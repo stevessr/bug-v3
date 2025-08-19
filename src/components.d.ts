@@ -10,11 +10,11 @@ declare module 'vue' {
   export interface GlobalComponents {
     NButton: typeof import('naive-ui')['NButton']
     NCard: typeof import('naive-ui')['NCard']
-    NDialogProvider: typeof import('naive-ui')['NDialogProvider']
-    NInput: typeof import('naive-ui')['NInput']
-    NList: typeof import('naive-ui')['NList']
-    NListItem: typeof import('naive-ui')['NListItem']
-    NMessageProvider: typeof import('naive-ui')['NMessageProvider']
+    NConfigProvider: typeof import('naive-ui')['NConfigProvider']
+    NLayout: typeof import('naive-ui')['NLayout']
+    NLayoutContent: typeof import('naive-ui')['NLayoutContent']
+    NLayoutSider: typeof import('naive-ui')['NLayoutSider']
+    NSlider: typeof import('naive-ui')['NSlider']
     NSpace: typeof import('naive-ui')['NSpace']
   }
 }

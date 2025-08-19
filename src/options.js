@@ -1,17 +1,6 @@
-import { createApp, h } from 'vue';
-import { create, NDialogProvider, NMessageProvider } from 'naive-ui';
+import { createApp } from 'vue';
 import Options from './Options.vue';
 
-const naive = create();
-
-const AppRoot = {
-	render() {
-		return h(NMessageProvider, null, {
-			default: () => h(NDialogProvider, null, { default: () => h(Options) })
-		});
-	}
-};
-
-const app = createApp(AppRoot);
-app.use(naive);
+// Mount the Options.vue root which already renders providers in template.
+const app = createApp(Options);
 app.mount('#app');

@@ -24,7 +24,7 @@ export function injectEmojiButton(nachoCustomPicker) {
         }
         const emojiButton = document.createElement('button');
         emojiButton.className = 'btn no-text btn-icon toolbar__button nacho-toolbar-btn';
-        emojiButton.title = "Nachoneko表情包";
+        emojiButton.title = "智慧的表情包";
         emojiButton.type = "button";
         emojiButton.innerHTML = `🐈‍⬛`;
         toolbar.appendChild(emojiButton);

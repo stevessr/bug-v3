@@ -20,6 +20,19 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    // use terser for better compression control
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        // remove some pure functions if any
+        pure_funcs: ["console.info", "console.debug"],
+      },
+      format: {
+        comments: false,
+      },
+    },
     rollupOptions: {
       input: {
         main: resolve(__dirname, "src/main.js"),
@@ -30,6 +43,13 @@ export default defineConfig({
         entryFileNames: `assets/[name].js`,
         chunkFileNames: `assets/[name].js`,
         assetFileNames: `assets/[name].[ext]`,
+        // manual chunking: put node_modules into vendor and naive-ui into its own chunk
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('naive-ui')) return 'vendor-naive-ui';
+            return 'vendor';
+          }
+        },
       },
     },
   },

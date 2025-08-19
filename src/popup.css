@@ -1,0 +1,104 @@
+.popup-layout {
+  height: 100%;
+  position: relative; /* base for overlay */
+  display: flex; /* arrange content horizontally */
+  align-items: stretch;
+}
+
+/* ensure inner naive layout fills the container */
+.popup-layout ::v-deep(.n-layout) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+.app-root {
+  height: 100%;
+}
+.app-root ::v-deep(*) {
+  height: 100%;
+}
+
+.popup-layout ::v-deep(.n-layout-content) {
+  height: 100%;
+  flex: 1 1 auto;
+  display: flex;
+}
+
+.popup-layout ::v-deep(.n-layout-scroll-container) {
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-layout ::v-deep(.n-card) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* floating sidebar: absolute so it doesn't affect content flow */
+.popup-sider {
+  position: absolute !important;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 260px; /* match Naive's inline sizing seen in DOM */
+  padding: 12px;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--n-color, #fff);
+  z-index: 40; /* above overlay */
+  transform: translateX(-100%);
+  transition: transform 260ms ease, opacity 200ms ease;
+  opacity: 0;
+}
+.popup-sider:not(.collapsed) {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* ensure inner scroll container stretches */
+.popup-sider ::v-deep(.n-layout-sider-scroll-container),
+.popup-sider ::v-deep(.n-space) {
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-btn {
+  width: 100%;
+  justify-content: center;
+}
+.sidebar-btn + .sidebar-btn {
+  margin-top: 8px;
+}
+
+.menu-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 30; /* below sidebar (40) */
+}
+
+.status {
+  color: #4caf50;
+  height: 18px;
+}
+
+/* make the open-options button smaller */
+.open-options-btn {
+  --n-height: 30px;
+  --n-font-size: 13px;
+  --n-padding: 0 10px;
+}
+.open-options-btn ::v-deep(.n-button) {
+  height: 30px !important;
+  min-height: 30px !important;
+}
+.open-options-btn ::v-deep(.n-button__content) {
+  font-size: 13px !important;
+}
