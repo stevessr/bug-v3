@@ -12,17 +12,18 @@
   "license": "ISC",
   "packageManager": "pnpm@10.14.0",
   "dependencies": {
-    "@vitejs/plugin-vue": "^6.0.1",
-    "naive-ui": "^2.42.0",
+    "htmx.org": "^2.0.6",
     "rollup-plugin-gzip": "^4.1.1",
-    "unplugin-auto-import": "^20.0.0",
-    "unplugin-vue-components": "^29.0.0",
-    "vue": "^3.5.18",
-    "vuedraggable": "^4.1.0"
+    "tsc": "^2.0.4",
+    "typescript": "^5.9.2"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.12",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.12",
     "terser": "^5.43.1",
     "vfonts": "^0.0.3",
-    "vite": "^7.1.2"
+    "vite": "^7.1.3"
   }
 }

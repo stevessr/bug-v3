@@ -3,49 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>智慧的表情包</title>
-  <style>
-    body {
-      width: 360px;
-      height: 420px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: Arial, sans-serif;
-    }
-    h1 {
-      font-size: 1.2em;
-      color: #333;
-      margin-bottom: 6px;
-    }
-    /* Advanced controls animation and left positioning */
-    .popup-root { position: relative; }
-    #advanced-controls {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      position: absolute;
-      left: 12px;
-      top: 44px;
-      width: calc(100% - 24px);
-      background: #fff;
-      padding: 8px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-      border-radius: 6px;
-      box-sizing: border-box;
-      max-height: 0;
-      overflow: hidden;
-      opacity: 0;
-      transform: translateY(-6px);
-      transition: max-height 260ms ease, opacity 180ms ease, transform 180ms ease;
-      z-index: 20;
-    }
-    #advanced-controls.open {
-      max-height: 240px; /* enough to show buttons */
-      opacity: 1;
-      transform: translateY(0);
-    }
-    #toggle-advanced { flex: 0 0 auto; }
-  </style>
+  <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
   <div id="app" style="width:360px;height:420px;box-sizing:border-box;">
@@ -71,6 +29,7 @@
       </div>
     </div>
   </div>
-  <script type="module" src="./src/popup.js"></script>
+      <script src="/htmx.js"></script>
+      <script type="module" src="./src/popup.ts"></script>
 </body>
 </html>

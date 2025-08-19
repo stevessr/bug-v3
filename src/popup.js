@@ -1,6 +1,6 @@
-import { createApp, h } from 'vue';
-import Popup from './Popup.vue';
-
-// Popup.vue uses auto-imported composables/components, mount directly.
-const app = createApp({ render: () => h(Popup) });
-app.mount('#app');
+// Native popup entry: import popup logic module to wire up behaviors
+import('./popup.ts').then(mod => {
+	// popup.ts exports refs and functions; Popup.html includes DOM elements that popup.ts can query/use
+}).catch(e => console.error('[Nachoneko] popup init failed', e));
+// ensure htmx is available
+import('./htmx.ts');

@@ -3,10 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <title>Emoji Extension Options</title>
-  <link rel="stylesheet" type="text/css" href="./src/options.css">
+  <link rel="stylesheet" type="text/css" href="/src/styles.css">
 </head>
 <body>
-  <div id="app"></div>
-  <script type="module" src="./src/options.js"></script>
+  <body class="bg-gray-50 text-gray-800">
+  <div id="app" class="p-4">
+    <div class="options-root">
+      <div class="toolbar flex justify-between items-center mb-3">
+        <div>
+          <button id="add-group" class="btn btn-primary">Add New Group</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="reset-default" class="btn">恢复默认</button>
+          <button id="save-data" class="btn btn-primary">保存</button>
+        </div>
+      </div>
+
+      <div class="status text-green-600 mb-2"></div>
+
+      <div class="groups space-y-3"></div>
+    </div>
+  </div>
+  <script src="/htmx.js"></script>
+  <script type="module" src="./src/options.ts"></script>
 </body>
 </html>

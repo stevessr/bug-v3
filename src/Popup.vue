@@ -67,25 +67,9 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { onMounted } from "vue";
-import {
-  scale,
-  status,
-  fileInput,
-  collapsed,
-  loadScale,
-  saveScale,
-  exportConfig,
-  triggerFile,
-  onFileChange,
-  pushToCloud,
-  pullFromCloud,
-  openOptions,
-} from "./popup.ts";
-
-onMounted(() => {
-  loadScale();
-});
+<script lang="ts">
+// This .vue file was retained for reference but the app no longer uses Vue.
+// Keep a minimal default export so tooling doesn't try to import Vue.
+export default {};
 </script>
 <style src="./popup.css" scoped></style>

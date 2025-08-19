@@ -2,6 +2,8 @@
 console.log('[Nachoneko] Script loaded. Independent picker strategy active.');
 
 (async () => {
+    // ensure htmx is bundled and available
+    await import('./htmx.ts');
     // Migrate existing settings from chrome.storage.sync to chrome.storage.local (if any)
     async function migrateStorage() {
         if (!chrome || !chrome.storage || !chrome.storage.sync) return;

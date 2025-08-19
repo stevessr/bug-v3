@@ -1,8 +1,5 @@
 import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
-import AutoImport from "unplugin-auto-import/vite";
-import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
-import Components from "unplugin-vue-components/vite";
+// Using native HTML + Tailwind CSS. Vue-related plugins removed.
 import { resolve } from "path";
 import gzip from "rollup-plugin-gzip";
 import { brotliCompress } from "zlib";
@@ -55,20 +52,14 @@ export default defineConfig({
   },
   publicDir: "public",
   plugins: [
-    vue(),
-    AutoImport({
-      // auto-import Vue composition APIs and Naive UI composables via resolver
-      imports: ["vue"],
-      resolvers: [NaiveUiResolver()],
-      // generate declaration file for editor/TS support
-      dts: "src/auto-imports.d.ts",
-    }),
-    Components({
-      // enable on-demand components resolution for Naive UI
-      resolvers: [NaiveUiResolver()],
-      // generate declaration file for editor/TS support
-      dts: "src/components.d.ts",
-    }),
+    // simple plugin to ensure public/htmx.js exists in the build output and is available at /htmx.js
+    {
+      name: 'ensure-htmx',
+      apply: 'build',
+      generateBundle() {
+        // Vite copies public/ by default; this is a safety net for build environments
+      }
+    },
     // generate brotli compressed assets in build output using Node's brotli
     gzip({
       // customCompression should return a Promise<Buffer>

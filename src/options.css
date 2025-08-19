@@ -6,3 +6,12 @@ body {
 }
 
 /* Naive UI will handle most of the styling now */
+
+/* touch-drag helpers */
+.touch-drag-placeholder {
+  min-height: 40px;
+  margin: 4px 0;
+}
+.touch-draggable-item {
+  touch-action: none; /* prevent browser gestures while dragging */
+}
