@@ -5,8 +5,8 @@
   <title>Nachoneko表情包</title>
   <style>
     body {
-      width: 200px;
-      height: 100px;
+      width: 360px;
+      height: 420px;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -15,10 +15,62 @@
     h1 {
       font-size: 1.2em;
       color: #333;
+      margin-bottom: 6px;
     }
+    /* Advanced controls animation and left positioning */
+    .popup-root { position: relative; }
+    #advanced-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: absolute;
+      left: 12px;
+      top: 44px;
+      width: calc(100% - 24px);
+      background: #fff;
+      padding: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      border-radius: 6px;
+      box-sizing: border-box;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: max-height 260ms ease, opacity 180ms ease, transform 180ms ease;
+      z-index: 20;
+    }
+    #advanced-controls.open {
+      max-height: 240px; /* enough to show buttons */
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #toggle-advanced { flex: 0 0 auto; }
   </style>
 </head>
 <body>
-  <h1>Nachoneko表情包</h1>
+  <div id="app" style="width:360px;height:420px;box-sizing:border-box;">
+    <div class="popup-root" style="display:flex;height:100%;">
+      <div style="width:120px;padding:12px;border-right:1px solid #eee;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;">
+        <button id="download-config" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">下载配置</button>
+        <button id="upload-cloud" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">上传到云端</button>
+        <button id="pull-cloud" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">从云端拉取</button>
+        <input id="config-file-input" type="file" accept="application/json" style="display:none" />
+        <button id="upload-overwrite" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">上传并覆盖</button>
+        <button id="upload-merge" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">上传并合并</button>
+      </div>
+      <div style="flex:1;padding:12px;box-sizing:border-box;">
+        <h1 style="font-size:1.1em;margin:0 0 8px 0;">Nachoneko 表情包</h1>
+        <div style="margin-bottom:8px;">插入图片大小：
+          <input id="insert-scale" type="range" min="5" max="200" value="30" style="vertical-align:middle;" />
+          <span id="insert-scale-value">30%</span>
+        </div>
+        <div style="margin-bottom:8px;">
+          <button id="open-options" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">打开设置</button>
+        </div>
+        <div id="popup-status" style="height:24px;color:#333;font-size:13px;"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./src/popup.js"></script>
 </body>
 </html>

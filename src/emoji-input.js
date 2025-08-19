@@ -19,9 +19,18 @@ export function handleInsert(emoji) {
         return; 
     }
 
-    if (textArea) {
+    (async () => {
+        let insertScale = 30;
+        try {
+            const data = await chrome.storage.local.get('insertScale');
+            if (data && data.insertScale) insertScale = Number(data.insertScale) || 30;
+        } catch (e) {
+            console.warn('[Nachoneko] Failed to read insertScale, using default 30', e);
+        }
+
+        if (textArea) {
         console.log('[Nachoneko] Textarea found.', textArea);
-        const emojiMarkdown = `![${alt}|${width}x${height},30%](${src}) `;
+        const emojiMarkdown = `![${alt}|${width}x${height},${insertScale}%](${src}) `;
         console.log('[Nachoneko] Emoji Markdown:', emojiMarkdown);
         const startPos = textArea.selectionStart;
         const endPos = textArea.selectionEnd;
@@ -35,9 +44,9 @@ export function handleInsert(emoji) {
         const changeEvent = new Event('change', { bubbles: true, cancelable: true });
         textArea.dispatchEvent(changeEvent);
         console.log('[Nachoneko] Input and Change events dispatched.');
-    } else if (richEle) {
-        console.log('[Nachoneko] Rich editor found.', richEle);
-        const imgTemplate = `<img src="${src}" alt="${alt}" width="${width}" height="${height}" data-scale="30" style="width: ${Math.round(width * 0.3)}px">`;
+        } else if (richEle) {
+            console.log('[Nachoneko] Rich editor found.', richEle);
+            const imgTemplate = `<img src="${src}" alt="${alt}" width="${width}" height="${height}" data-scale="${insertScale}" style="width: ${Math.round(width * (insertScale/100))}px">`;
         console.log('[Nachoneko] Rich editor imgTemplate:', imgTemplate);
         try {
             const dt = new DataTransfer();
@@ -49,7 +58,8 @@ export function handleInsert(emoji) {
             document.execCommand("insertHTML", false, imgTemplate);
             console.log('[Nachoneko] Rich editor document.execCommand used.');
         }
-    }
+        }
+    })();
     // Close the picker by clicking the active button again
     const activeEmojiButton = document.querySelector('.d-editor-button-bar .active .emoji-picker-btn');
     if (activeEmojiButton) activeEmojiButton.click();

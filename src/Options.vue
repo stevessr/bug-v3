@@ -1,66 +1,83 @@
 <template>
   <n-message-provider>
     <n-dialog-provider>
-      <div style="padding: 20px;">
-        <n-space vertical :size="20">
-          <n-button type="primary" @click="addNewGroup">Add New Group</n-button>
-          <n-grid :x-gap="12" :y-gap="12" :cols="'1 600:2 900:3'">
-            <n-gi v-for="(groupData, groupIndex) in emojiData" :key="groupIndex">
-              <n-card :title="groupData.group" closable @close="deleteGroup(groupIndex)">
-                <template #header-extra>
-                  <n-input
-                    :value="groupData.group"
-                    @update:value="(v) => updateGroupName(groupIndex, v)"
-                    placeholder="Group Name"
-                    size="small"
-                    style="width: 120px;"
-                  />
-                </template>
-                <n-list hoverable clickable>
-                  <n-list-item v-for="(emoji, emojiIndex) in groupData.emojis" :key="emojiIndex">
-                    <n-space align="center">
-                      <template v-if="isLinux(emoji.url)">
-                        <img :src="emoji.url" :alt="emoji.name" width="24" height="24" />
+      <div style="padding: 14px;">
+        <n-space vertical :size="12">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <n-button type="primary" @click="addNewGroup">Add New Group</n-button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <n-button @click="resetToDefault">恢复默认</n-button>
+              <n-button @click="saveEmojiData(emojiData.value)">保存</n-button>
+            </div>
+          </div>
+
+          <!-- groups container with drag-and-drop -->
+          <div>
+            <draggable v-model="emojiData" item-key="group" @end="onGroupDragEnd">
+              <template #item="{element: group, index: groupIndex}">
+                <n-card :title="group.group" closable @close="deleteGroup(groupIndex)" style="margin-bottom:12px;">
+                      <template #header-extra>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                          <img v-if="group.icon" :src="group.icon" :alt="group.group" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" />
+                          <n-input
+                            :value="group.group"
+                            @update:value="(v) => updateGroupName(groupIndex, v)"
+                            placeholder="Group Name"
+                            size="small"
+                            style="width: 140px;"
+                          />
+                          <n-input
+                            :value="group.icon || ''"
+                            @update:value="(v) => updateGroupIcon(groupIndex, v)"
+                            placeholder="Icon URL"
+                            size="small"
+                            style="width: 180px;"
+                          />
+                        </div>
                       </template>
-                      <template v-else>
-                        <n-popover trigger="click">
-                          <template #trigger>
-                            <n-button size="tiny" circle>{/* 外部资源 */}外</n-button>
-                          </template>
-                          <div style="display:flex;flex-direction:column;gap:8px;min-width:180px;">
-                            <div style="font-size:12px;word-break:break-all;color:var(--n-text-color);">{{ emoji.name }}</div>
-                            <div style="font-size:11px;color:var(--n-text-color-2);word-break:break-all;">{{ emoji.url }}</div>
-                            <div style="display:flex;gap:8px;justify-content:flex-end;">
-                              <n-button size="small" @click="openExternal(emoji.url)">打开</n-button>
-                              <n-button size="small" @click="copyUrl(emoji.url)">复制 URL</n-button>
+
+                  <template v-if="group.icon">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                      <img :src="group.icon" :alt="group.group" style="width:48px;height:48px;object-fit:cover;border-radius:6px;" />
+                      <div style="font-weight:600">{{ group.group }}</div>
+                    </div>
+                  </template>
+
+                  <n-list hoverable>
+                    <draggable v-model="group.emojis" :group="{ name: 'emojis' }" item-key="url" @end="() => onEmojiDragEnd(groupIndex)">
+                      <template #item="{element: emoji, index: emojiIndex}">
+                        <n-list-item>
+                          <n-space align="center" style="width:100%;justify-content:space-between;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                              <template v-if="isLinux(emoji.url)">
+                                <img :src="emoji.url" :alt="emoji.name" width="36" height="36" style="border-radius:6px;object-fit:cover;" />
+                              </template>
+                              <div style="display:flex;flex-direction:column;">
+                                <div style="font-weight:500">{{ emoji.name }}</div>
+                                <div style="font-size:12px;color:var(--n-text-color-2);word-break:break-all;max-width:420px">{{ emoji.url }}</div>
+                              </div>
                             </div>
-                          </div>
-                        </n-popover>
+
+                            <div style="display:flex;gap:8px;align-items:center;">
+                              <n-button size="tiny" @click="openExternal(emoji.url)">打开</n-button>
+                              <n-button size="tiny" @click="copyUrl(emoji.url)">复制</n-button>
+                              <n-button type="error" size="tiny" @click="deleteEmoji(groupIndex, emojiIndex)">删除</n-button>
+                            </div>
+                          </n-space>
+                        </n-list-item>
                       </template>
-                      <n-input
-                        :value="emoji.name"
-                        @update:value="(v) => updateEmoji(groupIndex, emojiIndex, 'name', v)"
-                        placeholder="Name"
-                        size="small"
-                        style="width: 80px;"
-                      />
-                      <n-input
-                        :value="emoji.url"
-                        @update:value="(v) => updateEmoji(groupIndex, emojiIndex, 'url', v)"
-                        placeholder="URL"
-                        size="small"
-                        style="width: 150px;"
-                      />
-                      <n-button type="error" size="tiny" @click="deleteEmoji(groupIndex, emojiIndex)">Delete</n-button>
-                    </n-space>
-                  </n-list-item>
-                </n-list>
-                <template #action>
-                  <n-button type="info" @click="addNewEmoji(groupIndex)">Add Emoji</n-button>
-                </template>
-              </n-card>
-            </n-gi>
-          </n-grid>
+                    </draggable>
+                  </n-list>
+
+                  <template #action>
+                    <n-button type="info" @click="addNewEmoji(groupIndex)">Add Emoji</n-button>
+                  </template>
+                </n-card>
+              </template>
+            </draggable>
+          </div>
         </n-space>
       </div>
     </n-dialog-provider>
@@ -71,14 +88,20 @@
 import { ref, onMounted, h } from 'vue';
 import { useDialog, useMessage } from 'naive-ui';
 import { emojiSet as defaultEmojiSet } from './emoji-data.js';
+// draggable for reordering
+import draggable from 'vuedraggable';
 
 const EMOJI_STORAGE_KEY = 'emojiData';
 const emojiData = ref([]);
+const detailedView = ref(true);
+const groupAsImage = ref(false);
+// prefer chrome.storage.sync when available (Chromium sync API), fallback to local
+const storage = (chrome && chrome.storage && chrome.storage.sync) ? chrome.storage.sync : chrome.storage.local;
 const dialog = useDialog();
 const message = useMessage();
 
 async function getEmojiData() {
-  const data = await chrome.storage.local.get(EMOJI_STORAGE_KEY);
+  const data = await storage.get(EMOJI_STORAGE_KEY);
   if (data && data[EMOJI_STORAGE_KEY]) {
     emojiData.value = data[EMOJI_STORAGE_KEY];
   } else {
@@ -89,7 +112,7 @@ async function getEmojiData() {
 }
 
 async function saveEmojiData(data) {
-  await chrome.storage.local.set({ [EMOJI_STORAGE_KEY]: data });
+  await storage.set({ [EMOJI_STORAGE_KEY]: data });
 }
 
 function addNewGroup() {
@@ -172,6 +195,22 @@ function updateEmoji(groupIndex, emojiIndex, field, value) {
 onMounted(() => {
   getEmojiData();
 });
+
+function onGroupDragEnd() {
+  // persist new order
+  saveEmojiData(emojiData.value);
+}
+
+function onEmojiDragEnd(groupIndex) {
+  // persist emoji reorder inside a group
+  saveEmojiData(emojiData.value);
+}
+
+function resetToDefault() {
+  emojiData.value = [{ group: 'Default Emojis', emojis: defaultEmojiSet }];
+  saveEmojiData(emojiData.value);
+  message.success('已恢复默认');
+}
 
 function isLinux(url) {
   try {

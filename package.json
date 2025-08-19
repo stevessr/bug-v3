@@ -14,9 +14,11 @@
   "dependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
     "naive-ui": "^2.42.0",
+    "rollup-plugin-gzip": "^4.1.1",
     "unplugin-auto-import": "^20.0.0",
     "unplugin-vue-components": "^29.0.0",
-    "vue": "^3.5.18"
+    "vue": "^3.5.18",
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "vfonts": "^0.0.3",

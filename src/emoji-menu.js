@@ -134,19 +134,35 @@ export function createEmojiMenu(defaultEmojiSet) {
     const targetEmojiImg = e.target.closest("img.nacho-emoji");
     if (!targetEmojiImg) return;
 
-    const emojiName = targetEmojiImg.dataset.emojiName;
-    let clickedEmojiData = null;
+    const imgSrc = targetEmojiImg.getAttribute('src');
+    const imgAlt = targetEmojiImg.getAttribute('alt') || targetEmojiImg.getAttribute('title') || '';
 
+    // Try to find original emoji data by src or name
+    let clickedEmojiData = null;
     for (const group of allEmojiData) {
-        const found = group.emojis.find(emo => emo.name === emojiName);
-        if (found) {
-            clickedEmojiData = found;
-            break;
-        }
+      const foundBySrc = group.emojis.find(emo => emo.url === imgSrc);
+      if (foundBySrc) { clickedEmojiData = foundBySrc; break; }
+      const foundByName = group.emojis.find(emo => emo.name === imgAlt);
+      if (foundByName) { clickedEmojiData = foundByName; break; }
     }
 
-    if (clickedEmojiData) {
-      handleInsert(clickedEmojiData);
+    // Build an object compatible with handleInsert
+    const payload = {
+      alt: clickedEmojiData ? (clickedEmojiData.name || imgAlt) : imgAlt,
+      src: clickedEmojiData ? (clickedEmojiData.url || imgSrc) : imgSrc,
+      width: clickedEmojiData ? clickedEmojiData.width : undefined,
+      height: clickedEmojiData ? clickedEmojiData.height : undefined,
+    };
+
+    if (!payload.src) {
+      console.warn('[Nachoneko] Clicked emoji has no src, skipping insert.');
+      return;
+    }
+
+    try {
+      handleInsert(payload);
+    } catch (err) {
+      console.error('[Nachoneko] handleInsert failed:', err, payload);
     }
   });
 

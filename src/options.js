@@ -1,9 +1,17 @@
-import { createApp } from 'vue';
-import { create } from 'naive-ui';
+import { createApp, h } from 'vue';
+import { create, NDialogProvider, NMessageProvider } from 'naive-ui';
 import Options from './Options.vue';
 
 const naive = create();
 
-const app = createApp(Options);
+const AppRoot = {
+	render() {
+		return h(NMessageProvider, null, {
+			default: () => h(NDialogProvider, null, { default: () => h(Options) })
+		});
+	}
+};
+
+const app = createApp(AppRoot);
 app.use(naive);
 app.mount('#app');

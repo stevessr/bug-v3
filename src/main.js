@@ -2,6 +2,30 @@
 console.log('[Nachoneko] Script loaded. Independent picker strategy active.');
 
 (async () => {
+    // Migrate existing settings from chrome.storage.sync to chrome.storage.local (if any)
+    async function migrateStorage() {
+        if (!chrome || !chrome.storage || !chrome.storage.sync) return;
+        try {
+            const keysToCheck = ['emojiData', 'insertScale'];
+            const syncData = await chrome.storage.sync.get(keysToCheck);
+            const toRemove = [];
+            for (const k of keysToCheck) {
+                if (syncData && Object.prototype.hasOwnProperty.call(syncData, k) && syncData[k] !== undefined) {
+                    const payload = {};
+                    payload[k] = syncData[k];
+                    await chrome.storage.local.set(payload);
+                    toRemove.push(k);
+                }
+            }
+            if (toRemove.length) {
+                try { await chrome.storage.sync.remove(toRemove); } catch (e) { /* best-effort */ }
+                console.info('[Nachoneko] Migrated storage keys to local:', toRemove);
+            }
+        } catch (e) {
+            console.warn('[Nachoneko] Storage migration failed:', e);
+        }
+    }
+    await migrateStorage();
     try {
         const { createEmojiMenu } = await import('./emoji-menu.js');
         const { injectEmojiButton } = await import('./emoji-button-injection.js');
