@@ -3,12 +3,13 @@
   "name": "Nachoneko表情包",
   "description": "在 LINUX.DO 插入甘城猫猫表情包",
   "version": "1.4",
-  "permissions": [],
+  "permissions": ["storage"],
+  "options_page": "options.html",
   "host_permissions": ["https://linux.do/*"],
   "content_scripts": [
     {
       "matches": ["https://linux.do/*"],
-      "js": ["main.js"],
+      "js": ["assets/main.js"],
       "css": ["custom-styles.css"],
       "type": "module"
     }

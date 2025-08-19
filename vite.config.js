@@ -1,19 +1,52 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+import AutoImport from "unplugin-auto-import/vite";
+import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
+import Components from "unplugin-vue-components/vite";
+import { resolve } from "path";
 
-// No more Vue, so we can simplify the config
+// https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    port: 3000,
+    hmr: {
+      host: "localhost",
+      protocol: "ws",
+    },
+  },
   build: {
-    outDir: 'dist',
-    assetsDir: '',
+    outDir: "dist",
     rollupOptions: {
       input: {
-        main: 'main.js',
+        main: resolve(__dirname, "src/main.js"),
+        options: resolve(__dirname, "options.html"),
+        popup: resolve(__dirname, "popup.html"),
       },
       output: {
-        entryFileNames: '[name].js',
-        // No more CSS assets
-        assetFileNames: '[name].[ext]',
+        entryFileNames: `assets/[name].js`,
+        chunkFileNames: `assets/[name].js`,
+        assetFileNames: `assets/[name].[ext]`,
       },
     },
   },
+  publicDir: "public",
+  plugins: [
+    vue(),
+    AutoImport({
+      imports: [
+        "vue",
+        {
+          "naive-ui": [
+            "useDialog",
+            "useMessage",
+            "useNotification",
+            "useLoadingBar",
+          ],
+        },
+      ],
+    }),
+    Components({
+      resolvers: [NaiveUiResolver()],
+    }),
+  ],
 });
