@@ -1,0 +1,21 @@
+{
+  "name": "chrome-extension-v3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "vite build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "dependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vue": "^3.5.18"
+  },
+  "devDependencies": {
+    "vite": "^7.1.2"
+  }
+}

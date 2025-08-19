@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Nachoneko表情包",
+  "description": "在 LINUX.DO 插入甘城猫猫表情包",
+  "version": "1.4",
+  "permissions": [],
+  "host_permissions": ["https://linux.do/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://linux.do/*"],
+      "js": ["main.js"],
+      "css": ["custom-styles.css"],
+      "type": "module"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Nachoneko表情包"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png",
+    "512": "icons/icon512.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["https://linux.do/*"]
+    }
+  ]
+}
