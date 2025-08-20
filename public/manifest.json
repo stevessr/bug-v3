@@ -7,25 +7,31 @@
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "16": "icon16.png",
-      "48": "icon48.png",
-      "128": "icon128.png"
+      "48": "img/48.png",
+      "64": "img/64.png",
+      "128": "img/128.png",
+      "512": "img/512.png",
+      "1000": "img/1000.png",
+      "1200": "img/1200.jpg"
     }
   },
   "options_page": "options/options.html",
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "js/background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["js/content.js"]
     }
   ],
   "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "48": "img/48.png",
+    "64": "img/64.png",
+    "128": "img/128.png",
+    "512": "img/512.png",
+    "1000": "img/1000.png",
+    "1200": "img/1200.jpg"
   },
   "web_accessible_resources": [
     {

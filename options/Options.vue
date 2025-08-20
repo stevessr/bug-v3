@@ -1,43 +1,43 @@
 <template>
   <div class="container">
     <h1>Emoji Management</h1>
-    <a-button type="primary" @click="showAddModal" style="margin-bottom: 20px;">Add Emoji</a-button>
+    <Button type="primary" @click="showAddModal" style="margin-bottom: 20px;">Add Emoji</Button>
     
-    <a-table :columns="columns" :data-source="emojiStore.emojis" row-key="packet">
+    <Table :columns="columns" :data-source="emojiStore.emojis" row-key="packet">
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'url'">
           <img :src="record.url" :alt="record.name" style="width: 50px; height: auto;" />
         </template>
         <template v-if="column.key === 'action'">
-          <a-space>
-            <a-button type="link" @click="showEditModal(record)">Edit</a-button>
-            <a-popconfirm
+          <Space>
+            <Button type="link" @click="showEditModal(record)">Edit</Button>
+            <Popconfirm
               title="Are you sure you want to delete this emoji?"
               @confirm="deleteEmoji(record.packet)"
             >
-              <a-button type="link" danger>Delete</a-button>
-            </a-popconfirm>
-          </a-space>
+              <Button type="link" danger>Delete</Button>
+            </Popconfirm>
+          </Space>
         </template>
       </template>
-    </a-table>
+    </Table>
 
-    <a-modal v-model:open="isModalVisible" :title="modalTitle" @ok="handleOk">
-      <a-form :model="formState" layout="vertical">
-        <a-form-item label="Name" name="name">
-          <a-input v-model:value="formState.name" />
-        </a-form-item>
-        <a-form-item label="URL" name="url">
-          <a-input v-model:value="formState.url" />
-        </a-form-item>
-         <a-form-item label="Width" name="width">
-          <a-input-number v-model:value="formState.width" />
-        </a-form-item>
-        <a-form-item label="Height" name="height">
-          <a-input-number v-model:value="formState.height" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
+    <Modal v-model:open="isModalVisible" :title="modalTitle" @ok="handleOk">
+      <Form :model="formState" layout="vertical">
+        <FormItem label="Name" name="name">
+          <Input v-model:value="formState.name" />
+        </FormItem>
+        <FormItem label="URL" name="url">
+          <Input v-model:value="formState.url" />
+        </FormItem>
+         <FormItem label="Width" name="width">
+          <InputNumber v-model:value="formState.width" />
+        </FormItem>
+        <FormItem label="Height" name="height">
+          <InputNumber v-model:value="formState.height" />
+        </FormItem>
+      </Form>
+    </Modal>
   </div>
 </template>
 
@@ -45,6 +45,7 @@
 import { ref, reactive, computed } from 'vue';
 import { useEmojiStore } from '../store/useEmojiStore';
 import { Emoji } from '../store/emoji-data';
+import { Button, Table, Modal, Form, Input, InputNumber, Space, Popconfirm } from 'ant-design-vue';
 import 'ant-design-vue/dist/reset.css';
 
 const emojiStore = useEmojiStore();

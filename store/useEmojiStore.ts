@@ -1,22 +1,60 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
-import { Emoji, emojiSet as defaultEmojiSet } from './emoji-data';
+import type { Emoji } from './emoji-data';
 
 export const useEmojiStore = defineStore('emoji', () => {
   const emojis = ref<Emoji[]>([]);
+  const areEmojisLoaded = ref(false);
+  const isLoading = ref(false);
 
-  // Load emojis from storage or use default set
-  chrome.storage.sync.get('emojis', (data) => {
-    if (data.emojis) {
-      emojis.value = data.emojis;
-    } else {
-      emojis.value = defaultEmojiSet;
+  // Promise wrapper for chrome.storage.sync.get
+  const getStorageData = (keys: string | string[]): Promise<{ [key: string]: any }> => {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(keys, resolve);
+    });
+  };
+
+  // Promise wrapper for chrome.storage.sync.set
+  const setStorageData = (data: { [key: string]: any }): Promise<void> => {
+    return new Promise((resolve) => {
+      chrome.storage.sync.set(data, resolve);
+    });
+  };
+
+  // Load emojis from storage or dynamically import default set
+  const loadEmojis = async () => {
+    if (areEmojisLoaded.value || isLoading.value) {
+      return;
     }
-  });
+
+    isLoading.value = true;
+    try {
+      const data = await getStorageData('emojis');
+      if (data.emojis && data.emojis.length > 0) {
+        emojis.value = data.emojis;
+      } else {
+        // Dynamically import default emoji set only when needed
+        const { emojiSet: defaultEmojiSet } = await import('./emoji-data');
+        emojis.value = defaultEmojiSet;
+      }
+      areEmojisLoaded.value = true;
+    } catch (error) {
+      console.error('Failed to load emojis:', error);
+      // Fallback to empty array if everything fails
+      emojis.value = [];
+      areEmojisLoaded.value = true;
+    } finally {
+      isLoading.value = false;
+    }
+  };
 
   // Watch for changes and save to storage
-  watch(emojis, (newEmojis) => {
-    chrome.storage.sync.set({ emojis: newEmojis });
+  watch(emojis, async (newEmojis) => {
+    try {
+      await setStorageData({ emojis: newEmojis });
+    } catch (error) {
+      console.error('Failed to save emojis:', error);
+    }
   }, { deep: true });
 
   function addEmoji(emoji: Omit<Emoji, 'packet'>) {
@@ -35,5 +73,13 @@ export const useEmojiStore = defineStore('emoji', () => {
     emojis.value = emojis.value.filter(e => e.packet !== packet);
   }
 
-  return { emojis, addEmoji, updateEmoji, deleteEmoji };
+  return {
+    emojis,
+    areEmojisLoaded,
+    isLoading,
+    loadEmojis,
+    addEmoji,
+    updateEmoji,
+    deleteEmoji
+  };
 });

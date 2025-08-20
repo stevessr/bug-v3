@@ -1,11 +1,10 @@
-import { createApp } from 'vue';
+import { createApp, defineAsyncComponent } from 'vue';
 import { createPinia } from 'pinia';
-import Options from './Options.vue';
-import Antd from 'ant-design-vue';
+
+const Options = defineAsyncComponent(() => import('./Options.vue'));
 
 const pinia = createPinia();
 const app = createApp(Options);
 
-app.use(Antd);
 app.use(pinia);
 app.mount('#app');
