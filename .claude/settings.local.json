@@ -3,7 +3,10 @@
     "allow": [
       "Bash(rm:*)",
       "Bash(pnpm install)",
-      "Bash(pnpm build)"
+      "Bash(pnpm build)",
+      "Bash(mkdir:*)",
+      "Bash(git reset:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
