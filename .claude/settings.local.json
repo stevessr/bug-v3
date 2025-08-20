@@ -6,7 +6,8 @@
       "Bash(pnpm build)",
       "Bash(mkdir:*)",
       "Bash(git reset:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

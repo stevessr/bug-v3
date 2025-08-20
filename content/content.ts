@@ -1,19 +1,32 @@
-console.log('Content script loaded.');
+import { Emoji } from '../store/emoji-data';
 
-function injectEmojiPicker() {
-  // Create a button to trigger the emoji picker
-  const emojiButton = document.createElement('button');
-  emojiButton.innerHTML = '😀';
-  emojiButton.style.position = 'fixed';
-  emojiButton.style.bottom = '10px';
-  emojiButton.style.right = '10px';
-  emojiButton.style.zIndex = '9999';
-  document.body.appendChild(emojiButton);
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'INSERT_EMOJI') {
+    insertEmoji(request.emoji);
+    sendResponse({ status: 'success' });
+  }
+});
 
-  emojiButton.addEventListener('click', () => {
-    // For now, just log a message
-    console.log('Emoji button clicked!');
-  });
+function insertEmoji(emoji: Emoji) {
+  const activeElement = document.activeElement;
+
+  if (activeElement && (activeElement.tagName === 'TEXTAREA' || (activeElement.tagName === 'INPUT' && /text|search|email|password|url/.test((activeElement as HTMLInputElement).type)))) {
+    const textArea = activeElement as HTMLTextAreaElement | HTMLInputElement;
+    const emojiMarkdown = `![${emoji.name}|${emoji.width || '500'}x${emoji.height || '500'},30%](${emoji.url}) `;
+
+    const startPos = textArea.selectionStart ?? 0;
+    const endPos = textArea.selectionEnd ?? 0;
+    
+    textArea.value = textArea.value.substring(0, startPos) + emojiMarkdown + textArea.value.substring(endPos);
+    
+    const newCursorPos = startPos + emojiMarkdown.length;
+    textArea.selectionStart = newCursorPos;
+    textArea.selectionEnd = newCursorPos;
+
+    // Dispatch an input event to notify frameworks of the change
+    const event = new Event('input', { bubbles: true, cancelable: true });
+    textArea.dispatchEvent(event);
+    
+    textArea.focus();
+  }
 }
-
-injectEmojiPicker();
