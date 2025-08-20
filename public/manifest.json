@@ -9,7 +9,7 @@
   "content_scripts": [
     {
       "matches": ["https://linux.do/*"],
-      "js": ["assets/main.js"],
+      "js": ["assets/content.js"],
       "css": ["custom-styles.css"],
       "type": "module"
     }

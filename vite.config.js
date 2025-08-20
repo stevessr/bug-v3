@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-// Using native HTML + Tailwind CSS. Vue-related plugins removed.
+import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import gzip from "rollup-plugin-gzip";
 import { brotliCompress } from "zlib";
@@ -34,9 +34,9 @@ export default defineConfig({
     },
     rollupOptions: {
       input: {
-        main: resolve(__dirname, "src/main.js"),
         options: resolve(__dirname, "options.html"),
         popup: resolve(__dirname, "popup.html"),
+        content: resolve(__dirname, "content/main.jsx"),
       },
       output: {
         entryFileNames: `assets/[name].js`,
@@ -45,9 +45,6 @@ export default defineConfig({
         // manual chunking: put node_modules into vendor and naive-ui into its own chunk
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("htmx.org")) {
-              return "htmx";
-            }
             return "vendor";
           }
         },
@@ -56,83 +53,7 @@ export default defineConfig({
   },
   publicDir: "public",
   plugins: [
-    // plugin to provide a real htmx.js from node_modules at /htmx.js during dev and in build output
-    {
-      name: "ensure-htmx",
-      configureServer(server) {
-        // serve /htmx.js by reading from node_modules (so dev pages that include /htmx.js get real library)
-        server.middlewares.use((req, res, next) => {
-          if (!req.url) return next();
-          if (req.url === "/htmx.js") {
-            const candidates = [
-              pathResolve(
-                __dirname,
-                "node_modules",
-                "htmx.org",
-                "dist",
-                "htmx.min.js"
-              ),
-              pathResolve(
-                __dirname,
-                "node_modules",
-                "htmx.org",
-                "dist",
-                "htmx.js"
-              ),
-            ];
-            let src = null;
-            for (const p of candidates) {
-              if (fs.existsSync(p)) {
-                src = p;
-                break;
-              }
-            }
-            if (src) {
-              res.setHeader("Content-Type", "application/javascript");
-              res.end(fs.readFileSync(src));
-              return;
-            }
-            // fallback: respond with warning stub
-            res.setHeader("Content-Type", "application/javascript");
-            res.end(
-              "(function(){console.warn('[htmx loader] htmx not found in node_modules');})();"
-            );
-            return;
-          }
-          next();
-        });
-      },
-      apply: "build",
-      generateBundle() {
-        // during build, copy node_modules/htmx.org/dist/htmx.min.js into dist/htmx.js
-        const candidates = [
-          pathResolve(
-            __dirname,
-            "node_modules",
-            "htmx.org",
-            "dist",
-            "htmx.min.js"
-          ),
-          pathResolve(__dirname, "node_modules", "htmx.org", "dist", "htmx.js"),
-        ];
-        let src = null;
-        for (const p of candidates) {
-          if (fs.existsSync(p)) {
-            src = p;
-            break;
-          }
-        }
-        if (!src) {
-          // nothing to do
-          this.warn(
-            "htmx source not found in node_modules; /htmx.js will be the public stub"
-          );
-          return;
-        }
-        const code = fs.readFileSync(src);
-        this.emitFile({ type: "asset", fileName: "htmx.js", source: code });
-      },
-    },
+    react(),
     // generate brotli compressed assets in build output using Node's brotli
     gzip({
       // customCompression should return a Promise<Buffer>
