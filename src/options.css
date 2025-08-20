@@ -1,11 +1,8 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  padding: 1em;
   background-color: #f4f4f9;
   color: #333;
 }
-
-/* Naive UI will handle most of the styling now */
 
 /* touch-drag helpers */
 .touch-drag-placeholder {
@@ -15,3 +12,17 @@ body {
 .touch-draggable-item {
   touch-action: none; /* prevent browser gestures while dragging */
 }
+
+.drag-handle {
+  /* hidden by default; only show on touch-capable devices via the .has-touch root class */
+  display: none;
+  background: #f3f4f6;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  align-items: center;
+  justify-content: center;
+}
+.has-touch .drag-handle {
+  display: inline-flex;
+}
+.drag-handle:active { cursor: grabbing; }

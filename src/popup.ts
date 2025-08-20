@@ -135,7 +135,7 @@ export async function mergeConfig(newData: any[]) {
 
 export async function onFileChange(e: Event) {
   const target = e.target as HTMLInputElement | null;
-  const file = target?.files && target.files[0];
+  const file = target?.files && target.files;
   if (!file) return;
   try {
     const data = await readFileInput(file);
@@ -269,3 +269,6 @@ if (typeof window !== 'undefined') {
     initPopup().catch(console.error);
   }
 }
+
+// ensure htmx is available
+import('htmx.org');

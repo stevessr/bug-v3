@@ -1,35 +1,80 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>智慧的表情包</title>
-  <link rel="stylesheet" href="/src/styles.css">
-</head>
-<body>
-  <div id="app" style="width:360px;height:420px;box-sizing:border-box;">
-    <div class="popup-root" style="display:flex;height:100%;">
-      <div style="width:120px;padding:12px;border-right:1px solid #eee;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;">
-        <button id="download-config" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">下载配置</button>
-        <button id="upload-cloud" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">上传到云端</button>
-        <button id="pull-cloud" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">从云端拉取</button>
-        <input id="config-file-input" type="file" accept="application/json" style="display:none" />
-        <button id="upload-overwrite" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">上传并覆盖</button>
-        <button id="upload-merge" style="padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">上传并合并</button>
-      </div>
-      <div style="flex:1;padding:12px;box-sizing:border-box;">
-        <h1 style="font-size:1.1em;margin:0 0 8px 0;">Nachoneko 表情包</h1>
-        <div style="margin-bottom:8px;">插入图片大小：
-          <input id="insert-scale" type="range" min="5" max="200" value="30" style="vertical-align:middle;" />
-          <span id="insert-scale-value">30%</span>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Emoji Manager</title>
+    <script type="module" src="src/popup.ts"></script>
+    <link rel="stylesheet" href="src/popup.css" />
+  </head>
+  <body>
+    <div class="popup-root">
+      <div class="popup-layout">
+        <!-- 侧边栏 -->
+        <div :class="['popup-sider', { collapsed }]">
+          <div class="sidebar-content">
+            <button class="sidebar-btn" @click="exportConfig">下载配置</button>
+            <button class="sidebar-btn" @click="pushToCloud">上传到云端</button>
+            <button class="sidebar-btn" @click="pullFromCloud">
+              从云端拉取
+            </button>
+            <button class="sidebar-btn" @click="triggerFile">
+              上传（本地文件）
+            </button>
+          </div>
         </div>
-        <div style="margin-bottom:8px;">
-          <button id="open-options" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">打开设置</button>
+
+        <!-- 主内容区 -->
+        <div class="popup-content">
+          <div class="content-card">
+            <div class="header">
+              <div class="title">Nachoneko 表情包</div>
+              <button
+                v-if="collapsed"
+                class="menu-btn"
+                @click="collapsed = false"
+              >
+                菜单
+              </button>
+            </div>
+
+            <div class="scale-control">
+              <span>插入大小</span>
+              <input
+                type="range"
+                v-model="scale"
+                min="5"
+                max="200"
+                step="1"
+                class="slider"
+                @input="saveScale"
+              />
+              <span class="scale-value">{{ scale }}%</span>
+            </div>
+
+            <button id="open-options" class="primary-btn" @click="openOptions">
+              打开表情包设置
+            </button>
+
+            <div class="status">{{ status }}</div>
+
+            <input
+              ref="fileInput"
+              type="file"
+              accept="application/json"
+              style="display: none"
+              @change="onFileChange"
+            />
+          </div>
+
+          <!-- 遮罩层 -->
+          <div
+            v-if="!collapsed"
+            class="menu-overlay"
+            @click="collapsed = true"
+          ></div>
         </div>
-        <div id="popup-status" style="height:24px;color:#333;font-size:13px;"></div>
       </div>
     </div>
-  </div>
-      <script src="/htmx.js"></script>
-      <script type="module" src="./src/popup.ts"></script>
-</body>
+  </body>
 </html>

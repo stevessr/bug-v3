@@ -1,6 +1,7 @@
 import { emojiSet as defaultEmojiSet } from './emoji-data.js';
 import { promptDialog, confirmDialog, editEmojiDialog } from './dialog';
-import { attachTouchDrag } from './touch-drag';
+import { attachTouchDrag, isTouchDevice } from './touch-drag';
+import htmx from 'htmx.org';
 
 declare const chrome: any;
 
@@ -128,28 +129,35 @@ export async function copyUrl(url: string) {
 }
 
 function renderStatus() {
-  const el = document.querySelector('.status');
-  if (el) el.textContent = status || '';
+  const el = document.getElementById('status');
+  if (el) {
+    if (status) {
+      el.textContent = status;
+      el.classList.remove('hidden');
+    } else {
+      el.classList.add('hidden');
+    }
+  }
 }
 
 function renderGroups() {
-  const container = document.querySelector('.groups');
+  const container = document.getElementById('groups');
   if (!container) return;
   container.innerHTML = '';
   emojiData.forEach((group, groupIndex) => {
     const card = document.createElement('div');
-    // use Tailwind-like utility classes (we also have plain CSS fallbacks)
-  card.className = 'group-card card p-3 mb-3 rounded-md bg-white';
-  // limit max width for a single group to avoid overly wide layouts on large screens
-  card.style.maxWidth = '720px';
+    card.className = 'group-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-300';
     card.setAttribute('draggable', 'true');
     card.dataset.groupIndex = String(groupIndex);
+    
     // drag handlers for reordering groups
     card.addEventListener('dragstart', (ev: DragEvent) => {
       ev.dataTransfer?.setData('text/group-index', String(groupIndex));
       card.style.opacity = '0.5';
     });
-    card.addEventListener('dragend', () => { card.style.opacity = ''; });
+    card.addEventListener('dragend', () => { 
+      card.style.opacity = ''; 
+    });
     card.addEventListener('dragover', (ev) => { ev.preventDefault(); });
     card.addEventListener('drop', (ev) => {
       ev.preventDefault();
@@ -158,97 +166,100 @@ function renderGroups() {
         const from = Number(src);
         const to = Number(card.dataset.groupIndex);
         if (!Number.isNaN(from) && !Number.isNaN(to) && from !== to) {
-          const moved = emojiData.splice(from, 1)[0];
+          const moved = emojiData.splice(from, 1);
           emojiData.splice(to, 0, moved);
           saveEmojiData(emojiData);
+          // 重新渲染界面以反映新的顺序
           renderGroups();
         }
       }
     });
+    
+    // Card header
     const header = document.createElement('div');
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
-    header.style.marginBottom = '8px';
-
-  const left = document.createElement('div');
-  left.className = 'flex items-center gap-2';
-
+    header.className = 'p-4 border-b border-gray-200 bg-gray-50';
+    
+    const headerTop = document.createElement('div');
+    headerTop.className = 'flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
+    
+    const left = document.createElement('div');
+    left.className = 'flex items-center gap-3 flex-1';
+    
     if (group.icon) {
       const img = document.createElement('img');
       img.src = group.icon;
       img.alt = group.group;
-      img.style.width = '32px';
-      img.style.height = '32px';
-      img.style.objectFit = 'cover';
-      img.style.borderRadius = '4px';
+      img.className = 'w-10 h-10 object-cover rounded-lg';
       left.appendChild(img);
     }
-  const nameInput = document.createElement('input');
-  nameInput.value = group.group || '';
-  nameInput.placeholder = 'Group Name';
-  nameInput.className = 'px-2 py-1 border rounded';
-  nameInput.addEventListener('input', (e: any) => updateGroupName(groupIndex, e.target.value));
+    
+    const nameInput = document.createElement('input');
+    nameInput.value = group.group || '';
+    nameInput.placeholder = '分组名称';
+    nameInput.className = 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+    nameInput.addEventListener('input', (e: any) => updateGroupName(groupIndex, e.target.value));
     left.appendChild(nameInput);
-
+    
+    headerTop.appendChild(left);
+    
+    const right = document.createElement('div');
+    const delBtn = document.createElement('button');
+    delBtn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 hover:text-red-700" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+      </svg>
+    `;
+    delBtn.className = 'p-2 rounded-full hover:bg-red-100 transition-colors duration-200';
+    delBtn.title = '删除分组';
+    delBtn.addEventListener('click', () => deleteGroup(groupIndex));
+    right.appendChild(delBtn);
+    
+    headerTop.appendChild(right);
+    header.appendChild(headerTop);
+    
     const iconInput = document.createElement('input');
     iconInput.value = group.icon || '';
-    iconInput.placeholder = 'Icon URL';
-    iconInput.style.width = '180px';
-    iconInput.style.padding = '4px';
+    iconInput.placeholder = '图标URL (可选)';
+    iconInput.className = 'mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm';
     iconInput.addEventListener('input', (e: any) => updateGroupIcon(groupIndex, e.target.value));
-    left.appendChild(iconInput);
-
-    header.appendChild(left);
-
-  const right = document.createElement('div');
-  right.className = 'flex items-center gap-2';
-  const delBtn = document.createElement('button');
-  delBtn.textContent = '删除分组';
-  delBtn.className = 'btn btn-primary';
-  delBtn.addEventListener('click', () => deleteGroup(groupIndex));
-  right.appendChild(delBtn);
-    header.appendChild(right);
-
+    header.appendChild(iconInput);
+    
     card.appendChild(header);
-
+    
+    // Group preview
     if (group.icon) {
       const preview = document.createElement('div');
-      preview.style.display = 'flex';
-      preview.style.alignItems = 'center';
-      preview.style.gap = '8px';
-      preview.style.marginBottom = '8px';
+      preview.className = 'px-4 py-3 flex items-center gap-3 border-b border-gray-100';
       const img = document.createElement('img');
       img.src = group.icon;
       img.alt = group.group;
-      img.style.width = '48px';
-      img.style.height = '48px';
-      img.style.objectFit = 'cover';
-      img.style.borderRadius = '6px';
+      img.className = 'w-12 h-12 object-cover rounded-lg';
       preview.appendChild(img);
       const title = document.createElement('div');
-      title.style.fontWeight = '600';
+      title.className = 'font-semibold text-gray-800';
       title.textContent = group.group;
       preview.appendChild(title);
       card.appendChild(preview);
     }
-
+    
+    // Emoji list
     const ul = document.createElement('ul');
-    ul.className = 'emoji-list';
-    ul.style.listStyle = 'none';
-    ul.style.padding = '0';
-    ul.style.margin = '0';
+    ul.className = 'emoji-list divide-y divide-gray-100 max-h-96 overflow-y-auto';
+    
     group.emojis.forEach((emoji: any, emojiIndex: number) => {
       const li = document.createElement('li');
-  li.className = 'flex justify-between items-center p-2 border-b touch-draggable-item';
+      li.className = 'p-3 flex justify-between items-center touch-draggable-item hover:bg-gray-50 transition-colors duration-150';
       li.setAttribute('draggable', 'true');
       li.dataset.emojiIndex = String(emojiIndex);
+      
       // drag handlers for emojis within same group
       li.addEventListener('dragstart', (ev: DragEvent) => {
         ev.dataTransfer?.setData('text/emoji', JSON.stringify({ fromGroup: groupIndex, fromIndex: emojiIndex }));
         li.style.opacity = '0.5';
       });
-      li.addEventListener('dragend', () => { li.style.opacity = ''; });
+      li.addEventListener('dragend', () => { 
+        li.style.opacity = ''; 
+      });
       li.addEventListener('dragover', (ev) => { ev.preventDefault(); });
       li.addEventListener('drop', (ev) => {
         ev.preventDefault();
@@ -260,15 +271,17 @@ function renderGroups() {
             const toIndex = Number(li.dataset.emojiIndex);
             if (fromGroup === groupIndex) {
               // reorder in same group
-              const moved = emojiData[groupIndex].emojis.splice(fromIndex, 1)[0];
+              const moved = emojiData[groupIndex].emojis.splice(fromIndex, 1);
               emojiData[groupIndex].emojis.splice(toIndex, 0, moved);
               saveEmojiData(emojiData);
+              // 重新渲染界面以反映新的顺序
               renderGroups();
             } else {
               // move between groups
-              const moved = emojiData[fromGroup].emojis.splice(fromIndex, 1)[0];
+              const moved = emojiData[fromGroup].emojis.splice(fromIndex, 1);
               emojiData[groupIndex].emojis.splice(toIndex, 0, moved);
               saveEmojiData(emojiData);
+              // 重新渲染界面以反映新的顺序
               renderGroups();
             }
           } catch (e) {
@@ -276,83 +289,109 @@ function renderGroups() {
           }
         }
       });
-
+      
       const left = document.createElement('div');
-      left.style.display = 'flex';
-      left.style.alignItems = 'center';
-      left.style.gap = '8px';
-      left.style.maxWidth = '70%';
+      left.className = 'flex items-center gap-3 flex-1 min-w-0';
+      
       if (isLinux(emoji.url)) {
         const img = document.createElement('img');
         img.src = emoji.url;
         img.alt = emoji.name;
-        img.width = 36;
-        img.height = 36;
-        img.style.borderRadius = '6px';
-        img.style.objectFit = 'cover';
+        img.className = 'w-9 h-9 rounded-lg object-cover flex-shrink-0';
         left.appendChild(img);
       }
+      
       const meta = document.createElement('div');
-      meta.style.display = 'flex';
-      meta.style.flexDirection = 'column';
+      meta.className = 'min-w-0';
       const nm = document.createElement('div');
-      nm.style.fontWeight = '500';
+      nm.className = 'font-medium text-gray-800 truncate';
       nm.textContent = emoji.name;
-      const url = document.createElement('div');
-      url.style.fontSize = '12px';
-      url.style.color = '#666';
-      url.style.wordBreak = 'break-all';
-      url.style.maxWidth = '420px';
-      url.textContent = emoji.url;
       meta.appendChild(nm);
-      meta.appendChild(url);
       left.appendChild(meta);
-
+      
       const right = document.createElement('div');
-      right.className = 'flex gap-2 items-center';
-      const editBtn = document.createElement('button');
-      editBtn.textContent = '编辑';
-      editBtn.className = 'btn';
-      editBtn.addEventListener('click', async () => {
-        const edited = await editEmojiDialog(emoji.name || '', emoji.url || '');
-        if (!edited) return;
-        updateEmoji(groupIndex, emojiIndex, 'name', edited.name);
-        updateEmoji(groupIndex, emojiIndex, 'url', edited.url);
-        renderGroups();
+      right.className = 'flex gap-1 items-center';
+      
+      // drag handle for touch devices
+      const handle = document.createElement('button');
+      handle.className = 'drag-handle p-1.5 rounded-lg hover:bg-gray-200 transition-colors duration-200';
+      handle.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+        </svg>
+      `;
+      handle.title = '拖拽排序';
+      // 阻止点击事件冒泡到父元素
+      handle.addEventListener('click', (e) => {
+        e.stopPropagation();
       });
+      right.appendChild(handle);
+      
+      const openBtn = document.createElement('button');
+      openBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 hover:text-blue-700" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" />
+        </svg>
+      `;
+      openBtn.className = 'p-1.5 rounded-lg hover:bg-blue-100 transition-colors duration-200';
+      openBtn.title = '打开链接';
+      openBtn.addEventListener('click', () => openExternal(emoji.url));
+      right.appendChild(openBtn);
+      
       const copyBtn = document.createElement('button');
-      copyBtn.textContent = '复制';
-      copyBtn.className = 'btn';
+      copyBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 hover:text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+          <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+        </svg>
+      `;
+      copyBtn.className = 'p-1.5 rounded-lg hover:bg-gray-200 transition-colors duration-200';
+      copyBtn.title = '复制链接';
       copyBtn.addEventListener('click', () => copyUrl(emoji.url));
-      const delEmojiBtn = document.createElement('button');
-      delEmojiBtn.textContent = '删除';
-      delEmojiBtn.className = 'btn btn-primary';
-      delEmojiBtn.addEventListener('click', () => deleteEmoji(groupIndex, emojiIndex));
-      right.appendChild(editBtn);
       right.appendChild(copyBtn);
+      
+      const delEmojiBtn = document.createElement('button');
+      delEmojiBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 hover:text-red-700" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+      `;
+      delEmojiBtn.className = 'p-1.5 rounded-lg hover:bg-red-100 transition-colors duration-200';
+      delEmojiBtn.title = '删除表情';
+      delEmojiBtn.addEventListener('click', () => deleteEmoji(groupIndex, emojiIndex));
       right.appendChild(delEmojiBtn);
-
+      
       li.appendChild(left);
       li.appendChild(right);
       ul.appendChild(li);
     });
+    
     card.appendChild(ul);
-
-  const addWrap = document.createElement('div');
-  addWrap.style.marginTop = '8px';
-  const addBtn = document.createElement('button');
-  addBtn.textContent = 'Add Emoji';
-  addBtn.className = 'btn';
-  addBtn.addEventListener('click', () => addNewEmoji(groupIndex));
-  addWrap.appendChild(addBtn);
-  card.appendChild(addWrap);
-
+    
+    // Add emoji button
+    const addWrap = document.createElement('div');
+    addWrap.className = 'p-4 bg-gray-50 border-t border-gray-200';
+    const addBtn = document.createElement('button');
+    addBtn.innerHTML = `
+      <div class="flex items-center justify-center gap-2 text-gray-600 hover:text-gray-800">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+        </svg>
+        添加表情
+      </div>
+    `;
+    addBtn.className = 'w-full py-2 rounded-lg hover:bg-gray-100 transition-colors duration-200';
+    addBtn.addEventListener('click', () => addNewEmoji(groupIndex));
+    addWrap.appendChild(addBtn);
+    card.appendChild(addWrap);
+    
     container.appendChild(card);
   });
-
+  
   // attach touch drag support for emoji items (mobile/touch)
   try {
     attachTouchDrag(document, '.touch-draggable-item', {
+      handleSelector: '.drag-handle',
       onDrop: ({ fromContainer, fromIndex, toContainer, toIndex, item }) => {
         // convert placeholder-based indices to emojiData operations
         if (!item) return;
@@ -368,13 +407,14 @@ function renderGroups() {
         const safeFrom = Math.max(0, Math.min((emojiData[fromGroupIndex]?.emojis?.length||0)-1, fromIndex));
         const safeTo = Math.max(0, Math.min((emojiData[toGroupIndex]?.emojis?.length||0), toIndex));
         if (fromGroupIndex === toGroupIndex) {
-          const moved = emojiData[fromGroupIndex].emojis.splice(safeFrom, 1)[0];
+          const moved = emojiData[fromGroupIndex].emojis.splice(safeFrom, 1);
           emojiData[toGroupIndex].emojis.splice(safeTo, 0, moved);
         } else {
-          const moved = emojiData[fromGroupIndex].emojis.splice(safeFrom, 1)[0];
+          const moved = emojiData[fromGroupIndex].emojis.splice(safeFrom, 1);
           emojiData[toGroupIndex].emojis.splice(safeTo, 0, moved);
         }
         saveEmojiData(emojiData);
+        // 重新渲染界面以反映新的顺序
         renderGroups();
       }
     });
@@ -386,6 +426,16 @@ function renderGroups() {
 
 export async function initOptions() {
   console.log('[Nachoneko] initOptions running');
+  // add a root class when touch is available so we can show touch-only UI (like drag handles)
+  try {
+    if (isTouchDevice() && document && document.documentElement) {
+      document.documentElement.classList.add('has-touch');
+    } else if (document && document.documentElement) {
+      document.documentElement.classList.remove('has-touch');
+    }
+  } catch (e) {
+    // ignore
+  }
   await getEmojiData();
   // wire toolbar buttons
   const addBtn = document.getElementById('add-group');

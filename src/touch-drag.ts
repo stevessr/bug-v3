@@ -9,7 +9,7 @@ type DropInfo = {
   item: Element;
 };
 
-export function attachTouchDrag(root: Element | Document, itemSelector: string, opts: { onDrop: (info: DropInfo) => void }) {
+export function attachTouchDrag(root: Element | Document, itemSelector: string, opts: { onDrop: (info: DropInfo) => void, handleSelector?: string }) {
   let draggingEl: Element | null = null;
   let placeholder: HTMLElement | null = null;
   let originContainer: Element | null = null;
@@ -28,12 +28,22 @@ export function attachTouchDrag(root: Element | Document, itemSelector: string, 
     const t = e.target as Element;
     const item = findItemEl(t);
     if (!item) return;
+    // if a handleSelector is provided, only start drag when touch started on the handle (or inside it)
+    if (opts.handleSelector) {
+      let ok = false;
+      let cur: Element | null = e.target as Element | null;
+      while (cur && cur !== item) {
+        if (cur.matches && (cur as Element).matches(opts.handleSelector)) { ok = true; break; }
+        cur = cur.parentElement;
+      }
+      if (!ok) return; // touch didn't start on handle
+    }
     e.preventDefault();
     draggingEl = item;
     originContainer = item.parentElement;
     originIndex = indexWithinParent(item);
 
-    // create placeholder
+    // create placeholder with same dimensions
     placeholder = document.createElement('div');
     placeholder.className = 'touch-drag-placeholder';
     placeholder.style.height = (item as HTMLElement).getBoundingClientRect().height + 'px';
@@ -43,14 +53,8 @@ export function attachTouchDrag(root: Element | Document, itemSelector: string, 
 
     item.parentElement?.insertBefore(placeholder, item.nextSibling);
 
-    // make dragged element fixed so it follows touch
-    (item as HTMLElement).style.transition = 'none';
-    (item as HTMLElement).style.position = 'fixed';
-    (item as HTMLElement).style.left = item.getBoundingClientRect().left + 'px';
-    (item as HTMLElement).style.top = item.getBoundingClientRect().top + 'px';
-    (item as HTMLElement).style.width = item.getBoundingClientRect().width + 'px';
-    (item as HTMLElement).style.zIndex = '9999';
-    (item as HTMLElement).style.pointerEvents = 'none';
+    // hide the original element with opacity instead of moving it
+    (item as HTMLElement).style.opacity = '0.5';
 
     document.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd);
@@ -60,9 +64,6 @@ export function attachTouchDrag(root: Element | Document, itemSelector: string, 
     if (!draggingEl) return;
     e.preventDefault();
     const touch = e.touches[0];
-    const el = draggingEl as HTMLElement;
-    el.style.left = touch.clientX - el.offsetWidth / 2 + 'px';
-    el.style.top = touch.clientY - el.offsetHeight / 2 + 'px';
 
     // find element under the touch
     const target = document.elementFromPoint(touch.clientX, touch.clientY) as Element | null;
@@ -88,35 +89,30 @@ export function attachTouchDrag(root: Element | Document, itemSelector: string, 
     const toContainer = placeholder.parentElement;
     const toIndex = indexWithinParent(placeholder);
 
-    // remove placeholder and restore dragged element
-    const dragged = draggingEl;
-    cleanup();
-
-    // call drop callback
+    // call drop callback before cleanup
     opts.onDrop({
       fromContainer: originContainer,
       fromIndex: originIndex,
       toContainer: toContainer,
       toIndex: toIndex,
-      item: dragged,
+      item: draggingEl,
     });
+
+    cleanup();
   }
 
   function cleanup() {
+    // restore the original element's visibility
     if (draggingEl) {
-      // remove inline styles
       const el = draggingEl as HTMLElement;
-      el.style.position = '';
-      el.style.left = '';
-      el.style.top = '';
-      el.style.width = '';
-      el.style.zIndex = '';
-      el.style.pointerEvents = '';
-      el.style.transition = '';
+      el.style.opacity = '';
     }
+    
+    // remove placeholder
     if (placeholder && placeholder.parentElement) {
       placeholder.parentElement.removeChild(placeholder);
     }
+    
     placeholder = null;
     draggingEl = null;
     originContainer = null;
@@ -152,4 +148,16 @@ export function attachTouchDrag(root: Element | Document, itemSelector: string, 
       document.removeEventListener('touchend', onTouchEnd as EventListener);
     }
   };
+}
+
+// Detect touch-capable devices using multiple signals.
+export function isTouchDevice() {
+  try {
+    const hasOnTouchStart = typeof window !== 'undefined' && 'ontouchstart' in window;
+    const maxTouchPoints = typeof navigator !== 'undefined' && (navigator as any).maxTouchPoints && (navigator as any).maxTouchPoints > 0;
+    const msMax = typeof navigator !== 'undefined' && (navigator as any).msMaxTouchPoints && (navigator as any).msMaxTouchPoints > 0;
+    return Boolean(hasOnTouchStart || maxTouchPoints || msMax);
+  } catch (e) {
+    return false;
+  }
 }
