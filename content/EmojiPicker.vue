@@ -1,95 +1,188 @@
 <template>
-  <div class="emoji-picker-container">
-    <div class="emoji-picker">
-      <div class="emoji-grid">
-        <button
-          class="emoji-button"
-          v-for="emoji in emojiSet"
-          :key="emoji.name"
-          @click="selectEmoji(emoji)"
+  <div class="emoji-picker-container bg-white border border-gray-200 rounded-lg shadow-lg w-80 max-h-96">
+    <!-- Header -->
+    <div class="p-3 border-b border-gray-200 bg-gray-50">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold text-gray-900">表情选择器</h3>
+        <button 
+          @click="$emit('close')"
+          class="p-1 text-gray-500 hover:text-gray-700 rounded"
+          title="关闭"
         >
-          <img :src="emoji.url" :alt="emoji.name" />
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
         </button>
       </div>
+      
+      <!-- Scale Control -->
+      <div class="flex items-center gap-2 text-xs">
+        <span class="text-gray-600">缩放:</span>
+        <input
+          v-model.number="localScale"
+          type="range"
+          min="5"
+          max="150"
+          step="5"
+          class="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          @input="updateScale"
+        />
+        <span class="w-10 text-right text-gray-600">{{ localScale }}%</span>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="p-2 border-b border-gray-100">
+      <div class="relative">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="搜索表情..."
+          class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <svg class="absolute right-2 top-1.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Group Tabs -->
+    <div class="flex border-b border-gray-100 overflow-x-auto">
+      <button
+        v-for="group in sortedGroups"
+        :key="group.id"
+        @click="activeGroupId = group.id"
+        :class="[
+          'flex-shrink-0 px-3 py-2 text-xs font-medium border-b-2 transition-colors',
+          activeGroupId === group.id
+            ? 'border-blue-500 text-blue-600 bg-blue-50'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        ]"
+      >
+        <span class="mr-1">{{ group.icon }}</span>
+        {{ group.name }}
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex items-center justify-center py-8">
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+      <span class="ml-2 text-sm text-gray-600">加载中...</span>
+    </div>
+
+    <!-- Emoji Grid -->
+    <div v-else-if="filteredEmojis.length > 0" class="p-2">
+      <div class="grid grid-cols-4 gap-1 max-h-64 overflow-y-auto">
+        <button
+          v-for="emoji in filteredEmojis"
+          :key="emoji.id"
+          @click="selectEmoji(emoji)"
+          class="relative p-1 rounded hover:bg-gray-100 transition-colors group"
+          :title="emoji.name"
+        >
+          <img
+            :src="emoji.url"
+            :alt="emoji.name"
+            :style="{ 
+              width: `${Math.round(40 * (localScale / 100))}px`,
+              height: `${Math.round(40 * (localScale / 100))}px`
+            }"
+            class="object-contain mx-auto"
+            loading="lazy"
+          />
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else class="flex flex-col items-center justify-center py-8 text-center">
+      <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-8v2m0 6v2"></path>
+      </svg>
+      <p class="text-sm text-gray-600">{{ searchQuery ? '没有找到匹配的表情' : '该分组还没有表情' }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { emojiSet, Emoji } from "../store/emoji-data";
+import { ref, computed, onMounted, watch } from 'vue';
+import { useEmojiStore } from '../src/stores/emojiStore';
+import type { Emoji } from '../src/types/emoji';
 
+// Props and emits
 defineProps<{
   visible: boolean;
 }>();
 
-const emit = defineEmits(["select", "close"]);
+const emit = defineEmits<{
+  select: [emoji: Emoji];
+  close: [];
+}>();
+
+// Store
+const emojiStore = useEmojiStore();
+
+// Local state
+const localScale = ref(100);
+const searchQuery = ref('');
+const activeGroupId = ref('nachoneko');
+const isLoading = ref(true);
+
+// Computed
+const activeGroup = computed(() => 
+  emojiStore.groups.find(g => g.id === activeGroupId.value) || emojiStore.groups[0]
+);
+
+const filteredEmojis = computed(() => {
+  if (!activeGroup.value) return [];
+  
+  let emojis = activeGroup.value.emojis;
+  
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    emojis = emojis.filter(emoji => 
+      emoji.name.toLowerCase().includes(query)
+    );
+  }
+  
+  return emojis;
+});
+
+const sortedGroups = computed(() => 
+  [...emojiStore.groups].sort((a, b) => a.order - b.order)
+);
+
+// Methods
+const updateScale = () => {
+  emojiStore.updateSettings({ imageScale: localScale.value });
+};
 
 const selectEmoji = (emoji: Emoji) => {
-  const textarea = document.querySelector(
-    ".d-editor-input"
-  ) as HTMLTextAreaElement;
-  if (textarea) {
-    const emojiMarkdown = `![${emoji.name}|${emoji.width || 'auto'}x${emoji.height || 'auto'}](${emoji.url}) `;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    textarea.value =
-      textarea.value.substring(0, start) +
-      emojiMarkdown +
-      textarea.value.substring(end);
-    textarea.selectionStart = textarea.selectionEnd = start + emojiMarkdown.length;
-    textarea.focus();
-  }
-  emit("select", emoji);
-  emit("close");
+  emit('select', emoji);
+  emit('close');
 };
+
+// Lifecycle
+onMounted(async () => {
+  isLoading.value = true;
+  await emojiStore.loadData();
+  localScale.value = emojiStore.settings.imageScale;
+  activeGroupId.value = emojiStore.settings.defaultGroup;
+  isLoading.value = false;
+});
+
+// Watch for settings changes
+watch(() => emojiStore.settings.imageScale, (newScale) => {
+  localScale.value = newScale;
+});
 </script>
 
-<style scoped>
+<style>
+/* Import TailwindCSS for content script */
+@import '../src/styles/main.css';
+
+/* Additional emoji picker specific styles */
 .emoji-picker-container {
-  position: absolute;
-  z-index: 10001;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 320px;
-  height: 250px;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-.emoji-picker {
-  display: flex;
-  flex-direction: column;
-}
-
-.emoji-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-  gap: 4px;
-}
-
-.emoji-button {
-  background: none;
-  border: 1px solid transparent;
-  padding: 2px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-}
-
-.emoji-button:hover {
-  background-color: #f0f0f0;
-  border-color: #ccc;
-}
-
-.emoji-button img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 </style>

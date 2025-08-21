@@ -5,6 +5,9 @@ import { AntDesignVueResolver } from "unplugin-vue-components/resolvers";
 import { fileURLToPath, URL } from "url";
 
 export default defineConfig({
+  css: {
+    postcss: './postcss.config.js',
+  },
   plugins: [
     vue(),
     // auto register components and import styles for ant-design-vue

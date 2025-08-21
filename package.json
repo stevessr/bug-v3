@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-  "dev": "vite",
-  "build": "vite build && node ./scripts/clean-empty-chunks.mjs",
-  "serve": "vite preview"
+    "dev": "vite",
+    "build": "vite build && node ./scripts/clean-empty-chunks.mjs",
+    "serve": "vite preview"
   },
   "dependencies": {
     "ant-design-vue": "^4.1.2",
@@ -16,11 +16,15 @@
   },
   "devDependencies": {
     "@ant-design/icons-vue": "^7.0.1",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^24.3.0",
     "@vitejs/plugin-vue": "^6.0.1",
+    "autoprefixer": "^10.4.21",
     "less": "^4.4.1",
+    "postcss": "^8.5.6",
     "rolldown": "^0.2.0",
     "rolldown-vite": "^7.1.4",
+    "tailwindcss": "^3.4.17",
     "terser": "^5.43.1",
     "unplugin-auto-import": "^20.0.0",
     "unplugin-vue-components": "^29.0.0"
