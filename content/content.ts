@@ -5,14 +5,29 @@ function initializeEmojiFeature() {
   const targetNode = document.body;
   const config = { childList: true, subtree: true };
 
-  const observer = new MutationObserver((mutationsList, obs) => {
-    const toolbar = document.querySelector(".d-editor-button-bar");
-    if (toolbar && !document.getElementById("custom-emoji-button")) {
-      injectButton(toolbar);
-      // We don't disconnect here to handle dynamic UI changes where the editor might be removed and re-added.
-    }
-  });
+  let checkTimeout: number | null = null;
+  const debouncedCheck = () => {
+    if (checkTimeout) window.clearTimeout(checkTimeout);
+    checkTimeout = window.setTimeout(() => {
+      try {
+        const toolbar = findToolbar();
+        if (toolbar && !document.getElementById("custom-emoji-button")) {
+          injectButton(toolbar);
+        }
+      } catch (e) {
+        // swallow
+      }
+    }, 250);
+  };
 
+  // initial attempt after DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', debouncedCheck);
+  } else {
+    debouncedCheck();
+  }
+
+  const observer = new MutationObserver(() => debouncedCheck());
   observer.observe(targetNode, config);
 }
 
@@ -76,7 +91,47 @@ function injectButton(toolbar: Element) {
   });
 
   // 6. Inject the button into the toolbar
-  toolbar.appendChild(button);
+  try {
+    toolbar.appendChild(button);
+  } catch (e) {
+    // fallback: append to body and position near toolbar bounding box
+    console.debug('[emoji] append to toolbar failed, falling back to body');
+    document.body.appendChild(button);
+  }
+}
+
+function findToolbar(): Element | null {
+  // Try multiple strategies to locate an editor toolbar or a suitable insertion point.
+  const selectors = [
+    '.d-editor-button-bar', // Discourse
+    '.editor-toolbar',
+    '.toolbar',
+    '.ProseMirror-menubar',
+    '[role="toolbar"]',
+  ];
+
+  for (const s of selectors) {
+    const el = document.querySelector(s);
+    if (el) return el as Element;
+  }
+
+  // If focused element is an input/textarea or contenteditable, try to find its nearest toolbar sibling
+  const active = document.activeElement as HTMLElement | null;
+  if (active) {
+    if (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT' || active.isContentEditable) {
+      // check parent for toolbar-like sibling
+      const parent = active.parentElement;
+      if (parent) {
+        const toolbar = parent.querySelector('[role="toolbar"], .toolbar, .editor-toolbar');
+        if (toolbar) return toolbar as Element;
+      }
+      // fallback to parent itself
+      return parent;
+    }
+  }
+
+  // last resort, return null so injectButton doesn't run
+  return null;
 }
 
 initializeEmojiFeature();
