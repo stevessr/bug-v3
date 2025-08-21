@@ -1,5 +1,9 @@
 // Enhanced content script for Linux.do emoji injection
 // Updated to use new storage system with conflict resolution
+
+// Chrome API declaration for content script context
+declare const chrome: any;
+
 // Global state
 let cachedEmojiGroups: any[] = [];
 let cachedSettings: any = { imageScale: 30, gridColumns: 4 };
@@ -14,9 +18,13 @@ class ContentStorageAdapter {
       try {
         const result = await chrome.storage.local.get({ [key]: null });
         const value = result[key];
-        if (value && value.data) {
+        if (value !== null && value !== undefined) {
           console.log(`[Content Storage] Found ${key} in extension storage`);
-          return value.data;
+          // Handle both new storage format (with .data) and legacy format
+          if (value && typeof value === 'object' && value.data !== undefined) {
+            return value.data;
+          }
+          return value;
         }
       } catch (error) {
         console.warn(`[Content Storage] Extension storage failed for ${key}:`, error);
@@ -29,9 +37,13 @@ class ContentStorageAdapter {
         const value = localStorage.getItem(key);
         if (value) {
           const parsed = JSON.parse(value);
-          if (parsed && parsed.data) {
+          if (parsed !== null && parsed !== undefined) {
             console.log(`[Content Storage] Found ${key} in localStorage`);
-            return parsed.data;
+            // Handle both new storage format (with .data) and legacy format
+            if (parsed && typeof parsed === 'object' && parsed.data !== undefined) {
+              return parsed.data;
+            }
+            return parsed;
           }
         }
       }
@@ -45,9 +57,13 @@ class ContentStorageAdapter {
         const value = sessionStorage.getItem(key);
         if (value) {
           const parsed = JSON.parse(value);
-          if (parsed && parsed.data) {
+          if (parsed !== null && parsed !== undefined) {
             console.log(`[Content Storage] Found ${key} in sessionStorage`);
-            return parsed.data;
+            // Handle both new storage format (with .data) and legacy format
+            if (parsed && typeof parsed === 'object' && parsed.data !== undefined) {
+              return parsed.data;
+            }
+            return parsed;
           }
         }
       }
@@ -60,33 +76,93 @@ class ContentStorageAdapter {
   }
 
   async getAllEmojiGroups(): Promise<any[]> {
+    console.log('[Content Storage] Getting all emoji groups');
+    
     // First try to get the group index
     const groupIndex = await this.get('emojiGroupIndex');
-    if (groupIndex && Array.isArray(groupIndex)) {
+    console.log('[Content Storage] Group index:', groupIndex);
+    
+    if (groupIndex && Array.isArray(groupIndex) && groupIndex.length > 0) {
       const groups = [];
       for (const groupInfo of groupIndex) {
-        const group = await this.get(`emojiGroup_${groupInfo.id}`);
-        if (group) {
-          groups.push({ ...group, order: groupInfo.order });
+        console.log(`[Content Storage] Processing group info:`, groupInfo);
+        if (groupInfo && groupInfo.id) {
+          const group = await this.get(`emojiGroup_${groupInfo.id}`);
+          console.log(`[Content Storage] Raw group data for ${groupInfo.id}:`, group);
+          
+          if (group) {
+            console.log(`[Content Storage] Group structure:`, {
+              hasEmojis: !!group.emojis,
+              emojisType: typeof group.emojis,
+              isArray: Array.isArray(group.emojis),
+              emojisLength: group.emojis?.length,
+              groupKeys: Object.keys(group)
+            });
+            
+            // Handle case where emojis is stored as an object instead of array
+            let emojisArray = group.emojis;
+            if (group.emojis && typeof group.emojis === 'object' && !Array.isArray(group.emojis)) {
+              // Convert object to array if needed
+              emojisArray = Object.values(group.emojis);
+              console.log(`[Content Storage] Converting emojis object to array for ${group.name}, length: ${emojisArray.length}`);
+            }
+            
+            if (emojisArray && Array.isArray(emojisArray)) {
+              const processedGroup = { ...group, emojis: emojisArray, order: groupInfo.order || 0 };
+              groups.push(processedGroup);
+              console.log(`[Content Storage] ✅ Loaded group: ${group.name} with ${emojisArray.length} emojis`);
+            } else if (groupInfo.id === 'favorites') {
+              // Special handling for favorites group which might not have emojis initially
+              const favoritesGroup = { 
+                ...group, 
+                emojis: emojisArray && Array.isArray(emojisArray) ? emojisArray : [], 
+                order: groupInfo.order || 0 
+              };
+              groups.push(favoritesGroup);
+              console.log(`[Content Storage] ✅ Loaded favorites group with ${favoritesGroup.emojis.length} emojis`);
+            } else {
+              console.warn(`[Content Storage] ❌ Group ${group.name || groupInfo.id} has invalid emojis after conversion:`, {
+                hasEmojis: !!emojisArray,
+                emojisType: typeof emojisArray,
+                isArray: Array.isArray(emojisArray),
+                originalEmojisType: typeof group.emojis
+              });
+            }
+          } else {
+            console.warn(`[Content Storage] ❌ Group ${groupInfo.id} data is null/undefined`);
+          }
         }
       }
+      
+      console.log(`[Content Storage] Processed ${groupIndex.length} groups, ${groups.length} valid groups found`);
+      
       if (groups.length > 0) {
+        console.log(`[Content Storage] Successfully loaded ${groups.length} groups from new storage system`);
         return groups.sort((a, b) => a.order - b.order);
+      } else {
+        console.warn(`[Content Storage] No valid groups found in new storage system despite having group index`);
       }
     }
 
     // Fallback to legacy emojiGroups key
+    console.log('[Content Storage] Trying legacy emojiGroups key');
     const legacyGroups = await this.get('emojiGroups');
-    if (legacyGroups && Array.isArray(legacyGroups)) {
+    if (legacyGroups && Array.isArray(legacyGroups) && legacyGroups.length > 0) {
+      console.log(`[Content Storage] Loaded ${legacyGroups.length} groups from legacy storage`);
       return legacyGroups;
     }
 
+    console.log('[Content Storage] No groups found in storage');
     return [];
   }
 
   async getSettings(): Promise<any> {
+    console.log('[Content Storage] Getting settings');
     const settings = await this.get('appSettings');
-    return settings || { imageScale: 30, gridColumns: 4 };
+    const defaultSettings = { imageScale: 30, gridColumns: 4 };
+    const result = settings ? { ...defaultSettings, ...settings } : defaultSettings;
+    console.log('[Content Storage] Settings loaded:', result);
+    return result;
   }
 }
 
@@ -99,9 +175,27 @@ async function loadDataFromStorage() {
     
     // Load groups using new storage system
     const groups = await contentStorage.getAllEmojiGroups();
+    console.log('[Emoji Extension] Loaded groups from storage:', groups?.length || 0);
+    
     if (Array.isArray(groups) && groups.length > 0) {
-      cachedEmojiGroups = groups;
-      console.log('[Emoji Extension] Loaded groups:', groups.length);
+      // Validate that groups have valid emoji data
+      let validGroups = 0;
+      let totalEmojis = 0;
+      
+      groups.forEach(group => {
+        if (group && group.emojis && Array.isArray(group.emojis)) {
+          validGroups++;
+          totalEmojis += group.emojis.length;
+        }
+      });
+      
+      if (validGroups > 0 && totalEmojis > 0) {
+        cachedEmojiGroups = groups;
+        console.log(`[Emoji Extension] Successfully loaded ${validGroups} valid groups with ${totalEmojis} total emojis`);
+      } else {
+        console.warn('[Emoji Extension] Groups exist but contain no valid emojis, using defaults');
+        cachedEmojiGroups = [];
+      }
     } else {
       console.warn('[Emoji Extension] No valid emoji groups found, using defaults');
       cachedEmojiGroups = [];
@@ -114,8 +208,19 @@ async function loadDataFromStorage() {
       console.log('[Emoji Extension] Loaded settings:', cachedSettings);
     }
 
+    // Final validation and fallback
+    let finalEmojisCount = 0;
+    if (Array.isArray(cachedEmojiGroups)) {
+      cachedEmojiGroups.forEach(group => {
+        if (group?.emojis?.length) {
+          finalEmojisCount += group.emojis.length;
+        }
+      });
+    }
+
     console.log('[Emoji Extension] Final cache state:', {
       groupsCount: cachedEmojiGroups.length,
+      emojisCount: finalEmojisCount,
       settings: cachedSettings
     });
 
@@ -127,26 +232,6 @@ async function loadDataFromStorage() {
   }
 }
 
-// Get all emojis from cached groups
-function getAllEmojis() {
-  const allEmojis: any[] = [];
-
-  // Ensure cachedEmojiGroups is an array before calling forEach
-  if (Array.isArray(cachedEmojiGroups)) {
-    cachedEmojiGroups.forEach((group) => {
-      if (group && group.emojis && Array.isArray(group.emojis)) {
-        allEmojis.push(...group.emojis);
-      }
-    });
-  }
-
-  // Fallback to default if no emojis loaded
-  if (allEmojis.length === 0) {
-    return getDefaultEmojis();
-  }
-
-  return allEmojis;
-}
 
 console.log("[Emoji Extension] Content script loaded");
 
@@ -155,8 +240,18 @@ function initializeEmojiFeature() {
 
   // Load data from storage first
   loadDataFromStorage().then(() => {
-    console.log("[Emoji Extension] Data loaded from storage");
+    console.log("[Emoji Extension] Data loaded from storage, proceeding to inject features");
 
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(injectFeatures, 500);
+      });
+    } else {
+      setTimeout(injectFeatures, 500);
+    }
+  }).catch(error => {
+    console.error("[Emoji Extension] Failed to load data, proceeding with defaults:", error);
+    // Even if loading fails, still try to inject features with defaults
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => {
         setTimeout(injectFeatures, 500);
@@ -305,19 +400,41 @@ function injectButton(toolbar: Element) {
 }
 
 function createEmojiPicker(): HTMLElement {
-  // Get current emoji data with proper validation
-  const allEmojis = getAllEmojis();
-  console.log('[Emoji Extension] Creating picker with emojis:', allEmojis?.length || 0);
+  // Get current groups data instead of all emojis
+  console.log('[Emoji Extension] Creating picker with groups:', cachedEmojiGroups?.length || 0);
   
-  // Validate we have emojis
-  if (!Array.isArray(allEmojis) || allEmojis.length === 0) {
-    console.warn('[Emoji Extension] No valid emojis available for picker');
-    // Return a minimal error div
-    const errorDiv = document.createElement('div');
-    errorDiv.style.cssText = 'padding: 20px; text-align: center; color: #666;';
-    errorDiv.textContent = '暂无表情数据';
-    return errorDiv;
+  // Validate we have groups and emojis
+  let hasValidData = false;
+  let totalEmojis = 0;
+  let groupsToUse = cachedEmojiGroups;
+  
+  if (Array.isArray(cachedEmojiGroups) && cachedEmojiGroups.length > 0) {
+    cachedEmojiGroups.forEach(group => {
+      if (group?.emojis?.length > 0) {
+        hasValidData = true;
+        totalEmojis += group.emojis.length;
+      }
+    });
   }
+  
+  // If no valid cached data, create a default group
+  if (!hasValidData || totalEmojis === 0) {
+    console.warn('[Emoji Extension] No valid groups/emojis in cache, using default emojis');
+    
+    const defaultEmojis = getDefaultEmojis();
+    groupsToUse = [{
+      id: 'default',
+      name: '默认表情',
+      icon: '😀',
+      order: 0,
+      emojis: defaultEmojis
+    }];
+    
+    totalEmojis = defaultEmojis.length;
+    hasValidData = true;
+  }
+
+  console.log(`[Emoji Extension] Creating picker with ${groupsToUse.length} groups and ${totalEmojis} total emojis`);
 
   // Create picker following simple.html structure
   const picker = document.createElement("div");
@@ -357,18 +474,40 @@ function createEmojiPicker(): HTMLElement {
   const content = document.createElement("div");
   content.className = "emoji-picker__content";
 
-  // Section navigation
+  // Section navigation - create buttons for each group
   const sectionsNav = document.createElement("div");
   sectionsNav.className = "emoji-picker__sections-nav";
 
-  const favButton = document.createElement("button");
-  favButton.className = "btn no-text btn-flat emoji-picker__section-btn active";
-  favButton.setAttribute("tabindex", "-1");
-  favButton.setAttribute("data-section", "favorites");
-  favButton.type = "button";
-  favButton.innerHTML = "⭐";
-
-  sectionsNav.appendChild(favButton);
+  // Create navigation buttons for each group
+  groupsToUse.forEach((group, index) => {
+    if (group?.emojis?.length > 0) {
+      const navButton = document.createElement("button");
+      navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? 'active' : ''}`;
+      navButton.setAttribute("tabindex", "-1");
+      navButton.setAttribute("data-section", group.id);
+      navButton.type = "button";
+      navButton.innerHTML = group.icon || "📁";
+      navButton.title = group.name;
+      
+      // Add click handler for navigation
+      navButton.addEventListener('click', () => {
+        // Remove active class from all buttons
+        sectionsNav.querySelectorAll('.emoji-picker__section-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        // Add active class to clicked button
+        navButton.classList.add('active');
+        
+        // Scroll to corresponding section
+        const targetSection = sections.querySelector(`[data-section="${group.id}"]`);
+        if (targetSection) {
+          targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+      
+      sectionsNav.appendChild(navButton);
+    }
+  });
 
   // Scrollable content
   const scrollableContent = document.createElement("div");
@@ -378,76 +517,98 @@ function createEmojiPicker(): HTMLElement {
   sections.className = "emoji-picker__sections";
   sections.setAttribute("role", "button");
 
-  // Create section
-  const section = document.createElement("div");
-  section.className = "emoji-picker__section";
-  section.setAttribute("data-section", "favorites");
-  section.setAttribute("role", "region");
-  section.setAttribute("aria-label", "表情");
-
-  // Section title
-  const titleContainer = document.createElement("div");
-  titleContainer.className = "emoji-picker__section-title-container";
-
-  const title = document.createElement("h2");
-  title.className = "emoji-picker__section-title";
-  title.textContent = "表情";
-
-  titleContainer.appendChild(title);
-
-  // Section emojis
-  const sectionEmojis = document.createElement("div");
-  sectionEmojis.className = "emoji-picker__section-emojis";
-
-  // Populate with emojis - Additional safety check
-  if (Array.isArray(allEmojis) && allEmojis.length > 0) {
-    allEmojis.forEach((emoji) => {
-      // Ensure emoji object has required properties
-      if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) {
-        console.warn('[Emoji Extension] Skipping invalid emoji:', emoji);
-        return;
-      }
+  // Create sections for each group
+  groupsToUse.forEach((group) => {
+    if (group?.emojis?.length > 0) {
+      console.log(`[Emoji Extension] Creating section for group: ${group.name} with ${group.emojis.length} emojis`);
       
-      const img = document.createElement("img");
-      img.width = 32;
-      img.height = 32;
-      img.className = "emoji";
-      img.src = emoji.url;
-      img.setAttribute("tabindex", "0");
-      img.setAttribute("data-emoji", emoji.name);
-      img.alt = emoji.name;
-      img.title = `:${emoji.name}:`;
-      img.loading = "lazy";
+      // Create section
+      const section = document.createElement("div");
+      section.className = "emoji-picker__section";
+      section.setAttribute("data-section", group.id);
+      section.setAttribute("role", "region");
+      section.setAttribute("aria-label", group.name);
 
-    img.addEventListener("click", () => {
-      insertEmojiIntoEditor(emoji);
-      picker.remove();
-    });
+      // Section title
+      const titleContainer = document.createElement("div");
+      titleContainer.className = "emoji-picker__section-title-container";
 
-    img.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        insertEmojiIntoEditor(emoji);
-        picker.remove();
+      const title = document.createElement("h2");
+      title.className = "emoji-picker__section-title";
+      title.textContent = group.name;
+
+      titleContainer.appendChild(title);
+
+      // Section emojis
+      const sectionEmojis = document.createElement("div");
+      sectionEmojis.className = "emoji-picker__section-emojis";
+
+      // Populate with emojis from this group
+      let addedEmojis = 0;
+      
+      group.emojis.forEach((emoji: any, index: number) => {
+        // Ensure emoji object has required properties
+        if (!emoji || typeof emoji !== 'object') {
+          console.warn(`[Emoji Extension] Skipping invalid emoji at index ${index} in group ${group.name}:`, emoji);
+          return;
+        }
+        
+        if (!emoji.url || !emoji.name) {
+          console.warn(`[Emoji Extension] Skipping emoji with missing url/name at index ${index} in group ${group.name}:`, emoji);
+          return;
+        }
+        
+        const img = document.createElement("img");
+        img.width = 32;
+        img.height = 32;
+        img.className = "emoji";
+        img.src = emoji.url;
+        img.setAttribute("tabindex", "0");
+        img.setAttribute("data-emoji", emoji.name);
+        img.alt = emoji.name;
+        img.title = `:${emoji.name}:`;
+        img.loading = "lazy";
+
+        img.addEventListener("click", () => {
+          insertEmojiIntoEditor(emoji);
+          picker.remove();
+        });
+
+        img.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            insertEmojiIntoEditor(emoji);
+            picker.remove();
+          }
+        });
+
+        sectionEmojis.appendChild(img);
+        addedEmojis++;
+      });
+      
+      console.log(`[Emoji Extension] Added ${addedEmojis} emojis to section ${group.name}`);
+      
+      if (addedEmojis === 0) {
+        // Group has no valid emojis, show message
+        const noEmojisMsg = document.createElement("div");
+        noEmojisMsg.textContent = `${group.name} 组暂无有效表情`;
+        noEmojisMsg.style.cssText = "padding: 20px; text-align: center; color: #999;";
+        sectionEmojis.appendChild(noEmojisMsg);
       }
-    });
 
-    sectionEmojis.appendChild(img);
-    });
-  } else {
-    // Add fallback message if no emojis are available
-    const noEmojisMsg = document.createElement("div");
-    noEmojisMsg.textContent = "暂无表情数据";
-    noEmojisMsg.style.cssText = "padding: 20px; text-align: center; color: #666;";
-    sectionEmojis.appendChild(noEmojisMsg);
-  }
+      // Assemble section
+      section.appendChild(titleContainer);
+      section.appendChild(sectionEmojis);
+      sections.appendChild(section);
+    }
+  });
 
-  // Search functionality
+  // Search functionality - search across all sections
   searchInput.addEventListener("input", (e) => {
     const query = (e.target as HTMLInputElement).value.toLowerCase();
-    const images = sectionEmojis.querySelectorAll("img");
+    const allImages = sections.querySelectorAll("img");
 
-    images.forEach((img) => {
+    allImages.forEach((img) => {
       const emojiName = img.getAttribute("data-emoji")?.toLowerCase() || "";
       if (query === "" || emojiName.includes(query)) {
         (img as HTMLElement).style.display = "";
@@ -455,12 +616,19 @@ function createEmojiPicker(): HTMLElement {
         (img as HTMLElement).style.display = "none";
       }
     });
+    
+    // Show/hide section titles based on whether they have visible emojis
+    const allSections = sections.querySelectorAll(".emoji-picker__section");
+    allSections.forEach((section) => {
+      const visibleEmojis = section.querySelectorAll("img:not([style*='none'])");
+      const titleContainer = section.querySelector(".emoji-picker__section-title-container");
+      if (titleContainer) {
+        (titleContainer as HTMLElement).style.display = visibleEmojis.length > 0 ? "" : "none";
+      }
+    });
   });
 
   // Assemble structure
-  section.appendChild(titleContainer);
-  section.appendChild(sectionEmojis);
-  sections.appendChild(section);
   scrollableContent.appendChild(sections);
   content.appendChild(sectionsNav);
   content.appendChild(scrollableContent);
@@ -544,7 +712,7 @@ function insertEmojiIntoEditor(emoji: any) {
 
 // Storage sync listener - updated for new storage system
 if (chrome?.storage?.onChanged) {
-  chrome.storage.onChanged.addListener((changes, namespace) => {
+  chrome.storage.onChanged.addListener((changes: any, namespace: string) => {
     if (namespace === "local") {
       // Handle new storage system keys
       const relevantKeys = [
@@ -570,12 +738,16 @@ setInterval(() => {
     '.d-editor-button-bar[role="toolbar"]'
   );
   if (toolbar && !document.querySelector(".nacho-emoji-picker-button")) {
+    console.log('[Emoji Extension] Toolbar found but button missing, injecting...');
     injectButton(toolbar);
   }
-
-  // Reload data every 30 seconds to stay in sync
-  loadDataFromStorage();
 }, 30000);
+
+// Reload data every 2 minutes to stay in sync with backend storage
+setInterval(() => {
+  console.log('[Emoji Extension] Periodic data reload');
+  loadDataFromStorage();
+}, 120000);
 
 // More frequent check for toolbar injection
 setInterval(() => {
