@@ -178,7 +178,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   };
 
-  // Group management
+  // Group management (improved methods)
   const createGroup = (name: string, icon: string) => {
     const id = `group-${Date.now()}`;
     const newGroup: EmojiGroup = {
@@ -189,8 +189,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       emojis: []
     };
     groups.value.push(newGroup);
-  // persist via watcher, but also broadcast quickly for UX
-  postState('createGroup');
+    // Trigger save immediately
+    saveData();
+    postState('createGroup');
     return newGroup;
   };
 
@@ -198,7 +199,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const index = groups.value.findIndex(g => g.id === groupId);
     if (index !== -1) {
       groups.value[index] = { ...groups.value[index], ...updates };
-  postState('updateGroup');
+      saveData();
+      postState('updateGroup');
     }
   };
 
@@ -210,23 +212,29 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     if (activeGroupId.value === groupId) {
       activeGroupId.value = groups.value[0]?.id || 'nachoneko';
     }
-  postState('deleteGroup');
+    saveData();
+    postState('deleteGroup');
   };
 
-  const reorderGroups = (groupIds: string[]) => {
-    const reorderedGroups = groupIds.map((id, index) => {
-      const group = groups.value.find(g => g.id === id);
-      if (group) {
-        return { ...group, order: index };
-      }
-      return null;
-    }).filter(Boolean) as EmojiGroup[];
+  const reorderGroups = (sourceGroupId: string, targetGroupId: string) => {
+    const sourceIndex = groups.value.findIndex(g => g.id === sourceGroupId);
+    const targetIndex = groups.value.findIndex(g => g.id === targetGroupId);
     
-    groups.value = reorderedGroups;
-  postState('reorderGroups');
+    if (sourceIndex !== -1 && targetIndex !== -1) {
+      const [removed] = groups.value.splice(sourceIndex, 1);
+      groups.value.splice(targetIndex, 0, removed);
+      
+      // Update order numbers
+      groups.value.forEach((group, index) => {
+        group.order = index;
+      });
+      
+      saveData();
+      postState('reorderGroups');
+    }
   };
 
-  // Emoji management
+  // Emoji management (improved methods)
   const addEmoji = (groupId: string, emoji: Omit<Emoji, 'id' | 'groupId'>) => {
     const group = groups.value.find(g => g.id === groupId);
     if (group) {
@@ -236,6 +244,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         groupId
       };
       group.emojis.push(newEmoji);
+      saveData();
       postState('addEmoji');
       return newEmoji;
     }
@@ -246,7 +255,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const index = group.emojis.findIndex(e => e.id === emojiId);
       if (index !== -1) {
         group.emojis[index] = { ...group.emojis[index], ...updates };
-  postState('updateEmoji');
+        saveData();
+        postState('updateEmoji');
         break;
       }
     }
@@ -257,36 +267,39 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       group.emojis = group.emojis.filter(e => e.id !== emojiId);
     }
     favorites.value.delete(emojiId);
-  postState('deleteEmoji');
+    saveData();
+    postState('deleteEmoji');
   };
 
-  const moveEmoji = (emojiId: string, targetGroupId: string, targetIndex?: number) => {
-    let emoji: Emoji | undefined;
+  const moveEmoji = (sourceGroupId: string, sourceIndex: number, targetGroupId: string, targetIndex: number) => {
+    const sourceGroup = groups.value.find(g => g.id === sourceGroupId);
+    const targetGroup = groups.value.find(g => g.id === targetGroupId);
     
-    // Find and remove emoji from current group
-    for (const group of groups.value) {
-      const index = group.emojis.findIndex(e => e.id === emojiId);
-      if (index !== -1) {
-        emoji = group.emojis.splice(index, 1)[0];
-        break;
+    if (sourceGroup && targetGroup && sourceIndex >= 0 && sourceIndex < sourceGroup.emojis.length) {
+      const [emoji] = sourceGroup.emojis.splice(sourceIndex, 1);
+      emoji.groupId = targetGroupId;
+      
+      // Insert at target position
+      if (targetIndex >= 0 && targetIndex <= targetGroup.emojis.length) {
+        targetGroup.emojis.splice(targetIndex, 0, emoji);
+      } else {
+        targetGroup.emojis.push(emoji);
       }
+      
+      saveData();
+      postState('moveEmoji');
     }
-    
-    // Add to target group
-    if (emoji) {
-      const targetGroup = groups.value.find(g => g.id === targetGroupId);
-      if (targetGroup) {
-        emoji.groupId = targetGroupId;
-        
-        // Insert at specific position if index provided
-        if (typeof targetIndex === 'number' && targetIndex >= 0) {
-          targetGroup.emojis.splice(targetIndex, 0, emoji);
-        } else {
-          targetGroup.emojis.push(emoji);
-        }
-      }
+  };
+
+  const removeEmojiFromGroup = (groupId: string, index: number) => {
+    const group = groups.value.find(g => g.id === groupId);
+    if (group && index >= 0 && index < group.emojis.length) {
+      const emoji = group.emojis[index];
+      group.emojis.splice(index, 1);
+      favorites.value.delete(emoji.id);
+      saveData();
+      postState('removeEmoji');
     }
-  postState('moveEmoji');
   };
 
   // Favorites management
@@ -425,6 +438,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     updateEmoji,
     deleteEmoji,
     moveEmoji,
+    removeEmojiFromGroup,
     toggleFavorite,
     findEmojiById,
     updateSettings,

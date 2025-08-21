@@ -44,79 +44,257 @@
       </div>
     </header>
 
+    <!-- Navigation Tabs -->
+    <nav class="bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex space-x-8">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            @click="activeTab = tab.id"
+            :class="[
+              'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
+              activeTab === tab.id
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            ]"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+      </div>
+    </nav>
+
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Settings Panel -->
-      <div class="bg-white rounded-lg shadow-sm border mb-8">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">全局设置</h2>
-        </div>
-        <div class="p-6 space-y-6">
-          <!-- Image Scale -->
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium text-gray-900">默认图片缩放</label>
-              <p class="text-sm text-gray-500">控制插入表情的默认尺寸</p>
+      
+      <!-- Settings Tab -->
+      <div v-if="activeTab === 'settings'" class="space-y-8">
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">全局设置</h2>
+          </div>
+          <div class="p-6 space-y-6">
+            <!-- Image Scale -->
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-900">默认图片缩放</label>
+                <p class="text-sm text-gray-500">控制插入表情的默认尺寸</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <input
+                  :value="emojiStore.settings.imageScale"
+                  @input="updateImageScale"
+                  type="range"
+                  min="5"
+                  max="150"
+                  step="5"
+                  class="w-32"
+                />
+                <span class="text-sm text-gray-600 w-12">{{ emojiStore.settings.imageScale }}%</span>
+              </div>
             </div>
-            <div class="flex items-center gap-3">
-              <input
-                :value="emojiStore.settings.imageScale"
-                @input="updateImageScale"
-                type="range"
-                min="5"
-                max="150"
-                step="5"
-                class="w-32"
-              />
-              <span class="text-sm text-gray-600 w-12">{{ emojiStore.settings.imageScale }}%</span>
+
+            <!-- Grid Columns -->
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-900">网格列数</label>
+                <p class="text-sm text-gray-500">表情选择器中的列数</p>
+              </div>
+              <select
+                :value="emojiStore.settings.gridColumns"
+                @change="updateGridColumns"
+                class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="2">2 列</option>
+                <option value="3">3 列</option>
+                <option value="4">4 列</option>
+                <option value="5">5 列</option>
+                <option value="6">6 列</option>
+                <option value="8">8 列</option>
+              </select>
+            </div>
+
+            <!-- Show Search Bar -->
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-900">显示搜索框</label>
+                <p class="text-sm text-gray-500">在表情选择器中显示搜索功能</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="emojiStore.settings.showSearchBar"
+                  @change="updateShowSearchBar"
+                  class="sr-only peer"
+                />
+                <div
+                  class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
+                ></div>
+              </label>
             </div>
           </div>
-
-          <!-- Grid Columns -->
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium text-gray-900">网格列数</label>
-              <p class="text-sm text-gray-500">表情选择器中的列数</p>
-            </div>
-            <select
-              :value="emojiStore.settings.gridColumns"
-              @change="updateGridColumns"
-              class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="2">2 列</option>
-              <option value="3">3 列</option>
-              <option value="4">4 列</option>
-              <option value="5">5 列</option>
-              <option value="6">6 列</option>
-              <option value="8">8 列</option>
-            </select>
-          </div>
-
-          <!-- Show Search Bar -->
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium text-gray-900">显示搜索框</label>
-              <p class="text-sm text-gray-500">在表情选择器中显示搜索功能</p>
-            </div>
-      <label class="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                :checked="emojiStore.settings.showSearchBar"
-                @change="updateShowSearchBar"
-        class="sr-only peer"
-              />
-              <div
-        class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
-              ></div>
-            </label>
-          </div>
-
-
         </div>
       </div>
 
-      <!-- Emoji Groups Management -->
-      <div class="bg-white rounded-lg shadow-sm border mb-8">
+      <!-- Emoji Groups Tab -->
+      <div v-if="activeTab === 'groups'" class="space-y-8">
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+              <h2 class="text-lg font-semibold text-gray-900">表情分组管理</h2>
+              <button
+                @click="showCreateGroupModal = true"
+                class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                新建分组
+              </button>
+            </div>
+          </div>
+          
+          <div class="p-6">
+            <div class="space-y-4">
+              <div
+                v-for="group in emojiStore.sortedGroups"
+                :key="group.id"
+                class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                :draggable="true"
+                @dragstart="handleDragStart(group, $event)"
+                @dragover.prevent
+                @drop="handleDrop(group, $event)"
+              >
+                <div class="flex items-center justify-between p-4">
+                  <div class="flex items-center gap-3">
+                    <div class="cursor-move text-gray-400">⋮⋮</div>
+                    <div class="text-lg">{{ group.icon }}</div>
+                    <div>
+                      <h3 class="font-medium text-gray-900">{{ group.name }}</h3>
+                      <p class="text-sm text-gray-500">{{ group.emojis?.length || 0 }} 个表情</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button
+                      @click="toggleGroupExpansion(group.id)"
+                      class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                    >
+                      {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
+                    </button>
+                    <button
+                      @click="openEditGroup(group)"
+                      class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
+                      @click="confirmDeleteGroup(group)"
+                      class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                    >
+                      删除
+                    </button>
+                  </div>
+                </div>
+                
+                <!-- Expanded emoji display -->
+                <div v-if="expandedGroups.has(group.id)" class="px-4 pb-4 border-t border-gray-100">
+                  <div class="mt-4">
+                    <div class="grid grid-cols-12 gap-3">
+                      <div
+                        v-for="(emoji, index) in group.emojis"
+                        :key="`${group.id}-${index}`"
+                        class="emoji-item relative group cursor-move"
+                        :draggable="true"
+                        @dragstart="handleEmojiDragStart(emoji, group.id, index, $event)"
+                        @dragover.prevent
+                        @drop="handleEmojiDrop(group.id, index, $event)"
+                      >
+                        <div class="aspect-square bg-gray-50 rounded-lg p-2 hover:bg-gray-100 transition-colors">
+                          <img
+                            :src="emoji.url"
+                            :alt="emoji.name"
+                            class="w-full h-full object-contain rounded"
+                            :style="{ width: '48px', height: '48px' }"
+                          />
+                        </div>
+                        <div class="text-xs text-center text-gray-600 mt-1 truncate">{{ emoji.name }}</div>
+                        <button
+                          @click="removeEmojiFromGroup(group.id, index)"
+                          class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- Add emoji button -->
+                    <div class="mt-4">
+                      <button
+                        @click="showAddEmojiModal = true; selectedGroupForAdd = group.id"
+                        class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full"
+                      >
+                        + 添加表情
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Tab -->
+      <div v-if="activeTab === 'stats'" class="space-y-8">
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">使用统计</h2>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="bg-blue-50 rounded-lg p-4">
+                <div class="text-2xl font-bold text-blue-600">{{ emojiStore.groups.length }}</div>
+                <div class="text-sm text-blue-800">表情分组</div>
+              </div>
+              <div class="bg-green-50 rounded-lg p-4">
+                <div class="text-2xl font-bold text-green-600">{{ totalEmojis }}</div>
+                <div class="text-sm text-green-800">总表情数</div>
+              </div>
+              <div class="bg-purple-50 rounded-lg p-4">
+                <div class="text-2xl font-bold text-purple-600">{{ emojiStore.favorites.size }}</div>
+                <div class="text-sm text-purple-800">收藏表情</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- About Tab -->
+      <div v-if="activeTab === 'about'" class="space-y-8">
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">关于扩展</h2>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <h3 class="font-medium text-gray-900">表情包扩展</h3>
+              <p class="text-sm text-gray-600">版本 1.0.0</p>
+            </div>
+            <div>
+              <h3 class="font-medium text-gray-900">功能特色</h3>
+              <ul class="text-sm text-gray-600 space-y-1 mt-2">
+                <li>• 支持多分组表情管理</li>
+                <li>• 拖拽排序和重新组织</li>
+                <li>• Chrome 同步支持</li>
+                <li>• 响应式设计，触屏优化</li>
+                <li>• 实时搜索和过滤</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legacy content (remove this section) -->
+      <div v-if="false" class="bg-white rounded-lg shadow-sm border mb-8">
         <div class="px-6 py-4 border-b border-gray-200">
           <div class="flex justify-between items-center">
             <h2 class="text-lg font-semibold text-gray-900">表情分组管理</h2>
@@ -163,8 +341,8 @@
         </div>
       </div>
 
-      <!-- Emoji Management -->
-      <div class="bg-white rounded-lg shadow-sm border">
+      <!-- Legacy emoji management (remove this section) -->
+      <div v-if="false" class="bg-white rounded-lg shadow-sm border">
         <div class="px-6 py-4 border-b border-gray-200">
           <div class="flex justify-between items-center">
             <h2 class="text-lg font-semibold text-gray-900">表情管理</h2>
@@ -479,6 +657,35 @@
       </div>
     </div>
 
+    <!-- Confirm Delete Group Modal -->
+    <div
+      v-if="showConfirmDeleteModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click="showConfirmDeleteModal = false"
+    >
+      <div
+        class="bg-white rounded-lg p-6 w-full max-w-md"
+        @click.stop
+      >
+        <h3 class="text-lg font-semibold mb-4">确认删除</h3>
+        <p class="text-gray-600 mb-6">确定要删除分组 "{{ groupToDelete?.name }}" 吗？分组中的表情也会被删除。</p>
+        <div class="flex justify-end gap-3">
+          <button
+            @click="showConfirmDeleteModal = false"
+            class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+          >
+            取消
+          </button>
+          <button
+            @click="deleteGroup"
+            class="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+          >
+            删除
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Success Toast -->
     <div
       v-if="showSuccessToast"
@@ -504,8 +711,27 @@ import type { EmojiGroup } from '../types/emoji'
 
 const emojiStore = useEmojiStore()
 
+// Tab navigation
+const activeTab = ref('settings')
+const tabs = [
+  { id: 'settings', label: '设置' },
+  { id: 'groups', label: '分组管理' },
+  { id: 'stats', label: '统计' },
+  { id: 'about', label: '关于' }
+]
+
+// Drag and drop state
+const draggedGroup = ref<EmojiGroup | null>(null)
+const draggedEmoji = ref<any>(null)
+const draggedEmojiGroupId = ref<string>('')
+const draggedEmojiIndex = ref<number>(-1)
+
+// Group expansion state
+const expandedGroups = ref<Set<string>>(new Set())
+
 // Reactive data
 const selectedGroupId = ref('')
+const selectedGroupForAdd = ref('')
 const showCreateGroupModal = ref(false)
 const showAddEmojiModal = ref(false)
 const showEditGroupModal = ref(false)
@@ -513,11 +739,14 @@ const showImportModal = ref(false)
 const showImportEmojiModal = ref(false)
 const showSuccessToast = ref(false)
 const showErrorToast = ref(false)
+const showConfirmDeleteModal = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
+const groupToDelete = ref<EmojiGroup | null>(null)
 
 // New group data
 const newGroupName = ref('')
+const newGroupIcon = ref('📁')
 const newGroupColor = ref('#3B82F6')
 const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16']
 
@@ -548,7 +777,86 @@ const filteredEmojis = computed(() => {
   return group ? group.emojis : []
 })
 
-// Methods
+const totalEmojis = computed(() => {
+  return emojiStore.groups.reduce((total, group) => total + (group.emojis?.length || 0), 0)
+})
+
+// Group management methods
+const toggleGroupExpansion = (groupId: string) => {
+  if (expandedGroups.value.has(groupId)) {
+    expandedGroups.value.delete(groupId)
+  } else {
+    expandedGroups.value.add(groupId)
+  }
+}
+
+const confirmDeleteGroup = (group: EmojiGroup) => {
+  groupToDelete.value = group
+  showConfirmDeleteModal.value = true
+}
+
+const deleteGroup = async () => {
+  if (groupToDelete.value) {
+    await emojiStore.deleteGroup(groupToDelete.value.id)
+    showSuccess(`分组 "${groupToDelete.value.name}" 已删除`)
+    showConfirmDeleteModal.value = false
+    groupToDelete.value = null
+  }
+}
+
+// Drag and drop handlers
+const handleDragStart = (group: EmojiGroup, event: DragEvent) => {
+  draggedGroup.value = group
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+const handleDrop = (targetGroup: EmojiGroup, event: DragEvent) => {
+  event.preventDefault()
+  if (draggedGroup.value && draggedGroup.value.id !== targetGroup.id) {
+    // Reorder groups logic here
+    emojiStore.reorderGroups(draggedGroup.value.id, targetGroup.id)
+    showSuccess('分组顺序已更新')
+  }
+  draggedGroup.value = null
+}
+
+const handleEmojiDragStart = (emoji: any, groupId: string, index: number, event: DragEvent) => {
+  draggedEmoji.value = emoji
+  draggedEmojiGroupId.value = groupId
+  draggedEmojiIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+const handleEmojiDrop = (targetGroupId: string, targetIndex: number, event: DragEvent) => {
+  event.preventDefault()
+  if (draggedEmoji.value && draggedEmojiGroupId.value) {
+    emojiStore.moveEmoji(
+      draggedEmojiGroupId.value,
+      draggedEmojiIndex.value,
+      targetGroupId,
+      targetIndex
+    )
+    showSuccess('表情已移动')
+  }
+  resetEmojiDrag()
+}
+
+const removeEmojiFromGroup = (groupId: string, index: number) => {
+  emojiStore.removeEmojiFromGroup(groupId, index)
+  showSuccess('表情已删除')
+}
+
+const resetEmojiDrag = () => {
+  draggedEmoji.value = null
+  draggedEmojiGroupId.value = ''
+  draggedEmojiIndex.value = -1
+}
+
+// Settings methods
 const updateImageScale = (event: Event) => {
   const target = event.target as HTMLInputElement
   emojiStore.updateSettings({ imageScale: parseInt(target.value) })
@@ -599,13 +907,6 @@ const saveEditGroup = () => {
   })
   showEditGroupModal.value = false
   showSuccess('分组已更新')
-}
-
-const deleteGroup = (groupId: string) => {
-  if (confirm('确定要删除这个分组吗？分组中的表情也会被删除。')) {
-    emojiStore.deleteGroup(groupId)
-    showSuccess('分组删除成功')
-  }
 }
 
 const addEmoji = () => {
