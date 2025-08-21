@@ -124,8 +124,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
-import { useEmojiStore } from '../src/stores/emojiStore';
-import type { Emoji } from '../src/types/emoji';
+import { useEmojiStore } from '../stores/emojiStore';
+import type { Emoji } from '../types/emoji';
 
 const emojiStore = useEmojiStore();
 const localScale = ref(100);
@@ -207,5 +207,5 @@ const openOptions = () => {
 
 <style>
 /* Import TailwindCSS in popup */
-@import '../src/styles/main.css';
+@import '../styles/main.css';
 </style>

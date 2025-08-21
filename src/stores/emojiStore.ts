@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji';
 import { defaultEmojiGroups, defaultSettings } from '../types/emoji';
+import { emojiStorage, storageHelpers } from '../utils/storage';
 
 export const useEmojiStore = defineStore('emojiExtension', () => {
   // State
@@ -37,16 +38,49 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   );
 
   // Chrome storage helpers
-  const getStorageData = (keys: string | string[]): Promise<{ [key: string]: any }> => {
-    return new Promise((resolve) => {
-      chrome.storage.local.get(keys, resolve);
-    });
+  const getStorageData = async (keys: string | string[]): Promise<{ [key: string]: any }> => {
+    // Use IndexedDB instead of Chrome storage as primary
+    if (typeof keys === 'string') {
+      keys = [keys]
+    }
+    
+    const result: { [key: string]: any } = {}
+    
+    for (const key of keys) {
+      switch (key) {
+        case 'emojiGroups':
+          result[key] = await storageHelpers.getGroups()
+          break
+        case 'appSettings':
+          result[key] = await storageHelpers.getSettings()
+          break
+        case 'favorites':
+          result[key] = await storageHelpers.getFavorites()
+          break
+      }
+    }
+    
+    return result
   };
 
-  const setStorageData = (data: { [key: string]: any }): Promise<void> => {
-    return new Promise((resolve) => {
-      chrome.storage.local.set(data, resolve);
-    });
+  const setStorageData = async (data: { [key: string]: any }): Promise<void> => {
+    try {
+      // Save to IndexedDB
+      if (data.emojiGroups) {
+        await storageHelpers.setGroups(data.emojiGroups)
+      }
+      if (data.appSettings) {
+        await storageHelpers.setSettings(data.appSettings)
+      }
+      if (data.favorites) {
+        await storageHelpers.setFavorites(data.favorites)
+      }
+      
+      console.log('Data saved successfully to IndexedDB:', data);
+    } catch (error) {
+      console.error('Failed to save to IndexedDB:', error);
+      throw error;
+    }
   };
 
   // Actions
@@ -172,14 +206,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   const moveEmoji = (emojiId: string, targetGroupId: string, targetIndex?: number) => {
     let emoji: Emoji | undefined;
-    let sourceGroupId: string | undefined;
     
     // Find and remove emoji from current group
     for (const group of groups.value) {
       const index = group.emojis.findIndex(e => e.id === emojiId);
       if (index !== -1) {
         emoji = group.emojis.splice(index, 1)[0];
-        sourceGroupId = group.id;
         break;
       }
     }
@@ -228,8 +260,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   };
 
   // Settings management
-  const updateSettings = (newSettings: Partial<AppSettings>) => {
+  const updateSettings = async (newSettings: Partial<AppSettings>) => {
     settings.value = { ...settings.value, ...newSettings };
+    // Force immediate save for settings changes
+    await saveData();
   };
 
   // Export/Import
@@ -257,6 +291,47 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       return true;
     } catch (error) {
       console.error('Failed to import configuration:', error);
+      return false;
+    }
+  };
+
+  // Backup/Sync functionality
+  const backupToChrome = async () => {
+    try {
+      return await emojiStorage.syncToChrome();
+    } catch (error) {
+      console.error('Failed to backup to Chrome:', error);
+      return false;
+    }
+  };
+
+  const restoreFromChrome = async () => {
+    try {
+      const success = await emojiStorage.restoreFromChrome();
+      if (success) {
+        // Reload data after restore
+        await loadData();
+      }
+      return success;
+    } catch (error) {
+      console.error('Failed to restore from Chrome:', error);
+      return false;
+    }
+  };
+
+  const resetToDefaults = async () => {
+    try {
+      const success = await emojiStorage.resetToDefaults();
+      if (success) {
+        // Reload default data
+        groups.value = JSON.parse(JSON.stringify(defaultEmojiGroups));
+        settings.value = { ...defaultSettings };
+        favorites.value = new Set();
+        activeGroupId.value = settings.value.defaultGroup;
+      }
+      return success;
+    } catch (error) {
+      console.error('Failed to reset to defaults:', error);
       return false;
     }
   };
@@ -295,6 +370,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     findEmojiById,
     updateSettings,
     exportConfiguration,
-    importConfiguration
+    importConfiguration,
+    backupToChrome,
+    restoreFromChrome,
+    resetToDefaults
   };
 });

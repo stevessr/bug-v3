@@ -5,7 +5,7 @@
   "description": "An emoji extension built with Vue 3 and Vite.",
   "permissions": ["storage", "activeTab", "scripting"],
   "action": {
-    "default_popup": "popup/popup.html",
+    "default_popup": "popup.html",
     "default_icon": {
       "48": "img/48.png",
       "64": "img/64.png",
@@ -15,7 +15,7 @@
       "1200": "img/1200.jpg"
     }
   },
-  "options_page": "options/options.html",
+  "options_page": "options.html",
   "background": {
     "service_worker": "js/background.js"
   },
