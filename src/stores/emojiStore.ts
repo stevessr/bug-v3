@@ -170,14 +170,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     favorites.value.delete(emojiId);
   };
 
-  const moveEmoji = (emojiId: string, targetGroupId: string) => {
+  const moveEmoji = (emojiId: string, targetGroupId: string, targetIndex?: number) => {
     let emoji: Emoji | undefined;
+    let sourceGroupId: string | undefined;
     
     // Find and remove emoji from current group
     for (const group of groups.value) {
       const index = group.emojis.findIndex(e => e.id === emojiId);
       if (index !== -1) {
         emoji = group.emojis.splice(index, 1)[0];
+        sourceGroupId = group.id;
         break;
       }
     }
@@ -187,7 +189,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const targetGroup = groups.value.find(g => g.id === targetGroupId);
       if (targetGroup) {
         emoji.groupId = targetGroupId;
-        targetGroup.emojis.push(emoji);
+        
+        // Insert at specific position if index provided
+        if (typeof targetIndex === 'number' && targetIndex >= 0) {
+          targetGroup.emojis.splice(targetIndex, 0, emoji);
+        } else {
+          targetGroup.emojis.push(emoji);
+        }
       }
     }
   };
