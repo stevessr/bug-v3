@@ -434,6 +434,8 @@ export const storageHelpers = {
       throw error;
     }
   },
+
+  async resetToDefaults(): Promise<void> {
     logStorage('RESET_DEFAULTS', 'start');
     
     try {
@@ -609,6 +611,114 @@ export const storageHelpers = {
       }
     } catch (error) {
       logStorage('SYNC_CHECK', 'failed', undefined, error);
+    }
+  },
+
+  // Enhanced group storage with individual keys for better performance
+  async getGroupsSplit(): Promise<EmojiGroup[]> {
+    logStorage('READ_GROUPS_SPLIT', 'start');
+    
+    try {
+      // First try to get group index from Chrome storage
+      const indexData = await getStorageData({ [STORAGE_KEYS.GROUP_INDEX]: null });
+      const groupIndex = indexData[STORAGE_KEYS.GROUP_INDEX];
+      
+      if (groupIndex && Array.isArray(groupIndex)) {
+        logStorage('READ_GROUPS_SPLIT', 'found group index', groupIndex);
+        
+        // Load each group individually
+        const groupPromises = groupIndex.map(async (groupInfo: { id: string, order: number }) => {
+          try {
+            const groupData = await getStorageData({ [STORAGE_KEYS.GROUP_PREFIX + groupInfo.id]: null });
+            const group = groupData[STORAGE_KEYS.GROUP_PREFIX + groupInfo.id];
+            if (group) {
+              return { ...group, order: groupInfo.order };
+            }
+          } catch (error) {
+            logStorage('READ_GROUPS_SPLIT', `group ${groupInfo.id}`, undefined, error);
+          }
+          return null;
+        });
+        
+        const groups = (await Promise.all(groupPromises))
+          .filter(group => group !== null)
+          .sort((a, b) => a.order - b.order);
+        
+        if (groups.length > 0) {
+          logStorage('READ_GROUPS_SPLIT', 'split storage success', { count: groups.length });
+          return groups;
+        }
+      }
+    } catch (error) {
+      logStorage('READ_GROUPS_SPLIT', 'split storage failed', undefined, error);
+    }
+    
+    // Fallback to regular groups storage
+    return this.getGroups();
+  },
+
+  async setGroupsSplit(groups: EmojiGroup[]): Promise<void> {
+    logStorage('WRITE_GROUPS_SPLIT', 'start', { count: groups.length });
+    
+    try {
+      // Create group index for order tracking
+      const groupIndex = groups.map((group, index) => ({
+        id: group.id,
+        order: index
+      }));
+      
+      // Save group index
+      await setStorageData({ [STORAGE_KEYS.GROUP_INDEX]: groupIndex });
+      
+      // Save each group individually
+      const savePromises = groups.map(async (group) => {
+        const groupData = { [STORAGE_KEYS.GROUP_PREFIX + group.id]: group };
+        return setStorageData(groupData);
+      });
+      
+      await Promise.all(savePromises);
+      
+      // Also save to regular groups key for backward compatibility
+      await setStorageData({ [STORAGE_KEYS.GROUPS]: groups });
+      
+      logStorage('WRITE_GROUPS_SPLIT', 'success', { count: groups.length });
+      
+      // Debounced sync
+      debouncedSync(async () => {
+        const settings = await this.getSettings();
+        const favorites = await this.getFavorites();
+        await this.backupToSync(groups, settings, favorites);
+      });
+      
+    } catch (error) {
+      logStorage('WRITE_GROUPS_SPLIT', 'failed', undefined, error);
+      throw error;
+    }
+  },
+
+  async deleteGroupSplit(groupId: string): Promise<void> {
+    logStorage('DELETE_GROUP_SPLIT', groupId);
+    
+    try {
+      // Remove individual group storage
+      const chromeAPI = getChromeAPI();
+      if (chromeAPI?.storage?.local) {
+        chromeAPI.storage.local.remove([STORAGE_KEYS.GROUP_PREFIX + groupId]);
+      }
+      
+      // Update group index
+      const indexData = await getStorageData({ [STORAGE_KEYS.GROUP_INDEX]: [] });
+      const groupIndex = indexData[STORAGE_KEYS.GROUP_INDEX].filter((info: any) => info.id !== groupId);
+      await setStorageData({ [STORAGE_KEYS.GROUP_INDEX]: groupIndex });
+      
+      // Update regular groups storage for compatibility
+      const groups = await this.getGroupsSplit();
+      await setStorageData({ [STORAGE_KEYS.GROUPS]: groups });
+      
+      logStorage('DELETE_GROUP_SPLIT', 'success');
+    } catch (error) {
+      logStorage('DELETE_GROUP_SPLIT', 'failed', undefined, error);
+      throw error;
     }
   }
 };

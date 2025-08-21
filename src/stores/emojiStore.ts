@@ -75,10 +75,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       console.log('[EmojiStore] Performing sync check');
       await storageHelpers.syncCheck();
       
-      // Load from storage using the new helpers
-      console.log('[EmojiStore] Loading data from storage');
+      // Load from storage using the new split helpers for better performance
+      console.log('[EmojiStore] Loading data from split storage');
       const [loadedGroups, loadedSettings, loadedFavorites] = await Promise.all([
-        storageHelpers.getGroups(),
+        storageHelpers.getGroupsSplit(),
         storageHelpers.getSettings(),
         storageHelpers.getFavorites(),
       ]);
@@ -129,12 +129,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         favoritesCount: favorites.value.size
       });
 
-      // 使用统一数据设置方法，确保本地和同步存储都更新
-      await storageHelpers.setAllData(
-        groups.value,
-        updatedSettings,
-        Array.from(favorites.value)
-      );
+      // 使用分割存储方法以提高性能，确保本地和同步存储都更新
+      await Promise.all([
+        storageHelpers.setGroupsSplit(groups.value),
+        storageHelpers.setSettings(updatedSettings),
+        storageHelpers.setFavorites(Array.from(favorites.value))
+      ]);
       
       console.log('[EmojiStore] SaveData completed successfully');
     } catch (error) {
@@ -183,6 +183,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       console.warn('Cannot delete system groups');
       return;
     }
+    
+    // Remove from split storage
+    storageHelpers.deleteGroupSplit(groupId).catch(error => 
+      console.error('[EmojiStore] Failed to delete group from split storage:', error)
+    );
+    
     groups.value = groups.value.filter(g => g.id !== groupId);
     if (activeGroupId.value === groupId) {
       activeGroupId.value = groups.value[0]?.id || 'nachoneko';
