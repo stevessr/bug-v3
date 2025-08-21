@@ -140,3 +140,7 @@ coverage/
 .eslintcache
 .prettierignore
 .stylelintcache
+
+# Release artifacts
+releases/
+*.zip

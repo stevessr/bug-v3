@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <div id="debug-info">
+        <h2>Emoji Extension Debug Test</h2>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        async function debugTest() {
+            const output = document.getElementById('output');
+            
+            try {
+                output.innerHTML += '<p>Testing IndexedDB availability...</p>';
+                
+                // Test IndexedDB
+                const dbRequest = indexedDB.open('EmojiExtensionDB', 1);
+                
+                dbRequest.onsuccess = async (event) => {
+                    const db = event.target.result;
+                    output.innerHTML += '<p>✅ IndexedDB available</p>';
+                    
+                    // Check if there are any groups
+                    const transaction = db.transaction(['groups'], 'readonly');
+                    const store = transaction.objectStore('groups');
+                    const getAllRequest = store.getAll();
+                    
+                    getAllRequest.onsuccess = () => {
+                        const groups = getAllRequest.result;
+                        output.innerHTML += `<p>Groups in IndexedDB: ${groups.length}</p>`;
+                        groups.forEach(group => {
+                            output.innerHTML += `<p>- ${group.id}: ${group.value?.name || 'No name'} (${group.value?.emojis?.length || 0} emojis)</p>`;
+                        });
+                    };
+                };
+                
+                dbRequest.onerror = () => {
+                    output.innerHTML += '<p>❌ IndexedDB error</p>';
+                };
+                
+                // Test Chrome storage
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    output.innerHTML += '<p>Testing Chrome storage...</p>';
+                    chrome.storage.local.get(['groups'], (result) => {
+                        output.innerHTML += `<p>Groups in Chrome storage: ${result.groups?.length || 0}</p>`;
+                    });
+                } else {
+                    output.innerHTML += '<p>Chrome APIs not available</p>';
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        debugTest();
+    </script>
+</body>
+</html>
