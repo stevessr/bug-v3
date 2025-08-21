@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node ./scripts/clean-empty-chunks.mjs",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "test": "playwright test",
+    "test:debug": "playwright test --debug"
   },
   "dependencies": {
     "ant-design-vue": "^4.1.2",
@@ -15,17 +17,19 @@
   },
   "devDependencies": {
     "@ant-design/icons-vue": "^7.0.1",
+    "@playwright/test": "^1.55.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^24.3.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "autoprefixer": "^10.4.21",
     "less": "^4.4.1",
+    "playwright": "^1.55.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "terser": "^5.43.1",
     "typescript": "^5.3.3",
-    "vite": "^6.0.0",
     "unplugin-auto-import": "^0.17.5",
-    "unplugin-vue-components": "^0.26.0"
+    "unplugin-vue-components": "^0.26.0",
+    "vite": "^6.0.0"
   }
 }

@@ -1,45 +1,127 @@
 // Enhanced content script for Linux.do emoji injection
-// Optimized for Chrome Extension MV3 with storage sync
+// Updated to use new storage system with conflict resolution
 // Global state
 let cachedEmojiGroups: any[] = [];
 let cachedSettings: any = { imageScale: 30, gridColumns: 4 };
 import { getDefaultEmojis } from "./default";
 
-// Storage sync functionality
+// Storage system adapter for content script
+class ContentStorageAdapter {
+  // Read from extension storage with fallback to local/session storage
+  async get(key: string): Promise<any> {
+    // Try extension storage first (main source for content scripts)
+    if (chrome?.storage?.local) {
+      try {
+        const result = await chrome.storage.local.get({ [key]: null });
+        const value = result[key];
+        if (value && value.data) {
+          console.log(`[Content Storage] Found ${key} in extension storage`);
+          return value.data;
+        }
+      } catch (error) {
+        console.warn(`[Content Storage] Extension storage failed for ${key}:`, error);
+      }
+    }
+
+    // Fallback to localStorage
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const value = localStorage.getItem(key);
+        if (value) {
+          const parsed = JSON.parse(value);
+          if (parsed && parsed.data) {
+            console.log(`[Content Storage] Found ${key} in localStorage`);
+            return parsed.data;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`[Content Storage] localStorage failed for ${key}:`, error);
+    }
+
+    // Fallback to sessionStorage
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const value = sessionStorage.getItem(key);
+        if (value) {
+          const parsed = JSON.parse(value);
+          if (parsed && parsed.data) {
+            console.log(`[Content Storage] Found ${key} in sessionStorage`);
+            return parsed.data;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`[Content Storage] sessionStorage failed for ${key}:`, error);
+    }
+
+    console.log(`[Content Storage] No data found for ${key}`);
+    return null;
+  }
+
+  async getAllEmojiGroups(): Promise<any[]> {
+    // First try to get the group index
+    const groupIndex = await this.get('emojiGroupIndex');
+    if (groupIndex && Array.isArray(groupIndex)) {
+      const groups = [];
+      for (const groupInfo of groupIndex) {
+        const group = await this.get(`emojiGroup_${groupInfo.id}`);
+        if (group) {
+          groups.push({ ...group, order: groupInfo.order });
+        }
+      }
+      if (groups.length > 0) {
+        return groups.sort((a, b) => a.order - b.order);
+      }
+    }
+
+    // Fallback to legacy emojiGroups key
+    const legacyGroups = await this.get('emojiGroups');
+    if (legacyGroups && Array.isArray(legacyGroups)) {
+      return legacyGroups;
+    }
+
+    return [];
+  }
+
+  async getSettings(): Promise<any> {
+    const settings = await this.get('appSettings');
+    return settings || { imageScale: 30, gridColumns: 4 };
+  }
+}
+
+const contentStorage = new ContentStorageAdapter();
+
+// Storage sync functionality using new storage system
 async function loadDataFromStorage() {
   try {
-    if (chrome?.storage?.local) {
-      const data = await chrome.storage.local.get([
-        "emojiGroups",
-        "appSettings",
-      ]);
-
-      // Ensure cachedEmojiGroups is always an array
-      if (data.emojiGroups && Array.isArray(data.emojiGroups)) {
-        cachedEmojiGroups = data.emojiGroups;
-      } else {
-        console.warn(
-          "[Emoji Extension] No valid emoji groups found in storage, using defaults"
-        );
-        cachedEmojiGroups = [];
-      }
-
-      // Merge settings with defaults
-      if (data.appSettings && typeof data.appSettings === "object") {
-        cachedSettings = { ...cachedSettings, ...data.appSettings };
-      }
-
-      console.log("[Emoji Extension] Loaded from storage:", {
-        groupsCount: cachedEmojiGroups.length,
-        settings: cachedSettings,
-      });
+    console.log('[Emoji Extension] Loading data using new storage system');
+    
+    // Load groups using new storage system
+    const groups = await contentStorage.getAllEmojiGroups();
+    if (Array.isArray(groups) && groups.length > 0) {
+      cachedEmojiGroups = groups;
+      console.log('[Emoji Extension] Loaded groups:', groups.length);
     } else {
-      console.warn("[Emoji Extension] Chrome storage not available");
+      console.warn('[Emoji Extension] No valid emoji groups found, using defaults');
       cachedEmojiGroups = [];
     }
+
+    // Load settings
+    const settings = await contentStorage.getSettings();
+    if (settings && typeof settings === 'object') {
+      cachedSettings = { ...cachedSettings, ...settings };
+      console.log('[Emoji Extension] Loaded settings:', cachedSettings);
+    }
+
+    console.log('[Emoji Extension] Final cache state:', {
+      groupsCount: cachedEmojiGroups.length,
+      settings: cachedSettings
+    });
+
   } catch (error) {
-    console.error("[Emoji Extension] Failed to load from storage:", error);
-    // Ensure we have a valid array even if loading fails
+    console.error('[Emoji Extension] Failed to load from storage:', error);
+    // Ensure we have valid arrays even if loading fails
     cachedEmojiGroups = [];
     cachedSettings = { imageScale: 30, gridColumns: 4 };
   }
@@ -460,35 +542,23 @@ function insertEmojiIntoEditor(emoji: any) {
   }
 }
 
-// Storage sync listener
+// Storage sync listener - updated for new storage system
 if (chrome?.storage?.onChanged) {
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === "local") {
-      if (changes.emojiGroups) {
-        const newGroups = changes.emojiGroups.newValue;
-        if (Array.isArray(newGroups)) {
-          cachedEmojiGroups = newGroups;
-          console.log(
-            "[Emoji Extension] Emoji groups updated from storage:",
-            newGroups.length
-          );
-        } else {
-          console.warn(
-            "[Emoji Extension] Invalid emoji groups received:",
-            newGroups
-          );
-          cachedEmojiGroups = [];
-        }
-      }
-      if (changes.appSettings) {
-        const newSettings = changes.appSettings.newValue;
-        if (newSettings && typeof newSettings === "object") {
-          cachedSettings = { ...cachedSettings, ...newSettings };
-          console.log(
-            "[Emoji Extension] Settings updated from storage:",
-            cachedSettings
-          );
-        }
+      // Handle new storage system keys
+      const relevantKeys = [
+        'emojiGroups', 'emojiGroupIndex', 'appSettings'
+      ];
+      
+      const hasRelevantChanges = Object.keys(changes).some(key => 
+        relevantKeys.includes(key) || key.startsWith('emojiGroup_')
+      );
+
+      if (hasRelevantChanges) {
+        console.log('[Emoji Extension] Storage change detected, reloading data');
+        // Reload all data when any relevant storage changes
+        loadDataFromStorage();
       }
     }
   });
