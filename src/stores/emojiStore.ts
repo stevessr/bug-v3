@@ -13,6 +13,50 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const isLoading = ref(false);
   const favorites = ref<Set<string>>(new Set());
 
+  // Cross-context sync (popup <-> options) using BroadcastChannel
+  const sourceId = Math.random().toString(36).slice(2);
+  const channel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('emoji-store') : null;
+  const isSyncing = ref(false);
+
+  const postState = (reason: string = 'update') => {
+    if (!channel) return;
+    try {
+      channel.postMessage({
+        type: 'state:update',
+        reason,
+        sourceId,
+        payload: {
+          groups: groups.value,
+          settings: settings.value,
+          favorites: Array.from(favorites.value),
+          activeGroupId: activeGroupId.value,
+          searchQuery: searchQuery.value,
+        }
+      });
+    } catch (e) {
+      // no-op
+    }
+  };
+
+  if (channel) {
+    channel.onmessage = (ev: MessageEvent) => {
+      const data = ev.data as any;
+      if (!data || data.type !== 'state:update' || data.sourceId === sourceId) return;
+      try {
+        isSyncing.value = true;
+        const p = data.payload || {};
+        if (p.settings) settings.value = { ...defaultSettings, ...p.settings };
+        if (p.groups) groups.value = p.groups;
+        if (p.favorites) favorites.value = new Set(p.favorites);
+        if (p.activeGroupId) activeGroupId.value = p.activeGroupId;
+        if (typeof p.searchQuery === 'string') searchQuery.value = p.searchQuery;
+      } finally {
+        // small nextTick-like delay could be added, but simple timeout is enough
+        setTimeout(() => { isSyncing.value = false; }, 0);
+      }
+    };
+  }
+
   // Computed
   const activeGroup = computed(() => 
     groups.value.find(g => g.id === activeGroupId.value) || groups.value[0]
@@ -110,6 +154,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       
       // Set active group
       activeGroupId.value = settings.value.defaultGroup;
+  // Broadcast initial state so other contexts align when opened later
+  postState('load');
     } catch (error) {
       console.error('Failed to load emoji data:', error);
       groups.value = JSON.parse(JSON.stringify(defaultEmojiGroups));
@@ -119,12 +165,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   };
 
   const saveData = async () => {
+    if (isSyncing.value) return; // avoid echo during incoming sync
     try {
       await setStorageData({
         emojiGroups: groups.value,
         appSettings: settings.value,
         favorites: Array.from(favorites.value)
       });
+      postState('save');
     } catch (error) {
       console.error('Failed to save emoji data:', error);
     }
@@ -141,6 +189,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       emojis: []
     };
     groups.value.push(newGroup);
+  // persist via watcher, but also broadcast quickly for UX
+  postState('createGroup');
     return newGroup;
   };
 
@@ -148,6 +198,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const index = groups.value.findIndex(g => g.id === groupId);
     if (index !== -1) {
       groups.value[index] = { ...groups.value[index], ...updates };
+  postState('updateGroup');
     }
   };
 
@@ -159,6 +210,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     if (activeGroupId.value === groupId) {
       activeGroupId.value = groups.value[0]?.id || 'nachoneko';
     }
+  postState('deleteGroup');
   };
 
   const reorderGroups = (groupIds: string[]) => {
@@ -171,6 +223,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }).filter(Boolean) as EmojiGroup[];
     
     groups.value = reorderedGroups;
+  postState('reorderGroups');
   };
 
   // Emoji management
@@ -179,10 +232,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     if (group) {
       const newEmoji: Emoji = {
         ...emoji,
-        id: `emoji-${Date.now()}`,
+        id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         groupId
       };
       group.emojis.push(newEmoji);
+      postState('addEmoji');
       return newEmoji;
     }
   };
@@ -192,6 +246,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const index = group.emojis.findIndex(e => e.id === emojiId);
       if (index !== -1) {
         group.emojis[index] = { ...group.emojis[index], ...updates };
+  postState('updateEmoji');
         break;
       }
     }
@@ -202,6 +257,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       group.emojis = group.emojis.filter(e => e.id !== emojiId);
     }
     favorites.value.delete(emojiId);
+  postState('deleteEmoji');
   };
 
   const moveEmoji = (emojiId: string, targetGroupId: string, targetIndex?: number) => {
@@ -230,6 +286,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         }
       }
     }
+  postState('moveEmoji');
   };
 
   // Favorites management
@@ -250,6 +307,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         favGroup.emojis.push({ ...sourceEmoji, groupId: 'favorites' });
       }
     }
+  postState('toggleFavorite');
   };
 
   const findEmojiById = (emojiId: string): Emoji | undefined => {
@@ -264,6 +322,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     settings.value = { ...settings.value, ...newSettings };
     // Force immediate save for settings changes
     await saveData();
+  postState('updateSettings');
   };
 
   // Export/Import

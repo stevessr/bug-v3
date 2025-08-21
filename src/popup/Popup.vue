@@ -74,10 +74,8 @@
     <!-- Emoji Grid -->
     <div v-else-if="emojiStore.filteredEmojis.length > 0" class="p-2">
       <div 
-        :class="[
-          'grid gap-1 max-h-64 overflow-y-auto',
-          `grid-cols-${emojiStore.settings.gridColumns}`
-        ]"
+        class="grid gap-1 max-h-64 overflow-y-auto"
+        :style="{ gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))` }"
       >
         <button
           v-for="emoji in emojiStore.filteredEmojis"

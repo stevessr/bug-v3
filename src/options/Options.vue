@@ -98,15 +98,15 @@
               <label class="text-sm font-medium text-gray-900">显示搜索框</label>
               <p class="text-sm text-gray-500">在表情选择器中显示搜索功能</p>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
+      <label class="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 :checked="emojiStore.settings.showSearchBar"
                 @change="updateShowSearchBar"
-                class="sr-only"
+        class="sr-only peer"
               />
               <div
-                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
+        class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
               ></div>
             </label>
           </div>
@@ -145,7 +145,7 @@
               </div>
               <div class="flex items-center gap-2">
                 <button
-                  @click="editGroup(group)"
+                  @click="openEditGroup(group)"
                   class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
                 >
                   编辑
@@ -322,6 +322,31 @@
             />
           </div>
         </div>
+
+          <!-- Edit Group Modal -->
+          <div
+            v-if="showEditGroupModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            @click="showEditGroupModal = false"
+          >
+            <div class="bg-white rounded-lg p-6 w-full max-w-md" @click.stop>
+              <h3 class="text-lg font-semibold mb-4">编辑分组</h3>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">分组名称</label>
+                  <input v-model="editGroupName" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">分组图标/表情</label>
+                  <input v-model="editGroupIcon" type="text" placeholder="例如：😀 或 📁" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+              <div class="flex justify-end gap-3 mt-6">
+                <button @click="showEditGroupModal = false" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors">取消</button>
+                <button @click="saveEditGroup" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">保存</button>
+              </div>
+            </div>
+          </div>
         <div class="flex justify-end gap-3 mt-6">
           <button
             @click="showAddEmojiModal = false"
@@ -418,17 +443,23 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="粘贴表情JSON内容..."
             ></textarea>
+            <div class="mt-2 text-xs text-gray-500">
+              示例：
+              <button class="ml-2 text-blue-600 hover:underline" @click="fillEmojiJsonExample">填充示例</button>
+            </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">目标分组</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">目标分组（可选）</label>
             <select
               v-model="importTargetGroupId"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
+              <option value="">自动按分组创建</option>
               <option v-for="group in emojiStore.groups" :key="group.id" :value="group.id">
                 {{ group.name }}
               </option>
             </select>
+            <p class="mt-1 text-xs text-gray-500">留空将根据JSON中的 groupId 自动创建/归类到分组</p>
           </div>
         </div>
         <div class="flex justify-end gap-3 mt-6">
@@ -477,6 +508,7 @@ const emojiStore = useEmojiStore()
 const selectedGroupId = ref('')
 const showCreateGroupModal = ref(false)
 const showAddEmojiModal = ref(false)
+const showEditGroupModal = ref(false)
 const showImportModal = ref(false)
 const showImportEmojiModal = ref(false)
 const showSuccessToast = ref(false)
@@ -488,6 +520,11 @@ const errorMessage = ref('')
 const newGroupName = ref('')
 const newGroupColor = ref('#3B82F6')
 const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16']
+
+// Edit group state
+const editingGroupId = ref<string>('')
+const editGroupName = ref<string>('')
+const editGroupIcon = ref<string>('')
 
 // New emoji data
 const newEmojiName = ref('')
@@ -543,9 +580,25 @@ const createGroup = () => {
   showSuccess('分组创建成功')
 }
 
-const editGroup = (group: EmojiGroup) => {
-  // TODO: Implement edit group functionality
-  console.log('Edit group:', group)
+const openEditGroup = (group: EmojiGroup) => {
+  editingGroupId.value = group.id
+  editGroupName.value = group.name
+  editGroupIcon.value = group.icon
+  showEditGroupModal.value = true
+}
+
+const saveEditGroup = () => {
+  if (!editingGroupId.value) return
+  if (!editGroupName.value.trim()) {
+    showError('请输入分组名称')
+    return
+  }
+  emojiStore.updateGroup(editingGroupId.value, {
+    name: editGroupName.value.trim(),
+    icon: editGroupIcon.value || '📁'
+  })
+  showEditGroupModal.value = false
+  showSuccess('分组已更新')
 }
 
 const deleteGroup = (groupId: string) => {
@@ -652,20 +705,36 @@ const importEmojis = () => {
       showError('表情数据格式错误，应该是数组格式')
       return
     }
-    
-    if (!importTargetGroupId.value) {
-      showError('请选择目标分组')
-      return
+    // If target group selected, import all into that group
+    if (importTargetGroupId.value) {
+      emojis.forEach((emoji: any) => {
+        const emojiData = {
+          packet: Date.now() + Math.random() * 1000,
+          name: emoji.name || emoji.alt || '未命名',
+          url: emoji.url || emoji.src
+        }
+        emojiStore.addEmoji(importTargetGroupId.value, emojiData)
+      })
+    } else {
+      // Auto create or use group by emoji.groupId
+      const groupMap = new Map<string, string>() // group name -> id
+      emojiStore.groups.forEach(g => groupMap.set(g.name, g.id))
+      emojis.forEach((emoji: any) => {
+        const groupName = (emoji.groupId || emoji.group || '未分组').toString()
+        let targetId = groupMap.get(groupName)
+        if (!targetId) {
+          const created = emojiStore.createGroup(groupName, '📁')
+          targetId = created.id
+          groupMap.set(groupName, targetId)
+        }
+        const emojiData = {
+          packet: Number.isInteger(emoji.packet) ? emoji.packet : (Date.now() + Math.floor(Math.random()*1000)),
+          name: emoji.name || emoji.alt || '未命名',
+          url: emoji.url || emoji.src
+        }
+        emojiStore.addEmoji(targetId, emojiData)
+      })
     }
-    
-    emojis.forEach((emoji: any) => {
-      const emojiData = {
-        packet: Date.now() + Math.random() * 1000,
-        name: emoji.name || emoji.alt || '未命名',
-        url: emoji.url || emoji.src
-      }
-      emojiStore.addEmoji(importTargetGroupId.value, emojiData)
-    })
     
     importEmojiText.value = ''
     importTargetGroupId.value = ''
@@ -728,4 +797,13 @@ onMounted(() => {
     importTargetGroupId.value = emojiStore.groups[0].id
   }
 })
+
+// Fill example JSON for emoji import
+const fillEmojiJsonExample = () => {
+  importEmojiText.value = JSON.stringify([
+    { name: '微笑', url: 'https://example.com/smile.png', groupId: '常用' },
+    { name: '点赞', url: 'https://example.com/thumbs-up.png', groupId: '常用' },
+    { name: '爱心', url: 'https://example.com/heart.png', groupId: '红色' }
+  ], null, 2)
+}
 </script>
