@@ -8,3 +8,9 @@ const app = createApp(Options);
 
 app.use(pinia);
 app.mount('#app');
+
+// Initialize store data
+import { useEmojiStore } from '../stores/emojiStore';
+
+const store = useEmojiStore(pinia);
+store.loadData();

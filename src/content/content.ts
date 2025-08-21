@@ -110,6 +110,7 @@ console.log('[Emoji Extension] Content script loaded');
 
 // Load CSS styles following simple.html structure
 function addSimpleHTMLStyles() {
+  return;
   const style = document.createElement('style');
   style.textContent = `
     .fk-d-menu.-animated.-expanded {
@@ -125,106 +126,6 @@ function addSimpleHTMLStyles() {
     
     .fk-d-menu__inner-content {
       background: white !important;
-    }
-    
-    .emoji-picker {
-      max-height: 400px !important;
-      overflow-y: auto !important;
-    }
-    
-    .emoji-picker__filter-container {
-      padding: 12px !important;
-      border-bottom: 1px solid #e5e7eb !important;
-      background: #f9fafb !important;
-    }
-    
-    .emoji-picker__filter {
-      position: relative !important;
-    }
-    
-    .filter-input {
-      width: 100% !important;
-      padding: 8px 12px !important;
-      border: 1px solid #d1d5db !important;
-      border-radius: 6px !important;
-      font-size: 14px !important;
-      outline: none !important;
-    }
-    
-    .filter-input:focus {
-      border-color: #3b82f6 !important;
-      box-shadow: 0 0 0 1px #3b82f6 !important;
-    }
-    
-    .emoji-picker__content {
-      padding: 0 !important;
-    }
-    
-    .emoji-picker__sections-nav {
-      display: flex !important;
-      padding: 8px !important;
-      border-bottom: 1px solid #e5e7eb !important;
-      background: #f9fafb !important;
-    }
-    
-    .emoji-picker__section-btn {
-      padding: 6px !important;
-      margin-right: 4px !important;
-      border: none !important;
-      background: none !important;
-      border-radius: 4px !important;
-      cursor: pointer !important;
-    }
-    
-    .emoji-picker__section-btn.active {
-      background: #e5e7eb !important;
-    }
-    
-    .emoji-picker__scrollable-content {
-      max-height: 280px !important;
-      overflow-y: auto !important;
-    }
-    
-    .emoji-picker__section {
-      padding: 12px !important;
-    }
-    
-    .emoji-picker__section-title-container {
-      display: flex !important;
-      justify-content: space-between !important;
-      align-items: center !important;
-      margin-bottom: 8px !important;
-    }
-    
-    .emoji-picker__section-title {
-      font-size: 14px !important;
-      font-weight: 600 !important;
-      color: #374151 !important;
-      margin: 0 !important;
-    }
-    
-    .emoji-picker__section-emojis {
-      display: grid !important;
-      grid-template-columns: repeat(6, 1fr) !important;
-      gap: 8px !important;
-    }
-    
-    .emoji-picker__section-emojis img {
-      width: 32px !important;
-      height: 32px !important;
-      cursor: pointer !important;
-      border-radius: 4px !important;
-      padding: 4px !important;
-      transition: background-color 0.15s !important;
-    }
-    
-    .emoji-picker__section-emojis img:hover {
-      background-color: #f3f4f6 !important;
-    }
-    
-    .emoji-picker__section-emojis img:focus {
-      background-color: #e5e7eb !important;
-      outline: none !important;
     }
   `;
   document.head.appendChild(style);
@@ -321,9 +222,15 @@ function injectButton(toolbar: Element) {
           pickerElement.style.bottom = (window.innerHeight - editorRect.top + 10) + 'px';
           pickerElement.style.left = (editorRect.left + editorRect.width / 2 - 200) + 'px';
         } else {
-          // Position to the right of editor
-          pickerElement.style.top = editorRect.top + 'px';
-          pickerElement.style.left = (editorRect.right + 10) + 'px';
+          // Position above the button, centered
+          const pickerRect = pickerElement.getBoundingClientRect();
+          pickerElement.style.top = (buttonRect.top - pickerRect.height - 5) + 'px';
+          pickerElement.style.left = (buttonRect.left + (buttonRect.width / 2) - (pickerRect.width / 2)) + 'px';
+
+          // Fallback to below if not enough space on top
+          if (pickerElement.getBoundingClientRect().top < 0) {
+            pickerElement.style.top = (buttonRect.bottom + 5) + 'px';
+          }
         }
       } else {
         // Fallback positioning

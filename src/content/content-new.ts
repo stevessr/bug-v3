@@ -48,6 +48,7 @@ console.log('[Emoji Extension] Content script loaded');
 
 // Load CSS styles
 async function loadStyles() {
+  return;
   try {
     const cssUrl = (window as any).chrome?.runtime?.getURL('assets/picker-styles.css');
     if (cssUrl) {

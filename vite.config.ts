@@ -29,9 +29,6 @@ export default defineConfig({
         options: fileURLToPath(new URL("options.html", import.meta.url)),
         content: fileURLToPath(new URL("src/content/content.ts", import.meta.url)),
         background: fileURLToPath(new URL("src/background/background.ts", import.meta.url)),
-        "picker-styles": fileURLToPath(
-          new URL("src/content/picker-styles.css", import.meta.url)
-        ),
       },
       output: {
         entryFileNames: (chunkInfo) => {
