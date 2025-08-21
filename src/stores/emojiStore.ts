@@ -68,47 +68,36 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- Actions ---
 
   const loadData = async () => {
+    console.log('[EmojiStore] Starting loadData');
     isLoading.value = true;
     try {
-      // 首先进行同步检查，确保数据一致性
+      // 首先进行同步检查，确保数据一致性（使用防抖机制）
+      console.log('[EmojiStore] Performing sync check');
       await storageHelpers.syncCheck();
       
-      // Load from local storage first
+      // Load from storage using the new helpers
+      console.log('[EmojiStore] Loading data from storage');
       const [loadedGroups, loadedSettings, loadedFavorites] = await Promise.all([
         storageHelpers.getGroups(),
         storageHelpers.getSettings(),
         storageHelpers.getFavorites(),
       ]);
 
+      console.log('[EmojiStore] Data loaded:', {
+        groupsCount: loadedGroups?.length || 0,
+        settings: loadedSettings,
+        favoritesCount: loadedFavorites?.length || 0
+      });
+
       groups.value = loadedGroups && loadedGroups.length > 0 ? loadedGroups : JSON.parse(JSON.stringify(defaultEmojiGroups));
       settings.value = { ...defaultSettings, ...loadedSettings };
       favorites.value = new Set(loadedFavorites || []);
 
-      // Check if sync data is newer and should override local
-      try {
-        const syncData = await storageHelpers.restoreFromSync();
-        if (syncData && syncData.groups && syncData.groups.length > 0) {
-          // Only use sync data if it's newer or local is empty
-          const localTimestamp = loadedSettings?.lastModified || 0;
-          const syncTimestamp = syncData.timestamp || 0;
-
-          if (syncTimestamp > localTimestamp || groups.value.length <= 2) { // 2 = default groups
-            groups.value = syncData.groups;
-            settings.value = { ...defaultSettings, ...syncData.settings, lastModified: syncTimestamp };
-            favorites.value = new Set(syncData.favorites || []);
-
-            // Update local storage with sync data using unified method
-            await storageHelpers.setAllData(groups.value, settings.value, Array.from(favorites.value));
-          }
-        }
-      } catch (syncError) {
-        console.warn('Failed to load sync data, using local data:', syncError);
-      }
-
       activeGroupId.value = settings.value.defaultGroup || 'nachoneko';
 
+      console.log('[EmojiStore] LoadData completed successfully');
     } catch (error) {
-      console.error('Failed to load initial data:', error);
+      console.error('[EmojiStore] Failed to load initial data:', error);
       // Fallback to defaults in case of error
       groups.value = JSON.parse(JSON.stringify(defaultEmojiGroups));
       settings.value = { ...defaultSettings };
@@ -120,18 +109,25 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   const saveData = async () => {
     if (isLoading.value || isSaving.value || batchDepth > 0) {
+      console.log('[EmojiStore] SaveData deferred - loading:', isLoading.value, 'saving:', isSaving.value, 'batch:', batchDepth);
       pendingSave.value = true;
       return;
     }
     
+    console.log('[EmojiStore] Starting saveData');
     isSaving.value = true;
     try {
-      // fire-and-forget; outer callers need not await persistence
       await nextTick();
 
       // Update timestamp for sync comparison
       const updatedSettings = { ...settings.value, lastModified: Date.now() };
       settings.value = updatedSettings;
+
+      console.log('[EmojiStore] Saving data:', {
+        groupsCount: groups.value.length,
+        settings: updatedSettings,
+        favoritesCount: favorites.value.size
+      });
 
       // 使用统一数据设置方法，确保本地和同步存储都更新
       await storageHelpers.setAllData(
@@ -139,8 +135,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         updatedSettings,
         Array.from(favorites.value)
       );
+      
+      console.log('[EmojiStore] SaveData completed successfully');
     } catch (error) {
-      console.error('Failed to save data:', error);
+      console.error('[EmojiStore] Failed to save data:', error);
     } finally {
       isSaving.value = false;
     }
@@ -347,40 +345,61 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   // --- Synchronization and Persistence ---
 
-  // Watch for local changes and persist them to chrome.storage (respects batching)
+  // Watch for local changes and persist them (with better debouncing)
+  let saveTimeout: NodeJS.Timeout | null = null;
+  const SAVE_DEBOUNCE_DELAY = 500; // 500ms debounce
+  
   watch([groups, settings, favorites], () => {
-    if (!isLoading.value && !isUpdatingFromStorage) {
-      maybeSave();
+    if (!isLoading.value && !isUpdatingFromStorage && !isSaving.value) {
+      // Clear existing timeout
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+      
+      // Debounce saves to prevent continuous writes
+      saveTimeout = setTimeout(() => {
+        console.log('[EmojiStore] Triggering debounced save');
+        maybeSave();
+      }, SAVE_DEBOUNCE_DELAY);
     }
   }, { deep: true });
 
   // Listen for changes from other extension contexts (e.g., options page)
   let isUpdatingFromStorage = false;
   onStorageChange((changes, areaName) => {
-    if (isSaving.value || isLoading.value || isUpdatingFromStorage) return; // Prevent loops
+    if (isSaving.value || isLoading.value || isUpdatingFromStorage) {
+      console.log('[EmojiStore] Ignoring storage change - save:', isSaving.value, 'load:', isLoading.value, 'updating:', isUpdatingFromStorage);
+      return; // Prevent loops
+    }
 
+    console.log('[EmojiStore] Storage change detected:', areaName, Object.keys(changes));
     isUpdatingFromStorage = true;
     try {
       if (areaName === 'local') {
         const groupsChange = changes[STORAGE_KEYS.GROUPS];
         if (groupsChange && groupsChange.newValue) {
+          console.log('[EmojiStore] Updating groups from storage change');
           groups.value = groupsChange.newValue;
         }
 
         const settingsChange = changes[STORAGE_KEYS.SETTINGS];
         if (settingsChange && settingsChange.newValue) {
+          console.log('[EmojiStore] Updating settings from storage change');
           settings.value = settingsChange.newValue;
         }
 
         const favoritesChange = changes[STORAGE_KEYS.FAVORITES];
         if (favoritesChange && favoritesChange.newValue) {
+          console.log('[EmojiStore] Updating favorites from storage change');
           favorites.value = new Set(favoritesChange.newValue);
         }
       } else if (areaName === 'sync') {
-        // Handle sync storage changes - sync data takes priority
+        // Handle sync storage changes - sync data takes priority (but avoid loops)
         const backupChange = changes['emojiExtensionBackup'];
         if (backupChange && backupChange.newValue) {
           const backup = backupChange.newValue;
+          console.log('[EmojiStore] Updating from sync storage change');
+          
           if (backup.groups) {
             groups.value = backup.groups;
           }
@@ -391,18 +410,19 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
             favorites.value = new Set(backup.favorites);
           }
 
-          // Update local storage to match sync (without triggering save)
+          // Update local storage to match sync (without triggering save to prevent loops)
           setStorageData({
             [STORAGE_KEYS.GROUPS]: groups.value,
             [STORAGE_KEYS.SETTINGS]: settings.value,
             [STORAGE_KEYS.FAVORITES]: Array.from(favorites.value)
-          }).catch(console.error);
+          }).catch(error => console.error('[EmojiStore] Failed to update local storage from sync:', error));
         }
       }
     } finally {
       setTimeout(() => {
         isUpdatingFromStorage = false;
-      }, 100);
+        console.log('[EmojiStore] Storage update completed');
+      }, 200); // Increased timeout to ensure stability
     }
   });
 

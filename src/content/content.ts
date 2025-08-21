@@ -223,8 +223,19 @@ function injectButton(toolbar: Element) {
 }
 
 function createEmojiPicker(): HTMLElement {
-  // Get current emoji data
+  // Get current emoji data with proper validation
   const allEmojis = getAllEmojis();
+  console.log('[Emoji Extension] Creating picker with emojis:', allEmojis?.length || 0);
+  
+  // Validate we have emojis
+  if (!Array.isArray(allEmojis) || allEmojis.length === 0) {
+    console.warn('[Emoji Extension] No valid emojis available for picker');
+    // Return a minimal error div
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'padding: 20px; text-align: center; color: #666;';
+    errorDiv.textContent = '暂无表情数据';
+    return errorDiv;
+  }
 
   // Create picker following simple.html structure
   const picker = document.createElement("div");
@@ -306,18 +317,25 @@ function createEmojiPicker(): HTMLElement {
   const sectionEmojis = document.createElement("div");
   sectionEmojis.className = "emoji-picker__section-emojis";
 
-  // Populate with emojis
-  allEmojis.forEach((emoji) => {
-    const img = document.createElement("img");
-    img.width = 32;
-    img.height = 32;
-    img.className = "emoji";
-    img.src = emoji.url;
-    img.setAttribute("tabindex", "0");
-    img.setAttribute("data-emoji", emoji.name);
-    img.alt = emoji.name;
-    img.title = `:${emoji.name}:`;
-    img.loading = "lazy";
+  // Populate with emojis - Additional safety check
+  if (Array.isArray(allEmojis) && allEmojis.length > 0) {
+    allEmojis.forEach((emoji) => {
+      // Ensure emoji object has required properties
+      if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) {
+        console.warn('[Emoji Extension] Skipping invalid emoji:', emoji);
+        return;
+      }
+      
+      const img = document.createElement("img");
+      img.width = 32;
+      img.height = 32;
+      img.className = "emoji";
+      img.src = emoji.url;
+      img.setAttribute("tabindex", "0");
+      img.setAttribute("data-emoji", emoji.name);
+      img.alt = emoji.name;
+      img.title = `:${emoji.name}:`;
+      img.loading = "lazy";
 
     img.addEventListener("click", () => {
       insertEmojiIntoEditor(emoji);
@@ -333,7 +351,14 @@ function createEmojiPicker(): HTMLElement {
     });
 
     sectionEmojis.appendChild(img);
-  });
+    });
+  } else {
+    // Add fallback message if no emojis are available
+    const noEmojisMsg = document.createElement("div");
+    noEmojisMsg.textContent = "暂无表情数据";
+    noEmojisMsg.style.cssText = "padding: 20px; text-align: center; color: #666;";
+    sectionEmojis.appendChild(noEmojisMsg);
+  }
 
   // Search functionality
   searchInput.addEventListener("input", (e) => {
