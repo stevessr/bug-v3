@@ -1,20 +1,39 @@
 // Background service worker for Emoji Extension
 console.log('Emoji Extension Background script loaded.');
 
-// Initialize extension on install
-chrome.runtime.onInstalled.addListener(async (details) => {
-  console.log('Emoji extension installed/updated:', details.reason);
-  
-  if (details.reason === 'install') {
-    // Initialize default data
-    await initializeDefaultData();
+// Safe chrome API access
+const getChromeAPI = () => {
+  try {
+    return (globalThis as any).chrome || (self as any).chrome;
+  } catch (e) {
+    console.error('Chrome API not available:', e);
+    return null;
   }
-});
+};
+
+// Initialize extension on install
+const chromeAPI = getChromeAPI();
+if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onInstalled) {
+  chromeAPI.runtime.onInstalled.addListener(async (details: any) => {
+    console.log('Emoji extension installed/updated:', details.reason);
+    
+    if (details.reason === 'install') {
+      // Initialize default data
+      await initializeDefaultData();
+    }
+  });
+}
 
 // Initialize default emoji data and settings
 async function initializeDefaultData() {
+  const chromeAPI = getChromeAPI();
+  if (!chromeAPI || !chromeAPI.storage) {
+    console.error('Chrome storage API not available');
+    return;
+  }
+
   try {
-    const existingData = await chrome.storage.local.get(['emojiGroups', 'appSettings']);
+    const existingData = await chromeAPI.storage.local.get(['emojiGroups', 'appSettings']);
     
     if (!existingData.emojiGroups) {
       // Default emoji groups from the reference
@@ -56,7 +75,7 @@ async function initializeDefaultData() {
         }
       ];
 
-      await chrome.storage.local.set({ emojiGroups: defaultGroups });
+      await chromeAPI.storage.local.set({ emojiGroups: defaultGroups });
       console.log('Default emoji groups initialized');
     }
 
@@ -68,7 +87,7 @@ async function initializeDefaultData() {
         gridColumns: 4
       };
 
-      await chrome.storage.local.set({ appSettings: defaultSettings });
+      await chromeAPI.storage.local.set({ appSettings: defaultSettings });
       console.log('Default app settings initialized');
     }
   } catch (error) {
@@ -77,32 +96,40 @@ async function initializeDefaultData() {
 }
 
 // Handle messages from content scripts and popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Background received message:', message);
+if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onMessage) {
+  chromeAPI.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
+    console.log('Background received message:', message);
 
-  switch (message.type) {
-    case 'GET_EMOJI_DATA':
-      handleGetEmojiData(sendResponse);
-      return true; // Keep channel open for async response
+    switch (message.type) {
+      case 'GET_EMOJI_DATA':
+        handleGetEmojiData(sendResponse);
+        return true; // Keep channel open for async response
 
-    case 'SAVE_EMOJI_DATA':
-      handleSaveEmojiData(message.data, sendResponse);
-      return true;
+      case 'SAVE_EMOJI_DATA':
+        handleSaveEmojiData(message.data, sendResponse);
+        return true;
 
-    case 'SYNC_SETTINGS':
-      handleSyncSettings(message.settings, sendResponse);
-      return true;
+      case 'SYNC_SETTINGS':
+        handleSyncSettings(message.settings, sendResponse);
+        return true;
 
-    default:
-      console.log('Unknown message type:', message.type);
-      sendResponse({ success: false, error: 'Unknown message type' });
-  }
-});
+      default:
+        console.log('Unknown message type:', message.type);
+        sendResponse({ success: false, error: 'Unknown message type' });
+    }
+  });
+}
 
 // Get emoji data from storage
 async function handleGetEmojiData(sendResponse: (response: any) => void) {
+  const chromeAPI = getChromeAPI();
+  if (!chromeAPI || !chromeAPI.storage) {
+    sendResponse({ success: false, error: 'Chrome storage API not available' });
+    return;
+  }
+
   try {
-    const data = await chrome.storage.local.get(['emojiGroups', 'appSettings', 'favorites']);
+    const data = await chromeAPI.storage.local.get(['emojiGroups', 'appSettings', 'favorites']);
     sendResponse({
       success: true,
       data: {
@@ -111,7 +138,7 @@ async function handleGetEmojiData(sendResponse: (response: any) => void) {
         favorites: data.favorites || []
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to get emoji data:', error);
     sendResponse({ success: false, error: error.message });
   }
@@ -119,10 +146,16 @@ async function handleGetEmojiData(sendResponse: (response: any) => void) {
 
 // Save emoji data to storage
 async function handleSaveEmojiData(data: any, sendResponse: (response: any) => void) {
+  const chromeAPI = getChromeAPI();
+  if (!chromeAPI || !chromeAPI.storage) {
+    sendResponse({ success: false, error: 'Chrome storage API not available' });
+    return;
+  }
+
   try {
-    await chrome.storage.local.set(data);
+    await chromeAPI.storage.local.set(data);
     sendResponse({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to save emoji data:', error);
     sendResponse({ success: false, error: error.message });
   }
@@ -130,14 +163,20 @@ async function handleSaveEmojiData(data: any, sendResponse: (response: any) => v
 
 // Sync settings across extension
 async function handleSyncSettings(settings: any, sendResponse: (response: any) => void) {
+  const chromeAPI = getChromeAPI();
+  if (!chromeAPI || !chromeAPI.storage || !chromeAPI.tabs) {
+    sendResponse({ success: false, error: 'Chrome API not available' });
+    return;
+  }
+
   try {
-    await chrome.storage.local.set({ appSettings: settings });
+    await chromeAPI.storage.local.set({ appSettings: settings });
     
     // Notify all tabs about settings change
-    const tabs = await chrome.tabs.query({});
+    const tabs = await chromeAPI.tabs.query({});
     for (const tab of tabs) {
       if (tab.id) {
-        chrome.tabs.sendMessage(tab.id, {
+        chromeAPI.tabs.sendMessage(tab.id, {
           type: 'SETTINGS_UPDATED',
           settings: settings
         }).catch(() => {
@@ -147,39 +186,50 @@ async function handleSyncSettings(settings: any, sendResponse: (response: any) =
     }
     
     sendResponse({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to sync settings:', error);
     sendResponse({ success: false, error: error.message });
   }
 }
 
 // Storage change listener for cross-extension sync
-chrome.storage.onChanged.addListener((changes, namespace) => {
-  console.log('Storage changed:', changes, namespace);
-  
-  // You could implement cloud sync here by listening to storage changes
-  // and syncing with a cloud service
-});
+if (chromeAPI && chromeAPI.storage && chromeAPI.storage.onChanged) {
+  chromeAPI.storage.onChanged.addListener((changes: any, namespace: any) => {
+    console.log('Storage changed:', changes, namespace);
+    
+    // You could implement cloud sync here by listening to storage changes
+    // and syncing with a cloud service
+  });
+}
 
 // Context menu setup (optional feature)
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'open-emoji-options',
-    title: '表情管理',
-    contexts: ['page']
+if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onInstalled && chromeAPI.contextMenus) {
+  chromeAPI.runtime.onInstalled.addListener(() => {
+    if (chromeAPI.contextMenus && chromeAPI.contextMenus.create) {
+      chromeAPI.contextMenus.create({
+        id: 'open-emoji-options',
+        title: '表情管理',
+        contexts: ['page']
+      });
+    }
   });
-});
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'open-emoji-options') {
-    chrome.runtime.openOptionsPage();
+  if (chromeAPI.contextMenus.onClicked) {
+    chromeAPI.contextMenus.onClicked.addListener((info: any, tab: any) => {
+      if (info.menuItemId === 'open-emoji-options' && chromeAPI.runtime && chromeAPI.runtime.openOptionsPage) {
+        chromeAPI.runtime.openOptionsPage();
+      }
+    });
   }
-});
+}
 
 // Clean up storage periodically (remove unused data)
 setInterval(async () => {
+  const chromeAPI = getChromeAPI();
+  if (!chromeAPI || !chromeAPI.storage) return;
+
   try {
-    const data = await chrome.storage.local.get(['emojiGroups']);
+    const data = await chromeAPI.storage.local.get(['emojiGroups']);
     if (data.emojiGroups) {
       // Could implement cleanup logic here
       console.log('Storage cleanup check completed');

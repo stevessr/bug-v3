@@ -33,12 +33,20 @@ export default defineConfig({
         background: fileURLToPath(
           new URL("background/background.ts", import.meta.url)
         ),
+        "picker-styles": fileURLToPath(
+          new URL("content/picker-styles.css", import.meta.url)
+        ),
       },
       output: {
         entryFileNames: "js/[name].js",
         chunkFileNames: "js/[name].js",
         assetFileNames: "assets/[name].[ext]",
         manualChunks(id) {
+          // Don't split content script to avoid import issues
+          if (id.includes('content/content.ts') || id.includes('content/emoji-data.ts')) {
+            return undefined; // Bundle together in main content.js
+          }
+          
           // Split node_modules into per-package vendor chunks and handle pnpm layout
           if (id.includes("node_modules")) {
             const parts = id.split(/[\\/]/);
@@ -82,9 +90,6 @@ export default defineConfig({
               }
             }
             return `vendor_${candidate.replace("/", "_")}`;
-          }
-          if (id.includes("emoji-data")) {
-            return "emoji-data";
           }
         },
       },

@@ -16,6 +16,18 @@
               导入配置
             </button>
             <button
+              @click="showImportEmojiModal = true"
+              class="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors"
+            >
+              导入表情
+            </button>
+            <button
+              @click="resetSettings"
+              class="px-4 py-2 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors"
+            >
+              重置设置
+            </button>
+            <button
               @click="syncToChrome"
               class="px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
             >
@@ -139,23 +151,23 @@
                   <p class="text-sm text-gray-500">{{ group.emojis.length }} 个表情</p>
                 </div>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-3">
                 <button
                   @click="editGroup(group)"
-                  class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                  class="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded touch-manipulation"
                 >
                   编辑
                 </button>
                 <button
                   @click="showAddEmojiToGroup(group.id)"
-                  class="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded"
+                  class="px-4 py-2 text-sm text-green-600 hover:bg-green-50 rounded touch-manipulation"
                 >
                   添加表情
                 </button>
                 <button
                   v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
                   @click="showDeleteGroupConfirm(group)"
-                  class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+                  class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded touch-manipulation"
                 >
                   删除
                 </button>
@@ -164,11 +176,11 @@
 
             <!-- Emojis Grid -->
             <div v-if="!collapsedGroups.has(group.id)" class="transition-all duration-200">
-              <div v-if="group.emojis.length > 0" class="grid grid-cols-12 gap-3">
+              <div v-if="group.emojis.length > 0" :class="getGridClass()">
                 <div
                   v-for="(emoji, index) in group.emojis"
                   :key="emoji.id"
-                  class="relative group/emoji bg-gray-50 rounded-lg p-2 hover:bg-gray-100 transition-colors cursor-move touch-manipulation"
+                  class="relative group/emoji bg-gray-50 rounded-lg p-2 hover:bg-gray-100 transition-colors cursor-move touch-manipulation aspect-square flex items-center justify-center"
                   :draggable="true"
                   @dragstart="onDragStart($event, emoji, index)"
                   @dragover.prevent
@@ -178,13 +190,14 @@
                     :src="emoji.url"
                     :alt="emoji.name"
                     :title="emoji.name"
-                    class="w-12 h-12 object-contain mx-auto rounded"
+                    class="w-full h-full object-contain rounded"
+                    style="max-width: 100%; max-height: 100%;"
                     @click="editEmoji(emoji)"
                   />
-                  <p class="text-xs text-gray-600 text-center mt-1 truncate">{{ emoji.name }}</p>
+                  <p class="absolute bottom-0 left-0 right-0 text-xs text-gray-600 text-center bg-white bg-opacity-75 rounded-b truncate px-1">{{ emoji.name }}</p>
                   <button
                     @click="showDeleteEmojiConfirm(emoji)"
-                    class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover/emoji:opacity-100 transition-opacity"
+                    class="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover/emoji:opacity-100 transition-opacity touch-manipulation"
                   >
                     ×
                   </button>
@@ -471,6 +484,39 @@
       </div>
     </div>
 
+    <!-- Import Emoji Modal -->
+    <div v-if="showImportEmojiModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 w-96 max-h-96 overflow-hidden">
+        <h3 class="text-lg font-semibold mb-4">批量导入表情</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">表情JSON数据</label>
+            <textarea
+              v-model="importEmojiData"
+              rows="8"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs overflow-y-auto"
+              placeholder='[{"id":"emoji-1","packet":1,"name":"表情名","url":"https://example.com/emoji.png","groupId":"group-name"}]'
+            ></textarea>
+            <p class="text-xs text-gray-500 mt-1">支持的字段：id (必需), name (必需), url (必需), groupId (必需), packet (可选), width (可选), height (可选)</p>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+          <button
+            @click="showImportEmojiModal = false; importEmojiData = ''"
+            class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded"
+          >
+            取消
+          </button>
+          <button
+            @click="importEmojiConfiguration"
+            class="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+          >
+            导入表情
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Import Modal -->
     <div v-if="showImportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg p-6 w-96">
@@ -520,6 +566,7 @@
 import { ref, onMounted } from 'vue';
 import { useEmojiStore } from '../src/stores/emojiStore';
 import type { EmojiGroup, Emoji } from '../src/types/emoji';
+import { validateEmojiArray } from '../src/types/emoji';
 
 const emojiStore = useEmojiStore();
 
@@ -531,6 +578,7 @@ const showAddEmojiModal = ref(false);
 const showEditEmojiModal = ref(false);
 const showDeleteEmojiModal = ref(false);
 const showImportModal = ref(false);
+const showImportEmojiModal = ref(false);
 
 // Form data
 const newGroup = ref({ name: '', icon: '' });
@@ -551,6 +599,7 @@ const editingEmoji = ref({
 });
 const deletingEmoji = ref<Emoji | null>(null);
 const importData = ref('');
+const importEmojiData = ref('');
 const currentGroupId = ref('');
 
 // UI state
@@ -566,6 +615,19 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   setTimeout(() => {
     notification.value.show = false;
   }, 3000);
+};
+
+const getGridClass = () => {
+  const cols = emojiStore.settings.gridColumns;
+  const gridClasses = {
+    2: 'grid grid-cols-2 gap-3',
+    3: 'grid grid-cols-3 gap-3', 
+    4: 'grid grid-cols-4 gap-3',
+    5: 'grid grid-cols-5 gap-3',
+    6: 'grid grid-cols-6 gap-3',
+    8: 'grid grid-cols-8 gap-3'
+  };
+  return gridClasses[cols as keyof typeof gridClasses] || 'grid grid-cols-4 gap-3';
 };
 
 const toggleGroupCollapse = (groupId: string) => {
@@ -700,8 +762,14 @@ const onDrop = (event: DragEvent, targetGroupId: string, targetIndex: number) =>
 const syncToChrome = async () => {
   try {
     const config = emojiStore.exportConfiguration();
-    await chrome.storage.sync.set({ emojiConfig: config });
-    showNotification('配置已上传到Chrome同步！');
+    const w: any = window as any;
+    const chromeApi = w.chrome;
+    if (chromeApi && chromeApi.storage && chromeApi.storage.sync) {
+      await chromeApi.storage.sync.set({ emojiConfig: config });
+      showNotification('配置已上传到Chrome同步！');
+    } else {
+      throw new Error('Chrome sync API not available');
+    }
   } catch (error) {
     console.error('Chrome sync failed:', error);
     showNotification('Chrome同步失败，请检查同步设置', 'error');
@@ -738,17 +806,84 @@ const importConfiguration = () => {
   }
 };
 
+const importEmojiConfiguration = () => {
+  try {
+    const emojiArray = JSON.parse(importEmojiData.value);
+    
+    // 验证表情数据格式
+    const { valid, errors } = validateEmojiArray(emojiArray);
+    if (!valid) {
+      showNotification(`导入失败：${errors.join('; ')}`, 'error');
+      return;
+    }
+
+    // 按分组整理表情
+    const groupedEmojis = new Map<string, any[]>();
+    emojiArray.forEach((emoji: any) => {
+      if (!groupedEmojis.has(emoji.groupId)) {
+        groupedEmojis.set(emoji.groupId, []);
+      }
+      groupedEmojis.get(emoji.groupId)!.push(emoji);
+    });
+
+    // 为每个分组创建或更新
+    let addedCount = 0;
+    groupedEmojis.forEach((emojis, groupId) => {
+      let group = emojiStore.groups.find(g => g.id === groupId);
+      
+      if (!group) {
+        // 创建新分组
+        group = emojiStore.createGroup(groupId, '📁');
+      }
+
+      // 添加表情到分组
+      emojis.forEach(emoji => {
+        emojiStore.addEmoji(groupId, {
+          name: emoji.name,
+          url: emoji.url,
+          packet: emoji.packet || Date.now(),
+          width: emoji.width,
+          height: emoji.height
+        });
+        addedCount++;
+      });
+    });
+
+    showNotification(`成功导入 ${addedCount} 个表情到 ${groupedEmojis.size} 个分组！`);
+    showImportEmojiModal.value = false;
+    importEmojiData.value = '';
+  } catch (error) {
+    showNotification('JSON格式错误，请检查表情数据', 'error');
+  }
+};
+
+const resetSettings = () => {
+  if (confirm('确定要重置所有设置吗？这将恢复到默认设置。')) {
+    emojiStore.updateSettings({
+      imageScale: 100,
+      defaultGroup: 'nachoneko',
+      showSearchBar: true,
+      gridColumns: 4
+    });
+    showNotification('设置已重置为默认值');
+  }
+};
+
 // Lifecycle
 onMounted(async () => {
   await emojiStore.loadData();
   
   // Try to load from Chrome sync if available
   try {
-    const result = await chrome.storage.sync.get(['emojiConfig']);
-    if (result.emojiConfig) {
-      const success = emojiStore.importConfiguration(result.emojiConfig);
-      if (success) {
-        showNotification('已从Chrome同步加载配置');
+    const w: any = window as any;
+    const chromeApi = w.chrome;
+    if (chromeApi && chromeApi.storage && chromeApi.storage.sync) {
+      const result = await chromeApi.storage.sync.get(['emojiConfig']);
+      if (result.emojiConfig) {
+        const success = emojiStore.importConfiguration(result.emojiConfig);
+        if (success) {
+          showNotification('已从Chrome同步加载配置');
+        }
       }
     }
   } catch (error) {

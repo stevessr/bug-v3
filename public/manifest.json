@@ -35,7 +35,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
+      "resources": ["assets/*", "js/picker-styles.css"],
       "matches": ["<all_urls>"]
     }
   ]

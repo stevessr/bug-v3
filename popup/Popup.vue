@@ -89,11 +89,7 @@
           <img
             :src="emoji.url"
             :alt="emoji.name"
-            :style="{ 
-              width: `${Math.round(40 * (localScale / 100))}px`,
-              height: `${Math.round(40 * (localScale / 100))}px`
-            }"
-            class="object-contain mx-auto"
+            class="w-10 h-10 object-contain mx-auto"
             loading="lazy"
           />
           <!-- Favorite indicator -->
@@ -148,33 +144,44 @@ const updateScale = () => {
 };
 
 const selectEmoji = (emoji: Emoji) => {
-  // Copy to clipboard
+  // Copy to clipboard - use stored scale, not popup display scale
   const scale = emojiStore.settings.imageScale;
-  const width = emoji.width ? Math.round(emoji.width * (scale / 100)) : 'auto';
-  const height = emoji.height ? Math.round(emoji.height * (scale / 100)) : 'auto';
-  const emojiMarkdown = `![${emoji.name}|${width}x${height}](${emoji.url})`;
+  const match = emoji.url.match(/_(\d{3,})x(\d{3,})\./);
+  let width = '500';
+  let height = '500';
+  if (match) {
+    width = match[1];
+    height = match[2];
+  } else if (emoji.width && emoji.height) {
+    width = emoji.width.toString();
+    height = emoji.height.toString();
+  }
+  
+  const emojiMarkdown = `![${emoji.name}|${width}x${height},${scale}%](${emoji.url}) `;
   
   // Try to copy to clipboard
   navigator.clipboard.writeText(emojiMarkdown).then(() => {
     console.log('Emoji copied to clipboard');
   }).catch(() => {
     // Fallback: send message to content script
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0] && tabs[0].id) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          type: 'INSERT_EMOJI',
-          emoji: emoji,
-          scale: scale
-        });
-      }
-    });
+    const chromeApi = (window as any).chrome;
+    if (chromeApi && chromeApi.tabs) {
+      chromeApi.tabs.query({ active: true, currentWindow: true }, (tabs: any) => {
+        if (tabs[0] && tabs[0].id) {
+          chromeApi.tabs.sendMessage(tabs[0].id, {
+            type: 'INSERT_EMOJI',
+            emoji: emoji,
+            scale: scale
+          });
+        }
+      });
+    }
   });
 
   // Add to favorites if not already there
   if (!emojiStore.favorites.has(emoji.id)) {
     // Auto-add frequently used emojis to favorites (simple heuristic)
     const now = Date.now();
-    const lastUsed = localStorage.getItem(`emoji-last-used-${emoji.id}`);
     const useCount = parseInt(localStorage.getItem(`emoji-use-count-${emoji.id}`) || '0') + 1;
     
     localStorage.setItem(`emoji-last-used-${emoji.id}`, now.toString());
@@ -191,7 +198,10 @@ const selectEmoji = (emoji: Emoji) => {
 };
 
 const openOptions = () => {
-  chrome.runtime.openOptionsPage();
+  const chromeApi = (window as any).chrome;
+  if (chromeApi && chromeApi.runtime) {
+    chromeApi.runtime.openOptionsPage();
+  }
 };
 </script>
 
