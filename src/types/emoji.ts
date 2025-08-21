@@ -21,6 +21,7 @@ export interface AppSettings {
   defaultGroup: string;
   showSearchBar: boolean;
   gridColumns: number; // 2 to 8
+  lastModified?: number; // timestamp for sync comparison
 }
 
 export interface DefaultEmojiData {

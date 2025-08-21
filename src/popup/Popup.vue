@@ -117,6 +117,14 @@
         去添加表情
       </button>
     </div>
+
+    <!-- Copy Success Toast -->
+    <div
+      v-if="showCopyToast"
+      class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm animate-pulse"
+    >
+      链接已复制到剪贴板
+    </div>
   </div>
 </template>
 
@@ -127,6 +135,7 @@ import type { Emoji } from '../types/emoji';
 
 const emojiStore = useEmojiStore();
 const localScale = ref(100);
+const showCopyToast = ref(false);
 
 onMounted(async () => {
   await emojiStore.loadData();
@@ -160,6 +169,11 @@ const selectEmoji = (emoji: Emoji) => {
   // Try to copy to clipboard
   navigator.clipboard.writeText(emojiMarkdown).then(() => {
     console.log('Emoji copied to clipboard');
+    // 显示复制成功提示，不关闭弹窗
+    showCopyToast.value = true;
+    setTimeout(() => {
+      showCopyToast.value = false;
+    }, 2000);
   }).catch(() => {
     // Fallback: send message to content script
     const chromeApi = (window as any).chrome;
@@ -171,6 +185,11 @@ const selectEmoji = (emoji: Emoji) => {
             emoji: emoji,
             scale: scale
           });
+          // 显示插入成功提示
+          showCopyToast.value = true;
+          setTimeout(() => {
+            showCopyToast.value = false;
+          }, 2000);
         }
       });
     }
@@ -191,8 +210,8 @@ const selectEmoji = (emoji: Emoji) => {
     }
   }
 
-  // Close popup
-  window.close();
+  // 不要立即关闭弹窗，让用户可以继续选择表情
+  // window.close();  // 注释掉这行
 };
 
 const openOptions = () => {

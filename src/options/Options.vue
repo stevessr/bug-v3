@@ -812,11 +812,11 @@ const handleDragStart = (group: EmojiGroup, event: DragEvent) => {
   }
 }
 
-const handleDrop = (targetGroup: EmojiGroup, event: DragEvent) => {
+const handleDrop = async (targetGroup: EmojiGroup, event: DragEvent) => {
   event.preventDefault()
   if (draggedGroup.value && draggedGroup.value.id !== targetGroup.id) {
     // Reorder groups logic here
-    emojiStore.reorderGroups(draggedGroup.value.id, targetGroup.id)
+    await emojiStore.reorderGroups(draggedGroup.value.id, targetGroup.id)
     showSuccess('分组顺序已更新')
   }
   draggedGroup.value = null
@@ -998,53 +998,73 @@ const importConfiguration = () => {
   }
 }
 
-const importEmojis = () => {
+const importEmojis = async () => {
   try {
-    const emojis = JSON.parse(importEmojiText.value)
-    
+    const emojis = JSON.parse(importEmojiText.value);
+
     if (!Array.isArray(emojis)) {
-      showError('表情数据格式错误，应该是数组格式')
-      return
+      showError('表情数据格式错误，应该是数组格式');
+      return;
     }
-    // If target group selected, import all into that group
-    if (importTargetGroupId.value) {
-      emojis.forEach((emoji: any) => {
-        const emojiData = {
-          packet: Date.now() + Math.random() * 1000,
-          name: emoji.name || emoji.alt || '未命名',
-          url: emoji.url || emoji.src
-        }
-        emojiStore.addEmoji(importTargetGroupId.value, emojiData)
-      })
-    } else {
-      // Auto create or use group by emoji.groupId
-      const groupMap = new Map<string, string>() // group name -> id
-      emojiStore.groups.forEach(g => groupMap.set(g.name, g.id))
-      emojis.forEach((emoji: any) => {
-        const groupName = (emoji.groupId || emoji.group || '未分组').toString()
-        let targetId = groupMap.get(groupName)
-        if (!targetId) {
-          const created = emojiStore.createGroup(groupName, '📁')
-          targetId = created.id
-          groupMap.set(groupName, targetId)
-        }
-        const emojiData = {
-          packet: Number.isInteger(emoji.packet) ? emoji.packet : (Date.now() + Math.floor(Math.random()*1000)),
-          name: emoji.name || emoji.alt || '未命名',
-          url: emoji.url || emoji.src
-        }
-        emojiStore.addEmoji(targetId, emojiData)
-      })
-    }
+
+    // Batch import to avoid multiple saveData calls
+    // Start a batch
+    emojiStore.beginBatch();
     
-    importEmojiText.value = ''
-    importTargetGroupId.value = ''
-    showImportEmojiModal.value = false
-    showSuccess(`成功导入 ${emojis.length} 个表情`)
+    try {
+      if (importTargetGroupId.value) {
+        // Import all into target group
+        emojis.forEach((emoji: any) => {
+          const emojiData = {
+            packet: Date.now() + Math.random() * 1000,
+            name: emoji.name || emoji.alt || '未命名',
+            url: emoji.url || emoji.src
+          };
+          emojiStore.addEmojiWithoutSave(importTargetGroupId.value, emojiData);
+        });
+      } else {
+        // Auto create or use group by emoji.groupId
+        const groupMap = new Map<string, string>(); // group name -> id
+        emojiStore.groups.forEach(g => groupMap.set(g.name, g.id));
+        emojis.forEach((emoji: any) => {
+          const groupName = (emoji.groupId || emoji.group || '未分组').toString();
+          let targetId = groupMap.get(groupName);
+          if (!targetId) {
+            const created = emojiStore.createGroupWithoutSave(groupName, '📁');
+            if (created) {
+              targetId = created.id;
+              groupMap.set(groupName, targetId);
+            } else {
+              // Fallback to first available group if creation fails
+              targetId = emojiStore.groups[0]?.id || 'nachoneko';
+            }
+          }
+          if (targetId) {
+            const emojiData = {
+              packet: Number.isInteger(emoji.packet) ? emoji.packet : (Date.now() + Math.floor(Math.random() * 1000)),
+              name: emoji.name || emoji.alt || '未命名',
+              url: emoji.url || emoji.src
+            };
+            emojiStore.addEmojiWithoutSave(targetId, emojiData);
+          }
+        });
+      }
+
+      // Save all changes at once
+      await emojiStore.saveData();
+    } finally {
+      // End batch
+      await emojiStore.endBatch();
+    }
+
+    importEmojiText.value = '';
+    importTargetGroupId.value = '';
+    showImportEmojiModal.value = false;
+    showSuccess(`成功导入 ${emojis.length} 个表情`);
   } catch (error) {
-    showError('表情数据格式错误')
+    showError('表情数据格式错误');
   }
-}
+};
 
 const resetSettings = () => {
   if (confirm('确定要重置所有设置吗？这将清除所有自定义数据。')) {
@@ -1055,15 +1075,16 @@ const resetSettings = () => {
 
 const syncToChrome = async () => {
   try {
-    const success = await emojiStore.backupToChrome()
+    // Force sync to chrome storage
+    const success = await emojiStore.forceSync()
     if (success) {
-      showSuccess('数据已上传到Chrome同步')
+      showSuccess('数据已上传到Chrome同步存储')
     } else {
-      showError('Chrome同步功能不可用')
+      showError('同步失败，请检查网络连接')
     }
   } catch (error) {
     console.error('Sync error:', error)
-    showError('同步失败，请检查网络连接')
+    showError('同步失败，请重试')
   }
 }
 
