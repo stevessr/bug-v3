@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Test</title>
+</head>
+<body>
+    <h1>Storage System Test</h1>
+    <div id="output"></div>
+    
+    <script type="module">
+        // Test the new storage system
+        async function testStorage() {
+            const output = document.getElementById('output');
+            const log = (msg) => {
+                output.innerHTML += msg + '<br>';
+                console.log(msg);
+            };
+
+            log('Testing new storage system...');
+            
+            // Test localStorage
+            try {
+                const testData = { data: { test: 'value' }, timestamp: Date.now() };
+                localStorage.setItem('test_key', JSON.stringify(testData));
+                const retrieved = localStorage.getItem('test_key');
+                if (retrieved) {
+                    const parsed = JSON.parse(retrieved);
+                    log('✅ localStorage test passed');
+                } else {
+                    log('❌ localStorage test failed');
+                }
+            } catch (error) {
+                log('❌ localStorage error: ' + error.message);
+            }
+
+            // Test sessionStorage
+            try {
+                const testData = { data: { test: 'value' }, timestamp: Date.now() };
+                sessionStorage.setItem('test_key', JSON.stringify(testData));
+                const retrieved = sessionStorage.getItem('test_key');
+                if (retrieved) {
+                    const parsed = JSON.parse(retrieved);
+                    log('✅ sessionStorage test passed');
+                } else {
+                    log('❌ sessionStorage test failed');
+                }
+            } catch (error) {
+                log('❌ sessionStorage error: ' + error.message);
+            }
+
+            // Test Chrome storage if available
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                try {
+                    await chrome.storage.local.set({ test_chrome: { test: 'value' } });
+                    const result = await chrome.storage.local.get({ test_chrome: null });
+                    if (result.test_chrome) {
+                        log('✅ Chrome storage test passed');
+                    } else {
+                        log('❌ Chrome storage test failed');
+                    }
+                } catch (error) {
+                    log('❌ Chrome storage error: ' + error.message);
+                }
+            } else {
+                log('⚠️ Chrome storage not available (expected in regular browser)');
+            }
+
+            log('Storage tests completed');
+        }
+
+        testStorage();
+    </script>
+</body>
+</html>
