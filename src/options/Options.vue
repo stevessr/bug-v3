@@ -330,7 +330,7 @@
                 </button>
                 <button
                   v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
-                  @click="deleteGroup(group.id)"
+                  @click="confirmDeleteGroup(group)"
                   class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
                 >
                   删除
@@ -707,6 +707,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useEmojiStore } from '../stores/emojiStore'
+// force flush to IndexedDB buffer when options page updates data
+import { flushBuffer } from '../utils/indexedDB'
 import type { EmojiGroup } from '../types/emoji'
 
 const emojiStore = useEmojiStore()
@@ -817,7 +819,9 @@ const handleDrop = async (targetGroup: EmojiGroup, event: DragEvent) => {
   if (draggedGroup.value && draggedGroup.value.id !== targetGroup.id) {
     // Reorder groups logic here
     await emojiStore.reorderGroups(draggedGroup.value.id, targetGroup.id)
-    showSuccess('分组顺序已更新')
+  await flushBuffer(true)
+  console.log('[Options] reorderGroups flushed to IndexedDB', { source: draggedGroup.value.id, target: targetGroup.id })
+  showSuccess('分组顺序已更新')
   }
   draggedGroup.value = null
 }
@@ -840,13 +844,15 @@ const handleEmojiDrop = (targetGroupId: string, targetIndex: number, event: Drag
       targetGroupId,
       targetIndex
     )
-    showSuccess('表情已移动')
+  void flushBuffer(true).then(() => console.log('[Options] moveEmoji flushed to IndexedDB', { from: draggedEmojiGroupId.value, to: targetGroupId }))
+  showSuccess('表情已移动')
   }
   resetEmojiDrag()
 }
 
 const removeEmojiFromGroup = (groupId: string, index: number) => {
   emojiStore.removeEmojiFromGroup(groupId, index)
+  void flushBuffer(true).then(() => console.log('[Options] removeEmojiFromGroup flushed to IndexedDB', { groupId, index }));
   showSuccess('表情已删除')
 }
 
@@ -878,8 +884,9 @@ const createGroup = () => {
     return
   }
 
-  emojiStore.createGroup(newGroupName.value.trim(), '📁')
-  
+  emojiStore.createGroup(newGroupName.value.trim(), newGroupIcon.value || '📁')
+  // Force immediate flush to IndexedDB so options changes are persisted
+  void flushBuffer(true).then(() => console.log('[Options] createGroup flushed to IndexedDB', { name: newGroupName.value }));
   // Reset form
   newGroupName.value = ''
   newGroupColor.value = '#3B82F6'
@@ -905,6 +912,8 @@ const saveEditGroup = () => {
     name: editGroupName.value.trim(),
     icon: editGroupIcon.value || '📁'
   })
+  // Force flush and log
+  void flushBuffer(true).then(() => console.log('[Options] saveEditGroup flushed to IndexedDB', { id: editingGroupId.value, name: editGroupName.value }));
   showEditGroupModal.value = false
   showSuccess('分组已更新')
 }
@@ -922,7 +931,7 @@ const addEmoji = () => {
   }
 
   emojiStore.addEmoji(newEmojiGroupId.value, emojiData)
-  
+  void flushBuffer(true).then(() => console.log('[Options] addEmoji flushed to IndexedDB', { group: newEmojiGroupId.value, name: emojiData.name }));
   // Reset form
   newEmojiName.value = ''
   newEmojiUrl.value = ''
@@ -934,8 +943,9 @@ const addEmoji = () => {
 
 const deleteEmoji = (emojiId: string) => {
   if (confirm('确定要删除这个表情吗？')) {
-    emojiStore.deleteEmoji(emojiId)
-    showSuccess('表情删除成功')
+  emojiStore.deleteEmoji(emojiId)
+  void flushBuffer(true).then(() => console.log('[Options] deleteEmoji flushed to IndexedDB', { id: emojiId }));
+  showSuccess('表情删除成功')
   }
 }
 
@@ -1110,13 +1120,18 @@ const showError = (message: string) => {
 }
 
 // Initialize
-onMounted(() => {
-  emojiStore.loadData()
+onMounted(async () => {
+  console.log('[Options.vue] Component mounted, loading data...');
+  await emojiStore.loadData()
+  console.log('[Options.vue] Data loaded, groups count:', emojiStore.groups.length);
   
   // Set default values
   if (emojiStore.groups.length > 0) {
     newEmojiGroupId.value = emojiStore.groups[0].id
     importTargetGroupId.value = emojiStore.groups[0].id
+    console.log('[Options.vue] Set default group IDs to:', emojiStore.groups[0].id);
+  } else {
+    console.warn('[Options.vue] No groups available after loading');
   }
 })
 

@@ -2,6 +2,9 @@ import type { EmojiGroup, AppSettings } from '../types/emoji';
 import { defaultEmojiGroups, defaultSettings } from '../types/emoji';
 import { indexedDBHelpers } from './indexedDB';
 
+// In build/test environments `chrome` may not be declared. Provide a loose declaration
+declare const chrome: any;
+
 // --- Constants ---
 export const STORAGE_KEYS = {
   GROUPS: 'emojiGroups',
@@ -34,11 +37,33 @@ function getChromeAPI() {
 function logStorage(operation: string, key: string, data?: any, error?: any) {
   const timestamp = new Date().toISOString();
   const logPrefix = `[Storage ${timestamp}]`;
-  
+
+  function formatPreview(d: any) {
+    try {
+      const s = JSON.stringify(d);
+      const size = s.length;
+      if (size > 2000) {
+        return { preview: s.slice(0, 500) + '... (truncated)', size };
+      }
+      return { preview: JSON.parse(s), size };
+    } catch {
+      try {
+        return { preview: String(d) };
+      } catch {
+        return { preview: '[unserializable data]' };
+      }
+    }
+  }
+
   if (error) {
     console.error(`${logPrefix} ${operation} FAILED for "${key}":`, error);
   } else {
-    console.log(`${logPrefix} ${operation} for "${key}"`, data ? `(${typeof data === 'object' ? JSON.stringify(data).length : data} chars)` : '');
+    if (typeof data !== 'undefined') {
+      const p = formatPreview(data);
+      console.log(`${logPrefix} ${operation} for "${key}" - size: ${p.size ?? 'unknown'}`, p.preview);
+    } else {
+      console.log(`${logPrefix} ${operation} for "${key}"`);
+    }
   }
 }
 
@@ -59,7 +84,7 @@ export async function getStorageData(keys: string | string[] | { [key: string]: 
   
   return new Promise((resolve, reject) => {
     try {
-      chromeAPI.storage.local.get(keys, (result) => {
+  chromeAPI.storage.local.get(keys, (result: any) => {
         if (chromeAPI.runtime.lastError) {
           logStorage('GET', typeof keys === 'string' ? keys : 'multiple', undefined, chromeAPI.runtime.lastError);
           return reject(chromeAPI.runtime.lastError);
@@ -89,7 +114,7 @@ export async function setStorageData(data: { [key: string]: any }): Promise<void
   
   return new Promise((resolve, reject) => {
     try {
-      chromeAPI.storage.local.set(data, () => {
+  chromeAPI.storage.local.set(data, () => {
         if (chromeAPI.runtime.lastError) {
           logStorage('SET', Object.keys(data).join(', '), undefined, chromeAPI.runtime.lastError);
           return reject(chromeAPI.runtime.lastError);
@@ -119,7 +144,7 @@ export async function setSyncStorageData(data: { [key: string]: any }): Promise<
   
   return new Promise((resolve, reject) => {
     try {
-      chromeAPI.storage.sync.set(data, () => {
+  chromeAPI.storage.sync.set(data, () => {
         if (chromeAPI.runtime.lastError) {
           logStorage('SYNC_SET', Object.keys(data).join(', '), undefined, chromeAPI.runtime.lastError);
           return reject(chromeAPI.runtime.lastError);
@@ -149,7 +174,7 @@ export async function getSyncStorageData(keys: string | string[] | { [key: strin
   
   return new Promise((resolve, reject) => {
     try {
-      chromeAPI.storage.sync.get(keys, (result: any) => {
+  chromeAPI.storage.sync.get(keys, (result: any) => {
         if (chromeAPI.runtime.lastError) {
           logStorage('SYNC_GET', typeof keys === 'string' ? keys : 'multiple', undefined, chromeAPI.runtime.lastError);
           return reject(chromeAPI.runtime.lastError);
