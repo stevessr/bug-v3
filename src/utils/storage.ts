@@ -64,7 +64,24 @@ class EmojiStorage {
     await this.init()
 
     if (!this.db) {
-      console.warn('IndexedDB not available, returning default value')
+      console.warn('IndexedDB not available, trying Chrome storage')
+      // Fallback to Chrome storage
+      try {
+        const chromeAPI = this.getChromeAPI()
+        if (chromeAPI?.storage?.local) {
+          return new Promise((resolve) => {
+            chromeAPI.storage.local.get([key], (result: any) => {
+              if (result && result[key] !== undefined) {
+                resolve(result[key])
+              } else {
+                resolve(defaultValue)
+              }
+            })
+          })
+        }
+      } catch (error) {
+        console.error('Chrome storage also failed:', error)
+      }
       return defaultValue
     }
 
@@ -77,8 +94,27 @@ class EmojiStorage {
         if (request.result && request.result.value !== undefined) {
           resolve(request.result.value)
         } else {
-          console.log(`No data found for key ${key}, returning default value`)
-          resolve(defaultValue)
+          console.log(`No data found for key ${key} in IndexedDB, trying Chrome storage`)
+          // Try Chrome storage as fallback
+          try {
+            const chromeAPI = this.getChromeAPI()
+            if (chromeAPI?.storage?.local) {
+              chromeAPI.storage.local.get([key], (result: any) => {
+                if (result && result[key] !== undefined) {
+                  console.log(`Found ${key} in Chrome storage`)
+                  resolve(result[key])
+                } else {
+                  console.log(`No data found for key ${key} anywhere, returning default value`)
+                  resolve(defaultValue)
+                }
+              })
+            } else {
+              resolve(defaultValue)
+            }
+          } catch (error) {
+            console.error('Chrome storage fallback failed:', error)
+            resolve(defaultValue)
+          }
         }
       }
 
@@ -108,6 +144,17 @@ class EmojiStorage {
 
       request.onsuccess = () => {
         console.log(`Successfully saved data for key ${key}`)
+        
+        // Also save to Chrome storage for content script synchronization
+        const chromeAPI = this.getChromeAPI()
+        if (chromeAPI?.storage?.local) {
+          chromeAPI.storage.local.set({ [key]: value }).then(() => {
+            console.log(`Also saved ${key} to Chrome storage for content script sync`)
+          }).catch((error: any) => {
+            console.warn(`Failed to sync ${key} to Chrome storage:`, error)
+          })
+        }
+        
         resolve(true)
       }
 

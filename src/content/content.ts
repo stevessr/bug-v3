@@ -10,22 +10,48 @@ async function loadDataFromStorage() {
   try {
     if (chrome?.storage?.local) {
       const data = await chrome.storage.local.get(['emojiGroups', 'appSettings']);
-      cachedEmojiGroups = data.emojiGroups || [];
-      cachedSettings = { ...cachedSettings, ...(data.appSettings || {}) };
+      
+      // Ensure cachedEmojiGroups is always an array
+      if (data.emojiGroups && Array.isArray(data.emojiGroups)) {
+        cachedEmojiGroups = data.emojiGroups;
+      } else {
+        console.warn('[Emoji Extension] No valid emoji groups found in storage, using defaults');
+        cachedEmojiGroups = [];
+      }
+      
+      // Merge settings with defaults
+      if (data.appSettings && typeof data.appSettings === 'object') {
+        cachedSettings = { ...cachedSettings, ...data.appSettings };
+      }
+      
+      console.log('[Emoji Extension] Loaded from storage:', {
+        groupsCount: cachedEmojiGroups.length,
+        settings: cachedSettings
+      });
+    } else {
+      console.warn('[Emoji Extension] Chrome storage not available');
+      cachedEmojiGroups = [];
     }
   } catch (error) {
     console.error('[Emoji Extension] Failed to load from storage:', error);
+    // Ensure we have a valid array even if loading fails
+    cachedEmojiGroups = [];
+    cachedSettings = { imageScale: 30, gridColumns: 4 };
   }
 }
 
 // Get all emojis from cached groups
 function getAllEmojis() {
   const allEmojis: any[] = [];
-  cachedEmojiGroups.forEach(group => {
-    if (group.emojis && Array.isArray(group.emojis)) {
-      allEmojis.push(...group.emojis);
-    }
-  });
+  
+  // Ensure cachedEmojiGroups is an array before calling forEach
+  if (Array.isArray(cachedEmojiGroups)) {
+    cachedEmojiGroups.forEach(group => {
+      if (group && group.emojis && Array.isArray(group.emojis)) {
+        allEmojis.push(...group.emojis);
+      }
+    });
+  }
   
   // Fallback to default if no emojis loaded
   if (allEmojis.length === 0) {
@@ -538,12 +564,21 @@ if (chrome?.storage?.onChanged) {
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
       if (changes.emojiGroups) {
-        cachedEmojiGroups = changes.emojiGroups.newValue || [];
-        console.log('[Emoji Extension] Emoji groups updated from storage');
+        const newGroups = changes.emojiGroups.newValue;
+        if (Array.isArray(newGroups)) {
+          cachedEmojiGroups = newGroups;
+          console.log('[Emoji Extension] Emoji groups updated from storage:', newGroups.length);
+        } else {
+          console.warn('[Emoji Extension] Invalid emoji groups received:', newGroups);
+          cachedEmojiGroups = [];
+        }
       }
       if (changes.appSettings) {
-        cachedSettings = { ...cachedSettings, ...(changes.appSettings.newValue || {}) };
-        console.log('[Emoji Extension] Settings updated from storage');
+        const newSettings = changes.appSettings.newValue;
+        if (newSettings && typeof newSettings === 'object') {
+          cachedSettings = { ...cachedSettings, ...newSettings };
+          console.log('[Emoji Extension] Settings updated from storage:', cachedSettings);
+        }
       }
     }
   });

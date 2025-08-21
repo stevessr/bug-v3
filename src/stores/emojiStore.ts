@@ -120,9 +120,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         await storageHelpers.setFavorites(data.favorites)
       }
       
-      console.log('Data saved successfully to IndexedDB:', data);
+      console.log('Data saved successfully to IndexedDB and Chrome storage:', data);
     } catch (error) {
-      console.error('Failed to save to IndexedDB:', error);
+      console.error('Failed to save to storage:', error);
       throw error;
     }
   };
