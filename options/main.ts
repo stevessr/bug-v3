@@ -1,7 +1,6 @@
-import { createApp, defineAsyncComponent } from 'vue';
+import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-
-const Options = defineAsyncComponent(() => import('./Options.vue'));
+import Options from './Options.vue';
 
 const pinia = createPinia();
 const app = createApp(Options);
