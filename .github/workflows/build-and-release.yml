@@ -22,11 +22,11 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
-        cache: 'npm'
+        node-version: '22'
+        cache: 'pnpm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm i -g pnpm && pnpm i
       
     - name: Get version from input or tag
       id: version
@@ -44,7 +44,7 @@ jobs:
         jq --arg version "$VERSION" '.version = $version' package.json > tmp.json && mv tmp.json package.json
         
     - name: Build extension
-      run: npm run build
+      run: pnpm build
       
     - name: Create dist directory structure
       run: |
