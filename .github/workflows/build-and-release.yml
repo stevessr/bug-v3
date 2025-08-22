@@ -18,17 +18,24 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Enable Corepack and ensure pnpm
+      run: |
+        # Enable corepack (bundled with Node 16+) and prepare pnpm
+        corepack enable
+        # Try to prepare/activate pnpm via corepack; fall back to global install if that fails
+        corepack prepare pnpm@10 --activate || npm install -g pnpm@10
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '22'
         cache: 'pnpm'
-        
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: '8'
 
     - name: Install dependencies
       run: pnpm install
