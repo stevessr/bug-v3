@@ -22,8 +22,6 @@ export function exportConfigurationFile(store: any) {
 }
 
 export function exportGroupFile(group: any) {
-  // Export as a top-level array so the import modal (which expects an array)
-  // can directly read the file and import the items.
   const emojis = (group.emojis || []).map((e: any) => ({
     id: e.id,
     packet: e.packet,
@@ -31,8 +29,6 @@ export function exportGroupFile(group: any) {
     url: e.url,
     width: e.width,
     height: e.height,
-    // Use group name as groupId so import logic that expects group/groupId string
-    // will map it back to a group name when auto-creating groups.
     groupId: group.name || group.id,
   }));
   const filename = `emoji-group-${group.id}-${group.name || 'group'}.json`;
