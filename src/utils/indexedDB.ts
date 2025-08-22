@@ -1,5 +1,6 @@
 // IndexedDB utility for emoji extension
 import type { EmojiGroup, AppSettings } from '../types/emoji';
+import { logger, indexedDBWrapper } from '../config/buildFlags';
 
 const DB_NAME = 'EmojiExtensionDB';
 const DB_VERSION = 1;
@@ -13,6 +14,11 @@ const STORES = {
 
 // Logging helper
 function logDB(operation: string, store: string, key?: string, data?: any, error?: any) {
+  // 如果日志被禁用，直接返回
+  if (indexedDBWrapper.shouldSkip() && !error) {
+    return;
+  }
+
   const timestamp = new Date().toISOString();
   const logPrefix = `[IndexedDB ${timestamp}]`;
 
@@ -53,17 +59,17 @@ function logDB(operation: string, store: string, key?: string, data?: any, error
     // automated tests that assert no console.error output.
     const nonFatalFailure = operation.endsWith('_FAILED') || operation.startsWith('FLUSH');
     if (nonFatalFailure) {
-      console.warn(`${logPrefix} ${operation} FAILED in "${store}"${key ? ` for key "${key}"` : ''}: ${errInfo}`, error);
+      logger.warn(`${logPrefix} ${operation} FAILED in "${store}"${key ? ` for key "${key}"` : ''}: ${errInfo}`, error);
     } else {
-      console.error(`${logPrefix} ${operation} FAILED in "${store}"${key ? ` for key "${key}"` : ''}: ${errInfo}`, error);
+      logger.error(`${logPrefix} ${operation} FAILED in "${store}"${key ? ` for key "${key}"` : ''}: ${errInfo}`, error);
     }
   } else {
     if (typeof data !== 'undefined') {
       const p = formatPreview(data as any);
       // Print structured output: summary and preview
-      console.log(`${logPrefix} ${operation} in "${store}"${key ? ` for key "${key}"` : ''} - size: ${p.size ?? 'unknown'}`, p.preview);
+      logger.log(`${logPrefix} ${operation} in "${store}"${key ? ` for key "${key}"` : ''} - size: ${p.size ?? 'unknown'}`, p.preview);
     } else {
-      console.log(`${logPrefix} ${operation} in "${store}"${key ? ` for key "${key}"` : ''}`);
+      logger.log(`${logPrefix} ${operation} in "${store}"${key ? ` for key "${key}"` : ''}`);
     }
   }
 }
@@ -223,6 +229,11 @@ async function flushBuffer(force = false) {
 }
 
 async function getDB(): Promise<IDBDatabase> {
+  // 如果 IndexedDB 被禁用，抛出错误
+  if (indexedDBWrapper.shouldSkip()) {
+    throw new Error('IndexedDB is disabled by build configuration');
+  }
+
   if (dbInstance) {
     return dbInstance;
   }
@@ -280,6 +291,12 @@ async function getDB(): Promise<IDBDatabase> {
 
 // Generic IndexedDB operations
 async function getValue<T>(storeName: string, key: string): Promise<T | undefined> {
+  // 如果 IndexedDB 被禁用，直接返回 undefined
+  if (indexedDBWrapper.shouldSkip()) {
+    logDB('GET_SKIPPED', storeName, key, 'IndexedDB disabled');
+    return undefined;
+  }
+
   try {
     // If groups are buffered, return from buffer first
     if (storeName === STORES.GROUPS) {
@@ -429,6 +446,12 @@ function saveFallbackToLocal(id: string, value: any, error: any) {
 }
 
 async function setValue<T>(storeName: string, key: string, value: T): Promise<void> {
+  // 如果 IndexedDB 被禁用，直接返回
+  if (indexedDBWrapper.shouldSkip()) {
+    logDB('SET_SKIPPED', storeName, key, 'IndexedDB disabled');
+    return;
+  }
+
   try {
     // Clean the data to ensure it's serializable for IndexedDB
     const cleanedValue = cleanDataForStorage(value);
@@ -580,6 +603,12 @@ async function getAllValues<T>(storeName: string): Promise<T[]> {
 }
 
 async function clearStore(storeName: string): Promise<void> {
+  // 如果 IndexedDB 被禁用，直接返回
+  if (indexedDBWrapper.shouldSkip()) {
+    logDB('CLEAR_SKIPPED', storeName, undefined, 'IndexedDB disabled');
+    return;
+  }
+
   try {
     // Clear buffer if applicable
     if (storeName === STORES.GROUPS) {
@@ -688,6 +717,11 @@ export const indexedDBHelpers = {
   },
 
   async isAvailable(): Promise<boolean> {
+    // 首先检查编译期开关
+    if (indexedDBWrapper.shouldSkip()) {
+      return false;
+    }
+
     try {
       await getDB();
       return true;
