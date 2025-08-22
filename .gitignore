@@ -144,3 +144,8 @@ coverage/
 # Release artifacts
 releases/
 *.zip
+
+# Test files
+test-*.html
+playwright-report/
+test-results/
