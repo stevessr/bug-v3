@@ -16,7 +16,7 @@
       <div class="p-6">
         <div class="space-y-4">
           <div
-            v-for="group in emojiStore.sortedGroups"
+            v-for="group in displayGroups"
             :key="group.id"
             class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
             :draggable="group.id !== 'favorites'"
@@ -171,10 +171,17 @@ const emits = defineEmits([
   'image-error',
 ]);
 
-defineProps<{
+const props = defineProps<{
   emojiStore: any;
   expandedGroups: Set<string>;
   isImageUrl?: (s: string) => boolean;
   activeTab?: string;
 }>();
+
+import { computed } from 'vue';
+
+// computed list that excludes the favorites group so it doesn't appear in group management
+const displayGroups = computed(() => {
+  return (props.emojiStore?.sortedGroups || []).filter((g: any) => g.id !== 'favorites');
+});
 </script>
