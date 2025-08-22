@@ -35,6 +35,7 @@ export default function useOptions() {
   const showCreateGroupModal = ref(false);
   const showAddEmojiModal = ref(false);
   const showEditGroupModal = ref(false);
+  const showEditEmojiModal = ref(false);
   const showImportModal = ref(false);
   const showImportEmojiModal = ref(false);
   const showSuccessToast = ref(false);
@@ -48,6 +49,11 @@ export default function useOptions() {
   const editingGroupId = ref<string>("");
   const editGroupName = ref<string>("");
   const editGroupIcon = ref<string>("");
+
+  // Edit emoji state
+  const editingEmoji = ref<any>(null);
+  const editingEmojiGroupId = ref<string>("");
+  const editingEmojiIndex = ref<number>(-1);
 
   const handleConfigImported = async (config: any) => {
     if (!config) {
@@ -238,6 +244,29 @@ export default function useOptions() {
     showEditGroupModal.value = true;
   };
 
+  const openEditEmoji = (emoji: any, groupId: string, index: number) => {
+    editingEmoji.value = emoji;
+    editingEmojiGroupId.value = groupId;
+    editingEmojiIndex.value = index;
+    showEditEmojiModal.value = true;
+  };
+
+  const handleEmojiEdit = async (payload: { emoji: any; groupId: string; index: number }) => {
+    try {
+      emojiStore.updateEmojiInGroup(payload.groupId, payload.index, payload.emoji);
+      await flushBuffer(true);
+      console.log('[Options] updateEmojiInGroup flushed to IndexedDB', {
+        groupId: payload.groupId,
+        index: payload.index,
+        emoji: payload.emoji.name,
+      });
+      showSuccess('表情已更新');
+    } catch (error) {
+      console.error('Error updating emoji:', error);
+      showError('表情更新失败');
+    }
+  };
+
   const openAddEmojiModal = (groupId: string) => {
     selectedGroupForAdd.value = groupId || "";
     showAddEmojiModal.value = true;
@@ -407,6 +436,7 @@ export default function useOptions() {
     showCreateGroupModal,
     showAddEmojiModal,
     showEditGroupModal,
+    showEditEmojiModal,
     showImportModal,
     showImportEmojiModal,
     showSuccessToast,
@@ -419,6 +449,9 @@ export default function useOptions() {
     editingGroupId,
     editGroupName,
     editGroupIcon,
+    editingEmoji,
+    editingEmojiGroupId,
+    editingEmojiIndex,
     // grid
     localGridColumns,
     updateImageScale,
@@ -439,6 +472,8 @@ export default function useOptions() {
     confirmDeleteGroup,
     deleteGroup,
     openEditGroup,
+    openEditEmoji,
+    handleEmojiEdit,
     openAddEmojiModal,
     onGroupCreated,
     onEmojiAdded,

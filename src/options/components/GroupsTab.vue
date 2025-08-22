@@ -18,12 +18,14 @@
           <div
             v-for="group in displayGroups"
             :key="group.id"
-            class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
-            :draggable="group.id !== 'favorites'"
-            @dragstart="$emit('group-dragstart', group, $event)"
-            @dragover.prevent
-            @drop="$emit('group-drop', group, $event)"
-          >
+            <div
+              class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+              :draggable="group.id !== 'favorites'"
+              @dragstart="$emit('group-dragstart', group, $event)"
+              @dragover.prevent
+              @drop="$emit('group-drop', group, $event)"
+              :ref="(el) => el && addGroupTouchEvents(el as HTMLElement, group)"
+            >
             <div class="flex items-center justify-between p-4">
               <div class="flex items-center gap-3">
                 <div
@@ -105,6 +107,7 @@
                     @dragstart="$emit('emoji-drag-start', emoji, group.id, index, $event)"
                     @dragover.prevent
                     @drop="$emit('emoji-drop', group.id, index, $event)"
+                    :ref="(el) => el && addEmojiTouchEvents(el as HTMLElement, emoji, group.id, index)"
                   >
                     <div
                       class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors"
@@ -120,6 +123,15 @@
                     >
                       {{ emoji.name }}
                     </div>
+                    <!-- Edit button in bottom right corner -->
+                    <button
+                      @click="$emit('edit-emoji', emoji, group.id, index)"
+                      class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      title="编辑表情"
+                    >
+                      ✎
+                    </button>
+                    <!-- Remove button in top right corner -->
                     <button
                       @click="$emit('remove-emoji', group.id, index)"
                       class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
@@ -169,6 +181,7 @@ const emits = defineEmits([
   'emoji-drop',
   'remove-emoji',
   'image-error',
+  'edit-emoji',
 ]);
 
 const props = defineProps<{
@@ -178,10 +191,106 @@ const props = defineProps<{
   activeTab?: string;
 }>();
 
-import { computed } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { TouchDragHandler } from '../../utils/touchDragDrop';
 
 // computed list that excludes the favorites group so it doesn't appear in group management
 const displayGroups = computed(() => {
   return (props.emojiStore?.sortedGroups || []).filter((g: any) => g.id !== 'favorites');
 });
+
+// Touch drag handlers
+const groupTouchHandler = ref<TouchDragHandler | null>(null);
+const emojiTouchHandler = ref<TouchDragHandler | null>(null);
+
+onMounted(() => {
+  // Initialize touch handlers
+  groupTouchHandler.value = new TouchDragHandler({
+    onDragStart: (element) => {
+      const groupData = (element as any).__groupData;
+      if (groupData && groupData.id !== 'favorites') {
+        element.classList.add('touch-dragging');
+      }
+    },
+    onDragEnd: (element, dropTarget) => {
+      element.classList.remove('touch-dragging');
+      if (dropTarget) {
+        const groupData = (element as any).__groupData;
+        const targetData = (dropTarget as any).__groupData;
+        if (groupData && targetData && groupData.id !== targetData.id) {
+          // Create synthetic drag event for compatibility
+          const syntheticEvent = new DragEvent('drop');
+          emits('group-drop', targetData, syntheticEvent);
+        }
+      }
+    }
+  });
+
+  emojiTouchHandler.value = new TouchDragHandler({
+    onDragStart: (element) => {
+      element.classList.add('touch-dragging');
+    },
+    onDragEnd: (element, dropTarget) => {
+      element.classList.remove('touch-dragging');
+      if (dropTarget) {
+        const emojiData = (element as any).__emojiData;
+        const targetData = (dropTarget as any).__emojiData;
+        if (emojiData && targetData) {
+          // Create synthetic drag event for compatibility
+          const syntheticEvent = new DragEvent('drop');
+          emits('emoji-drop', targetData.groupId, targetData.index, syntheticEvent);
+        }
+      }
+    }
+  });
+});
+
+onUnmounted(() => {
+  groupTouchHandler.value?.destroy();
+  emojiTouchHandler.value?.destroy();
+});
+
+// Function to add touch events to group elements
+const addGroupTouchEvents = (element: HTMLElement, group: any) => {
+  if (group.id !== 'favorites') {
+    (element as any).__groupData = group;
+    groupTouchHandler.value?.addTouchEvents(element, true);
+  }
+};
+
+// Function to add touch events to emoji elements
+const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, index: number) => {
+  (element as any).__emojiData = { emoji, groupId, index };
+  emojiTouchHandler.value?.addTouchEvents(element, true);
+};
 </script>
+
+<style scoped>
+.group-item.touch-dragging {
+  opacity: 0.6;
+  transform: scale(0.95);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.emoji-item.touch-dragging {
+  opacity: 0.6;
+  transform: scale(0.9);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.touch-drag-preview {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+/* Enhanced touch targets for mobile */
+@media (max-width: 768px) {
+  .emoji-item {
+    margin: 4px;
+  }
+  
+  .emoji-item button {
+    opacity: 1; /* Always show buttons on mobile */
+  }
+}
+</style>
