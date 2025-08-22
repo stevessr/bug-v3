@@ -302,16 +302,16 @@ const popularSources = [
     url: 'https://raw.githubusercontent.com/walinejs/emojis/main/tieba/info.json'
   },
   {
-    name: 'AOMEI',
+    name: 'hoyoverse-hi3',
     icon: '🌟',
-    description: '傲梅表情包',
-    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/aomei/info.json'
+    description: '崩坏三表情包',
+    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/hoyoverse-hi3/info.json'
   },
   {
-    name: 'OwO',
+    name: 'coolapk',
     icon: '😊',
-    description: 'OwO 表情包',
-    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/owo/info.json'
+    description: 'coolapk 表情包',
+    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/coolapk/info.json'
   }
 ];
 
