@@ -33,14 +33,60 @@
           <div class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"></div>
         </label>
       </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium text-gray-900">输出格式</label>
+          <p class="text-sm text-gray-500">插入表情时使用的格式</p>
+        </div>
+        <select 
+          v-model="localOutputFormat"
+          @change="handleOutputFormatChange"
+          class="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="markdown">Markdown 格式</option>
+          <option value="html">HTML 格式</option>
+        </select>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, watch, isRef } from 'vue';
+
 const props = defineProps<{ settings: any }>();
-const settings = props.settings;
-defineEmits(['update:imageScale', 'update:showSearchBar']);
+// allow flexible typing (either a reactive ref or a plain object)
+const settings: any = props.settings;
+const emit = defineEmits(['update:imageScale', 'update:showSearchBar', 'update:outputFormat']);
+
+// support both ref(settings) and plain settings object
+const getOutputFormat = () => {
+  try {
+    if (isRef(settings)) return (settings.value && (settings.value as any).outputFormat) || 'markdown';
+    return (settings && (settings as any).outputFormat) || 'markdown';
+  } catch {
+    return 'markdown';
+  }
+};
+
+// local reactive copy for outputFormat so the select will update when parent props change
+const localOutputFormat = ref<string>(getOutputFormat());
+watch(
+  () => getOutputFormat(),
+  (val) => {
+    localOutputFormat.value = val || 'markdown';
+  }
+);
+
+const handleOutputFormatChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement;
+  if (target) {
+    // keep local state in sync and notify parent
+    localOutputFormat.value = target.value;
+    emit('update:outputFormat', target.value);
+  }
+};
 </script>
 
 <style scoped></style>

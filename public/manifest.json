@@ -23,7 +23,8 @@
   "content_scripts": [
     {
       "matches": ["https://linux.do/*"],
-      "js": ["js/content.js"]
+      "js": ["js/content.js"],
+      "type": "module"
     }
   ],
   "icons": {

@@ -1,3 +1,5 @@
+import { defaultSettings } from '../types/emoji';
+
 export class ContentStorageAdapter {
   // Read from extension storage with fallback to local/session storage
   async get(key: string): Promise<any> {
@@ -153,8 +155,8 @@ export class ContentStorageAdapter {
   async getSettings(): Promise<any> {
     console.log('[Content Storage] Getting settings');
     const settings = await this.get('appSettings');
-    const defaultSettings = { imageScale: 30, gridColumns: 4 };
-    const result = settings ? { ...defaultSettings, ...settings } : defaultSettings;
+    // Merge with central defaultSettings so fields like outputFormat are always present
+    const result = settings ? { ...defaultSettings, ...settings } : { ...defaultSettings };
     console.log('[Content Storage] Settings loaded:', result);
     return result;
   }

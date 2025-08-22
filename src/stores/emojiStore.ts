@@ -462,6 +462,21 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     settings.value = { ...settings.value, ...newSettings };
   console.log('[EmojiStore] updateSettings', { updates: newSettings });
   maybeSave();
+    // attempt to notify background to sync to content scripts
+    void syncSettingsToBackground();
+  };
+
+  // Notify background to sync settings across contexts (content scripts)
+  // Use a separate function so we can call it after persistence if needed
+  const syncSettingsToBackground = async () => {
+    try {
+      const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome;
+      if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
+  chromeAPI.runtime.sendMessage({ type: 'SYNC_SETTINGS', settings: settings.value });
+      }
+    } catch (e) {
+      // ignore
+    }
   };
 
   // --- Import/Export ---

@@ -40,18 +40,30 @@ export function insertEmojiIntoEditor(emoji: any) {
   }
 
   const scale = (cachedState && cachedState.settings && cachedState.settings.imageScale) || 30;
+  const outputFormat = (cachedState && cachedState.settings && cachedState.settings.outputFormat) || 'markdown';
 
   if (textArea) {
-    const emojiMarkdown = `![${emoji.name}|${width}x${height},${scale}%](${emoji.url}) `;
+    let emojiText = '';
+    
+    if (outputFormat === 'html') {
+      // HTML格式输出
+      const pixelWidth = Math.max(1, Math.round(Number(width) * (scale / 100)));
+      const pixelHeight = Math.max(1, Math.round(Number(height) * (scale / 100)));
+      emojiText = `<img src="${emoji.url}" title=":${emoji.name}:" class="emoji only-emoji" alt=":${emoji.name}:" loading="lazy" width="${pixelWidth}" height="${pixelHeight}" style="aspect-ratio: ${pixelWidth} / ${pixelHeight};"> `;
+    } else {
+      // 默认Markdown格式输出
+      emojiText = `![${emoji.name}|${width}x${height},${scale}%](${emoji.url}) `;
+    }
+
     const startPos = textArea.selectionStart;
     const endPos = textArea.selectionEnd;
     textArea.value =
       textArea.value.substring(0, startPos) +
-      emojiMarkdown +
+      emojiText +
       textArea.value.substring(endPos, textArea.value.length);
 
     textArea.selectionStart = textArea.selectionEnd =
-      startPos + emojiMarkdown.length;
+      startPos + emojiText.length;
     textArea.focus();
 
     const event = new Event("input", { bubbles: true, cancelable: true });
