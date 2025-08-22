@@ -164,17 +164,17 @@
 <script setup lang="ts">
 import GridColumnsSelector from "../components/GridColumnsSelector.vue";
 import AboutSection from "../components/AboutSection.vue";
-import HeaderControls from "./HeaderControls.vue";
-import GlobalSettings from "./GlobalSettings.vue";
-import EmojiStats from "./EmojiStats.vue";
-import ImportConfigModal from "./ImportConfigModal.vue";
-import ImportEmojisModal from "./ImportEmojisModal.vue";
-import CreateGroupModal from "./CreateGroupModal.vue";
-import AddEmojiModal from "./AddEmojiModal.vue";
-import ConfirmDeleteModal from "./ConfirmDeleteModal.vue";
-import NotificationToasts from "./NotificationToasts.vue";
-import GroupsTab from "./GroupsTab.vue";
-import EditGroupModal from "./EditGroupModal.vue";
+import HeaderControls from "./components/HeaderControls.vue";
+import GlobalSettings from "./components/GlobalSettings.vue";
+import EmojiStats from "./components/EmojiStats.vue";
+import ImportConfigModal from "./modals/ImportConfigModal.vue";
+import ImportEmojisModal from "./modals/ImportEmojisModal.vue";
+import CreateGroupModal from "./modals/CreateGroupModal.vue";
+import AddEmojiModal from "./modals/AddEmojiModal.vue";
+import ConfirmDeleteModal from "./modals/ConfirmDeleteModal.vue";
+import NotificationToasts from "./components/NotificationToasts.vue";
+import GroupsTab from "./components/GroupsTab.vue";
+import EditGroupModal from "./modals/EditGroupModal.vue";
 // composable
 import useOptions from "./useOptions";
 

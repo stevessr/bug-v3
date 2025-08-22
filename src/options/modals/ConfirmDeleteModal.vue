@@ -5,7 +5,7 @@
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       @click="close"
     >
-      <div class="bg-white rounded-lg p-6 w-full max-w-md modal-panel" @click.stop>
+      <div class="bg-white rounded-lg p-6 w-full max-w-md" @click.stop>
         <h3 class="text-lg font-semibold mb-4">确认删除</h3>
         <p class="text-gray-600 mb-6">
           确定要删除分组 "{{ group?.name }}" 吗？分组中的表情也会被删除。
@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits } from "vue";
 
 const { show, group } = defineProps<{
   show: boolean;
@@ -38,13 +38,13 @@ const { show, group } = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:show', value: boolean): void;
-  (e: 'confirm'): void;
+  (e: "update:show", value: boolean): void;
+  (e: "confirm"): void;
 }>();
 
-const close = () => emit('update:show', false);
-const cancel = () => emit('update:show', false);
-const confirmDelete = () => emit('confirm');
+const close = () => emit("update:show", false);
+const cancel = () => emit("update:show", false);
+const confirmDelete = () => emit("confirm");
 </script>
 
 <style scoped>
@@ -57,8 +57,6 @@ const confirmDelete = () => emit('confirm');
 .modal-leave-active {
   transition: opacity 180ms ease-out;
 }
-
-/* panel scale */
 .modal-panel {
   transform-origin: center center;
 }

@@ -1,6 +1,5 @@
 import { ref, computed, onMounted, watch } from "vue";
-import { importConfigurationToStore, importEmojisToStore } from "./importUtils";
-import { exportConfigurationFile, exportGroupFile } from "./exportUtils";
+import { importConfigurationToStore, importEmojisToStore, exportConfigurationFile, exportGroupFile } from './utils';
 import { useEmojiStore } from "../stores/emojiStore";
 import { flushBuffer } from "../utils/indexedDB";
 import type { EmojiGroup } from "../types/emoji";

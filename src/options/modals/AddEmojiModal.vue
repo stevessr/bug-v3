@@ -31,8 +31,8 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { useEmojiStore } from '../stores/emojiStore';
-import { flushBuffer } from '../utils/indexedDB';
+import { useEmojiStore } from '../../stores/emojiStore';
+import { flushBuffer } from '../../utils/indexedDB';
 
 const { show, groups, defaultGroupId } = defineProps<{ show: boolean; groups: any[]; defaultGroupId?: string }>()
 
