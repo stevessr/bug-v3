@@ -22,7 +22,10 @@
         <div class="bg-white rounded-lg shadow-sm border p-6">
           <h2 class="text-lg font-semibold text-gray-900 mb-4">从 URL 导入</h2>
           <p class="text-sm text-gray-600 mb-4">
-            输入 Waline 表情配置的 JSON URL 或 GitHub raw 文件链接
+            输入 Waline 表情配置的 JSON URL 或 GitHub raw 文件链接<br>
+            <span class="text-xs text-gray-500">
+              支持标准 Waline 格式和 Weibo 风格格式
+            </span>
           </p>
           
           <div class="space-y-4">
@@ -66,7 +69,10 @@
         <div class="bg-white rounded-lg shadow-sm border p-6">
           <h2 class="text-lg font-semibold text-gray-900 mb-4">从 JSON 文本导入</h2>
           <p class="text-sm text-gray-600 mb-4">
-            直接粘贴 Waline 表情配置的 JSON 内容
+            直接粘贴 Waline 表情配置的 JSON 内容<br>
+            <span class="text-xs text-gray-500">
+              支持标准 Waline 格式和 Weibo 风格格式 (包含 name, prefix, type, items 的配置)
+            </span>
           </p>
           
           <div class="space-y-4">
@@ -79,7 +85,8 @@
                 v-model="jsonInput"
                 rows="8"
                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono text-xs"
-                placeholder='{ "表情包名": { "type": "image", "container": [{ "icon": "😀", "text": "表情名", "src": "图片链接" }] } }'
+                placeholder='示例格式1: { "表情包名": { "type": "image", "container": [{ "icon": "😀", "text": "表情名", "src": "图片链接" }] } }
+示例格式2: { "name": "Weibo", "prefix": "weibo_", "type": "png", "items": ["smile", "lovely"] }'
               ></textarea>
             </div>
             
@@ -274,37 +281,37 @@ const popularSources = [
     name: 'QQ 表情',
     icon: '🐧',
     description: 'QQ 经典表情包',
-    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/qq/index.json'
+    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/qq/info.json'
   },
   {
     name: '微信表情',
     icon: '💬',
     description: '微信默认表情',
-    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/weibo/index.json'
+    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/weibo/info.json'
   },
   {
     name: 'Bilibili',
     icon: '📺',
     description: 'B站小电视表情',
-    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/bilibili/index.json'
+    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/bilibili/info.json'
   },
   {
     name: 'Tieba',
     icon: '🗣️',
     description: '百度贴吧表情',
-    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/tieba/index.json'
+    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/tieba/info.json'
   },
   {
     name: 'AOMEI',
     icon: '🌟',
     description: '傲梅表情包',
-    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/aomei/index.json'
+    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/aomei/info.json'
   },
   {
     name: 'OwO',
     icon: '😊',
     description: 'OwO 表情包',
-    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/owo/index.json'
+    url: 'https://raw.githubusercontent.com/walinejs/emojis/main/owo/info.json'
   }
 ];
 
@@ -319,38 +326,57 @@ const parseWalineConfig = (data: any): Array<{ name: string; url: string }> => {
   try {
     // Handle different Waline emoji formats
     if (typeof data === 'object' && data !== null) {
-      // Format 1: { "category": { "type": "image", "container": [...] } }
-      for (const categoryKey in data) {
-        const category = data[categoryKey];
+      
+      // Format 0: Weibo style with items array and prefix
+      // { "name": "Weibo", "prefix": "weibo_", "type": "png", "icon": "doge", "items": [...] }
+      if (Array.isArray(data.items) && data.prefix && data.type) {
+        const prefix = data.prefix || '';
+        const type = data.type || 'png';
+        const baseUrl = data.baseUrl || 'https://cdn.jsdelivr.net/gh/walinejs/emojis@1.0.0/';
         
-        if (category && typeof category === 'object') {
-          // Check for container array
-          if (Array.isArray(category.container)) {
-            for (const item of category.container) {
-              if (item && typeof item === 'object') {
-                const name = item.text || item.name || item.title || `emoji-${emojis.length}`;
-                const url = item.src || item.url || item.icon;
-                
-                if (url && typeof url === 'string') {
-                  emojis.push({ name, url });
+        for (const item of data.items) {
+          if (typeof item === 'string') {
+            const name = item;
+            const url = `${baseUrl}${data.name?.toLowerCase() || 'weibo'}/${prefix}${item}.${type}`;
+            emojis.push({ name, url });
+          }
+        }
+      }
+      
+      // Format 1: { "category": { "type": "image", "container": [...] } }
+      else {
+        for (const categoryKey in data) {
+          const category = data[categoryKey];
+          
+          if (category && typeof category === 'object') {
+            // Check for container array
+            if (Array.isArray(category.container)) {
+              for (const item of category.container) {
+                if (item && typeof item === 'object') {
+                  const name = item.text || item.name || item.title || `emoji-${emojis.length}`;
+                  const url = item.src || item.url || item.icon;
+                  
+                  if (url && typeof url === 'string') {
+                    emojis.push({ name, url });
+                  }
                 }
               }
             }
-          }
-          // Check for direct emoji objects
-          else if (category.src || category.url) {
-            const name = category.text || category.name || `emoji-${emojis.length}`;
-            const url = category.src || category.url;
-            emojis.push({ name, url });
-          }
-          // Check for nested objects
-          else {
-            for (const itemKey in category) {
-              const item = category[itemKey];
-              if (item && typeof item === 'object' && (item.src || item.url)) {
-                const name = item.text || item.name || itemKey;
-                const url = item.src || item.url;
-                emojis.push({ name, url });
+            // Check for direct emoji objects
+            else if (category.src || category.url) {
+              const name = category.text || category.name || `emoji-${emojis.length}`;
+              const url = category.src || category.url;
+              emojis.push({ name, url });
+            }
+            // Check for nested objects
+            else {
+              for (const itemKey in category) {
+                const item = category[itemKey];
+                if (item && typeof item === 'object' && (item.src || item.url)) {
+                  const name = item.text || item.name || itemKey;
+                  const url = item.src || item.url;
+                  emojis.push({ name, url });
+                }
               }
             }
           }
@@ -401,7 +427,10 @@ const importFromUrl = async () => {
     const group = await emojiStore.createGroup(groupName, '🌐');
     
     for (const emoji of emojis) {
-      emojiStore.addEmojiWithoutSave(group.id, emoji);
+      emojiStore.addEmojiWithoutSave(group.id, {
+        ...emoji,
+        packet: Date.now() + Math.floor(Math.random() * 1000)
+      });
     }
     
     await emojiStore.saveData();
@@ -455,7 +484,10 @@ const importFromJson = async () => {
     const group = await emojiStore.createGroup(groupName, '📝');
     
     for (const emoji of emojis) {
-      emojiStore.addEmojiWithoutSave(group.id, emoji);
+      emojiStore.addEmojiWithoutSave(group.id, {
+        ...emoji,
+        packet: Date.now() + Math.floor(Math.random() * 1000)
+      });
     }
     
     await emojiStore.saveData();
@@ -511,7 +543,10 @@ const importFromSource = async (source: any) => {
     const group = await emojiStore.createGroup(source.name, source.icon);
     
     for (const emoji of emojis) {
-      emojiStore.addEmojiWithoutSave(group.id, emoji);
+      emojiStore.addEmojiWithoutSave(group.id, {
+        ...emoji,
+        packet: Date.now() + Math.floor(Math.random() * 1000)
+      });
     }
     
     await emojiStore.saveData();
