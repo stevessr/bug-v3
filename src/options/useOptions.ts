@@ -11,8 +11,9 @@ export default function useOptions() {
   // Tab navigation
   const activeTab = ref("settings");
   const tabs = [
-    { id: "settings", label: "设置" },
-    { id: "groups", label: "分组管理" },
+  { id: "settings", label: "设置" },
+  { id: "favorites", label: "常用" },
+  { id: "groups", label: "分组管理" },
     { id: "stats", label: "统计" },
     { id: "about", label: "关于" },
   ];
