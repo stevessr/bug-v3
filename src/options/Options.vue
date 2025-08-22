@@ -740,6 +740,7 @@ import { useEmojiStore } from '../stores/emojiStore'
 // force flush to IndexedDB buffer when options page updates data
 import { flushBuffer } from '../utils/indexedDB'
 import type { EmojiGroup } from '../types/emoji'
+import { isImageUrl } from '../utils/isImageUrl'
 
 const emojiStore = useEmojiStore()
 
@@ -787,16 +788,7 @@ const editingGroupId = ref<string>('')
 const editGroupName = ref<string>('')
 const editGroupIcon = ref<string>('')
 
-// Utility: detect if a string looks like an http(s) image URL
-const isImageUrl = (value: string | null | undefined) => {
-  if (!value) return false
-  try {
-    const url = new URL(value)
-    return (url.protocol === 'http:' || url.protocol === 'https:') && /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
-  } catch (e) {
-    return false
-  }
-}
+// ...use shared isImageUrl from utils
 
 // New emoji data
 const newEmojiName = ref('')
