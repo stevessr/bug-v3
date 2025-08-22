@@ -27,21 +27,31 @@ export default defineConfig({
       input: {
         popup: fileURLToPath(new URL("popup.html", import.meta.url)),
         options: fileURLToPath(new URL("options.html", import.meta.url)),
+        tenor: fileURLToPath(new URL("src/tenor/main.ts", import.meta.url)),
+        waline: fileURLToPath(new URL("src/waline/main.ts", import.meta.url)),
         content: fileURLToPath(new URL("src/content/content.ts", import.meta.url)),
         background: fileURLToPath(new URL("src/background/background.ts", import.meta.url)),
       },
       output: {
         entryFileNames: (chunkInfo) => {
-          // Content script needs to be in a specific format to avoid ES module issues
           return 'js/[name].js';
         },
         chunkFileNames: "js/[name].js",
         assetFileNames: "assets/[name].[ext]",
-        manualChunks: undefined, // Disable manual chunks to bundle everything together
+        manualChunks: (id) => {
+          // Force content script dependencies to be inlined
+          if (id.includes('src/content/') || id.includes('content.ts')) {
+            return undefined; // Don't create separate chunks for content script
+          }
+          // Keep shared modules for other scripts
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+          return undefined;
+        },
       },
       external: (id) => {
-        // Don't externalize anything for content script to avoid import issues
-        return false;
+        return false; // Don't externalize anything
       },
     },
   },

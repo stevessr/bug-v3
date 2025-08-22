@@ -36,9 +36,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     return emojis;
   });
 
-  const sortedGroups = computed(() =>
-    [...groups.value].sort((a, b) => a.order - b.order)
-  );
+  const sortedGroups = computed(() => {
+    const allGroups = [...groups.value];
+    const favoritesGroup = allGroups.find(g => g.id === 'favorites');
+    const otherGroups = allGroups.filter(g => g.id !== 'favorites').sort((a, b) => a.order - b.order);
+    
+    // Always put favorites first if it exists
+    return favoritesGroup ? [favoritesGroup, ...otherGroups] : otherGroups;
+  });
 
   // --- Save control (batching) ---
   let batchDepth = 0;
@@ -73,43 +78,63 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     try {
       // Load data using new storage system with conflict resolution
       console.log('[EmojiStore] Loading data from new storage system');
-      const [loadedGroups, loadedSettings, loadedFavorites] = await Promise.all([
+      const [loadedGroups, loadedSettings, loadedFavorites] = await Promise.allSettled([
         newStorageHelpers.getAllEmojiGroups(),
         newStorageHelpers.getSettings(),
         newStorageHelpers.getFavorites(),
       ]);
 
+      // Extract successful results
+      const groupsData = loadedGroups.status === 'fulfilled' ? loadedGroups.value : null;
+      const settingsData = loadedSettings.status === 'fulfilled' ? loadedSettings.value : null;
+      const favoritesData = loadedFavorites.status === 'fulfilled' ? loadedFavorites.value : null;
+
+      // Log any loading errors but don't fail completely
+      if (loadedGroups.status === 'rejected') {
+        console.error('[EmojiStore] Failed to load groups:', loadedGroups.reason);
+      }
+      if (loadedSettings.status === 'rejected') {
+        console.error('[EmojiStore] Failed to load settings:', loadedSettings.reason);
+      }
+      if (loadedFavorites.status === 'rejected') {
+        console.error('[EmojiStore] Failed to load favorites:', loadedFavorites.reason);
+      }
+
       // Detailed data loading debug info
       console.log('[EmojiStore] Raw loaded data:');
-      console.log('  - loadedGroups:', loadedGroups);
-      console.log('  - loadedSettings:', loadedSettings);
-      console.log('  - loadedFavorites:', loadedFavorites);
+      console.log('  - loadedGroups:', groupsData);
+      console.log('  - loadedSettings:', settingsData);
+      console.log('  - loadedFavorites:', favoritesData);
 
       // Summarize loaded data to avoid huge console dumps
       console.log('[EmojiStore] Data loaded summary:', {
-        groupsCount: loadedGroups?.length || 0,
-        groupsValid: Array.isArray(loadedGroups),
-        settingsLastModified: loadedSettings?.lastModified,
-        favoritesCount: loadedFavorites?.length || 0
+        groupsCount: groupsData?.length || 0,
+        groupsValid: Array.isArray(groupsData),
+        settingsLastModified: settingsData?.lastModified,
+        favoritesCount: favoritesData?.length || 0
       });
 
-      groups.value = loadedGroups && loadedGroups.length > 0 ? loadedGroups : JSON.parse(JSON.stringify(defaultEmojiGroups));
-      settings.value = { ...defaultSettings, ...loadedSettings };
-      favorites.value = new Set(loadedFavorites || []);
+      groups.value = groupsData && groupsData.length > 0 ? groupsData : JSON.parse(JSON.stringify(defaultEmojiGroups));
+      settings.value = { ...defaultSettings, ...settingsData };
+      favorites.value = new Set(favoritesData || []);
 
       console.log('[EmojiStore] Final groups after assignment:', {
         count: groups.value?.length || 0,
-        groupIds: groups.value?.map(g => g.id) || []
+        groupIds: groups.value?.map((g: any) => g.id) || []
       });
 
-      // If we used default data, save it to storage for next time
-      if (!loadedGroups || loadedGroups.length === 0) {
+      // If we used default data, save it to storage for next time (with error handling)
+      if (!groupsData || groupsData.length === 0) {
         console.log('[EmojiStore] No groups loaded, saving default groups to storage');
-        await newStorageHelpers.setAllEmojiGroups(groups.value);
+        newStorageHelpers.setAllEmojiGroups(groups.value).catch(error => {
+          console.error('[EmojiStore] Failed to save default groups:', error);
+        });
       }
-      if (!loadedSettings || Object.keys(loadedSettings).length === 0) {
+      if (!settingsData || Object.keys(settingsData).length === 0) {
         console.log('[EmojiStore] No settings loaded, saving default settings to storage');
-        await newStorageHelpers.setSettings(settings.value);
+        newStorageHelpers.setSettings(settings.value).catch(error => {
+          console.error('[EmojiStore] Failed to save default settings:', error);
+        });
       }
 
       activeGroupId.value = settings.value.defaultGroup || 'nachoneko';
@@ -150,19 +175,32 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         favoritesCount: favorites.value.size
       });
 
-      // Use new storage system with progressive writes
-      await Promise.all([
-        newStorageHelpers.setAllEmojiGroups(groups.value),
-        newStorageHelpers.setSettings(updatedSettings),
-        newStorageHelpers.setFavorites(Array.from(favorites.value))
-      ]);
+      // Use new storage system with progressive writes and better error handling
+      const savePromises = [
+        newStorageHelpers.setAllEmojiGroups(groups.value).catch(error => {
+          console.error('[EmojiStore] Failed to save groups:', error);
+          // Don't throw, just log - partial saves are better than complete failure
+        }),
+        newStorageHelpers.setSettings(updatedSettings).catch(error => {
+          console.error('[EmojiStore] Failed to save settings:', error);
+        }),
+        newStorageHelpers.setFavorites(Array.from(favorites.value)).catch(error => {
+          console.error('[EmojiStore] Failed to save favorites:', error);
+        })
+      ];
       
+      await Promise.allSettled(savePromises);
       console.log('[EmojiStore] SaveData completed successfully');
     } catch (error) {
       const e: any = error;
       console.error('[EmojiStore] Failed to save data:', e?.stack || e);
     } finally {
       isSaving.value = false;
+      // Check if there's a pending save that was deferred
+      if (pendingSave.value) {
+        pendingSave.value = false;
+        setTimeout(() => saveData(), 100); // Retry after a short delay
+      }
     }
   };
 
@@ -223,6 +261,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   };
 
   const reorderGroups = async (sourceGroupId: string, targetGroupId: string) => {
+    // Prevent reordering if either source or target is favorites
+    if (sourceGroupId === 'favorites' || targetGroupId === 'favorites') {
+      console.warn('[EmojiStore] Cannot reorder favorites group');
+      return;
+    }
+    
     const sourceIndex = groups.value.findIndex(g => g.id === sourceGroupId);
     const targetIndex = groups.value.findIndex(g => g.id === targetGroupId);
 
@@ -316,6 +360,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   };
 
+  const updateEmojiInGroup = (groupId: string, index: number, updatedEmoji: Partial<Emoji>) => {
+    const group = groups.value.find(g => g.id === groupId);
+    if (group && index >= 0 && index < group.emojis.length) {
+      const currentEmoji = group.emojis[index];
+      // Update the emoji while preserving the id and other metadata
+      group.emojis[index] = { ...currentEmoji, ...updatedEmoji };
+      console.log('[EmojiStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id });
+      maybeSave();
+    }
+  };
+
   // --- Favorites Management ---
   const addToFavorites = async (emoji: Emoji) => {
     // Check if emoji already exists in favorites group
@@ -325,21 +380,45 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       return;
     }
 
-    const alreadyExists = favoritesGroup.emojis.some(e => e.url === emoji.url);
-    if (alreadyExists) {
-      console.log('[EmojiStore] Emoji already in favorites:', emoji.name);
-      return;
-    }
-
-    // Add emoji to favorites group with new ID
-    const favoriteEmoji: Emoji = {
-      ...emoji,
-      id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      groupId: 'favorites'
-    };
+    const now = Date.now();
+    const existingEmojiIndex = favoritesGroup.emojis.findIndex(e => e.url === emoji.url);
     
-    favoritesGroup.emojis.unshift(favoriteEmoji); // Add to beginning
-    console.log('[EmojiStore] Added emoji to favorites:', emoji.name);
+    if (existingEmojiIndex !== -1) {
+      // Emoji already exists in favorites, update usage tracking
+      const existingEmoji = favoritesGroup.emojis[existingEmojiIndex];
+      const lastUsed = existingEmoji.lastUsed || 0;
+      const timeDiff = now - lastUsed;
+      const twelveHours = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+      
+      if (timeDiff < twelveHours) {
+        // Less than 12 hours, only increment count
+        existingEmoji.usageCount = (existingEmoji.usageCount || 0) + 1;
+        console.log('[EmojiStore] Updated usage count for existing emoji:', emoji.name, 'count:', existingEmoji.usageCount);
+      } else {
+        // More than 12 hours, apply decay and update timestamp
+        const currentCount = existingEmoji.usageCount || 1;
+        existingEmoji.usageCount = Math.floor(currentCount * 0.8) + 1;
+        existingEmoji.lastUsed = now;
+        console.log('[EmojiStore] Applied usage decay and updated timestamp for emoji:', emoji.name, 'new count:', existingEmoji.usageCount);
+      }
+    } else {
+      // Add emoji to favorites group with initial usage tracking
+      const favoriteEmoji: Emoji = {
+        ...emoji,
+        id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        groupId: 'favorites',
+        usageCount: 1,
+        lastUsed: now,
+        addedAt: now
+      };
+      
+      favoritesGroup.emojis.push(favoriteEmoji); // Add new emoji
+      console.log('[EmojiStore] Added new emoji to favorites:', emoji.name);
+    }
+    
+    // Sort favorites by lastUsed timestamp (most recent first)
+    favoritesGroup.emojis.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0));
+    
     maybeSave();
   };
 
@@ -492,6 +571,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     deleteEmoji,
     moveEmoji,
     removeEmojiFromGroup,
+    updateEmojiInGroup,
     addToFavorites,
     toggleFavorite,
     findEmojiById,
