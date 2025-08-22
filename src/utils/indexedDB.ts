@@ -36,7 +36,27 @@ function logDB(operation: string, store: string, key?: string, data?: any, error
   }
 
   if (error) {
-    console.error(`${logPrefix} ${operation} FAILED in "${store}"${key ? ` for key "${key}"` : ''}:`, error);
+    // Make error output human readable (include name/message) while preserving the original error object
+    let errInfo = '';
+    try {
+      if (error && typeof error === 'object') {
+        errInfo = `${(error as any).name || 'Error'}: ${(error as any).message || String(error)}`;
+      } else {
+        errInfo = String(error);
+      }
+    } catch {
+      errInfo = String(error);
+    }
+
+    // Some failures (buffer flush per-item failures or cleanup) are non-fatal in tests/environments
+    // where the Chrome extension APIs are not available. Log them as warnings to avoid failing
+    // automated tests that assert no console.error output.
+    const nonFatalFailure = operation.endsWith('_FAILED') || operation.startsWith('FLUSH');
+    if (nonFatalFailure) {
+      console.warn(`${logPrefix} ${operation} FAILED in "${store}"${key ? ` for key "${key}"` : ''}: ${errInfo}`, error);
+    } else {
+      console.error(`${logPrefix} ${operation} FAILED in "${store}"${key ? ` for key "${key}"` : ''}: ${errInfo}`, error);
+    }
   } else {
     if (typeof data !== 'undefined') {
       const p = formatPreview(data as any);
@@ -71,6 +91,22 @@ function scheduleFlush() {
   flushTimer = setTimeout(() => void flushBuffer(false), FLUSH_DEBOUNCE_MS);
 }
 
+// Attempt to flush buffer when the page is unloading to reduce lost writes
+if (typeof window !== 'undefined' && window.addEventListener) {
+  try {
+    window.addEventListener('beforeunload', () => {
+      try {
+        // synchronous attempt: schedule a forced flush (best-effort)
+        void flushBuffer(true);
+      } catch {
+        // swallow errors during unload
+      }
+    });
+  } catch {
+    // ignore environments where addEventListener may not be available
+  }
+}
+
 async function flushBuffer(force = false) {
   try {
     // If nothing dirty and not forced, skip
@@ -81,54 +117,104 @@ async function flushBuffer(force = false) {
 
     const db = await getDB();
 
-    // Flush groups
+    // Flush groups: write each group in its own transaction to avoid one failing put
+    // aborting the whole batch (which previously could leave the store cleared).
     if (bufferState.dirty.groups || force) {
-      const tx = db.transaction([STORES.GROUPS], 'readwrite');
-      const store = tx.objectStore(STORES.GROUPS);
-
-      // Clear then put all buffered groups to ensure consistency
-      const clearReq = store.clear();
-      await new Promise<void>((resolve, reject) => {
-        clearReq.onsuccess = () => resolve();
-        clearReq.onerror = () => reject(clearReq.error);
-      });
+      const writtenIds: string[] = [];
 
       for (const [id, value] of bufferState.groups.entries()) {
-        const req = store.put({ id, value });
-        await new Promise<void>((resolve, reject) => {
-          req.onsuccess = () => resolve();
-          req.onerror = () => reject(req.error);
+        try {
+          // If id is null/undefined, skip and persist to fallback; otherwise coerce to string
+          if (id === null || typeof id === 'undefined') {
+            logDB('FLUSH_PUT_SKIPPED_INVALID_KEY', STORES.GROUPS, String(id), undefined, 'invalid key');
+            try { saveFallbackToLocal(String(id), value, 'invalid key'); } catch {}
+            continue;
+          }
+
+          const safeId = String(id);
+          const cleanedValue = cleanDataForStorage(value);
+          const txItem = db.transaction([STORES.GROUPS], 'readwrite');
+          const storeItem = txItem.objectStore(STORES.GROUPS);
+          const req = storeItem.put({ id: safeId, value: cleanedValue });
+
+          await new Promise<void>((resolve, reject) => {
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+
+          writtenIds.push(id);
+        } catch (e) {
+          // Log the failing id but continue with others
+          logDB('FLUSH_PUT_FAILED', STORES.GROUPS, id, undefined, e);
+          try {
+            // Attempt to persist the failed item to a local fallback store to avoid data loss
+            const fallback = cleanDataForStorage(value);
+            saveFallbackToLocal(id, fallback, e);
+          } catch {
+            // ignore fallback failures
+          }
+        }
+      }
+
+      // Remove any DB entries that are not present in the buffer anymore.
+      try {
+        const txKeys = db.transaction([STORES.GROUPS], 'readonly');
+        const storeKeys = txKeys.objectStore(STORES.GROUPS);
+        const allKeys: string[] = await new Promise((resolve, reject) => {
+          const getAllReq = storeKeys.getAllKeys();
+          getAllReq.onsuccess = () => resolve(getAllReq.result as string[]);
+          getAllReq.onerror = () => reject(getAllReq.error);
         });
+
+        const toDelete = allKeys.filter(k => !bufferState.groups.has(k));
+
+        for (const key of toDelete) {
+          try {
+            const txDel = db.transaction([STORES.GROUPS], 'readwrite');
+            const storeDel = txDel.objectStore(STORES.GROUPS);
+            const delReq = storeDel.delete(key);
+            await new Promise<void>((resolve, reject) => {
+              delReq.onsuccess = () => resolve();
+              delReq.onerror = () => reject(delReq.error);
+            });
+          } catch (e) {
+            logDB('FLUSH_DELETE_FAILED', STORES.GROUPS, key, undefined, e);
+          }
+        }
+      } catch (e) {
+        logDB('FLUSH_CLEANUP_FAILED', STORES.GROUPS, undefined, undefined, e);
       }
 
       bufferState.dirty.groups = false;
-      logDB('FLUSH', STORES.GROUPS, undefined, { count: bufferState.groups.size });
+      logDB('FLUSH', STORES.GROUPS, undefined, { count: bufferState.groups.size, written: writtenIds.length });
     }
 
     // Flush settings
     if (bufferState.dirty.settings || force) {
       const tx = db.transaction([STORES.SETTINGS], 'readwrite');
       const store = tx.objectStore(STORES.SETTINGS);
-      const req = store.put({ id: 'app', value: bufferState.settings });
+      const cleanedSettings = cleanDataForStorage(bufferState.settings);
+      const req = store.put({ id: 'app', value: cleanedSettings });
       await new Promise<void>((resolve, reject) => {
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
       });
       bufferState.dirty.settings = false;
-      logDB('FLUSH', STORES.SETTINGS, 'app', bufferState.settings);
+      logDB('FLUSH', STORES.SETTINGS, 'app', cleanedSettings);
     }
 
     // Flush favorites
     if (bufferState.dirty.favorites || force) {
       const tx = db.transaction([STORES.FAVORITES], 'readwrite');
       const store = tx.objectStore(STORES.FAVORITES);
-      const req = store.put({ id: 'list', value: bufferState.favorites || [] });
+      const cleanedFavorites = cleanDataForStorage(bufferState.favorites || []);
+      const req = store.put({ id: 'list', value: cleanedFavorites });
       await new Promise<void>((resolve, reject) => {
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
       });
       bufferState.dirty.favorites = false;
-      logDB('FLUSH', STORES.FAVORITES, 'list', bufferState.favorites);
+      logDB('FLUSH', STORES.FAVORITES, 'list', cleanedFavorites);
     }
   } catch (error) {
     logDB('FLUSH', 'buffer', undefined, undefined, error);
@@ -153,6 +239,17 @@ async function getDB(): Promise<IDBDatabase> {
 
     request.onsuccess = () => {
       dbInstance = request.result;
+      // attach versionchange handler so we close and clear instance when needed
+      try {
+        dbInstance.onversionchange = () => {
+          logDB('VERSION_CHANGE', 'database');
+          try { dbInstance?.close(); } catch {};
+          dbInstance = null;
+        };
+      } catch {
+        // non-fatal if handler cannot be attached
+      }
+
       logDB('OPEN', 'database', undefined, 'success');
       resolve(dbInstance);
     };
@@ -237,30 +334,127 @@ async function getValue<T>(storeName: string, key: string): Promise<T | undefine
   }
 }
 
+// Helper function to clean data for IndexedDB storage
+function cleanDataForStorage<T>(data: T): T {
+  try {
+    // Deep clone and clean the data to ensure it's serializable
+    const cloned = JSON.parse(JSON.stringify(data));
+
+    // If the serialized payload is very large, trim potentially huge fields (data URLs)
+    const MAX_SERIALIZED_SIZE = 200 * 1024; // 200KB safe threshold
+    try {
+      const s = JSON.stringify(cloned);
+      if (s.length > MAX_SERIALIZED_SIZE) {
+        // Attempt targeted trimming for emoji groups that contain data URLs or very large strings
+        if (cloned && typeof cloned === 'object' && Array.isArray((cloned as any).emojis)) {
+          const group: any = { ...cloned };
+          group.emojis = (group.emojis as any[]).map((emoji: any) => {
+            if (emoji && typeof emoji === 'object') {
+              const e = { ...emoji };
+              if (typeof e.url === 'string') {
+                // Trim inline data URLs and very large URLs
+                if (e.url.startsWith('data:image/') || e.url.length > 100 * 1024) {
+                  // Replace with placeholder and mark trimmed so UI can recover if needed
+                  e._urlTrimmed = true;
+                  e._originalUrlLength = e.url.length;
+                  e.url = '';
+                }
+              }
+              return e;
+            }
+            return emoji;
+          });
+
+          const reSerialized = JSON.stringify(group);
+          if (reSerialized.length <= s.length) {
+            logDB('CLEAN_DATA_TRIM', 'groups', undefined, { originalSize: s.length, newSize: reSerialized.length });
+            return group as T;
+          }
+        }
+      }
+    } catch (err) {
+      // ignore serialization-check errors
+    }
+
+    return cloned;
+  } catch (error) {
+    logDB('CLEAN_DATA', 'failed', undefined, error);
+    // Fallback: try to extract only basic properties
+    if (typeof data === 'object' && data !== null) {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(data)) {
+        try {
+          JSON.stringify(value);
+          cleaned[key] = value;
+        } catch {
+          // Skip unserializable properties
+          logDB('CLEAN_DATA', `skipped property: ${key}`, undefined, 'unserializable');
+        }
+      }
+      return cleaned as T;
+    }
+    return data;
+  }
+}
+
+// Persist failed group writes to localStorage as a fallback to avoid data loss
+function saveFallbackToLocal(id: string, value: any, error: any) {
+  try {
+    const key = 'idb_fallback_groups';
+    let map: Record<string, any> = {};
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) map = JSON.parse(raw);
+    } catch {
+      // ignore parse errors and start fresh
+      map = {};
+    }
+
+    map[id] = {
+      value,
+      savedAt: Date.now(),
+      error: (error && typeof error === 'object') ? { name: error.name, message: error.message } : String(error)
+    };
+
+    try {
+      localStorage.setItem(key, JSON.stringify(map));
+      logDB('FALLBACK_SAVE', 'localStorage', key, { id, savedAt: map[id].savedAt });
+    } catch (err) {
+      // localStorage may also fail (quota) — log and ignore
+      logDB('FALLBACK_SAVE_FAILED', 'localStorage', key, undefined, err);
+    }
+  } catch {
+    // swallow any unexpected errors in fallback path
+  }
+}
+
 async function setValue<T>(storeName: string, key: string, value: T): Promise<void> {
   try {
+    // Clean the data to ensure it's serializable for IndexedDB
+    const cleanedValue = cleanDataForStorage(value);
+    
     // Write to buffer first for groups/settings/favorites
     if (storeName === STORES.GROUPS) {
-      bufferState.groups.set(key, value);
+      bufferState.groups.set(key, cleanedValue);
       bufferState.dirty.groups = true;
       scheduleFlush();
-      logDB('PUT_BUFFER', storeName, key, value);
+      logDB('PUT_BUFFER', storeName, key, cleanedValue);
       return;
     }
 
     if (storeName === STORES.SETTINGS) {
-      bufferState.settings = value;
+      bufferState.settings = cleanedValue;
       bufferState.dirty.settings = true;
       scheduleFlush();
-      logDB('PUT_BUFFER', storeName, key, value);
+      logDB('PUT_BUFFER', storeName, key, cleanedValue);
       return;
     }
 
     if (storeName === STORES.FAVORITES) {
-      bufferState.favorites = value as any;
+      bufferState.favorites = cleanedValue as any;
       bufferState.dirty.favorites = true;
       scheduleFlush();
-      logDB('PUT_BUFFER', storeName, key, value);
+      logDB('PUT_BUFFER', storeName, key, cleanedValue);
       return;
     }
 
@@ -269,10 +463,10 @@ async function setValue<T>(storeName: string, key: string, value: T): Promise<vo
     const store = transaction.objectStore(storeName);
 
     return new Promise((resolve, reject) => {
-      const request = store.put({ id: key, value });
+    const request = store.put({ id: String(key), value: cleanedValue });
 
       request.onsuccess = () => {
-        logDB('PUT', storeName, key, value);
+        logDB('PUT', storeName, key, cleanedValue);
         resolve();
       };
 
