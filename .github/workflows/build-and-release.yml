@@ -79,7 +79,7 @@ jobs:
         retention-days: 30
         
     - name: Create GitHub Release
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '')
       uses: softprops/action-gh-release@v1
       with:
         files: emoji-extension-v${{ steps.version.outputs.VERSION }}.zip
