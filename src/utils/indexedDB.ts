@@ -94,7 +94,9 @@ async function flushBuffer(force = false) {
       });
 
       for (const [id, value] of bufferState.groups.entries()) {
-        const req = store.put({ id, value });
+        // Clean the data before storing in IndexedDB
+        const cleanedValue = cleanDataForStorage(value);
+        const req = store.put({ id, value: cleanedValue });
         await new Promise<void>((resolve, reject) => {
           req.onsuccess = () => resolve();
           req.onerror = () => reject(req.error);
@@ -109,26 +111,28 @@ async function flushBuffer(force = false) {
     if (bufferState.dirty.settings || force) {
       const tx = db.transaction([STORES.SETTINGS], 'readwrite');
       const store = tx.objectStore(STORES.SETTINGS);
-      const req = store.put({ id: 'app', value: bufferState.settings });
+      const cleanedSettings = cleanDataForStorage(bufferState.settings);
+      const req = store.put({ id: 'app', value: cleanedSettings });
       await new Promise<void>((resolve, reject) => {
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
       });
       bufferState.dirty.settings = false;
-      logDB('FLUSH', STORES.SETTINGS, 'app', bufferState.settings);
+      logDB('FLUSH', STORES.SETTINGS, 'app', cleanedSettings);
     }
 
     // Flush favorites
     if (bufferState.dirty.favorites || force) {
       const tx = db.transaction([STORES.FAVORITES], 'readwrite');
       const store = tx.objectStore(STORES.FAVORITES);
-      const req = store.put({ id: 'list', value: bufferState.favorites || [] });
+      const cleanedFavorites = cleanDataForStorage(bufferState.favorites || []);
+      const req = store.put({ id: 'list', value: cleanedFavorites });
       await new Promise<void>((resolve, reject) => {
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
       });
       bufferState.dirty.favorites = false;
-      logDB('FLUSH', STORES.FAVORITES, 'list', bufferState.favorites);
+      logDB('FLUSH', STORES.FAVORITES, 'list', cleanedFavorites);
     }
   } catch (error) {
     logDB('FLUSH', 'buffer', undefined, undefined, error);
@@ -237,30 +241,58 @@ async function getValue<T>(storeName: string, key: string): Promise<T | undefine
   }
 }
 
+// Helper function to clean data for IndexedDB storage
+function cleanDataForStorage<T>(data: T): T {
+  try {
+    // Deep clone and clean the data to ensure it's serializable
+    return JSON.parse(JSON.stringify(data));
+  } catch (error) {
+    logDB('CLEAN_DATA', 'failed', undefined, error);
+    // Fallback: try to extract only basic properties
+    if (typeof data === 'object' && data !== null) {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(data)) {
+        try {
+          JSON.stringify(value);
+          cleaned[key] = value;
+        } catch {
+          // Skip unserializable properties
+          logDB('CLEAN_DATA', `skipped property: ${key}`, undefined, 'unserializable');
+        }
+      }
+      return cleaned as T;
+    }
+    return data;
+  }
+}
+
 async function setValue<T>(storeName: string, key: string, value: T): Promise<void> {
   try {
+    // Clean the data to ensure it's serializable for IndexedDB
+    const cleanedValue = cleanDataForStorage(value);
+    
     // Write to buffer first for groups/settings/favorites
     if (storeName === STORES.GROUPS) {
-      bufferState.groups.set(key, value);
+      bufferState.groups.set(key, cleanedValue);
       bufferState.dirty.groups = true;
       scheduleFlush();
-      logDB('PUT_BUFFER', storeName, key, value);
+      logDB('PUT_BUFFER', storeName, key, cleanedValue);
       return;
     }
 
     if (storeName === STORES.SETTINGS) {
-      bufferState.settings = value;
+      bufferState.settings = cleanedValue;
       bufferState.dirty.settings = true;
       scheduleFlush();
-      logDB('PUT_BUFFER', storeName, key, value);
+      logDB('PUT_BUFFER', storeName, key, cleanedValue);
       return;
     }
 
     if (storeName === STORES.FAVORITES) {
-      bufferState.favorites = value as any;
+      bufferState.favorites = cleanedValue as any;
       bufferState.dirty.favorites = true;
       scheduleFlush();
-      logDB('PUT_BUFFER', storeName, key, value);
+      logDB('PUT_BUFFER', storeName, key, cleanedValue);
       return;
     }
 
@@ -269,10 +301,10 @@ async function setValue<T>(storeName: string, key: string, value: T): Promise<vo
     const store = transaction.objectStore(storeName);
 
     return new Promise((resolve, reject) => {
-      const request = store.put({ id: key, value });
+      const request = store.put({ id: key, value: cleanedValue });
 
       request.onsuccess = () => {
-        logDB('PUT', storeName, key, value);
+        logDB('PUT', storeName, key, cleanedValue);
         resolve();
       };
 
