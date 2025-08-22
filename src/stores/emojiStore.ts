@@ -360,6 +360,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   };
 
+  const updateEmojiInGroup = (groupId: string, index: number, updatedEmoji: Partial<Emoji>) => {
+    const group = groups.value.find(g => g.id === groupId);
+    if (group && index >= 0 && index < group.emojis.length) {
+      const currentEmoji = group.emojis[index];
+      // Update the emoji while preserving the id and other metadata
+      group.emojis[index] = { ...currentEmoji, ...updatedEmoji };
+      console.log('[EmojiStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id });
+      maybeSave();
+    }
+  };
+
   // --- Favorites Management ---
   const addToFavorites = async (emoji: Emoji) => {
     // Check if emoji already exists in favorites group
@@ -560,6 +571,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     deleteEmoji,
     moveEmoji,
     removeEmojiFromGroup,
+    updateEmojiInGroup,
     addToFavorites,
     toggleFavorite,
     findEmojiById,

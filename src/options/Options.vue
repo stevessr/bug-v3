@@ -78,6 +78,7 @@
         @emoji-drag-start="handleEmojiDragStart"
         @emoji-drop="handleEmojiDrop"
         @remove-emoji="removeEmojiFromGroup"
+        @edit-emoji="openEditEmoji"
         @image-error="handleImageError"
       />
 
@@ -154,6 +155,15 @@
       @confirm="deleteGroup"
     />
 
+    <EditEmojiModal
+      v-model:show="showEditEmojiModal"
+      :emoji="editingEmoji"
+      :groupId="editingEmojiGroupId"
+      :index="editingEmojiIndex"
+      @save="handleEmojiEdit"
+      @image-error="handleImageError"
+    />
+
     <NotificationToasts
       v-model:showSuccess="showSuccessToast"
       :successMessage="successMessage"
@@ -177,6 +187,7 @@ import ConfirmDeleteModal from "./modals/ConfirmDeleteModal.vue";
 import NotificationToasts from "./components/NotificationToasts.vue";
 import GroupsTab from "./components/GroupsTab.vue";
 import FavoritesTab from "./components/FavoritesTab.vue";
+import EditEmojiModal from "./modals/EditEmojiModal.vue";
 import EditGroupModal from "./modals/EditGroupModal.vue";
 // composable
 import useOptions from "./useOptions";
