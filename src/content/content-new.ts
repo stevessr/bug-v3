@@ -321,6 +321,14 @@ function createEmojiPicker(): HTMLElement {
 function insertEmojiIntoEditor(emoji: any) {
   console.log('[Emoji Extension] Inserting emoji:', emoji);
   
+  // Add emoji to favorites automatically
+  chrome.runtime.sendMessage({
+    action: "addToFavorites",
+    emoji: emoji
+  }).catch((error: any) => {
+    console.log("[Emoji Extension] Failed to add to favorites:", error);
+  });
+  
   const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement;
   const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement;
   

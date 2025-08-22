@@ -186,6 +186,12 @@
                       编辑
                     </button>
                     <button
+                      @click="exportGroup(group)"
+                      class="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                    >
+                      导出
+                    </button>
+                    <button
                       v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
                       @click="confirmDeleteGroup(group)"
                       class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
@@ -226,14 +232,20 @@
                       </div>
                     </div>
                     
-                    <!-- Add emoji button -->
-                    <div class="mt-4">
+                    <!-- Add emoji button (hidden for favorites group) -->
+                    <div v-if="group.id !== 'favorites'" class="mt-4">
                       <button
-                        @click="showAddEmojiModal = true; selectedGroupForAdd = group.id"
+                        @click="openAddEmojiModal(group.id)"
                         class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full"
                       >
                         + 添加表情
                       </button>
+                    </div>
+                    <!-- For favorites group, show info instead -->
+                    <div v-if="group.id === 'favorites'" class="mt-4">
+                      <div class="px-3 py-2 text-sm text-gray-500 text-center border border-gray-200 rounded-lg bg-gray-50">
+                        使用表情会自动添加到常用分组
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -501,30 +513,7 @@
           </div>
         </div>
 
-          <!-- Edit Group Modal -->
-          <div
-            v-if="showEditGroupModal"
-            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-            @click="showEditGroupModal = false"
-          >
-            <div class="bg-white rounded-lg p-6 w-full max-w-md" @click.stop>
-              <h3 class="text-lg font-semibold mb-4">编辑分组</h3>
-              <div class="space-y-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">分组名称</label>
-                  <input v-model="editGroupName" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">分组图标/表情</label>
-                  <input v-model="editGroupIcon" type="text" placeholder="例如：😀 或 📁" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-              <div class="flex justify-end gap-3 mt-6">
-                <button @click="showEditGroupModal = false" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors">取消</button>
-                <button @click="saveEditGroup" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">保存</button>
-              </div>
-            </div>
-          </div>
+          
         <div class="flex justify-end gap-3 mt-6">
           <button
             @click="showAddEmojiModal = false"
@@ -538,6 +527,34 @@
           >
             添加
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Group Modal (top-level) -->
+    <div
+      v-if="showEditGroupModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click="showEditGroupModal = false"
+    >
+      <div
+        class="bg-white rounded-lg p-6 w-full max-w-md"
+        @click.stop
+      >
+        <h3 class="text-lg font-semibold mb-4">编辑分组</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">分组名称</label>
+            <input v-model="editGroupName" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">分组图标/表情</label>
+            <input v-model="editGroupIcon" type="text" placeholder="例如：😀 或 📁" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+          <button @click="showEditGroupModal = false" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors">取消</button>
+          <button @click="saveEditGroup" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">保存</button>
         </div>
       </div>
     </div>
@@ -935,10 +952,47 @@ const addEmoji = () => {
   // Reset form
   newEmojiName.value = ''
   newEmojiUrl.value = ''
-  newEmojiGroupId.value = ''
+  // reset to first group (if available) so next add defaults sensibly
+  newEmojiGroupId.value = emojiStore.groups[0]?.id || ''
+  selectedGroupForAdd.value = ''
   showAddEmojiModal.value = false
   
   showSuccess('表情添加成功')
+}
+
+// Open Add Emoji modal bound to a specific group id
+const openAddEmojiModal = (groupId: string) => {
+  selectedGroupForAdd.value = groupId || ''
+  // prefer the provided groupId, otherwise fallback to first available group
+  newEmojiGroupId.value = groupId || emojiStore.groups[0]?.id || ''
+  showAddEmojiModal.value = true
+}
+
+// Export a single group's emojis as JSON file
+const exportGroup = (group: EmojiGroup) => {
+  if (!group) return
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    group: {
+      id: group.id,
+      name: group.name,
+      icon: group.icon,
+      order: group.order
+    },
+    emojis: (group.emojis || []).map(e => ({ id: e.id, packet: e.packet, name: e.name, url: e.url, width: e.width, height: e.height, groupId: e.groupId }))
+  }
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `emoji-group-${group.id}-${group.name || 'group'}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+
+  showSuccess(`已导出分组 "${group.name}" (${(group.emojis || []).length} 个表情)`)
 }
 
 const deleteEmoji = (emojiId: string) => {

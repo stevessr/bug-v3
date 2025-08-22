@@ -20,6 +20,7 @@
     "@ant-design/icons-vue": "^7.0.1",
     "@playwright/test": "^1.55.0",
     "@tailwindcss/typography": "^0.5.16",
+    "@types/chrome": "^0.1.4",
     "@types/node": "^24.3.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "autoprefixer": "^10.4.21",

@@ -300,7 +300,7 @@ function injectButton(toolbar: Element) {
 
   let currentPicker: HTMLElement | null = null;
 
-  button.addEventListener("click", (event) => {
+  button.addEventListener("click", async (event) => {
     event.stopPropagation();
 
     if (currentPicker) {
@@ -310,14 +310,17 @@ function injectButton(toolbar: Element) {
       return;
     }
 
-    currentPicker = createEmojiPicker();
+    // Create picker asynchronously to ensure fresh data
+    currentPicker = await createEmojiPicker();
 
     // Position picker relative to button like simple.js
     const buttonRect = button.getBoundingClientRect();
     const pickerElement = currentPicker;
 
     // Add to body first to get dimensions
-    document.body.appendChild(pickerElement);
+    if (pickerElement) {
+      document.body.appendChild(pickerElement);
+    }
 
     // Position similar to simple.js logic
     const isOnMobile = /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(
@@ -325,52 +328,54 @@ function injectButton(toolbar: Element) {
     );
     const replyControl = document.querySelector("#reply-control");
 
-    if (isOnMobile && replyControl) {
-      const replyRect = replyControl.getBoundingClientRect();
-      pickerElement.style.position = "fixed";
-      pickerElement.style.bottom =
-        window.innerHeight - replyRect.top + 5 + "px";
-      pickerElement.style.left = replyRect.left + "px";
-      pickerElement.style.right = replyRect.right + "px";
-    } else {
-      const editorWrapper = document.querySelector(
-        ".d-editor-textarea-wrapper"
-      );
-      if (editorWrapper) {
-        const editorRect = editorWrapper.getBoundingClientRect();
-        const isMinireply =
-          replyControl?.className.includes("hide-preview") &&
-          window.innerWidth < 1600;
-
+    if (pickerElement) {
+      if (isOnMobile && replyControl) {
+        const replyRect = replyControl.getBoundingClientRect();
         pickerElement.style.position = "fixed";
-
-        if (isMinireply) {
-          // Center above editor
-          pickerElement.style.bottom =
-            window.innerHeight - editorRect.top + 10 + "px";
-          pickerElement.style.left =
-            editorRect.left + editorRect.width / 2 - 200 + "px";
-        } else {
-          // Position above the button, centered
-          const pickerRect = pickerElement.getBoundingClientRect();
-          pickerElement.style.top =
-            buttonRect.top - pickerRect.height - 5 + "px";
-          pickerElement.style.left =
-            buttonRect.left +
-            buttonRect.width / 2 -
-            pickerRect.width / 2 +
-            "px";
-
-          // Fallback to below if not enough space on top
-          if (pickerElement.getBoundingClientRect().top < 0) {
-            pickerElement.style.top = buttonRect.bottom + 5 + "px";
-          }
-        }
+        pickerElement.style.bottom =
+          window.innerHeight - replyRect.top + 5 + "px";
+        pickerElement.style.left = replyRect.left + "px";
+        pickerElement.style.right = replyRect.right + "px";
       } else {
-        // Fallback positioning
-        pickerElement.style.position = "fixed";
-        pickerElement.style.top = buttonRect.bottom + 5 + "px";
-        pickerElement.style.left = buttonRect.left + "px";
+        const editorWrapper = document.querySelector(
+          ".d-editor-textarea-wrapper"
+        );
+        if (editorWrapper) {
+          const editorRect = editorWrapper.getBoundingClientRect();
+          const isMinireply =
+            replyControl?.className.includes("hide-preview") &&
+            window.innerWidth < 1600;
+
+          pickerElement.style.position = "fixed";
+
+          if (isMinireply) {
+            // Center above editor
+            pickerElement.style.bottom =
+              window.innerHeight - editorRect.top + 10 + "px";
+            pickerElement.style.left =
+              editorRect.left + editorRect.width / 2 - 200 + "px";
+          } else {
+            // Position above the button, centered
+            const pickerRect = pickerElement.getBoundingClientRect();
+            pickerElement.style.top =
+              buttonRect.top - pickerRect.height - 5 + "px";
+            pickerElement.style.left =
+              buttonRect.left +
+              buttonRect.width / 2 -
+              pickerRect.width / 2 +
+              "px";
+
+            // Fallback to below if not enough space on top
+            if (pickerElement.getBoundingClientRect().top < 0) {
+              pickerElement.style.top = buttonRect.bottom + 5 + "px";
+            }
+          }
+        } else {
+          // Fallback positioning
+          pickerElement.style.position = "fixed";
+          pickerElement.style.top = buttonRect.bottom + 5 + "px";
+          pickerElement.style.left = buttonRect.left + "px";
+        }
       }
     }
 
@@ -399,7 +404,11 @@ function injectButton(toolbar: Element) {
   }
 }
 
-function createEmojiPicker(): HTMLElement {
+async function createEmojiPicker(): Promise<HTMLElement> {
+  // Refresh emoji data before creating picker to include latest favorites
+  console.log('[Emoji Extension] Refreshing emoji data before creating picker');
+  await loadDataFromStorage();
+  
   // Get current groups data instead of all emojis
   console.log('[Emoji Extension] Creating picker with groups:', cachedEmojiGroups?.length || 0);
   
@@ -642,6 +651,14 @@ function createEmojiPicker(): HTMLElement {
 
 function insertEmojiIntoEditor(emoji: any) {
   console.log("[Emoji Extension] Inserting emoji:", emoji);
+
+  // Add emoji to favorites automatically
+  chrome.runtime.sendMessage({
+    action: "addToFavorites",
+    emoji: emoji
+  }).catch((error: any) => {
+    console.log("[Emoji Extension] Failed to add to favorites:", error);
+  });
 
   const textArea = document.querySelector(
     "textarea.d-editor-input"
