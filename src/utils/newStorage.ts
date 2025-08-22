@@ -76,6 +76,32 @@ function logStorage(operation: string, key: string, data?: any, error?: any) {
 
 // --- Storage Layer Implementations ---
 
+// Helper function to ensure data is serializable
+function ensureSerializable<T>(data: T): T {
+  try {
+    // Test serialization and clean the data
+    return JSON.parse(JSON.stringify(data));
+  } catch (error) {
+    logStorage('SERIALIZE_CLEAN', 'data', undefined, error);
+    // Fallback: create a clean version
+    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(data)) {
+        try {
+          JSON.stringify(value);
+          cleaned[key] = value;
+        } catch {
+          logStorage('SERIALIZE_CLEAN', `skipped property: ${key}`, undefined, 'unserializable');
+        }
+      }
+      return cleaned as T;
+    } else if (Array.isArray(data)) {
+      return data.map(item => ensureSerializable(item)) as T;
+    }
+    return data;
+  }
+}
+
 class LocalStorageLayer {
   async get(key: string): Promise<any> {
     try {
@@ -251,13 +277,16 @@ class IndexedDBLayer {
       const isAvailable = await indexedDBHelpers.isAvailable();
       if (!isAvailable) return;
 
+      // Ensure the value is serializable for IndexedDB
+      const cleanValue = ensureSerializable(value);
+
       if (key === STORAGE_KEYS.SETTINGS) {
-        await indexedDBHelpers.setSettings(value);
+        await indexedDBHelpers.setSettings(cleanValue);
       } else if (key === STORAGE_KEYS.FAVORITES) {
-        await indexedDBHelpers.setFavorites(value);
+        await indexedDBHelpers.setFavorites(cleanValue);
       } else if (key === STORAGE_KEYS.GROUP_INDEX) {
         // For group index, we need to handle this specially
-        logStorage('IDB_SET', key, value);
+        logStorage('IDB_SET', key, cleanValue);
       } else if (key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
         // For individual groups, we need to update the entire groups collection
         const groups = await indexedDBHelpers.getAllGroups() || [];
@@ -265,15 +294,15 @@ class IndexedDBLayer {
         const existingIndex = groups.findIndex(g => g.id === groupId);
         
         if (existingIndex !== -1) {
-          groups[existingIndex] = value;
+          groups[existingIndex] = cleanValue;
         } else {
-          groups.push(value);
+          groups.push(cleanValue);
         }
         
         await indexedDBHelpers.setAllGroups(groups);
       }
       
-      logStorage('IDB_SET', key, value);
+      logStorage('IDB_SET', key, cleanValue);
     } catch (error) {
       logStorage('IDB_SET', key, undefined, error);
       throw error;
@@ -346,8 +375,11 @@ class NewStorageManager {
 
   // Write with progressive timers across all layers
   async set(key: string, value: any, timestamp?: number): Promise<void> {
+    // Ensure the value is serializable before storage
+    const cleanValue = ensureSerializable(value);
+    
     const finalValue = {
-      data: value,
+      data: cleanValue,
       timestamp: timestamp || Date.now()
     };
 
