@@ -439,6 +439,24 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   };
 
+  // --- One-click Add Emoji from Web ---
+  const addEmojiFromWeb = (emojiData: { name: string; url: string }) => {
+    const ungroupedGroup = groups.value.find(g => g.id === 'ungrouped');
+    if (ungroupedGroup) {
+      const newEmoji: Emoji = {
+        id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        packet: Date.now(),
+        name: emojiData.name,
+        url: emojiData.url,
+        groupId: 'ungrouped'
+      };
+      ungroupedGroup.emojis.push(newEmoji);
+      console.log('[EmojiStore] addEmojiFromWeb', { id: newEmoji.id, name: newEmoji.name });
+      maybeSave();
+      return newEmoji;
+    }
+  };
+
   // --- Settings Management ---
   const updateSettings = (newSettings: Partial<AppSettings>) => {
     settings.value = { ...settings.value, ...newSettings };
@@ -582,6 +600,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     forceSync,
     // expose batching helpers for bulk operations
     beginBatch,
-    endBatch
+    endBatch,
+    // one-click add from web
+    addEmojiFromWeb
   };
 });

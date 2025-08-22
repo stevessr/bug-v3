@@ -16,6 +16,7 @@ export default function useOptions() {
   { id: "settings", label: "设置" },
   { id: "favorites", label: "常用" },
   { id: "groups", label: "分组管理" },
+    { id: "ungrouped", label: "未分组" },
     { id: "stats", label: "统计" },
     { id: "about", label: "关于" },
   ];
@@ -251,16 +252,32 @@ export default function useOptions() {
     showEditEmojiModal.value = true;
   };
 
-  const handleEmojiEdit = async (payload: { emoji: any; groupId: string; index: number }) => {
+  const handleEmojiEdit = async (payload: { emoji: any; groupId: string; index: number; targetGroupId?: string }) => {
     try {
-      emojiStore.updateEmojiInGroup(payload.groupId, payload.index, payload.emoji);
+      if (payload.targetGroupId && payload.targetGroupId !== payload.groupId) {
+        // 需要移动表情到不同的分组
+        console.log('[Options] Moving emoji to different group:', {
+          from: payload.groupId,
+          to: payload.targetGroupId,
+          emoji: payload.emoji.name
+        });
+        
+        // 从源分组移除表情
+        emojiStore.removeEmojiFromGroup(payload.groupId, payload.index);
+        
+        // 添加到目标分组
+        const updatedEmoji = { ...payload.emoji, groupId: payload.targetGroupId };
+        emojiStore.addEmoji(payload.targetGroupId, updatedEmoji);
+        
+        showSuccess('表情已移动到新分组并更新');
+      } else {
+        // 只是更新表情信息，不移动分组
+        emojiStore.updateEmojiInGroup(payload.groupId, payload.index, payload.emoji);
+        showSuccess('表情已更新');
+      }
+      
       await flushBuffer(true);
-      console.log('[Options] updateEmojiInGroup flushed to IndexedDB', {
-        groupId: payload.groupId,
-        index: payload.index,
-        emoji: payload.emoji.name,
-      });
-      showSuccess('表情已更新');
+      console.log('[Options] emoji edit operation flushed to IndexedDB');
     } catch (error) {
       console.error('Error updating emoji:', error);
       showError('表情更新失败');

@@ -82,6 +82,22 @@
             />
           </div>
 
+          <!-- Group Selection -->
+          <div v-if="availableGroups.length > 0">
+            <label for="emoji-group" class="block text-sm font-medium text-gray-700">
+              选择分组
+            </label>
+            <select
+              id="emoji-group"
+              v-model="selectedGroupId"
+              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            >
+              <option v-for="group in availableGroups" :key="group.id" :value="group.id">
+                {{ group.icon }} {{ group.name }}
+              </option>
+            </select>
+          </div>
+
           <!-- Buttons -->
           <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
             <button
@@ -105,7 +121,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
+import { useEmojiStore } from '../../stores/emojiStore';
 import type { Emoji } from '../../types/emoji';
 
 const props = defineProps<{
@@ -117,18 +134,34 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:show': [value: boolean];
-  'save': [payload: { emoji: Emoji; groupId: string; index: number }];
+  'save': [payload: { emoji: Emoji; groupId: string; index: number; targetGroupId?: string }];
   'image-error': [event: Event];
 }>();
 
-const localEmoji = ref<Emoji>({
+const emojiStore = useEmojiStore();
+
+const localEmoji = ref<Partial<Emoji>>({
   name: '',
   url: '',
+});
+
+const selectedGroupId = ref<string>('');
+
+// 可用的分组列表（排除常用分组）
+const availableGroups = computed(() => {
+  return emojiStore.groups.filter(g => g.id !== 'favorites');
 });
 
 watch(() => props.emoji, (newEmoji) => {
   if (newEmoji) {
     localEmoji.value = { ...newEmoji };
+    selectedGroupId.value = newEmoji.groupId || props.groupId || '';
+  }
+}, { immediate: true });
+
+watch(() => props.groupId, (newGroupId) => {
+  if (newGroupId && !selectedGroupId.value) {
+    selectedGroupId.value = newGroupId;
   }
 }, { immediate: true });
 
@@ -137,11 +170,25 @@ const closeModal = () => {
 };
 
 const handleSubmit = () => {
-  if (props.groupId !== undefined && props.index !== undefined) {
+  if (props.groupId !== undefined && props.index !== undefined && localEmoji.value.name && localEmoji.value.url) {
+    const updatedEmoji: Emoji = {
+      id: props.emoji?.id || '',
+      packet: props.emoji?.packet || Date.now(),
+      name: localEmoji.value.name,
+      url: localEmoji.value.url,
+      groupId: selectedGroupId.value,
+      width: localEmoji.value.width,
+      height: localEmoji.value.height,
+      usageCount: localEmoji.value.usageCount,
+      lastUsed: localEmoji.value.lastUsed,
+      addedAt: localEmoji.value.addedAt,
+    };
+
     emit('save', {
-      emoji: localEmoji.value,
+      emoji: updatedEmoji,
       groupId: props.groupId,
       index: props.index,
+      targetGroupId: selectedGroupId.value !== props.groupId ? selectedGroupId.value : undefined,
     });
     closeModal();
   }

@@ -1,9 +1,13 @@
 import { loadDataFromStorage } from "./storage";
 import { findToolbar, injectButton } from "./injector";
+import { initOneClickAdd } from "./oneClickAdd";
 
 export async function initializeEmojiFeature() {
   console.log('[Emoji Extension] Initializing (module)...');
   await loadDataFromStorage();
+
+  // 初始化一键添加表情功能
+  initOneClickAdd();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => { setTimeout(() => { injectFeatures(); }, 500); });
