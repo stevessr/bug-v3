@@ -1,4 +1,5 @@
-import { useEmojiStore } from '../stores/emojiStore';
+import { useEmojiStore } from '../../stores/emojiStore';
+import type { EmojiGroup } from '../../types/emoji';
 
 export async function importConfigurationToStore(config: any) {
   const store = useEmojiStore();
@@ -32,32 +33,35 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
       items.forEach((emoji) => {
         const emojiData = {
           packet: Number.isInteger(emoji.packet) ? emoji.packet : Date.now() + Math.floor(Math.random() * 1000),
-          name: emoji.name || emoji.alt || '未命名',
+          name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
           url: emoji.url || emoji.src,
         };
         store.addEmojiWithoutSave(targetGroupId, emojiData);
       });
     } else {
-      const groupMap = new Map<string, string>();
-      store.groups.forEach((g) => groupMap.set(g.name, g.id));
+          const groupMap = new Map<string, string>();
+          store.groups.forEach((g: EmojiGroup) => {
+            if (g && g.name && g.id) groupMap.set(g.name, g.id);
+          });
 
       items.forEach((emoji) => {
         // item.groupId might be either a group id or a group name depending on source
-        const rawGroup = emoji.groupId || emoji.group || inferredGroupName || '未分组';
+        const rawGroup = emoji.groupId || emoji.group || inferredGroupName || '\u672a\u5206\u7ec4';
         const groupName = rawGroup.toString();
         let targetId = groupMap.get(groupName);
         if (!targetId) {
-          const created = store.createGroupWithoutSave(groupName, '📁');
-          if (created) {
+          const created = store.createGroupWithoutSave(groupName, '\ud83d\udcc1');
+          if (created && created.id) {
             targetId = created.id;
             groupMap.set(groupName, targetId);
           } else {
             targetId = store.groups[0]?.id || 'nachoneko';
+            if (targetId) groupMap.set(groupName, targetId);
           }
         }
         const emojiData = {
           packet: Number.isInteger(emoji.packet) ? emoji.packet : Date.now() + Math.floor(Math.random() * 1000),
-          name: emoji.name || emoji.alt || '未命名',
+          name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
           url: emoji.url || emoji.src,
         };
         if (targetId) store.addEmojiWithoutSave(targetId, emojiData);

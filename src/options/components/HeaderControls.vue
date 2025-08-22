@@ -34,7 +34,6 @@
 </template>
 
 <script setup lang="ts">
-// This component only emits actions to the parent; logic lives in Options.vue
 defineEmits([
   'open-import',
   'open-import-emojis',
