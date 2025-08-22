@@ -1550,4 +1550,11 @@ export const defaultEmojiGroups: EmojiGroup[] = [
       },
     ],
   },
+  {
+    id: "ungrouped",
+    name: "未分组",
+    icon: "📦",
+    order: 999,
+    emojis: [],
+  },
 ];

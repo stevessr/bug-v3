@@ -82,7 +82,20 @@
         @image-error="handleImageError"
       />
 
-  <FavoritesTab v-if="activeTab === 'favorites'" :emojiStore="emojiStore" />
+  <FavoritesTab 
+    v-if="activeTab === 'favorites'" 
+    :emojiStore="emojiStore" 
+    @remove="removeEmojiFromGroup"
+    @edit="openEditEmoji"
+  />
+
+      <!-- Ungrouped Tab -->
+      <UngroupedTab 
+        v-if="activeTab === 'ungrouped'" 
+        :emojiStore="emojiStore" 
+        @remove="removeEmojiFromGroup"
+        @edit="openEditEmoji"
+      />
 
       <!-- Statistics Tab -->
       <div v-if="activeTab === 'stats'" class="space-y-8">
@@ -187,6 +200,7 @@ import ConfirmDeleteModal from "./modals/ConfirmDeleteModal.vue";
 import NotificationToasts from "./components/NotificationToasts.vue";
 import GroupsTab from "./components/GroupsTab.vue";
 import FavoritesTab from "./components/FavoritesTab.vue";
+import UngroupedTab from "./components/UngroupedTab.vue";
 import EditEmojiModal from "./modals/EditEmojiModal.vue";
 import EditGroupModal from "./modals/EditGroupModal.vue";
 // composable
