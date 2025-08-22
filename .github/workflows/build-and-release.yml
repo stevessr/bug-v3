@@ -46,11 +46,33 @@ jobs:
     - name: Get version from input or tag
       id: version
       run: |
+        set -euo pipefail
+
+        # Helper to generate timestamp version: 1.YYYY.M.D.H.M
+        gen_ts() {
+          echo "1.$(date -u +%Y).$(date -u +%m).$(date -u +%d).$(date -u +%H).$(date -u +%M)"
+        }
+
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          INPUT_VERSION="${{ github.event.inputs.version }}"
+          if [ -n "$INPUT_VERSION" ] && echo "$INPUT_VERSION" | grep -Eq '^[1-4](\.[0-9]+)*$'; then
+            VERSION="$INPUT_VERSION"
+          else
+            echo "Input version is empty or invalid (must start with major 1-4). Falling back to timestamp version."
+            VERSION="$(gen_ts)"
+          fi
         else
-          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          # For push events, extract tag after refs/tags/v
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          if [ -n "$TAG_VERSION" ] && echo "$TAG_VERSION" | grep -Eq '^[1-4](\.[0-9]+)*$'; then
+            VERSION="$TAG_VERSION"
+          else
+            echo "Tag version missing or invalid (must start with major 1-4). Falling back to timestamp version."
+            VERSION="$(gen_ts)"
+          fi
         fi
+
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         
     - name: Update manifest version
       run: |
