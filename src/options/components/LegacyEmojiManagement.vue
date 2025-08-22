@@ -62,17 +62,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref } from "vue";
 const props = defineProps<{ emojiStore: any }>();
-const emits = defineEmits(['open-add-emoji', 'delete-emoji', 'image-error']);
+const emits = defineEmits(["open-add-emoji", "delete-emoji", "image-error"]);
 
-const selectedGroupId = ref('');
+const selectedGroupId = ref("");
 
 const filteredEmojis = computed(() => {
-  if (!selectedGroupId.value) {
+  if (!selectedGroupId.value)
     return props.emojiStore.groups.flatMap((group: any) => group.emojis);
-  }
-  const group = props.emojiStore.groups.find((g: any) => g.id === selectedGroupId.value);
+  const group = props.emojiStore.groups.find(
+    (g: any) => g.id === selectedGroupId.value
+  );
   return group ? group.emojis : [];
 });
 </script>
