@@ -520,50 +520,18 @@
 
   <ImportEmojisModal v-model="showImportEmojiModal" @imported="handleEmojisImported" />
 
-    <!-- Confirm Delete Group Modal -->
-    <div
-      v-if="showConfirmDeleteModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click="showConfirmDeleteModal = false"
-    >
-      <div class="bg-white rounded-lg p-6 w-full max-w-md" @click.stop>
-        <h3 class="text-lg font-semibold mb-4">确认删除</h3>
-        <p class="text-gray-600 mb-6">
-          确定要删除分组 "{{ groupToDelete?.name }}"
-          吗？分组中的表情也会被删除。
-        </p>
-        <div class="flex justify-end gap-3">
-          <button
-            @click="showConfirmDeleteModal = false"
-            class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
-          >
-            取消
-          </button>
-          <button
-            @click="deleteGroup"
-            class="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-          >
-            删除
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDeleteModal
+      v-model:show="showConfirmDeleteModal"
+      :group="groupToDelete"
+      @confirm="deleteGroup"
+    />
 
-    <!-- Success Toast -->
-    <div
-      v-if="showSuccessToast"
-      class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50"
-    >
-      {{ successMessage }}
-    </div>
-
-    <!-- Error Toast -->
-    <div
-      v-if="showErrorToast"
-      class="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50"
-    >
-      {{ errorMessage }}
-    </div>
+    <NotificationToasts
+      v-model:showSuccess="showSuccessToast"
+      :successMessage="successMessage"
+      v-model:showError="showErrorToast"
+      :errorMessage="errorMessage"
+    />
   </div>
 </template>
 
@@ -575,6 +543,8 @@ import ImportConfigModal from './ImportConfigModal.vue';
 import ImportEmojisModal from './ImportEmojisModal.vue';
 import CreateGroupModal from './CreateGroupModal.vue';
 import AddEmojiModal from './AddEmojiModal.vue';
+import ConfirmDeleteModal from './ConfirmDeleteModal.vue';
+import NotificationToasts from './NotificationToasts.vue';
 import { importConfigurationToStore, importEmojisToStore } from './importUtils';
 import { exportConfigurationFile, exportGroupFile } from './exportUtils';
 import { useEmojiStore } from "../stores/emojiStore";
