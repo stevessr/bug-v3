@@ -1,6 +1,7 @@
 import type { EmojiGroup, AppSettings } from '../types/emoji';
 import { defaultEmojiGroups, defaultSettings } from '../types/emoji';
-import { indexedDBHelpers } from './indexedDB';
+import indexedDBHelpers from './indexedDB';
+import { logger } from '../config/buildFlags';
 
 // In build/test environments `chrome` may not be declared. Provide a loose declaration
 declare const chrome: any;
@@ -63,7 +64,7 @@ function logStorage(operation: string, key: string, data?: any, error?: any) {
   }
 
   if (error) {
-    console.error(`${logPrefix} ${operation} FAILED for "${key}":`, error);
+    logger.error(`${logPrefix} ${operation} FAILED for "${key}":`, error);
   } else {
     // Ensure certain success messages explicitly contain the word 'success' so
     // automated tests that search for 'success' can reliably match them.
@@ -72,9 +73,9 @@ function logStorage(operation: string, key: string, data?: any, error?: any) {
 
     if (typeof data !== 'undefined') {
       const p = formatPreview(data);
-      console.log(`${logPrefix} ${operation} for "${key}" - size: ${p.size ?? 'unknown'}${successSuffix}`, p.preview);
+      logger.log(`${logPrefix} ${operation} for "${key}" - size: ${p.size ?? 'unknown'}${successSuffix}`, p.preview);
     } else {
-      console.log(`${logPrefix} ${operation} for "${key}"${successSuffix}`);
+      logger.log(`${logPrefix} ${operation} for "${key}"${successSuffix}`);
     }
   }
 }
