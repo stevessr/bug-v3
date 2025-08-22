@@ -158,14 +158,15 @@
                 v-for="group in emojiStore.sortedGroups"
                 :key="group.id"
                 class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
-                :draggable="true"
+                :draggable="group.id !== 'favorites'"
                 @dragstart="handleDragStart(group, $event)"
                 @dragover.prevent
                 @drop="handleDrop(group, $event)"
               >
                 <div class="flex items-center justify-between p-4">
                   <div class="flex items-center gap-3">
-                    <div class="cursor-move text-gray-400">⋮⋮</div>
+                    <div v-if="group.id !== 'favorites'" class="cursor-move text-gray-400">⋮⋮</div>
+                    <div v-else class="w-6 text-yellow-500">⭐</div>
                     <div class="text-lg">{{ group.icon }}</div>
                     <div>
                       <h3 class="font-medium text-gray-900">{{ group.name }}</h3>
@@ -180,6 +181,7 @@
                       {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
                     </button>
                     <button
+                      v-if="group.id !== 'favorites'"
                       @click="openEditGroup(group)"
                       class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
                     >
@@ -825,6 +827,12 @@ const deleteGroup = async () => {
 
 // Drag and drop handlers
 const handleDragStart = (group: EmojiGroup, event: DragEvent) => {
+  // Prevent dragging favorites group
+  if (group.id === 'favorites') {
+    event.preventDefault()
+    showError('常用分组不能移动位置')
+    return
+  }
   draggedGroup.value = group
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move'
@@ -833,6 +841,12 @@ const handleDragStart = (group: EmojiGroup, event: DragEvent) => {
 
 const handleDrop = async (targetGroup: EmojiGroup, event: DragEvent) => {
   event.preventDefault()
+  // Prevent dropping onto favorites group
+  if (targetGroup.id === 'favorites') {
+    showError('不能移动到常用分组位置')
+    draggedGroup.value = null
+    return
+  }
   if (draggedGroup.value && draggedGroup.value.id !== targetGroup.id) {
     // Reorder groups logic here
     await emojiStore.reorderGroups(draggedGroup.value.id, targetGroup.id)
@@ -913,6 +927,11 @@ const createGroup = () => {
 }
 
 const openEditGroup = (group: EmojiGroup) => {
+  // Prevent editing favorites group
+  if (group.id === 'favorites') {
+    showError('常用分组不能编辑名称和图标')
+    return
+  }
   editingGroupId.value = group.id
   editGroupName.value = group.name
   editGroupIcon.value = group.icon

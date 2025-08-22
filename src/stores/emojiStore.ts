@@ -36,9 +36,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     return emojis;
   });
 
-  const sortedGroups = computed(() =>
-    [...groups.value].sort((a, b) => a.order - b.order)
-  );
+  const sortedGroups = computed(() => {
+    const allGroups = [...groups.value];
+    const favoritesGroup = allGroups.find(g => g.id === 'favorites');
+    const otherGroups = allGroups.filter(g => g.id !== 'favorites').sort((a, b) => a.order - b.order);
+    
+    // Always put favorites first if it exists
+    return favoritesGroup ? [favoritesGroup, ...otherGroups] : otherGroups;
+  });
 
   // --- Save control (batching) ---
   let batchDepth = 0;
@@ -223,6 +228,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   };
 
   const reorderGroups = async (sourceGroupId: string, targetGroupId: string) => {
+    // Prevent reordering if either source or target is favorites
+    if (sourceGroupId === 'favorites' || targetGroupId === 'favorites') {
+      console.warn('[EmojiStore] Cannot reorder favorites group');
+      return;
+    }
+    
     const sourceIndex = groups.value.findIndex(g => g.id === sourceGroupId);
     const targetIndex = groups.value.findIndex(g => g.id === targetGroupId);
 
@@ -325,21 +336,45 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       return;
     }
 
-    const alreadyExists = favoritesGroup.emojis.some(e => e.url === emoji.url);
-    if (alreadyExists) {
-      console.log('[EmojiStore] Emoji already in favorites:', emoji.name);
-      return;
-    }
-
-    // Add emoji to favorites group with new ID
-    const favoriteEmoji: Emoji = {
-      ...emoji,
-      id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      groupId: 'favorites'
-    };
+    const now = Date.now();
+    const existingEmojiIndex = favoritesGroup.emojis.findIndex(e => e.url === emoji.url);
     
-    favoritesGroup.emojis.unshift(favoriteEmoji); // Add to beginning
-    console.log('[EmojiStore] Added emoji to favorites:', emoji.name);
+    if (existingEmojiIndex !== -1) {
+      // Emoji already exists in favorites, update usage tracking
+      const existingEmoji = favoritesGroup.emojis[existingEmojiIndex];
+      const lastUsed = existingEmoji.lastUsed || 0;
+      const timeDiff = now - lastUsed;
+      const twelveHours = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+      
+      if (timeDiff < twelveHours) {
+        // Less than 12 hours, only increment count
+        existingEmoji.usageCount = (existingEmoji.usageCount || 0) + 1;
+        console.log('[EmojiStore] Updated usage count for existing emoji:', emoji.name, 'count:', existingEmoji.usageCount);
+      } else {
+        // More than 12 hours, apply decay and update timestamp
+        const currentCount = existingEmoji.usageCount || 1;
+        existingEmoji.usageCount = Math.floor(currentCount * 0.8) + 1;
+        existingEmoji.lastUsed = now;
+        console.log('[EmojiStore] Applied usage decay and updated timestamp for emoji:', emoji.name, 'new count:', existingEmoji.usageCount);
+      }
+    } else {
+      // Add emoji to favorites group with initial usage tracking
+      const favoriteEmoji: Emoji = {
+        ...emoji,
+        id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        groupId: 'favorites',
+        usageCount: 1,
+        lastUsed: now,
+        addedAt: now
+      };
+      
+      favoritesGroup.emojis.push(favoriteEmoji); // Add new emoji
+      console.log('[EmojiStore] Added new emoji to favorites:', emoji.name);
+    }
+    
+    // Sort favorites by lastUsed timestamp (most recent first)
+    favoritesGroup.emojis.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0));
+    
     maybeSave();
   };
 

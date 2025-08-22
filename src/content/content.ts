@@ -138,7 +138,10 @@ class ContentStorageAdapter {
       
       if (groups.length > 0) {
         console.log(`[Content Storage] Successfully loaded ${groups.length} groups from new storage system`);
-        return groups.sort((a, b) => a.order - b.order);
+        // Ensure favorites group is always first
+        const favoritesGroup = groups.find(g => g.id === 'favorites');
+        const otherGroups = groups.filter(g => g.id !== 'favorites').sort((a, b) => a.order - b.order);
+        return favoritesGroup ? [favoritesGroup, ...otherGroups] : otherGroups;
       } else {
         console.warn(`[Content Storage] No valid groups found in new storage system despite having group index`);
       }
@@ -149,7 +152,10 @@ class ContentStorageAdapter {
     const legacyGroups = await this.get('emojiGroups');
     if (legacyGroups && Array.isArray(legacyGroups) && legacyGroups.length > 0) {
       console.log(`[Content Storage] Loaded ${legacyGroups.length} groups from legacy storage`);
-      return legacyGroups;
+      // Ensure favorites group is always first for legacy data too
+      const favoritesGroup = legacyGroups.find(g => g.id === 'favorites');
+      const otherGroups = legacyGroups.filter(g => g.id !== 'favorites').sort((a, b) => (a.order || 0) - (b.order || 0));
+      return favoritesGroup ? [favoritesGroup, ...otherGroups] : otherGroups;
     }
 
     console.log('[Content Storage] No groups found in storage');
