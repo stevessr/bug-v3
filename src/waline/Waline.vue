@@ -332,7 +332,7 @@ const parseWalineConfig = (data: any): Array<{ name: string; url: string }> => {
       if (Array.isArray(data.items) && data.prefix && data.type) {
         const prefix = data.prefix || '';
         const type = data.type || 'png';
-        const baseUrl = data.baseUrl || 'https://cdn.jsdelivr.net/gh/walinejs/emojis@1.0.0/';
+        const baseUrl = data.baseUrl || 'https://cdn.jsdelivr.net/gh/walinejs/emojis/';
         
         for (const item of data.items) {
           if (typeof item === 'string') {
