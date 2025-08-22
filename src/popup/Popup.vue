@@ -49,7 +49,7 @@
 
     <!-- Group Tabs -->
     <div class="flex border-b border-gray-100 overflow-x-auto">
-      <button
+  <button
         v-for="group in emojiStore.sortedGroups"
         :key="group.id"
         @click="emojiStore.activeGroupId = group.id"
@@ -60,7 +60,14 @@
             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
         ]"
       >
-        <span class="mr-1">{{ group.icon }}</span>
+        <span class="mr-1">
+          <template v-if="isImageUrl(group.icon)">
+            <img :src="group.icon" alt="group icon" class="w-4 h-4 object-contain inline-block" />
+          </template>
+          <template v-else>
+            {{ group.icon }}
+          </template>
+        </span>
         {{ group.name }}
       </button>
     </div>
@@ -84,12 +91,14 @@
           class="relative p-1 rounded hover:bg-gray-100 transition-colors group"
           :title="emoji.name"
         >
-          <img
-            :src="emoji.url"
-            :alt="emoji.name"
-            class="w-10 h-10 object-contain mx-auto"
-            loading="lazy"
-          />
+          <div class="w-10 h-10 rounded overflow-hidden mx-auto">
+            <img
+              :src="emoji.url"
+              :alt="emoji.name"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
           <!-- Favorite indicator -->
           <div 
             v-if="emojiStore.favorites.has(emoji.id)"
@@ -136,6 +145,17 @@ import type { Emoji } from '../types/emoji';
 const emojiStore = useEmojiStore();
 const localScale = ref(100);
 const showCopyToast = ref(false);
+
+// Utility: detect if a string looks like an http(s) image URL
+const isImageUrl = (value: string | null | undefined) => {
+  if (!value) return false
+  try {
+    const url = new URL(value)
+    return (url.protocol === 'http:' || url.protocol === 'https:') && /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
+  } catch (e) {
+    return false
+  }
+}
 
 onMounted(async () => {
   await emojiStore.loadData();
