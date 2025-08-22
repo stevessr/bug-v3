@@ -18,14 +18,13 @@
           <div
             v-for="group in displayGroups"
             :key="group.id"
-            <div
-              class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
-              :draggable="group.id !== 'favorites'"
-              @dragstart="$emit('group-dragstart', group, $event)"
-              @dragover.prevent
-              @drop="$emit('group-drop', group, $event)"
-              :ref="(el) => el && addGroupTouchEvents(el as HTMLElement, group)"
-            >
+            class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+            :draggable="group.id !== 'favorites'"
+            @dragstart="$emit('group-dragstart', group, $event)"
+            @dragover.prevent
+            @drop="$emit('group-drop', group, $event)"
+            :ref="(el) => el && addGroupTouchEvents(el as HTMLElement, group)"
+          >
             <div class="flex items-center justify-between p-4">
               <div class="flex items-center gap-3">
                 <div
