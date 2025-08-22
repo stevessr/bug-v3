@@ -496,12 +496,33 @@ async function createEmojiPicker(): Promise<HTMLElement> {
   // Create navigation buttons for each group
   groupsToUse.forEach((group, index) => {
     if (group?.emojis?.length > 0) {
-      const navButton = document.createElement("button");
+  const navButton = document.createElement("button");
       navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? 'active' : ''}`;
       navButton.setAttribute("tabindex", "-1");
       navButton.setAttribute("data-section", group.id);
       navButton.type = "button";
-      navButton.innerHTML = group.icon || "📁";
+      // Render icon: if it's an image URL, create an <img>, otherwise use text
+      const iconVal = group.icon || "📁";
+      const isImage = (val: any) => {
+        try {
+          const u = new URL(val);
+          return (u.protocol === 'http:' || u.protocol === 'https:') && /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(u.pathname);
+        } catch (e) {
+          return false;
+        }
+      }
+      if (isImage(iconVal)) {
+        const img = document.createElement('img');
+        img.src = iconVal;
+        img.alt = group.name || '';
+        img.className = 'emoji-group-icon';
+        img.style.width = '18px';
+        img.style.height = '18px';
+        img.style.objectFit = 'contain';
+        navButton.appendChild(img);
+      } else {
+        navButton.textContent = String(iconVal);
+      }
       navButton.title = group.name;
       
       // Add click handler for navigation

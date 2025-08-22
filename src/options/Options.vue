@@ -101,18 +101,7 @@
                 <label class="text-sm font-medium text-gray-900">网格列数</label>
                 <p class="text-sm text-gray-500">表情选择器中的列数</p>
               </div>
-              <select
-                :value="emojiStore.settings.gridColumns"
-                @change="updateGridColumns"
-                class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="2">2 列</option>
-                <option value="3">3 列</option>
-                <option value="4">4 列</option>
-                <option value="5">5 列</option>
-                <option value="6">6 列</option>
-                <option value="8">8 列</option>
-              </select>
+              <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
             </div>
 
             <!-- Show Search Bar -->
@@ -167,7 +156,14 @@
                   <div class="flex items-center gap-3">
                     <div v-if="group.id !== 'favorites'" class="cursor-move text-gray-400">⋮⋮</div>
                     <div v-else class="w-6 text-yellow-500">⭐</div>
-                    <div class="text-lg">{{ group.icon }}</div>
+                    <div class="text-lg">
+                      <template v-if="isImageUrl(group.icon)">
+                        <img :src="group.icon" alt="group icon" class="w-6 h-6 object-contain rounded" @error="handleImageError" />
+                      </template>
+                      <template v-else>
+                        {{ group.icon }}
+                      </template>
+                    </div>
                     <div>
                       <h3 class="font-medium text-gray-900">{{ group.name }}</h3>
                       <p class="text-sm text-gray-500">{{ group.emojis?.length || 0 }} 个表情</p>
@@ -206,7 +202,7 @@
                 <!-- Expanded emoji display -->
                 <div v-if="expandedGroups.has(group.id)" class="px-4 pb-4 border-t border-gray-100">
                   <div class="mt-4">
-                    <div class="grid grid-cols-12 gap-3">
+                    <div class="grid gap-3" :style="{ gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))` }">
                       <div
                         v-for="(emoji, index) in group.emojis"
                         :key="`${group.id}-${index}`"
@@ -216,12 +212,11 @@
                         @dragover.prevent
                         @drop="handleEmojiDrop(group.id, index, $event)"
                       >
-                        <div class="aspect-square bg-gray-50 rounded-lg p-2 hover:bg-gray-100 transition-colors">
+                        <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors">
                           <img
                             :src="emoji.url"
                             :alt="emoji.name"
-                            class="w-full h-full object-contain rounded"
-                            :style="{ width: '48px', height: '48px' }"
+                            class="w-full h-full object-cover"
                           />
                         </div>
                         <div class="text-xs text-center text-gray-600 mt-1 truncate">{{ emoji.name }}</div>
@@ -434,6 +429,18 @@
             />
           </div>
           <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">分组图标 / 图片链接</label>
+            <input
+              v-model="newGroupIcon"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例如：😀 或 https://..."
+            />
+            <div v-if="isImageUrl(newGroupIcon)" class="mt-2 text-center">
+              <img :src="newGroupIcon" alt="预览" class="w-10 h-10 object-contain mx-auto border border-gray-200 rounded" @error="handleImageError" />
+            </div>
+          </div>
+          <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">分组颜色</label>
             <div class="flex gap-2">
               <div
@@ -550,8 +557,11 @@
             <input v-model="editGroupName" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">分组图标/表情</label>
-            <input v-model="editGroupIcon" type="text" placeholder="例如：😀 或 📁" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label class="block text-sm font-medium text-gray-700 mb-1">分组图标/图片链接</label>
+            <input v-model="editGroupIcon" type="text" placeholder="例如：😀 或 https://..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div v-if="isImageUrl(editGroupIcon)" class="mt-2 text-center">
+              <img :src="editGroupIcon" alt="预览" class="w-10 h-10 object-contain mx-auto border border-gray-200 rounded" @error="handleImageError" />
+            </div>
           </div>
         </div>
         <div class="flex justify-end gap-3 mt-6">
@@ -724,7 +734,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import { useEmojiStore } from '../stores/emojiStore'
 // force flush to IndexedDB buffer when options page updates data
 import { flushBuffer } from '../utils/indexedDB'
@@ -775,6 +786,17 @@ const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#F
 const editingGroupId = ref<string>('')
 const editGroupName = ref<string>('')
 const editGroupIcon = ref<string>('')
+
+// Utility: detect if a string looks like an http(s) image URL
+const isImageUrl = (value: string | null | undefined) => {
+  if (!value) return false
+  try {
+    const url = new URL(value)
+    return (url.protocol === 'http:' || url.protocol === 'https:') && /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
+  } catch (e) {
+    return false
+  }
+}
 
 // New emoji data
 const newEmojiName = ref('')
@@ -899,10 +921,15 @@ const updateImageScale = (event: Event) => {
   emojiStore.updateSettings({ imageScale: parseInt(target.value) })
 }
 
-const updateGridColumns = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  emojiStore.updateSettings({ gridColumns: parseInt(target.value) })
-}
+// Local grid columns state bound to GridColumnsSelector component
+const localGridColumns = ref<number>(emojiStore.settings.gridColumns || 4)
+
+// Keep emojiStore in sync when localGridColumns changes
+watch(localGridColumns, (val) => {
+  if (Number.isInteger(val) && val >= 1) {
+    emojiStore.updateSettings({ gridColumns: val })
+  }
+})
 
 const updateShowSearchBar = (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -1205,6 +1232,13 @@ onMounted(async () => {
     console.log('[Options.vue] Set default group IDs to:', emojiStore.groups[0].id);
   } else {
     console.warn('[Options.vue] No groups available after loading');
+  }
+})
+
+// Keep localGridColumns in sync with store when settings load/change
+watch(() => emojiStore.settings.gridColumns, (val) => {
+  if (Number.isInteger(val)) {
+    localGridColumns.value = val
   }
 })
 
