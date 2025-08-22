@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from "vue";
+import { defineProps, toRefs } from "vue";
 import type { EmojiGroup } from "../../types/emoji";
 import { isImageUrl } from "../../utils/isImageUrl";
 
@@ -39,7 +39,8 @@ const props = defineProps<{
   setActive: (id: string) => void;
 }>();
 
-const { groups, activeGroupId, setActive } = props;
+// Preserve reactivity for primitive props (like activeGroupId) by using toRefs
+const { groups, activeGroupId, setActive } = toRefs(props) as any;
 
 // isImageUrl is imported and usable directly in the template
 </script>
