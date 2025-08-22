@@ -424,7 +424,7 @@ class NewStorageManager {
     let newestValue = null;
     let newestTimestamp = 0;
 
-    values.forEach((result, index) => {
+  values.forEach((result, _index) => {
       if (result.status === 'fulfilled' && result.value) {
         const timestamp = result.value.timestamp || 0;
         if (timestamp > newestTimestamp) {

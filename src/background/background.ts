@@ -97,7 +97,7 @@ async function initializeDefaultData() {
 
 // Handle messages from content scripts and popup
 if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onMessage) {
-  chromeAPI.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
+  chromeAPI.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
     console.log('Background received message:', message);
 
     switch (message.type) {
@@ -117,7 +117,69 @@ if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onMessage) {
         console.log('Unknown message type:', message.type);
         sendResponse({ success: false, error: 'Unknown message type' });
     }
+
+    // Handle action-based messages (new style)
+    if (message.action) {
+      switch (message.action) {
+        case 'addToFavorites':
+          handleAddToFavorites(message.emoji, sendResponse);
+          return true;
+
+        default:
+          console.log('Unknown action:', message.action);
+          sendResponse({ success: false, error: 'Unknown action' });
+      }
+    }
   });
+}
+
+// Handle add emoji to favorites
+async function handleAddToFavorites(emoji: any, sendResponse: (response: any) => void) {
+  const chromeAPI = getChromeAPI();
+  if (!chromeAPI || !chromeAPI.storage) {
+    sendResponse({ success: false, error: 'Chrome storage API not available' });
+    return;
+  }
+
+  try {
+    // Get current groups data
+    const data = await chromeAPI.storage.local.get(['emojiGroups']);
+    const groups = data.emojiGroups || [];
+    
+    // Find favorites group
+    const favoritesGroup = groups.find((g: any) => g.id === 'favorites');
+    if (!favoritesGroup) {
+      console.warn('Favorites group not found');
+      sendResponse({ success: false, error: 'Favorites group not found' });
+      return;
+    }
+
+    // Check if emoji already exists in favorites
+    const alreadyExists = favoritesGroup.emojis.some((e: any) => e.url === emoji.url);
+    if (alreadyExists) {
+      console.log('Emoji already in favorites:', emoji.name);
+      sendResponse({ success: true, message: 'Already in favorites' });
+      return;
+    }
+
+    // Add emoji to favorites group
+    const favoriteEmoji = {
+      ...emoji,
+      id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      groupId: 'favorites'
+    };
+    
+    favoritesGroup.emojis.unshift(favoriteEmoji); // Add to beginning
+
+    // Save updated groups
+    await chromeAPI.storage.local.set({ emojiGroups: groups });
+    console.log('Added emoji to favorites:', emoji.name);
+    
+    sendResponse({ success: true, message: 'Added to favorites' });
+  } catch (error) {
+    console.error('Failed to add emoji to favorites:', error);
+    sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+  }
 }
 
 // Get emoji data from storage
@@ -215,7 +277,7 @@ if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onInstalled && chromeAPI
   });
 
   if (chromeAPI.contextMenus.onClicked) {
-    chromeAPI.contextMenus.onClicked.addListener((info: any, tab: any) => {
+  chromeAPI.contextMenus.onClicked.addListener((info: any, _tab: any) => {
       if (info.menuItemId === 'open-emoji-options' && chromeAPI.runtime && chromeAPI.runtime.openOptionsPage) {
         chromeAPI.runtime.openOptionsPage();
       }

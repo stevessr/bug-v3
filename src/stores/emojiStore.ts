@@ -317,6 +317,32 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   };
 
   // --- Favorites Management ---
+  const addToFavorites = async (emoji: Emoji) => {
+    // Check if emoji already exists in favorites group
+    const favoritesGroup = groups.value.find(g => g.id === 'favorites');
+    if (!favoritesGroup) {
+      console.warn('[EmojiStore] Favorites group not found');
+      return;
+    }
+
+    const alreadyExists = favoritesGroup.emojis.some(e => e.url === emoji.url);
+    if (alreadyExists) {
+      console.log('[EmojiStore] Emoji already in favorites:', emoji.name);
+      return;
+    }
+
+    // Add emoji to favorites group with new ID
+    const favoriteEmoji: Emoji = {
+      ...emoji,
+      id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      groupId: 'favorites'
+    };
+    
+    favoritesGroup.emojis.unshift(favoriteEmoji); // Add to beginning
+    console.log('[EmojiStore] Added emoji to favorites:', emoji.name);
+    maybeSave();
+  };
+
   const toggleFavorite = (emojiId: string) => {
     if (favorites.value.has(emojiId)) {
       favorites.value.delete(emojiId);
@@ -466,6 +492,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     deleteEmoji,
     moveEmoji,
     removeEmojiFromGroup,
+    addToFavorites,
     toggleFavorite,
     findEmojiById,
     updateSettings,
