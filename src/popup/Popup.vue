@@ -141,21 +141,13 @@
 import { ref, onMounted, watch } from 'vue';
 import { useEmojiStore } from '../stores/emojiStore';
 import type { Emoji } from '../types/emoji';
+import { isImageUrl } from '../utils/isImageUrl'
 
 const emojiStore = useEmojiStore();
 const localScale = ref(100);
 const showCopyToast = ref(false);
 
-// Utility: detect if a string looks like an http(s) image URL
-const isImageUrl = (value: string | null | undefined) => {
-  if (!value) return false
-  try {
-    const url = new URL(value)
-    return (url.protocol === 'http:' || url.protocol === 'https:') && /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
-  } catch (e) {
-    return false
-  }
-}
+// ...use shared isImageUrl from utils
 
 onMounted(async () => {
   await emojiStore.loadData();
