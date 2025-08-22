@@ -81,6 +81,8 @@
         @image-error="handleImageError"
       />
 
+  <FavoritesTab v-if="activeTab === 'favorites'" :emojiStore="emojiStore" />
+
       <!-- Statistics Tab -->
       <div v-if="activeTab === 'stats'" class="space-y-8">
         <EmojiStats
@@ -174,6 +176,7 @@ import AddEmojiModal from "./modals/AddEmojiModal.vue";
 import ConfirmDeleteModal from "./modals/ConfirmDeleteModal.vue";
 import NotificationToasts from "./components/NotificationToasts.vue";
 import GroupsTab from "./components/GroupsTab.vue";
+import FavoritesTab from "./components/FavoritesTab.vue";
 import EditGroupModal from "./modals/EditGroupModal.vue";
 // composable
 import useOptions from "./useOptions";
