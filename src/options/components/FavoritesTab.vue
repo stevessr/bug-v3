@@ -18,7 +18,7 @@
           <div
             v-for="(emoji, idx) in favoritesGroup.emojis"
             :key="`fav-${emoji.id || idx}`"
-            class="emoji-item"
+            class="emoji-item relative"
           >
             <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden">
               <img
@@ -26,6 +26,10 @@
                 :alt="emoji.name"
                 class="w-full h-full object-cover"
               />
+            </div>
+            <div class="absolute top-1 right-1 flex gap-1">
+              <button @click="$emit('edit', emoji, 'favorites', idx)" title="编辑" class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded">编辑</button>
+              <button @click="$emit('remove', 'favorites', idx)" title="移除" class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded">移除</button>
             </div>
             <div class="text-xs text-center text-gray-600 mt-1 truncate">
               {{ emoji.name }}
