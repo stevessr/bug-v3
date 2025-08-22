@@ -26,7 +26,7 @@
             :ref="(el) => el && addGroupTouchEvents(el as HTMLElement, group)"
           >
             <div class="flex items-center justify-between p-4">
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-3" data-group-move>
                 <div
                   v-if="group.id !== 'favorites'"
                   class="cursor-move text-gray-400"
@@ -210,6 +210,26 @@ onMounted(() => {
       if (groupData && groupData.id !== 'favorites') {
         element.classList.add('touch-dragging');
       }
+      // Emit synthetic dragstart so Options composable knows which group is being dragged
+      try {
+        const groupData = (element as any).__groupData;
+        if (groupData) {
+          const syntheticEvent = new DragEvent('dragstart');
+          emits('group-dragstart', groupData, syntheticEvent);
+        }
+      } catch (err) {
+        // ignore synthetic event creation errors in older browsers
+      }
+    },
+    // Only start group dragging if the initial touch is on the move handle (.cursor-move)
+    shouldStartDrag: (e: TouchEvent, element: HTMLElement) => {
+      // Walk the event target's node chain (covers text nodes) up to the group element
+      let node: Node | null = e.target as Node | null;
+      while (node && node !== element) {
+        if (node instanceof Element && node.hasAttribute && node.hasAttribute('data-group-move')) return true;
+        node = node.parentNode;
+      }
+      return false;
     },
     onDragEnd: (element, dropTarget) => {
       element.classList.remove('touch-dragging');
@@ -228,6 +248,16 @@ onMounted(() => {
   emojiTouchHandler.value = new TouchDragHandler({
     onDragStart: (element) => {
       element.classList.add('touch-dragging');
+      // Emit synthetic dragstart so Options composable knows which emoji is being dragged
+      try {
+        const emojiData = (element as any).__emojiData;
+        if (emojiData) {
+          const syntheticEvent = new DragEvent('dragstart');
+          emits('emoji-drag-start', emojiData.emoji, emojiData.groupId, emojiData.index, syntheticEvent);
+        }
+      } catch (err) {
+        // ignore
+      }
     },
     onDragEnd: (element, dropTarget) => {
       element.classList.remove('touch-dragging');
@@ -260,6 +290,13 @@ const addGroupTouchEvents = (element: HTMLElement, group: any) => {
 // Function to add touch events to emoji elements
 const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, index: number) => {
   (element as any).__emojiData = { emoji, groupId, index };
+  // Prevent touchstart on emoji from bubbling up and starting a group drag
+  const stopTouch = (e: TouchEvent) => {
+    e.stopPropagation();
+  };
+  element.addEventListener('touchstart', stopTouch, { passive: false });
+  // store reference so it can be removed later if needed
+  (element as any).__stopEmojiTouch = stopTouch;
   emojiTouchHandler.value?.addTouchEvents(element, true);
 };
 </script>
