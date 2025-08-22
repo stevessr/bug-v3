@@ -30,11 +30,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, toRefs } from 'vue';
 import { useEmojiStore } from '../../stores/emojiStore';
 import { flushBuffer } from '../../utils/indexedDB';
 
-const { show, groups, defaultGroupId } = defineProps<{ show: boolean; groups: any[]; defaultGroupId?: string }>()
+const props = defineProps<{ show: boolean; groups: any[]; defaultGroupId?: string }>()
+
+// expose groups as a reactive ref for template and internal use
+const { groups } = toRefs(props as any);
 
 const emits = defineEmits<{
   (e: 'update:show', value: boolean): void,
@@ -43,10 +46,28 @@ const emits = defineEmits<{
 
 const name = ref('');
 const url = ref('');
-const groupId = ref(defaultGroupId || groups[0]?.id || '');
+// initialize groupId from reactive props; don't destructure props to keep reactivity
+const groupId = ref(props.defaultGroupId || props.groups?.[0]?.id || '');
 
-watch(() => defaultGroupId, (v) => {
+// Keep groupId in sync when defaultGroupId prop changes
+watch(() => props.defaultGroupId, (v) => {
   if (v) groupId.value = v;
+});
+
+// If groups list changes (e.g. first load), ensure we have a sensible default
+watch(() => props.groups, (g) => {
+  if ((!groupId.value || !g?.find((x: any) => x.id === groupId.value)) && g && g.length) {
+    groupId.value = props.defaultGroupId || g[0].id || '';
+  }
+}, { immediate: true });
+
+// Reset fields when the modal opens so repeated opens work without refresh
+watch(() => props.show, (v) => {
+  if (v) {
+    name.value = '';
+    url.value = '';
+    groupId.value = props.defaultGroupId || (groups.value && groups.value[0]?.id) || '';
+  }
 });
 
 const emojiStore = useEmojiStore();
@@ -69,6 +90,6 @@ const add = () => {
   emits('update:show', false);
   name.value = '';
   url.value = '';
-  groupId.value = groups[0]?.id || '';
+  groupId.value = groups.value?.[0]?.id || '';
 }
 </script>
