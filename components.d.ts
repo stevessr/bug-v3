@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    AboutSection: typeof import('./src/components/AboutSection.vue')['default']
     GridColumnsSelector: typeof import('./src/components/GridColumnsSelector.vue')['default']
   }
 }
