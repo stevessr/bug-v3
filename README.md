@@ -1,6 +1,6 @@
 # Emoji Extension
 
-A modern emoji extension built with Vue 3, Vite, and TypeScript featuring a progressive multi-layer storage system.
+A modern emoji extension built with Vue 3, Vite, and TypeScript featuring a progressive multi-layer storage system and compile-time optimization flags.
 
 ## Features
 
@@ -9,8 +9,41 @@ A modern emoji extension built with Vue 3, Vite, and TypeScript featuring a prog
 - 🔄 **Cross-Context Sync**: Real-time synchronization between popup, options, and content scripts
 - 🎨 **Modern UI**: Built with Vue 3, Ant Design Vue, and Tailwind CSS
 - 📱 **Touch Optimized**: Drag-and-drop support with mobile optimization
-- 🔧 **Comprehensive Logging**: Detailed debugging and error tracking
+- 🔧 **Comprehensive Logging**: Detailed debugging and error tracking with compile-time toggles
 - ☁️ **Cloud Sync**: Chrome sync storage support for configuration backup
+- ⚡ **Build Optimization**: Compile-time flags for logging and IndexedDB to reduce bundle size
+
+## Build Configurations
+
+This project supports compile-time flags to optimize builds for different environments:
+
+### Available Build Commands
+
+```bash
+# Development build (all features enabled)
+npm run dev
+
+# Standard production build (all features enabled)
+npm run build
+
+# Production build without logging (smaller bundle size)
+npm run build:prod
+
+# Build without IndexedDB support (for restricted environments)
+npm run build:no-indexeddb
+
+# Minimal build (no logging, no IndexedDB - smallest bundle)
+npm run build:minimal
+```
+
+### Bundle Size Comparison
+
+| Build Type | Background.js | Content.js | Total Reduction |
+|------------|---------------|------------|-----------------|
+| Standard   | 5.20 kB      | 23.03 kB   | Baseline        |
+| Minimal    | 4.21 kB      | 19.50 kB   | ~15-40% smaller |
+
+For detailed information about compile-time flags, see [BUILD_FLAGS.md](./BUILD_FLAGS.md).
 
 ## Development
 
