@@ -28,8 +28,20 @@
               />
             </div>
             <div class="absolute top-1 right-1 flex gap-1">
-              <button @click="$emit('edit', emoji, 'favorites', idx)" title="编辑" class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded">编辑</button>
-              <button @click="$emit('remove', 'favorites', idx)" title="移除" class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded">移除</button>
+              <button
+                @click="$emit('edit', emoji, 'favorites', idx)"
+                title="编辑"
+                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded"
+              >
+                编辑
+              </button>
+              <button
+                @click="$emit('remove', 'favorites', idx)"
+                title="移除"
+                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded"
+              >
+                移除
+              </button>
             </div>
             <div class="text-xs text-center text-gray-600 mt-1 truncate">
               {{ emoji.name }}
@@ -48,6 +60,11 @@
 import { computed } from "vue";
 const props = defineProps<{
   emojiStore: any;
+}>();
+
+defineEmits<{
+  (e: "remove", groupId: string, idx: number): void;
+  (e: "edit", emoji: any, groupId: string, idx: number): void;
 }>();
 
 const favoritesGroup = computed(() =>
