@@ -1,0 +1,1 @@
+export { insertEmojiIntoEditor } from './editor';
