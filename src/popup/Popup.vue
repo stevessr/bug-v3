@@ -195,20 +195,8 @@ const selectEmoji = (emoji: Emoji) => {
     }
   });
 
-  // Add to favorites if not already there
-  if (!emojiStore.favorites.has(emoji.id)) {
-    // Auto-add frequently used emojis to favorites (simple heuristic)
-    const now = Date.now();
-    const useCount = parseInt(localStorage.getItem(`emoji-use-count-${emoji.id}`) || '0') + 1;
-    
-    localStorage.setItem(`emoji-last-used-${emoji.id}`, now.toString());
-    localStorage.setItem(`emoji-use-count-${emoji.id}`, useCount.toString());
-    
-    // Add to favorites if used more than 3 times
-    if (useCount > 3) {
-      emojiStore.toggleFavorite(emoji.id);
-    }
-  }
+  // Add to favorites using smart tracking
+  emojiStore.addToFavorites(emoji);
 
   // 不要立即关闭弹窗，让用户可以继续选择表情
   // window.close();  // 注释掉这行
