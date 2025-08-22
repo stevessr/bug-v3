@@ -12,6 +12,27 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
   // payload can be either:
   // - an array of emoji items
   // - an object: { exportedAt, group: { id, name, ... }, emojis: [...] }
+  // - a markdown string containing image links like: ![alt](upload://abc.webp) ...
+  //    in that case we'll parse the markdown and convert to an items array
+  if (typeof payload === 'string') {
+    const md = payload as string;
+    const mdItems: any[] = [];
+    // match markdown image syntax: ![alt](url "title")
+    const re = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    let match: RegExpExecArray | null = null;
+    while ((match = re.exec(md)) !== null) {
+      const alt = (match[1] || '').trim();
+      let url = (match[2] || '').trim();
+      // strip optional title after space inside parentheses: (url "title")
+      // take only the first token which should be the url
+      url = url.split(/\s+/)[0].replace(/^['"]|['"]$/g, '').trim();
+      const name = alt.split('|')[0].trim() || decodeURIComponent((url.split('/').pop() || '').split('?')[0]);
+      mdItems.push({ name, url });
+    }
+    if (mdItems.length > 0) {
+      payload = mdItems;
+    }
+  }
   const store = useEmojiStore();
 
   let items: any[] = [];

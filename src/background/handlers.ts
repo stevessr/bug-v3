@@ -1,4 +1,5 @@
 import { getChromeAPI } from './utils';
+import { newStorageHelpers } from '../utils/newStorage';
 
 export function setupMessageListener() {
   const chromeAPI = getChromeAPI();
@@ -40,39 +41,34 @@ export function setupMessageListener() {
 }
 
 export async function handleAddToFavorites(emoji: any, sendResponse: (response: any) => void) {
-  const chromeAPI = getChromeAPI();
-  if (!chromeAPI || !chromeAPI.storage) {
-    sendResponse({ success: false, error: 'Chrome storage API not available' });
-    return;
-  }
-
   try {
-    const data = await chromeAPI.storage.local.get(['emojiGroups']);
-    const groups = data.emojiGroups || [];
+    // Use the unified newStorageHelpers to read/update groups for consistency
+    const groups = await newStorageHelpers.getAllEmojiGroups();
     const favoritesGroup = groups.find((g: any) => g.id === 'favorites');
     if (!favoritesGroup) {
-      console.warn('Favorites group not found');
-      sendResponse({ success: false, error: 'Favorites group not found' });
-      return;
+      console.warn('Favorites group not found - creating one');
+      const newFavorites = { id: 'favorites', name: 'Favorites', icon: '⭐', order: 0, emojis: [] };
+      groups.unshift(newFavorites);
     }
 
+    const finalGroups = groups;
+    const favGroup = finalGroups.find((g: any) => g.id === 'favorites')!;
+
     const now = Date.now();
-    const existingEmojiIndex = favoritesGroup.emojis.findIndex((e: any) => e.url === emoji.url);
+    const existingEmojiIndex = favGroup.emojis.findIndex((e: any) => e.url === emoji.url);
 
     if (existingEmojiIndex !== -1) {
-      const existingEmoji = favoritesGroup.emojis[existingEmojiIndex];
+      const existingEmoji = favGroup.emojis[existingEmojiIndex];
       const lastUsed = existingEmoji.lastUsed || 0;
       const timeDiff = now - lastUsed;
       const twelveHours = 12 * 60 * 60 * 1000;
 
       if (timeDiff < twelveHours) {
         existingEmoji.usageCount = (existingEmoji.usageCount || 0) + 1;
-        console.log('Updated usage count for existing emoji:', emoji.name, 'count:', existingEmoji.usageCount);
       } else {
         const currentCount = existingEmoji.usageCount || 1;
         existingEmoji.usageCount = Math.floor(currentCount * 0.8) + 1;
         existingEmoji.lastUsed = now;
-        console.log('Applied usage decay and updated timestamp for emoji:', emoji.name, 'new count:', existingEmoji.usageCount);
       }
     } else {
       const favoriteEmoji = {
@@ -83,14 +79,27 @@ export async function handleAddToFavorites(emoji: any, sendResponse: (response: 
         lastUsed: now,
         addedAt: now
       };
-
-      favoritesGroup.emojis.push(favoriteEmoji);
-      console.log('Added new emoji to favorites:', emoji.name);
+      favGroup.emojis.push(favoriteEmoji);
     }
 
-    favoritesGroup.emojis.sort((a: any, b: any) => (b.lastUsed || 0) - (a.lastUsed || 0));
+    favGroup.emojis.sort((a: any, b: any) => (b.lastUsed || 0) - (a.lastUsed || 0));
 
-    await chromeAPI.storage.local.set({ emojiGroups: groups });
+    // Persist via newStorageHelpers which updates group index and individual groups
+    await newStorageHelpers.setAllEmojiGroups(finalGroups);
+
+    // Notify content scripts by updating chrome.storage (legacy compatibility)
+    const chromeAPI = getChromeAPI();
+    if (chromeAPI && chromeAPI.storage && chromeAPI.storage.local) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          chromeAPI.storage.local.set({ emojiGroups: finalGroups }, () => {
+            if (chromeAPI.runtime.lastError) reject(chromeAPI.runtime.lastError); else resolve();
+          });
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
 
     sendResponse({ success: true, message: 'Added to favorites' });
   } catch (error) {
