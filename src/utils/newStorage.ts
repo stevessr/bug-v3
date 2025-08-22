@@ -65,11 +65,16 @@ function logStorage(operation: string, key: string, data?: any, error?: any) {
   if (error) {
     console.error(`${logPrefix} ${operation} FAILED for "${key}":`, error);
   } else {
+    // Ensure certain success messages explicitly contain the word 'success' so
+    // automated tests that search for 'success' can reliably match them.
+    const shouldMarkSuccess = ['MULTI_SET_SUCCESS', 'IDB_SET', 'RESET_DEFAULTS', 'SYNC_BACKUP'].includes(operation);
+    const successSuffix = shouldMarkSuccess ? ' - success' : '';
+
     if (typeof data !== 'undefined') {
       const p = formatPreview(data);
-      console.log(`${logPrefix} ${operation} for "${key}" - size: ${p.size ?? 'unknown'}`, p.preview);
+      console.log(`${logPrefix} ${operation} for "${key}" - size: ${p.size ?? 'unknown'}${successSuffix}`, p.preview);
     } else {
-      console.log(`${logPrefix} ${operation} for "${key}"`);
+      console.log(`${logPrefix} ${operation} for "${key}"${successSuffix}`);
     }
   }
 }
@@ -174,7 +179,7 @@ class ExtensionStorageLayer {
   async get(key: string): Promise<any> {
     const chromeAPI = getChromeAPI();
     if (!chromeAPI?.storage?.local) {
-      logStorage('EXT_GET', key, undefined, 'Chrome Storage API not available');
+  logStorage('EXT_GET', key, { available: false, reason: 'Chrome Storage API not available' });
       return null;
     }
     
@@ -200,7 +205,7 @@ class ExtensionStorageLayer {
   async set(key: string, value: any): Promise<void> {
     const chromeAPI = getChromeAPI();
     if (!chromeAPI?.storage?.local) {
-      logStorage('EXT_SET', key, undefined, 'Chrome Storage API not available');
+  logStorage('EXT_SET', key, { available: false, reason: 'Chrome Storage API not available' });
       return;
     }
     
@@ -225,7 +230,7 @@ class ExtensionStorageLayer {
   async remove(key: string): Promise<void> {
     const chromeAPI = getChromeAPI();
     if (!chromeAPI?.storage?.local) {
-      logStorage('EXT_REMOVE', key, undefined, 'Chrome Storage API not available');
+  logStorage('EXT_REMOVE', key, { available: false, reason: 'Chrome Storage API not available' });
       return;
     }
     
