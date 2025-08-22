@@ -25,6 +25,7 @@ export interface AppSettings {
   defaultGroup: string;
   showSearchBar: boolean;
   gridColumns: number; // 2 to 8
+  outputFormat: 'markdown' | 'html'; // 输出格式选择
   lastModified?: number; // timestamp for sync comparison
 }
 
@@ -114,6 +115,7 @@ const defaultSettings: AppSettings = {
   defaultGroup: "nachoneko",
   showSearchBar: true,
   gridColumns: 4,
+  outputFormat: "markdown", // 默认使用markdown格式
 };
 
 export { defaultEmojiGroups, defaultSettings };
