@@ -449,156 +449,15 @@
       </div>
     </main>
 
-    <!-- Create Group Modal -->
-    <div
-      v-if="showCreateGroupModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click="showCreateGroupModal = false"
-    >
-      <div class="bg-white rounded-lg p-6 w-full max-w-md" @click.stop>
-        <h3 class="text-lg font-semibold mb-4">新建分组</h3>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >分组名称</label
-            >
-            <input
-              v-model="newGroupName"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="输入分组名称"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >分组图标 / 图片链接</label
-            >
-            <input
-              v-model="newGroupIcon"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="例如：😀 或 https://..."
-            />
-            <div v-if="isImageUrl(newGroupIcon)" class="mt-2 text-center">
-              <img
-                :src="newGroupIcon"
-                alt="预览"
-                class="w-10 h-10 object-contain mx-auto border border-gray-200 rounded"
-                @error="handleImageError"
-              />
-            </div>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >分组颜色</label
-            >
-            <div class="flex gap-2">
-              <div
-                v-for="color in colorOptions"
-                :key="color"
-                class="w-8 h-8 rounded cursor-pointer border-2"
-                :class="
-                  newGroupColor === color
-                    ? 'border-gray-900'
-                    : 'border-gray-300'
-                "
-                :style="{ backgroundColor: color }"
-                @click="newGroupColor = color"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-end gap-3 mt-6">
-          <button
-            @click="showCreateGroupModal = false"
-            class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
-          >
-            取消
-          </button>
-          <button
-            @click="createGroup"
-            class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            创建
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Create Group and Add Emoji modals extracted into components -->
+    <CreateGroupModal v-model:show="showCreateGroupModal" @created="onGroupCreated" />
 
-    <!-- Add Emoji Modal -->
-    <div
-      v-if="showAddEmojiModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click="showAddEmojiModal = false"
-    >
-      <div class="bg-white rounded-lg p-6 w-full max-w-md" @click.stop>
-        <h3 class="text-lg font-semibold mb-4">添加表情</h3>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >表情名称</label
-            >
-            <input
-              v-model="newEmojiName"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="输入表情名称"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >图片URL</label
-            >
-            <input
-              v-model="newEmojiUrl"
-              type="url"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="输入图片链接"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >所属分组</label
-            >
-            <select
-              v-model="newEmojiGroupId"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option
-                v-for="group in emojiStore.groups"
-                :key="group.id"
-                :value="group.id"
-              >
-                {{ group.name }}
-              </option>
-            </select>
-          </div>
-          <div v-if="newEmojiUrl" class="text-center">
-            <img
-              :src="newEmojiUrl"
-              alt="预览"
-              class="w-16 h-16 object-contain mx-auto border border-gray-200 rounded"
-              @error="handleImageError"
-            />
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-3 mt-6">
-          <button
-            @click="showAddEmojiModal = false"
-            class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
-          >
-            取消
-          </button>
-          <button
-            @click="addEmoji"
-            class="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-          >
-            添加
-          </button>
-        </div>
-      </div>
-    </div>
+    <AddEmojiModal
+      v-model:show="showAddEmojiModal"
+      :groups="emojiStore.groups"
+      :defaultGroupId="selectedGroupForAdd"
+      @added="onEmojiAdded"
+    />
 
     <!-- Edit Group Modal (top-level) -->
     <div
@@ -714,6 +573,8 @@ import GridColumnsSelector from "../components/GridColumnsSelector.vue";
 import AboutSection from "../components/AboutSection.vue";
 import ImportConfigModal from './ImportConfigModal.vue';
 import ImportEmojisModal from './ImportEmojisModal.vue';
+import CreateGroupModal from './CreateGroupModal.vue';
+import AddEmojiModal from './AddEmojiModal.vue';
 import { importConfigurationToStore, importEmojisToStore } from './importUtils';
 import { exportConfigurationFile, exportGroupFile } from './exportUtils';
 import { useEmojiStore } from "../stores/emojiStore";
@@ -725,7 +586,7 @@ import { isImageUrl } from "../utils/isImageUrl";
 const emojiStore = useEmojiStore();
 
 // mark these imports as used for TS/linters (they are used in template)
-const _modalComponents = { ImportConfigModal, ImportEmojisModal } as const;
+const _modalComponents = { ImportConfigModal, ImportEmojisModal, CreateGroupModal, AddEmojiModal } as const;
 // read the keys to avoid 'declared but not used' errors
 void Object.keys(_modalComponents);
 
@@ -762,21 +623,6 @@ const successMessage = ref("");
 const errorMessage = ref("");
 const groupToDelete = ref<EmojiGroup | null>(null);
 
-// New group data
-const newGroupName = ref("");
-const newGroupIcon = ref("📁");
-const newGroupColor = ref("#3B82F6");
-const colorOptions = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#F97316",
-  "#06B6D4",
-  "#84CC16",
-];
-
 // Edit group state
 const editingGroupId = ref<string>("");
 const editGroupName = ref<string>("");
@@ -784,10 +630,7 @@ const editGroupIcon = ref<string>("");
 
 // ...use shared isImageUrl from utils
 
-// New emoji data
-const newEmojiName = ref("");
-const newEmojiUrl = ref("");
-const newEmojiGroupId = ref("");
+// New emoji data (moved to AddEmojiModal)
 
 // Import modal states handled by components; parsed payloads handled via events
 
@@ -978,26 +821,7 @@ const updateShowSearchBar = (event: Event) => {
   emojiStore.updateSettings({ showSearchBar: target.checked });
 };
 
-const createGroup = () => {
-  if (!newGroupName.value.trim()) {
-    showError("请输入分组名称");
-    return;
-  }
-
-  emojiStore.createGroup(newGroupName.value.trim(), newGroupIcon.value || "📁");
-  // Force immediate flush to IndexedDB so options changes are persisted
-  void flushBuffer(true).then(() =>
-    console.log("[Options] createGroup flushed to IndexedDB", {
-      name: newGroupName.value,
-    })
-  );
-  // Reset form
-  newGroupName.value = "";
-  newGroupColor.value = "#3B82F6";
-  showCreateGroupModal.value = false;
-
-  showSuccess("分组创建成功");
-};
+// createGroup moved into CreateGroupModal component
 
 const openEditGroup = (group: EmojiGroup) => {
   // Prevent editing favorites group
@@ -1032,45 +856,11 @@ const saveEditGroup = () => {
   showSuccess("分组已更新");
 };
 
-const addEmoji = () => {
-  if (
-    !newEmojiName.value.trim() ||
-    !newEmojiUrl.value.trim() ||
-    !newEmojiGroupId.value
-  ) {
-    showError("请填写完整的表情信息");
-    return;
-  }
-
-  const emojiData = {
-    packet: Date.now(),
-    name: newEmojiName.value.trim(),
-    url: newEmojiUrl.value.trim(),
-  };
-
-  emojiStore.addEmoji(newEmojiGroupId.value, emojiData);
-  void flushBuffer(true).then(() =>
-    console.log("[Options] addEmoji flushed to IndexedDB", {
-      group: newEmojiGroupId.value,
-      name: emojiData.name,
-    })
-  );
-  // Reset form
-  newEmojiName.value = "";
-  newEmojiUrl.value = "";
-  // reset to first group (if available) so next add defaults sensibly
-  newEmojiGroupId.value = emojiStore.groups[0]?.id || "";
-  selectedGroupForAdd.value = "";
-  showAddEmojiModal.value = false;
-
-  showSuccess("表情添加成功");
-};
+// addEmoji moved into AddEmojiModal component
 
 // Open Add Emoji modal bound to a specific group id
 const openAddEmojiModal = (groupId: string) => {
   selectedGroupForAdd.value = groupId || "";
-  // prefer the provided groupId, otherwise fallback to first available group
-  newEmojiGroupId.value = groupId || emojiStore.groups[0]?.id || "";
   showAddEmojiModal.value = true;
 };
 
@@ -1126,6 +916,21 @@ const handleImageError = (event: Event) => {
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzNkMzMC42Mjc0IDM2IDM2IDMwLjYyNzQgMzYgMjRDMzYgMTcuMzcyNiAzMC42Mjc0IDEyIDI0IDEyQzE3LjM3MjYgMTIgMTIgMTcuMzcyNiAxMiAyNEMxMiAzMC42Mjc0IDE3LjM3MjYgMzYgMjQgMzZaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIvPgo8cGF0aCBkPSJNMjEgMjFIMjdNMjEgMjdIMjciIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+";
 };
 
+// Callbacks from child modals
+const onGroupCreated = () => {
+  // After CreateGroupModal created a group
+  showSuccess('分组创建成功');
+  // ensure default new emoji group selection is available
+  if (emojiStore.groups.length > 0) {
+    // no-op here; AddEmojiModal will use current store.groups when opened
+    console.log('[Options] group created, groups count:', emojiStore.groups.length);
+  }
+};
+
+const onEmojiAdded = () => {
+  showSuccess('表情添加成功');
+};
+
 const showSuccess = (message: string) => {
   successMessage.value = message;
   showSuccessToast.value = true;
@@ -1153,7 +958,7 @@ onMounted(async () => {
 
   // Set default values
   if (emojiStore.groups.length > 0) {
-    newEmojiGroupId.value = emojiStore.groups[0].id;
+    selectedGroupForAdd.value = emojiStore.groups[0].id;
     console.log(
       "[Options.vue] Set default group IDs to:",
       emojiStore.groups[0].id
