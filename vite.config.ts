@@ -50,11 +50,15 @@ export default defineConfig(({ mode }) => {
           chunkFileNames: "js/[name].js",
           assetFileNames: "assets/[name].[ext]",
           manualChunks: (id) => {
-            // Force content script dependencies to be inlined
+            // Force content script dependencies to be bundled into the content entry
             if (id.includes('src/content/') || id.includes('content.ts')) {
-              return undefined; // Don't create separate chunks for content script
+              return 'content';
             }
-            // Keep shared modules for other scripts
+            // Keep background modules together so runtime doesn't need cross-chunk imports
+            if (id.includes('src/background/') || id.includes('background.ts')) {
+              return 'background';
+            }
+            // Put third-party deps into vendor
             if (id.includes('node_modules')) {
               return 'vendor';
             }

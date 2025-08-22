@@ -50,6 +50,7 @@
           :settings="emojiStore.settings"
           @update:imageScale="(e) => updateImageScale(e)"
           @update:showSearchBar="(e) => updateShowSearchBar(e)"
+          @update:outputFormat="(value) => updateOutputFormat(value)"
         >
           <template #grid-selector>
             <GridColumnsSelector
@@ -244,6 +245,7 @@ const {
   localGridColumns,
   updateImageScale,
   updateShowSearchBar,
+  updateOutputFormat,
   handleDragStart,
   handleDrop,
   handleEmojiDragStart,

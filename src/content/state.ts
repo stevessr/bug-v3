@@ -2,6 +2,7 @@
 export interface AppSettings {
   imageScale: number;
   gridColumns: number;
+  outputFormat: 'markdown' | 'html'; // 输出格式选择
 }
 
 export const cachedState: {
@@ -9,5 +10,5 @@ export const cachedState: {
   settings: AppSettings;
 } = {
   emojiGroups: [],
-  settings: { imageScale: 30, gridColumns: 4 },
+  settings: { imageScale: 30, gridColumns: 4, outputFormat: "markdown" },
 };
