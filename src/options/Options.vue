@@ -250,5 +250,11 @@ const {
   showSuccess,
   flushBuffer,
   handleImageError,
+  openEditEmoji,
+  showEditEmojiModal,
+  editingEmoji,
+  editingEmojiGroupId,
+  editingEmojiIndex,
+  handleEmojiEdit,
 } = options;
 </script>
