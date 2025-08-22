@@ -14,6 +14,10 @@ export interface Emoji {
   width?: number;
   height?: number;
   groupId: string;
+  // Favorites usage tracking fields
+  usageCount?: number;
+  lastUsed?: number; // timestamp
+  addedAt?: number; // timestamp when first added to favorites
 }
 
 export interface AppSettings {

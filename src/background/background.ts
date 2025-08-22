@@ -133,7 +133,7 @@ if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onMessage) {
   });
 }
 
-// Handle add emoji to favorites
+// Handle add emoji to favorites with smart usage tracking
 async function handleAddToFavorites(emoji: any, sendResponse: (response: any) => void) {
   const chromeAPI = getChromeAPI();
   if (!chromeAPI || !chromeAPI.storage) {
@@ -154,26 +154,47 @@ async function handleAddToFavorites(emoji: any, sendResponse: (response: any) =>
       return;
     }
 
-    // Check if emoji already exists in favorites
-    const alreadyExists = favoritesGroup.emojis.some((e: any) => e.url === emoji.url);
-    if (alreadyExists) {
-      console.log('Emoji already in favorites:', emoji.name);
-      sendResponse({ success: true, message: 'Already in favorites' });
-      return;
-    }
-
-    // Add emoji to favorites group
-    const favoriteEmoji = {
-      ...emoji,
-      id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      groupId: 'favorites'
-    };
+    const now = Date.now();
+    const existingEmojiIndex = favoritesGroup.emojis.findIndex((e: any) => e.url === emoji.url);
     
-    favoritesGroup.emojis.unshift(favoriteEmoji); // Add to beginning
+    if (existingEmojiIndex !== -1) {
+      // Emoji already exists in favorites, update usage tracking
+      const existingEmoji = favoritesGroup.emojis[existingEmojiIndex];
+      const lastUsed = existingEmoji.lastUsed || 0;
+      const timeDiff = now - lastUsed;
+      const twelveHours = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+      
+      if (timeDiff < twelveHours) {
+        // Less than 12 hours, only increment count
+        existingEmoji.usageCount = (existingEmoji.usageCount || 0) + 1;
+        console.log('Updated usage count for existing emoji:', emoji.name, 'count:', existingEmoji.usageCount);
+      } else {
+        // More than 12 hours, apply decay and update timestamp
+        const currentCount = existingEmoji.usageCount || 1;
+        existingEmoji.usageCount = Math.floor(currentCount * 0.8) + 1;
+        existingEmoji.lastUsed = now;
+        console.log('Applied usage decay and updated timestamp for emoji:', emoji.name, 'new count:', existingEmoji.usageCount);
+      }
+    } else {
+      // Add emoji to favorites group with initial usage tracking
+      const favoriteEmoji = {
+        ...emoji,
+        id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        groupId: 'favorites',
+        usageCount: 1,
+        lastUsed: now,
+        addedAt: now
+      };
+      
+      favoritesGroup.emojis.push(favoriteEmoji); // Add new emoji
+      console.log('Added new emoji to favorites:', emoji.name);
+    }
+    
+    // Sort favorites by lastUsed timestamp (most recent first)
+    favoritesGroup.emojis.sort((a: any, b: any) => (b.lastUsed || 0) - (a.lastUsed || 0));
 
     // Save updated groups
     await chromeAPI.storage.local.set({ emojiGroups: groups });
-    console.log('Added emoji to favorites:', emoji.name);
     
     sendResponse({ success: true, message: 'Added to favorites' });
   } catch (error) {
