@@ -42,7 +42,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import ImageUpload from './ImageUpload.vue';
-import type { ProviderManager } from '@/utils/imageProviders';
+import type { ProviderManager } from './providerManager';
 
 interface Props {
   providerManager: ProviderManager;

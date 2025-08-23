@@ -41,6 +41,8 @@ export default defineConfig(({ mode }) => {
           popup: fileURLToPath(new URL("popup.html", import.meta.url)),
           options: fileURLToPath(new URL("options.html", import.meta.url)),
           "image-generator": fileURLToPath(new URL("image-generator.html", import.meta.url)),
+          "image-generator-new": fileURLToPath(new URL("image-generator-new.html", import.meta.url)),
+          "image-generator-vue": fileURLToPath(new URL("src/image-generator-vue.ts", import.meta.url)),
           tenor: fileURLToPath(new URL("src/tenor/main.ts", import.meta.url)),
           waline: fileURLToPath(new URL("src/waline/main.ts", import.meta.url)),
           content: fileURLToPath(new URL("src/content/content.ts", import.meta.url)),

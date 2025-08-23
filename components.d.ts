@@ -14,6 +14,7 @@ declare module 'vue' {
     GenerationMode: typeof import('./src/components/ImageGenerator/GenerationMode.vue')['default']
     GridColumnsSelector: typeof import('./src/components/GridColumnsSelector.vue')['default']
     ImageGeneratorMain: typeof import('./src/components/ImageGenerator/ImageGeneratorMain.vue')['default']
+    ImageGeneratorMainNew: typeof import('./src/components/ImageGenerator/ImageGeneratorMainNew.vue')['default']
     ImageUpload: typeof import('./src/components/ImageGenerator/ImageUpload.vue')['default']
     PromptInput: typeof import('./src/components/ImageGenerator/PromptInput.vue')['default']
     ResultDisplay: typeof import('./src/components/ImageGenerator/ResultDisplay.vue')['default']

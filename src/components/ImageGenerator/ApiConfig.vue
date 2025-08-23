@@ -68,8 +68,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
-import { PROVIDER_CONFIGS } from '@/types/imageGenerator';
-import type { ProviderManager } from '@/utils/imageProviders';
+import { PROVIDER_CONFIGS } from './types';
+import type { ProviderManager } from './providerManager';
 
 interface Props {
   providerManager: ProviderManager;

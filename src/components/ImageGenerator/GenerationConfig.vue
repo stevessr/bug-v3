@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { ASPECT_RATIOS, ART_STYLES, IMAGE_COUNTS } from '@/types/imageGenerator';
+import { ASPECT_RATIOS, ART_STYLES, IMAGE_COUNTS } from './types';
 
 interface Props {
   modelValue: {
