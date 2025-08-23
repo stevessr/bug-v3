@@ -6,10 +6,10 @@
     <span class="ml-2 text-sm text-gray-600">加载中...</span>
   </div>
 
-  <div v-else-if="emojis.length > 0" class="p-0">
+  <div v-else-if="emojis.length > 0" class="p-0 overflow-hidden">
     <div
-      class="grid emoji-grid"
-      :style="`grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); max-height: auto !important;`"
+      class="grid emoji-grid overflow-y-auto"
+      :style="`grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); max-height: 300px;`"
     >
       <button
         v-for="emoji in emojis"
