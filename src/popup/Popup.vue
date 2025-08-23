@@ -129,7 +129,7 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
   overflow: hidden;
 }
 
-/* Desktop styles - stable dimensions */
+/* Desktop styles - stable dimensions with minimum size enforcement */
 @media (min-width: 768px) {
   .popup-container {
     width: 400px;
@@ -141,7 +141,7 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
   }
 }
 
-/* Mobile-specific styles - full screen */
+/* Mobile-specific styles - minimum size with full screen fallback */
 @media (max-width: 767px) {
   html, body {
     margin: 0;
@@ -160,11 +160,19 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
 
   .popup-container {
     width: 100%;
-    min-width: 100%;
+    min-width: 200px;
     max-width: 100%;
     height: 100%;
-    min-height: 100%;
+    min-height: 200px;
     max-height: 100%;
+  }
+}
+
+/* Enforce absolute minimum sizes to prevent extremely small windows */
+@media screen {
+  .popup-container {
+    min-width: 200px !important;
+    min-height: 200px !important;
   }
 }
 
