@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-
 // 跨平台构建脚本
 import { spawn } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 
 // 解析命令行参数
@@ -15,7 +15,17 @@ const configs = {
     ENABLE_INDEXEDDB: 'true',
     NODE_ENV: 'development'
   },
+  'dev:variant': {
+    ENABLE_LOGGING: 'true',
+    ENABLE_INDEXEDDB: 'true',
+    NODE_ENV: 'development'
+  },
   build: {
+    ENABLE_LOGGING: 'true',
+    ENABLE_INDEXEDDB: 'true',
+    NODE_ENV: 'production'
+  },
+  'build:variant': {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'true',
     NODE_ENV: 'production'
@@ -57,6 +67,12 @@ console.log('');
 
 // 执行 vite build
 const viteCommand = buildType === 'dev' ? 'vite' : 'vite build';
+// Variant flag: when true, we'll write manifest.development.json into dist/manifest.json after build
+const isVariant = buildType.endsWith(':variant') || buildType === 'dev:variant';
+const publicDir = path.resolve(process.cwd(), 'public');
+const devManifest = path.join(publicDir, 'manifest.development.json');
+const distDir = path.resolve(process.cwd(), 'dist');
+
 const child = spawn('npx', viteCommand.split(' '), {
   stdio: 'inherit',
   env: process.env,
@@ -73,14 +89,30 @@ child.on('exit', (code) => {
     });
     
     cleanChild.on('exit', (cleanCode) => {
-      if (cleanCode === 0) {
-        console.log('✅ 构建完成！');
-      } else {
-        console.error('❌ 清理过程出错');
-      }
-      process.exit(cleanCode);
+        if (cleanCode === 0) {
+          console.log('✅ 构建完成！');
+          if (isVariant) {
+            try {
+              if (fs.existsSync(devManifest) && fs.existsSync(distDir)) {
+                const target = path.join(distDir, 'manifest.json');
+                fs.copyFileSync(devManifest, target);
+                console.log('🔀 Wrote development manifest to', target);
+              } else if (!fs.existsSync(devManifest)) {
+                console.warn('manifest.development.json not found; skipping writing to dist');
+              }
+            } catch (e) {
+              console.error('Failed to write dev manifest to dist:', e);
+            }
+          }
+        } else {
+          console.error('❌ 清理过程出错');
+        }
+        process.exit(cleanCode);
     });
   } else {
-    process.exit(code);
+      if (isVariant) {
+        restoreManifest();
+      }
+  process.exit(code);
   }
 });
