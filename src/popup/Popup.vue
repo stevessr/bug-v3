@@ -1,5 +1,5 @@
 <template>
-  <div class="w-80 max-h-96 mobile:w-screen mobile:h-screen mobile:max-h-none bg-white">
+  <div class="w-80 max-h-96 mobile:w-full mobile:h-full mobile:max-h-none bg-white">
     <!-- Header with scale control -->
     <div class="p-3 border-b border-gray-200 bg-gray-50">
       <div class="flex items-center justify-between mb-2">
@@ -82,7 +82,7 @@
       :setActive="(id: string) => (emojiStore.activeGroupId = id)"
     />
 
-  <!-- Emoji Grid -->
+    <!-- Emoji Grid -->
     <EmojiGrid
       :emojis="emojiStore.filteredEmojis"
       :isLoading="emojiStore.isLoading"
@@ -115,4 +115,56 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
 <style>
 /* Import TailwindCSS in popup */
 @import "../styles/main.css";
+
+/* Desktop styles - ensure minimum size */
+@media (min-width: 616px) {
+  .w-80 {
+    min-width: 600px;
+    min-height: 800px;
+    width: 600px;
+    max-height: 800px;
+  }
+}
+
+/* Mobile-specific styles for popup (also applies to narrow desktop popup) */
+@media (max-width: 615px) {
+  /* Use % instead of vw/vh to avoid scrollbar width feedback causing jitter */
+  html, body, #app {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    min-width: 615px;
+    min-height: 600px;
+    overflow: hidden;
+  }
+
+  /* Ensure the popup container fills the available space on mobile only */
+  .mobile\:w-full {
+    width: 100% !important;
+  }
+  
+  .mobile\:h-full {
+    height: 100% !important;
+  }
+  
+  .mobile\:max-h-none {
+    max-height: none !important;
+  }
+
+  /* Make the popup container flex on mobile */
+  .w-80.mobile\:w-full {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Let inner grid scroll while outer stays fixed */
+  .emoji-grid {
+    max-height: auto;
+    overflow-y: auto;
+  }
+  .flex.border-b.border-gray-100.overflow-x-auto{
+    min-height: fit-content;
+  }
+}
 </style>
