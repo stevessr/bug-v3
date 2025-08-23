@@ -26,6 +26,7 @@ export interface AppSettings {
   showSearchBar: boolean;
   gridColumns: number; // 2 to 8
   outputFormat: 'markdown' | 'html'; // 输出格式选择
+  forceMobileMode?: boolean; // 强制移动模式
   lastModified?: number; // timestamp for sync comparison
 }
 
@@ -116,6 +117,7 @@ const defaultSettings: AppSettings = {
   showSearchBar: true,
   gridColumns: 4,
   outputFormat: "markdown", // 默认使用markdown格式
+  forceMobileMode: false, // 默认不强制移动模式
 };
 
 export { defaultEmojiGroups, defaultSettings };

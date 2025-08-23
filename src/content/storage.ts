@@ -57,7 +57,14 @@ export async function loadDataFromStorage(): Promise<void> {
     } else {
       console.warn('[Emoji Extension] Background did not return emoji data, falling back to defaults');
       cachedState.emojiGroups = [];
-      cachedState.settings = { imageScale: 30, gridColumns: 4, outputFormat: 'markdown' };
+      cachedState.settings = { 
+        imageScale: 30, 
+        gridColumns: 4, 
+        outputFormat: 'markdown',
+        forceMobileMode: false,
+        defaultGroup: 'nachoneko',
+        showSearchBar: true
+      };
     }
 
     let finalEmojisCount = 0;
@@ -71,7 +78,14 @@ export async function loadDataFromStorage(): Promise<void> {
   } catch (error) {
     console.error('[Emoji Extension] Failed to load from background (module):', error);
     cachedState.emojiGroups = [];
-    cachedState.settings = { imageScale: 30, gridColumns: 4, outputFormat: 'markdown' };
+    cachedState.settings = { 
+      imageScale: 30, 
+      gridColumns: 4, 
+      outputFormat: 'markdown',
+      forceMobileMode: false,
+      defaultGroup: 'nachoneko',
+      showSearchBar: true
+    };
   }
 }
 
