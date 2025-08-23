@@ -69,54 +69,109 @@ interface UploadError {
 }
 
 interface UploadQueueItem {
+  id: string;
   file: File;
   resolve: (value: UploadResponse) => void;
   reject: (error: any) => void;
   retryCount: number;
+  status: 'waiting' | 'uploading' | 'failed' | 'success';
+  error?: any;
+  result?: UploadResponse;
+  timestamp: number;
 }
 
 class ImageUploader {
-  private queue: UploadQueueItem[] = [];
+  private waitingQueue: UploadQueueItem[] = [];
+  private uploadingQueue: UploadQueueItem[] = [];
+  private failedQueue: UploadQueueItem[] = [];
+  private successQueue: UploadQueueItem[] = [];
   private isProcessing = false;
-  private maxRetries = 3;
+  private maxRetries = 2; // Second failure stops retry
+  private progressDialog: HTMLElement | null = null;
 
   async uploadImage(file: File): Promise<UploadResponse> {
     return new Promise((resolve, reject) => {
-      this.queue.push({
+      const item: UploadQueueItem = {
+        id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         file,
         resolve,
         reject,
-        retryCount: 0
-      });
+        retryCount: 0,
+        status: 'waiting',
+        timestamp: Date.now()
+      };
+      
+      this.waitingQueue.push(item);
+      this.updateProgressDialog();
       this.processQueue();
     });
   }
 
+  private moveToQueue(item: UploadQueueItem, targetStatus: 'waiting' | 'uploading' | 'failed' | 'success') {
+    // Remove from all queues
+    this.waitingQueue = this.waitingQueue.filter(i => i.id !== item.id);
+    this.uploadingQueue = this.uploadingQueue.filter(i => i.id !== item.id);
+    this.failedQueue = this.failedQueue.filter(i => i.id !== item.id);
+    this.successQueue = this.successQueue.filter(i => i.id !== item.id);
+    
+    // Add to target queue
+    item.status = targetStatus;
+    switch (targetStatus) {
+      case 'waiting':
+        this.waitingQueue.push(item);
+        break;
+      case 'uploading':
+        this.uploadingQueue.push(item);
+        break;
+      case 'failed':
+        this.failedQueue.push(item);
+        break;
+      case 'success':
+        this.successQueue.push(item);
+        break;
+    }
+    
+    this.updateProgressDialog();
+  }
+
   private async processQueue() {
-    if (this.isProcessing || this.queue.length === 0) {
+    if (this.isProcessing || this.waitingQueue.length === 0) {
       return;
     }
 
     this.isProcessing = true;
 
-    while (this.queue.length > 0) {
-      const item = this.queue.shift()!;
+    while (this.waitingQueue.length > 0) {
+      const item = this.waitingQueue.shift()!;
+      this.moveToQueue(item, 'uploading');
+      
       try {
         const result = await this.performUpload(item.file);
+        item.result = result;
+        this.moveToQueue(item, 'success');
         item.resolve(result);
+        
+        // Insert into editor
+        const markdown = `![${result.original_filename}](${result.url})`;
+        insertIntoEditor(markdown);
+        
       } catch (error: any) {
+        item.error = error;
+        
         if (this.shouldRetry(error, item)) {
           item.retryCount++;
-          this.queue.unshift(item); // Put back at front for retry
           
-          if (error.extras?.wait_seconds) {
-            // Wait for rate limit
+          if (error.error_type === 'rate_limit' && error.extras?.wait_seconds) {
+            // Wait for rate limit before retry
             await this.sleep(error.extras.wait_seconds * 1000);
           } else {
             // Wait before retry
             await this.sleep(Math.pow(2, item.retryCount) * 1000);
           }
+          
+          this.moveToQueue(item, 'waiting');
         } else {
+          this.moveToQueue(item, 'failed');
           item.reject(error);
         }
       }
@@ -130,10 +185,49 @@ class ImageUploader {
       return false;
     }
 
-    // Retry on rate limits and network errors
-    return error.error_type === 'rate_limit' || 
-           error.name === 'NetworkError' || 
-           error.name === 'TypeError';
+    // Only retry 429 (rate limit) errors automatically
+    return error.error_type === 'rate_limit';
+  }
+  
+  // Method to manually retry failed items
+  retryFailedItem(itemId: string) {
+    const item = this.failedQueue.find(i => i.id === itemId);
+    if (item && item.retryCount < this.maxRetries) {
+      item.retryCount++;
+      this.moveToQueue(item, 'waiting');
+      this.processQueue();
+    }
+  }
+
+  showProgressDialog() {
+    if (this.progressDialog) {
+      return; // Already showing
+    }
+    
+    this.progressDialog = this.createProgressDialog();
+    document.body.appendChild(this.progressDialog);
+  }
+
+  hideProgressDialog() {
+    if (this.progressDialog) {
+      this.progressDialog.remove();
+      this.progressDialog = null;
+    }
+  }
+
+  private updateProgressDialog() {
+    if (!this.progressDialog) {
+      return;
+    }
+    
+    const allItems = [
+      ...this.waitingQueue,
+      ...this.uploadingQueue,
+      ...this.failedQueue,
+      ...this.successQueue
+    ];
+    
+    this.renderQueueItems(this.progressDialog, allItems);
   }
 
   private async sleep(ms: number): Promise<void> {
@@ -248,23 +342,14 @@ export async function showImageUploadDialog(): Promise<void> {
       }
 
       // Show upload progress
-      const progressDialog = createProgressDialog(files.length);
-      document.body.appendChild(progressDialog);
+      uploader.showProgressDialog();
 
       try {
-        const promises = Array.from(files).map(async (file, index) => {
+        const promises = Array.from(files).map(async (file) => {
           try {
-            updateProgress(progressDialog, index, 'uploading', file.name);
             const result = await uploader.uploadImage(file);
-            updateProgress(progressDialog, index, 'success', file.name);
-            
-            // Insert into editor
-            const markdown = `![${result.original_filename}](${result.url})`;
-            insertIntoEditor(markdown);
-            
             return result;
           } catch (error: any) {
-            updateProgress(progressDialog, index, 'error', file.name, error);
             logger.error('[Image Uploader] Upload failed:', error);
             throw error;
           }
@@ -274,9 +359,9 @@ export async function showImageUploadDialog(): Promise<void> {
         
       } finally {
         setTimeout(() => {
-          progressDialog.remove();
+          uploader.hideProgressDialog();
           resolve();
-        }, 2000);
+        }, 3000); // Keep dialog open longer to show results
       }
     });
 
@@ -284,92 +369,6 @@ export async function showImageUploadDialog(): Promise<void> {
     input.click();
     document.body.removeChild(input);
   });
-}
-
-function createProgressDialog(fileCount: number): HTMLElement {
-  const dialog = document.createElement('div');
-  dialog.className = 'image-upload-progress';
-  dialog.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    min-width: 300px;
-    max-width: 500px;
-    z-index: 10000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  `;
-
-  const title = document.createElement('h3');
-  title.textContent = `上传图片 (${fileCount} 个文件)`;
-  title.style.cssText = 'margin: 0 0 15px 0; font-size: 16px; color: #333;';
-  
-  const list = document.createElement('div');
-  list.className = 'upload-list';
-  
-  for (let i = 0; i < fileCount; i++) {
-    const item = document.createElement('div');
-    item.className = `upload-item upload-item-${i}`;
-    item.style.cssText = `
-      display: flex;
-      align-items: center;
-      margin-bottom: 8px;
-      padding: 8px;
-      border-radius: 4px;
-      background: #f8f9fa;
-    `;
-    
-    const status = document.createElement('span');
-    status.className = 'status';
-    status.style.cssText = 'margin-right: 10px; font-size: 16px;';
-    status.textContent = '⏳';
-    
-    const filename = document.createElement('span');
-    filename.className = 'filename';
-    filename.style.cssText = 'flex: 1; color: #666;';
-    filename.textContent = '准备上传...';
-    
-    item.appendChild(status);
-    item.appendChild(filename);
-    list.appendChild(item);
-  }
-  
-  dialog.appendChild(title);
-  dialog.appendChild(list);
-  
-  return dialog;
-}
-
-function updateProgress(dialog: HTMLElement, index: number, status: 'uploading' | 'success' | 'error', filename: string, error?: any) {
-  const item = dialog.querySelector(`.upload-item-${index}`) as HTMLElement;
-  if (!item) return;
-  
-  const statusEl = item.querySelector('.status') as HTMLElement;
-  const filenameEl = item.querySelector('.filename') as HTMLElement;
-  
-  switch (status) {
-    case 'uploading':
-      statusEl.textContent = '📤';
-      filenameEl.textContent = filename;
-      item.style.background = '#e3f2fd';
-      break;
-    case 'success':
-      statusEl.textContent = '✅';
-      filenameEl.textContent = `${filename} - 上传成功`;
-      item.style.background = '#e8f5e8';
-      break;
-    case 'error':
-      statusEl.textContent = '❌';
-      const errorMsg = error?.errors?.[0] || error?.message || '上传失败';
-      filenameEl.textContent = `${filename} - ${errorMsg}`;
-      item.style.background = '#ffebee';
-      break;
-  }
 }
 
 export { uploader };
