@@ -326,20 +326,141 @@ class ImageUploader {
 
 const uploader = new ImageUploader();
 
+function createDragDropUploadPanel(): HTMLElement {
+  const panel = document.createElement('div');
+  panel.className = 'drag-drop-upload-panel';
+  panel.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    max-width: 90vw;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  `;
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+  `;
+
+  const header = document.createElement('div');
+  header.style.cssText = `
+    padding: 20px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  `;
+
+  const title = document.createElement('h3');
+  title.textContent = '上传图片';
+  title.style.cssText = `
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+  `;
+
+  const closeButton = document.createElement('button');
+  closeButton.innerHTML = '✕';
+  closeButton.style.cssText = `
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  `;
+  closeButton.addEventListener('mouseenter', () => {
+    closeButton.style.backgroundColor = '#f3f4f6';
+  });
+  closeButton.addEventListener('mouseleave', () => {
+    closeButton.style.backgroundColor = 'transparent';
+  });
+
+  header.appendChild(title);
+  header.appendChild(closeButton);
+
+  const content = document.createElement('div');
+  content.style.cssText = `
+    padding: 24px;
+  `;
+
+  const dropZone = document.createElement('div');
+  dropZone.className = 'drop-zone';
+  dropZone.style.cssText = `
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    background: #f9fafb;
+    transition: all 0.2s;
+    cursor: pointer;
+  `;
+
+  const dropIcon = document.createElement('div');
+  dropIcon.innerHTML = '📁';
+  dropIcon.style.cssText = `
+    font-size: 48px;
+    margin-bottom: 16px;
+  `;
+
+  const dropText = document.createElement('div');
+  dropText.innerHTML = `
+    <div style="font-size: 16px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+      拖拽图片到此处，或点击选择文件
+    </div>
+    <div style="font-size: 14px; color: #6b7280;">
+      支持 JPG、PNG、GIF 等格式，最大 10MB
+    </div>
+  `;
+
+  dropZone.appendChild(dropIcon);
+  dropZone.appendChild(dropText);
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.multiple = true;
+  fileInput.style.display = 'none';
+
+  content.appendChild(dropZone);
+  content.appendChild(fileInput);
+
+  panel.appendChild(header);
+  panel.appendChild(content);
+
+  return { panel, overlay, dropZone, fileInput, closeButton } as any;
+}
+
 export async function showImageUploadDialog(): Promise<void> {
   return new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = true;
-    input.style.display = 'none';
+    const { panel, overlay, dropZone, fileInput, closeButton } = createDragDropUploadPanel();
 
-    input.addEventListener('change', async (event) => {
-      const files = (event.target as HTMLInputElement).files;
-      if (!files || files.length === 0) {
-        resolve();
-        return;
-      }
+    let isDragOver = false;
+
+    const cleanup = () => {
+      document.body.removeChild(overlay);
+      document.body.removeChild(panel);
+      resolve();
+    };
+
+    const handleFiles = async (files: FileList) => {
+      if (!files || files.length === 0) return;
+
+      cleanup();
 
       // Show upload progress
       uploader.showProgressDialog();
@@ -356,18 +477,88 @@ export async function showImageUploadDialog(): Promise<void> {
         });
 
         await Promise.allSettled(promises);
-        
+
       } finally {
         setTimeout(() => {
           uploader.hideProgressDialog();
-          resolve();
-        }, 3000); // Keep dialog open longer to show results
+        }, 3000);
+      }
+    };
+
+    // File input change handler
+    fileInput.addEventListener('change', async (event) => {
+      const files = (event.target as HTMLInputElement).files;
+      if (files) {
+        await handleFiles(files);
       }
     });
 
-    document.body.appendChild(input);
-    input.click();
-    document.body.removeChild(input);
+    // Click to select files
+    dropZone.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    // Drag and drop handlers
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!isDragOver) {
+        isDragOver = true;
+        dropZone.style.borderColor = '#3b82f6';
+        dropZone.style.backgroundColor = '#eff6ff';
+      }
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      if (!dropZone.contains(e.relatedTarget as Node)) {
+        isDragOver = false;
+        dropZone.style.borderColor = '#d1d5db';
+        dropZone.style.backgroundColor = '#f9fafb';
+      }
+    });
+
+    dropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      isDragOver = false;
+      dropZone.style.borderColor = '#d1d5db';
+      dropZone.style.backgroundColor = '#f9fafb';
+
+      const files = e.dataTransfer?.files;
+      if (files) {
+        await handleFiles(files);
+      }
+    });
+
+    // Close handlers
+    closeButton.addEventListener('click', cleanup);
+    overlay.addEventListener('click', cleanup);
+
+    // Prevent default drag behaviors on document
+    const preventDefaults = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      document.addEventListener(eventName, preventDefaults, false);
+    });
+
+    // Cleanup event listeners when panel is closed
+    const originalCleanup = cleanup;
+    const enhancedCleanup = () => {
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        document.removeEventListener(eventName, preventDefaults, false);
+      });
+      originalCleanup();
+    };
+
+    closeButton.removeEventListener('click', cleanup);
+    overlay.removeEventListener('click', cleanup);
+    closeButton.addEventListener('click', enhancedCleanup);
+    overlay.addEventListener('click', enhancedCleanup);
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(panel);
   });
 }
 
