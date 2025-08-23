@@ -6,16 +6,16 @@
     <span class="ml-2 text-sm text-gray-600">加载中...</span>
   </div>
 
-  <div v-else-if="emojis.length > 0" class="p-2">
+  <div v-else-if="emojis.length > 0" class="p-0">
     <div
-      class="grid gap-1 max-h-96 mobile:max-h-auto overflow-y-auto emoji-grid"
+      class="grid emoji-grid"
       :style="`grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); max-height: auto !important;`"
     >
       <button
         v-for="emoji in emojis"
         :key="emoji.id"
         @click="$emit('select', emoji)"
-        class="relative p-1 rounded hover:bg-gray-100 transition-colors group mobile:p-2"
+        class="relative p-0 rounded hover:bg-gray-100 transition-colors group mobile:p-2"
         :title="emoji.name"
       >
         <div

@@ -363,7 +363,6 @@ video {
     var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 .emoji-grid {
-  display: grid;
   max-height: auto;
   gap: 0.5rem;
   overflow-y: auto;
