@@ -5,7 +5,7 @@
       :key="group.id"
       @click="setActive(group.id)"
       :class="[
-        'flex-shrink-0 px-3 py-2 text-xs font-medium border-b-2 transition-colors',
+        'flex-shrink-0 px-3 py-2 mobile:px-4 mobile:py-3 text-xs mobile:text-sm font-medium border-b-2 transition-colors',
         activeGroupId === group.id
           ? 'border-blue-500 text-blue-600 bg-blue-50'
           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
@@ -16,7 +16,7 @@
           <img
             :src="group.icon"
             alt="group icon"
-            class="w-4 h-4 object-contain inline-block"
+            class="w-4 h-4 mobile:w-5 mobile:h-5 object-contain inline-block"
           />
         </template>
         <template v-else>
