@@ -19,15 +19,28 @@ export default defineConfig(({ mode }) => {
       // 编译期标志定义
       __ENABLE_LOGGING__: enableLogging,
       __ENABLE_INDEXEDDB__: enableIndexedDB,
+      __VUE_OPTIONS_API__: true,
+      __VUE_PROD_DEVTOOLS__: false,
     },
     plugins: [
       generateDefaultEmojiGroupsPlugin(),
-      vue(),
+      vue({
+        template: {
+          compilerOptions: {
+            isCustomElement: (tag) => false
+          }
+        }
+      }),
       // auto register components and import styles for ant-design-vue
       Components({
         resolvers: [AntDesignVueResolver({ importStyle: "less" })],
       }),
     ],
+    resolve: {
+      alias: {
+        'vue': 'vue/dist/vue.esm-bundler.js'
+      }
+    },
     build: {
       minify: "terser",
       terserOptions: {
@@ -41,8 +54,7 @@ export default defineConfig(({ mode }) => {
           popup: fileURLToPath(new URL("popup.html", import.meta.url)),
           options: fileURLToPath(new URL("options.html", import.meta.url)),
           "image-generator": fileURLToPath(new URL("image-generator.html", import.meta.url)),
-          "image-generator-new": fileURLToPath(new URL("image-generator-new.html", import.meta.url)),
-          "image-generator-vue": fileURLToPath(new URL("src/image-generator-vue.ts", import.meta.url)),
+          "image-generator-vue": fileURLToPath(new URL("image-generator-vue.html", import.meta.url)),
           tenor: fileURLToPath(new URL("src/tenor/main.ts", import.meta.url)),
           waline: fileURLToPath(new URL("src/waline/main.ts", import.meta.url)),
           content: fileURLToPath(new URL("src/content/content.ts", import.meta.url)),

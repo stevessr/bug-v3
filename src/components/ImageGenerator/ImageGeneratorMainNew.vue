@@ -19,24 +19,17 @@
 
         <!-- Generation Mode -->
         <GenerationMode
-          v-model="isEditMode"
-          :selected-provider="selectedProvider"
+          v-model="generationMode"
+          :provider-manager="providerManager"
+          :uploaded-image="uploadedImage"
           @mode-changed="onModeChanged"
-        />
-
-        <!-- Image Upload (Edit Mode Only) -->
-        <ImageUpload
-          v-if="isEditMode"
-          v-model="uploadedImage"
-          :is-edit-mode="isEditMode"
-          @image-uploaded="onImageUploaded"
-          @image-removed="onImageRemoved"
+          @image-changed="onImageUploaded"
         />
 
         <!-- Prompt Input -->
         <PromptInput
           v-model="prompt"
-          :is-edit-mode="isEditMode"
+          :is-edit-mode="generationMode === 'edit'"
           @prompt-changed="onPromptChanged"
         />
 
@@ -82,7 +75,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import ApiConfig from './ApiConfig.vue';
-import GenerationMode from './GenerationMode.vue';
+import GenerationMode from './GenerationModeNew.vue';
 import ImageUpload from './ImageUpload.vue';
 import PromptInput from './PromptInput.vue';
 import GenerationConfig from './GenerationConfig.vue';
@@ -91,7 +84,7 @@ import { providerManager } from './providerManager';
 import type { GenerateRequest } from './types';
 
 const selectedProvider = ref('gemini');
-const isEditMode = ref(false);
+const generationMode = ref<'generate' | 'edit'>('generate');
 const uploadedImage = ref('');
 const prompt = ref('');
 const generationConfig = ref({
@@ -106,15 +99,15 @@ const generatedImages = ref<string[]>([]);
 
 const canGenerate = computed(() => {
   const hasPrompt = prompt.value.trim().length > 0;
-  const hasImageForEdit = !isEditMode.value || uploadedImage.value;
+  const hasImageForEdit = generationMode.value !== 'edit' || uploadedImage.value;
   return hasPrompt && hasImageForEdit;
 });
 
 const onProviderChanged = (provider: string) => {
   selectedProvider.value = provider;
   // If switching away from Gemini, disable edit mode
-  if (provider !== 'gemini' && isEditMode.value) {
-    isEditMode.value = false;
+  if (provider !== 'gemini' && generationMode.value === 'edit') {
+    generationMode.value = 'generate';
   }
 };
 
@@ -127,9 +120,9 @@ const onModelChanged = (model: string) => {
   console.log('Model changed to:', model);
 };
 
-const onModeChanged = (editMode: boolean) => {
-  isEditMode.value = editMode;
-  if (!editMode) {
+const onModeChanged = (mode: 'generate' | 'edit') => {
+  generationMode.value = mode;
+  if (mode !== 'edit') {
     uploadedImage.value = '';
   }
 };
@@ -162,8 +155,8 @@ const onGenerate = async () => {
       aspectRatio: generationConfig.value.aspectRatio,
       numberOfImages: generationConfig.value.imageCount,
       style: generationConfig.value.style,
-      editMode: isEditMode.value,
-      inputImage: isEditMode.value ? uploadedImage.value : undefined
+      editMode: generationMode.value === 'edit',
+      inputImage: generationMode.value === 'edit' ? uploadedImage.value : undefined
     };
 
     // Simulate API call - in real implementation, use the provider manager

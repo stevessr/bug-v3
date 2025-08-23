@@ -12,6 +12,7 @@ declare module 'vue' {
     GenerateButton: typeof import('./src/components/ImageGenerator/GenerateButton.vue')['default']
     GenerationConfig: typeof import('./src/components/ImageGenerator/GenerationConfig.vue')['default']
     GenerationMode: typeof import('./src/components/ImageGenerator/GenerationMode.vue')['default']
+    GenerationModeNew: typeof import('./src/components/ImageGenerator/GenerationModeNew.vue')['default']
     GridColumnsSelector: typeof import('./src/components/GridColumnsSelector.vue')['default']
     ImageGeneratorMain: typeof import('./src/components/ImageGenerator/ImageGeneratorMain.vue')['default']
     ImageGeneratorMainNew: typeof import('./src/components/ImageGenerator/ImageGeneratorMainNew.vue')['default']
