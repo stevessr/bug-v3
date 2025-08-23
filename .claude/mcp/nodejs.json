@@ -1,0 +1,159 @@
+{
+  "name": "nodejs",
+  "description": "Node.js development environment with scripting, testing, and package management",
+  "version": "1.0.0",
+  "type": "mcp-server",
+  "transport": {
+    "type": "stdio"
+  },
+  "capabilities": {
+    "nodejs_execution": {
+      "script_execution": true,
+      "repl_interaction": true,
+      "module_loading": true,
+      "async_operations": true
+    },
+    "package_management": {
+      "npm_operations": true,
+      "pnpm_operations": true,
+      "yarn_operations": true,
+      "dependency_analysis": true
+    },
+    "testing_framework": {
+      "jest": true,
+      "mocha": true,
+      "vitest": true,
+      "playwright": true,
+      "cypress": true
+    },
+    "build_tools": {
+      "webpack": true,
+      "vite": true,
+      "rollup": true,
+      "parcel": true,
+      "esbuild": true
+    },
+    "development_tools": {
+      "linting": true,
+      "formatting": true,
+      "type_checking": true,
+      "debugging": true
+    }
+  },
+  "configuration": {
+    "node_version": "18+",
+    "package_manager": "npm",
+    "test_framework": "jest",
+    "build_tool": "vite",
+    "src_directory": "./src",
+    "test_directory": "./tests",
+    "build_directory": "./dist",
+    "scripts_directory": "./scripts"
+  },
+  "tools": [
+    {
+      "name": "execute_node",
+      "description": "Execute Node.js code or scripts",
+      "parameters": {
+        "code": "string",
+        "file_path": "string",
+        "args": "array",
+        "env": "object"
+      }
+    },
+    {
+      "name": "run_npm_script",
+      "description": "Run npm/pnpm scripts from package.json",
+      "parameters": {
+        "script_name": "string",
+        "args": "array",
+        "package_manager": "string"
+      }
+    },
+    {
+      "name": "install_dependencies",
+      "description": "Install Node.js dependencies",
+      "parameters": {
+        "packages": "array",
+        "dev": "boolean",
+        "package_manager": "string"
+      }
+    },
+    {
+      "name": "run_tests",
+      "description": "Execute Node.js tests with specified framework",
+      "parameters": {
+        "test_pattern": "string",
+        "framework": "string",
+        "coverage": "boolean",
+        "watch": "boolean"
+      }
+    },
+    {
+      "name": "build_project",
+      "description": "Build project using configured build tool",
+      "parameters": {
+        "mode": "string",
+        "target": "string",
+        "options": "object"
+      }
+    },
+    {
+      "name": "lint_code",
+      "description": "Run linting and formatting tools",
+      "parameters": {
+        "paths": "array",
+        "fix": "boolean",
+        "tools": "array"
+      }
+    },
+    {
+      "name": "analyze_dependencies",
+      "description": "Analyze project dependencies and vulnerabilities",
+      "parameters": {
+        "type": "string",
+        "output_format": "string"
+      }
+    },
+    {
+      "name": "generate_documentation",
+      "description": "Generate project documentation from code",
+      "parameters": {
+        "source_paths": "array",
+        "output_path": "string",
+        "format": "string"
+      }
+    },
+    {
+      "name": "debug_application",
+      "description": "Start debugging session for Node.js application",
+      "parameters": {
+        "entry_point": "string",
+        "debug_port": "number",
+        "options": "object"
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "nodejs://environment",
+      "name": "Node.js Environment",
+      "description": "Current Node.js version and configuration"
+    },
+    {
+      "uri": "nodejs://packages",
+      "name": "Installed Packages",
+      "description": "List of installed npm packages and versions"
+    },
+    {
+      "uri": "nodejs://scripts",
+      "name": "Available Scripts",
+      "description": "npm scripts and build commands"
+    },
+    {
+      "uri": "nodejs://test-results",
+      "name": "Test Results",
+      "description": "Test execution results and coverage reports"
+    }
+  ]
+}

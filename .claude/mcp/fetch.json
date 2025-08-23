@@ -1,0 +1,150 @@
+{
+  "name": "fetch",
+  "description": "Network interactions, HTTP requests, and API testing capabilities",
+  "version": "1.0.0",
+  "type": "mcp-server",
+  "transport": {
+    "type": "stdio"
+  },
+  "capabilities": {
+    "http_operations": {
+      "get_requests": true,
+      "post_requests": true,
+      "put_requests": true,
+      "delete_requests": true,
+      "patch_requests": true,
+      "custom_headers": true,
+      "authentication": true
+    },
+    "api_testing": {
+      "rest_api_testing": true,
+      "graphql_testing": true,
+      "webhook_testing": true,
+      "response_validation": true,
+      "schema_validation": true
+    },
+    "data_formats": {
+      "json_support": true,
+      "xml_support": true,
+      "form_data": true,
+      "multipart": true,
+      "binary_data": true
+    },
+    "advanced_features": {
+      "request_chaining": true,
+      "response_caching": true,
+      "retry_logic": true,
+      "rate_limiting": true,
+      "proxy_support": true
+    }
+  },
+  "configuration": {
+    "timeout": 30000,
+    "max_redirects": 5,
+    "default_headers": {
+      "User-Agent": "MCP-Fetch/1.0.0",
+      "Accept": "application/json"
+    },
+    "retry_attempts": 3,
+    "retry_delay": 1000,
+    "cache_enabled": true,
+    "cache_duration": 300000
+  },
+  "tools": [
+    {
+      "name": "http_request",
+      "description": "Make HTTP requests with full customization",
+      "parameters": {
+        "method": "string",
+        "url": "string",
+        "headers": "object",
+        "body": "any",
+        "timeout": "number"
+      }
+    },
+    {
+      "name": "test_api_endpoint",
+      "description": "Test API endpoint with validation",
+      "parameters": {
+        "endpoint": "string",
+        "method": "string",
+        "test_data": "object",
+        "expected_status": "number",
+        "validation_schema": "object"
+      }
+    },
+    {
+      "name": "fetch_json",
+      "description": "Fetch and parse JSON data from URL",
+      "parameters": {
+        "url": "string",
+        "headers": "object",
+        "cache": "boolean"
+      }
+    },
+    {
+      "name": "upload_file",
+      "description": "Upload file via HTTP multipart form",
+      "parameters": {
+        "url": "string",
+        "file_path": "string",
+        "field_name": "string",
+        "additional_fields": "object"
+      }
+    },
+    {
+      "name": "download_file",
+      "description": "Download file from URL to local path",
+      "parameters": {
+        "url": "string",
+        "destination": "string",
+        "headers": "object"
+      }
+    },
+    {
+      "name": "test_webhook",
+      "description": "Test webhook endpoints and payloads",
+      "parameters": {
+        "webhook_url": "string",
+        "payload": "object",
+        "signature": "string"
+      }
+    },
+    {
+      "name": "validate_response",
+      "description": "Validate HTTP response against schema",
+      "parameters": {
+        "response": "object",
+        "schema": "object",
+        "strict": "boolean"
+      }
+    },
+    {
+      "name": "monitor_endpoint",
+      "description": "Monitor endpoint availability and performance",
+      "parameters": {
+        "url": "string",
+        "interval": "number",
+        "duration": "number",
+        "alerts": "object"
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "fetch://cache",
+      "name": "Request Cache",
+      "description": "Cached HTTP responses and metadata"
+    },
+    {
+      "uri": "fetch://history",
+      "name": "Request History",
+      "description": "History of HTTP requests and responses"
+    },
+    {
+      "uri": "fetch://metrics",
+      "name": "Network Metrics",
+      "description": "Network performance and reliability metrics"
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "name": "memory",
+  "description": "Long-term memory and context persistence for development workflows",
+  "version": "1.0.0",
+  "type": "mcp-server",
+  "transport": {
+    "type": "stdio"
+  },
+  "capabilities": {
+    "persistent_storage": {
+      "conversation_memory": true,
+      "code_context": true,
+      "project_history": true,
+      "decision_tracking": true
+    },
+    "intelligent_indexing": {
+      "semantic_search": true,
+      "topic_clustering": true,
+      "relevance_scoring": true,
+      "auto_tagging": true
+    },
+    "context_retrieval": {
+      "similarity_search": true,
+      "temporal_search": true,
+      "filtered_search": true,
+      "aggregated_insights": true
+    },
+    "learning_patterns": {
+      "workflow_patterns": true,
+      "error_patterns": true,
+      "solution_patterns": true,
+      "preference_learning": true
+    }
+  },
+  "configuration": {
+    "storage_backend": "vector_db",
+    "max_memory_size": "1GB",
+    "retention_policy": "90_days",
+    "index_refresh_interval": "1_hour",
+    "similarity_threshold": 0.8,
+    "auto_cleanup": true,
+    "compression_enabled": true
+  },
+  "tools": [
+    {
+      "name": "store_memory",
+      "description": "Store information in long-term memory with metadata",
+      "parameters": {
+        "content": "string",
+        "memory_type": "string",
+        "tags": "array",
+        "metadata": "object",
+        "importance": "number"
+      }
+    },
+    {
+      "name": "retrieve_memory",
+      "description": "Retrieve memories based on query and filters",
+      "parameters": {
+        "query": "string",
+        "memory_types": "array",
+        "tags": "array",
+        "time_range": "object",
+        "limit": "number"
+      }
+    },
+    {
+      "name": "search_similar",
+      "description": "Find similar memories using semantic search",
+      "parameters": {
+        "reference": "string",
+        "threshold": "number",
+        "exclude_types": "array",
+        "limit": "number"
+      }
+    },
+    {
+      "name": "update_memory",
+      "description": "Update existing memory entry",
+      "parameters": {
+        "memory_id": "string",
+        "updates": "object",
+        "merge_strategy": "string"
+      }
+    },
+    {
+      "name": "delete_memory",
+      "description": "Delete specific memory entries",
+      "parameters": {
+        "memory_ids": "array",
+        "confirm": "boolean"
+      }
+    },
+    {
+      "name": "analyze_patterns",
+      "description": "Analyze patterns in stored memories",
+      "parameters": {
+        "analysis_type": "string",
+        "time_range": "object",
+        "filters": "object"
+      }
+    },
+    {
+      "name": "get_insights",
+      "description": "Extract insights from memory patterns",
+      "parameters": {
+        "context": "string",
+        "insight_type": "string",
+        "confidence_threshold": "number"
+      }
+    },
+    {
+      "name": "cleanup_memory",
+      "description": "Clean up old or irrelevant memories",
+      "parameters": {
+        "strategy": "string",
+        "criteria": "object",
+        "dry_run": "boolean"
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "memory://index",
+      "name": "Memory Index",
+      "description": "Searchable index of all stored memories"
+    },
+    {
+      "uri": "memory://stats",
+      "name": "Memory Statistics",
+      "description": "Usage statistics and memory health metrics"
+    },
+    {
+      "uri": "memory://patterns",
+      "name": "Discovered Patterns",
+      "description": "Patterns discovered through memory analysis"
+    },
+    {
+      "uri": "memory://insights",
+      "name": "Generated Insights",
+      "description": "Insights derived from memory analysis"
+    }
+  ]
+}

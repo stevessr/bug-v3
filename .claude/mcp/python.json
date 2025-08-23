@@ -1,0 +1,145 @@
+{
+  "name": "python",
+  "description": "Python development environment with scripting, testing, and validation capabilities",
+  "version": "1.0.0",
+  "type": "mcp-server",
+  "transport": {
+    "type": "stdio"
+  },
+  "capabilities": {
+    "python_execution": {
+      "script_execution": true,
+      "interactive_repl": true,
+      "virtual_environments": true,
+      "package_management": true
+    },
+    "testing_framework": {
+      "unittest": true,
+      "pytest": true,
+      "doctest": true,
+      "coverage_analysis": true
+    },
+    "data_processing": {
+      "data_analysis": true,
+      "file_processing": true,
+      "json_manipulation": true,
+      "csv_processing": true,
+      "xml_parsing": true
+    },
+    "validation": {
+      "schema_validation": true,
+      "data_validation": true,
+      "format_validation": true,
+      "custom_validators": true
+    },
+    "automation": {
+      "build_scripts": true,
+      "deployment_scripts": true,
+      "monitoring_scripts": true,
+      "utility_scripts": true
+    }
+  },
+  "configuration": {
+    "python_version": "3.11+",
+    "virtual_env_path": "./venv",
+    "pip_requirements": "./requirements.txt",
+    "test_directory": "./tests",
+    "script_directory": "./scripts",
+    "data_directory": "./data",
+    "output_directory": "./output"
+  },
+  "tools": [
+    {
+      "name": "execute_python",
+      "description": "Execute Python code or scripts",
+      "parameters": {
+        "code": "string",
+        "file_path": "string",
+        "args": "array",
+        "env": "object"
+      }
+    },
+    {
+      "name": "run_tests",
+      "description": "Run Python tests with specified framework",
+      "parameters": {
+        "test_path": "string",
+        "framework": "string",
+        "coverage": "boolean",
+        "verbose": "boolean"
+      }
+    },
+    {
+      "name": "install_package",
+      "description": "Install Python packages via pip",
+      "parameters": {
+        "package": "string",
+        "version": "string",
+        "requirements_file": "string"
+      }
+    },
+    {
+      "name": "create_virtualenv",
+      "description": "Create and manage Python virtual environments",
+      "parameters": {
+        "env_name": "string",
+        "python_version": "string",
+        "requirements": "array"
+      }
+    },
+    {
+      "name": "validate_data",
+      "description": "Validate data against schemas or custom rules",
+      "parameters": {
+        "data": "any",
+        "schema": "object",
+        "validator_type": "string"
+      }
+    },
+    {
+      "name": "process_file",
+      "description": "Process files using Python scripts",
+      "parameters": {
+        "file_path": "string",
+        "processor": "string",
+        "options": "object",
+        "output_path": "string"
+      }
+    },
+    {
+      "name": "generate_script",
+      "description": "Generate Python scripts for specific tasks",
+      "parameters": {
+        "task_type": "string",
+        "parameters": "object",
+        "template": "string"
+      }
+    },
+    {
+      "name": "analyze_code",
+      "description": "Analyze Python code quality and metrics",
+      "parameters": {
+        "code_path": "string",
+        "metrics": "array",
+        "tools": "array"
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "python://environment",
+      "name": "Python Environment",
+      "description": "Current Python environment and installed packages"
+    },
+    {
+      "uri": "python://scripts",
+      "name": "Available Scripts",
+      "description": "Collection of utility and automation scripts"
+    },
+    {
+      "uri": "python://test-results",
+      "name": "Test Results",
+      "description": "Python test execution results and coverage reports"
+    }
+  ]
+}

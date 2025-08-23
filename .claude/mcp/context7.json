@@ -1,0 +1,89 @@
+{
+  "name": "context7",
+  "description": "Enhanced context management and intelligent memory system for development workflows",
+  "version": "1.0.0",
+  "type": "mcp-server",
+  "transport": {
+    "type": "stdio"
+  },
+  "capabilities": {
+    "context_management": {
+      "project_context": true,
+      "file_context": true,
+      "conversation_history": true,
+      "code_references": true
+    },
+    "memory_operations": {
+      "persistent_storage": true,
+      "session_memory": true,
+      "context_search": true,
+      "memory_indexing": true
+    },
+    "intelligent_suggestions": {
+      "context_aware_completions": true,
+      "code_pattern_recognition": true,
+      "workflow_optimization": true
+    }
+  },
+  "configuration": {
+    "memory_retention_days": 30,
+    "context_depth": 10,
+    "indexing_enabled": true,
+    "project_root": "/home/runner/work/bug-v3/bug-v3",
+    "exclusion_patterns": [
+      "node_modules/**",
+      "dist/**",
+      ".git/**",
+      "*.log"
+    ]
+  },
+  "tools": [
+    {
+      "name": "store_context",
+      "description": "Store development context with metadata",
+      "parameters": {
+        "context_type": "string",
+        "content": "string",
+        "metadata": "object",
+        "tags": "array"
+      }
+    },
+    {
+      "name": "retrieve_context",
+      "description": "Retrieve stored context by query or tags",
+      "parameters": {
+        "query": "string",
+        "tags": "array",
+        "limit": "number"
+      }
+    },
+    {
+      "name": "analyze_project_structure",
+      "description": "Analyze and understand project architecture",
+      "parameters": {
+        "path": "string",
+        "depth": "number"
+      }
+    },
+    {
+      "name": "suggest_next_actions",
+      "description": "Suggest relevant next development actions based on context",
+      "parameters": {
+        "current_task": "string",
+        "project_state": "object"
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "context://project",
+      "name": "Project Context",
+      "description": "Current project understanding and state"
+    },
+    {
+      "uri": "context://memory",
+      "name": "Persistent Memory",
+      "description": "Long-term development memory and patterns"
+    }
+  ]
+}

@@ -4,13 +4,62 @@
       "Bash(rm:*)",
       "Bash(pnpm install)",
       "Bash(pnpm build)",
+      "Bash(npm:*)",
+      "Bash(node:*)",
+      "Bash(python:*)",
+      "Bash(pip:*)",
+      "Bash(playwright:*)",
       "Bash(mkdir:*)",
       "Bash(git reset:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(chmod:*)",
+      "Bash(source:*)",
+      "MCP(*)",
+      "Read(*.json)",
+      "Write(*.json)",
+      "Edit(*.json)"
     ],
     "deny": [],
     "ask": []
+  },
+  "mcp": {
+    "enabled": true,
+    "servers": {
+      "context7": {
+        "enabled": true,
+        "config": ".claude/mcp/context7.json"
+      },
+      "memory": {
+        "enabled": true,
+        "config": ".claude/mcp/memory.json"
+      },
+      "nodejs": {
+        "enabled": true,
+        "config": ".claude/mcp/nodejs.json"
+      },
+      "playwright": {
+        "enabled": true,
+        "config": ".claude/mcp/playwright.json"
+      },
+      "linux": {
+        "enabled": true,
+        "config": ".claude/mcp/linux.json"
+      },
+      "fetch": {
+        "enabled": true,
+        "config": ".claude/mcp/fetch.json"
+      },
+      "python": {
+        "enabled": true,
+        "config": ".claude/mcp/python.json"
+      }
+    }
+  },
+  "environment": {
+    "project_root": "/home/runner/work/bug-v3/bug-v3",
+    "node_env": "development",
+    "debug_mode": true
   }
 }
