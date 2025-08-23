@@ -22,23 +22,37 @@
           >
             <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden">
               <img
-                :src="emoji.url"
+                :src="emoji.displayUrl || emoji.url"
                 :alt="emoji.name"
                 class="w-full h-full object-cover"
               />
+            </div>
+            <!-- Activity badge -->
+            <div 
+              v-if="emoji.usageCount && emoji.usageCount > 0"
+              class="absolute top-1 left-1 bg-blue-500 text-white text-xs rounded-full px-1.5 py-0.5 font-semibold min-w-[20px] text-center"
+            >
+              {{ emoji.usageCount > 99 ? '99+' : emoji.usageCount }}
+            </div>
+            <div 
+              v-else
+              class="absolute top-1 left-1 bg-yellow-500 text-white text-xs rounded-full px-1 py-0.5"
+              title="收藏的表情"
+            >
+              ⭐
             </div>
             <div class="absolute top-1 right-1 flex gap-1">
               <button
                 @click="$emit('edit', emoji, 'favorites', idx)"
                 title="编辑"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded"
+                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100"
               >
                 编辑
               </button>
               <button
                 @click="$emit('remove', 'favorites', idx)"
                 title="移除"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded"
+                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100"
               >
                 移除
               </button>
