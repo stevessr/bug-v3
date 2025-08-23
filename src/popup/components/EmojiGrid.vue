@@ -6,30 +6,39 @@
     <span class="ml-2 text-sm text-gray-600">加载中...</span>
   </div>
 
-  <div v-else-if="emojis.length > 0" class="p-2">
+  <div v-else-if="emojis.length > 0" class="p-0 overflow-hidden">
     <div
-      class="grid gap-1 max-h-96 mobile:max-h-auto overflow-y-auto emoji-grid"
-      :style="`grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); max-height: auto !important;`"
+      class="grid emoji-grid overflow-y-auto"
+      :style="`grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); max-height: 300px;`"
     >
       <button
         v-for="emoji in emojis"
         :key="emoji.id"
         @click="$emit('select', emoji)"
-        class="relative p-1 rounded hover:bg-gray-100 transition-colors group mobile:p-2"
+        class="relative p-0 rounded hover:bg-gray-100 transition-colors group mobile:p-2"
         :title="emoji.name"
       >
         <div
           class="w-10 h-10 mobile:w-12 mobile:h-12 rounded overflow-hidden mx-auto"
         >
           <img
-            :src="emoji.url"
+            :src="emoji.displayUrl || emoji.url"
             :alt="emoji.name"
             class="w-full h-full object-cover"
             loading="lazy"
           />
         </div>
+        <!-- Activity indicator for favorites -->
         <div
-          v-if="favorites.has(emoji.id)"
+          v-if="favorites.has(emoji.id) && emoji.usageCount"
+          class="absolute top-0 right-0 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-xs text-white font-bold"
+          :title="`使用 ${emoji.usageCount} 次`"
+        >
+          {{ emoji.usageCount > 99 ? '99+' : emoji.usageCount }}
+        </div>
+        <!-- Star icon for favorites without usage count -->
+        <div
+          v-else-if="favorites.has(emoji.id)"
           class="absolute top-0 right-0 w-3 h-3 bg-yellow-400 rounded-full flex items-center justify-center"
         >
           <svg
