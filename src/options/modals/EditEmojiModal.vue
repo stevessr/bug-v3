@@ -44,7 +44,7 @@
           <div class="flex justify-center">
             <div class="w-24 h-24 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
               <img
-                :src="localEmoji.url"
+                :src="localEmoji.displayUrl || localEmoji.url"
                 :alt="localEmoji.name"
                 class="w-full h-full object-cover"
                 @error="$emit('image-error', $event)"
@@ -67,10 +67,10 @@
             />
           </div>
 
-          <!-- URL field -->
+          <!-- Output URL field -->
           <div>
             <label for="emoji-url" class="block text-sm font-medium text-gray-700">
-              图片链接
+              输出链接 (必填)
             </label>
             <input
               id="emoji-url"
@@ -80,6 +80,22 @@
               placeholder="https://example.com/emoji.png"
               required
             />
+            <p class="mt-1 text-xs text-gray-500">插入到编辑器时使用的链接</p>
+          </div>
+
+          <!-- Display URL field -->
+          <div>
+            <label for="emoji-display-url" class="block text-sm font-medium text-gray-700">
+              显示链接 (可选)
+            </label>
+            <input
+              id="emoji-display-url"
+              v-model="localEmoji.displayUrl"
+              type="url"
+              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              placeholder="https://example.com/preview.png"
+            />
+            <p class="mt-1 text-xs text-gray-500">表情选择器中显示的链接，留空则使用输出链接</p>
           </div>
 
           <!-- Group Selection -->
@@ -143,6 +159,7 @@ const emojiStore = useEmojiStore();
 const localEmoji = ref<Partial<Emoji>>({
   name: '',
   url: '',
+  displayUrl: '',
 });
 
 const selectedGroupId = ref<string>('');
@@ -176,6 +193,7 @@ const handleSubmit = () => {
       packet: props.emoji?.packet || Date.now(),
       name: localEmoji.value.name,
       url: localEmoji.value.url,
+      displayUrl: localEmoji.value.displayUrl || undefined,
       groupId: selectedGroupId.value,
       width: localEmoji.value.width,
       height: localEmoji.value.height,

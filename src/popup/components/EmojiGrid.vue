@@ -22,14 +22,23 @@
           class="w-10 h-10 mobile:w-12 mobile:h-12 rounded overflow-hidden mx-auto"
         >
           <img
-            :src="emoji.url"
+            :src="emoji.displayUrl || emoji.url"
             :alt="emoji.name"
             class="w-full h-full object-cover"
             loading="lazy"
           />
         </div>
+        <!-- Activity indicator for favorites -->
         <div
-          v-if="favorites.has(emoji.id)"
+          v-if="favorites.has(emoji.id) && emoji.usageCount"
+          class="absolute top-0 right-0 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-xs text-white font-bold"
+          :title="`使用 ${emoji.usageCount} 次`"
+        >
+          {{ emoji.usageCount > 99 ? '99+' : emoji.usageCount }}
+        </div>
+        <!-- Star icon for favorites without usage count -->
+        <div
+          v-else-if="favorites.has(emoji.id)"
           class="absolute top-0 right-0 w-3 h-3 bg-yellow-400 rounded-full flex items-center justify-center"
         >
           <svg
