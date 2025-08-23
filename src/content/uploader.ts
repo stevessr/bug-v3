@@ -1,5 +1,4 @@
 import { logger } from "./buildFlags";
-import { insertEmojiIntoEditor } from "./insert";
 
 // Generic function to insert text into editor
 function insertIntoEditor(text: string) {
@@ -234,6 +233,217 @@ class ImageUploader {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  private createProgressDialog(): HTMLElement {
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 350px;
+      max-height: 400px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      z-index: 10000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+    `;
+
+    const header = document.createElement('div');
+    header.style.cssText = `
+      padding: 16px 20px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: 600;
+      font-size: 14px;
+      color: #374151;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    `;
+    header.textContent = '图片上传队列';
+
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '✕';
+    closeButton.style.cssText = `
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    `;
+    closeButton.addEventListener('click', () => {
+      this.hideProgressDialog();
+    });
+    closeButton.addEventListener('mouseenter', () => {
+      closeButton.style.backgroundColor = '#e5e7eb';
+    });
+    closeButton.addEventListener('mouseleave', () => {
+      closeButton.style.backgroundColor = 'transparent';
+    });
+
+    header.appendChild(closeButton);
+
+    const content = document.createElement('div');
+    content.className = 'upload-queue-content';
+    content.style.cssText = `
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 12px;
+    `;
+
+    dialog.appendChild(header);
+    dialog.appendChild(content);
+
+    return dialog;
+  }
+
+  private renderQueueItems(dialog: HTMLElement, allItems: UploadQueueItem[]) {
+    const content = dialog.querySelector('.upload-queue-content');
+    if (!content) return;
+
+    content.innerHTML = '';
+
+    if (allItems.length === 0) {
+      const emptyState = document.createElement('div');
+      emptyState.style.cssText = `
+        text-align: center;
+        color: #6b7280;
+        font-size: 14px;
+        padding: 20px;
+      `;
+      emptyState.textContent = '暂无上传任务';
+      content.appendChild(emptyState);
+      return;
+    }
+
+    allItems.forEach(item => {
+      const itemEl = document.createElement('div');
+      itemEl.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        background: #f9fafb;
+        border-radius: 6px;
+        border-left: 4px solid ${this.getStatusColor(item.status)};
+      `;
+
+      const leftSide = document.createElement('div');
+      leftSide.style.cssText = `
+        flex: 1;
+        min-width: 0;
+      `;
+
+      const fileName = document.createElement('div');
+      fileName.style.cssText = `
+        font-size: 13px;
+        font-weight: 500;
+        color: #374151;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      `;
+      fileName.textContent = item.file.name;
+
+      const status = document.createElement('div');
+      status.style.cssText = `
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 2px;
+      `;
+      status.textContent = this.getStatusText(item);
+
+      leftSide.appendChild(fileName);
+      leftSide.appendChild(status);
+
+      const rightSide = document.createElement('div');
+      rightSide.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      `;
+
+      // Add retry button for failed items
+      if (item.status === 'failed' && item.retryCount < this.maxRetries) {
+        const retryButton = document.createElement('button');
+        retryButton.innerHTML = '🔄';
+        retryButton.style.cssText = `
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 14px;
+          padding: 4px;
+          border-radius: 4px;
+          transition: background-color 0.2s;
+        `;
+        retryButton.title = '重试上传';
+        retryButton.addEventListener('click', () => {
+          this.retryFailedItem(item.id);
+        });
+        retryButton.addEventListener('mouseenter', () => {
+          retryButton.style.backgroundColor = '#e5e7eb';
+        });
+        retryButton.addEventListener('mouseleave', () => {
+          retryButton.style.backgroundColor = 'transparent';
+        });
+        rightSide.appendChild(retryButton);
+      }
+
+      const statusIcon = document.createElement('div');
+      statusIcon.style.cssText = `
+        font-size: 16px;
+      `;
+      statusIcon.textContent = this.getStatusIcon(item.status);
+
+      rightSide.appendChild(statusIcon);
+
+      itemEl.appendChild(leftSide);
+      itemEl.appendChild(rightSide);
+
+      content.appendChild(itemEl);
+    });
+  }
+
+  private getStatusColor(status: string): string {
+    switch (status) {
+      case 'waiting': return '#f59e0b';
+      case 'uploading': return '#3b82f6';
+      case 'success': return '#10b981';
+      case 'failed': return '#ef4444';
+      default: return '#6b7280';
+    }
+  }
+
+  private getStatusText(item: UploadQueueItem): string {
+    switch (item.status) {
+      case 'waiting': return '等待上传';
+      case 'uploading': return '正在上传...';
+      case 'success': return '上传成功';
+      case 'failed': 
+        if (item.error?.error_type === 'rate_limit') {
+          return `上传失败 - 请求过于频繁 (重试 ${item.retryCount}/${this.maxRetries})`;
+        }
+        return `上传失败 (重试 ${item.retryCount}/${this.maxRetries})`;
+      default: return '未知状态';
+    }
+  }
+
+  private getStatusIcon(status: string): string {
+    switch (status) {
+      case 'waiting': return '⏳';
+      case 'uploading': return '📤';
+      case 'success': return '✅';
+      case 'failed': return '❌';
+      default: return '❓';
+    }
+  }
+
   private async performUpload(file: File): Promise<UploadResponse> {
     // Calculate SHA1 checksum (simplified - using a placeholder)
     const sha1 = await this.calculateSHA1(file);
@@ -326,7 +536,15 @@ class ImageUploader {
 
 const uploader = new ImageUploader();
 
-function createDragDropUploadPanel(): HTMLElement {
+interface DragDropElements {
+  panel: HTMLElement;
+  overlay: HTMLElement;
+  dropZone: HTMLElement;
+  fileInput: HTMLInputElement;
+  closeButton: HTMLButtonElement;
+}
+
+function createDragDropUploadPanel(): DragDropElements {
   const panel = document.createElement('div');
   panel.className = 'drag-drop-upload-panel';
   panel.style.cssText = `
@@ -442,7 +660,7 @@ function createDragDropUploadPanel(): HTMLElement {
   panel.appendChild(header);
   panel.appendChild(content);
 
-  return { panel, overlay, dropZone, fileInput, closeButton } as any;
+  return { panel, overlay, dropZone, fileInput, closeButton };
 }
 
 export async function showImageUploadDialog(): Promise<void> {
@@ -486,7 +704,7 @@ export async function showImageUploadDialog(): Promise<void> {
     };
 
     // File input change handler
-    fileInput.addEventListener('change', async (event) => {
+    fileInput.addEventListener('change', async (event: Event) => {
       const files = (event.target as HTMLInputElement).files;
       if (files) {
         await handleFiles(files);
@@ -499,7 +717,7 @@ export async function showImageUploadDialog(): Promise<void> {
     });
 
     // Drag and drop handlers
-    dropZone.addEventListener('dragover', (e) => {
+    dropZone.addEventListener('dragover', (e: DragEvent) => {
       e.preventDefault();
       if (!isDragOver) {
         isDragOver = true;
@@ -508,7 +726,7 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     });
 
-    dropZone.addEventListener('dragleave', (e) => {
+    dropZone.addEventListener('dragleave', (e: DragEvent) => {
       e.preventDefault();
       if (!dropZone.contains(e.relatedTarget as Node)) {
         isDragOver = false;
@@ -517,7 +735,7 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     });
 
-    dropZone.addEventListener('drop', async (e) => {
+    dropZone.addEventListener('drop', async (e: DragEvent) => {
       e.preventDefault();
       isDragOver = false;
       dropZone.style.borderColor = '#d1d5db';
