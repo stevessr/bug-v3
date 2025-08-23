@@ -17,17 +17,33 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
   if (typeof payload === 'string') {
     const md = payload as string;
     const mdItems: any[] = [];
-    // match markdown image syntax: ![alt](url "title")
+    // match markdown image syntax: ![alt](url "title") or ![alt](url "displayUrl")
     const re = /!\[([^\]]*)\]\(([^)]+)\)/g;
     let match: RegExpExecArray | null = null;
     while ((match = re.exec(md)) !== null) {
       const alt = (match[1] || '').trim();
-      let url = (match[2] || '').trim();
-      // strip optional title after space inside parentheses: (url "title")
-      // take only the first token which should be the url
-      url = url.split(/\s+/)[0].replace(/^['"]|['"]$/g, '').trim();
+      let urlPart = (match[2] || '').trim();
+      
+      // Parse URL and optional display URL from title
+      const urlTokens = urlPart.split(/\s+/);
+      const url = urlTokens[0].replace(/^['"]|['"]$/g, '').trim();
+      
+      // Check if there's a second URL in quotes (as title) - this can be used as displayUrl
+      let displayUrl: string | undefined;
+      if (urlTokens.length > 1) {
+        const titlePart = urlTokens.slice(1).join(' ').replace(/^['"]|['"]$/g, '').trim();
+        // If the title looks like a URL, use it as display URL
+        if (titlePart.startsWith('http://') || titlePart.startsWith('https://')) {
+          displayUrl = titlePart;
+        }
+      }
+      
       const name = alt.split('|')[0].trim() || decodeURIComponent((url.split('/').pop() || '').split('?')[0]);
-      mdItems.push({ name, url });
+      const emojiData: any = { name, url };
+      if (displayUrl) {
+        emojiData.displayUrl = displayUrl;
+      }
+      mdItems.push(emojiData);
     }
     if (mdItems.length > 0) {
       payload = mdItems;
@@ -56,6 +72,7 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
           packet: Number.isInteger(emoji.packet) ? emoji.packet : Date.now() + Math.floor(Math.random() * 1000),
           name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
           url: emoji.url || emoji.src,
+          ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
         };
         store.addEmojiWithoutSave(targetGroupId, emojiData);
       });
@@ -84,6 +101,7 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
           packet: Number.isInteger(emoji.packet) ? emoji.packet : Date.now() + Math.floor(Math.random() * 1000),
           name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
           url: emoji.url || emoji.src,
+          ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
         };
         if (targetId) store.addEmojiWithoutSave(targetId, emojiData);
       });

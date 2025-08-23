@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Emoji Extension",
+  "name": "Emoji Extension (Dev)",
   "version": "1.0.0",
-  "description": "An emoji extension built with Vue 3 and Vite.",
+  "description": "Development variant of the Emoji extension.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
-    "https://linux.do/*"
+    "https://linux.do/*",
+    "http://localhost:5173/*"
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup-dev.html",
     "default_icon": {
       "48": "img/48.png",
       "64": "img/64.png",
@@ -19,7 +20,7 @@
       "1200": "img/1200.jpg"
     }
   },
-  "options_page": "options.html",
+  "options_page": "options-dev.html",
   "background": {
     "service_worker": "js/background.js",
     "type": "module"
@@ -27,7 +28,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["js/content.js"],
+      "js": ["js/content-dev.js"],
       "type": "module"
     }
   ],
@@ -41,8 +42,9 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/*", "js/*.css", "image-generator.html"],
+      "resources": ["assets/*", "js/*.css", "js/*.js", "image-generator.html"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "_development_variant": true
 }

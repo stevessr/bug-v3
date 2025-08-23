@@ -8,12 +8,34 @@
     @apply fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg;
   }
   
-  .emoji-grid {
-    @apply grid gap-2 p-4 max-h-80 overflow-y-auto;
-  }
-  
   .emoji-button {
     @apply flex items-center justify-center p-2 rounded hover:bg-gray-100 transition-colors cursor-pointer;
+  }
+  
+  .emoji-grid {
+    @apply gap-2 p-4;
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #e5e7eb #f9fafb;
+  }
+  
+  .emoji-grid::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .emoji-grid::-webkit-scrollbar-track {
+    background: #f9fafb;
+    border-radius: 3px;
+  }
+  
+  .emoji-grid::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 3px;
+  }
+  
+  .emoji-grid::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
   }
   
   .scale-control {

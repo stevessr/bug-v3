@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Test - Upload & Injection</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .toolbar-test {
+            border: 1px solid #ccc;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .d-editor-button-bar {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .chat-composer__inner-container {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 8px;
+        }
+        .d-editor-input {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .btn {
+            background: #007cff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .btn:hover {
+            background: #0056cc;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Manual Test Page - Image Upload & Injection</h1>
+    
+    <div class="status info">
+        <strong>说明：</strong>这个页面用于手动测试图片上传和按钮注入功能。在实际的linux.do网站上，这些功能会自动注入到相应的工具栏中。
+    </div>
+
+    <div class="test-section">
+        <h2>1. 标准编辑器工具栏测试</h2>
+        <p>模拟 linux.do 标准编辑器的工具栏环境</p>
+        <div class="toolbar-test">
+            <div class="d-editor-button-bar" role="toolbar">
+                <button class="btn">B</button>
+                <button class="btn">I</button>
+                <button class="btn">🔗</button>
+                <!-- 注入的按钮会出现在这里 -->
+            </div>
+        </div>
+        <textarea class="d-editor-input" placeholder="在这里输入内容..."></textarea>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 聊天编辑器工具栏测试</h2>
+        <p>模拟 linux.do 聊天编辑器的工具栏环境</p>
+        <div class="toolbar-test">
+            <div class="chat-composer__inner-container">
+                <button class="btn">+</button>
+                <textarea style="flex: 1; height: 40px; border: 1px solid #ddd; border-radius: 4px; padding: 8px;" placeholder="与 discobot 聊天"></textarea>
+                <button class="btn">😊</button>
+                <!-- 注入的按钮会出现在这里 -->
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. 手动功能测试</h2>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn" id="testUpload">📷 测试图片上传</button>
+            <button class="btn" id="testGenerator">🎨 打开AI生成器</button>
+            <button class="btn" id="testInjection">🔄 重新注入按钮</button>
+        </div>
+        <div id="testStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. 测试结果</h2>
+        <div id="results">
+            <div class="status info">
+                <strong>等待测试...</strong> 点击上面的按钮开始测试各项功能。
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟 chrome.runtime API
+        if (!window.chrome) {
+            window.chrome = {
+                runtime: {
+                    getURL: (path) => `/dist/${path}`
+                }
+            };
+        }
+
+        const results = document.getElementById('results');
+        const testStatus = document.getElementById('testStatus');
+
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function updateStatus(message, type = 'info') {
+            testStatus.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        // 测试图片上传
+        document.getElementById('testUpload').addEventListener('click', async () => {
+            updateStatus('正在测试图片上传功能...', 'info');
+            try {
+                // 这里会调用实际的上传功能
+                if (window.showImageUploadDialog) {
+                    await window.showImageUploadDialog();
+                    addResult('✅ 图片上传对话框正常打开', 'success');
+                } else {
+                    addResult('❌ 图片上传功能未加载', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ 图片上传测试失败: ${error.message}`, 'error');
+            }
+            updateStatus('');
+        });
+
+        // 测试AI生成器
+        document.getElementById('testGenerator').addEventListener('click', () => {
+            updateStatus('正在打开AI图片生成器...', 'info');
+            try {
+                const url = chrome.runtime.getURL('image-generator.html');
+                window.open(url, '_blank');
+                addResult('✅ AI图片生成器页面已打开', 'success');
+            } catch (error) {
+                addResult(`❌ AI生成器打开失败: ${error.message}`, 'error');
+            }
+            updateStatus('');
+        });
+
+        // 测试按钮注入
+        document.getElementById('testInjection').addEventListener('click', () => {
+            updateStatus('正在测试按钮注入功能...', 'info');
+            try {
+                // 检查是否有注入函数
+                if (window.injectButton && window.findAllToolbars) {
+                    const toolbars = window.findAllToolbars();
+                    if (toolbars.length > 0) {
+                        toolbars.forEach(toolbar => {
+                            window.injectButton(toolbar);
+                        });
+                        addResult(`✅ 找到 ${toolbars.length} 个工具栏，已注入按钮`, 'success');
+                    } else {
+                        addResult('⚠️ 未找到匹配的工具栏', 'error');
+                    }
+                } else {
+                    addResult('❌ 注入功能未加载', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ 按钮注入测试失败: ${error.message}`, 'error');
+            }
+            updateStatus('');
+        });
+
+        // 页面加载时的检查
+        window.addEventListener('load', () => {
+            addResult('🔍 页面加载完成，开始检查环境...', 'info');
+            
+            // 检查工具栏
+            const standardToolbar = document.querySelector('.d-editor-button-bar[role="toolbar"]');
+            const chatToolbar = document.querySelector('.chat-composer__inner-container');
+            
+            if (standardToolbar) {
+                addResult('✅ 找到标准编辑器工具栏', 'success');
+            }
+            if (chatToolbar) {
+                addResult('✅ 找到聊天编辑器工具栏', 'success');
+            }
+            
+            // 检查输入框
+            const textArea = document.querySelector('.d-editor-input');
+            if (textArea) {
+                addResult('✅ 找到编辑器输入框', 'success');
+            }
+            
+            addResult('📋 测试环境准备完成，可以开始手动测试', 'info');
+        });
+    </script>
+</body>
+</html>
