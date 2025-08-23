@@ -135,7 +135,7 @@ const parseHTMLImages = (text: string) => {
       anchors.forEach((a) => {
         const title = a.getAttribute('title') || '';
         const img = a.querySelector('img') as HTMLImageElement | null;
-        const href = (a.getAttribute('data-download-href') || a.getAttribute('href') || (img && img.src) || '').trim();
+        const href = (a.getAttribute('href') || a.getAttribute('data-download-href') || (img && img.src) || '').trim();
         const nameVal = title || (img && img.alt) || decodeURIComponent((href.split('/').pop() || '').split('?')[0]) || '\u672a\u547d\u540d';
         if (href) items.push({ name: nameVal, url: href });
       });
