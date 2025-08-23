@@ -12,6 +12,8 @@
     "build:prod": "node scripts/build.js build:prod",
     "build:no-indexeddb": "node scripts/build.js build:no-indexeddb",
     "build:minimal": "node scripts/build.js build:minimal",
+    "build:userscript": "node scripts/build.js build:userscript",
+    "build:userscript:min": "node scripts/build.js build:userscript:min",
     "serve": "vite preview",
     "test": "playwright test",
     "test:debug": "playwright test --debug",
