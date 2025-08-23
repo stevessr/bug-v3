@@ -1,6 +1,6 @@
 <template>
   <div v-if="show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="close">
-    <div class="bg-white rounded-lg p-6 w-full max-w-md" @click.stop>
+    <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
       <h3 class="text-lg font-semibold mb-4">添加表情</h3>
       <div class="space-y-4">
         <div>
@@ -40,6 +40,48 @@
             <option v-for="g in groups" :key="g.id" :value="g.id">{{ g.name }}</option>
           </select>
         </div>
+        
+        <!-- 解析结果预览和URL变种选择 -->
+        <div v-if="parsedItems.length > 0 && inputMode !== 'url'" class="bg-gray-50 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-medium text-gray-700">解析结果 ({{ parsedItems.length }} 个)</h4>
+            <button @click="parsedItems = []" type="button" class="text-xs text-gray-500 hover:text-gray-700">清空</button>
+          </div>
+          <div class="max-h-64 overflow-y-auto space-y-3">
+            <div v-for="(item, index) in parsedItems" :key="index" class="bg-white rounded border p-3">
+              <div class="flex items-start gap-3">
+                <img 
+                  :src="item.selectedVariant || item.url" 
+                  :alt="item.name" 
+                  class="w-12 h-12 object-cover rounded border flex-shrink-0"
+                  @error="(e) => (e.target as HTMLImageElement).style.display='none'"
+                />
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-gray-900 truncate">{{ item.name }}</div>
+                  <div v-if="item.variants.length > 1" class="mt-2">
+                    <label class="block text-xs text-gray-600 mb-1">选择URL变种:</label>
+                    <select 
+                      v-model="item.selectedVariant" 
+                      @change="(e) => { item.selectedVariant = (e.target as HTMLSelectElement).value; console.log('[AddEmojiModal] Variant changed:', item.name, item.selectedVariant); }"
+                      class="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option v-for="variant in item.variants" :key="variant.url" :value="variant.url">
+                        {{ variant.label }}
+                      </option>
+                    </select>
+                  </div>
+                  <div v-else class="mt-1">
+                    <span class="text-xs text-gray-500">{{ item.variants[0]?.label || '默认' }}</span>
+                  </div>
+                  <div class="mt-1 text-xs text-gray-500 break-all">
+                    {{ item.selectedVariant || item.url }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div v-if="url" class="text-center">
           <img :src="url" alt="预览" class="w-16 h-16 object-contain mx-auto border border-gray-200 rounded" @error="handleImageError" />
         </div>
@@ -53,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, toRefs } from 'vue';
+import { ref, watch, toRefs, reactive } from 'vue';
 import { useEmojiStore } from '../../stores/emojiStore';
 import { flushBuffer } from '../../utils/indexedDB';
 
@@ -71,7 +113,7 @@ const name = ref('');
 const url = ref('');
 const inputMode = ref<'url' | 'markdown' | 'html'>('url');
 const pasteText = ref('');
-const parsedItems = ref<Array<{ name: string; url: string }>>([]);
+const parsedItems = ref<ImageVariant[]>([]);
 // initialize groupId from reactive props; don't destructure props to keep reactivity
 const groupId = ref(props.defaultGroupId || props.groups?.[0]?.id || '');
 
@@ -106,8 +148,8 @@ const handleImageError = (event: Event) => {
   target.src = '';
 };
 
-const parseMarkdownImages = (text: string) => {
-  const items: Array<{ name: string; url: string }> = [];
+const parseMarkdownImages = (text: string): ImageVariant[] => {
+  const items: ImageVariant[] = [];
   if (!text) return items;
   const re = /!\[([^\]]*)\]\(([^)]+)\)/g;
   let match: RegExpExecArray | null = null;
@@ -117,27 +159,124 @@ const parseMarkdownImages = (text: string) => {
     // strip optional title after space: (url "title")
     urlRaw = urlRaw.split(/\s+/)[0].replace(/^['"]|['"]$/g, '').trim();
     const namePart = (alt || '').split('|')[0].trim();
-    const nameVal = namePart || decodeURIComponent((urlRaw.split('/').pop() || '').split('?')[0]) || '\u672a\u547d\u540d';
-    items.push({ name: nameVal, url: urlRaw });
+    const nameVal = namePart || decodeURIComponent((urlRaw.split('/').pop() || '').split('?')[0]) || '未命名';
+    const item = reactive({ 
+      name: nameVal, 
+      url: urlRaw,
+      variants: [{ label: '默认', url: urlRaw }],
+      selectedVariant: urlRaw
+    });
+    items.push(item);
   }
   return items;
 }
 
-const parseHTMLImages = (text: string) => {
-  const items: Array<{ name: string; url: string }> = [];
+interface ImageVariant {
+  name: string;
+  url: string;
+  variants: Array<{ label: string; url: string }>;
+  selectedVariant: string;
+}
+
+const parseHTMLImages = (text: string): ImageVariant[] => {
+  const items: ImageVariant[] = [];
   if (!text) return items;
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, 'text/html');
-    // prefer anchors with class lightbox
+    
+    // prefer lightbox wrappers
+    const lightboxWrappers = Array.from(doc.querySelectorAll('.lightbox-wrapper')) as HTMLElement[];
+    if (lightboxWrappers.length) {
+      lightboxWrappers.forEach((wrapper) => {
+        const anchor = wrapper.querySelector('a.lightbox') as HTMLAnchorElement | null;
+        const img = wrapper.querySelector('img') as HTMLImageElement | null;
+        
+        if (!anchor || !img) return;
+        
+        const title = anchor.getAttribute('title') || '';
+        const originalUrl = anchor.getAttribute('href') || '';
+        const downloadUrl = anchor.getAttribute('data-download-href') || '';
+        const imgSrc = img.getAttribute('src') || '';
+        const srcset = img.getAttribute('srcset') || '';
+        
+        const nameVal = title || img.getAttribute('alt') || 
+                       decodeURIComponent((originalUrl.split('/').pop() || '').split('?')[0]) || '未命名';
+        
+        const variants: Array<{ label: string; url: string }> = [];
+        
+        // 添加原始URL（最高质量）
+        if (originalUrl) {
+          variants.push({ label: '原始 (最高质量)', url: originalUrl });
+        }
+        
+        // 添加下载URL
+        if (downloadUrl && downloadUrl !== originalUrl) {
+          variants.push({ label: '下载链接', url: downloadUrl });
+        }
+        
+        // 解析srcset中的变种
+        if (srcset) {
+          const srcsetParts = srcset.split(',').map(s => s.trim());
+          srcsetParts.forEach(part => {
+            const [url, descriptor] = part.split(' ');
+            if (url && descriptor) {
+              const scale = descriptor.replace('x', '');
+              // 尝试从URL中提取尺寸信息
+              const sizeMatch = url.match(/_(\d+)x(\d+)\./);
+              const sizeInfo = sizeMatch ? ` (${sizeMatch[1]}×${sizeMatch[2]})` : '';
+              variants.push({ 
+                label: `${scale}x 缩放${sizeInfo}`, 
+                url: url.startsWith('http') ? url : (originalUrl ? new URL(url, originalUrl).href : url)
+              });
+            }
+          });
+        }
+        
+        // 添加当前显示的图片URL
+        if (imgSrc && !variants.some(v => v.url === imgSrc)) {
+          const sizeMatch = imgSrc.match(/_(\d+)x(\d+)\./);
+          const sizeInfo = sizeMatch ? ` (${sizeMatch[1]}×${sizeMatch[2]})` : '';
+          variants.push({ 
+            label: `当前显示${sizeInfo}`, 
+            url: imgSrc.startsWith('http') ? imgSrc : (originalUrl ? new URL(imgSrc, originalUrl).href : imgSrc)
+          });
+        }
+        
+        if (variants.length > 0) {
+          const item = reactive({
+            name: nameVal,
+            url: variants[0].url, // 默认选择第一个（通常是原始URL）
+            variants,
+            selectedVariant: variants[0].url
+          });
+          items.push(item);
+        }
+      });
+      return items;
+    }
+    
+    // prefer anchors with class lightbox (兼容旧格式)
     const anchors = Array.from(doc.querySelectorAll('a.lightbox')) as HTMLAnchorElement[];
     if (anchors.length) {
       anchors.forEach((a) => {
         const title = a.getAttribute('title') || '';
         const img = a.querySelector('img') as HTMLImageElement | null;
         const href = (a.getAttribute('href') || a.getAttribute('data-download-href') || (img && img.src) || '').trim();
-        const nameVal = title || (img && img.alt) || decodeURIComponent((href.split('/').pop() || '').split('?')[0]) || '\u672a\u547d\u540d';
-        if (href) items.push({ name: nameVal, url: href });
+        const nameVal = title || (img && img.alt) || decodeURIComponent((href.split('/').pop() || '').split('?')[0]) || '未命名';
+        
+        const variants: Array<{ label: string; url: string }> = [];
+        if (href) variants.push({ label: '默认', url: href });
+        
+        if (href) {
+          const item = reactive({
+            name: nameVal,
+            url: href,
+            variants,
+            selectedVariant: href
+          });
+          items.push(item);
+        }
       });
       return items;
     }
@@ -147,8 +286,20 @@ const parseHTMLImages = (text: string) => {
     imgs.forEach((img) => {
       const src = (img.getAttribute('src') || '').trim();
       const alt = img.getAttribute('alt') || '';
-      const nameVal = alt || decodeURIComponent((src.split('/').pop() || '').split('?')[0]) || '\u672a\u547d\u540d';
-      if (src) items.push({ name: nameVal, url: src });
+      const nameVal = alt || decodeURIComponent((src.split('/').pop() || '').split('?')[0]) || '未命名';
+      
+      const variants: Array<{ label: string; url: string }> = [];
+      if (src) variants.push({ label: '默认', url: src });
+      
+      if (src) {
+        const item = reactive({
+          name: nameVal,
+          url: src,
+          variants,
+          selectedVariant: src
+        });
+        items.push(item);
+      }
     });
   } catch (e) {
     // parsing failed, return empty
@@ -157,13 +308,32 @@ const parseHTMLImages = (text: string) => {
 }
 
 const previewParse = () => {
+  let newItems: ImageVariant[] = [];
   if (inputMode.value === 'markdown') {
-    parsedItems.value = parseMarkdownImages(pasteText.value);
+    newItems = parseMarkdownImages(pasteText.value);
   } else if (inputMode.value === 'html') {
-    parsedItems.value = parseHTMLImages(pasteText.value);
-  } else {
-    parsedItems.value = [];
+    newItems = parseHTMLImages(pasteText.value);
   }
+  
+  // 保持现有项目的selectedVariant值，如果名称和URL匹配的话
+  const existingItems = parsedItems.value;
+  
+  // 清空数组但保持响应性
+  parsedItems.value.splice(0);
+  
+  // 添加新项目，尝试保持之前的选择
+  newItems.forEach(newItem => {
+    const existingItem = existingItems.find(existing => 
+      existing.name === newItem.name && existing.url === newItem.url
+    );
+    
+    if (existingItem && newItem.variants.some(v => v.url === existingItem.selectedVariant)) {
+      // 保持之前的选择
+      newItem.selectedVariant = existingItem.selectedVariant;
+    }
+    
+    parsedItems.value.push(newItem);
+  });
 }
 
 const close = () => {
@@ -171,15 +341,22 @@ const close = () => {
 };
 
 const add = () => {
-  // If non-url mode, parse pasteText and import parsed items
+  // If non-url mode, use already parsed items
   if (inputMode.value !== 'url') {
-    previewParse();
     if (parsedItems.value.length > 0) {
       if (!groupId.value) return;
       emojiStore.beginBatch();
       try {
         parsedItems.value.forEach((it) => {
-          const emojiData = { packet: Date.now(), name: it.name, url: it.url };
+          console.log('[AddEmojiModal] Processing item:', {
+            name: it.name,
+            originalUrl: it.url,
+            selectedVariant: it.selectedVariant,
+            variants: it.variants.map(v => ({ label: v.label, url: v.url }))
+          });
+          const selectedUrl = it.selectedVariant || it.url;
+          console.log('[AddEmojiModal] Using URL:', selectedUrl);
+          const emojiData = { packet: Date.now(), name: it.name, url: selectedUrl };
           emojiStore.addEmojiWithoutSave(groupId.value, emojiData);
           emits('added', { groupId: groupId.value, name: emojiData.name });
         });
@@ -206,13 +383,20 @@ const add = () => {
 }
 
 const importParsed = () => {
-  previewParse();
   if (parsedItems.value.length === 0) return;
   if (!groupId.value) return;
   emojiStore.beginBatch();
   try {
     parsedItems.value.forEach((it) => {
-      const emojiData = { packet: Date.now(), name: it.name, url: it.url };
+      console.log('[AddEmojiModal] importParsed - Processing item:', {
+        name: it.name,
+        originalUrl: it.url,
+        selectedVariant: it.selectedVariant,
+        variants: it.variants.map(v => ({ label: v.label, url: v.url }))
+      });
+      const selectedUrl = it.selectedVariant || it.url;
+      console.log('[AddEmojiModal] importParsed - Using URL:', selectedUrl);
+      const emojiData = { packet: Date.now(), name: it.name, url: selectedUrl };
       emojiStore.addEmojiWithoutSave(groupId.value, emojiData);
       emits('added', { groupId: groupId.value, name: emojiData.name });
     });
