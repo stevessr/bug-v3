@@ -170,11 +170,24 @@ export async function handleGetEmojiData(sendResponse: (response: any) => void) 
 
   try {
     const data = await chromeAPI.storage.local.get(['emojiGroups', 'appSettings', 'favorites']);
+    
+    // 解析新的存储格式，appSettings 现在是 { data: {...}, timestamp: ... } 的格式
+    let settings = {};
+    if (data.appSettings) {
+      if (data.appSettings.data && typeof data.appSettings.data === 'object') {
+        // 新格式：{ data: {...}, timestamp: ... }
+        settings = data.appSettings.data;
+      } else if (typeof data.appSettings === 'object') {
+        // 兼容旧格式：直接是设置对象
+        settings = data.appSettings;
+      }
+    }
+    
     sendResponse({
       success: true,
       data: {
         groups: data.emojiGroups || [],
-        settings: data.appSettings || {},
+        settings: settings,
         favorites: data.favorites || []
       }
     });
@@ -208,7 +221,14 @@ export async function handleSyncSettings(settings: any, sendResponse: (response:
   }
 
   try {
-    await chromeAPI.storage.local.set({ appSettings: settings });
+    // 保存为新的存储格式：{ data: {...}, timestamp: ... }
+    const timestamp = Date.now();
+    const appSettingsData = {
+      data: { ...settings, lastModified: timestamp },
+      timestamp: timestamp
+    };
+    
+    await chromeAPI.storage.local.set({ appSettings: appSettingsData });
 
     const tabs = await chromeAPI.tabs.query({});
     for (const tab of tabs) {
@@ -243,8 +263,19 @@ export function setupContextMenu() {
   const chromeAPI = getChromeAPI();
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onInstalled && chromeAPI.contextMenus) {
     chromeAPI.runtime.onInstalled.addListener(() => {
-      chrome.storage.local.get('forceMobileMode', (result) => {
-        const forceMobileMode = result.forceMobileMode || false;
+      chrome.storage.local.get('appSettings', (result) => {
+        // 解析新的存储格式来获取 forceMobileMode
+        let forceMobileMode = false;
+        if (result.appSettings) {
+          if (result.appSettings.data && typeof result.appSettings.data === 'object') {
+            // 新格式：{ data: {...}, timestamp: ... }
+            forceMobileMode = result.appSettings.data.forceMobileMode || false;
+          } else if (typeof result.appSettings === 'object') {
+            // 兼容旧格式：直接是设置对象
+            forceMobileMode = result.appSettings.forceMobileMode || false;
+          }
+        }
+        
         if (chromeAPI.contextMenus && chromeAPI.contextMenus.create) {
           chromeAPI.contextMenus.create({
             id: 'open-emoji-options',
@@ -268,7 +299,33 @@ export function setupContextMenu() {
           chromeAPI.runtime.openOptionsPage();
         } else if (info.menuItemId === 'force-mobile-mode') {
           const newCheckedState = info.checked;
-          chrome.storage.local.set({ forceMobileMode: newCheckedState });
+          
+          // 获取当前设置并更新 forceMobileMode
+          chrome.storage.local.get('appSettings', (result) => {
+            let currentSettings = {};
+            if (result.appSettings) {
+              if (result.appSettings.data && typeof result.appSettings.data === 'object') {
+                currentSettings = result.appSettings.data;
+              } else if (typeof result.appSettings === 'object') {
+                currentSettings = result.appSettings;
+              }
+            }
+            
+            // 更新设置并保存为新格式
+            const timestamp = Date.now();
+            const updatedSettings = {
+              ...currentSettings,
+              forceMobileMode: newCheckedState,
+              lastModified: timestamp
+            };
+            
+            const appSettingsData = {
+              data: updatedSettings,
+              timestamp: timestamp
+            };
+            
+            chrome.storage.local.set({ appSettings: appSettingsData });
+          });
         }
       });
     }
