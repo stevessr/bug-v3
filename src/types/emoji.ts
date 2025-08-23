@@ -11,6 +11,7 @@ export interface Emoji {
   packet: number;
   name: string;
   url: string;
+  displayUrl?: string; // Optional display URL, different from output URL
   width?: number;
   height?: number;
   groupId: string;
