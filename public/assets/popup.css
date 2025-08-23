@@ -363,10 +363,26 @@ video {
     var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 .emoji-grid {
-  max-height: auto;
+  max-height: 300px;
   gap: 0.5rem;
   overflow-y: auto;
   padding: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb #f9fafb;
+}
+.emoji-grid::-webkit-scrollbar {
+  width: 6px;
+}
+.emoji-grid::-webkit-scrollbar-track {
+  background: #f9fafb;
+  border-radius: 3px;
+}
+.emoji-grid::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+.emoji-grid::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
 }
 .emoji-button {
   display: flex;

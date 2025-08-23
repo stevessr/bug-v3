@@ -132,9 +132,9 @@ const {
   width: 320px;
   min-width: 320px;
   max-width: 320px;
-  height: 400px;
+  height: 500px;
   min-height: 400px;
-  max-height: 400px;
+  max-height: 600px;
   overflow: hidden;
 }
 
@@ -146,7 +146,7 @@ const {
     max-width: 400px;
     height: auto;
     min-height: 500px;
-    max-height: 500px;
+    max-height: 600px;
   }
 }
 
