@@ -99,6 +99,9 @@
         @edit="openEditEmoji"
       />
 
+      <!-- External Import Tab -->
+      <ExternalImportTab v-if="activeTab === 'import'" />
+
       <!-- Statistics Tab -->
       <div v-if="activeTab === 'stats'" class="space-y-8">
         <EmojiStats
@@ -203,6 +206,7 @@ import NotificationToasts from "./components/NotificationToasts.vue";
 import GroupsTab from "./components/GroupsTab.vue";
 import FavoritesTab from "./components/FavoritesTab.vue";
 import UngroupedTab from "./components/UngroupedTab.vue";
+import ExternalImportTab from "./components/ExternalImportTab.vue";
 import EditEmojiModal from "./modals/EditEmojiModal.vue";
 import EditGroupModal from "./modals/EditGroupModal.vue";
 // composable
