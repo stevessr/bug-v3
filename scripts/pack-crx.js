@@ -26,7 +26,7 @@ function parseArgs() {
 
 function runBuild() {
   console.log('🔨 Running build...');
-  const res = spawnSync('node', ['./scripts/build.js', 'build'], { stdio: 'inherit', shell: true });
+  const res = spawnSync('node', ['./scripts/build.js', 'build:minimal'], { stdio: 'inherit', shell: true });
   if (res.status !== 0) {
     console.error('Build failed. Aborting pack.');
     process.exit(res.status || 1);
