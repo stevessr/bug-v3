@@ -51,6 +51,7 @@
           @update:imageScale="(e) => updateImageScale(e)"
           @update:showSearchBar="(e) => updateShowSearchBar(e)"
           @update:outputFormat="(value) => updateOutputFormat(value)"
+          @update:forceMobileMode="(e) => updateForceMobileMode(e)"
         >
           <template #grid-selector>
             <GridColumnsSelector
@@ -246,6 +247,7 @@ const {
   updateImageScale,
   updateShowSearchBar,
   updateOutputFormat,
+  updateForceMobileMode,
   handleDragStart,
   handleDrop,
   handleEmojiDragStart,
