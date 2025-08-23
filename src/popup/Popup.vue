@@ -1,5 +1,5 @@
 <template>
-  <div class="w-80 max-h-96 mobile:w-full mobile:h-full mobile:max-h-none bg-white">
+  <div class="popup-container bg-white">
     <!-- Header with scale control -->
     <div class="p-3 border-b border-gray-200 bg-gray-50">
       <div class="flex items-center justify-between mb-2">
@@ -116,55 +116,67 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
 /* Import TailwindCSS in popup */
 @import "../styles/main.css";
 
-/* Desktop styles - ensure minimum size */
-@media (min-width: 616px) {
-  .w-80 {
-    min-width: 600px;
-    min-height: 800px;
-    width: 600px;
-    max-height: 800px;
+/* Popup container base styles */
+.popup-container {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
+  height: 400px;
+  min-height: 400px;
+  max-height: 400px;
+  overflow: hidden;
+}
+
+/* Desktop styles - stable dimensions */
+@media (min-width: 768px) {
+  .popup-container {
+    width: 400px;
+    min-width: 400px;
+    max-width: 400px;
+    height: 500px;
+    min-height: 500px;
+    max-height: 500px;
   }
 }
 
-/* Mobile-specific styles for popup (also applies to narrow desktop popup) */
-@media (max-width: 615px) {
-  /* Use % instead of vw/vh to avoid scrollbar width feedback causing jitter */
-  html, body, #app {
+/* Mobile-specific styles - full screen */
+@media (max-width: 767px) {
+  html, body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
-    min-width: 615px;
-    min-height: 600px;
     overflow: hidden;
   }
-
-  /* Ensure the popup container fills the available space on mobile only */
-  .mobile\:w-full {
-    width: 100% !important;
-  }
   
-  .mobile\:h-full {
-    height: 100% !important;
-  }
-  
-  .mobile\:max-h-none {
-    max-height: none !important;
-  }
-
-  /* Make the popup container flex on mobile */
-  .w-80.mobile\:w-full {
-    display: flex;
-    flex-direction: column;
+  #app {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
   }
 
-  /* Let inner grid scroll while outer stays fixed */
-  .emoji-grid {
-    max-height: auto;
-    overflow-y: auto;
+  .popup-container {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    height: 100%;
+    min-height: 100%;
+    max-height: 100%;
   }
-  .flex.border-b.border-gray-100.overflow-x-auto{
-    min-height: fit-content;
-  }
+}
+
+/* Inner content scrolling */
+.emoji-grid {
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Tab container fixed height */
+.flex.border-b.border-gray-100.overflow-x-auto {
+  flex-shrink: 0;
+  min-height: fit-content;
 }
 </style>
