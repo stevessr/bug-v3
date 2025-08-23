@@ -1,5 +1,5 @@
 import { loadDataFromStorage } from "./storage";
-import { findToolbar, injectButton } from "./injector";
+import { findToolbar, findAllToolbars, injectButton } from "./injector";
 import { initOneClickAdd } from "./oneClickAdd";
 import { logger } from "./buildFlags";
 
@@ -17,11 +17,26 @@ export async function initializeEmojiFeature(
 
   function attemptInjection() {
     injectionAttempts++;
-    const toolbar = findToolbar();
-    if (toolbar) {
-      logger.log("[Emoji Extension] Toolbar found, injecting button.");
-      injectButton(toolbar);
-    } else if (injectionAttempts < maxInjectionAttempts) {
+    
+    // Inject into all available toolbars
+    const toolbars = findAllToolbars();
+    let injectedCount = 0;
+    
+    toolbars.forEach(toolbar => {
+      if (!toolbar.querySelector(".emoji-extension-button") && !toolbar.querySelector(".image-upload-button")) {
+        logger.log("[Emoji Extension] Toolbar found, injecting buttons.");
+        injectButton(toolbar);
+        injectedCount++;
+      }
+    });
+    
+    if (injectedCount > 0 || toolbars.length > 0) {
+      // Success - we found toolbars and injected or they already have buttons
+      return;
+    }
+    
+    // No toolbars found, continue retry logic
+    if (injectionAttempts < maxInjectionAttempts) {
       logger.log(
         `[Emoji Extension] Toolbar not found, attempt ${injectionAttempts}/${maxInjectionAttempts}. Retrying ${
           delay / 1000
@@ -93,13 +108,15 @@ export async function initializeEmojiFeature(
 
   // periodic checks
   setInterval(() => {
-    const toolbar = findToolbar();
-    if (toolbar && !document.querySelector(".nacho-emoji-picker-button")) {
-      logger.log(
-        "[Emoji Extension] Toolbar found but button missing, injecting... (module)"
-      );
-      injectButton(toolbar);
-    }
+    const toolbars = findAllToolbars();
+    toolbars.forEach(toolbar => {
+      if (!toolbar.querySelector(".emoji-extension-button") && !toolbar.querySelector(".image-upload-button")) {
+        logger.log(
+          "[Emoji Extension] Toolbar found but buttons missing, injecting... (module)"
+        );
+        injectButton(toolbar);
+      }
+    });
   }, 30000);
 
   setInterval(() => {

@@ -1,14 +1,30 @@
 import { createEmojiPicker, isMobile } from "./picker";
 import { cachedState } from "./state";
+import { showImageUploadDialog } from "./uploader";
+
+// Different toolbar selectors for different contexts
+const TOOLBAR_SELECTORS = [
+  '.d-editor-button-bar[role="toolbar"]', // Standard editor toolbar
+  '.chat-composer__inner-container', // Chat composer
+];
 
 export function findToolbar(): Element | null {
-  const toolbar = document.querySelector(
-    '.d-editor-button-bar[role="toolbar"]'
-  );
-  if (toolbar) {
-    return toolbar;
+  for (const selector of TOOLBAR_SELECTORS) {
+    const toolbar = document.querySelector(selector);
+    if (toolbar) {
+      return toolbar;
+    }
   }
   return null;
+}
+
+export function findAllToolbars(): Element[] {
+  const toolbars: Element[] = [];
+  for (const selector of TOOLBAR_SELECTORS) {
+    const elements = document.querySelectorAll(selector);
+    toolbars.push(...Array.from(elements));
+  }
+  return toolbars;
 }
 
 let currentPicker: HTMLElement | null = null;
@@ -93,9 +109,79 @@ async function injectMobilePicker() {
   currentPicker = modalContainer as HTMLElement;
 }
 
+function createUploadMenu(): HTMLElement {
+  const menu = document.createElement('div');
+  menu.className = 'upload-menu';
+  menu.style.cssText = `
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 8px 0;
+    min-width: 180px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  `;
+
+  const uploadOption = document.createElement('div');
+  uploadOption.className = 'upload-option';
+  uploadOption.style.cssText = `
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+  `;
+  uploadOption.innerHTML = `
+    <span style="margin-right: 8px;">📁</span>
+    <span>上传本地图片</span>
+  `;
+  uploadOption.addEventListener('mouseenter', () => {
+    uploadOption.style.backgroundColor = '#f5f5f5';
+  });
+  uploadOption.addEventListener('mouseleave', () => {
+    uploadOption.style.backgroundColor = 'transparent';
+  });
+  uploadOption.addEventListener('click', async () => {
+    menu.remove();
+    await showImageUploadDialog();
+  });
+
+  const generateOption = document.createElement('div');
+  generateOption.className = 'upload-option';
+  generateOption.style.cssText = uploadOption.style.cssText;
+  generateOption.innerHTML = `
+    <span style="margin-right: 8px;">🎨</span>
+    <span>AI 生成图片</span>
+  `;
+  generateOption.addEventListener('mouseenter', () => {
+    generateOption.style.backgroundColor = '#f5f5f5';
+  });
+  generateOption.addEventListener('mouseleave', () => {
+    generateOption.style.backgroundColor = 'transparent';
+  });
+  generateOption.addEventListener('click', () => {
+    menu.remove();
+    // Open image generator in new tab
+    window.open(chrome.runtime.getURL('image-generator.html'), '_blank');
+  });
+
+  menu.appendChild(uploadOption);
+  menu.appendChild(generateOption);
+
+  return menu;
+}
+
 export function injectButton(toolbar: Element) {
-  const button = document.createElement("button");
-  button.classList.add(
+  // Check if we already injected buttons in this toolbar
+  if (toolbar.querySelector(".emoji-extension-button") || toolbar.querySelector(".image-upload-button")) {
+    return;
+  }
+
+  const isChatComposer = toolbar.classList.contains('chat-composer__inner-container');
+  
+  // Create emoji button
+  const emojiButton = document.createElement("button");
+  emojiButton.classList.add(
     "btn",
     "no-text",
     "btn-icon",
@@ -103,17 +189,26 @@ export function injectButton(toolbar: Element) {
     "nacho-emoji-picker-button",
     "emoji-extension-button"
   );
-  button.title = "表情包";
-  button.type = "button";
-  button.innerHTML = `🐈‍⬛`;
+  
+  // Add chat-specific classes if needed
+  if (isChatComposer) {
+    emojiButton.classList.add("fk-d-menu__trigger", "emoji-picker-trigger", "chat-composer-button", "btn-transparent", "-emoji");
+    emojiButton.setAttribute("aria-expanded", "false");
+    emojiButton.setAttribute("data-identifier", "emoji-picker");
+    emojiButton.setAttribute("data-trigger", "");
+  }
+  
+  emojiButton.title = "表情包";
+  emojiButton.type = "button";
+  emojiButton.innerHTML = `🐈‍⬛`;
 
-  button.addEventListener("click", async (event) => {
+  emojiButton.addEventListener("click", async (event) => {
     event.stopPropagation();
     if (currentPicker) {
       currentPicker.remove();
       currentPicker = null;
       document.removeEventListener("click", (event) =>
-        handleClickOutside(event, button)
+        handleClickOutside(event, emojiButton)
       );
       return;
     }
@@ -124,13 +219,76 @@ export function injectButton(toolbar: Element) {
     if (forceMobile) {
       injectMobilePicker();
     } else {
-      injectDesktopPicker(button);
+      injectDesktopPicker(emojiButton);
     }
   });
 
+  // Create image upload button
+  const uploadButton = document.createElement("button");
+  uploadButton.classList.add(
+    "btn",
+    "no-text",
+    "btn-icon",
+    "toolbar__button", 
+    "image-upload-button"
+  );
+  
+  // Add chat-specific classes if needed
+  if (isChatComposer) {
+    uploadButton.classList.add("fk-d-menu__trigger", "chat-composer-button", "btn-transparent");
+    uploadButton.setAttribute("aria-expanded", "false");
+    uploadButton.setAttribute("data-trigger", "");
+  }
+  
+  uploadButton.title = "上传图片";
+  uploadButton.type = "button";
+  uploadButton.innerHTML = `📷`;
+
+  uploadButton.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    
+    // Show menu with upload options
+    const menu = createUploadMenu();
+    document.body.appendChild(menu);
+    
+    // Position menu near button
+    const rect = uploadButton.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = rect.bottom + 5 + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.style.zIndex = '10000';
+    
+    // Remove menu when clicking outside
+    const removeMenu = (e: Event) => {
+      if (!menu.contains(e.target as Node)) {
+        menu.remove();
+        document.removeEventListener('click', removeMenu);
+      }
+    };
+    
+    setTimeout(() => {
+      document.addEventListener('click', removeMenu);
+    }, 100);
+  });
+
   try {
-    toolbar.appendChild(button);
+    // Insert buttons at appropriate positions
+    if (isChatComposer) {
+      // For chat composer, insert before the emoji picker button
+      const emojiPickerBtn = toolbar.querySelector('.emoji-picker-trigger:not(.emoji-extension-button)');
+      if (emojiPickerBtn) {
+        toolbar.insertBefore(uploadButton, emojiPickerBtn);
+        toolbar.insertBefore(emojiButton, emojiPickerBtn);
+      } else {
+        toolbar.appendChild(uploadButton);
+        toolbar.appendChild(emojiButton);
+      }
+    } else {
+      // For standard toolbar, append at the end
+      toolbar.appendChild(uploadButton);
+      toolbar.appendChild(emojiButton);
+    }
   } catch (e) {
-    console.error("[Emoji Extension] Failed to inject button (module):", e);
+    console.error("[Emoji Extension] Failed to inject buttons (module):", e);
   }
 }
