@@ -1,5 +1,12 @@
 // Main userscript entry point - adapted from content script
-import { loadDataFromLocalStorage, addEmojiToUserscript } from './userscript-storage';
+import { 
+  loadDataFromLocalStorage, 
+  addEmojiToUserscript, 
+  exportUserscriptData, 
+  importUserscriptData, 
+  syncFromManager,
+  saveDataToLocalStorage
+} from './userscript-storage';
 
 // Global state for userscript
 let userscriptState = {
@@ -191,6 +198,34 @@ async function createEmojiPicker(): Promise<HTMLElement> {
   const sectionsNav = document.createElement('div');
   sectionsNav.className = 'emoji-picker__sections-nav';
 
+  // Add management button at the start of sections nav
+  const managementButton = document.createElement('button');
+  managementButton.className = 'btn no-text btn-flat emoji-picker__section-btn management-btn';
+  managementButton.setAttribute('tabindex', '-1');
+  managementButton.type = 'button';
+  managementButton.innerHTML = '⚙️';
+  managementButton.title = '管理表情 - 点击打开完整管理界面';
+  managementButton.style.borderRight = '1px solid #ddd';
+  
+  managementButton.addEventListener('click', () => {
+    openManagementInterface();
+  });
+  sectionsNav.appendChild(managementButton);
+
+  // Add settings button
+  const settingsButton = document.createElement('button');
+  settingsButton.className = 'btn no-text btn-flat emoji-picker__section-btn settings-btn';
+  settingsButton.setAttribute('tabindex', '-1');
+  settingsButton.type = 'button';
+  settingsButton.innerHTML = '🔧';
+  settingsButton.title = '设置';
+  settingsButton.style.borderRight = '1px solid #ddd';
+  
+  settingsButton.addEventListener('click', () => {
+    showSettingsModal();
+  });
+  sectionsNav.appendChild(settingsButton);
+
   const scrollableContent = document.createElement('div');
   scrollableContent.className = 'emoji-picker__scrollable-content';
 
@@ -324,6 +359,296 @@ async function createEmojiPicker(): Promise<HTMLElement> {
   picker.appendChild(innerContent);
 
   return picker;
+}
+
+// Open management interface
+function openManagementInterface() {
+  // Check if we can access the manager in the same domain
+  try {
+    const managerUrl = window.location.origin + '/emoji-manager.html';
+    
+    // Try to open in a new tab
+    const newWindow = window.open(managerUrl, 'emojiManager', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    
+    if (!newWindow) {
+      // Fallback: Show instructions modal
+      showManagementModal();
+    } else {
+      console.log('[Emoji Extension Userscript] Opened management interface');
+    }
+  } catch (error) {
+    console.error('[Emoji Extension Userscript] Failed to open management interface:', error);
+    showManagementModal();
+  }
+}
+
+// Show management modal with instructions and data operations
+function showManagementModal() {
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+  `;
+  
+  content.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 style="margin: 0; color: #333;">表情管理</h2>
+      <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+    </div>
+    
+    <div style="margin-bottom: 20px;">
+      <h3 style="color: #555;">快速操作</h3>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button id="exportBtn" style="padding: 8px 16px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer;">导出数据</button>
+        <button id="syncBtn" style="padding: 8px 16px; background: #52c41a; color: white; border: none; border-radius: 4px; cursor: pointer;">同步管理器数据</button>
+        <button id="importBtn" style="padding: 8px 16px; background: #722ed1; color: white; border: none; border-radius: 4px; cursor: pointer;">导入数据</button>
+      </div>
+    </div>
+    
+    <div style="background: #f5f5f5; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
+      <h3 style="color: #555; margin-top: 0;">完整管理界面</h3>
+      <p style="margin: 8px 0; color: #666;">
+        要使用完整的表情管理功能，请：<br>
+        1. 下载并保存管理界面文件<br>
+        2. 在浏览器中打开该文件<br>
+        3. 在管理界面中编辑表情后，点击"同步到用户脚本"
+      </p>
+      <button id="downloadManager" style="padding: 8px 16px; background: #fa8c16; color: white; border: none; border-radius: 4px; cursor: pointer;">下载管理界面</button>
+    </div>
+    
+    <div id="importSection" style="display: none; background: #f0f8ff; padding: 16px; border-radius: 4px;">
+      <h3 style="color: #555; margin-top: 0;">导入数据</h3>
+      <textarea id="importData" style="width: 100%; height: 150px; border: 1px solid #ddd; border-radius: 4px; padding: 8px; font-family: monospace; font-size: 12px;" placeholder="粘贴要导入的JSON数据..."></textarea>
+      <div style="margin-top: 8px;">
+        <button id="confirmImport" style="padding: 8px 16px; background: #52c41a; color: white; border: none; border-radius: 4px; cursor: pointer;">确认导入</button>
+        <button id="cancelImport" style="padding: 8px 16px; background: #d9d9d9; color: #666; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px;">取消</button>
+      </div>
+    </div>
+    
+    <div style="background: #fff2e8; padding: 12px; border-radius: 4px; border-left: 4px solid #fa8c16; font-size: 14px; color: #595959;">
+      <strong>提示：</strong>当前数据包含 ${userscriptState.emojiGroups.length} 个分组，共 ${userscriptState.emojiGroups.reduce((acc, g) => acc + (g.emojis?.length || 0), 0)} 个表情
+    </div>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+  
+  // Event listeners
+  content.querySelector('#closeModal')?.addEventListener('click', () => {
+    modal.remove();
+  });
+  
+  content.querySelector('#exportBtn')?.addEventListener('click', () => {
+    const data = exportUserscriptData();
+    navigator.clipboard.writeText(data).then(() => {
+      alert('数据已复制到剪贴板');
+    }).catch(() => {
+      // Fallback: show in text area
+      const textarea = document.createElement('textarea');
+      textarea.value = data;
+      textarea.style.cssText = 'width: 100%; height: 200px; margin: 8px 0; font-family: monospace; font-size: 12px;';
+      content.appendChild(textarea);
+      textarea.select();
+    });
+  });
+  
+  content.querySelector('#syncBtn')?.addEventListener('click', () => {
+    const synced = syncFromManager();
+    if (synced) {
+      alert('数据同步成功！请刷新页面以查看更新。');
+      modal.remove();
+      // Reload userscript data
+      initializeUserscriptData();
+    } else {
+      alert('未找到管理器数据。请先在管理界面中操作，然后点击"同步到用户脚本"。');
+    }
+  });
+  
+  content.querySelector('#importBtn')?.addEventListener('click', () => {
+    const importSection = content.querySelector('#importSection');
+    if (importSection) {
+      importSection.style.display = importSection.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+  
+  content.querySelector('#confirmImport')?.addEventListener('click', () => {
+    const textarea = content.querySelector('#importData') as HTMLTextAreaElement;
+    if (textarea && textarea.value.trim()) {
+      const success = importUserscriptData(textarea.value.trim());
+      if (success) {
+        alert('数据导入成功！请刷新页面以查看更新。');
+        modal.remove();
+        // Reload userscript data
+        initializeUserscriptData();
+      } else {
+        alert('数据导入失败，请检查格式是否正确。');
+      }
+    }
+  });
+  
+  content.querySelector('#cancelImport')?.addEventListener('click', () => {
+    const importSection = content.querySelector('#importSection');
+    if (importSection) {
+      importSection.style.display = 'none';
+    }
+  });
+  
+  content.querySelector('#downloadManager')?.addEventListener('click', () => {
+    // We can't download the file directly in userscript, so show instructions
+    alert('请访问 GitHub 仓库下载 emoji-manager.html 文件，或者联系开发者获取完整管理界面。');
+  });
+  
+  // Close on outside click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+// Show settings modal
+function showSettingsModal() {
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+  `;
+  
+  content.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 style="margin: 0; color: #333;">设置</h2>
+      <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">图片缩放比例: <span id="scaleValue">${userscriptState.settings.imageScale}%</span></label>
+      <input type="range" id="scaleSlider" min="5" max="150" step="5" value="${userscriptState.settings.imageScale}" 
+             style="width: 100%; margin-bottom: 8px;">
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">输出格式:</label>
+      <div style="display: flex; gap: 16px;">
+        <label style="display: flex; align-items: center; color: #666;">
+          <input type="radio" name="outputFormat" value="markdown" ${userscriptState.settings.outputFormat === 'markdown' ? 'checked' : ''} style="margin-right: 4px;">
+          Markdown
+        </label>
+        <label style="display: flex; align-items: center; color: #666;">
+          <input type="radio" name="outputFormat" value="html" ${userscriptState.settings.outputFormat === 'html' ? 'checked' : ''} style="margin-right: 4px;">
+          HTML
+        </label>
+      </div>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <label style="display: flex; align-items: center; color: #555; font-weight: 500;">
+        <input type="checkbox" id="showSearchBar" ${userscriptState.settings.showSearchBar ? 'checked' : ''} style="margin-right: 8px;">
+        显示搜索栏
+      </label>
+    </div>
+    
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button id="resetSettings" style="padding: 8px 16px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">重置</button>
+      <button id="saveSettings" style="padding: 8px 16px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer;">保存</button>
+    </div>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+  
+  // Event listeners
+  const scaleSlider = content.querySelector('#scaleSlider') as HTMLInputElement;
+  const scaleValue = content.querySelector('#scaleValue') as HTMLElement;
+  
+  scaleSlider?.addEventListener('input', () => {
+    if (scaleValue) {
+      scaleValue.textContent = scaleSlider.value + '%';
+    }
+  });
+  
+  content.querySelector('#closeModal')?.addEventListener('click', () => {
+    modal.remove();
+  });
+  
+  content.querySelector('#resetSettings')?.addEventListener('click', () => {
+    if (confirm('确定要重置所有设置吗？')) {
+      userscriptState.settings = {
+        imageScale: 30,
+        gridColumns: 4,
+        outputFormat: 'markdown',
+        forceMobileMode: false,
+        defaultGroup: 'nachoneko',
+        showSearchBar: true
+      };
+      modal.remove();
+    }
+  });
+  
+  content.querySelector('#saveSettings')?.addEventListener('click', () => {
+    // Update settings
+    userscriptState.settings.imageScale = parseInt(scaleSlider?.value || '30');
+    
+    const outputFormat = content.querySelector('input[name="outputFormat"]:checked') as HTMLInputElement;
+    if (outputFormat) {
+      userscriptState.settings.outputFormat = outputFormat.value as 'markdown' | 'html';
+    }
+    
+    const showSearchBar = content.querySelector('#showSearchBar') as HTMLInputElement;
+    if (showSearchBar) {
+      userscriptState.settings.showSearchBar = showSearchBar.checked;
+    }
+    
+    // Save to localStorage
+    saveDataToLocalStorage({ settings: userscriptState.settings });
+    alert('设置已保存');
+    
+    modal.remove();
+  });
+  
+  // Close on outside click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
 }
 
 let currentPicker: HTMLElement | null = null;

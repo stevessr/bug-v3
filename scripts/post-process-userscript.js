@@ -58,6 +58,8 @@ function processUserscript() {
   const outputDir = 'dist';
   const inputFile = path.resolve(__dirname, '..', inputDir, 'userscript.js');
   const outputFile = path.resolve(__dirname, '..', outputDir, `emoji-extension${isMinified ? '-min' : ''}.user.js`);
+  const managerFile = path.resolve(__dirname, '..', 'emoji-manager.html');
+  const managerOutput = path.resolve(__dirname, '..', outputDir, 'emoji-manager.html');
 
   try {
     console.log(`📦 Processing ${isMinified ? 'minified' : 'standard'} userscript...`);
@@ -87,6 +89,12 @@ function processUserscript() {
     
     console.log(`✅ Created ${isMinified ? 'minified' : 'standard'} userscript: ${outputFile}`);
     console.log(`📊 File size: ${sizeKB} KB`);
+    
+    // Copy emoji manager if it exists (only for standard build to avoid duplication)
+    if (!isMinified && fs.existsSync(managerFile)) {
+      fs.copyFileSync(managerFile, managerOutput);
+      console.log(`📋 Copied emoji manager: ${managerOutput}`);
+    }
     
     // Clean up temporary build directory
     try {
