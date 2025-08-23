@@ -48,6 +48,17 @@
           <option value="html">HTML 格式</option>
         </select>
       </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium text-gray-900">强制移动模式</label>
+          <p class="text-sm text-gray-500">在桌面端强制使用移动端样式</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" :checked="settings.forceMobileMode" @change="$emit('update:forceMobileMode', $event)" class="sr-only peer" />
+          <div class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"></div>
+        </label>
+      </div>
     </div>
   </div>
 </template>
@@ -58,7 +69,7 @@ import { ref, watch, isRef } from 'vue';
 const props = defineProps<{ settings: any }>();
 // allow flexible typing (either a reactive ref or a plain object)
 const settings: any = props.settings;
-const emit = defineEmits(['update:imageScale', 'update:showSearchBar', 'update:outputFormat']);
+const emit = defineEmits(['update:imageScale', 'update:showSearchBar', 'update:outputFormat', 'update:forceMobileMode']);
 
 // support both ref(settings) and plain settings object
 const getOutputFormat = () => {

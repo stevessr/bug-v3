@@ -243,19 +243,32 @@ export function setupContextMenu() {
   const chromeAPI = getChromeAPI();
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onInstalled && chromeAPI.contextMenus) {
     chromeAPI.runtime.onInstalled.addListener(() => {
-      if (chromeAPI.contextMenus && chromeAPI.contextMenus.create) {
-        chromeAPI.contextMenus.create({
-          id: 'open-emoji-options',
-          title: '表情管理',
-          contexts: ['page']
-        });
-      }
+      chrome.storage.local.get('forceMobileMode', (result) => {
+        const forceMobileMode = result.forceMobileMode || false;
+        if (chromeAPI.contextMenus && chromeAPI.contextMenus.create) {
+          chromeAPI.contextMenus.create({
+            id: 'open-emoji-options',
+            title: '表情管理',
+            contexts: ['page']
+          });
+          chromeAPI.contextMenus.create({
+            id: 'force-mobile-mode',
+            title: '强制使用移动模式',
+            type: 'checkbox',
+            checked: forceMobileMode,
+            contexts: ['page']
+          });
+        }
+      });
     });
 
     if (chromeAPI.contextMenus.onClicked) {
       chromeAPI.contextMenus.onClicked.addListener((info: any, _tab: any) => {
         if (info.menuItemId === 'open-emoji-options' && chromeAPI.runtime && chromeAPI.runtime.openOptionsPage) {
           chromeAPI.runtime.openOptionsPage();
+        } else if (info.menuItemId === 'force-mobile-mode') {
+          const newCheckedState = info.checked;
+          chrome.storage.local.set({ forceMobileMode: newCheckedState });
         }
       });
     }

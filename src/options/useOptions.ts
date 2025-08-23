@@ -238,6 +238,12 @@ export default function useOptions() {
     emojiStore.updateSettings({ outputFormat: value as 'markdown' | 'html' });
   };
 
+  const updateForceMobileMode = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    // Cast to any to allow setting properties not present on the AppSettings type
+    emojiStore.updateSettings({ forceMobileMode: target.checked } as any);
+  };
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === "favorites") {
       showError("常用分组不能编辑名称和图标");
@@ -478,6 +484,7 @@ export default function useOptions() {
     updateImageScale,
     updateShowSearchBar,
     updateOutputFormat,
+    updateForceMobileMode,
     // drag/drop
     handleDragStart,
     handleDrop,
