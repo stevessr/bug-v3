@@ -151,3 +151,11 @@ playwright-report/
 test-results/
 chrome-extension-v3.crx
 pack-key.pem
+
+# MCP Environment
+venv/
+.env.mcp
+.claude/mcp/logs/
+.claude/mcp/cache/
+.claude/mcp/data/
+browsers/
