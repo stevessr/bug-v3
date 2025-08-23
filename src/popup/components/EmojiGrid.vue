@@ -6,17 +6,17 @@
 
   <div v-else-if="emojis.length > 0" class="p-2">
     <div
-      class="grid gap-1 max-h-64 overflow-y-auto"
+      class="grid gap-1 max-h-64 mobile:max-h-none mobile:h-full overflow-y-auto"
       :style="{ gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }"
     >
       <button
         v-for="emoji in emojis"
         :key="emoji.id"
         @click="$emit('select', emoji)"
-        class="relative p-1 rounded hover:bg-gray-100 transition-colors group"
+        class="relative p-1 rounded hover:bg-gray-100 transition-colors group mobile:p-2"
         :title="emoji.name"
       >
-        <div class="w-10 h-10 rounded overflow-hidden mx-auto">
+        <div class="w-10 h-10 mobile:w-12 mobile:h-12 rounded overflow-hidden mx-auto">
           <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" loading="lazy" />
         </div>
         <div
