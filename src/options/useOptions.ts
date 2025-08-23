@@ -17,6 +17,7 @@ export default function useOptions() {
   { id: "favorites", label: "常用" },
   { id: "groups", label: "分组管理" },
     { id: "ungrouped", label: "未分组" },
+    { id: "import", label: "外部导入" },
     { id: "stats", label: "统计" },
     { id: "about", label: "关于" },
   ];
