@@ -27,17 +27,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://linux.do/*",
-        "https://meta.*.org/*",
-        "https://community.*.*/*",
-        "https://discuss.*.*/*",
-        "https://discussion.*.*/*",
-        "https://discussions.*.*/",
-        "https://forum.*.*/*",
-        "https://forums.*.*/*",
-        "https://discourse.*.com/*",
-        "https://*.discourse.group/*",
-        "https://developer.*.*/*"
+        "<all_urls>"
       ],
       "js": ["js/content.js"],
       "type": "module"
