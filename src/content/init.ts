@@ -1,7 +1,102 @@
 import { loadDataFromStorage } from "./storage";
-import { findToolbar, findAllToolbars, injectButton } from "./injector";
+import { findAllToolbars, injectButton } from "./injector";
 import { initOneClickAdd } from "./oneClickAdd";
 import { logger } from "./buildFlags";
+
+// Function to check and re-inject buttons if needed
+function checkAndReinjectButtons() {
+  const toolbars = findAllToolbars();
+  toolbars.forEach((toolbar: Element) => {
+    if (!toolbar.querySelector(".emoji-extension-button") && !toolbar.querySelector(".image-upload-button")) {
+      logger.log("[Emoji Extension] Buttons missing after reply button click, re-injecting...");
+      injectButton(toolbar);
+    }
+  });
+}
+
+// Setup reply button listeners
+function setupReplyButtonListeners() {
+  // Selectors for different types of reply buttons
+  const replyButtonSelectors = [
+    // Topic footer reply button
+    'button.btn.btn-icon-text.btn-primary.create.topic-footer-button[title*="回复"]',
+    // Simple reply button (no text)
+    'button.btn.no-text.btn-icon.btn-default.create.reply-to-post[title*="回复"]',
+    // Post action menu reply button
+    'button.btn.btn-icon-text.post-action-menu__reply.reply.create[title*="回复"]'
+  ];
+
+  // Use event delegation to handle dynamically added buttons
+  document.addEventListener('click', (event: Event) => {
+    const target = event.target as HTMLElement;
+    
+    // Check if the clicked element matches any reply button selector
+    const isReplyButton = replyButtonSelectors.some(selector => {
+      try {
+        return target.matches(selector) || target.closest(selector);
+      } catch (e) {
+        // Handle invalid selector gracefully
+        return false;
+      }
+    });
+
+    if (isReplyButton) {
+      logger.log("[Emoji Extension] Reply button clicked, checking for injection needs...");
+      
+      // Delay check to allow the editor to be created
+      setTimeout(() => {
+        checkAndReinjectButtons();
+      }, 500);
+      
+      // Additional check after a longer delay for complex UI changes
+      setTimeout(() => {
+        checkAndReinjectButtons();
+      }, 2000);
+    }
+  });
+
+  // Also listen for mutations in case buttons are added/removed dynamically
+  const observer = new MutationObserver((mutations) => {
+    let shouldCheck = false;
+    
+    mutations.forEach((mutation) => {
+      // Check if any added nodes contain reply buttons
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as Element;
+          
+          // Check if the added element or its descendants contain reply buttons
+          const hasReplyButtons = replyButtonSelectors.some(selector => {
+            try {
+              return element.matches(selector) || element.querySelector(selector);
+            } catch (e) {
+              return false;
+            }
+          });
+          
+          if (hasReplyButtons) {
+            shouldCheck = true;
+          }
+        }
+      });
+    });
+    
+    if (shouldCheck) {
+      logger.log("[Emoji Extension] Reply buttons detected in DOM changes, checking injection...");
+      setTimeout(() => {
+        checkAndReinjectButtons();
+      }, 500);
+    }
+  });
+
+  // Start observing DOM changes
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+
+  logger.log("[Emoji Extension] Reply button listeners initialized");
+}
 
 export async function initializeEmojiFeature(
   maxInjectionAttempts: number = 10,
@@ -12,6 +107,9 @@ export async function initializeEmojiFeature(
 
   // 初始化一键添加表情功能
   initOneClickAdd();
+
+  // 初始化回复按钮监听器
+  setupReplyButtonListeners();
 
   let injectionAttempts = 0;
 
