@@ -62,6 +62,22 @@ npm run build:minimal
 - IndexedDB: ❌ 禁用
 - 特点: 最小体积，最高性能，适合资源受限环境
 
+### 油猴脚本构建
+```bash
+npm run build:userscript
+```
+- 日志: ✅ 启用
+- IndexedDB: ❌ 禁用 (使用 localStorage)
+- 特点: 生成油猴脚本，无需浏览器扩展即可使用
+
+### 油猴脚本构建（混淆版）
+```bash
+npm run build:userscript:min
+```
+- 日志: ✅ 启用
+- IndexedDB: ❌ 禁用 (使用 localStorage)
+- 特点: 压缩混淆的油猴脚本，体积更小
+
 ## 手动配置环境变量
 
 您也可以通过设置环境变量来手动控制构建配置：
@@ -122,6 +138,8 @@ if (indexedDBWrapper.isEnabled()) {
 | 无日志构建 | ~10-15% | ~5-10% | 生产环境 |
 | 无 IndexedDB | ~5-10% | ~3-5% | 简化存储需求 |
 | 最小化构建 | ~15-25% | ~10-15% | 资源受限环境 |
+| 油猴脚本 | N/A | N/A | 无需扩展的用户脚本 |
+| 油猴脚本混淆 | ~15-20% | ~5-10% | 体积优化的用户脚本 |
 
 ## 注意事项
 
