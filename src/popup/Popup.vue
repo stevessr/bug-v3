@@ -1,5 +1,5 @@
 <template>
-  <div class="w-80 max-h-96 bg-white">
+  <div class="w-80 max-h-96 mobile:w-screen mobile:h-screen mobile:max-h-none bg-white">
     <!-- Header with scale control -->
     <div class="p-3 border-b border-gray-200 bg-gray-50">
       <div class="flex items-center justify-between mb-2">
@@ -115,4 +115,27 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
 <style>
 /* Import TailwindCSS in popup */
 @import "../styles/main.css";
+
+/* Mobile-specific styles for popup */
+@media (max-width: 640px) {
+  /* Ensure the popup takes full screen on mobile */
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  #app {
+    width: 100vw;
+    height: 100vh;
+  }
+  
+  /* Adjust emoji grid for mobile full screen */
+  .emoji-grid {
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+  }
+}
 </style>
