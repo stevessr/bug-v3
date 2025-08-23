@@ -12,7 +12,8 @@
     "serve": "vite preview",
     "test": "playwright test",
     "test:debug": "playwright test --debug",
-    "release": "bash ./scripts/release.sh"
+    "release": "bash ./scripts/release.sh",
+    "pack:crx": "node ./scripts/pack-crx.js"
   },
   "dependencies": {
     "ant-design-vue": "^4.1.2",
@@ -35,6 +36,17 @@
     "typescript": "^5.3.3",
     "unplugin-auto-import": "^0.17.5",
     "unplugin-vue-components": "^0.26.0",
-    "vite": "^6.0.0"
-  }
+    "vite": "^6.0.0",
+    "crx": "^5.0.1"
+  },
+  "optionalDependencies": {},
+  "dependenciesMeta": {},
+  "devDependenciesExtra": {},
+  "devDependenciesAdditions": {},
+  "devDependencies2": {},
+  "peerDependencies": {},
+  "peerDependenciesMeta": {},
+  "bundledDependencies": [],
+  "overrides": {},
+  "engines": {}
 }
