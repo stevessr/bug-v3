@@ -121,7 +121,7 @@ export function injectButton(toolbar: Element) {
     // Use cached settings instead of reading from storage directly
     const forceMobile = (cachedState.settings as any)?.forceMobileMode || false;
 
-    if (forceMobile || isMobile()) {
+    if (forceMobile) {
       injectMobilePicker();
     } else {
       injectDesktopPicker(button);
