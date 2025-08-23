@@ -19,8 +19,10 @@
           </div>
         </div>
         <div v-if="inputMode === 'url'">
-          <label class="block text-sm font-medium text-gray-700 mb-1">图片URL</label>
-          <input v-model="url" type="url" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入图片链接" />
+          <label class="block text-sm font-medium text-gray-700 mb-1">输出链接 (必填)</label>
+          <input v-model="url" type="url" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="插入到编辑器时使用的链接" />
+          <label class="block text-sm font-medium text-gray-700 mb-1 mt-3">显示链接 (可选)</label>
+          <input v-model="displayUrl" type="url" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="表情选择器中显示的链接，留空则使用输出链接" />
         </div>
         <div v-else>
           <label class="block text-sm font-medium text-gray-700 mb-1">粘贴内容 (Markdown 或 HTML)</label>
@@ -83,7 +85,7 @@
         </div>
         
         <div v-if="url" class="text-center">
-          <img :src="url" alt="预览" class="w-16 h-16 object-contain mx-auto border border-gray-200 rounded" @error="handleImageError" />
+          <img :src="displayUrl || url" alt="预览" class="w-16 h-16 object-contain mx-auto border border-gray-200 rounded" @error="handleImageError" />
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-6">
@@ -111,6 +113,7 @@ const emits = defineEmits<{
 
 const name = ref('');
 const url = ref('');
+const displayUrl = ref('');
 const inputMode = ref<'url' | 'markdown' | 'html'>('url');
 const pasteText = ref('');
 const parsedItems = ref<ImageVariant[]>([]);
@@ -372,13 +375,19 @@ const add = () => {
   }
 
   if (!name.value.trim() || !url.value.trim() || !groupId.value) return;
-  const emojiData = { packet: Date.now(), name: name.value.trim(), url: url.value.trim() };
+  const emojiData = { 
+    packet: Date.now(), 
+    name: name.value.trim(), 
+    url: url.value.trim(),
+    ...(displayUrl.value.trim() && { displayUrl: displayUrl.value.trim() })
+  };
   emojiStore.addEmoji(groupId.value, emojiData);
   void flushBuffer(true).then(() => console.log('[AddEmojiModal] addEmoji flushed'));
   emits('added', { groupId: groupId.value, name: emojiData.name });
   emits('update:show', false);
   name.value = '';
   url.value = '';
+  displayUrl.value = '';
   groupId.value = groups.value?.[0]?.id || '';
 }
 
