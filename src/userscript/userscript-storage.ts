@@ -150,3 +150,68 @@ export function addEmojiToUserscript(emojiData: { name: string; url: string }): 
     console.error('[Userscript] Failed to add emoji:', error);
   }
 }
+
+export function exportUserscriptData(): string {
+  try {
+    const data = loadDataFromLocalStorage();
+    return JSON.stringify(data, null, 2);
+  } catch (error) {
+    console.error('[Userscript] Failed to export data:', error);
+    return '';
+  }
+}
+
+export function importUserscriptData(jsonData: string): boolean {
+  try {
+    const data = JSON.parse(jsonData);
+    
+    if (data.emojiGroups && Array.isArray(data.emojiGroups)) {
+      saveDataToLocalStorage({ emojiGroups: data.emojiGroups });
+    }
+    
+    if (data.settings && typeof data.settings === 'object') {
+      saveDataToLocalStorage({ settings: data.settings });
+    }
+    
+    console.log('[Userscript] Data imported successfully');
+    return true;
+  } catch (error) {
+    console.error('[Userscript] Failed to import data:', error);
+    return false;
+  }
+}
+
+export function syncFromManager(): boolean {
+  try {
+    // Try to load data from manager keys
+    const managerGroups = localStorage.getItem('emoji_extension_manager_groups');
+    const managerSettings = localStorage.getItem('emoji_extension_manager_settings');
+    
+    let updated = false;
+    
+    if (managerGroups) {
+      const groups = JSON.parse(managerGroups);
+      if (Array.isArray(groups)) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
+        updated = true;
+      }
+    }
+    
+    if (managerSettings) {
+      const settings = JSON.parse(managerSettings);
+      if (typeof settings === 'object') {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        updated = true;
+      }
+    }
+    
+    if (updated) {
+      console.log('[Userscript] Synced data from manager');
+    }
+    
+    return updated;
+  } catch (error) {
+    console.error('[Userscript] Failed to sync from manager:', error);
+    return false;
+  }
+}
