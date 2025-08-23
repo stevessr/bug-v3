@@ -4,7 +4,7 @@ import { ensureDefaultIfEmpty } from "./storage";
 
 // Inline isImageUrl function to avoid external import
 function isImageUrl(value: string | null | undefined): boolean {
-  if (!value || typeof value !== 'string') return false;
+  if (!value || typeof value !== "string") return false;
   try {
     const url = new URL(value);
     const pathname = url.pathname.toLowerCase();
@@ -13,6 +13,11 @@ function isImageUrl(value: string | null | undefined): boolean {
     return false;
   }
 }
+export const isMobile = (): boolean => {
+  const userAgent = navigator.userAgent;
+  const mobileKeywords = ["Android", "iPhone", "iPad", "iPod", "Windows Phone"];
+  return mobileKeywords.some((keyword) => userAgent.includes(keyword));
+};
 
 export async function createEmojiPicker(): Promise<HTMLElement> {
   ensureDefaultIfEmpty();
@@ -22,7 +27,8 @@ export async function createEmojiPicker(): Promise<HTMLElement> {
   picker.className = "fk-d-menu -animated -expanded";
   picker.setAttribute("data-identifier", "emoji-picker");
   picker.setAttribute("role", "dialog");
-  picker.style.cssText = "max-width: 400px; visibility: visible; z-index: 999999;";
+  picker.style.cssText =
+    "max-width: 400px; visibility: visible; z-index: 999999;";
 
   const innerContent = document.createElement("div");
   innerContent.className = "fk-d-menu__inner-content";
@@ -54,66 +60,86 @@ export async function createEmojiPicker(): Promise<HTMLElement> {
     if (!group?.emojis?.length) return;
 
     const navButton = document.createElement("button");
-    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? 'active' : ''}`;
+    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${
+      index === 0 ? "active" : ""
+    }`;
     navButton.setAttribute("tabindex", "-1");
     navButton.setAttribute("data-section", group.id);
     navButton.type = "button";
 
     const iconVal = group.icon || "📁";
     if (isImageUrl(iconVal)) {
-      const img = document.createElement('img');
+      const img = document.createElement("img");
       img.src = iconVal;
-      img.alt = group.name || '';
-      img.className = 'emoji-group-icon';
-      img.style.width = '18px';
-      img.style.height = '18px';
-      img.style.objectFit = 'contain';
+      img.alt = group.name || "";
+      img.className = "emoji-group-icon";
+      img.style.width = "18px";
+      img.style.height = "18px";
+      img.style.objectFit = "contain";
       navButton.appendChild(img);
     } else {
       navButton.textContent = String(iconVal);
     }
     navButton.title = group.name;
-    navButton.addEventListener('click', () => {
-      sectionsNav.querySelectorAll('.emoji-picker__section-btn').forEach(btn => btn.classList.remove('active'));
-      navButton.classList.add('active');
+    navButton.addEventListener("click", () => {
+      sectionsNav
+        .querySelectorAll(".emoji-picker__section-btn")
+        .forEach((btn) => btn.classList.remove("active"));
+      navButton.classList.add("active");
       const target = sections.querySelector(`[data-section="${group.id}"]`);
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
     sectionsNav.appendChild(navButton);
 
-    const section = document.createElement('div');
-    section.className = 'emoji-picker__section';
-    section.setAttribute('data-section', group.id);
-    section.setAttribute('role', 'region');
-    section.setAttribute('aria-label', group.name);
+    const section = document.createElement("div");
+    section.className = "emoji-picker__section";
+    section.setAttribute("data-section", group.id);
+    section.setAttribute("role", "region");
+    section.setAttribute("aria-label", group.name);
 
-    const titleContainer = document.createElement('div');
-    titleContainer.className = 'emoji-picker__section-title-container';
-    const title = document.createElement('h2');
-    title.className = 'emoji-picker__section-title';
+    const titleContainer = document.createElement("div");
+    titleContainer.className = "emoji-picker__section-title-container";
+    const title = document.createElement("h2");
+    title.className = "emoji-picker__section-title";
     title.textContent = group.name;
     titleContainer.appendChild(title);
 
-    const sectionEmojis = document.createElement('div');
-    sectionEmojis.className = 'emoji-picker__section-emojis';
+    const sectionEmojis = document.createElement("div");
+    sectionEmojis.className = "emoji-picker__section-emojis";
 
     let added = 0;
     group.emojis.forEach((emoji: any) => {
-      if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return;
-      const img = document.createElement('img');
-      img.width = 32; img.height = 32; img.className = 'emoji'; img.src = emoji.url;
-      img.setAttribute('tabindex', '0'); img.setAttribute('data-emoji', emoji.name); img.alt = emoji.name; img.title = `:${emoji.name}:`;
-      img.loading = 'lazy';
-      img.addEventListener('click', () => { insertEmojiIntoEditor(emoji); picker.remove(); });
-      img.addEventListener('keydown', (e:any) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); insertEmojiIntoEditor(emoji); picker.remove(); } });
+      if (!emoji || typeof emoji !== "object" || !emoji.url || !emoji.name)
+        return;
+      const img = document.createElement("img");
+      img.width = 32;
+      img.height = 32;
+      img.className = "emoji";
+      img.src = emoji.url;
+      img.setAttribute("tabindex", "0");
+      img.setAttribute("data-emoji", emoji.name);
+      img.alt = emoji.name;
+      img.title = `:${emoji.name}:`;
+      img.loading = "lazy";
+      img.addEventListener("click", () => {
+        insertEmojiIntoEditor(emoji);
+        picker.remove();
+      });
+      img.addEventListener("keydown", (e: any) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          insertEmojiIntoEditor(emoji);
+          picker.remove();
+        }
+      });
       sectionEmojis.appendChild(img);
       added++;
     });
 
     if (added === 0) {
-      const msg = document.createElement('div');
+      const msg = document.createElement("div");
       msg.textContent = `${group.name} 组暂无有效表情`;
-      msg.style.cssText = 'padding: 20px; text-align: center; color: #999;';
+      msg.style.cssText = "padding: 20px; text-align: center; color: #999;";
       sectionEmojis.appendChild(msg);
     }
 
@@ -122,17 +148,24 @@ export async function createEmojiPicker(): Promise<HTMLElement> {
     sections.appendChild(section);
   });
 
-  searchInput.addEventListener('input', (e:any) => {
-    const q = (e.target.value || '').toLowerCase();
-    const allImages = sections.querySelectorAll('img');
-    allImages.forEach((img:any) => {
-      const emojiName = img.getAttribute('data-emoji')?.toLowerCase() || '';
-      (img as HTMLElement).style.display = (q === '' || emojiName.includes(q)) ? '' : 'none';
+  searchInput.addEventListener("input", (e: any) => {
+    const q = (e.target.value || "").toLowerCase();
+    const allImages = sections.querySelectorAll("img");
+    allImages.forEach((img: any) => {
+      const emojiName = img.getAttribute("data-emoji")?.toLowerCase() || "";
+      (img as HTMLElement).style.display =
+        q === "" || emojiName.includes(q) ? "" : "none";
     });
-    sections.querySelectorAll('.emoji-picker__section').forEach(section => {
-      const visibleEmojis = section.querySelectorAll('img:not([style*="none"])');
-      const titleContainer = section.querySelector('.emoji-picker__section-title-container');
-      if (titleContainer) (titleContainer as HTMLElement).style.display = visibleEmojis.length > 0 ? '' : 'none';
+    sections.querySelectorAll(".emoji-picker__section").forEach((section) => {
+      const visibleEmojis = section.querySelectorAll(
+        'img:not([style*="none"])'
+      );
+      const titleContainer = section.querySelector(
+        ".emoji-picker__section-title-container"
+      );
+      if (titleContainer)
+        (titleContainer as HTMLElement).style.display =
+          visibleEmojis.length > 0 ? "" : "none";
     });
   });
 
