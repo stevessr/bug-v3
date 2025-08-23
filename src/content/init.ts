@@ -3,7 +3,10 @@ import { findToolbar, injectButton } from "./injector";
 import { initOneClickAdd } from "./oneClickAdd";
 import { logger } from "./buildFlags";
 
-export async function initializeEmojiFeature() {
+export async function initializeEmojiFeature(
+  maxInjectionAttempts: number = 10,
+  delay: number = 1000
+) {
   logger.log("[Emoji Extension] Initializing (module)...");
   await loadDataFromStorage();
 
@@ -11,7 +14,6 @@ export async function initializeEmojiFeature() {
   initOneClickAdd();
 
   let injectionAttempts = 0;
-  const maxInjectionAttempts = 10;
 
   function attemptInjection() {
     injectionAttempts++;
@@ -21,12 +23,26 @@ export async function initializeEmojiFeature() {
       injectButton(toolbar);
     } else if (injectionAttempts < maxInjectionAttempts) {
       logger.log(
-        `[Emoji Extension] Toolbar not found, attempt ${injectionAttempts}/${maxInjectionAttempts}. Retrying in 1s.`
+        `[Emoji Extension] Toolbar not found, attempt ${injectionAttempts}/${maxInjectionAttempts}. Retrying ${
+          delay / 1000
+        } s.`
       );
-      setTimeout(attemptInjection, 1000);
+      setTimeout(attemptInjection, delay);
+    } else if (maxInjectionAttempts < 20) {
+      initializeEmojiFeature(20, 2000);
+    } else if (maxInjectionAttempts < 40) {
+      initializeEmojiFeature(40, 4000);
+    } else if (maxInjectionAttempts < 80) {
+      initializeEmojiFeature(80, 8000);
+    } else if (maxInjectionAttempts < 160) {
+      initializeEmojiFeature(160, 16000);
+    } else if (maxInjectionAttempts < 320) {
+      initializeEmojiFeature(320, 32000);
+    } else if (maxInjectionAttempts < 640) {
+      initializeEmojiFeature(640, 64000);
     } else {
       logger.error(
-        "[Emoji Extension] Failed to find toolbar after multiple attempts. Button injection failed."
+        "[Emoji Extension] Failed to find toolbar after multiple attempts. Button injection failed. 我感觉你是人机"
       );
     }
   }
@@ -65,7 +81,7 @@ export async function initializeEmojiFeature() {
   if ((window as any).chrome?.runtime?.onMessage) {
     (window as any).chrome.runtime.onMessage.addListener(
       (message: any, _sender: any, _sendResponse: any) => {
-        if (message.type === 'SETTINGS_UPDATED') {
+        if (message.type === "SETTINGS_UPDATED") {
           logger.log(
             "[Emoji Extension] Settings updated from background, reloading data"
           );
