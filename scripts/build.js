@@ -44,6 +44,18 @@ const configs = {
     ENABLE_LOGGING: 'false',
     ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production'
+  },
+  'build:userscript': {
+    ENABLE_LOGGING: 'true',
+    ENABLE_INDEXEDDB: 'false',
+    NODE_ENV: 'production',
+    BUILD_MINIFIED: 'false'
+  },
+  'build:userscript:min': {
+    ENABLE_LOGGING: 'true',
+    ENABLE_INDEXEDDB: 'false',
+    NODE_ENV: 'production',
+    BUILD_MINIFIED: 'true'
   }
 };
 
@@ -66,7 +78,8 @@ Object.entries(config).forEach(([key, value]) => {
 console.log('');
 
 // 执行 vite build
-const viteCommand = buildType === 'dev' ? 'vite' : 'vite build';
+const isUserscript = buildType.startsWith('build:userscript');
+const viteCommand = buildType === 'dev' ? 'vite' : `vite build${isUserscript ? ' --config vite.config.userscript.ts' : ''}`;
 // Variant flag: when true, we'll write manifest.development.json into dist/manifest.json after build
 const isVariant = buildType.endsWith(':variant') || buildType === 'dev:variant';
 const publicDir = path.resolve(process.cwd(), 'public');
@@ -81,34 +94,52 @@ const child = spawn('npx', viteCommand.split(' '), {
 
 child.on('exit', (code) => {
   if (code === 0 && buildType !== 'dev') {
-    // 构建成功后清理空文件
-    console.log('🧹 清理空文件...');
-    const cleanChild = spawn('node', ['./scripts/clean-empty-chunks.mjs'], {
-      stdio: 'inherit',
-      shell: true
-    });
-    
-    cleanChild.on('exit', (cleanCode) => {
-        if (cleanCode === 0) {
-          console.log('✅ 构建完成！');
-          if (isVariant) {
-            try {
-              if (fs.existsSync(devManifest) && fs.existsSync(distDir)) {
-                const target = path.join(distDir, 'manifest.json');
-                fs.copyFileSync(devManifest, target);
-                console.log('🔀 Wrote development manifest to', target);
-              } else if (!fs.existsSync(devManifest)) {
-                console.warn('manifest.development.json not found; skipping writing to dist');
-              }
-            } catch (e) {
-              console.error('Failed to write dev manifest to dist:', e);
-            }
-          }
+    // For userscript builds, run post-processing instead of clean-empty-chunks
+    if (isUserscript) {
+      console.log('🔧 Post-processing userscript...');
+      const postProcessChild = spawn('node', ['./scripts/post-process-userscript.js', buildType], {
+        stdio: 'inherit',
+        shell: true
+      });
+      
+      postProcessChild.on('exit', (postCode) => {
+        if (postCode === 0) {
+          console.log('✅ Userscript build completed!');
         } else {
-          console.error('❌ 清理过程出错');
+          console.error('❌ Userscript post-processing failed');
         }
-        process.exit(cleanCode);
-    });
+        process.exit(postCode);
+      });
+    } else {
+      // Original Chrome extension build flow
+      console.log('🧹 清理空文件...');
+      const cleanChild = spawn('node', ['./scripts/clean-empty-chunks.mjs'], {
+        stdio: 'inherit',
+        shell: true
+      });
+      
+      cleanChild.on('exit', (cleanCode) => {
+          if (cleanCode === 0) {
+            console.log('✅ 构建完成！');
+            if (isVariant) {
+              try {
+                if (fs.existsSync(devManifest) && fs.existsSync(distDir)) {
+                  const target = path.join(distDir, 'manifest.json');
+                  fs.copyFileSync(devManifest, target);
+                  console.log('🔀 Wrote development manifest to', target);
+                } else if (!fs.existsSync(devManifest)) {
+                  console.warn('manifest.development.json not found; skipping writing to dist');
+                }
+              } catch (e) {
+                console.error('Failed to write dev manifest to dist:', e);
+              }
+            }
+          } else {
+            console.error('❌ 清理过程出错');
+          }
+          process.exit(cleanCode);
+      });
+    }
   } else {
       if (isVariant) {
         restoreManifest();
