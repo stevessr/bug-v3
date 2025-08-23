@@ -1,5 +1,23 @@
-// oneClickAdd.ts - 一键添加表情功能（专门针对Magnific Popup图片查看器）
+// oneClickAdd.ts - 一键添加表情功能（支持 Magnific Popup 和 cooked 内容区域）
 declare const chrome: any;
+
+// 添加CSS动画
+const cssAnimation = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+// 注入CSS动画到页面
+function injectCSSAnimation() {
+  if (!document.getElementById('oneclick-add-styles')) {
+    const style = document.createElement('style');
+    style.id = 'oneclick-add-styles';
+    style.textContent = cssAnimation;
+    document.head.appendChild(style);
+  }
+}
 
 interface AddEmojiButtonData {
   name: string;
@@ -294,21 +312,307 @@ function observeMagnificPopup() {
 }
 
 /**
+ * 检查一个元素是否为带有 cooked 类的内容区域。
+ * @param element 要检查的元素
+ * @returns 如果是则返回 true
+ */
+function isCookedContent(element: Element): boolean {
+  return element.classList.contains('cooked') && 
+         element.querySelector('.lightbox-wrapper') !== null;
+}
+
+/**
+ * 从 lightbox-wrapper 中解析图片数据。
+ * @param lightboxWrapper lightbox-wrapper 元素
+ * @returns 包含名称和URL的表情数据数组
+ */
+function extractEmojiDataFromLightbox(lightboxWrapper: Element): AddEmojiButtonData[] {
+  const results: AddEmojiButtonData[] = [];
+  
+  const anchor = lightboxWrapper.querySelector('a.lightbox') as HTMLAnchorElement | null;
+  const img = lightboxWrapper.querySelector('img') as HTMLImageElement | null;
+  
+  if (!anchor || !img) return results;
+  
+  const title = anchor.getAttribute('title') || '';
+  const originalUrl = anchor.getAttribute('href') || '';
+  const downloadUrl = anchor.getAttribute('data-download-href') || '';
+  const imgSrc = img.getAttribute('src') || '';
+  
+  // 提取图片名称
+  let name = title || img.getAttribute('alt') || '';
+  if (!name || name.length < 2) {
+    // 从URL中提取文件名
+    const urlToUse = originalUrl || downloadUrl || imgSrc;
+    name = extractNameFromUrl(urlToUse);
+  }
+  
+  // 清理名称，移除文件扩展名
+  name = name.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim();
+  if (name.length === 0) {
+    name = '表情';
+  }
+  
+  // 优先使用原始URL，然后是下载URL，最后是图片src
+  const urlToUse = originalUrl || downloadUrl || imgSrc;
+  if (urlToUse && urlToUse.startsWith('http')) {
+    results.push({
+      name,
+      url: urlToUse
+    });
+  }
+  
+  return results;
+}
+
+/**
+ * 创建一键解析按钮。
+ * @param cookedElement cooked 元素
+ * @returns 创建的按钮元素
+ */
+function createBatchParseButton(cookedElement: Element): HTMLElement {
+  const button = document.createElement('button');
+  button.className = 'emoji-batch-parse-button';
+  button.style.cssText = `
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 10px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    z-index: 1000;
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  `;
+  
+  button.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+    </svg>
+    一键解析并添加所有图片
+  `;
+  
+  button.title = '解析当前内容中的所有图片并添加到未分组表情';
+  
+  // 添加hover效果
+  button.addEventListener('mouseenter', () => {
+    if (!button.innerHTML.includes('已处理') && !button.innerHTML.includes('失败')) {
+      button.style.background = 'linear-gradient(135deg, #d97706, #b45309)';
+      button.style.transform = 'translateY(-1px)';
+      button.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+    }
+  });
+
+  button.addEventListener('mouseleave', () => {
+    if (!button.innerHTML.includes('已处理') && !button.innerHTML.includes('失败')) {
+      button.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+      button.style.transform = 'translateY(0)';
+      button.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+    }
+  });
+  
+  // 添加点击事件
+  button.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 保存按钮原始内容和样式
+    const originalContent = button.innerHTML;
+    const originalStyle = button.style.cssText;
+    
+    try {
+      // 显示处理中状态
+      button.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="animation: spin 1s linear infinite;">
+          <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/>
+        </svg>
+        正在解析...
+      `;
+      button.style.background = 'linear-gradient(135deg, #6b7280, #4b5563)';
+      button.disabled = true;
+      
+      // 查找所有lightbox-wrapper
+      const lightboxWrappers = cookedElement.querySelectorAll('.lightbox-wrapper');
+      const allEmojiData: AddEmojiButtonData[] = [];
+      
+      lightboxWrappers.forEach((wrapper) => {
+        const emojiDataArray = extractEmojiDataFromLightbox(wrapper);
+        allEmojiData.push(...emojiDataArray);
+      });
+      
+      if (allEmojiData.length === 0) {
+        throw new Error('未找到可解析的图片');
+      }
+      
+      // 批量添加表情
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const emojiData of allEmojiData) {
+        try {
+          await chrome.runtime.sendMessage({
+            action: 'addEmojiFromWeb',
+            emojiData: emojiData
+          });
+          successCount++;
+        } catch (error) {
+          console.error('[OneClickAdd] 添加表情失败:', emojiData.name, error);
+          failCount++;
+        }
+      }
+      
+      // 显示成功状态
+      button.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+        </svg>
+        已处理 ${successCount}/${allEmojiData.length} 张图片
+      `;
+      button.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+      button.style.color = '#ffffff';
+      
+      // 3秒后恢复按钮状态
+      setTimeout(() => {
+        button.innerHTML = originalContent;
+        button.style.cssText = originalStyle;
+        button.disabled = false;
+      }, 3000);
+      
+    } catch (error) {
+      console.error('[OneClickAdd] 批量解析失败:', error);
+      
+      // 显示失败状态
+      button.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+        解析失败
+      `;
+      button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+      button.style.color = '#ffffff';
+      
+      // 3秒后恢复按钮状态
+      setTimeout(() => {
+        button.innerHTML = originalContent;
+        button.style.cssText = originalStyle;
+        button.disabled = false;
+      }, 3000);
+    }
+  });
+  
+  return button;
+}
+
+/**
+ * 为 cooked 内容区域添加一键解析按钮。
+ * @param cookedElement cooked 元素
+ */
+function addBatchParseButtonToCooked(cookedElement: Element) {
+  // 检查是否已经添加过按钮，避免重复注入
+  if (cookedElement.querySelector('.emoji-batch-parse-button')) {
+    return;
+  }
+  
+  // 检查是否有lightbox-wrapper
+  const lightboxWrappers = cookedElement.querySelectorAll('.lightbox-wrapper');
+  if (lightboxWrappers.length === 0) {
+    return;
+  }
+  
+  // 创建按钮
+  const button = createBatchParseButton(cookedElement);
+  
+  // 在cooked元素的开头插入按钮
+  const firstChild = cookedElement.firstChild;
+  if (firstChild) {
+    cookedElement.insertBefore(button, firstChild);
+  } else {
+    cookedElement.appendChild(button);
+  }
+}
+
+/**
+ * 扫描页面中所有 cooked 内容区域，并为它们添加一键解析按钮。
+ */
+function scanForCookedContent() {
+  const cookedElements = document.querySelectorAll('.cooked');
+  
+  cookedElements.forEach((element) => {
+    if (isCookedContent(element)) {
+      addBatchParseButtonToCooked(element);
+    }
+  });
+}
+
+/**
+ * 监听 DOM 变化，当 cooked 内容出现时自动执行扫描。
+ */
+function observeCookedContent() {
+  const observer = new MutationObserver((mutations) => {
+    let hasCookedChanges = false;
+    
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList') {
+        // 检查是否有新的节点被添加，并且是 cooked 相关的
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as Element;
+            // 检查元素本身或其子元素是否包含cooked
+            if (element.classList && element.classList.contains('cooked')) {
+              hasCookedChanges = true;
+            } else if (element.querySelector && element.querySelector('.cooked')) {
+              hasCookedChanges = true;
+            }
+          }
+        });
+      }
+    });
+    
+    if (hasCookedChanges) {
+      // 短暂延迟以确保DOM完全更新，然后执行扫描
+      setTimeout(scanForCookedContent, 100);
+    }
+  });
+
+  // 监听 body 的子节点变化，包括子树
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+/**
  * 初始化一键添加功能。
  */
 export function initOneClickAdd() {
-  console.log('[OneClickAdd] 初始化一键添加表情功能（仅针对 Magnific Popup）');
+  console.log('[OneClickAdd] 初始化一键添加表情功能（支持 Magnific Popup 和 cooked 内容）');
   
-  // 初始扫描
+  // 注入CSS动画
+  injectCSSAnimation();
+  
+  // 初始扫描 Magnific Popup
   setTimeout(scanForMagnificPopup, 500);
+  
+  // 初始扫描 cooked 内容
+  setTimeout(scanForCookedContent, 600);
   
   // 监听 DOM 变化
   observeMagnificPopup();
+  observeCookedContent();
   
   // 监听页面可见性变化，当页面重新变为可见时再次扫描
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       setTimeout(scanForMagnificPopup, 200);
+      setTimeout(scanForCookedContent, 300);
     }
   });
 }
