@@ -88,7 +88,9 @@
       :isLoading="emojiStore.isLoading"
       :favorites="emojiStore.favorites"
       :gridColumns="emojiStore.settings.gridColumns"
-      :emptyMessage="emojiStore.searchQuery ? '没有找到匹配的表情' : '该分组还没有表情'"
+      :emptyMessage="
+        emojiStore.searchQuery ? '没有找到匹配的表情' : '该分组还没有表情'
+      "
       :showAddButton="!emojiStore.searchQuery"
       @select="selectEmoji"
       @open-options="openOptions"
@@ -109,7 +111,14 @@ import GroupTabs from "./components/GroupTabs.vue";
 import EmojiGrid from "./components/EmojiGrid.vue";
 import { usePopup } from "./usePopup";
 
-const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions } = usePopup();
+const {
+  emojiStore,
+  localScale,
+  showCopyToast,
+  updateScale,
+  selectEmoji,
+  openOptions,
+} = usePopup();
 </script>
 
 <style>
@@ -132,10 +141,10 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
 /* Desktop styles - stable dimensions */
 @media (min-width: 768px) {
   .popup-container {
-    width: 400px;
+    width: auto;
     min-width: 400px;
     max-width: 400px;
-    height: 500px;
+    height: auto;
     min-height: 500px;
     max-height: 500px;
   }
@@ -143,20 +152,17 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
 
 /* Mobile-specific styles - full screen */
 @media (max-width: 767px) {
-  html, body {
+  html,
+  body {
     margin: 0;
     padding: 0;
     width: 100%;
+    min-width: 400px;
     height: 100%;
+    min-height: 400px;
     overflow: hidden;
   }
-  
-  #app {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
+
 
   .popup-container {
     width: 100%;
@@ -166,17 +172,5 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
     min-height: 100%;
     max-height: 100%;
   }
-}
-
-/* Inner content scrolling */
-.emoji-grid {
-  overflow-y: auto;
-  flex: 1;
-}
-
-/* Tab container fixed height */
-.flex.border-b.border-gray-100.overflow-x-auto {
-  flex-shrink: 0;
-  min-height: fit-content;
 }
 </style>
