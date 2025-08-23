@@ -149,3 +149,5 @@ releases/
 test-*.html
 playwright-report/
 test-results/
+chrome-extension-v3.crx
+pack-key.pem
