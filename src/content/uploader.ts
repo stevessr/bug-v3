@@ -1,5 +1,21 @@
 import { logger } from "./buildFlags";
 
+// Function to parse image filenames from markdown text
+function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
+  const imageRegex = /!\[([^\]]*)\]\([^)]+\)/g;
+  const filenames: string[] = [];
+  let match;
+  
+  while ((match = imageRegex.exec(markdownText)) !== null) {
+    const filename = match[1];
+    if (filename && filename.trim()) {
+      filenames.push(filename.trim());
+    }
+  }
+  
+  return filenames;
+}
+
 // Generic function to insert text into editor
 function insertIntoEditor(text: string) {
   const textArea = document.querySelector("textarea.d-editor-input") as HTMLTextAreaElement | null;
@@ -542,6 +558,9 @@ interface DragDropElements {
   dropZone: HTMLElement;
   fileInput: HTMLInputElement;
   closeButton: HTMLButtonElement;
+  diffDropZone: HTMLElement;
+  diffFileInput: HTMLInputElement;
+  markdownTextarea: HTMLTextAreaElement;
 }
 
 function createDragDropUploadPanel(): DragDropElements {
@@ -552,7 +571,7 @@ function createDragDropUploadPanel(): DragDropElements {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 400px;
+    width: 500px;
     max-width: 90vw;
     background: white;
     border-radius: 12px;
@@ -616,6 +635,52 @@ function createDragDropUploadPanel(): DragDropElements {
     padding: 24px;
   `;
 
+  // Create tabs
+  const tabContainer = document.createElement('div');
+  tabContainer.style.cssText = `
+    display: flex;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 20px;
+  `;
+
+  const regularTab = document.createElement('button');
+  regularTab.textContent = '常规上传';
+  regularTab.style.cssText = `
+    flex: 1;
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid #3b82f6;
+    color: #3b82f6;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  `;
+
+  const diffTab = document.createElement('button');
+  diffTab.textContent = '差分上传';
+  diffTab.style.cssText = `
+    flex: 1;
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #6b7280;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  `;
+
+  tabContainer.appendChild(regularTab);
+  tabContainer.appendChild(diffTab);
+
+  // Regular upload panel
+  const regularPanel = document.createElement('div');
+  regularPanel.className = 'regular-upload-panel';
+  regularPanel.style.cssText = `
+    display: block;
+  `;
+
   const dropZone = document.createElement('div');
   dropZone.className = 'drop-zone';
   dropZone.style.cssText = `
@@ -654,20 +719,126 @@ function createDragDropUploadPanel(): DragDropElements {
   fileInput.multiple = true;
   fileInput.style.display = 'none';
 
-  content.appendChild(dropZone);
-  content.appendChild(fileInput);
+  regularPanel.appendChild(dropZone);
+  regularPanel.appendChild(fileInput);
+
+  // Diff upload panel
+  const diffPanel = document.createElement('div');
+  diffPanel.className = 'diff-upload-panel';
+  diffPanel.style.cssText = `
+    display: none;
+  `;
+
+  const markdownTextarea = document.createElement('textarea');
+  markdownTextarea.placeholder = '请粘贴包含图片的markdown文本...';
+  markdownTextarea.style.cssText = `
+    width: 100%;
+    height: 120px;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 14px;
+    resize: vertical;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+  `;
+
+  const diffDropZone = document.createElement('div');
+  diffDropZone.className = 'diff-drop-zone';
+  diffDropZone.style.cssText = `
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 30px 20px;
+    text-align: center;
+    background: #f9fafb;
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-bottom: 12px;
+  `;
+
+  const diffDropIcon = document.createElement('div');
+  diffDropIcon.innerHTML = '📋';
+  diffDropIcon.style.cssText = `
+    font-size: 36px;
+    margin-bottom: 12px;
+  `;
+
+  const diffDropText = document.createElement('div');
+  diffDropText.innerHTML = `
+    <div style="font-size: 16px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+      选择图片进行差分上传
+    </div>
+    <div style="font-size: 14px; color: #6b7280;">
+      只会上传不在上方markdown文本中的图片
+    </div>
+  `;
+
+  diffDropZone.appendChild(diffDropIcon);
+  diffDropZone.appendChild(diffDropText);
+
+  const diffFileInput = document.createElement('input');
+  diffFileInput.type = 'file';
+  diffFileInput.accept = 'image/*';
+  diffFileInput.multiple = true;
+  diffFileInput.style.display = 'none';
+
+  diffPanel.appendChild(markdownTextarea);
+  diffPanel.appendChild(diffDropZone);
+  diffPanel.appendChild(diffFileInput);
+
+  content.appendChild(tabContainer);
+  content.appendChild(regularPanel);
+  content.appendChild(diffPanel);
 
   panel.appendChild(header);
   panel.appendChild(content);
 
-  return { panel, overlay, dropZone, fileInput, closeButton };
+  // Tab switching logic
+  const switchToTab = (activeTab: HTMLElement, inactiveTab: HTMLElement, activePanel: HTMLElement, inactivePanel: HTMLElement) => {
+    activeTab.style.borderBottomColor = '#3b82f6';
+    activeTab.style.color = '#3b82f6';
+    inactiveTab.style.borderBottomColor = 'transparent';
+    inactiveTab.style.color = '#6b7280';
+    activePanel.style.display = 'block';
+    inactivePanel.style.display = 'none';
+  };
+
+  regularTab.addEventListener('click', () => {
+    switchToTab(regularTab, diffTab, regularPanel, diffPanel);
+  });
+
+  diffTab.addEventListener('click', () => {
+    switchToTab(diffTab, regularTab, diffPanel, regularPanel);
+  });
+
+  return { 
+    panel, 
+    overlay, 
+    dropZone, 
+    fileInput, 
+    closeButton,
+    diffDropZone,
+    diffFileInput,
+    markdownTextarea
+  };
 }
 
 export async function showImageUploadDialog(): Promise<void> {
   return new Promise((resolve) => {
-    const { panel, overlay, dropZone, fileInput, closeButton } = createDragDropUploadPanel();
+    const { 
+      panel, 
+      overlay, 
+      dropZone, 
+      fileInput, 
+      closeButton,
+      diffDropZone,
+      diffFileInput,
+      markdownTextarea
+    } = createDragDropUploadPanel();
 
     let isDragOver = false;
+    let isDiffDragOver = false;
 
     const cleanup = () => {
       document.body.removeChild(overlay);
@@ -703,7 +874,57 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     };
 
-    // File input change handler
+    const handleDiffFiles = async (files: FileList) => {
+      if (!files || files.length === 0) return;
+
+      const markdownText = markdownTextarea.value;
+      const existingFilenames = parseImageFilenamesFromMarkdown(markdownText);
+      
+      // Filter files that are not in the existing list
+      const filesToUpload = Array.from(files).filter(file => {
+        const filename = file.name;
+        return !existingFilenames.includes(filename);
+      });
+
+      if (filesToUpload.length === 0) {
+        alert('所有选择的图片都已在markdown文本中存在，无需上传。');
+        return;
+      }
+
+      if (filesToUpload.length < files.length) {
+        const skippedCount = files.length - filesToUpload.length;
+        const proceed = confirm(`发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`);
+        if (!proceed) {
+          return;
+        }
+      }
+
+      cleanup();
+
+      // Show upload progress
+      uploader.showProgressDialog();
+
+      try {
+        const promises = filesToUpload.map(async (file) => {
+          try {
+            const result = await uploader.uploadImage(file);
+            return result;
+          } catch (error: any) {
+            logger.error('[Image Uploader] Diff upload failed:', error);
+            throw error;
+          }
+        });
+
+        await Promise.allSettled(promises);
+
+      } finally {
+        setTimeout(() => {
+          uploader.hideProgressDialog();
+        }, 3000);
+      }
+    };
+
+    // Regular upload handlers
     fileInput.addEventListener('change', async (event: Event) => {
       const files = (event.target as HTMLInputElement).files;
       if (files) {
@@ -711,12 +932,10 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     });
 
-    // Click to select files
     dropZone.addEventListener('click', () => {
       fileInput.click();
     });
 
-    // Drag and drop handlers
     dropZone.addEventListener('dragover', (e: DragEvent) => {
       e.preventDefault();
       if (!isDragOver) {
@@ -744,6 +963,48 @@ export async function showImageUploadDialog(): Promise<void> {
       const files = e.dataTransfer?.files;
       if (files) {
         await handleFiles(files);
+      }
+    });
+
+    // Diff upload handlers
+    diffFileInput.addEventListener('change', async (event: Event) => {
+      const files = (event.target as HTMLInputElement).files;
+      if (files) {
+        await handleDiffFiles(files);
+      }
+    });
+
+    diffDropZone.addEventListener('click', () => {
+      diffFileInput.click();
+    });
+
+    diffDropZone.addEventListener('dragover', (e: DragEvent) => {
+      e.preventDefault();
+      if (!isDiffDragOver) {
+        isDiffDragOver = true;
+        diffDropZone.style.borderColor = '#3b82f6';
+        diffDropZone.style.backgroundColor = '#eff6ff';
+      }
+    });
+
+    diffDropZone.addEventListener('dragleave', (e: DragEvent) => {
+      e.preventDefault();
+      if (!diffDropZone.contains(e.relatedTarget as Node)) {
+        isDiffDragOver = false;
+        diffDropZone.style.borderColor = '#d1d5db';
+        diffDropZone.style.backgroundColor = '#f9fafb';
+      }
+    });
+
+    diffDropZone.addEventListener('drop', async (e: DragEvent) => {
+      e.preventDefault();
+      isDiffDragOver = false;
+      diffDropZone.style.borderColor = '#d1d5db';
+      diffDropZone.style.backgroundColor = '#f9fafb';
+
+      const files = e.dataTransfer?.files;
+      if (files) {
+        await handleDiffFiles(files);
       }
     });
 
