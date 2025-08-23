@@ -15,29 +15,68 @@ export interface ImageProvider {
   loadApiKey(): string;
 }
 
+export interface ModelConfig {
+  id: string;
+  name: string;
+}
+
 export interface ProviderConfig {
   displayName: string;
-  models?: string[];
+  placeholder: string;
+  helpText: string;
+  helpLink: string;
+  models?: ModelConfig[];
+  supportsModels?: boolean;
   supportsImageEditing?: boolean;
 }
 
 export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
   gemini: {
     displayName: 'Google Gemini',
-    models: ['imagen-3.0-generate-001'],
+    placeholder: '请输入您的 Gemini API Key',
+    helpText: '获取API Key请访问',
+    helpLink: 'https://aistudio.google.com/app/apikey',
+    supportsModels: true,
+    models: [
+      { id: 'imagen-3.0-generate-001', name: 'Imagen 3.0 Generate' },
+      { id: 'gemini-2.0-flash-thinking-exp-01-21', name: 'Gemini 2.0 Flash Thinking' },
+      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' }
+    ],
     supportsImageEditing: true
   },
   siliconflow: {
     displayName: 'SiliconFlow',
-    models: ['black-forest-labs/FLUX.1-schnell', 'stabilityai/stable-diffusion-xl-base-1.0']
+    placeholder: '请输入您的 SiliconFlow API Key',
+    helpText: '获取API Key请访问',
+    helpLink: 'https://cloud.siliconflow.cn/',
+    supportsModels: true,
+    models: [
+      { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell' },
+      { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'Stable Diffusion XL' }
+    ]
   },
   cloudflare: {
     displayName: 'Cloudflare AI',
-    models: ['@cf/bytedance/stable-diffusion-xl-lightning']
+    placeholder: '请输入您的 Cloudflare API Token',
+    helpText: '获取API Token请访问',
+    helpLink: 'https://dash.cloudflare.com/profile/api-tokens',
+    supportsModels: true,
+    models: [
+      { id: '@cf/bytedance/stable-diffusion-xl-lightning', name: 'Stable Diffusion XL Lightning' }
+    ]
   },
   chutesai: {
     displayName: 'ChutesAI',
-    models: ['flux-1.1-pro', 'flux-1-pro', 'flux-1-dev', 'flux-1-schnell']
+    placeholder: '请输入您的 ChutesAI API Key',
+    helpText: '获取API Key请访问',
+    helpLink: 'https://chutesai.com/',
+    supportsModels: true,
+    models: [
+      { id: 'flux-1.1-pro', name: 'FLUX 1.1 Pro' },
+      { id: 'flux-1-pro', name: 'FLUX 1 Pro' },
+      { id: 'flux-1-dev', name: 'FLUX 1 Dev' },
+      { id: 'flux-1-schnell', name: 'FLUX 1 Schnell' }
+    ]
   }
 };
 

@@ -4,6 +4,7 @@ import type { ImageProvider, GenerateRequest } from './types';
 export class ProviderManager {
   private currentProvider: string = 'gemini';
   private providers: Map<string, ImageProvider> = new Map();
+  private providerModels: Map<string, string> = new Map();
 
   constructor() {
     this.loadCurrentProvider();
@@ -12,24 +13,24 @@ export class ProviderManager {
   }
 
   private initializeMockProviders() {
-    const mockProvider: ImageProvider = {
-      name: 'gemini',
-      displayName: 'Google Gemini',
+    const createMockProvider = (name: string, displayName: string): ImageProvider => ({
+      name,
+      displayName,
       generateImages: async (request: GenerateRequest) => {
         return ['mock-image-url.jpg'];
       },
       setApiKey: (key: string) => {
-        localStorage.setItem('gemini_api_key', key);
+        localStorage.setItem(`${name}_api_key`, key);
       },
       loadApiKey: () => {
-        return localStorage.getItem('gemini_api_key') || '';
+        return localStorage.getItem(`${name}_api_key`) || '';
       }
-    };
+    });
     
-    this.providers.set('gemini', mockProvider);
-    this.providers.set('siliconflow', { ...mockProvider, name: 'siliconflow', displayName: 'SiliconFlow' });
-    this.providers.set('cloudflare', { ...mockProvider, name: 'cloudflare', displayName: 'Cloudflare AI' });
-    this.providers.set('chutesai', { ...mockProvider, name: 'chutesai', displayName: 'ChutesAI' });
+    this.providers.set('gemini', createMockProvider('gemini', 'Google Gemini'));
+    this.providers.set('siliconflow', createMockProvider('siliconflow', 'SiliconFlow'));
+    this.providers.set('cloudflare', createMockProvider('cloudflare', 'Cloudflare AI'));
+    this.providers.set('chutesai', createMockProvider('chutesai', 'ChutesAI'));
   }
 
   addProvider(provider: ImageProvider) {
@@ -40,8 +41,12 @@ export class ProviderManager {
     return this.currentProvider;
   }
 
-  getCurrentProvider(): ImageProvider | undefined {
-    return this.providers.get(this.currentProvider);
+  getCurrentProvider(): ImageProvider {
+    const provider = this.providers.get(this.currentProvider);
+    if (!provider) {
+      throw new Error(`Provider ${this.currentProvider} not found`);
+    }
+    return provider;
   }
 
   setCurrentProvider(name: string) {
@@ -57,6 +62,23 @@ export class ProviderManager {
 
   supportsImageEditing(): boolean {
     return this.currentProvider === 'gemini';
+  }
+
+  // Model management methods
+  setProviderModel(providerName: string, modelId: string) {
+    this.providerModels.set(providerName, modelId);
+    localStorage.setItem(`${providerName}_selected_model`, modelId);
+  }
+
+  getProviderModel(providerName: string): string | undefined {
+    return this.providerModels.get(providerName);
+  }
+
+  loadProviderModel(providerName: string) {
+    const savedModel = localStorage.getItem(`${providerName}_selected_model`);
+    if (savedModel) {
+      this.providerModels.set(providerName, savedModel);
+    }
   }
 
   private saveCurrentProvider() {
