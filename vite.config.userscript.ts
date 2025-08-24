@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
           : undefined,
       rollupOptions: {
         input: {
-          userscript: fileURLToPath(new URL('src/userscript/userscript-main.ts', import.meta.url))
+          userscript: fileURLToPath(new URL('scripts/tampermonkey/userscript-main.ts', import.meta.url))
         },
         output: {
           entryFileNames: chunkInfo => {
