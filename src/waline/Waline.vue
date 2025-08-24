@@ -1,6 +1,8 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
+import { logger } from '../config/buildFlags'
 import { useEmojiStore } from '../stores/emojiStore'
 
 const emojiStore = useEmojiStore()
@@ -74,6 +76,7 @@ onMounted(async () => {
 })
 
 // Methods
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parseWalineConfig = (data: any): Array<{ name: string; url: string }> => {
   const emojis: Array<{ name: string; url: string }> = []
 
@@ -151,7 +154,7 @@ const parseWalineConfig = (data: any): Array<{ name: string; url: string }> => {
       }
     }
   } catch (error) {
-    console.error('Error parsing Waline config:', error)
+    logger.error('Error parsing Waline config:', error)
   }
 
   return emojis
@@ -202,7 +205,7 @@ const importFromUrl = async () => {
     urlInput.value = ''
     urlGroupName.value = ''
   } catch (error) {
-    console.error('Import from URL failed:', error)
+    logger.error('Import from URL failed:', error)
     const errorMessage = error instanceof Error ? error.message : '导入失败'
 
     importResults.value.unshift({
@@ -258,7 +261,7 @@ const importFromJson = async () => {
     jsonInput.value = ''
     jsonGroupName.value = ''
   } catch (error) {
-    console.error('Import from JSON failed:', error)
+    logger.error('Import from JSON failed:', error)
     const errorMessage = error instanceof Error ? error.message : '导入失败'
 
     importResults.value.unshift({
@@ -274,6 +277,7 @@ const importFromJson = async () => {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const importFromSource = async (source: any) => {
   isImportingSource.value = source.name
   const resultId = Date.now().toString()
@@ -312,7 +316,7 @@ const importFromSource = async (source: any) => {
 
     showMessage(`成功导入 ${source.name} (${emojis.length} 个表情)`, 'success')
   } catch (error) {
-    console.error('Import from source failed:', error)
+    logger.error('Import from source failed:', error)
     const errorMessage = error instanceof Error ? error.message : '导入失败'
 
     importResults.value.unshift({

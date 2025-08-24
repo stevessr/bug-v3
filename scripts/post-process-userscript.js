@@ -48,6 +48,7 @@ function getPackageVersion() {
     return packageJson.version || '1.0.0'
   } catch (error) {
     console.warn('Could not read package version, using default')
+    console.error(error)
     return '1.0.0'
   }
 }
