@@ -74,7 +74,10 @@ export default defineConfig(({ mode }) => {
           assetFileNames: 'assets/[name].[ext]',
           manualChunks: (id, { getModuleInfo }) => {
             // Helper: determine whether `moduleId` is reachable from the content entry
-            const isReachableFromContent = (moduleId: string, seen = new Set<string>()): boolean => {
+            const isReachableFromContent = (
+              moduleId: string,
+              seen = new Set<string>()
+            ): boolean => {
               if (seen.has(moduleId)) return false
               seen.add(moduleId)
               if (moduleId.includes('src/content/') || moduleId.includes('content.ts')) return true

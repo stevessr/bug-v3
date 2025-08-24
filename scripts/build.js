@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 跨平台构建脚本
-import { spawn } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
@@ -89,6 +89,21 @@ const publicDir = path.resolve(process.cwd(), 'public')
 const devManifest = path.join(publicDir, 'manifest.development.json')
 const distDir = path.resolve(process.cwd(), 'dist')
 
+// Safe restore helper: remove a partially-written dist/manifest.json if present.
+function restoreManifest() {
+  try {
+    const target = path.join(distDir, 'manifest.json')
+    if (fs.existsSync(target)) {
+      fs.unlinkSync(target)
+      console.log('🔁 Removed partially written', target)
+    } else {
+      console.log('🔁 No dist manifest to restore')
+    }
+  } catch (e) {
+    console.warn('🔁 restoreManifest error:', e)
+  }
+}
+
 const child = spawn('npx', viteCommand.split(' '), {
   stdio: 'inherit',
   env: process.env,
@@ -97,6 +112,19 @@ const child = spawn('npx', viteCommand.split(' '), {
 
 child.on('exit', code => {
   if (code === 0 && buildType !== 'dev') {
+    console.log('Running post build')
+    const fixResult = spawnSync('node', ['./scripts/fix-content-build.cjs'], {
+      stdio: 'inherit',
+      shell: true
+    })
+    if (fixResult.error) {
+      console.error('❌ fix-content-build failed to start:', fixResult.error)
+      process.exit(1)
+    }
+    if (fixResult.status !== 0) {
+      console.error('❌ fix-content-build exited with code', fixResult.status)
+      process.exit(fixResult.status)
+    }
     // For userscript builds, run post-processing instead of clean-empty-chunks
     if (isUserscript) {
       console.log('🔧 Post-processing userscript...')
