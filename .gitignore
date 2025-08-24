@@ -159,3 +159,4 @@ venv/
 .claude/mcp/cache/
 .claude/mcp/data/
 browsers/
+src/types/defaultEmojiGroups.ts

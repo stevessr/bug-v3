@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "description": "An emoji extension built with Vue 3 and Vite.",
   "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "https://linux.do/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -22,19 +26,7 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://linux.do/*",
-        "https://meta.*.org/*",
-        "https://community.*.*/*",
-        "https://discuss.*.*/*",
-        "https://discussion.*.*/*",
-        "https://discussions.*.*/",
-        "https://forum.*.*/*",
-        "https://forums.*.*/*",
-        "https://discourse.*.com/*",
-        "https://*.discourse.group/*",
-        "https://developer.*.*/*"
-      ],
+      "matches": ["<all_urls>"],
       "js": ["js/content.js"],
       "type": "module"
     }
@@ -49,7 +41,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/*", "js/*.css"],
+      "resources": ["assets/*", "js/*.css", "*.html"],
       "matches": ["<all_urls>"]
     }
   ]

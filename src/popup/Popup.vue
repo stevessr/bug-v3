@@ -1,5 +1,13 @@
+<script setup lang="ts">
+import GroupTabs from './components/GroupTabs.vue'
+import EmojiGrid from './components/EmojiGrid.vue'
+import { usePopup } from './usePopup'
+
+const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions } = usePopup()
+</script>
+
 <template>
-  <div class="w-80 max-h-96 mobile:w-full mobile:h-full mobile:max-h-none bg-white">
+  <div class="popup-container bg-white">
     <!-- Header with scale control -->
     <div class="p-3 border-b border-gray-200 bg-gray-50">
       <div class="flex items-center justify-between mb-2">
@@ -9,12 +17,7 @@
           class="p-1 text-gray-500 hover:text-gray-700 rounded"
           title="设置"
         >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -48,10 +51,7 @@
     </div>
 
     <!-- Search Bar -->
-    <div
-      v-if="emojiStore.settings.showSearchBar"
-      class="p-2 border-b border-gray-100"
-    >
+    <div v-if="emojiStore.settings.showSearchBar" class="p-2 border-b border-gray-100">
       <div class="relative">
         <input
           v-model="emojiStore.searchQuery"
@@ -104,67 +104,63 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import GroupTabs from "./components/GroupTabs.vue";
-import EmojiGrid from "./components/EmojiGrid.vue";
-import { usePopup } from "./usePopup";
-
-const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions } = usePopup();
-</script>
-
 <style>
 /* Import TailwindCSS in popup */
-@import "../styles/main.css";
+@import '../styles/main.css';
 
-/* Desktop styles - ensure minimum size */
-@media (min-width: 616px) {
-  .w-80 {
-    min-width: 600px;
-    min-height: 800px;
-    width: 600px;
-    max-height: 800px;
+/* Popup container base styles */
+.popup-container {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
+  height: 500px;
+  min-height: 400px;
+  max-height: 600px;
+  overflow: hidden;
+}
+
+/* Desktop styles - stable dimensions with minimum size enforcement */
+@media (min-width: 768px) {
+  .popup-container {
+    width: auto;
+    min-width: 400px;
+    max-width: 400px;
+    height: auto;
+    min-height: 500px;
+    max-height: 600px;
   }
 }
 
-/* Mobile-specific styles for popup (also applies to narrow desktop popup) */
-@media (max-width: 615px) {
-  /* Use % instead of vw/vh to avoid scrollbar width feedback causing jitter */
-  html, body, #app {
+/* Mobile-specific styles - minimum size with full screen fallback */
+@media (max-width: 767px) {
+  html,
+  body {
     margin: 0;
     padding: 0;
     width: 100%;
+    min-width: 400px;
     height: 100%;
-    min-width: 615px;
-    min-height: 600px;
+    min-height: 400px;
     overflow: hidden;
   }
 
-  /* Ensure the popup container fills the available space on mobile only */
-  .mobile\:w-full {
-    width: 100% !important;
+  .popup-container {
+    width: 100%;
+    min-width: 200px;
+    max-width: 100%;
+    height: 100%;
+    min-height: 200px;
+    max-height: 100%;
   }
-  
-  .mobile\:h-full {
-    height: 100% !important;
-  }
-  
-  .mobile\:max-h-none {
-    max-height: none !important;
-  }
+}
 
-  /* Make the popup container flex on mobile */
-  .w-80.mobile\:w-full {
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Let inner grid scroll while outer stays fixed */
-  .emoji-grid {
-    max-height: auto;
-    overflow-y: auto;
-  }
-  .flex.border-b.border-gray-100.overflow-x-auto{
-    min-height: fit-content;
+/* Enforce absolute minimum sizes to prevent extremely small windows */
+@media screen {
+  .popup-container {
+    min-width: 200px !important;
+    min-height: 200px !important;
   }
 }
 </style>

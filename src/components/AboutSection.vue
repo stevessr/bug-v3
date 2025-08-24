@@ -1,3 +1,7 @@
+<script setup lang="ts">
+// 纯展示组件，无需逻辑
+</script>
+
 <template>
   <div class="space-y-8">
     <div class="bg-white rounded-lg shadow-sm border">
@@ -23,10 +27,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-// 纯展示组件，无需逻辑
-</script>
 
 <style scoped>
 /* 保持样式由父级 Tailwind 提供，如需覆写可在此添加 */

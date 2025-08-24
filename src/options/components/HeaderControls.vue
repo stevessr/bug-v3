@@ -1,3 +1,13 @@
+<script setup lang="ts">
+defineEmits([
+  'open-import',
+  'open-import-emojis',
+  'reset-settings',
+  'sync-to-chrome',
+  'export-configuration'
+])
+</script>
+
 <template>
   <div class="flex gap-3 flex-wrap">
     <button
@@ -46,15 +56,3 @@
     </button>
   </div>
 </template>
-
-<script setup lang="ts">
-defineEmits([
-  'open-import',
-  'open-import-emojis',
-  'reset-settings',
-  'sync-to-chrome',
-  'export-configuration',
-]);
-</script>
-
-<style scoped></style>
