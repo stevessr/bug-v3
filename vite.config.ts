@@ -54,7 +54,8 @@ export default defineConfig(({ mode }) => {
           'image-generator-js': fileURLToPath(new URL('src/image-generator.ts', import.meta.url)),
           'animation-converter-js': fileURLToPath(new URL('src/animation-converter.ts', import.meta.url)),
           'image-editor-js': fileURLToPath(new URL('src/image-editor.ts', import.meta.url)),
-          'emoji-manager-js': fileURLToPath(new URL('src/emoji-manager.ts', import.meta.url))
+          'emoji-manager-js': fileURLToPath(new URL('src/emoji-manager.ts', import.meta.url)),
+          'image-generator-vue-js': fileURLToPath(new URL('src/image-generator-vue.ts', import.meta.url))
         },
         output: {
           entryFileNames: chunkInfo => {
