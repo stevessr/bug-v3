@@ -8,9 +8,7 @@
       <h3 class="text-lg font-semibold mb-4">导入配置</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"
-            >配置文件</label
-          >
+          <label class="block text-sm font-medium text-gray-700 mb-1">配置文件</label>
           <input
             ref="fileInput"
             type="file"
@@ -20,9 +18,7 @@
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"
-            >或粘贴JSON配置</label
-          >
+          <label class="block text-sm font-medium text-gray-700 mb-1">或粘贴JSON配置</label>
           <textarea
             v-model="text"
             rows="6"
@@ -50,40 +46,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, defineProps } from "vue";
+import { ref, defineEmits, defineProps } from 'vue'
 
-const props = defineProps<{ modelValue: boolean }>();
-void props.modelValue;
+const props = defineProps<{ modelValue: boolean }>()
+void props.modelValue
 const emit = defineEmits<{
-  (e: "update:modelValue", v: boolean): void;
-  (e: "imported", config: any): void;
-}>();
+  (e: 'update:modelValue', v: boolean): void
+  (e: 'imported', config: any): void
+}>()
 
-const text = ref("");
-const fileInput = ref<HTMLInputElement | null>(null);
+const text = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
 
-const close = () => emit("update:modelValue", false);
+const close = () => emit('update:modelValue', false)
 
 const handleFile = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
   if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      text.value = e.target?.result as string;
-    };
-    reader.readAsText(file);
+    const reader = new FileReader()
+    reader.onload = e => {
+      text.value = e.target?.result as string
+    }
+    reader.readAsText(file)
   }
-};
+}
 
 const doImport = () => {
   try {
-    const parsed = JSON.parse(text.value);
-    emit("imported", parsed);
-    text.value = "";
-    close();
+    const parsed = JSON.parse(text.value)
+    emit('imported', parsed)
+    text.value = ''
+    close()
   } catch (err) {
-    emit("imported", null);
+    emit('imported', null)
   }
-};
+}
 </script>

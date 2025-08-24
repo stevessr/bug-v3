@@ -30,21 +30,21 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from "vue";
+import { defineProps, defineEmits } from 'vue'
 
 const { show, group } = defineProps<{
-  show: boolean;
-  group: { id?: string; name?: string } | null;
-}>();
+  show: boolean
+  group: { id?: string; name?: string } | null
+}>()
 
 const emit = defineEmits<{
-  (e: "update:show", value: boolean): void;
-  (e: "confirm"): void;
-}>();
+  (e: 'update:show', value: boolean): void
+  (e: 'confirm'): void
+}>()
 
-const close = () => emit("update:show", false);
-const cancel = () => emit("update:show", false);
-const confirmDelete = () => emit("confirm");
+const close = () => emit('update:show', false)
+const cancel = () => emit('update:show', false)
+const confirmDelete = () => emit('confirm')
 </script>
 
 <style scoped>
@@ -67,6 +67,8 @@ const confirmDelete = () => emit("confirm");
 }
 .modal-enter-active .modal-panel,
 .modal-leave-active .modal-panel {
-  transition: transform 180ms ease-out, opacity 180ms ease-out;
+  transition:
+    transform 180ms ease-out,
+    opacity 180ms ease-out;
 }
 </style>

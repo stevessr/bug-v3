@@ -6,9 +6,7 @@
         <div class="flex justify-between items-center py-6">
           <div>
             <h1 class="text-2xl font-bold text-gray-900">表情管理</h1>
-            <p class="text-sm text-gray-600">
-              管理表情包分组、自定义表情和扩展设置
-            </p>
+            <p class="text-sm text-gray-600">管理表情包分组、自定义表情和扩展设置</p>
           </div>
           <HeaderControls
             @open-import="showImportModal = true"
@@ -33,7 +31,7 @@
               'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === tab.id
                 ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             ]"
           >
             {{ tab.label }}
@@ -48,18 +46,13 @@
       <div v-if="activeTab === 'settings'" class="space-y-8">
         <GlobalSettings
           :settings="emojiStore.settings"
-          @update:imageScale="(e) => updateImageScale(e)"
-          @update:showSearchBar="(e) => updateShowSearchBar(e)"
-          @update:outputFormat="(value) => updateOutputFormat(value)"
-          @update:forceMobileMode="(e) => updateForceMobileMode(e)"
+          @update:imageScale="e => updateImageScale(e)"
+          @update:showSearchBar="e => updateShowSearchBar(e)"
+          @update:outputFormat="value => updateOutputFormat(value)"
+          @update:forceMobileMode="e => updateForceMobileMode(e)"
         >
           <template #grid-selector>
-            <GridColumnsSelector
-              v-model="localGridColumns"
-              :min="2"
-              :max="8"
-              :step="1"
-            />
+            <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
           </template>
         </GlobalSettings>
       </div>
@@ -84,17 +77,17 @@
         @image-error="handleImageError"
       />
 
-  <FavoritesTab 
-    v-if="activeTab === 'favorites'" 
-    :emojiStore="emojiStore" 
-    @remove="removeEmojiFromGroup"
-    @edit="openEditEmoji"
-  />
+      <FavoritesTab
+        v-if="activeTab === 'favorites'"
+        :emojiStore="emojiStore"
+        @remove="removeEmojiFromGroup"
+        @edit="openEditEmoji"
+      />
 
       <!-- Ungrouped Tab -->
-      <UngroupedTab 
-        v-if="activeTab === 'ungrouped'" 
-        :emojiStore="emojiStore" 
+      <UngroupedTab
+        v-if="activeTab === 'ungrouped'"
+        :emojiStore="emojiStore"
         @remove="removeEmojiFromGroup"
         @edit="openEditEmoji"
       />
@@ -118,10 +111,7 @@
     </main>
 
     <!-- Create Group and Add Emoji modals extracted into components -->
-    <CreateGroupModal
-      v-model:show="showCreateGroupModal"
-      @created="onGroupCreated"
-    />
+    <CreateGroupModal v-model:show="showCreateGroupModal" @created="onGroupCreated" />
 
     <AddEmojiModal
       v-model:show="showAddEmojiModal"
@@ -137,19 +127,19 @@
       :initialIcon="editGroupIcon"
       :isImageUrl="isImageUrl"
       @save="
-        (payload) => {
+        payload => {
           if (payload && payload.id) {
             emojiStore.updateGroup(payload.id, {
               name: payload.name,
-              icon: payload.icon,
-            });
+              icon: payload.icon
+            })
             void flushBuffer(true).then(() =>
               console.log('[Options] saveEditGroup flushed to IndexedDB', {
                 id: payload.id,
-                name: payload.name,
+                name: payload.name
               })
-            );
-            showSuccess('分组已更新');
+            )
+            showSuccess('分组已更新')
           }
         }
       "
@@ -157,15 +147,9 @@
     />
 
     <!-- Import modals (components) -->
-    <ImportConfigModal
-      v-model="showImportModal"
-      @imported="handleConfigImported"
-    />
+    <ImportConfigModal v-model="showImportModal" @imported="handleConfigImported" />
 
-    <ImportEmojisModal
-      v-model="showImportEmojiModal"
-      @imported="handleEmojisImported"
-    />
+    <ImportEmojisModal v-model="showImportEmojiModal" @imported="handleEmojisImported" />
 
     <ConfirmDeleteModal
       v-model:show="showConfirmDeleteModal"
@@ -192,36 +176,36 @@
 </template>
 
 <script setup lang="ts">
-import GridColumnsSelector from "../components/GridColumnsSelector.vue";
-import AboutSection from "../components/AboutSection.vue";
-import HeaderControls from "./components/HeaderControls.vue";
-import GlobalSettings from "./components/GlobalSettings.vue";
-import EmojiStats from "./components/EmojiStats.vue";
-import ImportConfigModal from "./modals/ImportConfigModal.vue";
-import ImportEmojisModal from "./modals/ImportEmojisModal.vue";
-import CreateGroupModal from "./modals/CreateGroupModal.vue";
-import AddEmojiModal from "./modals/AddEmojiModal.vue";
-import ConfirmDeleteModal from "./modals/ConfirmDeleteModal.vue";
-import NotificationToasts from "./components/NotificationToasts.vue";
-import GroupsTab from "./components/GroupsTab.vue";
-import FavoritesTab from "./components/FavoritesTab.vue";
-import UngroupedTab from "./components/UngroupedTab.vue";
-import ExternalImportTab from "./components/ExternalImportTab.vue";
-import EditEmojiModal from "./modals/EditEmojiModal.vue";
-import EditGroupModal from "./modals/EditGroupModal.vue";
+import GridColumnsSelector from '../components/GridColumnsSelector.vue'
+import AboutSection from '../components/AboutSection.vue'
+import HeaderControls from './components/HeaderControls.vue'
+import GlobalSettings from './components/GlobalSettings.vue'
+import EmojiStats from './components/EmojiStats.vue'
+import ImportConfigModal from './modals/ImportConfigModal.vue'
+import ImportEmojisModal from './modals/ImportEmojisModal.vue'
+import CreateGroupModal from './modals/CreateGroupModal.vue'
+import AddEmojiModal from './modals/AddEmojiModal.vue'
+import ConfirmDeleteModal from './modals/ConfirmDeleteModal.vue'
+import NotificationToasts from './components/NotificationToasts.vue'
+import GroupsTab from './components/GroupsTab.vue'
+import FavoritesTab from './components/FavoritesTab.vue'
+import UngroupedTab from './components/UngroupedTab.vue'
+import ExternalImportTab from './components/ExternalImportTab.vue'
+import EditEmojiModal from './modals/EditEmojiModal.vue'
+import EditGroupModal from './modals/EditGroupModal.vue'
 // composable
-import useOptions from "./useOptions";
+import useOptions from './useOptions'
 
-const options = useOptions();
+const options = useOptions()
 
 // expose used components to template for linter
 const _modalComponents = {
   ImportConfigModal,
   ImportEmojisModal,
   CreateGroupModal,
-  AddEmojiModal,
-} as const;
-void Object.keys(_modalComponents);
+  AddEmojiModal
+} as const
+void Object.keys(_modalComponents)
 
 // re-export bindings for template access
 const {
@@ -277,6 +261,6 @@ const {
   editingEmoji,
   editingEmojiGroupId,
   editingEmojiIndex,
-  handleEmojiEdit,
-} = options;
+  handleEmojiEdit
+} = options
 </script>

@@ -21,6 +21,7 @@ When invoked, immediately begin a comprehensive security audit:
 ## Scanning Checklist
 
 ### 1. Secrets and Credentials
+
 ```bash
 # Patterns to search for:
 - API keys: /api[_-]?key/i
@@ -34,25 +35,28 @@ When invoked, immediately begin a comprehensive security audit:
 ### 2. Common Vulnerabilities
 
 #### SQL Injection
+
 ```javascript
 // Vulnerable:
-db.query(`SELECT * FROM users WHERE id = ${userId}`);
+db.query(`SELECT * FROM users WHERE id = ${userId}`)
 
 // Secure:
-db.query('SELECT * FROM users WHERE id = ?', [userId]);
+db.query('SELECT * FROM users WHERE id = ?', [userId])
 ```
 
 #### Cross-Site Scripting (XSS)
+
 ```javascript
 // Vulnerable:
-element.innerHTML = userInput;
+element.innerHTML = userInput
 
 // Secure:
-element.textContent = userInput;
+element.textContent = userInput
 // Or use proper sanitization
 ```
 
 #### Path Traversal
+
 ```python
 # Vulnerable:
 file_path = os.path.join(base_dir, user_input)
@@ -62,6 +66,7 @@ file_path = os.path.join(base_dir, os.path.basename(user_input))
 ```
 
 #### Command Injection
+
 ```python
 # Vulnerable:
 os.system(f"convert {user_file} output.pdf")
@@ -73,6 +78,7 @@ subprocess.run(["convert", user_file, "output.pdf"], check=True)
 ### 3. Authentication & Authorization
 
 Check for:
+
 - Weak password policies
 - Missing authentication on sensitive endpoints
 - Improper session management
@@ -97,28 +103,36 @@ Check for:
 ## Severity Classification
 
 ### 🔴 CRITICAL
+
 Immediate exploitation possible, data breach risk:
+
 - Exposed credentials
 - SQL injection
 - Remote code execution
 - Authentication bypass
 
 ### 🟠 HIGH
+
 Significant security risk:
+
 - XSS vulnerabilities
 - Path traversal
 - Weak cryptography
 - Missing authorization
 
 ### 🟡 MEDIUM
+
 Security weakness that should be addressed:
+
 - Information disclosure
 - Session fixation
 - Clickjacking potential
 - Weak password policy
 
 ### 🟢 LOW
+
 Best practice violations:
+
 - Missing security headers
 - Outdated dependencies
 - Code quality issues
@@ -126,7 +140,7 @@ Best practice violations:
 
 ## Output Format
 
-```
+````
 🔒 SECURITY SCAN REPORT
 ━━━━━━━━━━━━━━━━━━━━━━
 
@@ -145,27 +159,31 @@ Best practice violations:
    File: src/config.js:15
    ```javascript
    const API_KEY = "sk-proj-abc123def456";
-   ```
-   
-   Impact: Full API access compromise
-   
-   Fix:
-   ```javascript
-   const API_KEY = process.env.API_KEY;
-   ```
-   Add to .env file and ensure .env is in .gitignore
+````
+
+Impact: Full API access compromise
+
+Fix:
+
+```javascript
+const API_KEY = process.env.API_KEY
+```
+
+Add to .env file and ensure .env is in .gitignore
 
 2. SQL Injection Vulnerability
    File: src/api/users.js:42
+
    ```javascript
-   db.query(`SELECT * FROM users WHERE email = '${email}'`);
+   db.query(`SELECT * FROM users WHERE email = '${email}'`)
    ```
-   
+
    Impact: Database compromise, data theft
-   
+
    Fix:
+
    ```javascript
-   db.query('SELECT * FROM users WHERE email = ?', [email]);
+   db.query('SELECT * FROM users WHERE email = ?', [email])
    ```
 
 🟠 HIGH SEVERITY (3)
@@ -174,11 +192,13 @@ Best practice violations:
 [Additional issues...]
 
 📋 Recommendations:
+
 1. Implement pre-commit hooks for secret scanning
 2. Add security linting to CI/CD pipeline
 3. Regular dependency updates
 4. Security training for developers
-```
+
+````
 
 ## Remediation Guidelines
 
@@ -197,21 +217,24 @@ Check for vulnerable dependencies:
 ```bash
 npm audit
 npm audit fix
-```
+````
 
 ### Python
+
 ```bash
 pip-audit
 safety check
 ```
 
 ### Go
+
 ```bash
 go mod audit
 govulncheck ./...
 ```
 
 ### Java
+
 ```bash
 mvn dependency-check:check
 ```
@@ -219,6 +242,7 @@ mvn dependency-check:check
 ## Security Tools Integration
 
 Suggest integration of:
+
 1. **Pre-commit hooks**: Prevent secrets from being committed
 2. **SAST tools**: Static analysis in CI/CD
 3. **Dependency scanners**: Automated vulnerability checks
@@ -228,6 +252,7 @@ Suggest integration of:
 ## Common False Positives
 
 Be aware of:
+
 - Example/test credentials in documentation
 - Encrypted values that look like secrets
 - Template variables
@@ -236,6 +261,7 @@ Be aware of:
 ## Compliance Checks
 
 Consider requirements for:
+
 - OWASP Top 10
 - PCI DSS (payment processing)
 - HIPAA (healthcare data)
