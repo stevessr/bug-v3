@@ -22,20 +22,7 @@ defineEmits([
     >
       导入表情
     </button>
-    <a
-      href="/tenor.html"
-      target="_blank"
-      class="px-4 py-2 text-sm bg-pink-100 text-pink-700 rounded-md hover:bg-pink-200 transition-colors inline-block"
-    >
-      🎬 Tenor GIF
-    </a>
-    <a
-      href="/waline.html"
-      target="_blank"
-      class="px-4 py-2 text-sm bg-cyan-100 text-cyan-700 rounded-md hover:bg-cyan-200 transition-colors inline-block"
-    >
-      📦 Waline 导入
-    </a>
+    <!-- Tenor and Waline have been moved to standalone pages; links removed to avoid duplication -->
     <button
       @click="$emit('reset-settings')"
       class="px-4 py-2 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors"

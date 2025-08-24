@@ -1,208 +1,3 @@
-<template>
-  <div v-if="activeTab === 'tools'" class="space-y-8">
-    <div class="bg-gradient-to-br from-blue-600 to-purple-700 text-white p-6 rounded-lg">
-      <h2 class="text-2xl font-bold mb-4">🔧 多媒体小工具</h2>
-      <p class="text-blue-100">
-        专业的多媒体处理工具，支持格式转换、帧处理和本地 FFmpeg 集成
-      </p>
-    </div>
-
-    <!-- Format Converter -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <div class="flex items-center mb-4">
-        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-          🔄
-        </div>
-        <div>
-          <h3 class="text-lg font-semibold">格式转换器</h3>
-          <p class="text-gray-600 text-sm">
-            Convert between GIF, MP4, WebM → APNG/GIF with proper re-encoding
-          </p>
-        </div>
-      </div>
-      
-      <div 
-        class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors hover:border-blue-400 hover:bg-blue-50 cursor-pointer"
-        @drop="handleFormatConverterDrop"
-        @dragover.prevent="handleDragOver"
-        @dragleave="handleDragLeave"
-        @click="triggerFormatFileInput"
-      >
-        <input 
-          ref="formatFileInput" 
-          type="file" 
-          accept="video/*,image/gif,image/webp" 
-          @change="handleFormatConverterFile"
-          class="hidden"
-        />
-        <div class="text-4xl mb-4">📁</div>
-        <p class="text-gray-600 mb-2">拖拽文件到此处或点击选择文件</p>
-        <p class="text-gray-400 text-sm">支持: GIF, MP4, WebM</p>
-      </div>
-
-      <div v-if="formatConvertProgress.show" class="mt-4">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-medium">{{ formatConvertProgress.text }}</span>
-          <span class="text-sm text-gray-500">{{ formatConvertProgress.percent }}%</span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-            :style="{ width: formatConvertProgress.percent + '%' }"
-          ></div>
-        </div>
-        <div v-if="formatConvertProgress.fileInfo" class="mt-3 p-3 bg-gray-50 rounded text-sm">
-          <div class="grid grid-cols-2 gap-2">
-            <div><span class="font-medium">文件大小:</span> {{ formatConvertProgress.fileInfo.size }}</div>
-            <div><span class="font-medium">尺寸:</span> {{ formatConvertProgress.fileInfo.dimensions }}</div>
-            <div><span class="font-medium">帧率:</span> {{ formatConvertProgress.fileInfo.framerate }}</div>
-            <div><span class="font-medium">编码:</span> {{ formatConvertProgress.fileInfo.codec }}</div>
-            <div><span class="font-medium">码率:</span> {{ formatConvertProgress.fileInfo.bitrate }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Frame Splitter -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <div class="flex items-center mb-4">
-        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-          ✂️
-        </div>
-        <div>
-          <h3 class="text-lg font-semibold">帧分离器</h3>
-          <p class="text-gray-600 text-sm">
-            Frame Splitter: Extract individual frames from animations
-          </p>
-        </div>
-      </div>
-      
-      <div 
-        class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors hover:border-green-400 hover:bg-green-50 cursor-pointer"
-        @drop="handleFrameSplitterDrop"
-        @dragover.prevent="handleDragOver"
-        @dragleave="handleDragLeave"
-        @click="triggerFrameSplitterInput"
-      >
-        <input 
-          ref="frameSplitterInput" 
-          type="file" 
-          accept="image/gif,video/*" 
-          @change="handleFrameSplitterFile"
-          class="hidden"
-        />
-        <div class="text-4xl mb-4">🎞️</div>
-        <p class="text-gray-600 mb-2">选择动画文件以提取帧</p>
-        <p class="text-gray-400 text-sm">支持: GIF, MP4, WebM</p>
-      </div>
-
-      <a-button type="primary" @click="startFrameSplitting" :disabled="!frameSplitterFile" class="mt-4">
-        开始提取帧
-      </a-button>
-    </div>
-
-    <!-- Frame Merger -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <div class="flex items-center mb-4">
-        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-          🔗
-        </div>
-        <div>
-          <h3 class="text-lg font-semibold">帧合并器</h3>
-          <p class="text-gray-600 text-sm">
-            Frame Merger: Combine multiple images into animated GIFs/APNGs
-          </p>
-        </div>
-      </div>
-      
-      <div 
-        class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors hover:border-purple-400 hover:bg-purple-50 cursor-pointer"
-        @drop="handleFrameMergerDrop"
-        @dragover.prevent="handleDragOver"
-        @dragleave="handleDragLeave"
-        @click="triggerFrameMergerInput"
-      >
-        <input 
-          ref="frameMergerInput" 
-          type="file" 
-          accept="image/*" 
-          multiple
-          @change="handleFrameMergerFiles"
-          class="hidden"
-        />
-        <div class="text-4xl mb-4">🖼️</div>
-        <p class="text-gray-600 mb-2">选择多个图像文件进行合并</p>
-        <p class="text-gray-400 text-sm">支持: PNG, JPG, WebP</p>
-      </div>
-
-      <div v-if="frameMergerFiles.length > 0" class="mt-4">
-        <p class="text-sm text-gray-600 mb-2">已选择 {{ frameMergerFiles.length }} 个文件</p>
-        <div class="flex space-x-2 mb-4">
-          <a-input-number 
-            v-model:value="frameDelay" 
-            :min="50" 
-            :max="5000" 
-            :step="50"
-            addon-before="帧延迟"
-            addon-after="ms"
-          />
-          <a-select v-model:value="outputFormat" style="width: 120px">
-            <a-select-option value="gif">GIF</a-select-option>
-            <a-select-option value="apng">APNG</a-select-option>
-          </a-select>
-        </div>
-        <a-button type="primary" @click="startFrameMerging">
-          合并为动画
-        </a-button>
-      </div>
-    </div>
-
-    <!-- FFmpeg Integration -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <div class="flex items-center mb-4">
-        <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-4">
-          🎬
-        </div>
-        <div>
-          <h3 class="text-lg font-semibold">本地 FFmpeg 集成</h3>
-          <p class="text-gray-600 text-sm">
-            Local FFmpeg Integration: Uses @ffmpeg/ffmpeg and @ffmpeg/util from node_modules
-          </p>
-        </div>
-      </div>
-
-      <div class="space-y-4">
-        <div class="flex items-center space-x-4">
-          <a-button 
-            type="primary" 
-            @click="initFFmpeg" 
-            :loading="ffmpegLoading"
-            :disabled="ffmpegLoaded"
-          >
-            {{ ffmpegLoaded ? '✅ FFmpeg 已就绪' : '初始化 FFmpeg' }}
-          </a-button>
-          
-          <div v-if="ffmpegLoaded" class="text-green-600 text-sm">
-            FFmpeg WASM 已加载，可以进行高级视频处理
-          </div>
-        </div>
-
-        <div v-if="ffmpegLoaded" class="p-4 bg-gray-50 rounded-lg">
-          <h4 class="font-medium mb-2">FFmpeg 功能</h4>
-          <div class="grid grid-cols-2 gap-2 text-sm">
-            <div>✅ 视频格式转换</div>
-            <div>✅ 音频提取</div>
-            <div>✅ 帧率调整</div>
-            <div>✅ 分辨率缩放</div>
-            <div>✅ 视频压缩</div>
-            <div>✅ 水印添加</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
@@ -230,29 +25,35 @@ const frameSplitterFile = ref<File | null>(null)
 const frameMergerFiles = ref<File[]>([])
 const frameDelay = ref(500)
 const outputFormat = ref('gif')
+const targetFormat = ref('png')
+const outputQuality = ref(90)
+const formatFile = ref<File | null>(null)
+const formatOutputUrl = ref('')
+const formatOutputName = ref('')
+const frameImages = ref<Array<{ url: string; name: string }>>([])
 
 const ffmpegLoaded = ref(false)
 const ffmpegLoading = ref(false)
-const ffmpeg = ref<any>(null)
+// ffmpeg wasm instance (initialized when user requests); keep as placeholder
 
 // Methods
 const handleDragOver = (e: DragEvent) => {
   e.preventDefault()
   if (e.currentTarget) {
-    (e.currentTarget as HTMLElement).classList.add('border-blue-400', 'bg-blue-50')
+    ;(e.currentTarget as HTMLElement).classList.add('border-blue-400', 'bg-blue-50')
   }
 }
 
 const handleDragLeave = (e: DragEvent) => {
   if (e.currentTarget) {
-    (e.currentTarget as HTMLElement).classList.remove('border-blue-400', 'bg-blue-50')
+    ;(e.currentTarget as HTMLElement).classList.remove('border-blue-400', 'bg-blue-50')
   }
 }
 
 const handleFormatConverterDrop = (e: DragEvent) => {
   e.preventDefault()
   handleDragLeave(e)
-  
+
   const files = Array.from(e.dataTransfer?.files || [])
   if (files.length > 0) {
     processFormatConverter(files[0])
@@ -290,7 +91,7 @@ const processFormatConverter = async (file: File) => {
     await delay(800)
     formatConvertProgress.value.percent = step.percent
     formatConvertProgress.value.text = step.text
-    
+
     if (step.showInfo && !formatConvertProgress.value.fileInfo) {
       formatConvertProgress.value.fileInfo = {
         size: formatBytes(file.size),
@@ -303,16 +104,183 @@ const processFormatConverter = async (file: File) => {
   }
 
   message.success('文件转换完成！')
-  
+  // keep reference to selected file for conversion
+  formatFile.value = file
+
   setTimeout(() => {
     formatConvertProgress.value.show = false
   }, 3000)
 }
 
+const startFormatConversion = async () => {
+  if (!formatFile.value) return
+
+  const file = formatFile.value
+  // Only support basic image conversion client-side (first-frame for GIF)
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0)
+        const mime = targetFormat.value === 'jpeg' ? 'image/jpeg' : targetFormat.value === 'webp' ? 'image/webp' : 'image/png'
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            message.error('转换失败：生成 Blob 失败')
+            return
+          }
+          if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
+          formatOutputUrl.value = URL.createObjectURL(blob)
+          const ext = targetFormat.value === 'jpeg' ? 'jpg' : targetFormat.value
+          formatOutputName.value = file.name.replace(/\.[^.]+$/, '') + '.' + ext
+          message.success('图像已转换，可下载')
+        }, mime, outputQuality.value / 100)
+      }
+      img.src = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  } else if (file.type.startsWith('video/')) {
+    if (!ffmpegLoaded.value) {
+      message.warning('视频转换需要 FFmpeg，先初始化 FFmpeg（右侧）')
+      // fallback: provide original file for download
+      if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
+      formatOutputUrl.value = URL.createObjectURL(file)
+      formatOutputName.value = file.name
+    } else {
+      // TODO: implement ffmpeg conversion flow
+      message.info('使用 FFmpeg 转换视频（尚未实现）')
+      if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
+      formatOutputUrl.value = URL.createObjectURL(file)
+      formatOutputName.value = file.name
+    }
+  } else {
+    message.error('不支持的文件类型')
+  }
+}
+
+const downloadConvertedFile = () => {
+  if (!formatOutputUrl.value) return
+  const a = document.createElement('a')
+  a.href = formatOutputUrl.value
+  a.download = formatOutputName.value || 'converted'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
+// Frame extraction
+const extractFramesFromVideo = async (file: File) => {
+  frameImages.value = []
+  const url = URL.createObjectURL(file)
+  const video = document.createElement('video')
+  video.src = url
+  video.crossOrigin = 'anonymous'
+  video.muted = true
+  await new Promise((resolve, reject) => {
+    video.addEventListener('loadedmetadata', () => resolve(null))
+    video.addEventListener('error', (e) => reject(e))
+  })
+  const duration = video.duration
+  const captureCount = Math.min(Math.ceil(duration), 24)
+  const canvas = document.createElement('canvas')
+  canvas.width = video.videoWidth || 640
+  canvas.height = video.videoHeight || 360
+  const ctx = canvas.getContext('2d')!
+
+  for (let i = 0; i < captureCount; i++) {
+    const time = (i / captureCount) * duration
+    await new Promise<void>((resolve) => {
+      const onSeeked = () => {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const imgUrl = URL.createObjectURL(blob)
+            frameImages.value.push({ url: imgUrl, name: `${file.name.replace(/\.[^.]+$/, '')}_frame_${i + 1}.png` })
+          }
+          resolve()
+        }, 'image/png')
+        video.removeEventListener('seeked', onSeeked)
+      }
+      video.addEventListener('seeked', onSeeked)
+      video.currentTime = Math.min(time, duration - 0.001)
+    })
+  }
+  URL.revokeObjectURL(url)
+}
+
+const extractFramesFromGifFallback = async (file: File) => {
+  // Best-effort: capture first frame only
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0)
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob)
+          frameImages.value = [{ url, name: file.name.replace(/\.[^.]+$/, '') + '_frame_1.png' }]
+        }
+      }, 'image/png')
+    }
+    img.src = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
+}
+
+const startFrameSplitting = async () => {
+  if (!frameSplitterFile.value) return
+  frameImages.value = []
+  const file = frameSplitterFile.value
+  try {
+    if (file.type.startsWith('video/')) {
+      message.loading('正在提取视频帧...', 0.5)
+      await extractFramesFromVideo(file)
+      message.success(`提取完成：${frameImages.value.length} 帧`)
+    } else if (file.type === 'image/gif') {
+      message.loading('尝试从 GIF 提取帧（仅首帧）', 0.5)
+      await extractFramesFromGifFallback(file)
+      message.success(`提取完成：${frameImages.value.length} 帧（仅首帧）`)
+    } else {
+      message.error('不支持的提取类型')
+    }
+  } catch (e) {
+    console.error(e)
+    message.error('帧提取失败')
+  }
+}
+
+const downloadFrame = (frame: { url: string; name: string }) => {
+  const a = document.createElement('a')
+  a.href = frame.url
+  a.download = frame.name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
+const downloadAllFrames = async () => {
+  if (frameImages.value.length === 0) return
+  // Attempt sequential downloads
+  for (const f of frameImages.value) {
+    downloadFrame(f)
+    // slight delay to avoid browser blocking
+    // eslint-disable-next-line no-await-in-loop
+    await delay(150)
+  }
+}
+
 const handleFrameSplitterDrop = (e: DragEvent) => {
   e.preventDefault()
   handleDragLeave(e)
-  
+
   const files = Array.from(e.dataTransfer?.files || [])
   if (files.length > 0) {
     frameSplitterFile.value = files[0]
@@ -332,19 +300,12 @@ const handleFrameSplitterFile = (e: Event) => {
   }
 }
 
-const startFrameSplitting = () => {
-  if (!frameSplitterFile.value) return
-  
-  message.loading('正在提取帧...', 2)
-  setTimeout(() => {
-    message.success('帧提取完成！已提取到 24 帧')
-  }, 2000)
-}
+// startFrameSplitting implemented above (async extractor)
 
 const handleFrameMergerDrop = (e: DragEvent) => {
   e.preventDefault()
   handleDragLeave(e)
-  
+
   const files = Array.from(e.dataTransfer?.files || [])
   frameMergerFiles.value = files.filter(file => file.type.startsWith('image/'))
   message.success(`已选择 ${frameMergerFiles.value.length} 个图像文件`)
@@ -364,7 +325,7 @@ const handleFrameMergerFiles = (e: Event) => {
 
 const startFrameMerging = () => {
   if (frameMergerFiles.value.length === 0) return
-  
+
   message.loading(`正在合并为 ${outputFormat.value.toUpperCase()}...`, 3)
   setTimeout(() => {
     message.success(`动画 ${outputFormat.value.toUpperCase()} 生成完成！`)
@@ -373,9 +334,9 @@ const startFrameMerging = () => {
 
 const initFFmpeg = async () => {
   if (ffmpegLoaded.value) return
-  
+
   ffmpegLoading.value = true
-  
+
   try {
     // Simulate FFmpeg loading
     await delay(2000)
@@ -400,3 +361,291 @@ const formatBytes = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 </script>
+<template>
+  <div v-if="activeTab === 'tools'" class="space-y-8">
+    <div class="bg-gradient-to-br from-blue-600 to-purple-700 text-white p-6 rounded-lg">
+      <h2 class="text-2xl font-bold mb-4">🔧 多媒体小工具</h2>
+      <p class="text-blue-100">专业的多媒体处理工具，支持格式转换、帧处理和本地 FFmpeg 集成</p>
+    </div>
+
+    <!-- Quick open standalone windows -->
+    <div class="flex space-x-3">
+      <a
+        class="inline-flex items-center px-4 py-2 bg-white text-sm rounded shadow hover:bg-gray-100"
+        href="/image-editor.html"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        🖼 图像编辑器（新窗口）
+      </a>
+      <a
+        class="inline-flex items-center px-4 py-2 bg-white text-sm rounded shadow hover:bg-gray-100"
+        href="/ai-image-generator.html"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        🤖 AI 图像生成（新窗口）
+      </a>
+      <a
+        class="inline-flex items-center px-4 py-2 bg-white text-sm rounded shadow hover:bg-gray-100"
+        href="/emoji-rename.html"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ✏️ AI 表情重命名（新窗口）
+      </a>
+    </div>
+
+    <!-- Format Converter -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex items-center mb-4">
+        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">🔄</div>
+        <div>
+          <h3 class="text-lg font-semibold">格式转换器</h3>
+          <p class="text-gray-600 text-sm">
+            Convert between GIF, MP4, WebM → APNG/GIF with proper re-encoding
+          </p>
+        </div>
+      </div>
+
+      <div
+        class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors hover:border-blue-400 hover:bg-blue-50 cursor-pointer"
+        @drop="handleFormatConverterDrop"
+        @dragover.prevent="handleDragOver"
+        @dragleave="handleDragLeave"
+        @click="triggerFormatFileInput"
+      >
+        <input
+          ref="formatFileInput"
+          type="file"
+          accept="video/*,image/gif,image/webp"
+          @change="handleFormatConverterFile"
+          class="hidden"
+        />
+        <div class="text-4xl mb-4">📁</div>
+        <p class="text-gray-600 mb-2">拖拽文件到此处或点击选择文件</p>
+        <p class="text-gray-400 text-sm">支持: GIF, MP4, WebM</p>
+      </div>
+
+      <div class="mt-4 flex items-center space-x-3">
+        <label class="text-sm">目标格式：</label>
+        <a-select v-model:value="targetFormat" style="width: 160px">
+          <a-select-option value="png">PNG</a-select-option>
+          <a-select-option value="webp">WebP</a-select-option>
+          <a-select-option value="jpeg">JPEG</a-select-option>
+          <a-select-option value="gif">GIF (原样/不保证转换)</a-select-option>
+          <a-select-option value="apng">APNG (原样/不保证转换)</a-select-option>
+        </a-select>
+
+        <label class="text-sm">质量：</label>
+        <a-input-number v-model:value="outputQuality" :min="10" :max="100" :step="5" />
+
+        <a-button type="primary" @click="startFormatConversion" :disabled="!formatFile" class="ml-2">开始转换</a-button>
+        <a-button v-if="formatOutputUrl" @click="downloadConvertedFile" class="ml-2">下载结果</a-button>
+      </div>
+
+  <div v-if="formatConvertProgress.show" class="mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-medium">{{ formatConvertProgress.text }}</span>
+          <span class="text-sm text-gray-500">{{ formatConvertProgress.percent }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div
+            class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            :style="{ width: formatConvertProgress.percent + '%' }"
+          ></div>
+        </div>
+        <div v-if="formatConvertProgress.fileInfo" class="mt-3 p-3 bg-gray-50 rounded text-sm">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <span class="font-medium">文件大小:</span>
+              {{ formatConvertProgress.fileInfo.size }}
+            </div>
+            <div>
+              <span class="font-medium">尺寸:</span>
+              {{ formatConvertProgress.fileInfo.dimensions }}
+            </div>
+            <div>
+              <span class="font-medium">帧率:</span>
+              {{ formatConvertProgress.fileInfo.framerate }}
+            </div>
+            <div>
+              <span class="font-medium">编码:</span>
+              {{ formatConvertProgress.fileInfo.codec }}
+            </div>
+            <div>
+              <span class="font-medium">码率:</span>
+              {{ formatConvertProgress.fileInfo.bitrate }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-if="formatOutputUrl" class="mt-4 p-3 bg-white rounded shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="text-sm">已生成文件: <span class="font-medium">{{ formatOutputName }}</span></div>
+          <div>
+            <a-button type="primary" @click="downloadConvertedFile">下载</a-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Frame Splitter -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex items-center mb-4">
+        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+          ✂️
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold">帧分离器</h3>
+          <p class="text-gray-600 text-sm">
+            Frame Splitter: Extract individual frames from animations
+          </p>
+        </div>
+      </div>
+
+      <div
+        class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors hover:border-green-400 hover:bg-green-50 cursor-pointer"
+        @drop="handleFrameSplitterDrop"
+        @dragover.prevent="handleDragOver"
+        @dragleave="handleDragLeave"
+        @click="triggerFrameSplitterInput"
+      >
+        <input
+          ref="frameSplitterInput"
+          type="file"
+          accept="image/gif,video/*"
+          @change="handleFrameSplitterFile"
+          class="hidden"
+        />
+        <div class="text-4xl mb-4">🎞️</div>
+        <p class="text-gray-600 mb-2">选择动画文件以提取帧</p>
+        <p class="text-gray-400 text-sm">支持: GIF, MP4, WebM</p>
+      </div>
+
+      <a-button
+        type="primary"
+        @click="startFrameSplitting"
+        :disabled="!frameSplitterFile"
+        class="mt-4"
+      >
+        开始提取帧
+      </a-button>
+
+      <div v-if="frameImages.length > 0" class="mt-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-medium">已提取 {{ frameImages.length }} 帧</div>
+          <div class="flex space-x-2">
+            <a-button type="primary" @click="downloadAllFrames">下载全部帧</a-button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+          <div v-for="frame in frameImages" :key="frame.name" class="border rounded p-2 bg-white">
+            <img :src="frame.url" class="w-full h-24 object-contain mb-2" />
+            <div class="flex items-center justify-between">
+              <div class="text-xs truncate">{{ frame.name }}</div>
+              <a-button size="small" @click="downloadFrame(frame)">下载</a-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Frame Merger -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex items-center mb-4">
+        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+          🔗
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold">帧合并器</h3>
+          <p class="text-gray-600 text-sm">
+            Frame Merger: Combine multiple images into animated GIFs/APNGs
+          </p>
+        </div>
+      </div>
+
+      <div
+        class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors hover:border-purple-400 hover:bg-purple-50 cursor-pointer"
+        @drop="handleFrameMergerDrop"
+        @dragover.prevent="handleDragOver"
+        @dragleave="handleDragLeave"
+        @click="triggerFrameMergerInput"
+      >
+        <input
+          ref="frameMergerInput"
+          type="file"
+          accept="image/*"
+          multiple
+          @change="handleFrameMergerFiles"
+          class="hidden"
+        />
+        <div class="text-4xl mb-4">🖼️</div>
+        <p class="text-gray-600 mb-2">选择多个图像文件进行合并</p>
+        <p class="text-gray-400 text-sm">支持: PNG, JPG, WebP</p>
+      </div>
+
+      <div v-if="frameMergerFiles.length > 0" class="mt-4">
+        <p class="text-sm text-gray-600 mb-2">已选择 {{ frameMergerFiles.length }} 个文件</p>
+        <div class="flex space-x-2 mb-4">
+          <a-input-number
+            v-model:value="frameDelay"
+            :min="50"
+            :max="5000"
+            :step="50"
+            addon-before="帧延迟"
+            addon-after="ms"
+          />
+          <a-select v-model:value="outputFormat" style="width: 120px">
+            <a-select-option value="gif">GIF</a-select-option>
+            <a-select-option value="apng">APNG</a-select-option>
+          </a-select>
+        </div>
+        <a-button type="primary" @click="startFrameMerging">合并为动画</a-button>
+      </div>
+    </div>
+
+    <!-- FFmpeg Integration -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex items-center mb-4">
+        <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-4">🎬</div>
+        <div>
+          <h3 class="text-lg font-semibold">本地 FFmpeg 集成</h3>
+          <p class="text-gray-600 text-sm">
+            Local FFmpeg Integration: Uses @ffmpeg/ffmpeg and @ffmpeg/util from node_modules
+          </p>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="flex items-center space-x-4">
+          <a-button
+            type="primary"
+            @click="initFFmpeg"
+            :loading="ffmpegLoading"
+            :disabled="ffmpegLoaded"
+          >
+            {{ ffmpegLoaded ? '✅ FFmpeg 已就绪' : '初始化 FFmpeg' }}
+          </a-button>
+
+          <div v-if="ffmpegLoaded" class="text-green-600 text-sm">
+            FFmpeg WASM 已加载，可以进行高级视频处理
+          </div>
+        </div>
+
+        <div v-if="ffmpegLoaded" class="p-4 bg-gray-50 rounded-lg">
+          <h4 class="font-medium mb-2">FFmpeg 功能</h4>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div>✅ 视频格式转换</div>
+            <div>✅ 音频提取</div>
+            <div>✅ 帧率调整</div>
+            <div>✅ 分辨率缩放</div>
+            <div>✅ 视频压缩</div>
+            <div>✅ 水印添加</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
