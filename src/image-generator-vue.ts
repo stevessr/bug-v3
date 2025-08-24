@@ -11,7 +11,9 @@ class SimpleProviderManager {
       gemini: { name: 'gemini', displayName: 'Google Gemini' },
       siliconflow: { name: 'siliconflow', displayName: 'SiliconFlow' },
       cloudflare: { name: 'cloudflare', displayName: 'Cloudflare Workers AI' },
-      chutesai: { name: 'chutesai', displayName: 'Chutes AI' }
+      chutesai: { name: 'chutesai', displayName: 'Chutes AI' },
+      chromeai: { name: 'chromeai', displayName: 'Chrome AI' },
+      edgeai: { name: 'edgeai', displayName: 'Edge AI' }
     }
     this.loadSelectedProvider()
   }
@@ -103,6 +105,10 @@ const ImageGeneratorMain = {
     const cloudflareModel = ref(configManager.getConfig('cloudflare', 'model', '@cf/stabilityai/stable-diffusion-xl-base-1.0'))
     const cloudflareCustomModel = ref(configManager.getConfig('cloudflare', 'customModel', false))
     const chutesaiApiKey = ref(configManager.getConfig('chutesai', 'apiKey'))
+    
+    // Browser AI states
+    const chromeAiAvailable = ref(false)
+    const edgeAiAvailable = ref(false)
 
     // Image settings
     const aspectRatio = ref('1:1')
@@ -118,6 +124,34 @@ const ImageGeneratorMain = {
     watch([cloudflareCustomModel], () => configManager.setConfig('cloudflare', 'customModel', cloudflareCustomModel.value))
     watch([chutesaiApiKey], () => configManager.setConfig('chutesai', 'apiKey', chutesaiApiKey.value))
 
+    // Browser AI availability check
+    onMounted(async () => {
+      await checkBrowserAiAvailability()
+    })
+
+    const checkBrowserAiAvailability = async () => {
+      // Check Chrome AI
+      try {
+        if (typeof window !== 'undefined' && (window as any).chrome?.ai) {
+          const canCreateSession = await (window as any).chrome.ai.canCreateTextSession()
+          chromeAiAvailable.value = canCreateSession === 'readily'
+          console.log('Chrome AI available:', chromeAiAvailable.value)
+        }
+      } catch (error) {
+        console.log('Chrome AI not available:', error)
+      }
+
+      // Check Edge AI
+      try {
+        if (typeof window !== 'undefined' && (window as any).navigator?.ml) {
+          edgeAiAvailable.value = true
+          console.log('Edge AI available:', edgeAiAvailable.value)
+        }
+      } catch (error) {
+        console.log('Edge AI not available:', error)
+      }
+    }
+
     // Provider change handler
     watch(selectedProvider, (newProvider) => {
       providerManager.setCurrentProvider(newProvider)
@@ -125,10 +159,17 @@ const ImageGeneratorMain = {
 
     // Computed properties
     const availableProviders = computed(() => 
-      providerManager.getProviderNames().map(name => ({
-        value: name,
-        label: providerManager.getProviderDisplayName(name)
-      }))
+      providerManager.getProviderNames()
+        .filter(name => {
+          // Filter out browser AI providers if not available
+          if (name === 'chromeai' && !chromeAiAvailable.value) return false
+          if (name === 'edgeai' && !edgeAiAvailable.value) return false
+          return true
+        })
+        .map(name => ({
+          value: name,
+          label: providerManager.getProviderDisplayName(name)
+        }))
     )
 
     const canGenerate = computed(() => {
@@ -143,6 +184,10 @@ const ImageGeneratorMain = {
           return cloudflareAccountId.value.trim() !== '' && cloudflareApiToken.value.trim() !== ''
         case 'chutesai':
           return chutesaiApiKey.value.trim() !== ''
+        case 'chromeai':
+          return chromeAiAvailable.value
+        case 'edgeai':
+          return edgeAiAvailable.value
         default:
           return false
       }
@@ -182,6 +227,10 @@ const ImageGeneratorMain = {
           return generateWithCloudflare(request)
         case 'chutesai':
           return generateWithChutesAI(request)
+        case 'chromeai':
+          return generateWithChromeAI(request)
+        case 'edgeai':
+          return generateWithEdgeAI(request)
         default:
           throw new Error('Unknown provider')
       }
@@ -205,6 +254,49 @@ const ImageGeneratorMain = {
     const generateWithChutesAI = async (request: any): Promise<string[]> => {
       // Simplified ChutesAI implementation
       throw new Error('ChutesAI provider not implemented in this simplified version')
+    }
+
+    const generateWithChromeAI = async (request: any): Promise<string[]> => {
+      if (!chromeAiAvailable.value) {
+        throw new Error('Chrome AI is not available. Please ensure you are using Chrome 127+ with AI features enabled.')
+      }
+
+      try {
+        // Note: Chrome AI is primarily for text generation, not image generation
+        // This is a demonstration of how to use Chrome AI APIs
+        const session = await (window as any).chrome.ai.createTextSession()
+        
+        // Generate a description or enhancement of the prompt
+        const enhancedPrompt = await session.prompt(
+          `Enhance this image generation prompt to be more detailed and descriptive: "${request.prompt}"`
+        )
+        
+        // Since Chrome AI doesn't generate images directly, we'll return a message
+        // In a real implementation, you might use this enhanced prompt with another image service
+        return [`Chrome AI enhanced prompt: ${enhancedPrompt}. Note: Chrome AI does not generate images directly. Please use an image generation provider.`]
+      } catch (error) {
+        throw new Error(`Chrome AI error: ${error.message}`)
+      }
+    }
+
+    const generateWithEdgeAI = async (request: any): Promise<string[]> => {
+      if (!edgeAiAvailable.value) {
+        throw new Error('Edge AI is not available. Please ensure you are using Microsoft Edge with AI features enabled.')
+      }
+
+      try {
+        // Note: Edge AI APIs are still in development and primarily for text assistance
+        // This is a demonstration of how to use Edge AI APIs when available
+        const response = await (window as any).navigator.ml.generateText({
+          prompt: `Create a detailed image description based on this prompt: "${request.prompt}"`,
+          maxTokens: 500
+        })
+        
+        // Since Edge AI doesn't generate images directly, we'll return a description
+        return [`Edge AI generated description: ${response}. Note: Edge AI does not generate images directly. Please use an image generation provider.`]
+      } catch (error) {
+        throw new Error(`Edge AI error: ${error.message}`)
+      }
     }
 
     const downloadImage = (imageUrl: string, index: number) => {
@@ -238,6 +330,9 @@ const ImageGeneratorMain = {
       cloudflareModel,
       cloudflareCustomModel,
       chutesaiApiKey,
+      // Browser AI
+      chromeAiAvailable,
+      edgeAiAvailable,
       // Settings
       aspectRatio,
       numberOfImages,
