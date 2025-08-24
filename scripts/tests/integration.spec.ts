@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Integration Tests', () => {
   test('should complete end-to-end workflow: options → tools → individual tools', async ({ page, context }) => {
     // Start from options page
-    await page.goto('/html/options.html')
+    await page.goto('/options.html')
     
     // Navigate to tools tab
     await page.locator('text=小工具').click()
@@ -59,11 +59,11 @@ test.describe('Integration Tests', () => {
     })
     
     const pages = [
-      '/html/options.html',
-      '/html/animation-converter.html',
-      '/html/image-editor.html', 
-      '/html/image-generator-vue.html',
-      '/html/emoji-manager.html'
+      '/options.html',
+      '/animation-converter.html',
+      '/image-editor.html', 
+      '/image-generator-vue.html',
+      '/emoji-manager.html'
     ]
     
     for (const pagePath of pages) {
@@ -92,10 +92,10 @@ test.describe('Integration Tests', () => {
     ]
     
     const pages = [
-      '/html/options.html',
-      '/html/animation-converter.html',
-      '/html/image-editor.html',
-      '/html/emoji-manager.html'
+      '/options.html',
+      '/animation-converter.html',
+      '/image-editor.html',
+      '/emoji-manager.html'
     ]
     
     for (const viewport of viewports) {
@@ -121,7 +121,7 @@ test.describe('Integration Tests', () => {
 
   test('should validate browser extension manifest compatibility', async ({ page }) => {
     // Test that all pages work within extension context
-    await page.goto('/html/options.html')
+    await page.goto('/options.html')
     
     // Check chrome.storage APIs would be available (simulated)
     const storageScript = `
@@ -144,10 +144,10 @@ test.describe('Integration Tests', () => {
     const performanceMetrics = []
     
     const pages = [
-      '/html/options.html',
-      '/html/animation-converter.html',
-      '/html/image-editor.html',
-      '/html/emoji-manager.html'
+      '/options.html',
+      '/animation-converter.html',
+      '/image-editor.html',
+      '/emoji-manager.html'
     ]
     
     for (const pagePath of pages) {
@@ -169,10 +169,10 @@ test.describe('Integration Tests', () => {
 
   test('should validate accessibility compliance', async ({ page }) => {
     const pages = [
-      '/html/options.html',
-      '/html/animation-converter.html',
-      '/html/image-editor.html',
-      '/html/emoji-manager.html'
+      '/options.html',
+      '/animation-converter.html',
+      '/image-editor.html',
+      '/emoji-manager.html'
     ]
     
     for (const pagePath of pages) {

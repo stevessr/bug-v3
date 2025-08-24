@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Animation Converter', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/html/animation-converter.html')
+    await page.goto('/animation-converter.html')
   })
 
   test('should load animation converter interface', async ({ page }) => {

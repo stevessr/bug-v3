@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test'
 
 test.describe('CSP Compliance Validation', () => {
   const pages = [
-    '/html/options.html',
-    '/html/animation-converter.html', 
-    '/html/image-editor.html',
-    '/html/image-generator-vue.html',
-    '/html/emoji-manager.html'
+    '/options.html',
+    '/animation-converter.html', 
+    '/image-editor.html',
+    '/image-generator-vue.html',
+    '/emoji-manager.html'
   ]
 
   pages.forEach(pagePath => {
@@ -71,7 +71,7 @@ test.describe('CSP Compliance Validation', () => {
     })
     
     // Load main options page
-    await page.goto('/html/options.html')
+    await page.goto('/options.html')
     await page.waitForLoadState('networkidle')
     
     // All script URLs should be local (extension:// or relative)
@@ -95,7 +95,7 @@ test.describe('CSP Compliance Validation', () => {
     })
     
     // Load animation converter
-    await page.goto('/html/animation-converter.html')
+    await page.goto('/animation-converter.html')
     await page.waitForLoadState('networkidle')
     
     // Check no ffmpeg CDN requests
@@ -116,10 +116,10 @@ test.describe('CSP Compliance Validation', () => {
     })
     
     // Load Vue-based pages
-    await page.goto('/html/emoji-manager.html')
+    await page.goto('/emoji-manager.html')
     await page.waitForLoadState('networkidle')
     
-    await page.goto('/html/image-generator-vue.html')
+    await page.goto('/image-generator-vue.html')
     await page.waitForLoadState('networkidle')
     
     // Check no Vue or Ant Design CDN requests
@@ -177,7 +177,7 @@ test.describe('CSP Compliance Validation', () => {
     })
     
     // Test main functionality still works
-    await page.goto('/html/options.html')
+    await page.goto('/options.html')
     
     // Should be able to navigate to tools tab
     await page.locator('text=小工具').click()
