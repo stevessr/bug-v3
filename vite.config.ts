@@ -1,11 +1,13 @@
 import { fileURLToPath, URL } from 'url'
-
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
+import fs from 'fs'
+import path from 'path'
 
 import { generateDefaultEmojiGroupsPlugin } from './scripts/vite-plugin-generate-default-emoji-groups'
+import moveToolHtmlToRootPlugin from './scripts/vite-plugin-move-tool-html-to-root'
 
 export default defineConfig(({ mode }) => {
   // 根据构建模式设置编译期标志
@@ -33,7 +35,9 @@ export default defineConfig(({ mode }) => {
       // auto register components and import styles for ant-design-vue
       Components({
         resolvers: [AntDesignVueResolver({ importStyle: 'less' })]
-      })
+      }),
+      // 插件：将三个工具的HTML文件输出到根目录（抽离为模块）
+      moveToolHtmlToRootPlugin()
     ],
     build: {
       minify: 'terser',
