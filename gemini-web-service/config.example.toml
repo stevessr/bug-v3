@@ -1,0 +1,37 @@
+# Gemini Web Service Configuration Example
+
+# Copy this file to config.toml and customize as needed
+
+[server]
+host = "127.0.0.1"
+port = 8080
+cors_enabled = true
+max_workspaces = 10
+command_timeout_seconds = 300
+
+# Optional: Path to existing Gemini CLI executable
+# gemini_cli_path = "/usr/local/bin/gemini"
+
+# Optional: Default directory for workspaces
+# default_workspace_dir = "/home/user/workspaces"
+
+# Example workspace configurations
+# These can be pre-configured for users
+
+[[workspace_presets]]
+name = "Development"
+api_type = "gemini"
+description = "General development workspace using Gemini API"
+
+[[workspace_presets]]
+name = "Production"
+api_type = "vertex"
+description = "Production workspace using Vertex AI"
+project_id_required = true
+region_required = true
+
+[[workspace_presets]]
+name = "CLI Reuse"
+api_type = "login_file"
+description = "Reuse existing Gemini CLI authentication"
+login_file_path = "~/.gemini/auth.json"
