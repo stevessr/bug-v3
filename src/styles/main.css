@@ -7,11 +7,11 @@
   .emoji-picker-container {
     @apply fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg;
   }
-  
+
   .emoji-button {
     @apply flex items-center justify-center p-2 rounded hover:bg-gray-100 transition-colors cursor-pointer;
   }
-  
+
   .emoji-grid {
     @apply gap-2 p-4;
     max-height: 300px;
@@ -19,25 +19,25 @@
     scrollbar-width: thin;
     scrollbar-color: #e5e7eb #f9fafb;
   }
-  
+
   .emoji-grid::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   .emoji-grid::-webkit-scrollbar-track {
     background: #f9fafb;
     border-radius: 3px;
   }
-  
+
   .emoji-grid::-webkit-scrollbar-thumb {
     background: #e5e7eb;
     border-radius: 3px;
   }
-  
+
   .emoji-grid::-webkit-scrollbar-thumb:hover {
     background: #d1d5db;
   }
-  
+
   .scale-control {
     @apply flex items-center gap-2 p-2 bg-gray-50 rounded;
   }

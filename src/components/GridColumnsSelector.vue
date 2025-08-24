@@ -1,19 +1,3 @@
-<template>
-  <select
-    :value="modelValue"
-    @change="onChange"
-    class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-  >
-    <option
-      v-for="col in options"
-      :key="col"
-      :value="col"
-    >
-      {{ col }} 列
-    </option>
-  </select>
-</template>
-
 <script setup lang="ts">
 import { computed } from 'vue'
 
@@ -42,6 +26,16 @@ const onChange = (e: Event) => {
   emit('update:modelValue', Number(target.value))
 }
 </script>
+
+<template>
+  <select
+    :value="modelValue"
+    @change="onChange"
+    class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  >
+    <option v-for="col in options" :key="col" :value="col">{{ col }} 列</option>
+  </select>
+</template>
 
 <style scoped>
 /* keep style minimal; parent can override */
