@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('AI Image Generator Improvements', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/html/image-generator-vue.html')
+    await page.goto('/image-generator-vue.html')
   })
 
   test('should load AI generator interface', async ({ page }) => {

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Image Editor', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/html/image-editor.html')
+    await page.goto('/image-editor.html')
   })
 
   test('should load image editor interface', async ({ page }) => {
