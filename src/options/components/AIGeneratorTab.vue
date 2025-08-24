@@ -1,247 +1,3 @@
-<template>
-  <div v-if="activeTab === 'ai-generator'" class="space-y-6">
-    <div class="bg-gradient-to-br from-purple-600 to-pink-700 text-white p-6 rounded-lg">
-      <h2 class="text-2xl font-bold mb-4">🎨 增强型 AI 图像生成器</h2>
-      <p class="text-purple-100">
-        支持 Cloudflare、OpenAI、以及浏览器原生 AI 的多平台图像生成工具
-      </p>
-    </div>
-
-    <!-- Provider Selection -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4">🔧 AI 提供商配置</h3>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <a-card 
-          v-for="provider in providers" 
-          :key="provider.id"
-          :class="selectedProvider === provider.id ? 'border-blue-500 bg-blue-50' : ''"
-          class="cursor-pointer transition-all hover:shadow-md"
-          @click="selectProvider(provider.id)"
-        >
-          <div class="text-center">
-            <div class="text-3xl mb-2">{{ provider.icon }}</div>
-            <h4 class="font-semibold">{{ provider.name }}</h4>
-            <p class="text-sm text-gray-600 mt-1">{{ provider.description }}</p>
-            <div class="mt-2">
-              <a-tag :color="provider.available ? 'green' : 'red'">
-                {{ provider.available ? '可用' : '不可用' }}
-              </a-tag>
-            </div>
-          </div>
-        </a-card>
-      </div>
-
-      <!-- Configuration Panel -->
-      <div class="border-t pt-6">
-        <!-- Cloudflare Configuration -->
-        <div v-if="selectedProvider === 'cloudflare'" class="space-y-4">
-          <h4 class="font-semibold text-lg">☁️ Cloudflare AI 配置</h4>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium mb-2">Account ID</label>
-              <a-input 
-                v-model:value="cloudflareConfig.accountId" 
-                placeholder="输入 Cloudflare Account ID"
-                type="password"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">API Token</label>
-              <a-input 
-                v-model:value="cloudflareConfig.apiToken" 
-                placeholder="输入 Cloudflare API Token"
-                type="password"
-              />
-            </div>
-          </div>
-          <div class="flex items-center space-x-4">
-            <a-checkbox v-model:checked="cloudflareConfig.useCustomModel">
-              使用自定义模型
-            </a-checkbox>
-            <a-input 
-              v-if="cloudflareConfig.useCustomModel"
-              v-model:value="cloudflareConfig.customModel"
-              placeholder="@cf/stable-diffusion-xl-base-1.0"
-              class="flex-1"
-            />
-          </div>
-          <a-button @click="testCloudflareConnection" :loading="testing">
-            测试连接
-          </a-button>
-        </div>
-
-        <!-- OpenAI Configuration -->
-        <div v-if="selectedProvider === 'openai'" class="space-y-4">
-          <h4 class="font-semibold text-lg">🤖 OpenAI 配置</h4>
-          <div>
-            <label class="block text-sm font-medium mb-2">API Key</label>
-            <a-input 
-              v-model:value="openaiConfig.apiKey" 
-              placeholder="输入 OpenAI API Key"
-              type="password"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">模型</label>
-            <a-select v-model:value="openaiConfig.model" class="w-full">
-              <a-select-option value="dall-e-3">DALL-E 3</a-select-option>
-              <a-select-option value="dall-e-2">DALL-E 2</a-select-option>
-            </a-select>
-          </div>
-          <a-button @click="testOpenAIConnection" :loading="testing">
-            测试连接
-          </a-button>
-        </div>
-
-        <!-- Browser AI Configuration -->
-        <div v-if="selectedProvider === 'chrome-ai'" class="space-y-4">
-          <h4 class="font-semibold text-lg">🌐 Chrome AI 配置</h4>
-          <div class="p-4 bg-blue-50 rounded-lg">
-            <div class="flex items-center space-x-2 mb-2">
-              <div class="w-3 h-3 rounded-full" :class="chromeAIStatus.available ? 'bg-green-500' : 'bg-red-500'"></div>
-              <span class="font-medium">状态: {{ chromeAIStatus.message }}</span>
-            </div>
-            <p class="text-sm text-gray-600">
-              需要 Chrome 127+ 并启用 AI 功能。本地处理，无需 API 密钥。
-            </p>
-          </div>
-          <a-button @click="initChromeAI" :loading="testing" :disabled="chromeAIStatus.available">
-            {{ chromeAIStatus.available ? '✅ 已就绪' : '初始化 Chrome AI' }}
-          </a-button>
-        </div>
-
-        <!-- Edge AI Configuration -->
-        <div v-if="selectedProvider === 'edge-ai'" class="space-y-4">
-          <h4 class="font-semibold text-lg">🔷 Edge AI 配置</h4>
-          <div class="p-4 bg-blue-50 rounded-lg">
-            <div class="flex items-center space-x-2 mb-2">
-              <div class="w-3 h-3 rounded-full" :class="edgeAIStatus.available ? 'bg-green-500' : 'bg-red-500'"></div>
-              <span class="font-medium">状态: {{ edgeAIStatus.message }}</span>
-            </div>
-            <p class="text-sm text-gray-600">
-              需要 Microsoft Edge 并启用 AI 写作辅助功能。
-            </p>
-          </div>
-          <a-button @click="initEdgeAI" :loading="testing" :disabled="edgeAIStatus.available">
-            {{ edgeAIStatus.available ? '✅ 已就绪' : '初始化 Edge AI' }}
-          </a-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Generation Interface -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4">🎨 图像生成</h3>
-      
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Input Panel -->
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">提示词 (Prompt)</label>
-            <a-textarea 
-              v-model:value="prompt"
-              :rows="4"
-              placeholder="描述你想要生成的图像..."
-              class="resize-none"
-            />
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium mb-2">负面提示词 (Negative Prompt)</label>
-            <a-textarea 
-              v-model:value="negativePrompt"
-              :rows="2"
-              placeholder="描述你不想要的元素..."
-              class="resize-none"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium mb-2">宽度</label>
-              <a-select v-model:value="imageConfig.width">
-                <a-select-option value="512">512px</a-select-option>
-                <a-select-option value="768">768px</a-select-option>
-                <a-select-option value="1024">1024px</a-select-option>
-              </a-select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">高度</label>
-              <a-select v-model:value="imageConfig.height">
-                <a-select-option value="512">512px</a-select-option>
-                <a-select-option value="768">768px</a-select-option>
-                <a-select-option value="1024">1024px</a-select-option>
-              </a-select>
-            </div>
-          </div>
-
-          <div v-if="selectedProvider !== 'chrome-ai' && selectedProvider !== 'edge-ai'">
-            <label class="block text-sm font-medium mb-2">生成数量</label>
-            <a-input-number v-model:value="imageConfig.count" :min="1" :max="4" />
-          </div>
-
-          <div v-if="selectedProvider === 'cloudflare' || selectedProvider === 'openai'">
-            <label class="block text-sm font-medium mb-2">引导强度 (Guidance Scale)</label>
-            <a-slider v-model:value="imageConfig.guidance" :min="1" :max="20" />
-          </div>
-
-          <a-button 
-            type="primary" 
-            size="large" 
-            @click="generateImage"
-            :loading="generating"
-            :disabled="!prompt.trim() || !isProviderConfigured"
-            class="w-full"
-          >
-            {{ generating ? '生成中...' : '生成图像' }}
-          </a-button>
-        </div>
-
-        <!-- Preview and Results -->
-        <div class="space-y-4">
-          <div v-if="generating" class="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-            <div class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p class="text-gray-600">{{ generationStatus }}</p>
-            <a-progress v-if="generationProgress > 0" :percent="generationProgress" class="mt-4" />
-          </div>
-
-          <div v-else-if="generatedImages.length > 0" class="space-y-4">
-            <h4 class="font-semibold">生成结果</h4>
-            <div class="grid grid-cols-1 gap-4">
-              <div 
-                v-for="(image, index) in generatedImages" 
-                :key="index"
-                class="border rounded-lg overflow-hidden"
-              >
-                <img :src="image.url" :alt="`Generated image ${index + 1}`" class="w-full h-auto" />
-                <div class="p-3 bg-gray-50">
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-600">{{ image.timestamp }}</span>
-                    <div class="space-x-2">
-                      <a-button size="small" @click="downloadImage(image.url, index)">
-                        下载
-                      </a-button>
-                      <a-button size="small" @click="copyImageToClipboard(image.url)">
-                        复制
-                      </a-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-            <div class="text-4xl mb-4">🎨</div>
-            <p class="text-gray-600">生成的图像将显示在这里</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
@@ -385,7 +141,7 @@ const testOpenAIConnection = async () => {
 
 const initChromeAI = async () => {
   testing.value = true
-  
+
   try {
     // Check for Chrome AI availability
     if ('ai' in window && 'assistant' in (window as any).ai) {
@@ -410,7 +166,7 @@ const initChromeAI = async () => {
 
 const initEdgeAI = async () => {
   testing.value = true
-  
+
   try {
     // Check for Edge AI availability
     if ('navigator' in window && 'ml' in navigator) {
@@ -487,9 +243,7 @@ const copyImageToClipboard = async (url: string) => {
   try {
     const response = await fetch(url)
     const blob = await response.blob()
-    await navigator.clipboard.write([
-      new ClipboardItem({ [blob.type]: blob })
-    ])
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
     message.success('图像已复制到剪贴板')
   } catch (error) {
     message.error('复制失败')
@@ -516,3 +270,250 @@ onMounted(() => {
   }
 })
 </script>
+
+<template>
+  <div v-if="activeTab === 'ai-generator'" class="space-y-6">
+    <div class="bg-gradient-to-br from-purple-600 to-pink-700 text-white p-6 rounded-lg">
+      <h2 class="text-2xl font-bold mb-4">🎨 增强型 AI 图像生成器</h2>
+      <p class="text-purple-100">支持 Cloudflare、OpenAI、以及浏览器原生 AI 的多平台图像生成工具</p>
+    </div>
+
+    <!-- Provider Selection -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4">🔧 AI 提供商配置</h3>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <a-card
+          v-for="provider in providers"
+          :key="provider.id"
+          :class="selectedProvider === provider.id ? 'border-blue-500 bg-blue-50' : ''"
+          class="cursor-pointer transition-all hover:shadow-md"
+          @click="selectProvider(provider.id)"
+        >
+          <div class="text-center">
+            <div class="text-3xl mb-2">{{ provider.icon }}</div>
+            <h4 class="font-semibold">{{ provider.name }}</h4>
+            <p class="text-sm text-gray-600 mt-1">{{ provider.description }}</p>
+            <div class="mt-2">
+              <a-tag :color="provider.available ? 'green' : 'red'">
+                {{ provider.available ? '可用' : '不可用' }}
+              </a-tag>
+            </div>
+          </div>
+        </a-card>
+      </div>
+
+      <!-- Configuration Panel -->
+      <div class="border-t pt-6">
+        <!-- Cloudflare Configuration -->
+        <div v-if="selectedProvider === 'cloudflare'" class="space-y-4">
+          <h4 class="font-semibold text-lg">☁️ Cloudflare AI 配置</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Account ID</label>
+              <a-input
+                v-model:value="cloudflareConfig.accountId"
+                placeholder="输入 Cloudflare Account ID"
+                type="password"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">API Token</label>
+              <a-input
+                v-model:value="cloudflareConfig.apiToken"
+                placeholder="输入 Cloudflare API Token"
+                type="password"
+              />
+            </div>
+          </div>
+          <div class="flex items-center space-x-4">
+            <a-checkbox v-model:checked="cloudflareConfig.useCustomModel">
+              使用自定义模型
+            </a-checkbox>
+            <a-input
+              v-if="cloudflareConfig.useCustomModel"
+              v-model:value="cloudflareConfig.customModel"
+              placeholder="@cf/stable-diffusion-xl-base-1.0"
+              class="flex-1"
+            />
+          </div>
+          <a-button @click="testCloudflareConnection" :loading="testing">测试连接</a-button>
+        </div>
+
+        <!-- OpenAI Configuration -->
+        <div v-if="selectedProvider === 'openai'" class="space-y-4">
+          <h4 class="font-semibold text-lg">🤖 OpenAI 配置</h4>
+          <div>
+            <label class="block text-sm font-medium mb-2">API Key</label>
+            <a-input
+              v-model:value="openaiConfig.apiKey"
+              placeholder="输入 OpenAI API Key"
+              type="password"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">模型</label>
+            <a-select v-model:value="openaiConfig.model" class="w-full">
+              <a-select-option value="dall-e-3">DALL-E 3</a-select-option>
+              <a-select-option value="dall-e-2">DALL-E 2</a-select-option>
+            </a-select>
+          </div>
+          <a-button @click="testOpenAIConnection" :loading="testing">测试连接</a-button>
+        </div>
+
+        <!-- Browser AI Configuration -->
+        <div v-if="selectedProvider === 'chrome-ai'" class="space-y-4">
+          <h4 class="font-semibold text-lg">🌐 Chrome AI 配置</h4>
+          <div class="p-4 bg-blue-50 rounded-lg">
+            <div class="flex items-center space-x-2 mb-2">
+              <div
+                class="w-3 h-3 rounded-full"
+                :class="chromeAIStatus.available ? 'bg-green-500' : 'bg-red-500'"
+              ></div>
+              <span class="font-medium">状态: {{ chromeAIStatus.message }}</span>
+            </div>
+            <p class="text-sm text-gray-600">
+              需要 Chrome 127+ 并启用 AI 功能。本地处理，无需 API 密钥。
+            </p>
+          </div>
+          <a-button @click="initChromeAI" :loading="testing" :disabled="chromeAIStatus.available">
+            {{ chromeAIStatus.available ? '✅ 已就绪' : '初始化 Chrome AI' }}
+          </a-button>
+        </div>
+
+        <!-- Edge AI Configuration -->
+        <div v-if="selectedProvider === 'edge-ai'" class="space-y-4">
+          <h4 class="font-semibold text-lg">🔷 Edge AI 配置</h4>
+          <div class="p-4 bg-blue-50 rounded-lg">
+            <div class="flex items-center space-x-2 mb-2">
+              <div
+                class="w-3 h-3 rounded-full"
+                :class="edgeAIStatus.available ? 'bg-green-500' : 'bg-red-500'"
+              ></div>
+              <span class="font-medium">状态: {{ edgeAIStatus.message }}</span>
+            </div>
+            <p class="text-sm text-gray-600">需要 Microsoft Edge 并启用 AI 写作辅助功能。</p>
+          </div>
+          <a-button @click="initEdgeAI" :loading="testing" :disabled="edgeAIStatus.available">
+            {{ edgeAIStatus.available ? '✅ 已就绪' : '初始化 Edge AI' }}
+          </a-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generation Interface -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4">🎨 图像生成</h3>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Input Panel -->
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">提示词 (Prompt)</label>
+            <a-textarea
+              v-model:value="prompt"
+              :rows="4"
+              placeholder="描述你想要生成的图像..."
+              class="resize-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-2">负面提示词 (Negative Prompt)</label>
+            <a-textarea
+              v-model:value="negativePrompt"
+              :rows="2"
+              placeholder="描述你不想要的元素..."
+              class="resize-none"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">宽度</label>
+              <a-select v-model:value="imageConfig.width">
+                <a-select-option value="512">512px</a-select-option>
+                <a-select-option value="768">768px</a-select-option>
+                <a-select-option value="1024">1024px</a-select-option>
+              </a-select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">高度</label>
+              <a-select v-model:value="imageConfig.height">
+                <a-select-option value="512">512px</a-select-option>
+                <a-select-option value="768">768px</a-select-option>
+                <a-select-option value="1024">1024px</a-select-option>
+              </a-select>
+            </div>
+          </div>
+
+          <div v-if="selectedProvider !== 'chrome-ai' && selectedProvider !== 'edge-ai'">
+            <label class="block text-sm font-medium mb-2">生成数量</label>
+            <a-input-number v-model:value="imageConfig.count" :min="1" :max="4" />
+          </div>
+
+          <div v-if="selectedProvider === 'cloudflare' || selectedProvider === 'openai'">
+            <label class="block text-sm font-medium mb-2">引导强度 (Guidance Scale)</label>
+            <a-slider v-model:value="imageConfig.guidance" :min="1" :max="20" />
+          </div>
+
+          <a-button
+            type="primary"
+            size="large"
+            @click="generateImage"
+            :loading="generating"
+            :disabled="!prompt.trim() || !isProviderConfigured"
+            class="w-full"
+          >
+            {{ generating ? '生成中...' : '生成图像' }}
+          </a-button>
+        </div>
+
+        <!-- Preview and Results -->
+        <div class="space-y-4">
+          <div
+            v-if="generating"
+            class="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg"
+          >
+            <div
+              class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"
+            ></div>
+            <p class="text-gray-600">{{ generationStatus }}</p>
+            <a-progress v-if="generationProgress > 0" :percent="generationProgress" class="mt-4" />
+          </div>
+
+          <div v-else-if="generatedImages.length > 0" class="space-y-4">
+            <h4 class="font-semibold">生成结果</h4>
+            <div class="grid grid-cols-1 gap-4">
+              <div
+                v-for="(image, index) in generatedImages"
+                :key="index"
+                class="border rounded-lg overflow-hidden"
+              >
+                <img :src="image.url" :alt="`Generated image ${index + 1}`" class="w-full h-auto" />
+                <div class="p-3 bg-gray-50">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">{{ image.timestamp }}</span>
+                    <div class="space-x-2">
+                      <a-button size="small" @click="downloadImage(image.url, index)">
+                        下载
+                      </a-button>
+                      <a-button size="small" @click="copyImageToClipboard(image.url)">
+                        复制
+                      </a-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
+            <div class="text-4xl mb-4">🎨</div>
+            <p class="text-gray-600">生成的图像将显示在这里</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

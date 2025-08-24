@@ -29,6 +29,10 @@
   },
   "dependencies": {
     "ant-design-vue": "^4.1.2",
+    "@ffmpeg/ffmpeg": "^0.12.10",
+    "@ffmpeg/util": "^0.12.1",
+    "gifuct-js": "^2.1.2",
+    "jszip": "^3.10.1",
     "eslint": "^9.34.0",
     "globals": "^16.3.0",
     "pinia": "^2.1.7",

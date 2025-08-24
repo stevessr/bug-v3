@@ -4,7 +4,7 @@ test.describe('Image Editor Tab', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/options.html')
     await page.waitForLoadState('networkidle')
-    
+
     // Navigate to image editor tab
     await page.click('text=图像编辑器')
     await page.waitForTimeout(1000)
@@ -13,10 +13,10 @@ test.describe('Image Editor Tab', () => {
   test('should display image editor correctly', async ({ page }) => {
     // Check main heading
     await expect(page.locator('text=专业图像编辑器')).toBeVisible()
-    
+
     // Check upload area is shown initially
     await expect(page.locator('text=拖拽图像到此处或点击选择')).toBeVisible()
-    
+
     // Check supported formats message
     await expect(page.locator('text=支持: PNG, JPG, WebP, GIF')).toBeVisible()
   })
@@ -33,7 +33,7 @@ test.describe('Image Editor Tab', () => {
         ctx.fillStyle = 'red'
         ctx.fillRect(0, 0, 800, 600)
       }
-      
+
       const dataUrl = canvas.toDataURL()
       const img = new Image()
       img.onload = () => {
@@ -47,18 +47,18 @@ test.describe('Image Editor Tab', () => {
       }
       img.src = dataUrl
     })
-    
+
     await page.waitForTimeout(2000)
-    
+
     // Check if editor interface elements are visible
     const editorInterface = page.locator('text=图像编辑器').locator('../../../..')
-    
+
     // Should have tools
     await expect(editorInterface.locator('text=选择')).toBeVisible()
     await expect(editorInterface.locator('text=画笔')).toBeVisible()
     await expect(editorInterface.locator('text=文本')).toBeVisible()
     await expect(editorInterface.locator('text=橡皮擦')).toBeVisible()
-    
+
     // Should have adjustment controls
     await expect(editorInterface.locator('text=实时调整')).toBeVisible()
     await expect(editorInterface.locator('text=亮度')).toBeVisible()
@@ -70,7 +70,7 @@ test.describe('Image Editor Tab', () => {
   test('should display all editing tools', async ({ page }) => {
     // Check if tools list is comprehensive
     const expectedTools = ['选择', '裁剪', '画笔', '文本', '矩形', '圆形', '橡皮擦']
-    
+
     for (const tool of expectedTools) {
       await expect(page.locator(`text=${tool}`)).toBeVisible()
     }
@@ -84,12 +84,12 @@ test.describe('Image Editor Tab', () => {
         component.currentImage = { width: 800, height: 600 }
       }
     })
-    
+
     await page.waitForTimeout(1000)
-    
+
     // Check filter section
     const expectedFilters = ['灰度', '棕褐色', '模糊', '锐化', '复古', '反色']
-    
+
     for (const filter of expectedFilters) {
       await expect(page.locator(`text=${filter}`)).toBeVisible()
     }
@@ -103,9 +103,9 @@ test.describe('Image Editor Tab', () => {
         component.currentImage = { width: 800, height: 600 }
       }
     })
-    
+
     await page.waitForTimeout(1000)
-    
+
     // Check zoom controls
     await expect(page.locator('text=缩放:')).toBeVisible()
     await expect(page.locator('button:has-text("+")')).toBeVisible()
@@ -122,9 +122,9 @@ test.describe('Image Editor Tab', () => {
         component.history = [{}] // Simulate some history
       }
     })
-    
+
     await page.waitForTimeout(1000)
-    
+
     // Check history controls
     await expect(page.locator('text=历史记录')).toBeVisible()
     await expect(page.locator('button:has-text("撤销")')).toBeVisible()
@@ -139,9 +139,9 @@ test.describe('Image Editor Tab', () => {
         component.currentImage = { width: 800, height: 600 }
       }
     })
-    
+
     await page.waitForTimeout(1000)
-    
+
     // Check for save button
     await expect(page.locator('button:has-text("保存图像")')).toBeVisible()
     await expect(page.locator('button:has-text("重置")')).toBeVisible()
@@ -156,21 +156,21 @@ test.describe('Image Editor Tab', () => {
         component.currentImage = { width: 800, height: 600 }
       }
     })
-    
+
     await page.waitForTimeout(1000)
-    
+
     // Click on brush tool
     const brushTool = page.locator('button:has-text("🖌️ 画笔")')
     await brushTool.click()
-    
+
     // Should show brush controls
     await expect(page.locator('text=画笔大小')).toBeVisible()
     await expect(page.locator('text=颜色')).toBeVisible()
-    
+
     // Click on text tool
     const textTool = page.locator('button:has-text("📝 文本")')
     await textTool.click()
-    
+
     // Should show text controls
     await expect(page.locator('text=文本')).toBeVisible()
     await expect(page.locator('text=字体大小')).toBeVisible()
@@ -184,16 +184,16 @@ test.describe('Image Editor Tab', () => {
         component.currentImage = { width: 800, height: 600 }
       }
     })
-    
+
     await page.waitForTimeout(1000)
-    
+
     // Test brightness slider
     const brightnessSlider = page.locator('.ant-slider').first()
     await expect(brightnessSlider).toBeVisible()
-    
+
     // Interact with slider (drag to different position)
     await brightnessSlider.click({ position: { x: 50, y: 10 } })
-    
+
     // Verify other sliders exist
     const sliders = page.locator('.ant-slider')
     await expect(sliders).toHaveCount(4) // brightness, contrast, saturation, hue
