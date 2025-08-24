@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
 import { logger } from '../config/buildFlags'

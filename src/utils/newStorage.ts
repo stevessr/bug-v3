@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
 import { logger } from '../config/buildFlags'
