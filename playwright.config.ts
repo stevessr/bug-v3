@@ -8,20 +8,24 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:4173',
+    baseURL: 'http://localhost:4174',
     trace: 'on-first-retry'
   },
 
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] }
+      use: { 
+        ...devices['Desktop Chrome'],
+        channel: 'chrome',
+        headless: true
+      }
     }
   ],
 
   webServer: {
     command: 'npm run serve',
-    port: 4173,
-    reuseExistingServer: !process.env.CI
+    port: 4174,
+    reuseExistingServer: true
   }
 })
