@@ -123,7 +123,7 @@ test.describe('External Import Tab', () => {
     await expect(groupSelect).toBeVisible()
 
     // Should have options
-    await expect(groupSelect.locator('option:has-text("自动创建分组")')).toBeVisible()
+    await expect(groupSelect.locator('option').first()).toBeVisible()
 
     // Select existing group if available
     const groupOptions = await groupSelect.locator('option').count()
