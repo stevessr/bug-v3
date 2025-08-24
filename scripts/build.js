@@ -123,20 +123,53 @@ child.on('exit', code => {
 
       cleanChild.on('exit', cleanCode => {
         if (cleanCode === 0) {
-          console.log('✅ 构建完成！')
-          if (isVariant) {
-            try {
-              if (fs.existsSync(devManifest) && fs.existsSync(distDir)) {
-                const target = path.join(distDir, 'manifest.json')
-                fs.copyFileSync(devManifest, target)
-                console.log('🔀 Wrote development manifest to', target)
-              } else if (!fs.existsSync(devManifest)) {
-                console.warn('manifest.development.json not found; skipping writing to dist')
+          // Move HTML files from dist/html/ to dist/
+          try {
+            const htmlDir = path.join(distDir, 'html')
+            if (fs.existsSync(htmlDir)) {
+              const htmlFiles = fs.readdirSync(htmlDir)
+              for (const file of htmlFiles) {
+                if (file.endsWith('.html')) {
+                  const source = path.join(htmlDir, file)
+                  const target = path.join(distDir, file)
+                  fs.copyFileSync(source, target)
+                  console.log(`📄 Moved ${file} to dist root`)
+                }
               }
-            } catch (e) {
-              console.error('Failed to write dev manifest to dist:', e)
+              // Remove the html directory
+              fs.rmSync(htmlDir, { recursive: true, force: true })
             }
+          } catch (e) {
+            console.error('Failed to move HTML files:', e)
           }
+          
+          // Inject script tags into HTML files
+          console.log('🔧 Injecting script tags...')
+          const injectChild = spawn('node', ['./scripts/inject-scripts.js'], {
+            stdio: 'inherit',
+            shell: true
+          })
+
+          injectChild.on('exit', injectCode => {
+            if (injectCode !== 0) {
+              console.warn('Script injection completed with warnings')
+            }
+            
+            console.log('✅ 构建完成！')
+            if (isVariant) {
+              try {
+                if (fs.existsSync(devManifest) && fs.existsSync(distDir)) {
+                  const target = path.join(distDir, 'manifest.json')
+                  fs.copyFileSync(devManifest, target)
+                  console.log('🔀 Wrote development manifest to', target)
+                } else if (!fs.existsSync(devManifest)) {
+                  console.warn('manifest.development.json not found; skipping writing to dist')
+                }
+              } catch (e) {
+                console.error('Failed to write dev manifest to dist:', e)
+              }
+            }
+          })
         } else {
           console.error('❌ 清理过程出错')
         }
