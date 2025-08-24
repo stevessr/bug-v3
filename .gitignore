@@ -153,3 +153,4 @@ chrome-extension-v3.crx
 pack-key.pem
 src/types/defaultEmojiGroups.ts
 package-lock.json
+bug-copilot.crx
