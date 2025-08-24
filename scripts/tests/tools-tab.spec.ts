@@ -13,12 +13,13 @@ test.describe('Tools Tab Functionality', () => {
     // Click on tools tab
     await toolsTab.click()
     
-    // Verify tools cards are displayed
-    await expect(page.locator('.tool-card')).toHaveCount(4)
+    // Verify tools cards are displayed - look for the actual class structure
+    const toolCards = page.locator('.bg-white.rounded-lg.border.border-gray-200.p-6')
+    await expect(toolCards).toHaveCount(4)
     
     // Check each tool card
     await expect(page.locator('text=AI 图片生成')).toBeVisible()
-    await expect(page.locator('text=动画转换器')).toBeVisible()
+    await expect(page.locator('text=动图转换器')).toBeVisible()
     await expect(page.locator('text=图片编辑器')).toBeVisible()
     await expect(page.locator('text=表情管理器')).toBeVisible()
   })
@@ -30,14 +31,14 @@ test.describe('Tools Tab Functionality', () => {
     // Click on animation converter
     const [newPage] = await Promise.all([
       context.waitForEvent('page'),
-      page.locator('text=动画转换器').click()
+      page.locator('text=动图转换器').click()
     ])
     
     // Verify new page opened with correct URL
     await expect(newPage).toHaveURL(/animation-converter\.html/)
     
     // Verify page title
-    await expect(newPage).toHaveTitle(/动画转换器/)
+    await expect(newPage).toHaveTitle(/动图转换器/)
   })
 
   test('should open image editor in new tab', async ({ context, page }) => {

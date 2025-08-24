@@ -7,7 +7,7 @@ test.describe('AI Image Generator Improvements', () => {
 
   test('should load AI generator interface', async ({ page }) => {
     // Check page title and header
-    await expect(page).toHaveTitle(/AI 图片生成/)
+    await expect(page).toHaveTitle(/AI 图片生成器/)
     await expect(page.locator('text=AI 图片生成器')).toBeVisible()
   })
 
