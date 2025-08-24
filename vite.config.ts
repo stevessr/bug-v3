@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
   const enableIndexedDB = process.env.ENABLE_INDEXEDDB !== 'false'; // 默认启用，除非明确禁用
 
   return {
+    base: './', // 设置相对路径基础
     css: {
       postcss: './postcss.config.js',
     },
@@ -38,7 +39,7 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        'vue': 'vue/dist/vue.esm-bundler.js'
+        'vue': 'vue/dist/vue.runtime.esm-bundler.js'
       }
     },
     build: {

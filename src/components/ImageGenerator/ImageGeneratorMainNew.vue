@@ -76,7 +76,6 @@
 import { ref, computed, onMounted } from 'vue';
 import ApiConfig from './ApiConfig.vue';
 import GenerationMode from './GenerationModeNew.vue';
-import ImageUpload from './ImageUpload.vue';
 import PromptInput from './PromptInput.vue';
 import GenerationConfig from './GenerationConfig.vue';
 import ResultDisplay from './ResultDisplay.vue';
@@ -104,14 +103,16 @@ const canGenerate = computed(() => {
 });
 
 const onProviderChanged = (provider: string) => {
+  console.log('Provider changed to:', provider);
   selectedProvider.value = provider;
   // If switching away from Gemini, disable edit mode
   if (provider !== 'gemini' && generationMode.value === 'edit') {
+    console.log('Disabling edit mode due to provider change');
     generationMode.value = 'generate';
   }
 };
 
-const onApiKeyChanged = (apiKey: string) => {
+const onApiKeyChanged = (_apiKey: string) => {
   // API key changes are handled in the ApiConfig component
   console.log('API Key updated for provider:', selectedProvider.value);
 };
@@ -127,12 +128,8 @@ const onModeChanged = (mode: 'generate' | 'edit') => {
   }
 };
 
-const onImageUploaded = (base64: string) => {
-  uploadedImage.value = base64;
-};
-
-const onImageRemoved = () => {
-  uploadedImage.value = '';
+const onImageUploaded = (base64: string | undefined) => {
+  uploadedImage.value = base64 || '';
 };
 
 const onPromptChanged = (newPrompt: string) => {

@@ -58,7 +58,6 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { PROVIDER_CONFIGS } from './types';
 import type { ProviderManager } from './providerManager';
 
 interface Props {
@@ -80,9 +79,11 @@ const selectedMode = ref<'generate' | 'edit'>(props.modelValue);
 const uploadedImage = ref(props.uploadedImage);
 const fileInput = ref<HTMLInputElement>();
 
-const supportsImageEditing = computed(() => 
-  props.providerManager.supportsImageEditing()
-);
+const supportsImageEditing = computed(() => {
+  const currentProvider = props.providerManager.getCurrentProviderName();
+  console.log('Current provider for image editing check:', currentProvider);
+  return props.providerManager.supportsImageEditing();
+});
 
 const onModeChange = () => {
   if (selectedMode.value === 'edit' && !supportsImageEditing.value) {
@@ -131,6 +132,16 @@ watch(() => props.modelValue, (newValue) => {
 
 watch(() => props.uploadedImage, (newValue) => {
   uploadedImage.value = newValue;
+});
+
+// Watch for provider changes and reset edit mode if not supported
+watch(() => props.providerManager.getCurrentProviderName(), (newProvider) => {
+  console.log('Provider changed to:', newProvider);
+  if (selectedMode.value === 'edit' && !supportsImageEditing.value) {
+    console.log('Switching from edit mode due to provider change');
+    selectedMode.value = 'generate';
+    onModeChange();
+  }
 });
 </script>
 
