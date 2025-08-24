@@ -12,17 +12,17 @@ test.describe('Tools Tab - Multimedia Converter', () => {
 
   test('should display tools tab correctly', async ({ page }) => {
     // Check main heading
-    await expect(page.locator('text=多媒体小工具')).toBeVisible()
+    await expect(page.getByText('多媒体小工具')).toBeVisible()
 
     // Check all tool sections are present
-    await expect(page.locator('text=格式转换器')).toBeVisible()
-    await expect(page.locator('text=帧分离器')).toBeVisible()
-    await expect(page.locator('text=帧合并器')).toBeVisible()
-    await expect(page.locator('text=本地 FFmpeg 集成')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '格式转换器' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '帧分离器' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '帧合并器' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '本地 FFmpeg 集成' })).toBeVisible()
   })
 
   test('should handle format converter drag and drop area', async ({ page }) => {
-    const dropZone = page.locator('.drag-drop-zone').first()
+    const dropZone = page.locator('.border-2').first()
 
     // Check drop zone is visible
     await expect(dropZone).toBeVisible()
@@ -35,7 +35,7 @@ test.describe('Tools Tab - Multimedia Converter', () => {
 
   test('should simulate format conversion progress', async ({ page }) => {
     // Create a mock file and trigger processing
-    const dropZone = page.locator('.drag-drop-zone').first()
+    const dropZone = page.locator('.border-2').first()
 
     // Create a test file
     await page.evaluate(() => {
