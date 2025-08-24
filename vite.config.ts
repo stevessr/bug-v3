@@ -20,6 +20,11 @@ export default defineConfig(({ mode }) => {
       __ENABLE_LOGGING__: enableLogging,
       __ENABLE_INDEXEDDB__: enableIndexedDB,
     },
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url))
+      }
+    },
     plugins: [
       generateDefaultEmojiGroupsPlugin(),
       vue(),
