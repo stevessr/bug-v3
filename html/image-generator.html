@@ -293,6 +293,32 @@
             </a>
           </small>
 
+          <!-- Cloudflare specific inputs -->
+          <div id="cloudflareCredentials" style="display: none; margin-top: 15px">
+            <div style="margin-bottom: 15px">
+              <label for="cloudflareAccountId" style="display: block; margin-bottom: 5px; font-weight: 600; color: #856404">
+                账户 ID (Account ID)
+              </label>
+              <input
+                type="text"
+                id="cloudflareAccountId"
+                placeholder="请输入 Cloudflare 账户 ID"
+                style="width: 100%; padding: 10px; border: 1px solid #ffeaa7; border-radius: 6px"
+              />
+            </div>
+            <div style="margin-bottom: 15px">
+              <label for="cloudflareApiToken" style="display: block; margin-bottom: 5px; font-weight: 600; color: #856404">
+                API Token
+              </label>
+              <input
+                type="password"
+                id="cloudflareApiToken"
+                placeholder="请输入 Cloudflare API Token"
+                style="width: 100%; padding: 10px; border: 1px solid #ffeaa7; border-radius: 6px"
+              />
+            </div>
+          </div>
+
           <div id="cloudflareModelSection" style="display: none; margin-top: 15px">
             <label
               for="cloudflareModel"
@@ -309,6 +335,18 @@
                 Stable Diffusion XL Lightning
               </option>
             </select>
+            <div style="margin-top: 10px">
+              <label style="display: flex; align-items: center;">
+                <input type="checkbox" id="cloudflareCustomModel" style="margin-right: 8px">
+                <span style="font-size: 14px; color: #856404">使用自定义模型</span>
+              </label>
+              <input
+                type="text"
+                id="cloudflareCustomModelName"
+                placeholder="输入自定义模型名称，如: @cf/custom/model-name"
+                style="width: 100%; padding: 8px; border: 1px solid #ffeaa7; border-radius: 4px; margin-top: 5px; display: none;"
+              />
+            </div>
           </div>
 
           <div id="chutesaiModelSection" style="display: none; margin-top: 15px">

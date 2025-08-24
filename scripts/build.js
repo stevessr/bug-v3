@@ -123,6 +123,26 @@ child.on('exit', code => {
 
       cleanChild.on('exit', cleanCode => {
         if (cleanCode === 0) {
+          // Move HTML files from dist/html/ to dist/
+          try {
+            const htmlDir = path.join(distDir, 'html')
+            if (fs.existsSync(htmlDir)) {
+              const htmlFiles = fs.readdirSync(htmlDir)
+              for (const file of htmlFiles) {
+                if (file.endsWith('.html')) {
+                  const source = path.join(htmlDir, file)
+                  const target = path.join(distDir, file)
+                  fs.copyFileSync(source, target)
+                  console.log(`📄 Moved ${file} to dist root`)
+                }
+              }
+              // Remove the html directory
+              fs.rmSync(htmlDir, { recursive: true, force: true })
+            }
+          } catch (e) {
+            console.error('Failed to move HTML files:', e)
+          }
+          
           console.log('✅ 构建完成！')
           if (isVariant) {
             try {
