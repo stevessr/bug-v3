@@ -41,7 +41,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/*", "js/*.css", "*.html"],
+      "resources": ["assets/*", "js/*.css", "js/ffmpeg-core.js", "js/ffmpeg-core-compat.js", "js/ffmpeg-core.wasm", "*.html"],
       "matches": ["<all_urls>"]
     }
   ]
