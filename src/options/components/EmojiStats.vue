@@ -1,3 +1,10 @@
+<script setup lang="ts">
+const props = defineProps<{ groupCount: number; totalEmojis: number; favoritesCount: number }>()
+const groupCount = props.groupCount
+const totalEmojis = props.totalEmojis
+const favoritesCount = props.favoritesCount
+</script>
+
 <template>
   <div class="bg-white rounded-lg shadow-sm border">
     <div class="px-6 py-4 border-b border-gray-200">
@@ -21,12 +28,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-const props = defineProps<{ groupCount: number; totalEmojis: number; favoritesCount: number }>();
-const groupCount = props.groupCount;
-const totalEmojis = props.totalEmojis;
-const favoritesCount = props.favoritesCount;
-</script>
-
-<style scoped></style>

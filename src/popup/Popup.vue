@@ -1,3 +1,11 @@
+<script setup lang="ts">
+import GroupTabs from './components/GroupTabs.vue'
+import EmojiGrid from './components/EmojiGrid.vue'
+import { usePopup } from './usePopup'
+
+const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions } = usePopup()
+</script>
+
 <template>
   <div class="popup-container bg-white">
     <!-- Header with scale control -->
@@ -9,12 +17,7 @@
           class="p-1 text-gray-500 hover:text-gray-700 rounded"
           title="设置"
         >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -48,10 +51,7 @@
     </div>
 
     <!-- Search Bar -->
-    <div
-      v-if="emojiStore.settings.showSearchBar"
-      class="p-2 border-b border-gray-100"
-    >
+    <div v-if="emojiStore.settings.showSearchBar" class="p-2 border-b border-gray-100">
       <div class="relative">
         <input
           v-model="emojiStore.searchQuery"
@@ -88,9 +88,7 @@
       :isLoading="emojiStore.isLoading"
       :favorites="emojiStore.favorites"
       :gridColumns="emojiStore.settings.gridColumns"
-      :emptyMessage="
-        emojiStore.searchQuery ? '没有找到匹配的表情' : '该分组还没有表情'
-      "
+      :emptyMessage="emojiStore.searchQuery ? '没有找到匹配的表情' : '该分组还没有表情'"
       :showAddButton="!emojiStore.searchQuery"
       @select="selectEmoji"
       @open-options="openOptions"
@@ -106,24 +104,9 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import GroupTabs from "./components/GroupTabs.vue";
-import EmojiGrid from "./components/EmojiGrid.vue";
-import { usePopup } from "./usePopup";
-
-const {
-  emojiStore,
-  localScale,
-  showCopyToast,
-  updateScale,
-  selectEmoji,
-  openOptions,
-} = usePopup();
-</script>
-
 <style>
 /* Import TailwindCSS in popup */
-@import "../styles/main.css";
+@import '../styles/main.css';
 
 /* Popup container base styles */
 .popup-container {
@@ -162,7 +145,6 @@ const {
     min-height: 400px;
     overflow: hidden;
   }
-
 
   .popup-container {
     width: 100%;

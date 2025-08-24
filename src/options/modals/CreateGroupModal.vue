@@ -1,3 +1,54 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+
+import { useEmojiStore } from '../../stores/emojiStore'
+import { flushBuffer } from '../../utils/indexedDB'
+import { isImageUrl } from '../../utils/isImageUrl'
+
+const { show } = defineProps<{ show: boolean }>()
+
+const emits = defineEmits<{
+  (e: 'update:show', value: boolean): void
+  (e: 'created'): void
+}>()
+
+const name = ref('')
+const icon = ref('📁')
+const selectedColor = ref('#3B82F6')
+const colorOptions = [
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#F97316',
+  '#06B6D4',
+  '#84CC16'
+]
+
+const emojiStore = useEmojiStore()
+
+const handleImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement
+  target.src = ''
+}
+
+const close = () => {
+  emits('update:show', false)
+}
+
+const create = () => {
+  if (!name.value.trim()) return
+  emojiStore.createGroup(name.value.trim(), icon.value || '📁')
+  void flushBuffer(true).then(() => console.log('[CreateGroupModal] created group flushed'))
+  name.value = ''
+  icon.value = '📁'
+  selectedColor.value = '#3B82F6'
+  emits('created')
+  emits('update:show', false)
+}
+</script>
+
 <template>
   <div
     v-if="show"
@@ -8,9 +59,7 @@
       <h3 class="text-lg font-semibold mb-4">新建分组</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"
-            >分组名称</label
-          >
+          <label class="block text-sm font-medium text-gray-700 mb-1">分组名称</label>
           <input
             v-model="name"
             type="text"
@@ -19,9 +68,7 @@
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"
-            >分组图标 / 图片链接</label
-          >
+          <label class="block text-sm font-medium text-gray-700 mb-1">分组图标 / 图片链接</label>
           <input
             v-model="icon"
             type="text"
@@ -38,17 +85,13 @@
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"
-            >分组颜色</label
-          >
+          <label class="block text-sm font-medium text-gray-700 mb-1">分组颜色</label>
           <div class="flex gap-2">
             <div
               v-for="color in colorOptions"
               :key="color"
-              :class="[
-                'w-8 h-8 rounded cursor-pointer border-2',
-                selectedColor === color ? 'border-gray-900' : 'border-gray-300',
-              ]"
+              class="w-8 h-8 rounded cursor-pointer border-2"
+              :class="[selectedColor === color ? 'border-gray-900' : 'border-gray-300']"
               :style="{ backgroundColor: color }"
               @click="selectedColor = color"
             ></div>
@@ -72,55 +115,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref } from "vue";
-import { useEmojiStore } from "../../stores/emojiStore";
-import { flushBuffer } from "../../utils/indexedDB";
-import { isImageUrl } from "../../utils/isImageUrl";
-
-const { show } = defineProps<{ show: boolean }>();
-
-const emits = defineEmits<{
-  (e: "update:show", value: boolean): void;
-  (e: "created"): void;
-}>();
-
-const name = ref("");
-const icon = ref("📁");
-const selectedColor = ref("#3B82F6");
-const colorOptions = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#F97316",
-  "#06B6D4",
-  "#84CC16",
-];
-
-const emojiStore = useEmojiStore();
-
-const handleImageError = (event: Event) => {
-  const target = event.target as HTMLImageElement;
-  target.src = "";
-};
-
-const close = () => {
-  emits("update:show", false);
-};
-
-const create = () => {
-  if (!name.value.trim()) return;
-  emojiStore.createGroup(name.value.trim(), icon.value || "📁");
-  void flushBuffer(true).then(() =>
-    console.log("[CreateGroupModal] created group flushed")
-  );
-  name.value = "";
-  icon.value = "📁";
-  selectedColor.value = "#3B82F6";
-  emits("created");
-  emits("update:show", false);
-};
-</script>

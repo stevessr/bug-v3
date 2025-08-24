@@ -1,3 +1,22 @@
+<script setup lang="ts">
+import { defineProps, defineEmits } from 'vue'
+
+const { showSuccess, successMessage, showError, errorMessage } = defineProps<{
+  showSuccess: boolean
+  successMessage: string
+  showError: boolean
+  errorMessage: string
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:showSuccess', value: boolean): void
+  (e: 'update:showError', value: boolean): void
+}>()
+
+const closeSuccess = () => emit('update:showSuccess', false)
+const closeError = () => emit('update:showError', false)
+</script>
+
 <template>
   <div>
     <transition name="toast" appear>
@@ -28,25 +47,6 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
-
-const { showSuccess, successMessage, showError, errorMessage } = defineProps<{
-  showSuccess: boolean;
-  successMessage: string;
-  showError: boolean;
-  errorMessage: string;
-}>();
-
-const emit = defineEmits<{
-  (e: 'update:showSuccess', value: boolean): void;
-  (e: 'update:showError', value: boolean): void;
-}>();
-
-const closeSuccess = () => emit('update:showSuccess', false);
-const closeError = () => emit('update:showError', false);
-</script>
-
 <style scoped>
 /* toast slide up + fade */
 .toast-enter-from,
@@ -56,7 +56,9 @@ const closeError = () => emit('update:showError', false);
 }
 .toast-enter-active,
 .toast-leave-active {
-  transition: transform 220ms cubic-bezier(.2,.8,.2,1), opacity 220ms ease;
+  transition:
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 220ms ease;
 }
 
 .toast {
