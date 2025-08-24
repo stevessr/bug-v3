@@ -72,19 +72,37 @@ export default defineConfig(({ mode }) => {
           },
           chunkFileNames: 'js/[name].js',
           assetFileNames: 'assets/[name].[ext]',
-          manualChunks: id => {
-            // Force content script dependencies to be bundled into the content entry
-            if (id.includes('src/content/') || id.includes('content.ts')) {
-              return 'content'
+          manualChunks: (id, { getModuleInfo }) => {
+            // Helper: determine whether `moduleId` is reachable from the content entry
+            const isReachableFromContent = (moduleId: string, seen = new Set<string>()): boolean => {
+              if (seen.has(moduleId)) return false
+              seen.add(moduleId)
+              if (moduleId.includes('src/content/') || moduleId.includes('content.ts')) return true
+              const info = getModuleInfo(moduleId)
+              if (!info) return false
+              for (const importer of info.importers) {
+                if (isReachableFromContent(importer, seen)) return true
+              }
+              return false
             }
+
+            // If this module is part of the content dependency graph, force into 'content'
+            try {
+              if (isReachableFromContent(id)) return 'content'
+            } catch (e) {
+              // defensive: fall back to default behavior on any error
+            }
+
             // Keep background modules together so runtime doesn't need cross-chunk imports
             if (id.includes('src/background/') || id.includes('background.ts')) {
               return 'background'
             }
+
             // Put third-party deps into vendor
             if (id.includes('node_modules')) {
               return 'vendor'
             }
+
             return undefined
           }
         },
