@@ -61,7 +61,27 @@
         >
           {{ model.name }}
         </option>
+        <option value="custom">自定义模型</option>
       </select>
+    </div>
+
+    <!-- Custom Model Input -->
+    <div 
+      v-if="currentProviderConfig?.supportsModels && selectedModel === 'custom'" 
+      class="config-item"
+    >
+      <label for="customModelInput">自定义模型名称</label>
+      <input 
+        id="customModelInput"
+        type="text" 
+        v-model="customModel"
+        @input="onCustomModelChange"
+        placeholder="输入模型名称，例如: gpt-4o, claude-3-opus..."
+        class="form-input"
+      >
+      <small class="help-text">
+        请输入您要使用的具体模型名称
+      </small>
     </div>
   </div>
 </template>
@@ -86,6 +106,7 @@ const emit = defineEmits<{
 const selectedProvider = ref('gemini');
 const apiKey = ref('');
 const selectedModel = ref('');
+const customModel = ref('');
 
 const providerNames = computed(() => props.providerManager.getProviderNames());
 
@@ -111,8 +132,16 @@ const onApiKeyChange = () => {
 };
 
 const onModelChange = () => {
-  props.providerManager.setProviderModel(selectedProvider.value, selectedModel.value);
-  emit('modelChanged', selectedModel.value);
+  const modelToUse = selectedModel.value === 'custom' ? customModel.value : selectedModel.value;
+  props.providerManager.setProviderModel(selectedProvider.value, modelToUse);
+  emit('modelChanged', modelToUse);
+};
+
+const onCustomModelChange = () => {
+  if (selectedModel.value === 'custom' && customModel.value) {
+    props.providerManager.setProviderModel(selectedProvider.value, customModel.value);
+    emit('modelChanged', customModel.value);
+  }
 };
 
 const loadApiKey = () => {
@@ -124,7 +153,21 @@ const loadModel = () => {
   if (currentProviderConfig.value?.supportsModels) {
     props.providerManager.loadProviderModel(selectedProvider.value);
     const model = props.providerManager.getProviderModel(selectedProvider.value);
-    selectedModel.value = model || currentProviderConfig.value.models?.[0]?.id || '';
+    
+    // Check if the stored model is one of the predefined models
+    const predefinedModels = currentProviderConfig.value.models?.map(m => m.id) || [];
+    if (model && predefinedModels.includes(model)) {
+      selectedModel.value = model;
+      customModel.value = '';
+    } else if (model) {
+      // It's a custom model
+      selectedModel.value = 'custom';
+      customModel.value = model;
+    } else {
+      // No model stored, use first predefined model
+      selectedModel.value = currentProviderConfig.value.models?.[0]?.id || '';
+      customModel.value = '';
+    }
   }
 };
 
