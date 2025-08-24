@@ -17,234 +17,234 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-    - name: Enable Corepack and ensure pnpm
-      run: |
-        # Enable corepack (bundled with Node 16+) and prepare pnpm
-        corepack enable
-        # Try to prepare/activate pnpm via corepack; fall back to global install if that fails
-        corepack prepare pnpm@10 --activate || npm install -g pnpm@10
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'pnpm'
+      - name: Enable Corepack and ensure pnpm
+        run: |
+          # Enable corepack (bundled with Node 16+) and prepare pnpm
+          corepack enable
+          # Try to prepare/activate pnpm via corepack; fall back to global install if that fails
+          corepack prepare pnpm@10 --activate || npm install -g pnpm@10
 
-    - name: Install dependencies
-      run: pnpm install
-      
-    - name: Get version from input or tag
-      id: version
-      run: |
-        set -euo pipefail
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
 
-        # Helper to generate timestamp version: 1.YYYY.M.D.H.M
-        gen_ts() {
-          echo "1.$(date -u +%Y).$(date -u +%m).$(date -u +%d).$(date -u +%H).$(date -u +%M)"
-        }
+      - name: Install dependencies
+        run: pnpm install
 
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          INPUT_VERSION="${{ github.event.inputs.version }}"
-          if [ -n "$INPUT_VERSION" ] && echo "$INPUT_VERSION" | grep -Eq '^[1-4](\.[0-9]+)*$'; then
-            VERSION="$INPUT_VERSION"
+      - name: Get version from input or tag
+        id: version
+        run: |
+          set -euo pipefail
+
+          # Helper to generate timestamp version: 1.YYYY.M.D.H.M
+          gen_ts() {
+            echo "1.$(date -u +%Y).$(date -u +%m).$(date -u +%d).$(date -u +%H).$(date -u +%M)"
+          }
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            INPUT_VERSION="${{ github.event.inputs.version }}"
+            if [ -n "$INPUT_VERSION" ] && echo "$INPUT_VERSION" | grep -Eq '^[1-4](\.[0-9]+)*$'; then
+              VERSION="$INPUT_VERSION"
+            else
+              echo "Input version is empty or invalid (must start with major 1-4). Falling back to timestamp version."
+              VERSION="$(gen_ts)"
+            fi
           else
-            echo "Input version is empty or invalid (must start with major 1-4). Falling back to timestamp version."
-            VERSION="$(gen_ts)"
+            # For push events, extract tag after refs/tags/v
+            TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+            if [ -n "$TAG_VERSION" ] && echo "$TAG_VERSION" | grep -Eq '^[1-4](\.[0-9]+)*$'; then
+              VERSION="$TAG_VERSION"
+            else
+              echo "Tag version missing or invalid (must start with major 1-4). Falling back to timestamp version."
+              VERSION="$(gen_ts)"
+            fi
           fi
-        else
-          # For push events, extract tag after refs/tags/v
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          if [ -n "$TAG_VERSION" ] && echo "$TAG_VERSION" | grep -Eq '^[1-4](\.[0-9]+)*$'; then
-            VERSION="$TAG_VERSION"
+
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update manifest version
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          jq --arg version "$VERSION" '.version = $version' public/manifest.json > tmp.json && mv tmp.json public/manifest.json
+          jq --arg version "$VERSION" '.version = $version' package.json > tmp.json && mv tmp.json package.json
+
+      - name: Build extension
+        run: pnpm build
+
+      - name: Create tag if missing (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch' && steps.version.outputs.VERSION != ''
+        run: |
+          set -e
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          TAG="v${VERSION}"
+
+          # fetch tags from origin
+          git fetch --tags origin
+
+          # check if tag exists on remote
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "refs/tags/${TAG}"; then
+            echo "Tag ${TAG} already exists on remote"
           else
-            echo "Tag version missing or invalid (must start with major 1-4). Falling back to timestamp version."
-            VERSION="$(gen_ts)"
+            echo "Creating and pushing tag ${TAG}"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "${TAG}" -m "Release ${TAG}"
+            git push origin "refs/tags/${TAG}"
           fi
-        fi
 
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        
-    - name: Update manifest version
-      run: |
-        VERSION="${{ steps.version.outputs.VERSION }}"
-        jq --arg version "$VERSION" '.version = $version' public/manifest.json > tmp.json && mv tmp.json public/manifest.json
-        jq --arg version "$VERSION" '.version = $version' package.json > tmp.json && mv tmp.json package.json
-        
-    - name: Build extension
-      run: pnpm build
+      - name: Create dist directory structure
+        run: |
+          mkdir -p dist-release
+          cp -r dist/* dist-release/
 
-    - name: Create tag if missing (workflow_dispatch)
-      if: github.event_name == 'workflow_dispatch' && steps.version.outputs.VERSION != ''
-      run: |
-        set -e
-        VERSION="${{ steps.version.outputs.VERSION }}"
-        TAG="v${VERSION}"
+      - name: Create zip for Microsoft Edge Store
+        run: |
+          cd dist-release
+          zip -r ../emoji-extension-v${{ steps.version.outputs.VERSION }}.zip .
+          cd ..
 
-        # fetch tags from origin
-        git fetch --tags origin
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-build-v${{ steps.version.outputs.VERSION }}
+          path: |
+            emoji-extension-v${{ steps.version.outputs.VERSION }}.zip
+            dist-release/
+          retention-days: 30
 
-        # check if tag exists on remote
-        if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "refs/tags/${TAG}"; then
-          echo "Tag ${TAG} already exists on remote"
-        else
-          echo "Creating and pushing tag ${TAG}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${TAG}" -m "Release ${TAG}"
-          git push origin "refs/tags/${TAG}"
-        fi
-      
-    - name: Create dist directory structure
-      run: |
-        mkdir -p dist-release
-        cp -r dist/* dist-release/
-        
-    - name: Create zip for Microsoft Edge Store
-      run: |
-        cd dist-release
-        zip -r ../emoji-extension-v${{ steps.version.outputs.VERSION }}.zip .
-        cd ..
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: extension-build-v${{ steps.version.outputs.VERSION }}
-        path: |
-          emoji-extension-v${{ steps.version.outputs.VERSION }}.zip
-          dist-release/
-        retention-days: 30
-        
-    - name: Create GitHub Release
-      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '')
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v${{ steps.version.outputs.VERSION }}
-        files: emoji-extension-v${{ steps.version.outputs.VERSION }}.zip
-        name: Release v${{ steps.version.outputs.VERSION }}
-        body: |
-          ## Emoji Extension v${{ steps.version.outputs.VERSION }}
-          
-          ### Features
-          - Complete storage architecture rewrite with progressive multi-layer system
-          - Improved emoji management with individual group storage
-          - Enhanced cross-context synchronization
-          - Comprehensive logging and error handling
-          
-          ### Installation
-          1. Download the `emoji-extension-v${{ steps.version.outputs.VERSION }}.zip` file
-          2. Extract it to a folder
-          3. Go to Chrome/Edge extensions page and enable Developer mode
-          4. Click "Load unpacked" and select the extracted folder
-          
-          ### Microsoft Edge Store
-          This release is also available on the Microsoft Edge Add-ons store.
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '')
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          files: emoji-extension-v${{ steps.version.outputs.VERSION }}.zip
+          name: Release v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Emoji Extension v${{ steps.version.outputs.VERSION }}
+
+            ### Features
+            - Complete storage architecture rewrite with progressive multi-layer system
+            - Improved emoji management with individual group storage
+            - Enhanced cross-context synchronization
+            - Comprehensive logging and error handling
+
+            ### Installation
+            1. Download the `emoji-extension-v${{ steps.version.outputs.VERSION }}.zip` file
+            2. Extract it to a folder
+            3. Go to Chrome/Edge extensions page and enable Developer mode
+            4. Click "Load unpacked" and select the extracted folder
+
+            ### Microsoft Edge Store
+            This release is also available on the Microsoft Edge Add-ons store.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   edge-store-upload:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Get version
-      id: version
-      run: |
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-        else
-          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-        fi
-        
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: extension-build-v${{ steps.version.outputs.VERSION }}
-        
-    - name: Setup Python for Edge Store Upload
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-        
-    - name: Install Edge Store CLI dependencies
-      run: |
-        pip install requests
-        
-    - name: Upload to Microsoft Edge Store
-      env:
-        EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
-        EDGE_CLIENT_SECRET: ${{ secrets.EDGE_CLIENT_SECRET }}
-        EDGE_ACCESS_TOKEN_URL: ${{ secrets.EDGE_ACCESS_TOKEN_URL }}
-        EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
-      run: |
-        python - <<EOF
-        import requests
-        import os
-        import sys
-        
-        # Get access token
-        client_id = os.environ.get('EDGE_CLIENT_ID')
-        client_secret = os.environ.get('EDGE_CLIENT_SECRET')
-        token_url = os.environ.get('EDGE_ACCESS_TOKEN_URL')
-        product_id = os.environ.get('EDGE_PRODUCT_ID')
-        
-        if not all([client_id, client_secret, token_url, product_id]):
-            print("Missing required environment variables for Edge Store upload")
-            print("Please set EDGE_CLIENT_ID, EDGE_CLIENT_SECRET, EDGE_ACCESS_TOKEN_URL, and EDGE_PRODUCT_ID in repository secrets")
-            sys.exit(0)  # Exit gracefully if secrets are not set
-        
-        # Get access token
-        token_data = {
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'scope': 'https://api.addons.microsoftedge.microsoft.com/.default',
-            'grant_type': 'client_credentials'
-        }
-        
-        token_response = requests.post(token_url, data=token_data)
-        if token_response.status_code != 200:
-            print(f"Failed to get access token: {token_response.text}")
-            sys.exit(1)
-            
-        access_token = token_response.json()['access_token']
-        
-        # Upload package
-        upload_url = f"https://api.addons.microsoftedge.microsoft.com/v1/products/{product_id}/submissions/draft/package"
-        
-        headers = {
-            'Authorization': f'Bearer {access_token}',
-        }
-        
-        version = "${{ steps.version.outputs.VERSION }}"
-        zip_file = f"emoji-extension-v{version}.zip"
-        
-        with open(zip_file, 'rb') as f:
-            files = {'file': (zip_file, f, 'application/zip')}
-            upload_response = requests.post(upload_url, headers=headers, files=files)
-            
-        if upload_response.status_code == 202:
-            print(f"Successfully uploaded {zip_file} to Microsoft Edge Store")
-            print("Package is now in draft status and ready for submission")
-        else:
-            print(f"Upload failed: {upload_response.status_code} - {upload_response.text}")
-            sys.exit(1)
-        EOF
-        
-    - name: Submission Instructions
-      run: |
-        echo "::notice title=Edge Store Upload::Extension package uploaded successfully to Microsoft Edge Store. Please go to Partner Center to submit for review."
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-build-v${{ steps.version.outputs.VERSION }}
+
+      - name: Setup Python for Edge Store Upload
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Edge Store CLI dependencies
+        run: |
+          pip install requests
+
+      - name: Upload to Microsoft Edge Store
+        env:
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_CLIENT_SECRET: ${{ secrets.EDGE_CLIENT_SECRET }}
+          EDGE_ACCESS_TOKEN_URL: ${{ secrets.EDGE_ACCESS_TOKEN_URL }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+        run: |
+          python - <<EOF
+          import requests
+          import os
+          import sys
+
+          # Get access token
+          client_id = os.environ.get('EDGE_CLIENT_ID')
+          client_secret = os.environ.get('EDGE_CLIENT_SECRET')
+          token_url = os.environ.get('EDGE_ACCESS_TOKEN_URL')
+          product_id = os.environ.get('EDGE_PRODUCT_ID')
+
+          if not all([client_id, client_secret, token_url, product_id]):
+              print("Missing required environment variables for Edge Store upload")
+              print("Please set EDGE_CLIENT_ID, EDGE_CLIENT_SECRET, EDGE_ACCESS_TOKEN_URL, and EDGE_PRODUCT_ID in repository secrets")
+              sys.exit(0)  # Exit gracefully if secrets are not set
+
+          # Get access token
+          token_data = {
+              'client_id': client_id,
+              'client_secret': client_secret,
+              'scope': 'https://api.addons.microsoftedge.microsoft.com/.default',
+              'grant_type': 'client_credentials'
+          }
+
+          token_response = requests.post(token_url, data=token_data)
+          if token_response.status_code != 200:
+              print(f"Failed to get access token: {token_response.text}")
+              sys.exit(1)
+              
+          access_token = token_response.json()['access_token']
+
+          # Upload package
+          upload_url = f"https://api.addons.microsoftedge.microsoft.com/v1/products/{product_id}/submissions/draft/package"
+
+          headers = {
+              'Authorization': f'Bearer {access_token}',
+          }
+
+          version = "${{ steps.version.outputs.VERSION }}"
+          zip_file = f"emoji-extension-v{version}.zip"
+
+          with open(zip_file, 'rb') as f:
+              files = {'file': (zip_file, f, 'application/zip')}
+              upload_response = requests.post(upload_url, headers=headers, files=files)
+              
+          if upload_response.status_code == 202:
+              print(f"Successfully uploaded {zip_file} to Microsoft Edge Store")
+              print("Package is now in draft status and ready for submission")
+          else:
+              print(f"Upload failed: {upload_response.status_code} - {upload_response.text}")
+              sys.exit(1)
+          EOF
+
+      - name: Submission Instructions
+        run: |
+          echo "::notice title=Edge Store Upload::Extension package uploaded successfully to Microsoft Edge Store. Please go to Partner Center to submit for review."

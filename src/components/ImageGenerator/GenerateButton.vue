@@ -1,51 +1,45 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+
+interface Props {
+  isGenerating: boolean
+  hasResults: boolean
+  canGenerate: boolean
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  generate: []
+  clear: []
+}>()
+
+const onGenerate = () => {
+  if (!props.isGenerating && props.canGenerate) {
+    emit('generate')
+  }
+}
+
+const onClear = () => {
+  emit('clear')
+}
+</script>
+
 <template>
   <div class="generate-section">
-    <button 
+    <button
       @click="onGenerate"
       :disabled="isGenerating || !canGenerate"
       class="generate-btn"
-      :class="{ 'generating': isGenerating }"
+      :class="{ generating: isGenerating }"
     >
       <span v-if="isGenerating" class="loading-spinner"></span>
       {{ isGenerating ? '生成中...' : '🎨 生成图片' }}
     </button>
-    
-    <button 
-      v-if="hasResults"
-      @click="onClear"
-      class="clear-btn"
-    >
-      🗑️ 清空结果
-    </button>
+
+    <button v-if="hasResults" @click="onClear" class="clear-btn">🗑️ 清空结果</button>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed } from 'vue';
-
-interface Props {
-  isGenerating: boolean;
-  hasResults: boolean;
-  canGenerate: boolean;
-}
-
-const props = defineProps<Props>();
-
-const emit = defineEmits<{
-  generate: [];
-  clear: [];
-}>();
-
-const onGenerate = () => {
-  if (!props.isGenerating && props.canGenerate) {
-    emit('generate');
-  }
-};
-
-const onClear = () => {
-  emit('clear');
-};
-</script>
 
 <style scoped>
 .generate-section {
@@ -125,7 +119,7 @@ const onClear = () => {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .generate-btn,
   .clear-btn {
     width: 100%;

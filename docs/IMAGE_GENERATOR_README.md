@@ -7,9 +7,11 @@
 ## 项目结构
 
 ### 类型定义
+
 - `src/types/imageGenerator.ts` - 包含所有接口和类型定义
 
 ### 图片生成提供商
+
 - `src/utils/imageProviders/BaseProvider.ts` - 基础提供商类
 - `src/utils/imageProviders/GeminiProvider.ts` - Google Gemini 提供商
 - `src/utils/imageProviders/SiliconFlowProvider.ts` - SiliconFlow 提供商
@@ -19,6 +21,7 @@
 - `src/utils/imageProviders/index.ts` - 导出文件
 
 ### Vue 组件
+
 - `src/components/ImageGenerator/ApiConfig.vue` - API 配置组件
 - `src/components/ImageGenerator/GenerationMode.vue` - 生成模式选择组件
 - `src/components/ImageGenerator/ImageUpload.vue` - 图片上传组件
@@ -30,23 +33,28 @@
 - `src/components/ImageGenerator/index.ts` - 组件导出文件
 
 ### Composables
+
 - `src/composables/useImageGenerator.ts` - 图片生成状态管理
 
 ### 视图
+
 - `src/views/ImageGeneratorView.vue` - 页面视图组件
 
 ### 独立 HTML 文件
+
 - `image-generator-vue.html` - 可独立运行的 Vue 版本
 
 ## 功能特性
 
 ### 支持的提供商
+
 1. **Google Gemini** - 支持图片生成和编辑
 2. **SiliconFlow** - 使用 Kwai-Kolors/Kolors 模型
 3. **Cloudflare Workers AI** - 支持 Flux 1 Schnell 和 Stable Diffusion XL Lightning
 4. **Chutes AI** - 支持 Neta Lumina、Chroma 和 JuggernautXL 模型
 
 ### 主要功能
+
 - 文本生成图片
 - 图片编辑（仅 Gemini）
 - 多种宽高比支持
@@ -60,29 +68,25 @@
 ### 在 Vue 项目中使用
 
 1. 安装依赖并导入组件：
+
 ```vue
 <template>
   <ImageGeneratorMain />
 </template>
 
 <script setup lang="ts">
-import { ImageGeneratorMain } from '@/components/ImageGenerator';
+import { ImageGeneratorMain } from '@/components/ImageGenerator'
 </script>
 ```
 
 2. 或者使用 composable：
+
 ```vue
 <script setup lang="ts">
-import { useImageGenerator } from '@/composables/useImageGenerator';
+import { useImageGenerator } from '@/composables/useImageGenerator'
 
-const {
-  providerManager,
-  isGenerating,
-  error,
-  generatedImages,
-  generateImages,
-  clearResults
-} = useImageGenerator();
+const { providerManager, isGenerating, error, generatedImages, generateImages, clearResults } =
+  useImageGenerator()
 </script>
 ```
 
@@ -93,67 +97,85 @@ const {
 ## 组件说明
 
 ### ApiConfig
+
 API 配置组件，用于选择提供商、输入 API Key 和选择模型。
 
 **Props:**
+
 - `providerManager: ProviderManager` - 提供商管理器
 
 **Events:**
+
 - `provider-changed` - 提供商变更
 - `api-key-changed` - API Key 变更
 - `model-changed` - 模型变更
 
 ### GenerationMode
+
 生成模式选择组件，支持文本生成图片和图片编辑模式。
 
 **Props:**
+
 - `providerManager: ProviderManager` - 提供商管理器
 - `modelValue: 'generate' | 'edit'` - 当前模式
 
 **Events:**
+
 - `update:modelValue` - 模式更新
 - `mode-changed` - 模式变更
 
 ### ImageUpload
+
 图片上传组件，支持拖拽上传和点击选择。
 
 **Props:**
+
 - `image?: string` - 当前图片（base64）
 
 **Events:**
+
 - `update:image` - 图片更新
 - `image-changed` - 图片变更
 
 ### PromptInput
+
 提示词输入组件，根据模式显示不同的占位符。
 
 **Props:**
+
 - `modelValue: string` - 提示词内容
 - `isEditMode?: boolean` - 是否为编辑模式
 
 **Events:**
+
 - `update:modelValue` - 内容更新
 - `prompt-changed` - 内容变更
 
 ### GenerationConfig
+
 生成配置组件，包含数量、宽高比和风格选择。
 
 **Props:**
+
 - `modelValue: { imageCount: number; aspectRatio: string; style: string }` - 配置对象
 
 **Events:**
+
 - `update:modelValue` - 配置更新
 - `config-changed` - 配置变更
 
 ### ResultDisplay
+
 结果显示组件，展示生成的图片和操作按钮。
 
 **Props:**
+
 - `isLoading: boolean` - 是否加载中
 - `error: string | null` - 错误信息
 - `images: string[]` - 图片列表
 
 **Events:**
+
 - `download-image` - 下载图片
 - `copy-image-url` - 复制图片链接
 

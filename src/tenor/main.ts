@@ -1,10 +1,11 @@
-import { createApp } from 'vue';
-import { createPinia } from 'pinia';
-import Tenor from './Tenor.vue';
-import '../styles/main.css';
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 
-const app = createApp(Tenor);
-const pinia = createPinia();
+import Tenor from './Tenor.vue'
+import '../styles/main.css'
 
-app.use(pinia);
-app.mount('#app');
+const app = createApp(Tenor)
+const pinia = createPinia()
+
+app.use(pinia)
+app.mount('#app')
