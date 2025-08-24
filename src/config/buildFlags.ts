@@ -2,8 +2,8 @@
 // These values are replaced at build time by Vite
 
 declare global {
-  const __ENABLE_LOGGING__: boolean
-  const __ENABLE_INDEXEDDB__: boolean
+  var __ENABLE_LOGGING__: boolean
+  var __ENABLE_INDEXEDDB__: boolean
 }
 
 // Runtime flags that can be set by build configuration

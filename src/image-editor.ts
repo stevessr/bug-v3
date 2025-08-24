@@ -1,5 +1,6 @@
-import { createApp } from 'vue';
-import ImageEditorMain from '@/components/ImageEditor/ImageEditorMain.vue';
+import { createApp } from 'vue'
 
-const app = createApp(ImageEditorMain);
-app.mount('#app');
+import ImageEditorMain from '@/components/ImageEditor/ImageEditorMain.vue'
+
+const app = createApp(ImageEditorMain)
+app.mount('#app')

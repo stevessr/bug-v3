@@ -1,4 +1,4 @@
-import { createEmojiPicker, isMobile } from './picker'
+import { createEmojiPicker } from './picker'
 import { cachedState } from './state'
 import { showImageUploadDialog } from './uploader'
 

@@ -1,5 +1,6 @@
-import { createApp } from 'vue';
-import AnimationConverterMain from '@/components/AnimationConverter/AnimationConverterMain.vue';
+import { createApp } from 'vue'
 
-const app = createApp(AnimationConverterMain);
-app.mount('#app');
+import AnimationConverterMain from '@/components/AnimationConverter/AnimationConverterMain.vue'
+
+const app = createApp(AnimationConverterMain)
+app.mount('#app')

@@ -9,12 +9,23 @@ import {
 } from './userscript-storage'
 
 // Global state for userscript
-const userscriptState = {
+type Emoji = { name: string; url: string; width?: number; height?: number; icon?: string }
+type EmojiGroup = { id: string; name: string; icon?: string; emojis?: Emoji[] }
+type UserscriptSettings = {
+  imageScale: number
+  gridColumns: number
+  outputFormat: 'markdown' | 'html'
+  forceMobileMode: boolean
+  defaultGroup: string
+  showSearchBar: boolean
+}
+
+const userscriptState: { emojiGroups: EmojiGroup[]; settings: UserscriptSettings } = {
   emojiGroups: [],
   settings: {
     imageScale: 30,
     gridColumns: 4,
-    outputFormat: 'markdown' as const,
+    outputFormat: 'markdown',
     forceMobileMode: false,
     defaultGroup: 'nachoneko',
     showSearchBar: true
@@ -347,7 +358,9 @@ async function createEmojiPicker(): Promise<HTMLElement> {
 
     sections.querySelectorAll('.emoji-picker__section').forEach(section => {
       const visibleImages = section.querySelectorAll('img:not([style*="none"])')
-      const titleContainer = section.querySelector('.emoji-picker__section-title-container')
+      const titleContainer = section.querySelector(
+        '.emoji-picker__section-title-container'
+      ) as HTMLElement | null
       if (titleContainer) {
         titleContainer.style.display = visibleImages.length > 0 ? '' : 'none'
       }
@@ -496,7 +509,7 @@ function showManagementModal() {
   })
 
   content.querySelector('#importBtn')?.addEventListener('click', () => {
-    const importSection = content.querySelector('#importSection')
+    const importSection = content.querySelector('#importSection') as HTMLElement | null
     if (importSection) {
       importSection.style.display = importSection.style.display === 'none' ? 'block' : 'none'
     }
@@ -518,7 +531,7 @@ function showManagementModal() {
   })
 
   content.querySelector('#cancelImport')?.addEventListener('click', () => {
-    const importSection = content.querySelector('#importSection')
+    const importSection = content.querySelector('#importSection') as HTMLElement | null
     if (importSection) {
       importSection.style.display = 'none'
     }

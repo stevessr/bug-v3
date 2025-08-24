@@ -95,7 +95,7 @@ export class ProviderManager {
   }
 
   copyToClipboard(url: string): Promise<void> {
-    return this.currentProvider.copyToClipboard(url)
+    return (this.currentProvider as any).copyToClipboard(url)
   }
 
   // Provider-specific methods
