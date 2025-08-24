@@ -1,38 +1,36 @@
 <template>
   <div class="generation-mode">
     <h3>🎯 生成模式</h3>
-    
+
     <div class="mode-selection">
       <label class="mode-option">
-        <input 
-          type="radio" 
-          name="mode" 
-          value="generate" 
+        <input
+          type="radio"
+          name="mode"
+          value="generate"
           v-model="selectedMode"
           @change="onModeChange"
-        >
+        />
         <span>🎨 文本生成图片</span>
       </label>
-      
+
       <label class="mode-option">
-        <input 
-          type="radio" 
-          name="mode" 
-          value="edit" 
+        <input
+          type="radio"
+          name="mode"
+          value="edit"
           v-model="selectedMode"
           @change="onModeChange"
           :disabled="!supportsImageEditing"
-        >
+        />
         <span>✏️ 图片编辑</span>
-        <small v-if="!supportsImageEditing" class="disabled-hint">
-          (仅支持 Google Gemini)
-        </small>
+        <small v-if="!supportsImageEditing" class="disabled-hint">(仅支持 Google Gemini)</small>
       </label>
     </div>
 
     <!-- Image Upload Section for Edit Mode -->
-    <ImageUpload 
-      v-if="selectedMode === 'edit'" 
+    <ImageUpload
+      v-if="selectedMode === 'edit'"
       v-model:image="uploadedImage"
       @image-changed="onImageChanged"
     />
@@ -40,66 +38,72 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import ImageUpload from './ImageUpload.vue';
-import type { ProviderManager } from '@/utils/imageProviders';
+import { ref, computed, watch } from 'vue'
+import ImageUpload from './ImageUpload.vue'
+import type { ProviderManager } from '@/utils/imageProviders'
 
 interface Props {
-  providerManager: ProviderManager;
-  modelValue: 'generate' | 'edit';
-  uploadedImage?: string;
+  providerManager: ProviderManager
+  modelValue: 'generate' | 'edit'
+  uploadedImage?: string
 }
 
-const props = defineProps<Props>();
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  'update:modelValue': [mode: 'generate' | 'edit'];
-  'update:uploadedImage': [image: string | undefined];
-  modeChanged: [mode: 'generate' | 'edit'];
-  imageChanged: [image: string | undefined];
-}>();
+  'update:modelValue': [mode: 'generate' | 'edit']
+  'update:uploadedImage': [image: string | undefined]
+  modeChanged: [mode: 'generate' | 'edit']
+  imageChanged: [image: string | undefined]
+}>()
 
-const selectedMode = ref<'generate' | 'edit'>(props.modelValue);
-const uploadedImage = ref<string | undefined>(props.uploadedImage);
+const selectedMode = ref<'generate' | 'edit'>(props.modelValue)
+const uploadedImage = ref<string | undefined>(props.uploadedImage)
 
 const supportsImageEditing = computed(() => {
-  return props.providerManager.supportsImageEditing();
-});
+  return props.providerManager.supportsImageEditing()
+})
 
 const onModeChange = () => {
   // If switching to edit mode but provider doesn't support it, switch back
   if (selectedMode.value === 'edit' && !supportsImageEditing.value) {
-    selectedMode.value = 'generate';
-    return;
+    selectedMode.value = 'generate'
+    return
   }
-  
-  emit('update:modelValue', selectedMode.value);
-  emit('modeChanged', selectedMode.value);
-};
+
+  emit('update:modelValue', selectedMode.value)
+  emit('modeChanged', selectedMode.value)
+}
 
 const onImageChanged = (image: string | undefined) => {
-  uploadedImage.value = image;
-  emit('update:uploadedImage', image);
-  emit('imageChanged', image);
-};
+  uploadedImage.value = image
+  emit('update:uploadedImage', image)
+  emit('imageChanged', image)
+}
 
 // Watch for external mode changes
-watch(() => props.modelValue, (newMode) => {
-  selectedMode.value = newMode;
-});
+watch(
+  () => props.modelValue,
+  newMode => {
+    selectedMode.value = newMode
+  }
+)
 
 // Watch for external image changes
-watch(() => props.uploadedImage, (newImage) => {
-  uploadedImage.value = newImage;
-});
+watch(
+  () => props.uploadedImage,
+  newImage => {
+    uploadedImage.value = newImage
+  }
+)
 
 // Watch for provider changes - reset to generate mode if edit is not supported
-watch(supportsImageEditing, (supports) => {
+watch(supportsImageEditing, supports => {
   if (!supports && selectedMode.value === 'edit') {
-    selectedMode.value = 'generate';
-    onModeChange();
+    selectedMode.value = 'generate'
+    onModeChange()
   }
-});
+})
 </script>
 
 <style scoped>
@@ -130,11 +134,11 @@ watch(supportsImageEditing, (supports) => {
   font-size: 14px;
 }
 
-.mode-option input[type="radio"] {
+.mode-option input[type='radio'] {
   margin-right: 8px;
 }
 
-.mode-option input[type="radio"]:disabled {
+.mode-option input[type='radio']:disabled {
   cursor: not-allowed;
 }
 

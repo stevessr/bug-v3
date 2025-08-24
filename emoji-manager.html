@@ -1,580 +1,661 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>表情管理器 - Emoji Extension Manager</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/ant-design-vue@4/dist/antd.min.js"></script>
-    <link href="https://unpkg.com/ant-design-vue@4/dist/reset.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/ant-design-vue@4/dist/reset.css" rel="stylesheet" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
     <style>
-        .emoji-grid {
-            display: grid;
-            gap: 8px;
-            padding: 16px;
-        }
-        .emoji-item {
-            width: 48px;
-            height: 48px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
-        .emoji-item:hover {
-            border-color: #1890ff;
-            transform: scale(1.1);
-        }
-        .group-header {
-            background: #f5f5f5;
-            padding: 12px;
-            margin: 8px 0;
-            border-radius: 6px;
-            border-left: 4px solid #1890ff;
-        }
-        .management-section {
-            background: white;
-            border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+      .emoji-grid {
+        display: grid;
+        gap: 8px;
+        padding: 16px;
+      }
+      .emoji-item {
+        width: 48px;
+        height: 48px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+      }
+      .emoji-item:hover {
+        border-color: #1890ff;
+        transform: scale(1.1);
+      }
+      .group-header {
+        background: #f5f5f5;
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 6px;
+        border-left: 4px solid #1890ff;
+      }
+      .management-section {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div id="app">
-        <a-layout style="min-height: 100vh">
-            <!-- Header -->
-            <a-layout-header style="background: #001529; padding: 0">
-                <div style="color: white; padding: 0 24px; display: flex; align-items: center; justify-content: space-between">
-                    <h1 style="color: white; margin: 0; font-size: 18px">🐈‍⬛ 表情管理器</h1>
-                    <div>
-                        <a-button @click="exportData" style="margin-right: 8px">导出数据</a-button>
-                        <a-button @click="showImportModal = true" type="primary">导入数据</a-button>
-                    </div>
+      <a-layout style="min-height: 100vh">
+        <!-- Header -->
+        <a-layout-header style="background: #001529; padding: 0">
+          <div
+            style="
+              color: white;
+              padding: 0 24px;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+            "
+          >
+            <h1 style="color: white; margin: 0; font-size: 18px">🐈‍⬛ 表情管理器</h1>
+            <div>
+              <a-button @click="exportData" style="margin-right: 8px">导出数据</a-button>
+              <a-button @click="showImportModal = true" type="primary">导入数据</a-button>
+            </div>
+          </div>
+        </a-layout-header>
+
+        <a-layout>
+          <!-- Sidebar -->
+          <a-layout-sider width="200" style="background: #fff">
+            <a-menu
+              v-model:selectedKeys="selectedKeys"
+              mode="inline"
+              style="height: 100%; border-right: 0"
+            >
+              <a-menu-item key="groups" @click="activeTab = 'groups'">
+                <span>📁 分组管理</span>
+              </a-menu-item>
+              <a-menu-item key="settings" @click="activeTab = 'settings'">
+                <span>⚙️ 设置</span>
+              </a-menu-item>
+              <a-menu-item key="favorites" @click="activeTab = 'favorites'">
+                <span>⭐ 收藏夹</span>
+              </a-menu-item>
+              <a-menu-item key="export" @click="activeTab = 'export'">
+                <span>📤 导出/同步</span>
+              </a-menu-item>
+            </a-menu>
+          </a-layout-sider>
+
+          <!-- Content -->
+          <a-layout-content style="margin: 24px 16px; padding: 24px; background: #f0f2f5">
+            <!-- Groups Management -->
+            <div v-if="activeTab === 'groups'">
+              <div class="management-section">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 16px;
+                  "
+                >
+                  <h2>表情分组管理</h2>
+                  <a-button type="primary" @click="showCreateGroupModal = true">创建分组</a-button>
                 </div>
-            </a-layout-header>
 
-            <a-layout>
-                <!-- Sidebar -->
-                <a-layout-sider width="200" style="background: #fff">
-                    <a-menu v-model:selectedKeys="selectedKeys" mode="inline" style="height: 100%; border-right: 0">
-                        <a-menu-item key="groups" @click="activeTab = 'groups'">
-                            <span>📁 分组管理</span>
-                        </a-menu-item>
-                        <a-menu-item key="settings" @click="activeTab = 'settings'">
-                            <span>⚙️ 设置</span>
-                        </a-menu-item>
-                        <a-menu-item key="favorites" @click="activeTab = 'favorites'">
-                            <span>⭐ 收藏夹</span>
-                        </a-menu-item>
-                        <a-menu-item key="export" @click="activeTab = 'export'">
-                            <span>📤 导出/同步</span>
-                        </a-menu-item>
-                    </a-menu>
-                </a-layout-sider>
+                <!-- Groups List -->
+                <a-list :data-source="emojiGroups" item-layout="vertical">
+                  <template #renderItem="{ item: group }">
+                    <a-list-item>
+                      <template #actions>
+                        <a @click="editGroup(group)">编辑</a>
+                        <a @click="deleteGroup(group.id)">删除</a>
+                        <a @click="showAddEmojiModal(group.id)">添加表情</a>
+                      </template>
 
-                <!-- Content -->
-                <a-layout-content style="margin: 24px 16px; padding: 24px; background: #f0f2f5">
-                    
-                    <!-- Groups Management -->
-                    <div v-if="activeTab === 'groups'">
-                        <div class="management-section">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px">
-                                <h2>表情分组管理</h2>
-                                <a-button type="primary" @click="showCreateGroupModal = true">创建分组</a-button>
-                            </div>
-                            
-                            <!-- Groups List -->
-                            <a-list :data-source="emojiGroups" item-layout="vertical">
-                                <template #renderItem="{ item: group }">
-                                    <a-list-item>
-                                        <template #actions>
-                                            <a @click="editGroup(group)">编辑</a>
-                                            <a @click="deleteGroup(group.id)">删除</a>
-                                            <a @click="showAddEmojiModal(group.id)">添加表情</a>
-                                        </template>
-                                        
-                                        <div class="group-header">
-                                            <h3 style="margin: 0; display: flex; align-items: center">
-                                                <span style="margin-right: 8px; font-size: 18px">{{ group.icon }}</span>
-                                                {{ group.name }}
-                                                <a-tag style="margin-left: 8px">{{ group.emojis?.length || 0 }} 个表情</a-tag>
-                                            </h3>
-                                        </div>
-                                        
-                                        <!-- Emojis Grid -->
-                                        <div class="emoji-grid" :style="{gridTemplateColumns: `repeat(${settings.gridColumns}, 1fr)`}">
-                                            <img 
-                                                v-for="emoji in group.emojis" 
-                                                :key="emoji.packet || emoji.name"
-                                                :src="emoji.url" 
-                                                :alt="emoji.name"
-                                                :title="emoji.name"
-                                                class="emoji-item"
-                                                @click="editEmoji(emoji, group.id)"
-                                                @error="handleImageError"
-                                            />
-                                        </div>
-                                    </a-list-item>
-                                </template>
-                            </a-list>
-                        </div>
-                    </div>
+                      <div class="group-header">
+                        <h3 style="margin: 0; display: flex; align-items: center">
+                          <span style="margin-right: 8px; font-size: 18px">{{ group.icon }}</span>
+                          {{ group.name }}
+                          <a-tag style="margin-left: 8px">
+                            {{ group.emojis?.length || 0 }} 个表情
+                          </a-tag>
+                        </h3>
+                      </div>
 
-                    <!-- Settings -->
-                    <div v-if="activeTab === 'settings'" class="management-section">
-                        <h2>全局设置</h2>
-                        
-                        <a-form layout="vertical">
-                            <a-row :gutter="16">
-                                <a-col :span="12">
-                                    <a-form-item label="图片缩放比例">
-                                        <a-slider 
-                                            v-model:value="settings.imageScale" 
-                                            :min="5" 
-                                            :max="150" 
-                                            :step="5"
-                                            :marks="{30: '30%', 50: '50%', 100: '100%'}"
-                                        />
-                                        <div>当前: {{ settings.imageScale }}%</div>
-                                    </a-form-item>
-                                </a-col>
-                                <a-col :span="12">
-                                    <a-form-item label="网格列数">
-                                        <a-slider 
-                                            v-model:value="settings.gridColumns" 
-                                            :min="2" 
-                                            :max="8" 
-                                            :step="1"
-                                            :marks="{2: '2', 4: '4', 6: '6', 8: '8'}"
-                                        />
-                                    </a-form-item>
-                                </a-col>
-                            </a-row>
-                            
-                            <a-form-item label="输出格式">
-                                <a-radio-group v-model:value="settings.outputFormat">
-                                    <a-radio value="markdown">Markdown</a-radio>
-                                    <a-radio value="html">HTML</a-radio>
-                                </a-radio-group>
-                            </a-form-item>
-                            
-                            <a-form-item>
-                                <a-checkbox v-model:checked="settings.showSearchBar">显示搜索栏</a-checkbox>
-                            </a-form-item>
-                            
-                            <a-form-item>
-                                <a-checkbox v-model:checked="settings.forceMobileMode">强制移动端模式</a-checkbox>
-                            </a-form-item>
-                            
-                            <a-form-item>
-                                <a-button type="primary" @click="saveSettings">保存设置</a-button>
-                            </a-form-item>
-                        </a-form>
-                    </div>
+                      <!-- Emojis Grid -->
+                      <div
+                        class="emoji-grid"
+                        :style="{gridTemplateColumns: `repeat(${settings.gridColumns}, 1fr)`}"
+                      >
+                        <img
+                          v-for="emoji in group.emojis"
+                          :key="emoji.packet || emoji.name"
+                          :src="emoji.url"
+                          :alt="emoji.name"
+                          :title="emoji.name"
+                          class="emoji-item"
+                          @click="editEmoji(emoji, group.id)"
+                          @error="handleImageError"
+                        />
+                      </div>
+                    </a-list-item>
+                  </template>
+                </a-list>
+              </div>
+            </div>
 
-                    <!-- Favorites -->
-                    <div v-if="activeTab === 'favorites'" class="management-section">
-                        <h2>收藏夹</h2>
-                        <div v-if="favorites.length === 0" style="text-align: center; color: #999; padding: 40px">
-                            还没有收藏的表情
-                        </div>
-                        <div v-else class="emoji-grid" :style="{gridTemplateColumns: `repeat(${settings.gridColumns}, 1fr)`}">
-                            <img 
-                                v-for="emoji in favorites" 
-                                :key="emoji.id"
-                                :src="emoji.url" 
-                                :alt="emoji.name"
-                                :title="emoji.name"
-                                class="emoji-item"
-                                @click="removeFromFavorites(emoji.id)"
-                            />
-                        </div>
-                    </div>
+            <!-- Settings -->
+            <div v-if="activeTab === 'settings'" class="management-section">
+              <h2>全局设置</h2>
 
-                    <!-- Export/Sync -->
-                    <div v-if="activeTab === 'export'" class="management-section">
-                        <h2>数据导出与同步</h2>
-                        
-                        <a-space direction="vertical" style="width: 100%">
-                            <div>
-                                <h3>用户脚本同步</h3>
-                                <p>将当前数据同步到用户脚本的localStorage中</p>
-                                <a-button type="primary" @click="syncToUserscript">同步到用户脚本</a-button>
-                            </div>
-                            
-                            <a-divider />
-                            
-                            <div>
-                                <h3>数据导出</h3>
-                                <p>导出完整的表情数据以便备份或分享</p>
-                                <a-space>
-                                    <a-button @click="exportData">导出 JSON</a-button>
-                                    <a-button @click="exportForUserscript">导出用户脚本数据</a-button>
-                                </a-space>
-                            </div>
-                            
-                            <a-divider />
-                            
-                            <div>
-                                <h3>数据导入</h3>
-                                <p>从备份文件或其他来源导入表情数据</p>
-                                <a-button @click="showImportModal = true">导入数据</a-button>
-                            </div>
-                        </a-space>
-                    </div>
-                </a-layout-content>
-            </a-layout>
+              <a-form layout="vertical">
+                <a-row :gutter="16">
+                  <a-col :span="12">
+                    <a-form-item label="图片缩放比例">
+                      <a-slider
+                        v-model:value="settings.imageScale"
+                        :min="5"
+                        :max="150"
+                        :step="5"
+                        :marks="{30: '30%', 50: '50%', 100: '100%'}"
+                      />
+                      <div>当前: {{ settings.imageScale }}%</div>
+                    </a-form-item>
+                  </a-col>
+                  <a-col :span="12">
+                    <a-form-item label="网格列数">
+                      <a-slider
+                        v-model:value="settings.gridColumns"
+                        :min="2"
+                        :max="8"
+                        :step="1"
+                        :marks="{2: '2', 4: '4', 6: '6', 8: '8'}"
+                      />
+                    </a-form-item>
+                  </a-col>
+                </a-row>
+
+                <a-form-item label="输出格式">
+                  <a-radio-group v-model:value="settings.outputFormat">
+                    <a-radio value="markdown">Markdown</a-radio>
+                    <a-radio value="html">HTML</a-radio>
+                  </a-radio-group>
+                </a-form-item>
+
+                <a-form-item>
+                  <a-checkbox v-model:checked="settings.showSearchBar">显示搜索栏</a-checkbox>
+                </a-form-item>
+
+                <a-form-item>
+                  <a-checkbox v-model:checked="settings.forceMobileMode">强制移动端模式</a-checkbox>
+                </a-form-item>
+
+                <a-form-item>
+                  <a-button type="primary" @click="saveSettings">保存设置</a-button>
+                </a-form-item>
+              </a-form>
+            </div>
+
+            <!-- Favorites -->
+            <div v-if="activeTab === 'favorites'" class="management-section">
+              <h2>收藏夹</h2>
+              <div
+                v-if="favorites.length === 0"
+                style="text-align: center; color: #999; padding: 40px"
+              >
+                还没有收藏的表情
+              </div>
+              <div
+                v-else
+                class="emoji-grid"
+                :style="{gridTemplateColumns: `repeat(${settings.gridColumns}, 1fr)`}"
+              >
+                <img
+                  v-for="emoji in favorites"
+                  :key="emoji.id"
+                  :src="emoji.url"
+                  :alt="emoji.name"
+                  :title="emoji.name"
+                  class="emoji-item"
+                  @click="removeFromFavorites(emoji.id)"
+                />
+              </div>
+            </div>
+
+            <!-- Export/Sync -->
+            <div v-if="activeTab === 'export'" class="management-section">
+              <h2>数据导出与同步</h2>
+
+              <a-space direction="vertical" style="width: 100%">
+                <div>
+                  <h3>用户脚本同步</h3>
+                  <p>将当前数据同步到用户脚本的localStorage中</p>
+                  <a-button type="primary" @click="syncToUserscript">同步到用户脚本</a-button>
+                </div>
+
+                <a-divider />
+
+                <div>
+                  <h3>数据导出</h3>
+                  <p>导出完整的表情数据以便备份或分享</p>
+                  <a-space>
+                    <a-button @click="exportData">导出 JSON</a-button>
+                    <a-button @click="exportForUserscript">导出用户脚本数据</a-button>
+                  </a-space>
+                </div>
+
+                <a-divider />
+
+                <div>
+                  <h3>数据导入</h3>
+                  <p>从备份文件或其他来源导入表情数据</p>
+                  <a-button @click="showImportModal = true">导入数据</a-button>
+                </div>
+              </a-space>
+            </div>
+          </a-layout-content>
         </a-layout>
+      </a-layout>
 
-        <!-- Create Group Modal -->
-        <a-modal v-model:open="showCreateGroupModal" title="创建分组" @ok="createGroup">
-            <a-form layout="vertical">
-                <a-form-item label="分组名称" required>
-                    <a-input v-model:value="newGroup.name" placeholder="输入分组名称" />
-                </a-form-item>
-                <a-form-item label="分组图标">
-                    <a-input v-model:value="newGroup.icon" placeholder="输入图标或emoji" />
-                </a-form-item>
-            </a-form>
-        </a-modal>
+      <!-- Create Group Modal -->
+      <a-modal v-model:open="showCreateGroupModal" title="创建分组" @ok="createGroup">
+        <a-form layout="vertical">
+          <a-form-item label="分组名称" required>
+            <a-input v-model:value="newGroup.name" placeholder="输入分组名称" />
+          </a-form-item>
+          <a-form-item label="分组图标">
+            <a-input v-model:value="newGroup.icon" placeholder="输入图标或emoji" />
+          </a-form-item>
+        </a-form>
+      </a-modal>
 
-        <!-- Edit Group Modal -->
-        <a-modal v-model:open="showEditGroupModal" title="编辑分组" @ok="updateGroup">
-            <a-form layout="vertical">
-                <a-form-item label="分组名称" required>
-                    <a-input v-model:value="editingGroup.name" placeholder="输入分组名称" />
-                </a-form-item>
-                <a-form-item label="分组图标">
-                    <a-input v-model:value="editingGroup.icon" placeholder="输入图标或emoji" />
-                </a-form-item>
-            </a-form>
-        </a-modal>
+      <!-- Edit Group Modal -->
+      <a-modal v-model:open="showEditGroupModal" title="编辑分组" @ok="updateGroup">
+        <a-form layout="vertical">
+          <a-form-item label="分组名称" required>
+            <a-input v-model:value="editingGroup.name" placeholder="输入分组名称" />
+          </a-form-item>
+          <a-form-item label="分组图标">
+            <a-input v-model:value="editingGroup.icon" placeholder="输入图标或emoji" />
+          </a-form-item>
+        </a-form>
+      </a-modal>
 
-        <!-- Add Emoji Modal -->
-        <a-modal v-model:open="showAddEmojiModal" title="添加表情" @ok="addEmoji">
-            <a-form layout="vertical">
-                <a-form-item label="表情名称" required>
-                    <a-input v-model:value="newEmoji.name" placeholder="输入表情名称" />
-                </a-form-item>
-                <a-form-item label="图片URL" required>
-                    <a-input v-model:value="newEmoji.url" placeholder="输入图片链接" />
-                </a-form-item>
-                <a-form-item v-if="newEmoji.url">
-                    <img :src="newEmoji.url" style="max-width: 100px; max-height: 100px" />
-                </a-form-item>
-            </a-form>
-        </a-modal>
+      <!-- Add Emoji Modal -->
+      <a-modal v-model:open="showAddEmojiModal" title="添加表情" @ok="addEmoji">
+        <a-form layout="vertical">
+          <a-form-item label="表情名称" required>
+            <a-input v-model:value="newEmoji.name" placeholder="输入表情名称" />
+          </a-form-item>
+          <a-form-item label="图片URL" required>
+            <a-input v-model:value="newEmoji.url" placeholder="输入图片链接" />
+          </a-form-item>
+          <a-form-item v-if="newEmoji.url">
+            <img :src="newEmoji.url" style="max-width: 100px; max-height: 100px" />
+          </a-form-item>
+        </a-form>
+      </a-modal>
 
-        <!-- Import Modal -->
-        <a-modal v-model:open="showImportModal" title="导入数据" @ok="importData">
-            <a-form layout="vertical">
-                <a-form-item label="数据格式">
-                    <a-radio-group v-model:value="importFormat">
-                        <a-radio value="json">JSON 格式</a-radio>
-                        <a-radio value="userscript">用户脚本格式</a-radio>
-                    </a-radio-group>
-                </a-form-item>
-                <a-form-item label="数据内容">
-                    <a-textarea v-model:value="importData" :rows="10" placeholder="粘贴要导入的数据" />
-                </a-form-item>
-            </a-form>
-        </a-modal>
+      <!-- Import Modal -->
+      <a-modal v-model:open="showImportModal" title="导入数据" @ok="importData">
+        <a-form layout="vertical">
+          <a-form-item label="数据格式">
+            <a-radio-group v-model:value="importFormat">
+              <a-radio value="json">JSON 格式</a-radio>
+              <a-radio value="userscript">用户脚本格式</a-radio>
+            </a-radio-group>
+          </a-form-item>
+          <a-form-item label="数据内容">
+            <a-textarea v-model:value="importData" :rows="10" placeholder="粘贴要导入的数据" />
+          </a-form-item>
+        </a-form>
+      </a-modal>
     </div>
 
     <script>
-        const { createApp } = Vue;
-        const { 
-            Layout, LayoutHeader, LayoutSider, LayoutContent,
-            Menu, MenuItem, Button, List, ListItem, Tag,
-            Form, FormItem, Input, Slider, RadioGroup, Radio,
-            Checkbox, Space, Divider, Modal, Textarea,
-            Row, Col, message
-        } = antd;
+      const { createApp } = Vue
+      const {
+        Layout,
+        LayoutHeader,
+        LayoutSider,
+        LayoutContent,
+        Menu,
+        MenuItem,
+        Button,
+        List,
+        ListItem,
+        Tag,
+        Form,
+        FormItem,
+        Input,
+        Slider,
+        RadioGroup,
+        Radio,
+        Checkbox,
+        Space,
+        Divider,
+        Modal,
+        Textarea,
+        Row,
+        Col,
+        message
+      } = antd
 
-        createApp({
-            components: {
-                ALayout: Layout,
-                ALayoutHeader: LayoutHeader,
-                ALayoutSider: LayoutSider,
-                ALayoutContent: LayoutContent,
-                AMenu: Menu,
-                AMenuItem: MenuItem,
-                AButton: Button,
-                AList: List,
-                AListItem: ListItem,
-                ATag: Tag,
-                AForm: Form,
-                AFormItem: FormItem,
-                AInput: Input,
-                ASlider: Slider,
-                ARadioGroup: RadioGroup,
-                ARadio: Radio,
-                ACheckbox: Checkbox,
-                ASpace: Space,
-                ADivider: Divider,
-                AModal: Modal,
-                ATextarea: Textarea,
-                ARow: Row,
-                ACol: Col
+      createApp({
+        components: {
+          ALayout: Layout,
+          ALayoutHeader: LayoutHeader,
+          ALayoutSider: LayoutSider,
+          ALayoutContent: LayoutContent,
+          AMenu: Menu,
+          AMenuItem: MenuItem,
+          AButton: Button,
+          AList: List,
+          AListItem: ListItem,
+          ATag: Tag,
+          AForm: Form,
+          AFormItem: FormItem,
+          AInput: Input,
+          ASlider: Slider,
+          ARadioGroup: RadioGroup,
+          ARadio: Radio,
+          ACheckbox: Checkbox,
+          ASpace: Space,
+          ADivider: Divider,
+          AModal: Modal,
+          ATextarea: Textarea,
+          ARow: Row,
+          ACol: Col
+        },
+        data() {
+          return {
+            activeTab: 'groups',
+            selectedKeys: ['groups'],
+            emojiGroups: [],
+            settings: {
+              imageScale: 30,
+              gridColumns: 4,
+              outputFormat: 'markdown',
+              forceMobileMode: false,
+              defaultGroup: 'nachoneko',
+              showSearchBar: true
             },
-            data() {
-                return {
-                    activeTab: 'groups',
-                    selectedKeys: ['groups'],
-                    emojiGroups: [],
-                    settings: {
-                        imageScale: 30,
-                        gridColumns: 4,
-                        outputFormat: 'markdown',
-                        forceMobileMode: false,
-                        defaultGroup: 'nachoneko',
-                        showSearchBar: true
-                    },
-                    favorites: [],
-                    showCreateGroupModal: false,
-                    showEditGroupModal: false,
-                    showAddEmojiModal: false,
-                    showImportModal: false,
-                    newGroup: { name: '', icon: '📁' },
-                    editingGroup: { id: '', name: '', icon: '' },
-                    newEmoji: { name: '', url: '', groupId: '' },
-                    importData: '',
-                    importFormat: 'json'
-                }
-            },
-            mounted() {
-                this.loadData();
-            },
-            methods: {
-                loadData() {
-                    // Load from localStorage
-                    try {
-                        const groups = localStorage.getItem('emoji_extension_manager_groups');
-                        if (groups) {
-                            this.emojiGroups = JSON.parse(groups);
-                        } else {
-                            this.emojiGroups = this.getDefaultGroups();
-                        }
-                        
-                        const settings = localStorage.getItem('emoji_extension_manager_settings');
-                        if (settings) {
-                            this.settings = { ...this.settings, ...JSON.parse(settings) };
-                        }
-                        
-                        const favorites = localStorage.getItem('emoji_extension_manager_favorites');
-                        if (favorites) {
-                            this.favorites = JSON.parse(favorites);
-                        }
-                    } catch (error) {
-                        console.error('Failed to load data:', error);
-                        message.error('加载数据失败');
-                    }
-                },
-                
-                saveData() {
-                    try {
-                        localStorage.setItem('emoji_extension_manager_groups', JSON.stringify(this.emojiGroups));
-                        localStorage.setItem('emoji_extension_manager_settings', JSON.stringify(this.settings));
-                        localStorage.setItem('emoji_extension_manager_favorites', JSON.stringify(this.favorites));
-                    } catch (error) {
-                        console.error('Failed to save data:', error);
-                        message.error('保存数据失败');
-                    }
-                },
-                
-                getDefaultGroups() {
-                    return [{
-                        id: 'default',
-                        name: '默认表情',
-                        icon: '😀',
-                        order: 0,
-                        emojis: [
-                            { packet: 1, name: "瞌睡", url: "https://linux.do/uploads/default/optimized/4X/5/9/f/59ffbc2c53dd2a07dc30d4368bd5c9e01ca57d80_2_490x500.jpeg" },
-                            { packet: 2, name: "哭泣", url: "https://linux.do/uploads/default/optimized/4X/5/d/9/5d932c05a642396335f632a370bd8d45463cf2e2_2_503x500.jpeg" },
-                            { packet: 3, name: "疑问", url: "https://linux.do/uploads/default/optimized/4X/f/a/a/faa5afe1749312bc4a326feff0eca6fb39355300_2_518x499.jpeg" }
-                        ]
-                    }];
-                },
-                
-                createGroup() {
-                    if (!this.newGroup.name.trim()) {
-                        message.error('请输入分组名称');
-                        return;
-                    }
-                    
-                    const newGroup = {
-                        id: Date.now().toString(),
-                        name: this.newGroup.name.trim(),
-                        icon: this.newGroup.icon || '📁',
-                        order: this.emojiGroups.length,
-                        emojis: []
-                    };
-                    
-                    this.emojiGroups.push(newGroup);
-                    this.saveData();
-                    this.showCreateGroupModal = false;
-                    this.newGroup = { name: '', icon: '📁' };
-                    message.success('分组创建成功');
-                },
-                
-                editGroup(group) {
-                    this.editingGroup = { ...group };
-                    this.showEditGroupModal = true;
-                },
-                
-                updateGroup() {
-                    const index = this.emojiGroups.findIndex(g => g.id === this.editingGroup.id);
-                    if (index !== -1) {
-                        this.emojiGroups[index] = { ...this.emojiGroups[index], ...this.editingGroup };
-                        this.saveData();
-                        this.showEditGroupModal = false;
-                        message.success('分组更新成功');
-                    }
-                },
-                
-                deleteGroup(groupId) {
-                    const index = this.emojiGroups.findIndex(g => g.id === groupId);
-                    if (index !== -1) {
-                        if (confirm('确定要删除这个分组吗？')) {
-                            this.emojiGroups.splice(index, 1);
-                            this.saveData();
-                            message.success('分组删除成功');
-                        }
-                    }
-                },
-                
-                showAddEmojiModal(groupId) {
-                    this.newEmoji.groupId = groupId;
-                    this.showAddEmojiModal = true;
-                },
-                
-                addEmoji() {
-                    if (!this.newEmoji.name.trim() || !this.newEmoji.url.trim()) {
-                        message.error('请填写表情名称和URL');
-                        return;
-                    }
-                    
-                    const group = this.emojiGroups.find(g => g.id === this.newEmoji.groupId);
-                    if (group) {
-                        const emoji = {
-                            packet: Date.now(),
-                            name: this.newEmoji.name.trim(),
-                            url: this.newEmoji.url.trim()
-                        };
-                        
-                        group.emojis.push(emoji);
-                        this.saveData();
-                        this.showAddEmojiModal = false;
-                        this.newEmoji = { name: '', url: '', groupId: '' };
-                        message.success('表情添加成功');
-                    }
-                },
-                
-                editEmoji(emoji, groupId) {
-                    // TODO: Implement emoji editing
-                    console.log('Edit emoji:', emoji, groupId);
-                },
-                
-                removeFromFavorites(emojiId) {
-                    const index = this.favorites.findIndex(f => f.id === emojiId);
-                    if (index !== -1) {
-                        this.favorites.splice(index, 1);
-                        this.saveData();
-                        message.success('已从收藏夹移除');
-                    }
-                },
-                
-                saveSettings() {
-                    this.saveData();
-                    message.success('设置保存成功');
-                },
-                
-                exportData() {
-                    const data = {
-                        groups: this.emojiGroups,
-                        settings: this.settings,
-                        favorites: this.favorites,
-                        version: '1.0.0',
-                        exportTime: new Date().toISOString()
-                    };
-                    
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `emoji-extension-backup-${new Date().toISOString().split('T')[0]}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    message.success('数据导出成功');
-                },
-                
-                exportForUserscript() {
-                    const data = {
-                        emojiGroups: this.emojiGroups,
-                        settings: this.settings
-                    };
-                    
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `userscript-data-${new Date().toISOString().split('T')[0]}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    message.success('用户脚本数据导出成功');
-                },
-                
-                syncToUserscript() {
-                    try {
-                        // Save to userscript localStorage keys
-                        localStorage.setItem('emoji_extension_userscript_data', JSON.stringify(this.emojiGroups));
-                        localStorage.setItem('emoji_extension_userscript_settings', JSON.stringify(this.settings));
-                        message.success('数据已同步到用户脚本');
-                    } catch (error) {
-                        message.error('同步失败: ' + error.message);
-                    }
-                },
-                
-                importData() {
-                    try {
-                        const data = JSON.parse(this.importData);
-                        
-                        if (this.importFormat === 'userscript') {
-                            if (data.emojiGroups) {
-                                this.emojiGroups = data.emojiGroups;
-                            }
-                            if (data.settings) {
-                                this.settings = { ...this.settings, ...data.settings };
-                            }
-                        } else {
-                            if (data.groups) {
-                                this.emojiGroups = data.groups;
-                            }
-                            if (data.settings) {
-                                this.settings = { ...this.settings, ...data.settings };
-                            }
-                            if (data.favorites) {
-                                this.favorites = data.favorites;
-                            }
-                        }
-                        
-                        this.saveData();
-                        this.showImportModal = false;
-                        this.importData = '';
-                        message.success('数据导入成功');
-                    } catch (error) {
-                        message.error('导入失败，请检查数据格式');
-                    }
-                },
-                
-                handleImageError(event) {
-                    event.target.style.display = 'none';
-                }
+            favorites: [],
+            showCreateGroupModal: false,
+            showEditGroupModal: false,
+            showAddEmojiModal: false,
+            showImportModal: false,
+            newGroup: { name: '', icon: '📁' },
+            editingGroup: { id: '', name: '', icon: '' },
+            newEmoji: { name: '', url: '', groupId: '' },
+            importData: '',
+            importFormat: 'json'
+          }
+        },
+        mounted() {
+          this.loadData()
+        },
+        methods: {
+          loadData() {
+            // Load from localStorage
+            try {
+              const groups = localStorage.getItem('emoji_extension_manager_groups')
+              if (groups) {
+                this.emojiGroups = JSON.parse(groups)
+              } else {
+                this.emojiGroups = this.getDefaultGroups()
+              }
+
+              const settings = localStorage.getItem('emoji_extension_manager_settings')
+              if (settings) {
+                this.settings = { ...this.settings, ...JSON.parse(settings) }
+              }
+
+              const favorites = localStorage.getItem('emoji_extension_manager_favorites')
+              if (favorites) {
+                this.favorites = JSON.parse(favorites)
+              }
+            } catch (error) {
+              console.error('Failed to load data:', error)
+              message.error('加载数据失败')
             }
-        }).mount('#app');
+          },
+
+          saveData() {
+            try {
+              localStorage.setItem(
+                'emoji_extension_manager_groups',
+                JSON.stringify(this.emojiGroups)
+              )
+              localStorage.setItem(
+                'emoji_extension_manager_settings',
+                JSON.stringify(this.settings)
+              )
+              localStorage.setItem(
+                'emoji_extension_manager_favorites',
+                JSON.stringify(this.favorites)
+              )
+            } catch (error) {
+              console.error('Failed to save data:', error)
+              message.error('保存数据失败')
+            }
+          },
+
+          getDefaultGroups() {
+            return [
+              {
+                id: 'default',
+                name: '默认表情',
+                icon: '😀',
+                order: 0,
+                emojis: [
+                  {
+                    packet: 1,
+                    name: '瞌睡',
+                    url: 'https://linux.do/uploads/default/optimized/4X/5/9/f/59ffbc2c53dd2a07dc30d4368bd5c9e01ca57d80_2_490x500.jpeg'
+                  },
+                  {
+                    packet: 2,
+                    name: '哭泣',
+                    url: 'https://linux.do/uploads/default/optimized/4X/5/d/9/5d932c05a642396335f632a370bd8d45463cf2e2_2_503x500.jpeg'
+                  },
+                  {
+                    packet: 3,
+                    name: '疑问',
+                    url: 'https://linux.do/uploads/default/optimized/4X/f/a/a/faa5afe1749312bc4a326feff0eca6fb39355300_2_518x499.jpeg'
+                  }
+                ]
+              }
+            ]
+          },
+
+          createGroup() {
+            if (!this.newGroup.name.trim()) {
+              message.error('请输入分组名称')
+              return
+            }
+
+            const newGroup = {
+              id: Date.now().toString(),
+              name: this.newGroup.name.trim(),
+              icon: this.newGroup.icon || '📁',
+              order: this.emojiGroups.length,
+              emojis: []
+            }
+
+            this.emojiGroups.push(newGroup)
+            this.saveData()
+            this.showCreateGroupModal = false
+            this.newGroup = { name: '', icon: '📁' }
+            message.success('分组创建成功')
+          },
+
+          editGroup(group) {
+            this.editingGroup = { ...group }
+            this.showEditGroupModal = true
+          },
+
+          updateGroup() {
+            const index = this.emojiGroups.findIndex(g => g.id === this.editingGroup.id)
+            if (index !== -1) {
+              this.emojiGroups[index] = { ...this.emojiGroups[index], ...this.editingGroup }
+              this.saveData()
+              this.showEditGroupModal = false
+              message.success('分组更新成功')
+            }
+          },
+
+          deleteGroup(groupId) {
+            const index = this.emojiGroups.findIndex(g => g.id === groupId)
+            if (index !== -1) {
+              if (confirm('确定要删除这个分组吗？')) {
+                this.emojiGroups.splice(index, 1)
+                this.saveData()
+                message.success('分组删除成功')
+              }
+            }
+          },
+
+          showAddEmojiModal(groupId) {
+            this.newEmoji.groupId = groupId
+            this.showAddEmojiModal = true
+          },
+
+          addEmoji() {
+            if (!this.newEmoji.name.trim() || !this.newEmoji.url.trim()) {
+              message.error('请填写表情名称和URL')
+              return
+            }
+
+            const group = this.emojiGroups.find(g => g.id === this.newEmoji.groupId)
+            if (group) {
+              const emoji = {
+                packet: Date.now(),
+                name: this.newEmoji.name.trim(),
+                url: this.newEmoji.url.trim()
+              }
+
+              group.emojis.push(emoji)
+              this.saveData()
+              this.showAddEmojiModal = false
+              this.newEmoji = { name: '', url: '', groupId: '' }
+              message.success('表情添加成功')
+            }
+          },
+
+          editEmoji(emoji, groupId) {
+            // TODO: Implement emoji editing
+            console.log('Edit emoji:', emoji, groupId)
+          },
+
+          removeFromFavorites(emojiId) {
+            const index = this.favorites.findIndex(f => f.id === emojiId)
+            if (index !== -1) {
+              this.favorites.splice(index, 1)
+              this.saveData()
+              message.success('已从收藏夹移除')
+            }
+          },
+
+          saveSettings() {
+            this.saveData()
+            message.success('设置保存成功')
+          },
+
+          exportData() {
+            const data = {
+              groups: this.emojiGroups,
+              settings: this.settings,
+              favorites: this.favorites,
+              version: '1.0.0',
+              exportTime: new Date().toISOString()
+            }
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `emoji-extension-backup-${new Date().toISOString().split('T')[0]}.json`
+            a.click()
+            URL.revokeObjectURL(url)
+            message.success('数据导出成功')
+          },
+
+          exportForUserscript() {
+            const data = {
+              emojiGroups: this.emojiGroups,
+              settings: this.settings
+            }
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `userscript-data-${new Date().toISOString().split('T')[0]}.json`
+            a.click()
+            URL.revokeObjectURL(url)
+            message.success('用户脚本数据导出成功')
+          },
+
+          syncToUserscript() {
+            try {
+              // Save to userscript localStorage keys
+              localStorage.setItem(
+                'emoji_extension_userscript_data',
+                JSON.stringify(this.emojiGroups)
+              )
+              localStorage.setItem(
+                'emoji_extension_userscript_settings',
+                JSON.stringify(this.settings)
+              )
+              message.success('数据已同步到用户脚本')
+            } catch (error) {
+              message.error('同步失败: ' + error.message)
+            }
+          },
+
+          importData() {
+            try {
+              const data = JSON.parse(this.importData)
+
+              if (this.importFormat === 'userscript') {
+                if (data.emojiGroups) {
+                  this.emojiGroups = data.emojiGroups
+                }
+                if (data.settings) {
+                  this.settings = { ...this.settings, ...data.settings }
+                }
+              } else {
+                if (data.groups) {
+                  this.emojiGroups = data.groups
+                }
+                if (data.settings) {
+                  this.settings = { ...this.settings, ...data.settings }
+                }
+                if (data.favorites) {
+                  this.favorites = data.favorites
+                }
+              }
+
+              this.saveData()
+              this.showImportModal = false
+              this.importData = ''
+              message.success('数据导入成功')
+            } catch (error) {
+              message.error('导入失败，请检查数据格式')
+            }
+          },
+
+          handleImageError(event) {
+            event.target.style.display = 'none'
+          }
+        }
+      }).mount('#app')
     </script>
-</body>
+  </body>
 </html>

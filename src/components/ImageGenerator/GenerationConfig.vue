@@ -3,17 +3,13 @@
     <div class="config-grid">
       <div class="config-item">
         <label for="imageCount">生成数量</label>
-        <select 
-          id="imageCount" 
+        <select
+          id="imageCount"
           v-model="imageCount"
           @change="onImageCountChange"
           class="form-select"
         >
-          <option 
-            v-for="count in IMAGE_COUNTS" 
-            :key="count.value" 
-            :value="count.value"
-          >
+          <option v-for="count in IMAGE_COUNTS" :key="count.value" :value="count.value">
             {{ count.label }}
           </option>
         </select>
@@ -21,17 +17,13 @@
 
       <div class="config-item">
         <label for="aspectRatio">宽高比</label>
-        <select 
-          id="aspectRatio" 
+        <select
+          id="aspectRatio"
           v-model="aspectRatio"
           @change="onAspectRatioChange"
           class="form-select"
         >
-          <option 
-            v-for="ratio in ASPECT_RATIOS" 
-            :key="ratio.value" 
-            :value="ratio.value"
-          >
+          <option v-for="ratio in ASPECT_RATIOS" :key="ratio.value" :value="ratio.value">
             {{ ratio.label }}
           </option>
         </select>
@@ -39,15 +31,10 @@
 
       <div class="config-item">
         <label for="style">艺术风格</label>
-        <select 
-          id="style" 
-          v-model="style"
-          @change="onStyleChange"
-          class="form-select"
-        >
-          <option 
-            v-for="styleOption in ART_STYLES" 
-            :key="styleOption.value" 
+        <select id="style" v-model="style" @change="onStyleChange" class="form-select">
+          <option
+            v-for="styleOption in ART_STYLES"
+            :key="styleOption.value"
             :value="styleOption.value"
           >
             {{ styleOption.label }}
@@ -59,65 +46,73 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { ASPECT_RATIOS, ART_STYLES, IMAGE_COUNTS } from '@/types/imageGenerator';
+import { ref, watch } from 'vue'
+import { ASPECT_RATIOS, ART_STYLES, IMAGE_COUNTS } from '@/types/imageGenerator'
 
 interface Props {
   modelValue: {
-    imageCount: number;
-    aspectRatio: string;
-    style: string;
-  };
+    imageCount: number
+    aspectRatio: string
+    style: string
+  }
 }
 
-const props = defineProps<Props>();
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  'update:modelValue': [config: {
-    imageCount: number;
-    aspectRatio: string;
-    style: string;
-  }];
-  configChanged: [config: {
-    imageCount: number;
-    aspectRatio: string;
-    style: string;
-  }];
-}>();
+  'update:modelValue': [
+    config: {
+      imageCount: number
+      aspectRatio: string
+      style: string
+    }
+  ]
+  configChanged: [
+    config: {
+      imageCount: number
+      aspectRatio: string
+      style: string
+    }
+  ]
+}>()
 
-const imageCount = ref(props.modelValue.imageCount);
-const aspectRatio = ref(props.modelValue.aspectRatio);
-const style = ref(props.modelValue.style);
+const imageCount = ref(props.modelValue.imageCount)
+const aspectRatio = ref(props.modelValue.aspectRatio)
+const style = ref(props.modelValue.style)
 
 const emitChange = () => {
   const config = {
     imageCount: imageCount.value,
     aspectRatio: aspectRatio.value,
     style: style.value
-  };
-  
-  emit('update:modelValue', config);
-  emit('configChanged', config);
-};
+  }
+
+  emit('update:modelValue', config)
+  emit('configChanged', config)
+}
 
 const onImageCountChange = () => {
-  emitChange();
-};
+  emitChange()
+}
 
 const onAspectRatioChange = () => {
-  emitChange();
-};
+  emitChange()
+}
 
 const onStyleChange = () => {
-  emitChange();
-};
+  emitChange()
+}
 
 // Watch for external changes
-watch(() => props.modelValue, (newValue) => {
-  imageCount.value = newValue.imageCount;
-  aspectRatio.value = newValue.aspectRatio;
-  style.value = newValue.style;
-}, { deep: true });
+watch(
+  () => props.modelValue,
+  newValue => {
+    imageCount.value = newValue.imageCount
+    aspectRatio.value = newValue.aspectRatio
+    style.value = newValue.style
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>

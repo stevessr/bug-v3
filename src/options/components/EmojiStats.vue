@@ -23,10 +23,10 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ groupCount: number; totalEmojis: number; favoritesCount: number }>();
-const groupCount = props.groupCount;
-const totalEmojis = props.totalEmojis;
-const favoritesCount = props.favoritesCount;
+const props = defineProps<{ groupCount: number; totalEmojis: number; favoritesCount: number }>()
+const groupCount = props.groupCount
+const totalEmojis = props.totalEmojis
+const favoritesCount = props.favoritesCount
 </script>
 
 <style scoped></style>

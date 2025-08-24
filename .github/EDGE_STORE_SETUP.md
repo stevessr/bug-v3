@@ -57,6 +57,7 @@ EDGE_PRODUCT_ID=<your-edge-store-product-id>
 ```
 
 **Where to find these values:**
+
 - `EDGE_CLIENT_ID`: From your Azure app registration "Overview" page
 - `EDGE_CLIENT_SECRET`: The secret you created in step 2.3
 - `EDGE_ACCESS_TOKEN_URL`: Replace `<your-tenant-id>` with your Azure AD tenant ID
@@ -65,6 +66,7 @@ EDGE_PRODUCT_ID=<your-edge-store-product-id>
 ### 4. Workflow Usage
 
 #### Automatic Release (Recommended)
+
 1. Create and push a git tag:
    ```bash
    git tag v1.0.1
@@ -77,6 +79,7 @@ EDGE_PRODUCT_ID=<your-edge-store-product-id>
    - Upload to Edge Store
 
 #### Manual Release
+
 1. Go to "Actions" tab in your repository
 2. Select "Build and Release to Microsoft Edge Store"
 3. Click "Run workflow"
@@ -113,6 +116,7 @@ EDGE_PRODUCT_ID=<your-edge-store-product-id>
 ### Manual Submission
 
 If automated upload fails, you can always:
+
 1. Download the zip file from the GitHub release
 2. Manually upload it to Partner Center
 3. Submit for review through the web interface

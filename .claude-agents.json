@@ -8,28 +8,10 @@
       "name": "api-developer",
       "description": "Backend API development specialist for REST and GraphQL APIs",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "api",
-        "backend",
-        "rest",
-        "graphql",
-        "development",
-        "nodejs"
-      ],
+      "tags": ["api", "backend", "rest", "graphql", "development", "nodejs"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Bash",
-          "Grep",
-          "Glob",
-          "Task"
-        ],
-        "optional_tools": [
-          "WebSearch"
-        ]
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob", "Task"],
+        "optional_tools": ["WebSearch"]
       },
       "capabilities": [
         "api_design",
@@ -40,27 +22,12 @@
         "api_testing"
       ],
       "triggers": {
-        "keywords": [
-          "api",
-          "endpoint",
-          "backend",
-          "rest",
-          "graphql",
-          "route"
-        ],
-        "patterns": [
-          "create * api",
-          "implement * endpoint",
-          "build * backend"
-        ]
+        "keywords": ["api", "endpoint", "backend", "rest", "graphql", "route"],
+        "patterns": ["create * api", "implement * endpoint", "build * backend"]
       },
       "hooks": null,
-      "commands": [
-        "api"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["api"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "examples": [
         {
           "trigger": "API creation request",
@@ -88,26 +55,10 @@
       "name": "api-documenter",
       "description": "API documentation specialist for OpenAPI specs and developer guides",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "documentation",
-        "api",
-        "openapi",
-        "swagger",
-        "reference"
-      ],
+      "tags": ["documentation", "api", "openapi", "swagger", "reference"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Grep",
-          "Glob"
-        ],
-        "optional_tools": [
-          "WebSearch",
-          "WebFetch"
-        ]
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Grep", "Glob"],
+        "optional_tools": ["WebSearch", "WebFetch"]
       },
       "capabilities": [
         "openapi_generation",
@@ -118,26 +69,12 @@
         "versioning"
       ],
       "triggers": {
-        "keywords": [
-          "api docs",
-          "openapi",
-          "swagger",
-          "documentation",
-          "reference"
-        ],
-        "patterns": [
-          "document * api",
-          "create api docs",
-          "generate openapi"
-        ]
+        "keywords": ["api docs", "openapi", "swagger", "documentation", "reference"],
+        "patterns": ["document * api", "create api docs", "generate openapi"]
       },
       "hooks": null,
-      "commands": [
-        "api-docs"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["api-docs"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "examples": [
         {
           "trigger": "API documentation request",
@@ -160,22 +97,10 @@
       "name": "code-reviewer",
       "description": "Expert code review specialist for quality, security, and maintainability",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "code-quality",
-        "review",
-        "security",
-        "best-practices"
-      ],
+      "tags": ["code-quality", "review", "security", "best-practices"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Grep",
-          "Glob",
-          "Bash"
-        ],
-        "optional_tools": [
-          "WebSearch"
-        ]
+        "tools": ["Read", "Grep", "Glob", "Bash"],
+        "optional_tools": ["WebSearch"]
       },
       "hooks": {
         "PostToolUse": [
@@ -190,12 +115,8 @@
           }
         ]
       },
-      "commands": [
-        "review"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["review"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "frontmatter": {
         "name": "code-reviewer",
         "description": "Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.",
@@ -211,24 +132,10 @@
       "name": "debugger",
       "description": "Expert debugging specialist for analyzing errors, stack traces, and fixing issues",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "debugging",
-        "error-analysis",
-        "troubleshooting",
-        "diagnostics"
-      ],
+      "tags": ["debugging", "error-analysis", "troubleshooting", "diagnostics"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Edit",
-          "Bash",
-          "Grep",
-          "Glob"
-        ],
-        "optional_tools": [
-          "WebSearch",
-          "MultiEdit"
-        ]
+        "tools": ["Read", "Edit", "Bash", "Grep", "Glob"],
+        "optional_tools": ["WebSearch", "MultiEdit"]
       },
       "hooks": {
         "PostToolUse": [
@@ -254,12 +161,8 @@
           }
         ]
       },
-      "commands": [
-        "debug"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["debug"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "frontmatter": {
         "name": "debugger",
         "description": "Expert debugging specialist for analyzing errors, stack traces, and unexpected behavior. Use proactively when encountering any errors or test failures.",
@@ -275,28 +178,10 @@
       "name": "devops-engineer",
       "description": "DevOps specialist for CI/CD, infrastructure automation, and deployment",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "devops",
-        "ci-cd",
-        "deployment",
-        "infrastructure",
-        "automation",
-        "kubernetes"
-      ],
+      "tags": ["devops", "ci-cd", "deployment", "infrastructure", "automation", "kubernetes"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Bash",
-          "Grep",
-          "Glob"
-        ],
-        "optional_tools": [
-          "Task",
-          "WebSearch"
-        ]
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob"],
+        "optional_tools": ["Task", "WebSearch"]
       },
       "capabilities": [
         "ci_cd_pipelines",
@@ -307,28 +192,12 @@
         "security_automation"
       ],
       "triggers": {
-        "keywords": [
-          "deploy",
-          "ci/cd",
-          "pipeline",
-          "kubernetes",
-          "docker",
-          "infrastructure"
-        ],
-        "patterns": [
-          "setup * deployment",
-          "create * pipeline",
-          "deploy to *"
-        ]
+        "keywords": ["deploy", "ci/cd", "pipeline", "kubernetes", "docker", "infrastructure"],
+        "patterns": ["setup * deployment", "create * pipeline", "deploy to *"]
       },
       "hooks": null,
-      "commands": [
-        "devops",
-        "deploy"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["devops", "deploy"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "examples": [
         {
           "trigger": "CI/CD setup",
@@ -356,24 +225,10 @@
       "name": "doc-writer",
       "description": "Documentation specialist for creating and updating technical documentation, API docs, and README files",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "documentation",
-        "technical-writing",
-        "api-docs",
-        "readme"
-      ],
+      "tags": ["documentation", "technical-writing", "api-docs", "readme"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "Grep",
-          "Glob"
-        ],
-        "optional_tools": [
-          "Bash",
-          "WebSearch"
-        ]
+        "tools": ["Read", "Write", "Edit", "Grep", "Glob"],
+        "optional_tools": ["Bash", "WebSearch"]
       },
       "hooks": {
         "PostToolUse": [
@@ -398,12 +253,8 @@
           }
         ]
       },
-      "commands": [
-        "document"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["document"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "frontmatter": {
         "name": "doc-writer",
         "description": "Documentation specialist for creating comprehensive technical documentation, API references, and README files. Automatically generates and updates documentation from code.",
@@ -419,29 +270,10 @@
       "name": "frontend-developer",
       "description": "Frontend development specialist for modern web applications",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "frontend",
-        "react",
-        "vue",
-        "javascript",
-        "ui",
-        "web"
-      ],
+      "tags": ["frontend", "react", "vue", "javascript", "ui", "web"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Bash",
-          "Grep",
-          "Glob",
-          "Task"
-        ],
-        "optional_tools": [
-          "WebSearch",
-          "WebFetch"
-        ]
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob", "Task"],
+        "optional_tools": ["WebSearch", "WebFetch"]
       },
       "capabilities": [
         "react_development",
@@ -452,27 +284,12 @@
         "accessibility"
       ],
       "triggers": {
-        "keywords": [
-          "frontend",
-          "ui",
-          "react",
-          "vue",
-          "component",
-          "interface"
-        ],
-        "patterns": [
-          "create * ui",
-          "build * frontend",
-          "implement * component"
-        ]
+        "keywords": ["frontend", "ui", "react", "vue", "component", "interface"],
+        "patterns": ["create * ui", "build * frontend", "implement * component"]
       },
       "hooks": null,
-      "commands": [
-        "frontend"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["frontend"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "examples": [
         {
           "trigger": "UI development request",
@@ -500,27 +317,10 @@
       "name": "marketing-writer",
       "description": "Marketing content specialist for technical marketing and product messaging",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "marketing",
-        "content",
-        "copywriting",
-        "seo",
-        "landing-pages",
-        "blog"
-      ],
+      "tags": ["marketing", "content", "copywriting", "seo", "landing-pages", "blog"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "WebSearch",
-          "Grep",
-          "Glob"
-        ],
-        "optional_tools": [
-          "WebFetch"
-        ]
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "WebSearch", "Grep", "Glob"],
+        "optional_tools": ["WebFetch"]
       },
       "capabilities": [
         "landing_page_copy",
@@ -531,28 +331,12 @@
         "content_strategy"
       ],
       "triggers": {
-        "keywords": [
-          "marketing",
-          "content",
-          "blog",
-          "landing page",
-          "copy",
-          "announcement"
-        ],
-        "patterns": [
-          "write * marketing",
-          "create * content",
-          "draft * announcement"
-        ]
+        "keywords": ["marketing", "content", "blog", "landing page", "copy", "announcement"],
+        "patterns": ["write * marketing", "create * content", "draft * announcement"]
       },
       "hooks": null,
-      "commands": [
-        "marketing",
-        "content"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["marketing", "content"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "examples": [
         {
           "trigger": "Landing page creation",
@@ -580,27 +364,10 @@
       "name": "product-manager",
       "description": "Product management specialist for requirements, user stories, and roadmaps",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "product",
-        "requirements",
-        "user-stories",
-        "roadmap",
-        "agile",
-        "planning"
-      ],
+      "tags": ["product", "requirements", "user-stories", "roadmap", "agile", "planning"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "Grep",
-          "Glob",
-          "TodoWrite"
-        ],
-        "optional_tools": [
-          "Task",
-          "WebSearch"
-        ]
+        "tools": ["Read", "Write", "Edit", "Grep", "Glob", "TodoWrite"],
+        "optional_tools": ["Task", "WebSearch"]
       },
       "capabilities": [
         "requirements_gathering",
@@ -611,28 +378,12 @@
         "agile_facilitation"
       ],
       "triggers": {
-        "keywords": [
-          "requirements",
-          "user story",
-          "roadmap",
-          "product",
-          "feature",
-          "backlog"
-        ],
-        "patterns": [
-          "create * requirements",
-          "write user stories",
-          "plan * roadmap"
-        ]
+        "keywords": ["requirements", "user story", "roadmap", "product", "feature", "backlog"],
+        "patterns": ["create * requirements", "write user stories", "plan * roadmap"]
       },
       "hooks": null,
-      "commands": [
-        "product",
-        "requirements"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["product", "requirements"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "examples": [
         {
           "trigger": "User story creation",
@@ -660,26 +411,10 @@
       "name": "project-planner",
       "description": "Strategic planning specialist for project decomposition and workflow management",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "planning",
-        "project-management",
-        "workflow",
-        "strategy",
-        "decomposition"
-      ],
+      "tags": ["planning", "project-management", "workflow", "strategy", "decomposition"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "Grep",
-          "Glob",
-          "TodoWrite",
-          "Task"
-        ],
-        "optional_tools": [
-          "WebSearch"
-        ]
+        "tools": ["Read", "Write", "Edit", "Grep", "Glob", "TodoWrite", "Task"],
+        "optional_tools": ["WebSearch"]
       },
       "capabilities": [
         "requirement_analysis",
@@ -690,26 +425,12 @@
         "risk_assessment"
       ],
       "triggers": {
-        "keywords": [
-          "plan",
-          "project",
-          "roadmap",
-          "timeline",
-          "breakdown"
-        ],
-        "patterns": [
-          "plan * project",
-          "create roadmap",
-          "break down *"
-        ]
+        "keywords": ["plan", "project", "roadmap", "timeline", "breakdown"],
+        "patterns": ["plan * project", "create roadmap", "break down *"]
       },
       "hooks": null,
-      "commands": [
-        "plan"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["plan"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "examples": [
         {
           "trigger": "Complex project request",
@@ -737,24 +458,10 @@
       "name": "refactor",
       "description": "Code refactoring specialist for improving code structure, patterns, and maintainability",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "refactoring",
-        "code-quality",
-        "patterns",
-        "clean-code"
-      ],
+      "tags": ["refactoring", "code-quality", "patterns", "clean-code"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Edit",
-          "MultiEdit",
-          "Grep",
-          "Glob"
-        ],
-        "optional_tools": [
-          "Bash",
-          "WebSearch"
-        ]
+        "tools": ["Read", "Edit", "MultiEdit", "Grep", "Glob"],
+        "optional_tools": ["Bash", "WebSearch"]
       },
       "hooks": {
         "PostToolUse": [
@@ -779,12 +486,8 @@
           }
         ]
       },
-      "commands": [
-        "refactor"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["refactor"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "frontmatter": {
         "name": "refactor",
         "description": "Code refactoring specialist. Expert at improving code structure, applying design patterns, and enhancing maintainability without changing functionality.",
@@ -800,23 +503,10 @@
       "name": "security-scanner",
       "description": "Security vulnerability scanner that detects common security issues and suggests fixes",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "security",
-        "vulnerability",
-        "scanner",
-        "audit"
-      ],
+      "tags": ["security", "vulnerability", "scanner", "audit"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Grep",
-          "Glob",
-          "Bash"
-        ],
-        "optional_tools": [
-          "WebSearch",
-          "Edit"
-        ]
+        "tools": ["Read", "Grep", "Glob", "Bash"],
+        "optional_tools": ["WebSearch", "Edit"]
       },
       "hooks": {
         "PostToolUse": [
@@ -842,12 +532,8 @@
           }
         ]
       },
-      "commands": [
-        "security-scan"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["security-scan"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "frontmatter": {
         "name": "security-scanner",
         "description": "Security vulnerability scanner that proactively detects security issues, exposed secrets, and suggests remediation. Use after code changes or for security audits.",
@@ -863,32 +549,10 @@
       "name": "shadcn-ui-builder",
       "description": "UI/UX specialist for designing and implementing interfaces using ShadCN UI components",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "ui",
-        "ux",
-        "shadcn",
-        "components",
-        "frontend",
-        "design",
-        "accessibility"
-      ],
+      "tags": ["ui", "ux", "shadcn", "components", "frontend", "design", "accessibility"],
       "requirements": {
-        "tools": [
-          "Glob",
-          "Grep",
-          "LS",
-          "Read",
-          "WebFetch",
-          "TodoWrite",
-          "Task"
-        ],
-        "optional_tools": [
-          "ExitPlanMode",
-          "NotebookRead",
-          "Edit",
-          "Write",
-          "MultiEdit"
-        ]
+        "tools": ["Glob", "Grep", "LS", "Read", "WebFetch", "TodoWrite", "Task"],
+        "optional_tools": ["ExitPlanMode", "NotebookRead", "Edit", "Write", "MultiEdit"]
       },
       "hooks": {
         "PostToolUse": [
@@ -913,13 +577,8 @@
           }
         ]
       },
-      "commands": [
-        "ui",
-        "shadcn"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["ui", "shadcn"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "examples": [
         {
           "trigger": "User needs UI implementation",
@@ -952,26 +611,10 @@
       "name": "tdd-specialist",
       "description": "Test-Driven Development specialist for comprehensive testing strategies",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "testing",
-        "tdd",
-        "quality",
-        "unit-tests",
-        "integration-tests"
-      ],
+      "tags": ["testing", "tdd", "quality", "unit-tests", "integration-tests"],
       "requirements": {
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Bash",
-          "Grep",
-          "Glob"
-        ],
-        "optional_tools": [
-          "Task"
-        ]
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob"],
+        "optional_tools": ["Task"]
       },
       "capabilities": [
         "test_first_development",
@@ -982,28 +625,12 @@
         "test_refactoring"
       ],
       "triggers": {
-        "keywords": [
-          "test",
-          "tdd",
-          "coverage",
-          "unit",
-          "integration",
-          "mock"
-        ],
-        "patterns": [
-          "write * tests",
-          "test * feature",
-          "add test coverage"
-        ]
+        "keywords": ["test", "tdd", "coverage", "unit", "integration", "mock"],
+        "patterns": ["write * tests", "test * feature", "add test coverage"]
       },
       "hooks": null,
-      "commands": [
-        "tdd",
-        "test-first"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["tdd", "test-first"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "examples": [
         {
           "trigger": "TDD request",
@@ -1031,23 +658,10 @@
       "name": "test-runner",
       "description": "Automated test execution specialist that runs tests and fixes failures",
       "author": "Claude Sub-Agents",
-      "tags": [
-        "testing",
-        "automation",
-        "quality-assurance",
-        "ci-cd"
-      ],
+      "tags": ["testing", "automation", "quality-assurance", "ci-cd"],
       "requirements": {
-        "tools": [
-          "Bash",
-          "Read",
-          "Edit",
-          "Grep",
-          "Glob"
-        ],
-        "optional_tools": [
-          "MultiEdit"
-        ]
+        "tools": ["Bash", "Read", "Edit", "Grep", "Glob"],
+        "optional_tools": ["MultiEdit"]
       },
       "hooks": {
         "PostToolUse": [
@@ -1072,12 +686,8 @@
           }
         ]
       },
-      "commands": [
-        "test"
-      ],
-      "compatible_with": [
-        "claude-code@>=1.0.0"
-      ],
+      "commands": ["test"],
+      "compatible_with": ["claude-code@>=1.0.0"],
       "frontmatter": {
         "name": "test-runner",
         "description": "Automated test execution specialist. Use proactively to run tests and fix failures. Automatically detects test frameworks and ensures all tests pass.",
