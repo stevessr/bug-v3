@@ -40,9 +40,13 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         input: {
-          popup: fileURLToPath(new URL('popup.html', import.meta.url)),
-          options: fileURLToPath(new URL('options.html', import.meta.url)),
-          'image-generator': fileURLToPath(new URL('image-generator.html', import.meta.url)),
+          popup: fileURLToPath(new URL('html/popup.html', import.meta.url)),
+          options: fileURLToPath(new URL('html/options.html', import.meta.url)),
+          'image-generator': fileURLToPath(new URL('html/image-generator.html', import.meta.url)),
+          'emoji-manager': fileURLToPath(new URL('html/emoji-manager.html', import.meta.url)),
+          'image-generator-vue': fileURLToPath(new URL('html/image-generator-vue.html', import.meta.url)),
+          'animation-converter': fileURLToPath(new URL('html/animation-converter.html', import.meta.url)),
+          'image-editor': fileURLToPath(new URL('html/image-editor.html', import.meta.url)),
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),

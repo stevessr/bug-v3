@@ -382,7 +382,7 @@ class CloudflareProvider implements ImageProvider {
   private selectedModel: string = '@cf/black-forest-labs/flux-1-schnell'
 
   setApiKey(key: string) {
-    // For Cloudflare, we expect the key in format: "accountId:apiToken"
+    // For backwards compatibility, still support the "accountId:apiToken" format
     const parts = key.split(':')
     if (parts.length === 2) {
       this.accountId = parts[0]
@@ -394,6 +394,16 @@ class CloudflareProvider implements ImageProvider {
       this.apiToken = key
       localStorage.setItem('cloudflare_api_token', key)
     }
+  }
+
+  setAccountId(accountId: string) {
+    this.accountId = accountId
+    localStorage.setItem('cloudflare_account_id', accountId)
+  }
+
+  setApiToken(apiToken: string) {
+    this.apiToken = apiToken
+    localStorage.setItem('cloudflare_api_token', apiToken)
   }
 
   loadApiKey() {
@@ -839,8 +849,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement
   const apiKeyHelp = document.getElementById('apiKeyHelp') as HTMLElement
   const apiKeyLink = document.getElementById('apiKeyLink') as HTMLAnchorElement
+  const cloudflareCredentials = document.getElementById('cloudflareCredentials') as HTMLElement
+  const cloudflareAccountIdInput = document.getElementById('cloudflareAccountId') as HTMLInputElement
+  const cloudflareApiTokenInput = document.getElementById('cloudflareApiToken') as HTMLInputElement
   const cloudflareModelSection = document.getElementById('cloudflareModelSection') as HTMLElement
   const cloudflareModelSelect = document.getElementById('cloudflareModel') as HTMLSelectElement
+  const cloudflareCustomModelCheck = document.getElementById('cloudflareCustomModel') as HTMLInputElement
+  const cloudflareCustomModelName = document.getElementById('cloudflareCustomModelName') as HTMLInputElement
   const chutesaiModelSection = document.getElementById('chutesaiModelSection') as HTMLElement
   const chutesaiModelSelect = document.getElementById('chutesaiModel') as HTMLSelectElement
   const promptInput = document.getElementById('prompt') as HTMLTextAreaElement
@@ -876,37 +891,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const provider = generator.getCurrentProvider()
     const savedApiKey = provider.loadApiKey()
 
+    // Hide all provider-specific sections first
+    cloudflareCredentials.style.display = 'none'
+    cloudflareModelSection.style.display = 'none'
+    chutesaiModelSection.style.display = 'none'
+    apiKeyInput.style.display = 'block'
+
     if (provider.name === 'gemini') {
       apiKeyInput.placeholder = '请输入您的 Gemini API Key'
       apiKeyHelp.innerHTML =
         '获取 API Key: <a id="apiKeyLink" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank">Google AI Studio</a>'
-      cloudflareModelSection.style.display = 'none'
-      chutesaiModelSection.style.display = 'none'
     } else if (provider.name === 'siliconflow') {
       apiKeyInput.placeholder = '请输入您的 SiliconFlow API Key'
       apiKeyHelp.innerHTML =
         '获取 API Key: <a id="apiKeyLink" href="https://cloud.siliconflow.cn" target="_blank">SiliconFlow 控制台</a>'
-      cloudflareModelSection.style.display = 'none'
-      chutesaiModelSection.style.display = 'none'
     } else if (provider.name === 'cloudflare') {
-      apiKeyInput.placeholder = '请输入 Account ID:API Token (例如: abc123:def456)'
+      // Hide the generic API key input for Cloudflare
+      apiKeyInput.style.display = 'none'
       apiKeyHelp.innerHTML =
         '获取凭据: <a id="apiKeyLink" href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Cloudflare API Tokens</a>'
+      
+      // Show Cloudflare-specific credentials and model sections
+      cloudflareCredentials.style.display = 'block'
       cloudflareModelSection.style.display = 'block'
-      chutesaiModelSection.style.display = 'none'
 
-      // Load saved model selection for Cloudflare
+      // Load saved Cloudflare credentials
       const cloudflareProvider = provider as any
+      cloudflareAccountIdInput.value = localStorage.getItem('cloudflare_account_id') || ''
+      cloudflareApiTokenInput.value = localStorage.getItem('cloudflare_api_token') || ''
+      
+      // Load saved model selection for Cloudflare
       if (cloudflareProvider.loadSelectedModel) {
         cloudflareProvider.loadSelectedModel()
-        cloudflareModelSelect.value =
-          cloudflareProvider.selectedModel || '@cf/black-forest-labs/flux-1-schnell'
+        const savedModel = cloudflareProvider.selectedModel || '@cf/black-forest-labs/flux-1-schnell'
+        
+        // Check if it's a custom model
+        const isCustomModel = !Array.from(cloudflareModelSelect.options).some(option => option.value === savedModel)
+        
+        if (isCustomModel) {
+          cloudflareCustomModelCheck.checked = true
+          cloudflareCustomModelName.style.display = 'block'
+          cloudflareCustomModelName.value = savedModel
+          cloudflareModelSelect.disabled = true
+        } else {
+          cloudflareCustomModelCheck.checked = false
+          cloudflareCustomModelName.style.display = 'none'
+          cloudflareModelSelect.disabled = false
+          cloudflareModelSelect.value = savedModel
+        }
       }
     } else if (provider.name === 'chutesai') {
       apiKeyInput.placeholder = '请输入您的 Chutes AI API Token'
       apiKeyHelp.innerHTML =
         '获取 API Token: <a id="apiKeyLink" href="https://chutes.ai" target="_blank">Chutes AI</a>'
-      cloudflareModelSection.style.display = 'none'
       chutesaiModelSection.style.display = 'block'
 
       // Load saved model selection for Chutes AI
@@ -917,7 +954,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    apiKeyInput.value = savedApiKey
+    // Set API key for non-Cloudflare providers
+    if (provider.name !== 'cloudflare') {
+      apiKeyInput.value = savedApiKey
+    }
   }
 
   // Initialize UI
@@ -934,8 +974,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const provider = generator.getCurrentProvider()
     if (provider.name === 'cloudflare') {
       const cloudflareProvider = provider as any
-      if (cloudflareProvider.setModel) {
+      if (cloudflareProvider.setModel && !cloudflareCustomModelCheck.checked) {
         cloudflareProvider.setModel(cloudflareModelSelect.value)
+      }
+    }
+  })
+
+  // Cloudflare custom model checkbox handler
+  cloudflareCustomModelCheck.addEventListener('change', () => {
+    if (cloudflareCustomModelCheck.checked) {
+      cloudflareCustomModelName.style.display = 'block'
+      cloudflareModelSelect.disabled = true
+    } else {
+      cloudflareCustomModelName.style.display = 'none'
+      cloudflareModelSelect.disabled = false
+      const provider = generator.getCurrentProvider()
+      if (provider.name === 'cloudflare') {
+        const cloudflareProvider = provider as any
+        if (cloudflareProvider.setModel) {
+          cloudflareProvider.setModel(cloudflareModelSelect.value)
+        }
+      }
+    }
+  })
+
+  // Cloudflare custom model name input handler
+  cloudflareCustomModelName.addEventListener('input', () => {
+    if (cloudflareCustomModelCheck.checked) {
+      const provider = generator.getCurrentProvider()
+      if (provider.name === 'cloudflare') {
+        const cloudflareProvider = provider as any
+        if (cloudflareProvider.setModel) {
+          cloudflareProvider.setModel(cloudflareCustomModelName.value)
+        }
+      }
+    }
+  })
+
+  // Cloudflare credentials handlers
+  cloudflareAccountIdInput.addEventListener('input', () => {
+    const provider = generator.getCurrentProvider()
+    if (provider.name === 'cloudflare') {
+      const cloudflareProvider = provider as any
+      if (cloudflareProvider.setAccountId) {
+        cloudflareProvider.setAccountId(cloudflareAccountIdInput.value)
+      }
+    }
+  })
+
+  cloudflareApiTokenInput.addEventListener('input', () => {
+    const provider = generator.getCurrentProvider()
+    if (provider.name === 'cloudflare') {
+      const cloudflareProvider = provider as any
+      if (cloudflareProvider.setApiToken) {
+        cloudflareProvider.setApiToken(cloudflareApiTokenInput.value)
       }
     }
   })
@@ -1056,13 +1148,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   generateBtn.addEventListener('click', async () => {
     const prompt = promptInput.value.trim()
-    const apiKey = apiKeyInput.value.trim()
+    const currentProvider = generator.getCurrentProvider()
     const isEditMode =
       (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value === 'edit'
 
-    if (!apiKey) {
-      showError('请先输入 API Key')
-      return
+    // Check credentials based on provider
+    if (currentProvider.name === 'cloudflare') {
+      const accountId = cloudflareAccountIdInput.value.trim()
+      const apiToken = cloudflareApiTokenInput.value.trim()
+      
+      if (!accountId || !apiToken) {
+        showError('请输入 Cloudflare 账户 ID 和 API Token')
+        return
+      }
+    } else {
+      const apiKey = apiKeyInput.value.trim()
+      if (!apiKey) {
+        showError('请先输入 API Key')
+        return
+      }
     }
 
     if (!prompt) {
@@ -1080,8 +1184,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return
     }
 
-    // Update API key
-    generator.getCurrentProvider().setApiKey(apiKey)
+    // Update API key/credentials
+    if (currentProvider.name === 'cloudflare') {
+      // Cloudflare credentials are handled by separate input listeners
+      // Do nothing here as they're already set
+    } else {
+      const apiKey = apiKeyInput.value.trim()
+      generator.getCurrentProvider().setApiKey(apiKey)
+    }
 
     const request: GenerateRequest = {
       prompt,

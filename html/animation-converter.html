@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动图转换器</title>
+  <link rel="icon" type="image/png" href="/icon16.png">
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+  <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 2.5em;
+      font-weight: 300;
+    }
+    
+    .header p {
+      margin: 10px 0 0;
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+    
+    .tool-tabs {
+      display: flex;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+    }
+    
+    .tool-tab {
+      flex: 1;
+      padding: 20px;
+      text-align: center;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      color: #6c757d;
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+    }
+    
+    .tool-tab:hover {
+      background: #e9ecef;
+      color: #495057;
+    }
+    
+    .tool-tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      background: white;
+    }
+    
+    .tool-content {
+      padding: 40px;
+    }
+    
+    .tool-section {
+      display: none;
+    }
+    
+    .tool-section.active {
+      display: block;
+    }
+    
+    .upload-area {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 30px;
+    }
+    
+    .upload-area:hover,
+    .upload-area.dragover {
+      border-color: #667eea;
+      background: #f8f9ff;
+    }
+    
+    .upload-icon {
+      font-size: 3em;
+      margin-bottom: 15px;
+      color: #6c757d;
+    }
+    
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+    
+    .setting-group {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    
+    .setting-group label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #495057;
+    }
+    
+    .setting-group select,
+    .setting-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      margin: 10px 5px;
+    }
+    
+    .btn:hover {
+      background: #5a6fd8;
+      transform: translateY(-1px);
+    }
+    
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-secondary {
+      background: #6c757d;
+    }
+    
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: #e9ecef;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+      display: none;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    .result-area {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      display: none;
+    }
+    
+    .frame-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .frame-item {
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .frame-item img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    
+    .frame-item .frame-name {
+      font-size: 12px;
+      color: #6c757d;
+      word-break: break-all;
+    }
+    
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border: 1px solid #f5c6cb;
+      display: none;
+    }
+    
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border: 1px solid #c3e6cb;
+      display: none;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🎞️ 动图转换器</h1>
+      <p>转换、拆分、合并动画文件，支持 GIF、MP4、WebM → APNG/GIF</p>
+    </div>
+
+    <!-- Tool Selection Tabs -->
+    <div class="tool-tabs">
+      <button class="tool-tab active" data-tool="converter">
+        📁 格式转换
+      </button>
+      <button class="tool-tab" data-tool="splitter">
+        ✂️ 帧拆分
+      </button>
+      <button class="tool-tab" data-tool="merger">
+        🔗 帧合并
+      </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="tool-content">
+      <!-- Format Converter -->
+      <div id="converter" class="tool-section active">
+        <h2>格式转换器</h2>
+        <p>将 GIF、MP4、WebM 转换为 APNG 或 GIF 格式</p>
+        
+        <div class="upload-area" id="converter-upload">
+          <div class="upload-icon">📂</div>
+          <h3>拖拽文件到此处或点击选择</h3>
+          <p>支持 GIF、MP4、WebM 格式，最大 100MB</p>
+          <input type="file" id="converter-file" accept=".gif,.mp4,.webm" style="display: none;">
+        </div>
+
+        <div class="settings-grid">
+          <div class="setting-group">
+            <label for="output-format">输出格式</label>
+            <select id="output-format">
+              <option value="gif">GIF</option>
+              <option value="apng">APNG</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label for="quality">质量</label>
+            <select id="quality">
+              <option value="high">高质量</option>
+              <option value="medium" selected>中等质量</option>
+              <option value="low">低质量</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label for="frame-rate">帧率 (FPS)</label>
+            <input type="number" id="frame-rate" value="15" min="5" max="60">
+          </div>
+          <div class="setting-group">
+            <label for="max-width">最大宽度 (px)</label>
+            <input type="number" id="max-width" value="480" min="100" max="1920">
+          </div>
+        </div>
+
+        <button class="btn" id="convert-btn" disabled>开始转换</button>
+      </div>
+
+      <!-- Frame Splitter -->
+      <div id="splitter" class="tool-section">
+        <h2>帧拆分器</h2>
+        <p>从动画文件中提取单独的帧</p>
+        
+        <div class="upload-area" id="splitter-upload">
+          <div class="upload-icon">📂</div>
+          <h3>拖拽动画文件到此处</h3>
+          <p>支持 GIF、MP4、WebM、APNG 格式</p>
+          <input type="file" id="splitter-file" accept=".gif,.mp4,.webm,.png" style="display: none;">
+        </div>
+
+        <div class="settings-grid">
+          <div class="setting-group">
+            <label for="frame-format">帧格式</label>
+            <select id="frame-format">
+              <option value="png" selected>PNG</option>
+              <option value="jpg">JPG</option>
+              <option value="webp">WebP</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label for="extract-every">提取间隔</label>
+            <select id="extract-every">
+              <option value="1" selected>每一帧</option>
+              <option value="2">每2帧</option>
+              <option value="3">每3帧</option>
+              <option value="5">每5帧</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn" id="split-btn" disabled>拆分帧</button>
+      </div>
+
+      <!-- Frame Merger -->
+      <div id="merger" class="tool-section">
+        <h2>帧合并器</h2>
+        <p>将多张图片合并为动画</p>
+        
+        <div class="upload-area" id="merger-upload">
+          <div class="upload-icon">🖼️</div>
+          <h3>拖拽图片文件到此处</h3>
+          <p>支持 PNG、JPG、WebP 格式，可选择多个文件</p>
+          <input type="file" id="merger-files" accept=".png,.jpg,.jpeg,.webp" multiple style="display: none;">
+        </div>
+
+        <div class="settings-grid">
+          <div class="setting-group">
+            <label for="merge-format">输出格式</label>
+            <select id="merge-format">
+              <option value="gif" selected>GIF</option>
+              <option value="apng">APNG</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label for="merge-fps">帧率 (FPS)</label>
+            <input type="number" id="merge-fps" value="10" min="1" max="30">
+          </div>
+          <div class="setting-group">
+            <label for="loop-count">循环次数</label>
+            <select id="loop-count">
+              <option value="0" selected>无限循环</option>
+              <option value="1">1次</option>
+              <option value="3">3次</option>
+              <option value="5">5次</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn" id="merge-btn" disabled>合并为动画</button>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-bar" id="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+
+      <!-- Loading Indicator -->
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p id="loading-text">正在加载 FFmpeg...</p>
+      </div>
+
+      <!-- Messages -->
+      <div class="error-message" id="error-message"></div>
+      <div class="success-message" id="success-message"></div>
+
+      <!-- Result Area -->
+      <div class="result-area" id="result-area">
+        <h3>处理结果</h3>
+        <div id="result-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    class AnimationConverter {
+      constructor() {
+        this.ffmpeg = null;
+        this.currentFiles = new Map();
+        this.init();
+      }
+
+      async init() {
+        await this.setupEventListeners();
+        await this.loadFFmpeg();
+      }
+
+      setupEventListeners() {
+        // Tab switching
+        document.querySelectorAll('.tool-tab').forEach(tab => {
+          tab.addEventListener('click', () => this.switchTool(tab.dataset.tool));
+        });
+
+        // Upload areas
+        this.setupUploadArea('converter-upload', 'converter-file');
+        this.setupUploadArea('splitter-upload', 'splitter-file');
+        this.setupUploadArea('merger-upload', 'merger-files');
+
+        // Convert button
+        document.getElementById('convert-btn').addEventListener('click', () => this.convertFile());
+        
+        // Split button
+        document.getElementById('split-btn').addEventListener('click', () => this.splitFrames());
+        
+        // Merge button
+        document.getElementById('merge-btn').addEventListener('click', () => this.mergeFrames());
+      }
+
+      setupUploadArea(areaId, inputId) {
+        const area = document.getElementById(areaId);
+        const input = document.getElementById(inputId);
+
+        area.addEventListener('click', () => input.click());
+        
+        area.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          area.classList.add('dragover');
+        });
+        
+        area.addEventListener('dragleave', () => {
+          area.classList.remove('dragover');
+        });
+        
+        area.addEventListener('drop', (e) => {
+          e.preventDefault();
+          area.classList.remove('dragover');
+          
+          const files = Array.from(e.dataTransfer.files);
+          this.handleFiles(areaId, files);
+        });
+
+        input.addEventListener('change', (e) => {
+          const files = Array.from(e.target.files);
+          this.handleFiles(areaId, files);
+        });
+      }
+
+      handleFiles(areaId, files) {
+        const tool = areaId.split('-')[0];
+        
+        if (tool === 'merger') {
+          this.currentFiles.set(tool, files);
+          document.getElementById('merge-btn').disabled = files.length === 0;
+          this.showMessage(`已选择 ${files.length} 个文件`, 'success');
+        } else {
+          const file = files[0];
+          if (file) {
+            this.currentFiles.set(tool, file);
+            const btnId = tool === 'converter' ? 'convert-btn' : 'split-btn';
+            document.getElementById(btnId).disabled = false;
+            this.showMessage(`已选择文件: ${file.name}`, 'success');
+          }
+        }
+      }
+
+      async loadFFmpeg() {
+        try {
+          this.showLoading('正在加载 FFmpeg...');
+          
+          const { FFmpeg } = FFmpegWASM;
+          const { fetchFile, toBlobURL } = FFmpegUtil;
+          
+          this.ffmpeg = new FFmpeg();
+          this.fetchFile = fetchFile;
+          this.toBlobURL = toBlobURL;
+
+          const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+          
+          await this.ffmpeg.load({
+            coreURL: await this.toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+            wasmURL: await this.toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+          });
+
+          this.hideLoading();
+          this.showMessage('FFmpeg 加载完成！', 'success');
+        } catch (error) {
+          this.hideLoading();
+          this.showMessage('FFmpeg 加载失败: ' + error.message, 'error');
+        }
+      }
+
+      switchTool(toolName) {
+        // Update tabs
+        document.querySelectorAll('.tool-tab').forEach(tab => {
+          tab.classList.remove('active');
+        });
+        document.querySelector(`[data-tool="${toolName}"]`).classList.add('active');
+
+        // Update sections
+        document.querySelectorAll('.tool-section').forEach(section => {
+          section.classList.remove('active');
+        });
+        document.getElementById(toolName).classList.add('active');
+      }
+
+      async convertFile() {
+        const file = this.currentFiles.get('converter');
+        if (!file || !this.ffmpeg) return;
+
+        try {
+          this.showLoading('正在转换文件...');
+          this.showProgress(0);
+
+          const inputName = 'input' + this.getFileExtension(file.name);
+          const outputFormat = document.getElementById('output-format').value;
+          const quality = document.getElementById('quality').value;
+          const frameRate = document.getElementById('frame-rate').value;
+          const maxWidth = document.getElementById('max-width').value;
+
+          await this.ffmpeg.writeFile(inputName, await this.fetchFile(file));
+
+          let outputName = `output.${outputFormat}`;
+          let ffmpegArgs;
+
+          if (outputFormat === 'gif') {
+            // Convert to GIF with optimization
+            const palette = 'palette.png';
+            
+            // Generate palette
+            await this.ffmpeg.exec([
+              '-i', inputName,
+              '-vf', `fps=${frameRate},scale=${maxWidth}:-1:flags=lanczos,palettegen`,
+              palette
+            ]);
+
+            // Create GIF with palette
+            ffmpegArgs = [
+              '-i', inputName,
+              '-i', palette,
+              '-filter_complex', `fps=${frameRate},scale=${maxWidth}:-1:flags=lanczos[x];[x][1:v]paletteuse`,
+              '-y', outputName
+            ];
+          } else {
+            // Convert to APNG
+            ffmpegArgs = [
+              '-i', inputName,
+              '-vf', `fps=${frameRate},scale=${maxWidth}:-1`,
+              '-plays', '0',
+              '-y', outputName
+            ];
+          }
+
+          await this.ffmpeg.exec(ffmpegArgs);
+
+          const data = await this.ffmpeg.readFile(outputName);
+          const blob = new Blob([data.buffer], { type: `image/${outputFormat}` });
+          
+          this.showResult(blob, outputName);
+          this.hideLoading();
+          this.showMessage('转换完成！', 'success');
+
+        } catch (error) {
+          this.hideLoading();
+          this.showMessage('转换失败: ' + error.message, 'error');
+        }
+      }
+
+      async splitFrames() {
+        const file = this.currentFiles.get('splitter');
+        if (!file || !this.ffmpeg) return;
+
+        try {
+          this.showLoading('正在拆分帧...');
+          this.showProgress(0);
+
+          const inputName = 'input' + this.getFileExtension(file.name);
+          const frameFormat = document.getElementById('frame-format').value;
+          const extractEvery = document.getElementById('extract-every').value;
+
+          await this.ffmpeg.writeFile(inputName, await this.fetchFile(file));
+
+          const outputPattern = `frame_%03d.${frameFormat}`;
+          const ffmpegArgs = [
+            '-i', inputName,
+            '-vf', `select='not(mod(n\\,${extractEvery}))'`,
+            '-vsync', 'vfr',
+            '-y', outputPattern
+          ];
+
+          await this.ffmpeg.exec(ffmpegArgs);
+
+          // Read all generated frames
+          const files = await this.ffmpeg.listDir('/');
+          const frameFiles = files.filter(f => f.name.startsWith('frame_') && f.name.endsWith(`.${frameFormat}`));
+
+          const frames = [];
+          for (const frameFile of frameFiles) {
+            const data = await this.ffmpeg.readFile(frameFile.name);
+            const blob = new Blob([data.buffer], { type: `image/${frameFormat}` });
+            frames.push({
+              name: frameFile.name,
+              blob: blob,
+              url: URL.createObjectURL(blob)
+            });
+          }
+
+          this.showFrameResults(frames);
+          this.hideLoading();
+          this.showMessage(`成功拆分出 ${frames.length} 帧`, 'success');
+
+        } catch (error) {
+          this.hideLoading();
+          this.showMessage('拆分失败: ' + error.message, 'error');
+        }
+      }
+
+      async mergeFrames() {
+        const files = this.currentFiles.get('merger');
+        if (!files || files.length === 0 || !this.ffmpeg) return;
+
+        try {
+          this.showLoading('正在合并帧...');
+          this.showProgress(0);
+
+          const outputFormat = document.getElementById('merge-format').value;
+          const fps = document.getElementById('merge-fps').value;
+          const loopCount = document.getElementById('loop-count').value;
+
+          // Write all input files
+          for (let i = 0; i < files.length; i++) {
+            const inputName = `input_${String(i).padStart(3, '0')}${this.getFileExtension(files[i].name)}`;
+            await this.ffmpeg.writeFile(inputName, await this.fetchFile(files[i]));
+          }
+
+          const outputName = `merged.${outputFormat}`;
+          let ffmpegArgs;
+
+          if (outputFormat === 'gif') {
+            // Create file list
+            const fileList = Array.from({length: files.length}, (_, i) => 
+              `file 'input_${String(i).padStart(3, '0')}${this.getFileExtension(files[i].name)}'`
+            ).join('\n');
+            
+            await this.ffmpeg.writeFile('filelist.txt', fileList);
+
+            ffmpegArgs = [
+              '-f', 'concat',
+              '-safe', '0',
+              '-i', 'filelist.txt',
+              '-vf', `fps=${fps}`,
+              '-loop', loopCount,
+              '-y', outputName
+            ];
+          } else {
+            // Create APNG
+            const pattern = `input_%03d${this.getFileExtension(files[0].name)}`;
+            ffmpegArgs = [
+              '-framerate', fps,
+              '-i', pattern,
+              '-plays', loopCount,
+              '-y', outputName
+            ];
+          }
+
+          await this.ffmpeg.exec(ffmpegArgs);
+
+          const data = await this.ffmpeg.readFile(outputName);
+          const blob = new Blob([data.buffer], { type: `image/${outputFormat}` });
+          
+          this.showResult(blob, outputName);
+          this.hideLoading();
+          this.showMessage('合并完成！', 'success');
+
+        } catch (error) {
+          this.hideLoading();
+          this.showMessage('合并失败: ' + error.message, 'error');
+        }
+      }
+
+      getFileExtension(filename) {
+        return filename.substring(filename.lastIndexOf('.'));
+      }
+
+      showResult(blob, filename) {
+        const resultArea = document.getElementById('result-area');
+        const resultContent = document.getElementById('result-content');
+        
+        const url = URL.createObjectURL(blob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = filename;
+        downloadLink.className = 'btn';
+        downloadLink.textContent = `下载 ${filename}`;
+
+        const preview = document.createElement('img');
+        preview.src = url;
+        preview.style.maxWidth = '300px';
+        preview.style.margin = '10px 0';
+
+        resultContent.innerHTML = '';
+        resultContent.appendChild(preview);
+        resultContent.appendChild(document.createElement('br'));
+        resultContent.appendChild(downloadLink);
+        
+        resultArea.style.display = 'block';
+      }
+
+      showFrameResults(frames) {
+        const resultArea = document.getElementById('result-area');
+        const resultContent = document.getElementById('result-content');
+        
+        const downloadAllBtn = document.createElement('button');
+        downloadAllBtn.className = 'btn';
+        downloadAllBtn.textContent = `下载所有帧 (${frames.length})`;
+        downloadAllBtn.onclick = () => this.downloadAllFrames(frames);
+
+        const frameGrid = document.createElement('div');
+        frameGrid.className = 'frame-grid';
+
+        frames.forEach(frame => {
+          const frameItem = document.createElement('div');
+          frameItem.className = 'frame-item';
+
+          const img = document.createElement('img');
+          img.src = frame.url;
+          img.alt = frame.name;
+
+          const nameDiv = document.createElement('div');
+          nameDiv.className = 'frame-name';
+          nameDiv.textContent = frame.name;
+
+          const downloadBtn = document.createElement('a');
+          downloadBtn.href = frame.url;
+          downloadBtn.download = frame.name;
+          downloadBtn.className = 'btn btn-secondary';
+          downloadBtn.style.fontSize = '12px';
+          downloadBtn.style.padding = '6px 12px';
+          downloadBtn.textContent = '下载';
+
+          frameItem.appendChild(img);
+          frameItem.appendChild(nameDiv);
+          frameItem.appendChild(downloadBtn);
+          frameGrid.appendChild(frameItem);
+        });
+
+        resultContent.innerHTML = '';
+        resultContent.appendChild(downloadAllBtn);
+        resultContent.appendChild(frameGrid);
+        
+        resultArea.style.display = 'block';
+      }
+
+      downloadAllFrames(frames) {
+        frames.forEach((frame, index) => {
+          setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = frame.url;
+            link.download = frame.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }, index * 100); // Delay downloads to avoid browser blocking
+        });
+      }
+
+      showLoading(text) {
+        document.getElementById('loading-text').textContent = text;
+        document.getElementById('loading').style.display = 'block';
+      }
+
+      hideLoading() {
+        document.getElementById('loading').style.display = 'none';
+      }
+
+      showProgress(percent) {
+        const progressBar = document.getElementById('progress-bar');
+        const progressFill = document.getElementById('progress-fill');
+        progressBar.style.display = 'block';
+        progressFill.style.width = percent + '%';
+      }
+
+      showMessage(message, type) {
+        const errorEl = document.getElementById('error-message');
+        const successEl = document.getElementById('success-message');
+        
+        errorEl.style.display = 'none';
+        successEl.style.display = 'none';
+
+        if (type === 'error') {
+          errorEl.textContent = message;
+          errorEl.style.display = 'block';
+        } else {
+          successEl.textContent = message;
+          successEl.style.display = 'block';
+        }
+
+        setTimeout(() => {
+          errorEl.style.display = 'none';
+          successEl.style.display = 'none';
+        }, 5000);
+      }
+    }
+
+    // Initialize the converter when the page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      new AnimationConverter();
+    });
+  </script>
+</body>
+</html>
