@@ -58,22 +58,23 @@ test.describe('AI Image Generator Tab', () => {
   })
 
   test('should handle OpenAI provider configuration', async ({ page }) => {
-    // Click on OpenAI provider
-    await page.click('text=OpenAI')
+    // Click on OpenAI provider - be more specific to avoid multiple matches
+    await page.getByRole('heading', { name: 'OpenAI' }).click()
     await page.waitForTimeout(500)
 
     // Check OpenAI configuration fields
     await expect(page.getByRole('heading', { name: '🤖 OpenAI 设置' })).toBeVisible()
     await expect(page.getByText('API Key')).toBeVisible()
-    await expect(page.getByText('模型')).toBeVisible()
+    await expect(page.getByText('模型', { exact: true })).toBeVisible()
 
     // Test API key input
     const apiKeyInput = page.locator('input[placeholder*="OpenAI API Key"]')
     await apiKeyInput.fill('sk-test-key')
 
-    // Test model selection
-    const modelSelect = page.locator('select').first()
-    await modelSelect.selectOption('dall-e-3')
+    // Test model selection - use Ant Design select
+    const modelSelect = page.locator('.ant-select').first()
+    await modelSelect.click()
+    await page.locator('.ant-select-item-option-content').getByText('DALL-E 3').click()
   })
 
   test('should handle browser AI providers', async ({ page }) => {
