@@ -6,6 +6,7 @@ import Components from 'unplugin-vue-components/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 
 import { generateDefaultEmojiGroupsPlugin } from './scripts/vite-plugin-generate-default-emoji-groups'
+import { copyHtmlToRootPlugin } from './scripts/vite-plugin-copy-html'
 
 export default defineConfig(({ mode }) => {
   // 根据构建模式设置编译期标志
@@ -16,6 +17,12 @@ export default defineConfig(({ mode }) => {
   return {
     css: {
       postcss: './postcss.config.js'
+    },
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        '@html': fileURLToPath(new URL('./src/html', import.meta.url))
+      }
     },
     define: {
       // 编译期标志定义
@@ -28,7 +35,8 @@ export default defineConfig(({ mode }) => {
       // auto register components and import styles for ant-design-vue
       Components({
         resolvers: [AntDesignVueResolver({ importStyle: 'less' })]
-      })
+      }),
+      copyHtmlToRootPlugin()
     ],
     build: {
       minify: 'terser',
@@ -40,9 +48,11 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         input: {
-          popup: fileURLToPath(new URL('popup.html', import.meta.url)),
-          options: fileURLToPath(new URL('options.html', import.meta.url)),
-          'image-generator': fileURLToPath(new URL('image-generator.html', import.meta.url)),
+          popup: fileURLToPath(new URL('src/html/popup.html', import.meta.url)),
+          options: fileURLToPath(new URL('src/html/options.html', import.meta.url)),
+          'image-generator': fileURLToPath(new URL('src/html/image-generator.html', import.meta.url)),
+          'emoji-manager': fileURLToPath(new URL('src/html/emoji-manager.html', import.meta.url)),
+          'image-generator-vue': fileURLToPath(new URL('src/html/image-generator-vue.html', import.meta.url)),
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
@@ -54,7 +64,13 @@ export default defineConfig(({ mode }) => {
             return 'js/[name].js'
           },
           chunkFileNames: 'js/[name].js',
-          assetFileNames: 'assets/[name].[ext]',
+          assetFileNames: assetInfo => {
+            // Move HTML files to root of dist
+            if (assetInfo.name?.endsWith('.html')) {
+              return '[name].[ext]'
+            }
+            return 'assets/[name].[ext]'
+          },
           manualChunks: id => {
             // Force content script dependencies to be bundled into the content entry
             if (id.includes('src/content/') || id.includes('content.ts')) {
