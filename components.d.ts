@@ -8,11 +8,16 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AboutSection: typeof import('./src/components/AboutSection.vue')['default']
+    AnimationConverterMain: typeof import('./src/components/AnimationConverter/AnimationConverterMain.vue')['default']
     ApiConfig: typeof import('./src/components/ImageGenerator/ApiConfig.vue')['default']
+    FormatConverter: typeof import('./src/components/AnimationConverter/FormatConverter.vue')['default']
+    FrameMerger: typeof import('./src/components/AnimationConverter/FrameMerger.vue')['default']
+    FrameSplitter: typeof import('./src/components/AnimationConverter/FrameSplitter.vue')['default']
     GenerateButton: typeof import('./src/components/ImageGenerator/GenerateButton.vue')['default']
     GenerationConfig: typeof import('./src/components/ImageGenerator/GenerationConfig.vue')['default']
     GenerationMode: typeof import('./src/components/ImageGenerator/GenerationMode.vue')['default']
     GridColumnsSelector: typeof import('./src/components/GridColumnsSelector.vue')['default']
+    ImageEditorMain: typeof import('./src/components/ImageEditor/ImageEditorMain.vue')['default']
     ImageGeneratorMain: typeof import('./src/components/ImageGenerator/ImageGeneratorMain.vue')['default']
     ImageUpload: typeof import('./src/components/ImageGenerator/ImageUpload.vue')['default']
     PromptInput: typeof import('./src/components/ImageGenerator/PromptInput.vue')['default']
