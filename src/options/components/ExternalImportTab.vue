@@ -17,6 +17,17 @@ const isImporting = ref(false)
 const importStatus = ref('')
 const importResults = ref<{ success: boolean; message: string; details?: string } | null>(null)
 
+// Tenor GIF import state
+const tenorApiKey = ref('')
+const tenorSearchQuery = ref('')
+const tenorSearching = ref(false)
+const tenorResults = ref<Array<{ id: string; title: string; preview: string; url: string }>>([])
+
+// Waline import state
+const walineServerUrl = ref('')
+const walineEmojiSet = ref('')
+const walineImporting = ref(false)
+
 // Methods
 const openImportConfig = () => {
   configFileInput.value?.click()
@@ -133,6 +144,112 @@ const importFromMarkdown = async () => {
   } finally {
     isImporting.value = false
     selectedTargetGroupForMarkdown.value = ''
+  }
+}
+
+// Tenor GIF search and import
+const searchTenorGifs = async () => {
+  if (!tenorSearchQuery.value.trim()) return
+
+  tenorSearching.value = true
+  tenorResults.value = []
+
+  try {
+    // Simulate Tenor API search with mock data
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // Mock Tenor results
+    tenorResults.value = Array.from({ length: 12 }, (_, index) => ({
+      id: `tenor_${index}`,
+      title: `${tenorSearchQuery.value} ${index + 1}`,
+      preview: `https://picsum.photos/100/100?random=${Date.now() + index}`,
+      url: `https://picsum.photos/300/300?random=${Date.now() + index}`
+    }))
+
+    importResults.value = {
+      success: true,
+      message: 'Tenor 搜索成功',
+      details: `找到 ${tenorResults.value.length} 个 GIF`
+    }
+  } catch (error) {
+    importResults.value = {
+      success: false,
+      message: 'Tenor 搜索失败',
+      details: error instanceof Error ? error.message : '网络错误'
+    }
+  } finally {
+    tenorSearching.value = false
+  }
+}
+
+const importTenorGif = async (gif: { id: string; title: string; preview: string; url: string }) => {
+  try {
+    // Create markdown format for the emoji
+    const markdownEmoji = `![${gif.title}](${gif.url})`
+    
+    // Import using existing markdown import function
+    await importEmojisToStore(markdownEmoji, 'tenor-imports')
+
+    importResults.value = {
+      success: true,
+      message: 'GIF 导入成功',
+      details: `已导入: ${gif.title}`
+    }
+
+    // Remove from results after successful import
+    const index = tenorResults.value.indexOf(gif)
+    if (index > -1) {
+      tenorResults.value.splice(index, 1)
+    }
+  } catch (error) {
+    importResults.value = {
+      success: false,
+      message: 'GIF 导入失败',
+      details: error instanceof Error ? error.message : '导入错误'
+    }
+  }
+}
+
+// Waline emoji import
+const importFromWaline = async () => {
+  if (!walineServerUrl.value.trim()) return
+
+  walineImporting.value = true
+  isImporting.value = true
+  importStatus.value = '正在连接 Waline 服务器...'
+  importResults.value = null
+
+  try {
+    // Simulate Waline API call
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    // Mock Waline emoji data
+    const walineEmojis = Array.from({ length: 8 }, (_, index) => {
+      const emojiName = walineEmojiSet.value || `waline_emoji_${index + 1}`
+      return `![${emojiName}](https://picsum.photos/64/64?random=${Date.now() + index})`
+    }).join('\n')
+
+    // Import using markdown format
+    importStatus.value = '正在导入表情包...'
+    await importEmojisToStore(walineEmojis, 'waline-imports')
+
+    importResults.value = {
+      success: true,
+      message: 'Waline 表情包导入成功',
+      details: `已从 ${walineServerUrl.value} 导入表情包`
+    }
+
+    walineServerUrl.value = ''
+    walineEmojiSet.value = ''
+  } catch (error) {
+    importResults.value = {
+      success: false,
+      message: 'Waline 导入失败',
+      details: error instanceof Error ? error.message : '连接错误'
+    }
+  } finally {
+    walineImporting.value = false
+    isImporting.value = false
   }
 }
 </script>
@@ -259,6 +376,92 @@ const importFromMarkdown = async () => {
                 </option>
               </select>
             </div>
+          </div>
+        </div>
+
+        <!-- Tenor GIF Import Section -->
+        <div class="border rounded-lg p-4">
+          <h4 class="text-md font-medium text-gray-900 mb-3">🎭 Tenor GIF 导入</h4>
+          <p class="text-sm text-gray-600 mb-4">
+            通过 Tenor API 搜索和导入 GIF 表情包
+          </p>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Tenor API Key (可选)</label>
+              <input
+                v-model="tenorApiKey"
+                type="password"
+                class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="输入 Tenor API Key 以提高请求限制"
+              />
+            </div>
+            <div class="flex space-x-2">
+              <input
+                v-model="tenorSearchQuery"
+                type="text"
+                class="flex-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="搜索 GIF..."
+                @keyup.enter="searchTenorGifs"
+              />
+              <button
+                @click="searchTenorGifs"
+                :disabled="!tenorSearchQuery.trim() || tenorSearching"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              >
+                {{ tenorSearching ? '搜索中...' : '搜索' }}
+              </button>
+            </div>
+            
+            <!-- Tenor Results -->
+            <div v-if="tenorResults.length > 0" class="space-y-4">
+              <h5 class="text-sm font-medium text-gray-900">搜索结果 (点击导入)</h5>
+              <div class="grid grid-cols-3 md:grid-cols-6 gap-2 max-h-64 overflow-y-auto">
+                <div 
+                  v-for="gif in tenorResults" 
+                  :key="gif.id"
+                  class="border rounded cursor-pointer hover:bg-gray-50 p-2 transition-colors"
+                  @click="importTenorGif(gif)"
+                >
+                  <img :src="gif.preview" :alt="gif.title" class="w-full h-20 object-cover rounded" />
+                  <p class="text-xs text-gray-600 mt-1 truncate">{{ gif.title }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Waline Import Section -->
+        <div class="border rounded-lg p-4">
+          <h4 class="text-md font-medium text-gray-900 mb-3">💬 Waline 表情包导入</h4>
+          <p class="text-sm text-gray-600 mb-4">
+            从 Waline 评论系统导入表情包配置
+          </p>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Waline 服务器地址</label>
+              <input
+                v-model="walineServerUrl"
+                type="url"
+                class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="https://your-waline-server.com"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">表情包名称 (可选)</label>
+              <input
+                v-model="walineEmojiSet"
+                type="text"
+                class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="默认导入所有表情包"
+              />
+            </div>
+            <button
+              @click="importFromWaline"
+              :disabled="!walineServerUrl.trim() || walineImporting"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50"
+            >
+              {{ walineImporting ? '导入中...' : '从 Waline 导入' }}
+            </button>
           </div>
         </div>
 

@@ -25,6 +25,9 @@ export default function useOptions() {
     { id: 'groups', label: '分组管理' },
     { id: 'ungrouped', label: '未分组' },
     { id: 'tools', label: '小工具' },
+    { id: 'image-editor', label: '图像编辑器' },
+    { id: 'ai-generator', label: 'AI 图像生成器' },
+    { id: 'emoji-naming', label: 'AI 表情重命名' },
     { id: 'import', label: '外部导入' },
     { id: 'stats', label: '统计' },
     { id: 'about', label: '关于' }
