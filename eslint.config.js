@@ -7,6 +7,7 @@ import importPlugin from 'eslint-plugin-import'
 import promise from 'eslint-plugin-promise'
 import prettier from 'eslint-plugin-prettier'
 import prettierConfig from 'eslint-config-prettier'
+import globals from 'globals'
 
 export default [
   // 忽略的文件
@@ -50,7 +51,6 @@ export default [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/prefer-const': 'error',
       '@typescript-eslint/no-var-requires': 'error',
 
       // Import 规则
@@ -200,6 +200,16 @@ export default [
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-var-requires': 'off'
+    }
+  },
+
+  // 全局变量配置
+  {
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.es2021
+      }
     }
   },
 
