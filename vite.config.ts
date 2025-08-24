@@ -83,7 +83,8 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules')) {
               return 'vendor'
             }
-            return 'undefined'
+            // Don't chunk other files - let them stay in their entry points
+            return undefined
           }
         },
         external: id => {

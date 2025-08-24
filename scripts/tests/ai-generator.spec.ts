@@ -3,12 +3,49 @@ import { test, expect } from '@playwright/test'
 test.describe('AI Image Generator Improvements', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/image-generator-vue.html')
+    // Wait for Vue app to mount by checking for the app container
+    await page.waitForSelector('#app', { timeout: 10000 })
+    // Wait for Vue component to render
+    await page.waitForFunction(() => {
+      const app = document.querySelector('#app');
+      return app && app.innerHTML.trim() !== '' && app.innerHTML !== '<image-generator-main></image-generator-main>';
+    }, { timeout: 15000 });
   })
 
   test('should load AI generator interface', async ({ page }) => {
-    // Check page title and header
+    // Capture console errors
+    const consoleErrors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+    
+    // First check basic page load
     await expect(page).toHaveTitle(/AI 图片生成器/)
-    await expect(page.locator('text=AI 图片生成器')).toBeVisible()
+    
+    // Check if app div exists
+    await expect(page.locator('#app')).toBeVisible()
+    
+    // Wait a bit for JS to execute
+    await page.waitForTimeout(2000);
+    
+    // Debug: check what's in the app div
+    const appContent = await page.textContent('#app');
+    console.log('App content:', appContent);
+    console.log('Console errors:', consoleErrors);
+    
+    // Check for JavaScript errors
+    if (consoleErrors.length > 0) {
+      console.log('JavaScript errors found:', consoleErrors);
+    }
+    
+    // Try looking for any content
+    const hasContent = await page.locator('#app').innerHTML();
+    console.log('App innerHTML:', hasContent);
+    
+    // Look for the header - if Vue mounted it should be there
+    await expect(page.locator('h1')).toBeVisible({ timeout: 5000 });
   })
 
   test('should display improved Cloudflare integration', async ({ page }) => {

@@ -26,11 +26,11 @@ test.describe('Animation Converter', () => {
     await expect(page.locator('text=拖拽文件到此处或点击选择')).toBeVisible()
     await expect(page.locator('text=支持 GIF、MP4、WebM 格式，最大 100MB')).toBeVisible()
     
-    // Check settings
-    await expect(page.locator('text=输出格式')).toBeVisible()
-    await expect(page.locator('text=质量')).toBeVisible()
-    await expect(page.locator('text=帧率 (FPS)')).toBeVisible()
-    await expect(page.locator('text=输出宽度 (px)')).toBeVisible()
+    // Check settings in converter section
+    await expect(page.locator('#converter text=输出格式')).toBeVisible()
+    await expect(page.locator('#converter text=质量')).toBeVisible()
+    await expect(page.locator('#converter text=帧率 (FPS)')).toBeVisible()
+    await expect(page.locator('#converter text=输出宽度 (px)')).toBeVisible()
   })
 
   test('should switch between tabs correctly', async ({ page }) => {
