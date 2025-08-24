@@ -1,4 +1,5 @@
 import { BaseProvider } from './BaseProvider'
+
 import type { GenerateRequest, ChutesAIGenerateResponse } from '@/types/imageGenerator'
 
 export class ChutesAIProvider extends BaseProvider {

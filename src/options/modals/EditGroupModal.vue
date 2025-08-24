@@ -1,3 +1,36 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+const props = defineProps<{
+  show: boolean
+  editingGroupId: string
+  initialName: string
+  initialIcon: string
+  isImageUrl?: (s: string) => boolean
+}>()
+const emits = defineEmits(['update:show', 'save', 'image-error'])
+
+const localName = ref(props.initialName || '')
+const localIcon = ref(props.initialIcon || '')
+
+watch(
+  () => props.initialName,
+  v => (localName.value = v || '')
+)
+watch(
+  () => props.initialIcon,
+  v => (localIcon.value = v || '')
+)
+
+const save = () => {
+  emits('save', {
+    id: props.editingGroupId,
+    name: localName.value.trim(),
+    icon: localIcon.value || '📁'
+  })
+  emits('update:show', false)
+}
+</script>
+
 <template>
   <div
     v-if="show"
@@ -50,36 +83,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-const props = defineProps<{
-  show: boolean
-  editingGroupId: string
-  initialName: string
-  initialIcon: string
-  isImageUrl?: (s: string) => boolean
-}>()
-const emits = defineEmits(['update:show', 'save', 'image-error'])
-
-const localName = ref(props.initialName || '')
-const localIcon = ref(props.initialIcon || '')
-
-watch(
-  () => props.initialName,
-  v => (localName.value = v || '')
-)
-watch(
-  () => props.initialIcon,
-  v => (localIcon.value = v || '')
-)
-
-const save = () => {
-  emits('save', {
-    id: props.editingGroupId,
-    name: localName.value.trim(),
-    icon: localIcon.value || '📁'
-  })
-  emits('update:show', false)
-}
-</script>

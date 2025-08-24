@@ -1,6 +1,7 @@
-import { Plugin } from 'vite'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
+
+import { Plugin } from 'vite'
 
 interface ConfigData {
   groups: any[]

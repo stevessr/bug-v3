@@ -1,3 +1,17 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+const props = defineProps<{ emojiStore: any }>()
+const emits = defineEmits(['open-add-emoji', 'delete-emoji', 'image-error'])
+
+const selectedGroupId = ref('')
+
+const filteredEmojis = computed(() => {
+  if (!selectedGroupId.value) return props.emojiStore.groups.flatMap((group: any) => group.emojis)
+  const group = props.emojiStore.groups.find((g: any) => g.id === selectedGroupId.value)
+  return group ? group.emojis : []
+})
+</script>
+
 <template>
   <div v-if="false" class="bg-white rounded-lg shadow-sm border">
     <div class="px-6 py-4 border-b border-gray-200">
@@ -54,17 +68,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed, ref } from 'vue'
-const props = defineProps<{ emojiStore: any }>()
-const emits = defineEmits(['open-add-emoji', 'delete-emoji', 'image-error'])
-
-const selectedGroupId = ref('')
-
-const filteredEmojis = computed(() => {
-  if (!selectedGroupId.value) return props.emojiStore.groups.flatMap((group: any) => group.emojis)
-  const group = props.emojiStore.groups.find((g: any) => g.id === selectedGroupId.value)
-  return group ? group.emojis : []
-})
-</script>

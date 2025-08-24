@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
+
 import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji'
 import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
 import { newStorageHelpers } from '../utils/newStorage'

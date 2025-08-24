@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+
 import Tenor from './Tenor.vue'
 import '../styles/main.css'
 

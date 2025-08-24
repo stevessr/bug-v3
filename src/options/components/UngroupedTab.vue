@@ -1,3 +1,140 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+
+import type { EmojiGroup } from '../../types/emoji'
+
+const props = defineProps<{ emojiStore: any }>()
+defineEmits<{
+  (e: 'remove', groupId: string, idx: number): void
+  (e: 'edit', emoji: any, groupId: string, idx: number): void
+}>()
+
+// 多选功能相关状态
+const isMultiSelectMode = ref(false)
+const selectedEmojis = ref(new Set<number>())
+const targetGroupId = ref('')
+const showCreateGroupDialog = ref(false)
+const newGroupName = ref('')
+const newGroupIcon = ref('')
+
+const ungroup = computed(() => props.emojiStore?.groups?.find((g: any) => g.id === 'ungrouped'))
+
+// 可用的分组列表（排除未分组）
+const availableGroups = computed(
+  () => props.emojiStore?.groups?.filter((g: EmojiGroup) => g.id !== 'ungrouped') || []
+)
+
+// 多选模式变化处理
+const onMultiSelectModeChange = () => {
+  if (!isMultiSelectMode.value) {
+    clearSelection()
+  }
+}
+
+// 切换表情选择状态
+const toggleEmojiSelection = (idx: number) => {
+  if (selectedEmojis.value.has(idx)) {
+    selectedEmojis.value.delete(idx)
+  } else {
+    selectedEmojis.value.add(idx)
+  }
+  // 触发响应式更新
+  selectedEmojis.value = new Set(selectedEmojis.value)
+}
+
+// 清空选择
+const clearSelection = () => {
+  selectedEmojis.value.clear()
+  selectedEmojis.value = new Set()
+  targetGroupId.value = ''
+}
+
+// 移动选中的表情
+const moveSelectedEmojis = async () => {
+  if (!targetGroupId.value || selectedEmojis.value.size === 0) return
+
+  try {
+    let targetGroup
+
+    // 如果选择创建新分组
+    if (targetGroupId.value === '__create_new__') {
+      showCreateGroupDialog.value = true
+      return
+    }
+
+    targetGroup = props.emojiStore.groups.find((g: EmojiGroup) => g.id === targetGroupId.value)
+    if (!targetGroup) return
+
+    // 获取选中的表情索引（按降序排列，避免删除时索引变化）
+    const sortedIndices = Array.from(selectedEmojis.value).sort((a, b) => b - a)
+
+    // 开始批量操作
+    props.emojiStore.beginBatch()
+
+    try {
+      // 逐个移动表情
+      for (const index of sortedIndices) {
+        if (index < ungroup.value.emojis.length) {
+          // 使用store的moveEmoji方法移动表情
+          props.emojiStore.moveEmoji(
+            'ungrouped',
+            index,
+            targetGroupId.value,
+            -1 // -1表示添加到目标分组的末尾
+          )
+        }
+      }
+    } finally {
+      // 结束批量操作，触发保存
+      await props.emojiStore.endBatch()
+    }
+
+    // 清空选择
+    clearSelection()
+
+    console.log(`已移动 ${sortedIndices.length} 个表情到分组: ${targetGroup.name}`)
+  } catch (error) {
+    console.error('移动表情时出错:', error)
+  }
+}
+
+// 确认创建新分组
+const confirmCreateGroup = async () => {
+  if (!newGroupName.value.trim()) return
+
+  try {
+    // 创建新分组
+    const newGroup = props.emojiStore.createGroup(
+      newGroupName.value.trim(),
+      newGroupIcon.value || '📁'
+    )
+
+    // 设置目标分组ID并关闭对话框
+    targetGroupId.value = newGroup.id
+    showCreateGroupDialog.value = false
+
+    // 重置表单
+    newGroupName.value = ''
+    newGroupIcon.value = ''
+
+    // 立即执行移动操作
+    await moveSelectedEmojis()
+
+    console.log(`已创建新分组: ${newGroup.name}`)
+  } catch (error) {
+    console.error('创建分组时出错:', error)
+  }
+}
+
+// 取消创建分组
+const cancelCreateGroup = () => {
+  showCreateGroupDialog.value = false
+  newGroupName.value = ''
+  newGroupIcon.value = ''
+  targetGroupId.value = ''
+}
+</script>
+
 <template>
   <div class="space-y-8">
     <div class="bg-white rounded-lg shadow-sm border">
@@ -155,142 +292,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed, ref } from 'vue'
-import type { EmojiGroup } from '../../types/emoji'
-
-const props = defineProps<{ emojiStore: any }>()
-defineEmits<{
-  (e: 'remove', groupId: string, idx: number): void
-  (e: 'edit', emoji: any, groupId: string, idx: number): void
-}>()
-
-// 多选功能相关状态
-const isMultiSelectMode = ref(false)
-const selectedEmojis = ref(new Set<number>())
-const targetGroupId = ref('')
-const showCreateGroupDialog = ref(false)
-const newGroupName = ref('')
-const newGroupIcon = ref('')
-
-const ungroup = computed(() => props.emojiStore?.groups?.find((g: any) => g.id === 'ungrouped'))
-
-// 可用的分组列表（排除未分组）
-const availableGroups = computed(
-  () => props.emojiStore?.groups?.filter((g: EmojiGroup) => g.id !== 'ungrouped') || []
-)
-
-// 多选模式变化处理
-const onMultiSelectModeChange = () => {
-  if (!isMultiSelectMode.value) {
-    clearSelection()
-  }
-}
-
-// 切换表情选择状态
-const toggleEmojiSelection = (idx: number) => {
-  if (selectedEmojis.value.has(idx)) {
-    selectedEmojis.value.delete(idx)
-  } else {
-    selectedEmojis.value.add(idx)
-  }
-  // 触发响应式更新
-  selectedEmojis.value = new Set(selectedEmojis.value)
-}
-
-// 清空选择
-const clearSelection = () => {
-  selectedEmojis.value.clear()
-  selectedEmojis.value = new Set()
-  targetGroupId.value = ''
-}
-
-// 移动选中的表情
-const moveSelectedEmojis = async () => {
-  if (!targetGroupId.value || selectedEmojis.value.size === 0) return
-
-  try {
-    let targetGroup
-
-    // 如果选择创建新分组
-    if (targetGroupId.value === '__create_new__') {
-      showCreateGroupDialog.value = true
-      return
-    }
-
-    targetGroup = props.emojiStore.groups.find((g: EmojiGroup) => g.id === targetGroupId.value)
-    if (!targetGroup) return
-
-    // 获取选中的表情索引（按降序排列，避免删除时索引变化）
-    const sortedIndices = Array.from(selectedEmojis.value).sort((a, b) => b - a)
-
-    // 开始批量操作
-    props.emojiStore.beginBatch()
-
-    try {
-      // 逐个移动表情
-      for (const index of sortedIndices) {
-        if (index < ungroup.value.emojis.length) {
-          // 使用store的moveEmoji方法移动表情
-          props.emojiStore.moveEmoji(
-            'ungrouped',
-            index,
-            targetGroupId.value,
-            -1 // -1表示添加到目标分组的末尾
-          )
-        }
-      }
-    } finally {
-      // 结束批量操作，触发保存
-      await props.emojiStore.endBatch()
-    }
-
-    // 清空选择
-    clearSelection()
-
-    console.log(`已移动 ${sortedIndices.length} 个表情到分组: ${targetGroup.name}`)
-  } catch (error) {
-    console.error('移动表情时出错:', error)
-  }
-}
-
-// 确认创建新分组
-const confirmCreateGroup = async () => {
-  if (!newGroupName.value.trim()) return
-
-  try {
-    // 创建新分组
-    const newGroup = props.emojiStore.createGroup(
-      newGroupName.value.trim(),
-      newGroupIcon.value || '📁'
-    )
-
-    // 设置目标分组ID并关闭对话框
-    targetGroupId.value = newGroup.id
-    showCreateGroupDialog.value = false
-
-    // 重置表单
-    newGroupName.value = ''
-    newGroupIcon.value = ''
-
-    // 立即执行移动操作
-    await moveSelectedEmojis()
-
-    console.log(`已创建新分组: ${newGroup.name}`)
-  } catch (error) {
-    console.error('创建分组时出错:', error)
-  }
-}
-
-// 取消创建分组
-const cancelCreateGroup = () => {
-  showCreateGroupDialog.value = false
-  newGroupName.value = ''
-  newGroupIcon.value = ''
-  targetGroupId.value = ''
-}
-</script>
 
 <style scoped>
 .emoji-item {

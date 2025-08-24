@@ -1,5 +1,6 @@
-import { getChromeAPI } from './utils'
 import { defaultEmojiGroups } from '../types/defaultEmojiGroups'
+
+import { getChromeAPI } from './utils'
 
 export async function initializeDefaultData() {
   const chromeAPI = getChromeAPI()
