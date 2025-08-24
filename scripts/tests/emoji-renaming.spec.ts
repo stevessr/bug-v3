@@ -135,8 +135,8 @@ test.describe('AI Emoji Renaming Tab', () => {
     await expect(page.locator('text=选择要重命名的表情')).toBeVisible()
 
     // Check action buttons
-    await expect(page.getByRole('button', { name: '全选' })).toBeVisible()
-    await expect(page.getByRole('button', { name: '清除选择' })).toBeVisible()
+    await expect(page.locator('button:has-text("全选")')).toBeVisible()
+    await expect(page.locator('button:has-text("清除选择")')).toBeVisible()
 
     // Check emoji grid
     const emojiGrid = page.locator('.grid-cols-8')
@@ -298,8 +298,8 @@ test.describe('AI Emoji Renaming Tab', () => {
     await page.waitForTimeout(1000)
 
     // Check batch operations
-    await expect(page.getByRole('button', { name: '应用所有重命名' })).toBeVisible()
-    await expect(page.getByRole('button', { name: '清除结果' })).toBeVisible()
+    await expect(page.locator('button:has-text("应用所有重命名")')).toBeVisible()
+    await expect(page.locator('button:has-text("清除结果")')).toBeVisible()
 
     // Test apply all
     await page.click('button:has-text("应用所有重命名")')

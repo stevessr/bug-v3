@@ -210,7 +210,7 @@ test.describe('AI Image Generator Tab', () => {
 
     await page.waitForTimeout(1000)
 
-    // Check result display  
+    // Check result display
     await expect(page.getByText('生成结果')).toBeVisible()
 
     // Check action buttons
