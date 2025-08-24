@@ -51,7 +51,10 @@ export default defineConfig(({ mode }) => {
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url)),
-          'image-generator-js': fileURLToPath(new URL('src/image-generator.ts', import.meta.url))
+          'image-generator-js': fileURLToPath(new URL('src/image-generator.ts', import.meta.url)),
+          'animation-converter-js': fileURLToPath(new URL('src/animation-converter.ts', import.meta.url)),
+          'image-editor-js': fileURLToPath(new URL('src/image-editor.ts', import.meta.url)),
+          'emoji-manager-js': fileURLToPath(new URL('src/emoji-manager.ts', import.meta.url))
         },
         output: {
           entryFileNames: chunkInfo => {
