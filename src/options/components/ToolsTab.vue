@@ -277,6 +277,8 @@ const extractFramesFromVideo = async (file: File) => {
   frameImages.value = []
   const url = URL.createObjectURL(file)
   const video = document.createElement('video')
+  // ensure browser will load enough data for seeking
+  video.preload = 'auto'
   video.src = url
   video.crossOrigin = 'anonymous'
   video.muted = true
@@ -284,6 +286,12 @@ const extractFramesFromVideo = async (file: File) => {
     video.addEventListener('loadedmetadata', () => resolve(null))
     video.addEventListener('error', e => reject(e))
   })
+  // pause to ensure seeking works consistently
+  try {
+    video.pause()
+  } catch {
+    /* ignore */
+  }
   
   const duration = video.duration
   // 获取视频信息用于智能采样
@@ -310,24 +318,85 @@ const extractFramesFromVideo = async (file: File) => {
   const ctx = canvas.getContext('2d')!
 
   for (let i = 0; i < captureCount; i++) {
-    const time = (i / (captureCount - 1)) * duration
-    await new Promise<void>(resolve => {
+    // protect against division by zero when captureCount === 1
+    const denom = Math.max(captureCount - 1, 1)
+    let time = (i / denom) * duration
+
+    // ensure time and duration are finite numbers
+    if (!Number.isFinite(time) || Number.isNaN(time)) time = 0
+    const maxSeek = Number.isFinite(duration) && !Number.isNaN(duration) ? Math.max(0, duration - 0.1) : 0
+
+    const seekTime = Math.min(Math.max(0, time), maxSeek)
+
+    await new Promise<void>((resolve) => {
       const onSeeked = () => {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        canvas.toBlob(blob => {
-          if (blob) {
-            const imgUrl = URL.createObjectURL(blob)
-            frameImages.value.push({
-              url: imgUrl,
-              name: `${file.name.replace(/\.[^.]+$/, '')}_frame_${String(i + 1).padStart(3, '0')}.png`
-            })
+        // clear timeout then process frame
+        clearTimeout(seekTimeout)
+
+        const finish = () => {
+          try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            canvas.toBlob(blob => {
+              if (blob) {
+                const imgUrl = URL.createObjectURL(blob)
+                frameImages.value.push({
+                  url: imgUrl,
+                  name: `${file.name.replace(/\.[^.]+$/, '')}_frame_${String(i + 1).padStart(3, '0')}.png`
+                })
+              }
+              resolve()
+            }, 'image/png')
+          } catch {
+            // In rare cases drawImage/toBlob may fail; continue with next frame
+            resolve()
+          } finally {
+            video.removeEventListener('seeked', onSeeked)
+            video.removeEventListener('error', onError)
           }
-          resolve()
-        }, 'image/png')
-        video.removeEventListener('seeked', onSeeked)
+        }
+
+        // Prefer requestVideoFrameCallback when available to ensure the frame is ready
+        // before drawing; otherwise fallback to immediate drawImage.
+        try {
+          const anyVideo = video as any
+          if (typeof anyVideo.requestVideoFrameCallback === 'function') {
+            anyVideo.requestVideoFrameCallback(() => finish())
+          } else {
+            finish()
+          }
+        } catch {
+          finish()
+        }
       }
+
+      const onError = () => {
+        clearTimeout(seekTimeout)
+        video.removeEventListener('seeked', onSeeked)
+        video.removeEventListener('error', onError)
+        // skip this frame on error
+        resolve()
+      }
+
+      // fallback timeout in case seeked/error never fire (some containers coalesce seeks)
+      const seekTimeout = setTimeout(() => {
+        video.removeEventListener('seeked', onSeeked)
+        video.removeEventListener('error', onError)
+        resolve()
+      }, 2500)
+
       video.addEventListener('seeked', onSeeked)
-      video.currentTime = Math.min(time, duration - 0.1)
+      video.addEventListener('error', onError)
+
+      // Assign a validated, clamped time to avoid non-finite errors
+      try {
+        video.currentTime = seekTime
+      } catch {
+        clearTimeout(seekTimeout)
+        video.removeEventListener('seeked', onSeeked)
+        video.removeEventListener('error', onError)
+        // If assignment throws, skip and resolve to continue processing other frames
+        resolve()
+      }
     })
   }
   URL.revokeObjectURL(url)
