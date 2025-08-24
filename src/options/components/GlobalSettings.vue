@@ -10,7 +10,15 @@
           <p class="text-sm text-gray-500">控制插入表情的默认尺寸</p>
         </div>
         <div class="flex items-center gap-3">
-          <input :value="settings.imageScale" @input="$emit('update:imageScale', $event)" type="range" min="5" max="150" step="5" class="w-32" />
+          <input
+            :value="settings.imageScale"
+            @input="$emit('update:imageScale', $event)"
+            type="range"
+            min="5"
+            max="150"
+            step="5"
+            class="w-32"
+          />
           <span class="text-sm text-gray-600 w-12">{{ settings.imageScale }}%</span>
         </div>
       </div>
@@ -29,8 +37,15 @@
           <p class="text-sm text-gray-500">在表情选择器中显示搜索功能</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" :checked="settings.showSearchBar" @change="$emit('update:showSearchBar', $event)" class="sr-only peer" />
-          <div class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"></div>
+          <input
+            type="checkbox"
+            :checked="settings.showSearchBar"
+            @change="$emit('update:showSearchBar', $event)"
+            class="sr-only peer"
+          />
+          <div
+            class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
+          ></div>
         </label>
       </div>
 
@@ -39,7 +54,7 @@
           <label class="text-sm font-medium text-gray-900">输出格式</label>
           <p class="text-sm text-gray-500">插入表情时使用的格式</p>
         </div>
-        <select 
+        <select
           v-model="localOutputFormat"
           @change="handleOutputFormatChange"
           class="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -55,8 +70,15 @@
           <p class="text-sm text-gray-500">在桌面端强制使用移动端样式</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" :checked="settings.forceMobileMode" @change="$emit('update:forceMobileMode', $event)" class="sr-only peer" />
-          <div class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"></div>
+          <input
+            type="checkbox"
+            :checked="settings.forceMobileMode"
+            @change="$emit('update:forceMobileMode', $event)"
+            class="sr-only peer"
+          />
+          <div
+            class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
+          ></div>
         </label>
       </div>
     </div>
@@ -64,40 +86,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, isRef } from 'vue';
+import { ref, watch, isRef } from 'vue'
 
-const props = defineProps<{ settings: any }>();
+const props = defineProps<{ settings: any }>()
 // allow flexible typing (either a reactive ref or a plain object)
-const settings: any = props.settings;
-const emit = defineEmits(['update:imageScale', 'update:showSearchBar', 'update:outputFormat', 'update:forceMobileMode']);
+const settings: any = props.settings
+const emit = defineEmits([
+  'update:imageScale',
+  'update:showSearchBar',
+  'update:outputFormat',
+  'update:forceMobileMode'
+])
 
 // support both ref(settings) and plain settings object
 const getOutputFormat = () => {
   try {
-    if (isRef(settings)) return (settings.value && (settings.value as any).outputFormat) || 'markdown';
-    return (settings && (settings as any).outputFormat) || 'markdown';
+    if (isRef(settings))
+      return (settings.value && (settings.value as any).outputFormat) || 'markdown'
+    return (settings && (settings as any).outputFormat) || 'markdown'
   } catch {
-    return 'markdown';
+    return 'markdown'
   }
-};
+}
 
 // local reactive copy for outputFormat so the select will update when parent props change
-const localOutputFormat = ref<string>(getOutputFormat());
+const localOutputFormat = ref<string>(getOutputFormat())
 watch(
   () => getOutputFormat(),
-  (val) => {
-    localOutputFormat.value = val || 'markdown';
+  val => {
+    localOutputFormat.value = val || 'markdown'
   }
-);
+)
 
 const handleOutputFormatChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement;
+  const target = event.target as HTMLSelectElement
   if (target) {
     // keep local state in sync and notify parent
-    localOutputFormat.value = target.value;
-    emit('update:outputFormat', target.value);
+    localOutputFormat.value = target.value
+    emit('update:outputFormat', target.value)
   }
-};
+}
 </script>
 
 <style scoped></style>

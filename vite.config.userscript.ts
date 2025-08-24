@@ -1,54 +1,57 @@
-import { defineConfig } from "vite";
-import { fileURLToPath } from "url";
+import { defineConfig } from 'vite'
+import { fileURLToPath } from 'url'
 
 export default defineConfig(({ mode }) => {
   // Build settings for userscript
-  const isDev = mode === 'development';
-  const enableLogging = process.env.ENABLE_LOGGING !== 'false'; // Always enable logging for userscripts unless explicitly disabled
-  const enableIndexedDB = false; // Userscripts don't use IndexedDB
+  const isDev = mode === 'development'
+  const enableLogging = process.env.ENABLE_LOGGING !== 'false' // Always enable logging for userscripts unless explicitly disabled
+  const enableIndexedDB = false // Userscripts don't use IndexedDB
 
   return {
     define: {
       // Compilation flags for userscript
       __ENABLE_LOGGING__: enableLogging,
-      __ENABLE_INDEXEDDB__: enableIndexedDB,
+      __ENABLE_INDEXEDDB__: enableIndexedDB
     },
     build: {
-      minify: process.env.BUILD_MINIFIED === 'true' ? "terser" : false,
-      terserOptions: process.env.BUILD_MINIFIED === 'true' ? {
-        compress: {
-          drop_console: !enableLogging,
-          drop_debugger: !isDev,
-          passes: 3, // Multiple passes for better compression
-        },
-        mangle: {
-          properties: {
-            regex: /^_/, // Mangle private properties
-          },
-        },
-        format: {
-          comments: false, // Remove comments
-        },
-      } : undefined,
+      minify: process.env.BUILD_MINIFIED === 'true' ? 'terser' : false,
+      terserOptions:
+        process.env.BUILD_MINIFIED === 'true'
+          ? {
+              compress: {
+                drop_console: !enableLogging,
+                drop_debugger: !isDev,
+                passes: 3 // Multiple passes for better compression
+              },
+              mangle: {
+                properties: {
+                  regex: /^_/ // Mangle private properties
+                }
+              },
+              format: {
+                comments: false // Remove comments
+              }
+            }
+          : undefined,
       rollupOptions: {
         input: {
-          userscript: fileURLToPath(new URL("src/userscript/userscript-main.ts", import.meta.url)),
+          userscript: fileURLToPath(new URL('src/userscript/userscript-main.ts', import.meta.url))
         },
         output: {
-          entryFileNames: (chunkInfo) => {
-            return `${chunkInfo.name}.js`;
+          entryFileNames: chunkInfo => {
+            return `${chunkInfo.name}.js`
           },
           chunkFileNames: `[name].js`,
           assetFileNames: `[name].[ext]`,
           // Bundle everything into a single file for userscript
           manualChunks: () => {
-            return 'userscript'; // Force everything into one chunk
-          },
+            return 'userscript' // Force everything into one chunk
+          }
         },
-        external: () => false, // Don't externalize anything
+        external: () => false // Don't externalize anything
       },
       outDir: process.env.BUILD_MINIFIED === 'true' ? 'dist-userscript-min' : 'dist-userscript',
-      emptyOutDir: true,
-    },
-  };
-});
+      emptyOutDir: true
+    }
+  }
+})

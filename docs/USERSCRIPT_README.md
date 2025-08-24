@@ -5,27 +5,33 @@
 ## 🚀 最新功能
 
 ### ✨ 完整功能支持
+
 - **✅ 所有扩展功能**：表情选择、搜索、添加、管理
 - **✅ 设置面板**：图片缩放、输出格式、界面选项
 - **✅ 数据管理**：导入/导出、同步功能
 - **✅ 完整管理界面**：独立的 HTML 管理器
 
 ### 📦 双重方案
+
 1. **增强用户脚本** - 包含所有基础功能 + 管理入口
 2. **独立管理界面** - 提供扩展级别的完整管理功能
 
 ## 构建命令
 
 ### 标准版本
+
 ```bash
 npm run build:userscript
 ```
+
 生成未压缩的用户脚本，便于调试和理解代码。
 
 ### 混淆版本
+
 ```bash
 npm run build:userscript:min
 ```
+
 生成压缩混淆的用户脚本，体积更小，加载更快。
 
 ## 生成的文件
@@ -54,11 +60,13 @@ npm run build:userscript:min
 ## 功能特性
 
 ### 支持的网站
+
 - linux.do
 - meta.discourse.org
-- 所有 Discourse 论坛 (*.discourse.org)
+- 所有 Discourse 论坛 (\*.discourse.org)
 
 ### 🎯 核心功能
+
 - **表情选择器**: 点击工具栏中的猫咪图标 🐈‍⬛ 打开表情选择器
 - **本地存储**: 使用 localStorage 存储用户设置和自定义表情
 - **一键添加**: 在图片弹窗中点击"添加表情"按钮将图片添加到表情库
@@ -66,6 +74,7 @@ npm run build:userscript:min
 - **自适应布局**: 根据页面环境自动选择最佳显示方式
 
 ### ⚙️ 管理功能
+
 - **设置面板**: 点击 🔧 图标配置缩放比例、输出格式等
 - **数据管理**: 点击 ⚙️ 图标进行导入/导出、同步操作
 - **完整管理界面**: 使用独立 HTML 文件进行高级管理：
@@ -77,28 +86,31 @@ npm run build:userscript:min
 
 ### 与浏览器扩展的差异
 
-| 特性 | 浏览器扩展 | 油猴脚本 |
-|------|------------|----------|
-| 安装方式 | 扩展商店 | 用户脚本管理器 |
-| 存储方式 | chrome.storage | localStorage |
-| 后台通信 | chrome.runtime | 无 (自包含) |
-| 更新方式 | 自动更新 | 手动更新或脚本自动检查 |
-| 权限要求 | 扩展权限 | 无特殊权限 |
-| 跨浏览器 | 需要不同扩展 | 通用兼容 |
+| 特性     | 浏览器扩展     | 油猴脚本               |
+| -------- | -------------- | ---------------------- |
+| 安装方式 | 扩展商店       | 用户脚本管理器         |
+| 存储方式 | chrome.storage | localStorage           |
+| 后台通信 | chrome.runtime | 无 (自包含)            |
+| 更新方式 | 自动更新       | 手动更新或脚本自动检查 |
+| 权限要求 | 扩展权限       | 无特殊权限             |
+| 跨浏览器 | 需要不同扩展   | 通用兼容               |
 
 ## 技术实现
 
 ### 存储适配
+
 - 使用 `localStorage` 替代 `chrome.storage`
 - 实现了完整的存储适配层 (`src/userscript/userscript-storage.ts`)
 - 支持表情分组和用户设置的持久化存储
 
 ### 自包含设计
+
 - 移除了对 Chrome 扩展 API 的依赖
 - 集成了默认表情数据
 - 实现了独立的表情管理功能
 
 ### 构建优化
+
 - 使用专门的 Vite 配置 (`vite.config.userscript.ts`)
 - 自动注入用户脚本元数据头
 - 支持代码压缩和混淆
@@ -106,6 +118,7 @@ npm run build:userscript:min
 ## 开发和调试
 
 ### 开发环境
+
 ```bash
 # 构建标准版本用于调试
 npm run build:userscript
@@ -115,11 +128,13 @@ npm run build:userscript
 ```
 
 ### 添加新功能
+
 1. 修改 `src/userscript/userscript-main.ts`
 2. 如需存储功能，更新 `src/userscript/userscript-storage.ts`
 3. 重新构建并测试
 
 ### 调试技巧
+
 - 使用浏览器开发者工具查看控制台日志
 - 标准版本包含详细的调试信息
 - 可以在油猴脚本管理器中直接编辑脚本进行快速测试
@@ -127,12 +142,14 @@ npm run build:userscript
 ## 兼容性
 
 ### 浏览器支持
+
 - Chrome 88+
 - Firefox 78+
 - Safari 14+
 - Edge 88+
 
 ### 论坛平台支持
+
 - Discourse (所有版本)
 - 其他类似结构的论坛 (通过 CSS 选择器适配)
 
@@ -156,6 +173,7 @@ npm run build:userscript
    - 备份重要的自定义表情
 
 ### 日志调试
+
 脚本包含详细的日志输出，前缀为 `[Emoji Extension Userscript]`，可以通过浏览器控制台查看运行状态。
 
 ## 更新说明
