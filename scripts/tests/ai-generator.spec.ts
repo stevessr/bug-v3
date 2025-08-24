@@ -13,12 +13,10 @@ test.describe('AI Image Generator Improvements', () => {
   })
 
   test('should load AI generator interface', async ({ page }) => {
-    // Capture console errors
-    const consoleErrors = [];
+    // Capture all console messages
+    const consoleMessages = [];
     page.on('console', msg => {
-      if (msg.type() === 'error') {
-        consoleErrors.push(msg.text());
-      }
+      consoleMessages.push(`${msg.type()}: ${msg.text()}`);
     });
     
     // First check basic page load
@@ -28,21 +26,28 @@ test.describe('AI Image Generator Improvements', () => {
     await expect(page.locator('#app')).toBeVisible()
     
     // Wait a bit for JS to execute
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
     
     // Debug: check what's in the app div
     const appContent = await page.textContent('#app');
     console.log('App content:', appContent);
-    console.log('Console errors:', consoleErrors);
+    console.log('All console messages:', consoleMessages);
     
-    // Check for JavaScript errors
-    if (consoleErrors.length > 0) {
-      console.log('JavaScript errors found:', consoleErrors);
-    }
-    
-    // Try looking for any content
+    // Check for any content
     const hasContent = await page.locator('#app').innerHTML();
     console.log('App innerHTML:', hasContent);
+    
+    // Check if scripts have loaded by checking for any JavaScript variables
+    const windowVue = await page.evaluate(() => window.Vue);
+    const windowApp = await page.evaluate(() => window.app);
+    console.log('Window Vue:', windowVue);
+    console.log('Window app:', windowApp);
+    
+    // Try to manually check DOM readiness
+    const domReady = await page.evaluate(() => document.readyState);
+    const appElement = await page.evaluate(() => !!document.getElementById('app'));
+    console.log('DOM ready state:', domReady);
+    console.log('App element exists:', appElement);
     
     // Look for the header - if Vue mounted it should be there
     await expect(page.locator('h1')).toBeVisible({ timeout: 5000 });

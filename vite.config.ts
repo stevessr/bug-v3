@@ -34,8 +34,8 @@ export default defineConfig(({ mode }) => {
       minify: 'terser',
       terserOptions: {
         compress: {
-          drop_console: !enableLogging, // 根据日志开关决定是否移除 console
-          drop_debugger: !isDev // 生产环境移除 debugger
+          drop_console: false, // Keep console logs for debugging
+          drop_debugger: !isDev // Only remove debugger in production
         }
       },
       rollupOptions: {
