@@ -1,9 +1,103 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+
+interface Props {
+  image?: string
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  'update:image': [image: string | undefined]
+  'image-changed': [image: string | undefined]
+}>()
+
+const fileInput = ref<HTMLInputElement>()
+const previewImage = ref<string | undefined>(props.image)
+const isDragOver = ref(false)
+
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const handleImageFile = (file: File) => {
+  if (!file.type.startsWith('image/')) {
+    alert('请选择图片文件')
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = e => {
+    const result = e.target?.result as string
+    const base64 = result.split(',')[1] // Remove data:image/...;base64, prefix
+    previewImage.value = result
+
+    emit('update:image', base64)
+    emit('image-changed', base64)
+  }
+  reader.readAsDataURL(file)
+}
+
+const onFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    handleImageFile(file)
+  }
+}
+
+const onDragOver = (event: DragEvent) => {
+  event.preventDefault()
+  isDragOver.value = true
+}
+
+const onDragLeave = (event: DragEvent) => {
+  event.preventDefault()
+  // Only set to false if we're leaving the upload area itself
+  if (!event.currentTarget?.contains(event.relatedTarget as Node)) {
+    isDragOver.value = false
+  }
+}
+
+const onDrop = (event: DragEvent) => {
+  event.preventDefault()
+  isDragOver.value = false
+
+  const file = event.dataTransfer?.files[0]
+  if (file) {
+    handleImageFile(file)
+  }
+}
+
+const removeImage = () => {
+  previewImage.value = undefined
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+
+  emit('update:image', undefined)
+  emit('image-changed', undefined)
+}
+
+// Watch for external image changes
+watch(
+  () => props.image,
+  newImage => {
+    if (newImage) {
+      previewImage.value = `data:image/jpeg;base64,${newImage}`
+    } else {
+      previewImage.value = undefined
+    }
+  }
+)
+</script>
+
 <template>
   <div class="image-upload-section">
     <h4>上传要编辑的图片</h4>
-    
+
     <!-- Upload Area -->
-    <div 
+    <div
       v-if="!previewImage"
       class="upload-area"
       :class="{ 'drag-over': isDragOver }"
@@ -14,122 +108,22 @@
     >
       <div class="upload-icon">📷</div>
       <div class="upload-text">点击或拖拽图片到此处</div>
-      <input 
+      <input
         ref="fileInput"
-        type="file" 
-        accept="image/*" 
+        type="file"
+        accept="image/*"
         @change="onFileSelect"
-        style="display: none;"
-      >
+        style="display: none"
+      />
     </div>
 
     <!-- Image Preview -->
     <div v-else class="image-preview">
-      <img 
-        :src="previewImage" 
-        alt="Preview"
-        class="preview-img"
-      >
-      <button 
-        @click="removeImage"
-        class="remove-btn"
-      >
-        移除图片
-      </button>
+      <img :src="previewImage" alt="Preview" class="preview-img" />
+      <button @click="removeImage" class="remove-btn">移除图片</button>
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch } from 'vue';
-
-interface Props {
-  image?: string;
-}
-
-const props = defineProps<Props>();
-
-const emit = defineEmits<{
-  'update:image': [image: string | undefined];
-  'image-changed': [image: string | undefined];
-}>();
-
-const fileInput = ref<HTMLInputElement>();
-const previewImage = ref<string | undefined>(props.image);
-const isDragOver = ref(false);
-
-const triggerFileInput = () => {
-  fileInput.value?.click();
-};
-
-const handleImageFile = (file: File) => {
-  if (!file.type.startsWith('image/')) {
-    alert('请选择图片文件');
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const result = e.target?.result as string;
-    const base64 = result.split(',')[1]; // Remove data:image/...;base64, prefix
-    previewImage.value = result;
-    
-    emit('update:image', base64);
-    emit('image-changed', base64);
-  };
-  reader.readAsDataURL(file);
-};
-
-const onFileSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (file) {
-    handleImageFile(file);
-  }
-};
-
-const onDragOver = (event: DragEvent) => {
-  event.preventDefault();
-  isDragOver.value = true;
-};
-
-const onDragLeave = (event: DragEvent) => {
-  event.preventDefault();
-  // Only set to false if we're leaving the upload area itself
-  if (!event.currentTarget?.contains(event.relatedTarget as Node)) {
-    isDragOver.value = false;
-  }
-};
-
-const onDrop = (event: DragEvent) => {
-  event.preventDefault();
-  isDragOver.value = false;
-  
-  const file = event.dataTransfer?.files[0];
-  if (file) {
-    handleImageFile(file);
-  }
-};
-
-const removeImage = () => {
-  previewImage.value = undefined;
-  if (fileInput.value) {
-    fileInput.value.value = '';
-  }
-  
-  emit('update:image', undefined);
-  emit('image-changed', undefined);
-};
-
-// Watch for external image changes
-watch(() => props.image, (newImage) => {
-  if (newImage) {
-    previewImage.value = `data:image/jpeg;base64,${newImage}`;
-  } else {
-    previewImage.value = undefined;
-  }
-});
-</script>
 
 <style scoped>
 .image-upload-section {

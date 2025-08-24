@@ -39,9 +39,9 @@ npm run build:minimal
 ### Bundle Size Comparison
 
 | Build Type | Background.js | Content.js | Total Reduction |
-|------------|---------------|------------|-----------------|
-| Standard   | 5.20 kB      | 23.03 kB   | Baseline        |
-| Minimal    | 4.21 kB      | 19.50 kB   | ~15-40% smaller |
+| ---------- | ------------- | ---------- | --------------- |
+| Standard   | 5.20 kB       | 23.03 kB   | Baseline        |
+| Minimal    | 4.21 kB       | 19.50 kB   | ~15-40% smaller |
 
 For detailed information about compile-time flags, see [BUILD_FLAGS.md](./BUILD_FLAGS.md).
 
@@ -87,6 +87,7 @@ src/
 ### Automated Release (Recommended)
 
 1. **Tag and Push**:
+
    ```bash
    git tag v1.0.1
    git push origin v1.0.1
@@ -118,7 +119,7 @@ The extension uses a progressive multi-layer storage system:
 ```typescript
 // Storage Priority Chain
 1. Local Storage    (immediate access, 0ms)
-2. Session Storage  (session-based, 100ms delay) 
+2. Session Storage  (session-based, 100ms delay)
 3. Extension Storage (Chrome API, 500ms delay)
 4. IndexedDB       (persistent fallback, 1000ms delay)
 ```
@@ -155,7 +156,7 @@ npm run test:debug
 ### Storage System
 
 - **Primary**: IndexedDB for persistent local storage
-- **Secondary**: Chrome storage for content script access  
+- **Secondary**: Chrome storage for content script access
 - **Backup**: Chrome sync storage with debouncing
 - **Split Keys**: Individual group storage (`emojiGroup_{id}`)
 
@@ -181,8 +182,9 @@ MIT License - see LICENSE file for details.
 ## Changelog
 
 ### v1.0.0
+
 - Complete storage architecture rewrite
-- Progressive multi-layer storage system  
+- Progressive multi-layer storage system
 - Enhanced cross-context synchronization
 - Split emoji group storage
 - Automated release workflow
