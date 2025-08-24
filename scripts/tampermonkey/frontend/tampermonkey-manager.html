@@ -4,24 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tampermonkey 表情扩展管理器</title>
-    
+
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    
+
     <!-- Ant Design Vue -->
     <script src="https://unpkg.com/ant-design-vue@4/dist/antd.min.js"></script>
     <link href="https://unpkg.com/ant-design-vue@4/dist/reset.css" rel="stylesheet" />
-    
+
     <!-- Tailwind CSS -->
     <link href="https://unpkg.com/tailwindcss@3/dist/tailwind.min.css" rel="stylesheet" />
-    
+
     <!-- Icons -->
     <link href="https://unpkg.com/@ant-design/icons-vue/dist/index.css" rel="stylesheet" />
-    
+
     <!-- FFmpeg WASM -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
     <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
-    
+
     <style>
       .emoji-grid {
         display: grid;
@@ -104,9 +104,7 @@
         <!-- Header -->
         <a-layout-header style="background: #001529; padding: 0">
           <div style="display: flex; align-items: center; padding: 0 24px">
-            <h1 style="color: white; margin: 0; font-size: 20px">
-              🎭 Tampermonkey 表情扩展管理器
-            </h1>
+            <h1 style="color: white; margin: 0; font-size: 20px">🎭 Tampermonkey 表情扩展管理器</h1>
             <div style="margin-left: auto">
               <a-button type="primary" @click="syncWithUserscript">同步到用户脚本</a-button>
             </div>
@@ -146,17 +144,30 @@
             <!-- Tools Section -->
             <div v-if="selectedKeys[0] === 'tools'" class="tools-section">
               <h2 style="color: white; margin-bottom: 24px">🔧 多媒体小工具</h2>
-              
+
               <!-- Format Converter -->
               <div class="tool-card">
                 <h3 style="color: white; margin-bottom: 16px">格式转换器</h3>
                 <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 16px">
                   支持 GIF, MP4, WebM → APNG/GIF 转换，具有完整的重新编码功能
                 </p>
-                <div class="drag-drop-zone" @drop="handleDrop" @dragover.prevent="handleDragOver" @dragleave="handleDragLeave">
-                  <input type="file" ref="formatFileInput" @change="handleFormatConvert" accept="video/*,image/gif" style="display: none">
+                <div
+                  class="drag-drop-zone"
+                  @drop="handleDrop"
+                  @dragover.prevent="handleDragOver"
+                  @dragleave="handleDragLeave"
+                >
+                  <input
+                    type="file"
+                    ref="formatFileInput"
+                    @change="handleFormatConvert"
+                    accept="video/*,image/gif"
+                    style="display: none"
+                  />
                   <p style="margin: 0; color: #666">拖拽文件到此处或点击选择文件</p>
-                  <p style="margin: 8px 0 0 0; font-size: 12px; color: #999">支持: GIF, MP4, WebM</p>
+                  <p style="margin: 8px 0 0 0; font-size: 12px; color: #999">
+                    支持: GIF, MP4, WebM
+                  </p>
                 </div>
               </div>
 
@@ -194,9 +205,7 @@
             <div v-if="showProgress" class="progress-container">
               <h4>处理进度</h4>
               <a-progress :percent="progressPercent" :status="progressStatus">
-                <template #format="percent">
-                  {{ progressText }} ({{ percent }}%)
-                </template>
+                <template #format="percent">{{ progressText }} ({{ percent }}%)</template>
               </a-progress>
               <div v-if="fileInfo" style="margin-top: 12px; font-size: 12px; color: #666">
                 <p>文件大小: {{ fileInfo.size }}</p>
@@ -234,9 +243,16 @@
 
     <script>
       const { createApp } = Vue
-      const { 
-        Layout, LayoutHeader, LayoutSider, LayoutContent,
-        Menu, MenuItem, Button, Progress, message
+      const {
+        Layout,
+        LayoutHeader,
+        LayoutSider,
+        LayoutContent,
+        Menu,
+        MenuItem,
+        Button,
+        Progress,
+        message
       } = antd
 
       createApp({
@@ -266,12 +282,12 @@
         methods: {
           async initFFmpeg() {
             if (this.ffmpegLoaded) return
-            
+
             this.ffmpegLoading = true
             try {
               const { FFmpeg } = FFmpegWASM
               this.ffmpeg = new FFmpeg()
-              
+
               await this.ffmpeg.load()
               this.ffmpegLoaded = true
               message.success('FFmpeg 初始化成功！')
@@ -312,7 +328,7 @@
             this.showProgress = true
             this.progressPercent = 0
             this.progressText = '正在分析文件...'
-            
+
             // Simulate file analysis
             this.fileInfo = {
               size: this.formatBytes(file.size),
@@ -336,7 +352,7 @@
               await this.delay(500)
               this.progressPercent = step.percent
               this.progressText = step.text
-              
+
               if (step.percent === 30) {
                 // Simulate getting file info
                 this.fileInfo = {
@@ -351,7 +367,7 @@
 
             this.progressStatus = 'success'
             message.success('文件处理完成！')
-            
+
             setTimeout(() => {
               this.showProgress = false
               this.progressStatus = 'active'

@@ -17,7 +17,10 @@ export {
 }
 
 // Legacy functions for backward compatibility
-export function loadDataFromLocalStorage() {
+export function loadDataFromLocalStorage(): {
+  emojiGroups: any[]
+  settings: any
+} {
   return {
     emojiGroups: userscriptManager.getSettings(),
     settings: userscriptManager.getSettings()
@@ -38,7 +41,7 @@ export function addEmojiToUserscript(emojiData: { name: string; url: string }): 
   // Find or create user uploads group
   const groups = JSON.parse(localStorage.getItem('emoji_extension_userscript_data') || '[]')
   let userGroup = groups.find((g: any) => g.id === 'user_uploads')
-  
+
   if (!userGroup) {
     userGroup = {
       id: 'user_uploads',
@@ -68,7 +71,7 @@ export function syncFromManager(): void {
   console.log('Sync from manager requested - enhanced userscript')
 }
 
-export function saveDataToLocalStorage(data: any): void {
+export function saveDataToLocalStorage(data: Record<string, any>): void {
   if (data.emojiGroups) {
     localStorage.setItem('emoji_extension_userscript_data', JSON.stringify(data.emojiGroups))
   }
@@ -149,8 +152,9 @@ function insertEmojiIntoEditor(emoji: {
     height = emoji.height.toString()
   }
 
-  const scale = userscriptState.settings?.imageScale || 30
-  const outputFormat = userscriptState.settings?.outputFormat || 'markdown'
+  const settings = userscriptManager.getSettings()
+  const scale = settings.imageScale || 30
+  const outputFormat = settings.outputFormat || 'markdown'
 
   if (textarea) {
     let insertText = ''
@@ -222,7 +226,9 @@ function isImageUrl(url: string): boolean {
 
 // Create emoji picker (simplified version)
 async function createEmojiPicker(): Promise<HTMLElement> {
-  const groups = userscriptState.emojiGroups
+  // Get emoji groups from enhanced userscript manager
+  const storedGroups = JSON.parse(localStorage.getItem('emoji_extension_userscript_data') || '[]')
+  const groups = storedGroups.length > 0 ? storedGroups : []
   const picker = document.createElement('div')
   picker.className = 'fk-d-menu -animated -expanded'
   picker.setAttribute('data-identifier', 'emoji-picker')
@@ -349,42 +355,37 @@ async function createEmojiPicker(): Promise<HTMLElement> {
 
     let validEmojis = 0
     group.emojis.forEach(
-      (emoji: {
-        url?: string
-        name?: string
-        width?: number
-        height?: number
-      }) => {
-      if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name)
-        return
+      (emoji: { url?: string; name?: string; width?: number; height?: number }) => {
+        if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return
 
-      const img = document.createElement('img')
-      img.width = 32
-      img.height = 32
-      img.className = 'emoji'
-      img.src = emoji.url
-      img.setAttribute('tabindex', '0')
-      img.setAttribute('data-emoji', emoji.name)
-      img.alt = emoji.name
-      img.title = `:${emoji.name}:`
-      img.loading = 'lazy'
+        const img = document.createElement('img')
+        img.width = 32
+        img.height = 32
+        img.className = 'emoji'
+        img.src = emoji.url
+        img.setAttribute('tabindex', '0')
+        img.setAttribute('data-emoji', emoji.name)
+        img.alt = emoji.name
+        img.title = `:${emoji.name}:`
+        img.loading = 'lazy'
 
-      img.addEventListener('click', () => {
-        insertEmojiIntoEditor(emoji)
-        picker.remove()
-      })
-
-      img.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
+        img.addEventListener('click', () => {
           insertEmojiIntoEditor(emoji)
           picker.remove()
-        }
-      })
+        })
 
-      emojisContainer.appendChild(img)
-      validEmojis++
-    })
+        img.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            insertEmojiIntoEditor(emoji)
+            picker.remove()
+          }
+        })
+
+        emojisContainer.appendChild(img)
+        validEmojis++
+      }
+    )
 
     if (validEmojis === 0) {
       const emptyMessage = document.createElement('div')
@@ -514,7 +515,7 @@ function showManagementModal() {
     </div>
     
     <div style="background: #fff2e8; padding: 12px; border-radius: 4px; border-left: 4px solid #fa8c16; font-size: 14px; color: #595959;">
-      <strong>提示：</strong>当前数据包含 ${userscriptState.emojiGroups.length} 个分组，共 ${userscriptState.emojiGroups.reduce((acc, g) => acc + (g.emojis?.length || 0), 0)} 个表情
+      <strong>提示：</strong>当前数据包含表情分组，请使用导出功能查看详细信息
     </div>
   `
 
@@ -600,6 +601,7 @@ function showManagementModal() {
 
 // Show settings modal
 function showSettingsModal() {
+  const settings = userscriptManager.getSettings()
   const modal = document.createElement('div')
   modal.style.cssText = `
     position: fixed;
@@ -632,8 +634,8 @@ function showSettingsModal() {
     </div>
     
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">图片缩放比例: <span id="scaleValue">${userscriptState.settings.imageScale}%</span></label>
-      <input type="range" id="scaleSlider" min="5" max="150" step="5" value="${userscriptState.settings.imageScale}" 
+      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">图片缩放比例: <span id="scaleValue">${settings.imageScale}%</span></label>
+      <input type="range" id="scaleSlider" min="5" max="150" step="5" value="${settings.imageScale}" 
              style="width: 100%; margin-bottom: 8px;">
     </div>
     
@@ -641,11 +643,11 @@ function showSettingsModal() {
       <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">输出格式:</label>
       <div style="display: flex; gap: 16px;">
         <label style="display: flex; align-items: center; color: #666;">
-          <input type="radio" name="outputFormat" value="markdown" ${userscriptState.settings.outputFormat === 'markdown' ? 'checked' : ''} style="margin-right: 4px;">
+          <input type="radio" name="outputFormat" value="markdown" ${settings.outputFormat === 'markdown' ? 'checked' : ''} style="margin-right: 4px;">
           Markdown
         </label>
         <label style="display: flex; align-items: center; color: #666;">
-          <input type="radio" name="outputFormat" value="html" ${userscriptState.settings.outputFormat === 'html' ? 'checked' : ''} style="margin-right: 4px;">
+          <input type="radio" name="outputFormat" value="html" ${settings.outputFormat === 'html' ? 'checked' : ''} style="margin-right: 4px;">
           HTML
         </label>
       </div>
@@ -653,7 +655,7 @@ function showSettingsModal() {
     
     <div style="margin-bottom: 16px;">
       <label style="display: flex; align-items: center; color: #555; font-weight: 500;">
-        <input type="checkbox" id="showSearchBar" ${userscriptState.settings.showSearchBar ? 'checked' : ''} style="margin-right: 8px;">
+        <input type="checkbox" id="showSearchBar" ${settings.showSearchBar ? 'checked' : ''} style="margin-right: 8px;">
         显示搜索栏
       </label>
     </div>
@@ -683,38 +685,24 @@ function showSettingsModal() {
 
   content.querySelector('#resetSettings')?.addEventListener('click', () => {
     if (confirm('确定要重置所有设置吗？')) {
-      userscriptState.settings = {
-        imageScale: 30,
-        gridColumns: 4,
-        outputFormat: 'markdown',
-        forceMobileMode: false,
-        defaultGroup: 'nachoneko',
-        showSearchBar: true
-      }
+      // Reset to defaults using userscript manager
+      userscriptManager.resetToDefaults()
       modal.remove()
     }
   })
 
   content.querySelector('#saveSettings')?.addEventListener('click', () => {
-    // Update settings
-    userscriptState.settings.imageScale = parseInt(scaleSlider?.value || '30')
-
-    const outputFormat = content.querySelector(
-      'input[name="outputFormat"]:checked'
-    ) as HTMLInputElement
-    if (outputFormat) {
-      userscriptState.settings.outputFormat = outputFormat.value as 'markdown' | 'html'
+    // Update settings using userscript manager
+    const newSettings = {
+      imageScale: parseInt(scaleSlider?.value || '30'),
+      outputFormat: (
+        content.querySelector('input[name="outputFormat"]:checked') as HTMLInputElement
+      )?.value as 'markdown' | 'html',
+      showSearchBar: (content.querySelector('#showSearchBar') as HTMLInputElement)?.checked
     }
 
-    const showSearchBar = content.querySelector('#showSearchBar') as HTMLInputElement
-    if (showSearchBar) {
-      userscriptState.settings.showSearchBar = showSearchBar.checked
-    }
-
-    // Save to localStorage
-    saveDataToLocalStorage({ settings: userscriptState.settings })
+    userscriptManager.updateSettings(newSettings)
     alert('设置已保存')
-
     modal.remove()
   })
 

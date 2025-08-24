@@ -66,7 +66,7 @@ export class EnhancedImageEditor {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
     this.ctx = canvas.getContext('2d')!
-    
+
     this.state = {
       tool: 'select',
       brushSize: 5,
@@ -309,7 +309,7 @@ export class EnhancedImageEditor {
     this.ctx.lineWidth = this.state.brushSize
     this.ctx.lineCap = 'round'
     this.ctx.lineJoin = 'round'
-    
+
     this.ctx.beginPath()
     this.ctx.moveTo(x, y)
   }
@@ -325,7 +325,7 @@ export class EnhancedImageEditor {
     this.ctx.lineWidth = this.state.brushSize
     this.ctx.lineCap = 'round'
     this.ctx.lineJoin = 'round'
-    
+
     this.ctx.beginPath()
     this.ctx.moveTo(x, y)
   }
@@ -342,7 +342,7 @@ export class EnhancedImageEditor {
 
   private updateCrop(x: number, y: number): void {
     if (!this.state.crop || !this.lastPoint) return
-    
+
     this.state.crop.width = x - this.state.crop.x
     this.state.crop.height = y - this.state.crop.y
     this.updateCropOverlay()
@@ -352,7 +352,7 @@ export class EnhancedImageEditor {
     if (!this.state.crop) return
 
     const { x, y, width, height } = this.state.crop
-    
+
     // Ensure positive dimensions
     const cropX = Math.min(x, x + width)
     const cropY = Math.min(y, y + height)
@@ -369,15 +369,15 @@ export class EnhancedImageEditor {
 
   private applyCrop(x: number, y: number, width: number, height: number): void {
     const imageData = this.ctx.getImageData(x, y, width, height)
-    
+
     // Resize canvas to crop dimensions
     this.canvas.width = width
     this.canvas.height = height
-    
+
     // Clear and draw cropped content
     this.ctx.clearRect(0, 0, width, height)
     this.ctx.putImageData(imageData, 0, 0)
-    
+
     this.saveState()
   }
 
@@ -390,7 +390,7 @@ export class EnhancedImageEditor {
     this.ctx.font = `${this.state.fontSize}px Arial`
     this.ctx.textAlign = 'left'
     this.ctx.textBaseline = 'top'
-    
+
     this.ctx.fillText(this.state.textInput, x, y)
     this.saveState()
   }
@@ -403,7 +403,7 @@ export class EnhancedImageEditor {
     this.ctx.strokeStyle = this.state.brushColor
     this.ctx.lineWidth = this.state.brushSize
     this.ctx.lineCap = 'round'
-    
+
     this.ctx.beginPath()
     this.ctx.moveTo(this.lastPoint.x, this.lastPoint.y)
     this.ctx.lineTo(x, y)
@@ -420,22 +420,20 @@ export class EnhancedImageEditor {
     this.ctx.globalAlpha = this.state.opacity
     this.ctx.strokeStyle = this.state.brushColor
     this.ctx.lineWidth = this.state.brushSize
-    
+
     this.ctx.strokeRect(this.lastPoint.x, this.lastPoint.y, width, height)
   }
 
   private drawCircle(x: number, y: number): void {
     if (!this.lastPoint) return
 
-    const radius = Math.sqrt(
-      Math.pow(x - this.lastPoint.x, 2) + Math.pow(y - this.lastPoint.y, 2)
-    )
+    const radius = Math.sqrt(Math.pow(x - this.lastPoint.x, 2) + Math.pow(y - this.lastPoint.y, 2))
 
     this.ctx.globalCompositeOperation = 'source-over'
     this.ctx.globalAlpha = this.state.opacity
     this.ctx.strokeStyle = this.state.brushColor
     this.ctx.lineWidth = this.state.brushSize
-    
+
     this.ctx.beginPath()
     this.ctx.arc(this.lastPoint.x, this.lastPoint.y, radius, 0, 2 * Math.PI)
     this.ctx.stroke()
@@ -462,13 +460,13 @@ export class EnhancedImageEditor {
 
   private continueMove(x: number, y: number): void {
     if (!this.lastPoint) return
-    
+
     const deltaX = x - this.lastPoint.x
     const deltaY = y - this.lastPoint.y
-    
+
     this.transform.x += deltaX
     this.transform.y += deltaY
-    
+
     this.redraw()
   }
 
@@ -485,7 +483,7 @@ export class EnhancedImageEditor {
       pointer-events: none;
       z-index: 10;
     `
-    
+
     this.canvas.parentElement?.appendChild(this.cropOverlay)
   }
 
@@ -517,14 +515,16 @@ export class EnhancedImageEditor {
   // Transform operations
   public zoom(factor: number, centerX?: number, centerY?: number): void {
     const newScale = Math.max(0.1, Math.min(10, this.transform.scale * factor))
-    
+
     if (centerX !== undefined && centerY !== undefined) {
       // Zoom towards point
       const coords = this.getCanvasCoordinates(centerX, centerY)
-      this.transform.x = coords.x - (coords.x - this.transform.x) * (newScale / this.transform.scale)
-      this.transform.y = coords.y - (coords.y - this.transform.y) * (newScale / this.transform.scale)
+      this.transform.x =
+        coords.x - (coords.x - this.transform.x) * (newScale / this.transform.scale)
+      this.transform.y =
+        coords.y - (coords.y - this.transform.y) * (newScale / this.transform.scale)
     }
-    
+
     this.transform.scale = newScale
     this.redraw()
   }
@@ -553,14 +553,14 @@ export class EnhancedImageEditor {
   // State management
   private saveState(): void {
     const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height)
-    
+
     // Remove any states after current index (for branching history)
     this.history = this.history.slice(0, this.historyIndex + 1)
-    
+
     // Add new state
     this.history.push(imageData)
     this.historyIndex = this.history.length - 1
-    
+
     // Limit history size to prevent memory issues
     if (this.history.length > 50) {
       this.history.shift()
@@ -600,19 +600,19 @@ export class EnhancedImageEditor {
   public loadImage(imageFile: File): Promise<void> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = e => {
         const img = new Image()
         img.onload = () => {
           this.originalImage = img
-          
+
           // Resize canvas to fit image
           this.canvas.width = img.width
           this.canvas.height = img.height
-          
+
           // Draw image
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
           this.ctx.drawImage(img, 0, 0)
-          
+
           // Reset transform
           this.transform = {
             scale: 1,
@@ -622,12 +622,12 @@ export class EnhancedImageEditor {
             x: 0,
             y: 0
           }
-          
+
           // Save initial state
           this.history = []
           this.historyIndex = -1
           this.saveState()
-          
+
           resolve()
         }
         img.onerror = () => reject(new Error('Failed to load image'))
@@ -653,39 +653,36 @@ export class EnhancedImageEditor {
 
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
-    
+
     // Apply transforms
     this.ctx.save()
-    
+
     // Apply zoom and pan
     this.ctx.scale(this.transform.scale, this.transform.scale)
     this.ctx.translate(this.transform.x, this.transform.y)
-    
+
     // Apply rotation
     if (this.transform.rotation !== 0) {
       this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2)
       this.ctx.rotate((this.transform.rotation * Math.PI) / 180)
       this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2)
     }
-    
+
     // Apply flips
     if (this.transform.flipX || this.transform.flipY) {
-      this.ctx.scale(
-        this.transform.flipX ? -1 : 1,
-        this.transform.flipY ? -1 : 1
-      )
+      this.ctx.scale(this.transform.flipX ? -1 : 1, this.transform.flipY ? -1 : 1)
       this.ctx.translate(
         this.transform.flipX ? -this.canvas.width : 0,
         this.transform.flipY ? -this.canvas.height : 0
       )
     }
-    
+
     // Draw current state
     const currentImageData = this.history[this.historyIndex]
     if (currentImageData) {
       this.ctx.putImageData(currentImageData, 0, 0)
     }
-    
+
     this.ctx.restore()
   }
 
@@ -746,7 +743,7 @@ export class EnhancedImageEditor {
   private applyGrayscale(data: Uint8ClampedArray, intensity: number): void {
     for (let i = 0; i < data.length; i += 4) {
       const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
-      data[i] = data[i] + (gray - data[i]) * intensity     // Red
+      data[i] = data[i] + (gray - data[i]) * intensity // Red
       data[i + 1] = data[i + 1] + (gray - data[i + 1]) * intensity // Green
       data[i + 2] = data[i + 2] + (gray - data[i + 2]) * intensity // Blue
     }
@@ -757,11 +754,11 @@ export class EnhancedImageEditor {
       const r = data[i]
       const g = data[i + 1]
       const b = data[i + 2]
-      
-      const sepiaR = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189))
-      const sepiaG = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168))
-      const sepiaB = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131))
-      
+
+      const sepiaR = Math.min(255, r * 0.393 + g * 0.769 + b * 0.189)
+      const sepiaG = Math.min(255, r * 0.349 + g * 0.686 + b * 0.168)
+      const sepiaB = Math.min(255, r * 0.272 + g * 0.534 + b * 0.131)
+
       data[i] = r + (sepiaR - r) * intensity
       data[i + 1] = g + (sepiaG - g) * intensity
       data[i + 2] = b + (sepiaB - b) * intensity
@@ -770,7 +767,7 @@ export class EnhancedImageEditor {
 
   private applyInvert(data: Uint8ClampedArray, intensity: number): void {
     for (let i = 0; i < data.length; i += 4) {
-      data[i] = data[i] + (255 - data[i]) * intensity         // Red
+      data[i] = data[i] + (255 - data[i]) * intensity // Red
       data[i + 1] = data[i + 1] + (255 - data[i + 1]) * intensity // Green
       data[i + 2] = data[i + 2] + (255 - data[i + 2]) * intensity // Blue
     }
@@ -779,7 +776,7 @@ export class EnhancedImageEditor {
   private applyBrightness(data: Uint8ClampedArray, intensity: number): void {
     const adjustment = intensity * 50 // -50 to +50
     for (let i = 0; i < data.length; i += 4) {
-      data[i] = Math.max(0, Math.min(255, data[i] + adjustment))     // Red
+      data[i] = Math.max(0, Math.min(255, data[i] + adjustment)) // Red
       data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + adjustment)) // Green
       data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + adjustment)) // Blue
     }
@@ -788,7 +785,7 @@ export class EnhancedImageEditor {
   private applyContrast(data: Uint8ClampedArray, intensity: number): void {
     const factor = (259 * (intensity * 255 + 255)) / (255 * (259 - intensity * 255))
     for (let i = 0; i < data.length; i += 4) {
-      data[i] = Math.max(0, Math.min(255, factor * (data[i] - 128) + 128))     // Red
+      data[i] = Math.max(0, Math.min(255, factor * (data[i] - 128) + 128)) // Red
       data[i + 1] = Math.max(0, Math.min(255, factor * (data[i + 1] - 128) + 128)) // Green
       data[i + 2] = Math.max(0, Math.min(255, factor * (data[i + 2] - 128) + 128)) // Blue
     }
@@ -799,9 +796,9 @@ export class EnhancedImageEditor {
       const r = data[i]
       const g = data[i + 1]
       const b = data[i + 2]
-      
+
       const gray = r * 0.299 + g * 0.587 + b * 0.114
-      
+
       data[i] = Math.max(0, Math.min(255, gray + (r - gray) * intensity))
       data[i + 1] = Math.max(0, Math.min(255, gray + (g - gray) * intensity))
       data[i + 2] = Math.max(0, Math.min(255, gray + (b - gray) * intensity))
