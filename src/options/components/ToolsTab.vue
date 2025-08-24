@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { message } from 'ant-design-vue'
+// libs for advanced processing
+import * as FFmpegWASM from '@ffmpeg/ffmpeg'
+import { parseGIF, decompressFrames } from 'gifuct-js'
+import JSZip from 'jszip'
 
 interface Props {
   activeTab: string
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 // File inputs
 const formatFileInput = ref<HTMLInputElement>()
@@ -34,7 +38,14 @@ const frameImages = ref<Array<{ url: string; name: string }>>([])
 
 const ffmpegLoaded = ref(false)
 const ffmpegLoading = ref(false)
-// ffmpeg wasm instance (initialized when user requests); keep as placeholder
+// ffmpeg wasm instance (initialized when user requests)
+type FFmpegLike = { load: () => Promise<void>; [k: string]: unknown }
+let ffmpeg: FFmpegLike | null = null
+
+const resolveCreateFFmpeg = () => {
+  const mod = FFmpegWASM as unknown as any
+  return (mod.createFFmpeg ?? mod.default?.createFFmpeg ?? mod.FFmpeg ?? mod.default?.FFmpeg) as any
+}
 
 // Methods
 const handleDragOver = (e: DragEvent) => {
@@ -119,7 +130,7 @@ const startFormatConversion = async () => {
   // Only support basic image conversion client-side (first-frame for GIF)
   if (file.type.startsWith('image/')) {
     const reader = new FileReader()
-    reader.onload = async (e) => {
+    reader.onload = async e => {
       const img = new Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
@@ -127,18 +138,27 @@ const startFormatConversion = async () => {
         canvas.height = img.height
         const ctx = canvas.getContext('2d')!
         ctx.drawImage(img, 0, 0)
-        const mime = targetFormat.value === 'jpeg' ? 'image/jpeg' : targetFormat.value === 'webp' ? 'image/webp' : 'image/png'
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            message.error('转换失败：生成 Blob 失败')
-            return
-          }
-          if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
-          formatOutputUrl.value = URL.createObjectURL(blob)
-          const ext = targetFormat.value === 'jpeg' ? 'jpg' : targetFormat.value
-          formatOutputName.value = file.name.replace(/\.[^.]+$/, '') + '.' + ext
-          message.success('图像已转换，可下载')
-        }, mime, outputQuality.value / 100)
+        const mime =
+          targetFormat.value === 'jpeg'
+            ? 'image/jpeg'
+            : targetFormat.value === 'webp'
+              ? 'image/webp'
+              : 'image/png'
+        canvas.toBlob(
+          blob => {
+            if (!blob) {
+              message.error('转换失败：生成 Blob 失败')
+              return
+            }
+            if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
+            formatOutputUrl.value = URL.createObjectURL(blob)
+            const ext = targetFormat.value === 'jpeg' ? 'jpg' : targetFormat.value
+            formatOutputName.value = file.name.replace(/\.[^.]+$/, '') + '.' + ext
+            message.success('图像已转换，可下载')
+          },
+          mime,
+          outputQuality.value / 100
+        )
       }
       img.src = e.target?.result as string
     }
@@ -182,7 +202,7 @@ const extractFramesFromVideo = async (file: File) => {
   video.muted = true
   await new Promise((resolve, reject) => {
     video.addEventListener('loadedmetadata', () => resolve(null))
-    video.addEventListener('error', (e) => reject(e))
+    video.addEventListener('error', e => reject(e))
   })
   const duration = video.duration
   const captureCount = Math.min(Math.ceil(duration), 24)
@@ -193,13 +213,16 @@ const extractFramesFromVideo = async (file: File) => {
 
   for (let i = 0; i < captureCount; i++) {
     const time = (i / captureCount) * duration
-    await new Promise<void>((resolve) => {
+    await new Promise<void>(resolve => {
       const onSeeked = () => {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        canvas.toBlob((blob) => {
+        canvas.toBlob(blob => {
           if (blob) {
             const imgUrl = URL.createObjectURL(blob)
-            frameImages.value.push({ url: imgUrl, name: `${file.name.replace(/\.[^.]+$/, '')}_frame_${i + 1}.png` })
+            frameImages.value.push({
+              url: imgUrl,
+              name: `${file.name.replace(/\.[^.]+$/, '')}_frame_${i + 1}.png`
+            })
           }
           resolve()
         }, 'image/png')
@@ -212,27 +235,40 @@ const extractFramesFromVideo = async (file: File) => {
   URL.revokeObjectURL(url)
 }
 
-const extractFramesFromGifFallback = async (file: File) => {
-  // Best-effort: capture first frame only
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const img = new Image()
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(img, 0, 0)
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob)
-          frameImages.value = [{ url, name: file.name.replace(/\.[^.]+$/, '') + '_frame_1.png' }]
-        }
-      }, 'image/png')
+const extractFramesFromGif = async (file: File) => {
+  // Use gifuct-js to decode all frames
+  frameImages.value = []
+  const arrayBuffer = await file.arrayBuffer()
+  const gif = parseGIF(arrayBuffer)
+  const frames = decompressFrames(gif, true)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = frames[0].dims.width
+  canvas.height = frames[0].dims.height
+  const ctx = canvas.getContext('2d')!
+
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i]
+    const imageData = new ImageData(
+      new Uint8ClampedArray(frame.patch),
+      frame.dims.width,
+      frame.dims.height
+    )
+    // clear and put image
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.putImageData(imageData, frame.dims.left || 0, frame.dims.top || 0)
+    // export
+    const blob = await new Promise<Blob | null>(resolve =>
+      canvas.toBlob(b => resolve(b), 'image/png')
+    )
+    if (blob) {
+      const url = URL.createObjectURL(blob)
+      frameImages.value.push({
+        url,
+        name: `${file.name.replace(/\.[^.]+$/, '')}_frame_${i + 1}.png`
+      })
     }
-    img.src = e.target?.result as string
   }
-  reader.readAsDataURL(file)
 }
 
 const startFrameSplitting = async () => {
@@ -245,15 +281,14 @@ const startFrameSplitting = async () => {
       await extractFramesFromVideo(file)
       message.success(`提取完成：${frameImages.value.length} 帧`)
     } else if (file.type === 'image/gif') {
-      message.loading('尝试从 GIF 提取帧（仅首帧）', 0.5)
-      await extractFramesFromGifFallback(file)
-      message.success(`提取完成：${frameImages.value.length} 帧（仅首帧）`)
+      message.loading('正在从 GIF 提取全部帧...', 0.5)
+      await extractFramesFromGif(file)
+      message.success(`提取完成：${frameImages.value.length} 帧`)
     } else {
       message.error('不支持的提取类型')
     }
-  } catch (e) {
-    console.error(e)
-    message.error('帧提取失败')
+  } catch (e: any) {
+    message.error('帧提取失败: ' + (e?.message || e))
   }
 }
 
@@ -268,13 +303,23 @@ const downloadFrame = (frame: { url: string; name: string }) => {
 
 const downloadAllFrames = async () => {
   if (frameImages.value.length === 0) return
-  // Attempt sequential downloads
+  // Package frames into a zip
+  const zip = new JSZip()
   for (const f of frameImages.value) {
-    downloadFrame(f)
-    // slight delay to avoid browser blocking
-    // eslint-disable-next-line no-await-in-loop
-    await delay(150)
+    const resp = await fetch(f.url)
+    const blob = await resp.blob()
+    zip.file(f.name, blob)
   }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' })
+  const url = URL.createObjectURL(zipBlob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `frames_${Date.now()}.zip`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 const handleFrameSplitterDrop = (e: DragEvent) => {
@@ -338,13 +383,34 @@ const initFFmpeg = async () => {
   ffmpegLoading.value = true
 
   try {
-    // Simulate FFmpeg loading
-    await delay(2000)
+    const creator = resolveCreateFFmpeg()
+    if (!creator) {
+      message.error('无法找到 FFmpeg 的 createFFmpeg 导出（模块导出不兼容）')
+      ffmpegLoading.value = false
+      return
+    }
+
+    try {
+      // Prefer calling as factory
+      ffmpeg = creator({ log: true })
+    } catch (e) {
+      // Fallback: try constructor
+
+      // @ts-ignore
+      ffmpeg = new creator()
+    }
+
+    const ff = ffmpeg as FFmpegLike
+    if (!ff.load) {
+      message.error('FFmpeg 实例不包含 load 方法，无法初始化')
+      ffmpegLoading.value = false
+      return
+    }
+    await ff.load()
     ffmpegLoaded.value = true
     message.success('FFmpeg WASM 初始化成功！')
-  } catch (error) {
-    console.error('FFmpeg initialization failed:', error)
-    message.error('FFmpeg 初始化失败')
+  } catch (error: any) {
+    message.error('FFmpeg 初始化失败: ' + (error?.message || error))
   } finally {
     ffmpegLoading.value = false
   }
@@ -440,11 +506,20 @@ const formatBytes = (bytes: number) => {
         <label class="text-sm">质量：</label>
         <a-input-number v-model:value="outputQuality" :min="10" :max="100" :step="5" />
 
-        <a-button type="primary" @click="startFormatConversion" :disabled="!formatFile" class="ml-2">开始转换</a-button>
-        <a-button v-if="formatOutputUrl" @click="downloadConvertedFile" class="ml-2">下载结果</a-button>
+        <a-button
+          type="primary"
+          @click="startFormatConversion"
+          :disabled="!formatFile"
+          class="ml-2"
+        >
+          开始转换
+        </a-button>
+        <a-button v-if="formatOutputUrl" @click="downloadConvertedFile" class="ml-2">
+          下载结果
+        </a-button>
       </div>
 
-  <div v-if="formatConvertProgress.show" class="mt-4">
+      <div v-if="formatConvertProgress.show" class="mt-4">
         <div class="flex items-center justify-between mb-2">
           <span class="text-sm font-medium">{{ formatConvertProgress.text }}</span>
           <span class="text-sm text-gray-500">{{ formatConvertProgress.percent }}%</span>
@@ -482,7 +557,10 @@ const formatBytes = (bytes: number) => {
       </div>
       <div v-if="formatOutputUrl" class="mt-4 p-3 bg-white rounded shadow-sm">
         <div class="flex items-center justify-between">
-          <div class="text-sm">已生成文件: <span class="font-medium">{{ formatOutputName }}</span></div>
+          <div class="text-sm">
+            已生成文件:
+            <span class="font-medium">{{ formatOutputName }}</span>
+          </div>
           <div>
             <a-button type="primary" @click="downloadConvertedFile">下载</a-button>
           </div>
