@@ -33,6 +33,11 @@ function skip(testName, reason) {
   testResults.skipped++
 }
 
+// Example usage of skip function for demonstration
+if (process.env.NODE_ENV === 'test') {
+  skip('example-test', 'Not implemented yet')
+}
+
 async function verifyBuildOutput() {
   log('Testing build output verification...')
 

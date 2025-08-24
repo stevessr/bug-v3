@@ -1,31 +1,80 @@
-// Main userscript entry point - adapted from content script
+// Main userscript entry point - enhanced version with default.json integration
 import {
-  loadDataFromLocalStorage,
-  addEmojiToUserscript,
-  exportUserscriptData,
-  importUserscriptData,
-  syncFromManager,
-  saveDataToLocalStorage
-} from './userscript-storage'
+  userscriptManager,
+  EnhancedUserscriptManager,
+  UploadState,
+  type UserscriptSettings,
+  type EmojiGroup
+} from './enhancedUserscript'
 
-// Global state for userscript
-const userscriptState = {
-  emojiGroups: [],
-  settings: {
-    imageScale: 30,
-    gridColumns: 4,
-    outputFormat: 'markdown' as const,
-    forceMobileMode: false,
-    defaultGroup: 'nachoneko',
-    showSearchBar: true
+// Re-export enhanced functionality for backward compatibility
+export {
+  userscriptManager as default,
+  EnhancedUserscriptManager,
+  UploadState,
+  type UserscriptSettings,
+  type EmojiGroup
+}
+
+// Legacy functions for backward compatibility
+export function loadDataFromLocalStorage() {
+  return {
+    emojiGroups: userscriptManager.getSettings(),
+    settings: userscriptManager.getSettings()
   }
 }
 
-// Initialize from localStorage
-function initializeUserscriptData() {
-  const data = loadDataFromLocalStorage()
-  userscriptState.emojiGroups = data.emojiGroups
-  userscriptState.settings = data.settings
+export function addEmojiToUserscript(emojiData: { name: string; url: string }): void {
+  // Convert to new format and add to user uploads group
+  const emoji = {
+    id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    name: emojiData.name,
+    url: emojiData.url,
+    groupId: 'user_uploads',
+    addedAt: Date.now(),
+    usageCount: 0
+  }
+
+  // Find or create user uploads group
+  const groups = JSON.parse(localStorage.getItem('emoji_extension_userscript_data') || '[]')
+  let userGroup = groups.find((g: any) => g.id === 'user_uploads')
+  
+  if (!userGroup) {
+    userGroup = {
+      id: 'user_uploads',
+      name: '用户添加',
+      icon: '⭐',
+      order: 999,
+      emojis: []
+    }
+    groups.push(userGroup)
+  }
+
+  userGroup.emojis.push(emoji)
+  localStorage.setItem('emoji_extension_userscript_data', JSON.stringify(groups))
+}
+
+export function exportUserscriptData(): string {
+  return userscriptManager.exportData()
+}
+
+export function importUserscriptData(jsonData: string): void {
+  userscriptManager.importData(jsonData)
+}
+
+export function syncFromManager(): void {
+  // This function is used to sync data from the extension manager
+  // Implementation would depend on the specific sync mechanism
+  console.log('Sync from manager requested - enhanced userscript')
+}
+
+export function saveDataToLocalStorage(data: any): void {
+  if (data.emojiGroups) {
+    localStorage.setItem('emoji_extension_userscript_data', JSON.stringify(data.emojiGroups))
+  }
+  if (data.settings) {
+    localStorage.setItem('emoji_extension_userscript_settings', JSON.stringify(data.settings))
+  }
 }
 
 // Check if current page should have emoji injection (copied from content script)
@@ -71,7 +120,12 @@ function shouldInjectEmoji(): boolean {
 }
 
 // Insert emoji into editor (adapted from content script)
-function insertEmojiIntoEditor(emoji: any) {
+function insertEmojiIntoEditor(emoji: {
+  url?: string
+  width?: number
+  height?: number
+  name?: string
+}) {
   console.log('[Emoji Extension Userscript] Inserting emoji:', emoji)
 
   const textarea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement
@@ -132,12 +186,12 @@ function insertEmojiIntoEditor(emoji: any) {
       dataTransfer.setData('text/html', htmlContent)
       const pasteEvent = new ClipboardEvent('paste', { clipboardData: dataTransfer, bubbles: true })
       proseMirror.dispatchEvent(pasteEvent)
-    } catch (error) {
+    } catch (insertError) {
       try {
         // Fallback to execCommand
         document.execCommand('insertHTML', false, htmlContent)
       } catch (fallbackError) {
-        console.error('无法向富文本编辑器中插入表情', fallbackError)
+        console.error('无法向富文本编辑器中插入表情', insertError, fallbackError)
       }
     }
   }
@@ -294,8 +348,15 @@ async function createEmojiPicker(): Promise<HTMLElement> {
     emojisContainer.className = 'emoji-picker__section-emojis'
 
     let validEmojis = 0
-    group.emojis.forEach((emoji: any) => {
-      if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return
+    group.emojis.forEach(
+      (emoji: {
+        url?: string
+        name?: string
+        width?: number
+        height?: number
+      }) => {
+      if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name)
+        return
 
       const img = document.createElement('img')
       img.width = 32
