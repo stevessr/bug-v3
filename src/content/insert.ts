@@ -1,1 +1,1 @@
-export { insertEmojiIntoEditor } from './editor';
+export { insertEmojiIntoEditor } from './editor'

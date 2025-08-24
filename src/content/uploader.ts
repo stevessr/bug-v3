@@ -1,108 +1,108 @@
-import { logger } from "./buildFlags";
+import { logger } from './buildFlags'
 
 // Function to parse image filenames from markdown text
 function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
-  const imageRegex = /!\[([^\]]*)\]\([^)]+\)/g;
-  const filenames: string[] = [];
-  let match;
-  
+  const imageRegex = /!\[([^\]]*)\]\([^)]+\)/g
+  const filenames: string[] = []
+  let match
+
   while ((match = imageRegex.exec(markdownText)) !== null) {
-    const filename = match[1];
+    const filename = match[1]
     if (filename && filename.trim()) {
-      filenames.push(filename.trim());
+      filenames.push(filename.trim())
     }
   }
-  
-  return filenames;
+
+  return filenames
 }
 
 // Generic function to insert text into editor
 function insertIntoEditor(text: string) {
-  const textArea = document.querySelector("textarea.d-editor-input") as HTMLTextAreaElement | null;
-  const richEle = document.querySelector(".ProseMirror.d-editor-input") as HTMLElement | null;
+  const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
+  const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
   if (!textArea && !richEle) {
-    console.error("找不到输入框");
-    return;
+    console.error('找不到输入框')
+    return
   }
 
   if (textArea) {
-    const start = textArea.selectionStart;
-    const end = textArea.selectionEnd;
-    const value = textArea.value;
+    const start = textArea.selectionStart
+    const end = textArea.selectionEnd
+    const value = textArea.value
 
-    textArea.value = value.substring(0, start) + text + value.substring(end);
-    textArea.setSelectionRange(start + text.length, start + text.length);
-    textArea.focus();
+    textArea.value = value.substring(0, start) + text + value.substring(end)
+    textArea.setSelectionRange(start + text.length, start + text.length)
+    textArea.focus()
 
     // Trigger input event to notify any listeners
-    const event = new Event('input', { bubbles: true });
-    textArea.dispatchEvent(event);
+    const event = new Event('input', { bubbles: true })
+    textArea.dispatchEvent(event)
   } else if (richEle) {
     // For rich text editor, insert at current cursor position
-    const selection = window.getSelection();
+    const selection = window.getSelection()
     if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const textNode = document.createTextNode(text);
-      range.insertNode(textNode);
-      
+      const range = selection.getRangeAt(0)
+      const textNode = document.createTextNode(text)
+      range.insertNode(textNode)
+
       // Move cursor after inserted text
-      range.setStartAfter(textNode);
-      range.setEndAfter(textNode);
-      selection.removeAllRanges();
-      selection.addRange(range);
+      range.setStartAfter(textNode)
+      range.setEndAfter(textNode)
+      selection.removeAllRanges()
+      selection.addRange(range)
     }
-    richEle.focus();
+    richEle.focus()
   }
 }
 
 interface UploadResponse {
-  id: number;
-  url: string;
-  original_filename: string;
-  filesize: number;
-  width: number;
-  height: number;
-  thumbnail_width: number;
-  thumbnail_height: number;
-  extension: string;
-  short_url: string;
-  short_path: string;
-  retain_hours: null;
-  human_filesize: string;
-  dominant_color: string;
-  thumbnail: null;
+  id: number
+  url: string
+  original_filename: string
+  filesize: number
+  width: number
+  height: number
+  thumbnail_width: number
+  thumbnail_height: number
+  extension: string
+  short_url: string
+  short_path: string
+  retain_hours: null
+  human_filesize: string
+  dominant_color: string
+  thumbnail: null
 }
 
 interface UploadError {
-  errors: string[];
-  error_type: string;
+  errors: string[]
+  error_type: string
   extras?: {
-    wait_seconds: number;
-    time_left: string;
-  };
+    wait_seconds: number
+    time_left: string
+  }
 }
 
 interface UploadQueueItem {
-  id: string;
-  file: File;
-  resolve: (value: UploadResponse) => void;
-  reject: (error: any) => void;
-  retryCount: number;
-  status: 'waiting' | 'uploading' | 'failed' | 'success';
-  error?: any;
-  result?: UploadResponse;
-  timestamp: number;
+  id: string
+  file: File
+  resolve: (value: UploadResponse) => void
+  reject: (error: any) => void
+  retryCount: number
+  status: 'waiting' | 'uploading' | 'failed' | 'success'
+  error?: any
+  result?: UploadResponse
+  timestamp: number
 }
 
 class ImageUploader {
-  private waitingQueue: UploadQueueItem[] = [];
-  private uploadingQueue: UploadQueueItem[] = [];
-  private failedQueue: UploadQueueItem[] = [];
-  private successQueue: UploadQueueItem[] = [];
-  private isProcessing = false;
-  private maxRetries = 2; // Second failure stops retry
-  private progressDialog: HTMLElement | null = null;
+  private waitingQueue: UploadQueueItem[] = []
+  private uploadingQueue: UploadQueueItem[] = []
+  private failedQueue: UploadQueueItem[] = []
+  private successQueue: UploadQueueItem[] = []
+  private isProcessing = false
+  private maxRetries = 2 // Second failure stops retry
+  private progressDialog: HTMLElement | null = null
 
   async uploadImage(file: File): Promise<UploadResponse> {
     return new Promise((resolve, reject) => {
@@ -114,143 +114,145 @@ class ImageUploader {
         retryCount: 0,
         status: 'waiting',
         timestamp: Date.now()
-      };
-      
-      this.waitingQueue.push(item);
-      this.updateProgressDialog();
-      this.processQueue();
-    });
+      }
+
+      this.waitingQueue.push(item)
+      this.updateProgressDialog()
+      this.processQueue()
+    })
   }
 
-  private moveToQueue(item: UploadQueueItem, targetStatus: 'waiting' | 'uploading' | 'failed' | 'success') {
+  private moveToQueue(
+    item: UploadQueueItem,
+    targetStatus: 'waiting' | 'uploading' | 'failed' | 'success'
+  ) {
     // Remove from all queues
-    this.waitingQueue = this.waitingQueue.filter(i => i.id !== item.id);
-    this.uploadingQueue = this.uploadingQueue.filter(i => i.id !== item.id);
-    this.failedQueue = this.failedQueue.filter(i => i.id !== item.id);
-    this.successQueue = this.successQueue.filter(i => i.id !== item.id);
-    
+    this.waitingQueue = this.waitingQueue.filter(i => i.id !== item.id)
+    this.uploadingQueue = this.uploadingQueue.filter(i => i.id !== item.id)
+    this.failedQueue = this.failedQueue.filter(i => i.id !== item.id)
+    this.successQueue = this.successQueue.filter(i => i.id !== item.id)
+
     // Add to target queue
-    item.status = targetStatus;
+    item.status = targetStatus
     switch (targetStatus) {
       case 'waiting':
-        this.waitingQueue.push(item);
-        break;
+        this.waitingQueue.push(item)
+        break
       case 'uploading':
-        this.uploadingQueue.push(item);
-        break;
+        this.uploadingQueue.push(item)
+        break
       case 'failed':
-        this.failedQueue.push(item);
-        break;
+        this.failedQueue.push(item)
+        break
       case 'success':
-        this.successQueue.push(item);
-        break;
+        this.successQueue.push(item)
+        break
     }
-    
-    this.updateProgressDialog();
+
+    this.updateProgressDialog()
   }
 
   private async processQueue() {
     if (this.isProcessing || this.waitingQueue.length === 0) {
-      return;
+      return
     }
 
-    this.isProcessing = true;
+    this.isProcessing = true
 
     while (this.waitingQueue.length > 0) {
-      const item = this.waitingQueue.shift()!;
-      this.moveToQueue(item, 'uploading');
-      
+      const item = this.waitingQueue.shift()!
+      this.moveToQueue(item, 'uploading')
+
       try {
-        const result = await this.performUpload(item.file);
-        item.result = result;
-        this.moveToQueue(item, 'success');
-        item.resolve(result);
-        
+        const result = await this.performUpload(item.file)
+        item.result = result
+        this.moveToQueue(item, 'success')
+        item.resolve(result)
+
         // Insert into editor
-        const markdown = `![${result.original_filename}](${result.url})`;
-        insertIntoEditor(markdown);
-        
+        const markdown = `![${result.original_filename}](${result.url})`
+        insertIntoEditor(markdown)
       } catch (error: any) {
-        item.error = error;
-        
+        item.error = error
+
         if (this.shouldRetry(error, item)) {
-          item.retryCount++;
-          
+          item.retryCount++
+
           if (error.error_type === 'rate_limit' && error.extras?.wait_seconds) {
             // Wait for rate limit before retry
-            await this.sleep(error.extras.wait_seconds * 1000);
+            await this.sleep(error.extras.wait_seconds * 1000)
           } else {
             // Wait before retry
-            await this.sleep(Math.pow(2, item.retryCount) * 1000);
+            await this.sleep(Math.pow(2, item.retryCount) * 1000)
           }
-          
-          this.moveToQueue(item, 'waiting');
+
+          this.moveToQueue(item, 'waiting')
         } else {
-          this.moveToQueue(item, 'failed');
-          item.reject(error);
+          this.moveToQueue(item, 'failed')
+          item.reject(error)
         }
       }
     }
 
-    this.isProcessing = false;
+    this.isProcessing = false
   }
 
   private shouldRetry(error: any, item: UploadQueueItem): boolean {
     if (item.retryCount >= this.maxRetries) {
-      return false;
+      return false
     }
 
     // Only retry 429 (rate limit) errors automatically
-    return error.error_type === 'rate_limit';
+    return error.error_type === 'rate_limit'
   }
-  
+
   // Method to manually retry failed items
   retryFailedItem(itemId: string) {
-    const item = this.failedQueue.find(i => i.id === itemId);
+    const item = this.failedQueue.find(i => i.id === itemId)
     if (item && item.retryCount < this.maxRetries) {
-      item.retryCount++;
-      this.moveToQueue(item, 'waiting');
-      this.processQueue();
+      item.retryCount++
+      this.moveToQueue(item, 'waiting')
+      this.processQueue()
     }
   }
 
   showProgressDialog() {
     if (this.progressDialog) {
-      return; // Already showing
+      return // Already showing
     }
-    
-    this.progressDialog = this.createProgressDialog();
-    document.body.appendChild(this.progressDialog);
+
+    this.progressDialog = this.createProgressDialog()
+    document.body.appendChild(this.progressDialog)
   }
 
   hideProgressDialog() {
     if (this.progressDialog) {
-      this.progressDialog.remove();
-      this.progressDialog = null;
+      this.progressDialog.remove()
+      this.progressDialog = null
     }
   }
 
   private updateProgressDialog() {
     if (!this.progressDialog) {
-      return;
+      return
     }
-    
+
     const allItems = [
       ...this.waitingQueue,
       ...this.uploadingQueue,
       ...this.failedQueue,
       ...this.successQueue
-    ];
-    
-    this.renderQueueItems(this.progressDialog, allItems);
+    ]
+
+    this.renderQueueItems(this.progressDialog, allItems)
   }
 
   private async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   private createProgressDialog(): HTMLElement {
-    const dialog = document.createElement('div');
+    const dialog = document.createElement('div')
     dialog.style.cssText = `
       position: fixed;
       top: 20px;
@@ -264,9 +266,9 @@ class ImageUploader {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       border: 1px solid #e5e7eb;
       overflow: hidden;
-    `;
+    `
 
-    const header = document.createElement('div');
+    const header = document.createElement('div')
     header.style.cssText = `
       padding: 16px 20px;
       background: #f9fafb;
@@ -277,11 +279,11 @@ class ImageUploader {
       display: flex;
       justify-content: space-between;
       align-items: center;
-    `;
-    header.textContent = '图片上传队列';
+    `
+    header.textContent = '图片上传队列'
 
-    const closeButton = document.createElement('button');
-    closeButton.innerHTML = '✕';
+    const closeButton = document.createElement('button')
+    closeButton.innerHTML = '✕'
     closeButton.style.cssText = `
       background: none;
       border: none;
@@ -291,54 +293,54 @@ class ImageUploader {
       padding: 4px;
       border-radius: 4px;
       transition: background-color 0.2s;
-    `;
+    `
     closeButton.addEventListener('click', () => {
-      this.hideProgressDialog();
-    });
+      this.hideProgressDialog()
+    })
     closeButton.addEventListener('mouseenter', () => {
-      closeButton.style.backgroundColor = '#e5e7eb';
-    });
+      closeButton.style.backgroundColor = '#e5e7eb'
+    })
     closeButton.addEventListener('mouseleave', () => {
-      closeButton.style.backgroundColor = 'transparent';
-    });
+      closeButton.style.backgroundColor = 'transparent'
+    })
 
-    header.appendChild(closeButton);
+    header.appendChild(closeButton)
 
-    const content = document.createElement('div');
-    content.className = 'upload-queue-content';
+    const content = document.createElement('div')
+    content.className = 'upload-queue-content'
     content.style.cssText = `
       max-height: 320px;
       overflow-y: auto;
       padding: 12px;
-    `;
+    `
 
-    dialog.appendChild(header);
-    dialog.appendChild(content);
+    dialog.appendChild(header)
+    dialog.appendChild(content)
 
-    return dialog;
+    return dialog
   }
 
   private renderQueueItems(dialog: HTMLElement, allItems: UploadQueueItem[]) {
-    const content = dialog.querySelector('.upload-queue-content');
-    if (!content) return;
+    const content = dialog.querySelector('.upload-queue-content')
+    if (!content) return
 
-    content.innerHTML = '';
+    content.innerHTML = ''
 
     if (allItems.length === 0) {
-      const emptyState = document.createElement('div');
+      const emptyState = document.createElement('div')
       emptyState.style.cssText = `
         text-align: center;
         color: #6b7280;
         font-size: 14px;
         padding: 20px;
-      `;
-      emptyState.textContent = '暂无上传任务';
-      content.appendChild(emptyState);
-      return;
+      `
+      emptyState.textContent = '暂无上传任务'
+      content.appendChild(emptyState)
+      return
     }
 
     allItems.forEach(item => {
-      const itemEl = document.createElement('div');
+      const itemEl = document.createElement('div')
       itemEl.style.cssText = `
         display: flex;
         align-items: center;
@@ -348,15 +350,15 @@ class ImageUploader {
         background: #f9fafb;
         border-radius: 6px;
         border-left: 4px solid ${this.getStatusColor(item.status)};
-      `;
+      `
 
-      const leftSide = document.createElement('div');
+      const leftSide = document.createElement('div')
       leftSide.style.cssText = `
         flex: 1;
         min-width: 0;
-      `;
+      `
 
-      const fileName = document.createElement('div');
+      const fileName = document.createElement('div')
       fileName.style.cssText = `
         font-size: 13px;
         font-weight: 500;
@@ -364,31 +366,31 @@ class ImageUploader {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-      `;
-      fileName.textContent = item.file.name;
+      `
+      fileName.textContent = item.file.name
 
-      const status = document.createElement('div');
+      const status = document.createElement('div')
       status.style.cssText = `
         font-size: 12px;
         color: #6b7280;
         margin-top: 2px;
-      `;
-      status.textContent = this.getStatusText(item);
+      `
+      status.textContent = this.getStatusText(item)
 
-      leftSide.appendChild(fileName);
-      leftSide.appendChild(status);
+      leftSide.appendChild(fileName)
+      leftSide.appendChild(status)
 
-      const rightSide = document.createElement('div');
+      const rightSide = document.createElement('div')
       rightSide.style.cssText = `
         display: flex;
         align-items: center;
         gap: 8px;
-      `;
+      `
 
       // Add retry button for failed items
       if (item.status === 'failed' && item.retryCount < this.maxRetries) {
-        const retryButton = document.createElement('button');
-        retryButton.innerHTML = '🔄';
+        const retryButton = document.createElement('button')
+        retryButton.innerHTML = '🔄'
         retryButton.style.cssText = `
           background: none;
           border: none;
@@ -397,175 +399,194 @@ class ImageUploader {
           padding: 4px;
           border-radius: 4px;
           transition: background-color 0.2s;
-        `;
-        retryButton.title = '重试上传';
+        `
+        retryButton.title = '重试上传'
         retryButton.addEventListener('click', () => {
-          this.retryFailedItem(item.id);
-        });
+          this.retryFailedItem(item.id)
+        })
         retryButton.addEventListener('mouseenter', () => {
-          retryButton.style.backgroundColor = '#e5e7eb';
-        });
+          retryButton.style.backgroundColor = '#e5e7eb'
+        })
         retryButton.addEventListener('mouseleave', () => {
-          retryButton.style.backgroundColor = 'transparent';
-        });
-        rightSide.appendChild(retryButton);
+          retryButton.style.backgroundColor = 'transparent'
+        })
+        rightSide.appendChild(retryButton)
       }
 
-      const statusIcon = document.createElement('div');
+      const statusIcon = document.createElement('div')
       statusIcon.style.cssText = `
         font-size: 16px;
-      `;
-      statusIcon.textContent = this.getStatusIcon(item.status);
+      `
+      statusIcon.textContent = this.getStatusIcon(item.status)
 
-      rightSide.appendChild(statusIcon);
+      rightSide.appendChild(statusIcon)
 
-      itemEl.appendChild(leftSide);
-      itemEl.appendChild(rightSide);
+      itemEl.appendChild(leftSide)
+      itemEl.appendChild(rightSide)
 
-      content.appendChild(itemEl);
-    });
+      content.appendChild(itemEl)
+    })
   }
 
   private getStatusColor(status: string): string {
     switch (status) {
-      case 'waiting': return '#f59e0b';
-      case 'uploading': return '#3b82f6';
-      case 'success': return '#10b981';
-      case 'failed': return '#ef4444';
-      default: return '#6b7280';
+      case 'waiting':
+        return '#f59e0b'
+      case 'uploading':
+        return '#3b82f6'
+      case 'success':
+        return '#10b981'
+      case 'failed':
+        return '#ef4444'
+      default:
+        return '#6b7280'
     }
   }
 
   private getStatusText(item: UploadQueueItem): string {
     switch (item.status) {
-      case 'waiting': return '等待上传';
-      case 'uploading': return '正在上传...';
-      case 'success': return '上传成功';
-      case 'failed': 
+      case 'waiting':
+        return '等待上传'
+      case 'uploading':
+        return '正在上传...'
+      case 'success':
+        return '上传成功'
+      case 'failed':
         if (item.error?.error_type === 'rate_limit') {
-          return `上传失败 - 请求过于频繁 (重试 ${item.retryCount}/${this.maxRetries})`;
+          return `上传失败 - 请求过于频繁 (重试 ${item.retryCount}/${this.maxRetries})`
         }
-        return `上传失败 (重试 ${item.retryCount}/${this.maxRetries})`;
-      default: return '未知状态';
+        return `上传失败 (重试 ${item.retryCount}/${this.maxRetries})`
+      default:
+        return '未知状态'
     }
   }
 
   private getStatusIcon(status: string): string {
     switch (status) {
-      case 'waiting': return '⏳';
-      case 'uploading': return '📤';
-      case 'success': return '✅';
-      case 'failed': return '❌';
-      default: return '❓';
+      case 'waiting':
+        return '⏳'
+      case 'uploading':
+        return '📤'
+      case 'success':
+        return '✅'
+      case 'failed':
+        return '❌'
+      default:
+        return '❓'
     }
   }
 
   private async performUpload(file: File): Promise<UploadResponse> {
     // Calculate SHA1 checksum (simplified - using a placeholder)
-    const sha1 = await this.calculateSHA1(file);
-    
+    const sha1 = await this.calculateSHA1(file)
+
     // Create form data
-    const formData = new FormData();
-    formData.append('upload_type', 'composer');
-    formData.append('relativePath', 'null');
-    formData.append('name', file.name);
-    formData.append('type', file.type);
-    formData.append('sha1_checksum', sha1);
-    formData.append('file', file, file.name);
+    const formData = new FormData()
+    formData.append('upload_type', 'composer')
+    formData.append('relativePath', 'null')
+    formData.append('name', file.name)
+    formData.append('type', file.type)
+    formData.append('sha1_checksum', sha1)
+    formData.append('file', file, file.name)
 
     // Get CSRF token from meta tag or cookie
-    const csrfToken = this.getCSRFToken();
-    
+    const csrfToken = this.getCSRFToken()
+
     const headers: Record<string, string> = {
-      'X-Csrf-Token': csrfToken,
-    };
+      'X-Csrf-Token': csrfToken
+    }
 
     // Add cookies if available
     if (document.cookie) {
-      headers['Cookie'] = document.cookie;
+      headers['Cookie'] = document.cookie
     }
 
-    const response = await fetch(`https://linux.do/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
+    const response = await fetch(
+      `https://linux.do/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8`,
+      {
+        method: 'POST',
+        headers,
+        body: formData
+      }
+    )
 
     if (!response.ok) {
-      const errorData = await response.json() as UploadError;
-      throw errorData;
+      const errorData = (await response.json()) as UploadError
+      throw errorData
     }
 
-    return await response.json() as UploadResponse;
+    return (await response.json()) as UploadResponse
   }
 
   private getCSRFToken(): string {
     // Try to get CSRF token from meta tag
-    const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement;
+    const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement
     if (metaToken) {
-      return metaToken.content;
+      return metaToken.content
     }
 
     // Try to get from cookie
-    const match = document.cookie.match(/csrf_token=([^;]+)/);
+    const match = document.cookie.match(/csrf_token=([^;]+)/)
     if (match) {
-      return decodeURIComponent(match[1]);
+      return decodeURIComponent(match[1])
     }
 
     // Fallback - try to extract from any form
-    const hiddenInput = document.querySelector('input[name="authenticity_token"]') as HTMLInputElement;
+    const hiddenInput = document.querySelector(
+      'input[name="authenticity_token"]'
+    ) as HTMLInputElement
     if (hiddenInput) {
-      return hiddenInput.value;
+      return hiddenInput.value
     }
 
-    logger.warn('[Image Uploader] No CSRF token found');
-    return '';
+    logger.warn('[Image Uploader] No CSRF token found')
+    return ''
   }
 
   private async calculateSHA1(file: File): Promise<string> {
     // Simplified SHA1 calculation - in a real implementation, you'd use crypto.subtle
     // For now, return a placeholder based on file properties
-    const text = `${file.name}-${file.size}-${file.lastModified}`;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(text);
-    
+    const text = `${file.name}-${file.size}-${file.lastModified}`
+    const encoder = new TextEncoder()
+    const data = encoder.encode(text)
+
     if (crypto.subtle) {
       try {
-        const hashBuffer = await crypto.subtle.digest('SHA-1', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        const hashBuffer = await crypto.subtle.digest('SHA-1', data)
+        const hashArray = Array.from(new Uint8Array(hashBuffer))
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
       } catch (e) {
-        logger.warn('[Image Uploader] Could not calculate SHA1, using fallback');
+        logger.warn('[Image Uploader] Could not calculate SHA1, using fallback')
       }
     }
-    
+
     // Fallback simple hash
-    let hash = 0;
+    let hash = 0
     for (let i = 0; i < text.length; i++) {
-      const char = text.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      const char = text.charCodeAt(i)
+      hash = (hash << 5) - hash + char
+      hash = hash & hash // Convert to 32-bit integer
     }
-    return Math.abs(hash).toString(16).padStart(40, '0');
+    return Math.abs(hash).toString(16).padStart(40, '0')
   }
 }
 
-const uploader = new ImageUploader();
+const uploader = new ImageUploader()
 
 interface DragDropElements {
-  panel: HTMLElement;
-  overlay: HTMLElement;
-  dropZone: HTMLElement;
-  fileInput: HTMLInputElement;
-  closeButton: HTMLButtonElement;
-  diffDropZone: HTMLElement;
-  diffFileInput: HTMLInputElement;
-  markdownTextarea: HTMLTextAreaElement;
+  panel: HTMLElement
+  overlay: HTMLElement
+  dropZone: HTMLElement
+  fileInput: HTMLInputElement
+  closeButton: HTMLButtonElement
+  diffDropZone: HTMLElement
+  diffFileInput: HTMLInputElement
+  markdownTextarea: HTMLTextAreaElement
 }
 
 function createDragDropUploadPanel(): DragDropElements {
-  const panel = document.createElement('div');
-  panel.className = 'drag-drop-upload-panel';
+  const panel = document.createElement('div')
+  panel.className = 'drag-drop-upload-panel'
   panel.style.cssText = `
     position: fixed;
     top: 50%;
@@ -578,9 +599,9 @@ function createDragDropUploadPanel(): DragDropElements {
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     z-index: 10000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  `;
+  `
 
-  const overlay = document.createElement('div');
+  const overlay = document.createElement('div')
   overlay.style.cssText = `
     position: fixed;
     top: 0;
@@ -589,27 +610,27 @@ function createDragDropUploadPanel(): DragDropElements {
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: 9999;
-  `;
+  `
 
-  const header = document.createElement('div');
+  const header = document.createElement('div')
   header.style.cssText = `
     padding: 20px 24px 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-  `;
+  `
 
-  const title = document.createElement('h3');
-  title.textContent = '上传图片';
+  const title = document.createElement('h3')
+  title.textContent = '上传图片'
   title.style.cssText = `
     margin: 0;
     font-size: 18px;
     font-weight: 600;
     color: #111827;
-  `;
+  `
 
-  const closeButton = document.createElement('button');
-  closeButton.innerHTML = '✕';
+  const closeButton = document.createElement('button')
+  closeButton.innerHTML = '✕'
   closeButton.style.cssText = `
     background: none;
     border: none;
@@ -619,32 +640,32 @@ function createDragDropUploadPanel(): DragDropElements {
     padding: 4px;
     border-radius: 4px;
     transition: background-color 0.2s;
-  `;
+  `
   closeButton.addEventListener('mouseenter', () => {
-    closeButton.style.backgroundColor = '#f3f4f6';
-  });
+    closeButton.style.backgroundColor = '#f3f4f6'
+  })
   closeButton.addEventListener('mouseleave', () => {
-    closeButton.style.backgroundColor = 'transparent';
-  });
+    closeButton.style.backgroundColor = 'transparent'
+  })
 
-  header.appendChild(title);
-  header.appendChild(closeButton);
+  header.appendChild(title)
+  header.appendChild(closeButton)
 
-  const content = document.createElement('div');
+  const content = document.createElement('div')
   content.style.cssText = `
     padding: 24px;
-  `;
+  `
 
   // Create tabs
-  const tabContainer = document.createElement('div');
+  const tabContainer = document.createElement('div')
   tabContainer.style.cssText = `
     display: flex;
     border-bottom: 1px solid #e5e7eb;
     margin-bottom: 20px;
-  `;
+  `
 
-  const regularTab = document.createElement('button');
-  regularTab.textContent = '常规上传';
+  const regularTab = document.createElement('button')
+  regularTab.textContent = '常规上传'
   regularTab.style.cssText = `
     flex: 1;
     padding: 10px 20px;
@@ -655,10 +676,10 @@ function createDragDropUploadPanel(): DragDropElements {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
-  `;
+  `
 
-  const diffTab = document.createElement('button');
-  diffTab.textContent = '差分上传';
+  const diffTab = document.createElement('button')
+  diffTab.textContent = '差分上传'
   diffTab.style.cssText = `
     flex: 1;
     padding: 10px 20px;
@@ -669,20 +690,20 @@ function createDragDropUploadPanel(): DragDropElements {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
-  `;
+  `
 
-  tabContainer.appendChild(regularTab);
-  tabContainer.appendChild(diffTab);
+  tabContainer.appendChild(regularTab)
+  tabContainer.appendChild(diffTab)
 
   // Regular upload panel
-  const regularPanel = document.createElement('div');
-  regularPanel.className = 'regular-upload-panel';
+  const regularPanel = document.createElement('div')
+  regularPanel.className = 'regular-upload-panel'
   regularPanel.style.cssText = `
     display: block;
-  `;
+  `
 
-  const dropZone = document.createElement('div');
-  dropZone.className = 'drop-zone';
+  const dropZone = document.createElement('div')
+  dropZone.className = 'drop-zone'
   dropZone.style.cssText = `
     border: 2px dashed #d1d5db;
     border-radius: 8px;
@@ -691,16 +712,16 @@ function createDragDropUploadPanel(): DragDropElements {
     background: #f9fafb;
     transition: all 0.2s;
     cursor: pointer;
-  `;
+  `
 
-  const dropIcon = document.createElement('div');
-  dropIcon.innerHTML = '📁';
+  const dropIcon = document.createElement('div')
+  dropIcon.innerHTML = '📁'
   dropIcon.style.cssText = `
     font-size: 48px;
     margin-bottom: 16px;
-  `;
+  `
 
-  const dropText = document.createElement('div');
+  const dropText = document.createElement('div')
   dropText.innerHTML = `
     <div style="font-size: 16px; font-weight: 500; color: #374151; margin-bottom: 8px;">
       拖拽图片到此处，或点击选择文件
@@ -708,29 +729,29 @@ function createDragDropUploadPanel(): DragDropElements {
     <div style="font-size: 14px; color: #6b7280;">
       支持 JPG、PNG、GIF 等格式，最大 10MB
     </div>
-  `;
+  `
 
-  dropZone.appendChild(dropIcon);
-  dropZone.appendChild(dropText);
+  dropZone.appendChild(dropIcon)
+  dropZone.appendChild(dropText)
 
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = 'image/*';
-  fileInput.multiple = true;
-  fileInput.style.display = 'none';
+  const fileInput = document.createElement('input')
+  fileInput.type = 'file'
+  fileInput.accept = 'image/*'
+  fileInput.multiple = true
+  fileInput.style.display = 'none'
 
-  regularPanel.appendChild(dropZone);
-  regularPanel.appendChild(fileInput);
+  regularPanel.appendChild(dropZone)
+  regularPanel.appendChild(fileInput)
 
   // Diff upload panel
-  const diffPanel = document.createElement('div');
-  diffPanel.className = 'diff-upload-panel';
+  const diffPanel = document.createElement('div')
+  diffPanel.className = 'diff-upload-panel'
   diffPanel.style.cssText = `
     display: none;
-  `;
+  `
 
-  const markdownTextarea = document.createElement('textarea');
-  markdownTextarea.placeholder = '请粘贴包含图片的markdown文本...';
+  const markdownTextarea = document.createElement('textarea')
+  markdownTextarea.placeholder = '请粘贴包含图片的markdown文本...'
   markdownTextarea.style.cssText = `
     width: 100%;
     height: 120px;
@@ -742,10 +763,10 @@ function createDragDropUploadPanel(): DragDropElements {
     resize: vertical;
     margin-bottom: 12px;
     box-sizing: border-box;
-  `;
+  `
 
-  const diffDropZone = document.createElement('div');
-  diffDropZone.className = 'diff-drop-zone';
+  const diffDropZone = document.createElement('div')
+  diffDropZone.className = 'diff-drop-zone'
   diffDropZone.style.cssText = `
     border: 2px dashed #d1d5db;
     border-radius: 8px;
@@ -755,16 +776,16 @@ function createDragDropUploadPanel(): DragDropElements {
     transition: all 0.2s;
     cursor: pointer;
     margin-bottom: 12px;
-  `;
+  `
 
-  const diffDropIcon = document.createElement('div');
-  diffDropIcon.innerHTML = '📋';
+  const diffDropIcon = document.createElement('div')
+  diffDropIcon.innerHTML = '📋'
   diffDropIcon.style.cssText = `
     font-size: 36px;
     margin-bottom: 12px;
-  `;
+  `
 
-  const diffDropText = document.createElement('div');
+  const diffDropText = document.createElement('div')
   diffDropText.innerHTML = `
     <div style="font-size: 16px; font-weight: 500; color: #374151; margin-bottom: 8px;">
       选择图片进行差分上传
@@ -772,273 +793,278 @@ function createDragDropUploadPanel(): DragDropElements {
     <div style="font-size: 14px; color: #6b7280;">
       只会上传不在上方markdown文本中的图片
     </div>
-  `;
+  `
 
-  diffDropZone.appendChild(diffDropIcon);
-  diffDropZone.appendChild(diffDropText);
+  diffDropZone.appendChild(diffDropIcon)
+  diffDropZone.appendChild(diffDropText)
 
-  const diffFileInput = document.createElement('input');
-  diffFileInput.type = 'file';
-  diffFileInput.accept = 'image/*';
-  diffFileInput.multiple = true;
-  diffFileInput.style.display = 'none';
+  const diffFileInput = document.createElement('input')
+  diffFileInput.type = 'file'
+  diffFileInput.accept = 'image/*'
+  diffFileInput.multiple = true
+  diffFileInput.style.display = 'none'
 
-  diffPanel.appendChild(markdownTextarea);
-  diffPanel.appendChild(diffDropZone);
-  diffPanel.appendChild(diffFileInput);
+  diffPanel.appendChild(markdownTextarea)
+  diffPanel.appendChild(diffDropZone)
+  diffPanel.appendChild(diffFileInput)
 
-  content.appendChild(tabContainer);
-  content.appendChild(regularPanel);
-  content.appendChild(diffPanel);
+  content.appendChild(tabContainer)
+  content.appendChild(regularPanel)
+  content.appendChild(diffPanel)
 
-  panel.appendChild(header);
-  panel.appendChild(content);
+  panel.appendChild(header)
+  panel.appendChild(content)
 
   // Tab switching logic
-  const switchToTab = (activeTab: HTMLElement, inactiveTab: HTMLElement, activePanel: HTMLElement, inactivePanel: HTMLElement) => {
-    activeTab.style.borderBottomColor = '#3b82f6';
-    activeTab.style.color = '#3b82f6';
-    inactiveTab.style.borderBottomColor = 'transparent';
-    inactiveTab.style.color = '#6b7280';
-    activePanel.style.display = 'block';
-    inactivePanel.style.display = 'none';
-  };
+  const switchToTab = (
+    activeTab: HTMLElement,
+    inactiveTab: HTMLElement,
+    activePanel: HTMLElement,
+    inactivePanel: HTMLElement
+  ) => {
+    activeTab.style.borderBottomColor = '#3b82f6'
+    activeTab.style.color = '#3b82f6'
+    inactiveTab.style.borderBottomColor = 'transparent'
+    inactiveTab.style.color = '#6b7280'
+    activePanel.style.display = 'block'
+    inactivePanel.style.display = 'none'
+  }
 
   regularTab.addEventListener('click', () => {
-    switchToTab(regularTab, diffTab, regularPanel, diffPanel);
-  });
+    switchToTab(regularTab, diffTab, regularPanel, diffPanel)
+  })
 
   diffTab.addEventListener('click', () => {
-    switchToTab(diffTab, regularTab, diffPanel, regularPanel);
-  });
+    switchToTab(diffTab, regularTab, diffPanel, regularPanel)
+  })
 
-  return { 
-    panel, 
-    overlay, 
-    dropZone, 
-    fileInput, 
+  return {
+    panel,
+    overlay,
+    dropZone,
+    fileInput,
     closeButton,
     diffDropZone,
     diffFileInput,
     markdownTextarea
-  };
+  }
 }
 
 export async function showImageUploadDialog(): Promise<void> {
-  return new Promise((resolve) => {
-    const { 
-      panel, 
-      overlay, 
-      dropZone, 
-      fileInput, 
+  return new Promise(resolve => {
+    const {
+      panel,
+      overlay,
+      dropZone,
+      fileInput,
       closeButton,
       diffDropZone,
       diffFileInput,
       markdownTextarea
-    } = createDragDropUploadPanel();
+    } = createDragDropUploadPanel()
 
-    let isDragOver = false;
-    let isDiffDragOver = false;
+    let isDragOver = false
+    let isDiffDragOver = false
 
     const cleanup = () => {
-      document.body.removeChild(overlay);
-      document.body.removeChild(panel);
-      resolve();
-    };
+      document.body.removeChild(overlay)
+      document.body.removeChild(panel)
+      resolve()
+    }
 
     const handleFiles = async (files: FileList) => {
-      if (!files || files.length === 0) return;
+      if (!files || files.length === 0) return
 
-      cleanup();
+      cleanup()
 
       // Show upload progress
-      uploader.showProgressDialog();
+      uploader.showProgressDialog()
 
       try {
-        const promises = Array.from(files).map(async (file) => {
+        const promises = Array.from(files).map(async file => {
           try {
-            const result = await uploader.uploadImage(file);
-            return result;
+            const result = await uploader.uploadImage(file)
+            return result
           } catch (error: any) {
-            logger.error('[Image Uploader] Upload failed:', error);
-            throw error;
+            logger.error('[Image Uploader] Upload failed:', error)
+            throw error
           }
-        });
+        })
 
-        await Promise.allSettled(promises);
-
+        await Promise.allSettled(promises)
       } finally {
         setTimeout(() => {
-          uploader.hideProgressDialog();
-        }, 3000);
+          uploader.hideProgressDialog()
+        }, 3000)
       }
-    };
+    }
 
     const handleDiffFiles = async (files: FileList) => {
-      if (!files || files.length === 0) return;
+      if (!files || files.length === 0) return
 
-      const markdownText = markdownTextarea.value;
-      const existingFilenames = parseImageFilenamesFromMarkdown(markdownText);
-      
+      const markdownText = markdownTextarea.value
+      const existingFilenames = parseImageFilenamesFromMarkdown(markdownText)
+
       // Filter files that are not in the existing list
       const filesToUpload = Array.from(files).filter(file => {
-        const filename = file.name;
-        return !existingFilenames.includes(filename);
-      });
+        const filename = file.name
+        return !existingFilenames.includes(filename)
+      })
 
       if (filesToUpload.length === 0) {
-        alert('所有选择的图片都已在markdown文本中存在，无需上传。');
-        return;
+        alert('所有选择的图片都已在markdown文本中存在，无需上传。')
+        return
       }
 
       if (filesToUpload.length < files.length) {
-        const skippedCount = files.length - filesToUpload.length;
-        const proceed = confirm(`发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`);
+        const skippedCount = files.length - filesToUpload.length
+        const proceed = confirm(
+          `发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`
+        )
         if (!proceed) {
-          return;
+          return
         }
       }
 
-      cleanup();
+      cleanup()
 
       // Show upload progress
-      uploader.showProgressDialog();
+      uploader.showProgressDialog()
 
       try {
-        const promises = filesToUpload.map(async (file) => {
+        const promises = filesToUpload.map(async file => {
           try {
-            const result = await uploader.uploadImage(file);
-            return result;
+            const result = await uploader.uploadImage(file)
+            return result
           } catch (error: any) {
-            logger.error('[Image Uploader] Diff upload failed:', error);
-            throw error;
+            logger.error('[Image Uploader] Diff upload failed:', error)
+            throw error
           }
-        });
+        })
 
-        await Promise.allSettled(promises);
-
+        await Promise.allSettled(promises)
       } finally {
         setTimeout(() => {
-          uploader.hideProgressDialog();
-        }, 3000);
+          uploader.hideProgressDialog()
+        }, 3000)
       }
-    };
+    }
 
     // Regular upload handlers
     fileInput.addEventListener('change', async (event: Event) => {
-      const files = (event.target as HTMLInputElement).files;
+      const files = (event.target as HTMLInputElement).files
       if (files) {
-        await handleFiles(files);
+        await handleFiles(files)
       }
-    });
+    })
 
     dropZone.addEventListener('click', () => {
-      fileInput.click();
-    });
+      fileInput.click()
+    })
 
     dropZone.addEventListener('dragover', (e: DragEvent) => {
-      e.preventDefault();
+      e.preventDefault()
       if (!isDragOver) {
-        isDragOver = true;
-        dropZone.style.borderColor = '#3b82f6';
-        dropZone.style.backgroundColor = '#eff6ff';
+        isDragOver = true
+        dropZone.style.borderColor = '#3b82f6'
+        dropZone.style.backgroundColor = '#eff6ff'
       }
-    });
+    })
 
     dropZone.addEventListener('dragleave', (e: DragEvent) => {
-      e.preventDefault();
+      e.preventDefault()
       if (!dropZone.contains(e.relatedTarget as Node)) {
-        isDragOver = false;
-        dropZone.style.borderColor = '#d1d5db';
-        dropZone.style.backgroundColor = '#f9fafb';
+        isDragOver = false
+        dropZone.style.borderColor = '#d1d5db'
+        dropZone.style.backgroundColor = '#f9fafb'
       }
-    });
+    })
 
     dropZone.addEventListener('drop', async (e: DragEvent) => {
-      e.preventDefault();
-      isDragOver = false;
-      dropZone.style.borderColor = '#d1d5db';
-      dropZone.style.backgroundColor = '#f9fafb';
+      e.preventDefault()
+      isDragOver = false
+      dropZone.style.borderColor = '#d1d5db'
+      dropZone.style.backgroundColor = '#f9fafb'
 
-      const files = e.dataTransfer?.files;
+      const files = e.dataTransfer?.files
       if (files) {
-        await handleFiles(files);
+        await handleFiles(files)
       }
-    });
+    })
 
     // Diff upload handlers
     diffFileInput.addEventListener('change', async (event: Event) => {
-      const files = (event.target as HTMLInputElement).files;
+      const files = (event.target as HTMLInputElement).files
       if (files) {
-        await handleDiffFiles(files);
+        await handleDiffFiles(files)
       }
-    });
+    })
 
     diffDropZone.addEventListener('click', () => {
-      diffFileInput.click();
-    });
+      diffFileInput.click()
+    })
 
     diffDropZone.addEventListener('dragover', (e: DragEvent) => {
-      e.preventDefault();
+      e.preventDefault()
       if (!isDiffDragOver) {
-        isDiffDragOver = true;
-        diffDropZone.style.borderColor = '#3b82f6';
-        diffDropZone.style.backgroundColor = '#eff6ff';
+        isDiffDragOver = true
+        diffDropZone.style.borderColor = '#3b82f6'
+        diffDropZone.style.backgroundColor = '#eff6ff'
       }
-    });
+    })
 
     diffDropZone.addEventListener('dragleave', (e: DragEvent) => {
-      e.preventDefault();
+      e.preventDefault()
       if (!diffDropZone.contains(e.relatedTarget as Node)) {
-        isDiffDragOver = false;
-        diffDropZone.style.borderColor = '#d1d5db';
-        diffDropZone.style.backgroundColor = '#f9fafb';
+        isDiffDragOver = false
+        diffDropZone.style.borderColor = '#d1d5db'
+        diffDropZone.style.backgroundColor = '#f9fafb'
       }
-    });
+    })
 
     diffDropZone.addEventListener('drop', async (e: DragEvent) => {
-      e.preventDefault();
-      isDiffDragOver = false;
-      diffDropZone.style.borderColor = '#d1d5db';
-      diffDropZone.style.backgroundColor = '#f9fafb';
+      e.preventDefault()
+      isDiffDragOver = false
+      diffDropZone.style.borderColor = '#d1d5db'
+      diffDropZone.style.backgroundColor = '#f9fafb'
 
-      const files = e.dataTransfer?.files;
+      const files = e.dataTransfer?.files
       if (files) {
-        await handleDiffFiles(files);
+        await handleDiffFiles(files)
       }
-    });
+    })
 
     // Close handlers
-    closeButton.addEventListener('click', cleanup);
-    overlay.addEventListener('click', cleanup);
+    closeButton.addEventListener('click', cleanup)
+    overlay.addEventListener('click', cleanup)
 
     // Prevent default drag behaviors on document
     const preventDefaults = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
+      e.preventDefault()
+      e.stopPropagation()
+    }
 
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      document.addEventListener(eventName, preventDefaults, false);
-    });
+    ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      document.addEventListener(eventName, preventDefaults, false)
+    })
 
     // Cleanup event listeners when panel is closed
-    const originalCleanup = cleanup;
+    const originalCleanup = cleanup
     const enhancedCleanup = () => {
-      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        document.removeEventListener(eventName, preventDefaults, false);
-      });
-      originalCleanup();
-    };
+      ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        document.removeEventListener(eventName, preventDefaults, false)
+      })
+      originalCleanup()
+    }
 
-    closeButton.removeEventListener('click', cleanup);
-    overlay.removeEventListener('click', cleanup);
-    closeButton.addEventListener('click', enhancedCleanup);
-    overlay.addEventListener('click', enhancedCleanup);
+    closeButton.removeEventListener('click', cleanup)
+    overlay.removeEventListener('click', cleanup)
+    closeButton.addEventListener('click', enhancedCleanup)
+    overlay.addEventListener('click', enhancedCleanup)
 
-    document.body.appendChild(overlay);
-    document.body.appendChild(panel);
-  });
+    document.body.appendChild(overlay)
+    document.body.appendChild(panel)
+  })
 }
 
-export { uploader };
+export { uploader }

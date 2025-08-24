@@ -1,13 +1,13 @@
 export function downloadJson(filename: string, payload: any) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 export function exportConfigurationFile(store: any) {
@@ -15,10 +15,10 @@ export function exportConfigurationFile(store: any) {
     version: '1.0',
     exportDate: new Date().toISOString(),
     settings: store.settings,
-    groups: store.groups,
-  };
-  const filename = `emoji-config-${new Date().toISOString().split('T')[0]}.json`;
-  downloadJson(filename, config);
+    groups: store.groups
+  }
+  const filename = `emoji-config-${new Date().toISOString().split('T')[0]}.json`
+  downloadJson(filename, config)
 }
 
 export function exportGroupFile(group: any) {
@@ -29,8 +29,8 @@ export function exportGroupFile(group: any) {
     url: e.url,
     width: e.width,
     height: e.height,
-    groupId: group.name || group.id,
-  }));
-  const filename = `emoji-group-${group.id}-${group.name || 'group'}.json`;
-  downloadJson(filename, emojis);
+    groupId: group.name || group.id
+  }))
+  const filename = `emoji-group-${group.id}-${group.name || 'group'}.json`
+  downloadJson(filename, emojis)
 }

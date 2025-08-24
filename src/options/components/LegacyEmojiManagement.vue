@@ -1,3 +1,17 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+const props = defineProps<{ emojiStore: any }>()
+const emits = defineEmits(['open-add-emoji', 'delete-emoji', 'image-error'])
+
+const selectedGroupId = ref('')
+
+const filteredEmojis = computed(() => {
+  if (!selectedGroupId.value) return props.emojiStore.groups.flatMap((group: any) => group.emojis)
+  const group = props.emojiStore.groups.find((g: any) => g.id === selectedGroupId.value)
+  return group ? group.emojis : []
+})
+</script>
+
 <template>
   <div v-if="false" class="bg-white rounded-lg shadow-sm border">
     <div class="px-6 py-4 border-b border-gray-200">
@@ -9,11 +23,7 @@
             class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">所有分组</option>
-            <option
-              v-for="group in emojiStore.groups"
-              :key="group.id"
-              :value="group.id"
-            >
+            <option v-for="group in emojiStore.groups" :key="group.id" :value="group.id">
               {{ group.name }}
             </option>
           </select>
@@ -41,9 +51,7 @@
             @error="$emit('image-error', $event)"
           />
           <p class="text-xs text-gray-600 truncate">{{ emoji.name }}</p>
-          <div
-            class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
+          <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               @click="$emit('delete-emoji', emoji.id)"
               class="w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors"
@@ -60,20 +68,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed, ref } from "vue";
-const props = defineProps<{ emojiStore: any }>();
-const emits = defineEmits(["open-add-emoji", "delete-emoji", "image-error"]);
-
-const selectedGroupId = ref("");
-
-const filteredEmojis = computed(() => {
-  if (!selectedGroupId.value)
-    return props.emojiStore.groups.flatMap((group: any) => group.emojis);
-  const group = props.emojiStore.groups.find(
-    (g: any) => g.id === selectedGroupId.value
-  );
-  return group ? group.emojis : [];
-});
-</script>
