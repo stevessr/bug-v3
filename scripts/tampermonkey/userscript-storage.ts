@@ -2,7 +2,7 @@
 import { getDefaultEmojis } from '../../src/content/default'
 
 export interface UserscriptStorage {
-  emojiGroups: any[]
+  emojiGroups: EmojiGroup[]
   settings: {
     imageScale: number
     gridColumns: number
@@ -13,6 +13,19 @@ export interface UserscriptStorage {
   }
 }
 
+interface EmojiGroup {
+  id: string
+  name: string
+  icon: string
+  emojis: Array<{
+    id: string
+    name: string
+    url: string
+    width?: number
+    height?: number
+  }>
+}
+
 const STORAGE_KEY = 'emoji_extension_userscript_data'
 const SETTINGS_KEY = 'emoji_extension_userscript_settings'
 
@@ -20,7 +33,7 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
   try {
     // Load emoji groups
     const groupsData = localStorage.getItem(STORAGE_KEY)
-    let emojiGroups: any[] = []
+    let emojiGroups: EmojiGroup[] = []
 
     if (groupsData) {
       try {
@@ -127,9 +140,8 @@ export function addEmojiToUserscript(emojiData: { name: string; url: string }): 
         id: 'user_added',
         name: '用户添加',
         icon: '⭐',
-        order: 999,
         emojis: []
-      }
+      } as EmojiGroup
       data.emojiGroups.push(userGroup)
     }
 

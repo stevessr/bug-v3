@@ -198,11 +198,13 @@ test.describe('AI Image Generator Tab', () => {
   test('should display generation results and controls', async ({ page }) => {
     // This test checks that the results display area exists and is properly structured
     // when generation would complete (without actually generating images)
-    
+
     // Check that the generation results section structure exists
-    const resultsSection = page.locator('[class*="generation-results"], [class*="result"], [id*="result"]').first()
-    const hasResultsStructure = await resultsSection.count() > 0
-    
+    const resultsSection = page
+      .locator('[class*="generation-results"], [class*="result"], [id*="result"]')
+      .first()
+    const hasResultsStructure = (await resultsSection.count()) > 0
+
     if (hasResultsStructure) {
       // If results structure exists, verify it has expected elements
       await expect(resultsSection).toBeVisible()

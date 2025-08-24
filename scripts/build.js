@@ -8,6 +8,12 @@ import path from 'path'
 const args = process.argv.slice(2)
 const buildType = args[0] || 'dev'
 
+// Function to restore manifest if needed
+const restoreManifest = () => {
+  console.log('Restoring manifest...')
+  // Add manifest restoration logic if needed
+}
+
 // 定义环境变量配置
 const configs = {
   dev: {
