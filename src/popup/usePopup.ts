@@ -1,4 +1,5 @@
 import { ref, onMounted, watch } from 'vue'
+
 import { useEmojiStore } from '../stores/emojiStore'
 import type { Emoji } from '../types/emoji'
 

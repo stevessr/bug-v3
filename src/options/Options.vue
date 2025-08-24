@@ -1,3 +1,94 @@
+<script setup lang="ts">
+import GridColumnsSelector from '../components/GridColumnsSelector.vue'
+import AboutSection from '../components/AboutSection.vue'
+
+import HeaderControls from './components/HeaderControls.vue'
+import GlobalSettings from './components/GlobalSettings.vue'
+import EmojiStats from './components/EmojiStats.vue'
+import ImportConfigModal from './modals/ImportConfigModal.vue'
+import ImportEmojisModal from './modals/ImportEmojisModal.vue'
+import CreateGroupModal from './modals/CreateGroupModal.vue'
+import AddEmojiModal from './modals/AddEmojiModal.vue'
+import ConfirmDeleteModal from './modals/ConfirmDeleteModal.vue'
+import NotificationToasts from './components/NotificationToasts.vue'
+import GroupsTab from './components/GroupsTab.vue'
+import FavoritesTab from './components/FavoritesTab.vue'
+import UngroupedTab from './components/UngroupedTab.vue'
+import ExternalImportTab from './components/ExternalImportTab.vue'
+import EditEmojiModal from './modals/EditEmojiModal.vue'
+import EditGroupModal from './modals/EditGroupModal.vue'
+// composable
+import useOptions from './useOptions'
+
+const options = useOptions()
+
+// expose used components to template for linter
+const _modalComponents = {
+  ImportConfigModal,
+  ImportEmojisModal,
+  CreateGroupModal,
+  AddEmojiModal
+} as const
+void Object.keys(_modalComponents)
+
+// re-export bindings for template access
+const {
+  emojiStore,
+  isImageUrl,
+  activeTab,
+  tabs,
+  totalEmojis,
+  expandedGroups,
+  toggleGroupExpansion,
+  selectedGroupForAdd,
+  showCreateGroupModal,
+  showAddEmojiModal,
+  showEditGroupModal,
+  showImportModal,
+  showImportEmojiModal,
+  showSuccessToast,
+  showErrorToast,
+  showConfirmDeleteModal,
+  successMessage,
+  errorMessage,
+  groupToDelete,
+  editingGroupId,
+  editGroupName,
+  editGroupIcon,
+  localGridColumns,
+  updateImageScale,
+  updateShowSearchBar,
+  updateOutputFormat,
+  updateForceMobileMode,
+  handleDragStart,
+  handleDrop,
+  handleEmojiDragStart,
+  handleEmojiDrop,
+  removeEmojiFromGroup,
+  handleConfigImported,
+  handleEmojisImported,
+  exportGroup,
+  exportConfiguration,
+  confirmDeleteGroup,
+  deleteGroup,
+  openEditGroup,
+  openAddEmojiModal,
+  onGroupCreated,
+  onEmojiAdded,
+  resetSettings,
+  syncToChrome,
+  showSuccess,
+  flushBuffer,
+  handleImageError,
+  openEditEmoji,
+  showEditEmojiModal,
+  editingEmoji,
+  editingEmojiGroupId,
+  editingEmojiIndex,
+  handleEmojiEdit
+} = options
+</script>
+
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
@@ -27,8 +118,8 @@
             v-for="tab in tabs"
             :key="tab.id"
             @click="activeTab = tab.id"
+            class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
             :class="[
-              'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === tab.id
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -174,93 +265,3 @@
     />
   </div>
 </template>
-
-<script setup lang="ts">
-import GridColumnsSelector from '../components/GridColumnsSelector.vue'
-import AboutSection from '../components/AboutSection.vue'
-import HeaderControls from './components/HeaderControls.vue'
-import GlobalSettings from './components/GlobalSettings.vue'
-import EmojiStats from './components/EmojiStats.vue'
-import ImportConfigModal from './modals/ImportConfigModal.vue'
-import ImportEmojisModal from './modals/ImportEmojisModal.vue'
-import CreateGroupModal from './modals/CreateGroupModal.vue'
-import AddEmojiModal from './modals/AddEmojiModal.vue'
-import ConfirmDeleteModal from './modals/ConfirmDeleteModal.vue'
-import NotificationToasts from './components/NotificationToasts.vue'
-import GroupsTab from './components/GroupsTab.vue'
-import FavoritesTab from './components/FavoritesTab.vue'
-import UngroupedTab from './components/UngroupedTab.vue'
-import ExternalImportTab from './components/ExternalImportTab.vue'
-import EditEmojiModal from './modals/EditEmojiModal.vue'
-import EditGroupModal from './modals/EditGroupModal.vue'
-// composable
-import useOptions from './useOptions'
-
-const options = useOptions()
-
-// expose used components to template for linter
-const _modalComponents = {
-  ImportConfigModal,
-  ImportEmojisModal,
-  CreateGroupModal,
-  AddEmojiModal
-} as const
-void Object.keys(_modalComponents)
-
-// re-export bindings for template access
-const {
-  emojiStore,
-  isImageUrl,
-  activeTab,
-  tabs,
-  totalEmojis,
-  expandedGroups,
-  toggleGroupExpansion,
-  selectedGroupForAdd,
-  showCreateGroupModal,
-  showAddEmojiModal,
-  showEditGroupModal,
-  showImportModal,
-  showImportEmojiModal,
-  showSuccessToast,
-  showErrorToast,
-  showConfirmDeleteModal,
-  successMessage,
-  errorMessage,
-  groupToDelete,
-  editingGroupId,
-  editGroupName,
-  editGroupIcon,
-  localGridColumns,
-  updateImageScale,
-  updateShowSearchBar,
-  updateOutputFormat,
-  updateForceMobileMode,
-  handleDragStart,
-  handleDrop,
-  handleEmojiDragStart,
-  handleEmojiDrop,
-  removeEmojiFromGroup,
-  handleConfigImported,
-  handleEmojisImported,
-  exportGroup,
-  exportConfiguration,
-  confirmDeleteGroup,
-  deleteGroup,
-  openEditGroup,
-  openAddEmojiModal,
-  onGroupCreated,
-  onEmojiAdded,
-  resetSettings,
-  syncToChrome,
-  showSuccess,
-  flushBuffer,
-  handleImageError,
-  openEditEmoji,
-  showEditEmojiModal,
-  editingEmoji,
-  editingEmojiGroupId,
-  editingEmojiIndex,
-  handleEmojiEdit
-} = options
-</script>

@@ -1,4 +1,5 @@
 import { BaseProvider } from './BaseProvider'
+
 import type { GenerateRequest, SiliconFlowGenerateResponse } from '@/types/imageGenerator'
 
 export class SiliconFlowProvider extends BaseProvider {

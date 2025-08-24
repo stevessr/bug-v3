@@ -1,19 +1,3 @@
-<template>
-  <div class="generate-section">
-    <button
-      @click="onGenerate"
-      :disabled="isGenerating || !canGenerate"
-      class="generate-btn"
-      :class="{ generating: isGenerating }"
-    >
-      <span v-if="isGenerating" class="loading-spinner"></span>
-      {{ isGenerating ? '生成中...' : '🎨 生成图片' }}
-    </button>
-
-    <button v-if="hasResults" @click="onClear" class="clear-btn">🗑️ 清空结果</button>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { computed } from 'vue'
 
@@ -40,6 +24,22 @@ const onClear = () => {
   emit('clear')
 }
 </script>
+
+<template>
+  <div class="generate-section">
+    <button
+      @click="onGenerate"
+      :disabled="isGenerating || !canGenerate"
+      class="generate-btn"
+      :class="{ generating: isGenerating }"
+    >
+      <span v-if="isGenerating" class="loading-spinner"></span>
+      {{ isGenerating ? '生成中...' : '🎨 生成图片' }}
+    </button>
+
+    <button v-if="hasResults" @click="onClear" class="clear-btn">🗑️ 清空结果</button>
+  </div>
+</template>
 
 <style scoped>
 .generate-section {

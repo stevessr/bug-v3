@@ -1,3 +1,11 @@
+<script setup lang="ts">
+import GroupTabs from './components/GroupTabs.vue'
+import EmojiGrid from './components/EmojiGrid.vue'
+import { usePopup } from './usePopup'
+
+const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions } = usePopup()
+</script>
+
 <template>
   <div class="popup-container bg-white">
     <!-- Header with scale control -->
@@ -95,14 +103,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import GroupTabs from './components/GroupTabs.vue'
-import EmojiGrid from './components/EmojiGrid.vue'
-import { usePopup } from './usePopup'
-
-const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions } = usePopup()
-</script>
 
 <style>
 /* Import TailwindCSS in popup */

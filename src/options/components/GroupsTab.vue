@@ -1,3 +1,146 @@
+<script setup lang="ts">
+const emits = defineEmits([
+  'open-create-group',
+  'group-dragstart',
+  'group-drop',
+  'toggle-expand',
+  'open-edit-group',
+  'export-group',
+  'confirm-delete-group',
+  'open-add-emoji',
+  'emoji-drag-start',
+  'emoji-drop',
+  'remove-emoji',
+  'image-error',
+  'edit-emoji'
+])
+
+const props = defineProps<{
+  emojiStore: any
+  expandedGroups: Set<string>
+  isImageUrl?: (s: string) => boolean
+  activeTab?: string
+}>()
+
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+
+import { TouchDragHandler } from '../../utils/touchDragDrop'
+
+// computed list that excludes the favorites group so it doesn't appear in group management
+const displayGroups = computed(() => {
+  return (props.emojiStore?.sortedGroups || []).filter((g: any) => g.id !== 'favorites')
+})
+
+// Touch drag handlers
+const groupTouchHandler = ref<TouchDragHandler | null>(null)
+const emojiTouchHandler = ref<TouchDragHandler | null>(null)
+
+onMounted(() => {
+  // Initialize touch handlers
+  groupTouchHandler.value = new TouchDragHandler({
+    onDragStart: element => {
+      const groupData = (element as any).__groupData
+      if (groupData && groupData.id !== 'favorites') {
+        element.classList.add('touch-dragging')
+      }
+      // Emit synthetic dragstart so Options composable knows which group is being dragged
+      try {
+        const groupData = (element as any).__groupData
+        if (groupData) {
+          const syntheticEvent = new DragEvent('dragstart')
+          emits('group-dragstart', groupData, syntheticEvent)
+        }
+      } catch (err) {
+        // ignore synthetic event creation errors in older browsers
+      }
+    },
+    // Only start group dragging if the initial touch is on the move handle (.cursor-move)
+    shouldStartDrag: (e: TouchEvent, element: HTMLElement) => {
+      // Walk the event target's node chain (covers text nodes) up to the group element
+      let node: Node | null = e.target as Node | null
+      while (node && node !== element) {
+        if (node instanceof Element && node.hasAttribute && node.hasAttribute('data-group-move'))
+          return true
+        node = node.parentNode
+      }
+      return false
+    },
+    onDragEnd: (element, dropTarget) => {
+      element.classList.remove('touch-dragging')
+      if (dropTarget) {
+        const groupData = (element as any).__groupData
+        const targetData = (dropTarget as any).__groupData
+        if (groupData && targetData && groupData.id !== targetData.id) {
+          // Create synthetic drag event for compatibility
+          const syntheticEvent = new DragEvent('drop')
+          emits('group-drop', targetData, syntheticEvent)
+        }
+      }
+    }
+  })
+
+  emojiTouchHandler.value = new TouchDragHandler({
+    onDragStart: element => {
+      element.classList.add('touch-dragging')
+      // Emit synthetic dragstart so Options composable knows which emoji is being dragged
+      try {
+        const emojiData = (element as any).__emojiData
+        if (emojiData) {
+          const syntheticEvent = new DragEvent('dragstart')
+          emits(
+            'emoji-drag-start',
+            emojiData.emoji,
+            emojiData.groupId,
+            emojiData.index,
+            syntheticEvent
+          )
+        }
+      } catch (err) {
+        // ignore
+      }
+    },
+    onDragEnd: (element, dropTarget) => {
+      element.classList.remove('touch-dragging')
+      if (dropTarget) {
+        const emojiData = (element as any).__emojiData
+        const targetData = (dropTarget as any).__emojiData
+        if (emojiData && targetData) {
+          // Create synthetic drag event for compatibility
+          const syntheticEvent = new DragEvent('drop')
+          emits('emoji-drop', targetData.groupId, targetData.index, syntheticEvent)
+        }
+      }
+    }
+  })
+})
+
+onUnmounted(() => {
+  groupTouchHandler.value?.destroy()
+  emojiTouchHandler.value?.destroy()
+})
+
+// Function to add touch events to group elements
+const addGroupTouchEvents = (element: HTMLElement, group: any) => {
+  if (group.id !== 'favorites') {
+    ;(element as any).__groupData = group
+    groupTouchHandler.value?.addTouchEvents(element, true)
+  }
+}
+
+// Function to add touch events to emoji elements
+const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, index: number) => {
+  ;(element as any).__emojiData = { emoji, groupId, index }
+  // Prevent touchstart on emoji from bubbling up and starting a group drag
+  const stopTouch = (e: TouchEvent) => {
+    e.stopPropagation()
+  }
+  element.addEventListener('touchstart', stopTouch, { passive: false })
+  // store reference so it can be removed later if needed
+  ;(element as any).__stopEmojiTouch = stopTouch
+  emojiTouchHandler.value?.addTouchEvents(element, true)
+}
+</script>
+
 <template>
   <div v-if="activeTab === 'groups'" class="space-y-8">
     <div class="bg-white rounded-lg shadow-sm border">
@@ -151,148 +294,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-const emits = defineEmits([
-  'open-create-group',
-  'group-dragstart',
-  'group-drop',
-  'toggle-expand',
-  'open-edit-group',
-  'export-group',
-  'confirm-delete-group',
-  'open-add-emoji',
-  'emoji-drag-start',
-  'emoji-drop',
-  'remove-emoji',
-  'image-error',
-  'edit-emoji'
-])
-
-const props = defineProps<{
-  emojiStore: any
-  expandedGroups: Set<string>
-  isImageUrl?: (s: string) => boolean
-  activeTab?: string
-}>()
-
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { TouchDragHandler } from '../../utils/touchDragDrop'
-
-// computed list that excludes the favorites group so it doesn't appear in group management
-const displayGroups = computed(() => {
-  return (props.emojiStore?.sortedGroups || []).filter((g: any) => g.id !== 'favorites')
-})
-
-// Touch drag handlers
-const groupTouchHandler = ref<TouchDragHandler | null>(null)
-const emojiTouchHandler = ref<TouchDragHandler | null>(null)
-
-onMounted(() => {
-  // Initialize touch handlers
-  groupTouchHandler.value = new TouchDragHandler({
-    onDragStart: element => {
-      const groupData = (element as any).__groupData
-      if (groupData && groupData.id !== 'favorites') {
-        element.classList.add('touch-dragging')
-      }
-      // Emit synthetic dragstart so Options composable knows which group is being dragged
-      try {
-        const groupData = (element as any).__groupData
-        if (groupData) {
-          const syntheticEvent = new DragEvent('dragstart')
-          emits('group-dragstart', groupData, syntheticEvent)
-        }
-      } catch (err) {
-        // ignore synthetic event creation errors in older browsers
-      }
-    },
-    // Only start group dragging if the initial touch is on the move handle (.cursor-move)
-    shouldStartDrag: (e: TouchEvent, element: HTMLElement) => {
-      // Walk the event target's node chain (covers text nodes) up to the group element
-      let node: Node | null = e.target as Node | null
-      while (node && node !== element) {
-        if (node instanceof Element && node.hasAttribute && node.hasAttribute('data-group-move'))
-          return true
-        node = node.parentNode
-      }
-      return false
-    },
-    onDragEnd: (element, dropTarget) => {
-      element.classList.remove('touch-dragging')
-      if (dropTarget) {
-        const groupData = (element as any).__groupData
-        const targetData = (dropTarget as any).__groupData
-        if (groupData && targetData && groupData.id !== targetData.id) {
-          // Create synthetic drag event for compatibility
-          const syntheticEvent = new DragEvent('drop')
-          emits('group-drop', targetData, syntheticEvent)
-        }
-      }
-    }
-  })
-
-  emojiTouchHandler.value = new TouchDragHandler({
-    onDragStart: element => {
-      element.classList.add('touch-dragging')
-      // Emit synthetic dragstart so Options composable knows which emoji is being dragged
-      try {
-        const emojiData = (element as any).__emojiData
-        if (emojiData) {
-          const syntheticEvent = new DragEvent('dragstart')
-          emits(
-            'emoji-drag-start',
-            emojiData.emoji,
-            emojiData.groupId,
-            emojiData.index,
-            syntheticEvent
-          )
-        }
-      } catch (err) {
-        // ignore
-      }
-    },
-    onDragEnd: (element, dropTarget) => {
-      element.classList.remove('touch-dragging')
-      if (dropTarget) {
-        const emojiData = (element as any).__emojiData
-        const targetData = (dropTarget as any).__emojiData
-        if (emojiData && targetData) {
-          // Create synthetic drag event for compatibility
-          const syntheticEvent = new DragEvent('drop')
-          emits('emoji-drop', targetData.groupId, targetData.index, syntheticEvent)
-        }
-      }
-    }
-  })
-})
-
-onUnmounted(() => {
-  groupTouchHandler.value?.destroy()
-  emojiTouchHandler.value?.destroy()
-})
-
-// Function to add touch events to group elements
-const addGroupTouchEvents = (element: HTMLElement, group: any) => {
-  if (group.id !== 'favorites') {
-    ;(element as any).__groupData = group
-    groupTouchHandler.value?.addTouchEvents(element, true)
-  }
-}
-
-// Function to add touch events to emoji elements
-const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, index: number) => {
-  ;(element as any).__emojiData = { emoji, groupId, index }
-  // Prevent touchstart on emoji from bubbling up and starting a group drag
-  const stopTouch = (e: TouchEvent) => {
-    e.stopPropagation()
-  }
-  element.addEventListener('touchstart', stopTouch, { passive: false })
-  // store reference so it can be removed later if needed
-  ;(element as any).__stopEmojiTouch = stopTouch
-  emojiTouchHandler.value?.addTouchEvents(element, true)
-}
-</script>
 
 <style scoped>
 .group-item.touch-dragging {

@@ -1,15 +1,17 @@
 import { ref, computed, onMounted, watch } from 'vue'
+
+import { useEmojiStore } from '../stores/emojiStore'
+import { flushBuffer } from '../utils/indexedDB'
+import { newStorageHelpers } from '../utils/newStorage'
+import type { EmojiGroup } from '../types/emoji'
+import { isImageUrl } from '../utils/isImageUrl'
+
 import {
   importConfigurationToStore,
   importEmojisToStore,
   exportConfigurationFile,
   exportGroupFile
 } from './utils'
-import { useEmojiStore } from '../stores/emojiStore'
-import { flushBuffer } from '../utils/indexedDB'
-import { newStorageHelpers } from '../utils/newStorage'
-import type { EmojiGroup } from '../types/emoji'
-import { isImageUrl } from '../utils/isImageUrl'
 
 export default function useOptions() {
   const emojiStore = useEmojiStore()

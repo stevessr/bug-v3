@@ -13,7 +13,7 @@
   'use strict'
 
   // 修改后的 CSS，类名已更改
-  var styles = `
+  const styles = `
     .nacho-emoji-picker {
       position: static;
       display: grid;
@@ -32,7 +32,7 @@
       height: 100px;
     }
     `
-  var styleSheet = document.createElement('style')
+  const styleSheet = document.createElement('style')
   styleSheet.type = 'text/css'
   styleSheet.innerText = styles
   document.head.appendChild(styleSheet)
@@ -254,9 +254,9 @@
   }
 
   setInterval(() => {
-    var toolbar = document.querySelector('.d-editor-button-bar[role="toolbar"]')
+    const toolbar = document.querySelector('.d-editor-button-bar[role="toolbar"]')
     if (toolbar && !document.querySelector('.nacho-emoji-picker-button')) {
-      var emojiButton = document.createElement('button')
+      const emojiButton = document.createElement('button')
       emojiButton.classList.add(
         'btn',
         'no-text',
@@ -272,14 +272,14 @@
       emojiButton.addEventListener('click', function (event) {
         event.stopPropagation()
 
-        let existingPicker = document.querySelector('.nacho-emoji-picker')
+        const existingPicker = document.querySelector('.nacho-emoji-picker')
         if (existingPicker) {
           existingPicker.remove()
           document.removeEventListener('click', handleClickOutside)
           return
         }
 
-        var emojiPicker = document.createElement('div')
+        const emojiPicker = document.createElement('div')
         emojiPicker.className = 'nacho-emoji-picker'
         emojiPicker.innerHTML = emojiSet
           .map(
@@ -290,19 +290,19 @@
 
         document.body.appendChild(emojiPicker)
 
-        var buttonRect = emojiButton.getBoundingClientRect()
+        const buttonRect = emojiButton.getBoundingClientRect()
         if (isMobileDevice()) {
-          let replyRect = document.querySelector('#reply-control').getBoundingClientRect()
+          const replyRect = document.querySelector('#reply-control').getBoundingClientRect()
           emojiPicker.style.position = 'fixed'
           emojiPicker.style.bottom = replyRect.top - 5 + 'px'
           emojiPicker.style.left = replyRect.left + 'px'
 
-          let imagePanel = document.querySelector('.nacho-emoji-picker img')
+          const imagePanel = document.querySelector('.nacho-emoji-picker img')
           imagePanel.style.width = '80px'
           imagePanel.style.height = '85px'
         } else {
           if (isMiniReply()) {
-            let editorRect = document
+            const editorRect = document
               .querySelector('.d-editor-textarea-wrapper')
               .getBoundingClientRect()
             emojiPicker.style.position = 'fixed'
@@ -310,7 +310,7 @@
             emojiPicker.style.left =
               editorRect.left + editorRect.width / 2 - emojiPicker.clientWidth / 2 + 'px'
           } else {
-            let editorRect = document
+            const editorRect = document
               .querySelector('.d-editor-textarea-wrapper')
               .getBoundingClientRect()
             emojiPicker.style.position = 'fixed'
@@ -332,8 +332,8 @@
 
         emojiPicker.addEventListener('click', function (e) {
           if (e.target.tagName === 'IMG') {
-            var textArea = document.querySelector('textarea.d-editor-input')
-            var richEle = document.querySelector('.ProseMirror.d-editor-input')
+            const textArea = document.querySelector('textarea.d-editor-input')
+            const richEle = document.querySelector('.ProseMirror.d-editor-input')
             if (!textArea && !richEle) {
               console.error('找不到输入框')
               return
@@ -353,10 +353,10 @@
             }
 
             if (textArea) {
-              var emojiMarkdown = `![${e.target.alt}|${width}x${height},30%](${e.target.src}) `
+              const emojiMarkdown = `![${e.target.alt}|${width}x${height},30%](${e.target.src}) `
 
-              var startPos = textArea.selectionStart
-              var endPos = textArea.selectionEnd
+              const startPos = textArea.selectionStart
+              const endPos = textArea.selectionEnd
               textArea.value =
                 textArea.value.substring(0, startPos) +
                 emojiMarkdown +
@@ -365,18 +365,18 @@
               textArea.selectionStart = textArea.selectionEnd = startPos + emojiMarkdown.length
               textArea.focus()
 
-              var event = new Event('input', {
+              const event = new Event('input', {
                 bubbles: true,
                 cancelable: true
               })
               textArea.dispatchEvent(event)
             } else {
               if (richEle) {
-                var imgTemplate = `<img src="${e.target.src}" alt="${e.target.alt}" width="${width}" height="${height}" data-scale="30" style="width: ${Math.round(width * 0.3)}px">`
+                const imgTemplate = `<img src="${e.target.src}" alt="${e.target.alt}" width="${width}" height="${height}" data-scale="30" style="width: ${Math.round(width * 0.3)}px">`
                 try {
-                  var dt = new DataTransfer()
+                  const dt = new DataTransfer()
                   dt.setData('text/html', imgTemplate)
-                  var evt = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true })
+                  const evt = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true })
                   richEle.dispatchEvent(evt)
                 } catch (_) {
                   try {

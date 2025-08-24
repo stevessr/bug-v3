@@ -1,3 +1,46 @@
+<script setup lang="ts">
+import { ref, watch, isRef } from 'vue'
+
+const props = defineProps<{ settings: any }>()
+// allow flexible typing (either a reactive ref or a plain object)
+const settings: any = props.settings
+const emit = defineEmits([
+  'update:imageScale',
+  'update:showSearchBar',
+  'update:outputFormat',
+  'update:forceMobileMode'
+])
+
+// support both ref(settings) and plain settings object
+const getOutputFormat = () => {
+  try {
+    if (isRef(settings))
+      return (settings.value && (settings.value as any).outputFormat) || 'markdown'
+    return (settings && (settings as any).outputFormat) || 'markdown'
+  } catch {
+    return 'markdown'
+  }
+}
+
+// local reactive copy for outputFormat so the select will update when parent props change
+const localOutputFormat = ref<string>(getOutputFormat())
+watch(
+  () => getOutputFormat(),
+  val => {
+    localOutputFormat.value = val || 'markdown'
+  }
+)
+
+const handleOutputFormatChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  if (target) {
+    // keep local state in sync and notify parent
+    localOutputFormat.value = target.value
+    emit('update:outputFormat', target.value)
+  }
+}
+</script>
+
 <template>
   <div class="bg-white rounded-lg shadow-sm border">
     <div class="px-6 py-4 border-b border-gray-200">
@@ -84,48 +127,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch, isRef } from 'vue'
-
-const props = defineProps<{ settings: any }>()
-// allow flexible typing (either a reactive ref or a plain object)
-const settings: any = props.settings
-const emit = defineEmits([
-  'update:imageScale',
-  'update:showSearchBar',
-  'update:outputFormat',
-  'update:forceMobileMode'
-])
-
-// support both ref(settings) and plain settings object
-const getOutputFormat = () => {
-  try {
-    if (isRef(settings))
-      return (settings.value && (settings.value as any).outputFormat) || 'markdown'
-    return (settings && (settings as any).outputFormat) || 'markdown'
-  } catch {
-    return 'markdown'
-  }
-}
-
-// local reactive copy for outputFormat so the select will update when parent props change
-const localOutputFormat = ref<string>(getOutputFormat())
-watch(
-  () => getOutputFormat(),
-  val => {
-    localOutputFormat.value = val || 'markdown'
-  }
-)
-
-const handleOutputFormatChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  if (target) {
-    // keep local state in sync and notify parent
-    localOutputFormat.value = target.value
-    emit('update:outputFormat', target.value)
-  }
-}
-</script>
-
-<style scoped></style>

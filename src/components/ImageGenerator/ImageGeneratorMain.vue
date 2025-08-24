@@ -1,70 +1,12 @@
-<template>
-  <div class="image-generator">
-    <div class="container">
-      <header class="header">
-        <h1>🎨 AI 图片生成器</h1>
-        <p>使用先进的 AI 技术，将您的想象转化为精美的图片</p>
-      </header>
-
-      <div class="generator-content">
-        <!-- API Configuration -->
-        <ApiConfig
-          :provider-manager="providerManager"
-          @provider-changed="onProviderChanged"
-          @api-key-changed="onApiKeyChanged"
-          @model-changed="onModelChanged"
-        />
-
-        <!-- Generation Mode -->
-        <GenerationMode
-          v-model="generationMode"
-          v-model:uploaded-image="uploadedImage"
-          :provider-manager="providerManager"
-          @mode-changed="onModeChanged"
-          @image-changed="onImageChanged"
-        />
-
-        <!-- Prompt Input -->
-        <PromptInput
-          v-model="prompt"
-          :is-edit-mode="generationMode === 'edit'"
-          @prompt-changed="onPromptChanged"
-        />
-
-        <!-- Generation Configuration -->
-        <GenerationConfig v-model="generationConfig" @config-changed="onConfigChanged" />
-
-        <!-- Generate Button -->
-        <GenerateButton
-          :is-generating="isGenerating"
-          :has-results="generatedImages.length > 0"
-          :can-generate="canGenerate"
-          @generate="onGenerate"
-          @clear="onClear"
-        />
-
-        <!-- Results Display -->
-        <ResultDisplay
-          :is-loading="isGenerating"
-          :error="error"
-          :images="generatedImages"
-          @download-image="onDownloadImage"
-          @copy-image-url="onCopyImageUrl"
-        />
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { useImageGenerator } from '@/composables/useImageGenerator'
-
 import ApiConfig from './ApiConfig.vue'
 import GenerationMode from './GenerationMode.vue'
 import PromptInput from './PromptInput.vue'
 import GenerationConfig from './GenerationConfig.vue'
 import GenerateButton from './GenerateButton.vue'
 import ResultDisplay from './ResultDisplay.vue'
+
+import { useImageGenerator } from '@/composables/useImageGenerator'
 
 // Use the composable
 const {
@@ -145,6 +87,64 @@ const onCopyImageUrl = async (url: string) => {
   }
 }
 </script>
+
+<template>
+  <div class="image-generator">
+    <div class="container">
+      <header class="header">
+        <h1>🎨 AI 图片生成器</h1>
+        <p>使用先进的 AI 技术，将您的想象转化为精美的图片</p>
+      </header>
+
+      <div class="generator-content">
+        <!-- API Configuration -->
+        <ApiConfig
+          :provider-manager="providerManager"
+          @provider-changed="onProviderChanged"
+          @api-key-changed="onApiKeyChanged"
+          @model-changed="onModelChanged"
+        />
+
+        <!-- Generation Mode -->
+        <GenerationMode
+          v-model="generationMode"
+          v-model:uploaded-image="uploadedImage"
+          :provider-manager="providerManager"
+          @mode-changed="onModeChanged"
+          @image-changed="onImageChanged"
+        />
+
+        <!-- Prompt Input -->
+        <PromptInput
+          v-model="prompt"
+          :is-edit-mode="generationMode === 'edit'"
+          @prompt-changed="onPromptChanged"
+        />
+
+        <!-- Generation Configuration -->
+        <GenerationConfig v-model="generationConfig" @config-changed="onConfigChanged" />
+
+        <!-- Generate Button -->
+        <GenerateButton
+          :is-generating="isGenerating"
+          :has-results="generatedImages.length > 0"
+          :can-generate="canGenerate"
+          @generate="onGenerate"
+          @clear="onClear"
+        />
+
+        <!-- Results Display -->
+        <ResultDisplay
+          :is-loading="isGenerating"
+          :error="error"
+          :images="generatedImages"
+          @download-image="onDownloadImage"
+          @copy-image-url="onCopyImageUrl"
+        />
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .image-generator {

@@ -1,3 +1,22 @@
+<script setup lang="ts">
+import { defineProps, defineEmits } from 'vue'
+
+const { showSuccess, successMessage, showError, errorMessage } = defineProps<{
+  showSuccess: boolean
+  successMessage: string
+  showError: boolean
+  errorMessage: string
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:showSuccess', value: boolean): void
+  (e: 'update:showError', value: boolean): void
+}>()
+
+const closeSuccess = () => emit('update:showSuccess', false)
+const closeError = () => emit('update:showError', false)
+</script>
+
 <template>
   <div>
     <transition name="toast" appear>
@@ -27,25 +46,6 @@
     </transition>
   </div>
 </template>
-
-<script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
-
-const { showSuccess, successMessage, showError, errorMessage } = defineProps<{
-  showSuccess: boolean
-  successMessage: string
-  showError: boolean
-  errorMessage: string
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:showSuccess', value: boolean): void
-  (e: 'update:showError', value: boolean): void
-}>()
-
-const closeSuccess = () => emit('update:showSuccess', false)
-const closeError = () => emit('update:showError', false)
-</script>
 
 <style scoped>
 /* toast slide up + fade */

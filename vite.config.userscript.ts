@@ -1,5 +1,6 @@
-import { defineConfig } from 'vite'
 import { fileURLToPath } from 'url'
+
+import { defineConfig } from 'vite'
 
 export default defineConfig(({ mode }) => {
   // Build settings for userscript

@@ -1,3 +1,142 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+
+import { useEmojiStore } from '../../stores/emojiStore'
+import { importConfigurationToStore, importEmojisToStore } from '../utils/importUtils'
+
+const emojiStore = useEmojiStore()
+
+// Refs
+const configFileInput = ref<HTMLInputElement>()
+const emojiFileInput = ref<HTMLInputElement>()
+const showTargetGroupSelector = ref(false)
+const selectedTargetGroup = ref('')
+const selectedTargetGroupForMarkdown = ref('')
+const markdownText = ref('')
+const isImporting = ref(false)
+const importStatus = ref('')
+const importResults = ref<{ success: boolean; message: string; details?: string } | null>(null)
+
+// Methods
+const openImportConfig = () => {
+  configFileInput.value?.click()
+}
+
+const openImportEmojis = () => {
+  showTargetGroupSelector.value = true
+  emojiFileInput.value?.click()
+}
+
+const handleConfigFileSelect = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  isImporting.value = true
+  importStatus.value = '正在读取配置文件...'
+  importResults.value = null
+
+  try {
+    const text = await file.text()
+    const config = JSON.parse(text)
+
+    importStatus.value = '正在导入配置...'
+    await importConfigurationToStore(config)
+
+    importResults.value = {
+      success: true,
+      message: '配置导入成功',
+      details: `已导入 ${config.groups?.length || 0} 个分组`
+    }
+  } catch (error) {
+    importResults.value = {
+      success: false,
+      message: '配置导入失败',
+      details: error instanceof Error ? error.message : '未知错误'
+    }
+  } finally {
+    isImporting.value = false
+    target.value = ''
+  }
+}
+
+const handleEmojiFileSelect = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  isImporting.value = true
+  importStatus.value = '正在读取表情文件...'
+  importResults.value = null
+
+  try {
+    const text = await file.text()
+    let data
+
+    if (file.name.endsWith('.json')) {
+      data = JSON.parse(text)
+    } else {
+      // Treat as markdown text
+      data = text
+    }
+
+    importStatus.value = '正在导入表情...'
+    await importEmojisToStore(data, selectedTargetGroup.value || undefined)
+
+    const count = Array.isArray(data) ? data.length : data.emojis?.length || '未知数量'
+    importResults.value = {
+      success: true,
+      message: '表情导入成功',
+      details: `已导入 ${count} 个表情`
+    }
+  } catch (error) {
+    importResults.value = {
+      success: false,
+      message: '表情导入失败',
+      details: error instanceof Error ? error.message : '未知错误'
+    }
+  } finally {
+    isImporting.value = false
+    showTargetGroupSelector.value = false
+    selectedTargetGroup.value = ''
+    target.value = ''
+  }
+}
+
+const importFromMarkdown = async () => {
+  if (!markdownText.value.trim()) return
+
+  isImporting.value = true
+  importStatus.value = '正在解析Markdown文本...'
+  importResults.value = null
+
+  try {
+    await importEmojisToStore(markdownText.value, selectedTargetGroupForMarkdown.value || undefined)
+
+    // Count emojis in markdown
+    const matches = markdownText.value.match(/!\[([^\]]*)\]\(([^)]+)\)/g)
+    const count = matches?.length || 0
+
+    importResults.value = {
+      success: true,
+      message: '从文本导入成功',
+      details: `已导入 ${count} 个表情`
+    }
+
+    markdownText.value = ''
+  } catch (error) {
+    importResults.value = {
+      success: false,
+      message: '从文本导入失败',
+      details: error instanceof Error ? error.message : '未知错误'
+    }
+  } finally {
+    isImporting.value = false
+    selectedTargetGroupForMarkdown.value = ''
+  }
+}
+</script>
+
 <template>
   <div class="space-y-8">
     <div class="bg-white shadow rounded-lg">
@@ -183,141 +322,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useEmojiStore } from '../../stores/emojiStore'
-import { importConfigurationToStore, importEmojisToStore } from '../utils/importUtils'
-
-const emojiStore = useEmojiStore()
-
-// Refs
-const configFileInput = ref<HTMLInputElement>()
-const emojiFileInput = ref<HTMLInputElement>()
-const showTargetGroupSelector = ref(false)
-const selectedTargetGroup = ref('')
-const selectedTargetGroupForMarkdown = ref('')
-const markdownText = ref('')
-const isImporting = ref(false)
-const importStatus = ref('')
-const importResults = ref<{ success: boolean; message: string; details?: string } | null>(null)
-
-// Methods
-const openImportConfig = () => {
-  configFileInput.value?.click()
-}
-
-const openImportEmojis = () => {
-  showTargetGroupSelector.value = true
-  emojiFileInput.value?.click()
-}
-
-const handleConfigFileSelect = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (!file) return
-
-  isImporting.value = true
-  importStatus.value = '正在读取配置文件...'
-  importResults.value = null
-
-  try {
-    const text = await file.text()
-    const config = JSON.parse(text)
-
-    importStatus.value = '正在导入配置...'
-    await importConfigurationToStore(config)
-
-    importResults.value = {
-      success: true,
-      message: '配置导入成功',
-      details: `已导入 ${config.groups?.length || 0} 个分组`
-    }
-  } catch (error) {
-    importResults.value = {
-      success: false,
-      message: '配置导入失败',
-      details: error instanceof Error ? error.message : '未知错误'
-    }
-  } finally {
-    isImporting.value = false
-    target.value = ''
-  }
-}
-
-const handleEmojiFileSelect = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (!file) return
-
-  isImporting.value = true
-  importStatus.value = '正在读取表情文件...'
-  importResults.value = null
-
-  try {
-    const text = await file.text()
-    let data
-
-    if (file.name.endsWith('.json')) {
-      data = JSON.parse(text)
-    } else {
-      // Treat as markdown text
-      data = text
-    }
-
-    importStatus.value = '正在导入表情...'
-    await importEmojisToStore(data, selectedTargetGroup.value || undefined)
-
-    const count = Array.isArray(data) ? data.length : data.emojis?.length || '未知数量'
-    importResults.value = {
-      success: true,
-      message: '表情导入成功',
-      details: `已导入 ${count} 个表情`
-    }
-  } catch (error) {
-    importResults.value = {
-      success: false,
-      message: '表情导入失败',
-      details: error instanceof Error ? error.message : '未知错误'
-    }
-  } finally {
-    isImporting.value = false
-    showTargetGroupSelector.value = false
-    selectedTargetGroup.value = ''
-    target.value = ''
-  }
-}
-
-const importFromMarkdown = async () => {
-  if (!markdownText.value.trim()) return
-
-  isImporting.value = true
-  importStatus.value = '正在解析Markdown文本...'
-  importResults.value = null
-
-  try {
-    await importEmojisToStore(markdownText.value, selectedTargetGroupForMarkdown.value || undefined)
-
-    // Count emojis in markdown
-    const matches = markdownText.value.match(/!\[([^\]]*)\]\(([^)]+)\)/g)
-    const count = matches?.length || 0
-
-    importResults.value = {
-      success: true,
-      message: '从文本导入成功',
-      details: `已导入 ${count} 个表情`
-    }
-
-    markdownText.value = ''
-  } catch (error) {
-    importResults.value = {
-      success: false,
-      message: '从文本导入失败',
-      details: error instanceof Error ? error.message : '未知错误'
-    }
-  } finally {
-    isImporting.value = false
-    selectedTargetGroupForMarkdown.value = ''
-  }
-}
-</script>
