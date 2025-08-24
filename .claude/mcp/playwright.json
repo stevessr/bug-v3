@@ -1,0 +1,134 @@
+{
+  "name": "playwright",
+  "description": "Browser automation and end-to-end testing capabilities for web applications",
+  "version": "1.0.0",
+  "type": "mcp-server",
+  "transport": {
+    "type": "stdio"
+  },
+  "capabilities": {
+    "browser_automation": {
+      "multi_browser_support": ["chromium", "firefox", "webkit"],
+      "headless_mode": true,
+      "headed_mode": true,
+      "mobile_emulation": true,
+      "device_simulation": true
+    },
+    "testing_framework": {
+      "e2e_testing": true,
+      "visual_regression": true,
+      "accessibility_testing": true,
+      "performance_testing": true,
+      "api_testing": true
+    },
+    "extension_testing": {
+      "extension_installation": true,
+      "popup_testing": true,
+      "content_script_testing": true,
+      "background_script_testing": true
+    },
+    "debugging": {
+      "screenshot_capture": true,
+      "video_recording": true,
+      "trace_collection": true,
+      "console_monitoring": true
+    }
+  },
+  "configuration": {
+    "default_browser": "chromium",
+    "headless": false,
+    "timeout": 30000,
+    "screenshot_path": "./tests/screenshots",
+    "video_path": "./tests/videos",
+    "trace_path": "./tests/traces",
+    "extension_path": "./dist",
+    "test_data_path": "./tests/data"
+  },
+  "tools": [
+    {
+      "name": "launch_browser",
+      "description": "Launch browser with specified configuration",
+      "parameters": {
+        "browser": "string",
+        "headless": "boolean",
+        "extensions": "array",
+        "device": "string"
+      }
+    },
+    {
+      "name": "navigate_to_page",
+      "description": "Navigate to a specific URL and wait for load",
+      "parameters": {
+        "url": "string",
+        "wait_for": "string",
+        "timeout": "number"
+      }
+    },
+    {
+      "name": "interact_with_element",
+      "description": "Click, type, or interact with page elements",
+      "parameters": {
+        "selector": "string",
+        "action": "string",
+        "value": "string",
+        "options": "object"
+      }
+    },
+    {
+      "name": "capture_screenshot",
+      "description": "Take screenshot of current page or element",
+      "parameters": {
+        "selector": "string",
+        "filename": "string",
+        "full_page": "boolean"
+      }
+    },
+    {
+      "name": "run_test_suite",
+      "description": "Execute predefined test suite",
+      "parameters": {
+        "suite_name": "string",
+        "browser": "string",
+        "parallel": "boolean"
+      }
+    },
+    {
+      "name": "install_extension",
+      "description": "Install browser extension for testing",
+      "parameters": {
+        "extension_path": "string",
+        "browser": "string",
+        "dev_mode": "boolean"
+      }
+    },
+    {
+      "name": "test_extension_popup",
+      "description": "Test extension popup functionality",
+      "parameters": {
+        "extension_id": "string",
+        "test_scenarios": "array"
+      }
+    },
+    {
+      "name": "validate_accessibility",
+      "description": "Run accessibility validation on page",
+      "parameters": {
+        "url": "string",
+        "standards": "array",
+        "ignore_rules": "array"
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "playwright://browsers",
+      "name": "Available Browsers",
+      "description": "List of installed browsers and their capabilities"
+    },
+    {
+      "uri": "playwright://test-results",
+      "name": "Test Results",
+      "description": "Latest test execution results and artifacts"
+    }
+  ]
+}

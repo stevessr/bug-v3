@@ -1,0 +1,107 @@
+{
+  "name": "Comprehensive Copilot Development Environment",
+  "description": "Full-featured MCP server configuration for advanced development workflows",
+  "version": "1.0.0",
+  "mcp_servers": {
+    "context7": {
+      "config_file": "./context7.json",
+      "enabled": true,
+      "priority": "high",
+      "startup_order": 1
+    },
+    "memory": {
+      "config_file": "./memory.json",
+      "enabled": true,
+      "priority": "high",
+      "startup_order": 2
+    },
+    "nodejs": {
+      "config_file": "./nodejs.json",
+      "enabled": true,
+      "priority": "high",
+      "startup_order": 3
+    },
+    "playwright": {
+      "config_file": "./playwright.json",
+      "enabled": true,
+      "priority": "medium",
+      "startup_order": 4
+    },
+    "linux": {
+      "config_file": "./linux.json",
+      "enabled": true,
+      "priority": "medium",
+      "startup_order": 5
+    },
+    "fetch": {
+      "config_file": "./fetch.json",
+      "enabled": true,
+      "priority": "medium",
+      "startup_order": 6
+    },
+    "python": {
+      "config_file": "./python.json",
+      "enabled": true,
+      "priority": "low",
+      "startup_order": 7
+    }
+  },
+  "global_configuration": {
+    "project_root": "/home/runner/work/bug-v3/bug-v3",
+    "log_level": "info",
+    "debug_mode": false,
+    "timeout_default": 30000,
+    "max_concurrent_operations": 10,
+    "memory_limit": "2GB",
+    "cache_enabled": true,
+    "auto_recovery": true
+  },
+  "environment_setup": {
+    "required_tools": [
+      "node",
+      "npm",
+      "git",
+      "python3",
+      "chromium"
+    ],
+    "optional_tools": [
+      "pnpm",
+      "yarn",
+      "firefox",
+      "webkit"
+    ],
+    "environment_variables": {
+      "NODE_ENV": "development",
+      "DEBUG": "mcp:*",
+      "PLAYWRIGHT_BROWSERS_PATH": "./browsers"
+    }
+  },
+  "workflow_integration": {
+    "build_hooks": {
+      "pre_build": ["context7:analyze_project_structure", "memory:store_memory"],
+      "post_build": ["nodejs:analyze_dependencies", "memory:store_memory"]
+    },
+    "test_hooks": {
+      "pre_test": ["playwright:launch_browser", "context7:retrieve_context"],
+      "post_test": ["memory:store_memory", "playwright:capture_screenshot"]
+    },
+    "development_hooks": {
+      "file_change": ["context7:store_context"],
+      "error_occurred": ["memory:store_memory", "context7:suggest_next_actions"]
+    }
+  },
+  "security": {
+    "sandbox_mode": true,
+    "allowed_domains": [
+      "localhost",
+      "127.0.0.1",
+      "github.com",
+      "api.github.com"
+    ],
+    "restricted_operations": [
+      "system_shutdown",
+      "file_delete_root",
+      "network_admin"
+    ]
+  }
+}

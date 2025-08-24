@@ -1,0 +1,150 @@
+{
+  "name": "linux",
+  "description": "Linux system operations, browser management, and plugin installation capabilities",
+  "version": "1.0.0",
+  "type": "mcp-server",
+  "transport": {
+    "type": "stdio"
+  },
+  "capabilities": {
+    "system_operations": {
+      "file_management": true,
+      "process_management": true,
+      "service_management": true,
+      "environment_management": true
+    },
+    "browser_management": {
+      "installation": true,
+      "configuration": true,
+      "plugin_management": true,
+      "profile_management": true,
+      "extension_installation": true
+    },
+    "development_tools": {
+      "package_installation": true,
+      "dependency_management": true,
+      "build_tools": true,
+      "version_management": true
+    },
+    "monitoring": {
+      "system_metrics": true,
+      "process_monitoring": true,
+      "resource_usage": true,
+      "log_analysis": true
+    }
+  },
+  "configuration": {
+    "shell": "/bin/bash",
+    "working_directory": "/home/runner/work/bug-v3/bug-v3",
+    "timeout": 60000,
+    "log_level": "info",
+    "auto_install_missing": true,
+    "browser_preferences": {
+      "default_browser": "chromium",
+      "extension_dev_mode": true,
+      "allow_insecure_localhost": true
+    }
+  },
+  "tools": [
+    {
+      "name": "execute_command",
+      "description": "Execute shell commands with proper error handling",
+      "parameters": {
+        "command": "string",
+        "working_dir": "string",
+        "timeout": "number",
+        "env_vars": "object"
+      }
+    },
+    {
+      "name": "install_browser",
+      "description": "Install and configure browser for development",
+      "parameters": {
+        "browser": "string",
+        "version": "string",
+        "dev_tools": "boolean"
+      }
+    },
+    {
+      "name": "install_browser_extension",
+      "description": "Install browser extension from various sources",
+      "parameters": {
+        "extension_source": "string",
+        "browser": "string",
+        "dev_mode": "boolean",
+        "extension_path": "string"
+      }
+    },
+    {
+      "name": "manage_services",
+      "description": "Start, stop, restart system services",
+      "parameters": {
+        "service": "string",
+        "action": "string",
+        "options": "object"
+      }
+    },
+    {
+      "name": "install_package",
+      "description": "Install system packages using appropriate package manager",
+      "parameters": {
+        "package": "string",
+        "package_manager": "string",
+        "version": "string"
+      }
+    },
+    {
+      "name": "manage_environment",
+      "description": "Set up development environment variables and paths",
+      "parameters": {
+        "variables": "object",
+        "persistent": "boolean",
+        "scope": "string"
+      }
+    },
+    {
+      "name": "monitor_system",
+      "description": "Monitor system resources and performance",
+      "parameters": {
+        "metrics": "array",
+        "duration": "number",
+        "interval": "number"
+      }
+    },
+    {
+      "name": "configure_browser",
+      "description": "Configure browser settings and preferences",
+      "parameters": {
+        "browser": "string",
+        "settings": "object",
+        "profile": "string"
+      }
+    },
+    {
+      "name": "analyze_logs",
+      "description": "Analyze system and application logs",
+      "parameters": {
+        "log_paths": "array",
+        "filters": "array",
+        "time_range": "object"
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "linux://system",
+      "name": "System Information",
+      "description": "Current system state and available resources"
+    },
+    {
+      "uri": "linux://browsers",
+      "name": "Installed Browsers",
+      "description": "List of installed browsers and their configurations"
+    },
+    {
+      "uri": "linux://processes",
+      "name": "Running Processes",
+      "description": "Currently running processes and their status"
+    }
+  ]
+}
