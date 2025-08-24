@@ -6,7 +6,7 @@ interface Props {
   activeTab: string
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 // State
 const selectedProvider = ref('cloudflare')
@@ -114,8 +114,8 @@ const testCloudflareConnection = async () => {
     // Simulate API test
     await delay(1500)
     message.success('Cloudflare AI 连接成功！')
-  } catch (error) {
-    message.error('连接失败: ' + (error as Error).message)
+  } catch {
+    message.error('连接失败')
   } finally {
     testing.value = false
   }
@@ -132,8 +132,8 @@ const testOpenAIConnection = async () => {
     // Simulate API test
     await delay(1500)
     message.success('OpenAI 连接成功！')
-  } catch (error) {
-    message.error('连接失败: ' + (error as Error).message)
+  } catch {
+    message.error('连接失败')
   } finally {
     testing.value = false
   }
@@ -144,7 +144,8 @@ const initChromeAI = async () => {
 
   try {
     // Check for Chrome AI availability
-    if ('ai' in window && 'assistant' in (window as any).ai) {
+    const w = window as unknown as { ai?: Record<string, unknown> }
+    if ('ai' in window && w.ai && 'assistant' in w.ai) {
       chromeAIStatus.value = {
         available: true,
         message: 'Chrome AI 已就绪'
@@ -153,7 +154,7 @@ const initChromeAI = async () => {
     } else {
       throw new Error('Chrome AI 不可用')
     }
-  } catch (error) {
+  } catch {
     chromeAIStatus.value = {
       available: false,
       message: '需要 Chrome 127+ 并启用 AI 功能'
@@ -178,7 +179,7 @@ const initEdgeAI = async () => {
     } else {
       throw new Error('Edge AI 不可用')
     }
-  } catch (error) {
+  } catch {
     edgeAIStatus.value = {
       available: false,
       message: '需要 Microsoft Edge 并启用 AI 功能'
@@ -223,8 +224,8 @@ const generateImage = async () => {
     })
 
     message.success('图像生成成功！')
-  } catch (error) {
-    message.error('生成失败: ' + (error as Error).message)
+  } catch {
+    message.error('生成失败')
   } finally {
     generating.value = false
     generationProgress.value = 0
@@ -245,7 +246,7 @@ const copyImageToClipboard = async (url: string) => {
     const blob = await response.blob()
     await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
     message.success('图像已复制到剪贴板')
-  } catch (error) {
+  } catch {
     message.error('复制失败')
   }
 }
@@ -275,7 +276,7 @@ onMounted(() => {
   <div v-if="activeTab === 'ai-generator'" class="space-y-6">
     <div class="bg-gradient-to-br from-purple-600 to-pink-700 text-white p-6 rounded-lg">
       <h2 class="text-2xl font-bold mb-4">🎨 增强型 AI 图像生成器</h2>
-      <p class="text-purple-100">支持 Cloudflare、OpenAI、以及浏览器原生 AI 的多平台图像生成工具</p>
+      <p class="text-purple-100">支持 Cloudflare、OpenAI，以及浏览器原生 AI 的图像生成工具</p>
     </div>
 
     <!-- Provider Selection -->
@@ -307,7 +308,7 @@ onMounted(() => {
       <div class="border-t pt-6">
         <!-- Cloudflare Configuration -->
         <div v-if="selectedProvider === 'cloudflare'" class="space-y-4">
-          <h4 class="font-semibold text-lg">☁️ Cloudflare AI 配置</h4>
+          <h4 class="font-semibold text-lg">☁️ Cloudflare 配置</h4>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium mb-2">Account ID</label>
@@ -342,7 +343,7 @@ onMounted(() => {
 
         <!-- OpenAI Configuration -->
         <div v-if="selectedProvider === 'openai'" class="space-y-4">
-          <h4 class="font-semibold text-lg">🤖 OpenAI 配置</h4>
+          <h4 class="font-semibold text-lg">🤖 OpenAI 设置</h4>
           <div>
             <label class="block text-sm font-medium mb-2">API Key</label>
             <a-input

@@ -12,14 +12,12 @@ test.describe('External Import Tab', () => {
 
   test('should display external import interface correctly', async ({ page }) => {
     // Check main heading
-    await expect(page.locator('text=外部表情导入')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '外部表情导入' })).toBeVisible()
 
     // Check all import sections
-    await expect(page.locator('text=导入配置文件')).toBeVisible()
-    await expect(page.locator('text=导入表情包')).toBeVisible()
-    await expect(page.locator('text=从文本导入')).toBeVisible()
-    await expect(page.locator('text=Tenor GIF 导入')).toBeVisible()
-    await expect(page.locator('text=Waline 表情包导入')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '导入配置文件' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '导入表情包' })).toBeVisible()
+    await expect(page.getByText('从文本导入')).toBeVisible()
   })
 
   test('should handle configuration file import', async ({ page }) => {
@@ -76,99 +74,9 @@ test.describe('External Import Tab', () => {
     await page.waitForTimeout(2000)
   })
 
-  test('should handle Tenor GIF search and import', async ({ page }) => {
-    // Check Tenor section
-    await expect(page.locator('text=🎭 Tenor GIF 导入')).toBeVisible()
-    await expect(page.locator('text=通过 Tenor API 搜索和导入 GIF 表情包')).toBeVisible()
-
-    // Check API key input (optional)
-    const apiKeyInput = page.locator('input[placeholder*="Tenor API Key"]')
-    await expect(apiKeyInput).toBeVisible()
-    await apiKeyInput.fill('test-tenor-key')
-
-    // Check search input
-    const searchInput = page.locator('input[placeholder*="搜索 GIF"]')
-    await expect(searchInput).toBeVisible()
-    await searchInput.fill('happy cat')
-
-    // Check search button
-    const searchButton = page.locator('button:has-text("搜索")')
-    await expect(searchButton).toBeEnabled()
-
-    // Test search
-    await searchButton.click()
-
-    // Should show searching state
-    await expect(page.locator('text=搜索中...')).toBeVisible()
-
-    // Wait for results (simulated)
-    await page.waitForTimeout(2000)
-
-    // Should show results
-    await expect(page.locator('text=搜索结果')).toBeVisible()
-
-    // Check result grid
-    const resultGrid = page.locator('.grid-cols-3')
-    await expect(resultGrid).toBeVisible()
-
-    // Test clicking on a result to import
-    const firstResult = page.locator('.grid-cols-3 > div').first()
-    if (await firstResult.isVisible()) {
-      await firstResult.click()
-      await page.waitForTimeout(1000)
-    }
-  })
-
-  test('should handle Tenor search with Enter key', async ({ page }) => {
-    const searchInput = page.locator('input[placeholder*="搜索 GIF"]')
-    await searchInput.fill('funny memes')
-
-    // Test Enter key search
-    await searchInput.press('Enter')
-
-    // Should trigger search
-    await expect(page.locator('text=搜索中...')).toBeVisible()
-    await page.waitForTimeout(2000)
-  })
-
-  test('should handle Waline emoji import', async ({ page }) => {
-    // Check Waline section
-    await expect(page.locator('text=💬 Waline 表情包导入')).toBeVisible()
-    await expect(page.locator('text=从 Waline 评论系统导入表情包配置')).toBeVisible()
-
-    // Check server URL input
-    const serverInput = page.locator('input[placeholder*="https://your-waline-server.com"]')
-    await expect(serverInput).toBeVisible()
-    await serverInput.fill('https://waline.example.com')
-
-    // Check emoji set input (optional)
-    const emojiSetInput = page.locator('input[placeholder*="默认导入所有表情包"]')
-    await expect(emojiSetInput).toBeVisible()
-    await emojiSetInput.fill('custom-emoji-set')
-
-    // Check import button
-    const importButton = page.locator('button:has-text("从 Waline 导入")')
-    await expect(importButton).toBeEnabled()
-
-    // Test import
-    await importButton.click()
-
-    // Should show importing state
-    await expect(page.locator('text=导入中...')).toBeVisible()
-
-    // Wait for completion (simulated)
-    await page.waitForTimeout(3000)
-  })
+  // Tenor and Waline functionality removed - tests no longer applicable
 
   test('should validate form inputs properly', async ({ page }) => {
-    // Test Tenor search without query
-    const tenorSearchButton = page.locator('button:has-text("搜索")')
-    await expect(tenorSearchButton).toBeDisabled()
-
-    // Test Waline import without URL
-    const walineImportButton = page.locator('button:has-text("从 Waline 导入")')
-    await expect(walineImportButton).toBeDisabled()
-
     // Test text import without content
     const textImportButton = page.locator('button:has-text("导入文本中的表情")')
     await expect(textImportButton).toBeDisabled()
@@ -184,14 +92,14 @@ test.describe('External Import Tab', () => {
 
     // Should show progress
     await expect(page.locator('.animate-spin')).toBeVisible()
-    await expect(page.locator('text=正在解析Markdown文本')).toBeVisible()
+    await expect(page.getByText('正在解析Markdown文本')).toBeVisible()
 
     // Wait for completion
     await page.waitForTimeout(3000)
 
     // Should show results
-    await expect(page.locator('text=从文本导入成功')).toBeVisible()
-    await expect(page.locator('text=已导入')).toBeVisible()
+    await expect(page.getByText('从文本导入成功')).toBeVisible()
+    await expect(page.getByText('已导入')).toBeVisible()
   })
 
   test('should handle import errors gracefully', async ({ page }) => {
@@ -225,22 +133,18 @@ test.describe('External Import Tab', () => {
   })
 
   test('should clear inputs after successful import', async ({ page }) => {
-    // Test Waline import input clearing
-    const serverInput = page.locator('input[placeholder*="https://your-waline-server.com"]')
-    const emojiSetInput = page.locator('input[placeholder*="默认导入所有表情包"]')
+    // Test text import input clearing
+    const textarea = page.locator('textarea[placeholder*="![表情名](表情URL)"]')
+    await textarea.fill('![test](https://example.com/emoji.gif)')
 
-    await serverInput.fill('https://test.com')
-    await emojiSetInput.fill('test-set')
-
-    const importButton = page.locator('button:has-text("从 Waline 导入")')
+    const importButton = page.locator('button:has-text("导入文本中的表情")')
     await importButton.click()
 
     // Wait for completion
-    await page.waitForTimeout(4000)
+    await page.waitForTimeout(3000)
 
-    // Inputs should be cleared on success
-    await expect(serverInput).toHaveValue('')
-    await expect(emojiSetInput).toHaveValue('')
+    // Input should be cleared on success
+    await expect(textarea).toHaveValue('')
   })
 
   test('should show detailed progress information', async ({ page }) => {
@@ -254,7 +158,7 @@ test.describe('External Import Tab', () => {
     await importButton.click()
 
     // Should show step-by-step progress
-    await expect(page.locator('text=正在解析Markdown文本')).toBeVisible()
+    await expect(page.getByText('正在解析Markdown文本')).toBeVisible()
 
     // Wait for different progress stages
     await page.waitForTimeout(1000)
@@ -263,6 +167,6 @@ test.describe('External Import Tab', () => {
     await page.waitForTimeout(2000)
 
     // Final result should show count
-    await expect(page.locator('text=已导入 2 个表情')).toBeVisible()
+    await expect(page.getByText(/已导入 \d+ 个表情/)).toBeVisible()
   })
 })

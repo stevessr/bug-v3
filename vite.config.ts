@@ -15,6 +15,13 @@ export default defineConfig(({ mode }) => {
   const enableIndexedDB = process.env.ENABLE_INDEXEDDB !== 'false' // 默认启用，除非明确禁用
 
   return {
+    // Exclude problematic worker/module entries from dep optimizer. Some worker
+    // build outputs (worker.js?worker_file&type=module) don't exist in the
+    // optimized deps dir during dev and cause the optimizer to produce a
+    // broken import path. Excluding the worker file lets Vite load it at runtime.
+    optimizeDeps: {
+      exclude: ['worker.js']
+    },
     css: {
       postcss: './postcss.config.js'
     },
@@ -83,7 +90,17 @@ export default defineConfig(({ mode }) => {
             if (id.includes('src/background/') || id.includes('background.ts')) {
               return 'background'
             }
-            // Put third-party deps into vendor
+            // Split large third-party deps into separate chunks to reduce vendor size
+            if (id.includes('node_modules/@ffmpeg')) {
+              return 'ffmpeg'
+            }
+            if (id.includes('node_modules/gifuct-js')) {
+              return 'gifuct'
+            }
+            if (id.includes('node_modules/jszip')) {
+              return 'jszip'
+            }
+            // Fallback third-party deps into vendor
             if (id.includes('node_modules')) {
               return 'vendor'
             }

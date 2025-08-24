@@ -12,13 +12,13 @@ test.describe('AI Emoji Renaming Tab', () => {
 
   test('should display emoji renaming interface correctly', async ({ page }) => {
     // Check main heading
-    await expect(page.locator('text=AI 表情符号重命名系统')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '🤖 AI 表情符号重命名系统' })).toBeVisible()
 
     // Check provider selection section
-    await expect(page.locator('text=AI 提供商选择')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '🔧 AI 提供商选择' })).toBeVisible()
 
     // Check emoji selection section
-    await expect(page.locator('text=表情选择与处理')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '📱 表情选择与处理' })).toBeVisible()
   })
 
   test('should show all AI providers with proper features', async ({ page }) => {
@@ -32,12 +32,12 @@ test.describe('AI Emoji Renaming Tab', () => {
     ]
 
     for (const provider of expectedProviders) {
-      await expect(page.locator(`text=${provider}`)).toBeVisible()
+      await expect(page.getByRole('heading', { name: provider, exact: true })).toBeVisible()
     }
 
     // Check URL support tags
-    await expect(page.locator('text=直接URL')).toBeVisible()
-    await expect(page.locator('text=需要缓存')).toBeVisible()
+    await expect(page.getByText('直接URL').first()).toBeVisible()
+    await expect(page.getByText('需要缓存').first()).toBeVisible()
   })
 
   test('should configure Google Gemini provider', async ({ page }) => {
@@ -46,9 +46,9 @@ test.describe('AI Emoji Renaming Tab', () => {
     await page.waitForTimeout(500)
 
     // Check Gemini configuration
-    await expect(page.locator('text=Google Gemini 配置')).toBeVisible()
-    await expect(page.locator('text=API Key')).toBeVisible()
-    await expect(page.locator('text=模型')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '🔍 Google Gemini 配置' })).toBeVisible()
+    await expect(page.getByText('API Key')).toBeVisible()
+    await expect(page.getByText('模型')).toBeVisible()
 
     // Test input fields
     const apiKeyInput = page.locator('input[placeholder*="Gemini API Key"]')
@@ -65,7 +65,9 @@ test.describe('AI Emoji Renaming Tab', () => {
     await page.waitForTimeout(500)
 
     // Check OpenAI configuration
-    await expect(page.locator('text=OpenAI GPT-4o 配置')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '🤖 OpenAI GPT-4o 配置' })).toBeVisible()
+
+    await expect(page.getByText('API Key')).toBeVisible()
 
     // Test API key input
     const apiKeyInput = page.locator('input[placeholder*="OpenAI API Key"]')
@@ -82,7 +84,7 @@ test.describe('AI Emoji Renaming Tab', () => {
     await page.waitForTimeout(500)
 
     // Check Claude configuration
-    await expect(page.locator('text=Anthropic Claude 配置')).toBeVisible()
+    await expect(page.getByText('API Key')).toBeVisible()
 
     // Test API key input
     const apiKeyInput = page.locator('input[placeholder*="Anthropic API Key"]')
@@ -99,8 +101,8 @@ test.describe('AI Emoji Renaming Tab', () => {
     await page.waitForTimeout(500)
 
     // Check configuration fields
-    await expect(page.locator('text=API Endpoint')).toBeVisible()
-    await expect(page.locator('text=模型名称')).toBeVisible()
+    await expect(page.getByText('API Endpoint')).toBeVisible()
+    await expect(page.getByText('模型名称')).toBeVisible()
 
     // Test configuration inputs
     const endpointInput = page.locator('input[placeholder*="https://api.example.com/v1"]')
@@ -133,8 +135,8 @@ test.describe('AI Emoji Renaming Tab', () => {
     await expect(page.locator('text=选择要重命名的表情')).toBeVisible()
 
     // Check action buttons
-    await expect(page.locator('button:has-text("全选")')).toBeVisible()
-    await expect(page.locator('button:has-text("清除选择")')).toBeVisible()
+    await expect(page.getByRole('button', { name: '全选' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '清除选择' })).toBeVisible()
 
     // Check emoji grid
     const emojiGrid = page.locator('.grid-cols-8')
@@ -250,9 +252,8 @@ test.describe('AI Emoji Renaming Tab', () => {
     await page.waitForTimeout(1000)
 
     // Check results display
-    await expect(page.locator('text=重命名建议')).toBeVisible()
-    await expect(page.locator('text=当前名称:')).toBeVisible()
-    await expect(page.locator('text=AI 建议:')).toBeVisible()
+    await expect(page.getByText('当前名称:')).toBeVisible()
+    await expect(page.getByText('AI 建议:')).toBeVisible()
 
     // Check suggestion buttons
     await expect(page.locator('button:has-text("快乐")')).toBeVisible()
@@ -297,8 +298,8 @@ test.describe('AI Emoji Renaming Tab', () => {
     await page.waitForTimeout(1000)
 
     // Check batch operations
-    await expect(page.locator('button:has-text("应用所有重命名")')).toBeVisible()
-    await expect(page.locator('button:has-text("清除结果")')).toBeVisible()
+    await expect(page.getByRole('button', { name: '应用所有重命名' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '清除结果' })).toBeVisible()
 
     // Test apply all
     await page.click('button:has-text("应用所有重命名")')

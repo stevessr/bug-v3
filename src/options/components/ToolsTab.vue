@@ -1,10 +1,12 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any, prettier/prettier */
 import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 // libs for advanced processing
-import * as FFmpegWASM from '@ffmpeg/ffmpeg'
 import { parseGIF, decompressFrames } from 'gifuct-js'
 import JSZip from 'jszip'
+
+// dynamic import helper functions when needed to avoid pre-bundling / HMR issues in dev
 
 interface Props {
   activeTab: string
@@ -41,31 +43,25 @@ const ffmpegLoading = ref(false)
 // ffmpeg wasm instance (initialized when user requests)
 type FFmpegLike = { load: () => Promise<void>; [k: string]: unknown }
 let ffmpeg: FFmpegLike | null = null
-
-const resolveCreateFFmpeg = () => {
-  const mod = FFmpegWASM as unknown as any
-  return (mod.createFFmpeg ?? mod.default?.createFFmpeg ?? mod.FFmpeg ?? mod.default?.FFmpeg) as any
-}
+let ffmpegMod: any = null
 
 // Methods
-const handleDragOver = (e: DragEvent) => {
-  e.preventDefault()
-  if (e.currentTarget) {
-    ;(e.currentTarget as HTMLElement).classList.add('border-blue-400', 'bg-blue-50')
-  }
+const handleDragOver = (ev: DragEvent) => {
+  ev.preventDefault()
+  const target = ev.currentTarget as HTMLElement | null
+  if (target) target.classList.add('border-blue-400', 'bg-blue-50')
 }
 
-const handleDragLeave = (e: DragEvent) => {
-  if (e.currentTarget) {
-    ;(e.currentTarget as HTMLElement).classList.remove('border-blue-400', 'bg-blue-50')
-  }
+const handleDragLeave = (ev: DragEvent) => {
+  const target = ev.currentTarget as HTMLElement | null
+  if (target) target.classList.remove('border-blue-400', 'bg-blue-50')
 }
 
-const handleFormatConverterDrop = (e: DragEvent) => {
-  e.preventDefault()
-  handleDragLeave(e)
+const handleFormatConverterDrop = (ev: DragEvent) => {
+  ev.preventDefault()
+  handleDragLeave(ev)
 
-  const files = Array.from(e.dataTransfer?.files || [])
+  const files = Array.from(ev.dataTransfer?.files || [])
   if (files.length > 0) {
     processFormatConverter(files[0])
   }
@@ -75,8 +71,8 @@ const triggerFormatFileInput = () => {
   formatFileInput.value?.click()
 }
 
-const handleFormatConverterFile = (e: Event) => {
-  const target = e.target as HTMLInputElement
+const handleFormatConverterFile = (ev: Event) => {
+  const target = ev.target as HTMLInputElement
   if (target.files && target.files[0]) {
     processFormatConverter(target.files[0])
   }
@@ -130,7 +126,7 @@ const startFormatConversion = async () => {
   // Only support basic image conversion client-side (first-frame for GIF)
   if (file.type.startsWith('image/')) {
     const reader = new FileReader()
-    reader.onload = async e => {
+    reader.onload = async ev => {
       const img = new Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
@@ -160,22 +156,33 @@ const startFormatConversion = async () => {
           outputQuality.value / 100
         )
       }
-      img.src = e.target?.result as string
+      img.src = ev.target?.result as string
     }
     reader.readAsDataURL(file)
   } else if (file.type.startsWith('video/')) {
-    if (!ffmpegLoaded.value) {
+    if (!ffmpegLoaded.value || !ffmpeg) {
       message.warning('视频转换需要 FFmpeg，先初始化 FFmpeg（右侧）')
       // fallback: provide original file for download
       if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
       formatOutputUrl.value = URL.createObjectURL(file)
       formatOutputName.value = file.name
-    } else {
-      // TODO: implement ffmpeg conversion flow
-      message.info('使用 FFmpeg 转换视频（尚未实现）')
+      return
+    }
+
+    try {
+      message.loading('正在使用 FFmpeg 转换视频，请稍候...', 0)
+      const mod = await import('@/options/utils/ffmpegHelper')
+      const { convertVideoToAnimated } = mod
+      const res = await convertVideoToAnimated(file, ffmpeg as any, ffmpegMod, targetFormat.value === 'gif' ? 'gif' : 'apng', {
+        fps: 10,
+        scale: 480
+      })
       if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
-      formatOutputUrl.value = URL.createObjectURL(file)
-      formatOutputName.value = file.name
+      formatOutputUrl.value = res.url
+      formatOutputName.value = res.name
+      message.success('视频转换完成，可下载')
+    } catch (err) {
+      message.error('视频转换失败: ' + String(err))
     }
   } else {
     message.error('不支持的文件类型')
@@ -287,8 +294,9 @@ const startFrameSplitting = async () => {
     } else {
       message.error('不支持的提取类型')
     }
-  } catch (e: any) {
-    message.error('帧提取失败: ' + (e?.message || e))
+  } catch (_e: unknown) {
+    const msg = (typeof _e === 'object' && _e && 'message' in _e) ? String((_e as any).message) : String(_e)
+    message.error('帧提取失败: ' + msg)
   }
 }
 
@@ -322,11 +330,11 @@ const downloadAllFrames = async () => {
   URL.revokeObjectURL(url)
 }
 
-const handleFrameSplitterDrop = (e: DragEvent) => {
-  e.preventDefault()
-  handleDragLeave(e)
+const handleFrameSplitterDrop = (ev: DragEvent) => {
+  ev.preventDefault()
+  handleDragLeave(ev)
 
-  const files = Array.from(e.dataTransfer?.files || [])
+  const files = Array.from(ev.dataTransfer?.files || [])
   if (files.length > 0) {
     frameSplitterFile.value = files[0]
     message.success(`已选择文件: ${files[0].name}`)
@@ -347,11 +355,11 @@ const handleFrameSplitterFile = (e: Event) => {
 
 // startFrameSplitting implemented above (async extractor)
 
-const handleFrameMergerDrop = (e: DragEvent) => {
-  e.preventDefault()
-  handleDragLeave(e)
+const handleFrameMergerDrop = (ev: DragEvent) => {
+  ev.preventDefault()
+  handleDragLeave(ev)
 
-  const files = Array.from(e.dataTransfer?.files || [])
+  const files = Array.from(ev.dataTransfer?.files || [])
   frameMergerFiles.value = files.filter(file => file.type.startsWith('image/'))
   message.success(`已选择 ${frameMergerFiles.value.length} 个图像文件`)
 }
@@ -368,50 +376,61 @@ const handleFrameMergerFiles = (e: Event) => {
   }
 }
 
-const startFrameMerging = () => {
+const startFrameMerging = async () => {
   if (frameMergerFiles.value.length === 0) return
 
-  message.loading(`正在合并为 ${outputFormat.value.toUpperCase()}...`, 3)
-  setTimeout(() => {
-    message.success(`动画 ${outputFormat.value.toUpperCase()} 生成完成！`)
-  }, 3000)
+  const files = frameMergerFiles.value
+  if (ffmpegLoaded.value && ffmpeg) {
+    try {
+      message.loading('使用 FFmpeg 合并帧，请稍候...', 0)
+      const m = await import('@/options/utils/ffmpegHelper')
+      const { mergeImagesToAnimated } = m
+      const res = await mergeImagesToAnimated(files, ffmpeg as any, ffmpegMod, outputFormat.value === 'apng' ? 'apng' : 'gif', {
+        delay: frameDelay.value,
+        scale: 480
+      })
+      if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
+      formatOutputUrl.value = res.url
+      formatOutputName.value = res.name
+      message.success('动画已生成，可下载')
+    } catch (err) {
+      message.error('合并失败: ' + String(err))
+    }
+  } else {
+    // fallback: zip all frames for download
+    try {
+      const zip = new JSZip()
+      for (const f of files) {
+        const data = await f.arrayBuffer()
+        zip.file(f.name, new Blob([data]))
+      }
+      const blob = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(blob)
+      if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
+      formatOutputUrl.value = url
+      formatOutputName.value = `frames_${Date.now()}.zip`
+      message.success('已将帧打包为 ZIP，点击下载')
+    } catch (err) {
+      message.error('打包失败: ' + String(err))
+    }
+  }
 }
 
 const initFFmpeg = async () => {
   if (ffmpegLoaded.value) return
 
   ffmpegLoading.value = true
-
   try {
-    const creator = resolveCreateFFmpeg()
-    if (!creator) {
-      message.error('无法找到 FFmpeg 的 createFFmpeg 导出（模块导出不兼容）')
-      ffmpegLoading.value = false
-      return
-    }
-
-    try {
-      // Prefer calling as factory
-      ffmpeg = creator({ log: true })
-    } catch (e) {
-      // Fallback: try constructor
-
-      // @ts-ignore
-      ffmpeg = new creator()
-    }
-
-    const ff = ffmpeg as FFmpegLike
-    if (!ff.load) {
-      message.error('FFmpeg 实例不包含 load 方法，无法初始化')
-      ffmpegLoading.value = false
-      return
-    }
-    await ff.load()
+  const helper = await import('@/options/utils/ffmpegHelper')
+  const res = await helper.createAndLoadFFmpeg()
+  // store minimal wrapper and module
+  ffmpeg = (res as any).ffmpeg as unknown as FFmpegLike
+  ffmpegMod = (res as any).mod
     ffmpegLoaded.value = true
+    ffmpegLoading.value = false
     message.success('FFmpeg WASM 初始化成功！')
-  } catch (error: any) {
-    message.error('FFmpeg 初始化失败: ' + (error?.message || error))
-  } finally {
+  } catch (err) {
+    message.error('FFmpeg 初始化失败: ' + String(err))
     ffmpegLoading.value = false
   }
 }
