@@ -29,11 +29,13 @@ const formatConvertProgress = ref({
 
 const frameSplitterFile = ref<File | null>(null)
 const frameMergerFiles = ref<File[]>([])
+const frameMergerPreviews = ref<Array<{ file: File; url: string; name: string }>>([])
 const frameDelay = ref(500)
 const outputFormat = ref('gif')
 const targetFormat = ref('png')
 const outputQuality = ref(90)
 const formatFile = ref<File | null>(null)
+const formatFilePreview = ref('')
 const formatOutputUrl = ref('')
 const formatOutputName = ref('')
 const frameImages = ref<Array<{ url: string; name: string }>>([])
@@ -63,18 +65,47 @@ const handleFormatConverterDrop = (ev: DragEvent) => {
 
   const files = Array.from(ev.dataTransfer?.files || [])
   if (files.length > 0) {
-    processFormatConverter(files[0])
+    setFormatFile(files[0])
   }
 }
 
 const triggerFormatFileInput = () => {
-  formatFileInput.value?.click()
+  if (!formatFile.value) {
+    formatFileInput.value?.click()
+  }
 }
 
 const handleFormatConverterFile = (ev: Event) => {
   const target = ev.target as HTMLInputElement
   if (target.files && target.files[0]) {
-    processFormatConverter(target.files[0])
+    setFormatFile(target.files[0])
+  }
+}
+
+const setFormatFile = (file: File) => {
+  formatFile.value = file
+  // Create preview URL
+  if (formatFilePreview.value) {
+    URL.revokeObjectURL(formatFilePreview.value)
+  }
+  formatFilePreview.value = URL.createObjectURL(file)
+  message.success(`已选择文件: ${file.name}`)
+}
+
+const clearFormatFile = () => {
+  formatFile.value = null
+  if (formatFilePreview.value) {
+    URL.revokeObjectURL(formatFilePreview.value)
+    formatFilePreview.value = ''
+  }
+  if (formatOutputUrl.value) {
+    URL.revokeObjectURL(formatOutputUrl.value)
+    formatOutputUrl.value = ''
+    formatOutputName.value = ''
+  }
+  // Clear file input
+  if (formatFileInput.value) {
+    formatFileInput.value.value = ''
   }
 }
 
@@ -123,8 +154,38 @@ const startFormatConversion = async () => {
   if (!formatFile.value) return
 
   const file = formatFile.value
+  
+  // Show progress first
+  await processFormatConverter(file)
+  
   // Only support basic image conversion client-side (first-frame for GIF)
   if (file.type.startsWith('image/')) {
+    if (targetFormat.value === 'gif' || targetFormat.value === 'apng') {
+      // For GIF/APNG conversion, we need FFmpeg
+      if (!ffmpegLoaded.value || !ffmpeg) {
+        message.warning('GIF/APNG 转换需要 FFmpeg，请先初始化 FFmpeg（页面下方）')
+        return
+      }
+      
+      try {
+        message.loading('正在使用 FFmpeg 转换为动画格式...', 0)
+        const mod = await import('@/options/utils/ffmpegHelper')
+        const { convertVideoToAnimated } = mod
+        const res = await convertVideoToAnimated(file, ffmpeg as any, ffmpegMod, targetFormat.value, {
+          fps: 10,
+          scale: 480
+        })
+        if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
+        formatOutputUrl.value = res.url
+        formatOutputName.value = res.name
+        message.success('图像转换为动画格式完成，可下载')
+      } catch (err) {
+        message.error('动画格式转换失败: ' + String(err))
+      }
+      return
+    }
+    
+    // Regular image format conversion
     const reader = new FileReader()
     reader.onload = async ev => {
       const img = new Image()
@@ -161,11 +222,7 @@ const startFormatConversion = async () => {
     reader.readAsDataURL(file)
   } else if (file.type.startsWith('video/')) {
     if (!ffmpegLoaded.value || !ffmpeg) {
-      message.warning('视频转换需要 FFmpeg，先初始化 FFmpeg（右侧）')
-      // fallback: provide original file for download
-      if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
-      formatOutputUrl.value = URL.createObjectURL(file)
-      formatOutputName.value = file.name
+      message.warning('视频转换需要 FFmpeg，请先初始化 FFmpeg（页面下方）')
       return
     }
 
@@ -173,8 +230,24 @@ const startFormatConversion = async () => {
       message.loading('正在使用 FFmpeg 转换视频，请稍候...', 0)
       const mod = await import('@/options/utils/ffmpegHelper')
       const { convertVideoToAnimated } = mod
-      const res = await convertVideoToAnimated(file, ffmpeg as any, ffmpegMod, targetFormat.value === 'gif' ? 'gif' : 'apng', {
-        fps: 10,
+      
+      // 根据目标格式选择输出类型
+      let outputType: 'gif' | 'apng' = 'gif'
+      let isFrameExtraction = false
+      
+      if (targetFormat.value === 'apng') {
+        outputType = 'apng'
+      } else if (targetFormat.value === 'gif') {
+        outputType = 'gif'
+      } else {
+        // 对于其他格式，提取第一帧
+        message.info('视频只能转换为动画格式(GIF/APNG)，将提取第一帧作为静态图像')
+        outputType = 'gif' // 默认使用gif格式提取帧
+        isFrameExtraction = true
+      }
+      
+      const res = await convertVideoToAnimated(file, ffmpeg as any, ffmpegMod, outputType, {
+        fps: isFrameExtraction ? 1 : 10,
         scale: 480
       })
       if (formatOutputUrl.value) URL.revokeObjectURL(formatOutputUrl.value)
@@ -211,15 +284,33 @@ const extractFramesFromVideo = async (file: File) => {
     video.addEventListener('loadedmetadata', () => resolve(null))
     video.addEventListener('error', e => reject(e))
   })
+  
   const duration = video.duration
-  const captureCount = Math.min(Math.ceil(duration), 24)
+  // 获取视频信息用于智能采样
+  
+  // 对于高帧率视频，智能决定采样策略
+  let captureCount: number
+  if (duration <= 5) {
+    // 短视频：每秒2帧
+    captureCount = Math.ceil(duration * 2)
+  } else if (duration <= 30) {
+    // 中等长度视频：每秒1帧
+    captureCount = Math.ceil(duration)
+  } else {
+    // 长视频：每2秒1帧
+    captureCount = Math.ceil(duration / 2)
+  }
+  
+  // 限制最大帧数
+  captureCount = Math.min(captureCount, 60)
+  
   const canvas = document.createElement('canvas')
   canvas.width = video.videoWidth || 640
   canvas.height = video.videoHeight || 360
   const ctx = canvas.getContext('2d')!
 
   for (let i = 0; i < captureCount; i++) {
-    const time = (i / captureCount) * duration
+    const time = (i / (captureCount - 1)) * duration
     await new Promise<void>(resolve => {
       const onSeeked = () => {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
@@ -228,7 +319,7 @@ const extractFramesFromVideo = async (file: File) => {
             const imgUrl = URL.createObjectURL(blob)
             frameImages.value.push({
               url: imgUrl,
-              name: `${file.name.replace(/\.[^.]+$/, '')}_frame_${i + 1}.png`
+              name: `${file.name.replace(/\.[^.]+$/, '')}_frame_${String(i + 1).padStart(3, '0')}.png`
             })
           }
           resolve()
@@ -236,7 +327,7 @@ const extractFramesFromVideo = async (file: File) => {
         video.removeEventListener('seeked', onSeeked)
       }
       video.addEventListener('seeked', onSeeked)
-      video.currentTime = Math.min(time, duration - 0.001)
+      video.currentTime = Math.min(time, duration - 0.1)
     })
   }
   URL.revokeObjectURL(url)
@@ -359,9 +450,8 @@ const handleFrameMergerDrop = (ev: DragEvent) => {
   ev.preventDefault()
   handleDragLeave(ev)
 
-  const files = Array.from(ev.dataTransfer?.files || [])
-  frameMergerFiles.value = files.filter(file => file.type.startsWith('image/'))
-  message.success(`已选择 ${frameMergerFiles.value.length} 个图像文件`)
+  const files = Array.from(ev.dataTransfer?.files || []).filter(file => file.type.startsWith('image/'))
+  setFrameMergerFiles(files)
 }
 
 const triggerFrameMergerInput = () => {
@@ -371,9 +461,59 @@ const triggerFrameMergerInput = () => {
 const handleFrameMergerFiles = (e: Event) => {
   const target = e.target as HTMLInputElement
   if (target.files) {
-    frameMergerFiles.value = Array.from(target.files)
-    message.success(`已选择 ${frameMergerFiles.value.length} 个图像文件`)
+    const files = Array.from(target.files).filter(file => file.type.startsWith('image/'))
+    setFrameMergerFiles(files)
   }
+}
+
+const setFrameMergerFiles = (files: File[]) => {
+  // Clear previous previews
+  frameMergerPreviews.value.forEach(preview => {
+    URL.revokeObjectURL(preview.url)
+  })
+  
+  frameMergerFiles.value = files
+  frameMergerPreviews.value = files.map(file => ({
+    file,
+    url: URL.createObjectURL(file),
+    name: file.name
+  }))
+  
+  message.success(`已选择 ${files.length} 个图像文件`)
+}
+
+const moveFrameUp = (index: number) => {
+  if (index > 0) {
+    const files = [...frameMergerFiles.value]
+    const previews = [...frameMergerPreviews.value]
+    
+    // Swap files
+    ;[files[index], files[index - 1]] = [files[index - 1], files[index]]
+    ;[previews[index], previews[index - 1]] = [previews[index - 1], previews[index]]
+    
+    frameMergerFiles.value = files
+    frameMergerPreviews.value = previews
+  }
+}
+
+const moveFrameDown = (index: number) => {
+  if (index < frameMergerFiles.value.length - 1) {
+    const files = [...frameMergerFiles.value]
+    const previews = [...frameMergerPreviews.value]
+    
+    // Swap files
+    ;[files[index], files[index + 1]] = [files[index + 1], files[index]]
+    ;[previews[index], previews[index + 1]] = [previews[index + 1], previews[index]]
+    
+    frameMergerFiles.value = files
+    frameMergerPreviews.value = previews
+  }
+}
+
+const removeFrame = (index: number) => {
+  URL.revokeObjectURL(frameMergerPreviews.value[index].url)
+  frameMergerFiles.value.splice(index, 1)
+  frameMergerPreviews.value.splice(index, 1)
 }
 
 const startFrameMerging = async () => {
@@ -507,9 +647,33 @@ const formatBytes = (bytes: number) => {
           @change="handleFormatConverterFile"
           class="hidden"
         />
-        <div class="text-4xl mb-4">📁</div>
-        <p class="text-gray-600 mb-2">拖拽文件到此处或点击选择文件</p>
-        <p class="text-gray-400 text-sm">支持: GIF, MP4, WebM</p>
+        <div v-if="!formatFile" class="text-4xl mb-4">📁</div>
+        <div v-if="!formatFile">
+          <p class="text-gray-600 mb-2">拖拽文件到此处或点击选择文件</p>
+          <p class="text-gray-400 text-sm">支持: GIF, MP4, WebM</p>
+        </div>
+        
+        <!-- File preview -->
+        <div v-if="formatFile" class="space-y-4">
+          <div class="text-lg font-medium text-gray-700">{{ formatFile.name }}</div>
+          <div v-if="formatFilePreview" class="flex justify-center">
+            <video
+              v-if="formatFile.type.startsWith('video/')"
+              :src="formatFilePreview"
+              controls
+              class="max-w-xs max-h-48 rounded shadow"
+            />
+            <img
+              v-else
+              :src="formatFilePreview"
+              class="max-w-xs max-h-48 rounded shadow object-contain"
+            />
+          </div>
+          <div class="text-sm text-gray-500">
+            大小: {{ (formatFile.size / 1024 / 1024).toFixed(2) }} MB
+          </div>
+          <a-button size="small" @click="clearFormatFile">重新选择</a-button>
+        </div>
       </div>
 
       <div class="mt-4 flex items-center space-x-3">
@@ -518,8 +682,8 @@ const formatBytes = (bytes: number) => {
           <a-select-option value="png">PNG</a-select-option>
           <a-select-option value="webp">WebP</a-select-option>
           <a-select-option value="jpeg">JPEG</a-select-option>
-          <a-select-option value="gif">GIF (原样/不保证转换)</a-select-option>
-          <a-select-option value="apng">APNG (原样/不保证转换)</a-select-option>
+          <a-select-option value="gif">GIF</a-select-option>
+          <a-select-option value="apng">APNG</a-select-option>
         </a-select>
 
         <label class="text-sm">质量：</label>
@@ -683,8 +847,55 @@ const formatBytes = (bytes: number) => {
         <p class="text-gray-400 text-sm">支持: PNG, JPG, WebP</p>
       </div>
 
-      <div v-if="frameMergerFiles.length > 0" class="mt-4">
-        <p class="text-sm text-gray-600 mb-2">已选择 {{ frameMergerFiles.length }} 个文件</p>
+      <div v-if="frameMergerPreviews.length > 0" class="mt-4">
+        <p class="text-sm text-gray-600 mb-2">已选择 {{ frameMergerPreviews.length }} 个文件</p>
+        
+        <!-- Image preview and reordering -->
+        <div class="mb-4 max-h-64 overflow-y-auto border rounded p-2">
+          <div class="grid grid-cols-4 md:grid-cols-6 gap-2">
+            <div 
+              v-for="(preview, index) in frameMergerPreviews" 
+              :key="index" 
+              class="border rounded p-2 bg-white relative group"
+            >
+              <img :src="preview.url" class="w-full h-16 object-contain mb-1" />
+              <div class="text-xs truncate">{{ preview.name }}</div>
+              <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                <a-button 
+                  size="small" 
+                  type="text" 
+                  @click="moveFrameUp(index)"
+                  :disabled="index === 0"
+                  class="!p-1 !w-6 !h-6 flex items-center justify-center"
+                >
+                  ↑
+                </a-button>
+                <a-button 
+                  size="small" 
+                  type="text" 
+                  @click="moveFrameDown(index)"
+                  :disabled="index === frameMergerPreviews.length - 1"
+                  class="!p-1 !w-6 !h-6 flex items-center justify-center"
+                >
+                  ↓
+                </a-button>
+                <a-button 
+                  size="small" 
+                  type="text" 
+                  danger
+                  @click="removeFrame(index)"
+                  class="!p-1 !w-6 !h-6 flex items-center justify-center"
+                >
+                  ×
+                </a-button>
+              </div>
+              <div class="absolute top-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                {{ index + 1 }}
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div class="flex space-x-2 mb-4">
           <a-input-number
             v-model:value="frameDelay"
@@ -700,6 +911,22 @@ const formatBytes = (bytes: number) => {
           </a-select>
         </div>
         <a-button type="primary" @click="startFrameMerging">合并为动画</a-button>
+      </div>
+      
+      <!-- Result display -->
+      <div v-if="formatOutputUrl && frameMergerFiles.length > 0" class="mt-4 p-3 bg-white rounded shadow-sm">
+        <div class="text-sm mb-2">合并结果预览：</div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <img v-if="outputFormat === 'gif'" :src="formatOutputUrl" class="w-20 h-20 object-contain border rounded">
+            <video v-else :src="formatOutputUrl" autoplay loop muted class="w-20 h-20 object-contain border rounded"></video>
+            <div class="text-sm">
+              <div class="font-medium">{{ formatOutputName }}</div>
+              <div class="text-gray-500">{{ frameMergerPreviews.length }} 帧 • {{ frameDelay }}ms 延迟</div>
+            </div>
+          </div>
+          <a-button type="primary" @click="downloadConvertedFile">下载</a-button>
+        </div>
       </div>
     </div>
 
