@@ -1,4 +1,5 @@
 import { BaseProvider } from './BaseProvider'
+
 import type { GenerateRequest, CloudflareGenerateResponse } from '@/types/imageGenerator'
 
 export class CloudflareProvider extends BaseProvider {

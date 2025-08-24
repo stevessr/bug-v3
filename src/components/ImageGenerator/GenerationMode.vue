@@ -1,45 +1,8 @@
-<template>
-  <div class="generation-mode">
-    <h3>🎯 生成模式</h3>
-
-    <div class="mode-selection">
-      <label class="mode-option">
-        <input
-          type="radio"
-          name="mode"
-          value="generate"
-          v-model="selectedMode"
-          @change="onModeChange"
-        />
-        <span>🎨 文本生成图片</span>
-      </label>
-
-      <label class="mode-option">
-        <input
-          type="radio"
-          name="mode"
-          value="edit"
-          v-model="selectedMode"
-          @change="onModeChange"
-          :disabled="!supportsImageEditing"
-        />
-        <span>✏️ 图片编辑</span>
-        <small v-if="!supportsImageEditing" class="disabled-hint">(仅支持 Google Gemini)</small>
-      </label>
-    </div>
-
-    <!-- Image Upload Section for Edit Mode -->
-    <ImageUpload
-      v-if="selectedMode === 'edit'"
-      v-model:image="uploadedImage"
-      @image-changed="onImageChanged"
-    />
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+
 import ImageUpload from './ImageUpload.vue'
+
 import type { ProviderManager } from '@/utils/imageProviders'
 
 interface Props {
@@ -105,6 +68,45 @@ watch(supportsImageEditing, supports => {
   }
 })
 </script>
+
+<template>
+  <div class="generation-mode">
+    <h3>🎯 生成模式</h3>
+
+    <div class="mode-selection">
+      <label class="mode-option">
+        <input
+          type="radio"
+          name="mode"
+          value="generate"
+          v-model="selectedMode"
+          @change="onModeChange"
+        />
+        <span>🎨 文本生成图片</span>
+      </label>
+
+      <label class="mode-option">
+        <input
+          type="radio"
+          name="mode"
+          value="edit"
+          v-model="selectedMode"
+          @change="onModeChange"
+          :disabled="!supportsImageEditing"
+        />
+        <span>✏️ 图片编辑</span>
+        <small v-if="!supportsImageEditing" class="disabled-hint">(仅支持 Google Gemini)</small>
+      </label>
+    </div>
+
+    <!-- Image Upload Section for Edit Mode -->
+    <ImageUpload
+      v-if="selectedMode === 'edit'"
+      v-model:image="uploadedImage"
+      @image-changed="onImageChanged"
+    />
+  </div>
+</template>
 
 <style scoped>
 .generation-mode {

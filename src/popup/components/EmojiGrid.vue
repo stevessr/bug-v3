@@ -1,3 +1,23 @@
+<script setup lang="ts">
+import { defineProps, toRefs } from 'vue'
+
+import type { Emoji } from '../../types/emoji'
+
+// Keep props reactive in the template by using toRefs instead of plain
+// destructuring which would lose reactivity for primitive props like
+// `isLoading` and cause the loading UI to never update.
+const props = defineProps<{
+  emojis: Emoji[]
+  isLoading: boolean
+  favorites: Set<string>
+  gridColumns: number
+  emptyMessage: string
+  showAddButton: boolean
+}>()
+
+const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton } = toRefs(props)
+</script>
+
 <template>
   <div v-if="isLoading" class="flex items-center justify-center py-8">
     <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
@@ -66,22 +86,3 @@
     </button>
   </div>
 </template>
-
-<script setup lang="ts">
-import { defineProps, toRefs } from 'vue'
-import type { Emoji } from '../../types/emoji'
-
-// Keep props reactive in the template by using toRefs instead of plain
-// destructuring which would lose reactivity for primitive props like
-// `isLoading` and cause the loading UI to never update.
-const props = defineProps<{
-  emojis: Emoji[]
-  isLoading: boolean
-  favorites: Set<string>
-  gridColumns: number
-  emptyMessage: string
-  showAddButton: boolean
-}>()
-
-const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton } = toRefs(props)
-</script>

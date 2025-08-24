@@ -1,5 +1,6 @@
-import { getChromeAPI } from './utils'
 import { newStorageHelpers } from '../utils/newStorage'
+
+import { getChromeAPI } from './utils'
 
 export function setupMessageListener() {
   const chromeAPI = getChromeAPI()

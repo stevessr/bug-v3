@@ -1,3 +1,19 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+const props = defineProps<{
+  emojiStore: any
+}>()
+
+defineEmits<{
+  (e: 'remove', groupId: string, idx: number): void
+  (e: 'edit', emoji: any, groupId: string, idx: number): void
+}>()
+
+const favoritesGroup = computed(() =>
+  props.emojiStore?.sortedGroups?.find((g: any) => g.id === 'favorites')
+)
+</script>
+
 <template>
   <div class="space-y-8">
     <div class="bg-white rounded-lg shadow-sm border">
@@ -67,22 +83,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed } from 'vue'
-const props = defineProps<{
-  emojiStore: any
-}>()
-
-defineEmits<{
-  (e: 'remove', groupId: string, idx: number): void
-  (e: 'edit', emoji: any, groupId: string, idx: number): void
-}>()
-
-const favoritesGroup = computed(() =>
-  props.emojiStore?.sortedGroups?.find((g: any) => g.id === 'favorites')
-)
-</script>
 
 <style scoped>
 .emoji-item {

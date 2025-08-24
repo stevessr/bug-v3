@@ -1,3 +1,94 @@
+<script setup lang="ts">
+import { ref, watch, computed } from 'vue'
+
+import { useEmojiStore } from '../../stores/emojiStore'
+import type { Emoji } from '../../types/emoji'
+
+const props = defineProps<{
+  show: boolean
+  emoji?: Emoji
+  groupId?: string
+  index?: number
+}>()
+
+const emit = defineEmits<{
+  'update:show': [value: boolean]
+  save: [payload: { emoji: Emoji; groupId: string; index: number; targetGroupId?: string }]
+  'image-error': [event: Event]
+}>()
+
+const emojiStore = useEmojiStore()
+
+const localEmoji = ref<Partial<Emoji>>({
+  name: '',
+  url: '',
+  displayUrl: ''
+})
+
+const selectedGroupId = ref<string>('')
+
+// 可用的分组列表（排除常用分组）
+const availableGroups = computed(() => {
+  return emojiStore.groups.filter(g => g.id !== 'favorites')
+})
+
+watch(
+  () => props.emoji,
+  newEmoji => {
+    if (newEmoji) {
+      localEmoji.value = { ...newEmoji }
+      selectedGroupId.value = newEmoji.groupId || props.groupId || ''
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => props.groupId,
+  newGroupId => {
+    if (newGroupId && !selectedGroupId.value) {
+      selectedGroupId.value = newGroupId
+    }
+  },
+  { immediate: true }
+)
+
+const closeModal = () => {
+  emit('update:show', false)
+}
+
+const handleSubmit = () => {
+  if (
+    props.groupId !== undefined &&
+    props.index !== undefined &&
+    localEmoji.value.name &&
+    localEmoji.value.url
+  ) {
+    const updatedEmoji: Emoji = {
+      id: props.emoji?.id || '',
+      packet: props.emoji?.packet || Date.now(),
+      name: localEmoji.value.name,
+      url: localEmoji.value.url,
+      displayUrl: localEmoji.value.displayUrl || undefined,
+      groupId: selectedGroupId.value,
+      width: localEmoji.value.width,
+      height: localEmoji.value.height,
+      usageCount: localEmoji.value.usageCount,
+      lastUsed: localEmoji.value.lastUsed,
+      addedAt: localEmoji.value.addedAt
+    }
+
+    emit('save', {
+      emoji: updatedEmoji,
+      groupId: props.groupId,
+      index: props.index,
+      targetGroupId: selectedGroupId.value !== props.groupId ? selectedGroupId.value : undefined
+    })
+    closeModal()
+  }
+}
+</script>
+
 <template>
   <div
     v-if="show"
@@ -124,93 +215,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import { useEmojiStore } from '../../stores/emojiStore'
-import type { Emoji } from '../../types/emoji'
-
-const props = defineProps<{
-  show: boolean
-  emoji?: Emoji
-  groupId?: string
-  index?: number
-}>()
-
-const emit = defineEmits<{
-  'update:show': [value: boolean]
-  save: [payload: { emoji: Emoji; groupId: string; index: number; targetGroupId?: string }]
-  'image-error': [event: Event]
-}>()
-
-const emojiStore = useEmojiStore()
-
-const localEmoji = ref<Partial<Emoji>>({
-  name: '',
-  url: '',
-  displayUrl: ''
-})
-
-const selectedGroupId = ref<string>('')
-
-// 可用的分组列表（排除常用分组）
-const availableGroups = computed(() => {
-  return emojiStore.groups.filter(g => g.id !== 'favorites')
-})
-
-watch(
-  () => props.emoji,
-  newEmoji => {
-    if (newEmoji) {
-      localEmoji.value = { ...newEmoji }
-      selectedGroupId.value = newEmoji.groupId || props.groupId || ''
-    }
-  },
-  { immediate: true }
-)
-
-watch(
-  () => props.groupId,
-  newGroupId => {
-    if (newGroupId && !selectedGroupId.value) {
-      selectedGroupId.value = newGroupId
-    }
-  },
-  { immediate: true }
-)
-
-const closeModal = () => {
-  emit('update:show', false)
-}
-
-const handleSubmit = () => {
-  if (
-    props.groupId !== undefined &&
-    props.index !== undefined &&
-    localEmoji.value.name &&
-    localEmoji.value.url
-  ) {
-    const updatedEmoji: Emoji = {
-      id: props.emoji?.id || '',
-      packet: props.emoji?.packet || Date.now(),
-      name: localEmoji.value.name,
-      url: localEmoji.value.url,
-      displayUrl: localEmoji.value.displayUrl || undefined,
-      groupId: selectedGroupId.value,
-      width: localEmoji.value.width,
-      height: localEmoji.value.height,
-      usageCount: localEmoji.value.usageCount,
-      lastUsed: localEmoji.value.lastUsed,
-      addedAt: localEmoji.value.addedAt
-    }
-
-    emit('save', {
-      emoji: updatedEmoji,
-      groupId: props.groupId,
-      index: props.index,
-      targetGroupId: selectedGroupId.value !== props.groupId ? selectedGroupId.value : undefined
-    })
-    closeModal()
-  }
-}
-</script>

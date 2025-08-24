@@ -1,3 +1,21 @@
+<script setup lang="ts">
+import { defineProps, defineEmits } from 'vue'
+
+const { show, group } = defineProps<{
+  show: boolean
+  group: { id?: string; name?: string } | null
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:show', value: boolean): void
+  (e: 'confirm'): void
+}>()
+
+const close = () => emit('update:show', false)
+const cancel = () => emit('update:show', false)
+const confirmDelete = () => emit('confirm')
+</script>
+
 <template>
   <transition name="modal" appear>
     <div
@@ -28,24 +46,6 @@
     </div>
   </transition>
 </template>
-
-<script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
-
-const { show, group } = defineProps<{
-  show: boolean
-  group: { id?: string; name?: string } | null
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:show', value: boolean): void
-  (e: 'confirm'): void
-}>()
-
-const close = () => emit('update:show', false)
-const cancel = () => emit('update:show', false)
-const confirmDelete = () => emit('confirm')
-</script>
 
 <style scoped>
 /* backdrop fade */
