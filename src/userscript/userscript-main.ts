@@ -9,7 +9,7 @@ import {
 } from './userscript-storage'
 
 // Global state for userscript
-let userscriptState = {
+const userscriptState = {
   emojiGroups: [],
   settings: {
     imageScale: 30,

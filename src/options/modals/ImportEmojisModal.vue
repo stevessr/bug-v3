@@ -1,64 +1,3 @@
-<template>
-  <div
-    v-if="modelValue"
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    @click="close"
-  >
-    <div class="bg-white rounded-lg p-6 w-full max-w-lg" @click.stop>
-      <h3 class="text-lg font-semibold mb-4">批量导入表情</h3>
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">表情文件</label>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".json"
-            @change="handleFile"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">或粘贴表情JSON</label>
-          <textarea
-            v-model="text"
-            rows="6"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="粘贴表情JSON内容..."
-          ></textarea>
-          <div class="mt-2 text-xs text-gray-500">
-            示例：
-            <button class="ml-2 text-blue-600 hover:underline" @click="fillExample">
-              填充示例
-            </button>
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">目标分组（可选）</label>
-          <input
-            v-model="targetGroupId"
-            placeholder="留空按 JSON 中分组创建"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md"
-          />
-        </div>
-      </div>
-      <div class="flex justify-end gap-3 mt-6">
-        <button
-          @click="close"
-          class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
-        >
-          取消
-        </button>
-        <button
-          @click="doImport"
-          class="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
-        >
-          导入
-        </button>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, defineEmits, defineProps } from 'vue'
 
@@ -133,3 +72,64 @@ const fillExample = () => {
   )
 }
 </script>
+
+<template>
+  <div
+    v-if="modelValue"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    @click="close"
+  >
+    <div class="bg-white rounded-lg p-6 w-full max-w-lg" @click.stop>
+      <h3 class="text-lg font-semibold mb-4">批量导入表情</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">表情文件</label>
+          <input
+            ref="fileInput"
+            type="file"
+            accept=".json"
+            @change="handleFile"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">或粘贴表情JSON</label>
+          <textarea
+            v-model="text"
+            rows="6"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="粘贴表情JSON内容..."
+          ></textarea>
+          <div class="mt-2 text-xs text-gray-500">
+            示例：
+            <button class="ml-2 text-blue-600 hover:underline" @click="fillExample">
+              填充示例
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">目标分组（可选）</label>
+          <input
+            v-model="targetGroupId"
+            placeholder="留空按 JSON 中分组创建"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md"
+          />
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button
+          @click="close"
+          class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+        >
+          取消
+        </button>
+        <button
+          @click="doImport"
+          class="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+        >
+          导入
+        </button>
+      </div>
+    </div>
+  </div>
+</template>

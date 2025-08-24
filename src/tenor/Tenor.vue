@@ -1,3 +1,223 @@
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+
+import { useEmojiStore } from '../stores/emojiStore'
+
+const emojiStore = useEmojiStore()
+
+// State
+const tenorApiKey = ref('')
+const inputApiKey = ref('')
+const searchQuery = ref('')
+const searchResults = ref<any[]>([])
+const selectedGifs = ref(new Set<string>())
+const isSearching = ref(false)
+const isLoadingMore = ref(false)
+const isImporting = ref(false)
+const hasSearched = ref(false)
+const hasMore = ref(false)
+const nextPos = ref('')
+
+// Search options
+const searchLimit = ref(12)
+const contentFilter = ref('high')
+
+// Group selection
+const showGroupModal = ref(false)
+const selectedGroupId = ref('')
+
+// Messages
+const message = ref({ text: '', type: 'success' as 'success' | 'error' })
+
+// Computed
+const availableGroups = computed(() => {
+  return emojiStore.groups.filter(g => g.id !== 'favorites')
+})
+
+// Load API key from storage
+onMounted(async () => {
+  await emojiStore.loadData()
+
+  try {
+    const result = await chrome.storage.local.get(['tenorApiKey'])
+    if (result.tenorApiKey) {
+      tenorApiKey.value = result.tenorApiKey
+    }
+  } catch (error) {
+    console.error('Failed to load Tenor API key:', error)
+  }
+})
+
+// Methods
+const saveApiKey = async () => {
+  if (!inputApiKey.value.trim()) return
+
+  try {
+    await chrome.storage.local.set({ tenorApiKey: inputApiKey.value.trim() })
+    tenorApiKey.value = inputApiKey.value.trim()
+    inputApiKey.value = ''
+    showMessage('API Key 已保存', 'success')
+  } catch (error) {
+    console.error('Failed to save API key:', error)
+    showMessage('API Key 保存失败', 'error')
+  }
+}
+
+const clearApiKey = async () => {
+  try {
+    await chrome.storage.local.remove(['tenorApiKey'])
+    tenorApiKey.value = ''
+    searchResults.value = []
+    selectedGifs.value.clear()
+    hasSearched.value = false
+    showMessage('API Key 已清除', 'success')
+  } catch (error) {
+    console.error('Failed to clear API key:', error)
+    showMessage('API Key 清除失败', 'error')
+  }
+}
+
+const searchGifs = async () => {
+  if (!searchQuery.value.trim() || !tenorApiKey.value || isSearching.value) return
+
+  isSearching.value = true
+  hasSearched.value = true
+  searchResults.value = []
+  selectedGifs.value.clear()
+  nextPos.value = ''
+
+  try {
+    const url = new URL('https://tenor.googleapis.com/v2/search')
+    url.searchParams.set('q', searchQuery.value.trim())
+    url.searchParams.set('key', tenorApiKey.value)
+    url.searchParams.set('limit', searchLimit.value.toString())
+    url.searchParams.set('contentfilter', contentFilter.value)
+    url.searchParams.set('media_filter', 'tinygif,gif')
+
+    const response = await fetch(url.toString())
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    if (data.results && Array.isArray(data.results)) {
+      searchResults.value = data.results
+      nextPos.value = data.next || ''
+      hasMore.value = !!data.next
+    } else {
+      searchResults.value = []
+      hasMore.value = false
+    }
+  } catch (error) {
+    console.error('Search failed:', error)
+    showMessage('搜索失败，请检查 API Key 或网络连接', 'error')
+    searchResults.value = []
+    hasMore.value = false
+  } finally {
+    isSearching.value = false
+  }
+}
+
+const loadMore = async () => {
+  if (!nextPos.value || isLoadingMore.value) return
+
+  isLoadingMore.value = true
+
+  try {
+    const url = new URL('https://tenor.googleapis.com/v2/search')
+    url.searchParams.set('q', searchQuery.value.trim())
+    url.searchParams.set('key', tenorApiKey.value)
+    url.searchParams.set('limit', searchLimit.value.toString())
+    url.searchParams.set('contentfilter', contentFilter.value)
+    url.searchParams.set('media_filter', 'tinygif,gif')
+    url.searchParams.set('pos', nextPos.value)
+
+    const response = await fetch(url.toString())
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    if (data.results && Array.isArray(data.results)) {
+      searchResults.value.push(...data.results)
+      nextPos.value = data.next || ''
+      hasMore.value = !!data.next
+    }
+  } catch (error) {
+    console.error('Load more failed:', error)
+    showMessage('加载更多失败', 'error')
+  } finally {
+    isLoadingMore.value = false
+  }
+}
+
+const toggleSelection = (gif: any) => {
+  if (selectedGifs.value.has(gif.id)) {
+    selectedGifs.value.delete(gif.id)
+  } else {
+    selectedGifs.value.add(gif.id)
+  }
+}
+
+const importSelected = () => {
+  if (selectedGifs.value.size === 0) return
+
+  if (availableGroups.value.length > 0) {
+    selectedGroupId.value = availableGroups.value[0].id
+  }
+  showGroupModal.value = true
+}
+
+const confirmImport = async () => {
+  if (!selectedGroupId.value || selectedGifs.value.size === 0) return
+
+  isImporting.value = true
+
+  try {
+    const gifsToImport = searchResults.value.filter(gif => selectedGifs.value.has(gif.id))
+    let successCount = 0
+
+    for (const gif of gifsToImport) {
+      try {
+        const emoji = {
+          name: gif.content_description || `tenor-${gif.id}`,
+          url: gif.media_formats.gif.url // Use full GIF for storage
+        }
+
+        emojiStore.addEmoji(selectedGroupId.value, emoji)
+        successCount++
+      } catch (error) {
+        console.error('Failed to import GIF:', gif.id, error)
+      }
+    }
+
+    if (successCount > 0) {
+      showMessage(`成功导入 ${successCount} 个 GIF`, 'success')
+      selectedGifs.value.clear()
+      showGroupModal.value = false
+    } else {
+      showMessage('导入失败', 'error')
+    }
+  } catch (error) {
+    console.error('Import failed:', error)
+    showMessage('导入失败', 'error')
+  } finally {
+    isImporting.value = false
+  }
+}
+
+const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
+  message.value = { text, type }
+  setTimeout(() => {
+    message.value.text = ''
+  }, 3000)
+}
+</script>
+
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
@@ -291,222 +511,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useEmojiStore } from '../stores/emojiStore'
-
-const emojiStore = useEmojiStore()
-
-// State
-const tenorApiKey = ref('')
-const inputApiKey = ref('')
-const searchQuery = ref('')
-const searchResults = ref<any[]>([])
-const selectedGifs = ref(new Set<string>())
-const isSearching = ref(false)
-const isLoadingMore = ref(false)
-const isImporting = ref(false)
-const hasSearched = ref(false)
-const hasMore = ref(false)
-const nextPos = ref('')
-
-// Search options
-const searchLimit = ref(12)
-const contentFilter = ref('high')
-
-// Group selection
-const showGroupModal = ref(false)
-const selectedGroupId = ref('')
-
-// Messages
-const message = ref({ text: '', type: 'success' as 'success' | 'error' })
-
-// Computed
-const availableGroups = computed(() => {
-  return emojiStore.groups.filter(g => g.id !== 'favorites')
-})
-
-// Load API key from storage
-onMounted(async () => {
-  await emojiStore.loadData()
-
-  try {
-    const result = await chrome.storage.local.get(['tenorApiKey'])
-    if (result.tenorApiKey) {
-      tenorApiKey.value = result.tenorApiKey
-    }
-  } catch (error) {
-    console.error('Failed to load Tenor API key:', error)
-  }
-})
-
-// Methods
-const saveApiKey = async () => {
-  if (!inputApiKey.value.trim()) return
-
-  try {
-    await chrome.storage.local.set({ tenorApiKey: inputApiKey.value.trim() })
-    tenorApiKey.value = inputApiKey.value.trim()
-    inputApiKey.value = ''
-    showMessage('API Key 已保存', 'success')
-  } catch (error) {
-    console.error('Failed to save API key:', error)
-    showMessage('API Key 保存失败', 'error')
-  }
-}
-
-const clearApiKey = async () => {
-  try {
-    await chrome.storage.local.remove(['tenorApiKey'])
-    tenorApiKey.value = ''
-    searchResults.value = []
-    selectedGifs.value.clear()
-    hasSearched.value = false
-    showMessage('API Key 已清除', 'success')
-  } catch (error) {
-    console.error('Failed to clear API key:', error)
-    showMessage('API Key 清除失败', 'error')
-  }
-}
-
-const searchGifs = async () => {
-  if (!searchQuery.value.trim() || !tenorApiKey.value || isSearching.value) return
-
-  isSearching.value = true
-  hasSearched.value = true
-  searchResults.value = []
-  selectedGifs.value.clear()
-  nextPos.value = ''
-
-  try {
-    const url = new URL('https://tenor.googleapis.com/v2/search')
-    url.searchParams.set('q', searchQuery.value.trim())
-    url.searchParams.set('key', tenorApiKey.value)
-    url.searchParams.set('limit', searchLimit.value.toString())
-    url.searchParams.set('contentfilter', contentFilter.value)
-    url.searchParams.set('media_filter', 'tinygif,gif')
-
-    const response = await fetch(url.toString())
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    if (data.results && Array.isArray(data.results)) {
-      searchResults.value = data.results
-      nextPos.value = data.next || ''
-      hasMore.value = !!data.next
-    } else {
-      searchResults.value = []
-      hasMore.value = false
-    }
-  } catch (error) {
-    console.error('Search failed:', error)
-    showMessage('搜索失败，请检查 API Key 或网络连接', 'error')
-    searchResults.value = []
-    hasMore.value = false
-  } finally {
-    isSearching.value = false
-  }
-}
-
-const loadMore = async () => {
-  if (!nextPos.value || isLoadingMore.value) return
-
-  isLoadingMore.value = true
-
-  try {
-    const url = new URL('https://tenor.googleapis.com/v2/search')
-    url.searchParams.set('q', searchQuery.value.trim())
-    url.searchParams.set('key', tenorApiKey.value)
-    url.searchParams.set('limit', searchLimit.value.toString())
-    url.searchParams.set('contentfilter', contentFilter.value)
-    url.searchParams.set('media_filter', 'tinygif,gif')
-    url.searchParams.set('pos', nextPos.value)
-
-    const response = await fetch(url.toString())
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    if (data.results && Array.isArray(data.results)) {
-      searchResults.value.push(...data.results)
-      nextPos.value = data.next || ''
-      hasMore.value = !!data.next
-    }
-  } catch (error) {
-    console.error('Load more failed:', error)
-    showMessage('加载更多失败', 'error')
-  } finally {
-    isLoadingMore.value = false
-  }
-}
-
-const toggleSelection = (gif: any) => {
-  if (selectedGifs.value.has(gif.id)) {
-    selectedGifs.value.delete(gif.id)
-  } else {
-    selectedGifs.value.add(gif.id)
-  }
-}
-
-const importSelected = () => {
-  if (selectedGifs.value.size === 0) return
-
-  if (availableGroups.value.length > 0) {
-    selectedGroupId.value = availableGroups.value[0].id
-  }
-  showGroupModal.value = true
-}
-
-const confirmImport = async () => {
-  if (!selectedGroupId.value || selectedGifs.value.size === 0) return
-
-  isImporting.value = true
-
-  try {
-    const gifsToImport = searchResults.value.filter(gif => selectedGifs.value.has(gif.id))
-    let successCount = 0
-
-    for (const gif of gifsToImport) {
-      try {
-        const emoji = {
-          name: gif.content_description || `tenor-${gif.id}`,
-          url: gif.media_formats.gif.url // Use full GIF for storage
-        }
-
-        emojiStore.addEmoji(selectedGroupId.value, emoji)
-        successCount++
-      } catch (error) {
-        console.error('Failed to import GIF:', gif.id, error)
-      }
-    }
-
-    if (successCount > 0) {
-      showMessage(`成功导入 ${successCount} 个 GIF`, 'success')
-      selectedGifs.value.clear()
-      showGroupModal.value = false
-    } else {
-      showMessage('导入失败', 'error')
-    }
-  } catch (error) {
-    console.error('Import failed:', error)
-    showMessage('导入失败', 'error')
-  } finally {
-    isImporting.value = false
-  }
-}
-
-const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
-  message.value = { text, type }
-  setTimeout(() => {
-    message.value.text = ''
-  }, 3000)
-}
-</script>

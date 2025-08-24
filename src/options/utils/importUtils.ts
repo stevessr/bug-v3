@@ -22,7 +22,7 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
     let match: RegExpExecArray | null = null
     while ((match = re.exec(md)) !== null) {
       const alt = (match[1] || '').trim()
-      let urlPart = (match[2] || '').trim()
+      const urlPart = (match[2] || '').trim()
 
       // Parse URL and optional display URL from title
       const urlTokens = urlPart.split(/\s+/)

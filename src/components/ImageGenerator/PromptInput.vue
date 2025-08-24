@@ -1,23 +1,3 @@
-<template>
-  <div class="prompt-input">
-    <label for="prompt" class="prompt-label">
-      {{ isEditMode ? '✏️ 描述您想要对图片进行的修改' : '📝 描述您想要生成的图片' }}
-    </label>
-
-    <div class="input-group">
-      <textarea
-        id="prompt"
-        v-model="promptText"
-        @input="onPromptChange"
-        :placeholder="placeholder"
-        class="prompt-textarea"
-        rows="4"
-        required
-      ></textarea>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 
@@ -55,6 +35,26 @@ watch(
   }
 )
 </script>
+
+<template>
+  <div class="prompt-input">
+    <label for="prompt" class="prompt-label">
+      {{ isEditMode ? '✏️ 描述您想要对图片进行的修改' : '📝 描述您想要生成的图片' }}
+    </label>
+
+    <div class="input-group">
+      <textarea
+        id="prompt"
+        v-model="promptText"
+        @input="onPromptChange"
+        :placeholder="placeholder"
+        class="prompt-textarea"
+        rows="4"
+        required
+      ></textarea>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .prompt-input {

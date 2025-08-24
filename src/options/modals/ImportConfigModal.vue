@@ -1,3 +1,42 @@
+<script setup lang="ts">
+import { ref, defineEmits, defineProps } from 'vue'
+
+const props = defineProps<{ modelValue: boolean }>()
+void props.modelValue
+const emit = defineEmits<{
+  (e: 'update:modelValue', v: boolean): void
+  (e: 'imported', config: any): void
+}>()
+
+const text = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const close = () => emit('update:modelValue', false)
+
+const handleFile = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = e => {
+      text.value = e.target?.result as string
+    }
+    reader.readAsText(file)
+  }
+}
+
+const doImport = () => {
+  try {
+    const parsed = JSON.parse(text.value)
+    emit('imported', parsed)
+    text.value = ''
+    close()
+  } catch (err) {
+    emit('imported', null)
+  }
+}
+</script>
+
 <template>
   <div
     v-if="modelValue"
@@ -44,42 +83,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, defineEmits, defineProps } from 'vue'
-
-const props = defineProps<{ modelValue: boolean }>()
-void props.modelValue
-const emit = defineEmits<{
-  (e: 'update:modelValue', v: boolean): void
-  (e: 'imported', config: any): void
-}>()
-
-const text = ref('')
-const fileInput = ref<HTMLInputElement | null>(null)
-
-const close = () => emit('update:modelValue', false)
-
-const handleFile = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = e => {
-      text.value = e.target?.result as string
-    }
-    reader.readAsText(file)
-  }
-}
-
-const doImport = () => {
-  try {
-    const parsed = JSON.parse(text.value)
-    emit('imported', parsed)
-    text.value = ''
-    close()
-  } catch (err) {
-    emit('imported', null)
-  }
-}
-</script>

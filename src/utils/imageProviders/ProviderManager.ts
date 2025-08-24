@@ -1,8 +1,9 @@
-import type { ImageProvider, GenerateRequest } from '@/types/imageGenerator'
 import { GeminiProvider } from './GeminiProvider'
 import { SiliconFlowProvider } from './SiliconFlowProvider'
 import { CloudflareProvider } from './CloudflareProvider'
 import { ChutesAIProvider } from './ChutesAIProvider'
+
+import type { ImageProvider, GenerateRequest } from '@/types/imageGenerator'
 
 export class ProviderManager {
   private providers: Map<string, ImageProvider> = new Map()

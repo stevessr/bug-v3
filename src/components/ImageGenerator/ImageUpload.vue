@@ -1,36 +1,3 @@
-<template>
-  <div class="image-upload-section">
-    <h4>上传要编辑的图片</h4>
-
-    <!-- Upload Area -->
-    <div
-      v-if="!previewImage"
-      class="upload-area"
-      :class="{ 'drag-over': isDragOver }"
-      @click="triggerFileInput"
-      @dragover.prevent="onDragOver"
-      @dragleave.prevent="onDragLeave"
-      @drop.prevent="onDrop"
-    >
-      <div class="upload-icon">📷</div>
-      <div class="upload-text">点击或拖拽图片到此处</div>
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/*"
-        @change="onFileSelect"
-        style="display: none"
-      />
-    </div>
-
-    <!-- Image Preview -->
-    <div v-else class="image-preview">
-      <img :src="previewImage" alt="Preview" class="preview-img" />
-      <button @click="removeImage" class="remove-btn">移除图片</button>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 
@@ -124,6 +91,39 @@ watch(
   }
 )
 </script>
+
+<template>
+  <div class="image-upload-section">
+    <h4>上传要编辑的图片</h4>
+
+    <!-- Upload Area -->
+    <div
+      v-if="!previewImage"
+      class="upload-area"
+      :class="{ 'drag-over': isDragOver }"
+      @click="triggerFileInput"
+      @dragover.prevent="onDragOver"
+      @dragleave.prevent="onDragLeave"
+      @drop.prevent="onDrop"
+    >
+      <div class="upload-icon">📷</div>
+      <div class="upload-text">点击或拖拽图片到此处</div>
+      <input
+        ref="fileInput"
+        type="file"
+        accept="image/*"
+        @change="onFileSelect"
+        style="display: none"
+      />
+    </div>
+
+    <!-- Image Preview -->
+    <div v-else class="image-preview">
+      <img :src="previewImage" alt="Preview" class="preview-img" />
+      <button @click="removeImage" class="remove-btn">移除图片</button>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .image-upload-section {

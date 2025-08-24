@@ -1,3 +1,42 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+
+interface Props {
+  isLoading: boolean
+  error: string | null
+  images: string[]
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  downloadImage: [url: string, filename: string]
+  copyImageUrl: [url: string]
+}>()
+
+const loadedImages = ref(new Set<string>())
+
+const onImageLoad = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  loadedImages.value.add(img.src)
+}
+
+const onImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  console.error('Failed to load image:', img.src)
+}
+
+const downloadImage = (url: string, index: number) => {
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')
+  const filename = `generated-image-${timestamp}-${index + 1}.png`
+  emit('downloadImage', url, filename)
+}
+
+const copyImageUrl = (url: string) => {
+  emit('copyImageUrl', url)
+}
+</script>
+
 <template>
   <div class="result-display">
     <!-- Loading State -->
@@ -41,45 +80,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref } from 'vue'
-
-interface Props {
-  isLoading: boolean
-  error: string | null
-  images: string[]
-}
-
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  downloadImage: [url: string, filename: string]
-  copyImageUrl: [url: string]
-}>()
-
-const loadedImages = ref(new Set<string>())
-
-const onImageLoad = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  loadedImages.value.add(img.src)
-}
-
-const onImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  console.error('Failed to load image:', img.src)
-}
-
-const downloadImage = (url: string, index: number) => {
-  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')
-  const filename = `generated-image-${timestamp}-${index + 1}.png`
-  emit('downloadImage', url, filename)
-}
-
-const copyImageUrl = (url: string) => {
-  emit('copyImageUrl', url)
-}
-</script>
 
 <style scoped>
 .result-display {

@@ -1,53 +1,6 @@
-<template>
-  <div class="api-config">
-    <h3>⚙️ API 配置</h3>
-
-    <!-- Provider Selection -->
-    <div class="config-item">
-      <label for="providerSelect">选择服务商</label>
-      <select
-        id="providerSelect"
-        v-model="selectedProvider"
-        @change="onProviderChange"
-        class="form-select"
-      >
-        <option v-for="provider in providerNames" :key="provider" :value="provider">
-          {{ getProviderDisplayName(provider) }}
-        </option>
-      </select>
-    </div>
-
-    <!-- API Key Input -->
-    <div class="config-item">
-      <input
-        type="password"
-        v-model="apiKey"
-        @input="onApiKeyChange"
-        :placeholder="currentProviderConfig?.placeholder || '请输入您的 API Key'"
-        class="form-input"
-      />
-      <small class="help-text">
-        {{ currentProviderConfig?.helpText }}:
-        <a :href="currentProviderConfig?.helpLink" target="_blank" class="help-link">
-          {{ getProviderDisplayName(selectedProvider) }}
-        </a>
-      </small>
-    </div>
-
-    <!-- Model Selection for providers that support it -->
-    <div v-if="currentProviderConfig?.supportsModels" class="config-item">
-      <label for="modelSelect">选择模型</label>
-      <select id="modelSelect" v-model="selectedModel" @change="onModelChange" class="form-select">
-        <option v-for="model in currentProviderConfig.models" :key="model.id" :value="model.id">
-          {{ model.name }}
-        </option>
-      </select>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+
 import { PROVIDER_CONFIGS } from '@/types/imageGenerator'
 import type { ProviderManager } from '@/utils/imageProviders'
 
@@ -130,6 +83,54 @@ watch(
   }
 )
 </script>
+
+<template>
+  <div class="api-config">
+    <h3>⚙️ API 配置</h3>
+
+    <!-- Provider Selection -->
+    <div class="config-item">
+      <label for="providerSelect">选择服务商</label>
+      <select
+        id="providerSelect"
+        v-model="selectedProvider"
+        @change="onProviderChange"
+        class="form-select"
+      >
+        <option v-for="provider in providerNames" :key="provider" :value="provider">
+          {{ getProviderDisplayName(provider) }}
+        </option>
+      </select>
+    </div>
+
+    <!-- API Key Input -->
+    <div class="config-item">
+      <input
+        type="password"
+        v-model="apiKey"
+        @input="onApiKeyChange"
+        :placeholder="currentProviderConfig?.placeholder || '请输入您的 API Key'"
+        class="form-input"
+      />
+      <small class="help-text">
+        {{ currentProviderConfig?.helpText }}:
+        <a :href="currentProviderConfig?.helpLink" target="_blank" class="help-link">
+          {{ getProviderDisplayName(selectedProvider) }}
+        </a>
+      </small>
+    </div>
+
+    <!-- Model Selection for providers that support it -->
+    <div v-if="currentProviderConfig?.supportsModels" class="config-item">
+      <label for="modelSelect">选择模型</label>
+      <select id="modelSelect" v-model="selectedModel" @change="onModelChange" class="form-select">
+        <option v-for="model in currentProviderConfig.models" :key="model.id" :value="model.id">
+          {{ model.name }}
+        </option>
+      </select>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .api-config {

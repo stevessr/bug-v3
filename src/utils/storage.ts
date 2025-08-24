@@ -1,7 +1,8 @@
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
-import indexedDBHelpers from './indexedDB'
 import { logger } from '../config/buildFlags'
+
+import indexedDBHelpers from './indexedDB'
 
 // In build/test environments `chrome` may not be declared. Provide a loose declaration
 declare const chrome: any

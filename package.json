@@ -28,6 +28,7 @@
   "dependencies": {
     "ant-design-vue": "^4.1.2",
     "eslint": "^9.34.0",
+    "globals": "^16.3.0",
     "pinia": "^2.1.7",
     "vue": "^3.4.21"
   },
