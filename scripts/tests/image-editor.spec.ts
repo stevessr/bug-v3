@@ -18,7 +18,7 @@ test.describe('Image Editor', () => {
 
   test('should display tool sidebar', async ({ page }) => {
     // Check tool categories
-    await expect(page.locator('text=基础工具')).toBeVisible()
+    await expect(page.locator('text=工具')).toBeVisible()
     await expect(page.locator('text=调整')).toBeVisible()
     await expect(page.locator('text=滤镜')).toBeVisible()
     
@@ -27,7 +27,7 @@ test.describe('Image Editor', () => {
     await expect(page.locator('text=裁剪')).toBeVisible()
     await expect(page.locator('text=画笔')).toBeVisible()
     await expect(page.locator('text=文字')).toBeVisible()
-    await expect(page.locator('text=形状')).toBeVisible()
+    await expect(page.locator('text=矩形')).toBeVisible()
     await expect(page.locator('text=橡皮擦')).toBeVisible()
   })
 

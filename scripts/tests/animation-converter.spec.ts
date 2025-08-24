@@ -14,16 +14,16 @@ test.describe('Animation Converter', () => {
     
     // Check tab navigation
     await expect(page.locator('text=格式转换')).toBeVisible()
-    await expect(page.locator('text=帧分离')).toBeVisible()
+    await expect(page.locator('text=帧拆分')).toBeVisible()
     await expect(page.locator('text=帧合并')).toBeVisible()
   })
 
   test('should display format converter interface', async ({ page }) => {
     // Should be on format converter by default
-    await expect(page.locator('text=GIF、MP4、WebM 转换为 APNG 或 GIF 格式')).toBeVisible()
+    await expect(page.locator('text=将 GIF、MP4、WebM 转换为 APNG 或 GIF 格式')).toBeVisible()
     
     // Check file upload area
-    await expect(page.locator('text=点击或拖拽文件到此区域上传')).toBeVisible()
+    await expect(page.locator('text=拖拽文件到此处或点击选择')).toBeVisible()
     await expect(page.locator('text=支持 GIF、MP4、WebM 格式，最大 100MB')).toBeVisible()
     
     // Check settings
@@ -35,8 +35,8 @@ test.describe('Animation Converter', () => {
 
   test('should switch between tabs correctly', async ({ page }) => {
     // Switch to frame splitter
-    await page.locator('text=帧分离').click()
-    await expect(page.locator('text=将动画分解为单独的帧图片')).toBeVisible()
+    await page.locator('text=帧拆分').click()
+    await expect(page.locator('text=从动画文件中提取单独的帧')).toBeVisible()
     
     // Switch to frame merger
     await page.locator('text=帧合并').click()
@@ -44,7 +44,7 @@ test.describe('Animation Converter', () => {
     
     // Switch back to format converter
     await page.locator('text=格式转换').click()
-    await expect(page.locator('text=GIF、MP4、WebM 转换为 APNG 或 GIF 格式')).toBeVisible()
+    await expect(page.locator('text=将 GIF、MP4、WebM 转换为 APNG 或 GIF 格式')).toBeVisible()
   })
 
   test('should validate FFmpeg loading without CDN dependencies', async ({ page }) => {
@@ -75,7 +75,7 @@ test.describe('Animation Converter', () => {
     await expect(fileInput).toBeAttached()
     
     // Check drag and drop area
-    const dropZone = page.locator('.ant-upload-drag')
+    const dropZone = page.locator('.upload-area')
     await expect(dropZone).toBeVisible()
   })
 
@@ -85,26 +85,26 @@ test.describe('Animation Converter', () => {
     await expect(formatSelect).toBeVisible()
     
     // Check quality selector
-    await expect(page.locator('text=普通')).toBeVisible()
+    await expect(page.locator('text=中等质量')).toBeVisible()
     
     // Check FPS input
-    const fpsInput = page.locator('input[placeholder*="15"]')
+    const fpsInput = page.locator('input#frame-rate')
     await expect(fpsInput).toBeVisible()
     
     // Check width input
-    const widthInput = page.locator('input[placeholder*="480"]')
+    const widthInput = page.locator('input#max-width')
     await expect(widthInput).toBeVisible()
   })
 
   test('should handle frame splitter interface', async ({ page }) => {
-    await page.locator('text=帧分离').click()
+    await page.locator('text=帧拆分').click()
     
     // Check frame splitter specific elements
-    await expect(page.locator('text=将动画分解为单独的帧图片')).toBeVisible()
-    await expect(page.locator('text=支持 GIF、MP4、WebM 等动画格式')).toBeVisible()
+    await expect(page.locator('text=从动画文件中提取单独的帧')).toBeVisible()
+    await expect(page.locator('text=支持 GIF、MP4、WebM、APNG 格式')).toBeVisible()
     
     // Check download options
-    await expect(page.locator('text=下载格式')).toBeVisible()
+    await expect(page.locator('text=帧格式')).toBeVisible()
   })
 
   test('should handle frame merger interface', async ({ page }) => {
@@ -112,10 +112,10 @@ test.describe('Animation Converter', () => {
     
     // Check frame merger specific elements
     await expect(page.locator('text=将多张图片合并为动画')).toBeVisible()
-    await expect(page.locator('text=支持 PNG、JPG、WebP 等图片格式')).toBeVisible()
+    await expect(page.locator('text=支持 PNG、JPG、WebP 格式，可选择多个文件')).toBeVisible()
     
     // Check multiple file upload
-    const fileInput = page.locator('input[type="file"]')
+    const fileInput = page.locator('input#merger-files')
     await expect(fileInput).toHaveAttribute('multiple')
   })
 })
