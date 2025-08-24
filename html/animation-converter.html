@@ -167,21 +167,49 @@
         background: #5a6268;
       }
 
-      .progress-bar {
+      /* Ant Design Progress Styling */
+      .ant-progress {
+        position: relative;
+        display: inline-block;
         width: 100%;
-        height: 20px;
-        background: #e9ecef;
-        border-radius: 10px;
-        overflow: hidden;
-        margin: 20px 0;
-        display: none;
       }
 
-      .progress-fill {
+      .ant-progress-outer {
+        width: 100%;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      .ant-progress-inner {
+        position: relative;
+        display: inline-block;
+        width: calc(100% - 55px);
+        vertical-align: middle;
+        background: #f5f5f5;
+        border-radius: 100px;
+        overflow: hidden;
+        height: 8px;
+      }
+
+      .ant-progress-bg {
+        position: relative;
+        background-color: #1890ff;
+        border-radius: 100px;
+        transition: all 0.4s cubic-bezier(0.08, 0.82, 0.17, 1) 0s;
         height: 100%;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        width: 0%;
-        transition: width 0.3s ease;
+      }
+
+      .ant-progress-text {
+        display: inline-block;
+        width: 2em;
+        margin-left: 8px;
+        color: rgba(0, 0, 0, 0.65);
+        font-size: 1em;
+        line-height: 1;
+        white-space: nowrap;
+        text-align: left;
+        vertical-align: middle;
+        word-break: normal;
       }
 
       .result-area {
@@ -409,8 +437,22 @@
         </div>
 
         <!-- Progress Bar -->
-        <div class="progress-bar" id="progress-bar">
-          <div class="progress-fill" id="progress-fill"></div>
+        <div id="progress-container" style="display: none; margin: 20px 0;">
+          <div class="ant-progress ant-progress-line">
+            <div class="ant-progress-outer">
+              <div class="ant-progress-inner">
+                <div 
+                  class="ant-progress-bg" 
+                  id="progress-fill"
+                  style="width: 0%; height: 8px; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s ease;"
+                ></div>
+              </div>
+            </div>
+            <span class="ant-progress-text" id="progress-text" style="color: #333; font-weight: 500;">0%</span>
+          </div>
+          <div style="text-align: center; margin-top: 8px; font-size: 14px; color: #666;" id="progress-info">
+            处理中...
+          </div>
         </div>
 
         <!-- Loading Indicator -->

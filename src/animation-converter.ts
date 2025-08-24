@@ -16,12 +16,26 @@ class AnimationConverter {
       console.log(message)
     })
 
-    this.ffmpeg.on('progress', ({ progress }) => {
-      const progressBar = document.getElementById('progress-bar') as HTMLElement
+    this.ffmpeg.on('progress', ({ progress, time }) => {
+      const progressContainer = document.getElementById('progress-container') as HTMLElement
+      const progressFill = document.getElementById('progress-fill') as HTMLElement
       const progressText = document.getElementById('progress-text') as HTMLElement
-      if (progressBar && progressText) {
-        progressBar.style.width = `${progress * 100}%`
-        progressText.textContent = `处理中... ${Math.round(progress * 100)}%`
+      const progressInfo = document.getElementById('progress-info') as HTMLElement
+      
+      if (progressContainer && progressFill && progressText && progressInfo) {
+        const percentage = Math.round(progress * 100)
+        
+        progressContainer.style.display = 'block'
+        progressFill.style.width = `${percentage}%`
+        progressText.textContent = `${percentage}%`
+        
+        // Show detailed progress information
+        if (time && time > 0) {
+          const timeString = this.formatTime(time)
+          progressInfo.textContent = `处理中... 已处理时长: ${timeString}`
+        } else {
+          progressInfo.textContent = `处理中... ${percentage}%`
+        }
       }
     })
 
@@ -35,6 +49,33 @@ class AnimationConverter {
     }
   }
 
+  private formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${minutes}:${secs.toString().padStart(2, '0')}`
+  }
+
+  private showProgress(message: string = '处理中...', percentage: number = 0) {
+    const progressContainer = document.getElementById('progress-container') as HTMLElement
+    const progressFill = document.getElementById('progress-fill') as HTMLElement
+    const progressText = document.getElementById('progress-text') as HTMLElement
+    const progressInfo = document.getElementById('progress-info') as HTMLElement
+    
+    if (progressContainer && progressFill && progressText && progressInfo) {
+      progressContainer.style.display = 'block'
+      progressFill.style.width = `${percentage}%`
+      progressText.textContent = `${percentage}%`
+      progressInfo.textContent = message
+    }
+  }
+
+  private hideProgress() {
+    const progressContainer = document.getElementById('progress-container') as HTMLElement
+    if (progressContainer) {
+      progressContainer.style.display = 'none'
+    }
+  }
+
   async convertFormat(file: File, outputFormat: string, options: any = {}) {
     if (!this.isLoaded) {
       throw new Error('FFmpeg not loaded yet')
@@ -42,35 +83,48 @@ class AnimationConverter {
 
     const fileName = file.name
     const outputFileName = `output.${outputFormat}`
+    const fileSize = (file.size / 1024 / 1024).toFixed(2) // MB
 
-    // Write input file to FFmpeg
-    await this.ffmpeg.writeFile(fileName, await fetchFile(file))
+    try {
+      this.showProgress(`准备处理文件: ${fileName} (${fileSize}MB)`, 0)
 
-    // Build FFmpeg command
-    const args = ['-i', fileName]
-    
-    if (options.fps) {
-      args.push('-r', options.fps.toString())
+      // Write input file to FFmpeg
+      await this.ffmpeg.writeFile(fileName, await fetchFile(file))
+      this.showProgress(`文件已加载，开始转换...`, 10)
+
+      // Build FFmpeg command
+      const args = ['-i', fileName]
+      
+      if (options.fps) args.push('-r', options.fps.toString())
+      if (options.scale) args.push('-vf', `scale=${options.scale}:-1`)
+      if (options.quality) {
+        if (outputFormat === 'gif') {
+          args.push('-vf', 'palettegen=reserve_transparent=1')
+        }
+      }
+      
+      args.push(outputFileName)
+
+      // Execute conversion
+      await this.ffmpeg.exec(args)
+      this.showProgress(`转换完成，准备下载...`, 95)
+
+      // Read output file
+      const data = await this.ffmpeg.readFile(outputFileName)
+      const outputBlob = new Blob([data], { 
+        type: outputFormat === 'gif' ? 'image/gif' : 'image/png' 
+      })
+
+      this.showProgress(`处理完成！文件大小: ${(outputBlob.size / 1024 / 1024).toFixed(2)}MB`, 100)
+      
+      // Hide progress after a short delay
+      setTimeout(() => this.hideProgress(), 2000)
+
+      return outputBlob
+    } catch (error) {
+      this.hideProgress()
+      throw error
     }
-    
-    if (options.quality) {
-      args.push('-q:v', options.quality.toString())
-    }
-    
-    if (options.width && options.height) {
-      args.push('-s', `${options.width}x${options.height}`)
-    }
-
-    args.push(outputFileName)
-
-    // Run conversion
-    await this.ffmpeg.exec(args)
-
-    // Read output file
-    const data = await this.ffmpeg.readFile(outputFileName)
-    const blob = new Blob([data], { type: `image/${outputFormat}` })
-
-    return blob
   }
 
   async splitFrames(file: File) {
@@ -79,22 +133,40 @@ class AnimationConverter {
     }
 
     const fileName = file.name
-    await this.ffmpeg.writeFile(fileName, await fetchFile(file))
+    const fileSize = (file.size / 1024 / 1024).toFixed(2) // MB
 
-    // Extract frames
-    await this.ffmpeg.exec(['-i', fileName, 'frame_%04d.png'])
+    try {
+      this.showProgress(`准备分离帧: ${fileName} (${fileSize}MB)`, 0)
 
-    // Get all frame files
-    const files = await this.ffmpeg.listDir('/')
-    const frameFiles = files.filter(f => f.name.startsWith('frame_'))
-    
-    const frames: Blob[] = []
-    for (const frameFile of frameFiles) {
-      const data = await this.ffmpeg.readFile(frameFile.name)
-      frames.push(new Blob([data], { type: 'image/png' }))
+      await this.ffmpeg.writeFile(fileName, await fetchFile(file))
+      this.showProgress(`文件已加载，开始分离帧...`, 20)
+
+      // Extract frames
+      await this.ffmpeg.exec(['-i', fileName, 'frame_%04d.png'])
+      this.showProgress(`帧分离完成，读取帧文件...`, 80)
+
+      // Get all frame files
+      const files = await this.ffmpeg.listDir('/')
+      const frameFiles = files.filter(f => f.name.startsWith('frame_'))
+      
+      const frames: Blob[] = []
+      for (let i = 0; i < frameFiles.length; i++) {
+        const frameFile = frameFiles[i]
+        const data = await this.ffmpeg.readFile(frameFile.name)
+        frames.push(new Blob([data], { type: 'image/png' }))
+        
+        const progress = 80 + (i / frameFiles.length) * 15
+        this.showProgress(`读取帧 ${i + 1}/${frameFiles.length}`, Math.round(progress))
+      }
+
+      this.showProgress(`完成！共提取 ${frames.length} 帧`, 100)
+      setTimeout(() => this.hideProgress(), 2000)
+
+      return frames
+    } catch (error) {
+      this.hideProgress()
+      throw error
     }
-
-    return frames
   }
 
   async mergeFrames(files: File[], outputFormat: string, fps: number = 10) {
@@ -102,25 +174,50 @@ class AnimationConverter {
       throw new Error('FFmpeg not loaded yet')
     }
 
-    // Write all frame files
-    for (let i = 0; i < files.length; i++) {
-      const fileName = `frame_${String(i + 1).padStart(4, '0')}.png`
-      await this.ffmpeg.writeFile(fileName, await fetchFile(files[i]))
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0)
+    const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2)
+
+    try {
+      this.showProgress(`准备合并 ${files.length} 个帧文件 (${totalSizeMB}MB)`, 0)
+
+      // Write all frame files
+      for (let i = 0; i < files.length; i++) {
+        const fileName = `frame_${String(i + 1).padStart(4, '0')}.png`
+        await this.ffmpeg.writeFile(fileName, await fetchFile(files[i]))
+        
+        const progress = (i / files.length) * 40
+        this.showProgress(`上传帧 ${i + 1}/${files.length}`, Math.round(progress))
+      }
+
+      this.showProgress(`所有帧已上传，开始合并动画...`, 40)
+
+      const outputFileName = `output.${outputFormat}`
+      
+      // Create animation from frames
+      await this.ffmpeg.exec([
+        '-framerate', fps.toString(),
+        '-i', 'frame_%04d.png',
+        '-y',
+        outputFileName
+      ])
+
+      this.showProgress(`动画合并完成，准备输出...`, 90)
+
+      // Read output file
+      const data = await this.ffmpeg.readFile(outputFileName)
+      const outputBlob = new Blob([data], { 
+        type: outputFormat === 'gif' ? 'image/gif' : 'image/png' 
+      })
+
+      const outputSizeMB = (outputBlob.size / 1024 / 1024).toFixed(2)
+      this.showProgress(`完成！输出文件大小: ${outputSizeMB}MB`, 100)
+      setTimeout(() => this.hideProgress(), 2000)
+
+      return outputBlob
+    } catch (error) {
+      this.hideProgress()
+      throw error
     }
-
-    const outputFileName = `output.${outputFormat}`
-    
-    // Create animation from frames
-    await this.ffmpeg.exec([
-      '-framerate', fps.toString(),
-      '-i', 'frame_%04d.png',
-      '-y',
-      outputFileName
-    ])
-
-    // Read output
-    const data = await this.ffmpeg.readFile(outputFileName)
-    return new Blob([data], { type: `image/${outputFormat}` })
   }
 }
 
