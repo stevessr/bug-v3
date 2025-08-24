@@ -17,6 +17,8 @@
     "serve": "vite preview",
     "test": "playwright test",
     "test:debug": "playwright test --debug",
+    "test:manual": "node scripts/manual-test-runner.js",
+    "test:build": "npm run build && npm run build:userscript && npm run test:manual",
     "release": "bash ./scripts/release.sh",
     "pack:crx": "node ./scripts/pack-crx.js",
     "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx",
