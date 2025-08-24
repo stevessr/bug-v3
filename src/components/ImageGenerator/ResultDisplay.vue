@@ -16,31 +16,23 @@
     <div v-else-if="images.length > 0" class="results">
       <h3>✨ 生成结果</h3>
       <div class="image-grid">
-        <div 
-          v-for="(image, index) in images" 
-          :key="index"
-          class="image-item"
-        >
-          <img 
-            :src="image" 
+        <div v-for="(image, index) in images" :key="index" class="image-item">
+          <img
+            :src="image"
             :alt="`Generated image ${index + 1}`"
             class="generated-image"
             @load="onImageLoad"
             @error="onImageError"
-          >
+          />
           <div class="image-actions">
-            <button 
+            <button
               @click="downloadImage(image, index)"
               class="action-btn download-btn"
               title="下载图片"
             >
               📥
             </button>
-            <button 
-              @click="copyImageUrl(image)"
-              class="action-btn copy-btn"
-              title="复制链接"
-            >
+            <button @click="copyImageUrl(image)" class="action-btn copy-btn" title="复制链接">
               📋
             </button>
           </div>
@@ -51,42 +43,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref } from 'vue'
 
 interface Props {
-  isLoading: boolean;
-  error: string | null;
-  images: string[];
+  isLoading: boolean
+  error: string | null
+  images: string[]
 }
 
-const props = defineProps<Props>();
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  downloadImage: [url: string, filename: string];
-  copyImageUrl: [url: string];
-}>();
+  downloadImage: [url: string, filename: string]
+  copyImageUrl: [url: string]
+}>()
 
-const loadedImages = ref(new Set<string>());
+const loadedImages = ref(new Set<string>())
 
 const onImageLoad = (event: Event) => {
-  const img = event.target as HTMLImageElement;
-  loadedImages.value.add(img.src);
-};
+  const img = event.target as HTMLImageElement
+  loadedImages.value.add(img.src)
+}
 
 const onImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement;
-  console.error('Failed to load image:', img.src);
-};
+  const img = event.target as HTMLImageElement
+  console.error('Failed to load image:', img.src)
+}
 
 const downloadImage = (url: string, index: number) => {
-  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-  const filename = `generated-image-${timestamp}-${index + 1}.png`;
-  emit('downloadImage', url, filename);
-};
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')
+  const filename = `generated-image-${timestamp}-${index + 1}.png`
+  emit('downloadImage', url, filename)
+}
 
 const copyImageUrl = (url: string) => {
-  emit('copyImageUrl', url);
-};
+  emit('copyImageUrl', url)
+}
 </script>
 
 <style scoped>
@@ -226,7 +218,7 @@ const copyImageUrl = (url: string) => {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 15px;
   }
-  
+
   .image-actions {
     opacity: 1; /* Always show on mobile */
   }

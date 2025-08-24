@@ -8,7 +8,7 @@
 
       <div class="generator-content">
         <!-- API Configuration -->
-        <ApiConfig 
+        <ApiConfig
           :provider-manager="providerManager"
           @provider-changed="onProviderChanged"
           @api-key-changed="onApiKeyChanged"
@@ -16,7 +16,7 @@
         />
 
         <!-- Generation Mode -->
-        <GenerationMode 
+        <GenerationMode
           v-model="generationMode"
           v-model:uploaded-image="uploadedImage"
           :provider-manager="providerManager"
@@ -25,20 +25,17 @@
         />
 
         <!-- Prompt Input -->
-        <PromptInput 
+        <PromptInput
           v-model="prompt"
           :is-edit-mode="generationMode === 'edit'"
           @prompt-changed="onPromptChanged"
         />
 
         <!-- Generation Configuration -->
-        <GenerationConfig 
-          v-model="generationConfig"
-          @config-changed="onConfigChanged"
-        />
+        <GenerationConfig v-model="generationConfig" @config-changed="onConfigChanged" />
 
         <!-- Generate Button -->
-        <GenerateButton 
+        <GenerateButton
           :is-generating="isGenerating"
           :has-results="generatedImages.length > 0"
           :can-generate="canGenerate"
@@ -47,7 +44,7 @@
         />
 
         <!-- Results Display -->
-        <ResultDisplay 
+        <ResultDisplay
           :is-loading="isGenerating"
           :error="error"
           :images="generatedImages"
@@ -60,14 +57,14 @@
 </template>
 
 <script setup lang="ts">
-import { useImageGenerator } from '@/composables/useImageGenerator';
+import { useImageGenerator } from '@/composables/useImageGenerator'
 
-import ApiConfig from './ApiConfig.vue';
-import GenerationMode from './GenerationMode.vue';
-import PromptInput from './PromptInput.vue';
-import GenerationConfig from './GenerationConfig.vue';
-import GenerateButton from './GenerateButton.vue';
-import ResultDisplay from './ResultDisplay.vue';
+import ApiConfig from './ApiConfig.vue'
+import GenerationMode from './GenerationMode.vue'
+import PromptInput from './PromptInput.vue'
+import GenerationConfig from './GenerationConfig.vue'
+import GenerateButton from './GenerateButton.vue'
+import ResultDisplay from './ResultDisplay.vue'
 
 // Use the composable
 const {
@@ -84,69 +81,69 @@ const {
   clearResults,
   downloadImage,
   copyImageUrl
-} = useImageGenerator();
+} = useImageGenerator()
 
 // Event handlers
 const onProviderChanged = (provider: string) => {
-  console.log('Provider changed to:', provider);
+  console.log('Provider changed to:', provider)
   // Reset edit mode if new provider doesn't support it
   if (generationMode.value === 'edit' && !providerManager.supportsImageEditing()) {
-    generationMode.value = 'generate';
+    generationMode.value = 'generate'
   }
-};
+}
 
 const onApiKeyChanged = (key: string) => {
-  console.log('API key changed');
-};
+  console.log('API key changed')
+}
 
 const onModelChanged = (model: string) => {
-  console.log('Model changed to:', model);
-};
+  console.log('Model changed to:', model)
+}
 
 const onModeChanged = (mode: 'generate' | 'edit') => {
-  console.log('Mode changed to:', mode);
+  console.log('Mode changed to:', mode)
   // Clear uploaded image when switching to generate mode
   if (mode === 'generate') {
-    uploadedImage.value = undefined;
+    uploadedImage.value = undefined
   }
-};
+}
 
 const onImageChanged = (image: string | undefined) => {
-  console.log('Image changed:', !!image);
-};
+  console.log('Image changed:', !!image)
+}
 
 const onPromptChanged = (newPrompt: string) => {
-  console.log('Prompt changed');
-};
+  console.log('Prompt changed')
+}
 
 const onConfigChanged = (config: typeof generationConfig.value) => {
-  console.log('Config changed:', config);
-};
+  console.log('Config changed:', config)
+}
 
 const onGenerate = async () => {
-  await generateImages();
-};
+  await generateImages()
+}
 
 const onClear = () => {
-  clearResults();
-};
+  clearResults()
+}
 
 const onDownloadImage = async (url: string, filename: string) => {
   try {
-    await downloadImage(url, filename);
+    await downloadImage(url, filename)
   } catch (err: any) {
-    alert(err.message || '下载失败');
+    alert(err.message || '下载失败')
   }
-};
+}
 
 const onCopyImageUrl = async (url: string) => {
   try {
-    await copyImageUrl(url);
-    alert('链接已复制到剪贴板');
+    await copyImageUrl(url)
+    alert('链接已复制到剪贴板')
   } catch (err) {
-    alert('复制失败');
+    alert('复制失败')
   }
-};
+}
 </script>
 
 <style scoped>
@@ -192,16 +189,16 @@ const onCopyImageUrl = async (url: string) => {
   .header h1 {
     font-size: 2rem;
   }
-  
+
   .header p {
     font-size: 1rem;
   }
-  
+
   .generator-content {
     padding: 20px;
     margin: 0 10px;
   }
-  
+
   .container {
     padding: 0 10px;
   }

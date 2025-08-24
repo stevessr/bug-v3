@@ -4,16 +4,16 @@ export default {
     './popup/**/*.{html,js,ts,vue}',
     './options/**/*.{html,js,ts,vue}',
     './content/**/*.{html,js,ts,vue}',
-    './src/**/*.{html,js,ts,vue}',
+    './src/**/*.{html,js,ts,vue}'
   ],
   theme: {
     screens: {
-      'mobile': {'max': '640px'},
-      'sm': '640px',
-      'md': '768px',
-      'lg': '1024px',
-      'xl': '1280px',
-      '2xl': '1536px',
+      mobile: { max: '640px' },
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px'
     },
     extend: {
       colors: {
@@ -24,7 +24,7 @@ export default {
           700: '#1d4ed8'
         }
       }
-    },
+    }
   },
-  plugins: [],
+  plugins: []
 }

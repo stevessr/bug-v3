@@ -1,67 +1,67 @@
 export interface GenerateRequest {
-  prompt: string;
-  aspectRatio: string;
-  numberOfImages: number;
-  style?: string;
-  inputImage?: string; // Base64 encoded image for editing
-  editMode?: boolean; // Whether this is an edit operation
+  prompt: string
+  aspectRatio: string
+  numberOfImages: number
+  style?: string
+  inputImage?: string // Base64 encoded image for editing
+  editMode?: boolean // Whether this is an edit operation
 }
 
 export interface GeminiGenerateResponse {
   candidates: Array<{
     images: Array<{
-      uri: string;
-    }>;
-  }>;
+      uri: string
+    }>
+  }>
 }
 
 export interface SiliconFlowGenerateResponse {
   data: Array<{
-    url: string;
-  }>;
+    url: string
+  }>
 }
 
 export interface CloudflareGenerateResponse {
   result?: {
-    image?: string; // Base64 encoded image
-  };
-  success: boolean;
+    image?: string // Base64 encoded image
+  }
+  success: boolean
   errors?: Array<{
-    message: string;
-  }>;
+    message: string
+  }>
 }
 
 export interface ChutesAIGenerateResponse {
-  success: boolean;
+  success: boolean
   data?: {
-    url: string;
-  };
-  error?: string;
+    url: string
+  }
+  error?: string
 }
 
 export interface ImageProvider {
-  name: string;
-  displayName: string;
-  generateImages(request: GenerateRequest): Promise<string[]>;
-  setApiKey(key: string): void;
-  loadApiKey(): string;
+  name: string
+  displayName: string
+  generateImages(request: GenerateRequest): Promise<string[]>
+  setApiKey(key: string): void
+  loadApiKey(): string
 }
 
 export interface ProviderConfig {
-  name: string;
-  displayName: string;
-  placeholder: string;
-  helpText: string;
-  helpLink: string;
-  supportsModels?: boolean;
-  supportsImageEditing?: boolean;
-  models?: ModelConfig[];
+  name: string
+  displayName: string
+  placeholder: string
+  helpText: string
+  helpLink: string
+  supportsModels?: boolean
+  supportsImageEditing?: boolean
+  models?: ModelConfig[]
 }
 
 export interface ModelConfig {
-  id: string;
-  name: string;
-  description?: string;
+  id: string
+  name: string
+  description?: string
 }
 
 export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
@@ -120,7 +120,7 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
       }
     ]
   }
-};
+}
 
 export const ASPECT_RATIOS = [
   { value: '1:1', label: '正方形 (1:1)' },
@@ -128,7 +128,7 @@ export const ASPECT_RATIOS = [
   { value: '9:16', label: '竖屏 (9:16)' },
   { value: '4:3', label: '标准 (4:3)' },
   { value: '3:4', label: '肖像 (3:4)' }
-];
+]
 
 export const ART_STYLES = [
   { value: '', label: '默认' },
@@ -140,10 +140,10 @@ export const ART_STYLES = [
   { value: 'sketch', label: '素描风格' },
   { value: 'digital-art', label: '数字艺术' },
   { value: 'pixel-art', label: '像素艺术' }
-];
+]
 
 export const IMAGE_COUNTS = [
   { value: 1, label: '1 张' },
   { value: 2, label: '2 张' },
   { value: 4, label: '4 张' }
-];
+]

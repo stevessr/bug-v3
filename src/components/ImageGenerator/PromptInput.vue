@@ -3,10 +3,10 @@
     <label for="prompt" class="prompt-label">
       {{ isEditMode ? '✏️ 描述您想要对图片进行的修改' : '📝 描述您想要生成的图片' }}
     </label>
-    
+
     <div class="input-group">
-      <textarea 
-        id="prompt" 
+      <textarea
+        id="prompt"
         v-model="promptText"
         @input="onPromptChange"
         :placeholder="placeholder"
@@ -19,38 +19,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch } from 'vue'
 
 interface Props {
-  modelValue: string;
-  isEditMode?: boolean;
+  modelValue: string
+  isEditMode?: boolean
 }
 
-const props = defineProps<Props>();
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  'update:modelValue': [prompt: string];
-  promptChanged: [prompt: string];
-}>();
+  'update:modelValue': [prompt: string]
+  promptChanged: [prompt: string]
+}>()
 
-const promptText = ref(props.modelValue);
+const promptText = ref(props.modelValue)
 
 const placeholder = computed(() => {
   if (props.isEditMode) {
-    return '例如：在图片中添加一只小狗，让背景变成夕阳...';
+    return '例如：在图片中添加一只小狗，让背景变成夕阳...'
   }
-  return '例如：一只可爱的橘猫坐在樱花树下，阳光透过花瓣洒在地面上，温暖的春日氛围...';
-});
+  return '例如：一只可爱的橘猫坐在樱花树下，阳光透过花瓣洒在地面上，温暖的春日氛围...'
+})
 
 const onPromptChange = () => {
-  emit('update:modelValue', promptText.value);
-  emit('promptChanged', promptText.value);
-};
+  emit('update:modelValue', promptText.value)
+  emit('promptChanged', promptText.value)
+}
 
 // Watch for external changes
-watch(() => props.modelValue, (newValue) => {
-  promptText.value = newValue;
-});
+watch(
+  () => props.modelValue,
+  newValue => {
+    promptText.value = newValue
+  }
+)
 </script>
 
 <style scoped>

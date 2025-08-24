@@ -53,8 +53,8 @@ defineEmits([
   'open-import-emojis',
   'reset-settings',
   'sync-to-chrome',
-  'export-configuration',
-]);
+  'export-configuration'
+])
 </script>
 
 <style scoped></style>
