@@ -57,12 +57,18 @@ export default defineConfig(({ mode }) => {
         input: {
           popup: fileURLToPath(new URL('src/html/popup.html', import.meta.url)),
           options: fileURLToPath(new URL('src/html/options.html', import.meta.url)),
-          'image-generator': fileURLToPath(new URL('src/html/image-generator.html', import.meta.url)),
+          'image-generator': fileURLToPath(
+            new URL('src/html/image-generator.html', import.meta.url)
+          ),
           'image-editor': fileURLToPath(new URL('src/html/image-editor.html', import.meta.url)),
-          'ai-image-generator': fileURLToPath(new URL('src/html/ai-image-generator.html', import.meta.url)),
+          'ai-image-generator': fileURLToPath(
+            new URL('src/html/ai-image-generator.html', import.meta.url)
+          ),
           'emoji-rename': fileURLToPath(new URL('src/html/emoji-rename.html', import.meta.url)),
           'emoji-manager': fileURLToPath(new URL('src/html/emoji-manager.html', import.meta.url)),
-          'image-generator-vue': fileURLToPath(new URL('src/html/image-generator-vue.html', import.meta.url)),
+          'image-generator-vue': fileURLToPath(
+            new URL('src/html/image-generator-vue.html', import.meta.url)
+          ),
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),

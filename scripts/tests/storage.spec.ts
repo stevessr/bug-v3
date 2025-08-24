@@ -17,10 +17,11 @@ test.describe('Emoji Extension Storage System', () => {
     await page.waitForTimeout(2000)
 
     // Check that no console errors occurred (filter out expected network errors)
-    const relevantErrors = errors.filter(error => 
-      !error.includes('Extension context invalidated') &&
-      !error.includes('Failed to load resource: net::ERR_NAME_NOT_RESOLVED') &&
-      !error.includes('Failed to load resource: the server responded with a status of 404')
+    const relevantErrors = errors.filter(
+      error =>
+        !error.includes('Extension context invalidated') &&
+        !error.includes('Failed to load resource: net::ERR_NAME_NOT_RESOLVED') &&
+        !error.includes('Failed to load resource: the server responded with a status of 404')
     )
     expect(relevantErrors).toHaveLength(0)
 
@@ -40,11 +41,14 @@ test.describe('Emoji Extension Storage System', () => {
     await page.goto('/options.html')
     await page.waitForTimeout(2000)
 
-    expect(errors.filter(error => 
-      !error.includes('Extension context invalidated') &&
-      !error.includes('Failed to load resource: net::ERR_NAME_NOT_RESOLVED') &&
-      !error.includes('Failed to load resource: the server responded with a status of 404')
-    )).toHaveLength(0)
+    expect(
+      errors.filter(
+        error =>
+          !error.includes('Extension context invalidated') &&
+          !error.includes('Failed to load resource: net::ERR_NAME_NOT_RESOLVED') &&
+          !error.includes('Failed to load resource: the server responded with a status of 404')
+      )
+    ).toHaveLength(0)
 
     const title = await page.title()
     expect(title).toBeTruthy()

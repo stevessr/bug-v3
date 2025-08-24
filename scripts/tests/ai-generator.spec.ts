@@ -213,7 +213,7 @@ test.describe('AI Image Generator Tab', () => {
       // Just verify the page has the generation interface
       await expect(page.getByText('生成图像')).toBeVisible()
     }
-    
+
     // Verify generation controls are present (regardless of results)
     const generateButton = page.getByRole('button', { name: /生成|Generate/ }).first()
     await expect(generateButton).toBeVisible()

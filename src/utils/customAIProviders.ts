@@ -87,7 +87,7 @@ export class CustomAIProviderManager {
         id: 'openai',
         name: 'openai',
         displayName: 'OpenAI DALL-E',
-        description: 'OpenAI\'s DALL-E image generation model',
+        description: "OpenAI's DALL-E image generation model",
         website: 'https://openai.com',
         documentation: 'https://platform.openai.com/docs/guides/images',
         apiKeyFormat: 'sk-...',
@@ -276,14 +276,14 @@ export class CustomAIProviderManager {
 
     const updated = { ...existing, ...config }
     this.customConfigs.set(id, updated)
-    
+
     // Update provider info
     const provider = this.providers.get(id)
     if (provider) {
       provider.displayName = updated.displayName
       provider.models = updated.models
     }
-    
+
     this.saveCustomProviders()
   }
 
@@ -306,7 +306,7 @@ export class CustomAIProviderManager {
   public async generateImages(request: GenerationRequest): Promise<GenerationResponse> {
     const providerId = this.getActiveProvider()
     const provider = this.providers.get(providerId)
-    
+
     if (!provider) {
       throw new Error('No active provider found')
     }
@@ -334,7 +334,7 @@ export class CustomAIProviderManager {
   }
 
   private async generateWithCustomProvider(
-    providerId: string, 
+    providerId: string,
     request: GenerationRequest
   ): Promise<GenerationResponse> {
     const config = this.customConfigs.get(providerId)
@@ -367,19 +367,17 @@ export class CustomAIProviderManager {
             model: request.model || config.defaultModel
           }
           break
-        
+
         case 'stability':
           requestBody = {
-            text_prompts: [
-              { text: request.prompt, weight: 1 }
-            ],
+            text_prompts: [{ text: request.prompt, weight: 1 }],
             cfg_scale: request.guidance || 7,
             steps: request.steps || 30,
             samples: request.numberOfImages || 1,
             width: 1024,
             height: 1024
           }
-          
+
           if (request.negativePrompt) {
             requestBody.text_prompts.push({
               text: request.negativePrompt,
@@ -387,7 +385,7 @@ export class CustomAIProviderManager {
             })
           }
           break
-        
+
         case 'custom':
           if (config.customRequestTemplate) {
             // Parse custom template (simplified)
@@ -451,17 +449,17 @@ export class CustomAIProviderManager {
           }
         }
         break
-      
+
       case 'stability':
         if (data.artifacts && Array.isArray(data.artifacts)) {
           return {
-            images: data.artifacts.map((artifact: any) => 
+            images: data.artifacts.map((artifact: any) =>
               artifact.base64 ? `data:image/png;base64,${artifact.base64}` : artifact.url
             )
           }
         }
         break
-      
+
       case 'custom':
         // Try to find images in common response formats
         if (data.images && Array.isArray(data.images)) {
@@ -497,7 +495,7 @@ export class CustomAIProviderManager {
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(requestBody)
@@ -520,9 +518,7 @@ export class CustomAIProviderManager {
     }
 
     const requestBody = {
-      text_prompts: [
-        { text: request.prompt, weight: 1 }
-      ],
+      text_prompts: [{ text: request.prompt, weight: 1 }],
       cfg_scale: request.guidance || 7,
       steps: request.steps || 30,
       samples: request.numberOfImages || 1,
@@ -541,7 +537,7 @@ export class CustomAIProviderManager {
     const response = await fetch(`https://api.stability.ai/v1/generation/${model}/text-to-image`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(requestBody)
@@ -553,9 +549,7 @@ export class CustomAIProviderManager {
 
     const data = await response.json()
     return {
-      images: data.artifacts.map((artifact: any) => 
-        `data:image/png;base64,${artifact.base64}`
-      )
+      images: data.artifacts.map((artifact: any) => `data:image/png;base64,${artifact.base64}`)
     }
   }
 
@@ -570,12 +564,14 @@ export class CustomAIProviderManager {
       throw new Error('Replicate API key not set')
     }
 
-    const model = request.model || 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b'
-    
+    const model =
+      request.model ||
+      'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b'
+
     const prediction = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
-        'Authorization': `Token ${apiKey}`,
+        Authorization: `Token ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -595,18 +591,18 @@ export class CustomAIProviderManager {
     }
 
     const predictionData = await prediction.json()
-    
+
     // Poll for completion
     let result = predictionData
     while (result.status === 'starting' || result.status === 'processing') {
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
         headers: {
-          'Authorization': `Token ${apiKey}`
+          Authorization: `Token ${apiKey}`
         }
       })
-      
+
       result = await statusResponse.json()
     }
 
@@ -626,11 +622,11 @@ export class CustomAIProviderManager {
     }
 
     const model = request.model || 'runwayml/stable-diffusion-v1-5'
-    
+
     const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -680,28 +676,28 @@ export class CustomAIProviderManager {
     if (!config) {
       throw new Error('Provider not found')
     }
-    
+
     // Remove sensitive data
     const exportConfig = { ...config }
     delete exportConfig.apiKey
-    
+
     return JSON.stringify(exportConfig, null, 2)
   }
 
   public importProviderConfig(configJson: string): void {
     try {
       const config: CustomProviderConfig = JSON.parse(configJson)
-      
+
       // Validate required fields
       if (!config.id || !config.name || !config.baseUrl) {
         throw new Error('Invalid configuration format')
       }
-      
+
       // Generate new ID if exists
       if (this.customConfigs.has(config.id)) {
         config.id = `${config.id}_${Date.now()}`
       }
-      
+
       this.addCustomProvider(config)
     } catch (error) {
       throw new Error(`Failed to import configuration: ${error}`)
@@ -709,18 +705,18 @@ export class CustomAIProviderManager {
   }
 
   public testProvider(id: string): Promise<boolean> {
-    return new Promise(async (resolve) => {
+    return new Promise(async resolve => {
       try {
         const testRequest: GenerationRequest = {
           prompt: 'test image generation',
           numberOfImages: 1
         }
-        
+
         const originalProvider = this.getActiveProvider()
         this.setActiveProvider(id)
-        
+
         await this.generateImages(testRequest)
-        
+
         this.setActiveProvider(originalProvider)
         resolve(true)
       } catch (error) {

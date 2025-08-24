@@ -39,17 +39,17 @@ export class EnhancedFFmpegProcessor {
     if (this.isLoaded && this.ffmpeg) return
 
     this.ffmpeg = new FFmpeg()
-    
+
     // Configure proper loading with local files to avoid CSP issues
     const baseURL = '/js/'
-    
+
     await this.ffmpeg.load({
       coreURL: baseURL + 'ffmpeg-core.js',
       wasmURL: baseURL + 'ffmpeg-core.wasm',
       // Use custom worker URL if available
       workerURL: baseURL + 'ffmpeg-worker.js'
     })
-    
+
     this.isLoaded = true
     console.log('[Enhanced FFmpeg] Initialization complete')
   }
@@ -65,13 +65,7 @@ export class EnhancedFFmpegProcessor {
       throw new Error('FFmpeg not initialized. Call initialize() first.')
     }
 
-    const {
-      fps = 10,
-      scale = 480,
-      quality = 80,
-      loop = true,
-      outputFormat = 'gif'
-    } = options
+    const { fps = 10, scale = 480, quality = 80, loop = true, outputFormat = 'gif' } = options
 
     const inputName = `input_${Date.now()}.${this.getFileExtension(file.name)}`
     const outputName = `output_${Date.now()}.${outputFormat}`
@@ -85,11 +79,11 @@ export class EnhancedFFmpegProcessor {
 
       // Add video filters
       const filters: string[] = []
-      
+
       if (scale > 0) {
         filters.push(`scale=${scale}:-1:flags=lanczos`)
       }
-      
+
       if (fps > 0) {
         filters.push(`fps=${fps}`)
       }
@@ -128,10 +122,10 @@ export class EnhancedFFmpegProcessor {
 
       // Read output file
       const data = await this.ffmpeg.readFile(outputName)
-      const blob = new Blob([data], { 
-        type: this.getMimeType(outputFormat) 
+      const blob = new Blob([data], {
+        type: this.getMimeType(outputFormat)
       })
-      
+
       // Cleanup
       await this.cleanup([inputName, outputName])
 
@@ -178,7 +172,7 @@ export class EnhancedFFmpegProcessor {
 
       // Build extraction command
       const args = ['-i', inputName]
-      
+
       if (startTime > 0) {
         args.push('-ss', startTime.toString())
       }
@@ -186,7 +180,7 @@ export class EnhancedFFmpegProcessor {
       // Extract frames at specified interval
       args.push('-vf', `fps=1/${interval}`)
       args.push('-q:v', Math.round((100 - quality) / 10).toString())
-      
+
       // Limit number of frames
       if (maxFrames > 0) {
         args.push('-vframes', maxFrames.toString())
@@ -200,14 +194,14 @@ export class EnhancedFFmpegProcessor {
       // Read extracted frames
       const frames: Blob[] = []
       const names: string[] = []
-      
+
       for (let i = 1; i <= maxFrames; i++) {
         const frameName = `frame_${i.toString().padStart(3, '0')}.png`
         try {
           const data = await this.ffmpeg.readFile(frameName)
           frames.push(new Blob([data], { type: 'image/png' }))
           names.push(this.generateFrameName(file.name, i))
-          
+
           // Cleanup frame file
           await this.ffmpeg.deleteFile(frameName)
         } catch {
@@ -263,10 +257,14 @@ export class EnhancedFFmpegProcessor {
 
       // Build synthesis command
       const args = [
-        '-framerate', fps.toString(),
-        '-i', 'frame_%03d.png',
-        '-vf', `scale=${scale}:-1:flags=lanczos`,
-        '-f', 'gif'
+        '-framerate',
+        fps.toString(),
+        '-i',
+        'frame_%03d.png',
+        '-vf',
+        `scale=${scale}:-1:flags=lanczos`,
+        '-f',
+        'gif'
       ]
 
       if (loop) {
@@ -291,9 +289,13 @@ export class EnhancedFFmpegProcessor {
         size: blob.size
       }
     } catch (error) {
-      await this.cleanup([outputName, ...Array.from({ length: frames.length }, (_, i) => 
-        `frame_${(i + 1).toString().padStart(3, '0')}.png`
-      )])
+      await this.cleanup([
+        outputName,
+        ...Array.from(
+          { length: frames.length },
+          (_, i) => `frame_${(i + 1).toString().padStart(3, '0')}.png`
+        )
+      ])
       throw new Error(`Animation synthesis failed: ${error}`)
     }
   }
@@ -330,8 +332,8 @@ export class EnhancedFFmpegProcessor {
       await this.ffmpeg.exec(args)
 
       const data = await this.ffmpeg.readFile(outputName)
-      const blob = new Blob([data], { 
-        type: this.getMimeType(targetFormat) 
+      const blob = new Blob([data], {
+        type: this.getMimeType(targetFormat)
       })
 
       await this.cleanup([inputName, outputName])

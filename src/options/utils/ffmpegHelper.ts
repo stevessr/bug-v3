@@ -6,17 +6,17 @@ export async function createAndLoadFFmpeg(): Promise<{ ffmpeg: unknown; mod: unk
   try {
     console.log('[FFmpeg] Attempting to import @ffmpeg/ffmpeg (new API)...')
     mod = await import('@ffmpeg/ffmpeg')
-    
+
     const FFmpeg = mod.FFmpeg || mod.default?.FFmpeg
     if (!FFmpeg) {
       throw new Error('FFmpeg constructor not found in module')
     }
 
     const ffmpeg = new FFmpeg()
-    
+
     // Use direct local file URLs to avoid blob URL CSP violations
     const baseURL = chrome.runtime.getURL('js/')
-    
+
     console.log('[FFmpeg] Loading with direct local file URLs...')
     await ffmpeg.load({
       coreURL: baseURL + 'ffmpeg-core-compat.js',
@@ -41,7 +41,7 @@ export async function createAndLoadFFmpeg(): Promise<{ ffmpeg: unknown; mod: unk
 // Legacy fallback function for older FFmpeg API
 async function createAndLoadFFmpegLegacy(): Promise<{ ffmpeg: unknown; mod: unknown }> {
   let mod: any = null
-  
+
   if (typeof window !== 'undefined') {
     await new Promise<void>((resolve, reject) => {
       const script = document.createElement('script')
@@ -54,17 +54,17 @@ async function createAndLoadFFmpegLegacy(): Promise<{ ffmpeg: unknown; mod: unkn
       script.onerror = () => reject(new Error('Failed to load ffmpeg from local files'))
       document.head.appendChild(script)
     })
-    
+
     // Wait a bit for the script to fully initialize
     await new Promise(resolve => setTimeout(resolve, 100))
-    
+
     // Check for available FFmpeg exports
     mod = {
       FFmpeg: (window as any).FFmpeg,
       createFFmpeg: (window as any).createFFmpeg,
       fetchFile: (window as any).fetchFile
     }
-    
+
     console.log('[FFmpeg] Available exports:', Object.keys(mod))
   }
 
@@ -99,7 +99,7 @@ async function createAndLoadFFmpegLegacy(): Promise<{ ffmpeg: unknown; mod: unkn
       console.log('[FFmpeg] Loading FFmpeg...')
       await ffmpeg.load()
       console.log('[FFmpeg] FFmpeg loaded successfully')
-      
+
       // Check if FS is available after loading
       if (typeof ffmpeg.FS !== 'function' && typeof ffmpeg.FS !== 'object') {
         console.warn('[FFmpeg] FS API is not available, but continuing with mock')
@@ -110,7 +110,7 @@ async function createAndLoadFFmpegLegacy(): Promise<{ ffmpeg: unknown; mod: unkn
     // Don't throw here for mock implementation
     console.warn('[FFmpeg] Continuing with mock implementation')
   }
-  
+
   return { ffmpeg, mod }
 }
 
@@ -122,7 +122,9 @@ export async function convertVideoToAnimated(
   opts?: { fps?: number; scale?: number }
 ) {
   const nameBase = file.name.replace(/\.[^.]+$/, '')
-  const inName = `in_${Date.now()}_${nameBase}` + (file.name.match(/\.mp4$|\.webm$/i) ? file.name.match(/\.mp4$|\.webm$/i)![0] : '.mp4')
+  const inName =
+    `in_${Date.now()}_${nameBase}` +
+    (file.name.match(/\.mp4$|\.webm$/i) ? file.name.match(/\.mp4$|\.webm$/i)![0] : '.mp4')
   const outName = `out_${Date.now()}_${nameBase}.${target}`
 
   // fetchFile helper may not exist on all module shapes
@@ -137,7 +139,12 @@ export async function convertVideoToAnimated(
   // ensure FS helper exists; if missing try to recreate a proper instance from the module
   if (typeof ffmpegInstance.FS !== 'function' && typeof ffmpegInstance.FS !== 'object') {
     // try to construct a fresh ffmpeg using module exports
-    const creator = (mod && ((mod as any).createFFmpeg ?? (mod as any).default?.createFFmpeg ?? (mod as any).FFmpeg ?? (mod as any).default?.FFmpeg))
+    const creator =
+      mod &&
+      ((mod as any).createFFmpeg ??
+        (mod as any).default?.createFFmpeg ??
+        (mod as any).FFmpeg ??
+        (mod as any).default?.FFmpeg)
     if (creator && typeof creator === 'function') {
       try {
         let newInst: any
@@ -205,7 +212,12 @@ export async function mergeImagesToAnimated(
     else data = new Uint8Array(await f.arrayBuffer())
     // ensure FS exists (some caller-supplied instances may be module objects)
     if (typeof ffmpegInstance.FS !== 'function' && typeof ffmpegInstance.FS !== 'object') {
-      const creator = (mod && ((mod as any).createFFmpeg ?? (mod as any).default?.createFFmpeg ?? (mod as any).FFmpeg ?? (mod as any).default?.FFmpeg))
+      const creator =
+        mod &&
+        ((mod as any).createFFmpeg ??
+          (mod as any).default?.createFFmpeg ??
+          (mod as any).FFmpeg ??
+          (mod as any).default?.FFmpeg)
       if (creator && typeof creator === 'function') {
         try {
           let newInst: any
@@ -237,7 +249,15 @@ export async function mergeImagesToAnimated(
   const outName = `${base}.${target}`
 
   // use image2 pattern
-  await ffmpegInstance.run('-framerate', String(fps), '-i', 'frame%03d.png', '-vf', `scale=${scale}:-1:flags=lanczos`, outName)
+  await ffmpegInstance.run(
+    '-framerate',
+    String(fps),
+    '-i',
+    'frame%03d.png',
+    '-vf',
+    `scale=${scale}:-1:flags=lanczos`,
+    outName
+  )
 
   const outData = ffmpegInstance.FS('readFile', outName)
   const blob = new Blob([outData.buffer], { type: target === 'gif' ? 'image/gif' : 'image/apng' })
@@ -246,9 +266,13 @@ export async function mergeImagesToAnimated(
   // cleanup
   for (let i = 0; i < files.length; i++) {
     const name = `frame${String(i + 1).padStart(3, '0')}.png`
-    try { ffmpegInstance.FS('unlink', name) } catch {}
+    try {
+      ffmpegInstance.FS('unlink', name)
+    } catch {}
   }
-  try { ffmpegInstance.FS('unlink', outName) } catch {}
+  try {
+    ffmpegInstance.FS('unlink', outName)
+  } catch {}
 
   return { url, name: outName }
 }

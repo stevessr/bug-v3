@@ -69,19 +69,21 @@ export class EnhancedUserscriptManager {
     this.isMobile = this.detectMobile()
     this.settings = this.loadSettings()
     this.emojiGroups = this.loadEmojiGroups()
-    
+
     // Initialize upload queues
     this.uploadQueues.set(UploadState.PENDING, [])
     this.uploadQueues.set(UploadState.UPLOADING, [])
     this.uploadQueues.set(UploadState.RETRY, [])
     this.uploadQueues.set(UploadState.SUCCESS, [])
-    
+
     this.setupUploadProcessor()
   }
 
   private detectMobile(): boolean {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           window.innerWidth <= 768
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      window.innerWidth <= 768
+    )
   }
 
   private loadSettings(): UserscriptSettings {
@@ -149,16 +151,18 @@ export class EnhancedUserscriptManager {
   public createEmojiPicker(): HTMLElement {
     const picker = document.createElement('div')
     picker.className = `emoji-picker ${this.isMobile || this.settings.forceMobileMode ? 'mobile' : 'desktop'}`
-    
+
     picker.innerHTML = this.generatePickerHTML()
     this.setupPickerEvents(picker)
-    
+
     return picker
   }
 
   private generatePickerHTML(): string {
     const isMobileLayout = this.isMobile || this.settings.forceMobileMode
-    const columns = isMobileLayout ? Math.max(4, Math.min(6, this.settings.gridColumns)) : this.settings.gridColumns
+    const columns = isMobileLayout
+      ? Math.max(4, Math.min(6, this.settings.gridColumns))
+      : this.settings.gridColumns
 
     return `
       <div class="emoji-picker__header">
@@ -171,11 +175,15 @@ export class EnhancedUserscriptManager {
       </div>
       
       <div class="emoji-picker__tabs">
-        ${this.emojiGroups.map(group => `
+        ${this.emojiGroups
+          .map(
+            group => `
           <button class="emoji-picker__tab" data-group="${group.id}" title="${group.name}">
             ${group.icon}
           </button>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
       
       <div class="emoji-picker__content" style="grid-template-columns: repeat(${columns}, 1fr)">
@@ -360,9 +368,13 @@ export class EnhancedUserscriptManager {
   }
 
   private generateGroupsHTML(): string {
-    return this.emojiGroups.map(group => `
+    return this.emojiGroups
+      .map(
+        group => `
       <div class="emoji-group" data-group="${group.id}" style="display: none;">
-        ${group.emojis.map(emoji => `
+        ${group.emojis
+          .map(
+            emoji => `
           <button class="emoji-item" 
                   data-emoji='${JSON.stringify(emoji)}' 
                   title="${emoji.name}">
@@ -371,9 +383,13 @@ export class EnhancedUserscriptManager {
                  style="width: ${this.settings.imageScale}%; height: ${this.settings.imageScale}%"
                  loading="lazy">
           </button>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
-    `).join('')
+    `
+      )
+      .join('')
   }
 
   private generateUploadQueuesHTML(): string {
@@ -429,31 +445,31 @@ export class EnhancedUserscriptManager {
     // Tab switching
     const tabs = picker.querySelectorAll('.emoji-picker__tab')
     const groups = picker.querySelectorAll('.emoji-group')
-    
+
     tabs.forEach((tab, index) => {
       tab.addEventListener('click', () => {
         // Remove active class from all tabs and groups
         tabs.forEach(t => t.classList.remove('active'))
-        groups.forEach(g => (g as HTMLElement).style.display = 'none')
-        
+        groups.forEach(g => ((g as HTMLElement).style.display = 'none'))
+
         // Activate clicked tab and corresponding group
         tab.classList.add('active')
         if (groups[index]) {
-          (groups[index] as HTMLElement).style.display = 'grid'
+          ;(groups[index] as HTMLElement).style.display = 'grid'
         }
       })
     })
 
     // Activate first tab by default
     if (tabs.length > 0) {
-      (tabs[0] as HTMLElement).click()
+      ;(tabs[0] as HTMLElement).click()
     }
 
     // Emoji click events
-    picker.addEventListener('click', (e) => {
+    picker.addEventListener('click', e => {
       const target = e.target as HTMLElement
       const emojiButton = target.closest('.emoji-item') as HTMLElement
-      
+
       if (emojiButton) {
         const emojiData = JSON.parse(emojiButton.dataset.emoji || '{}')
         this.insertEmoji(emojiData)
@@ -464,7 +480,7 @@ export class EnhancedUserscriptManager {
     // Search functionality
     const searchInput = picker.querySelector('.emoji-picker__search') as HTMLInputElement
     if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
+      searchInput.addEventListener('input', e => {
         const query = (e.target as HTMLInputElement).value.toLowerCase()
         this.filterEmojis(picker, query)
       })
@@ -484,7 +500,7 @@ export class EnhancedUserscriptManager {
   private setupQueueEvents(picker: HTMLElement): void {
     // Clear queue buttons
     picker.querySelectorAll('.clear-queue-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', e => {
         const state = (e.target as HTMLElement).dataset.state as UploadState
         this.clearQueue(state)
         this.updateQueueDisplay(picker)
@@ -503,15 +519,15 @@ export class EnhancedUserscriptManager {
     // Handle touch events for better mobile experience
     let startY = 0
     let currentY = 0
-    
-    picker.addEventListener('touchstart', (e) => {
+
+    picker.addEventListener('touchstart', e => {
       startY = e.touches[0].clientY
     })
-    
-    picker.addEventListener('touchmove', (e) => {
+
+    picker.addEventListener('touchmove', e => {
       currentY = e.touches[0].clientY
       const diff = startY - currentY
-      
+
       // Prevent scrolling the page when scrolling within picker
       if (Math.abs(diff) > 10) {
         e.preventDefault()
@@ -521,20 +537,20 @@ export class EnhancedUserscriptManager {
 
   private filterEmojis(picker: HTMLElement, query: string): void {
     const groups = picker.querySelectorAll('.emoji-group')
-    
+
     groups.forEach(group => {
       const items = group.querySelectorAll('.emoji-item')
       let visibleCount = 0
-      
+
       items.forEach(item => {
         const emojiData = JSON.parse((item as HTMLElement).dataset.emoji || '{}')
         const name = emojiData.name?.toLowerCase() || ''
         const visible = name.includes(query)
-        
+
         ;(item as HTMLElement).style.display = visible ? 'flex' : 'none'
         if (visible) visibleCount++
       })
-      
+
       // Show/hide group based on visible items
       ;(group as HTMLElement).style.display = visibleCount > 0 ? 'grid' : 'none'
     })
@@ -566,7 +582,7 @@ export class EnhancedUserscriptManager {
     const scale = this.settings.imageScale
     const width = emoji.width || 500
     const height = emoji.height || 500
-    
+
     const scaledWidth = Math.round((width * scale) / 100)
     const scaledHeight = Math.round((height * scale) / 100)
 
@@ -595,25 +611,24 @@ export class EnhancedUserscriptManager {
       // Create a temporary element to parse HTML
       const temp = document.createElement('div')
       temp.innerHTML = content
-      
+
       // Try clipboard approach first
       const dataTransfer = new DataTransfer()
       dataTransfer.setData('text/html', content)
-      const pasteEvent = new ClipboardEvent('paste', { 
-        clipboardData: dataTransfer, 
-        bubbles: true 
+      const pasteEvent = new ClipboardEvent('paste', {
+        clipboardData: dataTransfer,
+        bubbles: true
       })
-      
+
       proseMirror.dispatchEvent(pasteEvent)
     } catch (error) {
       console.error('Failed to insert into ProseMirror:', error)
-      
+
       // Fallback: try to insert as plain text
       try {
-        const textContent = this.settings.outputFormat === 'html' ? 
-          content : 
-          `![${emoji.name}](${emoji.url})`
-          
+        const textContent =
+          this.settings.outputFormat === 'html' ? content : `![${emoji.name}](${emoji.url})`
+
         document.execCommand('insertText', false, textContent)
       } catch (fallbackError) {
         console.error('Fallback insertion also failed:', fallbackError)
@@ -623,7 +638,7 @@ export class EnhancedUserscriptManager {
 
   private updateEmojiUsage(emojiId: string): void {
     const now = Date.now()
-    
+
     for (const group of this.emojiGroups) {
       const emoji = group.emojis.find(e => e.id === emojiId)
       if (emoji) {
@@ -632,7 +647,7 @@ export class EnhancedUserscriptManager {
         break
       }
     }
-    
+
     this.saveEmojiGroups()
   }
 
@@ -642,18 +657,18 @@ export class EnhancedUserscriptManager {
     input.type = 'file'
     input.multiple = true
     input.accept = 'image/*'
-    
-    input.addEventListener('change', (e) => {
+
+    input.addEventListener('change', e => {
       const files = Array.from((e.target as HTMLInputElement).files || [])
       this.addFilesToUploadQueue(files)
     })
-    
+
     input.click()
   }
 
   private addFilesToUploadQueue(files: File[]): void {
     const pendingQueue = this.uploadQueues.get(UploadState.PENDING) || []
-    
+
     files.forEach(file => {
       if (file.type.startsWith('image/')) {
         const uploadItem: UploadItem = {
@@ -664,11 +679,11 @@ export class EnhancedUserscriptManager {
           retryCount: 0,
           timestamp: Date.now()
         }
-        
+
         pendingQueue.push(uploadItem)
       }
     })
-    
+
     this.uploadQueues.set(UploadState.PENDING, pendingQueue)
     this.processUploadQueue()
     this.updateQueueDisplay()
@@ -686,15 +701,15 @@ export class EnhancedUserscriptManager {
 
     const pendingQueue = this.uploadQueues.get(UploadState.PENDING) || []
     const retryQueue = this.uploadQueues.get(UploadState.RETRY) || []
-    
+
     // Process pending items first, then retry items
-    const nextItem = pendingQueue.shift() || 
-                    (this.settings.autoRetryFailedUploads && retryQueue.shift())
-    
+    const nextItem =
+      pendingQueue.shift() || (this.settings.autoRetryFailedUploads && retryQueue.shift())
+
     if (!nextItem) return
 
     this.uploadWorkers++
-    
+
     try {
       await this.uploadFile(nextItem)
     } catch (error) {
@@ -710,12 +725,12 @@ export class EnhancedUserscriptManager {
     const uploadingQueue = this.uploadQueues.get(UploadState.UPLOADING) || []
     uploadingQueue.push(item)
     this.uploadQueues.set(UploadState.UPLOADING, uploadingQueue)
-    
+
     this.updateQueueDisplay()
 
     try {
       // Simulate upload process (replace with actual upload logic)
-      const uploadedUrl = await this.performUpload(item.file, (progress) => {
+      const uploadedUrl = await this.performUpload(item.file, progress => {
         item.progress = progress
         this.updateQueueDisplay()
       })
@@ -724,52 +739,51 @@ export class EnhancedUserscriptManager {
       item.state = UploadState.SUCCESS
       item.uploadedUrl = uploadedUrl
       item.progress = 100
-      
+
       const successQueue = this.uploadQueues.get(UploadState.SUCCESS) || []
       successQueue.push(item)
       this.uploadQueues.set(UploadState.SUCCESS, successQueue)
-      
+
       // Remove from uploading queue
       this.removeFromQueue(UploadState.UPLOADING, item.id)
-      
+
       // Add to emoji groups if successful
       this.addUploadedEmojiToGroups(item)
-      
     } catch (error) {
       // Move to retry queue
       item.state = UploadState.RETRY
       item.error = error instanceof Error ? error.message : 'Upload failed'
       item.retryCount++
-      
+
       const retryQueue = this.uploadQueues.get(UploadState.RETRY) || []
       retryQueue.push(item)
       this.uploadQueues.set(UploadState.RETRY, retryQueue)
-      
+
       // Remove from uploading queue
       this.removeFromQueue(UploadState.UPLOADING, item.id)
     }
-    
+
     this.updateQueueDisplay()
   }
 
   private async performUpload(file: File, onProgress: (progress: number) => void): Promise<string> {
     // This is a placeholder implementation
     // Replace with actual upload logic to your preferred image hosting service
-    
+
     return new Promise((resolve, reject) => {
       // Simulate upload progress
       let progress = 0
       const interval = setInterval(() => {
         progress += Math.random() * 20
         onProgress(Math.min(progress, 90))
-        
+
         if (progress >= 90) {
           clearInterval(interval)
-          
+
           // Simulate final upload completion
           setTimeout(() => {
             onProgress(100)
-            
+
             // For demo purposes, create a local blob URL
             // In a real implementation, this would be the uploaded URL
             const url = URL.createObjectURL(file)
@@ -777,9 +791,10 @@ export class EnhancedUserscriptManager {
           }, 500)
         }
       }, 200)
-      
+
       // Simulate potential failure
-      if (Math.random() < 0.1) { // 10% failure rate for demo
+      if (Math.random() < 0.1) {
+        // 10% failure rate for demo
         setTimeout(() => {
           clearInterval(interval)
           reject(new Error('Upload service unavailable'))
@@ -831,7 +846,7 @@ export class EnhancedUserscriptManager {
   private retryAllFailed(): void {
     const retryQueue = this.uploadQueues.get(UploadState.RETRY) || []
     const pendingQueue = this.uploadQueues.get(UploadState.PENDING) || []
-    
+
     // Move all retry items back to pending
     retryQueue.forEach(item => {
       item.state = UploadState.PENDING
@@ -839,7 +854,7 @@ export class EnhancedUserscriptManager {
       item.error = undefined
       pendingQueue.push(item)
     })
-    
+
     this.uploadQueues.set(UploadState.PENDING, pendingQueue)
     this.uploadQueues.set(UploadState.RETRY, [])
   }
@@ -848,29 +863,33 @@ export class EnhancedUserscriptManager {
     if (!picker) {
       picker = document.querySelector('.emoji-picker') as HTMLElement
     }
-    
+
     if (!picker) return
 
     // Update queue counts and items
     Object.values(UploadState).forEach(state => {
       const queue = this.uploadQueues.get(state) || []
       const section = picker.querySelector(`[data-state="${state}"]`)
-      
+
       if (section) {
         const countSpan = section.querySelector('.count')
         const itemsContainer = section.querySelector('.queue-items')
-        
+
         if (countSpan) {
           countSpan.textContent = queue.length.toString()
         }
-        
+
         if (itemsContainer) {
-          itemsContainer.innerHTML = queue.map(item => `
+          itemsContainer.innerHTML = queue
+            .map(
+              item => `
             <div class="queue-item ${state}" title="${item.file.name}${item.error ? '\n' + item.error : ''}">
               ${item.file.name}
               ${item.state === UploadState.UPLOADING ? ` (${Math.round(item.progress)}%)` : ''}
             </div>
-          `).join('')
+          `
+            )
+            .join('')
         }
       }
     })
@@ -897,23 +916,27 @@ export class EnhancedUserscriptManager {
   }
 
   public exportData(): string {
-    return JSON.stringify({
-      version: '2.0',
-      exportDate: new Date().toISOString(),
-      settings: this.settings,
-      groups: this.emojiGroups
-    }, null, 2)
+    return JSON.stringify(
+      {
+        version: '2.0',
+        exportDate: new Date().toISOString(),
+        settings: this.settings,
+        groups: this.emojiGroups
+      },
+      null,
+      2
+    )
   }
 
   public importData(dataJson: string): void {
     try {
       const data = JSON.parse(dataJson)
-      
+
       if (data.settings) {
         this.settings = { ...this.settings, ...data.settings }
         this.saveSettings()
       }
-      
+
       if (data.groups && Array.isArray(data.groups)) {
         this.emojiGroups = data.groups
         this.saveEmojiGroups()
@@ -948,7 +971,11 @@ if (typeof window !== 'undefined') {
     const generatorMeta = document.querySelector('meta[name="generator"]')
     if (generatorMeta) {
       const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
-      if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
+      if (
+        content.includes('discourse') ||
+        content.includes('flarum') ||
+        content.includes('phpbb')
+      ) {
         return true
       }
     }
@@ -968,40 +995,42 @@ if (typeof window !== 'undefined') {
   // Initialize userscript functionality
   if (shouldInjectEmoji()) {
     console.log('[Enhanced Userscript] Compatible platform detected, initializing...')
-    
+
     // Add emoji button to toolbar when available
     function addEmojiButton(): void {
-      const toolbar = document.querySelector('.d-editor-button-bar, .composer-toolbar, .reply-toolbar')
+      const toolbar = document.querySelector(
+        '.d-editor-button-bar, .composer-toolbar, .reply-toolbar'
+      )
       if (toolbar && !toolbar.querySelector('.emoji-extension-btn')) {
         const button = document.createElement('button')
         button.className = 'emoji-extension-btn btn btn-icon no-text'
         button.innerHTML = '😀'
         button.title = '表情选择器 (增强版)'
         button.style.cssText = 'margin-left: 8px; font-size: 16px;'
-        
-        button.addEventListener('click', (e) => {
+
+        button.addEventListener('click', e => {
           e.preventDefault()
           const picker = userscriptManager.createEmojiPicker()
           document.body.appendChild(picker)
-          
+
           // Position picker near button
           const rect = button.getBoundingClientRect()
           const pickerEl = picker as HTMLElement
-          pickerEl.style.top = (rect.bottom + 8) + 'px'
+          pickerEl.style.top = rect.bottom + 8 + 'px'
           pickerEl.style.left = rect.left + 'px'
         })
-        
+
         toolbar.appendChild(button)
       }
     }
 
     // Try to add button immediately and on DOM changes
     addEmojiButton()
-    
+
     const observer = new MutationObserver(() => {
       addEmojiButton()
     })
-    
+
     observer.observe(document.body, {
       childList: true,
       subtree: true
