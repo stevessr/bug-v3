@@ -9,6 +9,7 @@ const defaults: Settings = {
   gridColumns: 4,
   outputFormat: 'markdown',
   MobileMode: false,
+  sidebarCollapsed: false,
   lastModified: new Date(),
 }
 
@@ -37,7 +38,11 @@ function save(groups?: EmojiGroup[]) {
   current.lastModified = new Date()
   // preserve any existing ungrouped payload if present
   const existing = storage.loadPayload()
-  const payload: PersistPayload = { Settings: current, emojiGroups: groups || [], ungrouped: existing?.ungrouped || [] }
+  const payload: PersistPayload = {
+    Settings: current,
+    emojiGroups: groups || [],
+    ungrouped: existing?.ungrouped || [],
+  }
   storage.savePayload(payload)
   listeners.forEach((l) => l(current))
 }

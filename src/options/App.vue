@@ -1,6 +1,6 @@
 <template>
   <a-layout style="min-height: 100vh; padding: 24px">
-    <a-layout-sider width="240">
+    <a-layout-sider width="240" collapsible :collapsed="siderCollapsed" @collapse="toggleSider">
       <a-menu mode="inline" :selectedKeys="[currentTab]" style="height: 100%">
         <a-menu-item key="groups" @click="select('groups')">表情管理</a-menu-item>
         <a-menu-item key="ungrouped" @click="select('ungrouped')">未分组表情</a-menu-item>
@@ -25,11 +25,20 @@ import { defineComponent, reactive, ref, onMounted, computed } from 'vue'
 import settingsStore from '../data/update/settingsStore'
 import emojiGroupsStore from '../data/update/emojiGroupsStore'
 import storage from '../data/update/storage'
+import store from '../data/store/main'
+import { Modal } from 'ant-design-vue'
 export default defineComponent({
   setup() {
     const currentTab = ref<'groups' | 'ungrouped' | 'hot' | 'importexport' | 'settings'>('groups')
-
     const s = settingsStore.getSettings()
+    const siderCollapsed = ref(!!s.sidebarCollapsed)
+
+    function toggleSider(collapsed: boolean) {
+      siderCollapsed.value = collapsed
+      // persist
+      store.saveSettings({ sidebarCollapsed: collapsed })
+    }
+
     const form = reactive({ ...s })
 
     const groups = ref<any[]>([])
@@ -67,6 +76,21 @@ export default defineComponent({
     }
 
     function editGroup(item: any) {
+      try {
+        Modal.confirm({
+          title: '编辑分组名称',
+          content: '请通过分组编辑对话框修改分组名称',
+          onOk() {
+            const name = window.prompt('新的分组名称', item.displayName)
+            if (name == null) return
+            const g = groups.value.find((x: any) => x.UUID === item.UUID)
+            if (g) g.displayName = name
+            emojiGroupsStore.setEmojiGroups(groups.value)
+            loadGroups()
+          },
+        })
+        return
+      } catch (_) {}
       const name = window.prompt('新的分组名称', item.displayName)
       if (name == null) return
       const g = groups.value.find((x: any) => x.UUID === item.UUID)
@@ -76,6 +100,17 @@ export default defineComponent({
     }
 
     function deleteGroup(item: any) {
+      try {
+        Modal.confirm({
+          title: '确认',
+          content: '确认删除分组: ' + item.displayName + ' ?',
+          onOk() {
+            emojiGroupsStore.removeGroup(item.UUID)
+            loadGroups()
+          },
+        })
+        return
+      } catch (_) {}
       if (!window.confirm('确认删除分组: ' + item.displayName + ' ?')) return
       emojiGroupsStore.removeGroup(item.UUID)
       loadGroups()
@@ -180,7 +215,9 @@ export default defineComponent({
       doImport,
       ungrouped,
       hot,
-  // components are auto-imported by unplugin-vue-components
+      siderCollapsed,
+      toggleSider,
+      // components are auto-imported by unplugin-vue-components
     }
   },
 })
