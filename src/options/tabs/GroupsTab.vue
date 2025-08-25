@@ -10,9 +10,9 @@
       "
     >
       <a-button type="primary" @click="showNew = true">新建分组</a-button>
-      <a-button size="small" @click="editMode = !editMode">{{
-        editMode ? '退出编辑模式' : '进入编辑模式'
-      }}</a-button>
+      <a-button size="small" @click="toggleEditMode" :type="editMode ? 'primary' : 'default'">
+        {{ editMode ? '退出编辑模式' : '进入编辑模式' }}
+      </a-button>
     </div>
 
     <a-collapse>
@@ -73,7 +73,7 @@
               v-for="(e, i) in g.emojis"
               :key="e.UUID"
               class="emoji-cell"
-              @click.stop="editMode ? () => onEditEmoji(g, e, i) : undefined"
+              @click.stop="editMode && onEditEmoji(g, e, i)"
               :draggable="!editMode"
             >
               <img
@@ -127,6 +127,11 @@ export default defineComponent({
     const gridCols = ref((settings && settings.gridColumns) || 4)
     const editMode = ref(false)
     const showNew = ref(false)
+
+    function toggleEditMode() {
+      console.log('toggleEditMode called, current mode:', editMode.value)
+      editMode.value = !editMode.value
+    }
     const showEdit = ref(false)
     const showAddEmoji = ref(false)
     const showImport = ref(false)
@@ -395,6 +400,7 @@ export default defineComponent({
     } catch (_) {}
 
     function onEditEmoji(g: any, e: any, i: number) {
+      console.log('onEditEmoji called', { g, e, i, editMode: editMode.value })
       addingGroup.value = g
       editingEmoji.value = { ...e, __index: i }
       showAddEmoji.value = true
@@ -465,6 +471,7 @@ export default defineComponent({
       editingEmoji,
       editMode,
       gridCols,
+      toggleEditMode,
       onCreated,
       onEdit,
       onSaved,
@@ -483,3 +490,33 @@ export default defineComponent({
   },
 })
 </script>
+
+<style scoped>
+.emoji-cell {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.emoji-cell:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.emoji-cell::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  pointer-events: none;
+  transition: border-color 0.2s ease;
+}
+
+.emoji-cell:hover::after {
+  border-color: var(--ant-primary-color);
+}
+</style>

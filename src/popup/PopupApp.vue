@@ -54,12 +54,12 @@
 
 <script lang="ts">
 declare const chrome: any
-import { defineComponent, ref, computed, onMounted } from 'vue'
+import { defineComponent, ref, reactive, computed, onMounted } from 'vue'
 import store, { recordUsage } from '../data/store/main'
 
 export default defineComponent({
   setup() {
-    const settings = store.getSettings()
+  const settings = reactive({ ...store.getSettings() })
     const localScale = ref(settings.imageScale || 100)
     const groups = ref(store.getGroups())
     const ungrouped = ref(store.getUngrouped())

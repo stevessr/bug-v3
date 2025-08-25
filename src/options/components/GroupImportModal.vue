@@ -13,9 +13,21 @@
       >
         <a-textarea v-model:value="text" rows="6" />
         <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center">
-          <input type="file" accept="application/json,text/*" @change="onFileChange" />
+          <a-upload
+            :file-list="fileList"
+            :before-upload="beforeUpload"
+            accept="application/json,text/*"
+            :show-upload-list="false"
+          >
+            <a-button type="dashed" style="border-radius: 6px">
+              <template #icon>
+                <upload-outlined />
+              </template>
+              选择文件导入
+            </a-button>
+          </a-upload>
           <span style="font-size: 12px; color: var(--ant-text-color-secondary)"
-            >或选择文件导入（支持 JSON / 文本）</span
+            >支持 JSON / 文本格式</span
           >
         </div>
       </a-form-item>
@@ -83,8 +95,12 @@
 <script lang="ts">
 import { defineComponent, ref, watch } from 'vue'
 import { parseEmojisFromText } from '../utils/parser'
+import { UploadOutlined } from '@ant-design/icons-vue'
 
 export default defineComponent({
+  components: {
+    UploadOutlined,
+  },
   props: {
     modelValue: { type: Boolean, required: true },
     groupUUID: { type: String, required: true },
@@ -107,6 +123,34 @@ export default defineComponent({
 
     const selected = ref<any[]>([])
     const gridCols = ref(3)
+    const fileList = ref<any[]>([])
+
+    function beforeUpload(file: File) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const content = reader.result as string
+          if (!content) return
+          // if json try to pretty-print, otherwise set raw text
+          try {
+            const j = JSON.parse(content)
+            text.value = JSON.stringify(j, null, 2)
+          } catch (_) {
+            text.value = content
+          }
+          // auto-parse after loading
+          parse()
+        } finally {
+          fileList.value = []
+        }
+      }
+      reader.onerror = () => {
+        console.error('Failed to read file', reader.error)
+        fileList.value = []
+      }
+      reader.readAsText(file)
+      return false // 阻止默认上传行为
+    }
 
     function parse() {
       const t = (text.value || '').trim()
@@ -156,41 +200,7 @@ export default defineComponent({
       selected.value = preview.value.map((p: any) => p.displayUrl || p.realUrl)
     }
 
-    function onFileChange(ev: Event) {
-      const input = ev.target as HTMLInputElement
-      if (!input || !input.files || input.files.length === 0) return
-      const file = input.files[0]
-      const reader = new FileReader()
-      reader.onload = () => {
-        try {
-          const content = reader.result as string
-          if (!content) return
-          // if json try to pretty-print, otherwise set raw text
-          try {
-            const j = JSON.parse(content)
-            text.value = JSON.stringify(j, null, 2)
-          } catch (_) {
-            text.value = content
-          }
-          // auto-parse after loading
-          parse()
-        } finally {
-          // clear the input so the same file can be selected again if needed
-          try {
-            input.value = ''
-          } catch (_) {}
-        }
-      }
-      reader.onerror = () => {
-        try {
-          console.error('Failed to read file', reader.error)
-        } catch (_) {}
-        try {
-          input.value = ''
-        } catch (_) {}
-      }
-      reader.readAsText(file)
-    }
+    // onFileChange 方法已替换为 beforeUpload 方法，使用 Ant Design Vue 的 a-upload 组件
 
     function parseHtmlOnly(input: string) {
       const out: any[] = []
@@ -339,7 +349,8 @@ export default defineComponent({
       parse,
       onOk,
       close,
-      onFileChange,
+      beforeUpload,
+      fileList,
       selected,
       gridCols,
       variantList,
