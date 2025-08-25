@@ -1,0 +1,187 @@
+<template>
+  <a-layout style="min-height: 100vh; padding: 24px">
+    <a-layout-sider width="240">
+      <a-menu mode="inline" :selectedKeys="[currentTab]" style="height: 100%">
+        <a-menu-item key="groups" @click="select('groups')">表情管理</a-menu-item>
+        <a-menu-item key="ungrouped" @click="select('ungrouped')">未分组表情</a-menu-item>
+        <a-menu-item key="hot" @click="select('hot')">常用表情</a-menu-item>
+        <a-menu-item key="importexport" @click="select('importexport')">配置导入/导出</a-menu-item>
+        <a-menu-item key="settings" @click="select('settings')">设置</a-menu-item>
+      </a-menu>
+    </a-layout-sider>
+
+    <a-layout-content style="padding: 16px">
+      <GroupsTab v-if="currentTab === 'groups'" />
+      <UngroupedTab v-if="currentTab === 'ungrouped'" />
+      <HotTab v-if="currentTab === 'hot'" />
+      <ImportExportTab v-if="currentTab === 'importexport'" />
+      <SettingsTab v-if="currentTab === 'settings'" />
+    </a-layout-content>
+  </a-layout>
+</template>
+
+<script lang="ts">
+import { defineComponent, reactive, ref, onMounted, computed } from 'vue'
+import settingsStore from '../data/update/settingsStore'
+import emojiGroupsStore from '../data/update/emojiGroupsStore'
+import storage from '../data/update/storage'
+export default defineComponent({
+  setup() {
+    const currentTab = ref<'groups' | 'ungrouped' | 'hot' | 'importexport' | 'settings'>('groups')
+
+    const s = settingsStore.getSettings()
+    const form = reactive({ ...s })
+
+    const groups = ref<any[]>([])
+
+    function loadGroups() {
+      groups.value = emojiGroupsStore.getEmojiGroups()
+    }
+
+    function select(key: any) {
+      currentTab.value = key
+    }
+
+    function save() {
+      settingsStore.setSettings(
+        {
+          imageScale: Number(form.imageScale),
+          defaultEmojiGroupUUID: form.defaultEmojiGroupUUID,
+          gridColumns: form.gridColumns as any,
+          outputFormat: form.outputFormat,
+          MobileMode: !!form.MobileMode,
+        },
+        groups.value,
+      )
+      loadGroups()
+    }
+
+    function createGroup() {
+      const id =
+        typeof crypto !== 'undefined' && (crypto as any).randomUUID
+          ? (crypto as any).randomUUID()
+          : String(Date.now())
+      const group = { UUID: id, displayName: 'New Group', emojis: [], icon: '', order: 0 }
+      emojiGroupsStore.addGroup(group)
+      loadGroups()
+    }
+
+    function editGroup(item: any) {
+      const name = window.prompt('新的分组名称', item.displayName)
+      if (name == null) return
+      const g = groups.value.find((x: any) => x.UUID === item.UUID)
+      if (g) g.displayName = name
+      emojiGroupsStore.setEmojiGroups(groups.value)
+      loadGroups()
+    }
+
+    function deleteGroup(item: any) {
+      if (!window.confirm('确认删除分组: ' + item.displayName + ' ?')) return
+      emojiGroupsStore.removeGroup(item.UUID)
+      loadGroups()
+    }
+
+    // import/export
+    const exportJson = ref('')
+    function refreshExport() {
+      const payload = {
+        Settings: settingsStore.getSettings(),
+        emojiGroups: emojiGroupsStore.getEmojiGroups(),
+      }
+      exportJson.value = JSON.stringify(payload, null, 2)
+    }
+
+    function downloadExport() {
+      refreshExport()
+      const blob = new Blob([exportJson.value], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'bugcopilot-config.json'
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+
+    async function copyExport() {
+      refreshExport()
+      try {
+        await navigator.clipboard.writeText(exportJson.value)
+        // eslint-disable-next-line no-console
+        console.log('copied')
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    const importText = ref('')
+    function clearImport() {
+      importText.value = ''
+    }
+
+    function doImport() {
+      try {
+        const parsed = JSON.parse(importText.value)
+        if (parsed && parsed.Settings) {
+          settingsStore.setSettings(parsed.Settings, parsed.emojiGroups || [])
+        }
+        if (parsed && Array.isArray(parsed.emojiGroups)) {
+          emojiGroupsStore.setEmojiGroups(parsed.emojiGroups)
+        }
+        loadGroups()
+        refreshExport()
+        // eslint-disable-next-line no-console
+        console.log('imported')
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('import failed', err)
+        window.alert('导入失败: JSON 格式不正确')
+      }
+    }
+
+    // derived lists (best-effort)
+    const allEmojis = computed(() => {
+      const arr: any[] = []
+      for (const g of groups.value) {
+        if (Array.isArray(g.emojis))
+          arr.push(...g.emojis.map((e: any) => ({ ...e, groupUUID: g.UUID })))
+      }
+      return arr
+    })
+
+    const ungrouped = computed(() => {
+      // currently we keep ungrouped as empty because storage model stores only groups
+      // This returns emojis that do not have groupUUID (none) — placeholder
+      return [] as any[]
+    })
+
+    const hot = computed(() => {
+      // If we had usage tracking, we'd sort by usageCount. For now return top N where usageCount exists
+      const withUsage = allEmojis.value.filter((e) => typeof e.usageCount === 'number')
+      withUsage.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
+      return withUsage.slice(0, 50)
+    })
+
+    onMounted(() => {
+      loadGroups()
+      refreshExport()
+    })
+
+    return {
+      currentTab,
+      select,
+      form,
+      groups,
+      exportJson,
+      refreshExport,
+      downloadExport,
+      copyExport,
+      importText,
+      clearImport,
+      doImport,
+      ungrouped,
+      hot,
+  // components are auto-imported by unplugin-vue-components
+    }
+  },
+})
+</script>

@@ -6,10 +6,11 @@ interface emoji {
   realUrl: URL
   displayUrl: URL
   order: number
+  UUID: UUID
 }
 
 interface HotEmoji extends emoji {
-  groupURL: string
+  groupUUID: UUID
   usageCount: number
   lastUsed: number
 }

@@ -1,0 +1,252 @@
+import { createEmojiButtonElement } from './genbotton'
+import { injectStyleString, generatePickerStyles, PICKER_CLASS, BUTTON_CLASS } from './css'
+import { startExternalButtonListenerLoop } from '../loop/main'
+import { recordUsage } from '../../data/store/main'
+
+export type InjectorConfig = {
+  toolbarSelector?: string
+  emojiButtonClass?: string
+  emojiPickerClass?: string
+  textAreaSelector?: string
+  richEditorSelector?: string
+  emojiContentGeneratorFn: () => string
+  pollInterval?: number
+}
+
+/**
+ * 注入器：在页面上创建按钮和弹出选择器，并返回一个 cleanup 函数以便移除所有监听和 DOM。
+ * - 会轮询查找 toolbar（或使用默认选择器），并在找到时插入按钮
+ * - 点击按钮会创建 picker，并注入 emojiContentGeneratorFn 的 HTML
+ */
+export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
+  const config: Required<InjectorConfig> = {
+    toolbarSelector: cfg.toolbarSelector || '.d-editor-button-bar[role="toolbar"]',
+    emojiButtonClass: cfg.emojiButtonClass || BUTTON_CLASS,
+    emojiPickerClass: cfg.emojiPickerClass || PICKER_CLASS,
+    textAreaSelector: cfg.textAreaSelector || 'textarea.d-editor-input',
+    richEditorSelector: cfg.richEditorSelector || '.ProseMirror.d-editor-input',
+    emojiContentGeneratorFn: cfg.emojiContentGeneratorFn,
+    pollInterval: cfg.pollInterval || 500,
+  }
+
+  if (typeof document === 'undefined') {
+    return {
+      stop: () => {},
+    }
+  }
+
+  // 注入样式
+  const styleEl = injectStyleString(generatePickerStyles(config.emojiPickerClass))
+
+  let stopped = false
+  const listeners: Array<() => void> = []
+  const createdNodes: Node[] = []
+
+  const isMiniReply = () => {
+    const replyEle = document.querySelector('#reply-control')
+    return !!(replyEle && replyEle.className.includes('hide-preview') && window.innerWidth < 1600)
+  }
+
+  function attachPickerBehavior(emojiButton: HTMLElement) {
+    function handleClick(event: MouseEvent) {
+      event.stopPropagation()
+      const existingPicker = document.querySelector(`.${config.emojiPickerClass}`)
+      if (existingPicker) {
+        existingPicker.remove()
+        document.removeEventListener('click', handleClickOutside)
+        return
+      }
+
+      const emojiPicker = document.createElement('div')
+      emojiPicker.className = config.emojiPickerClass
+      emojiPicker.innerHTML = config.emojiContentGeneratorFn()
+      document.body.appendChild(emojiPicker)
+      createdNodes.push(emojiPicker)
+
+      // 统一定位逻辑：优先使用回复控件(`#reply-control`)定位（若存在），否则回退到编辑器包裹器定位
+      const replyControl = document.querySelector('#reply-control')
+      if (replyControl) {
+        const replyRect = (replyControl as Element).getBoundingClientRect()
+        emojiPicker.style.position = 'fixed'
+        emojiPicker.style.bottom = replyRect.top - 5 + 'px'
+        emojiPicker.style.left = replyRect.left + 'px'
+        const imagePanel = emojiPicker.querySelector('img')
+        if (imagePanel) {
+          ;(imagePanel as HTMLElement).style.width = '80px'
+          ;(imagePanel as HTMLElement).style.height = '85px'
+        }
+      } else {
+        const editorWrapper = document.querySelector('.d-editor-textarea-wrapper')
+        if (editorWrapper) {
+          const editorRect = (editorWrapper as Element).getBoundingClientRect()
+          emojiPicker.style.position = 'fixed'
+          if (isMiniReply()) {
+            emojiPicker.style.top = editorRect.top + 'px'
+            emojiPicker.style.left =
+              editorRect.left + editorRect.width / 2 - emojiPicker.clientWidth / 2 + 'px'
+          } else {
+            emojiPicker.style.top = editorRect.top + 'px'
+            emojiPicker.style.left = editorRect.right + 10 + 'px'
+          }
+        }
+      }
+
+      function handleClickOutside(e: MouseEvent) {
+        if (emojiPicker && !emojiPicker.contains(e.target as Node)) {
+          emojiPicker.remove()
+          document.removeEventListener('click', handleClickOutside)
+        }
+      }
+
+      setTimeout(() => {
+        document.addEventListener('click', handleClickOutside)
+        listeners.push(() => document.removeEventListener('click', handleClickOutside))
+      }, 0)
+
+      emojiPicker.addEventListener('click', function (e) {
+        const target = e.target as HTMLElement
+        if (target && target.tagName === 'IMG') {
+          // record usage if the image has a UUID data attribute
+          try {
+            const idAttr = (target as HTMLElement).getAttribute('data-uuid') || (target as HTMLElement).getAttribute('data-UUID')
+            if (idAttr) recordUsage(idAttr)
+          } catch (_) {}
+          const textArea = document.querySelector(
+            config.textAreaSelector,
+          ) as HTMLTextAreaElement | null
+          const richEle = document.querySelector(config.richEditorSelector) as HTMLElement | null
+          if (!textArea && !richEle) {
+            console.error('找不到输入框')
+            return
+          }
+
+          const imgElement = target as HTMLImageElement
+          let width = imgElement.getAttribute('data-width') || '500'
+          let height = imgElement.getAttribute('data-height') || '500'
+          if (!imgElement.getAttribute('data-width') || !imgElement.getAttribute('data-height')) {
+            const match = imgElement.src.match(/_(\d{3,})x(\d{3,})\./)
+            if (match) {
+              width = match[1]
+              height = match[2]
+            }
+          }
+
+          if (textArea) {
+            const emojiMarkdown = `![${imgElement.alt}|${width}x${height},30%](${imgElement.src}) `
+            const startPos = textArea.selectionStart
+            const endPos = textArea.selectionEnd
+            textArea.value =
+              textArea.value.substring(0, startPos) +
+              emojiMarkdown +
+              textArea.value.substring(endPos, textArea.value.length)
+            textArea.selectionStart = textArea.selectionEnd = startPos + emojiMarkdown.length
+            textArea.focus()
+            const event = new Event('input', { bubbles: true, cancelable: true })
+            textArea.dispatchEvent(event)
+          } else if (richEle) {
+            const imgTemplate = `<img src="${imgElement.src}" alt="${imgElement.alt}" width="${width}" height="${height}" data-scale="30" style="width: ${Math.round(parseInt(width) * 0.3)}px">`
+            try {
+              const dt = new DataTransfer()
+              dt.setData('text/html', imgTemplate)
+              const evt = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true })
+              richEle.dispatchEvent(evt)
+            } catch (_) {
+              try {
+                document.execCommand('insertHTML', false, imgTemplate)
+              } catch (err) {
+                console.error('无法向富文本编辑器中插入表情', err)
+              }
+            }
+          }
+
+          if (emojiPicker) emojiPicker.remove()
+        }
+      })
+    }
+
+    emojiButton.addEventListener('click', handleClick)
+    listeners.push(() => emojiButton.removeEventListener('click', handleClick))
+  }
+
+  const pollId = window.setInterval(() => {
+    if (stopped) return
+    const toolbar = document.querySelector(config.toolbarSelector)
+    if (toolbar && !document.querySelector(`.${config.emojiButtonClass}`)) {
+      const emojiButton = createEmojiButtonElement({ buttonClass: config.emojiButtonClass })
+      ;(toolbar as Element).appendChild(emojiButton)
+      createdNodes.push(emojiButton)
+      attachPickerBehavior(emojiButton)
+    }
+  }, config.pollInterval)
+
+  // 启动外部按钮监听循环
+  const stopExternalLoop = startExternalButtonListenerLoop({
+    selectors: undefined,
+    emojiButtonClass: config.emojiButtonClass,
+    textAreaSelector: config.textAreaSelector,
+    interval: config.pollInterval,
+  })
+  listeners.push(() => stopExternalLoop())
+
+  // 外部按钮选择器列表（依据提供的 HTML 片段）
+  const externalButtonSelectors = [
+    '#create-topic',
+    '.topic-drafts-menu-trigger',
+    'button.post-action-menu__reply',
+    'button.reply.create',
+    'button.create.reply-to-post',
+    '.topic-footer-button',
+  ]
+
+  function externalClickHandler(this: Element, ev: Event) {
+    // 尝试触发工具栏的 emoji 按钮来打开选择器
+    const btn = document.querySelector(`.${config.emojiButtonClass}`) as HTMLElement | null
+    if (btn) {
+      // 延迟触发，以便原始点击事件之类的优先执行
+      setTimeout(() => btn.click(), 0)
+    } else {
+      // 若找不到工具栏按钮，尝试聚焦输入框作为回退
+      const ta = document.querySelector(config.textAreaSelector) as HTMLTextAreaElement | null
+      if (ta) ta.focus()
+    }
+    // 不阻止原始事件，允许页面原有行为继续
+  }
+
+  function attachExternalButtonListeners() {
+    try {
+      externalButtonSelectors.forEach((sel) => {
+        const nodes = Array.from(document.querySelectorAll(sel)) as Element[]
+        nodes.forEach((n) => {
+          if (!n.getAttribute('data-nacho-listener')) {
+            n.addEventListener('click', externalClickHandler)
+            n.setAttribute('data-nacho-listener', '1')
+            listeners.push(() => n.removeEventListener('click', externalClickHandler))
+            // track node so cleanup will remove it if necessary
+            createdNodes.push(n)
+          }
+        })
+      })
+    } catch (err) {
+      // 忽略扫描过程中的异常，保持注入器稳定
+      // console.warn('attachExternalButtonListeners error', err)
+    }
+  }
+
+  function stop() {
+    stopped = true
+    window.clearInterval(pollId)
+    listeners.forEach((fn) => {
+      try {
+        fn()
+      } catch (_) {}
+    })
+    // 移除创建的 DOM
+    createdNodes.forEach((n) => n && n.parentNode && n.parentNode.removeChild(n))
+    // 移除样式
+    if (styleEl && styleEl.parentNode) styleEl.parentNode.removeChild(styleEl)
+  }
+
+  return { stop }
+}
+
+export default injectNachonekoEmojiFeature

@@ -14,9 +14,21 @@ export default defineConfig({
     vueJsx(),
     vueDevTools(),
     Components({
-      resolvers: [AntDesignVueResolver()],
+      dirs: ['src/options/tabs', 'src/options/components'],
+      extensions: ['vue'],
+      deep: true,
+      resolvers: [AntDesignVueResolver({ importStyle: false })],
+      dts: false,
     }),
   ],
+  build: {
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        options: fileURLToPath(new URL('./options.html', import.meta.url)),
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
