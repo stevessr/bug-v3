@@ -65,7 +65,7 @@
         <div style="margin-top: 8px">
           <div
             class="emoji-grid"
-            :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: '8px' }"
+            :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }"
             :data-group="g.UUID"
             :ref="(el) => setContainer(el, g.UUID)"
           >
@@ -78,7 +78,13 @@
             >
               <img
                 :src="e.displayUrl || e.realUrl"
-                style="width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 6px"
+                style="
+                  width: 100%;
+                  height: 100%;
+                  object-fit: cover;
+                  border-radius: 6px;
+                  display: block;
+                "
               />
             </div>
           </div>
@@ -393,6 +399,32 @@ export default defineComponent({
       })
     } catch (_) {}
 
+    // re-init sortables when grid column count changes
+    try {
+      watch(gridCols, async (v) => {
+        try {
+          // destroy all existing instances
+          Object.keys(sortableMap).forEach((k) => {
+            const inst = (sortableMap as any)[k]
+            if (inst && typeof inst.destroy === 'function') inst.destroy()
+            delete (sortableMap as any)[k]
+          })
+        } catch (_) {}
+
+        await nextTick()
+        try {
+          if (editMode && editMode.value) return
+          const els = document.querySelectorAll('.emoji-grid')
+          els.forEach((el) => {
+            try {
+              const g = (el as HTMLElement).getAttribute('data-group')
+              if (g) setContainer(el, g)
+            } catch (_) {}
+          })
+        } catch (_) {}
+      })
+    } catch (_) {}
+
     try {
       onUnmounted(() => {
         try {
@@ -519,6 +551,10 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.emoji-grid {
+  display: grid;
+  gap: 8px;
+}
 .emoji-cell {
   cursor: pointer;
   transition: all 0.2s ease;
@@ -545,5 +581,37 @@ export default defineComponent({
 
 .emoji-cell:hover::after {
   border-color: var(--ant-primary-color);
+}
+
+/* make each cell square: prefer aspect-ratio, fallback to padding-bottom trick */
+.emoji-cell {
+  width: 100%;
+}
+.emoji-cell > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.emoji-cell {
+  /* try aspect-ratio first */
+  aspect-ratio: 1 / 1;
+}
+
+/* fallback for older browsers: maintain square using pseudo element */
+.emoji-cell::before {
+  content: '';
+  display: block;
+  padding-top: 100%;
+  width: 100%;
+  height: 0;
+}
+.emoji-cell > img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 </style>
