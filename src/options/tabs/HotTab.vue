@@ -2,24 +2,24 @@
   <a-card title="常用表情">
     <div v-if="items.length === 0">暂无常用表情</div>
     <div v-else>
-      <a-collapse bordered>
+      <a-collapse bordered default-active-key="1">
         <a-collapse-panel header="常用表情列表" key="1">
-          <a-list bordered>
-            <a-list-item v-for="e in items" :key="e.UUID">
-              <div style="display: flex; align-items: center; gap: 12px">
-                <img
-                  :src="e.displayUrl || e.realUrl"
-                  style="width: 10vw; height: 10vw; object-fit: cover; border-radius: 4px; max-width: 80px; max-height: 80px"
-                />
-                <div style="flex: 1">
-                  <div style="font-weight: 500">{{ e.displayName }}</div>
-                  <div style="font-size: 12px; color: var(--ant-text-color-secondary)">
-                    使用次数: {{ e.usageCount || 0 }}
-                  </div>
-                </div>
-              </div>
-            </a-list-item>
-          </a-list>
+          <div v-if="items.length === 0">暂无常用表情</div>
+          <div v-else>
+            <div class="emoji-grid" :class="['grid', gridColsClass, 'gap-2']">
+              <a-card v-for="e in items" :key="e.UUID" hoverable size="small" style="width: 100%">
+                <template #cover>
+                  <img
+                    :src="e.displayUrl || e.realUrl"
+                    style="width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px"
+                  />
+                </template>
+                <a-card-meta :title="e.displayName">
+                  <template #description>使用次数: {{ e.usageCount || 0 }}</template>
+                </a-card-meta>
+              </a-card>
+            </div>
+          </div>
         </a-collapse-panel>
       </a-collapse>
 
@@ -56,13 +56,15 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue'
+import { defineComponent, ref, onMounted, reactive, computed } from 'vue'
 import store from '../../data/store/main'
 
 export default defineComponent({
   setup() {
     const items = ref<any[]>([])
     const stats = ref({ groupCount: 0, emojiCount: 0, totalHotness: 0 })
+    const settings = reactive({ ...store.getSettings() })
+    const gridColsClass = computed(() => `grid-cols-${(settings as any).gridColumns || 4}`)
     function load() {
       items.value = store.getHot()
       // compute stats
@@ -80,7 +82,7 @@ export default defineComponent({
       stats.value = { groupCount: groups.length, emojiCount, totalHotness: totalHot }
     }
     onMounted(load)
-    return { items, stats }
+    return { items, stats, gridColsClass }
   },
 })
 </script>
