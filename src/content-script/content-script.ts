@@ -28,6 +28,22 @@ function updateChannelsFromStorage() {
 
 updateChannelsFromStorage()
 
+// log when script is injected into the page
+try {
+  log('injected', {
+    href: typeof location !== 'undefined' ? String(location.href).slice(0, 200) : undefined,
+    title: typeof document !== 'undefined' ? String(document.title).slice(0, 200) : undefined,
+    channels: Array.from(channelList),
+    anyPending:
+      (typeof window !== 'undefined' &&
+        window.localStorage &&
+        (window.localStorage.getItem('bugcopilot_flag_session_pending') === 'true' ||
+          window.localStorage.getItem('bugcopilot_flag_extended_pending') === 'true')) ||
+      false,
+    time: new Date().toISOString(),
+  })
+} catch (_) {}
+
 // Polling watcher: only active when pending flags exist in this tab
 const PollWatcher = (function () {
   let intervalId: any = null
@@ -36,7 +52,8 @@ const PollWatcher = (function () {
     try {
       // if session pending, check sessionStorage for payload
       try {
-        const sessionPending = window.localStorage.getItem('bugcopilot_flag_session_pending') === 'true'
+        const sessionPending =
+          window.localStorage.getItem('bugcopilot_flag_session_pending') === 'true'
         if (sessionPending) {
           const sess = window.sessionStorage.getItem('bugcopilot_settings_v1')
           if (sess) {
@@ -55,7 +72,8 @@ const PollWatcher = (function () {
 
       // if extended pending, check chrome.storage.local.extended_payload
       try {
-        const extendedPending = window.localStorage.getItem('bugcopilot_flag_extended_pending') === 'true'
+        const extendedPending =
+          window.localStorage.getItem('bugcopilot_flag_extended_pending') === 'true'
         if (extendedPending) {
           if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
             chrome.storage.local.get(['extended_payload'], (res: any) => {
@@ -65,7 +83,11 @@ const PollWatcher = (function () {
                     window.localStorage.removeItem('bugcopilot_flag_extended_pending')
                   } catch (_) {}
                   try {
-                    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                    if (
+                      typeof chrome !== 'undefined' &&
+                      chrome.runtime &&
+                      chrome.runtime.sendMessage
+                    ) {
                       chrome.runtime.sendMessage({ type: 'stage-ack', stage: 'extended' })
                     }
                   } catch (_) {}
@@ -80,19 +102,29 @@ const PollWatcher = (function () {
 
   function start() {
     if (intervalId) return
+    try {
+      log('PollWatcher.start')
+    } catch (_) {}
     intervalId = setInterval(() => checkOnce(), 1000)
   }
 
   function stop() {
     try {
-      if (intervalId) clearInterval(intervalId)
+      if (intervalId) {
+        try {
+          log('PollWatcher.stop')
+        } catch (_) {}
+        clearInterval(intervalId)
+      }
     } catch (_) {}
     intervalId = null
   }
 
   // initial start check
   try {
-    const anyPending = window.localStorage.getItem('bugcopilot_flag_session_pending') === 'true' || window.localStorage.getItem('bugcopilot_flag_extended_pending') === 'true'
+    const anyPending =
+      window.localStorage.getItem('bugcopilot_flag_session_pending') === 'true' ||
+      window.localStorage.getItem('bugcopilot_flag_extended_pending') === 'true'
     if (anyPending) start()
   } catch (_) {}
 
@@ -108,7 +140,9 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         try {
           window.localStorage.setItem(msg.key, String(msg.value))
           // start polling when a pending flag is set
-          try { PollWatcher.start() } catch (_) {}
+          try {
+            PollWatcher.start()
+          } catch (_) {}
         } catch (_) {}
         return
       }
@@ -116,7 +150,9 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         try {
           window.localStorage.removeItem(msg.key)
           // stop polling when a pending flag is cleared
-          try { PollWatcher.stop() } catch (_) {}
+          try {
+            PollWatcher.stop()
+          } catch (_) {}
         } catch (_) {}
         return
       }

@@ -1,16 +1,32 @@
-'''{
+{
   "manifest_version": 3,
   "name": "emoji",
   "version": "1.0",
   "description": "A simple example of a Chrome extension built with Manifest V3.",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Click me!"
+    "default_title": "Click me!",
+    "default_icon": {
+      "48": "img/48.png",
+      "64": "img/64.png",
+      "128": "img/128.png",
+      "512": "img/512.png",
+      "1000": "img/1000.png",
+      "1200": "img/1200.jpg"
+    }
   },
   "permissions": ["storage", "offscreen", "scripting", "indexedDB"],
   "host_permissions": ["https://*.google.com/"],
   "background": {
     "service_worker": "background.js"
+  },
+  "icons": {
+    "48": "img/48.png",
+    "64": "img/64.png",
+    "128": "img/128.png",
+    "512": "img/512.png",
+    "1000": "img/1000.png",
+    "1200": "img/1200.jpg"
   },
   "offscreen": {
     "reasons": ["LOCAL_STORAGE"],
@@ -19,10 +35,14 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all-urls>"],
+      "matches": ["<all_urls>"],
       "js": ["content-script.js"]
     }
   ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "web_accessible_resources": [
     {
       "resources": ["picker.css"],
@@ -30,4 +50,3 @@
     }
   ]
 }
-''
