@@ -34,6 +34,13 @@ export default defineConfig({
         // build background entry so it outputs dist/background.js
         background: fileURLToPath(new URL('./src/background/index.ts', import.meta.url)),
       },
+      output: {
+        // rolldown (vite aliased) expects manualChunks to be a function
+        manualChunks(id) {
+          if (typeof id === 'string' && id.includes('monaco-editor')) return 'monaco-editor'
+          return undefined
+        },
+      },
     },
   },
   resolve: {
@@ -43,14 +50,5 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['monaco-editor'],
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'monaco-editor': ['monaco-editor'],
-        },
-      },
-    },
   },
 })

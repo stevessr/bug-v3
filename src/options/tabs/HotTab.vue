@@ -6,27 +6,50 @@
         <a-collapse-panel header="常用表情列表" key="1">
           <a-list bordered>
             <a-list-item v-for="e in items" :key="e.UUID">
-              <a-list-item-meta
-                :title="e.displayName"
-                :description="'使用次数: ' + (e.usageCount || 0)"
-              />
+              <div style="display: flex; align-items: center; gap: 12px">
+                <img
+                  :src="e.displayUrl || e.realUrl"
+                  style="width: 10vw; height: 10vw; object-fit: cover; border-radius: 4px; max-width: 80px; max-height: 80px"
+                />
+                <div style="flex: 1">
+                  <div style="font-weight: 500">{{ e.displayName }}</div>
+                  <div style="font-size: 12px; color: var(--ant-text-color-secondary)">
+                    使用次数: {{ e.usageCount || 0 }}
+                  </div>
+                </div>
+              </div>
             </a-list-item>
           </a-list>
         </a-collapse-panel>
       </a-collapse>
 
-      <div style="margin-top: 12px; border-top: 1px dashed var(--ant-divider); padding-top: 12px">
-        <div style="display: flex; gap: 16px">
-          <div>
-            分组数量: <strong>{{ stats.groupCount }}</strong>
-          </div>
-          <div>
-            表情数量: <strong>{{ stats.emojiCount }}</strong>
-          </div>
-          <div>
-            总热度: <strong>{{ stats.totalHotness }}</strong>
-          </div>
-        </div>
+      <div style="margin-top: 16px">
+        <a-row :gutter="16">
+          <a-col :span="8">
+            <a-card size="small" style="text-align: center">
+              <div style="font-size: 24px; font-weight: bold; color: var(--ant-primary-color)">
+                {{ stats.groupCount }}
+              </div>
+              <div style="font-size: 14px; color: var(--ant-text-color-secondary)">分组数量</div>
+            </a-card>
+          </a-col>
+          <a-col :span="8">
+            <a-card size="small" style="text-align: center">
+              <div style="font-size: 24px; font-weight: bold; color: var(--ant-success-color)">
+                {{ stats.emojiCount }}
+              </div>
+              <div style="font-size: 14px; color: var(--ant-text-color-secondary)">表情数量</div>
+            </a-card>
+          </a-col>
+          <a-col :span="8">
+            <a-card size="small" style="text-align: center">
+              <div style="font-size: 24px; font-weight: bold; color: var(--ant-warning-color)">
+                {{ stats.totalHotness }}
+              </div>
+              <div style="font-size: 14px; color: var(--ant-text-color-secondary)">总热度</div>
+            </a-card>
+          </a-col>
+        </a-row>
       </div>
     </div>
   </a-card>

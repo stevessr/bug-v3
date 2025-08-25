@@ -1,5 +1,9 @@
 import { test, expect, chromium } from '@playwright/test'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // This test launches chromium with the unpacked extension located at the repository's `dist` folder.
 // It requires Playwright to run locally and Chromium available on the host.

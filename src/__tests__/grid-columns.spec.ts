@@ -14,7 +14,15 @@ describe('grid columns react to settings', () => {
 
   it('GroupsTab uses gridCols from settings', async () => {
     const wrapper = mount(GroupsTab, {
-      global: { stubs: ['new-group-modal', 'edit-group-modal', 'add-emoji-modal', 'group-import-modal', 'import-conflict-modal'] },
+      global: {
+        stubs: [
+          'new-group-modal',
+          'edit-group-modal',
+          'add-emoji-modal',
+          'group-import-modal',
+          'import-conflict-modal',
+        ],
+      },
     })
     // default should be 4 columns
     await wrapper.vm.$nextTick()

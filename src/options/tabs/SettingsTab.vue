@@ -42,6 +42,7 @@ export default defineComponent({
   setup() {
     const commService = createOptionsCommService()
     const form = reactive({ ...store.getSettings() })
+    let isUpdatingFromExternal = false
     
     // watch key settings and persist immediately so UI can react
     const keys = [
@@ -55,20 +56,35 @@ export default defineComponent({
       // use any cast to satisfy TS when indexing by dynamic key
       watch(
         () => (form as any)[k],
-        () => {
-          try {
-            store.saveSettings(form)
-            // 发送设置变更消息到其他页面（包括popup）
-            commService.sendSettingsChanged(form)
-          } catch (_) {}
+        (newValue, oldValue) => {
+          if (isUpdatingFromExternal) return // 避免循环更新
+          // 确保值确实发生了变化
+          if (newValue !== oldValue) {
+            try {
+              store.saveSettings(form)
+              // 发送设置变更消息到其他页面（包括popup）
+              commService.sendSettingsChanged(form)
+            } catch (_) {}
+          }
         },
+        { deep: true }
       )
     }
 
     onMounted(() => {
       // 监听来自其他页面的设置变更消息（包括popup）
       commService.onSettingsChanged((newSettings) => {
-        Object.assign(form, newSettings)
+        isUpdatingFromExternal = true
+        // 逐个更新属性，确保Vue的响应式系统能正确检测变化
+        keys.forEach(key => {
+          if (newSettings[key] !== undefined && newSettings[key] !== (form as any)[key]) {
+            (form as any)[key] = newSettings[key]
+          }
+        })
+        // 使用 requestAnimationFrame 确保在下一帧重置标志
+        requestAnimationFrame(() => {
+          isUpdatingFromExternal = false
+        })
       })
     })
     
