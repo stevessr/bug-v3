@@ -5,18 +5,24 @@
       <a-list-item v-for="(c, idx) in conflicts" :key="c.key">
         <a-list-item-meta :title="c.displayName || c.realUrl" :description="c.key" />
         <template #actions>
-          <div style="display:flex; gap:8px; align-items:center">
+          <div style="display: flex; gap: 8px; align-items: center">
             <a-radio-group v-model:value="decisions[idx]">
               <a-radio value="skip">跳过</a-radio>
               <a-radio value="overwrite">覆盖</a-radio>
             </a-radio-group>
-            <div style="margin-left:12px; text-align:right">
-              <img :src="c.existing.displayUrl || c.existing.realUrl" style="width:64px; height:64px; object-fit:cover; border-radius:4px;" />
-              <div style="font-size:12px; color:var(--ant-text-color-secondary)">现有</div>
+            <div style="margin-left: 12px; text-align: right">
+              <img
+                :src="c.existing.displayUrl || c.existing.realUrl"
+                style="width: 64px; height: 64px; object-fit: cover; border-radius: 4px"
+              />
+              <div style="font-size: 12px; color: var(--ant-text-color-secondary)">现有</div>
             </div>
-            <div style="margin-left:8px; text-align:right">
-              <img :src="c.incoming.displayUrl || c.incoming.realUrl" style="width:64px; height:64px; object-fit:cover; border-radius:4px;" />
-              <div style="font-size:12px; color:var(--ant-text-color-secondary)">导入</div>
+            <div style="margin-left: 8px; text-align: right">
+              <img
+                :src="c.incoming.displayUrl || c.incoming.realUrl"
+                style="width: 64px; height: 64px; object-fit: cover; border-radius: 4px"
+              />
+              <div style="font-size: 12px; color: var(--ant-text-color-secondary)">导入</div>
             </div>
           </div>
         </template>
@@ -31,8 +37,8 @@ import type { PropType } from 'vue'
 
 export default defineComponent({
   props: {
-  modelValue: { type: Boolean as PropType<boolean>, required: true },
-  conflicts: { type: Array as PropType<any[]>, required: true },
+    modelValue: { type: Boolean as PropType<boolean>, required: true },
+    conflicts: { type: Array as PropType<any[]>, required: true },
   },
   emits: ['update:modelValue', 'resolved'],
   setup(props, { emit }) {
@@ -57,7 +63,11 @@ export default defineComponent({
     }
 
     function onOk() {
-      const result = (props.conflicts || []).map((c: any, i: number) => ({ key: c.key, decision: decisions.value[i] || 'skip', incoming: c.incoming }))
+      const result = (props.conflicts || []).map((c: any, i: number) => ({
+        key: c.key,
+        decision: decisions.value[i] || 'skip',
+        incoming: c.incoming,
+      }))
       emit('resolved', result)
       close()
     }

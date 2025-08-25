@@ -1,28 +1,49 @@
 <template>
-  <a-modal v-model:open="visible" title="导入分组表情" :width="1000" :bodyStyle="{ maxHeight: '72vh', overflow: 'auto' }" @ok="onOk" @cancel="close">
-      <a-form layout="vertical">
-        <a-form-item label="输入要导入的内容 (支持单个 URL / Markdown / BBCode / HTML / 或分组导出 JSON)">
-          <a-textarea v-model:value="text" rows="6" />
-        </a-form-item>
-        <a-form-item label="导入格式">
-          <a-select v-model:value="format" style="width:220px">
-            <a-select-option value="auto">自动检测</a-select-option>
-            <a-select-option value="text">纯文本 / URL 列表 / BBCode</a-select-option>
-            <a-select-option value="markdown">Markdown 图片语法</a-select-option>
-            <a-select-option value="html">HTML（img / a.lightbox）</a-select-option>
-            <a-select-option value="group-json">分组导出 JSON</a-select-option>
-          </a-select>
-          <a-button style="margin-left:12px" @click="parse">解析预览</a-button>
-        </a-form-item>
+  <a-modal
+    v-model:open="visible"
+    title="导入分组表情"
+    :width="1000"
+    :bodyStyle="{ maxHeight: '72vh', overflow: 'auto' }"
+    @ok="onOk"
+    @cancel="close"
+  >
+    <a-form layout="vertical">
+      <a-form-item
+        label="输入要导入的内容 (支持单个 URL / Markdown / BBCode / HTML / 或分组导出 JSON)"
+      >
+        <a-textarea v-model:value="text" rows="6" />
+        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center">
+          <input type="file" accept="application/json,text/*" @change="onFileChange" />
+          <span style="font-size: 12px; color: var(--ant-text-color-secondary)"
+            >或选择文件导入（支持 JSON / 文本）</span
+          >
+        </div>
+      </a-form-item>
+      <a-form-item label="导入格式">
+        <a-select v-model:value="format" style="width: 220px">
+          <a-select-option value="auto">自动检测</a-select-option>
+          <a-select-option value="text">纯文本 / URL 列表 / BBCode</a-select-option>
+          <a-select-option value="markdown">Markdown 图片语法</a-select-option>
+          <a-select-option value="html">HTML（img / a.lightbox）</a-select-option>
+          <a-select-option value="group-json">分组导出 JSON</a-select-option>
+        </a-select>
+        <a-button style="margin-left: 12px" @click="parse">解析预览</a-button>
+      </a-form-item>
       <a-list v-if="preview.length" :dataSource="preview" bordered>
         <a-list-item v-for="(p, idx) in preview" :key="p.id">
           <template #avatar>
-            <img :src="selected[idx] || p.displayUrl || p.realUrl" style="width:56px; height:56px; object-fit:cover; border-radius:6px" />
+            <img
+              :src="selected[idx] || p.displayUrl || p.realUrl"
+              style="width: 56px; height: 56px; object-fit: cover; border-radius: 6px"
+            />
           </template>
           <a-list-item-meta :title="p.displayName || p.realUrl" :description="p.realUrl" />
           <template #actions>
-            <div style="display:flex; flex-direction:column; gap:8px; width:420px">
-              <div class="variant-grid" :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }">
+            <div style="display: flex; flex-direction: column; gap: 8px; width: 420px">
+              <div
+                class="variant-grid"
+                :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }"
+              >
                 <div
                   v-for="(v, vi) in variantList(p)"
                   :key="vi"
@@ -33,21 +54,29 @@
                   <div class="variant-label">{{ v.label }}</div>
                 </div>
               </div>
-              <a-select v-model:value="selected[idx]" style="width:100%" placeholder="选择作为预览 URL">
-                <a-select-option v-for="(v, vi) in variantList(p)" :key="vi" :value="v.url">{{ v.label }} — {{ truncate(v.url) }}</a-select-option>
+              <a-select
+                v-model:value="selected[idx]"
+                style="width: 100%"
+                placeholder="选择作为预览 URL"
+              >
+                <a-select-option v-for="(v, vi) in variantList(p)" :key="vi" :value="v.url"
+                  >{{ v.label }} — {{ truncate(v.url) }}</a-select-option
+                >
               </a-select>
-              <div style="font-size:12px; color:var(--ant-text-color-secondary)">使用上方下拉选择要作为条目的预览 URL</div>
+              <div style="font-size: 12px; color: var(--ant-text-color-secondary)">
+                使用上方下拉选择要作为条目的预览 URL
+              </div>
             </div>
           </template>
         </a-list-item>
       </a-list>
     </a-form>
-        <a-form-item style="display:flex; gap:8px; align-items:center;">
-          <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
-            <span style="font-size:12px; color:var(--ant-text-color-secondary)">网格列数</span>
-            <a-input-number v-model:value="gridCols" :min="2" :max="6" />
-          </div>
-        </a-form-item>
+    <a-form-item style="display: flex; gap: 8px; align-items: center">
+      <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
+        <span style="font-size: 12px; color: var(--ant-text-color-secondary)">网格列数</span>
+        <a-input-number v-model:value="gridCols" :min="2" :max="6" />
+      </div>
+    </a-form-item>
   </a-modal>
 </template>
 
@@ -65,7 +94,7 @@ export default defineComponent({
     const visible = ref(!!props.modelValue)
     const text = ref('')
     const preview = ref<any[]>([])
-  const format = ref<'auto' | 'text' | 'markdown' | 'html' | 'group-json'>('auto')
+    const format = ref<'auto' | 'text' | 'markdown' | 'html' | 'group-json'>('auto')
 
     watch(
       () => props.modelValue,
@@ -81,17 +110,27 @@ export default defineComponent({
 
     function parse() {
       const t = (text.value || '').trim()
+      // if text empty but file loaded into text, it will be processed; onFileChange already sets text
 
       // group-json explicit or auto-detected JSON payload
-      if (format.value === 'group-json' || (format.value === 'auto' && (t.startsWith('{') || t.startsWith('[')))) {
+      if (
+        format.value === 'group-json' ||
+        (format.value === 'auto' && (t.startsWith('{') || t.startsWith('[')))
+      ) {
         try {
           const j = JSON.parse(t)
           let arr: any[] = []
           if (Array.isArray(j)) arr = j
-          else if (Array.isArray(j.emojiGroups) && j.emojiGroups.length === 1 && Array.isArray(j.emojiGroups[0].emojis)) arr = j.emojiGroups[0].emojis
+          else if (
+            Array.isArray(j.emojiGroups) &&
+            j.emojiGroups.length === 1 &&
+            Array.isArray(j.emojiGroups[0].emojis)
+          )
+            arr = j.emojiGroups[0].emojis
           else if (j.group && Array.isArray(j.group.emojis)) arr = j.group.emojis
           else if (Array.isArray(j.emojis)) arr = j.emojis
-          else if (Array.isArray(j.emojiGroups)) arr = j.emojiGroups.flatMap((gg: any) => Array.isArray(gg.emojis) ? gg.emojis : [])
+          else if (Array.isArray(j.emojiGroups))
+            arr = j.emojiGroups.flatMap((gg: any) => (Array.isArray(gg.emojis) ? gg.emojis : []))
           preview.value = arr || []
         } catch (err) {
           // fall back to best-effort text parsing
@@ -115,6 +154,42 @@ export default defineComponent({
         else preview.value = parseTextOnly(t)
       }
       selected.value = preview.value.map((p: any) => p.displayUrl || p.realUrl)
+    }
+
+    function onFileChange(ev: Event) {
+      const input = ev.target as HTMLInputElement
+      if (!input || !input.files || input.files.length === 0) return
+      const file = input.files[0]
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const content = reader.result as string
+          if (!content) return
+          // if json try to pretty-print, otherwise set raw text
+          try {
+            const j = JSON.parse(content)
+            text.value = JSON.stringify(j, null, 2)
+          } catch (_) {
+            text.value = content
+          }
+          // auto-parse after loading
+          parse()
+        } finally {
+          // clear the input so the same file can be selected again if needed
+          try {
+            input.value = ''
+          } catch (_) {}
+        }
+      }
+      reader.onerror = () => {
+        try {
+          console.error('Failed to read file', reader.error)
+        } catch (_) {}
+        try {
+          input.value = ''
+        } catch (_) {}
+      }
+      reader.readAsText(file)
     }
 
     function parseHtmlOnly(input: string) {
@@ -150,7 +225,14 @@ export default defineComponent({
             const src = (img.getAttribute('src') || '').trim()
             const alt = (img.getAttribute('alt') || '').trim() || ''
             const href = (img.closest('a')?.getAttribute('href') || '').trim()
-            out.push({ UUID: '', id: '', displayName: alt || '', displayUrl: src, realUrl: href || src, variants: {} })
+            out.push({
+              UUID: '',
+              id: '',
+              displayName: alt || '',
+              displayUrl: src,
+              realUrl: href || src,
+              variants: {},
+            })
           })
         }
       } catch (_) {}
@@ -164,7 +246,14 @@ export default defineComponent({
       while ((m = mdRegex.exec(input))) {
         const alt = m[1] || ''
         const url = m[2] || ''
-        out.push({ UUID: '', id: '', displayName: alt, displayUrl: url, realUrl: url, variants: {} })
+        out.push({
+          UUID: '',
+          id: '',
+          displayName: alt,
+          displayUrl: url,
+          realUrl: url,
+          variants: {},
+        })
       }
       return out
     }
@@ -178,10 +267,20 @@ export default defineComponent({
         out.push({ UUID: '', id: '', displayName: '', displayUrl: url, realUrl: url, variants: {} })
       }
       if (out.length) return out
-      const lines = input.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+      const lines = input
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
       for (const line of lines) {
         if (/^https?:\/\//i.test(line)) {
-          out.push({ UUID: '', id: '', displayName: '', displayUrl: line, realUrl: line, variants: {} })
+          out.push({
+            UUID: '',
+            id: '',
+            displayName: '',
+            displayUrl: line,
+            realUrl: line,
+            variants: {},
+          })
         }
       }
       return out
@@ -233,7 +332,21 @@ export default defineComponent({
       close()
     }
 
-  return { visible, text, preview, parse, onOk, close, selected, gridCols, variantList, selectVariant, format, truncate }
+    return {
+      visible,
+      text,
+      preview,
+      parse,
+      onOk,
+      close,
+      onFileChange,
+      selected,
+      gridCols,
+      variantList,
+      selectVariant,
+      format,
+      truncate,
+    }
   },
 })
 </script>

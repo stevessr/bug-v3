@@ -11,10 +11,30 @@
             style="display: flex; align-items: center; justify-content: space-between; width: 100%"
           >
             <div style="display: flex; align-items: center; gap: 8px">
-                  <template v-if="g.icon">
-                    <img v-if="isLikelyUrl(g.icon)" :src="g.icon" style="width:24px; height:24px; object-fit:cover" />
-                    <div v-else style="min-width:24px; min-height:24px; padding:2px 6px; display:flex; align-items:center; justify-content:center; border-radius:4px; background:var(--ant-btn-default-bg); font-size:12px; font-weight:600">{{ g.icon }}</div>
-                  </template>
+              <template v-if="g.icon">
+                <img
+                  v-if="isLikelyUrl(g.icon)"
+                  :src="g.icon"
+                  style="width: 24px; height: 24px; object-fit: cover"
+                />
+                <div
+                  v-else
+                  style="
+                    min-width: 24px;
+                    min-height: 24px;
+                    padding: 2px 6px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 4px;
+                    background: var(--ant-btn-default-bg);
+                    font-size: 12px;
+                    font-weight: 600;
+                  "
+                >
+                  {{ g.icon }}
+                </div>
+              </template>
               <div>
                 <div style="font-weight: 600">{{ g.displayName }}</div>
                 <div style="font-size: 12px; color: var(--ant-text-color-secondary)">
@@ -31,12 +51,25 @@
             </div>
           </div>
         </template>
-        <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px">
-          <div v-for="(e, i) in g.emojis" :key="e.UUID" style="display:flex; flex-direction:column; align-items:center; gap:4px">
-            <img :src="e.displayUrl || e.realUrl" style="width:48px; height:48px; object-fit:cover; border-radius:4px" />
-            <div style="display:flex; gap:4px">
-              <a-button size="small" @click.stop="moveUp(g, i)" :disabled="i === 0">上移</a-button>
-              <a-button size="small" @click.stop="moveDown(g, i)" :disabled="i === (g.emojis.length - 1)">下移</a-button>
+        <div style="margin-top: 8px">
+          <div
+            class="emoji-grid"
+            :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: '8px' }"
+            @dragover.prevent
+            @drop.prevent="(ev) => onGridDrop(ev, g)"
+          >
+            <div
+              v-for="(e, i) in g.emojis"
+              :key="e.UUID"
+              class="emoji-cell"
+              draggable="true"
+              @dragstart="(ev) => onDragStart(ev, g, i)"
+              @click.stop="() => onEditEmoji(g, e, i)"
+            >
+              <img
+                :src="e.displayUrl || e.realUrl"
+                style="width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 6px"
+              />
             </div>
           </div>
         </div>
@@ -45,18 +78,28 @@
 
     <new-group-modal v-model:modelValue="showNew" @created="onCreated" />
     <edit-group-modal v-model:modelValue="showEdit" :group="editingGroup" @save="onSaved" />
-    <add-emoji-modal v-model:modelValue="showAddEmoji" @added="onEmojiAdded" />
+    <add-emoji-modal
+      v-model:modelValue="showAddEmoji"
+      :emoji="editingEmoji"
+      @added="onEmojiAdded"
+      @saved="onEmojiSaved"
+    />
     <group-import-modal
       v-model:modelValue="showImport"
       :groupUUID="importGroupUUID"
       @imported="onImported"
     />
-  <import-conflict-modal v-if="showConflict" v-model:modelValue="showConflict" :conflicts="currentConflicts" @resolved="onResolved" />
+    <import-conflict-modal
+      v-if="showConflict"
+      v-model:modelValue="showConflict"
+      :conflicts="currentConflicts"
+      @resolved="onResolved"
+    />
   </a-card>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue'
+import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import store from '../../data/store/main'
 import { Modal } from 'ant-design-vue'
 
@@ -65,24 +108,37 @@ export default defineComponent({
     NewGroupModal: () => import('../components/NewGroupModal.vue'),
     EditGroupModal: () => import('../components/EditGroupModal.vue'),
     AddEmojiModal: () => import('../components/AddEmojiModal.vue'),
-  GroupImportModal: () => import('../components/GroupImportModal.vue'),
-  ImportConflictModal: () => import('../components/ImportConflictModal.vue'),
+    GroupImportModal: () => import('../components/GroupImportModal.vue'),
+    ImportConflictModal: () => import('../components/ImportConflictModal.vue'),
   },
   setup() {
     const groups = ref<any[]>([])
+    const settings = store.getSettings()
+    const gridCols = ref((settings && settings.gridColumns) || 4)
     const showNew = ref(false)
     const showEdit = ref(false)
     const showAddEmoji = ref(false)
     const showImport = ref(false)
-  const showConflict = ref(false)
-  const currentConflicts = ref<any[]>([])
+    const showConflict = ref(false)
+    const currentConflicts = ref<any[]>([])
     const editingGroup = ref<any | null>(null)
     const addingGroup = ref<any | null>(null)
+    const editingEmoji = ref<any | null>(null)
     const importGroupUUID = ref('')
 
     function load() {
       groups.value = store.getGroups()
     }
+
+    // react to settings changes
+    function onSettingsChange(ev: any) {
+      try {
+        const s = ev && ev.detail ? ev.detail : store.getSettings()
+        gridCols.value = (s && s.gridColumns) || gridCols.value
+      } catch (_) {}
+    }
+    if (typeof window !== 'undefined')
+      window.addEventListener('app:settings-changed', onSettingsChange)
 
     function isLikelyUrl(s: string) {
       if (!s) return false
@@ -168,7 +224,12 @@ export default defineComponent({
           const key = inc.UUID || inc.id || inc.realUrl || inc.displayUrl
           if (!key) continue
           if (existingMap.has(key)) {
-            conflicts.push({ key, existing: existingMap.get(key), incoming: inc, displayName: inc.displayName || inc.realUrl })
+            conflicts.push({
+              key,
+              existing: existingMap.get(key),
+              incoming: inc,
+              displayName: inc.displayName || inc.realUrl,
+            })
           } else {
             nonConflicts.push(inc)
           }
@@ -196,7 +257,9 @@ export default defineComponent({
       for (const d of decisions) {
         if (d.decision === 'skip') continue
         // overwrite: replace existing by key
-        const idx = g.emojis.findIndex((e: any) => (e.UUID || e.id || e.realUrl || e.displayUrl) === d.key)
+        const idx = g.emojis.findIndex(
+          (e: any) => (e.UUID || e.id || e.realUrl || e.displayUrl) === d.key,
+        )
         if (idx >= 0) {
           g.emojis.splice(idx, 1, d.incoming)
         } else {
@@ -206,7 +269,10 @@ export default defineComponent({
       store.importPayload({ emojiGroups: groups.value })
       load()
       try {
-        Modal.info({ title: '导入完成', content: `已处理 ${decisions.length} 个冲突（覆盖 ${decisions.filter((x: any) => x.decision === 'overwrite').length} 个）。` })
+        Modal.info({
+          title: '导入完成',
+          content: `已处理 ${decisions.length} 个冲突（覆盖 ${decisions.filter((x: any) => x.decision === 'overwrite').length} 个）。`,
+        })
       } catch (_) {}
       currentConflicts.value = []
       showConflict.value = false
@@ -214,6 +280,57 @@ export default defineComponent({
 
     function onAddEmoji(g: any) {
       addingGroup.value = g
+      editingEmoji.value = null
+      showAddEmoji.value = true
+    }
+
+    // drag/drop state
+    const dragState: any = { groupUUID: null, index: -1 }
+
+    function onDragStart(ev: DragEvent, g: any, idx: number) {
+      try {
+        dragState.groupUUID = g.UUID
+        dragState.index = idx
+        ;(ev.dataTransfer as any).setData(
+          'text/plain',
+          JSON.stringify({ groupUUID: g.UUID, index: idx }),
+        )
+      } catch (_) {}
+    }
+
+    function onGridDrop(ev: DragEvent, targetGroup: any) {
+      try {
+        const raw = (ev.dataTransfer as any).getData('text/plain')
+        if (!raw) return
+        const parsed = JSON.parse(raw)
+        const fromGroup = parsed.groupUUID
+        const fromIndex = parsed.index
+        const toGroup = targetGroup.UUID
+        // target index default to end
+        let toIndex = targetGroup.emojis.length
+        if (fromGroup === toGroup) {
+          const ok = store.reorderEmojiInGroup(
+            fromGroup,
+            fromIndex,
+            toIndex === 0 ? 0 : toIndex - 1,
+          )
+          if (ok) load()
+          return
+        }
+        const src = groups.value.find((x: any) => x.UUID === fromGroup)
+        const dst = groups.value.find((x: any) => x.UUID === toGroup)
+        if (!src || !dst) return
+        if (!Array.isArray(src.emojis) || !Array.isArray(dst.emojis)) return
+        const [item] = src.emojis.splice(fromIndex, 1)
+        dst.emojis.splice(toIndex, 0, item)
+        store.importPayload({ emojiGroups: groups.value })
+        load()
+      } catch (_) {}
+    }
+
+    function onEditEmoji(g: any, e: any, i: number) {
+      addingGroup.value = g
+      editingEmoji.value = { ...e, __index: i }
       showAddEmoji.value = true
     }
 
@@ -230,6 +347,23 @@ export default defineComponent({
       addingGroup.value = null
     }
 
+    function onEmojiSaved(e: any) {
+      if (!addingGroup.value || !editingEmoji.value) return
+      const gv = groups.value.find((x: any) => x.UUID === addingGroup.value.UUID)
+      if (!gv || !Array.isArray(gv.emojis)) return
+      const idx = gv.emojis.findIndex(
+        (it: any) => (it.UUID || it.id) === (editingEmoji.value.UUID || editingEmoji.value.id),
+      )
+      if (idx >= 0) {
+        gv.emojis.splice(idx, 1, e)
+        store.importPayload({ emojiGroups: groups.value })
+        load()
+      }
+      showAddEmoji.value = false
+      addingGroup.value = null
+      editingEmoji.value = null
+    }
+
     function moveUp(g: any, idx: number) {
       if (!g || typeof idx !== 'number' || idx <= 0) return
       const ok = store.reorderEmojiInGroup(g.UUID, idx, idx - 1)
@@ -243,17 +377,27 @@ export default defineComponent({
     }
 
     onMounted(load)
+    // remove listener on unmount
+    try {
+      onUnmounted(() => {
+        try {
+          window.removeEventListener('app:settings-changed', onSettingsChange)
+        } catch (_) {}
+      })
+    } catch (_) {}
 
     return {
       groups,
       showNew,
       showEdit,
       showAddEmoji,
-  showImport,
-  showConflict,
-  currentConflicts,
+      showImport,
+      showConflict,
+      currentConflicts,
       importGroupUUID,
       editingGroup,
+      editingEmoji,
+      gridCols,
       onCreated,
       onEdit,
       onSaved,
@@ -261,10 +405,14 @@ export default defineComponent({
       onImport,
       onExport,
       onImported,
-  onResolved,
-  isLikelyUrl,
+      onResolved,
+      isLikelyUrl,
       onAddEmoji,
       onEmojiAdded,
+      onEmojiSaved,
+      onDragStart,
+      onGridDrop,
+      onEditEmoji,
     }
   },
 })

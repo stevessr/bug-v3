@@ -36,12 +36,21 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive } from 'vue'
+import { defineComponent, reactive, watch } from 'vue'
 import store from '../../data/store/main'
 
 export default defineComponent({
   setup() {
     const form = reactive({ ...store.getSettings() })
+    // when gridColumns changes, persist immediately so UI can react
+    watch(
+      () => form.gridColumns,
+      (v) => {
+        try {
+          store.saveSettings(form)
+        } catch (_) {}
+      },
+    )
     function save() {
       store.saveSettings(form)
     }

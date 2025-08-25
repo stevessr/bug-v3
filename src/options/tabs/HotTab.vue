@@ -6,17 +6,26 @@
         <a-collapse-panel header="常用表情列表" key="1">
           <a-list bordered>
             <a-list-item v-for="e in items" :key="e.UUID">
-              <a-list-item-meta :title="e.displayName" :description="'使用次数: ' + (e.usageCount || 0)" />
+              <a-list-item-meta
+                :title="e.displayName"
+                :description="'使用次数: ' + (e.usageCount || 0)"
+              />
             </a-list-item>
           </a-list>
         </a-collapse-panel>
       </a-collapse>
 
-      <div style="margin-top:12px; border-top:1px dashed var(--ant-divider); padding-top:12px">
-        <div style="display:flex; gap:16px">
-          <div>分组数量: <strong>{{ stats.groupCount }}</strong></div>
-          <div>表情数量: <strong>{{ stats.emojiCount }}</strong></div>
-          <div>总热度: <strong>{{ stats.totalHotness }}</strong></div>
+      <div style="margin-top: 12px; border-top: 1px dashed var(--ant-divider); padding-top: 12px">
+        <div style="display: flex; gap: 16px">
+          <div>
+            分组数量: <strong>{{ stats.groupCount }}</strong>
+          </div>
+          <div>
+            表情数量: <strong>{{ stats.emojiCount }}</strong>
+          </div>
+          <div>
+            总热度: <strong>{{ stats.totalHotness }}</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -41,7 +50,7 @@ export default defineComponent({
         if (Array.isArray(g.emojis)) {
           emojiCount += g.emojis.length
           for (const e of g.emojis) {
-            totalHot += ((e as any).usageCount || 0)
+            totalHot += (e as any).usageCount || 0
           }
         }
       }

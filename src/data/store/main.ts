@@ -17,6 +17,12 @@ export function getSettings() {
 export function saveSettings(s: any) {
   log('saveSettings', s)
   settingsStore.setSettings(s, emojiGroupsStore.getEmojiGroups())
+  try {
+    // notify UI about settings change so components can react immediately
+    if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('app:settings-changed', { detail: s }))
+    }
+  } catch (_) {}
 }
 
 export function getGroups() {
@@ -66,6 +72,11 @@ export function importPayload(p: any) {
     },
   )
   if (p.Settings) settingsStore.setSettings(p.Settings, p.emojiGroups || undefined)
+  try {
+    if (p.Settings && typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('app:settings-changed', { detail: p.Settings }))
+    }
+  } catch (_) {}
   if (Array.isArray(p.emojiGroups)) emojiGroupsStore.setEmojiGroups(p.emojiGroups)
   if (Array.isArray(p.ungrouped) && (emojiGroupsStore as any).addUngrouped) {
     // replace existing ungrouped with imported ones
@@ -86,7 +97,9 @@ export function importPayload(p: any) {
 
 export function moveUngroupedToGroup(uuids: string[], groupUUID: string) {
   if (!Array.isArray(uuids) || !groupUUID) return { moved: 0 }
-  const existing: any[] = (emojiGroupsStore as any).getUngrouped ? (emojiGroupsStore as any).getUngrouped() : []
+  const existing: any[] = (emojiGroupsStore as any).getUngrouped
+    ? (emojiGroupsStore as any).getUngrouped()
+    : []
   let moved = 0
   for (const u of uuids) {
     const idx = existing.findIndex((e: any) => e.UUID === u)

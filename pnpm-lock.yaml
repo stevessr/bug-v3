@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@eslint/js':
+        specifier: ^9.34.0
+        version: 9.34.0
       '@ffmpeg/ffmpeg':
         specifier: ^0.12.15
         version: 0.12.15

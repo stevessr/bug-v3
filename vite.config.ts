@@ -26,6 +26,8 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         options: fileURLToPath(new URL('./options.html', import.meta.url)),
+        // build background entry so it outputs dist/background.js
+        background: fileURLToPath(new URL('./src/background/index.ts', import.meta.url)),
       },
     },
   },
