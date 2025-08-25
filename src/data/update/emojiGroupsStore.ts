@@ -45,16 +45,38 @@ function recordUsageByUUID(uuid: string) {
   const found = findEmojiByUUID(uuid)
   if (found && found.emoji) {
     const e: any = found.emoji
-    e.usageCount = (e.usageCount || 0) + 1
-    e.lastUsed = Date.now()
+    const now = Date.now()
+    // if no previous lastUsed, treat as new
+    if (!e.lastUsed) {
+      e.usageCount = 1
+      e.lastUsed = now
+    } else {
+      const days = Math.floor((now - (e.lastUsed || 0)) / (24 * 60 * 60 * 1000))
+      if (days >= 1 && typeof e.usageCount === 'number') {
+        // decay by 80% per day
+        e.usageCount = Math.floor(e.usageCount * Math.pow(0.8, days))
+      }
+      e.usageCount = (e.usageCount || 0) + 1
+      e.lastUsed = now
+    }
     settingsStore.save(emojiGroups)
     return true
   }
   // fallback: try ungrouped
   const ue = ungroupedEmojis.find((x) => x.UUID === (uuid as any))
   if (ue) {
-    ue.usageCount = (ue.usageCount || 0) + 1
-    ue.lastUsed = Date.now()
+    const now = Date.now()
+    if (!ue.lastUsed) {
+      ue.usageCount = 1
+      ue.lastUsed = now
+    } else {
+      const days = Math.floor((now - (ue.lastUsed || 0)) / (24 * 60 * 60 * 1000))
+      if (days >= 1 && typeof ue.usageCount === 'number') {
+        ue.usageCount = Math.floor(ue.usageCount * Math.pow(0.8, days))
+      }
+      ue.usageCount = (ue.usageCount || 0) + 1
+      ue.lastUsed = now
+    }
     settingsStore.save(emojiGroups)
     return true
   }
