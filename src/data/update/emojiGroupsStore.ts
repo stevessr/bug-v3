@@ -3,12 +3,12 @@ import storage from './storage'
 import settingsStore from './settingsStore'
 
 let emojiGroups: EmojiGroup[] = []
-let ungroupedEmojis: any[] = []
+let ungrouped: any[] = []
 
 function initFromStorage() {
   const p = storage.loadPayload()
   emojiGroups = Array.isArray(p?.emojiGroups) ? p!.emojiGroups : []
-  ungroupedEmojis = Array.isArray(p?.ungrouped) ? p!.ungrouped : []
+  ungrouped = Array.isArray(p?.ungrouped) ? p!.ungrouped : []
 }
 
 function getEmojiGroups() {
@@ -16,7 +16,7 @@ function getEmojiGroups() {
 }
 
 function getUngrouped() {
-  return ungroupedEmojis.map((e) => ({ ...e }))
+  return ungrouped.map((e) => ({ ...e }))
 }
 
 function setEmojiGroups(gs: EmojiGroup[]) {
@@ -26,14 +26,14 @@ function setEmojiGroups(gs: EmojiGroup[]) {
 }
 
 function addUngrouped(emoji: any) {
-  ungroupedEmojis.push(emoji)
+  ungrouped.push(emoji)
   settingsStore.save(emojiGroups)
 }
 
 function removeUngroupedByUUID(uuid: string) {
-  const idx = ungroupedEmojis.findIndex((e) => e.UUID === (uuid as any))
+  const idx = ungrouped.findIndex((e) => e.UUID === (uuid as any))
   if (idx >= 0) {
-    ungroupedEmojis.splice(idx, 1)
+    ungrouped.splice(idx, 1)
     settingsStore.save(emojiGroups)
     return true
   }
@@ -63,7 +63,7 @@ function recordUsageByUUID(uuid: string) {
     return true
   }
   // fallback: try ungrouped
-  const ue = ungroupedEmojis.find((x) => x.UUID === (uuid as any))
+  const ue = ungrouped.find((x) => x.UUID === (uuid as any))
   if (ue) {
     const now = Date.now()
     if (!ue.lastUsed) {
