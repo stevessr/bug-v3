@@ -72,11 +72,12 @@ export default defineComponent({
     SettingOutlined,
   },
   setup() {
-  const commService = createPopupCommService()
+    const commService = createPopupCommService()
     const settings = reactive({ ...store.getSettings() })
     const groups = ref(store.getGroups())
     const ungrouped = ref(store.getUngrouped())
     const hot = ref(store.getHot())
+    let isUpdatingFromExternal = false
 
     const gridStyle = computed(() => ({
       gridTemplateColumns: `repeat(${settings.gridColumns || 4}, 1fr)`,
@@ -90,6 +91,7 @@ export default defineComponent({
     }))
 
     function onScaleChange(value: number) {
+      if (isUpdatingFromExternal) return // 避免循环更新
       try {
         // 更新全局设置，这个设置会影响其他地方的图片缩放
         const newSettings = { ...settings, imageScale: value }
@@ -100,7 +102,6 @@ export default defineComponent({
         console.error('Failed to save image scale:', error)
       }
     }
-
 
     function openOptions() {
       try {
@@ -158,7 +159,12 @@ export default defineComponent({
       try {
         // 监听设置变更消息
         commService.onSettingsChanged((newSettings) => {
+          isUpdatingFromExternal = true
           Object.assign(settings, newSettings)
+          // 使用 requestAnimationFrame 确保在下一帧重置标志
+          requestAnimationFrame(() => {
+            isUpdatingFromExternal = false
+          })
         })
 
         // 监听表情组变更消息
