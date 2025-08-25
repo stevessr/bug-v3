@@ -41,15 +41,11 @@ export default defineConfig(({ mode }) => {
           )
         },
         output: {
-          entryFileNames: chunkInfo => {
-            return `${chunkInfo.name}.js`
-          },
-          chunkFileNames: `[name].js`,
+          entryFileNames: 'userscript.js',
+          chunkFileNames: 'userscript.js',
           assetFileNames: `[name].[ext]`,
-          // Bundle everything into a single file for userscript
-          manualChunks: () => {
-            return 'userscript' // Force everything into one chunk
-          }
+          // Force everything into a single file
+          inlineDynamicImports: true
         },
         external: () => false // Don't externalize anything
       },

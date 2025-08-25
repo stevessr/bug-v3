@@ -2,6 +2,7 @@ import { createEmojiButtonElement } from './genbotton'
 import { PICKER_CLASS, BUTTON_CLASS } from './css'
 import { startExternalButtonListenerLoop } from '../loop/main'
 import { recordUsage } from '../../data/store/main'
+import store from '../../data/store/main'
 
 export type InjectorConfig = {
   toolbarSelector?: string
@@ -28,7 +29,7 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
     textAreaSelector: cfg.textAreaSelector || 'textarea.d-editor-input',
     richEditorSelector: cfg.richEditorSelector || '.ProseMirror.d-editor-input',
     emojiContentGeneratorFn: cfg.emojiContentGeneratorFn,
-    pollInterval: cfg.pollInterval || 500,
+    pollInterval: cfg.pollInterval || 2000, // Reduced frequency from 500ms to 2s
   }
 
   if (typeof document === 'undefined') {
@@ -137,20 +138,34 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
             }
           }
 
+          // Get current settings for image scale and output format
+          const settings = store.getSettings()
+          const imageScale = settings.imageScale || 30
+          const outputFormat = settings.outputFormat || 'markdown'
+
           if (textArea) {
-            const emojiMarkdown = `![${imgElement.alt}|${width}x${height},30%](${imgElement.src}) `
+            let emojiText = ''
+            if (outputFormat === 'html') {
+              emojiText = `<img src="${imgElement.src}" alt="${imgElement.alt}" width="${Math.round(parseInt(width) * imageScale / 100)}" height="${Math.round(parseInt(height) * imageScale / 100)}" />`
+            } else {
+              // Default to markdown format
+              emojiText = `![${imgElement.alt}|${width}x${height},${imageScale}%](${imgElement.src}) `
+            }
+            
             const startPos = textArea.selectionStart
             const endPos = textArea.selectionEnd
             textArea.value =
               textArea.value.substring(0, startPos) +
-              emojiMarkdown +
+              emojiText +
               textArea.value.substring(endPos, textArea.value.length)
-            textArea.selectionStart = textArea.selectionEnd = startPos + emojiMarkdown.length
+            textArea.selectionStart = textArea.selectionEnd = startPos + emojiText.length
             textArea.focus()
             const event = new Event('input', { bubbles: true, cancelable: true })
             textArea.dispatchEvent(event)
           } else if (richEle) {
-            const imgTemplate = `<img src="${imgElement.src}" alt="${imgElement.alt}" width="${width}" height="${height}" data-scale="30" style="width: ${Math.round(parseInt(width) * 0.3)}px">`
+            const scaledWidth = Math.round(parseInt(width) * imageScale / 100)
+            const scaledHeight = Math.round(parseInt(height) * imageScale / 100)
+            const imgTemplate = `<img src="${imgElement.src}" alt="${imgElement.alt}" width="${width}" height="${height}" data-scale="${imageScale}" style="width: ${scaledWidth}px; height: ${scaledHeight}px">`
             try {
               const dt = new DataTransfer()
               dt.setData('text/html', imgTemplate)
@@ -174,21 +189,36 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
     listeners.push(() => emojiButton.removeEventListener('click', handleClick))
   }
 
+  // Track which toolbars we've already processed to prevent duplicate injection
+  const processedToolbars = new WeakSet<Element>()
+
   // helper to detect toolbar and insert the emoji button if missing
   function checkAndInsert() {
     if (stopped) return
     try {
-      const toolbar = document.querySelector(config.toolbarSelector) as Element | null
-      const existing = document.querySelector(`.${config.emojiButtonClass}`)
-      if (toolbar) console.log('[nacho-inject] toolbar found', config.toolbarSelector, toolbar)
-      if (toolbar && !existing) {
-        console.log('[nacho-inject] inserting emoji button')
+      const toolbars = document.querySelectorAll(config.toolbarSelector)
+      
+      toolbars.forEach(toolbar => {
+        // Skip if we've already processed this toolbar
+        if (processedToolbars.has(toolbar)) {
+          return
+        }
+        
+        // Check if this toolbar already has our button
+        const existingButton = toolbar.querySelector(`.${config.emojiButtonClass}`)
+        if (existingButton) {
+          processedToolbars.add(toolbar)
+          return
+        }
+        
+        console.log('[nacho-inject] inserting emoji button into new toolbar', toolbar)
         const emojiButton = createEmojiButtonElement({ buttonClass: config.emojiButtonClass })
-        ;(toolbar as Element).appendChild(emojiButton)
+        toolbar.appendChild(emojiButton)
         createdNodes.push(emojiButton)
         attachPickerBehavior(emojiButton)
+        processedToolbars.add(toolbar)
         console.log('[nacho-inject] emoji button appended')
-      }
+      })
     } catch (err) {
       console.log('[nacho-inject] checkAndInsert error', err)
     }

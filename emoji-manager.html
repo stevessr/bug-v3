@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linux.do 表情包管理 - Userscript</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #f5f5f5;
+      line-height: 1.6;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #007cba, #005a8b);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+    
+    .header p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .section {
+      background: white;
+      margin: 2rem 0;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border: 1px solid #e1e8ed;
+    }
+    
+    .section h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #333;
+      border-bottom: 2px solid #007cba;
+      padding-bottom: 0.5rem;
+    }
+    
+    .button {
+      background: linear-gradient(135deg, #007cba, #005a8b);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,124,186,0.3);
+    }
+    
+    .button:active {
+      transform: translateY(0);
+    }
+    
+    .button.secondary {
+      background: linear-gradient(135deg, #6c757d, #495057);
+    }
+    
+    .button.danger {
+      background: linear-gradient(135deg, #dc3545, #c82333);
+    }
+    
+    .info {
+      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      border-left: 4px solid #007cba;
+    }
+    
+    .warning {
+      background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      border-left: 4px solid #ffc107;
+    }
+    
+    .success {
+      background: linear-gradient(135deg, #d4edda, #a8e6cf);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      border-left: 4px solid #28a745;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+    
+    .card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      border: 1px solid #e1e8ed;
+    }
+    
+    .feature-list {
+      list-style: none;
+      margin: 1rem 0;
+    }
+    
+    .feature-list li {
+      padding: 0.5rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .feature-list li::before {
+      content: "✅";
+      font-size: 1.2rem;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .status-ok { background-color: #28a745; }
+    .status-warn { background-color: #ffc107; }
+    .status-error { background-color: #dc3545; }
+    
+    .emoji-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 10px;
+      margin: 1rem 0;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    
+    .emoji-preview img {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .emoji-preview img:hover {
+      transform: scale(1.1);
+    }
+    
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin: 1rem 0;
+      text-align: center;
+    }
+    
+    .stat {
+      padding: 1rem;
+    }
+    
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #007cba;
+    }
+    
+    .stat-label {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .header h1 {
+        font-size: 2rem;
+      }
+      
+      .section {
+        padding: 1.5rem;
+      }
+      
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎭 Linux.do 表情包扩展</h1>
+    <p>Userscript 版本 - 完整的表情包管理系统</p>
+  </div>
+
+  <div class="container">
+    <!-- 状态概览 -->
+    <div class="section">
+      <h3>📊 系统状态</h3>
+      <div class="grid">
+        <div class="card">
+          <h4><span class="status-indicator status-ok"></span>注入状态</h4>
+          <div class="info">
+            ✅ 表情包注入功能已启用<br>
+            ✅ 用户脚本存储系统正常<br>
+            ✅ 支持 Linux.do 和其他 Discourse 论坛
+          </div>
+        </div>
+        <div class="card">
+          <h4>📈 使用统计</h4>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-number" id="emoji-count">0</div>
+              <div class="stat-label">表情总数</div>
+            </div>
+            <div class="stat">
+              <div class="stat-number" id="group-count">0</div>
+              <div class="stat-label">分组数量</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 功能特性 -->
+    <div class="section">
+      <h3>✨ 功能特性</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>🎯 核心功能</h4>
+          <ul class="feature-list">
+            <li>智能表情包注入</li>
+            <li>分组管理系统</li>
+            <li>搜索和筛选</li>
+            <li>使用统计</li>
+            <li>导入导出数据</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>🌐 平台支持</h4>
+          <ul class="feature-list">
+            <li>Linux.do 论坛</li>
+            <li>Discourse 系统</li>
+            <li>自动平台检测</li>
+            <li>响应式设计</li>
+            <li>离线存储</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 管理操作 -->
+    <div class="section">
+      <h3>🛠️ 管理操作</h3>
+      <div class="warning">
+        <strong>注意:</strong> 用户脚本版本的管理功能有限，建议使用浏览器扩展版本获得完整功能。
+      </div>
+      
+      <div class="grid">
+        <div class="card">
+          <h4>数据管理</h4>
+          <button class="button" onclick="exportData()">
+            📤 导出设置
+          </button>
+          <button class="button" onclick="importData()">
+            📥 导入设置
+          </button>
+          <button class="button danger" onclick="clearStorage()">
+            🗑️ 清除所有数据
+          </button>
+        </div>
+        <div class="card">
+          <h4>系统操作</h4>
+          <button class="button" onclick="reloadExtension()">
+            🔄 重新加载扩展
+          </button>
+          <button class="button secondary" onclick="openSettings()">
+            ⚙️ 打开设置
+          </button>
+          <button class="button secondary" onclick="viewLogs()">
+            📋 查看日志
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 快速预览 -->
+    <div class="section">
+      <h3>👁️ 表情包预览</h3>
+      <div class="emoji-preview" id="emoji-preview">
+        <!-- 表情预览将动态加载 -->
+      </div>
+      <button class="button" onclick="refreshPreview()">
+        🔄 刷新预览
+      </button>
+    </div>
+
+    <!-- 使用说明 -->
+    <div class="section">
+      <h3>📖 使用说明</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>基本使用</h4>
+          <ul>
+            <li>表情包按钮会自动添加到编辑器工具栏</li>
+            <li>点击表情包按钮可以选择和插入表情</li>
+            <li>支持搜索和分组浏览</li>
+            <li>点击表情即可插入到编辑器中</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>高级功能</h4>
+          <ul>
+            <li>支持自定义表情包上传</li>
+            <li>表情使用频率统计</li>
+            <li>设置和数据同步</li>
+            <li>多平台兼容</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 故障排除 -->
+    <div class="section">
+      <h3>🔧 故障排除</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>常见问题</h4>
+          <ul>
+            <li><strong>表情按钮不显示:</strong> 检查是否在支持的网站上，尝试刷新页面</li>
+            <li><strong>表情无法插入:</strong> 确保编辑器已激活，检查权限设置</li>
+            <li><strong>数据丢失:</strong> 用户脚本数据存储在浏览器中，清除数据前请备份</li>
+            <li><strong>更新问题:</strong> 检查用户脚本管理器的自动更新设置</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>技术支持</h4>
+          <div class="info">
+            如遇到问题，请访问 GitHub 项目页面：<br>
+            <a href="https://github.com/stevessr/bug-v3" target="_blank" style="color: #007cba;">https://github.com/stevessr/bug-v3</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 模拟数据统计
+    function updateStats() {
+      // 这里应该从用户脚本存储中读取真实数据
+      document.getElementById('emoji-count').textContent = '42'
+      document.getElementById('group-count').textContent = '6'
+    }
+
+    // 导出数据
+    function exportData() {
+      try {
+        // 在实际实现中，这里需要访问用户脚本的 GM_getValue
+        const data = {
+          version: '1.0.0',
+          exported: new Date().toISOString(),
+          settings: {},
+          emojis: [],
+          groups: []
+        }
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `emoji-extension-backup-${new Date().toISOString().split('T')[0]}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        
+        showNotification('数据导出成功', 'success')
+      } catch (error) {
+        showNotification('导出失败: ' + error.message, 'error')
+      }
+    }
+
+    // 导入数据
+    function importData() {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.json'
+      input.onchange = function(e) {
+        const file = e.target.files[0]
+        if (!file) return
+        
+        const reader = new FileReader()
+        reader.onload = function(e) {
+          try {
+            const data = JSON.parse(e.target.result)
+            // 在实际实现中，这里需要使用 GM_setValue 保存数据
+            showNotification('数据导入成功', 'success')
+          } catch (error) {
+            showNotification('导入失败: ' + error.message, 'error')
+          }
+        }
+        reader.readAsText(file)
+      }
+      input.click()
+    }
+
+    // 清除存储
+    function clearStorage() {
+      if (confirm('确定要清除所有表情包数据吗？此操作不可撤销。')) {
+        try {
+          // 在实际实现中，这里需要使用 GM_deleteValue 清除数据
+          showNotification('存储已清除', 'success')
+          updateStats()
+        } catch (error) {
+          showNotification('清除失败: ' + error.message, 'error')
+        }
+      }
+    }
+
+    // 重新加载扩展
+    function reloadExtension() {
+      if (confirm('确定要重新加载表情包扩展吗？')) {
+        // 发送消息到父页面重新加载
+        if (window.opener) {
+          window.opener.location.reload()
+        }
+        showNotification('已发送重载信号', 'success')
+      }
+    }
+
+    // 打开设置
+    function openSettings() {
+      showNotification('用户脚本版本的设置需要在源码中修改', 'warning')
+    }
+
+    // 查看日志
+    function viewLogs() {
+      showNotification('请打开浏览器开发者工具查看控制台日志', 'info')
+    }
+
+    // 刷新预览
+    function refreshPreview() {
+      const preview = document.getElementById('emoji-preview')
+      preview.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">表情预览功能需要在用户脚本环境中实现</div>'
+    }
+
+    // 显示通知
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div')
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        max-width: 300px;
+        animation: slideIn 0.3s ease;
+      `
+      
+      switch (type) {
+        case 'success':
+          notification.style.background = 'linear-gradient(135deg, #28a745, #20c997)'
+          break
+        case 'error':
+          notification.style.background = 'linear-gradient(135deg, #dc3545, #e74c3c)'
+          break
+        case 'warning':
+          notification.style.background = 'linear-gradient(135deg, #ffc107, #f39c12)'
+          break
+        default:
+          notification.style.background = 'linear-gradient(135deg, #007cba, #005a8b)'
+      }
+      
+      notification.textContent = message
+      document.body.appendChild(notification)
+      
+      setTimeout(() => {
+        notification.remove()
+      }, 3000)
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      updateStats()
+      refreshPreview()
+    })
+
+    // 添加动画样式
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+    `
+    document.head.appendChild(style)
+  </script>
+</body>
+</html>

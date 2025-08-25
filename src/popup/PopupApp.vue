@@ -16,18 +16,35 @@
       </div>
     </div>
 
-    <!-- 图片缩放控制栏 -->
-    <div class="scale-control">
-      <div class="scale-control-content">
-        <span class="scale-label">图片缩放</span>
-        <a-slider
-          v-model:value="settings.imageScale"
-          :min="1"
-          :max="100"
-          class="scale-slider"
-          @change="onScaleChange"
-        />
-        <span class="scale-value">{{ settings.imageScale }}%</span>
+    <!-- 搜索和图片缩放控制栏 -->
+    <div class="controls-section">
+      <!-- 搜索栏 -->
+      <div class="search-control">
+        <a-input
+          v-model:value="searchQuery"
+          placeholder="搜索表情..."
+          allowClear
+          @input="onSearchInput"
+        >
+          <template #prefix>
+            <search-outlined />
+          </template>
+        </a-input>
+      </div>
+      
+      <!-- 图片缩放控制栏 -->
+      <div class="scale-control">
+        <div class="scale-control-content">
+          <span class="scale-label">图片缩放</span>
+          <a-slider
+            v-model:value="settings.imageScale"
+            :min="1"
+            :max="100"
+            class="scale-slider"
+            @change="onScaleChange"
+          />
+          <span class="scale-value">{{ settings.imageScale }}%</span>
+        </div>
       </div>
     </div>
 
@@ -35,19 +52,19 @@
       <div class="group-list">
         <!-- 常用 -->
         <div
-          v-if="(selectedGroup === 'all' || selectedGroup === 'hot') && hot.length"
+          v-if="(selectedGroup === 'all' || selectedGroup === 'hot') && filteredHot.length"
           class="group-section"
         >
           <div class="group-title">常用</div>
           <div class="emoji-grid" :style="gridStyle">
-            <div v-for="e in hot" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
+            <div v-for="e in filteredHot" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
               <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
             </div>
           </div>
         </div>
 
         <!-- 普通分组（按选中或全部显示） -->
-        <template v-for="g in groups" :key="g.UUID">
+        <template v-for="g in filteredGroups" :key="g.UUID">
           <div class="group-section" v-if="selectedGroup === 'all' || selectedGroup === g.UUID">
             <div class="group-title">{{ g.displayName }}</div>
             <div class="emoji-grid" :style="gridStyle">
@@ -60,12 +77,12 @@
 
         <!-- 未分组 -->
         <div
-          v-if="(selectedGroup === 'all' || selectedGroup === 'ungrouped') && ungrouped.length"
+          v-if="(selectedGroup === 'all' || selectedGroup === 'ungrouped') && filteredUngrouped.length"
           class="group-section"
         >
           <div class="group-title">未分组</div>
           <div class="emoji-grid" :style="gridStyle">
-            <div v-for="e in ungrouped" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
+            <div v-for="e in filteredUngrouped" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
               <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
             </div>
           </div>
@@ -107,10 +124,26 @@ const SettingOutlined = {
   },
 }
 
+const SearchOutlined = {
+  name: 'SearchOutlined',
+  render() {
+    return h(
+      'span',
+      {
+        'aria-hidden': 'true',
+        style:
+          'display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;font-size:14px;line-height:1',
+      },
+      '🔍',
+    )
+  },
+}
+
 export default defineComponent({
   components: {
     // keep settings button using slot icon; avoid importing icons to prevent type issues in popup build
     SettingOutlined,
+    SearchOutlined,
   },
   setup() {
     const commService = createPopupCommService()
@@ -121,6 +154,35 @@ export default defineComponent({
     const selectedGroup = ref<'all' | 'hot' | string>('all')
     const selectedKeys = ref<string[]>(['all'])
     const menuScroll = ref<HTMLElement | null>(null)
+    const searchQuery = ref('')
+
+    // Filtered data based on search query
+    const filteredHot = computed(() => {
+      if (!searchQuery.value) return hot.value
+      return hot.value.filter((e: any) => 
+        (e.name || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+        (e.displayName || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    })
+
+    const filteredGroups = computed(() => {
+      if (!searchQuery.value) return groups.value
+      return groups.value.map((g: any) => ({
+        ...g,
+        emojis: g.emojis.filter((e: any) => 
+          (e.name || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+          (e.displayName || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+        )
+      })).filter((g: any) => g.emojis.length > 0)
+    })
+
+    const filteredUngrouped = computed(() => {
+      if (!searchQuery.value) return ungrouped.value
+      return ungrouped.value.filter((e: any) => 
+        (e.name || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+        (e.displayName || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    })
 
     // Menu items for antd Menu
     const menuItems = computed(() => {
@@ -167,6 +229,13 @@ export default defineComponent({
         commService.sendSettingsChanged(newSettings)
       } catch (error) {
         console.error('Failed to save image scale:', error)
+      }
+    }
+
+    function onSearchInput() {
+      // Auto-switch to "all" view when searching to show all results
+      if (searchQuery.value && selectedGroup.value !== 'all') {
+        selectedGroup.value = 'all'
       }
     }
 
@@ -337,13 +406,18 @@ export default defineComponent({
       groups,
       ungrouped,
       hot,
+      filteredGroups,
+      filteredUngrouped, 
+      filteredHot,
       selectedGroup,
       selectedKeys,
       menuScroll,
       menuItems,
       gridStyle,
       emojiStyle,
+      searchQuery,
       onScaleChange,
+      onSearchInput,
       openOptions,
       onEmojiClick,
       stringifyUrl,
@@ -398,13 +472,18 @@ export default defineComponent({
   background: rgba(0, 0, 0, 0.18);
   border-radius: 4px;
 }
+.controls-section {
+  border-bottom: 1px solid #f0f0f0;
+  background-color: #fafafa;
+}
+.search-control {
+  padding: 12px 16px 8px 16px;
+}
 .scale-control {
   height: 48px;
   display: flex;
   align-items: center;
   padding: 8px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background-color: #fafafa;
 }
 .scale-control-content {
   display: flex;
