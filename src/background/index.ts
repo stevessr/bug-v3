@@ -444,7 +444,13 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
           }
           // forward to other extension pages / background listeners
           try {
-            chrome.runtime.sendMessage(payload)
+            chrome.runtime.sendMessage(payload, (_resp: any) => {
+              try {
+                if (chrome.runtime && chrome.runtime.lastError) {
+                  log('sendMessage error:', chrome.runtime.lastError)
+                }
+              } catch (_) {}
+            })
           } catch (_) {}
           // forward to content scripts in all tabs
           broadcastToTabs(payload)
@@ -455,7 +461,13 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         if (msg && msg.type === 'relay') {
           // relay to other extension contexts
           try {
-            chrome.runtime.sendMessage(msg)
+            chrome.runtime.sendMessage(msg, (_resp: any) => {
+              try {
+                if (chrome.runtime && chrome.runtime.lastError) {
+                  log('sendMessage error:', chrome.runtime.lastError)
+                }
+              } catch (_) {}
+            })
           } catch (_) {}
           sendResponse({ ok: true })
           return true
@@ -504,7 +516,15 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onConnect)
       port.onMessage.addListener((m: any) => {
         log('port message', m)
         if (m && m.type === 'broadcast') {
-          chrome.runtime.sendMessage(m)
+          try {
+            chrome.runtime.sendMessage(m, (_resp: any) => {
+              try {
+                if (chrome.runtime && chrome.runtime.lastError) {
+                  log('sendMessage error (port->runtime):', chrome.runtime.lastError)
+                }
+              } catch (_) {}
+            })
+          } catch (_) {}
           broadcastToTabs(m)
         }
       })

@@ -74,7 +74,7 @@
               :key="e.UUID"
               class="emoji-cell"
               @click.stop="editMode && onEditEmoji(g, e, i)"
-              :draggable="!editMode"
+              :draggable="editMode"
             >
               <img
                 :src="e.displayUrl || e.realUrl"
@@ -86,6 +86,15 @@
                   display: block;
                 "
               />
+              <!-- move controls visible in edit mode -->
+              <div class="emoji-controls" v-if="editMode">
+                <button class="emoji-control-btn up" @click.stop="moveUp(g, i)" title="上移">
+                  ▲
+                </button>
+                <button class="emoji-control-btn down" @click.stop="moveDown(g, i)" title="下移">
+                  ▼
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -329,9 +338,9 @@ export default defineComponent({
       } catch (_) {}
 
       if (!el) return
-      // do not initialize sortable while in edit mode
+      // only initialize sortable while in edit mode
       try {
-        if (editMode && editMode.value) return
+        if (!(editMode && editMode.value)) return
       } catch (_) {}
       // dynamic import to avoid compile-time type complaints
       // @ts-ignore - dynamic import to avoid static type resolution errors in some environments
@@ -377,14 +386,7 @@ export default defineComponent({
     try {
       watch(editMode, async (v) => {
         if (v) {
-          try {
-            Object.keys(sortableMap).forEach((k) => {
-              const inst = (sortableMap as any)[k]
-              if (inst && typeof inst.destroy === 'function') inst.destroy()
-              delete (sortableMap as any)[k]
-            })
-          } catch (_) {}
-        } else {
+          // enter edit mode: initialize sortables
           await nextTick()
           try {
             const els = document.querySelectorAll('.emoji-grid')
@@ -393,6 +395,15 @@ export default defineComponent({
                 const g = (el as HTMLElement).getAttribute('data-group')
                 if (g) setContainer(el, g)
               } catch (_) {}
+            })
+          } catch (_) {}
+        } else {
+          // leave edit mode: destroy all sortables
+          try {
+            Object.keys(sortableMap).forEach((k) => {
+              const inst = (sortableMap as any)[k]
+              if (inst && typeof inst.destroy === 'function') inst.destroy()
+              delete (sortableMap as any)[k]
             })
           } catch (_) {}
         }
@@ -413,7 +424,8 @@ export default defineComponent({
 
         await nextTick()
         try {
-          if (editMode && editMode.value) return
+          // only init sortables when edit mode is active
+          if (!(editMode && editMode.value)) return
           const els = document.querySelectorAll('.emoji-grid')
           els.forEach((el) => {
             try {
@@ -545,6 +557,8 @@ export default defineComponent({
       onEmojiSaved,
       setContainer,
       onEditEmoji,
+      moveUp,
+      moveDown,
     }
   },
 })
@@ -581,6 +595,25 @@ export default defineComponent({
 
 .emoji-cell:hover::after {
   border-color: var(--ant-primary-color);
+}
+
+.emoji-controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+}
+
+.emoji-control-btn {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
 }
 
 /* make each cell square: prefer aspect-ratio, fallback to padding-bottom trick */

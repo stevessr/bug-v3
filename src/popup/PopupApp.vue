@@ -309,7 +309,10 @@ export default defineComponent({
               if (ev.shiftKey) return
               if (Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) {
                 el.scrollLeft += ev.deltaY
-                ev.preventDefault()
+                // only prevent default if the event is cancelable to avoid errors in some browsers
+                try {
+                  if (ev.cancelable) ev.preventDefault()
+                } catch (_) {}
               }
             }
             el.addEventListener('wheel', wheelHandler as any, { passive: false })

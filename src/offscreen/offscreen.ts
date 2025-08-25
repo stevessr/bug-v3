@@ -32,7 +32,15 @@ setInterval(() => {
     ) {
       log('sessionStorage changed, sending to background')
       const payload = JSON.parse(currentSessionStoragePayload)
-      chrome.runtime.sendMessage({ type: 'session-storage-updated', payload })
+      try {
+        chrome.runtime.sendMessage({ type: 'session-storage-updated', payload }, (_resp: any) => {
+          try {
+            if (chrome.runtime && chrome.runtime.lastError) {
+              log('offscreen sendMessage error:', chrome.runtime.lastError)
+            }
+          } catch (_) {}
+        })
+      } catch (_) {}
       lastSessionStoragePayload = currentSessionStoragePayload
     }
   } catch (error) {

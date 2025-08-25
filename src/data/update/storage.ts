@@ -33,7 +33,15 @@ export function savePayload(payload: PersistPayload) {
     // notify background that localStorage payload updated
     try {
       if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage({ type: 'payload-updated', payload })
+        try {
+          chrome.runtime.sendMessage({ type: 'payload-updated', payload }, (_resp: any) => {
+            try {
+              if (chrome.runtime && chrome.runtime.lastError) {
+                // ignore but log
+              }
+            } catch (_) {}
+          })
+        } catch (_) {}
       }
     } catch (_) {}
   } catch (_) {
