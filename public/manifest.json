@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "emoji",
+  "version": "1.0",
+  "description": "A simple example of a Chrome extension built with Manifest V3.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Click me!"
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["https://*.google.com/"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all-urls>"],
+      "js": ["content-script.js"]
+    }
+  ]
+}
