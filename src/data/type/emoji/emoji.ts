@@ -26,4 +26,7 @@ interface EmojiGroup {
   emojis: emoji[]
   order: number
 }
-export type { emoji, EmojiGroup, HotEmoji, UngroupedEmoji }
+interface ungrouped {
+  emojis: UngroupedEmoji[]
+}
+export type { emoji, EmojiGroup, HotEmoji, UngroupedEmoji, ungrouped }
