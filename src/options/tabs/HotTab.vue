@@ -6,7 +6,7 @@
         <a-collapse-panel header="常用表情列表" key="1">
           <div v-if="items.length === 0">暂无常用表情</div>
           <div v-else>
-            <div class="emoji-grid" :class="['grid', gridColsClass, 'gap-2']">
+            <div class="emoji-grid" :class="['grid', gridColsClass, 'gap-2']" :style="gridStyle">
               <a-card v-for="e in items" :key="e.UUID" hoverable size="small" style="width: 100%">
                 <template #cover>
                   <img
@@ -56,8 +56,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, reactive, computed } from 'vue'
+import { defineComponent, ref, onMounted, onBeforeUnmount, reactive, computed } from 'vue'
 import store from '../../data/store/main'
+import { createOptionsCommService } from '../../services/communication'
 
 export default defineComponent({
   setup() {
@@ -65,7 +66,15 @@ export default defineComponent({
     const stats = ref({ groupCount: 0, emojiCount: 0, totalHotness: 0 })
     const settings = reactive({ ...store.getSettings() })
     const gridColsClass = computed(() => `grid-cols-${(settings as any).gridColumns || 4}`)
+    const gridStyle = computed(() => ({
+      display: 'grid',
+      gridTemplateColumns: `repeat(${(settings as any).gridColumns || 4}, 1fr)`,
+      gap: '8px',
+    }))
     function load() {
+      try {
+        console.info('[HotTab] enter hot tab - gridColumns =', (settings as any).gridColumns || 4)
+      } catch (_) {}
       items.value = store.getHot()
       // compute stats
       const groups = store.getGroups()
@@ -82,7 +91,31 @@ export default defineComponent({
       stats.value = { groupCount: groups.length, emojiCount, totalHotness: totalHot }
     }
     onMounted(load)
-    return { items, stats, gridColsClass }
+    // subscribe to settings changes so grid columns update live
+    const comm = createOptionsCommService()
+    const settingsHandler = (message: any) => {
+      try {
+        const payload =
+          message && typeof message === 'object' && message.payload !== undefined
+            ? message.payload
+            : message
+        if (payload && typeof payload === 'object') Object.assign(settings, payload)
+        try {
+          console.info(
+            '[HotTab] settings changed - gridColumns =',
+            (settings as any).gridColumns || 4,
+          )
+        } catch (_) {}
+      } catch (_) {}
+    }
+    comm.on('app:settings-changed', settingsHandler)
+
+    onBeforeUnmount(() => {
+      try {
+        comm.off && comm.off('app:settings-changed', settingsHandler)
+      } catch (_) {}
+    })
+    return { items, stats, gridColsClass, gridStyle }
   },
 })
 </script>
