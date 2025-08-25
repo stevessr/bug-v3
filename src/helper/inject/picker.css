@@ -1,0 +1,17 @@
+.__PICKER_CLASS__ {
+  position: static;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-height: 300px;
+  overflow: auto;
+  background-color: #f8f8f8;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 9999;
+}
+.__PICKER_CLASS__ img {
+  cursor: pointer;
+  width: 95px;
+  height: 100px;
+}
