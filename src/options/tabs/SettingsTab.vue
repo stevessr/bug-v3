@@ -28,9 +28,7 @@
 
       <a-form-item> <a-switch v-model:checked="form.MobileMode" /> 移动端视图 </a-form-item>
 
-      <a-form-item>
-        <a-button type="primary" @click="save">保存</a-button>
-      </a-form-item>
+      <!-- 保存按钮已移除：设置改动将自动保存并广播 -->
     </a-form>
   </a-card>
 </template>
@@ -42,19 +40,26 @@ import store from '../../data/store/main'
 export default defineComponent({
   setup() {
     const form = reactive({ ...store.getSettings() })
-    // when gridColumns changes, persist immediately so UI can react
-    watch(
-      () => form.gridColumns,
-      (v) => {
-        try {
-          store.saveSettings(form)
-        } catch (_) {}
-      },
-    )
-    function save() {
-      store.saveSettings(form)
+    // watch key settings and persist immediately so UI can react
+    const keys = [
+      'imageScale',
+      'defaultEmojiGroupUUID',
+      'gridColumns',
+      'outputFormat',
+      'MobileMode',
+    ]
+    for (const k of keys) {
+      // use any cast to satisfy TS when indexing by dynamic key
+      watch(
+        () => (form as any)[k],
+        () => {
+          try {
+            store.saveSettings(form)
+          } catch (_) {}
+        },
+      )
     }
-    return { form, save }
+    return { form }
   },
 })
 </script>

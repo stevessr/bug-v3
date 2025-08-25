@@ -62,3 +62,15 @@ pnpm test:e2e --debug
 ```sh
 pnpm lint
 ```
+
+## Content-script channel configuration
+
+The content script listens for broadcast messages from the background. You can configure which channels the content script will accept by setting the `channels` key in the extension's `chrome.storage.local` area. Example value:
+
+```json
+{
+  "channels": ["default", "emoji-updates", "my-channel"]
+}
+```
+
+The background sync process writes the latest payload to `chrome.storage.local.extended_payload`. The content script will also receive `sync-session` messages to update the page `sessionStorage` with the latest payload.

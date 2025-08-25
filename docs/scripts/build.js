@@ -19,50 +19,50 @@ const configs = {
   dev: {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'true',
-    NODE_ENV: 'development'
+    NODE_ENV: 'development',
   },
   'dev:variant': {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'true',
-    NODE_ENV: 'development'
+    NODE_ENV: 'development',
   },
   build: {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'true',
-    NODE_ENV: 'production'
+    NODE_ENV: 'production',
   },
   'build:variant': {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'true',
-    NODE_ENV: 'production'
+    NODE_ENV: 'production',
   },
   'build:prod': {
     ENABLE_LOGGING: 'false',
     ENABLE_INDEXEDDB: 'true',
-    NODE_ENV: 'production'
+    NODE_ENV: 'production',
   },
   'build:no-indexeddb': {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'false',
-    NODE_ENV: 'production'
+    NODE_ENV: 'production',
   },
   'build:minimal': {
     ENABLE_LOGGING: 'false',
     ENABLE_INDEXEDDB: 'false',
-    NODE_ENV: 'production'
+    NODE_ENV: 'production',
   },
   'build:userscript': {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production',
-    BUILD_MINIFIED: 'false'
+    BUILD_MINIFIED: 'false',
   },
   'build:userscript:min': {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production',
-    BUILD_MINIFIED: 'true'
-  }
+    BUILD_MINIFIED: 'true',
+  },
 }
 
 const config = configs[buildType]
@@ -98,20 +98,20 @@ const distDir = path.resolve(process.cwd(), 'dist')
 const child = spawn('npx', viteCommand.split(' '), {
   stdio: 'inherit',
   env: process.env,
-  shell: true
+  shell: true,
 })
 
-child.on('exit', code => {
+child.on('exit', (code) => {
   if (code === 0 && buildType !== 'dev') {
     // For userscript builds, run post-processing instead of clean-empty-chunks
     if (isUserscript) {
       console.log('🔧 Post-processing userscript...')
       const postProcessChild = spawn('node', ['./scripts/post-process-userscript.js', buildType], {
         stdio: 'inherit',
-        shell: true
+        shell: true,
       })
 
-      postProcessChild.on('exit', postCode => {
+      postProcessChild.on('exit', (postCode) => {
         if (postCode === 0) {
           console.log('✅ Userscript build completed!')
         } else {
@@ -124,10 +124,10 @@ child.on('exit', code => {
       console.log('🧹 清理空文件...')
       const cleanChild = spawn('node', ['./scripts/clean-empty-chunks.mjs'], {
         stdio: 'inherit',
-        shell: true
+        shell: true,
       })
 
-      cleanChild.on('exit', cleanCode => {
+      cleanChild.on('exit', (cleanCode) => {
         if (cleanCode === 0) {
           // Move HTML files from dist/html/ to dist/
           try {
@@ -148,15 +148,15 @@ child.on('exit', code => {
           } catch (e) {
             console.error('Failed to move HTML files:', e)
           }
-          
+
           // Inject script tags into HTML files
           console.log('🔧 Injecting script tags...')
           const injectChild = spawn('node', ['./scripts/inject-scripts.js'], {
             stdio: 'inherit',
-            shell: true
+            shell: true,
           })
 
-          injectChild.on('exit', injectCode => {
+          injectChild.on('exit', (injectCode) => {
             if (injectCode !== 0) {
               console.warn('Script injection completed with warnings')
             }
@@ -165,7 +165,7 @@ child.on('exit', code => {
               const assetsDir = path.join(distDir, 'assets')
               if (fs.existsSync(assetsDir)) {
                 const files = fs.readdirSync(assetsDir)
-                const bg = files.find(f => f.startsWith('background') && f.endsWith('.js'))
+                const bg = files.find((f) => f.startsWith('background') && f.endsWith('.js'))
                 if (bg) {
                   const src = path.join(assetsDir, bg)
                   const dest = path.join(distDir, 'background.js')
