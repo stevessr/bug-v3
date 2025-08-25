@@ -127,10 +127,22 @@ class CommunicationService {
     this.handlers.get(type)!.push(handler)
 
     // 同时监听 CustomEvent（向后兼容）
+    // Only treat CustomEvent as an external message when the detail includes a `from` field.
+    // Some parts of the app dispatch raw settings objects (detail = settings) without a
+    // `from` property; those should not be treated as cross-context messages.
     try {
       window.addEventListener(type, ((event: CustomEvent) => {
-        if (event.detail && event.detail.from !== this.context) {
-          handler(event.detail)
+        // require an explicit `from` marker to avoid handling local dispatches
+        try {
+          if (
+            event.detail &&
+            (event.detail as any).from &&
+            (event.detail as any).from !== this.context
+          ) {
+            handler(event.detail)
+          }
+        } catch (e) {
+          // ignore malformed event.detail
         }
       }) as EventListener)
     } catch (error) {
