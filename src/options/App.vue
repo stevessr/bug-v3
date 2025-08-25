@@ -27,8 +27,10 @@ import emojiGroupsStore from '../data/update/emojiGroupsStore'
 import storage from '../data/update/storage'
 import store from '../data/store/main'
 import { Modal } from 'ant-design-vue'
+import { createOptionsCommService } from '../services/communication'
 export default defineComponent({
   setup() {
+    const commService = createOptionsCommService()
     const currentTab = ref<'groups' | 'ungrouped' | 'hot' | 'importexport' | 'settings'>('groups')
     const s = settingsStore.getSettings()
     const siderCollapsed = ref(!!s.sidebarCollapsed)
@@ -36,7 +38,10 @@ export default defineComponent({
     function toggleSider(collapsed: boolean) {
       siderCollapsed.value = collapsed
       // persist
-      store.saveSettings({ sidebarCollapsed: collapsed })
+      const newSettings = { sidebarCollapsed: collapsed }
+      store.saveSettings(newSettings)
+      // 发送设置变更消息到其他页面
+      commService.sendSettingsChanged(newSettings)
     }
 
     const form = reactive({ ...s })
@@ -52,16 +57,16 @@ export default defineComponent({
     }
 
     function save() {
-      settingsStore.setSettings(
-        {
-          imageScale: Number(form.imageScale),
-          defaultEmojiGroupUUID: form.defaultEmojiGroupUUID,
-          gridColumns: form.gridColumns as any,
-          outputFormat: form.outputFormat,
-          MobileMode: !!form.MobileMode,
-        },
-        groups.value,
-      )
+      const newSettings = {
+        imageScale: Number(form.imageScale),
+        defaultEmojiGroupUUID: form.defaultEmojiGroupUUID,
+        gridColumns: form.gridColumns as any,
+        outputFormat: form.outputFormat,
+        MobileMode: !!form.MobileMode,
+      }
+      settingsStore.setSettings(newSettings, groups.value)
+      // 发送设置变更消息到其他页面
+      commService.sendSettingsChanged(newSettings)
       loadGroups()
     }
 
@@ -158,10 +163,16 @@ export default defineComponent({
         const parsed = JSON.parse(importText.value)
         if (parsed && parsed.Settings) {
           settingsStore.setSettings(parsed.Settings, parsed.emojiGroups || [])
+          // 发送设置变更消息
+          commService.sendSettingsChanged(parsed.Settings)
         }
         if (parsed && Array.isArray(parsed.emojiGroups)) {
           emojiGroupsStore.setEmojiGroups(parsed.emojiGroups)
+          // 发送表情组变更消息
+          commService.sendGroupsChanged(parsed.emojiGroups)
         }
+        // 发送数据导入完成消息
+        commService.sendDataImported(parsed)
         loadGroups()
         refreshExport()
         // eslint-disable-next-line no-console
@@ -199,6 +210,20 @@ export default defineComponent({
     onMounted(() => {
       loadGroups()
       refreshExport()
+
+      // 监听来自其他页面的消息
+      commService.onSettingsChanged((newSettings) => {
+        Object.assign(form, newSettings)
+      })
+
+      commService.onGroupsChanged((newGroups) => {
+        groups.value = newGroups
+      })
+
+      commService.onUsageRecorded((data) => {
+        // 可以在这里更新常用表情列表
+        // hot.value = store.getHot()
+      })
     })
 
     return {

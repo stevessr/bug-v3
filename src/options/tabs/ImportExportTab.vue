@@ -1,7 +1,7 @@
 <template>
   <div>
     <a-card title="导出当前配置" style="margin-bottom: 16px">
-      <a-textarea :value="exportJson" :rows="8" readonly />
+      <monaco-editor :model-value="exportJson" readonly language="json" />
       <div style="margin-top: 8px; display: flex; gap: 8px">
         <a-button @click="refresh">刷新</a-button>
         <a-button type="primary" @click="download">下载配置</a-button>
@@ -10,7 +10,7 @@
     </a-card>
 
     <a-card title="导入配置">
-      <a-textarea v-model:value="text" :rows="8" placeholder="粘贴 JSON" />
+      <monaco-editor v-model="text" language="json" />
       <div style="margin-top: 8px; display: flex; gap: 8px">
         <a-button type="primary" @click="doImport">导入</a-button>
         <a-button @click="clear">清空</a-button>
@@ -22,8 +22,12 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue'
 import store from '../../data/store/main'
+import MonacoEditor from '../components/MonacoEditor.vue'
 
 export default defineComponent({
+  components: {
+    MonacoEditor,
+  },
   setup() {
     const exportJson = ref('')
     const text = ref('')

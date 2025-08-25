@@ -31,7 +31,8 @@
             {{ g.icon }}
           </span>
         </template>
-        <span>{{ g.displayName }} ({{ g.UUID }})</span>
+        <span>{{ g.displayName }}</span>
+        <span style="margin-left: 8px; font-size: 12px; color: var(--ant-text-color-secondary)">({{ g.UUID }})</span>
       </span>
     </a-select-option>
   </a-select>

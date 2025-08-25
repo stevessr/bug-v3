@@ -1,6 +1,7 @@
 import settingsStore from '../update/settingsStore'
 import emojiGroupsStore from '../update/emojiGroupsStore'
 import storage from '../update/storage'
+import { createOptionsCommService } from '../../services/communication'
 
 function log(...args: any[]) {
   try {
@@ -21,6 +22,16 @@ export function saveSettings(s: any) {
     // notify UI about settings change so components can react immediately
     if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
       window.dispatchEvent(new CustomEvent('app:settings-changed', { detail: s }))
+    }
+    
+    // 使用通信服务发送设置变更消息（仅在 options 页面中）
+    if (typeof window !== 'undefined' && window.location.pathname.includes('options.html')) {
+      try {
+        const commService = createOptionsCommService()
+        commService.sendSettingsChanged(s)
+      } catch (error) {
+        console.warn('Failed to send settings via communication service:', error)
+      }
     }
   } catch (_) {}
 }
@@ -76,8 +87,31 @@ export function importPayload(p: any) {
     if (p.Settings && typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
       window.dispatchEvent(new CustomEvent('app:settings-changed', { detail: p.Settings }))
     }
+    
+    // 使用通信服务发送设置变更消息（仅在 options 页面中）
+    if (p.Settings && typeof window !== 'undefined' && window.location.pathname.includes('options.html')) {
+      try {
+        const commService = createOptionsCommService()
+        commService.sendSettingsChanged(p.Settings)
+      } catch (error) {
+        console.warn('Failed to send settings via communication service:', error)
+      }
+    }
   } catch (_) {}
-  if (Array.isArray(p.emojiGroups)) emojiGroupsStore.setEmojiGroups(p.emojiGroups)
+  
+  if (Array.isArray(p.emojiGroups)) {
+    emojiGroupsStore.setEmojiGroups(p.emojiGroups)
+    // 使用通信服务发送表情组变更消息（仅在 options 页面中）
+    try {
+      if (typeof window !== 'undefined' && window.location.pathname.includes('options.html')) {
+        const commService = createOptionsCommService()
+        commService.sendGroupsChanged(p.emojiGroups)
+      }
+    } catch (error) {
+      console.warn('Failed to send groups via communication service:', error)
+    }
+  }
+  
   if (Array.isArray(p.ungrouped) && (emojiGroupsStore as any).addUngrouped) {
     // replace existing ungrouped with imported ones
     const existing: any[] = (emojiGroupsStore as any).getUngrouped
@@ -92,6 +126,17 @@ export function importPayload(p: any) {
     }
     p.ungrouped.forEach((e: any) => (emojiGroupsStore as any).addUngrouped(e))
   }
+  
+  // 发送数据导入完成消息
+  try {
+    if (typeof window !== 'undefined' && window.location.pathname.includes('options.html')) {
+      const commService = createOptionsCommService()
+      commService.sendDataImported(p)
+    }
+  } catch (error) {
+    console.warn('Failed to send data import via communication service:', error)
+  }
+  
   return true
 }
 
