@@ -44,14 +44,18 @@ function getUserscriptFooter() {
 function runESLint(filePath) {
   return new Promise((resolve, reject) => {
     console.log(`🔍 Running ESLint on ${path.basename(filePath)}...`)
-    
+
     const configPath = path.resolve(__dirname, '..', '.eslintrc.userscript.js')
-    
+
     // First try to auto-fix formatting issues
-    const fixProcess = spawn('npx', ['eslint', filePath, '--fix', '--no-ignore', '-c', configPath], {
-      stdio: 'pipe',
-      shell: true
-    })
+    const fixProcess = spawn(
+      'npx',
+      ['eslint', filePath, '--fix', '--no-ignore', '-c', configPath],
+      {
+        stdio: 'pipe',
+        shell: true
+      }
+    )
 
     let fixOutput = ''
     let fixError = ''
@@ -67,7 +71,7 @@ function runESLint(filePath) {
     fixProcess.on('close', fixCode => {
       if (fixCode === 0) {
         console.log(`✅ ESLint auto-fix completed for ${path.basename(filePath)}`)
-        
+
         // Now run ESLint again to check for remaining issues
         const checkProcess = spawn('npx', ['eslint', filePath, '--no-ignore', '-c', configPath], {
           stdio: 'pipe',
@@ -195,7 +199,7 @@ async function main() {
 
     // Run ESLint validation
     await runESLint(outputFile)
-    
+
     console.log('🎉 Userscript build and validation completed successfully!')
     process.exit(0)
   } catch (error) {

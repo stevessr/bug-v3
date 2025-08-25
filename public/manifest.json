@@ -4,10 +4,7 @@
   "version": "1.0.0",
   "description": "An emoji extension built with Vue 3 and Vite.",
   "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": [
-    "https://generativelanguage.googleapis.com/*",
-    "https://linux.do/*"
-  ],
+  "host_permissions": ["https://generativelanguage.googleapis.com/*", "https://linux.do/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -41,7 +38,14 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/*", "js/*.css", "*.html"],
+      "resources": [
+        "assets/*",
+        "js/*.css",
+        "js/ffmpeg-core.js",
+        "js/ffmpeg-core-compat.js",
+        "js/ffmpeg-core.wasm",
+        "*.html"
+      ],
       "matches": ["<all_urls>"]
     }
   ]

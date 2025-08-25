@@ -28,6 +28,7 @@ function removeEmptyFiles(dir) {
       }
     } catch (e) {
       // ignore
+      console.debug('Failed to process file:', e.message)
     }
   }
   return removed

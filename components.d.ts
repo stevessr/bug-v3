@@ -8,7 +8,18 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AboutSection: typeof import('./src/components/AboutSection.vue')['default']
+    AButton: typeof import('ant-design-vue/es')['Button']
+    ACard: typeof import('ant-design-vue/es')['Card']
+    ACheckbox: typeof import('ant-design-vue/es')['Checkbox']
+    AInput: typeof import('ant-design-vue/es')['Input']
+    AInputNumber: typeof import('ant-design-vue/es')['InputNumber']
     ApiConfig: typeof import('./src/components/ImageGenerator/ApiConfig.vue')['default']
+    AProgress: typeof import('ant-design-vue/es')['Progress']
+    ASelect: typeof import('ant-design-vue/es')['Select']
+    ASelectOption: typeof import('ant-design-vue/es')['SelectOption']
+    ASlider: typeof import('ant-design-vue/es')['Slider']
+    ATag: typeof import('ant-design-vue/es')['Tag']
+    ATextarea: typeof import('ant-design-vue/es')['Textarea']
     GenerateButton: typeof import('./src/components/ImageGenerator/GenerateButton.vue')['default']
     GenerationConfig: typeof import('./src/components/ImageGenerator/GenerationConfig.vue')['default']
     GenerationMode: typeof import('./src/components/ImageGenerator/GenerationMode.vue')['default']
