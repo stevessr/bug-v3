@@ -55,15 +55,13 @@
           <div
             class="emoji-grid"
             :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: '8px' }"
-            @dragover.prevent
-            @drop.prevent="(ev) => onGridDrop(ev, g)"
+            :data-group="g.UUID"
+            :ref="(el) => setContainer(el, g.UUID)"
           >
             <div
               v-for="(e, i) in g.emojis"
               :key="e.UUID"
               class="emoji-cell"
-              draggable="true"
-              @dragstart="(ev) => onDragStart(ev, g, i)"
               @click.stop="() => onEditEmoji(g, e, i)"
             >
               <img
@@ -99,7 +97,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
+import { defineComponent, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import store from '../../data/store/main'
 import { Modal } from 'ant-design-vue'
 
@@ -284,49 +282,71 @@ export default defineComponent({
       showAddEmoji.value = true
     }
 
-    // drag/drop state
-    const dragState: any = { groupUUID: null, index: -1 }
+    // use sortablejs dynamically to avoid static type resolution issues
+    const sortableMap: Record<string, any> = {}
 
-    function onDragStart(ev: DragEvent, g: any, idx: number) {
+  function setContainer(el: any, groupUUID: string) {
+      // destroy existing instance
       try {
-        dragState.groupUUID = g.UUID
-        dragState.index = idx
-        ;(ev.dataTransfer as any).setData(
-          'text/plain',
-          JSON.stringify({ groupUUID: g.UUID, index: idx }),
-        )
-      } catch (_) {}
-    }
-
-    function onGridDrop(ev: DragEvent, targetGroup: any) {
-      try {
-        const raw = (ev.dataTransfer as any).getData('text/plain')
-        if (!raw) return
-        const parsed = JSON.parse(raw)
-        const fromGroup = parsed.groupUUID
-        const fromIndex = parsed.index
-        const toGroup = targetGroup.UUID
-        // target index default to end
-        let toIndex = targetGroup.emojis.length
-        if (fromGroup === toGroup) {
-          const ok = store.reorderEmojiInGroup(
-            fromGroup,
-            fromIndex,
-            toIndex === 0 ? 0 : toIndex - 1,
-          )
-          if (ok) load()
-          return
+        const existing = sortableMap[groupUUID]
+        if (existing && typeof existing.destroy === 'function') {
+          existing.destroy()
+          delete sortableMap[groupUUID]
         }
-        const src = groups.value.find((x: any) => x.UUID === fromGroup)
-        const dst = groups.value.find((x: any) => x.UUID === toGroup)
-        if (!src || !dst) return
-        if (!Array.isArray(src.emojis) || !Array.isArray(dst.emojis)) return
-        const [item] = src.emojis.splice(fromIndex, 1)
-        dst.emojis.splice(toIndex, 0, item)
-        store.importPayload({ emojiGroups: groups.value })
-        load()
       } catch (_) {}
+
+  if (!el) return
+      // dynamic import to avoid compile-time type complaints
+  // @ts-ignore - dynamic import to avoid static type resolution errors in some environments
+  // @ts-ignore
+  import('sortablejs')
+        .then((m) => {
+          const SortableLib: any = (m && (m as any).default) || m
+          try {
+            const inst = new SortableLib(el as HTMLElement, {
+              group: 'emoji-groups',
+              animation: 150,
+              ghostClass: 'sortable-ghost',
+              onEnd(evt: any) {
+                try {
+                  const fromGroupUUID = evt.from?.getAttribute('data-group')
+                  const toGroupUUID = evt.to?.getAttribute('data-group')
+                  const fromIndex = evt.oldIndex
+                  const toIndex = evt.newIndex
+                  if (!fromGroupUUID || !toGroupUUID) return
+                  if (fromGroupUUID === toGroupUUID) {
+                    const ok = store.reorderEmojiInGroup(fromGroupUUID, fromIndex, toIndex)
+                    if (ok) load()
+                    return
+                  }
+                  const src = groups.value.find((x: any) => x.UUID === fromGroupUUID)
+                  const dst = groups.value.find((x: any) => x.UUID === toGroupUUID)
+                  if (!src || !dst) return
+                  if (!Array.isArray(src.emojis) || !Array.isArray(dst.emojis)) return
+                  const [item] = src.emojis.splice(fromIndex, 1)
+                  dst.emojis.splice(toIndex, 0, item)
+                  store.importPayload({ emojiGroups: groups.value })
+                  load()
+                } catch (_) {}
+              },
+            })
+            sortableMap[groupUUID] = inst
+          } catch (_) {}
+        })
+        .catch(() => {})
     }
+
+    try {
+      onUnmounted(() => {
+        try {
+          Object.keys(sortableMap).forEach((k) => {
+            const inst = (sortableMap as any)[k]
+            if (inst && typeof inst.destroy === 'function') inst.destroy()
+            delete (sortableMap as any)[k]
+          })
+        } catch (_) {}
+      })
+    } catch (_) {}
 
     function onEditEmoji(g: any, e: any, i: number) {
       addingGroup.value = g
@@ -410,8 +430,7 @@ export default defineComponent({
       onAddEmoji,
       onEmojiAdded,
       onEmojiSaved,
-      onDragStart,
-      onGridDrop,
+  setContainer,
       onEditEmoji,
     }
   },
