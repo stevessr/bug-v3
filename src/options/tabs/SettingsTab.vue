@@ -2,9 +2,35 @@
   <a-card title="设置">
     <a-form-item>
       <div style="display: flex; gap: 8px; flex-wrap: wrap">
-        <a-button type="default" @click="resetSettings">重置设置</a-button>
-        <a-button type="primary" @click="applyDefaults">应用默认（不刷新分组）</a-button>
-        <a-button type="danger" @click="resetAllData">完全重置（包括分组）</a-button>
+        <a-popconfirm
+          title="确认要将设置重置为默认值吗？此操作会覆盖当前设置。"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="onConfirmResetSettings"
+          @cancel="onCancel"
+        >
+          <a-button type="default">重置设置</a-button>
+        </a-popconfirm>
+
+        <a-popconfirm
+          title="确认要将默认设置应用到当前设置吗？此操作会覆盖相关设置但不会刷新分组。"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="onConfirmApplyDefaults"
+          @cancel="onCancel"
+        >
+          <a-button type="primary">应用默认（不刷新分组）</a-button>
+        </a-popconfirm>
+
+        <a-popconfirm
+          title="确认要重置所有数据吗？这将删除所有自定义表情组和设置，恢复到默认状态。此操作不可撤销！"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="onConfirmResetAllData"
+          @cancel="onCancel"
+        >
+          <a-button type="danger">完全重置（包括分组）</a-button>
+        </a-popconfirm>
       </div>
       <div style="margin-top: 8px; font-size: 12px; color: #666">
         重置功能将使用转换后的默认配置文件 (converted_payload.json)
@@ -44,6 +70,7 @@
 
 <script lang="ts">
 import { defineComponent, reactive, watch, onMounted, nextTick } from 'vue'
+import { message } from 'ant-design-vue'
 import store from '../../data/store/main'
 import { createOptionsCommService } from '../../services/communication'
 import settingsStore from '../../data/update/settingsStore'
@@ -130,10 +157,8 @@ export default defineComponent({
       })
     })
 
+    // 执行重置设置的核心逻辑（不包含确认提示）
     async function resetSettings() {
-      // 简单确认
-      if (!window.confirm('确认要将设置重置为默认值吗？此操作会覆盖当前设置。')) return
-
       try {
         const defaultPayload = await loadConvertedDefaults()
         const defs = { ...defaultPayload.Settings }
@@ -160,15 +185,16 @@ export default defineComponent({
       }
     }
 
-    // 完全重置：包括表情组数据
-    async function resetAllData() {
-      if (
-        !window.confirm(
-          '确认要重置所有数据吗？这将删除所有自定义表情组和设置，恢复到默认状态。此操作不可撤销！',
-        )
-      )
-        return
+    // Popconfirm 的确认回调：调用核心逻辑并显示反馈
+    function onConfirmResetSettings(e?: MouseEvent) {
+      console.log('Popconfirm confirm event:', e)
+      resetSettings()
+      message.success('设置已重置')
+    }
 
+    // 完全重置：包括表情组数据
+    // 完全重置：包括表情组数据（核心逻辑）
+    async function resetAllData() {
       try {
         const defaultPayload = await loadConvertedDefaults()
 
@@ -192,6 +218,18 @@ export default defineComponent({
         console.error('Failed to reset all data', err)
         alert('重置失败，请检查控制台错误信息')
       }
+    }
+
+    // Popconfirm 的确认回调
+    function onConfirmResetAllData(e?: MouseEvent) {
+      console.log('Popconfirm confirm event (all data):', e)
+      resetAllData()
+      message.success('所有数据已重置，页面将刷新')
+    }
+
+    function onCancel(e?: MouseEvent) {
+      console.log('Popconfirm cancelled:', e)
+      message.info('已取消')
     }
 
     // applyDefaults: 将默认值应用到设置但不改分组数据（保守操作）
@@ -220,7 +258,23 @@ export default defineComponent({
       }
     }
 
-    return { form, resetSettings, applyDefaults, resetAllData }
+    // Popconfirm 的确认回调：应用默认并显示反馈
+    function onConfirmApplyDefaults(e?: MouseEvent) {
+      console.log('Popconfirm confirm event (apply defaults):', e)
+      applyDefaults()
+      message.success('默认设置已应用')
+    }
+
+    return {
+      form,
+      resetSettings,
+      applyDefaults,
+      resetAllData,
+      onConfirmResetSettings,
+      onConfirmResetAllData,
+      onConfirmApplyDefaults,
+      onCancel,
+    }
   },
 })
 </script>
