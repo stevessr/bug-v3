@@ -1,5 +1,16 @@
 <template>
   <a-card title="设置">
+    <a-form-item>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <a-button type="default" @click="resetSettings">重置设置</a-button>
+        <a-button type="primary" @click="applyDefaults">应用默认（不刷新分组）</a-button>
+        <a-button type="danger" @click="resetAllData">完全重置（包括分组）</a-button>
+      </div>
+      <div style="margin-top: 8px; font-size: 12px; color: #666">
+        重置功能将使用转换后的默认配置文件 (converted_payload.json)
+      </div>
+    </a-form-item>
+
     <a-form :model="form" layout="vertical">
       <a-form-item label="图片缩放 (%)">
         <div style="display: flex; gap: 12px; align-items: center">
@@ -27,8 +38,6 @@
       </a-form-item>
 
       <a-form-item> <a-switch v-model:checked="form.MobileMode" /> 移动端视图 </a-form-item>
-
-      <!-- 保存按钮已移除：设置改动将自动保存并广播 -->
     </a-form>
   </a-card>
 </template>
@@ -37,12 +46,31 @@
 import { defineComponent, reactive, watch, onMounted, nextTick } from 'vue'
 import store from '../../data/store/main'
 import { createOptionsCommService } from '../../services/communication'
+import settingsStore from '../../data/update/settingsStore'
 
 export default defineComponent({
   setup() {
     const commService = createOptionsCommService()
     const form = reactive({ ...store.getSettings() })
     let isUpdatingFromExternal = false
+
+    // 加载转换后的默认配置
+    async function loadConvertedDefaults() {
+      try {
+        const response = await fetch('/static/config/converted_payload.json')
+        if (response.ok) {
+          const payload = await response.json()
+          return payload
+        }
+      } catch (error) {
+        console.warn('Failed to load converted defaults, using fallback:', error)
+      }
+      // 回退到内置默认值
+      return {
+        Settings: { ...settingsStore.defaults },
+        emojiGroups: [],
+      }
+    }
 
     // watch key settings and persist immediately so UI can react
     const keys = [
@@ -102,7 +130,97 @@ export default defineComponent({
       })
     })
 
-    return { form }
+    async function resetSettings() {
+      // 简单确认
+      if (!window.confirm('确认要将设置重置为默认值吗？此操作会覆盖当前设置。')) return
+
+      try {
+        const defaultPayload = await loadConvertedDefaults()
+        const defs = { ...defaultPayload.Settings }
+
+        // 将 Date 转为可序列化字符串（storage 会处理字符串->Date 的反序列化）
+        if (defs.lastModified instanceof Date) defs.lastModified = defs.lastModified.toISOString()
+
+        // 更新本地表单并保存，广播到其他页面
+        Object.keys(defs).forEach((k) => ((form as any)[k] = (defs as any)[k]))
+        store.saveSettings(defs)
+        const comm = createOptionsCommService()
+        comm.sendSettingsChanged(defs)
+
+        console.log('Settings reset to converted defaults:', defs)
+      } catch (err) {
+        console.error('Failed to reset settings', err)
+        // 回退到内置默认值
+        const defs = { ...(settingsStore.defaults as any) }
+        if (defs.lastModified instanceof Date) defs.lastModified = defs.lastModified.toISOString()
+        Object.keys(defs).forEach((k) => ((form as any)[k] = (defs as any)[k]))
+        store.saveSettings(defs)
+        const comm = createOptionsCommService()
+        comm.sendSettingsChanged(defs)
+      }
+    }
+
+    // 完全重置：包括表情组数据
+    async function resetAllData() {
+      if (
+        !window.confirm(
+          '确认要重置所有数据吗？这将删除所有自定义表情组和设置，恢复到默认状态。此操作不可撤销！',
+        )
+      )
+        return
+
+      try {
+        const defaultPayload = await loadConvertedDefaults()
+
+        // 使用导入功能完全重置数据
+        const success = store.importPayload(defaultPayload)
+        if (success) {
+          // 更新表单显示
+          const newSettings = defaultPayload.Settings
+          Object.keys(newSettings).forEach((k) => ((form as any)[k] = (newSettings as any)[k]))
+
+          // 刷新页面以确保所有组件都更新
+          setTimeout(() => {
+            window.location.reload()
+          }, 1000)
+
+          console.log('All data reset to converted defaults')
+        } else {
+          throw new Error('Import failed')
+        }
+      } catch (err) {
+        console.error('Failed to reset all data', err)
+        alert('重置失败，请检查控制台错误信息')
+      }
+    }
+
+    // applyDefaults: 将默认值应用到设置但不改分组数据（保守操作）
+    async function applyDefaults() {
+      try {
+        const defaultPayload = await loadConvertedDefaults()
+        const defs = { ...defaultPayload.Settings }
+        if (defs.lastModified instanceof Date) defs.lastModified = defs.lastModified.toISOString()
+
+        // 只覆盖 Settings 字段
+        Object.keys(defs).forEach((k) => ((form as any)[k] = (defs as any)[k]))
+        store.saveSettings(defs)
+        const comm = createOptionsCommService()
+        comm.sendSettingsChanged(defs)
+
+        console.log('Applied converted defaults to settings only')
+      } catch (err) {
+        console.error('Failed to apply defaults', err)
+        // 回退到内置默认值
+        const defs = { ...(settingsStore.defaults as any) }
+        if (defs.lastModified instanceof Date) defs.lastModified = defs.lastModified.toISOString()
+        Object.keys(defs).forEach((k) => ((form as any)[k] = (defs as any)[k]))
+        store.saveSettings(defs)
+        const comm = createOptionsCommService()
+        comm.sendSettingsChanged(defs)
+      }
+    }
+
+    return { form, resetSettings, applyDefaults, resetAllData }
   },
 })
 </script>
