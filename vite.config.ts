@@ -35,6 +35,15 @@ export default defineConfig({
         background: fileURLToPath(new URL('./src/background/index.ts', import.meta.url)),
       },
       output: {
+        // Ensure background entry is emitted as dist/background.js so manifest can reference it
+        // while keeping other bundles hashed under assets/.
+        entryFileNames: (chunkInfo: any) => {
+          if (chunkInfo && chunkInfo.name === 'background') return 'background.js'
+          if (chunkInfo && chunkInfo.name === 'content-script') return 'content-script.js'
+          return 'assets/[name]-[hash].js'
+        },
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
         // rolldown (vite aliased) expects manualChunks to be a function
         manualChunks(id) {
           if (typeof id === 'string' && id.includes('monaco-editor')) return 'monaco-editor'
