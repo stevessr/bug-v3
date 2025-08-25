@@ -1,7 +1,18 @@
 <template>
   <a-card title="表情组管理">
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
+    <div
+      style="
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 8px;
+        gap: 8px;
+        align-items: center;
+      "
+    >
       <a-button type="primary" @click="showNew = true">新建分组</a-button>
+      <a-button size="small" @click="editMode = !editMode">{{
+        editMode ? '退出编辑模式' : '进入编辑模式'
+      }}</a-button>
     </div>
 
     <a-collapse>
@@ -62,7 +73,8 @@
               v-for="(e, i) in g.emojis"
               :key="e.UUID"
               class="emoji-cell"
-              @click.stop="() => onEditEmoji(g, e, i)"
+              @click.stop="editMode ? () => onEditEmoji(g, e, i) : undefined"
+              :draggable="!editMode"
             >
               <img
                 :src="e.displayUrl || e.realUrl"
@@ -97,7 +109,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { defineComponent, ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import store from '../../data/store/main'
 import { Modal } from 'ant-design-vue'
 
@@ -113,6 +125,7 @@ export default defineComponent({
     const groups = ref<any[]>([])
     const settings = store.getSettings()
     const gridCols = ref((settings && settings.gridColumns) || 4)
+    const editMode = ref(false)
     const showNew = ref(false)
     const showEdit = ref(false)
     const showAddEmoji = ref(false)
@@ -138,9 +151,14 @@ export default defineComponent({
     if (typeof window !== 'undefined')
       window.addEventListener('app:settings-changed', onSettingsChange)
 
+    // use helper for icon parsing
+    import('../components/iconHelper').then((m) => {})
     function isLikelyUrl(s: string) {
-      if (!s) return false
-      return /^https?:\/\//i.test(s) || s.startsWith('//')
+      try {
+        return (s && /^https?:\/\//i.test(s)) || (s && s.startsWith('//'))
+      } catch (_) {
+        return false
+      }
     }
 
     function onCreated(g: any) {
@@ -185,32 +203,12 @@ export default defineComponent({
       showImport.value = true
     }
 
-    function onExport(g: any) {
-      const metadata = {
-        displayName: g.displayName || '',
-        UUID: g.UUID,
-        emojiCount: Array.isArray(g.emojis) ? g.emojis.length : 0,
-        exportedAt: Date.now(),
-        version: 1,
-      }
-      const payload = { metadata, group: g }
-      const s = JSON.stringify(payload, null, 2)
-      const blob = new Blob([s], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const safeName = (g.displayName || 'group').replace(/[^a-z0-9_-]/gi, '_')
-      a.download = `group-${safeName}-${g.UUID}.json`
-      a.click()
-      URL.revokeObjectURL(url)
-    }
-
     function onImported(p: any) {
-      if (!p || !p.emojis) return
-      const g = groups.value.find((x: any) => x.UUID === p.groupUUID)
-      if (g) {
+      try {
+        if (!p || !p.groupUUID) return
+        const g = groups.value.find((x: any) => x.UUID === p.groupUUID)
+        if (!g) return
         g.emojis = g.emojis || []
-        // identify conflicts between incoming and existing
         const existingMap = new Map<string, any>()
         for (const e of g.emojis) {
           const key = e.UUID || e.id || e.realUrl || e.displayUrl
@@ -218,7 +216,8 @@ export default defineComponent({
         }
         const conflicts: any[] = []
         const nonConflicts: any[] = []
-        for (const inc of p.emojis) {
+        const incoming = Array.isArray(p.emojis) ? p.emojis : []
+        for (const inc of incoming) {
           const key = inc.UUID || inc.id || inc.realUrl || inc.displayUrl
           if (!key) continue
           if (existingMap.has(key)) {
@@ -232,7 +231,6 @@ export default defineComponent({
             nonConflicts.push(inc)
           }
         }
-        // add non-conflicting directly
         for (const nc of nonConflicts) g.emojis.push(nc)
         if (conflicts.length === 0) {
           store.importPayload({ emojiGroups: groups.value })
@@ -242,10 +240,28 @@ export default defineComponent({
           } catch (_) {}
           return
         }
-        // otherwise present conflict resolver
         currentConflicts.value = conflicts
         showConflict.value = true
-      }
+      } catch (_) {}
+    }
+
+    function onExport(g: any) {
+      try {
+        if (!g) return
+        const payload = {
+          emojiGroups: [{ displayName: g.displayName || '', UUID: g.UUID, emojis: g.emojis || [] }],
+        }
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        const name = (g.displayName || g.UUID || 'group').toString().replace(/[^a-z0-9\-_]/gi, '_')
+        a.download = `${name}.json`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        setTimeout(() => URL.revokeObjectURL(url), 5000)
+      } catch (_) {}
     }
 
     function onResolved(decisions: any[]) {
@@ -285,7 +301,7 @@ export default defineComponent({
     // use sortablejs dynamically to avoid static type resolution issues
     const sortableMap: Record<string, any> = {}
 
-  function setContainer(el: any, groupUUID: string) {
+    function setContainer(el: any, groupUUID: string) {
       // destroy existing instance
       try {
         const existing = sortableMap[groupUUID]
@@ -295,11 +311,15 @@ export default defineComponent({
         }
       } catch (_) {}
 
-  if (!el) return
+      if (!el) return
+      // do not initialize sortable while in edit mode
+      try {
+        if (editMode && editMode.value) return
+      } catch (_) {}
       // dynamic import to avoid compile-time type complaints
-  // @ts-ignore - dynamic import to avoid static type resolution errors in some environments
-  // @ts-ignore
-  import('sortablejs')
+      // @ts-ignore - dynamic import to avoid static type resolution errors in some environments
+      // @ts-ignore
+      import('sortablejs')
         .then((m) => {
           const SortableLib: any = (m && (m as any).default) || m
           try {
@@ -335,6 +355,32 @@ export default defineComponent({
         })
         .catch(() => {})
     }
+
+    // watch edit mode: when entering edit mode destroy all sortables; when leaving, re-init
+    try {
+      watch(editMode, async (v) => {
+        if (v) {
+          try {
+            Object.keys(sortableMap).forEach((k) => {
+              const inst = (sortableMap as any)[k]
+              if (inst && typeof inst.destroy === 'function') inst.destroy()
+              delete (sortableMap as any)[k]
+            })
+          } catch (_) {}
+        } else {
+          await nextTick()
+          try {
+            const els = document.querySelectorAll('.emoji-grid')
+            els.forEach((el) => {
+              try {
+                const g = (el as HTMLElement).getAttribute('data-group')
+                if (g) setContainer(el, g)
+              } catch (_) {}
+            })
+          } catch (_) {}
+        }
+      })
+    } catch (_) {}
 
     try {
       onUnmounted(() => {
@@ -417,6 +463,7 @@ export default defineComponent({
       importGroupUUID,
       editingGroup,
       editingEmoji,
+      editMode,
       gridCols,
       onCreated,
       onEdit,
@@ -430,7 +477,7 @@ export default defineComponent({
       onAddEmoji,
       onEmojiAdded,
       onEmojiSaved,
-  setContainer,
+      setContainer,
       onEditEmoji,
     }
   },

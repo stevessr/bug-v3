@@ -26,8 +26,11 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         options: fileURLToPath(new URL('./options.html', import.meta.url)),
-  // content script bundle
-  'content-script': fileURLToPath(new URL('./src/content-script/content-script.ts', import.meta.url)),
+        popup: fileURLToPath(new URL('./popup.html', import.meta.url)),
+        // content script bundle
+        'content-script': fileURLToPath(
+          new URL('./src/content-script/content-script.ts', import.meta.url),
+        ),
         // build background entry so it outputs dist/background.js
         background: fileURLToPath(new URL('./src/background/index.ts', import.meta.url)),
       },
