@@ -10,16 +10,47 @@
           <a-radio value="text">文字</a-radio>
           <a-radio value="url">URL</a-radio>
         </a-radio-group>
-        <div style="font-size:12px; color:var(--ant-text-color-secondary); margin-top:8px">{{ hint }}</div>
-        <a-input v-model:value="iconInput" placeholder="输入图标文字或图片 URL" style="margin-top:8px" />
-        <div style="margin-top:8px; display:flex; gap:8px; align-items:flex-start">
+        <div style="font-size: 12px; color: var(--ant-text-color-secondary); margin-top: 8px">
+          {{ hint }}
+        </div>
+        <a-input
+          v-model:value="iconInput"
+          placeholder="输入图标文字或图片 URL"
+          style="margin-top: 8px"
+        />
+        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: flex-start">
           <template v-if="isUrlPreview">
-            <div style="width:56px; height:56px; display:flex; align-items:center; justify-content:center; border:1px solid var(--ant-border-color); border-radius:6px">
-              <img :src="iconPreview" style="width:100%; height:100%; object-fit:cover; border-radius:4px" />
+            <div
+              style="
+                width: 56px;
+                height: 56px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid var(--ant-border-color);
+                border-radius: 6px;
+              "
+            >
+              <img
+                :src="iconPreview"
+                style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px"
+              />
             </div>
           </template>
           <template v-else>
-            <div style="padding:6px 10px; border:1px solid var(--ant-border-color); border-radius:6px; font-size:18px; font-weight:600; white-space:normal; word-break:break-word">{{ iconPreview || 'A' }}</div>
+            <div
+              style="
+                padding: 6px 10px;
+                border: 1px solid var(--ant-border-color);
+                border-radius: 6px;
+                font-size: 18px;
+                font-weight: 600;
+                white-space: normal;
+                word-break: break-word;
+              "
+            >
+              {{ iconPreview || 'A' }}
+            </div>
           </template>
         </div>
       </a-form-item>
@@ -38,13 +69,13 @@ export default defineComponent({
   emits: ['update:modelValue', 'save'],
   setup(props, { emit }) {
     const visible = ref(!!props.modelValue)
-  const name = ref((props.group && props.group.displayName) || '')
-  const icon = ref((props.group && props.group.icon) || '')
-  const mode = ref<'auto' | 'text' | 'url'>('auto')
-  const iconInput = ref(icon.value || '')
-  const iconPreview = ref('')
-  const isUrlPreview = ref(false)
-  const hint = ref('可输入单字符文字或图片 URL，自动检测 URL')
+    const name = ref((props.group && props.group.displayName) || '')
+    const icon = ref((props.group && props.group.icon) || '')
+    const mode = ref<'auto' | 'text' | 'url'>('auto')
+    const iconInput = ref(icon.value || '')
+    const iconPreview = ref('')
+    const isUrlPreview = ref(false)
+    const hint = ref('可输入单字符文字或图片 URL，自动检测 URL')
 
     // watch group prop to update fields when provided/changed
     watch(
@@ -93,39 +124,43 @@ export default defineComponent({
     }
 
     // reactively update preview when iconInput or mode changes
-    watch([iconInput, mode], () => {
-      const val = (iconInput.value || '').trim()
-      if (!val) {
-        iconPreview.value = ''
-        isUrlPreview.value = false
-        hint.value = '可输入单字符文字或图片 URL，自动检测 URL'
-        return
-      }
-      if (mode.value === 'url') {
-        isUrlPreview.value = true
-        iconPreview.value = val
-        hint.value = '以 URL 形式使用图标'
-        return
-      }
-      if (mode.value === 'text') {
-        isUrlPreview.value = false
-        iconPreview.value = val
-        hint.value = '以文本形式使用图标'
-        return
-      }
-      // auto mode: detect
-      if (isLikelyUrl(val)) {
-        isUrlPreview.value = true
-        iconPreview.value = val
-        hint.value = '检测到 URL，自动使用图片预览'
-      } else {
-        isUrlPreview.value = false
-        iconPreview.value = val
-        hint.value = '检测到文字，使用文字作为图标'
-      }
-    }, { immediate: true })
+    watch(
+      [iconInput, mode],
+      () => {
+        const val = (iconInput.value || '').trim()
+        if (!val) {
+          iconPreview.value = ''
+          isUrlPreview.value = false
+          hint.value = '可输入单字符文字或图片 URL，自动检测 URL'
+          return
+        }
+        if (mode.value === 'url') {
+          isUrlPreview.value = true
+          iconPreview.value = val
+          hint.value = '以 URL 形式使用图标'
+          return
+        }
+        if (mode.value === 'text') {
+          isUrlPreview.value = false
+          iconPreview.value = val
+          hint.value = '以文本形式使用图标'
+          return
+        }
+        // auto mode: detect
+        if (isLikelyUrl(val)) {
+          isUrlPreview.value = true
+          iconPreview.value = val
+          hint.value = '检测到 URL，自动使用图片预览'
+        } else {
+          isUrlPreview.value = false
+          iconPreview.value = val
+          hint.value = '检测到文字，使用文字作为图标'
+        }
+      },
+      { immediate: true },
+    )
 
-  return { visible, name, icon, mode, iconInput, iconPreview, isUrlPreview, hint, onOk, close }
+    return { visible, name, icon, mode, iconInput, iconPreview, isUrlPreview, hint, onOk, close }
   },
 })
 </script>

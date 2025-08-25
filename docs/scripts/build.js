@@ -160,7 +160,23 @@ child.on('exit', code => {
             if (injectCode !== 0) {
               console.warn('Script injection completed with warnings')
             }
-            
+            // attempt to locate background bundle in dist and copy to dist/background.js
+            try {
+              const assetsDir = path.join(distDir, 'assets')
+              if (fs.existsSync(assetsDir)) {
+                const files = fs.readdirSync(assetsDir)
+                const bg = files.find(f => f.startsWith('background') && f.endsWith('.js'))
+                if (bg) {
+                  const src = path.join(assetsDir, bg)
+                  const dest = path.join(distDir, 'background.js')
+                  fs.copyFileSync(src, dest)
+                  console.log('🔀 Copied background bundle to dist/background.js')
+                }
+              }
+            } catch (e) {
+              console.warn('Could not copy background bundle:', e)
+            }
+
             console.log('✅ 构建完成！')
             if (isVariant) {
               try {

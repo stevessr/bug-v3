@@ -5,7 +5,10 @@
         <a-input v-model:value="url" />
       </a-form-item>
       <a-form-item label="预览 URL (可选)">
-        <a-input v-model:value="previewUrl" placeholder="用于列表/缩略图的预览地址，若为空使用图片URL" />
+        <a-input
+          v-model:value="previewUrl"
+          placeholder="用于列表/缩略图的预览地址，若为空使用图片URL"
+        />
       </a-form-item>
       <a-form-item label="显示名称">
         <a-input v-model:value="displayName" />
@@ -20,14 +23,15 @@ import { defineComponent, ref, watch } from 'vue'
 export default defineComponent({
   props: {
     modelValue: { type: Boolean, required: true },
+    emoji: { type: Object as any, required: false },
   },
-  emits: ['update:modelValue', 'added'],
+  emits: ['update:modelValue', 'added', 'saved'],
   setup(props, { emit }) {
     const visible = ref(!!props.modelValue)
     const url = ref('')
     const displayName = ref('')
     const generatedId = ref('')
-  const previewUrl = ref('')
+    const previewUrl = ref('')
 
     watch(
       () => props.modelValue,
@@ -53,24 +57,41 @@ export default defineComponent({
       generatedId.value = urlToId(v || '')
     })
 
+    // if emoji prop provided, prefill fields for edit
+    watch(
+      () => props.emoji,
+      (val) => {
+        if (val) {
+          url.value = val.realUrl || ''
+          previewUrl.value = val.displayUrl || ''
+          displayName.value = val.displayName || ''
+          generatedId.value = val.UUID || val.id || generatedId.value
+        }
+      },
+      { immediate: true },
+    )
+
     function onOk() {
       const id =
         generatedId.value ||
         (typeof crypto !== 'undefined' && (crypto as any).randomUUID
           ? (crypto as any).randomUUID()
           : String(Date.now()))
-      emit('added', {
+      const payload = {
         UUID: id,
         id: id,
         displayName: displayName.value || '',
-    displayUrl: previewUrl.value || url.value,
-    realUrl: url.value,
+        displayUrl: previewUrl.value || url.value,
+        realUrl: url.value,
         order: 0,
-      })
+      }
+      // emit both saved (for edit flows) and added (for compatibility)
+      emit('saved', payload)
+      emit('added', payload)
       close()
     }
 
-  return { visible, url, previewUrl, displayName, onOk, close }
+    return { visible, url, previewUrl, displayName, onOk, close }
   },
 })
 </script>
