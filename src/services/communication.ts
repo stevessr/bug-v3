@@ -172,28 +172,49 @@ class CommunicationService {
   // 监听设置变更
   onSettingsChanged(handler: (settings: any) => void) {
     this.on('app:settings-changed', (message) => {
-      handler(message.payload)
+      // message may be a full Message object or a raw payload (CustomEvent detail)
+      if (message && typeof message === 'object') {
+        const payload = message.payload !== undefined ? message.payload : message
+        handler(payload)
+      } else {
+        handler(message)
+      }
     })
   }
 
   // 监听表情组变更
   onGroupsChanged(handler: (groups: any[]) => void) {
     this.on('app:groups-changed', (message) => {
-      handler(message.payload)
+      if (message && typeof message === 'object') {
+        const payload = message.payload !== undefined ? message.payload : message
+        handler(payload)
+      } else {
+        handler(message)
+      }
     })
   }
 
   // 监听表情使用记录
   onUsageRecorded(handler: (data: { uuid: string; timestamp: number }) => void) {
     this.on('app:usage-recorded', (message) => {
-      handler(message.payload)
+      if (message && typeof message === 'object') {
+        const payload = message.payload !== undefined ? message.payload : message
+        handler(payload)
+      } else {
+        handler(message)
+      }
     })
   }
 
   // 监听数据导入
   onDataImported(handler: (data: any) => void) {
     this.on('app:data-imported', (message) => {
-      handler(message.payload)
+      if (message && typeof message === 'object') {
+        const payload = message.payload !== undefined ? message.payload : message
+        handler(payload)
+      } else {
+        handler(message)
+      }
     })
   }
 }
