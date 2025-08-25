@@ -216,9 +216,16 @@ export default defineComponent({
           recordUsage(e.UUID)
           // 发送使用记录消息到其他页面
           commService.sendUsageRecorded(e.UUID)
+          // 本页也立即刷新常用列表，确保 UI 立刻反映使用变化
+          try {
+            hot.value = store.getHot()
+          } catch (_) {}
         } catch (_) {
           try {
             ;(store as any).recordUsage && (store as any).recordUsage(e.UUID)
+            try {
+              hot.value = store.getHot()
+            } catch (_) {}
           } catch (_) {}
         }
 
