@@ -66,7 +66,16 @@ const PollWatcher = (function () {
             } catch (_) {}
             try {
               if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-                chrome.runtime.sendMessage({ type: 'stage-ack', stage: 'session' })
+                chrome.runtime.sendMessage(
+                  { type: 'stage-ack', stage: 'session' },
+                  (_resp: any) => {
+                    try {
+                      if (chrome.runtime && chrome.runtime.lastError) {
+                        log('content-script sendMessage error:', chrome.runtime.lastError)
+                      }
+                    } catch (_) {}
+                  },
+                )
               }
             } catch (_) {}
           }
@@ -91,7 +100,16 @@ const PollWatcher = (function () {
                       chrome.runtime &&
                       chrome.runtime.sendMessage
                     ) {
-                      chrome.runtime.sendMessage({ type: 'stage-ack', stage: 'extended' })
+                      chrome.runtime.sendMessage(
+                        { type: 'stage-ack', stage: 'extended' },
+                        (_resp: any) => {
+                          try {
+                            if (chrome.runtime && chrome.runtime.lastError) {
+                              log('content-script sendMessage error:', chrome.runtime.lastError)
+                            }
+                          } catch (_) {}
+                        },
+                      )
                     }
                   } catch (_) {}
                 }
@@ -183,7 +201,16 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
               // notify background immediately that session applied
               try {
                 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-                  chrome.runtime.sendMessage({ type: 'stage-ack', stage: 'session' })
+                  chrome.runtime.sendMessage(
+                    { type: 'stage-ack', stage: 'session' },
+                    (_resp: any) => {
+                      try {
+                        if (chrome.runtime && chrome.runtime.lastError) {
+                          log('content-script sendMessage error:', chrome.runtime.lastError)
+                        }
+                      } catch (_) {}
+                    },
+                  )
                 }
               } catch (_) {}
             } catch (_) {}
