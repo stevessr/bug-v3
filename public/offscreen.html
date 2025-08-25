@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Offscreen Document</title>
+  </head>
+  <body>
+    <script>
+      // offscreen document script: listens for runtime messages and can access DOM APIs
+      try {
+        console.log('[offscreen] loaded')
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+          chrome.runtime.onMessage.addListener((msg, sender) => {
+            try {
+              console.log('[offscreen] msg', msg)
+            } catch (_) {}
+          })
+        }
+      } catch (_) {}
+    </script>
+  </body>
+</html>

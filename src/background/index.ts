@@ -46,6 +46,68 @@ function log(...args: any[]) {
   } catch (_) {}
 }
 
+// Offscreen document helpers
+let creatingOffscreen: Promise<void> | null = null
+const OFFSCREEN_PATH = 'offscreen.html'
+
+async function ensureOffscreenDocument() {
+  try {
+    const offscreenUrl = chrome.runtime.getURL(OFFSCREEN_PATH)
+
+    // Chrome 116+ supports runtime.getContexts
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime && 'getContexts' in chrome.runtime) {
+        const contexts = await chrome.runtime.getContexts({
+          contextTypes: ['OFFSCREEN_DOCUMENT'],
+          documentUrls: [offscreenUrl],
+        })
+        if (Array.isArray(contexts) && contexts.length > 0) return
+      } else if (
+        typeof self !== 'undefined' &&
+        (self as any).clients &&
+        (self as any).clients.matchAll
+      ) {
+        const clients = await (self as any).clients.matchAll()
+        if (
+          Array.isArray(clients) &&
+          clients.some((c: any) => c && c.url && c.url.includes(offscreenUrl))
+        )
+          return
+      }
+    } catch (err) {
+      // ignore context-check errors and try to create
+    }
+
+    if (creatingOffscreen) {
+      await creatingOffscreen
+      return
+    }
+
+    creatingOffscreen = (async () => {
+      try {
+        if (typeof chrome !== 'undefined' && chrome.offscreen && chrome.offscreen.createDocument) {
+          await chrome.offscreen.createDocument({
+            url: OFFSCREEN_PATH,
+            reasons: ['LOCAL_STORAGE'],
+            justification: 'Sync localStorage with chrome.storage',
+          })
+          log('offscreen document created')
+        } else {
+          log('offscreen API not available')
+        }
+      } catch (err) {
+        log('ensureOffscreenDocument create error', err)
+      } finally {
+        creatingOffscreen = null
+      }
+    })()
+
+    await creatingOffscreen
+  } catch (err) {
+    log('ensureOffscreenDocument error', err)
+  }
+}
+
 /*
 Content script example to receive broadcasts:
 
@@ -351,6 +413,16 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
           try {
             SyncManager.onLocalPayloadUpdated(msg.payload)
           } catch (_) {}
+          sendResponse({ ok: true })
+          return true
+        }
+        // allow requests to ensure an offscreen document exists
+        if (msg && (msg.type === 'ensure-offscreen' || msg.target === 'offscreen')) {
+          try {
+            ensureOffscreenDocument()
+          } catch (err) {
+            log('ensureOffscreenDocument request error', err)
+          }
           sendResponse({ ok: true })
           return true
         }

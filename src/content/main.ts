@@ -4,6 +4,7 @@ const stops: Array<() => void> = []
 
 function startAll() {
   try {
+    console.log('[nacho-content] startAll: attempting to install picker')
     const picker = installDefaultNachonekoPicker()
     if (picker && typeof picker.stop === 'function') stops.push(() => picker.stop())
   } catch (err) {
