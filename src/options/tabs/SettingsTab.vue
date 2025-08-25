@@ -34,7 +34,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive, watch, onMounted } from 'vue'
+import { defineComponent, reactive, watch, onMounted, nextTick } from 'vue'
 import store from '../../data/store/main'
 import { createOptionsCommService } from '../../services/communication'
 
@@ -43,7 +43,7 @@ export default defineComponent({
     const commService = createOptionsCommService()
     const form = reactive({ ...store.getSettings() })
     let isUpdatingFromExternal = false
-    
+
     // watch key settings and persist immediately so UI can react
     const keys = [
       'imageScale',
@@ -60,34 +60,48 @@ export default defineComponent({
           if (isUpdatingFromExternal) return // 避免循环更新
           // 确保值确实发生了变化
           if (newValue !== oldValue) {
+            console.log(`Settings changed: ${k} = ${newValue} (was ${oldValue})`)
             try {
               store.saveSettings(form)
               // 发送设置变更消息到其他页面（包括popup）
               commService.sendSettingsChanged(form)
-            } catch (_) {}
+            } catch (error) {
+              console.error('Failed to save settings:', error)
+            }
           }
         },
-        { deep: true }
+        { deep: true },
       )
     }
 
     onMounted(() => {
       // 监听来自其他页面的设置变更消息（包括popup）
       commService.onSettingsChanged((newSettings) => {
+        console.log('Received settings change:', newSettings)
+
+        // 检查消息是否有效
+        if (!newSettings || typeof newSettings !== 'object') {
+          console.warn('Invalid settings message received:', newSettings)
+          return
+        }
+
         isUpdatingFromExternal = true
+
         // 逐个更新属性，确保Vue的响应式系统能正确检测变化
-        keys.forEach(key => {
+        keys.forEach((key) => {
           if (newSettings[key] !== undefined && newSettings[key] !== (form as any)[key]) {
-            (form as any)[key] = newSettings[key]
+            console.log(`Updating ${key} from ${(form as any)[key]} to ${newSettings[key]}`)
+            ;(form as any)[key] = newSettings[key]
           }
         })
-        // 使用 requestAnimationFrame 确保在下一帧重置标志
-        requestAnimationFrame(() => {
+
+        // 使用 nextTick 确保在 Vue 更新周期完成后重置标志
+        nextTick(() => {
           isUpdatingFromExternal = false
         })
       })
     })
-    
+
     return { form }
   },
 })

@@ -62,7 +62,7 @@
 
 <script lang="ts">
 declare const chrome: any
-import { defineComponent, ref, reactive, computed, onMounted } from 'vue'
+import { defineComponent, ref, reactive, computed, onMounted, nextTick } from 'vue'
 import store, { recordUsage } from '../data/store/main'
 import { SettingOutlined } from '@ant-design/icons-vue'
 import { createPopupCommService } from '../services/communication'
@@ -87,12 +87,17 @@ export default defineComponent({
       width: '100%',
       aspectRatio: '1/1',
       objectFit: 'cover' as any,
-      // 移除缩放变换，popup 页面不使用图片缩放控制
+      // 应用图片缩放设置
+      transform: `scale(${(settings.imageScale || 100) / 100})`,
+      transformOrigin: 'center',
     }))
 
     function onScaleChange(value: number) {
       if (isUpdatingFromExternal) return // 避免循环更新
+      console.log('Scale changed to:', value)
       try {
+        // 更新本地设置对象
+        settings.imageScale = value
         // 更新全局设置，这个设置会影响其他地方的图片缩放
         const newSettings = { ...settings, imageScale: value }
         store.saveSettings(newSettings)
@@ -159,10 +164,26 @@ export default defineComponent({
       try {
         // 监听设置变更消息
         commService.onSettingsChanged((newSettings) => {
+          console.log('Popup received settings change:', newSettings)
+
+          // 检查消息是否有效
+          if (!newSettings || typeof newSettings !== 'object') {
+            console.warn('Popup: Invalid settings message received:', newSettings)
+            return
+          }
+
           isUpdatingFromExternal = true
-          Object.assign(settings, newSettings)
-          // 使用 requestAnimationFrame 确保在下一帧重置标志
-          requestAnimationFrame(() => {
+          // 更新本地设置对象，只更新有变化的属性
+          Object.keys(newSettings).forEach((key) => {
+            if (newSettings[key] !== undefined && newSettings[key] !== (settings as any)[key]) {
+              console.log(
+                `Popup updating ${key} from ${(settings as any)[key]} to ${newSettings[key]}`,
+              )
+              ;(settings as any)[key] = newSettings[key]
+            }
+          })
+          // 使用 nextTick 确保在 Vue 更新周期完成后重置标志
+          nextTick(() => {
             isUpdatingFromExternal = false
           })
         })
@@ -173,7 +194,7 @@ export default defineComponent({
         })
 
         // 监听使用记录消息
-        commService.onUsageRecorded((data) => {
+        commService.onUsageRecorded((_data) => {
           // 可以在这里更新常用表情列表
           hot.value = store.getHot()
         })
