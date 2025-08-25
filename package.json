@@ -14,6 +14,8 @@
     "test:e2e": "playwright test",
     "build-only": "vite build",
     "build:content": "vite build --config ./vite.content.config.ts",
+    "build:userscript": "BUILD_MINIFIED=false vite build --config ./vite.config.userscript.ts && node scripts/post-process-userscript.js",
+    "build:userscript:min": "BUILD_MINIFIED=true vite build --config ./vite.config.userscript.ts && node scripts/post-process-userscript.js",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
     "format": "prettier --write src/"
@@ -56,6 +58,7 @@
     "npm-run-all2": "^8.0.4",
     "prettier": "3.6.2",
     "sortablejs": "^1.15.6",
+    "terser": "^5.43.1",
     "typescript": "~5.8.0",
     "unplugin-vue-components": "^29.0.0",
     "vite": "npm:rolldown-vite@latest",
