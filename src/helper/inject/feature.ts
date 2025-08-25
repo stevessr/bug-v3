@@ -19,14 +19,56 @@ export function installNachonekoPicker(
   emojis: EmojiItem[],
   opts?: { toolbarSelector?: string; textAreaSelector?: string; richEditorSelector?: string },
 ) {
-  const generator = () =>
-    emojis
+  const generator = () => {
+    const images = emojis
       .map((e) => {
         const dw = e.width ? ` data-width="${e.width}"` : ''
         const dh = e.height ? ` data-height="${e.height}"` : ''
-        return `<img src="${e.url}" alt="${e.name}" title="${e.name}"${dw}${dh} />`
+        // add small attributes/classes that match the forum's emoji structure
+        return `<img width="32" height="32" class="emoji" src="${e.url}" alt="${e.name}" title=":" + ${JSON.stringify(
+          e.name,
+        )} + ":" + ""${dw}${dh} />`
       })
       .join('')
+
+    // Wrap the images in a DOM structure similar to docs/referense/simple.html
+    return `
+      <div class="fk-d-menu -animated -expanded" data-identifier="emoji-picker" role="dialog">
+        <div class="fk-d-menu__inner-content">
+          <div class="emoji-picker">
+            <div class="emoji-picker__filter-container">
+              <div class="emoji-picker__filter filter-input-container">
+                <input class="filter-input" placeholder="按表情符号名称和别名搜索…" type="text" />
+              </div>
+              <button class="btn no-text fk-d-menu__trigger -trigger emoji-picker__diversity-trigger btn-transparent" aria-expanded="false" data-trigger="" type="button">
+                <img width="20" height="20" src="${emojis[0]?.url || ''}" title="${emojis[0]?.name || ''}" alt="${emojis[0]?.name || ''}" class="emoji" />
+              </button>
+            </div>
+            <div class="emoji-picker__content">
+              <div class="emoji-picker__sections-nav">
+                <button class="btn no-text btn-flat emoji-picker__section-btn active" tabindex="-1" data-section="favorites" type="button">
+                  <img width="20" height="20" src="/images/emoji/twemoji/star.png" title="star" alt="star" class="emoji" />
+                </button>
+              </div>
+              <div class="emoji-picker__scrollable-content">
+                <div class="emoji-picker__sections" role="button">
+                  <div class="emoji-picker__section" data-section="favorites" role="region" aria-label="常用">
+                    <div class="emoji-picker__section-title-container">
+                      <h2 class="emoji-picker__section-title">常用</h2>
+                      <button class="btn no-text btn-icon btn-transparent" type="button"><span aria-hidden="true">&ZeroWidthSpace;</span></button>
+                    </div>
+                    <div class="emoji-picker__section-emojis">
+                      ${images}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+  }
 
   const injector = injectNachonekoEmojiFeature({
     toolbarSelector: opts?.toolbarSelector,

@@ -1,5 +1,5 @@
 import { createEmojiButtonElement } from './genbotton'
-import { injectStyleString, generatePickerStyles, PICKER_CLASS, BUTTON_CLASS } from './css'
+import { PICKER_CLASS, BUTTON_CLASS } from './css'
 import { startExternalButtonListenerLoop } from '../loop/main'
 import { recordUsage } from '../../data/store/main'
 
@@ -37,8 +37,7 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
     }
   }
 
-  // 注入样式
-  const styleEl = injectStyleString(generatePickerStyles(config.emojiPickerClass))
+  // NOTE: do not inject any styles into the page — styles come from the host site or static assets.
 
   let stopped = false
   const listeners: Array<() => void> = []
@@ -59,11 +58,14 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
         return
       }
 
-      const emojiPicker = document.createElement('div')
-      emojiPicker.className = config.emojiPickerClass
-      emojiPicker.innerHTML = config.emojiContentGeneratorFn()
-      document.body.appendChild(emojiPicker)
-      createdNodes.push(emojiPicker)
+  // generator() returns the full picker markup (root element like in simple.html).
+  const container = document.createElement('div')
+  container.innerHTML = config.emojiContentGeneratorFn().trim()
+  const emojiPicker = container.firstElementChild as HTMLElement | null
+  if (!emojiPicker) return
+  // append the generator-produced root node directly
+  document.body.appendChild(emojiPicker)
+  createdNodes.push(emojiPicker)
 
       // 统一定位逻辑：优先使用回复控件(`#reply-control`)定位（若存在），否则回退到编辑器包裹器定位
       const replyControl = document.querySelector('#reply-control')
@@ -278,8 +280,7 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
     })
     // 移除创建的 DOM
     createdNodes.forEach((n) => n && n.parentNode && n.parentNode.removeChild(n))
-    // 移除样式
-    if (styleEl && styleEl.parentNode) styleEl.parentNode.removeChild(styleEl)
+  // 不移除样式（注入器不负责样式）
   }
 
   return { stop }
