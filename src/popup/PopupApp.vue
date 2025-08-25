@@ -77,7 +77,17 @@
 
 <script lang="ts">
 declare const chrome: any
-import { defineComponent, ref, reactive, computed, onMounted, nextTick, watch, h } from 'vue'
+import {
+  defineComponent,
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  nextTick,
+  watch,
+  h,
+  onBeforeUnmount,
+} from 'vue'
 import store, { recordUsage } from '../data/store/main'
 import { createPopupCommService } from '../services/communication'
 // lightweight local icon to avoid importing ant-design icons in popup build
@@ -110,6 +120,7 @@ export default defineComponent({
     const hot = ref(store.getHot())
     const selectedGroup = ref<'all' | 'hot' | string>('all')
     const selectedKeys = ref<string[]>(['all'])
+    const menuScroll = ref<HTMLElement | null>(null)
 
     // Menu items for antd Menu
     const menuItems = computed(() => {
@@ -281,6 +292,33 @@ export default defineComponent({
             Object.assign(settings, s)
           } catch (_) {}
         })
+
+        // enable mouse wheel to scroll the horizontal menu (convert vertical wheel to horizontal)
+        try {
+          const el = menuScroll && (menuScroll as any).value ? (menuScroll as any).value : null
+          if (el) {
+            const wheelHandler = (ev: WheelEvent) => {
+              // if user is intentionally scrolling horizontally (shift) or horizontal delta larger, do nothing
+              if (ev.shiftKey) return
+              if (Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) {
+                el.scrollLeft += ev.deltaY
+                ev.preventDefault()
+              }
+            }
+            el.addEventListener('wheel', wheelHandler as any, { passive: false })
+            ;(menuScroll as any).__wheelHandler = wheelHandler
+          }
+        } catch (_) {}
+      } catch (_) {}
+    })
+
+    onBeforeUnmount(() => {
+      try {
+        const el = menuScroll && (menuScroll as any).value ? (menuScroll as any).value : null
+        if (el && (menuScroll as any).__wheelHandler) {
+          el.removeEventListener('wheel', (menuScroll as any).__wheelHandler)
+          delete (menuScroll as any).__wheelHandler
+        }
       } catch (_) {}
     })
 
@@ -291,6 +329,7 @@ export default defineComponent({
       hot,
       selectedGroup,
       selectedKeys,
+      menuScroll,
       menuItems,
       gridStyle,
       emojiStyle,
