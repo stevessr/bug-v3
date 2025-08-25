@@ -104,6 +104,17 @@ export function moveUngroupedToGroup(uuids: string[], groupUUID: string) {
   return { moved }
 }
 
+export function reorderEmojiInGroup(groupUUID: string, fromIndex: number, toIndex: number) {
+  try {
+    const ok = (emojiGroupsStore as any).reorderEmojiInGroup(groupUUID, fromIndex, toIndex)
+    log('reorderEmojiInGroup', { groupUUID, fromIndex, toIndex, ok })
+    return ok
+  } catch (err) {
+    log('reorderEmojiInGroup', 'error', err)
+    return false
+  }
+}
+
 export default {
   getSettings,
   saveSettings,
@@ -113,4 +124,5 @@ export default {
   exportPayload,
   importPayload,
   moveUngroupedToGroup,
+  reorderEmojiInGroup,
 }

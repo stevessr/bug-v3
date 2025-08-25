@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" title="导入分组表情" @ok="onOk" @cancel="close">
+  <a-modal v-model:open="visible" title="导入分组表情" :width="1000" :bodyStyle="{ maxHeight: '72vh', overflow: 'auto' }" @ok="onOk" @cancel="close">
       <a-form layout="vertical">
         <a-form-item label="输入要导入的内容 (支持单个 URL / Markdown / BBCode / HTML / 或分组导出 JSON)">
           <a-textarea v-model:value="text" rows="6" />
@@ -16,20 +16,28 @@
         </a-form-item>
       <a-list v-if="preview.length" :dataSource="preview" bordered>
         <a-list-item v-for="(p, idx) in preview" :key="p.id">
+          <template #avatar>
+            <img :src="selected[idx] || p.displayUrl || p.realUrl" style="width:56px; height:56px; object-fit:cover; border-radius:6px" />
+          </template>
           <a-list-item-meta :title="p.displayName || p.realUrl" :description="p.realUrl" />
           <template #actions>
+            <div style="display:flex; flex-direction:column; gap:8px; width:420px">
               <div class="variant-grid" :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }">
                 <div
                   v-for="(v, vi) in variantList(p)"
                   :key="vi"
                   class="variant-item"
                   :class="{ selected: selected[idx] === v.url }"
-                  @click="() => selectVariant(idx, v.url)"
                 >
                   <img :src="v.url" alt="variant" />
                   <div class="variant-label">{{ v.label }}</div>
                 </div>
               </div>
+              <a-select v-model:value="selected[idx]" style="width:100%" placeholder="选择作为预览 URL">
+                <a-select-option v-for="(v, vi) in variantList(p)" :key="vi" :value="v.url">{{ v.label }} — {{ truncate(v.url) }}</a-select-option>
+              </a-select>
+              <div style="font-size:12px; color:var(--ant-text-color-secondary)">使用上方下拉选择要作为条目的预览 URL</div>
+            </div>
           </template>
         </a-list-item>
       </a-list>
@@ -195,6 +203,11 @@ export default defineComponent({
       selected.value[idx] = url
     }
 
+    function truncate(s: string | undefined, len = 60) {
+      if (!s) return ''
+      return s.length > len ? s.slice(0, len - 3) + '...' : s
+    }
+
     function onOk() {
       if (preview.value.length) {
         const mapped = preview.value.map((p: any, i: number) => ({
@@ -220,7 +233,7 @@ export default defineComponent({
       close()
     }
 
-  return { visible, text, preview, parse, onOk, close, selected, gridCols, variantList, selectVariant, format }
+  return { visible, text, preview, parse, onOk, close, selected, gridCols, variantList, selectVariant, format, truncate }
   },
 })
 </script>

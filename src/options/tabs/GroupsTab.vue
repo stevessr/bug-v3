@@ -11,11 +11,10 @@
             style="display: flex; align-items: center; justify-content: space-between; width: 100%"
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <img
-                v-if="g.icon"
-                :src="g.icon"
-                style="width: 24px; height: 24px; object-fit: cover"
-              />
+                  <template v-if="g.icon">
+                    <img v-if="isLikelyUrl(g.icon)" :src="g.icon" style="width:24px; height:24px; object-fit:cover" />
+                    <div v-else style="min-width:24px; min-height:24px; padding:2px 6px; display:flex; align-items:center; justify-content:center; border-radius:4px; background:var(--ant-btn-default-bg); font-size:12px; font-weight:600">{{ g.icon }}</div>
+                  </template>
               <div>
                 <div style="font-weight: 600">{{ g.displayName }}</div>
                 <div style="font-size: 12px; color: var(--ant-text-color-secondary)">
@@ -33,12 +32,13 @@
           </div>
         </template>
         <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px">
-          <img
-            v-for="e in g.emojis"
-            :key="e.UUID"
-            :src="e.displayUrl || e.realUrl"
-            style="width: 48px; height: 48px; object-fit: cover"
-          />
+          <div v-for="(e, i) in g.emojis" :key="e.UUID" style="display:flex; flex-direction:column; align-items:center; gap:4px">
+            <img :src="e.displayUrl || e.realUrl" style="width:48px; height:48px; object-fit:cover; border-radius:4px" />
+            <div style="display:flex; gap:4px">
+              <a-button size="small" @click.stop="moveUp(g, i)" :disabled="i === 0">上移</a-button>
+              <a-button size="small" @click.stop="moveDown(g, i)" :disabled="i === (g.emojis.length - 1)">下移</a-button>
+            </div>
+          </div>
         </div>
       </a-collapse-panel>
     </a-collapse>
@@ -82,6 +82,11 @@ export default defineComponent({
 
     function load() {
       groups.value = store.getGroups()
+    }
+
+    function isLikelyUrl(s: string) {
+      if (!s) return false
+      return /^https?:\/\//i.test(s) || s.startsWith('//')
     }
 
     function onCreated(g: any) {
@@ -225,6 +230,18 @@ export default defineComponent({
       addingGroup.value = null
     }
 
+    function moveUp(g: any, idx: number) {
+      if (!g || typeof idx !== 'number' || idx <= 0) return
+      const ok = store.reorderEmojiInGroup(g.UUID, idx, idx - 1)
+      if (ok) load()
+    }
+
+    function moveDown(g: any, idx: number) {
+      if (!g || typeof idx !== 'number') return
+      const ok = store.reorderEmojiInGroup(g.UUID, idx, idx + 1)
+      if (ok) load()
+    }
+
     onMounted(load)
 
     return {
@@ -245,6 +262,7 @@ export default defineComponent({
       onExport,
       onImported,
   onResolved,
+  isLikelyUrl,
       onAddEmoji,
       onEmojiAdded,
     }
