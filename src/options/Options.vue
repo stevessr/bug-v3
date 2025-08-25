@@ -16,6 +16,12 @@ import FavoritesTab from './components/FavoritesTab.vue'
 import UngroupedTab from './components/UngroupedTab.vue'
 import ExternalImportTab from './components/ExternalImportTab.vue'
 import ToolsTab from './components/ToolsTab.vue'
+<<<<<<< HEAD
+=======
+import ImageEditorTab from './components/ImageEditorTab.vue'
+import AIGeneratorTab from './components/AIGeneratorTab.vue'
+import EmojiNamingTab from './components/EmojiNamingTab.vue'
+>>>>>>> 179a34af71ad2ff93dd5eaca7b050412a83554f3
 import EditEmojiModal from './modals/EditEmojiModal.vue'
 import EditGroupModal from './modals/EditGroupModal.vue'
 // composable
@@ -183,6 +189,18 @@ const {
         @remove="removeEmojiFromGroup"
         @edit="openEditEmoji"
       />
+
+      <!-- Tools Tab -->
+      <ToolsTab :activeTab="activeTab" />
+
+      <!-- Image Editor Tab -->
+      <ImageEditorTab :activeTab="activeTab" />
+
+      <!-- AI Generator Tab -->
+      <AIGeneratorTab :activeTab="activeTab" />
+
+      <!-- Emoji Naming Tab -->
+      <EmojiNamingTab :activeTab="activeTab" />
 
       <!-- External Import Tab -->
       <ExternalImportTab v-if="activeTab === 'import'" />

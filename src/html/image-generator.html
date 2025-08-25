@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 图片生成 - Gemini</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+          sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+        color: white;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+      }
+
+      .card {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #555;
+      }
+
+      .input-group {
+        position: relative;
+      }
+
+      textarea {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #e1e5e9;
+        border-radius: 12px;
+        font-size: 16px;
+        resize: vertical;
+        min-height: 120px;
+        transition: border-color 0.3s ease;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .btn {
+        flex: 1;
+        padding: 15px 30px;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .btn-secondary {
+        background: #f8f9fa;
+        color: #6c757d;
+        border: 2px solid #e9ecef;
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: #e9ecef;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      .loading.show {
+        display: block;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .results {
+        display: none;
+      }
+
+      .results.show {
+        display: block;
+      }
+
+      .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .image-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+        cursor: pointer;
+      }
+
+      .image-item:hover {
+        transform: scale(1.05);
+      }
+
+      .image-item img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+      }
+
+      .image-actions {
+        padding: 15px;
+        text-align: center;
+      }
+
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border: 1px solid #f5c6cb;
+      }
+
+      .config-section {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e9ecef;
+      }
+
+      .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .config-item {
+        display: flex;
+        flex-direction: column;
+      }
+
+      select,
+      input[type='number'] {
+        padding: 10px;
+        border: 2px solid #e1e5e9;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+      }
+
+      select:focus,
+      input[type='number']:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .api-config {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+
+      .api-config h3 {
+        color: #856404;
+        margin-bottom: 10px;
+      }
+
+      .api-config input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎨 AI 图片生成</h1>
+        <p>使用 Google Gemini AI 生成创意图片</p>
+      </div>
+
+      <div class="card">
+        <div class="api-config">
+          <h3>⚙️ API 配置</h3>
+          <div style="margin-bottom: 15px">
+            <label
+              for="providerSelect"
+              style="display: block; margin-bottom: 5px; font-weight: 600; color: #856404"
+            >
+              选择服务商
+            </label>
+            <select
+              id="providerSelect"
+              style="width: 100%; padding: 10px; border: 1px solid #ffeaa7; border-radius: 6px"
+            >
+              <option value="gemini">Google Gemini</option>
+              <option value="siliconflow">SiliconFlow</option>
+              <option value="cloudflare">Cloudflare Workers AI</option>
+              <option value="chutesai">Chutes AI</option>
+            </select>
+          </div>
+          <input type="password" id="apiKey" placeholder="请输入您的 API Key" />
+          <small id="apiKeyHelp" style="color: #856404; margin-top: 5px; display: block">
+            获取 API Key:
+            <a id="apiKeyLink" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank">
+              Google AI Studio
+            </a>
+          </small>
+
+          <!-- Cloudflare specific inputs -->
+          <div id="cloudflareCredentials" style="display: none; margin-top: 15px">
+            <div style="margin-bottom: 15px">
+              <label for="cloudflareAccountId" style="display: block; margin-bottom: 5px; font-weight: 600; color: #856404">
+                账户 ID (Account ID)
+              </label>
+              <input
+                type="text"
+                id="cloudflareAccountId"
+                placeholder="请输入 Cloudflare 账户 ID"
+                style="width: 100%; padding: 10px; border: 1px solid #ffeaa7; border-radius: 6px"
+              />
+            </div>
+            <div style="margin-bottom: 15px">
+              <label for="cloudflareApiToken" style="display: block; margin-bottom: 5px; font-weight: 600; color: #856404">
+                API Token
+              </label>
+              <input
+                type="password"
+                id="cloudflareApiToken"
+                placeholder="请输入 Cloudflare API Token"
+                style="width: 100%; padding: 10px; border: 1px solid #ffeaa7; border-radius: 6px"
+              />
+            </div>
+          </div>
+
+          <div id="cloudflareModelSection" style="display: none; margin-top: 15px">
+            <label
+              for="cloudflareModel"
+              style="display: block; margin-bottom: 5px; font-weight: 600; color: #856404"
+            >
+              选择模型
+            </label>
+            <select
+              id="cloudflareModel"
+              style="width: 100%; padding: 10px; border: 1px solid #ffeaa7; border-radius: 6px"
+            >
+              <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell (快速)</option>
+              <option value="@cf/bytedance/stable-diffusion-xl-lightning">
+                Stable Diffusion XL Lightning
+              </option>
+            </select>
+            <div style="margin-top: 10px">
+              <label style="display: flex; align-items: center;">
+                <input type="checkbox" id="cloudflareCustomModel" style="margin-right: 8px">
+                <span style="font-size: 14px; color: #856404">使用自定义模型</span>
+              </label>
+              <input
+                type="text"
+                id="cloudflareCustomModelName"
+                placeholder="输入自定义模型名称，如: @cf/custom/model-name"
+                style="width: 100%; padding: 8px; border: 1px solid #ffeaa7; border-radius: 4px; margin-top: 5px; display: none;"
+              />
+            </div>
+          </div>
+
+          <div id="chutesaiModelSection" style="display: none; margin-top: 15px">
+            <label
+              for="chutesaiModel"
+              style="display: block; margin-bottom: 5px; font-weight: 600; color: #856404"
+            >
+              选择模型
+            </label>
+            <select
+              id="chutesaiModel"
+              style="width: 100%; padding: 10px; border: 1px solid #ffeaa7; border-radius: 6px"
+            >
+              <option value="neta-lumina">Neta Lumina</option>
+              <option value="chroma">Chroma</option>
+              <option value="JuggernautXL">JuggernautXL</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>🎯 生成模式</h3>
+          <div style="margin-bottom: 20px">
+            <label style="display: flex; align-items: center; margin-bottom: 10px">
+              <input type="radio" name="mode" value="generate" checked style="margin-right: 8px" />
+              <span>🎨 文本生成图片</span>
+            </label>
+            <label style="display: flex; align-items: center">
+              <input type="radio" name="mode" value="edit" style="margin-right: 8px" />
+              <span>✏️ 图片编辑</span>
+            </label>
+          </div>
+
+          <div id="imageEditSection" style="display: none; margin-bottom: 20px">
+            <h4 style="margin-bottom: 10px; color: #374151">上传要编辑的图片</h4>
+            <div
+              id="imageUploadArea"
+              style="
+                border: 2px dashed #d1d5db;
+                border-radius: 8px;
+                padding: 20px;
+                text-align: center;
+                background: #f9fafb;
+                cursor: pointer;
+                transition: all 0.2s;
+              "
+            >
+              <div style="font-size: 24px; margin-bottom: 8px">📷</div>
+              <div style="color: #6b7280">点击或拖拽图片到此处</div>
+              <input type="file" id="imageInput" accept="image/*" style="display: none" />
+            </div>
+            <div id="imagePreview" style="display: none; margin-top: 15px">
+              <img
+                id="previewImg"
+                style="
+                  max-width: 200px;
+                  max-height: 200px;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                "
+              />
+              <button
+                id="removeImage"
+                style="
+                  display: block;
+                  margin: 10px auto 0;
+                  padding: 5px 10px;
+                  background: #ef4444;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 12px;
+                "
+              >
+                移除图片
+              </button>
+            </div>
+          </div>
+
+          <div class="config-grid">
+            <div class="config-item">
+              <label for="imageCount">生成数量</label>
+              <select id="imageCount">
+                <option value="1">1 张</option>
+                <option value="2">2 张</option>
+                <option value="4" selected>4 张</option>
+              </select>
+            </div>
+            <div class="config-item">
+              <label for="aspectRatio">宽高比</label>
+              <select id="aspectRatio">
+                <option value="1:1" selected>正方形 (1:1)</option>
+                <option value="16:9">宽屏 (16:9)</option>
+                <option value="9:16">竖屏 (9:16)</option>
+                <option value="4:3">标准 (4:3)</option>
+                <option value="3:4">肖像 (3:4)</option>
+              </select>
+            </div>
+            <div class="config-item">
+              <label for="style">艺术风格</label>
+              <select id="style">
+                <option value="">默认</option>
+                <option value="realistic">写实风格</option>
+                <option value="anime">动漫风格</option>
+                <option value="cartoon">卡通风格</option>
+                <option value="oil-painting">油画风格</option>
+                <option value="watercolor">水彩风格</option>
+                <option value="sketch">素描风格</option>
+                <option value="digital-art">数字艺术</option>
+                <option value="pixel-art">像素艺术</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="prompt" id="promptLabel">📝 描述您想要生成的图片</label>
+          <div class="input-group">
+            <textarea
+              id="prompt"
+              placeholder="例如：一只可爱的橘猫坐在樱花树下，阳光透过花瓣洒在地面上，温暖的春日氛围..."
+              required
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button type="button" class="btn btn-primary" id="generateBtn">🎨 生成图片</button>
+          <button type="button" class="btn btn-secondary" id="clearBtn">🗑️ 清空结果</button>
+        </div>
+
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <p style="margin-top: 10px">正在生成图片，请稍候...</p>
+        </div>
+
+        <div class="error" id="error" style="display: none"></div>
+
+        <div class="results" id="results">
+          <h3>✨ 生成结果</h3>
+          <div class="image-grid" id="imageGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/image-generator.ts"></script>
+  </body>
+</html>
