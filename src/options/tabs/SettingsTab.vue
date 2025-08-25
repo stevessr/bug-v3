@@ -34,12 +34,15 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive, watch } from 'vue'
+import { defineComponent, reactive, watch, onMounted } from 'vue'
 import store from '../../data/store/main'
+import { createOptionsCommService } from '../../services/communication'
 
 export default defineComponent({
   setup() {
+    const commService = createOptionsCommService()
     const form = reactive({ ...store.getSettings() })
+    
     // watch key settings and persist immediately so UI can react
     const keys = [
       'imageScale',
@@ -55,10 +58,20 @@ export default defineComponent({
         () => {
           try {
             store.saveSettings(form)
+            // 发送设置变更消息到其他页面（包括popup）
+            commService.sendSettingsChanged(form)
           } catch (_) {}
         },
       )
     }
+
+    onMounted(() => {
+      // 监听来自其他页面的设置变更消息（包括popup）
+      commService.onSettingsChanged((newSettings) => {
+        Object.assign(form, newSettings)
+      })
+    })
+    
     return { form }
   },
 })

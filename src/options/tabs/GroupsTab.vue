@@ -112,6 +112,7 @@
 import { defineComponent, ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import store from '../../data/store/main'
 import { Modal } from 'ant-design-vue'
+import { createOptionsCommService } from '../../services/communication'
 
 export default defineComponent({
   components: {
@@ -122,6 +123,7 @@ export default defineComponent({
     ImportConflictModal: () => import('../components/ImportConflictModal.vue'),
   },
   setup() {
+    const commService = createOptionsCommService()
     const groups = ref<any[]>([])
     const settings = store.getSettings()
     const gridCols = ref((settings && settings.gridColumns) || 4)
@@ -448,7 +450,24 @@ export default defineComponent({
       if (ok) load()
     }
 
-    onMounted(load)
+    onMounted(() => {
+      load()
+      
+      // 监听来自其他页面的消息
+      commService.onSettingsChanged((newSettings) => {
+        gridCols.value = (newSettings && newSettings.gridColumns) || gridCols.value
+      })
+
+      commService.onGroupsChanged((newGroups) => {
+        groups.value = newGroups
+      })
+
+      commService.onUsageRecorded((data) => {
+        // 可以在这里更新常用表情列表
+        // hot.value = store.getHot()
+      })
+    })
+    
     // remove listener on unmount
     try {
       onUnmounted(() => {
