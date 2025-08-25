@@ -20,7 +20,9 @@ export type InjectorConfig = {
  */
 export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
   const config: Required<InjectorConfig> = {
-    toolbarSelector: cfg.toolbarSelector || '.d-editor-button-bar[role="toolbar"]',
+    // include both the role'd toolbar and a fallback plain class selector
+    toolbarSelector:
+      cfg.toolbarSelector || '.d-editor-button-bar[role="toolbar"], .d-editor-button-bar',
     emojiButtonClass: cfg.emojiButtonClass || BUTTON_CLASS,
     emojiPickerClass: cfg.emojiPickerClass || PICKER_CLASS,
     textAreaSelector: cfg.textAreaSelector || 'textarea.d-editor-input',
@@ -170,16 +172,45 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
     listeners.push(() => emojiButton.removeEventListener('click', handleClick))
   }
 
-  const pollId = window.setInterval(() => {
+  // helper to detect toolbar and insert the emoji button if missing
+  function checkAndInsert() {
     if (stopped) return
-    const toolbar = document.querySelector(config.toolbarSelector)
-    if (toolbar && !document.querySelector(`.${config.emojiButtonClass}`)) {
-      const emojiButton = createEmojiButtonElement({ buttonClass: config.emojiButtonClass })
-      ;(toolbar as Element).appendChild(emojiButton)
-      createdNodes.push(emojiButton)
-      attachPickerBehavior(emojiButton)
+    try {
+      const toolbar = document.querySelector(config.toolbarSelector) as Element | null
+      const existing = document.querySelector(`.${config.emojiButtonClass}`)
+      if (toolbar) console.log('[nacho-inject] toolbar found', config.toolbarSelector, toolbar)
+      if (toolbar && !existing) {
+        console.log('[nacho-inject] inserting emoji button')
+        const emojiButton = createEmojiButtonElement({ buttonClass: config.emojiButtonClass })
+        ;(toolbar as Element).appendChild(emojiButton)
+        createdNodes.push(emojiButton)
+        attachPickerBehavior(emojiButton)
+        console.log('[nacho-inject] emoji button appended')
+      }
+    } catch (err) {
+      console.log('[nacho-inject] checkAndInsert error', err)
     }
+  }
+
+  // run an initial check
+  checkAndInsert()
+
+  // start a polling fallback
+  const pollId = window.setInterval(() => {
+    checkAndInsert()
   }, config.pollInterval)
+
+  // mutation observer to react when DOM changes (faster than polling)
+  let observer: MutationObserver | null = null
+  try {
+    observer = new MutationObserver(() => {
+      checkAndInsert()
+      attachExternalButtonListeners()
+    })
+    if (document.body) observer.observe(document.body, { childList: true, subtree: true })
+  } catch (_) {
+    observer = null
+  }
 
   // 启动外部按钮监听循环
   const stopExternalLoop = startExternalButtonListenerLoop({
@@ -237,6 +268,9 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
   function stop() {
     stopped = true
     window.clearInterval(pollId)
+    try {
+      if (observer) observer.disconnect()
+    } catch (_) {}
     listeners.forEach((fn) => {
       try {
         fn()

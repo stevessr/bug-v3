@@ -2,6 +2,9 @@
 // Receives broadcast messages from the extension background and filters by channel.
 declare const chrome: any
 
+// ensure content entry that starts inject features runs when content-script is injected
+import '../content/main'
+
 function log(...args: any[]) {
   try {
     console.log('[content-script]', ...args)
