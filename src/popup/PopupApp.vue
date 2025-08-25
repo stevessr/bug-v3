@@ -1,7 +1,11 @@
 <template>
   <div :class="['popup-root', { mobile: settings.MobileMode }]">
     <div class="popup-header">
-      <div class="center">表情快速面板</div>
+      <div class="center">
+        <div class="menu-scroll">
+          <a-menu v-model:selectedKeys="selectedKeys" mode="horizontal" :items="menuItems" />
+        </div>
+      </div>
       <div class="right">
         <a-button type="text" size="small" @click="openOptions">
           <template #icon>
@@ -29,7 +33,11 @@
 
     <div class="popup-body">
       <div class="group-list">
-        <div v-if="hot.length" class="group-section">
+        <!-- 常用 -->
+        <div
+          v-if="(selectedGroup === 'all' || selectedGroup === 'hot') && hot.length"
+          class="group-section"
+        >
           <div class="group-title">常用</div>
           <div class="emoji-grid" :style="gridStyle">
             <div v-for="e in hot" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
@@ -38,16 +46,23 @@
           </div>
         </div>
 
-        <div v-for="g in groups" :key="g.UUID" class="group-section">
-          <div class="group-title">{{ g.displayName }}</div>
-          <div class="emoji-grid" :style="gridStyle">
-            <div v-for="e in g.emojis" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
-              <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
+        <!-- 普通分组（按选中或全部显示） -->
+        <template v-for="g in groups" :key="g.UUID">
+          <div class="group-section" v-if="selectedGroup === 'all' || selectedGroup === g.UUID">
+            <div class="group-title">{{ g.displayName }}</div>
+            <div class="emoji-grid" :style="gridStyle">
+              <div v-for="e in g.emojis" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
+                <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
+              </div>
             </div>
           </div>
-        </div>
+        </template>
 
-        <div v-if="ungrouped.length" class="group-section">
+        <!-- 未分组 -->
+        <div
+          v-if="(selectedGroup === 'all' || selectedGroup === 'ungrouped') && ungrouped.length"
+          class="group-section"
+        >
           <div class="group-title">未分组</div>
           <div class="emoji-grid" :style="gridStyle">
             <div v-for="e in ungrouped" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
@@ -62,13 +77,29 @@
 
 <script lang="ts">
 declare const chrome: any
-import { defineComponent, ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { defineComponent, ref, reactive, computed, onMounted, nextTick, watch, h } from 'vue'
 import store, { recordUsage } from '../data/store/main'
-import { SettingOutlined } from '@ant-design/icons-vue'
 import { createPopupCommService } from '../services/communication'
+// lightweight local icon to avoid importing ant-design icons in popup build
+const SettingOutlined = {
+  name: 'SettingOutlined',
+  // render function to avoid runtime-template compilation requirement
+  render() {
+    return h(
+      'span',
+      {
+        'aria-hidden': 'true',
+        style:
+          'display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;font-size:14px;line-height:1',
+      },
+      '⚙',
+    )
+  },
+}
 
 export default defineComponent({
   components: {
+    // keep settings button using slot icon; avoid importing icons to prevent type issues in popup build
     SettingOutlined,
   },
   setup() {
@@ -77,6 +108,29 @@ export default defineComponent({
     const groups = ref(store.getGroups())
     const ungrouped = ref(store.getUngrouped())
     const hot = ref(store.getHot())
+    const selectedGroup = ref<'all' | 'hot' | string>('all')
+    const selectedKeys = ref<string[]>(['all'])
+
+    // Menu items for antd Menu
+    const menuItems = computed(() => {
+      const items: any[] = []
+      items.push({ key: 'all', label: '全部' })
+      items.push({ key: 'hot', label: '常用' })
+      groups.value.forEach((g: any) => {
+        items.push({ key: g.UUID, label: g.displayName || g.name || 'group' })
+      })
+      items.push({ key: 'ungrouped', label: '未分组' })
+      return items
+    })
+
+    // keep selectedGroup in sync with antd Menu selectedKeys
+    watch(selectedKeys, (v) => {
+      if (Array.isArray(v) && v.length > 0) selectedGroup.value = v[0]
+    })
+    watch(selectedGroup, (v) => {
+      if (!Array.isArray(selectedKeys.value) || selectedKeys.value[0] !== v)
+        selectedKeys.value = [v]
+    })
     let isUpdatingFromExternal = false
 
     const gridStyle = computed(() => ({
@@ -87,9 +141,6 @@ export default defineComponent({
       width: '100%',
       aspectRatio: '1/1',
       objectFit: 'cover' as any,
-      // 应用图片缩放设置
-      transform: `scale(${(settings.imageScale || 100) / 100})`,
-      transformOrigin: 'center',
     }))
 
     function onScaleChange(value: number) {
@@ -141,7 +192,13 @@ export default defineComponent({
       }
     }
 
-    function onEmojiClick(e: any) {
+    // 点击表情：记录使用、复制到剪贴板并提示
+    // 成功复制后显示提示“格式已经复制到剪贴板”
+    import('ant-design-vue').then(({ message }) => {
+      ;(window as any).__popup_message = message
+    })
+
+    async function onEmojiClick(e: any) {
       try {
         // record usage and quick copy to clipboard (displayUrl preferred)
         try {
@@ -153,10 +210,28 @@ export default defineComponent({
             ;(store as any).recordUsage && (store as any).recordUsage(e.UUID)
           } catch (_) {}
         }
+
         const txt = stringifyUrl(e.displayUrl || e.realUrl) || ''
         try {
-          navigator.clipboard.writeText(txt)
-        } catch (_) {}
+          await navigator.clipboard.writeText(txt)
+          // 显示提示（使用全局缓存的 antd message）
+          try {
+            const msg = (window as any).__popup_message
+            if (msg && typeof msg.success === 'function') msg.success('格式已经复制到剪贴板')
+            else alert('格式已经复制到剪贴板')
+          } catch (_) {
+            alert('格式已经复制到剪贴板')
+          }
+        } catch (err) {
+          // 复制失败也尝试提示
+          try {
+            const msg = (window as any).__popup_message
+            if (msg && typeof msg.error === 'function') msg.error('复制到剪贴板失败')
+            else alert('复制到剪贴板失败')
+          } catch (_) {
+            alert('复制到剪贴板失败')
+          }
+        }
       } catch (_) {}
     }
 
@@ -214,6 +289,9 @@ export default defineComponent({
       groups,
       ungrouped,
       hot,
+      selectedGroup,
+      selectedKeys,
+      menuItems,
       gridStyle,
       emojiStyle,
       onScaleChange,
@@ -246,6 +324,30 @@ export default defineComponent({
   justify-content: space-between;
   padding: 8px 16px;
   border-bottom: 1px solid #eee;
+}
+.popup-header .center {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  overflow: hidden; /* hide any vertical overflow */
+}
+.menu-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS/touch */
+}
+/* Make antd horizontal menu items lay out inline so the container can scroll horizontally */
+.menu-scroll .ant-menu-horizontal {
+  display: inline-flex;
+  white-space: nowrap;
+}
+/* thin horizontal scrollbar for better affordance */
+.menu-scroll::-webkit-scrollbar {
+  height: 7px;
+}
+.menu-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
 }
 .scale-control {
   height: 48px;

@@ -110,10 +110,10 @@ try {
   const payload = {
     version: 1,
     exportDate: new Date().toISOString(),
-  emojiGroups: processedGroups,
-  Settings: mapSettings(parsed.settings || parsed.Settings || {}, idToUuidMap),
-  // 将旧格式的未分组表情放到 top-level ungrouped
-  ungrouped: ungrouped || [],
+    emojiGroups: processedGroups,
+    Settings: mapSettings(parsed.settings || parsed.Settings || {}, idToUuidMap),
+    // 将旧格式的未分组表情放到 top-level ungrouped
+    ungrouped: ungrouped || [],
     // 保存映射关系用于调试
     _metadata: {
       idToUuidMap,
