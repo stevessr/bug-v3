@@ -1,5 +1,8 @@
 <template>
-  <div ref="editorContainer" style="height: 300px; border: 1px solid #d9d9d9; border-radius: 6px"></div>
+  <div
+    ref="editorContainer"
+    style="height: 300px; border: 1px solid #d9d9d9; border-radius: 6px"
+  ></div>
 </template>
 
 <script lang="ts">
@@ -10,16 +13,16 @@ export default defineComponent({
   props: {
     modelValue: {
       type: String,
-      default: ''
+      default: '',
     },
     readonly: {
       type: Boolean,
-      default: false
+      default: false,
     },
     language: {
       type: String,
-      default: 'json'
-    }
+      default: 'json',
+    },
   },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
@@ -31,35 +34,38 @@ export default defineComponent({
 
       // 动态导入 Monaco Editor
       const monaco = await import('monaco-editor')
-      
+
       // 配置 Monaco Editor 环境以支持 web workers
       if (typeof window !== 'undefined' && !(window as any).MonacoEnvironment) {
-        (window as any).MonacoEnvironment = {
-          getWorkerUrl: function(moduleId: string, label: string) {
+        ;(window as any).MonacoEnvironment = {
+          getWorkerUrl: function (moduleId: string, label: string) {
             // 对于浏览器扩展，使用内联 worker 禁用网络请求
-            return 'data:text/javascript;charset=utf-8,' + encodeURIComponent(`
+            return (
+              'data:text/javascript;charset=utf-8,' +
+              encodeURIComponent(`
               self.MonacoEnvironment = {
                 baseUrl: ''
               };
               // 禁用 worker 功能，让 Monaco 在主线程运行
               self.onmessage = function() {};
             `)
+            )
           },
-          getWorker: function(moduleId: string, label: string) {
+          getWorker: function (moduleId: string, label: string) {
             // 返回 null 让 Monaco 回退到主线程执行
             return null
-          }
+          },
         }
       }
-      
+
       // 配置 Monaco Editor
       monaco.editor.defineTheme('vs-light', {
         base: 'vs',
         inherit: true,
         rules: [],
         colors: {
-          'editor.background': '#ffffff'
-        }
+          'editor.background': '#ffffff',
+        },
       })
 
       editor = monaco.editor.create(editorContainer.value, {
@@ -74,28 +80,25 @@ export default defineComponent({
         roundedSelection: false,
         scrollbar: {
           verticalScrollbarSize: 8,
-          horizontalScrollbarSize: 8
+          horizontalScrollbarSize: 8,
         },
         readOnly: props.readonly,
         // 禁用需要 web workers 的功能以避免网络请求
-        wordBasedSuggestions: false,
+        wordBasedSuggestions: 'off',
         quickSuggestions: false,
         parameterHints: { enabled: false },
         suggestOnTriggerCharacters: false,
         acceptSuggestionOnEnter: 'off',
         tabCompletion: 'off',
         wordWrap: 'on',
-        automaticLayout: true,
         // 禁用其他可能导致问题的功能
         codeLens: false,
         colorDecorators: false,
-        lightbulb: { enabled: false },
         gotoLocation: { multiple: 'goto' },
         hover: { enabled: false },
         links: false,
-        documentHighlight: false,
         folding: false,
-        lineNumbersMinChars: 3
+        lineNumbersMinChars: 3,
       })
 
       // 监听内容变化
@@ -121,18 +124,24 @@ export default defineComponent({
     }
 
     // 监听外部值变化
-    watch(() => props.modelValue, (newValue) => {
-      if (editor && editor.getValue() !== newValue) {
-        editor.setValue(newValue)
-      }
-    })
+    watch(
+      () => props.modelValue,
+      (newValue) => {
+        if (editor && editor.getValue() !== newValue) {
+          editor.setValue(newValue)
+        }
+      },
+    )
 
     // 监听只读状态变化
-    watch(() => props.readonly, (newValue) => {
-      if (editor) {
-        editor.updateOptions({ readOnly: newValue })
-      }
-    })
+    watch(
+      () => props.readonly,
+      (newValue) => {
+        if (editor) {
+          editor.updateOptions({ readOnly: newValue })
+        }
+      },
+    )
 
     onMounted(() => {
       initEditor()
@@ -145,8 +154,8 @@ export default defineComponent({
     })
 
     return {
-      editorContainer
+      editorContainer,
     }
-  }
+  },
 })
 </script>
