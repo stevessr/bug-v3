@@ -108,7 +108,9 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
         if (target && target.tagName === 'IMG') {
           // record usage if the image has a UUID data attribute
           try {
-            const idAttr = (target as HTMLElement).getAttribute('data-uuid') || (target as HTMLElement).getAttribute('data-UUID')
+            const idAttr =
+              (target as HTMLElement).getAttribute('data-uuid') ||
+              (target as HTMLElement).getAttribute('data-UUID')
             if (idAttr) recordUsage(idAttr)
           } catch (_) {}
           const textArea = document.querySelector(

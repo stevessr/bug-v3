@@ -2,20 +2,33 @@ import settingsStore from '../update/settingsStore'
 import emojiGroupsStore from '../update/emojiGroupsStore'
 import storage from '../update/storage'
 
+function log(...args: any[]) {
+  try {
+    console.info('[data-store]', ...args)
+  } catch (_) {}
+}
+
 export function getSettings() {
-  return settingsStore.getSettings()
+  const s = settingsStore.getSettings()
+  log('getSettings', s)
+  return s
 }
 
 export function saveSettings(s: any) {
+  log('saveSettings', s)
   settingsStore.setSettings(s, emojiGroupsStore.getEmojiGroups())
 }
 
 export function getGroups() {
-  return emojiGroupsStore.getEmojiGroups()
+  const g = emojiGroupsStore.getEmojiGroups()
+  log('getGroups', { count: g.length })
+  return g
 }
 
 export function getUngrouped() {
-  return emojiGroupsStore.getUngrouped()
+  const ug = (emojiGroupsStore as any).getUngrouped ? (emojiGroupsStore as any).getUngrouped() : []
+  log('getUngrouped', { count: Array.isArray(ug) ? ug.length : 0 })
+  return ug
 }
 
 export function getHot() {
@@ -27,7 +40,9 @@ export function getHot() {
   }
   const withUsage = all.filter((e) => typeof e.usageCount === 'number')
   withUsage.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
-  return withUsage.slice(0, 50)
+  const top = withUsage.slice(0, 50)
+  log('getHot', { count: top.length })
+  return top
 }
 
 export function recordUsage(uuid: string) {
@@ -35,24 +50,58 @@ export function recordUsage(uuid: string) {
 }
 
 export function exportPayload() {
-  const payload = { Settings: getSettings(), emojiGroups: getGroups() }
+  const payload = { Settings: getSettings(), emojiGroups: getGroups(), ungrouped: getUngrouped() }
+  log('exportPayload')
   return JSON.stringify(payload, null, 2)
 }
 
 export function importPayload(p: any) {
   if (!p) return false
+  log(
+    'importPayload',
+    p && {
+      hasSettings: !!p.Settings,
+      groups: Array.isArray(p.emojiGroups) ? p.emojiGroups.length : 0,
+      ungrouped: Array.isArray(p.ungrouped) ? p.ungrouped.length : 0,
+    },
+  )
   if (p.Settings) settingsStore.setSettings(p.Settings, p.emojiGroups || undefined)
   if (Array.isArray(p.emojiGroups)) emojiGroupsStore.setEmojiGroups(p.emojiGroups)
-  if (Array.isArray(p.ungrouped)) {
-    // naive migration: replace existing ungrouped with provided
-    const ug = p.ungrouped
-    ;(emojiGroupsStore as any).setEmojiGroups(emojiGroupsStore.getEmojiGroups())
-    // set ungrouped internal state if supported
-    if ((emojiGroupsStore as any).addUngrouped && Array.isArray(ug)) {
-      ug.forEach((e: any) => (emojiGroupsStore as any).addUngrouped(e))
+  if (Array.isArray(p.ungrouped) && (emojiGroupsStore as any).addUngrouped) {
+    // replace existing ungrouped with imported ones
+    const existing: any[] = (emojiGroupsStore as any).getUngrouped
+      ? (emojiGroupsStore as any).getUngrouped()
+      : []
+    if (Array.isArray(existing)) {
+      existing.forEach((e: any) => {
+        try {
+          ;(emojiGroupsStore as any).removeUngroupedByUUID(e.UUID)
+        } catch (_) {}
+      })
     }
+    p.ungrouped.forEach((e: any) => (emojiGroupsStore as any).addUngrouped(e))
   }
   return true
+}
+
+export function moveUngroupedToGroup(uuids: string[], groupUUID: string) {
+  if (!Array.isArray(uuids) || !groupUUID) return { moved: 0 }
+  const existing: any[] = (emojiGroupsStore as any).getUngrouped ? (emojiGroupsStore as any).getUngrouped() : []
+  let moved = 0
+  for (const u of uuids) {
+    const idx = existing.findIndex((e: any) => e.UUID === u)
+    if (idx < 0) continue
+    const e = existing[idx]
+    try {
+      ;(emojiGroupsStore as any).addEmojiToGroup(groupUUID, e)
+      ;(emojiGroupsStore as any).removeUngroupedByUUID(e.UUID)
+      moved++
+    } catch (err) {
+      // ignore individual failures
+    }
+  }
+  log('moveUngroupedToGroup', { groupUUID, moved })
+  return { moved }
 }
 
 export default {
@@ -63,4 +112,5 @@ export default {
   getHot,
   exportPayload,
   importPayload,
+  moveUngroupedToGroup,
 }

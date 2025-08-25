@@ -2,11 +2,14 @@
   <a-card title="设置">
     <a-form :model="form" layout="vertical">
       <a-form-item label="图片缩放 (%)">
-        <a-input-number v-model:value="form.imageScale" :min="1" :max="100" />
+        <div style="display: flex; gap: 12px; align-items: center">
+          <a-slider v-model:value="form.imageScale" :min="1" :max="100" style="flex: 1" />
+          <a-input-number v-model:value="form.imageScale" :min="1" :max="100" />
+        </div>
       </a-form-item>
 
-      <a-form-item label="默认表情组 UUID">
-        <a-input v-model:value="form.defaultEmojiGroupUUID" />
+      <a-form-item label="默认表情组">
+        <default-group-select v-model:modelValue="form.defaultEmojiGroupUUID" />
       </a-form-item>
 
       <a-form-item label="列数">

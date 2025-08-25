@@ -1,0 +1,76 @@
+<template>
+  <a-modal :open="visible" title="添加表情" @ok="onOk" @cancel="close">
+    <a-form layout="vertical">
+      <a-form-item label="图片URL">
+        <a-input v-model:value="url" />
+      </a-form-item>
+      <a-form-item label="预览 URL (可选)">
+        <a-input v-model:value="previewUrl" placeholder="用于列表/缩略图的预览地址，若为空使用图片URL" />
+      </a-form-item>
+      <a-form-item label="显示名称">
+        <a-input v-model:value="displayName" />
+      </a-form-item>
+    </a-form>
+  </a-modal>
+</template>
+
+<script lang="ts">
+import { defineComponent, ref, watch } from 'vue'
+
+export default defineComponent({
+  props: {
+    modelValue: { type: Boolean, required: true },
+  },
+  emits: ['update:modelValue', 'added'],
+  setup(props, { emit }) {
+    const visible = ref(!!props.modelValue)
+    const url = ref('')
+    const displayName = ref('')
+    const generatedId = ref('')
+  const previewUrl = ref('')
+
+    watch(
+      () => props.modelValue,
+      (v) => (visible.value = !!v),
+    )
+
+    function close() {
+      emit('update:modelValue', false)
+    }
+
+    // simple deterministic hash to produce id from URL
+    function urlToId(u: string) {
+      if (!u) return String(Date.now())
+      let h = 2166136261 >>> 0
+      for (let i = 0; i < u.length; i++) {
+        h ^= u.charCodeAt(i)
+        h = Math.imul(h, 16777619) >>> 0
+      }
+      return 'u' + h.toString(16)
+    }
+
+    watch(url, (v) => {
+      generatedId.value = urlToId(v || '')
+    })
+
+    function onOk() {
+      const id =
+        generatedId.value ||
+        (typeof crypto !== 'undefined' && (crypto as any).randomUUID
+          ? (crypto as any).randomUUID()
+          : String(Date.now()))
+      emit('added', {
+        UUID: id,
+        id: id,
+        displayName: displayName.value || '',
+    displayUrl: previewUrl.value || url.value,
+    realUrl: url.value,
+        order: 0,
+      })
+      close()
+    }
+
+  return { visible, url, previewUrl, displayName, onOk, close }
+  },
+})
+</script>
