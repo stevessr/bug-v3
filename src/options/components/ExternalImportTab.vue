@@ -17,6 +17,8 @@ const isImporting = ref(false)
 const importStatus = ref('')
 const importResults = ref<{ success: boolean; message: string; details?: string } | null>(null)
 
+// Removed Tenor and Waline import functionality: these are provided by separate standalone pages.
+
 // Methods
 const openImportConfig = () => {
   configFileInput.value?.click()
@@ -135,6 +137,8 @@ const importFromMarkdown = async () => {
     selectedTargetGroupForMarkdown.value = ''
   }
 }
+
+// Tenor/Waline functionality removed here.
 </script>
 
 <template>
@@ -261,6 +265,8 @@ const importFromMarkdown = async () => {
             </div>
           </div>
         </div>
+
+        <!-- Tenor/Waline removed: functionality is provided via standalone pages -->
 
         <!-- Import Progress -->
         <div v-if="isImporting" class="border rounded-lg p-4 bg-blue-50">
