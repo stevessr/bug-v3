@@ -414,7 +414,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             SyncManager.onLocalPayloadUpdated(msg.payload)
           } catch (_) {}
           sendResponse({ ok: true })
-          return true
+          return
         }
         // allow requests to ensure an offscreen document exists
         if (msg && (msg.type === 'ensure-offscreen' || msg.target === 'offscreen')) {
@@ -424,14 +424,14 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             log('ensureOffscreenDocument request error', err)
           }
           sendResponse({ ok: true })
-          return true
+          return
         }
         if (msg && msg.type === 'stage-ack') {
           try {
             SyncManager.onStageAck(msg.stage)
           } catch (_) {}
           sendResponse({ ok: true })
-          return true
+          return
         }
       } catch (_) {}
       try {
@@ -455,7 +455,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
           // forward to content scripts in all tabs
           broadcastToTabs(payload)
           sendResponse({ ok: true })
-          return true
+          return
         }
 
         if (msg && msg.type === 'relay') {
@@ -477,7 +477,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
       }
       // default echo
       sendResponse({ ok: true, echo: msg })
-      return true
+      return
     },
   )
 } else if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.onMessage) {
