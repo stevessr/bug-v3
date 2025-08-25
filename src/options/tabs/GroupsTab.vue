@@ -152,7 +152,11 @@ export default defineComponent({
     function onSettingsChange(ev: any) {
       try {
         const s = ev && ev.detail ? ev.detail : store.getSettings()
-        gridCols.value = (s && s.gridColumns) || gridCols.value
+        const newGridCols = (s && s.gridColumns) || 4
+        if (newGridCols !== gridCols.value) {
+          console.log(`GroupsTab updating gridCols from ${gridCols.value} to ${newGridCols}`)
+          gridCols.value = newGridCols
+        }
       } catch (_) {}
     }
     if (typeof window !== 'undefined')
@@ -452,22 +456,26 @@ export default defineComponent({
 
     onMounted(() => {
       load()
-      
+
       // 监听来自其他页面的消息
       commService.onSettingsChanged((newSettings) => {
-        gridCols.value = (newSettings && newSettings.gridColumns) || gridCols.value
+        const newGridCols = (newSettings && newSettings.gridColumns) || 4
+        if (newGridCols !== gridCols.value) {
+          console.log(`GroupsTab (comm) updating gridCols from ${gridCols.value} to ${newGridCols}`)
+          gridCols.value = newGridCols
+        }
       })
 
       commService.onGroupsChanged((newGroups) => {
         groups.value = newGroups
       })
 
-      commService.onUsageRecorded((data) => {
+      commService.onUsageRecorded((_data) => {
         // 可以在这里更新常用表情列表
         // hot.value = store.getHot()
       })
     })
-    
+
     // remove listener on unmount
     try {
       onUnmounted(() => {

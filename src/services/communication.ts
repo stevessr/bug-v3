@@ -52,7 +52,7 @@ class CommunicationService {
   private handleMessage(message: Message) {
     const handlers = this.handlers.get(message.type)
     if (handlers) {
-      handlers.forEach(handler => {
+      handlers.forEach((handler) => {
         try {
           handler(message)
         } catch (error) {
@@ -68,10 +68,19 @@ class CommunicationService {
     let clonedPayload = payload
     if (payload) {
       try {
-        clonedPayload = JSON.parse(JSON.stringify(payload))
+        // 对于 Vue Proxy 对象，先转换为普通对象
+        const plainPayload = payload && typeof payload === 'object' ? { ...payload } : payload
+        clonedPayload = JSON.parse(JSON.stringify(plainPayload))
+        console.log(`Communication: sending ${type} with payload:`, clonedPayload)
       } catch (error) {
         console.warn('Failed to clone payload:', error)
-        clonedPayload = payload
+        // 如果序列化失败，尝试创建一个普通对象副本
+        try {
+          clonedPayload = payload && typeof payload === 'object' ? { ...payload } : payload
+        } catch (e) {
+          console.warn('Failed to create object copy:', e)
+          clonedPayload = payload
+        }
       }
     }
 
@@ -79,7 +88,7 @@ class CommunicationService {
       type,
       payload: clonedPayload,
       from: this.context,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
 
     // 发送到其他扩展页面（popup, options, background）
