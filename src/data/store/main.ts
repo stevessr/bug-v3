@@ -23,7 +23,7 @@ export function saveSettings(s: any) {
     if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
       window.dispatchEvent(new CustomEvent('app:settings-changed', { detail: s }))
     }
-    
+
     // 使用通信服务发送设置变更消息（仅在 options 页面中）
     if (typeof window !== 'undefined' && window.location.pathname.includes('options.html')) {
       try {
@@ -87,9 +87,13 @@ export function importPayload(p: any) {
     if (p.Settings && typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
       window.dispatchEvent(new CustomEvent('app:settings-changed', { detail: p.Settings }))
     }
-    
+
     // 使用通信服务发送设置变更消息（仅在 options 页面中）
-    if (p.Settings && typeof window !== 'undefined' && window.location.pathname.includes('options.html')) {
+    if (
+      p.Settings &&
+      typeof window !== 'undefined' &&
+      window.location.pathname.includes('options.html')
+    ) {
       try {
         const commService = createOptionsCommService()
         commService.sendSettingsChanged(p.Settings)
@@ -98,7 +102,7 @@ export function importPayload(p: any) {
       }
     }
   } catch (_) {}
-  
+
   if (Array.isArray(p.emojiGroups)) {
     emojiGroupsStore.setEmojiGroups(p.emojiGroups)
     // 使用通信服务发送表情组变更消息（仅在 options 页面中）
@@ -111,7 +115,7 @@ export function importPayload(p: any) {
       console.warn('Failed to send groups via communication service:', error)
     }
   }
-  
+
   if (Array.isArray(p.ungrouped) && (emojiGroupsStore as any).addUngrouped) {
     // replace existing ungrouped with imported ones
     const existing: any[] = (emojiGroupsStore as any).getUngrouped
@@ -126,7 +130,7 @@ export function importPayload(p: any) {
     }
     p.ungrouped.forEach((e: any) => (emojiGroupsStore as any).addUngrouped(e))
   }
-  
+
   // 发送数据导入完成消息
   try {
     if (typeof window !== 'undefined' && window.location.pathname.includes('options.html')) {
@@ -136,7 +140,7 @@ export function importPayload(p: any) {
   } catch (error) {
     console.warn('Failed to send data import via communication service:', error)
   }
-  
+
   return true
 }
 
@@ -173,6 +177,19 @@ export function reorderEmojiInGroup(groupUUID: string, fromIndex: number, toInde
   }
 }
 
+export function reorderGroups(fromIndex: number, toIndex: number) {
+  try {
+    const ok = (emojiGroupsStore as any).reorderGroups
+      ? (emojiGroupsStore as any).reorderGroups(fromIndex, toIndex)
+      : false
+    log('reorderGroups', { fromIndex, toIndex, ok })
+    return ok
+  } catch (err) {
+    log('reorderGroups', 'error', err)
+    return false
+  }
+}
+
 export default {
   getSettings,
   saveSettings,
@@ -183,4 +200,5 @@ export default {
   importPayload,
   moveUngroupedToGroup,
   reorderEmojiInGroup,
+  reorderGroups,
 }

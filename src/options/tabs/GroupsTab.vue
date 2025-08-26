@@ -74,7 +74,7 @@
               :key="e.UUID"
               class="emoji-cell"
               @click.stop="editMode && onEditEmoji(g, e, i)"
-              :draggable="editMode"
+              :draggable="true"
             >
               <img
                 :src="e.displayUrl || e.realUrl"
@@ -86,15 +86,6 @@
                   display: block;
                 "
               />
-              <!-- move controls visible in edit mode -->
-              <div class="emoji-controls" v-if="editMode">
-                <button class="emoji-control-btn up" @click.stop="moveUp(g, i)" title="上移">
-                  ▲
-                </button>
-                <button class="emoji-control-btn down" @click.stop="moveDown(g, i)" title="下移">
-                  ▼
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -339,9 +330,8 @@ export default defineComponent({
 
       if (!el) return
       // only initialize sortable while in edit mode
-      try {
-        if (!(editMode && editMode.value)) return
-      } catch (_) {}
+      // initialize regardless of edit mode so dragging/reordering works
+      // even when not in edit mode
       // dynamic import to avoid compile-time type complaints
       // @ts-ignore - dynamic import to avoid static type resolution errors in some environments
       // @ts-ignore
@@ -384,9 +374,11 @@ export default defineComponent({
 
     // watch edit mode: when entering edit mode destroy all sortables; when leaving, re-init
     try {
+      // keep this watcher to allow manual re-init when entering edit mode,
+      // but do not destroy instances when leaving edit mode so dragging
+      // remains available outside edit mode.
       watch(editMode, async (v) => {
         if (v) {
-          // enter edit mode: initialize sortables
           await nextTick()
           try {
             const els = document.querySelectorAll('.emoji-grid')
@@ -397,15 +389,6 @@ export default defineComponent({
               } catch (_) {}
             })
           } catch (_) {}
-        } else {
-          // leave edit mode: destroy all sortables
-          try {
-            Object.keys(sortableMap).forEach((k) => {
-              const inst = (sortableMap as any)[k]
-              if (inst && typeof inst.destroy === 'function') inst.destroy()
-              delete (sortableMap as any)[k]
-            })
-          } catch (_) {}
         }
       })
     } catch (_) {}
@@ -414,7 +397,7 @@ export default defineComponent({
     try {
       watch(gridCols, async (v) => {
         try {
-          // destroy all existing instances
+          // destroy all existing instances so we can re-init with new layout
           Object.keys(sortableMap).forEach((k) => {
             const inst = (sortableMap as any)[k]
             if (inst && typeof inst.destroy === 'function') inst.destroy()
@@ -424,8 +407,8 @@ export default defineComponent({
 
         await nextTick()
         try {
-          // only init sortables when edit mode is active
-          if (!(editMode && editMode.value)) return
+          // re-init sortables for all groups regardless of edit mode so
+          // grid column changes keep drag working.
           const els = document.querySelectorAll('.emoji-grid')
           els.forEach((el) => {
             try {

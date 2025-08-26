@@ -165,6 +165,14 @@ function reorderEmojiInGroup(groupUUID: string, fromIndex: number, toIndex: numb
   return true
 }
 
+function reorderGroups(fromIndex: number, toIndex: number) {
+  if (fromIndex < 0 || fromIndex >= emojiGroups.length) return false
+  const [g] = emojiGroups.splice(fromIndex, 1)
+  emojiGroups.splice(Math.min(Math.max(0, toIndex), emojiGroups.length), 0, g)
+  settingsStore.save(emojiGroups)
+  return true
+}
+
 initFromStorage()
 
 export default {
