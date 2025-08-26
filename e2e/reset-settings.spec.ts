@@ -1,4 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
+import { test, expect, chromium, Page } from '@playwright/test'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { Antd, VDialog, VTab } from './utils'
 
 function makePayload(gridColumns: number, syncConfig: object) {
@@ -18,7 +20,22 @@ function makePayload(gridColumns: number, syncConfig: object) {
 }
 
 async function goToSettings(page: Page) {
-  await page.goto('/options.html')
+  // navigate to options page inside loaded extension
+  // the page passed in should already be a context page pointing to the extension
+  // if not, caller should provide correct page
+  // we expect page.context() to be a persistent context with the extension loaded
+  const bgPages = [...page.context().backgroundPages(), ...page.context().serviceWorkers()]
+  let extensionId: string | null = null
+  for (const bg of bgPages) {
+    const url = bg.url()
+    const match = url.match(/^chrome-extension:\/\/([a-z]+)\//)
+    if (match) {
+      extensionId = match[1]
+      break
+    }
+  }
+  if (!extensionId) throw new Error('extension id not found')
+  await page.goto(`chrome-extension://${extensionId}/options.html`)
 
   // Click on the Settings menu item in the sidebar
   await page.waitForSelector('.ant-menu-item', { timeout: 10000 })
@@ -29,12 +46,29 @@ async function goToSettings(page: Page) {
 }
 
 test.describe('Reset Settings', () => {
-  test.beforeEach(async ({ page }) => {
+  let context: any
+  test.beforeEach(async () => {
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = path.dirname(__filename)
+    const extensionPath = path.resolve(__dirname, '..', 'dist')
+    const userDataDir = path.join(__dirname, '.tmp-user-data-reset')
+    context = await chromium.launchPersistentContext(userDataDir, {
+      headless: false,
+      args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+    })
+    await new Promise((r) => setTimeout(r, 1500))
+    const page = await context.newPage()
     const payload = makePayload(10, {})
     await page.addInitScript((p) => {
       localStorage.setItem('bugcopilot_settings_v1', JSON.stringify(p))
     }, payload)
     await goToSettings(page)
+  })
+
+  test.afterEach(async () => {
+    try {
+      await context.close()
+    } catch (_) {}
   })
 
   test('should reset grid columns configuration', async ({ page }) => {

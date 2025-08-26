@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, chromium } from '@playwright/test'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 function makePayload(gridColumns: number) {
   return {
@@ -25,41 +27,87 @@ function makePayload(gridColumns: number) {
 }
 
 test.describe('grid columns (Playwright)', () => {
-  test('options.html uses gridColumns from settings on load', async ({ page }) => {
+  async function launchExtensionAndGetId() {
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = path.dirname(__filename)
+    const extensionPath = path.resolve(__dirname, '..', 'dist')
+    const userDataDir = path.join(__dirname, '.tmp-user-data-grid')
+    const context = await chromium.launchPersistentContext(userDataDir, {
+      headless: false,
+      args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+    })
+    // wait for extension to load
+    await new Promise((r) => setTimeout(r, 1500))
+    let extensionId: string | null = null
+    for (const bg of context.backgroundPages()) {
+      const url = bg.url()
+      const match = url.match(/^chrome-extension:\/\/([a-z]+)\//)
+      if (match) {
+        extensionId = match[1]
+        break
+      }
+    }
+    if (!extensionId) {
+      for (const t of context.serviceWorkers()) {
+        const url = t.url()
+        const match = url.match(/^chrome-extension:\/\/([a-z]+)\//)
+        if (match) {
+          extensionId = match[1]
+          break
+        }
+      }
+    }
+    return { context, extensionId }
+  }
+
+  test('options.html uses gridColumns from settings on load', async () => {
     const payload = makePayload(5)
+    const { context, extensionId } = await launchExtensionAndGetId()
+    if (!extensionId) {
+      await context.close()
+      throw new Error('extension id not found')
+    }
+    const optionsUrl = `chrome-extension://${extensionId}/options.html`
+    const page = await context.newPage()
     await page.addInitScript((p) => {
       try {
         localStorage.setItem('bugcopilot_settings_v1', JSON.stringify(p))
       } catch (e) {}
     }, payload)
-    await page.goto('/options.html')
+    await page.goto(optionsUrl)
 
-    // Wait for the collapse panel to be visible
     await page.waitForSelector('.ant-collapse-header')
-
-    // Click on the collapse header to expand the emoji group
     await page.click('.ant-collapse-header')
-
-    // Now wait for the emoji grid to be visible
     await page.waitForSelector('.emoji-grid')
     const el = await page.locator('.emoji-grid').first()
     const inline = await el.getAttribute('style')
     expect(inline).toBeTruthy()
     expect(inline!.includes('repeat(5')).toBeTruthy()
+
+    await context.close()
   })
 
-  test('popup.html reacts to settings changes', async ({ page }) => {
+  test('popup.html reacts to settings changes', async () => {
     const payload = makePayload(6)
+    const { context, extensionId } = await launchExtensionAndGetId()
+    if (!extensionId) {
+      await context.close()
+      throw new Error('extension id not found')
+    }
+    const popupUrl = `chrome-extension://${extensionId}/popup.html`
+    const page = await context.newPage()
     await page.addInitScript((p) => {
       try {
         localStorage.setItem('bugcopilot_settings_v1', JSON.stringify(p))
       } catch (e) {}
     }, payload)
-    await page.goto('/popup.html')
+    await page.goto(popupUrl)
     await page.waitForSelector('.emoji-grid')
     const el = await page.locator('.emoji-grid').first()
     const inline = await el.getAttribute('style')
     expect(inline).toBeTruthy()
     expect(inline!.includes('repeat(6')).toBeTruthy()
+
+    await context.close()
   })
 })

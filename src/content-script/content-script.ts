@@ -31,6 +31,33 @@ function updateChannelsFromStorage() {
 
 updateChannelsFromStorage()
 
+// Helper: try to read session_payload directly from chrome.storage.local and apply to sessionStorage
+function tryApplySessionFromChromeStorage() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['session_payload'], (res: any) => {
+        try {
+          const payload = res?.session_payload
+          if (payload && !window.sessionStorage.getItem('bugcopilot_settings_v1')) {
+            try {
+              window.sessionStorage.setItem('bugcopilot_settings_v1', JSON.stringify(payload))
+              // notify background that session applied
+              try {
+                if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                  chrome.runtime.sendMessage({ type: 'stage-ack', stage: 'session' })
+                }
+              } catch (_) {}
+            } catch (_) {}
+          }
+        } catch (_) {}
+      })
+    }
+  } catch (_) {}
+}
+
+// attempt immediately at startup
+tryApplySessionFromChromeStorage()
+
 // log when script is injected into the page
 try {
   log('injected', {
@@ -184,6 +211,12 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
           // start polling when a pending flag is set
           try {
             PollWatcher.start()
+          } catch (_) {}
+          // if session_pending flag was set, attempt to read session_payload immediately
+          try {
+            if (msg.key === 'bugcopilot_flag_session_pending' && String(msg.value) === 'true') {
+              tryApplySessionFromChromeStorage()
+            }
           } catch (_) {}
           // if session pending was set, try to read session_payload immediately
           try {

@@ -68,6 +68,36 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
       document.body.appendChild(emojiPicker)
       createdNodes.push(emojiPicker)
 
+      // Debug: log current emojis inside the newly opened picker for diagnosis
+      try {
+        const imgs = Array.from(
+          emojiPicker.querySelectorAll('.emoji-picker__section-emojis .emoji, img'),
+        ) as HTMLImageElement[]
+        const emojiSnapshot = imgs
+          .map((el) => {
+            try {
+              return {
+                alt: (el.alt || '').toString(),
+                src: (el.src || el.getAttribute('src') || '').toString(),
+                uuid: (
+                  el.getAttribute('data-uuid') ||
+                  el.getAttribute('data-UUID') ||
+                  ''
+                ).toString(),
+                width: el.getAttribute('data-width') || (el.width ? String(el.width) : null),
+                height: el.getAttribute('data-height') || (el.height ? String(el.height) : null),
+              }
+            } catch (_) {
+              return null
+            }
+          })
+          .filter(Boolean)
+        console.log(
+          '[nacho-inject] emojiPicker opened, emoji snapshot:',
+          emojiSnapshot.slice(0, 50),
+        )
+      } catch (_) {}
+
       // 统一定位逻辑：优先使用回复控件(`#reply-control`)定位（若存在），否则回退到编辑器包裹器定位
       const replyControl = document.querySelector('#reply-control')
       if (replyControl) {
