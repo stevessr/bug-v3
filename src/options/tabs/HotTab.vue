@@ -17,11 +17,32 @@
                 <a-card-meta :title="e.displayName">
                   <template #description>使用次数: {{ e.usageCount || 0 }}</template>
                 </a-card-meta>
+                <template #actions>
+                  <a-popconfirm
+                    title="确定要清零该表情的使用次数吗？"
+                    ok-text="确定"
+                    cancel-text="取消"
+                    @confirm="() => resetHotByUUID(e.UUID)"
+                  >
+                    <a-button type="link" danger>清零</a-button>
+                  </a-popconfirm>
+                </template>
               </a-card>
             </div>
           </div>
         </a-collapse-panel>
       </a-collapse>
+
+      <a-divider />
+
+      <a-popconfirm
+        title="确定要清零所有表情的使用次数吗？"
+        ok-text="确定"
+        cancel-text="取消"
+        @confirm="resetHot"
+      >
+        <a-button danger>清零使用次数</a-button>
+      </a-popconfirm>
 
       <div style="margin-top: 16px">
         <a-row :gutter="16">
@@ -59,6 +80,7 @@
 import { defineComponent, ref, onMounted, onBeforeUnmount, reactive, computed } from 'vue'
 import store from '../../data/store/main'
 import { createOptionsCommService } from '../../services/communication'
+import { message } from 'ant-design-vue'
 
 export default defineComponent({
   setup() {
@@ -115,7 +137,25 @@ export default defineComponent({
         comm.off && comm.off('app:settings-changed', settingsHandler)
       } catch (_) {}
     })
-    return { items, stats, gridColsClass, gridStyle }
+    function resetHot() {
+      try {
+        store.resetHot()
+        message.success('常用表情使用次数已清零')
+        load()
+      } catch (err) {
+        message.error('操作失败')
+      }
+    }
+    function resetHotByUUID(uuid: string) {
+      try {
+        store.resetHotByUUID(uuid)
+        message.success('该表情使用次数已清零')
+        load()
+      } catch (err) {
+        message.error('操作失败')
+      }
+    }
+    return { items, stats, gridColsClass, gridStyle, resetHot, resetHotByUUID }
   },
 })
 </script>

@@ -13,13 +13,18 @@
       <a-form-item label="显示名称">
         <a-input v-model:value="displayName" />
       </a-form-item>
+      <a-form-item label="变种 (JSON，可选)">
+        <a-textarea
+          v-model:value="variantsText"
+          placeholder='例如: {"1x":"https://...","2x":"https://..."}'
+        />
+      </a-form-item>
     </a-form>
   </a-modal>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, watch } from 'vue'
-
 export default defineComponent({
   props: {
     modelValue: { type: Boolean, required: true },
@@ -32,6 +37,7 @@ export default defineComponent({
     const displayName = ref('')
     const generatedId = ref('')
     const previewUrl = ref('')
+    const variantsText = ref('')
 
     watch(
       () => props.modelValue,
@@ -66,6 +72,7 @@ export default defineComponent({
           previewUrl.value = val.displayUrl || ''
           displayName.value = val.displayName || ''
           generatedId.value = val.UUID || val.id || generatedId.value
+          variantsText.value = val.variants ? JSON.stringify(val.variants) : ''
         }
       },
       { immediate: true },
@@ -83,6 +90,13 @@ export default defineComponent({
         displayName: displayName.value || '',
         displayUrl: previewUrl.value || url.value,
         realUrl: url.value,
+        variants: (() => {
+          try {
+            return variantsText.value ? JSON.parse(variantsText.value) : {}
+          } catch (_) {
+            return {}
+          }
+        })(),
         order: 0,
       }
       // emit both saved (for edit flows) and added (for compatibility)
@@ -91,7 +105,7 @@ export default defineComponent({
       close()
     }
 
-    return { visible, url, previewUrl, displayName, onOk, close }
+    return { visible, url, previewUrl, displayName, onOk, close, variantsText }
   },
 })
 </script>

@@ -15,83 +15,68 @@
       </a-button>
     </div>
 
-    <a-collapse>
-      <a-collapse-panel v-for="g in groups" :key="g.UUID">
-        <template #header>
-          <div
-            style="display: flex; align-items: center; justify-content: space-between; width: 100%"
+    <!-- 卡片视图仅在“表情组顺序管理”标签中显示 -->
+
+    <!-- Tabs: default list and group order management -->
+    <a-tabs v-model:value="activeTab">
+      <a-tab-pane key="list" tab="默认视图">
+        <a-collapse>
+          <GroupPanel
+            v-for="g in groups"
+            :key="g.UUID"
+            :group="g"
+            :gridCols="gridCols"
+            :editMode="editMode"
+            :setContainer="setContainer"
+            :isLikelyUrl="isLikelyUrl"
+            @edit="onEdit"
+            @add-emoji="onAddEmoji"
+            @import="onImport"
+            @export="onExport"
+            @delete="onDelete"
+            @edit-emoji="onEditEmoji"
+          />
+        </a-collapse>
+      </a-tab-pane>
+
+      <a-tab-pane key="order" tab="表情组顺序管理">
+        <div class="group-cards" ref="groupCardsEl">
+          <a-card
+            v-for="(g, idx) in groups"
+            :key="g.UUID"
+            hoverable
+            style="width: 240px"
+            :data-index="idx"
           >
-            <div style="display: flex; align-items: center; gap: 8px">
-              <template v-if="g.icon">
-                <img
-                  v-if="isLikelyUrl(g.icon)"
-                  :src="g.icon"
-                  style="width: 24px; height: 24px; object-fit: cover"
-                />
-                <div
-                  v-else
-                  style="
-                    min-width: 24px;
-                    min-height: 24px;
-                    padding: 2px 6px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 4px;
-                    background: var(--ant-btn-default-bg);
-                    font-size: 12px;
-                    font-weight: 600;
-                  "
-                >
-                  {{ g.icon }}
-                </div>
-              </template>
-              <div>
-                <div style="font-weight: 600">{{ g.displayName }}</div>
-                <div style="font-size: 12px; color: var(--ant-text-color-secondary)">
-                  {{ g.UUID }} • {{ g.emojis?.length || 0 }} 表情
-                </div>
-              </div>
-            </div>
-            <div style="display: flex; gap: 8px">
-              <a-button size="small" @click.stop="onEdit(g)">编辑</a-button>
-              <a-button size="small" @click.stop="onAddEmoji(g)">添加表情</a-button>
-              <a-button size="small" @click.stop="onImport(g)">导入</a-button>
-              <a-button size="small" @click.stop="onExport(g)">导出</a-button>
-              <a-button size="small" danger @click.stop="onDelete(g)">删除</a-button>
-            </div>
-          </div>
-        </template>
-        <div style="margin-top: 8px">
-          <div
-            class="emoji-grid"
-            :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }"
-            :data-group="g.UUID"
-            :ref="(el) => setContainer(el, g.UUID)"
-          >
-            <div
-              v-for="(e, i) in g.emojis"
-              :key="e.UUID"
-              class="emoji-cell"
-              @click.stop="editMode && onEditEmoji(g, e, i)"
-              :draggable="true"
-            >
+            <template #cover>
               <img
-                :src="e.displayUrl || e.realUrl"
+                v-if="isLikelyUrl(g.icon)"
+                :src="g.icon"
+                alt="cover"
+                style="width: 100%; height: 140px; object-fit: cover"
+              />
+              <div
+                v-else
                 style="
                   width: 100%;
-                  height: 100%;
-                  object-fit: cover;
-                  border-radius: 6px;
-                  display: block;
+                  height: 140px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  background: var(--ant-btn-default-bg);
                 "
-              />
-            </div>
-          </div>
+              >
+                {{ g.icon || '' }}
+              </div>
+            </template>
+            <a-card-meta
+              :title="g.displayName"
+              :description="`${g.UUID} • ${(g.emojis && g.emojis.length) || 0} 表情`"
+            />
+          </a-card>
         </div>
-      </a-collapse-panel>
-    </a-collapse>
-
+      </a-tab-pane>
+    </a-tabs>
     <new-group-modal v-model:modelValue="showNew" @created="onCreated" />
     <edit-group-modal v-model:modelValue="showEdit" :group="editingGroup" @save="onSaved" />
     <add-emoji-modal
@@ -113,42 +98,41 @@
     />
   </a-card>
 </template>
-
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import store from '../../data/store/main'
+import { defineComponent, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import GroupPanel from '../components/GroupPanel.vue'
 import { Modal } from 'ant-design-vue'
+import store from '../../data/store/main'
 import { createOptionsCommService } from '../../services/communication'
 
 export default defineComponent({
-  components: {
-    NewGroupModal: () => import('../components/NewGroupModal.vue'),
-    EditGroupModal: () => import('../components/EditGroupModal.vue'),
-    AddEmojiModal: () => import('../components/AddEmojiModal.vue'),
-    GroupImportModal: () => import('../components/GroupImportModal.vue'),
-    ImportConflictModal: () => import('../components/ImportConflictModal.vue'),
-  },
+  components: { GroupPanel },
   setup() {
-    const commService = createOptionsCommService()
     const groups = ref<any[]>([])
-    const settings = store.getSettings()
-    const gridCols = ref((settings && settings.gridColumns) || 4)
-    const editMode = ref(false)
-    const showNew = ref(false)
+    const gridCols = ref<number>(4)
+    const editMode = ref<boolean>(false)
+    const activeTab = ref<string>('list')
+    const groupCardsEl = ref<HTMLElement | null>(null)
 
-    function toggleEditMode() {
-      console.log('toggleEditMode called, current mode:', editMode.value)
-      editMode.value = !editMode.value
-    }
+    const showNew = ref(false)
     const showEdit = ref(false)
     const showAddEmoji = ref(false)
     const showImport = ref(false)
     const showConflict = ref(false)
     const currentConflicts = ref<any[]>([])
+
     const editingGroup = ref<any | null>(null)
     const addingGroup = ref<any | null>(null)
     const editingEmoji = ref<any | null>(null)
     const importGroupUUID = ref('')
+
+    const commService = createOptionsCommService()
+    // helper to hold group-cards sortable instance
+    const groupSortable: any = { inst: null }
+
+    function toggleEditMode() {
+      editMode.value = !editMode.value
+    }
 
     function load() {
       groups.value = store.getGroups()
@@ -329,11 +313,7 @@ export default defineComponent({
       } catch (_) {}
 
       if (!el) return
-      // only initialize sortable while in edit mode
-      // initialize regardless of edit mode so dragging/reordering works
-      // even when not in edit mode
       // dynamic import to avoid compile-time type complaints
-      // @ts-ignore - dynamic import to avoid static type resolution errors in some environments
       // @ts-ignore
       import('sortablejs')
         .then((m) => {
@@ -372,43 +352,13 @@ export default defineComponent({
         .catch(() => {})
     }
 
-    // watch edit mode: when entering edit mode destroy all sortables; when leaving, re-init
-    try {
-      // keep this watcher to allow manual re-init when entering edit mode,
-      // but do not destroy instances when leaving edit mode so dragging
-      // remains available outside edit mode.
-      watch(editMode, async (v) => {
-        if (v) {
-          await nextTick()
-          try {
-            const els = document.querySelectorAll('.emoji-grid')
-            els.forEach((el) => {
-              try {
-                const g = (el as HTMLElement).getAttribute('data-group')
-                if (g) setContainer(el, g)
-              } catch (_) {}
-            })
-          } catch (_) {}
-        }
-      })
-    } catch (_) {}
+    // group-cards sortable handled when activeTab === 'order' via watcher
 
-    // re-init sortables when grid column count changes
-    try {
-      watch(gridCols, async (v) => {
-        try {
-          // destroy all existing instances so we can re-init with new layout
-          Object.keys(sortableMap).forEach((k) => {
-            const inst = (sortableMap as any)[k]
-            if (inst && typeof inst.destroy === 'function') inst.destroy()
-            delete (sortableMap as any)[k]
-          })
-        } catch (_) {}
-
+    // watch edit mode: when entering edit mode initialize sortables
+    watch(editMode, async (v) => {
+      if (v) {
         await nextTick()
         try {
-          // re-init sortables for all groups regardless of edit mode so
-          // grid column changes keep drag working.
           const els = document.querySelectorAll('.emoji-grid')
           els.forEach((el) => {
             try {
@@ -417,20 +367,85 @@ export default defineComponent({
             } catch (_) {}
           })
         } catch (_) {}
-      })
-    } catch (_) {}
+      }
+    })
 
-    try {
-      onUnmounted(() => {
+    // re-init sortables when grid column count changes
+    watch(gridCols, async (v) => {
+      try {
+        Object.keys(sortableMap).forEach((k) => {
+          const inst = (sortableMap as any)[k]
+          if (inst && typeof inst.destroy === 'function') inst.destroy()
+          delete (sortableMap as any)[k]
+        })
+      } catch (_) {}
+
+      await nextTick()
+      try {
+        const els = document.querySelectorAll('.emoji-grid')
+        els.forEach((el) => {
+          try {
+            const g = (el as HTMLElement).getAttribute('data-group')
+            if (g) setContainer(el, g)
+          } catch (_) {}
+        })
+      } catch (_) {}
+    })
+
+    // sortable for group cards (reorder groups)
+    function handleGroupDragEnd(evt: any) {
+      try {
+        const from = typeof evt.oldIndex === 'number' ? evt.oldIndex : -1
+        const to = typeof evt.newIndex === 'number' ? evt.newIndex : -1
+        if (from < 0 || to < 0) return
+        if (from === to) return
+        const ok = store.reorderGroups(from, to)
+        if (ok) load()
+      } catch (_) {}
+    }
+
+    watch(activeTab, async (val) => {
+      // when entering order tab init sortable
+      if (val === 'order') {
+        await nextTick()
         try {
-          Object.keys(sortableMap).forEach((k) => {
-            const inst = (sortableMap as any)[k]
-            if (inst && typeof inst.destroy === 'function') inst.destroy()
-            delete (sortableMap as any)[k]
+          const el = groupCardsEl.value
+          if (!el) return
+          // @ts-ignore
+          const m = await import('sortablejs')
+          const SortableLib: any = (m && (m as any).default) || m
+          try {
+            if (groupSortable.inst && typeof groupSortable.inst.destroy === 'function') {
+              groupSortable.inst.destroy()
+              delete groupSortable.inst
+            }
+          } catch (_) {}
+          const inst = new SortableLib(el as HTMLElement, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: handleGroupDragEnd,
           })
+          groupSortable.inst = inst
         } catch (_) {}
-      })
-    } catch (_) {}
+      } else {
+        try {
+          if (groupSortable.inst && typeof groupSortable.inst.destroy === 'function') {
+            groupSortable.inst.destroy()
+            delete groupSortable.inst
+          }
+        } catch (_) {}
+      }
+    })
+
+    onUnmounted(() => {
+      try {
+        Object.keys(sortableMap).forEach((k) => {
+          const inst = (sortableMap as any)[k]
+          if (inst && typeof inst.destroy === 'function') inst.destroy()
+          delete (sortableMap as any)[k]
+        })
+      } catch (_) {}
+    })
 
     function onEditEmoji(g: any, e: any, i: number) {
       console.log('onEditEmoji called', { g, e, i, editMode: editMode.value })
@@ -484,33 +499,29 @@ export default defineComponent({
     onMounted(() => {
       load()
 
-      // 监听来自其他页面的消息
-      commService.onSettingsChanged((newSettings) => {
+      // nothing to init here; group-order sortable initializes when entering the tab
+
+      // listen for comm updates
+      commService.onSettingsChanged((newSettings: any) => {
         const newGridCols = (newSettings && newSettings.gridColumns) || 4
         if (newGridCols !== gridCols.value) {
-          console.log(`GroupsTab (comm) updating gridCols from ${gridCols.value} to ${newGridCols}`)
           gridCols.value = newGridCols
         }
       })
 
-      commService.onGroupsChanged((newGroups) => {
+      commService.onGroupsChanged((newGroups: any) => {
         groups.value = newGroups
       })
 
-      commService.onUsageRecorded((_data) => {
-        // 可以在这里更新常用表情列表
-        // hot.value = store.getHot()
-      })
+      commService.onUsageRecorded((_data: any) => {})
     })
 
     // remove listener on unmount
-    try {
-      onUnmounted(() => {
-        try {
-          window.removeEventListener('app:settings-changed', onSettingsChange)
-        } catch (_) {}
-      })
-    } catch (_) {}
+    onUnmounted(() => {
+      try {
+        window.removeEventListener('app:settings-changed', onSettingsChange)
+      } catch (_) {}
+    })
 
     return {
       groups,
@@ -525,6 +536,8 @@ export default defineComponent({
       editingEmoji,
       editMode,
       gridCols,
+      activeTab,
+      groupCardsEl,
       toggleEditMode,
       onCreated,
       onEdit,
@@ -548,86 +561,27 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.emoji-grid {
+/* Styles for group/emoji grid moved to GroupPanel.vue to avoid duplication */
+</style>
+
+<style scoped>
+.group-cards {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
 }
-.emoji-cell {
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
+.group-card {
+  background: var(--ant-card-background);
+  border: 1px solid var(--ant-border-color);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: grab;
 }
-
-.emoji-cell:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.group-card:active {
+  cursor: grabbing;
 }
-
-.emoji-cell::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: 2px solid transparent;
-  border-radius: 6px;
-  pointer-events: none;
-  transition: border-color 0.2s ease;
-}
-
-.emoji-cell:hover::after {
-  border-color: var(--ant-primary-color);
-}
-
-.emoji-controls {
-  position: absolute;
-  top: 6px;
-  right: 6px;
+.group-card-header {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  z-index: 10;
-}
-
-.emoji-control-btn {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 2px 6px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-/* make each cell square: prefer aspect-ratio, fallback to padding-bottom trick */
-.emoji-cell {
-  width: 100%;
-}
-.emoji-cell > img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 6px;
-  display: block;
-}
-.emoji-cell {
-  /* try aspect-ratio first */
-  aspect-ratio: 1 / 1;
-}
-
-/* fallback for older browsers: maintain square using pseudo element */
-.emoji-cell::before {
-  content: '';
-  display: block;
-  padding-top: 100%;
-  width: 100%;
-  height: 0;
-}
-.emoji-cell > img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  align-items: center;
 }
 </style>

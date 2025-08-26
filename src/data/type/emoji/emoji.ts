@@ -7,12 +7,12 @@ interface emoji {
   displayUrl: URL
   order: number
   UUID: UUID
+  usageCount?: number
+  lastUsed?: number
 }
 
 interface HotEmoji extends emoji {
   groupUUID: UUID
-  usageCount: number
-  lastUsed: number
 }
 
 interface UngroupedEmoji extends emoji {

@@ -66,6 +66,14 @@ export function recordUsage(uuid: string) {
   return (emojiGroupsStore as any).recordUsageByUUID(uuid)
 }
 
+export function resetHot() {
+  return (emojiGroupsStore as any).resetAllUsageCounts()
+}
+
+export function resetHotByUUID(uuid: string) {
+  return (emojiGroupsStore as any).resetUsageCountByUUID(uuid)
+}
+
 export function exportPayload() {
   const payload = { Settings: getSettings(), emojiGroups: getGroups(), ungrouped: getUngrouped() }
   log('exportPayload')
@@ -196,9 +204,11 @@ export default {
   getGroups,
   getUngrouped,
   getHot,
+  resetHot,
   exportPayload,
   importPayload,
   moveUngroupedToGroup,
   reorderEmojiInGroup,
   reorderGroups,
+  resetHotByUUID,
 }

@@ -173,9 +173,46 @@ function reorderGroups(fromIndex: number, toIndex: number) {
   return true
 }
 
+function resetAllUsageCounts() {
+  for (const g of emojiGroups) {
+    if (Array.isArray(g.emojis)) {
+      for (const e of g.emojis) {
+        e.usageCount = 0
+        e.lastUsed = undefined
+      }
+    }
+  }
+  for (const e of ungrouped) {
+    e.usageCount = 0
+    e.lastUsed = undefined
+  }
+  settingsStore.save(emojiGroups)
+}
+
+function resetUsageCountByUUID(uuid: string) {
+  const found = findEmojiByUUID(uuid)
+  if (found && found.emoji) {
+    const e: any = found.emoji
+    e.usageCount = 0
+    e.lastUsed = undefined
+    settingsStore.save(emojiGroups)
+    return true
+  }
+  // fallback: try ungrouped
+  const ue = ungrouped.find((x) => x.UUID === (uuid as any))
+  if (ue) {
+    ue.usageCount = 0
+    ue.lastUsed = undefined
+    settingsStore.save(emojiGroups)
+    return true
+  }
+  return false
+}
+
 initFromStorage()
 
 export default {
+  resetAllUsageCounts,
   getEmojiGroups,
   getUngrouped,
   setEmojiGroups,
@@ -187,7 +224,9 @@ export default {
   removeEmojiFromGroup,
   moveEmojiBetweenGroups,
   reorderEmojiInGroup,
+  reorderGroups,
   addUngrouped,
   removeUngroupedByUUID,
   recordUsageByUUID,
+  resetUsageCountByUUID,
 }
