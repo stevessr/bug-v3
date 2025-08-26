@@ -41,19 +41,31 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        args: [
+          `--disable-extensions-except=./dist`,
+          `--load-extension=./dist`,
+        ],
+      },
     },
     {
       name: 'edge',
-      use: { channel: 'msedge' },
+      use: {
+        channel: 'msedge',
+        args: [
+          `--disable-extensions-except=./dist`,
+          `--load-extension=./dist`,
+        ],
+      },
     },
   ],
 
   webServer: {
     // use the dynamically selected port
-    command: `pnpm build && pnpm preview --port ${port}`,
+    command: `pnpm dev --port ${port}`,
     port,
     // allow reusing an existing preview server during development runs
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
   },
 })

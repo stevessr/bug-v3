@@ -26,7 +26,7 @@ describe('grid columns react to settings', () => {
     })
     // default should be 4 columns
     await wrapper.vm.$nextTick()
-    expect(wrapper.vm.gridCols).toBe(4)
+    expect((wrapper.vm as any).gridCols).toBe(4)
 
     // change settings and dispatch
     const s = store.getSettings()
@@ -34,7 +34,7 @@ describe('grid columns react to settings', () => {
     store.saveSettings(s)
     window.dispatchEvent(new CustomEvent('app:settings-changed', { detail: s }))
     await wrapper.vm.$nextTick()
-    expect(wrapper.vm.gridCols).toBe(6)
+    expect((wrapper.vm as any).gridCols).toBe(6)
   })
 
   it('PopupApp reacts to settings changes', async () => {

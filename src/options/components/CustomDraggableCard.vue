@@ -4,7 +4,7 @@
       <span>{{ group.displayName }}</span>
     </div>
     <div class="card-cover">
-      <img v-if="isLikelyUrl(group.icon)" :src="group.icon.toString()" alt="Group Icon" class="cover-image" />
+      <img v-if="isLikelyUrl(group.icon.toString())" :src="group.icon.toString()" alt="Group Icon" class="cover-image" />
       <div v-else class="cover-text">
         {{ group.icon }}
       </div>

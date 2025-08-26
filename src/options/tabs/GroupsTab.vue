@@ -74,7 +74,7 @@
   </a-card>
 </template>
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, defineExpose } from 'vue'
 import draggable from 'vuedraggable'
 import CustomDraggableCard from '../components/CustomDraggableCard.vue'
 import GroupPanel from '../components/GroupPanel.vue'
@@ -428,6 +428,10 @@ onUnmounted(() => {
   try {
     window.removeEventListener('app:settings-changed', onSettingsChange)
   } catch (_) {}
+})
+
+defineExpose({
+  gridCols,
 })
 </script>
 

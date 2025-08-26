@@ -8,8 +8,9 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check build-only && npm run build:content",
+    "build": "run-p type-check build-only && pnpm build:content",
     "preview": "vite preview",
+    "test": "pnpm test:e2e && pnpm test:unit",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
     "build-only": "vite build",
