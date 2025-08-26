@@ -26,13 +26,11 @@ export function installNachonekoPicker(
         // tabindex: first emoji tabindex=0, others -1 (match example)
         const tabindex = idx === 0 ? '0' : '-1'
         const dataEmoji = nameEsc
-        return (
-          `<img width="32" height="32" class="emoji" src="${e.url}" tabindex="${tabindex}" data-emoji="${dataEmoji}" alt="${nameEsc}" title=":${nameEsc}:" loading="lazy" />`
-        )
+        return `<img width="32" height="32" class="emoji" src="${e.url}" tabindex="${tabindex}" data-emoji="${dataEmoji}" alt="${nameEsc}" title=":${nameEsc}:" loading="lazy" />`
       })
       .join('\n')
 
-    return (`
+    return `
 <div class="fk-d-menu -animated -expanded" data-identifier="emoji-picker" data-content="" aria-expanded="true" role="dialog">
   <div class="fk-d-menu__inner-content">
     <div class="emoji-picker">
@@ -71,7 +69,7 @@ export function installNachonekoPicker(
     </div>
   </div>
 </div>
-    `)
+    `
   }
 
   const injector = injectNachonekoEmojiFeature({

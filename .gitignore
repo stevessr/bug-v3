@@ -32,3 +32,6 @@ coverage
 test-results/
 playwright-report/
 components.d.ts
+dist-userscript
+dist-userscript-min
+

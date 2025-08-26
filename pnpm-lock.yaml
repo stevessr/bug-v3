@@ -114,6 +114,9 @@ importers:
       sortablejs:
         specifier: ^1.15.6
         version: 1.15.6
+      terser:
+        specifier: ^5.43.1
+        version: 5.43.1
       typescript:
         specifier: ~5.8.0
         version: 5.8.3
@@ -3361,7 +3364,6 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.30
-    optional: true
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
@@ -4091,8 +4093,7 @@ snapshots:
 
   buffer-equal-constant-time@1.0.1: {}
 
-  buffer-from@1.1.2:
-    optional: true
+  buffer-from@1.1.2: {}
 
   bundle-name@4.1.0:
     dependencies:
@@ -4141,8 +4142,7 @@ snapshots:
 
   commander@10.0.1: {}
 
-  commander@2.20.3:
-    optional: true
+  commander@2.20.3: {}
 
   compute-scroll-into-view@1.0.20: {}
 
@@ -5212,10 +5212,8 @@ snapshots:
     dependencies:
       buffer-from: 1.1.2
       source-map: 0.6.1
-    optional: true
 
-  source-map@0.6.1:
-    optional: true
+  source-map@0.6.1: {}
 
   speakingurl@14.0.1: {}
 
@@ -5286,7 +5284,6 @@ snapshots:
       acorn: 8.15.0
       commander: 2.20.3
       source-map-support: 0.5.21
-    optional: true
 
   throttle-debounce@5.0.2: {}
 

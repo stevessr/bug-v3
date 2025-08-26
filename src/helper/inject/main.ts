@@ -59,14 +59,14 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
         return
       }
 
-  // generator() returns the full picker markup (root element like in simple.html).
-  const container = document.createElement('div')
-  container.innerHTML = config.emojiContentGeneratorFn().trim()
-  const emojiPicker = container.firstElementChild as HTMLElement | null
-  if (!emojiPicker) return
-  // append the generator-produced root node directly
-  document.body.appendChild(emojiPicker)
-  createdNodes.push(emojiPicker)
+      // generator() returns the full picker markup (root element like in simple.html).
+      const container = document.createElement('div')
+      container.innerHTML = config.emojiContentGeneratorFn().trim()
+      const emojiPicker = container.firstElementChild as HTMLElement | null
+      if (!emojiPicker) return
+      // append the generator-produced root node directly
+      document.body.appendChild(emojiPicker)
+      createdNodes.push(emojiPicker)
 
       // 统一定位逻辑：优先使用回复控件(`#reply-control`)定位（若存在），否则回退到编辑器包裹器定位
       const replyControl = document.querySelector('#reply-control')
@@ -146,12 +146,12 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
           if (textArea) {
             let emojiText = ''
             if (outputFormat === 'html') {
-              emojiText = `<img src="${imgElement.src}" alt="${imgElement.alt}" width="${Math.round(parseInt(width) * imageScale / 100)}" height="${Math.round(parseInt(height) * imageScale / 100)}" />`
+              emojiText = `<img src="${imgElement.src}" alt="${imgElement.alt}" width="${Math.round((parseInt(width) * imageScale) / 100)}" height="${Math.round((parseInt(height) * imageScale) / 100)}" />`
             } else {
               // Default to markdown format
               emojiText = `![${imgElement.alt}|${width}x${height},${imageScale}%](${imgElement.src}) `
             }
-            
+
             const startPos = textArea.selectionStart
             const endPos = textArea.selectionEnd
             textArea.value =
@@ -163,8 +163,8 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
             const event = new Event('input', { bubbles: true, cancelable: true })
             textArea.dispatchEvent(event)
           } else if (richEle) {
-            const scaledWidth = Math.round(parseInt(width) * imageScale / 100)
-            const scaledHeight = Math.round(parseInt(height) * imageScale / 100)
+            const scaledWidth = Math.round((parseInt(width) * imageScale) / 100)
+            const scaledHeight = Math.round((parseInt(height) * imageScale) / 100)
             const imgTemplate = `<img src="${imgElement.src}" alt="${imgElement.alt}" width="${width}" height="${height}" data-scale="${imageScale}" style="width: ${scaledWidth}px; height: ${scaledHeight}px">`
             try {
               const dt = new DataTransfer()
@@ -197,20 +197,20 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
     if (stopped) return
     try {
       const toolbars = document.querySelectorAll(config.toolbarSelector)
-      
-      toolbars.forEach(toolbar => {
+
+      toolbars.forEach((toolbar) => {
         // Skip if we've already processed this toolbar
         if (processedToolbars.has(toolbar)) {
           return
         }
-        
+
         // Check if this toolbar already has our button
         const existingButton = toolbar.querySelector(`.${config.emojiButtonClass}`)
         if (existingButton) {
           processedToolbars.add(toolbar)
           return
         }
-        
+
         console.log('[nacho-inject] inserting emoji button into new toolbar', toolbar)
         const emojiButton = createEmojiButtonElement({ buttonClass: config.emojiButtonClass })
         toolbar.appendChild(emojiButton)
@@ -310,7 +310,7 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
     })
     // 移除创建的 DOM
     createdNodes.forEach((n) => n && n.parentNode && n.parentNode.removeChild(n))
-  // 不移除样式（注入器不负责样式）
+    // 不移除样式（注入器不负责样式）
   }
 
   return { stop }
