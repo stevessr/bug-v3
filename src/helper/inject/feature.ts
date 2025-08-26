@@ -56,7 +56,7 @@ export function installNachonekoPicker(
       })
       .join('\n')
 
-  return `
+    return `
 <div class="fk-d-menu -animated -expanded" data-identifier="emoji-picker" data-content="" aria-expanded="true" role="dialog">
   <div class="fk-d-menu__inner-content">
     <div class="emoji-picker">

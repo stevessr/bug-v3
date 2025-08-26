@@ -254,15 +254,44 @@ export default defineComponent({
       const mdRegex = /!\[([^\]]*)\]\(([^)]+)\)/g
       let m: RegExpExecArray | null
       while ((m = mdRegex.exec(input))) {
-        const alt = m[1] || ''
+        const rawAlt = m[1] || ''
         const url = m[2] || ''
+        let displayName = rawAlt
+        let width: number | undefined = undefined
+        let height: number | undefined = undefined
+        let scale: number | undefined = undefined
+        const pipeIdx = rawAlt.indexOf('|')
+        if (pipeIdx >= 0) {
+          displayName = rawAlt.slice(0, pipeIdx)
+          const meta = rawAlt.slice(pipeIdx + 1).trim()
+          const parts = meta
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+          for (const p of parts) {
+            const dimMatch = p.match(/^(\d{1,5})x(\d{1,5})$/)
+            if (dimMatch) {
+              width = parseInt(dimMatch[1], 10)
+              height = parseInt(dimMatch[2], 10)
+              continue
+            }
+            const scaleMatch = p.match(/^(\d{1,3})%$/)
+            if (scaleMatch) {
+              scale = parseInt(scaleMatch[1], 10)
+              continue
+            }
+          }
+        }
         out.push({
           UUID: '',
           id: '',
-          displayName: alt,
+          displayName: displayName,
           displayUrl: url,
           realUrl: url,
           variants: {},
+          width,
+          height,
+          scale,
         })
       }
       return out
@@ -335,7 +364,9 @@ export default defineComponent({
             continue
           }
           seen.add(key)
-          deduped.push(e)
+          // ensure scale is not persisted: always read scale from settings when inserting
+          const { scale, ...clean } = e
+          deduped.push(clean)
         }
         emit('imported', { groupUUID: props.groupUUID, emojis: deduped, skipped })
       }

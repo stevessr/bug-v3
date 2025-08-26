@@ -58,7 +58,9 @@ test('picker opens and search filters emojis', async () => {
   // give script a moment to run
   await page.waitForTimeout(200)
 
-    const visible = await page.$$eval(`${pickerSelector} .emoji-picker__section-emojis .emoji`, (nodes) =>
+  const visible = await page.$$eval(
+    `${pickerSelector} .emoji-picker__section-emojis .emoji`,
+    (nodes) =>
       nodes
         .filter((n) => (n as HTMLElement).style.display !== 'none')
         .map((n) => ({
@@ -66,11 +68,15 @@ test('picker opens and search filters emojis', async () => {
           alt: (n as HTMLImageElement).getAttribute('alt'),
           data: (n as HTMLImageElement).getAttribute('data-emoji'),
         })),
-    )
+  )
 
-    expect(visible.length).toBeGreaterThan(0)
-    const someMatch = visible.some((v) => String(v.src || v.alt || v.data).toLowerCase().includes('beta'))
-    expect(someMatch).toBe(true)
+  expect(visible.length).toBeGreaterThan(0)
+  const someMatch = visible.some((v) =>
+    String(v.src || v.alt || v.data)
+      .toLowerCase()
+      .includes('beta'),
+  )
+  expect(someMatch).toBe(true)
 
   await context.close()
 })

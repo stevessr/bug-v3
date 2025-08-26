@@ -5,6 +5,9 @@ export type ParsedEmoji = {
   displayUrl: string
   realUrl: string
   variants?: Record<string, string>
+  width?: number
+  height?: number
+  scale?: number
 }
 
 function simpleHash(s: string) {
@@ -88,15 +91,46 @@ export function parseEmojisFromText(input: string): ParsedEmoji[] {
   const mdRegex = /!\[([^\]]*)\]\(([^)]+)\)/g
   let m: RegExpExecArray | null
   while ((m = mdRegex.exec(input))) {
-    const alt = m[1] || ''
+    const rawAlt = m[1] || ''
     const url = m[2] || ''
+    // support alt metadata like: "label|490x500,30%" where 30% is scale
+    let displayName = rawAlt
+    let width: number | undefined = undefined
+    let height: number | undefined = undefined
+    let scale: number | undefined = undefined
+    const pipeIdx = rawAlt.indexOf('|')
+    if (pipeIdx >= 0) {
+      displayName = rawAlt.slice(0, pipeIdx)
+      const meta = rawAlt.slice(pipeIdx + 1).trim()
+      // meta could be "490x500,30%" or "490x500" or ",30%"
+      const parts = meta
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+      for (const p of parts) {
+        const dimMatch = p.match(/^(\d{1,5})x(\d{1,5})$/)
+        if (dimMatch) {
+          width = parseInt(dimMatch[1], 10)
+          height = parseInt(dimMatch[2], 10)
+          continue
+        }
+        const scaleMatch = p.match(/^(\d{1,3})%$/)
+        if (scaleMatch) {
+          scale = parseInt(scaleMatch[1], 10)
+          continue
+        }
+      }
+    }
     out.push({
-      UUID: simpleHash(url + alt),
+      UUID: simpleHash(url + rawAlt),
       id: simpleHash(url),
-      displayName: alt,
+      displayName: displayName,
       displayUrl: url,
       realUrl: url,
       variants: {},
+      width,
+      height,
+      scale,
     })
   }
   if (out.length) return out

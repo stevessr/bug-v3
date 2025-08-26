@@ -38,10 +38,27 @@ function save(groups?: EmojiGroup[]) {
   current.lastModified = new Date()
   // preserve any existing ungrouped payload if present
   const existing = storage.loadPayload()
+  // ensure we NEVER persist a `scale` field on emoji objects — scale must always come from settings
+  function stripScaleFromEmoji(e: any) {
+    if (!e || typeof e !== 'object') return e
+    const { scale, ...rest } = e
+    return { ...rest }
+  }
+
+  function stripScaleFromGroups(gs: EmojiGroup[] | undefined) {
+    if (!Array.isArray(gs)) return []
+    return gs.map((g) => {
+      const emojis = Array.isArray((g as any).emojis)
+        ? (g as any).emojis.map((ee: any) => stripScaleFromEmoji(ee))
+        : []
+      return { ...g, emojis }
+    })
+  }
+
   const payload: PersistPayload = {
     Settings: current,
-    emojiGroups: groups || [],
-    ungrouped: existing?.ungrouped || [],
+    emojiGroups: stripScaleFromGroups(groups || []),
+    ungrouped: (existing?.ungrouped || []).map((u: any) => stripScaleFromEmoji(u)),
   }
   storage.savePayload(payload)
   listeners.forEach((l) => l(current))

@@ -118,7 +118,11 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
               const imgs = emojiPicker.querySelectorAll('.emoji-picker__section-emojis .emoji')
               imgs.forEach((img) => {
                 try {
-                  const txt = (img.getAttribute('data-emoji') || img.getAttribute('alt') || '').toLowerCase()
+                  const txt = (
+                    img.getAttribute('data-emoji') ||
+                    img.getAttribute('alt') ||
+                    ''
+                  ).toLowerCase()
                   if (!q) (img as HTMLElement).style.display = ''
                   else (img as HTMLElement).style.display = txt.includes(q) ? '' : 'none'
                 } catch (_) {}
