@@ -97,7 +97,7 @@ export default defineComponent({
       try {
         console.info('[HotTab] enter hot tab - gridColumns =', (settings as any).gridColumns || 4)
       } catch (_) {}
-      items.value = store.getHot()
+      items.value = store.getHot().filter((e: any) => e.usageCount > 0)
       // compute stats
       const groups = store.getGroups()
       let emojiCount = 0
