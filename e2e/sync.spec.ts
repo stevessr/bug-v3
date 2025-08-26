@@ -19,11 +19,14 @@ test('sync pipeline end-to-end (unpacked dist)', async () => {
     args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
   })
 
+  // Wait a bit for extension to load
+  await new Promise((resolve) => setTimeout(resolve, 2000))
+
   // Find extension id by inspecting background pages
   let extensionId: string | null = null
   for (const bg of context.backgroundPages()) {
     const url = bg.url()
-    const match = url.match(/^chrome-extension:\/\/([a-p0-9]+)\//)
+    const match = url.match(/^chrome-extension:\/\/([a-z]+)\//)
     if (match) {
       extensionId = match[1]
       break
@@ -35,7 +38,7 @@ test('sync pipeline end-to-end (unpacked dist)', async () => {
     // inspect service workers in context — may not be present in headless
     for (const t of context.serviceWorkers()) {
       const url = t.url()
-      const match = url.match(/^chrome-extension:\/\/([a-p0-9]+)\//)
+      const match = url.match(/^chrome-extension:\/\/([a-z]+)\//)
       if (match) {
         extensionId = match[1]
         break
@@ -53,11 +56,20 @@ test('sync pipeline end-to-end (unpacked dist)', async () => {
   const page = await context.newPage()
   await page.goto(optionsUrl)
 
-  // Wait for form to render
-  await page.waitForSelector('a-card')
+  // capture logs from the options page
+  page.on('console', (msg) => console.log('options page console>', msg.text()))
+
+  // Navigate to settings tab
+  await page.waitForSelector('.ant-menu-item')
+  await page.click('.ant-menu-item:has-text("设置")')
+
+  // Wait for settings form to render
+  await page.waitForSelector('.ant-form')
 
   // Change grid columns select to '5'
-  await page.click('label:has-text("列数") + .ant-form-item-control input')
+  const gridColumnsSelect = '.ant-form-item:has-text("列数") .ant-select'
+  await page.click(gridColumnsSelect)
+  await page.click('.ant-select-item:has-text("5")')
   // simpler: set select value via evaluate
   await page.evaluate(() => {
     try {
@@ -92,15 +104,15 @@ test('sync pipeline end-to-end (unpacked dist)', async () => {
 
   expect(sessionValue).not.toBeNull()
 
-  // check extended_payload in chrome.storage.local via background page evaluation
-  const bgPages = context.backgroundPages()
+  // check extended_payload in chrome.storage.local via both background pages and service workers
+  const bgPages = [...context.backgroundPages(), ...context.serviceWorkers()]
   let extendedExists = false
   for (const bg of bgPages) {
     try {
       const val = await bg.evaluate(() => {
         return new Promise((resolve: any) => {
           try {
-            // @ts-ignore - runtime chrome exists in extension background page
+            // @ts-ignore - runtime chrome exists in extension background page or service worker
             chrome.storage.local.get(['extended_payload'], (res: any) =>
               resolve(Boolean(res?.extended_payload)),
             )

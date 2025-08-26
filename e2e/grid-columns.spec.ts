@@ -33,6 +33,14 @@ test.describe('grid columns (Playwright)', () => {
       } catch (e) {}
     }, payload)
     await page.goto('/options.html')
+
+    // Wait for the collapse panel to be visible
+    await page.waitForSelector('.ant-collapse-header')
+
+    // Click on the collapse header to expand the emoji group
+    await page.click('.ant-collapse-header')
+
+    // Now wait for the emoji grid to be visible
     await page.waitForSelector('.emoji-grid')
     const el = await page.locator('.emoji-grid').first()
     const inline = await el.getAttribute('style')

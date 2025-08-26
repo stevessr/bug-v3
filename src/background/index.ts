@@ -23,6 +23,9 @@ try {
   })
 } catch (_) {}
 
+// expose last payload so tabs that open late can request it
+let lastPayloadGlobal: any = null
+
 function appendTelemetry(ev: any) {
   try {
     const item = { ts: Date.now(), ...ev }
@@ -191,6 +194,10 @@ const SyncManager = (function () {
   function onLocalPayloadUpdated(payload: any) {
     try {
       lastPayload = payload
+      // also keep a global copy accessible to requesters
+      try {
+        lastPayloadGlobal = payload
+      } catch (_) {}
       log('SyncManager: local updated, scheduling session sync')
       appendTelemetry({ event: 'local_payload_updated' })
       // start session timer (1s)
@@ -233,13 +240,43 @@ const SyncManager = (function () {
       log('SyncManager: broadcasting session payload')
       // broadcast to all tabs so content scripts can set sessionStorage
       try {
-        // instruct all tabs to mark session pending and broadcast session payload
-        sendMessageToAllTabs({
-          type: 'set-local-flag',
-          key: 'bugcopilot_flag_session_pending',
-          value: 'true',
-        })
-        broadcastToTabs({ type: 'sync-session', payload: lastPayload })
+        // write a session copy to chrome.storage.local first so late tabs can pick it up
+        try {
+          if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set(
+              { session_payload: lastPayload, session_pending_global: true },
+              () => {
+                try {
+                  // after persisted, instruct all tabs to mark session pending and broadcast session payload
+                  sendMessageToAllTabs({
+                    type: 'set-local-flag',
+                    key: 'bugcopilot_flag_session_pending',
+                    value: 'true',
+                  })
+                  broadcastToTabs({ type: 'sync-session', payload: lastPayload })
+                } catch (_) {}
+              },
+            )
+          } else {
+            // fallback: if storage not available, proceed with broadcast
+            sendMessageToAllTabs({
+              type: 'set-local-flag',
+              key: 'bugcopilot_flag_session_pending',
+              value: 'true',
+            })
+            broadcastToTabs({ type: 'sync-session', payload: lastPayload })
+          }
+        } catch (_) {
+          // if setting storage fails, fallback to broadcast
+          try {
+            sendMessageToAllTabs({
+              type: 'set-local-flag',
+              key: 'bugcopilot_flag_session_pending',
+              value: 'true',
+            })
+            broadcastToTabs({ type: 'sync-session', payload: lastPayload })
+          } catch (_) {}
+        }
         // start ack timeout waiting for stage-ack
         try {
           if (ackTimeout) clearTimeout(ackTimeout)
@@ -353,12 +390,38 @@ const SyncManager = (function () {
         // resend the stage messages
         if (stage === 'session') {
           try {
-            sendMessageToAllTabs({
-              type: 'set-local-flag',
-              key: 'bugcopilot_flag_session_pending',
-              value: 'true',
-            })
-            broadcastToTabs({ type: 'sync-session', payload: lastPayload })
+            // ensure session_payload persisted before retrying broadcast
+            try {
+              if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.set(
+                  { session_payload: lastPayload, session_pending_global: true },
+                  () => {
+                    try {
+                      sendMessageToAllTabs({
+                        type: 'set-local-flag',
+                        key: 'bugcopilot_flag_session_pending',
+                        value: 'true',
+                      })
+                      broadcastToTabs({ type: 'sync-session', payload: lastPayload })
+                    } catch (_) {}
+                  },
+                )
+              } else {
+                sendMessageToAllTabs({
+                  type: 'set-local-flag',
+                  key: 'bugcopilot_flag_session_pending',
+                  value: 'true',
+                })
+                broadcastToTabs({ type: 'sync-session', payload: lastPayload })
+              }
+            } catch (_) {
+              sendMessageToAllTabs({
+                type: 'set-local-flag',
+                key: 'bugcopilot_flag_session_pending',
+                value: 'true',
+              })
+              broadcastToTabs({ type: 'sync-session', payload: lastPayload })
+            }
           } catch (_) {}
           try {
             if (ackTimeout) clearTimeout(ackTimeout)
@@ -411,6 +474,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
       try {
         if (msg && msg.type === 'payload-updated') {
           try {
+            log('received payload-updated from page, payload keys:', Object.keys(msg.payload || {}))
             SyncManager.onLocalPayloadUpdated(msg.payload)
           } catch (_) {}
           sendResponse({ ok: true })
@@ -429,6 +493,29 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         if (msg && msg.type === 'stage-ack') {
           try {
             SyncManager.onStageAck(msg.stage)
+          } catch (_) {}
+          sendResponse({ ok: true })
+          return
+        }
+        // content script requesting the current session payload (e.g., late-initialized tab)
+        if (msg && msg.type === 'request-session-payload') {
+          try {
+            if (lastPayloadGlobal) {
+              // if tabs API available, respond only to sender tab
+              try {
+                if (chrome.tabs && sender && sender.tab && sender.tab.id != null) {
+                  chrome.tabs.sendMessage(sender.tab.id, {
+                    type: 'sync-session',
+                    payload: lastPayloadGlobal,
+                  })
+                } else {
+                  // fallback: broadcast to all
+                  broadcastToTabs({ type: 'sync-session', payload: lastPayloadGlobal })
+                }
+              } catch (_) {
+                broadcastToTabs({ type: 'sync-session', payload: lastPayloadGlobal })
+              }
+            }
           } catch (_) {}
           sendResponse({ ok: true })
           return

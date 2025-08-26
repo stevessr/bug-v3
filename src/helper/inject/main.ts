@@ -108,6 +108,28 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
         listeners.push(() => document.removeEventListener('click', handleClickOutside))
       }, 0)
 
+      // Attach filter input listener using DOM APIs (avoids inline script and works with CSP)
+      try {
+        const filterInput = emojiPicker.querySelector('.filter-input') as HTMLInputElement | null
+        if (filterInput) {
+          const filterHandler = function () {
+            try {
+              const q = (filterInput.value || '').trim().toLowerCase()
+              const imgs = emojiPicker.querySelectorAll('.emoji-picker__section-emojis .emoji')
+              imgs.forEach((img) => {
+                try {
+                  const txt = (img.getAttribute('data-emoji') || img.getAttribute('alt') || '').toLowerCase()
+                  if (!q) (img as HTMLElement).style.display = ''
+                  else (img as HTMLElement).style.display = txt.includes(q) ? '' : 'none'
+                } catch (_) {}
+              })
+            } catch (_) {}
+          }
+          filterInput.addEventListener('input', filterHandler)
+          listeners.push(() => filterInput.removeEventListener('input', filterHandler))
+        }
+      } catch (_) {}
+
       emojiPicker.addEventListener('click', function (e) {
         const target = e.target as HTMLElement
         if (target && target.tagName === 'IMG') {

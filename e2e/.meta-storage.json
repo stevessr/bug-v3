@@ -1,0 +1,59 @@
+{
+  "cookies": [
+    {
+      "name": "_t",
+      "value": "NODxwu7%2F%2FMBUlx8V4qpybHn%2BGDEgV7v0ZYGviDMfqp5xmwwi1L3GrMYNiF7XVVGyeLNKqaByaJPY%2F8H%2BGSSZDo7srDhawJmb4orI8a38iwue%2BgZpBhItcbrnJasNAmS7ivBm5soBOFgIz70q8GZZ%2BQJ8uhz25SgsVu5aDjI41%2B0ha6aWOtT6p3cpr5xB5W989G6jLZgHJZtQ22xIwdn0ZNjuYTwcZjJNc1ICVA%2BEhTQR3KQ8UX22Tx92CgX0PfwY7jZOFfYM%2FYBFQ4iWaxb%2BRswl8iTjgm6L72Y517JxtXNICQxD4JcHCaIPfGeSN0izNk0p1o1Ocjs%3D--WHS0usfGf25guwNh--Kj3Vnwqx18P9U5hLjgJT0g%3D%3D",
+      "domain": "meta.discourse.org",
+      "path": "/",
+      "expires": 1761390928.666458,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_forum_session",
+      "value": "a%2BMnCMo5p0bqc1vieTP0ag7%2BpTZmdHXBPcWz8ghbtQ9qKtHkSksRYsFymQ3Mr2KaXY%2FSHXEeu55Z3%2B%2B1dzXTRHbnSWeahjU0Dp7cHqz4t4bOz0DkN6GZK9Lb7QPQg3wbmEyfegLiivIGggGRWxegrDRjesBm7lTfBF%2FVrOlG2yfpXGsG7OQ4cEVk1kDWiLfY3AO1tyetu2u%2FQ8WD5C4rdY9cNsC8u7Rt8%2F3N8tDUGqRSIi2jRJCvgp6bkmMYeeARw3VfIz%2BA7xsitGupLdtwrkhtS0GYebTJhXHkcLuB5nOK3pBM4D%2FacbbI4W2gyoIm70LUanLWiwkZ8wTqvWqfKJSmn3ldvEO19fypOfINbIhB2vFXfzRAwjBO5AZIt7zmLgcS6Lm79h9s5GveHjKeND%2FnbtQF5q169HVc%2B1MXs4ZtPay7WnAtBNheMpBodE%2BtIJOYh7s9BBsE9ni0wDQGcVdcs9pdW%2FUAdcw%3D--lrW5CJLp%2BZYGlQyf--tEHGyUqlEgkHZJ%2FVZfLwRA%3D%3D",
+      "domain": "meta.discourse.org",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://meta.discourse.org",
+      "localStorage": [
+        {
+          "name": "__mbLastAjax",
+          "value": "1756206934051"
+        },
+        {
+          "name": "discourse_sidebar-section-tags-collapsed",
+          "value": "false"
+        },
+        {
+          "name": "discourse_sidebar-section-categories-collapsed",
+          "value": "false"
+        },
+        {
+          "name": "safeLocalStorage",
+          "value": "true"
+        },
+        {
+          "name": "discourse_push_notifications_subscribed-155785",
+          "value": ""
+        },
+        {
+          "name": "discourse_desktop_notifications_focus-tracker",
+          "value": "07a883ebd74545d08f5c26aa7a615ca9"
+        },
+        {
+          "name": "discourse_sidebar-section-community-collapsed",
+          "value": "false"
+        }
+      ]
+    }
+  ]
+}

@@ -48,74 +48,58 @@ try {
 } catch (_) {}
 
 // Polling watcher: only active when pending flags exist in this tab
-const PollWatcher = (function () {
+const PollWatcher = (() => {
   let intervalId: any = null
 
   function checkOnce() {
     try {
-      // if session pending, check sessionStorage for payload
+      // session pending: if sessionStorage has payload, clear flag and ack
       try {
         const sessionPending =
           window.localStorage.getItem('bugcopilot_flag_session_pending') === 'true'
         if (sessionPending) {
           const sess = window.sessionStorage.getItem('bugcopilot_settings_v1')
           if (sess) {
-            // session applied: clear local pending and ack background
             try {
               window.localStorage.removeItem('bugcopilot_flag_session_pending')
             } catch (_) {}
             try {
               if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-                chrome.runtime.sendMessage(
-                  { type: 'stage-ack', stage: 'session' },
-                  (_resp: any) => {
-                    try {
-                      if (chrome.runtime && chrome.runtime.lastError) {
-                        log('content-script sendMessage error:', chrome.runtime.lastError)
-                      }
-                    } catch (_) {}
-                  },
-                )
+                chrome.runtime.sendMessage({ type: 'stage-ack', stage: 'session' })
               }
             } catch (_) {}
           }
         }
       } catch (_) {}
 
-      // if extended pending, check chrome.storage.local.extended_payload
+      // extended pending: check chrome.storage.local.extended_payload and ack
       try {
         const extendedPending =
           window.localStorage.getItem('bugcopilot_flag_extended_pending') === 'true'
-        if (extendedPending) {
-          if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-            chrome.storage.local.get(['extended_payload'], (res: any) => {
-              try {
-                if (res && res.extended_payload) {
-                  try {
-                    window.localStorage.removeItem('bugcopilot_flag_extended_pending')
-                  } catch (_) {}
-                  try {
-                    if (
-                      typeof chrome !== 'undefined' &&
-                      chrome.runtime &&
-                      chrome.runtime.sendMessage
-                    ) {
-                      chrome.runtime.sendMessage(
-                        { type: 'stage-ack', stage: 'extended' },
-                        (_resp: any) => {
-                          try {
-                            if (chrome.runtime && chrome.runtime.lastError) {
-                              log('content-script sendMessage error:', chrome.runtime.lastError)
-                            }
-                          } catch (_) {}
-                        },
-                      )
-                    }
-                  } catch (_) {}
-                }
-              } catch (_) {}
-            })
-          }
+        if (
+          extendedPending &&
+          typeof chrome !== 'undefined' &&
+          chrome.storage &&
+          chrome.storage.local
+        ) {
+          chrome.storage.local.get(['extended_payload'], (res: any) => {
+            try {
+              if (res && res.extended_payload) {
+                try {
+                  window.localStorage.removeItem('bugcopilot_flag_extended_pending')
+                } catch (_) {}
+                try {
+                  if (
+                    typeof chrome !== 'undefined' &&
+                    chrome.runtime &&
+                    chrome.runtime.sendMessage
+                  ) {
+                    chrome.runtime.sendMessage({ type: 'stage-ack', stage: 'extended' })
+                  }
+                } catch (_) {}
+              }
+            } catch (_) {}
+          })
         }
       } catch (_) {}
     } catch (_) {}
@@ -136,9 +120,11 @@ const PollWatcher = (function () {
           log('PollWatcher.stop')
         } catch (_) {}
         clearInterval(intervalId)
+        intervalId = null
       }
-    } catch (_) {}
-    intervalId = null
+    } catch (_) {
+      intervalId = null
+    }
   }
 
   // initial start check
@@ -152,6 +138,41 @@ const PollWatcher = (function () {
   return { start, stop }
 })()
 
+// If session pending but sessionStorage is empty, request payload from background
+try {
+  const sessionPending = window.localStorage.getItem('bugcopilot_flag_session_pending') === 'true'
+  const hasSession = Boolean(window.sessionStorage.getItem('bugcopilot_settings_v1'))
+  if (sessionPending && !hasSession) {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'request-session-payload' })
+      }
+    } catch (_) {}
+  }
+} catch (_) {}
+
+// also try to read session payload from chrome.storage.local (for late tabs)
+try {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(['session_payload'], (res: any) => {
+      try {
+        const payload = res?.session_payload
+        if (payload && !window.sessionStorage.getItem('bugcopilot_settings_v1')) {
+          try {
+            window.sessionStorage.setItem('bugcopilot_settings_v1', JSON.stringify(payload))
+            // notify background that session applied
+            try {
+              if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                chrome.runtime.sendMessage({ type: 'stage-ack', stage: 'session' })
+              }
+            } catch (_) {}
+          } catch (_) {}
+        }
+      } catch (_) {}
+    })
+  }
+} catch (_) {}
+
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener((msg: any, sender: any) => {
     try {
@@ -163,6 +184,37 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
           // start polling when a pending flag is set
           try {
             PollWatcher.start()
+          } catch (_) {}
+          // if session pending was set, try to read session_payload immediately
+          try {
+            if (msg.key === 'bugcopilot_flag_session_pending' && String(msg.value) === 'true') {
+              try {
+                if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                  chrome.storage.local.get(['session_payload'], (res: any) => {
+                    try {
+                      const payload = res?.session_payload
+                      if (payload && !window.sessionStorage.getItem('bugcopilot_settings_v1')) {
+                        try {
+                          window.sessionStorage.setItem(
+                            'bugcopilot_settings_v1',
+                            JSON.stringify(payload),
+                          )
+                          try {
+                            if (
+                              typeof chrome !== 'undefined' &&
+                              chrome.runtime &&
+                              chrome.runtime.sendMessage
+                            ) {
+                              chrome.runtime.sendMessage({ type: 'stage-ack', stage: 'session' })
+                            }
+                          } catch (_) {}
+                        } catch (_) {}
+                      }
+                    } catch (_) {}
+                  })
+                }
+              } catch (_) {}
+            }
           } catch (_) {}
         } catch (_) {}
         return
@@ -192,6 +244,10 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
           const payload = msg.payload
           if (payload) {
             try {
+              log(
+                'content-script: received sync-session with payload keys:',
+                Object.keys(payload || {}),
+              )
               window.sessionStorage.setItem('bugcopilot_settings_v1', JSON.stringify(payload))
               log('sessionStorage updated via sync-session')
               // after applying to sessionStorage, clear the session_pending flag in localStorage for this tab

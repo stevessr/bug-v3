@@ -20,7 +20,33 @@ export function installNachonekoPicker(
   opts?: { toolbarSelector?: string; textAreaSelector?: string; richEditorSelector?: string },
 ) {
   const generator = () => {
-    const images = emojis
+    // Try to read the latest payload from localStorage so the picker can reflect runtime updates
+    let runtimeEmojis: Array<EmojiItem> | null = null
+    try {
+      const raw =
+        typeof window !== 'undefined' ? window.localStorage.getItem('bugcopilot_settings_v1') : null
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        const arr: EmojiItem[] = []
+        if (Array.isArray(parsed?.emojiGroups)) {
+          for (const g of parsed.emojiGroups) {
+            if (Array.isArray(g.emojis)) {
+              for (const em of g.emojis) arr.push(em)
+            }
+          }
+        }
+        if (Array.isArray(parsed?.ungrouped)) {
+          for (const em of parsed.ungrouped) arr.push(em)
+        }
+        if (arr.length) runtimeEmojis = arr
+      }
+    } catch (_) {
+      runtimeEmojis = null
+    }
+
+    const useEmojis = runtimeEmojis || emojis
+
+    const images = useEmojis
       .map((e, idx) => {
         const nameEsc = String(e.name || '').replace(/"/g, '&quot;')
         // tabindex: first emoji tabindex=0, others -1 (match example)
@@ -30,7 +56,7 @@ export function installNachonekoPicker(
       })
       .join('\n')
 
-    return `
+  return `
 <div class="fk-d-menu -animated -expanded" data-identifier="emoji-picker" data-content="" aria-expanded="true" role="dialog">
   <div class="fk-d-menu__inner-content">
     <div class="emoji-picker">
@@ -69,7 +95,7 @@ export function installNachonekoPicker(
     </div>
   </div>
 </div>
-    `
+  `
   }
 
   const injector = injectNachonekoEmojiFeature({

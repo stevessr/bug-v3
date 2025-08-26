@@ -1,24 +1,8 @@
 import process from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
-import net from 'node:net'
 
-// find a free ephemeral port
-async function getFreePort(): Promise<number> {
-  return await new Promise((resolve, reject) => {
-    const srv = net.createServer()
-    srv.unref()
-    srv.on('error', reject)
-    srv.listen(0, () => {
-      // @ts-ignore - address can be string | AddressInfo
-      const addr = srv.address()
-      const port = typeof addr === 'object' && addr ? addr.port : 5173
-      srv.close(() => resolve(port))
-    })
-  })
-}
-
-const port = process.env.PLAYWRIGHT_PORT ? Number(process.env.PLAYWRIGHT_PORT) : await getFreePort()
-const baseURL = process.env.CI ? 'http://localhost:4173' : `http://localhost:${port}`
+const port = process.env.PLAYWRIGHT_PORT ? Number(process.env.PLAYWRIGHT_PORT) : 4175
+const baseURL = `http://localhost:${port}`
 
 export default defineConfig({
   testDir: './e2e',
@@ -43,29 +27,34 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        args: [
-          `--disable-extensions-except=./dist`,
-          `--load-extension=./dist`,
-        ],
+        launchOptions: {
+          args: [
+            `--disable-extensions-except=D:/ssh/learn/extension/bug-copilot/dist`,
+            `--load-extension=D:/ssh/learn/extension/bug-copilot/dist`,
+          ],
+        },
       },
     },
     {
       name: 'edge',
       use: {
         channel: 'msedge',
-        args: [
-          `--disable-extensions-except=./dist`,
-          `--load-extension=./dist`,
-        ],
+        launchOptions: {
+          args: [
+            `--disable-extensions-except=D:/ssh/learn/extension/bug-copilot/dist`,
+            `--load-extension=D:/ssh/learn/extension/bug-copilot/dist`,
+          ],
+        },
       },
     },
   ],
 
   webServer: {
-    // use the dynamically selected port
-    command: `pnpm dev --port ${port}`,
-    port,
+    // use the dynamically selected port to serve built files
+    command: `pnpm preview --port ${port} --host 127.0.0.1`,
     // allow reusing an existing preview server during development runs
     reuseExistingServer: !process.env.CI,
+    url: baseURL,
+    timeout: 30 * 1000,
   },
 })

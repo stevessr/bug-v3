@@ -40,12 +40,7 @@
       </a-tab-pane>
 
       <a-tab-pane key="order" tab="表情组顺序管理">
-        <draggable
-          v-model="groups"
-          class="group-cards"
-          item-key="UUID"
-          @end="onDragEnd"
-        >
+        <draggable v-model="groups" class="group-cards" item-key="UUID" @end="onDragEnd">
           <template #item="{ element: g }">
             <CustomDraggableCard :group="g" />
           </template>
@@ -85,7 +80,16 @@ import { isLikelyUrl } from '../utils/isLikelyUrl'
 import type { EmojiGroup } from '../../data/type/emoji/emoji'
 
 const groups = ref<EmojiGroup[]>([])
-const gridCols = ref<number>(4)
+const gridCols = ref<number>(
+  (() => {
+    try {
+      const settings = store.getSettings()
+      return (settings && settings.gridColumns) || 4
+    } catch (_) {
+      return 4
+    }
+  })(),
+)
 const editMode = ref<boolean>(false)
 const activeTab = ref<string>('list')
 
@@ -126,8 +130,7 @@ function onSettingsChange(ev: any) {
     }
   } catch (_) {}
 }
-if (typeof window !== 'undefined')
-  window.addEventListener('app:settings-changed', onSettingsChange)
+if (typeof window !== 'undefined') window.addEventListener('app:settings-changed', onSettingsChange)
 
 function onCreated(g: any) {
   store.importPayload({ emojiGroups: [...(groups.value || []), g] })

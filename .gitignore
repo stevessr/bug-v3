@@ -35,4 +35,5 @@ components.d.ts
 dist-userscript
 dist-userscript-min
 
-e2e
+e2e/.tmp-user-data
+e2e/.meta-user-data

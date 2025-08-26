@@ -24,7 +24,7 @@ class CommunicationService {
   private init() {
     // 监听来自其他页面的消息
     try {
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
         chrome.runtime.onMessage.addListener((request: any, sender: any, sendResponse: any) => {
           if (request.type && request.from !== this.context) {
             this.handleMessage(request)
@@ -39,11 +39,13 @@ class CommunicationService {
 
     // 监听来自内容脚本的消息
     try {
-      window.addEventListener('message', (event) => {
-        if (event.data && event.data.type && event.data.from !== this.context) {
-          this.handleMessage(event.data)
-        }
-      })
+      if (typeof window !== 'undefined') {
+        window.addEventListener('message', (event) => {
+          if (event.data && event.data.type && event.data.from !== this.context) {
+            this.handleMessage(event.data)
+          }
+        })
+      }
     } catch (error) {
       console.warn('Failed to initialize window message listener:', error)
     }
@@ -93,9 +95,9 @@ class CommunicationService {
 
     // 发送到其他扩展页面（popup, options, background）
     try {
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
         chrome.runtime.sendMessage(message, (response: any) => {
-          if (chrome.runtime.lastError) {
+          if (chrome.runtime && chrome.runtime.lastError) {
             console.warn('Message sending failed:', chrome.runtime.lastError)
           }
         })
