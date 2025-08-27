@@ -19,7 +19,7 @@ interface imgbedConfig {
   imgBedUploadFolder: string
 }
 
-export function useImgBed() {
+function createImgBed() {
   // Modal control
   const showImgBedModal = ref(false)
 
@@ -148,4 +148,11 @@ export function useImgBed() {
       showImgBedModal.value = false
     },
   }
+}
+
+// export a singleton so multiple callers share the same reactive refs
+let _imgBedInstance: ReturnType<typeof createImgBed> | null = null
+export function useImgBed() {
+  if (!_imgBedInstance) _imgBedInstance = createImgBed()
+  return _imgBedInstance
 }

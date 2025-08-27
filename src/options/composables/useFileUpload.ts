@@ -1,6 +1,7 @@
-import { ref, type Ref } from 'vue'
+import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 import emojiGroupsStore from '../../data/update/emojiGroupsStore'
+import { useImgBed } from './useImgBed'
 
 // Helper function to convert a file to a data URL
 const fileToDataUrl = (file: File): Promise<string> => {
@@ -12,20 +13,10 @@ const fileToDataUrl = (file: File): Promise<string> => {
   })
 }
 
-// Define the properties this composable depends on from useImgBed
-interface ImgBedConfig {
-  useImgBed: Ref<boolean>
-  imgBedEndpoint: Ref<string>
-  imgBedAuthCode: Ref<string>
-  imgBedUploadChannel: Ref<string>
-  imgBedServerCompress: Ref<boolean>
-  imgBedAutoRetry: Ref<boolean>
-  imgBedUploadNameType: Ref<string>
-  imgBedReturnFormat: Ref<string>
-  imgBedUploadFolder: Ref<string>
-}
-
-export function useFileUpload(imgBedConfig: ImgBedConfig) {
+// This composable now integrates useImgBed internally and accepts binary inputs directly.
+export function useFileUpload() {
+  // Get imgbed config refs from shared composable
+  const imgBed = useImgBed()
   // Image Preview / Upload state
   const showImagePreview = ref(false)
   const previewImageUrl = ref('')
@@ -104,41 +95,45 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
     imageUrlInput.value = ''
   }
 
-  const remoteUpload = async (file: File) => {
-    if (!imgBedConfig.imgBedEndpoint.value) throw new Error('ImgBed endpoint 未配置')
-    const params = new URLSearchParams()
-    params.set('serverCompress', String(imgBedConfig.imgBedServerCompress.value))
-    params.set('uploadChannel', imgBedConfig.imgBedUploadChannel.value)
-    params.set('autoRetry', String(imgBedConfig.imgBedAutoRetry.value))
-    params.set('uploadNameType', imgBedConfig.imgBedUploadNameType.value)
-    params.set('returnFormat', imgBedConfig.imgBedReturnFormat.value)
-    if (imgBedConfig.imgBedUploadFolder.value)
-      params.set('uploadFolder', imgBedConfig.imgBedUploadFolder.value)
+  // Accept either a File or a Blob (binary) and optional filename
+  const remoteUpload = async (input: File | Blob, filename?: string) => {
+    const endpoint = imgBed.imgBedEndpoint.value
+    if (!endpoint) throw new Error('ImgBed endpoint 未配置')
 
-    const uploadUrl =
-      imgBedConfig.imgBedEndpoint.value +
-      'upload' +
-      (imgBedConfig.imgBedEndpoint.value.includes('?') ? '&' : '?') +
-      params.toString()
+    const params = new URLSearchParams()
+    params.set('serverCompress', String(imgBed.imgBedServerCompress.value))
+    params.set('uploadChannel', imgBed.imgBedUploadChannel.value)
+    params.set('autoRetry', String(imgBed.imgBedAutoRetry.value))
+    params.set('uploadNameType', imgBed.imgBedUploadNameType.value)
+    params.set('returnFormat', imgBed.imgBedReturnFormat.value)
+    if (imgBed.imgBedUploadFolder.value) params.set('uploadFolder', imgBed.imgBedUploadFolder.value)
+
+    const uploadUrl = endpoint + 'upload' + (endpoint.includes('?') ? '&' : '?') + params.toString()
 
     const fd = new FormData()
-    fd.append('file', file)
+    const fileToSend =
+      input instanceof File
+        ? input
+        : new File([input], filename || `upload-${Date.now()}.png`, {
+            type: input.type || 'image/png',
+          })
+    fd.append('file', fileToSend)
 
     const headers: HeadersInit = {}
-    if (imgBedConfig.imgBedAuthCode.value) {
-      headers['authcode'] = imgBedConfig.imgBedAuthCode.value
-      headers['X-Auth-Code'] = imgBedConfig.imgBedAuthCode.value
+    if (imgBed.imgBedAuthCode.value) {
+      headers['authcode'] = imgBed.imgBedAuthCode.value
+      headers['X-Auth-Code'] = imgBed.imgBedAuthCode.value
     }
 
-    const resp = await fetch(uploadUrl, { method: 'POST', body: fd, headers: headers })
+    const resp = await fetch(uploadUrl, { method: 'POST', body: fd, headers })
     if (!resp.ok) throw new Error(`上传失败: ${resp.status}`)
     const data = await resp.json()
     const src = Array.isArray(data) && data[0] && data[0].src ? data[0].src : null
     if (!src) throw new Error('返回格式不正确')
     try {
-      return new URL(src, imgBedConfig.imgBedEndpoint.value).href
+      return new URL(src, endpoint).href
     } catch (e) {
-      return imgBedConfig.imgBedEndpoint.value.replace(/\/upload\/?$/, '') + src
+      return endpoint.replace(/\/upload\/?$/, '') + src
     }
   }
 
@@ -148,8 +143,8 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
         (f) => f.originFileObj === file || (f.name === file.name && f.size === file.size),
       )
 
-    if (imgBedConfig.useImgBed.value) {
-      if (!imgBedConfig.imgBedEndpoint.value) {
+    if (imgBed.useImgBed.value) {
+      if (!imgBed.imgBedEndpoint.value) {
         message.error('ImgBed endpoint 未配置，请先配置 ImgBed 设置')
         return false
       }
@@ -243,6 +238,8 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
   }
 
   return {
+    // Expose the remoteUpload function so external components can call it directly
+    remoteUpload,
     showImagePreview,
     previewImageUrl,
     imageUrlInput,

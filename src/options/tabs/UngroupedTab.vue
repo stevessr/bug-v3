@@ -3,7 +3,9 @@
     <template #extra>
       <a-button type="primary" @click="showAddEmojiModal">添加表情</a-button>
     </template>
-    <div v-if="items.length === 0" style="text-align: center; padding: 20px;">当前没有未分组表情</div>
+    <div v-if="items.length === 0" style="text-align: center; padding: 20px">
+      当前没有未分组表情
+    </div>
     <div v-else>
       <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center">
         <a-select v-model:value="targetGroup" style="min-width: 220px" placeholder="选择目标分组">
@@ -20,17 +22,21 @@
         <a-button @click="selectAll">全选</a-button>
         <a-button @click="clearSelection">清空</a-button>
       </div>
-      <div style="margin-bottom: 16px;">
-        <a-input v-model:value="imgBedAuthCode" placeholder="请输入Imgbed Auth Code" style="width: 300px;" />
-      </div>
       <a-row :gutter="[16, 16]">
         <a-col v-for="e in items" :key="e.UUID" :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
           <a-card hoverable>
             <template #cover>
               <img
                 alt="emoji"
-                :src="e.displayUrl || e.realUrl"
-                style="width: 100%; height: 150px; object-fit: contain; padding: 10px;"
+                :src="toSrc(e.displayUrl || e.realUrl)"
+                style="
+                  width: 100%;
+                  height: 150px;
+                  object-fit: contain;
+                  padding: 10px;
+                  cursor: pointer;
+                "
+                @click="openPreview(e)"
               />
             </template>
             <a-card-meta :title="e.displayName || '（无名）'">
@@ -40,14 +46,16 @@
                 </a-tooltip>
               </template>
             </a-card-meta>
-            <div style="margin-top: 10px; text-align: right;">
+            <div style="margin-top: 10px; text-align: right">
               <a-checkbox v-model:checked="selectedMap[e.UUID]" @change="onCheck(e)" />
-              <a-button size="small" style="margin-left: 8px;" @click="moveSingle(e)">移动</a-button>
-              <a-button size="small" danger style="margin-left: 8px;" @click="deleteEmoji(e)">删除</a-button>
+              <a-button size="small" style="margin-left: 8px" @click="moveSingle(e)">移动</a-button>
+              <a-button size="small" danger style="margin-left: 8px" @click="deleteEmoji(e)"
+                >删除</a-button
+              >
               <a-button
                 v-if="isBase64Image(e.realUrl)"
                 size="small"
-                style="margin-left: 8px;"
+                style="margin-left: 8px"
                 :loading="uploadingEmojiUUID === e.UUID"
                 :disabled="!imgBedAuthCode"
                 @click="uploadEmojiImageToImgbed(e)"
@@ -76,6 +84,22 @@
       </a-form>
     </a-modal>
   </a-card>
+  <a-modal
+    v-model:open="previewVisible"
+    title="表情预览"
+    @cancel="closePreview"
+    ok-text="删除"
+    @ok="confirmDeletePreview"
+  >
+    <div style="text-align: center">
+      <img
+        v-if="previewEmoji"
+        :src="toSrc(previewEmoji.displayUrl || previewEmoji.realUrl)"
+        style="max-width: 100%; max-height: 60vh; object-fit: contain"
+      />
+      <div style="margin-top: 8px">{{ previewEmoji?.displayName || '（无名）' }}</div>
+    </div>
+  </a-modal>
 </template>
 
 <script lang="ts">
@@ -85,10 +109,19 @@ import emojiGroupsStore from '../../data/update/emojiGroupsStore'
 import { Modal, message } from 'ant-design-vue'
 import type { UngroupedEmoji } from '../../data/type/emoji/emoji'
 import { useFileUpload } from '../composables/useFileUpload'
+import { useImgBed } from '../composables/useImgBed'
 
 // Helper function to detect Base64 image URLs
-const isBase64Image = (url: string): boolean => {
-  return url.startsWith('data:image/') && url.includes(';base64,')
+const isBase64Image = (url: string | URL | null | undefined): boolean => {
+  if (!url) return false
+  // 如果是字符串则直接使用，否则尝试调用 toString()（URL 对象有 toString）
+  const s =
+    typeof url === 'string'
+      ? url
+      : typeof (url as URL).toString === 'function'
+        ? (url as URL).toString()
+        : String(url)
+  return s.startsWith('data:image/') || s.includes(';base64,')
 }
 
 export default defineComponent({
@@ -99,27 +132,50 @@ export default defineComponent({
     const targetGroup = ref<string | null>(null)
     const addEmojiModalVisible = ref(false)
     const uploadingEmojiUUID = ref<string | null>(null) // To track which emoji is being uploaded
-    const imgBedAuthCode = ref('') // Global auth code for imgbed
 
-    // ImgBed configuration for useFileUpload composable
-    const imgBedConfig = {
-      useImgBed: ref(true), // Always use ImgBed for remote uploads
-      imgBedEndpoint: ref('https://your.imgbed.domain/'), // Placeholder: User needs to replace this
-      imgBedAuthCode: imgBedAuthCode, // Use the local ref for auth code
-      imgBedUploadChannel: ref('telegram'),
-      imgBedServerCompress: ref(true),
-      imgBedAutoRetry: ref(true),
-      imgBedUploadNameType: ref('default'),
-      imgBedReturnFormat: ref('default'),
-      imgBedUploadFolder: ref(''),
-    }
+    // Use file upload composable which internally reads ImgBed config
+    const { remoteUpload } = useFileUpload()
 
-    const { remoteUpload } = useFileUpload(imgBedConfig)
+    // Expose imgbed auth code to the template so the user can input it
+    const imgBed = useImgBed()
+    const imgBedAuthCode = imgBed.imgBedAuthCode
 
     const newEmojiForm = reactive({
       displayName: '',
       realUrl: '',
     })
+
+    // Preview modal state
+    const previewVisible = ref(false)
+    const previewEmoji = ref<UngroupedEmoji | null>(null)
+
+    function openPreview(e: UngroupedEmoji) {
+      previewEmoji.value = e
+      previewVisible.value = true
+    }
+
+    function closePreview() {
+      previewVisible.value = false
+      previewEmoji.value = null
+    }
+
+    function confirmDeletePreview() {
+      if (!previewEmoji.value) return
+      const uuid = previewEmoji.value.UUID
+      const success = emojiGroupsStore.removeUngroupedByUUID(uuid)
+      if (success) {
+        message.success('表情已删除')
+        closePreview()
+        load()
+      } else {
+        message.error('删除失败')
+      }
+    }
+
+    const toSrc = (v: any): string => {
+      if (!v) return ''
+      return typeof v === 'string' ? v : typeof v.toString === 'function' ? v.toString() : String(v)
+    }
 
     const selected = computed(() =>
       Object.keys(selectedMap.value).filter((k) => selectedMap.value[k]),
@@ -199,36 +255,34 @@ export default defineComponent({
         return
       }
 
+      if (!isBase64Image(String(emoji.realUrl))) {
+        message.error('当前图片不是 Base64 数据，无法直接上传')
+        return
+      }
+
       uploadingEmojiUUID.value = emoji.UUID
       try {
-        const base64Data = emoji.realUrl.split(',')[1] || emoji.realUrl;
-        const mimeType = emoji.realUrl.split(',')[0].split(':')[1].split(';')[0] || 'image/png';
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: mimeType });
+        // Convert data URL to File via fetch -> blob for maximum compatibility
+        const res = await fetch(emoji.realUrl)
+        const blob = await res.blob()
+        const mimeType = blob.type || 'image/png'
+        const file = new File([blob], `emoji_${emoji.UUID}.${mimeType.split('/')[1]}`, {
+          type: mimeType,
+        })
 
-        // Create a File object from the Blob
-        const file = new File([blob], `emoji_${emoji.UUID}.${mimeType.split('/')[1]}`, { type: mimeType });
+        // Delegate actual upload to composable's remoteUpload
+        const uploadedUrl = await remoteUpload(file)
 
-        // Use the remoteUpload function from useFileUpload composable
-        const uploadedUrl = await remoteUpload(file);
-        
-        // Update the emoji's realUrl with the new imgbed URL
-        const updatedEmoji = { ...emoji, realUrl: uploadedUrl };
-        // Remove the old emoji and add the updated one
-        emojiGroupsStore.removeUngroupedByUUID(emoji.UUID);
-        emojiGroupsStore.addUngrouped(updatedEmoji);
-        message.success('图片上传成功，URL已更新');
-        load(); // Reload items to reflect the change
+        const updatedEmoji = { ...emoji, realUrl: uploadedUrl, displayUrl: uploadedUrl }
+        emojiGroupsStore.removeUngroupedByUUID(emoji.UUID)
+        emojiGroupsStore.addUngrouped(updatedEmoji)
+        message.success('图片上传成功，URL已更新')
+        load()
       } catch (error) {
-        console.error('上传图片失败:', error);
-        message.error(`上传图片失败: ${error instanceof Error ? error.message : String(error)}`);
+        console.error('上传图片失败:', error)
+        message.error(`上传图片失败: ${error instanceof Error ? error.message : String(error)}`)
       } finally {
-        uploadingEmojiUUID.value = null;
+        uploadingEmojiUUID.value = null
       }
     }
 
@@ -258,7 +312,9 @@ export default defineComponent({
       load()
     }
 
-    onMounted(load)
+    onMounted(() => {
+      load()
+    })
 
     return {
       items,
@@ -281,6 +337,12 @@ export default defineComponent({
       uploadEmojiImageToImgbed,
       isBase64Image,
       imgBedAuthCode,
+      toSrc,
+      previewVisible,
+      previewEmoji,
+      openPreview,
+      closePreview,
+      confirmDeletePreview,
     }
   },
 })

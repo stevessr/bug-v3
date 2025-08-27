@@ -34,7 +34,7 @@ function setSettings(patch: Partial<Settings>, groups?: EmojiGroup[]) {
   save(groups)
 }
 
-function save(groups?: EmojiGroup[]) {
+function save(groups?: EmojiGroup[], ungrouped?: any[]) { // Added ungrouped parameter
   current.lastModified = new Date()
   // preserve any existing ungrouped payload if present
   const existing = storage.loadPayload()
@@ -58,7 +58,8 @@ function save(groups?: EmojiGroup[]) {
   const payload: PersistPayload = {
     Settings: current,
     emojiGroups: stripScaleFromGroups(groups || []),
-    ungrouped: (existing?.ungrouped || []).map((u: any) => stripScaleFromEmoji(u)),
+    // Use the passed ungrouped array, fallback to existing if not provided
+    ungrouped: (ungrouped || existing?.ungrouped || []).map((u: any) => stripScaleFromEmoji(u)),
   }
   storage.savePayload(payload)
   listeners.forEach((l) => l(current))

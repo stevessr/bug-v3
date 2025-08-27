@@ -28,9 +28,8 @@ import { defineComponent, ref, watch } from 'vue'
 export default defineComponent({
   props: {
     modelValue: { type: Boolean, required: true },
-    emoji: { type: Object as any, required: false },
   },
-  emits: ['update:modelValue', 'added', 'saved'],
+  emits: ['update:modelValue', 'added'],
   setup(props, { emit }) {
     const visible = ref(!!props.modelValue)
     const url = ref('')
@@ -63,21 +62,6 @@ export default defineComponent({
       generatedId.value = urlToId(v || '')
     })
 
-    // if emoji prop provided, prefill fields for edit
-    watch(
-      () => props.emoji,
-      (val) => {
-        if (val) {
-          url.value = val.realUrl || ''
-          previewUrl.value = val.displayUrl || ''
-          displayName.value = val.displayName || ''
-          generatedId.value = val.UUID || val.id || generatedId.value
-          variantsText.value = val.variants ? JSON.stringify(val.variants) : ''
-        }
-      },
-      { immediate: true },
-    )
-
     function onOk() {
       const id =
         generatedId.value ||
@@ -99,8 +83,7 @@ export default defineComponent({
         })(),
         order: 0,
       }
-      // emit both saved (for edit flows) and added (for compatibility)
-      emit('saved', payload)
+      // emit added event for new emojis
       emit('added', payload)
       close()
     }

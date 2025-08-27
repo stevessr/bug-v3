@@ -35,6 +35,7 @@
             @export="onExport"
             @delete="onDelete"
             @edit-emoji="onEditEmoji"
+            @delete-emoji="onDeleteEmoji"
           />
         </a-collapse>
       </a-tab-pane>
@@ -49,11 +50,13 @@
     </a-tabs>
     <new-group-modal v-model:modelValue="showNew" @created="onCreated" />
     <edit-group-modal v-model:modelValue="showEdit" :group="editingGroup" @save="onSaved" />
-    <add-emoji-modal
-      v-model:modelValue="showAddEmoji"
+    <add-emoji-modal v-model:modelValue="showAddEmoji" @added="onEmojiAdded" />
+    <edit-emoji-modal
+      v-if="editingEmoji"
+      v-model:modelValue="showEditEmoji"
       :emoji="editingEmoji"
-      @added="onEmojiAdded"
       @saved="onEmojiSaved"
+      @deleted="onEmojiDeletedFromModal"
     />
     <group-import-modal
       v-model:modelValue="showImport"
@@ -96,6 +99,7 @@ const activeTab = ref<string>('list')
 const showNew = ref(false)
 const showEdit = ref(false)
 const showAddEmoji = ref(false)
+const showEditEmoji = ref(false)
 const showImport = ref(false)
 const showConflict = ref(false)
 const currentConflicts = ref<any[]>([])
@@ -374,7 +378,44 @@ function onEditEmoji(g: any, e: any, i: number) {
   console.log('onEditEmoji called', { g, e, i, editMode: editMode.value })
   addingGroup.value = g
   editingEmoji.value = { ...e, __index: i }
-  showAddEmoji.value = true
+  showEditEmoji.value = true
+}
+
+function onDeleteEmoji(g: any, e: any, i: number) {
+  try {
+    Modal.confirm({
+      title: '确认',
+      content: '确认删除表情: ' + (e.displayName || e.realUrl || e.displayUrl) + ' ?',
+      onOk() {
+        try {
+          const gv = groups.value.find((x: any) => x.UUID === g.UUID)
+          if (!gv || !Array.isArray(gv.emojis)) return
+          // prefer match by UUID/id/realUrl/displayUrl
+          const key = e.UUID || e.id || e.realUrl || e.displayUrl
+          const idx = gv.emojis.findIndex(
+            (it: any) => (it.UUID || it.id || it.realUrl || it.displayUrl) == key,
+          )
+          if (idx >= 0) gv.emojis.splice(idx, 1)
+          store.importPayload({ emojiGroups: groups.value })
+          load()
+        } catch (_) {}
+      },
+    })
+    return
+  } catch (_) {}
+  if (!window.confirm('确认删除表情: ' + (e.displayName || e.realUrl || e.displayUrl) + ' ?'))
+    return
+  try {
+    const gv = groups.value.find((x: any) => x.UUID === g.UUID)
+    if (!gv || !Array.isArray(gv.emojis)) return
+    const key = e.UUID || e.id || e.realUrl || e.displayUrl
+    const idx = gv.emojis.findIndex(
+      (it: any) => (it.UUID || it.id || it.realUrl || it.displayUrl) == key,
+    )
+    if (idx >= 0) gv.emojis.splice(idx, 1)
+    store.importPayload({ emojiGroups: groups.value })
+    load()
+  } catch (_) {}
 }
 
 function onEmojiAdded(e: any) {
@@ -402,9 +443,55 @@ function onEmojiSaved(e: any) {
     store.importPayload({ emojiGroups: groups.value })
     load()
   }
-  showAddEmoji.value = false
+  showEditEmoji.value = false
   addingGroup.value = null
   editingEmoji.value = null
+}
+
+function onEmojiDeletedFromModal(e: any) {
+  if (!addingGroup.value) return
+  try {
+    Modal.confirm({
+      title: '确认',
+      content: '确认删除表情: ' + (e.displayName || e.realUrl || e.displayUrl) + ' ?',
+      onOk() {
+        try {
+          const gv = groups.value.find((x: any) => x.UUID === addingGroup.value.UUID)
+          if (!gv || !Array.isArray(gv.emojis)) return
+          // prefer match by UUID/id/realUrl/displayUrl
+          const key = e.UUID || e.id || e.realUrl || e.displayUrl
+          const idx = gv.emojis.findIndex(
+            (it: any) => (it.UUID || it.id || it.realUrl || it.displayUrl) == key,
+          )
+          if (idx >= 0) gv.emojis.splice(idx, 1)
+          store.importPayload({ emojiGroups: groups.value })
+          load()
+          // 关闭编辑模态框
+          showEditEmoji.value = false
+          addingGroup.value = null
+          editingEmoji.value = null
+        } catch (_) {}
+      },
+    })
+  } catch (_) {
+    if (!window.confirm('确认删除表情: ' + (e.displayName || e.realUrl || e.displayUrl) + ' ?'))
+      return
+    try {
+      const gv = groups.value.find((x: any) => x.UUID === addingGroup.value.UUID)
+      if (!gv || !Array.isArray(gv.emojis)) return
+      const key = e.UUID || e.id || e.realUrl || e.displayUrl
+      const idx = gv.emojis.findIndex(
+        (it: any) => (it.UUID || it.id || it.realUrl || it.displayUrl) == key,
+      )
+      if (idx >= 0) gv.emojis.splice(idx, 1)
+      store.importPayload({ emojiGroups: groups.value })
+      load()
+      // 关闭编辑模态框
+      showEditEmoji.value = false
+      addingGroup.value = null
+      editingEmoji.value = null
+    } catch (_) {}
+  }
 }
 
 onMounted(() => {

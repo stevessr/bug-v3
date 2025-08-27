@@ -3,7 +3,7 @@ import type { UUID } from '../uuid/main'
 interface emoji {
   id: string
   displayName: string
-  realUrl: URL
+  realUrl: URL | string
   displayUrl: URL
   order: number
   UUID: UUID

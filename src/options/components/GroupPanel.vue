@@ -54,8 +54,9 @@
             v-for="(e, i) in group.emojis"
             :key="e.UUID"
             class="emoji-cell"
-            @click.stop="editMode && $emit('edit-emoji', group, e, i)"
-            :draggable="true"
+            @click.stop="editMode ? $emit('edit-emoji', group, e, i) : null"
+            :draggable="editMode"
+            :style="{ cursor: editMode ? 'pointer' : 'grab' }"
           >
             <img
               :src="e.displayUrl || e.realUrl"
@@ -67,6 +68,20 @@
                 display: block;
               "
             />
+
+            <!-- controls shown in edit mode -->
+            <div v-if="editMode" class="emoji-controls">
+              <button class="emoji-control-btn" @click.stop="$emit('edit-emoji', group, e, i)">
+                编辑
+              </button>
+              <button
+                class="emoji-control-btn"
+                style="color: #b91c1c; border-color: rgba(185, 28, 28, 0.12)"
+                @click.stop="$emit('delete-emoji', group, e, i)"
+              >
+                删除
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -132,8 +147,9 @@
             v-for="(e, i) in group.emojis"
             :key="e.UUID"
             class="emoji-cell"
-            @click.stop="editMode && $emit('edit-emoji', group, e, i)"
-            :draggable="true"
+            @click.stop="editMode ? $emit('edit-emoji', group, e, i) : null"
+            :draggable="editMode"
+            :style="{ cursor: editMode ? 'pointer' : 'grab' }"
           >
             <img
               :src="e.displayUrl || e.realUrl"
@@ -165,7 +181,7 @@ export default defineComponent({
     isLikelyUrl: { type: Function, required: false },
     asCard: { type: Boolean, default: false },
   },
-  emits: ['edit', 'add-emoji', 'import', 'export', 'delete', 'edit-emoji'],
+  emits: ['edit', 'add-emoji', 'import', 'export', 'delete', 'edit-emoji', 'delete-emoji'],
 })
 </script>
 
@@ -180,6 +196,10 @@ export default defineComponent({
   position: relative;
 }
 
+.emoji-cell[style*='cursor: pointer'] {
+  cursor: pointer !important;
+}
+
 .emoji-cell:hover {
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -187,6 +207,10 @@ export default defineComponent({
 
 .emoji-cell:active {
   cursor: grabbing;
+}
+
+.emoji-cell[style*='cursor: pointer']:active {
+  cursor: pointer !important;
 }
 
 .emoji-cell::after {

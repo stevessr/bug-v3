@@ -35,7 +35,7 @@ function initFromStorage() {
             } catch (_) {
               // fallback: call settingsStore.save to at least persist groups
               try {
-                settingsStore.save(emojiGroups)
+                settingsStore.save(emojiGroups, ungrouped)
               } catch (_) {}
             }
           } catch (_) {}
@@ -56,19 +56,19 @@ function getUngrouped() {
 function setEmojiGroups(gs: EmojiGroup[]) {
   emojiGroups = gs.map((g) => ({ ...g, emojis: [...g.emojis] }))
   // persist together with settings
-  settingsStore.save(emojiGroups)
+  settingsStore.save(emojiGroups, ungrouped)
 }
 
 function addUngrouped(emoji: any) {
   ungrouped.push(emoji)
-  settingsStore.save(emojiGroups)
+  settingsStore.save(emojiGroups, ungrouped)
 }
 
 function removeUngroupedByUUID(uuid: string) {
   const idx = ungrouped.findIndex((e) => e.UUID === (uuid as any))
   if (idx >= 0) {
     ungrouped.splice(idx, 1)
-    settingsStore.save(emojiGroups)
+    settingsStore.save(emojiGroups, ungrouped)
     return true
   }
   return false
@@ -93,7 +93,7 @@ function recordUsageByUUID(uuid: string) {
       e.usageCount = (e.usageCount || 0) + 1
       e.lastUsed = now
     }
-    settingsStore.save(emojiGroups)
+    settingsStore.save(emojiGroups, ungrouped)
     return true
   }
   // fallback: try ungrouped
@@ -111,7 +111,7 @@ function recordUsageByUUID(uuid: string) {
       ue.usageCount = (ue.usageCount || 0) + 1
       ue.lastUsed = now
     }
-    settingsStore.save(emojiGroups)
+    settingsStore.save(emojiGroups, ungrouped)
     return true
   }
   return false
@@ -131,14 +131,14 @@ function findEmojiByUUID(uuid: string) {
 
 function addGroup(group: EmojiGroup) {
   emojiGroups.push({ ...group, emojis: [...group.emojis] })
-  settingsStore.save(emojiGroups)
+  settingsStore.save(emojiGroups, ungrouped)
 }
 
 function removeGroup(uuid: string) {
   const idx = emojiGroups.findIndex((g) => g.UUID === (uuid as any))
   if (idx >= 0) {
     emojiGroups.splice(idx, 1)
-    settingsStore.save(emojiGroups)
+    settingsStore.save(emojiGroups, ungrouped)
     return true
   }
   return false
@@ -152,7 +152,7 @@ function addEmojiToGroup(groupUUID: string, emoji: any, position?: number) {
   } else {
     g.emojis.push(emoji)
   }
-  settingsStore.save(emojiGroups)
+  settingsStore.save(emojiGroups, ungrouped)
   return true
 }
 
@@ -162,7 +162,7 @@ function removeEmojiFromGroup(groupUUID: string, emojiUUID: string) {
   const idx = g.emojis.findIndex((e) => e.UUID === (emojiUUID as any))
   if (idx >= 0) {
     g.emojis.splice(idx, 1)
-    settingsStore.save(emojiGroups)
+    settingsStore.save(emojiGroups, ungrouped)
     return true
   }
   return false
@@ -185,7 +185,7 @@ function moveEmojiBetweenGroups(
   } else {
     to.emojis.push(e)
   }
-  settingsStore.save(emojiGroups)
+  settingsStore.save(emojiGroups, ungrouped)
   return true
 }
 
@@ -195,7 +195,7 @@ function reorderEmojiInGroup(groupUUID: string, fromIndex: number, toIndex: numb
   if (fromIndex < 0 || fromIndex >= g.emojis.length) return false
   const [e] = g.emojis.splice(fromIndex, 1)
   g.emojis.splice(Math.min(Math.max(0, toIndex), g.emojis.length), 0, e)
-  settingsStore.save(emojiGroups)
+  settingsStore.save(emojiGroups, ungrouped)
   return true
 }
 
@@ -203,7 +203,7 @@ function reorderGroups(fromIndex: number, toIndex: number) {
   if (fromIndex < 0 || fromIndex >= emojiGroups.length) return false
   const [g] = emojiGroups.splice(fromIndex, 1)
   emojiGroups.splice(Math.min(Math.max(0, toIndex), emojiGroups.length), 0, g)
-  settingsStore.save(emojiGroups)
+  settingsStore.save(emojiGroups, ungrouped)
   return true
 }
 
@@ -220,7 +220,7 @@ function resetAllUsageCounts() {
     e.usageCount = 0
     e.lastUsed = undefined
   }
-  settingsStore.save(emojiGroups)
+  settingsStore.save(emojiGroups, ungrouped)
 }
 
 function resetUsageCountByUUID(uuid: string) {
@@ -229,7 +229,7 @@ function resetUsageCountByUUID(uuid: string) {
     const e: any = found.emoji
     e.usageCount = 0
     e.lastUsed = undefined
-    settingsStore.save(emojiGroups)
+    settingsStore.save(emojiGroups, ungrouped)
     return true
   }
   // fallback: try ungrouped
@@ -237,7 +237,7 @@ function resetUsageCountByUUID(uuid: string) {
   if (ue) {
     ue.usageCount = 0
     ue.lastUsed = undefined
-    settingsStore.save(emojiGroups)
+    settingsStore.save(emojiGroups, ungrouped)
     return true
   }
   return false
