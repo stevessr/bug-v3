@@ -1,11 +1,13 @@
 import type { Settings } from '../type/settings/settings'
 declare const chrome: any
 import type { EmojiGroup } from '../type/emoji/emoji'
+import { v4 as uuidv4 } from 'uuid'
 
 const STORAGE_KEY = 'bugcopilot_settings_v1'
 const KEY_SETTINGS = 'Settings'
 const KEY_UNGROUPED = 'ungrouped'
 const KEY_EMOJI_PREFIX = 'emojiGroups-'
+const KEY_EMOJI_INDEX = 'emojiGroups-index'
 
 // in-memory cache mirroring chrome.storage.local for synchronous reads
 let extCache: Record<string, any> = {}
@@ -55,17 +57,38 @@ export function loadPayload(): PersistPayload | null {
     const Settings = settingsRaw ? JSON.parse(settingsRaw) : null
     const ungrouped = ungroupedRaw ? JSON.parse(ungroupedRaw) : []
 
-    // collect emoji groups by scanning keys
+    // collect emoji groups by using an index if present (preserve order), otherwise scan keys
     const emojiGroups: any[] = []
     try {
-      for (let i = 0; i < window.localStorage.length; i++) {
-        const k = window.localStorage.key(i)
-        if (!k) continue
-        if (k.startsWith(KEY_EMOJI_PREFIX)) {
-          try {
-            const g = JSON.parse(window.localStorage.getItem(k) as string)
-            emojiGroups.push(g)
-          } catch (_) {}
+      const indexRaw = window.localStorage.getItem(KEY_EMOJI_INDEX)
+      if (indexRaw) {
+        try {
+          const uuids: string[] = JSON.parse(indexRaw) || []
+          for (const u of uuids) {
+            try {
+              const k = `${KEY_EMOJI_PREFIX}${u}`
+              const rawG = window.localStorage.getItem(k)
+              if (!rawG) continue
+              const g = JSON.parse(rawG)
+              emojiGroups.push(g)
+            } catch (_) {}
+          }
+        } catch (_) {
+          // fallthrough to scan
+        }
+      }
+
+      if (emojiGroups.length === 0) {
+        // fallback: scan all keys
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const k = window.localStorage.key(i)
+          if (!k) continue
+          if (k.startsWith(KEY_EMOJI_PREFIX)) {
+            try {
+              const g = JSON.parse(window.localStorage.getItem(k) as string)
+              emojiGroups.push(g)
+            } catch (_) {}
+          }
         }
       }
     } catch (_) {}
@@ -81,6 +104,8 @@ export function loadPayload(): PersistPayload | null {
 export function savePayload(payload: PersistPayload) {
   if (typeof window === 'undefined' || !window.localStorage) return
   try {
+    // saved emoji index for use when mirroring to extension storage
+    let savedEmojiIndex: string[] | null = null
     // Write Settings
     try {
       window.localStorage.setItem(KEY_SETTINGS, JSON.stringify(payload.Settings || {}))
@@ -101,12 +126,33 @@ export function savePayload(payload: PersistPayload) {
       }
 
       const incomingKeys: string[] = []
+      const incomingIndex: string[] = []
       ;(payload.emojiGroups || []).forEach((g: any) => {
-        const k = `${KEY_EMOJI_PREFIX}${g.uuid}`
-        incomingKeys.push(k)
         try {
-          window.localStorage.setItem(k, JSON.stringify(g))
-        } catch (_) {}
+          // clone group to avoid mutating caller's object
+          const group = g && typeof g === 'object' ? { ...g } : { ...g }
+          let uuid =
+            group &&
+            (typeof group.uuid === 'string'
+              ? group.uuid
+              : group.uuid != null
+                ? String(group.uuid)
+                : null)
+          if (!uuid) {
+            uuid = uuidv4()
+            try {
+              group.uuid = uuid
+            } catch (_) {}
+          }
+          const k = `${KEY_EMOJI_PREFIX}${uuid}`
+          incomingKeys.push(k)
+          incomingIndex.push(uuid)
+          try {
+            window.localStorage.setItem(k, JSON.stringify(group))
+          } catch (_) {}
+        } catch (_) {
+          // skip malformed group
+        }
       })
 
       // remove stale keys
@@ -117,6 +163,13 @@ export function savePayload(payload: PersistPayload) {
           } catch (_) {}
         }
       })
+      // persist index of groups (order)
+      try {
+        window.localStorage.setItem(KEY_EMOJI_INDEX, JSON.stringify(incomingIndex))
+        savedEmojiIndex = incomingIndex
+      } catch (_) {
+        savedEmojiIndex = incomingIndex
+      }
     } catch (_) {}
 
     // set a local flag indicating session sync is pending for this tab
@@ -151,8 +204,33 @@ export function savePayload(payload: PersistPayload) {
         storeObj[KEY_SETTINGS] = payload.Settings || {}
         storeObj[KEY_UNGROUPED] = payload.ungrouped || []
         ;(payload.emojiGroups || []).forEach((g: any) => {
-          storeObj[`${KEY_EMOJI_PREFIX}${g.uuid}`] = g
+          try {
+            const group = g && typeof g === 'object' ? { ...g } : { ...g }
+            let uuid =
+              group &&
+              (typeof group.uuid === 'string'
+                ? group.uuid
+                : group.uuid != null
+                  ? String(group.uuid)
+                  : null)
+            if (!uuid) {
+              uuid = uuidv4()
+              try {
+                group.uuid = uuid
+              } catch (_) {}
+            }
+            storeObj[`${KEY_EMOJI_PREFIX}${uuid}`] = group
+            try {
+              // track index for storeObj
+              if (!Array.isArray(storeObj[KEY_EMOJI_INDEX])) storeObj[KEY_EMOJI_INDEX] = []
+              storeObj[KEY_EMOJI_INDEX].push(uuid)
+            } catch (_) {}
+          } catch (_) {}
         })
+        try {
+          // also ensure KEY_EMOJI_INDEX present even if empty
+          if (!storeObj[KEY_EMOJI_INDEX]) storeObj[KEY_EMOJI_INDEX] = savedEmojiIndex || []
+        } catch (_) {}
         try {
           chrome.storage.local.set(storeObj, () => {
             try {
