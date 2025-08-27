@@ -1,26 +1,79 @@
 import { ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
+import type { ImgBedUploadChannel } from '../types'
 
 const IMG_BED_KEY = 'openrouter-imgbed-config'
+
+type ImgBedFormat = 'default' | 'full'
+type ImgUploadNameType = 'default' | 'index' | 'origin' | 'short'
+
+interface imgbedConfig {
+  useImgBed: boolean
+  imgBedEndpoint: string
+  imgBedAuthCode: string
+  imgBedUploadChannel: ImgBedUploadChannel
+  imgBedServerCompress: boolean
+  imgBedAutoRetry: boolean
+  imgBedUploadNameType: ImgUploadNameType
+  imgBedReturnFormat: ImgBedFormat
+  imgBedUploadFolder: string
+}
 
 export function useImgBed() {
   // Modal control
   const showImgBedModal = ref(false)
 
   // Configuration state
-  const useImgBed = ref(false)
-  const imgBedEndpoint = ref('')
-  const imgBedAuthCode = ref('')
-  const imgBedUploadChannel = ref('telegram')
-  const imgBedServerCompress = ref(true)
-  const imgBedAutoRetry = ref(true)
-  const imgBedUploadNameType = ref('default')
-  const imgBedReturnFormat = ref('default')
-  const imgBedUploadFolder = ref('')
+  // Provide defaults via a factory so we can merge/restore easily
+  const createDefaultConfig = (): imgbedConfig => ({
+    useImgBed: false,
+    imgBedEndpoint: '',
+    imgBedAuthCode: '',
+    imgBedUploadChannel: 'telegram',
+    imgBedServerCompress: true,
+    imgBedAutoRetry: true,
+    imgBedUploadNameType: 'default',
+    imgBedReturnFormat: 'default',
+    imgBedUploadFolder: '',
+  })
 
-  const saveImgBedConfig = () => {
+  const defaults = createDefaultConfig()
+
+  const useImgBed = ref(defaults.useImgBed)
+  const imgBedEndpoint = ref(defaults.imgBedEndpoint)
+  const imgBedAuthCode = ref(defaults.imgBedAuthCode)
+  const imgBedUploadChannel = ref(defaults.imgBedUploadChannel)
+  const imgBedServerCompress = ref(defaults.imgBedServerCompress)
+  const imgBedAutoRetry = ref(defaults.imgBedAutoRetry)
+  const imgBedUploadNameType = ref(defaults.imgBedUploadNameType)
+  const imgBedReturnFormat = ref(defaults.imgBedReturnFormat)
+  const imgBedUploadFolder = ref(defaults.imgBedUploadFolder)
+
+  // Apply a partial config onto reactive refs with type checks
+  const setImgBedConfig = (cfg: Partial<imgbedConfig>) => {
+    if (!cfg) return
+    if (typeof cfg.useImgBed === 'boolean') useImgBed.value = cfg.useImgBed
+    if (typeof cfg.imgBedEndpoint === 'string') imgBedEndpoint.value = cfg.imgBedEndpoint
+    if (typeof cfg.imgBedAuthCode === 'string') imgBedAuthCode.value = cfg.imgBedAuthCode
+    if (typeof cfg.imgBedUploadChannel === 'string')
+      imgBedUploadChannel.value = cfg.imgBedUploadChannel
+    if (typeof cfg.imgBedServerCompress === 'boolean')
+      imgBedServerCompress.value = cfg.imgBedServerCompress
+    if (typeof cfg.imgBedAutoRetry === 'boolean') imgBedAutoRetry.value = cfg.imgBedAutoRetry
+    if (typeof cfg.imgBedUploadNameType === 'string')
+      imgBedUploadNameType.value = cfg.imgBedUploadNameType
+    if (typeof cfg.imgBedReturnFormat === 'string')
+      imgBedReturnFormat.value = cfg.imgBedReturnFormat
+    if (typeof cfg.imgBedUploadFolder === 'string')
+      imgBedUploadFolder.value = cfg.imgBedUploadFolder
+  }
+
+  const resetToDefaults = () => setImgBedConfig(defaults)
+
+  // low-level write (no UI side-effects)
+  const writeImgBedConfig = () => {
     try {
-      const cfg = {
+      const cfg: imgbedConfig = {
         useImgBed: useImgBed.value,
         imgBedEndpoint: imgBedEndpoint.value,
         imgBedAuthCode: imgBedAuthCode.value,
@@ -43,27 +96,15 @@ export function useImgBed() {
       const raw = localStorage.getItem(IMG_BED_KEY)
       if (!raw) return
       const cfg = JSON.parse(raw)
-      if (typeof cfg.useImgBed === 'boolean') useImgBed.value = cfg.useImgBed
-      if (typeof cfg.imgBedEndpoint === 'string') imgBedEndpoint.value = cfg.imgBedEndpoint
-      if (typeof cfg.imgBedAuthCode === 'string') imgBedAuthCode.value = cfg.imgBedAuthCode
-      if (typeof cfg.imgBedUploadChannel === 'string')
-        imgBedUploadChannel.value = cfg.imgBedUploadChannel
-      if (typeof cfg.imgBedServerCompress === 'boolean')
-        imgBedServerCompress.value = cfg.imgBedServerCompress
-      if (typeof cfg.imgBedAutoRetry === 'boolean') imgBedAutoRetry.value = cfg.imgBedAutoRetry
-      if (typeof cfg.imgBedUploadNameType === 'string')
-        imgBedUploadNameType.value = cfg.imgBedUploadNameType
-      if (typeof cfg.imgBedReturnFormat === 'string')
-        imgBedReturnFormat.value = cfg.imgBedReturnFormat
-      if (typeof cfg.imgBedUploadFolder === 'string')
-        imgBedUploadFolder.value = cfg.imgBedUploadFolder
+      // merge with defaults by applying only valid values
+      setImgBedConfig(cfg)
     } catch (e) {
       console.error('加载 ImgBed 配置失败', e)
     }
   }
 
   const handleSaveAndCloseImgBedModal = () => {
-    saveImgBedConfig()
+    writeImgBedConfig()
     showImgBedModal.value = false
     message.success('ImgBed 配置已保存')
   }
@@ -82,7 +123,8 @@ export function useImgBed() {
       imgBedUploadFolder,
     ],
     () => {
-      saveImgBedConfig()
+      // auto-save to storage
+      writeImgBedConfig()
     },
   )
 
@@ -98,7 +140,10 @@ export function useImgBed() {
     imgBedReturnFormat,
     imgBedUploadFolder,
     loadImgBedConfig,
-    saveImgBedConfig: handleSaveAndCloseImgBedModal, // Rename for clarity in component
+    saveImgBedConfig: handleSaveAndCloseImgBedModal, // keep public API: save and close
+    writeImgBedConfig,
+    setImgBedConfig,
+    resetToDefaults,
     closeImgBedModal: () => {
       showImgBedModal.value = false
     },

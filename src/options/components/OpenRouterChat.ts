@@ -6,6 +6,7 @@ import {
   DeleteOutlined,
   PlusOutlined,
 } from '@ant-design/icons-vue'
+import ImgBedConfig from './ImgBedConfig.vue'
 
 import { OpenRouterService } from '../../services/openrouter'
 import { useApiKeys } from '../composables/useApiKeys'
@@ -22,6 +23,7 @@ export default defineComponent({
     EyeInvisibleOutlined,
     DeleteOutlined,
     PlusOutlined,
+    ImgBedConfig,
   },
   setup() {
     const openRouterService = new OpenRouterService()
@@ -53,6 +55,8 @@ export default defineComponent({
       modelOptions: modelOptions,
       scrollToBottom: chatManager.scrollToBottom,
     })
+
+    // imgBedManager holds all ImgBed-related refs; template uses the manager directly
 
     // Watch for model changes to set appropriate options
     watch(chatManager.selectedModel, (newModel) => {
@@ -106,6 +110,8 @@ export default defineComponent({
       DeleteOutlined,
       PlusOutlined,
       cancelDelete,
+      // expose manager so template can pass it directly to ImgBedConfig
+      imgBedManager: imgBedManager,
     }
   },
 })

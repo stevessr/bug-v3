@@ -107,23 +107,30 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
   const remoteUpload = async (file: File) => {
     if (!imgBedConfig.imgBedEndpoint.value) throw new Error('ImgBed endpoint 未配置')
     const params = new URLSearchParams()
-    if (imgBedConfig.imgBedAuthCode.value) params.set('authCode', imgBedConfig.imgBedAuthCode.value)
     params.set('serverCompress', String(imgBedConfig.imgBedServerCompress.value))
     params.set('uploadChannel', imgBedConfig.imgBedUploadChannel.value)
     params.set('autoRetry', String(imgBedConfig.imgBedAutoRetry.value))
     params.set('uploadNameType', imgBedConfig.imgBedUploadNameType.value)
     params.set('returnFormat', imgBedConfig.imgBedReturnFormat.value)
-    if (imgBedConfig.imgBedUploadFolder.value) params.set('uploadFolder', imgBedConfig.imgBedUploadFolder.value)
+    if (imgBedConfig.imgBedUploadFolder.value)
+      params.set('uploadFolder', imgBedConfig.imgBedUploadFolder.value)
 
     const uploadUrl =
       imgBedConfig.imgBedEndpoint.value +
+      'upload' +
       (imgBedConfig.imgBedEndpoint.value.includes('?') ? '&' : '?') +
       params.toString()
 
     const fd = new FormData()
     fd.append('file', file)
 
-    const resp = await fetch(uploadUrl, { method: 'POST', body: fd })
+    const headers: HeadersInit = {}
+    if (imgBedConfig.imgBedAuthCode.value) {
+      headers['authcode'] = imgBedConfig.imgBedAuthCode.value
+      headers['X-Auth-Code'] = imgBedConfig.imgBedAuthCode.value
+    }
+
+    const resp = await fetch(uploadUrl, { method: 'POST', body: fd, headers: headers })
     if (!resp.ok) throw new Error(`上传失败: ${resp.status}`)
     const data = await resp.json()
     const src = Array.isArray(data) && data[0] && data[0].src ? data[0].src : null
@@ -137,7 +144,9 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
 
   const uploadBefore = async (file: File) => {
     const findExistingIndex = () =>
-      fileList.value.findIndex((f) => f.originFileObj === file || (f.name === file.name && f.size === file.size))
+      fileList.value.findIndex(
+        (f) => f.originFileObj === file || (f.name === file.name && f.size === file.size),
+      )
 
     if (imgBedConfig.useImgBed.value) {
       if (!imgBedConfig.imgBedEndpoint.value) {
@@ -146,7 +155,12 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
       }
       const existingIdx = findExistingIndex()
       if (existingIdx === -1) {
-        fileList.value.push({ uid: `${Date.now()}-${file.name}`, name: file.name, status: 'uploading', originFileObj: file })
+        fileList.value.push({
+          uid: `${Date.now()}-${file.name}`,
+          name: file.name,
+          status: 'uploading',
+          originFileObj: file,
+        })
       } else {
         fileList.value[existingIdx].status = 'uploading'
       }
@@ -178,7 +192,13 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
     const dataUrl = await fileToDataUrl(file)
     const existingIdx = findExistingIndex()
     if (existingIdx === -1) {
-      fileList.value.push({ uid: `${Date.now()}-${file.name}`, name: file.name, status: 'done', url: dataUrl, originFileObj: file })
+      fileList.value.push({
+        uid: `${Date.now()}-${file.name}`,
+        name: file.name,
+        status: 'done',
+        url: dataUrl,
+        originFileObj: file,
+      })
     } else {
       fileList.value[existingIdx].status = 'done'
       fileList.value[existingIdx].url = dataUrl

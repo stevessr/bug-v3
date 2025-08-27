@@ -220,38 +220,8 @@
       </div>
     </a-modal>
 
-    <!-- ImgBed Config Modal -->
-    <a-modal
-      v-model:open="showImgBedModal"
-      title="ImgBed 配置"
-      @ok="saveImgBedConfig"
-      @cancel="closeImgBedModal"
-      width="640px"
-    >
-      <span style="margin-left: 4px">
-        请先在
-        <a href="https://github.com/MarSeventh/CloudFlare-ImgBed" target="_blank"
-          >Cloudflare-ImgBed</a
-        >
-        项目中部署 ImgBed 服务
-        <br />
-        &nbsp然后填写 ImgBed 的 endpoint 和 authCode（可选）。
-      </span>
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <a-input
-          v-model:value="imgBedEndpoint"
-          placeholder="ImgBed endpoint (例如 https://your.domain/upload)"
-        />
-        <a-input v-model:value="imgBedAuthCode" placeholder="authCode (可选)" />
-        <a-select v-model:value="imgBedUploadChannel" style="width: 200px">
-          <a-select-option value="telegram">telegram</a-select-option>
-          <a-select-option value="cfr2">cfr2</a-select-option>
-          <a-select-option value="s3">s3</a-select-option>
-        </a-select>
-        <a-checkbox v-model:checked="imgBedServerCompress">启用服务器压缩</a-checkbox>
-        <a-checkbox v-model:checked="imgBedAutoRetry">失败自动重试</a-checkbox>
-      </div>
-    </a-modal>
+    <!-- ImgBed Config Component (simplified: pass manager directly) -->
+    <ImgBedConfig :manager="imgBedManager" />
 
     <!-- Import Chat Modal -->
     <a-modal
