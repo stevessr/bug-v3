@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 import type { OpenRouterService } from '../../services/openrouter'
+import storage from '../../data/update/storage'
 
 export function useApiKeys(openRouterService: OpenRouterService) {
   const showApiKeyModal = ref(false)
@@ -10,13 +11,27 @@ export function useApiKeys(openRouterService: OpenRouterService) {
 
   const loadApiKeys = () => {
     try {
-      const saved = localStorage.getItem('openrouter-api-keys')
+      let saved: any = null
+      try {
+        saved = storage.getItem('openrouter-api-keys')
+      } catch (_) {
+        saved = null
+      }
+
+      if (!saved) {
+        try {
+          const raw = localStorage.getItem('openrouter-api-keys')
+          if (raw) saved = JSON.parse(raw)
+        } catch (_) {
+          saved = null
+        }
+      }
+
       if (saved) {
-        const keys = JSON.parse(saved)
-        apiKeys.value = keys
-        openRouterService.setApiKeys(keys)
+        apiKeys.value = saved
+        openRouterService.setApiKeys(saved)
         // Also initialize temp keys for the modal
-        tempApiKeys.value = [...keys, '']
+        tempApiKeys.value = [...saved, '']
         showKeys.value = new Array(tempApiKeys.value.length).fill(false)
       }
     } catch (e) {
@@ -26,7 +41,17 @@ export function useApiKeys(openRouterService: OpenRouterService) {
 
   const saveApiKeysToStorage = () => {
     try {
-      localStorage.setItem('openrouter-api-keys', JSON.stringify(apiKeys.value))
+      try {
+        storage.setItem('openrouter-api-keys', apiKeys.value)
+        return
+      } catch (_) {
+        // fallback
+      }
+      try {
+        localStorage.setItem('openrouter-api-keys', JSON.stringify(apiKeys.value))
+      } catch (e) {
+        console.error('Failed to save API keys:', e)
+      }
     } catch (e) {
       console.error('Failed to save API keys:', e)
     }
@@ -61,12 +86,12 @@ export function useApiKeys(openRouterService: OpenRouterService) {
     showKeys.value = new Array(tempApiKeys.value.length).fill(false)
     showApiKeyModal.value = false
   }
-  
+
   const openApiKeyModal = () => {
     // Before opening, ensure temp keys reflect the current state
     tempApiKeys.value = [...apiKeys.value, '']
     if (tempApiKeys.value.length === 0) {
-        tempApiKeys.value.push('');
+      tempApiKeys.value.push('')
     }
     showKeys.value = new Array(tempApiKeys.value.length).fill(false)
     showApiKeyModal.value = true

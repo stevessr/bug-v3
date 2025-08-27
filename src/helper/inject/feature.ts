@@ -80,8 +80,35 @@ export function installNachonekoPicker(
       try {
         const local = window.localStorage.getItem('bugcopilot_settings_v1')
         if (local) {
-          const payload = JSON.parse(local)
-          return convert(payload)
+          try {
+            const payload = JSON.parse(local)
+            return convert(payload)
+          } catch (_) {
+            // fallthrough to try split keys
+          }
+        }
+
+        // assemble from split keys
+        try {
+          const SettingsRaw = window.localStorage.getItem('Settings')
+          const ungroupedRaw = window.localStorage.getItem('ungrouped')
+          const Settings = SettingsRaw ? JSON.parse(SettingsRaw) : null
+          const ungrouped = ungroupedRaw ? JSON.parse(ungroupedRaw) : []
+          const groups: any[] = []
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const k = window.localStorage.key(i)
+            if (!k) continue
+            if (k && k.startsWith('emojiGroups-')) {
+              try {
+                const g = JSON.parse(window.localStorage.getItem(k) as string)
+                groups.push(g)
+              } catch (_) {}
+            }
+          }
+          const assembled = { Settings: Settings || {}, emojiGroups: groups, ungrouped }
+          return convert(assembled)
+        } catch (e) {
+          // ignore and fallback to provided
         }
       } catch (e) {
         console.warn('[nacho-inject] failed parse local payload', e)

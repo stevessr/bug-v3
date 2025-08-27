@@ -40,7 +40,7 @@ export default defineComponent({
     // Composables
     const apiKeysManager = useApiKeys(openRouterService)
     const imgBedManager = useImgBed()
-    const fileUploadManager = useFileUpload(imgBedManager)
+    const fileUploadManager = useFileUpload()
 
     const chatManager = useChat({
       openRouterService,
