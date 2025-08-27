@@ -26,8 +26,8 @@ export default defineComponent({
   setup() {
     const openRouterService = new OpenRouterService()
 
-    // Model Options
-    const modelOptions = ref([
+    // Model Options（只定义一次） - 重命名为 openRouterModelOptions，避免与 ...chatManager 冲突
+    const openRouterModelOptions = ref([
       { value: 'openai/gpt-oss-20b:free', label: 'GPT OSS 20B (Free)' },
       { value: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air (Free)' },
       { value: 'qwen/qwen3-coder:free', label: 'Qwen 3 (Coder)' },
@@ -38,23 +38,22 @@ export default defineComponent({
     // Composables
     const apiKeysManager = useApiKeys(openRouterService)
     const imgBedManager = useImgBed()
-    const fileUploadManager = useFileUpload(imgBedManager)
+    const fileUploadManager = useFileUpload()
 
+    // 仅传入 openRouterService，避免传入 useChat 不接受的属性（如 apiKeys）
     const chatManager = useChat({
       openRouterService,
-      apiKeys: apiKeysManager.apiKeys,
-      fileList: fileUploadManager.fileList,
     })
 
-    const historyManager = useChatHistory({
-      messages: chatManager.messages,
-      selectedModel: chatManager.selectedModel,
-      modelOptions: modelOptions,
-      scrollToBottom: chatManager.scrollToBottom,
-    })
+    // useChatHistory 不接受参数，改为无参调用
+    const historyManager = useChatHistory()
 
     // Watch for model changes to set appropriate options
     watch(chatManager.selectedModel, (newModel) => {
+      if (!newModel) {
+        chatManager.enableImageGeneration.value = false
+        return
+      }
       if (newModel.includes('image') || newModel.includes('gemini')) {
         chatManager.enableImageGeneration.value = true
       } else {
@@ -65,7 +64,7 @@ export default defineComponent({
     onMounted(() => {
       apiKeysManager.loadApiKeys()
       imgBedManager.loadImgBedConfig()
-      
+
       // Add welcome message
       chatManager.addMessage(
         'assistant',
@@ -74,8 +73,8 @@ export default defineComponent({
     })
 
     return {
-      // Model Options
-      modelOptions,
+      // Model Options（使用重命名后的键）
+      openRouterModelOptions,
 
       // from useChat
       ...chatManager,
@@ -91,7 +90,7 @@ export default defineComponent({
 
       // from useChatHistory
       ...historyManager,
-      
+
       // Icons and h for render functions
       h,
       DownOutlined,

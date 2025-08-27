@@ -3,21 +3,21 @@ import { message } from 'ant-design-vue'
 
 const IMG_BED_KEY = 'openrouter-imgbed-config'
 
+// State is defined outside the function
+const showImgBedModal = ref(false)
+const useImgBed = ref(false)
+const imgBedEndpoint = ref('')
+const imgBedAuthCode = ref('')
+const imgBedUploadChannel = ref('telegram')
+const imgBedServerCompress = ref(true)
+const imgBedAutoRetry = ref(true)
+const imgBedUploadNameType = ref('default')
+const imgBedReturnFormat = ref('default')
+const imgBedUploadFolder = ref('')
+
+let isInitialized = false;
+
 export function useImgBed() {
-  // Modal control
-  const showImgBedModal = ref(false)
-
-  // Configuration state
-  const useImgBed = ref(false)
-  const imgBedEndpoint = ref('')
-  const imgBedAuthCode = ref('')
-  const imgBedUploadChannel = ref('telegram')
-  const imgBedServerCompress = ref(true)
-  const imgBedAutoRetry = ref(true)
-  const imgBedUploadNameType = ref('default')
-  const imgBedReturnFormat = ref('default')
-  const imgBedUploadFolder = ref('')
-
   const saveImgBedConfig = () => {
     try {
       const cfg = {
@@ -68,23 +68,26 @@ export function useImgBed() {
     message.success('ImgBed 配置已保存')
   }
 
-  // Auto-save when any config changes
-  watch(
-    [
-      useImgBed,
-      imgBedEndpoint,
-      imgBedAuthCode,
-      imgBedUploadChannel,
-      imgBedServerCompress,
-      imgBedAutoRetry,
-      imgBedUploadNameType,
-      imgBedReturnFormat,
-      imgBedUploadFolder,
-    ],
-    () => {
-      saveImgBedConfig()
-    },
-  )
+  if (!isInitialized) {
+    // Auto-save when any config changes
+    watch(
+      [
+        useImgBed,
+        imgBedEndpoint,
+        imgBedAuthCode,
+        imgBedUploadChannel,
+        imgBedServerCompress,
+        imgBedAutoRetry,
+        imgBedUploadNameType,
+        imgBedReturnFormat,
+        imgBedUploadFolder,
+      ],
+      saveImgBedConfig,
+      { deep: true }
+    )
+    isInitialized = true;
+  }
+
 
   return {
     showImgBedModal,
@@ -98,7 +101,7 @@ export function useImgBed() {
     imgBedReturnFormat,
     imgBedUploadFolder,
     loadImgBedConfig,
-    saveImgBedConfig: handleSaveAndCloseImgBedModal, // Rename for clarity in component
+    saveImgBedConfig: handleSaveAndCloseImgBedModal,
     closeImgBedModal: () => {
       showImgBedModal.value = false
     },

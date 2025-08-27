@@ -2,11 +2,18 @@ import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 import type { OpenRouterService } from '../../services/openrouter'
 
-export function useApiKeys(openRouterService: OpenRouterService) {
-  const showApiKeyModal = ref(false)
-  const apiKeys = ref<string[]>([])
-  const tempApiKeys = ref<string[]>([''])
-  const showKeys = ref<boolean[]>([false])
+// State is defined outside the function, making it a singleton
+const showApiKeyModal = ref(false)
+const apiKeys = ref<string[]>([])
+const tempApiKeys = ref<string[]>([''])
+const showKeys = ref<boolean[]>([false])
+
+let serviceInstance: OpenRouterService | null = null
+
+export function useApiKeys(openRouterService?: OpenRouterService) {
+  if (openRouterService && !serviceInstance) {
+    serviceInstance = openRouterService
+  }
 
   const loadApiKeys = () => {
     try {
@@ -14,8 +21,7 @@ export function useApiKeys(openRouterService: OpenRouterService) {
       if (saved) {
         const keys = JSON.parse(saved)
         apiKeys.value = keys
-        openRouterService.setApiKeys(keys)
-        // Also initialize temp keys for the modal
+        serviceInstance?.setApiKeys(keys)
         tempApiKeys.value = [...keys, '']
         showKeys.value = new Array(tempApiKeys.value.length).fill(false)
       }
@@ -49,25 +55,25 @@ export function useApiKeys(openRouterService: OpenRouterService) {
   const saveApiKeys = () => {
     const validKeys = tempApiKeys.value.filter((k) => k.trim())
     apiKeys.value = validKeys
-    openRouterService.setApiKeys(validKeys)
+    serviceInstance?.setApiKeys(validKeys)
     saveApiKeysToStorage()
     showApiKeyModal.value = false
     message.success(`已保存 ${validKeys.length} 个 API Key`)
   }
 
   const cancelApiKeys = () => {
-    // Reset temp keys from the currently saved keys
     tempApiKeys.value = [...apiKeys.value, '']
+    if (tempApiKeys.value.length === 1 && tempApiKeys.value[0] === '') {
+      // ensure there's always one empty input if no keys are saved
+    } else if (tempApiKeys.value.length > 1 && tempApiKeys.value[tempApiKeys.value.length - 1] !== '') {
+       tempApiKeys.value.push('')
+    }
     showKeys.value = new Array(tempApiKeys.value.length).fill(false)
     showApiKeyModal.value = false
   }
   
   const openApiKeyModal = () => {
-    // Before opening, ensure temp keys reflect the current state
     tempApiKeys.value = [...apiKeys.value, '']
-    if (tempApiKeys.value.length === 0) {
-        tempApiKeys.value.push('');
-    }
     showKeys.value = new Array(tempApiKeys.value.length).fill(false)
     showApiKeyModal.value = true
   }

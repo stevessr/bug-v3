@@ -1,22 +1,39 @@
-import { ref, nextTick, type Ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import type { OpenRouterService, OpenRouterMessage } from '../../services/openrouter'
 import type { ChatMessage } from '../types'
+import { useApiKeys } from './useApiKeys'
+import { useFileUpload } from './useFileUpload'
+
+// State is defined outside the function
+const messages = ref<ChatMessage[]>([])
+const inputMessage = ref('')
+const isLoading = ref(false)
+const selectedModel = ref('google/gemini-2.5-flash-image-preview:free')
+const enableImageGeneration = ref(false)
+const enableStreaming = ref(true)
+const chatContainer = ref<HTMLElement>()
+const modelOptions = ref([
+  { value: 'openai/gpt-oss-20b:free', label: 'GPT OSS 20B (Free)' },
+  { value: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air (Free)' },
+  { value: 'qwen/qwen3-coder:free', label: 'Qwen 3 (Coder)' },
+  { value: 'tngtech/deepseek-r1t2-chimera:free', label: 'DeepSeek R1T2 Chimera (Free)' },
+  { label: 'Gemini 2.5 Flash (Image)', value: 'google/gemini-2.5-flash-image-preview:free' },
+])
+
+let serviceInstance: OpenRouterService | null = null
 
 interface UseChatDeps {
   openRouterService: OpenRouterService
-  apiKeys: Ref<string[]>
-  fileList: Ref<any[]>
 }
 
-export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
-  const messages = ref<ChatMessage[]>([])
-  const inputMessage = ref('')
-  const isLoading = ref(false)
-  const selectedModel = ref('google/gemini-2.5-flash-image-preview:free')
-  const enableImageGeneration = ref(false)
-  const enableStreaming = ref(true)
-  const chatContainer = ref<HTMLElement>()
+export function useChat(deps?: UseChatDeps) {
+  if (deps?.openRouterService && !serviceInstance) {
+    serviceInstance = deps.openRouterService
+  }
+
+  const { apiKeys } = useApiKeys()
+  const { fileList } = useFileUpload()
 
   const scrollToBottom = () => {
     if (chatContainer.value) {
@@ -32,17 +49,19 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
       images,
     }
     messages.value.push(newMessage)
-    nextTick(() => {
-      scrollToBottom()
-    })
+    nextTick(scrollToBottom)
   }
 
   const sendMessage = async () => {
-    if (!inputMessage.value.trim() || isLoading.value || apiKeys.value.length === 0) {
-      if (apiKeys.value.length === 0) {
-        message.error('请先配置 API Keys')
-      }
+    if (!inputMessage.value.trim() && fileList.value.length === 0) return;
+    if (isLoading.value) return;
+    if (apiKeys.value.length === 0) {
+      message.error('请先在右上角配置你的 API Keys')
       return
+    }
+    if (!serviceInstance) {
+        message.error('Chat service not initialized.')
+        return
     }
 
     const userMessage = inputMessage.value.trim()
@@ -67,8 +86,8 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
         let assistantContent = ''
         let assistantImages: any[] = []
         const stream = enableImageGeneration.value
-          ? openRouterService.streamImage(userMessage, selectedModel.value)
-          : openRouterService.streamText(chatMessages, selectedModel.value)
+          ? serviceInstance.streamImage(userMessage, selectedModel.value)
+          : serviceInstance.streamText(chatMessages, selectedModel.value)
 
         addMessage('assistant', '')
         const messageIndex = messages.value.length - 1
@@ -90,8 +109,8 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
         }
       } else {
         const response = enableImageGeneration.value
-          ? await openRouterService.generateImage(userMessage, selectedModel.value)
-          : await openRouterService.generateText(chatMessages, selectedModel.value)
+          ? await serviceInstance.generateImage(userMessage, selectedModel.value)
+          : await serviceInstance.generateText(chatMessages, selectedModel.value)
 
         const assistantMessage = response.choices[0]?.message
         if (assistantMessage) {
@@ -117,6 +136,7 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
 
   const retryMessage = async (messageIndex: number) => {
     if (isLoading.value || messageIndex <= 0) return
+    if (!serviceInstance) return;
     
     const userMessage = messages.value[messageIndex - 1]
     if (userMessage.role !== 'user') return
@@ -138,8 +158,8 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
         let assistantContent = ''
         let assistantImages: any[] = []
         const stream = enableImageGeneration.value
-          ? openRouterService.streamImage(userContent, selectedModel.value)
-          : openRouterService.streamText(chatMessages, selectedModel.value)
+          ? serviceInstance.streamImage(userContent, selectedModel.value)
+          : serviceInstance.streamText(chatMessages, selectedModel.value)
 
         addMessage('assistant', '')
         const newMessageIndex = messages.value.length - 1
@@ -162,8 +182,8 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
         }
       } else {
         const response = enableImageGeneration.value
-          ? await openRouterService.generateImage(userContent, selectedModel.value)
-          : await openRouterService.generateText(chatMessages, selectedModel.value)
+          ? await serviceInstance.generateImage(userContent, selectedModel.value)
+          : await serviceInstance.generateText(chatMessages, selectedModel.value)
 
         const assistantMessage = response.choices[0]?.message
         if (assistantMessage) {
@@ -231,6 +251,7 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
     inputMessage,
     isLoading,
     selectedModel,
+    modelOptions,
     enableImageGeneration,
     enableStreaming,
     chatContainer,
