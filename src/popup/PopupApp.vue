@@ -31,7 +31,7 @@
           </template>
         </a-input>
       </div>
-      
+
       <!-- 图片缩放控制栏 -->
       <div class="scale-control">
         <div class="scale-control-content">
@@ -77,12 +77,19 @@
 
         <!-- 未分组 -->
         <div
-          v-if="(selectedGroup === 'all' || selectedGroup === 'ungrouped') && filteredUngrouped.length"
+          v-if="
+            (selectedGroup === 'all' || selectedGroup === 'ungrouped') && filteredUngrouped.length
+          "
           class="group-section"
         >
           <div class="group-title">未分组</div>
           <div class="emoji-grid" :style="gridStyle">
-            <div v-for="e in filteredUngrouped" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
+            <div
+              v-for="e in filteredUngrouped"
+              :key="e.UUID"
+              class="emoji-cell"
+              @click="onEmojiClick(e)"
+            >
               <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
             </div>
           </div>
@@ -159,28 +166,33 @@ export default defineComponent({
     // Filtered data based on search query
     const filteredHot = computed(() => {
       if (!searchQuery.value) return hot.value
-      return hot.value.filter((e: any) => 
-        (e.name || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        (e.displayName || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      return hot.value.filter(
+        (e: any) =>
+          (e.name || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+          (e.displayName || '').toLowerCase().includes(searchQuery.value.toLowerCase()),
       )
     })
 
     const filteredGroups = computed(() => {
       if (!searchQuery.value) return groups.value
-      return groups.value.map((g: any) => ({
-        ...g,
-        emojis: g.emojis.filter((e: any) => 
-          (e.name || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-          (e.displayName || '').toLowerCase().includes(searchQuery.value.toLowerCase())
-        )
-      })).filter((g: any) => g.emojis.length > 0)
+      return groups.value
+        .map((g: any) => ({
+          ...g,
+          emojis: g.emojis.filter(
+            (e: any) =>
+              (e.name || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+              (e.displayName || '').toLowerCase().includes(searchQuery.value.toLowerCase()),
+          ),
+        }))
+        .filter((g: any) => g.emojis.length > 0)
     })
 
     const filteredUngrouped = computed(() => {
       if (!searchQuery.value) return ungrouped.value
-      return ungrouped.value.filter((e: any) => 
-        (e.name || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        (e.displayName || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      return ungrouped.value.filter(
+        (e: any) =>
+          (e.name || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+          (e.displayName || '').toLowerCase().includes(searchQuery.value.toLowerCase()),
       )
     })
 
@@ -350,9 +362,26 @@ export default defineComponent({
           })
         })
 
-        // 监听表情组变更消息
-        commService.onGroupsChanged((newGroups) => {
-          groups.value = newGroups
+        // 监听表情组变更消息：从 store 重新读取最新数据以避免序列化/Proxy 导致的不一致
+        commService.onGroupsChanged((_newGroups) => {
+          try {
+            // prefer fresh data from store which is the single source of truth
+            groups.value = store.getGroups()
+          } catch (e) {
+            // fallback to payload if store read fails
+            try {
+              groups.value = Array.isArray(_newGroups) ? _newGroups : []
+            } catch (_) {
+              groups.value = []
+            }
+          }
+          // also refresh ungrouped and hot lists
+          try {
+            ungrouped.value = store.getUngrouped()
+          } catch (_) {}
+          try {
+            hot.value = store.getHot()
+          } catch (_) {}
         })
 
         // 监听使用记录消息
@@ -407,7 +436,7 @@ export default defineComponent({
       ungrouped,
       hot,
       filteredGroups,
-      filteredUngrouped, 
+      filteredUngrouped,
       filteredHot,
       selectedGroup,
       selectedKeys,

@@ -10,7 +10,7 @@ export type InjectorConfig = {
   emojiPickerClass?: string
   textAreaSelector?: string
   richEditorSelector?: string
-  emojiContentGeneratorFn: () => string
+  emojiContentGeneratorFn: () => string | Promise<string>
   pollInterval?: number
 }
 
@@ -55,18 +55,56 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
       const existingPicker = document.querySelector(`.${config.emojiPickerClass}`)
       if (existingPicker) {
         existingPicker.remove()
+        try {
+          emojiButton.setAttribute('aria-expanded', 'false')
+        } catch (_) {}
         document.removeEventListener('click', handleClickOutside)
         return
       }
 
       // generator() returns the full picker markup (root element like in simple.html).
       const container = document.createElement('div')
-      container.innerHTML = config.emojiContentGeneratorFn().trim()
+      // support generator returning either string or Promise<string>
+      try {
+        const result = config.emojiContentGeneratorFn()
+        if (result && typeof (result as any).then === 'function') {
+          ;(result as Promise<string>).then((html) => {
+            try {
+              container.innerHTML = (html || '').trim()
+              const emojiPicker = container.firstElementChild as HTMLElement | null
+              if (!emojiPicker) return
+              // ensure the picker has the configured picker class so toggle detection works
+              try {
+                emojiPicker.classList.add(config.emojiPickerClass)
+              } catch (_) {}
+              // append the generator-produced root node directly
+              document.body.appendChild(emojiPicker)
+              createdNodes.push(emojiPicker)
+            } catch (_) {}
+          })
+        } else {
+          container.innerHTML = String(result || '').trim()
+        }
+      } catch (err) {
+        try {
+          container.innerHTML = String(config.emojiContentGeneratorFn() || '').trim()
+        } catch (_) {
+          container.innerHTML = ''
+        }
+      }
       const emojiPicker = container.firstElementChild as HTMLElement | null
       if (!emojiPicker) return
-      // append the generator-produced root node directly
-      document.body.appendChild(emojiPicker)
-      createdNodes.push(emojiPicker)
+      // ensure the picker has the configured picker class so toggle detection works
+      try {
+        emojiPicker.classList.add(config.emojiPickerClass)
+      } catch (_) {}
+      // append the generator-produced root node directly (if not already appended by async branch)
+      if (!document.body.contains(emojiPicker)) {
+        document.body.appendChild(emojiPicker)
+        createdNodes.push(emojiPicker)
+      } else {
+        createdNodes.push(emojiPicker)
+      }
 
       // Debug: log current emojis inside the newly opened picker for diagnosis
       try {
@@ -129,6 +167,9 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
       function handleClickOutside(e: MouseEvent) {
         if (emojiPicker && !emojiPicker.contains(e.target as Node)) {
           emojiPicker.remove()
+          try {
+            emojiButton.setAttribute('aria-expanded', 'false')
+          } catch (_) {}
           document.removeEventListener('click', handleClickOutside)
         }
       }
@@ -162,6 +203,10 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
           filterInput.addEventListener('input', filterHandler)
           listeners.push(() => filterInput.removeEventListener('input', filterHandler))
         }
+      } catch (_) {}
+      // mark the trigger as expanded
+      try {
+        emojiButton.setAttribute('aria-expanded', 'true')
       } catch (_) {}
 
       emojiPicker.addEventListener('click', function (e) {
@@ -237,6 +282,9 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
           }
 
           if (emojiPicker) emojiPicker.remove()
+          try {
+            emojiButton.setAttribute('aria-expanded', 'false')
+          } catch (_) {}
         }
       })
     }
@@ -277,6 +325,32 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
       })
     } catch (err) {
       console.log('[nacho-inject] checkAndInsert error', err)
+    }
+    // If no toolbar found at all, create a floating button as a fallback so tests/pages without the
+    // site's toolbar can still open the picker. Only create one floating button per page.
+    try {
+      const existingFloating = document.querySelector(
+        `.${config.emojiButtonClass}.nacho-floating-btn`,
+      )
+      const anyToolbar = document.querySelector(config.toolbarSelector)
+      if (!anyToolbar && !existingFloating && document.body) {
+        const floatingBtn = createEmojiButtonElement({ buttonClass: config.emojiButtonClass })
+        floatingBtn.classList.add('nacho-floating-btn')
+        // simple inline styles to ensure visibility in tests
+        floatingBtn.style.position = 'fixed'
+        floatingBtn.style.right = '12px'
+        floatingBtn.style.bottom = '12px'
+        floatingBtn.style.zIndex = '2147483647'
+        floatingBtn.style.width = '44px'
+        floatingBtn.style.height = '44px'
+        floatingBtn.style.borderRadius = '8px'
+        document.body.appendChild(floatingBtn)
+        createdNodes.push(floatingBtn)
+        attachPickerBehavior(floatingBtn)
+        console.log('[nacho-inject] floating emoji button appended')
+      }
+    } catch (e) {
+      console.warn('[nacho-inject] failed to append floating button', e)
     }
   }
 

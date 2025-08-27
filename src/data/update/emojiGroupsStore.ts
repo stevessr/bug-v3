@@ -7,8 +7,42 @@ let ungrouped: any[] = []
 
 function initFromStorage() {
   const p = storage.loadPayload()
-  emojiGroups = Array.isArray(p?.emojiGroups) ? p!.emojiGroups : []
-  ungrouped = Array.isArray(p?.ungrouped) ? p!.ungrouped : []
+  if (p) {
+    emojiGroups = Array.isArray(p.emojiGroups) ? p.emojiGroups.map((g) => ({ ...g, emojis: [...g.emojis] })) : []
+    ungrouped = Array.isArray(p.ungrouped) ? p.ungrouped.map((e) => ({ ...e })) : []
+    return
+  }
+
+  // No payload in localStorage: try to load converted defaults from bundled JSON and persist them.
+  try {
+    if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+      fetch('/static/config/converted_payload.json')
+        .then((res) => {
+          if (!res.ok) throw new Error('fetch failed')
+          return res.json()
+        })
+        .then((payload: any) => {
+          try {
+            if (!payload) return
+            const gs = Array.isArray(payload.emojiGroups) ? payload.emojiGroups : []
+            const ug = Array.isArray(payload.ungrouped) ? payload.ungrouped : []
+            // initialize in-memory copies
+            emojiGroups = gs.map((g: any) => ({ ...g, emojis: Array.isArray(g.emojis) ? [...g.emojis] : [] }))
+            ungrouped = ug.map((e: any) => ({ ...e }))
+            // persist using settingsStore so storage.savePayload is used consistently
+            try {
+              settingsStore.setSettings(payload.Settings || {}, emojiGroups)
+            } catch (_) {
+              // fallback: call settingsStore.save to at least persist groups
+              try {
+                settingsStore.save(emojiGroups)
+              } catch (_) {}
+            }
+          } catch (_) {}
+        })
+        .catch((_) => {})
+    }
+  } catch (_) {}
 }
 
 function getEmojiGroups() {

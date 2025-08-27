@@ -40,3 +40,7 @@ e2e/.meta-user-data
 e2e/.tmp-user-data-grid
 e2e/.tmp-user-data-reset
 e2e/.tmp-user-data-vue
+e2e/.pw-user-data
+e2e/.pw-user-data-ext
+.pw-user-data-ext-diag
+.pw-user-data-observe

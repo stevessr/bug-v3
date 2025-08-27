@@ -17,34 +17,87 @@ export type EmojiItem = {
  */
 export function installNachonekoPicker(
   emojis: EmojiItem[],
-  opts?: { toolbarSelector?: string; textAreaSelector?: string; richEditorSelector?: string },
+  opts?: {
+    toolbarSelector?: string
+    textAreaSelector?: string
+    richEditorSelector?: string
+    ungrouped?: EmojiItem[]
+  },
 ) {
-  const generator = () => {
-    // Try to read the latest payload from localStorage so the picker can reflect runtime updates
-    let runtimeEmojis: Array<EmojiItem> | null = null
-    try {
-      const raw =
-        typeof window !== 'undefined' ? window.localStorage.getItem('bugcopilot_settings_v1') : null
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        const arr: EmojiItem[] = []
-        if (Array.isArray(parsed?.emojiGroups)) {
-          for (const g of parsed.emojiGroups) {
-            if (Array.isArray(g.emojis)) {
-              for (const em of g.emojis) arr.push(em)
+  const generator = async () => {
+    // try to request payload from extension background first
+    const runtimeEmojis = [] as any[]
+    async function loadRuntimeEmojis() {
+      // helper to convert payload -> flat runtimeEmojis
+      const convert = (payload: any) => {
+        const out: any[] = []
+        if (!payload) return out
+        const groups = payload.emojiGroups || []
+        groups.forEach((g: any) => {
+          if (g.emojis) {
+            g.emojis.forEach((e: any) => out.push({ ...e, groupUUID: g.uuid }))
+          }
+        })
+        if (payload.ungrouped) {
+          payload.ungrouped.forEach((e: any) => out.push({ ...e, groupUUID: undefined }))
+        }
+        return out
+      }
+
+      // try runtime message
+      try {
+        const payload = await new Promise<any>((resolve) => {
+          let settled = false
+          try {
+            ;(window as any).chrome?.runtime?.sendMessage(
+              { type: 'request-payload' },
+              (resp: any) => {
+                if (settled) return
+                settled = true
+                resolve(resp && resp.payload ? resp.payload : null)
+              },
+            )
+          } catch (err) {
+            if (!settled) {
+              settled = true
+              resolve(null)
             }
           }
-        }
-        if (Array.isArray(parsed?.ungrouped)) {
-          for (const em of parsed.ungrouped) arr.push(em)
-        }
-        if (arr.length) runtimeEmojis = arr
+          // timeout fallback: if no response in 300ms, resolve null
+          setTimeout(() => {
+            if (!settled) {
+              settled = true
+              resolve(null)
+            }
+          }, 300)
+        })
+        if (payload) return convert(payload)
+      } catch (err) {
+        // ignore and fallback
       }
-    } catch (_) {
-      runtimeEmojis = null
+
+      // fallback to localStorage
+      try {
+        const local = window.localStorage.getItem('bugcopilot_settings_v1')
+        if (local) {
+          const payload = JSON.parse(local)
+          return convert(payload)
+        }
+      } catch (e) {
+        console.warn('[nacho-inject] failed parse local payload', e)
+      }
+
+      // final fallback: provided emojis + ungrouped (from opts)
+      const out = [] as any[]
+      ;(emojis || []).forEach((e: any) => out.push({ ...e, groupUUID: e.groupUUID }))
+      ;((opts && opts.ungrouped) || []).forEach((e: any) =>
+        out.push({ ...e, groupUUID: undefined }),
+      )
+      return out
     }
 
-    const useEmojis = runtimeEmojis || emojis
+    const loaded = await loadRuntimeEmojis()
+    const useEmojis = loaded || emojis
 
     const images = useEmojis
       .map((e, idx) => {

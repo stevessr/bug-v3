@@ -40,7 +40,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["picker.css"],
+      "resources": ["picker.css", "content-script.js"],
       "matches": ["<all_urls>"]
     }
   ]
