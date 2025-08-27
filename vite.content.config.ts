@@ -3,7 +3,6 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 
-// Minimal config: build only the content-script entry as a single IIFE bundle
 export default defineConfig({
   plugins: [vue(), vueJsx()],
   build: {
@@ -17,7 +16,6 @@ export default defineConfig({
         inlineDynamicImports: true,
       },
     },
-    // produce non-hashed assets so manifest references stay simple
     emptyOutDir: false,
   },
 })

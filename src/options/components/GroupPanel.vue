@@ -175,7 +175,7 @@ export default defineComponent({
   gap: 8px;
 }
 .emoji-cell {
-  cursor: pointer;
+  cursor: grab;
   transition: all 0.2s ease;
   position: relative;
 }
@@ -183,6 +183,10 @@ export default defineComponent({
 .emoji-cell:hover {
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.emoji-cell:active {
+  cursor: grabbing;
 }
 
 .emoji-cell::after {

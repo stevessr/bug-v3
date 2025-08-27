@@ -293,7 +293,6 @@ function setContainer(el: any, groupUUID: string) {
           group: 'emoji-groups',
           animation: 150,
           ghostClass: 'sortable-ghost',
-          handle: '.drag-handle',
           onEnd(evt: any) {
             try {
               const fromGroupUUID = evt.from?.getAttribute('data-group')
