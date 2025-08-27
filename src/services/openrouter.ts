@@ -142,7 +142,7 @@ export class OpenRouterService {
    */
   async generateText(
     messages: OpenRouterMessage[],
-    model = 'openai/gpt-3.5-turbo',
+    model = 'google/gemini-2.5-flash-image-preview:free',
     options: Partial<OpenRouterRequest> = {},
   ): Promise<OpenRouterResponse> {
     const request: OpenRouterRequest = {

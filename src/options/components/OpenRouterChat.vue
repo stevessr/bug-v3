@@ -208,7 +208,7 @@ export default defineComponent({
     const messages = ref<ChatMessage[]>([])
     const inputMessage = ref('')
     const isLoading = ref(false)
-    const selectedModel = ref('openai/gpt-3.5-turbo')
+    const selectedModel = ref('google/gemini-2.5-flash-image-preview:free')
     const enableImageGeneration = ref(false)
     const enableStreaming = ref(true)
     const chatContainer = ref<HTMLElement>()
@@ -225,10 +225,11 @@ export default defineComponent({
 
     // Model Options
     const modelOptions = ref([
-      { label: 'GPT-3.5 Turbo', value: 'openai/gpt-3.5-turbo' },
-      { label: 'GPT-4', value: 'openai/gpt-4' },
-      { label: 'Claude 3 Sonnet', value: 'anthropic/claude-3-sonnet' },
-      { label: 'Gemini 2.5 Flash (Image)', value: 'google/gemini-2.5-flash-image-preview' },
+      { value: 'openai/gpt-oss-20b:free', label: 'GPT OSS 20B (Free)' },
+      { value: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air (Free)' },
+      { value: 'qwen/qwen3-coder:free', label: 'Qwen 3 (Coder)' },
+      { value: 'tngtech/deepseek-r1t2-chimera:free', label: 'DeepSeek R1T2 Chimera (Free)' },
+      { label: 'Gemini 2.5 Flash (Image)', value: 'google/gemini-2.5-flash-image-preview:free' },
     ])
 
     // Load saved API keys from localStorage
