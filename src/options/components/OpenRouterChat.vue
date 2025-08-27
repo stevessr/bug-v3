@@ -52,8 +52,13 @@
                 alt="Generated image"
               />
             </div>
-            <div v-if="!isLoading" class="message-actions" style="margin-top: 8px;">
-              <a-button v-if="message.role === 'assistant'" size="small" @click="retryMessage(index)">重试</a-button>
+            <div v-if="!isLoading" class="message-actions" style="margin-top: 8px">
+              <a-button
+                v-if="message.role === 'assistant'"
+                size="small"
+                @click="retryMessage(index)"
+                >重试</a-button
+              >
               <a-popconfirm
                 title="确定要删除这条消息吗？"
                 ok-text="确定"
@@ -211,6 +216,7 @@
       />
       <div style="text-align: center; margin-top: 16px">
         <a-button @click="downloadImage">下载图像</a-button>
+        <a-button @click="addPreviewToEmoji" style="margin-left: 8px">添加到表情</a-button>
       </div>
     </a-modal>
 
@@ -222,6 +228,15 @@
       @cancel="closeImgBedModal"
       width="640px"
     >
+      <span style="margin-left: 4px">
+        请先在
+        <a href="https://github.com/MarSeventh/CloudFlare-ImgBed" target="_blank"
+          >Cloudflare-ImgBed</a
+        >
+        项目中部署 ImgBed 服务
+        <br />
+        &nbsp然后填写 ImgBed 的 endpoint 和 authCode（可选）。
+      </span>
       <div style="display: flex; flex-direction: column; gap: 8px">
         <a-input
           v-model:value="imgBedEndpoint"
@@ -249,7 +264,9 @@
     >
       <div style="display: flex; flex-direction: column; gap: 16px">
         <div>
-          <label style="display: block; margin-bottom: 8px; font-weight: 500">选择文件或粘贴 JSON 数据：</label>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500"
+            >选择文件或粘贴 JSON 数据：</label
+          >
           <input
             type="file"
             accept=".json"

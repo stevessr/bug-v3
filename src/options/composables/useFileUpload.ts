@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
+import emojiGroupsStore from '../../data/update/emojiGroupsStore'
 
 // Helper function to convert a file to a data URL
 const fileToDataUrl = (file: File): Promise<string> => {
@@ -44,18 +45,58 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
     a.click()
   }
 
+  const addPreviewToEmoji = async () => {
+    const url = previewImageUrl.value
+    if (!url) {
+      message.error('没有可用的图片 URL')
+      return
+    }
+
+    try {
+      const uuid = crypto.randomUUID()
+      let displayName = 'chat-emoji'
+      try {
+        const urlObj = new URL(url)
+        const pathname = urlObj.pathname
+        const filename = pathname.substring(pathname.lastIndexOf('/') + 1)
+        if (filename) {
+          displayName = filename
+        }
+      } catch (e) {
+        // Could be a data URL, ignore error and use default name
+      }
+
+      const newEmoji = {
+        id: uuid,
+        UUID: uuid,
+        displayName: displayName,
+        realUrl: url,
+        displayUrl: url,
+        order: Date.now(),
+        addedAt: Date.now(),
+      }
+
+      emojiGroupsStore.addUngrouped(newEmoji)
+      message.success('已添加到未分组表情')
+      showImagePreview.value = false
+    } catch (error) {
+      console.error('Failed to add emoji:', error)
+      message.error(`添加表情失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    }
+  }
+
   const addImageUrl = () => {
     const raw = imageUrlInput.value.trim()
     if (!raw) return
     const url =
       raw.startsWith('data:') || raw.startsWith('http') ? raw : `data:image/png;base64,${raw}`
     const item = { uid: `${Date.now()}`, name: 'pasted.png', status: 'done', url }
-    
+
     const exists = fileList.value.find((f) => f.url === url || f.preview === url)
     if (!exists) {
       fileList.value.push(item)
     }
-    
+
     const pendingExists = pendingImages.value.find((p) => p.image_url?.url === url)
     if (!pendingExists) {
       pendingImages.value.push({ type: 'image_url', image_url: { url } })
@@ -75,7 +116,9 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
     if (imgBedConfig.imgBedUploadFolder.value) params.set('uploadFolder', imgBedConfig.imgBedUploadFolder.value)
 
     const uploadUrl =
-      imgBedConfig.imgBedEndpoint.value + (imgBedConfig.imgBedEndpoint.value.includes('?') ? '&' : '?') + params.toString()
+      imgBedConfig.imgBedEndpoint.value +
+      (imgBedConfig.imgBedEndpoint.value.includes('?') ? '&' : '?') +
+      params.toString()
 
     const fd = new FormData()
     fd.append('file', file)
@@ -93,7 +136,8 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
   }
 
   const uploadBefore = async (file: File) => {
-    const findExistingIndex = () => fileList.value.findIndex((f) => f.originFileObj === file || (f.name === file.name && f.size === file.size))
+    const findExistingIndex = () =>
+      fileList.value.findIndex((f) => f.originFileObj === file || (f.name === file.name && f.size === file.size))
 
     if (imgBedConfig.useImgBed.value) {
       if (!imgBedConfig.imgBedEndpoint.value) {
@@ -159,7 +203,7 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
       }))
     pendingImages.value = fileList.value.map((entry) => ({
       type: 'image_url',
-      image_url: { url: entry.url }
+      image_url: { url: entry.url },
     }))
   }
 
@@ -186,6 +230,7 @@ export function useFileUpload(imgBedConfig: ImgBedConfig) {
     pendingImages,
     previewImage,
     downloadImage,
+    addPreviewToEmoji,
     addImageUrl,
     uploadBefore,
     handleUploadChange,

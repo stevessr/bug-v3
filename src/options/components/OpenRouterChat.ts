@@ -44,6 +44,7 @@ export default defineComponent({
       openRouterService,
       apiKeys: apiKeysManager.apiKeys,
       fileList: fileUploadManager.fileList,
+      pendingImages: fileUploadManager.pendingImages,
     })
 
     const historyManager = useChatHistory({

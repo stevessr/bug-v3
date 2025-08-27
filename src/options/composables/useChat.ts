@@ -7,9 +7,10 @@ interface UseChatDeps {
   openRouterService: OpenRouterService
   apiKeys: Ref<string[]>
   fileList: Ref<any[]>
+  pendingImages: Ref<any[]>
 }
 
-export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
+export function useChat({ openRouterService, apiKeys, fileList, pendingImages }: UseChatDeps) {
   const messages = ref<ChatMessage[]>([])
   const inputMessage = ref('')
   const isLoading = ref(false)
@@ -69,7 +70,7 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
 
   const sendMessage = async () => {
     const trimmedMessage = inputMessage.value.trim()
-    if ((!trimmedMessage && fileList.value.length === 0) || isLoading.value) {
+    if ((!trimmedMessage && pendingImages.value.length === 0) || isLoading.value) {
       return
     }
     if (apiKeys.value.length === 0) {
@@ -80,11 +81,12 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
     const userMessage = trimmedMessage
     inputMessage.value = ''
 
-    const userImages = fileList.value.length
-      ? fileList.value.map((f) => ({ type: 'image_url', image_url: { url: f.url || f.preview } }))
+    const userImages = pendingImages.value.length
+      ? pendingImages.value.map((p) => ({ type: 'image_url', image_url: { url: p.image_url.url } }))
       : undefined
     addMessage('user', userMessage, userImages)
     fileList.value = []
+    pendingImages.value = []
 
     isLoading.value = true
 
