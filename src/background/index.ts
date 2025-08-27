@@ -26,6 +26,58 @@ try {
 // expose last payload so tabs that open late can request it
 let lastPayloadGlobal: any = null
 
+// Import data stores for accessing emoji data
+let emojiGroupsStore: any = null
+let settingsStore: any = null
+
+// Load converted_payload.json as default data
+async function loadDefaultPayload() {
+  try {
+    // Try to fetch from extension URL
+    const response = await fetch(chrome.runtime.getURL('static/config/converted_payload.json'))
+    if (response.ok) {
+      return await response.json()
+    }
+  } catch (_) {}
+  return null
+}
+
+// Initialize stores and load default data
+;(async () => {
+  try {
+    // Try to import the stores
+    const [emojiModule, settingsModule] = await Promise.all([
+      import('../data/update/emojiGroupsStore'),
+      import('../data/update/settingsStore')
+    ])
+    
+    emojiGroupsStore = emojiModule.default
+    settingsStore = settingsModule.default
+    
+    log('Emoji stores imported successfully')
+  } catch (err) {
+    log('Failed to import emoji stores:', err)
+  }
+
+  // Try to load default payload if no data exists
+  try {
+    const defaultPayload = await loadDefaultPayload()
+    if (defaultPayload && defaultPayload.emojiGroups) {
+      lastPayloadGlobal = {
+        Settings: defaultPayload.Settings || settingsStore?.defaults || {},
+        emojiGroups: defaultPayload.emojiGroups || [],
+        ungrouped: defaultPayload.ungrouped || []
+      }
+      log('Loaded default payload from converted_payload.json:', {
+        groupsCount: lastPayloadGlobal.emojiGroups?.length || 0,
+        emojisCount: lastPayloadGlobal.emojiGroups?.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0) || 0
+      })
+    }
+  } catch (err) {
+    log('Failed to load default payload:', err)
+  }
+})()
+
 function appendTelemetry(ev: any) {
   try {
     const item = { ts: Date.now(), ...ev }
@@ -470,12 +522,60 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
   chrome.runtime.onMessage.addListener(
     (msg: any, sender: any, sendResponse: (resp: any) => void) => {
       log('onMessage', { msg, from: sender })
+      
+      // Handle GET_EMOJI_DATA request from content scripts
+      if (msg && msg.type === 'GET_EMOJI_DATA') {
+        try {
+          let groups = []
+          let settings = {}
+          let ungroupedEmojis = []
+
+          if (lastPayloadGlobal) {
+            groups = lastPayloadGlobal.emojiGroups || []
+            settings = lastPayloadGlobal.Settings || {}
+            ungroupedEmojis = lastPayloadGlobal.ungrouped || []
+          } else if (emojiGroupsStore && settingsStore) {
+            // Try to get from stores if available
+            try {
+              groups = emojiGroupsStore.getEmojiGroups() || []
+              settings = settingsStore.getSettings() || {}
+              ungroupedEmojis = emojiGroupsStore.getUngrouped() || []
+            } catch (_) {}
+          }
+
+          log('Responding to GET_EMOJI_DATA:', {
+            groupsCount: groups.length,
+            emojisCount: groups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0),
+            ungroupedCount: ungroupedEmojis.length,
+            hasSettings: !!settings
+          })
+
+          sendResponse({
+            success: true,
+            data: {
+              groups,
+              settings,
+              ungroupedEmojis
+            }
+          })
+        } catch (error) {
+          log('Error handling GET_EMOJI_DATA:', error)
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }
+        return true
+      }
+      
       // handle payload-updated events from page localStorage
       try {
         if (msg && msg.type === 'payload-updated') {
           try {
             log('received payload-updated from page, payload keys:', Object.keys(msg.payload || {}))
             SyncManager.onLocalPayloadUpdated(msg.payload)
+            // Update global payload for content scripts
+            lastPayloadGlobal = msg.payload
           } catch (_) {}
           sendResponse({ ok: true })
           return
@@ -570,7 +670,51 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
 } else if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.onMessage) {
   browser.runtime.onMessage.addListener((msg: any, sender: any) => {
     log('onMessage', { msg, from: sender })
+    
+    // Handle GET_EMOJI_DATA request from content scripts
+    if (msg && msg.type === 'GET_EMOJI_DATA') {
+      try {
+        let groups = []
+        let settings = {}
+        let ungroupedEmojis = []
+
+        if (lastPayloadGlobal) {
+          groups = lastPayloadGlobal.emojiGroups || []
+          settings = lastPayloadGlobal.Settings || {}
+          ungroupedEmojis = lastPayloadGlobal.ungrouped || []
+        } else if (emojiGroupsStore && settingsStore) {
+          try {
+            groups = emojiGroupsStore.getEmojiGroups() || []
+            settings = settingsStore.getSettings() || {}
+            ungroupedEmojis = emojiGroupsStore.getUngrouped() || []
+          } catch (_) {}
+        }
+
+        return Promise.resolve({
+          success: true,
+          data: {
+            groups,
+            settings,
+            ungroupedEmojis
+          }
+        })
+      } catch (error) {
+        return Promise.resolve({
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+    
     try {
+      if (msg && msg.type === 'payload-updated') {
+        try {
+          SyncManager.onLocalPayloadUpdated(msg.payload)
+          lastPayloadGlobal = msg.payload
+        } catch (_) {}
+        return Promise.resolve({ ok: true })
+      }
+      
       if (msg && msg.type === 'broadcast') {
         const payload = {
           type: 'broadcast',

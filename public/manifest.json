@@ -45,7 +45,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["picker.css", "content-script.js"],
+      "resources": ["picker.css", "content-script.js", "static/config/converted_payload.json"],
       "matches": ["<all_urls>"]
     }
   ]
