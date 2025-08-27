@@ -1,13 +1,13 @@
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
 import type { ChatMessage } from '../types'
-import { useChat } from './useChat'
 
-// State is defined outside the function
-const showImportModal = ref(false)
-const importChatData = ref('')
-const importError = ref('')
-const replaceExistingChat = ref(false)
+interface ChatHistoryDeps {
+  messages: Ref<ChatMessage[]>
+  selectedModel: Ref<string>
+  modelOptions: Ref<{ label: string; value: string }[]>
+  scrollToBottom: () => void
+}
 
 interface ImportedChatData {
   messages: {
@@ -25,8 +25,11 @@ interface ImportedChatData {
   timestamp?: string
 }
 
-export function useChatHistory() {
-  const { messages, selectedModel, modelOptions, scrollToBottom } = useChat()
+export function useChatHistory({ messages, selectedModel, modelOptions, scrollToBottom }: ChatHistoryDeps) {
+  const showImportModal = ref(false)
+  const importChatData = ref('')
+  const importError = ref('')
+  const replaceExistingChat = ref(false)
 
   const exportChat = () => {
     const chatData = {
@@ -117,7 +120,9 @@ export function useChatHistory() {
       importError.value = ''
       replaceExistingChat.value = false
       
-      nextTick(scrollToBottom)
+      nextTick(() => {
+        scrollToBottom()
+      })
       
     } catch (error) {
       importError.value = '解析 JSON 数据失败：' + (error instanceof Error ? error.message : '未知错误')

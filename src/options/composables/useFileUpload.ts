@@ -1,6 +1,5 @@
-import { ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { useImgBed } from './useImgBed'
 
 // Helper function to convert a file to a data URL
 const fileToDataUrl = (file: File): Promise<string> => {
@@ -12,10 +11,20 @@ const fileToDataUrl = (file: File): Promise<string> => {
   })
 }
 
-export function useFileUpload() {
-  // Get the stateful ImgBed config
-  const imgBedConfig = useImgBed()
+// Define the properties this composable depends on from useImgBed
+interface ImgBedConfig {
+  useImgBed: Ref<boolean>
+  imgBedEndpoint: Ref<string>
+  imgBedAuthCode: Ref<string>
+  imgBedUploadChannel: Ref<string>
+  imgBedServerCompress: Ref<boolean>
+  imgBedAutoRetry: Ref<boolean>
+  imgBedUploadNameType: Ref<string>
+  imgBedReturnFormat: Ref<string>
+  imgBedUploadFolder: Ref<string>
+}
 
+export function useFileUpload(imgBedConfig: ImgBedConfig) {
   // Image Preview / Upload state
   const showImagePreview = ref(false)
   const previewImageUrl = ref('')
