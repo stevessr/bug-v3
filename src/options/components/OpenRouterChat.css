@@ -1,0 +1,83 @@
+.tools-container {
+  padding: 0;
+}
+
+.chat-container {
+  height: 400px;
+  overflow-y: auto;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #fafafa;
+}
+
+.message-item {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.user-message {
+  margin-left: 20%;
+  background: #e6f7ff;
+}
+
+.assistant-message {
+  margin-right: 20%;
+  background: #f6ffed;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.message-content {
+  word-wrap: break-word;
+}
+
+.message-images {
+  margin-top: 8px;
+}
+
+.generated-image {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.generated-image:hover {
+  transform: scale(1.02);
+}
+
+.loading-message {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.input-area {
+  margin-bottom: 0;
+}
+
+.quick-actions {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+}
+
+.api-key-manager {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.api-key-item {
+  margin-bottom: 8px;
+}
