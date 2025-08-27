@@ -4,7 +4,7 @@
       <template #extra>
         <a-button type="link" @click="showApiKeyModal = true">配置 API Keys</a-button>
       </template>
-      
+
       <!-- Model Selection -->
       <div style="margin-bottom: 16px">
         <a-row :gutter="16">
@@ -17,25 +17,24 @@
             />
           </a-col>
           <a-col :span="6">
-            <a-checkbox v-model:checked="enableImageGeneration">
-              生成图像
-            </a-checkbox>
+            <a-checkbox v-model:checked="enableImageGeneration"> 生成图像 </a-checkbox>
           </a-col>
           <a-col :span="6">
-            <a-checkbox v-model:checked="enableStreaming">
-              流式响应
-            </a-checkbox>
+            <a-checkbox v-model:checked="enableStreaming"> 流式响应 </a-checkbox>
           </a-col>
         </a-row>
       </div>
 
       <!-- Chat Area -->
       <div class="chat-container" ref="chatContainer">
-        <div 
-          v-for="(message, index) in messages" 
+        <div
+          v-for="(message, index) in messages"
           :key="index"
           class="message-item"
-          :class="{ 'user-message': message.role === 'user', 'assistant-message': message.role === 'assistant' }"
+          :class="{
+            'user-message': message.role === 'user',
+            'assistant-message': message.role === 'assistant',
+          }"
         >
           <div class="message-header">
             <strong>{{ message.role === 'user' ? '用户' : 'AI' }}</strong>
@@ -44,8 +43,8 @@
           <div class="message-content">
             <div v-if="message.content" v-html="formatContent(message.content)"></div>
             <div v-if="message.images && message.images.length" class="message-images">
-              <img 
-                v-for="(image, imgIndex) in message.images" 
+              <img
+                v-for="(image, imgIndex) in message.images"
                 :key="imgIndex"
                 :src="image.image_url.url"
                 @click="previewImage(image.image_url.url)"
@@ -55,10 +54,8 @@
             </div>
           </div>
         </div>
-        
-        <div v-if="isLoading" class="loading-message">
-          <a-spin size="small" /> AI 正在思考...
-        </div>
+
+        <div v-if="isLoading" class="loading-message"><a-spin size="small" /> AI 正在思考...</div>
       </div>
 
       <!-- Input Area -->
@@ -73,8 +70,8 @@
             />
           </a-col>
           <a-col :span="4">
-            <a-button 
-              type="primary" 
+            <a-button
+              type="primary"
               @click="sendMessage"
               :loading="isLoading"
               :disabled="!inputMessage.trim() || apiKeys.length === 0"
@@ -100,9 +97,7 @@
                 <a-menu-item key="summary">内容总结</a-menu-item>
               </a-menu>
             </template>
-            <a-button size="small">
-              模板 <DownOutlined />
-            </a-button>
+            <a-button size="small"> 模板 <DownOutlined /> </a-button>
           </a-dropdown>
         </a-space>
       </div>
@@ -118,7 +113,7 @@
     >
       <div class="api-key-manager">
         <p>添加多个 API Key 以实现负载均衡和容错：</p>
-        
+
         <div v-for="(key, index) in tempApiKeys" :key="index" class="api-key-item">
           <a-row :gutter="8">
             <a-col :span="20">
@@ -129,29 +124,24 @@
               />
             </a-col>
             <a-col :span="2">
-              <a-button 
-                type="link" 
+              <a-button
+                type="link"
                 @click="toggleKeyVisibility(index)"
                 :icon="showKeys[index] ? h(EyeInvisibleOutlined) : h(EyeOutlined)"
               />
             </a-col>
             <a-col :span="2">
-              <a-button 
-                type="link" 
-                danger 
-                @click="removeApiKey(index)"
-                :icon="h(DeleteOutlined)"
-              />
+              <a-button type="link" danger @click="removeApiKey(index)" :icon="h(DeleteOutlined)" />
             </a-col>
           </a-row>
         </div>
-        
+
         <a-button @click="addApiKey" type="dashed" style="width: 100%; margin-top: 8px">
           <PlusOutlined /> 添加 API Key
         </a-button>
-        
-        <a-alert 
-          v-if="tempApiKeys.filter(k => k.trim()).length === 0"
+
+        <a-alert
+          v-if="tempApiKeys.filter((k) => k.trim()).length === 0"
           message="请至少添加一个有效的 API Key"
           type="warning"
           style="margin-top: 16px"
@@ -167,8 +157,8 @@
       width="80%"
       style="max-width: 1000px"
     >
-      <img 
-        :src="previewImageUrl" 
+      <img
+        :src="previewImageUrl"
         style="width: 100%; height: auto; max-height: 70vh; object-fit: contain"
         alt="Image preview"
       />
@@ -182,13 +172,14 @@
 <script lang="ts">
 import { defineComponent, ref, nextTick, onMounted, h } from 'vue'
 import { message } from 'ant-design-vue'
-import { OpenRouterService, OpenRouterMessage } from '../../services/openrouter'
-import { 
-  DownOutlined, 
-  EyeOutlined, 
-  EyeInvisibleOutlined, 
-  DeleteOutlined, 
-  PlusOutlined 
+import { OpenRouterService } from '../../services/openrouter'
+import type { OpenRouterMessage } from '../../services/openrouter'
+import {
+  DownOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  DeleteOutlined,
+  PlusOutlined,
 } from '@ant-design/icons-vue'
 
 interface ChatMessage extends OpenRouterMessage {
@@ -208,11 +199,11 @@ export default defineComponent({
     EyeOutlined,
     EyeInvisibleOutlined,
     DeleteOutlined,
-    PlusOutlined
+    PlusOutlined,
   },
   setup() {
     const openRouterService = new OpenRouterService()
-    
+
     // UI State
     const messages = ref<ChatMessage[]>([])
     const inputMessage = ref('')
@@ -221,23 +212,23 @@ export default defineComponent({
     const enableImageGeneration = ref(false)
     const enableStreaming = ref(true)
     const chatContainer = ref<HTMLElement>()
-    
+
     // API Key Management
     const showApiKeyModal = ref(false)
     const apiKeys = ref<string[]>([])
     const tempApiKeys = ref<string[]>([''])
     const showKeys = ref<boolean[]>([false])
-    
+
     // Image Preview
     const showImagePreview = ref(false)
     const previewImageUrl = ref('')
-    
+
     // Model Options
     const modelOptions = ref([
       { label: 'GPT-3.5 Turbo', value: 'openai/gpt-3.5-turbo' },
       { label: 'GPT-4', value: 'openai/gpt-4' },
       { label: 'Claude 3 Sonnet', value: 'anthropic/claude-3-sonnet' },
-      { label: 'Gemini 2.5 Flash (Image)', value: 'google/gemini-2.5-flash-image-preview' }
+      { label: 'Gemini 2.5 Flash (Image)', value: 'google/gemini-2.5-flash-image-preview' },
     ])
 
     // Load saved API keys from localStorage
@@ -279,7 +270,7 @@ export default defineComponent({
     }
 
     const saveApiKeys = () => {
-      const validKeys = tempApiKeys.value.filter(k => k.trim())
+      const validKeys = tempApiKeys.value.filter((k) => k.trim())
       apiKeys.value = validKeys
       openRouterService.setApiKeys(validKeys)
       saveApiKeysToStorage()
@@ -299,7 +290,7 @@ export default defineComponent({
         role,
         content,
         timestamp: new Date(),
-        images
+        images,
       }
       messages.value.push(newMessage)
       nextTick(() => {
@@ -320,37 +311,37 @@ export default defineComponent({
 
       const userMessage = inputMessage.value.trim()
       inputMessage.value = ''
-      
+
       // Add user message
       addMessage('user', userMessage)
-      
+
       isLoading.value = true
-      
+
       try {
-        const chatMessages: OpenRouterMessage[] = messages.value.map(m => ({
+        const chatMessages: OpenRouterMessage[] = messages.value.map((m) => ({
           role: m.role,
-          content: m.content
+          content: m.content,
         }))
 
         if (enableStreaming.value) {
           // Streaming response
           let assistantContent = ''
           let assistantImages: any[] = []
-          
-          const stream = enableImageGeneration.value 
+
+          const stream = enableImageGeneration.value
             ? openRouterService.streamImage(userMessage, selectedModel.value)
             : openRouterService.streamText(chatMessages, selectedModel.value)
-          
+
           // Add empty assistant message that we'll update
           addMessage('assistant', '')
           const messageIndex = messages.value.length - 1
-          
+
           for await (const chunk of stream) {
             if (chunk.choices[0]?.delta?.content) {
               assistantContent += chunk.choices[0].delta.content
               messages.value[messageIndex].content = assistantContent
             }
-            
+
             if (chunk.choices[0]?.delta?.images) {
               assistantImages.push(...chunk.choices[0].delta.images)
               messages.value[messageIndex].images = assistantImages
@@ -361,7 +352,7 @@ export default defineComponent({
           const response = enableImageGeneration.value
             ? await openRouterService.generateImage(userMessage, selectedModel.value)
             : await openRouterService.generateText(chatMessages, selectedModel.value)
-          
+
           const assistantMessage = response.choices[0]?.message
           if (assistantMessage) {
             addMessage('assistant', assistantMessage.content || '', assistantMessage.images)
@@ -393,7 +384,7 @@ export default defineComponent({
       const chatData = {
         timestamp: new Date().toISOString(),
         model: selectedModel.value,
-        messages: messages.value
+        messages: messages.value,
       }
       const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -409,8 +400,8 @@ export default defineComponent({
       const templates = {
         'image-prompt': '请为我生成一张图片：',
         'code-review': '请帮我审查以下代码，指出问题和改进建议：\n\n```\n\n```',
-        'translation': '请将以下内容翻译成中文：\n\n',
-        'summary': '请总结以下内容的要点：\n\n'
+        translation: '请将以下内容翻译成中文：\n\n',
+        summary: '请总结以下内容的要点：\n\n',
       }
       inputMessage.value = templates[key as keyof typeof templates] || ''
     }
@@ -425,9 +416,9 @@ export default defineComponent({
     }
 
     const formatTime = (timestamp: Date) => {
-      return timestamp.toLocaleTimeString('zh-CN', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      return timestamp.toLocaleTimeString('zh-CN', {
+        hour: '2-digit',
+        minute: '2-digit',
       })
     }
 
@@ -454,9 +445,12 @@ export default defineComponent({
       loadApiKeys()
       tempApiKeys.value = [...apiKeys.value, '']
       showKeys.value = new Array(tempApiKeys.value.length).fill(false)
-      
+
       // Add welcome message
-      addMessage('assistant', '👋 欢迎使用 OpenRouter 对话工具！\n\n我可以帮你：\n• 进行对话交流\n• 生成图像\n• 翻译文本\n• 审查代码\n• 总结内容\n\n请先在右上角配置你的 API Keys，然后开始对话吧！')
+      addMessage(
+        'assistant',
+        '👋 欢迎使用 OpenRouter 对话工具！\n\n我可以帮你：\n• 进行对话交流\n• 生成图像\n• 翻译文本\n• 审查代码\n• 总结内容\n\n请先在右上角配置你的 API Keys，然后开始对话吧！',
+      )
     })
 
     return {
@@ -468,7 +462,7 @@ export default defineComponent({
       enableImageGeneration,
       enableStreaming,
       chatContainer,
-      
+
       // API Key Management
       showApiKeyModal,
       apiKeys,
@@ -479,7 +473,7 @@ export default defineComponent({
       toggleKeyVisibility,
       saveApiKeys,
       cancelApiKeys,
-      
+
       // Chat Functions
       sendMessage,
       handleEnter,
@@ -488,26 +482,26 @@ export default defineComponent({
       insertTemplate,
       formatContent,
       formatTime,
-      
+
       // Image Functions
       showImagePreview,
       previewImageUrl,
       previewImage,
       downloadImage,
-      
+
       // Options
       modelOptions,
       updateModelOptions,
-      
+
       // Icons for template
       h,
       DownOutlined,
       EyeOutlined,
       EyeInvisibleOutlined,
       DeleteOutlined,
-      PlusOutlined
+      PlusOutlined,
     }
-  }
+  },
 })
 </script>
 
@@ -531,7 +525,7 @@ export default defineComponent({
   padding: 12px;
   border-radius: 8px;
   background: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .user-message {

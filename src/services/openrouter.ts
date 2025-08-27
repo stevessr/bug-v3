@@ -72,11 +72,11 @@ export class OpenRouterService {
   private baseUrl = 'https://openrouter.ai/api/v1/chat/completions'
 
   constructor(apiKeys: string[] = []) {
-    this.apiKeys = apiKeys.filter(key => key.trim())
+    this.apiKeys = apiKeys.filter((key) => key.trim())
   }
 
   setApiKeys(keys: string[]) {
-    this.apiKeys = keys.filter(key => key.trim())
+    this.apiKeys = keys.filter((key) => key.trim())
     this.currentKeyIndex = 0
   }
 
@@ -115,18 +115,21 @@ export class OpenRouterService {
 
   private async makeRequest(request: OpenRouterRequest, retryCount = 0): Promise<Response> {
     const apiKey = this.getCurrentApiKey()
-    
+
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(request)
+      body: JSON.stringify(request),
     })
 
     // If rate limited or unauthorized, try next API key
-    if ((response.status === 429 || response.status === 401) && retryCount < this.apiKeys.length - 1) {
+    if (
+      (response.status === 429 || response.status === 401) &&
+      retryCount < this.apiKeys.length - 1
+    ) {
       this.rotateApiKey()
       return this.makeRequest(request, retryCount + 1)
     }
@@ -140,17 +143,17 @@ export class OpenRouterService {
   async generateText(
     messages: OpenRouterMessage[],
     model = 'openai/gpt-3.5-turbo',
-    options: Partial<OpenRouterRequest> = {}
+    options: Partial<OpenRouterRequest> = {},
   ): Promise<OpenRouterResponse> {
     const request: OpenRouterRequest = {
       model,
       messages,
       modalities: ['text'],
-      ...options
+      ...options,
     }
 
     const response = await this.makeRequest(request)
-    
+
     if (!response.ok) {
       const error = await response.text()
       throw new Error(`OpenRouter API error: ${response.status} ${error}`)
@@ -165,24 +168,24 @@ export class OpenRouterService {
   async generateImage(
     prompt: string,
     model = 'google/gemini-2.5-flash-image-preview',
-    options: Partial<OpenRouterRequest> = {}
+    options: Partial<OpenRouterRequest> = {},
   ): Promise<OpenRouterResponse> {
     const messages: OpenRouterMessage[] = [
       {
         role: 'user',
-        content: prompt
-      }
+        content: prompt,
+      },
     ]
 
     const request: OpenRouterRequest = {
       model,
       messages,
       modalities: ['image', 'text'],
-      ...options
+      ...options,
     }
 
     const response = await this.makeRequest(request)
-    
+
     if (!response.ok) {
       const error = await response.text()
       throw new Error(`OpenRouter API error: ${response.status} ${error}`)
@@ -196,19 +199,19 @@ export class OpenRouterService {
    */
   async *streamText(
     messages: OpenRouterMessage[],
-    model = 'openai/gpt-3.5-turbo',
-    options: Partial<OpenRouterRequest> = {}
+    model = 'google/gemini-2.5-flash-image-preview',
+    options: Partial<OpenRouterRequest> = {},
   ): AsyncGenerator<OpenRouterStreamChunk, void, unknown> {
     const request: OpenRouterRequest = {
       model,
       messages,
       modalities: ['text'],
       stream: true,
-      ...options
+      ...options,
     }
 
     const response = await this.makeRequest(request)
-    
+
     if (!response.ok) {
       const error = await response.text()
       throw new Error(`OpenRouter API error: ${response.status} ${error}`)
@@ -257,13 +260,13 @@ export class OpenRouterService {
   async *streamImage(
     prompt: string,
     model = 'google/gemini-2.5-flash-image-preview',
-    options: Partial<OpenRouterRequest> = {}
+    options: Partial<OpenRouterRequest> = {},
   ): AsyncGenerator<OpenRouterStreamChunk, void, unknown> {
     const messages: OpenRouterMessage[] = [
       {
         role: 'user',
-        content: prompt
-      }
+        content: prompt,
+      },
     ]
 
     const request: OpenRouterRequest = {
@@ -271,11 +274,11 @@ export class OpenRouterService {
       messages,
       modalities: ['image', 'text'],
       stream: true,
-      ...options
+      ...options,
     }
 
     const response = await this.makeRequest(request)
-    
+
     if (!response.ok) {
       const error = await response.text()
       throw new Error(`OpenRouter API error: ${response.status} ${error}`)
@@ -326,25 +329,30 @@ export class OpenRouterService {
     // For now, return common models based on documentation
     return [
       {
-        id: 'openai/gpt-3.5-turbo',
-        name: 'GPT-3.5 Turbo',
-        modalities: ['text']
-      },
-      {
-        id: 'openai/gpt-4',
-        name: 'GPT-4',
-        modalities: ['text']
-      },
-      {
-        id: 'google/gemini-2.5-flash-image-preview',
+        id: 'google/gemini-2.5-flash-image-preview:free',
         name: 'Gemini 2.5 Flash (Image)',
-        modalities: ['text', 'image']
+        modalities: ['text', 'image'],
       },
       {
-        id: 'anthropic/claude-3-sonnet',
-        name: 'Claude 3 Sonnet',
-        modalities: ['text']
-      }
+        id: 'openai/gpt-oss-20b:free',
+        name: 'GPT OSS 20B (Free)',
+        modalities: ['text'],
+      },
+      {
+        id: 'z-ai/glm-4.5-air:free',
+        name: 'GLM 4.5 Air (Free)',
+        modalities: ['text'],
+      },
+      {
+        id: 'qwen/qwen3-coder:free',
+        name: 'Qwen 3 (Coder)',
+        modalities: ['text'],
+      },
+      {
+        id: 'tngtech/deepseek-r1t2-chimera:free',
+        name: 'DeepSeek R1T2 Chimera (Free)',
+        modalities: ['text'],
+      },
     ]
   }
 }
