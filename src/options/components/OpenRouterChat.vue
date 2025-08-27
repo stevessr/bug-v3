@@ -60,21 +60,70 @@
 
       <!-- Input Area -->
       <div class="input-area">
+        <div style="margin-bottom: 8px">
+          <a-row :gutter="8">
+            <a-col :span="16">
+              <a-textarea
+                v-model:value="inputMessage"
+                placeholder="输入消息..."
+                :auto-size="{ minRows: 2, maxRows: 6 }"
+                @press-enter="handleEnter"
+              />
+            </a-col>
+            <a-col :span="8">
+              <div style="display: flex; gap: 8px">
+                <a-input
+                  v-model:value="imageUrlInput"
+                  placeholder="粘贴图片 URL 并点击添加"
+                  @keyup.enter="addImageUrl"
+                />
+                <a-button @click="addImageUrl">添加</a-button>
+              </div>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div style="margin-bottom: 8px; display: flex; gap: 8px; align-items: center">
+          <input type="file" accept="image/*" multiple @change="handleFileUpload" />
+          <span style="color: #888; font-size: 12px"
+            >已选择图片可以预览并删除，发送后会作为 message.content 的 image_url</span
+          >
+        </div>
+
+        <div
+          v-if="pendingImages.length"
+          class="pending-images"
+          style="margin-bottom: 8px; display: flex; gap: 8px; flex-wrap: wrap"
+        >
+          <div v-for="(img, idx) in pendingImages" :key="idx" style="position: relative">
+            <img
+              :src="img.image_url.url"
+              class="pending-thumb"
+              @click="previewImage(img.image_url.url)"
+            />
+            <a-button
+              size="small"
+              type="text"
+              danger
+              style="position: absolute; top: 4px; right: 4px"
+              @click="removePendingImage(idx)"
+              >删除</a-button
+            >
+          </div>
+        </div>
+
         <a-row :gutter="8">
           <a-col :span="20">
-            <a-textarea
-              v-model:value="inputMessage"
-              placeholder="输入消息..."
-              :auto-size="{ minRows: 2, maxRows: 6 }"
-              @press-enter="handleEnter"
-            />
+            <!-- empty column to align -->
           </a-col>
           <a-col :span="4">
             <a-button
               type="primary"
               @click="sendMessage"
               :loading="isLoading"
-              :disabled="!inputMessage.trim() || apiKeys.length === 0"
+              :disabled="
+                (!inputMessage.trim() && pendingImages.length === 0) || apiKeys.length === 0
+              "
               style="width: 100%; height: 100%"
             >
               发送
@@ -222,6 +271,8 @@ export default defineComponent({
     // Image Preview
     const showImagePreview = ref(false)
     const previewImageUrl = ref('')
+    const imageUrlInput = ref('')
+    const pendingImages = ref<any[]>([])
 
     // Model Options
     const modelOptions = ref([
@@ -313,8 +364,11 @@ export default defineComponent({
       const userMessage = inputMessage.value.trim()
       inputMessage.value = ''
 
-      // Add user message
-      addMessage('user', userMessage)
+      // Add user message (include any pending images)
+      const userImages = pendingImages.value.length ? [...pendingImages.value] : undefined
+      addMessage('user', userMessage, userImages)
+      // clear pending images immediately after queuing
+      pendingImages.value = []
 
       isLoading.value = true
 
@@ -322,6 +376,7 @@ export default defineComponent({
         const chatMessages: OpenRouterMessage[] = messages.value.map((m) => ({
           role: m.role,
           content: m.content,
+          images: m.images as any,
         }))
 
         if (enableStreaming.value) {
@@ -344,7 +399,15 @@ export default defineComponent({
             }
 
             if (chunk.choices[0]?.delta?.images) {
-              assistantImages.push(...chunk.choices[0].delta.images)
+              const newImages = chunk.choices[0].delta.images.map((img: any) => {
+                const raw = img.image_url?.url || ''
+                const url =
+                  raw.startsWith('data:') || raw.startsWith('http')
+                    ? raw
+                    : `data:image/png;base64,${raw}`
+                return { ...img, image_url: { url } }
+              })
+              assistantImages.push(...newImages)
               messages.value[messageIndex].images = assistantImages
             }
           }
@@ -356,7 +419,18 @@ export default defineComponent({
 
           const assistantMessage = response.choices[0]?.message
           if (assistantMessage) {
-            addMessage('assistant', assistantMessage.content || '', assistantMessage.images)
+            let images = assistantMessage.images
+            if (images && images.length) {
+              images = images.map((img: any) => {
+                const raw = img.image_url?.url || ''
+                const url =
+                  raw.startsWith('data:') || raw.startsWith('http')
+                    ? raw
+                    : `data:image/png;base64,${raw}`
+                return { ...img, image_url: { url } }
+              })
+            }
+            addMessage('assistant', assistantMessage.content || '', images)
           }
         }
       } catch (error) {
@@ -428,6 +502,40 @@ export default defineComponent({
       showImagePreview.value = true
     }
 
+    const addImageUrl = () => {
+      const raw = imageUrlInput.value.trim()
+      if (!raw) return
+      const url =
+        raw.startsWith('data:') || raw.startsWith('http') ? raw : `data:image/png;base64,${raw}`
+      pendingImages.value.push({ type: 'image_url', image_url: { url } })
+      imageUrlInput.value = ''
+    }
+
+    const handleFileUpload = async (e: Event) => {
+      const input = e.target as HTMLInputElement
+      if (!input.files) return
+      const files = Array.from(input.files)
+      for (const file of files) {
+        const dataUrl = await fileToDataUrl(file)
+        pendingImages.value.push({ type: 'image_url', image_url: { url: dataUrl } })
+      }
+      // clear input
+      input.value = ''
+    }
+
+    const removePendingImage = (index: number) => {
+      pendingImages.value.splice(index, 1)
+    }
+
+    const fileToDataUrl = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+    }
+
     const downloadImage = () => {
       const a = document.createElement('a')
       a.href = previewImageUrl.value
@@ -489,6 +597,12 @@ export default defineComponent({
       previewImageUrl,
       previewImage,
       downloadImage,
+      // Image input helpers
+      imageUrlInput,
+      pendingImages,
+      addImageUrl,
+      handleFileUpload,
+      removePendingImage,
 
       // Options
       modelOptions,

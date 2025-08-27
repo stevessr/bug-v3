@@ -33,7 +33,7 @@
     "ant-design-vue": "^4.2.6",
     "autoprefixer": "^10.4.21",
     "monaco-editor": "^0.52.2",
-    "openai": "^5.15.0",
+    "openai": "^5.16.0",
     "pinia": "^3.0.3",
     "playwright": "^1.55.0",
     "tailwindcss": "^4.1.12",
