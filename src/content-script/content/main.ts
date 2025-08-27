@@ -1,4 +1,4 @@
-import { installDefaultNachonekoPicker } from '../helper/inject/feature'
+import { installDefaultNachonekoPicker } from '../../helper/inject/feature'
 
 const stops: Array<() => void> = []
 
