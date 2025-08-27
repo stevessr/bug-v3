@@ -1,4 +1,4 @@
-import type { OpenRouterMessage } from '../../services/openrouter'
+import type { OpenRouterMessage } from '../services/openrouter'
 
 export interface ChatMessage extends OpenRouterMessage {
   timestamp: Date

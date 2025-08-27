@@ -65,13 +65,18 @@ export default defineComponent({
     onMounted(() => {
       apiKeysManager.loadApiKeys()
       imgBedManager.loadImgBedConfig()
-      
+
       // Add welcome message
       chatManager.addMessage(
         'assistant',
         '👋 欢迎使用 OpenRouter 对话工具！\n\n我可以帮你：\n• 进行对话交流\n• 生成图像\n• 翻译文本\n• 审查代码\n• 总结内容\n\n请先在右上角配置你的 API Keys，然后开始对话吧！',
       )
     })
+
+    // Handler for cancel action in popconfirm (no-op but must be defined to avoid Vue warning)
+    const cancelDelete = () => {
+      // Intentionally empty: UI only needs a defined handler to suppress warning.
+    }
 
     return {
       // Model Options
@@ -91,7 +96,7 @@ export default defineComponent({
 
       // from useChatHistory
       ...historyManager,
-      
+
       // Icons and h for render functions
       h,
       DownOutlined,
@@ -99,6 +104,7 @@ export default defineComponent({
       EyeInvisibleOutlined,
       DeleteOutlined,
       PlusOutlined,
+      cancelDelete,
     }
   },
 })

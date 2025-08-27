@@ -37,15 +37,47 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
     })
   }
 
+  const formatMessagesForApi = (chatMessages: ChatMessage[]): OpenRouterMessage[] => {
+    return chatMessages
+      .map((m) => {
+        if (m.role === 'user') {
+          const contentParts: any[] = []
+          if (m.content && m.content.trim()) {
+            contentParts.push({ type: 'text', text: m.content })
+          }
+          if (m.images && m.images.length > 0) {
+            m.images.forEach((img) => {
+              if (img.image_url && img.image_url.url) {
+                contentParts.push({ type: 'image_url', image_url: { url: img.image_url.url } })
+              }
+            })
+          }
+
+          if (contentParts.length > 0) {
+            return { role: 'user', content: contentParts }
+          }
+          return null // Will be filtered out
+        }
+        // Assistant messages
+        if (m.role === 'assistant' && m.content) {
+          return { role: m.role, content: m.content }
+        }
+        return null // Filter out empty/invalid assistant messages
+      })
+      .filter(Boolean) as OpenRouterMessage[]
+  }
+
   const sendMessage = async () => {
-    if (!inputMessage.value.trim() || isLoading.value || apiKeys.value.length === 0) {
-      if (apiKeys.value.length === 0) {
-        message.error('请先配置 API Keys')
-      }
+    const trimmedMessage = inputMessage.value.trim()
+    if ((!trimmedMessage && fileList.value.length === 0) || isLoading.value) {
+      return
+    }
+    if (apiKeys.value.length === 0) {
+      message.error('请先配置 API Keys')
       return
     }
 
-    const userMessage = inputMessage.value.trim()
+    const userMessage = trimmedMessage
     inputMessage.value = ''
 
     const userImages = fileList.value.length
@@ -57,18 +89,14 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
     isLoading.value = true
 
     try {
-      const chatMessages: OpenRouterMessage[] = messages.value.map((m) => ({
-        role: m.role,
-        content: m.content,
-        images: m.images as any,
-      }))
+      const apiMessages = formatMessagesForApi(messages.value)
 
       if (enableStreaming.value) {
         let assistantContent = ''
         let assistantImages: any[] = []
         const stream = enableImageGeneration.value
           ? openRouterService.streamImage(userMessage, selectedModel.value)
-          : openRouterService.streamText(chatMessages, selectedModel.value)
+          : openRouterService.streamText(apiMessages, selectedModel.value)
 
         addMessage('assistant', '')
         const messageIndex = messages.value.length - 1
@@ -81,7 +109,10 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
           if (chunk.choices[0]?.delta?.images) {
             const newImages = chunk.choices[0].delta.images.map((img: any) => {
               const raw = img.image_url?.url || ''
-              const url = raw.startsWith('data:') || raw.startsWith('http') ? raw : `data:image/png;base64,${raw}`
+              const url =
+                raw.startsWith('data:') || raw.startsWith('http')
+                  ? raw
+                  : `data:image/png;base64,${raw}`
               return { ...img, image_url: { url } }
             })
             assistantImages.push(...newImages)
@@ -91,7 +122,7 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
       } else {
         const response = enableImageGeneration.value
           ? await openRouterService.generateImage(userMessage, selectedModel.value)
-          : await openRouterService.generateText(chatMessages, selectedModel.value)
+          : await openRouterService.generateText(apiMessages, selectedModel.value)
 
         const assistantMessage = response.choices[0]?.message
         if (assistantMessage) {
@@ -99,7 +130,10 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
           if (images && images.length) {
             images = images.map((img: any) => {
               const raw = img.image_url?.url || ''
-              const url = raw.startsWith('data:') || raw.startsWith('http') ? raw : `data:image/png;base64,${raw}`
+              const url =
+                raw.startsWith('data:') || raw.startsWith('http')
+                  ? raw
+                  : `data:image/png;base64,${raw}`
               return { ...img, image_url: { url } }
             })
           }
@@ -117,29 +151,28 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
 
   const retryMessage = async (messageIndex: number) => {
     if (isLoading.value || messageIndex <= 0) return
-    
+
     const userMessage = messages.value[messageIndex - 1]
     if (userMessage.role !== 'user') return
 
+    // Remove the failed assistant response
     messages.value.splice(messageIndex, 1)
-    
-    const userContent = userMessage.content
-    
+
+    // We need to resend the history up to the point of the user message
+    const historyForRetry = messages.value.slice(0, messageIndex)
+
     isLoading.value = true
 
     try {
-      const chatMessages: OpenRouterMessage[] = messages.value.map((m) => ({
-        role: m.role,
-        content: m.content,
-        images: m.images as any,
-      }))
+      const apiMessages = formatMessagesForApi(historyForRetry)
+      const lastUserMessage = apiMessages[apiMessages.length - 1]
 
       if (enableStreaming.value) {
         let assistantContent = ''
         let assistantImages: any[] = []
         const stream = enableImageGeneration.value
-          ? openRouterService.streamImage(userContent, selectedModel.value)
-          : openRouterService.streamText(chatMessages, selectedModel.value)
+          ? openRouterService.streamImage(lastUserMessage.content as string, selectedModel.value)
+          : openRouterService.streamText(apiMessages, selectedModel.value)
 
         addMessage('assistant', '')
         const newMessageIndex = messages.value.length - 1
@@ -151,9 +184,13 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
           }
           if (chunk.choices[0]?.delta?.images) {
             const newImages = chunk.choices[0].delta.images.map((img: any) => {
-              if (img.image_url?.url) return { type: 'image_url', image_url: { url: img.image_url.url } }
+              if (img.image_url?.url)
+                return { type: 'image_url', image_url: { url: img.image_url.url } }
               let raw = img.url || (typeof img === 'string' ? img : '')
-              let url = (raw && !raw.startsWith('data:') && !raw.startsWith('http')) ? `data:image/png;base64,${raw}` : raw
+              let url =
+                raw && !raw.startsWith('data:') && !raw.startsWith('http')
+                  ? `data:image/png;base64,${raw}`
+                  : raw
               return { type: 'image_url', image_url: { url } }
             })
             assistantImages = [...newImages]
@@ -162,8 +199,11 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
         }
       } else {
         const response = enableImageGeneration.value
-          ? await openRouterService.generateImage(userContent, selectedModel.value)
-          : await openRouterService.generateText(chatMessages, selectedModel.value)
+          ? await openRouterService.generateImage(
+              lastUserMessage.content as string,
+              selectedModel.value,
+            )
+          : await openRouterService.generateText(apiMessages, selectedModel.value)
 
         const assistantMessage = response.choices[0]?.message
         if (assistantMessage) {
@@ -171,7 +211,10 @@ export function useChat({ openRouterService, apiKeys, fileList }: UseChatDeps) {
           if (images && images.length) {
             images = images.map((img: any) => {
               const raw = img.image_url?.url || ''
-              const url = raw.startsWith('data:') || raw.startsWith('http') ? raw : `data:image/png;base64,${raw}`
+              const url =
+                raw.startsWith('data:') || raw.startsWith('http')
+                  ? raw
+                  : `data:image/png;base64,${raw}`
               return { ...img, image_url: { url } }
             })
           }

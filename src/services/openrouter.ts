@@ -113,6 +113,35 @@ export class OpenRouterService {
     }
   }
 
+  // Normalize image URLs returned by the API stream.
+  // If the API returns a bare base64 string (no data: prefix or scheme),
+  // convert it to a data URI so the front-end can render and export it.
+  private normalizeImageUrl(url: string): string {
+    if (!url) return url
+
+    // Already a data URI or has a scheme (http/https/blob/etc.)
+    if (url.startsWith('data:') || /^[a-z]+:\/\//i.test(url) || url.startsWith('blob:')) {
+      return url
+    }
+
+    // Remove whitespace/newlines that sometimes appear in streamed base64
+    const clean = url.replace(/\s+/g, '')
+
+    // Heuristic: if the string looks like base64 and is reasonably long,
+    // assume it's a PNG/JPEG base64 payload and prefix a data URI.
+    // Common PNG base64 starts with iVBOR, JPEG often starts with /9j/.
+    if (
+      clean.length > 50 &&
+      (/^[A-Za-z0-9+/]+=*$/.test(clean) || /^iVBOR/.test(clean) || /^\/9j\//.test(clean))
+    ) {
+      // Default to PNG. If the consumer needs more accurate MIME detection,
+      // we can improve this later.
+      return `data:image/png;base64,${clean}`
+    }
+
+    return url
+  }
+
   private async makeRequest(request: OpenRouterRequest, retryCount = 0): Promise<Response> {
     const apiKey = this.getCurrentApiKey()
 
@@ -225,27 +254,68 @@ export class OpenRouterService {
     const decoder = new TextDecoder()
 
     try {
+      let buffer = ''
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
         const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
+        buffer += chunk
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') {
-              return
-            }
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.choices) {
-                yield parsed
+        const parts = buffer.split('\n')
+        // Keep the last part in buffer (may be partial)
+        buffer = parts.pop() || ''
+
+        for (const line of parts) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6)
+          if (data === '[DONE]') {
+            return
+          }
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.choices) {
+              // Normalize any image URLs in choices/delta/message
+              for (const choice of parsed.choices) {
+                const delta = choice.delta || choice.message || {}
+                if (delta.images && Array.isArray(delta.images)) {
+                  for (const img of delta.images) {
+                    if (img?.image_url?.url) {
+                      img.image_url.url = this.normalizeImageUrl(img.image_url.url)
+                    }
+                  }
+                }
               }
-            } catch (e) {
-              // Skip invalid JSON
+
+              yield parsed
             }
+          } catch (e) {
+            // Skip invalid JSON for this line; continue with others
+          }
+        }
+      }
+
+      // Process any remaining buffered line after stream ends
+      if (buffer.startsWith('data: ')) {
+        const data = buffer.slice(6)
+        if (data !== '[DONE]') {
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.choices) {
+              for (const choice of parsed.choices) {
+                const delta = choice.delta || choice.message || {}
+                if (delta.images && Array.isArray(delta.images)) {
+                  for (const img of delta.images) {
+                    if (img?.image_url?.url) {
+                      img.image_url.url = this.normalizeImageUrl(img.image_url.url)
+                    }
+                  }
+                }
+              }
+              yield parsed
+            }
+          } catch (e) {
+            // ignore
           }
         }
       }
@@ -292,27 +362,69 @@ export class OpenRouterService {
     const decoder = new TextDecoder()
 
     try {
+      let buffer = ''
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
         const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
+        buffer += chunk
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') {
-              return
-            }
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.choices) {
-                yield parsed
+        const parts = buffer.split('\n')
+        buffer = parts.pop() || ''
+
+        for (const line of parts) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6)
+          if (data === '[DONE]') {
+            return
+          }
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.choices) {
+              // Normalize any image URLs inside the parsed chunk
+              for (const choice of parsed.choices) {
+                const delta = choice.delta || choice.message || {}
+                if (delta.images && Array.isArray(delta.images)) {
+                  for (const img of delta.images) {
+                    if (img?.image_url?.url) {
+                      img.image_url.url = this.normalizeImageUrl(img.image_url.url)
+                    }
+                  }
+                }
               }
-            } catch (e) {
-              // Skip invalid JSON
+
+              console.log(parsed)
+              yield parsed
             }
+          } catch (e) {
+            // Skip invalid JSON
+          }
+        }
+      }
+
+      // Process any remaining buffered line after stream ends
+      if (buffer.startsWith('data: ')) {
+        const data = buffer.slice(6)
+        if (data !== '[DONE]') {
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.choices) {
+              for (const choice of parsed.choices) {
+                const delta = choice.delta || choice.message || {}
+                if (delta.images && Array.isArray(delta.images)) {
+                  for (const img of delta.images) {
+                    if (img?.image_url?.url) {
+                      img.image_url.url = this.normalizeImageUrl(img.image_url.url)
+                    }
+                  }
+                }
+              }
+              console.log(parsed)
+              yield parsed
+            }
+          } catch (e) {
+            // ignore
           }
         }
       }
