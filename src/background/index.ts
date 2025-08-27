@@ -33,10 +33,20 @@ let settingsStore: any = null
 // Load converted_payload.json as default data
 async function loadDefaultPayload() {
   try {
-    // Try to fetch from extension URL
-    const response = await fetch(chrome.runtime.getURL('static/config/converted_payload.json'))
-    if (response.ok) {
-      return await response.json()
+    // Try to fetch from extension URL first
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
+      const response = await fetch(chrome.runtime.getURL('static/config/converted_payload.json'))
+      if (response.ok) {
+        return await response.json()
+      }
+    }
+    
+    // Fallback: try direct fetch (for popup/options context)
+    if (typeof window !== 'undefined' && window.fetch) {
+      const response = await fetch('/static/config/converted_payload.json')
+      if (response.ok) {
+        return await response.json()
+      }
     }
   } catch (_) {}
   return null
@@ -55,11 +65,37 @@ async function loadDefaultPayload() {
     settingsStore = settingsModule.default
     
     log('Emoji stores imported successfully')
+    
+    // Wait a bit for the emojiGroupsStore.initFromStorage() to complete its async fetch
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // Try to get data from stores first
+    try {
+      const groups = emojiGroupsStore.getEmojiGroups() || []
+      const settings = settingsStore.getSettings() || {}
+      const ungrouped = emojiGroupsStore.getUngrouped() || []
+      
+      if (groups.length > 1) {
+        // Data successfully loaded from emojiGroupsStore
+        lastPayloadGlobal = {
+          Settings: settings,
+          emojiGroups: groups,
+          ungrouped: ungrouped
+        }
+        log('Loaded data from emojiGroupsStore:', {
+          groupsCount: groups.length,
+          emojisCount: groups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0)
+        })
+        return
+      }
+    } catch (err) {
+      log('Failed to get data from stores:', err)
+    }
   } catch (err) {
     log('Failed to import emoji stores:', err)
   }
 
-  // Try to load default payload if no data exists
+  // Fallback: Try to load default payload from converted_payload.json
   try {
     const defaultPayload = await loadDefaultPayload()
     if (defaultPayload && defaultPayload.emojiGroups) {
