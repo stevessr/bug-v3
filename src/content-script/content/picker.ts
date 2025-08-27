@@ -8,11 +8,32 @@ export function isMobile(): boolean {
 }
 
 export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLElement> {
+  const groups = cachedState.emojiGroups.length > 0 ? cachedState.emojiGroups : getDefaultEmojis()
+  
+  // Generate emoji images HTML
+  let imagesHtml = ''
+  groups.forEach(group => {
+    if (group.emojis && Array.isArray(group.emojis)) {
+      group.emojis.forEach((emojiData: emoji, index: number) => {
+        const nameEsc = String(emojiData.displayName || '').replace(/"/g, '&quot;')
+        const tabindex = index === 0 ? '0' : '-1'
+        const dataEmoji = nameEsc
+        const displayUrl = emojiData.displayUrl || emojiData.realUrl
+        imagesHtml += `<img width="32" height="32" class="emoji" src="${displayUrl}" tabindex="${tabindex}" data-emoji="${dataEmoji}" alt="${nameEsc}" title=":${nameEsc}:" loading="lazy" />\n`
+      })
+    }
+  })
+  
+  // Create the picker element matching the target structure
   const picker = document.createElement('div')
-  picker.className = 'emoji-picker-container'
+  picker.className = 'fk-d-menu -animated -expanded'
+  picker.setAttribute('data-identifier', 'emoji-picker')
+  picker.setAttribute('data-content', '')
+  picker.setAttribute('aria-labelledby', 'ember161')
+  picker.setAttribute('aria-expanded', 'true')
+  picker.setAttribute('role', 'dialog')
   
   if (isMobilePicker) {
-    picker.className += ' mobile-picker'
     picker.style.cssText = `
       position: fixed;
       top: 50%;
@@ -26,8 +47,7 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
       z-index: 10000;
       overflow-y: auto;
-      padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      visibility: visible;
     `
   } else {
     picker.style.cssText = `
@@ -41,126 +61,97 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
       max-width: 500px;
       max-height: 400px;
       overflow-y: auto;
-      padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      visibility: visible;
     `
   }
 
-  // Add header
-  const header = document.createElement('div')
-  header.style.cssText = `
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #eee;
+  picker.innerHTML = `
+  <div class="fk-d-menu__inner-content">
+    <div class="emoji-picker">
+      <div class="emoji-picker__filter-container">
+        <div class="emoji-picker__filter filter-input-container">
+          <input class="filter-input" placeholder="按表情符号名称和别名搜索…" type="text" />
+          <svg class="fa d-icon d-icon-magnifying-glass svg-icon -right svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+            <use href="#magnifying-glass"></use>
+          </svg>
+        </div>
+        <button class="btn no-text fk-d-menu__trigger -trigger emoji-picker__diversity-trigger btn-transparent" aria-expanded="false" data-trigger="" type="button" id="ember162">
+          <img width="20" height="20" src="/images/emoji/twemoji/clap.png" title="clap" alt="clap" class="emoji" />
+        </button>
+      </div>
+      <div class="emoji-picker__content">
+        <div class="emoji-picker__sections-nav">
+          <button class="btn no-text btn-flat emoji-picker__section-btn active" tabindex="-1" data-section="favorites" type="button">
+            <img width="20" height="20" src="/images/emoji/twemoji/star.png" title="star" alt="star" class="emoji" />
+          </button>
+        </div>
+        <div class="emoji-picker__scrollable-content">
+          <div class="emoji-picker__sections" role="button">
+            <div class="emoji-picker__section" data-section="favorites" role="region" aria-label="常用">
+              <div class="emoji-picker__section-title-container">
+                <h2 class="emoji-picker__section-title">常用</h2>
+                <button class="btn no-text btn-icon btn-transparent" type="button">
+                  <svg class="fa d-icon d-icon-trash-can svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <use href="#trash-can"></use>
+                  </svg>
+                  <span aria-hidden="true">&ZeroWidthSpace;</span>
+                </button>
+              </div>
+              <div class="emoji-picker__section-emojis">
+                ${imagesHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   `
-  header.innerHTML = `
-    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">表情包</h3>
-    <button class="close-btn" style="
-      background: none;
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 4px;
-      color: #666;
-    ">✕</button>
-  `
-  
-  header.querySelector('.close-btn')?.addEventListener('click', () => {
-    picker.remove()
+
+  // Add click handlers for emoji images
+  const emojiImages = picker.querySelectorAll('.emoji-picker__section-emojis .emoji')
+  emojiImages.forEach(img => {
+    img.addEventListener('click', () => {
+      const emojiData: emoji = {
+        id: img.getAttribute('data-emoji') || img.getAttribute('alt') || '',
+        displayName: img.getAttribute('data-emoji') || img.getAttribute('alt') || '',
+        realUrl: new URL(img.getAttribute('src') || ''),
+        displayUrl: new URL(img.getAttribute('src') || ''),
+        order: 0,
+        UUID: crypto.randomUUID() as any
+      }
+      insertEmoji(emojiData)
+      picker.remove()
+    })
   })
 
-  picker.appendChild(header)
+  // Add close functionality
+  const closeBtn = picker.querySelector('.emoji-picker__section-title-container button')
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      picker.remove()
+    })
+  }
 
-  // Add emoji groups
-  const groups = cachedState.emojiGroups.length > 0 ? cachedState.emojiGroups : getDefaultEmojis()
-  
-  groups.forEach(group => {
-    const groupSection = document.createElement('div')
-    groupSection.style.cssText = `
-      margin-bottom: 16px;
-    `
-    
-    const groupTitle = document.createElement('div')
-    groupTitle.style.cssText = `
-      font-size: 14px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    `
-    
-    // Handle icon that could be string or URL
-    const iconDisplay = typeof group.icon === 'string' ? group.icon : '📷'
-    groupTitle.innerHTML = `
-      <span>${iconDisplay}</span>
-      <span>${group.displayName || '未命名'}</span>
-    `
-    
-    groupSection.appendChild(groupTitle)
-    
-    // Add emoji grid
-    const emojiGrid = document.createElement('div')
-    emojiGrid.style.cssText = `
-      display: grid;
-      grid-template-columns: repeat(${cachedState.settings.gridColumns || 4}, 1fr);
-      gap: 8px;
-    `
-    
-    if (group.emojis && Array.isArray(group.emojis)) {
-      group.emojis.forEach((emojiData: emoji) => {
-        const emojiButton = document.createElement('button')
-        emojiButton.style.cssText = `
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 8px;
-          border-radius: 6px;
-          font-size: ${cachedState.settings.imageScale || 30}px;
-          transition: background-color 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 40px;
-        `
+  // Add filter functionality
+  const filterInput = picker.querySelector('.filter-input') as HTMLInputElement
+  if (filterInput) {
+    filterInput.addEventListener('input', (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value.toLowerCase()
+      emojiImages.forEach(img => {
+        const alt = img.getAttribute('alt') || ''
+        const title = img.getAttribute('title') || ''
+        const dataEmoji = img.getAttribute('data-emoji') || ''
         
-        // Use displayUrl for showing, realUrl for actual insertion
-        const img = document.createElement('img')
-        img.src = emojiData.displayUrl.toString()
-        img.alt = emojiData.displayName
-        img.style.cssText = `
-          max-width: ${cachedState.settings.imageScale || 30}px;
-          max-height: ${cachedState.settings.imageScale || 30}px;
-          object-fit: contain;
-        `
+        const shouldShow = alt.toLowerCase().includes(searchTerm) || 
+                          title.toLowerCase().includes(searchTerm) || 
+                          dataEmoji.toLowerCase().includes(searchTerm)
         
-        emojiButton.appendChild(img)
-        
-        emojiButton.addEventListener('click', () => {
-          insertEmoji(emojiData)
-          picker.remove()
-        })
-        
-        emojiButton.addEventListener('mouseenter', () => {
-          emojiButton.style.backgroundColor = '#f0f0f0'
-        })
-        
-        emojiButton.addEventListener('mouseleave', () => {
-          emojiButton.style.backgroundColor = 'transparent'
-        })
-        
-        emojiGrid.appendChild(emojiButton)
+        const htmlImg = img as HTMLElement
+        htmlImg.style.display = shouldShow ? 'block' : 'none'
       })
-    }
-    
-    groupSection.appendChild(emojiGrid)
-    picker.appendChild(groupSection)
-  })
+    })
+  }
 
   return picker
 }
