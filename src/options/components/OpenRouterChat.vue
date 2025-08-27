@@ -52,6 +52,18 @@
                 alt="Generated image"
               />
             </div>
+            <div v-if="!isLoading" class="message-actions" style="margin-top: 8px;">
+              <a-button v-if="message.role === 'assistant'" size="small" @click="retryMessage(index)">重试</a-button>
+              <a-popconfirm
+                title="确定要删除这条消息吗？"
+                ok-text="确定"
+                cancel-text="取消"
+                @confirm="deleteMessage(index)"
+                @cancel="cancelDelete"
+              >
+                <a-button size="small" danger>删除</a-button>
+              </a-popconfirm>
+            </div>
           </div>
         </div>
 
@@ -122,6 +134,7 @@
         <a-space wrap>
           <a-button size="small" @click="clearChat">清空对话</a-button>
           <a-button size="small" @click="exportChat">导出对话</a-button>
+          <a-button size="small" @click="showImportModal = true">导入对话</a-button>
           <a-dropdown>
             <template #overlay>
               <a-menu @click="insertTemplate">
@@ -222,6 +235,46 @@
         </a-select>
         <a-checkbox v-model:checked="imgBedServerCompress">启用服务器压缩</a-checkbox>
         <a-checkbox v-model:checked="imgBedAutoRetry">失败自动重试</a-checkbox>
+      </div>
+    </a-modal>
+
+    <!-- Import Chat Modal -->
+    <a-modal
+      v-model:open="showImportModal"
+      title="导入对话记录"
+      @ok="importChat"
+      @cancel="cancelImport"
+      width="700px"
+      :ok-button-props="{ disabled: !importChatData.trim() }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500">选择文件或粘贴 JSON 数据：</label>
+          <input
+            type="file"
+            accept=".json"
+            @change="handleChatFileUpload"
+            style="margin-bottom: 8px"
+          />
+        </div>
+
+        <div>
+          <a-textarea
+            v-model:value="importChatData"
+            placeholder="粘贴导出的对话 JSON 数据..."
+            :auto-size="{ minRows: 8, maxRows: 20 }"
+          />
+        </div>
+
+        <div>
+          <a-checkbox v-model:checked="replaceExistingChat">
+            替换现有对话（否则为追加到当前对话）
+          </a-checkbox>
+        </div>
+
+        <div v-if="importError" style="color: #ff4d4f; font-size: 14px">
+          {{ importError }}
+        </div>
       </div>
     </a-modal>
   </div>
