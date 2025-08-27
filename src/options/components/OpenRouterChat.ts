@@ -60,6 +60,7 @@ export default defineComponent({
     const fileList = ref<Array<any>>([])
     // legacy pendingImages used by tests - keep in sync with fileList
     const pendingImages = ref<any[]>([])
+    // (removed processedUploads) fileList updates are reconciled from onChange
 
     // Optional CloudFlare-ImgBed upload settings
     const useImgBed = ref(false)
@@ -373,8 +374,23 @@ export default defineComponent({
         raw.startsWith('data:') || raw.startsWith('http') ? raw : `data:image/png;base64,${raw}`
       // push to fileList as done status and mirror to pendingImages for tests
       const item = { uid: `${Date.now()}`, name: 'pasted.png', status: 'done', url }
-      fileList.value.push(item)
-      pendingImages.value.push({ type: 'image_url', image_url: { url } })
+      console.debug('[OpenRouterChat] addImageUrl called, url=', url)
+      // avoid duplicates: check by url
+      const exists = fileList.value.find((f) => f.url === url || f.preview === url)
+      if (!exists) {
+        fileList.value.push(item)
+      } else {
+        console.debug('[OpenRouterChat] addImageUrl skipped pushing duplicate fileList item', url)
+      }
+      const pendingExists = pendingImages.value.find((p) => p.image_url?.url === url)
+      if (!pendingExists) {
+        pendingImages.value.push({ type: 'image_url', image_url: { url } })
+      } else {
+        console.debug(
+          '[OpenRouterChat] addImageUrl skipped pushing duplicate pendingImages item',
+          url,
+        )
+      }
       imageUrlInput.value = ''
     }
 
@@ -414,40 +430,102 @@ export default defineComponent({
 
     // before upload: either send to ImgBed (if enabled) or convert file to data URL and add to fileList, prevent actual upload
     const uploadBefore = async (file: File) => {
+      // mark file with a temporary uid if AntD hasn't provided one yet
+      console.debug('[OpenRouterChat] uploadBefore called, name=', file.name, 'size=', file.size)
+      // Helper to find an existing entry likely created by AntD Upload
+      const findExistingIndex = () => {
+        return fileList.value.findIndex((f) => {
+          // match by exact originFileObj, or by name+size, or by name only as fallback
+          if (f.originFileObj && f.originFileObj === file) return true
+          if ((f.originFileObj && f.originFileObj.size) || (file as any).size) {
+            const fsize = f.originFileObj?.size || f.size || 0
+            if (f.name === file.name && fsize === (file as any).size) return true
+          }
+          return f.name === file.name
+        })
+      }
+
+      const existingIdx = findExistingIndex()
+
       if (useImgBed.value && imgBedEndpoint.value) {
         const uid = `${Date.now()}-${file.name}`
-        fileList.value.push({ uid, name: file.name, status: 'uploading' })
+        // Do not blindly push; update AntD's entry if present, otherwise insert one
+        if (existingIdx === -1) {
+          fileList.value.push({ uid, name: file.name, status: 'uploading', originFileObj: file })
+        } else {
+          // ensure originFileObj and status present
+          fileList.value[existingIdx].originFileObj = file
+          fileList.value[existingIdx].status = 'uploading'
+        }
+
         try {
           const url = await remoteUpload(file)
-          const idx = fileList.value.findIndex((f) => f.uid === uid)
-          if (idx !== -1) {
-            fileList.value[idx].status = 'done'
-            fileList.value[idx].url = url
-            fileList.value[idx].originFileObj = file
+          const idxToUpdate = findExistingIndex()
+          if (idxToUpdate !== -1) {
+            fileList.value[idxToUpdate].status = 'done'
+            fileList.value[idxToUpdate].url = url
+            fileList.value[idxToUpdate].originFileObj = file
           }
-          // add to pendingImages for backward-compat
-          pendingImages.value.push({ type: 'image_url', image_url: { url } })
+          // add to pendingImages for backward-compat if missing
+          const pendingExists = pendingImages.value.find((p) => p.image_url?.url === url)
+          if (!pendingExists) pendingImages.value.push({ type: 'image_url', image_url: { url } })
         } catch (err) {
-          const idx = fileList.value.findIndex((f) => f.uid === uid)
-          if (idx !== -1) {
-            fileList.value[idx].status = 'error'
-            fileList.value[idx].response = String(err instanceof Error ? err.message : err)
+          const idxToUpdate = findExistingIndex()
+          if (idxToUpdate !== -1) {
+            fileList.value[idxToUpdate].status = 'error'
+            fileList.value[idxToUpdate].response = String(err instanceof Error ? err.message : err)
           }
         }
         return false
       }
 
+      // Local dataURL branch
       const dataUrl = await fileToDataUrl(file)
-      const uid = `${Date.now()}-${file.name}`
-      fileList.value.push({
-        uid,
-        name: file.name,
-        status: 'done',
-        url: dataUrl,
-        originFileObj: file,
-      })
-      pendingImages.value.push({ type: 'image_url', image_url: { url: dataUrl } })
+      console.debug('[OpenRouterChat] uploadBefore converted to dataUrl, name=', file.name)
+
+      if (existingIdx === -1) {
+        const uid = `${Date.now()}-${file.name}`
+        fileList.value.push({
+          uid,
+          name: file.name,
+          status: 'done',
+          url: dataUrl,
+          originFileObj: file,
+        })
+      } else {
+        // update existing AntD-created entry instead of pushing a duplicate
+        fileList.value[existingIdx].status = 'done'
+        fileList.value[existingIdx].url = dataUrl
+        fileList.value[existingIdx].originFileObj = file
+      }
+
+      const pendingExistsLocal = pendingImages.value.find((p) => p.image_url?.url === dataUrl)
+      if (!pendingExistsLocal)
+        pendingImages.value.push({ type: 'image_url', image_url: { url: dataUrl } })
       return false
+    }
+
+    // Centralized handler for AntD Upload change events. Reconciles fileList from info.fileList.
+    const handleUploadChange = async (info: any) => {
+      // Use the authoritative fileList from AntD - only use files already processed by uploadBefore
+      const remoteList: any[] = info.fileList || []
+
+      // Only keep files that already have URLs (processed by uploadBefore)
+      fileList.value = remoteList
+        .filter((f) => f.url || f.thumbUrl || f.preview)
+        .map((f) => ({
+          uid: f.uid,
+          name: f.name,
+          status: f.status,
+          url: f.url || f.thumbUrl || f.preview,
+          originFileObj: f.originFileObj || f.raw || null,
+        }))
+
+      // Sync pendingImages with current fileList
+      pendingImages.value = fileList.value.map((entry) => ({
+        type: 'image_url',
+        image_url: { url: entry.url }
+      }))
     }
 
     const handleUploadPreview = async (file: any) => {
@@ -460,12 +538,18 @@ export default defineComponent({
     }
 
     const handleRemove = (file: any) => {
+      console.debug('[OpenRouterChat] handleRemove called, file=', file)
       const idx = fileList.value.findIndex((f) => f.uid === file.uid)
       if (idx !== -1) fileList.value.splice(idx, 1)
       // remove from pendingImages by matching url
       const url = file.url || file.preview
       const pidx = pendingImages.value.findIndex((p) => p.image_url?.url === url)
       if (pidx !== -1) pendingImages.value.splice(pidx, 1)
+      else
+        console.debug(
+          '[OpenRouterChat] handleRemove did not find matching pendingImages item for url=',
+          url,
+        )
     }
 
     const handleFileUpload = async (e: Event) => {
@@ -473,11 +557,36 @@ export default defineComponent({
       if (!input?.files) return
       const files = Array.from(input.files)
       for (const file of files) {
+        console.debug(
+          '[OpenRouterChat] handleFileUpload processing file=',
+          file.name,
+          'size=',
+          file.size,
+        )
         const dataUrl = await fileToDataUrl(file)
+        // try to find existing AntD entry by name+size
+        const idx = fileList.value.findIndex((f) => {
+          const fsize = f.originFileObj?.size || f.size || 0
+          return f.name === file.name && fsize === (file as any).size
+        })
         const uid = `${Date.now()}-${file.name}`
-        const item = { uid, name: file.name, status: 'done', url: dataUrl, originFileObj: file }
-        fileList.value.push(item)
-        pendingImages.value.push({ type: 'image_url', image_url: { url: dataUrl } })
+        if (idx === -1) {
+          fileList.value.push({
+            uid,
+            name: file.name,
+            status: 'done',
+            url: dataUrl,
+            originFileObj: file,
+          })
+        } else {
+          fileList.value[idx].status = 'done'
+          fileList.value[idx].url = dataUrl
+          fileList.value[idx].originFileObj = file
+        }
+
+        const pendingExists = pendingImages.value.find((p) => p.image_url?.url === dataUrl)
+        if (!pendingExists)
+          pendingImages.value.push({ type: 'image_url', image_url: { url: dataUrl } })
       }
       try {
         ;(input as HTMLInputElement).value = ''
@@ -560,6 +669,7 @@ export default defineComponent({
       addImageUrl,
       fileList,
       uploadBefore,
+      handleUploadChange,
       handleUploadPreview,
       handleRemove,
       pendingImages,

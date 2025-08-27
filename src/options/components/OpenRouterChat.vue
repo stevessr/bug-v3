@@ -89,6 +89,7 @@
             v-model:file-list="fileList"
             list-type="picture-card"
             :before-upload="uploadBefore"
+            :on-change="handleUploadChange"
             :on-preview="handleUploadPreview"
             :on-remove="handleRemove"
           >
