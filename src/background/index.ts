@@ -30,29 +30,76 @@ let lastPayloadGlobal: any = null
 let emojiGroupsStore: any = null
 let settingsStore: any = null
 
-// Load converted_payload.json as default data
-async function loadDefaultPayload() {
+// Load emoji data directly from chrome.storage.local 
+async function loadFromChromeStorage(): Promise<any> {
   try {
-    // Try to fetch from extension URL first
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
-      const response = await fetch(chrome.runtime.getURL('static/config/converted_payload.json'))
-      if (response.ok) {
-        return await response.json()
-      }
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(null, (items: any) => {
+          try {
+            if (chrome.runtime.lastError) {
+              log('Chrome storage error:', chrome.runtime.lastError)
+              resolve(null)
+              return
+            }
+
+            // Assemble payload from storage items
+            const Settings = items['Settings'] || {}
+            const ungrouped = items['ungrouped'] || []
+            
+            // Collect emoji groups using index
+            const emojiGroups: any[] = []
+            const indexList = items['emojiGroups-index'] || []
+            
+            if (Array.isArray(indexList)) {
+              for (const uuid of indexList) {
+                const groupKey = `emojiGroups-${uuid}`
+                const group = items[groupKey]
+                if (group) {
+                  emojiGroups.push(group)
+                }
+              }
+            }
+
+            // If no groups found via index, scan for all emojiGroups-* keys
+            if (emojiGroups.length === 0) {
+              Object.keys(items).forEach(key => {
+                if (key.startsWith('emojiGroups-') && key !== 'emojiGroups-index') {
+                  const group = items[key]
+                  if (group) {
+                    emojiGroups.push(group)
+                  }
+                }
+              })
+            }
+
+            const payload = {
+              Settings,
+              emojiGroups,
+              ungrouped
+            }
+
+            log('Loaded from chrome storage:', {
+              settingsKeys: Object.keys(Settings).length,
+              groupsCount: emojiGroups.length,
+              ungroupedCount: ungrouped.length
+            })
+
+            resolve(payload)
+          } catch (error) {
+            log('Error assembling storage data:', error)
+            resolve(null)
+          }
+        })
+      })
     }
-    
-    // Fallback: try direct fetch (for popup/options context)
-    if (typeof window !== 'undefined' && window.fetch) {
-      const response = await fetch('/static/config/converted_payload.json')
-      if (response.ok) {
-        return await response.json()
-      }
-    }
-  } catch (_) {}
+  } catch (error) {
+    log('Error accessing chrome storage:', error)
+  }
   return null
 }
 
-// Initialize stores and load default data
+// Initialize stores and load data from chrome storage
 ;(async () => {
   try {
     // Try to import the stores
@@ -66,16 +113,16 @@ async function loadDefaultPayload() {
     
     log('Emoji stores imported successfully')
     
-    // Wait a bit for the emojiGroupsStore.initFromStorage() to complete its async fetch
+    // Wait a bit for the emojiGroupsStore.initFromStorage() to complete its async loading
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    // Try to get data from stores first
+    // Try to get data from stores first (they load from extension storage)
     try {
       const groups = emojiGroupsStore.getEmojiGroups() || []
       const settings = settingsStore.getSettings() || {}
       const ungrouped = emojiGroupsStore.getUngrouped() || []
       
-      if (groups.length > 1) {
+      if (groups.length > 0) {
         // Data successfully loaded from emojiGroupsStore
         lastPayloadGlobal = {
           Settings: settings,
@@ -91,26 +138,25 @@ async function loadDefaultPayload() {
     } catch (err) {
       log('Failed to get data from stores:', err)
     }
+    
+    // If stores don't have data, try loading directly from chrome storage
+    try {
+      const storagePayload: any = await loadFromChromeStorage()
+      if (storagePayload && storagePayload.emojiGroups && storagePayload.emojiGroups.length > 0) {
+        lastPayloadGlobal = storagePayload
+        log('Loaded data directly from chrome storage:', {
+          groupsCount: storagePayload.emojiGroups.length,
+          emojisCount: storagePayload.emojiGroups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0)
+        })
+        return
+      }
+    } catch (err) {
+      log('Failed to load from chrome storage:', err)
+    }
+    
+    log('No emoji data found in extension storage - data needs to be imported via options page')
   } catch (err) {
     log('Failed to import emoji stores:', err)
-  }
-
-  // Fallback: Try to load default payload from converted_payload.json
-  try {
-    const defaultPayload = await loadDefaultPayload()
-    if (defaultPayload && defaultPayload.emojiGroups) {
-      lastPayloadGlobal = {
-        Settings: defaultPayload.Settings || settingsStore?.defaults || {},
-        emojiGroups: defaultPayload.emojiGroups || [],
-        ungrouped: defaultPayload.ungrouped || []
-      }
-      log('Loaded default payload from converted_payload.json:', {
-        groupsCount: lastPayloadGlobal.emojiGroups?.length || 0,
-        emojisCount: lastPayloadGlobal.emojiGroups?.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0) || 0
-      })
-    }
-  } catch (err) {
-    log('Failed to load default payload:', err)
   }
 })()
 
@@ -556,7 +602,7 @@ const SyncManager = (function () {
 
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener(
-    (msg: any, sender: any, sendResponse: (resp: any) => void) => {
+    async (msg: any, sender: any, sendResponse: (resp: any) => void) => {
       log('onMessage', { msg, from: sender })
       
       // Handle GET_EMOJI_DATA request from content scripts
@@ -566,6 +612,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
           let settings = {}
           let ungroupedEmojis = []
 
+          // First try to get from global cache
           if (lastPayloadGlobal) {
             groups = lastPayloadGlobal.emojiGroups || []
             settings = lastPayloadGlobal.Settings || {}
@@ -577,6 +624,23 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
               settings = settingsStore.getSettings() || {}
               ungroupedEmojis = emojiGroupsStore.getUngrouped() || []
             } catch (_) {}
+          }
+
+          // If no data found, try loading directly from chrome storage
+          if (groups.length === 0) {
+            try {
+              const freshData: any = await loadFromChromeStorage()
+              if (freshData && freshData.emojiGroups) {
+                groups = freshData.emojiGroups || []
+                settings = freshData.Settings || {}
+                ungroupedEmojis = freshData.ungrouped || []
+                // Update cache
+                lastPayloadGlobal = freshData
+                log('Refreshed data from chrome storage for GET_EMOJI_DATA')
+              }
+            } catch (err) {
+              log('Failed to refresh from chrome storage:', err)
+            }
           }
 
           log('Responding to GET_EMOJI_DATA:', {
@@ -704,7 +768,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
     },
   )
 } else if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.onMessage) {
-  browser.runtime.onMessage.addListener((msg: any, sender: any) => {
+  browser.runtime.onMessage.addListener(async (msg: any, sender: any) => {
     log('onMessage', { msg, from: sender })
     
     // Handle GET_EMOJI_DATA request from content scripts
@@ -714,6 +778,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         let settings = {}
         let ungroupedEmojis = []
 
+        // First try to get from global cache
         if (lastPayloadGlobal) {
           groups = lastPayloadGlobal.emojiGroups || []
           settings = lastPayloadGlobal.Settings || {}
@@ -724,6 +789,23 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             settings = settingsStore.getSettings() || {}
             ungroupedEmojis = emojiGroupsStore.getUngrouped() || []
           } catch (_) {}
+        }
+
+        // If no data found, try loading directly from chrome storage
+        if (groups.length === 0) {
+          try {
+            const freshData: any = await loadFromChromeStorage()
+            if (freshData && freshData.emojiGroups) {
+              groups = freshData.emojiGroups || []
+              settings = freshData.Settings || {}
+              ungroupedEmojis = freshData.ungrouped || []
+              // Update cache
+              lastPayloadGlobal = freshData
+              log('Refreshed data from chrome storage for GET_EMOJI_DATA (browser)')
+            }
+          } catch (err) {
+            log('Failed to refresh from chrome storage (browser):', err)
+          }
         }
 
         return Promise.resolve({
