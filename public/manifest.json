@@ -16,7 +16,12 @@
     }
   },
   "permissions": ["storage", "offscreen", "scripting"],
-  "host_permissions": ["https://*.google.com/"],
+  "host_permissions": [
+    "https://*.google.com/",
+    "https://linux.do/*",
+    "https://*.discourse.org/*",
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "background.js"
   },

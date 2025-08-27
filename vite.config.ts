@@ -29,6 +29,10 @@ export default defineConfig({
         popup: fileURLToPath(new URL('./popup.html', import.meta.url)),
         // build background entry so it outputs dist/background.js
         background: fileURLToPath(new URL('./src/background/index.ts', import.meta.url)),
+        // build content-script entry so it outputs dist/content-script.js
+        'content-script': fileURLToPath(
+          new URL('./src/content-script/content-script.ts', import.meta.url),
+        ),
       },
       output: {
         // Ensure background entry is emitted as dist/background.js so manifest can reference it
