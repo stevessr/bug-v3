@@ -173,6 +173,26 @@ class CommunicationService {
     this.send('app:groups-changed', groups)
   }
 
+  // 发送普通表情组变更消息
+  sendNormalGroupsChanged(groups: any[]) {
+    this.send('app:normal-groups-changed', { groups, timestamp: Date.now() })
+  }
+
+  // 发送常用表情组变更消息
+  sendCommonEmojiGroupChanged(group: any) {
+    this.send('app:common-group-changed', { group, timestamp: Date.now() })
+  }
+
+  // 发送未分组表情变更消息
+  sendUngroupedEmojisChanged(emojis: any[]) {
+    this.send('app:ungrouped-changed', { emojis, timestamp: Date.now() })
+  }
+
+  // 发送特定表情组变更消息（精确到单个组）
+  sendSpecificGroupChanged(groupUUID: string, group: any) {
+    this.send('app:specific-group-changed', { groupUUID, group, timestamp: Date.now() })
+  }
+
   // 发送表情使用记录消息
   sendUsageRecorded(uuid: string) {
     this.send('app:usage-recorded', { uuid, timestamp: Date.now() })
@@ -199,6 +219,56 @@ class CommunicationService {
   // 监听表情组变更
   onGroupsChanged(handler: (groups: any[]) => void) {
     this.on('app:groups-changed', (message) => {
+      if (message && typeof message === 'object') {
+        const payload = message.payload !== undefined ? message.payload : message
+        handler(payload)
+      } else {
+        handler(message)
+      }
+    })
+  }
+
+  // 监听普通表情组变更
+  onNormalGroupsChanged(handler: (data: { groups: any[]; timestamp: number }) => void) {
+    this.on('app:normal-groups-changed', (message) => {
+      if (message && typeof message === 'object') {
+        const payload = message.payload !== undefined ? message.payload : message
+        handler(payload)
+      } else {
+        handler(message)
+      }
+    })
+  }
+
+  // 监听常用表情组变更
+  onCommonEmojiGroupChanged(handler: (data: { group: any; timestamp: number }) => void) {
+    this.on('app:common-group-changed', (message) => {
+      if (message && typeof message === 'object') {
+        const payload = message.payload !== undefined ? message.payload : message
+        handler(payload)
+      } else {
+        handler(message)
+      }
+    })
+  }
+
+  // 监听未分组表情变更
+  onUngroupedEmojisChanged(handler: (data: { emojis: any[]; timestamp: number }) => void) {
+    this.on('app:ungrouped-changed', (message) => {
+      if (message && typeof message === 'object') {
+        const payload = message.payload !== undefined ? message.payload : message
+        handler(payload)
+      } else {
+        handler(message)
+      }
+    })
+  }
+
+  // 监听特定表情组变更
+  onSpecificGroupChanged(
+    handler: (data: { groupUUID: string; group: any; timestamp: number }) => void,
+  ) {
+    this.on('app:specific-group-changed', (message) => {
       if (message && typeof message === 'object') {
         const payload = message.payload !== undefined ? message.payload : message
         handler(payload)

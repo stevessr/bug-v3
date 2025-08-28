@@ -111,8 +111,14 @@ export async function initializeEmojiFeature(
   maxInjectionAttempts: number = 10,
   delay: number = 1000,
 ) {
-  logger.log('[Mr Emoji] Initializing (module)...')
-  await loadDataFromStorage()
+  const initStartTime = performance.now()
+  logger.log('[性能] 初始化表情功能开始...')
+
+  // 使用新的缓存系统加载数据，首次加载强制刷新
+  await loadDataFromStorage(true)
+
+  const dataLoadTime = performance.now() - initStartTime
+  logger.log(`[性能] 数据加载耗时: ${Math.round(dataLoadTime)}ms`)
 
   // 初始化一键添加表情功能
   initOneClickAdd()

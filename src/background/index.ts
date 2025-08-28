@@ -5,6 +5,10 @@ declare const chrome: any
 declare const browser: any
 
 import { getRuntimeSyncConfig } from '../data/sync-config'
+import { createBackgroundCommService } from '../services/communication'
+
+// 创建通信服务实例
+const commService = createBackgroundCommService()
 
 // runtime-configurable sync params (will be populated async)
 const CONFIG: { ACK_TIMEOUT_MS: number; MAX_RETRIES: number; POLL_INTERVAL_MS: number } = {

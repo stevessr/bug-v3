@@ -1,7 +1,8 @@
-import { cachedState } from './state'
+import { cachedState, cacheManager, cacheUtils } from './state'
 import { getDefaultEmojis } from './default'
-import type { emoji } from './types'
+import type { emoji, EmojiGroup } from './types'
 import { createContentScriptCommService } from '../../services/communication'
+import { performanceMonitor, measureAsync } from './performance'
 
 // 导入后台通信函数
 interface BackgroundResponse {
@@ -36,6 +37,109 @@ function sendMessageToBackground(message: any): Promise<BackgroundResponse> {
 
 // 创建通信服务用于实时通知其他页面
 const commService = createContentScriptCommService()
+
+// 组级别加载支持函数
+async function loadGroupsFromBackground(): Promise<EmojiGroup[]> {
+  try {
+    console.log('[组级缓存] 从后台获取表情组数据')
+    const response = await sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
+
+    if (response && response.success && response.data && response.data.groups) {
+      const freshGroups = response.data.groups.filter(
+        (g: any) => g && typeof g.UUID === 'string' && Array.isArray(g.emojis),
+      )
+
+      if (freshGroups.length > 0) {
+        // 更新组级别缓存
+        freshGroups.forEach((group: any) => {
+          if (group.UUID === 'common-emoji-group') {
+            cacheUtils.updateCommonGroupCache(group)
+          } else {
+            cacheUtils.updateGroupCache(group.UUID, group)
+          }
+        })
+
+        // 更新主缓存
+        cachedState.emojiGroups = freshGroups
+        console.log(`[组级缓存] 成功加载 ${freshGroups.length} 个表情组`)
+        return freshGroups
+      }
+    }
+
+    console.warn('[组级缓存] 后台没有返回有效数据')
+    return []
+  } catch (error) {
+    console.error('[组级缓存] 从后台加载失败:', error)
+    return []
+  }
+}
+
+// 后台异步检查更新
+async function checkForUpdatesInBackground(): Promise<void> {
+  try {
+    console.log('[组级缓存] 后台异步检查更新')
+
+    // 使用较短的超时时间，避免阻塞 UI
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Background check timeout')), 2000)
+    })
+
+    const checkPromise = sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
+
+    const response = (await Promise.race([checkPromise, timeoutPromise])) as any
+
+    if (response && response.success && response.data && response.data.groups) {
+      const freshGroups = response.data.groups
+      let hasUpdates = false
+
+      // 检查是否有组级别更新
+      for (const group of freshGroups) {
+        if (!group.UUID) continue
+
+        const cachedGroup =
+          group.UUID === 'common-emoji-group'
+            ? cacheManager.commonGroupCache.data
+            : cacheUtils.getGroupCache(group.UUID)
+
+        // 简单的更新检查（比较表情数量和修改时间）
+        if (
+          !cachedGroup ||
+          cachedGroup.emojis?.length !== group.emojis?.length ||
+          JSON.stringify(cachedGroup.emojis) !== JSON.stringify(group.emojis)
+        ) {
+          console.log(`[组级缓存] 检测到组更新: ${group.UUID}`)
+
+          // 更新特定组
+          if (group.UUID === 'common-emoji-group') {
+            cacheUtils.updateCommonGroupCache(group)
+          } else {
+            cacheUtils.updateGroupCache(group.UUID, group)
+          }
+
+          // 更新主缓存
+          const index = cachedState.emojiGroups.findIndex((g) => g.UUID === group.UUID)
+          if (index >= 0) {
+            cachedState.emojiGroups[index] = group
+          }
+
+          hasUpdates = true
+        }
+      }
+
+      if (hasUpdates) {
+        console.log('[组级缓存] 检测到更新，已同步缓存')
+      } else {
+        console.log('[组级缓存] 未检测到更新')
+      }
+    }
+  } catch (error) {
+    // 忙时忽略错误，不影响主流程
+    console.debug(
+      '[组级缓存] 后台检查更新失败（忽略）:',
+      error instanceof Error ? error.message : String(error),
+    )
+  }
+}
 
 // 缓存状态管理
 let cacheVersion = 0
@@ -119,53 +223,49 @@ function closePicker(picker: HTMLElement, isMobilePicker: boolean) {
 }
 
 export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLElement> {
-  const now = Date.now()
-  const shouldRefreshCache =
-    cacheVersion === 0 || // 第一次加载
-    now - lastDataFetch > CACHE_EXPIRE_TIME || // 缓存过期
-    cacheVersion > 0 // 有更新消息
+  const measureId = performanceMonitor.startMeasure('emoji-picker-creation', { isMobilePicker })
+  const startTime = performance.now()
+  console.log('[组级缓存] 开始创建表情选择器')
 
-  let groups = cachedState.emojiGroups
+  let groups: EmojiGroup[] = []
 
-  // 只在需要时才获取最新数据
-  if (shouldRefreshCache) {
-    console.log('[Emoji Picker] 缓存无效或过期，获取最新表情数据...')
-    try {
-      const response = await sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
-      if (response && response.success && response.data && response.data.groups) {
-        const freshGroups = response.data.groups.filter(
-          (g: any) => g && typeof g.UUID === 'string' && Array.isArray(g.emojis),
-        )
-        if (freshGroups.length > 0) {
-          groups = freshGroups
-          // 更新缓存状态
-          cachedState.emojiGroups = groups
-          lastDataFetch = now
-          cacheVersion = 0 // 重置版本号
-          console.log(`[Emoji Picker] 成功获取 ${groups.length} 个表情组（数据已缓存）`)
-        }
-      }
-    } catch (error) {
-      console.warn('[Emoji Picker] 获取最新数据失败，使用缓存数据:', error)
+  // 在激进缓存模式下，优先使用缓存数据
+  if (cacheManager.isAggressiveMode) {
+    console.log('[组级缓存] 激进模式，尝试使用缓存数据')
+
+    const cachedGroups = cacheUtils.getAllCachedGroups()
+    if (cachedGroups.length > 0) {
+      groups = cachedGroups
+      console.log(`[组级缓存] 使用缓存数据：${groups.length} 个组`)
+
+      // 后台异步检查更新（不阻塞 UI 显示）
+      checkForUpdatesInBackground()
+    } else {
+      console.log('[组级缓存] 无缓存数据，从后台加载')
+      groups = await loadGroupsFromBackground()
     }
   } else {
-    console.log(`[Emoji Picker] 使用缓存数据（${groups.length} 个分组）`)
+    console.log('[组级缓存] 非激进模式，从后台加载')
+    groups = await loadGroupsFromBackground()
   }
 
   // 如果仍然没有数据，使用默认表情
   if (!groups || groups.length === 0) {
     groups = getDefaultEmojis()
-    console.log('[Emoji Picker] 使用默认表情数据')
+    console.log('[组级缓存] 使用默认表情数据')
   }
 
   // 确保常用表情分组显示在第一位
   const commonGroupIndex = groups.findIndex((g) => g.UUID === 'common-emoji-group')
   if (commonGroupIndex > 0) {
-    // 如果常用表情不在第一位，将其移动到第一位
     const commonGroup = groups.splice(commonGroupIndex, 1)[0]
     groups.unshift(commonGroup)
-    console.log('[Emoji Picker] 将常用表情分组移动到第一位')
+    console.log('[组级缓存] 将常用表情分组移动到第一位')
   }
+
+  const renderStartTime = performance.now()
+  const loadTime = renderStartTime - startTime
+  console.log(`[组级缓存] 数据加载完成，耗时: ${Math.round(loadTime)}ms`)
 
   // Generate sections navigation HTML
   let sectionsNavHtml = ''
@@ -329,10 +429,13 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
     `
   }
 
-  // Add click handlers for emoji images
+  // Add click handlers for emoji images - 优化的异步版本
   const emojiImages = picker.querySelectorAll('.emoji-picker__section-emojis .emoji')
   emojiImages.forEach((img) => {
     img.addEventListener('click', async () => {
+      const clickStartTime = performance.now()
+      console.log('[异步点击] 表情点击开始')
+
       // 获取原始 UUID 信息
       const originalUUID = img.getAttribute('data-uuid') || ''
 
@@ -345,27 +448,63 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
         UUID: (originalUUID as any) || (crypto.randomUUID() as any),
       }
 
-      // 先记录使用统计（如果有原始 UUID）
+      // 并行处理：记录使用统计 + 插入表情
+      const tasks = []
+
+      // 任务 1: 记录使用统计（如果有 UUID）
       if (originalUUID) {
-        try {
-          await recordEmojiUsage(originalUUID)
-          console.log('[Emoji Picker] 成功记录表情使用:', originalUUID)
-        } catch (error) {
-          console.error('[Emoji Picker] 记录表情使用失败:', error)
-        }
+        const usageTask = recordEmojiUsage(originalUUID)
+          .then(() => {
+            console.log('[异步点击] 成功记录表情使用:', originalUUID)
+            return true
+          })
+          .catch((error) => {
+            console.error('[异步点击] 记录表情使用失败:', error)
+            return false
+          })
+        tasks.push(usageTask)
       } else {
-        console.warn('[Emoji Picker] 表情缺少 UUID 信息，无法记录使用统计')
+        console.warn('[异步点击] 表情缺少 UUID 信息，无法记录使用统计')
+        tasks.push(Promise.resolve(false))
       }
 
-      // 插入表情
-      insertEmoji(emojiData)
+      // 任务 2: 插入表情
+      const insertTask = insertEmoji(emojiData)
         .then(() => {
-          closePicker(picker, isMobilePicker)
+          console.log('[异步点击] 成功插入表情')
+          return true
         })
         .catch((error) => {
-          console.error('[Emoji Insert] 插入表情失败:', error)
-          closePicker(picker, isMobilePicker)
+          console.error('[异步点击] 插入表情失败:', error)
+          return false
         })
+      tasks.push(insertTask)
+
+      // 等待所有任务完成
+      try {
+        const results = await Promise.allSettled(tasks)
+        const clickDuration = performance.now() - clickStartTime
+
+        console.log(`[异步点击] 所有任务完成，总耗时: ${Math.round(clickDuration)}ms`)
+        console.log(
+          '[异步点击] 任务结果:',
+          results.map((r) => r.status),
+        )
+
+        // 只要插入成功就关闭选择器（不等待统计记录）
+        const insertResult = results[1] // 插入结果是第二个任务
+        if (insertResult.status === 'fulfilled') {
+          closePicker(picker, isMobilePicker)
+        } else {
+          // 即使插入失败也关闭选择器，避免界面卡住
+          console.warn('[异步点击] 插入失败，但仍然关闭选择器')
+          closePicker(picker, isMobilePicker)
+        }
+      } catch (error) {
+        console.error('[异步点击] 处理表情点击时出错:', error)
+        // 即使出错也尝试关闭选择器
+        closePicker(picker, isMobilePicker)
+      }
     })
   })
 
@@ -493,10 +632,302 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
     })
   }
 
+  const renderEndTime = performance.now()
+  const renderTime = renderEndTime - renderStartTime
+  const totalTime = renderEndTime - startTime
+
+  // 性能监控和日志优化
+  const performanceStats = {
+    loadTime: Math.round(loadTime),
+    renderTime: Math.round(renderTime),
+    totalTime: Math.round(totalTime),
+    groupsCount: groups.length,
+    emojisCount: groups.reduce((sum, g) => sum + (g.emojis?.length || 0), 0),
+    cacheStats: cacheUtils.getCacheStats(),
+    taskStats: taskManager.getTaskStats(),
+  }
+
+  console.log('[性能监控] 表情选择器创建完成:', performanceStats)
+
+  // 性能警告
+  if (totalTime > 1000) {
+    console.warn(`[性能警告] 表情选择器创建耗时过长: ${totalTime}ms`)
+  }
+
+  if (loadTime > 500) {
+    console.warn(`[性能警告] 数据加载耗时过长: ${loadTime}ms, 建议检查网络或缓存配置`)
+  }
+
+  // 将性能统计附加到 picker 元素上，供调试使用
+  picker.setAttribute('data-performance', JSON.stringify(performanceStats))
+
+  // 完成性能测量
+  performanceMonitor.endMeasure('emoji-picker-creation', measureId)
+
   return picker
 }
 
-async function insertEmoji(emojiData: emoji) {
+// 异步表情插入系统
+interface EmojiInsertTask {
+  id: string
+  emojiData: emoji
+  startTime: number
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  steps: {
+    findElement: boolean
+    getSettings: boolean
+    generateContent: boolean
+    insertContent: boolean
+  }
+}
+
+// 任务管理器
+class EmojiInsertTaskManager {
+  private tasks: Map<string, EmojiInsertTask> = new Map()
+  private processingQueue: Set<string> = new Set()
+
+  createTask(emojiData: emoji): string {
+    const taskId = `emoji-insert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const task: EmojiInsertTask = {
+      id: taskId,
+      emojiData,
+      startTime: Date.now(),
+      status: 'pending',
+      steps: {
+        findElement: false,
+        getSettings: false,
+        generateContent: false,
+        insertContent: false,
+      },
+    }
+    this.tasks.set(taskId, task)
+    console.log(`[异步插入] 创建任务: ${taskId}`, emojiData.displayName)
+    return taskId
+  }
+
+  updateTaskStep(taskId: string, step: keyof EmojiInsertTask['steps'], completed: boolean) {
+    const task = this.tasks.get(taskId)
+    if (task) {
+      task.steps[step] = completed
+    }
+  }
+
+  completeTask(taskId: string, success: boolean) {
+    const task = this.tasks.get(taskId)
+    if (task) {
+      task.status = success ? 'completed' : 'failed'
+      this.processingQueue.delete(taskId)
+      const duration = Date.now() - task.startTime
+      console.log(`[异步插入] 任务${success ? '完成' : '失败'}: ${taskId}, 耗时: ${duration}ms`)
+
+      // 清理旧任务（保留最近 10 个）
+      if (this.tasks.size > 10) {
+        const sortedTasks = Array.from(this.tasks.entries()).sort(
+          (a, b) => b[1].startTime - a[1].startTime,
+        )
+        sortedTasks.slice(10).forEach(([id]) => this.tasks.delete(id))
+      }
+    }
+  }
+
+  getTaskStats() {
+    const tasks = Array.from(this.tasks.values())
+    const completed = tasks.filter((t) => t.status === 'completed').length
+    const failed = tasks.filter((t) => t.status === 'failed').length
+    const processing = tasks.filter((t) => t.status === 'processing').length
+    const avgDuration =
+      tasks
+        .filter((t) => t.status === 'completed')
+        .reduce((sum, t) => sum + (Date.now() - t.startTime), 0) / Math.max(completed, 1)
+
+    return { total: tasks.length, completed, failed, processing, avgDuration }
+  }
+}
+
+const taskManager = new EmojiInsertTaskManager()
+
+// 异步获取设置
+async function getEmojiSettings(): Promise<any> {
+  // 先返回缓存设置，然后异步更新
+  let settings = { ...cacheManager.settingsCache.data }
+
+  try {
+    // 如果激进缓存模式开启且设置缓存还在有效期内，直接使用缓存
+    if (cacheManager.isAggressiveMode) {
+      const cacheAge = Date.now() - cacheManager.settingsCache.lastUpdate
+      if (cacheAge < 5000 && Object.keys(settings).length > 0) {
+        // 5秒缓存
+        console.log('[异步插入] 使用设置缓存，缓存时间:', cacheAge + 'ms')
+        return settings
+      }
+    }
+
+    // 后台获取设置
+    console.log('[异步插入] 实时获取最新设置...')
+    const response = await sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
+    if (response && response.success && response.data && response.data.settings) {
+      settings = { ...settings, ...response.data.settings }
+      // 更新缓存
+      cacheUtils.updateSettingsCache(response.data.settings)
+      console.log('[异步插入] 成功获取最新设置')
+    }
+  } catch (error) {
+    console.warn('[异步插入] 获取设置失败，使用缓存:', error)
+  }
+
+  return settings
+}
+
+// 异步查找输入元素
+async function findInputElement(): Promise<{
+  textArea: HTMLTextAreaElement | null
+  richEle: HTMLElement | null
+}> {
+  return new Promise((resolve) => {
+    // 立即返回当前结果
+    const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
+    const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
+
+    resolve({ textArea, richEle })
+  })
+}
+
+// 异步生成表情内容
+async function generateEmojiContent(
+  emojiData: emoji,
+  settings: any,
+): Promise<{
+  textContent: string
+  htmlContent: string
+  scaledWidth: number
+  scaledHeight: number
+}> {
+  return new Promise((resolve) => {
+    // 获取图片尺寸信息
+    let width = '500'
+    let height = '500'
+    const imgSrc = emojiData.realUrl?.toString() || emojiData.displayUrl?.toString() || ''
+
+    // 尝试从 URL 中提取尺寸
+    const match = imgSrc.match(/_(\d{3,})x(\d{3,})\./)
+    if (match) {
+      width = match[1]
+      height = match[2]
+    }
+
+    const imageScale = settings.imageScale || 30
+    const scaledWidth = Math.round((parseInt(width) * imageScale) / 100)
+    const scaledHeight = Math.round((parseInt(height) * imageScale) / 100)
+
+    // 生成不同格式的内容
+    let textContent: string
+    switch (settings.outputFormat) {
+      case 'html':
+        textContent = `<img src="${imgSrc}" title=":${emojiData.displayName}:" class="emoji only-emoji" alt=":${emojiData.displayName}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};">`
+        break
+      case 'bbcode':
+        textContent = `[img]${imgSrc}[/img]`
+        break
+      case 'markdown':
+      default:
+        textContent = `![${emojiData.displayName}|${width}x${height},${imageScale}%](${imgSrc}) `
+        break
+    }
+
+    const htmlContent = `<img src="${imgSrc}" title=":${emojiData.displayName}:" class="emoji only-emoji" alt=":${emojiData.displayName}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};">`
+
+    resolve({ textContent, htmlContent, scaledWidth, scaledHeight })
+  })
+}
+
+// 优化后的异步插入函数
+async function insertEmoji(emojiData: emoji): Promise<void> {
+  const taskId = taskManager.createTask(emojiData)
+
+  try {
+    console.log('[异步插入] 开始处理:', emojiData.displayName)
+    const startTime = performance.now()
+
+    // 并行执行多个异步操作
+    const [elements, settings] = await Promise.all([findInputElement(), getEmojiSettings()])
+
+    taskManager.updateTaskStep(taskId, 'findElement', true)
+    taskManager.updateTaskStep(taskId, 'getSettings', true)
+
+    const { textArea, richEle } = elements
+
+    if (!textArea && !richEle) {
+      console.error('[异步插入] 找不到输入框')
+      taskManager.completeTask(taskId, false)
+      return
+    }
+
+    console.log('[异步插入] 找到输入框:', { textArea: !!textArea, richEle: !!richEle })
+    console.log('[异步插入] 使用设置:', {
+      outputFormat: settings.outputFormat,
+      imageScale: settings.imageScale,
+    })
+
+    // 生成内容
+    const content = await generateEmojiContent(emojiData, settings)
+    taskManager.updateTaskStep(taskId, 'generateContent', true)
+
+    console.log('[异步插入] 生成的内容:', content.textContent)
+
+    // 插入内容
+    if (textArea) {
+      console.log('[异步插入] 处理普通文本框插入')
+
+      const start = textArea.selectionStart || 0
+      const end = textArea.selectionEnd || 0
+      const text = textArea.value
+
+      // 插入表情文本
+      textArea.value = text.substring(0, start) + content.textContent + text.substring(end)
+      textArea.selectionStart = textArea.selectionEnd = start + content.textContent.length
+      textArea.focus()
+
+      // 触发事件
+      const inputEvent = new Event('input', { bubbles: true, cancelable: true })
+      textArea.dispatchEvent(inputEvent)
+    } else if (richEle) {
+      console.log('[异步插入] 处理富文本编辑器插入')
+
+      try {
+        const dt = new DataTransfer()
+        dt.setData('text/html', content.htmlContent)
+        const evt = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true })
+        richEle.dispatchEvent(evt)
+        console.log('[异步插入] 通过粘贴事件插入表情成功')
+      } catch (e1) {
+        console.warn('[异步插入] 粘贴事件失败，尝试 execCommand:', e1)
+        try {
+          const result = document.execCommand('insertHTML', false, content.htmlContent)
+          console.log('[异步插入] execCommand 结果:', result)
+        } catch (e2) {
+          console.error('[异步插入] 无法向富文本编辑器中插入表情:', e2)
+          throw e2
+        }
+      }
+    }
+
+    taskManager.updateTaskStep(taskId, 'insertContent', true)
+
+    const duration = performance.now() - startTime
+    console.log(
+      `[异步插入] 成功插入表情: ${emojiData.displayName}, 耗时: ${Math.round(duration)}ms`,
+    )
+
+    taskManager.completeTask(taskId, true)
+  } catch (error) {
+    console.error('[异步插入] 插入表情失败:', error)
+    taskManager.completeTask(taskId, false)
+    throw error
+  }
+}
+
+// 旧的同步实现（保留作为备用）
+async function insertEmojiLegacy(emojiData: emoji) {
   console.log('[Emoji Insert] 开始插入表情:', emojiData)
 
   // 首先尝试主动查找文本框（参考simple.js的实现）
