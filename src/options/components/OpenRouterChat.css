@@ -3,13 +3,96 @@
 }
 
 .chat-container {
-  height: 400px;
+  position: relative;
   overflow-y: auto;
   border: 1px solid #d9d9d9;
   border-radius: 6px;
   padding: 16px;
   margin-bottom: 16px;
   background: #fafafa;
+  transition: height 0.2s ease;
+  /* Remove fixed height to allow dynamic sizing */
+}
+
+/* 拖拽时禁用过渡效果和文本选择 */
+.chat-container.resizing {
+  transition: none;
+  user-select: none;
+}
+
+/* 拖拽手柄 */
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.05));
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 0 0 6px 6px;
+}
+
+/* 拖拽手柄图标 */
+.resize-handle-icon {
+  width: 30px;
+  height: 4px;
+  background: #d9d9d9;
+  border-radius: 2px;
+  position: relative;
+}
+
+.resize-handle-icon::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #d9d9d9;
+  border-radius: 1px;
+}
+
+.resize-handle:hover .resize-handle-icon,
+.resize-handle:hover .resize-handle-icon::after {
+  background: #1890ff;
+}
+
+/* 拖拽时的样式 */
+.chat-container.resizing .resize-handle .resize-handle-icon,
+.chat-container.resizing .resize-handle .resize-handle-icon::after {
+  background: #1890ff;
+}
+
+/* 大小指示器 */
+.size-indicator {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 15;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  animation: fadeInOut 0.3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-50%) scale(0.9); }
+  100% { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+
+.chat-container.resizing .size-indicator {
+  opacity: 1;
 }
 
 .message-item {

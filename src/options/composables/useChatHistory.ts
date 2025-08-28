@@ -1,5 +1,13 @@
-import { ref, nextTick, type Ref } from 'vue'
-import { message } from 'ant-design-vue'
+import { ref, nextTick, watch, onBeforeUnmount, readonly, type Ref } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import { 
+  saveChatHistory, 
+  loadChatHistory, 
+  clearChatHistory,
+  type ChatHistoryData,
+  type ChatMessage as StoredChatMessage
+} from '../../data/update/storage'
+import { v4 as uuidv4 } from 'uuid'
 
 import type { ChatMessage } from '../types'
 
@@ -36,6 +44,188 @@ export function useChatHistory({
   const importChatData = ref('')
   const importError = ref('')
   const replaceExistingChat = ref(false)
+  
+  // 新增：自动保存相关状态
+  const sessionId = ref(uuidv4()) // 会话ID
+  const sessionCreatedTime = ref(new Date()) // 会话创建时间
+  const autoSaveTimer = ref<number | null>(null) // 自动保存定时器
+
+  // 防抖保存函数
+  const debouncedSave = (() => {
+    let timeoutId: number | null = null
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      timeoutId = window.setTimeout(() => {
+        saveCurrentHistory()
+      }, 1000) // 1秒防抖
+    }
+  })()
+
+  // 转换函数：将ChatMessage转换为StoredChatMessage
+  const convertToStoredMessage = (msg: ChatMessage): StoredChatMessage => ({
+    role: msg.role as 'user' | 'assistant', // 类型断言，确保兼容性
+    content: msg.content,
+    timestamp: msg.timestamp,
+    images: msg.images,
+  })
+
+  // 转换函数：将StoredChatMessage转换为ChatMessage
+  const convertFromStoredMessage = (msg: StoredChatMessage): ChatMessage => ({
+    role: msg.role,
+    content: msg.content,
+    timestamp: msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp),
+    images: msg.images,
+  })
+
+  // 保存当前对话历史
+  const saveCurrentHistory = () => {
+    try {
+      if (messages.value.length === 0) {
+        return // 空对话不保存
+      }
+
+      const historyData: ChatHistoryData = {
+        sessionId: sessionId.value,
+        lastModified: new Date(),
+        selectedModel: selectedModel.value,
+        messages: messages.value.map(convertToStoredMessage),
+        metadata: {
+          totalMessages: messages.value.length,
+          createdAt: sessionCreatedTime.value,
+        },
+      }
+      
+      saveChatHistory(historyData)
+      console.log('[ChatHistory] Auto-saved chat history with', messages.value.length, 'messages')
+    } catch (error) {
+      console.warn('[ChatHistory] Failed to save chat history:', error)
+    }
+  }
+
+  // 手动触发保存
+  const manualSave = () => {
+    saveCurrentHistory()
+  }
+
+  // 恢复对话历史
+  const restoreHistory = async () => {
+    try {
+      const savedHistory = loadChatHistory()
+      if (!savedHistory || !savedHistory.messages || savedHistory.messages.length === 0) {
+        console.log('[ChatHistory] No saved history found')
+        return false
+      }
+
+      // 检查是否是最近的会话（小于24小时）
+      const lastModified = new Date(savedHistory.lastModified)
+      const hoursSinceLastModified = (Date.now() - lastModified.getTime()) / (1000 * 60 * 60)
+      
+      if (hoursSinceLastModified > 24) {
+        console.log('[ChatHistory] Saved history is too old, skipping restore')
+        return false
+      }
+
+      // 只在当前没有消息或者用户确认时才恢复
+      let shouldRestore = false
+      if (messages.value.length === 0) {
+        shouldRestore = true
+      } else {
+        shouldRestore = await new Promise((resolve) => {
+          const modal = Modal.confirm({
+            title: '检测到历史对话记录',
+            content: `发现了 ${savedHistory.messages.length} 条对话记录（上次修改：${lastModified.toLocaleString()}）。是否恢复？`,
+            okText: '恢复',
+            cancelText: '取消',
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+          })
+        })
+      }
+
+      if (shouldRestore) {
+        // 恢复消息
+        const restoredMessages = savedHistory.messages.map(convertFromStoredMessage)
+        messages.value = restoredMessages
+        
+        // 恢复模型选择
+        if (savedHistory.selectedModel) {
+          const modelExists = modelOptions.value.some((opt) => opt.value === savedHistory.selectedModel)
+          if (modelExists) {
+            selectedModel.value = savedHistory.selectedModel
+          }
+        }
+        
+        // 恢复会话ID和创建时间
+        sessionId.value = savedHistory.sessionId || uuidv4()
+        sessionCreatedTime.value = new Date(savedHistory.metadata.createdAt)
+        
+        // 滚动到底部
+        nextTick(() => {
+          scrollToBottom()
+        })
+        
+        message.success(`已恢复 ${restoredMessages.length} 条对话记录`)
+        console.log('[ChatHistory] Restored chat history:', restoredMessages.length, 'messages')
+        return true
+      }
+    } catch (error) {
+      console.warn('[ChatHistory] Failed to restore chat history:', error)
+      message.error('恢复对话历史失败')
+    }
+    return false
+  }
+
+  // 清除对话历史的增强版本
+  const clearChatHistoryEnhanced = () => {
+    try {
+      clearChatHistory()
+      // 重置会话ID和创建时间
+      sessionId.value = uuidv4()
+      sessionCreatedTime.value = new Date()
+      message.success('对话历史已清除')
+      console.log('[ChatHistory] Cleared chat history')
+    } catch (error) {
+      console.warn('[ChatHistory] Failed to clear chat history:', error)
+      message.error('清除对话历史失败')
+    }
+  }
+
+  // 设置监听器
+  const setupWatchers = () => {
+    // 监听消息和模型变化，自动保存
+    const stopWatching = watch(
+      [messages, selectedModel],
+      () => {
+        debouncedSave()
+      },
+      { deep: true }
+    )
+
+    // 定时保存（每30秒）
+    const intervalId = setInterval(() => {
+      if (messages.value.length > 0) {
+        saveCurrentHistory()
+      }
+    }, 30000)
+
+    // 清理函数
+    const cleanup = () => {
+      stopWatching()
+      clearInterval(intervalId)
+      if (autoSaveTimer.value) {
+        clearTimeout(autoSaveTimer.value)
+      }
+    }
+
+    onBeforeUnmount(cleanup)
+    
+    return cleanup
+  }
+
+  // 初始化监听器
+  setupWatchers()
 
   const exportChat = () => {
     const chatData = {
@@ -176,5 +366,11 @@ export function useChatHistory({
     importChat,
     cancelImport,
     handleChatFileUpload,
+    // 新增的功能
+    restoreHistory,
+    manualSave,
+    clearChatHistoryEnhanced,
+    sessionId: readonly(sessionId),
+    sessionCreatedTime: readonly(sessionCreatedTime),
   }
 }

@@ -27,8 +27,13 @@
         </a-row>
       </div>
 
-      <!-- Chat Area -->
-      <div class="chat-container" ref="chatContainer">
+      <!-- Chat Area with Resizable Container -->
+      <div
+        ref="chatContainerRef"
+        class="chat-container"
+        :class="{ 'resizing': isResizing }"
+        :style="{ height: containerHeight + 'px' }"
+      >
         <div
           v-for="(message, index) in messages"
           :key="index"
@@ -75,6 +80,16 @@
         </div>
 
         <div v-if="isLoading" class="loading-message"><a-spin size="small" /> AI 正在思考...</div>
+        
+        <!-- Resize Handle -->
+        <div class="resize-handle" @mousedown="startResize">
+          <div class="resize-handle-icon"></div>
+        </div>
+        
+        <!-- Size Indicator -->
+        <div v-if="isResizing" class="size-indicator">
+          {{ containerHeight }}px
+        </div>
       </div>
 
       <!-- Input Area -->
@@ -142,6 +157,9 @@
           <a-button size="small" @click="clearChat">清空对话</a-button>
           <a-button size="small" @click="exportChat">导出对话</a-button>
           <a-button size="small" @click="showImportModal = true">导入对话</a-button>
+          <a-button size="small" @click="manualSave">手动保存</a-button>
+          <a-button size="small" @click="clearChatHistoryEnhanced">清除历史</a-button>
+          <a-button size="small" @click="resetToDefault">重置容器</a-button>
           <a-dropdown>
             <template #overlay>
               <a-menu @click="insertTemplate">

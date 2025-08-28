@@ -10,6 +10,9 @@ const KEY_UNGROUPED = 'ungrouped'
 const KEY_EMOJI_PREFIX = 'emojiGroups-'
 const KEY_EMOJI_INDEX = 'emojiGroups-index'
 const KEY_COMMON_EMOJIS = 'emojiGroups-common' // 常用表情专用键值
+const KEY_CHAT_HISTORY = 'openrouter-chat-history' // OpenRouter对话历史
+const KEY_CHAT_SETTINGS = 'openrouter-chat-settings' // OpenRouter聊天设置
+const KEY_CONTAINER_SIZE = 'openrouter-container-size' // 容器大小设置
 
 // in-memory cache mirroring chrome.storage.local for synchronous reads
 let extCache: Record<string, any> = {}
@@ -452,6 +455,75 @@ export function saveCommonEmojiGroup(group: EmojiGroup) {
   }
 }
 
+// 对话历史和容器大小的数据类型
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+  images?: {
+    type: 'image_url'
+    image_url: {
+      url: string
+    }
+  }[]
+}
+
+export interface ChatHistoryData {
+  sessionId: string
+  lastModified: Date
+  selectedModel: string
+  messages: ChatMessage[]
+  metadata: {
+    totalMessages: number
+    createdAt: Date
+  }
+}
+
+export interface ContainerSizeSettings {
+  height: number
+  isUserModified: boolean
+  lastModified: Date
+}
+
+// 保存对话历史
+export function saveChatHistory(historyData: ChatHistoryData): void {
+  setItem(KEY_CHAT_HISTORY, historyData)
+}
+
+// 加载对话历史
+export function loadChatHistory(): ChatHistoryData | null {
+  return getItem(KEY_CHAT_HISTORY)
+}
+
+// 保存容器大小设置
+export function saveContainerSize(sizeSettings: ContainerSizeSettings): void {
+  setItem(KEY_CONTAINER_SIZE, sizeSettings)
+}
+
+// 加载容器大小设置
+export function loadContainerSize(): ContainerSizeSettings | null {
+  return getItem(KEY_CONTAINER_SIZE)
+}
+
+// 清除对话历史
+export function clearChatHistory(): void {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(KEY_CHAT_HISTORY)
+    }
+    
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.remove([KEY_CHAT_HISTORY], () => {
+        console.log('[Storage] Cleared chat history from extension storage')
+      })
+      // 清除内存缓存
+      delete extCache[KEY_CHAT_HISTORY]
+    }
+  } catch (error) {
+    console.warn('[Storage] Failed to clear chat history:', error)
+  }
+}
+
 export default {
   loadPayload,
   savePayload,
@@ -461,6 +533,11 @@ export default {
   saveCommonEmojiGroup,
   createCommonEmojiGroup,
   ensureCommonEmojiGroup,
+  saveChatHistory,
+  loadChatHistory,
+  saveContainerSize,
+  loadContainerSize,
+  clearChatHistory,
 }
 
 // 初始化常用表情分组

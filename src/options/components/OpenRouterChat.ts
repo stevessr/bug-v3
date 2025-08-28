@@ -13,6 +13,7 @@ import { useImgBed } from '../composables/useImgBed'
 import { useFileUpload } from '../composables/useFileUpload'
 import { useChatHistory } from '../composables/useChatHistory'
 import { useChat } from '../composables/useChat'
+import { useResizableContainer } from '../composables/useResizableContainer'
 
 import ImgBedConfig from './ImgBedConfig.vue'
 
@@ -29,6 +30,9 @@ export default defineComponent({
   setup() {
     const openRouterService = new OpenRouterService()
 
+    // 容器引用
+    const chatContainerRef = ref<HTMLElement>()
+
     // Model Options
     const modelOptions = ref([
       { value: 'openai/gpt-oss-20b:free', label: 'GPT OSS 20B (Free)' },
@@ -42,6 +46,9 @@ export default defineComponent({
     const apiKeysManager = useApiKeys(openRouterService)
     const imgBedManager = useImgBed()
     const fileUploadManager = useFileUpload()
+    
+    // 可调整大小容器
+    const resizableContainer = useResizableContainer(chatContainerRef)
 
     const chatManager = useChat({
       openRouterService,
@@ -72,11 +79,18 @@ export default defineComponent({
       apiKeysManager.loadApiKeys()
       imgBedManager.loadImgBedConfig()
 
-      // Add welcome message
-      chatManager.addMessage(
-        'assistant',
-        '👋 欢迎使用 OpenRouter 对话工具！\n\n我可以帮你：\n• 进行对话交流\n• 生成图像\n• 翻译文本\n• 审查代码\n• 总结内容\n\n请先在右上角配置你的 API Keys，然后开始对话吧！',
-      )
+      // 尝试恢复对话历史
+      historyManager.restoreHistory()
+
+      // Add welcome message only if no history was restored
+      setTimeout(() => {
+        if (chatManager.messages.value.length === 0) {
+          chatManager.addMessage(
+            'assistant',
+            '👋 欢迎使用 OpenRouter 对话工具！\n\n我可以帮你：\n• 进行对话交流\n• 生成图像\n• 翻译文本\n• 审查代码\n• 总结内容\n\n请先在右上角配置你的 API Keys，然后开始对话吧！',
+          )
+        }
+      }, 100) // 给恢复历史一些时间
     })
 
     // Handler for cancel action in popconfirm (no-op but must be defined to avoid Vue warning)
@@ -102,6 +116,10 @@ export default defineComponent({
 
       // from useChatHistory
       ...historyManager,
+      
+      // from useResizableContainer
+      ...resizableContainer,
+      chatContainerRef,
 
       // Icons and h for render functions
       h,
