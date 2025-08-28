@@ -74,7 +74,69 @@ function initCommunicationListeners() {
     }
   })
 
+  // 🚀 关键修复：监听表情使用记录更新，立即刷新常用表情组
+  commService.onUsageRecorded((data) => {
+    console.log('[缓存] 收到表情使用记录更新信号:', data.uuid)
+
+    // 立即从后台重新获取常用表情组数据
+    refreshCommonEmojiGroupFromBackground()
+      .then((updatedGroup) => {
+        if (updatedGroup) {
+          console.log('[缓存] 成功刷新常用表情组数据')
+          // 触发表情选择器界面刷新
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('emoji-common-group-refreshed', {
+                detail: { group: updatedGroup, timestamp: Date.now() },
+              }),
+            )
+          }
+        }
+      })
+      .catch((error) => {
+        console.warn('[缓存] 刷新常用表情组失败:', error)
+      })
+  })
+
   console.log('[缓存] 通信监听器初始化完成')
+}
+
+// 🚀 新增：从后台刷新常用表情组的函数
+async function refreshCommonEmojiGroupFromBackground(): Promise<any | null> {
+  try {
+    console.log('[缓存] 从后台实时获取常用表情组数据')
+    const response = await sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
+
+    if (response && response.success && response.data) {
+      // 查找常用表情组
+      const commonGroup = response.data.groups?.find((g: any) => g.UUID === 'common-emoji-group')
+
+      if (commonGroup) {
+        console.log('[缓存] 找到常用表情组，更新缓存')
+
+        // 更新缓存
+        cacheUtils.updateCommonGroupCache(commonGroup)
+
+        // 更新主缓存
+        const index = cachedState.emojiGroups.findIndex((g) => g.UUID === 'common-emoji-group')
+        if (index >= 0) {
+          cachedState.emojiGroups[index] = commonGroup
+        } else {
+          cachedState.emojiGroups.unshift(commonGroup)
+        }
+
+        return commonGroup
+      } else {
+        console.warn('[缓存] 后台响应中未找到常用表情组')
+      }
+    } else {
+      console.warn('[缓存] 后台响应失败或无数据')
+    }
+  } catch (error) {
+    console.error('[缓存] 从后台获取常用表情组失败:', error)
+  }
+
+  return null
 }
 
 // 在模块加载时初始化监听器
@@ -139,7 +201,7 @@ export async function loadDataFromStorage(forceRefresh: boolean = false): Promis
   try {
     const now = Date.now()
 
-    // 在激进缓存模式下，除非强制刷新或是首次加载，否则优先使用缓存
+    // 🚀 关键修复：在激进缓存模式下，特别处理常用表情组
     if (cacheManager.isAggressiveMode && !forceRefresh && cacheManager.lastFullUpdate > 0) {
       console.log('[缓存] 激进模式下使用缓存数据')
 
@@ -155,6 +217,19 @@ export async function loadDataFromStorage(forceRefresh: boolean = false): Promis
           ungroupedCount: cacheManager.ungroupedCache.data.length,
           cacheStats: cacheUtils.getCacheStats(),
         })
+
+        // 🚀 关键修复：在激进模式下也要检查常用表情组是否需要更新
+        // 如果常用表情组缓存过旧（超过10秒），就刷新一下
+        const commonGroupCacheAge = now - cacheManager.commonGroupCache.lastUpdate
+        if (commonGroupCacheAge > 10000) {
+          // 10秒
+          console.log('[缓存] 常用表情组缓存过旧，异步刷新')
+          // 异步刷新常用表情组，不阻塞主流程
+          refreshCommonEmojiGroupFromBackground().catch(() => {
+            // 忽略错误，不影响主流程
+          })
+        }
+
         return
       }
     }

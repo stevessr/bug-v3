@@ -132,9 +132,45 @@ export default defineComponent({
     }
     comm.on('app:settings-changed', settingsHandler)
 
+    // 🚀 关键修复：监听使用记录更新和常用表情组变更
+    const usageRecordedHandler = (data: any) => {
+      try {
+        console.log('[HotTab] 收到使用记录更新消息，刷新常用表情列表')
+        load() // 重新加载常用表情数据
+      } catch (error) {
+        console.error('[HotTab] 处理使用记录更新失败:', error)
+      }
+    }
+
+    const commonGroupChangedHandler = (data: any) => {
+      try {
+        console.log('[HotTab] 收到常用表情组变更消息，刷新数据')
+        load() // 重新加载常用表情数据
+      } catch (error) {
+        console.error('[HotTab] 处理常用表情组变更失败:', error)
+      }
+    }
+
+    const groupsChangedHandler = (groups: any) => {
+      try {
+        console.log('[HotTab] 收到表情组变更消息，刷新统计数据')
+        load() // 重新加载统计数据
+      } catch (error) {
+        console.error('[HotTab] 处理表情组变更失败:', error)
+      }
+    }
+
+    // 注册监听器
+    comm.onUsageRecorded(usageRecordedHandler)
+    comm.onCommonEmojiGroupChanged(commonGroupChangedHandler)
+    comm.onGroupsChanged(groupsChangedHandler)
+
     onBeforeUnmount(() => {
       try {
         comm.off && comm.off('app:settings-changed', settingsHandler)
+        comm.off && comm.off('app:usage-recorded', usageRecordedHandler)
+        comm.off && comm.off('app:common-group-changed', commonGroupChangedHandler)
+        comm.off && comm.off('app:groups-changed', groupsChangedHandler)
       } catch (_) {}
     })
     function resetHot() {

@@ -44,3 +44,4 @@ e2e/.pw-user-data
 e2e/.pw-user-data-ext
 .pw-user-data-ext-diag
 .pw-user-data-observe
+*.zip

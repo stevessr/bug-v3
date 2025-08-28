@@ -37,8 +37,12 @@
     "@google/genai": "^1.15.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
     "ant-design-vue": "^4.2.6",
     "autoprefixer": "^10.4.21",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-promise": "^7.2.1",
     "monaco-editor": "^0.52.2",
     "openai": "^5.16.0",
     "pinia": "^3.0.3",
@@ -46,6 +50,7 @@
     "tailwindcss": "^4.1.12",
     "uuid": "^11.1.0",
     "vue": "^3.5.20",
+    "vue-eslint-parser": "^10.2.0",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {

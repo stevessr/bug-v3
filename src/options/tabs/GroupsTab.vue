@@ -528,7 +528,24 @@ onMounted(() => {
     groups.value = newGroups
   })
 
-  commService.onUsageRecorded((_data: any) => {})
+  // 🚀 关键修复：添加常用表情组和使用记录的监听器
+  commService.onCommonEmojiGroupChanged((data: any) => {
+    try {
+      console.log('[GroupsTab] 收到常用表情组变更消息，刷新数据')
+      load() // 重新加载所有分组数据
+    } catch (error) {
+      console.error('[GroupsTab] 处理常用表情组变更失败:', error)
+    }
+  })
+
+  commService.onUsageRecorded((data: any) => {
+    try {
+      console.log('[GroupsTab] 收到使用记录更新消息，刷新数据')
+      load() // 重新加载所有分组数据，包括使用计数
+    } catch (error) {
+      console.error('[GroupsTab] 处理使用记录更新失败:', error)
+    }
+  })
 })
 
 // remove listener on unmount

@@ -394,6 +394,35 @@ export default defineComponent({
           hot.value = store.getHot()
         })
 
+        // 🚀 关键修复：添加常用表情组专门的监听器
+        commService.onCommonEmojiGroupChanged((data) => {
+          try {
+            console.log('[PopupApp] 收到常用表情组变更消息，刷新常用表情列表')
+            hot.value = store.getHot()
+            // 如果有更新的常用表情组数据，也更新commonEmojiGroup
+            if (data && data.group) {
+              commonEmojiGroup.value = data.group
+            }
+          } catch (error) {
+            console.error('[PopupApp] 处理常用表情组变更失败:', error)
+          }
+        })
+
+        // 🚀 关键修复：监听特定表情组变更（针对常用表情组）
+        commService.onSpecificGroupChanged((data) => {
+          try {
+            if (data && data.groupUUID === 'common-emoji-group') {
+              console.log('[PopupApp] 收到常用表情组特定变更消息，刷新数据')
+              hot.value = store.getHot()
+              if (data.group) {
+                commonEmojiGroup.value = data.group
+              }
+            }
+          } catch (error) {
+            console.error('[PopupApp] 处理特定表情组变更失败:', error)
+          }
+        })
+
         // 向后兼容：监听 CustomEvent
         window.addEventListener('app:settings-changed', (ev: any) => {
           try {

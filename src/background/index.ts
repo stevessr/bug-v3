@@ -81,12 +81,14 @@ async function handleEmojiUsageChrome(uuid: string, sendResponse: (resp: any) =>
   try {
     log('Recording emoji usage for UUID (Chrome):', uuid)
     let success = false
+    let shouldNotifyCommonGroup = false
 
     // Try to use emoji groups store if available
     if (emojiGroupsStore && typeof emojiGroupsStore.recordUsageByUUID === 'function') {
       try {
         success = emojiGroupsStore.recordUsageByUUID(uuid)
         log('recordUsageByUUID result (Chrome):', success)
+        shouldNotifyCommonGroup = success
       } catch (error) {
         log('Error calling recordUsageByUUID (Chrome):', error)
       }
@@ -115,10 +117,35 @@ async function handleEmojiUsageChrome(uuid: string, sendResponse: (resp: any) =>
                   log('Successfully saved emoji usage update (Chrome)')
                   // Update global cache
                   lastPayloadGlobal = freshData
+                  success = true
+                  shouldNotifyCommonGroup = true
+
+                  // 发送响应
                   sendResponse({
                     success: true,
                     message: 'Usage recorded successfully',
                   })
+
+                  // 🚀 关键修复：使用记录更新后，通知常用表情组变更
+                  if (shouldNotifyCommonGroup) {
+                    try {
+                      // 获取更新后的常用表情组
+                      const updatedCommonGroup = emojiGroupsStore?.getCommonEmojiGroup
+                        ? emojiGroupsStore.getCommonEmojiGroup()
+                        : null
+
+                      if (updatedCommonGroup) {
+                        log('Sending common emoji group update notification after usage record')
+                        commService.sendCommonEmojiGroupChanged(updatedCommonGroup)
+                        commService.sendSpecificGroupChanged(
+                          'common-emoji-group',
+                          updatedCommonGroup,
+                        )
+                      }
+                    } catch (notifyError) {
+                      log('Error sending common group update notification:', notifyError)
+                    }
+                  }
                 }
               })
               return // Early return to avoid double response
@@ -137,6 +164,24 @@ async function handleEmojiUsageChrome(uuid: string, sendResponse: (resp: any) =>
       success: success,
       message: success ? 'Usage recorded successfully' : 'Failed to record usage',
     })
+
+    // 🚀 关键修复：如果通过 store 更新成功，也要发送通知
+    if (shouldNotifyCommonGroup) {
+      try {
+        // 获取更新后的常用表情组
+        const updatedCommonGroup = emojiGroupsStore?.getCommonEmojiGroup
+          ? emojiGroupsStore.getCommonEmojiGroup()
+          : null
+
+        if (updatedCommonGroup) {
+          log('Sending common emoji group update notification after store usage record')
+          commService.sendCommonEmojiGroupChanged(updatedCommonGroup)
+          commService.sendSpecificGroupChanged('common-emoji-group', updatedCommonGroup)
+        }
+      } catch (notifyError) {
+        log('Error sending common group update notification:', notifyError)
+      }
+    }
   } catch (error) {
     log('Error handling RECORD_EMOJI_USAGE (Chrome):', error)
     sendResponse({
@@ -155,12 +200,14 @@ async function handleEmojiUsageFirefox(uuid: string): Promise<object> {
   try {
     log('Recording emoji usage for UUID (Firefox):', uuid)
     let success = false
+    let shouldNotifyCommonGroup = false
 
     // Try to use emoji groups store if available
     if (emojiGroupsStore && typeof emojiGroupsStore.recordUsageByUUID === 'function') {
       try {
         success = emojiGroupsStore.recordUsageByUUID(uuid)
         log('recordUsageByUUID result (Firefox):', success)
+        shouldNotifyCommonGroup = success
       } catch (error) {
         log('Error calling recordUsageByUUID (Firefox):', error)
       }
@@ -181,6 +228,7 @@ async function handleEmojiUsageFirefox(uuid: string): Promise<object> {
               await browser.storage.local.set(saveData)
               log('Successfully saved emoji usage update (Firefox)')
               success = true
+              shouldNotifyCommonGroup = true
               // Update global cache
               lastPayloadGlobal = freshData
             }
@@ -190,6 +238,24 @@ async function handleEmojiUsageFirefox(uuid: string): Promise<object> {
         }
       } catch (error) {
         log('Error updating emoji usage in fresh data (Firefox):', error)
+      }
+    }
+
+    // 🚀 关键修复：Firefox环境下也要发送常用表情组更新通知
+    if (shouldNotifyCommonGroup) {
+      try {
+        // 获取更新后的常用表情组
+        const updatedCommonGroup = emojiGroupsStore?.getCommonEmojiGroup
+          ? emojiGroupsStore.getCommonEmojiGroup()
+          : null
+
+        if (updatedCommonGroup) {
+          log('Sending common emoji group update notification after usage record (Firefox)')
+          commService.sendCommonEmojiGroupChanged(updatedCommonGroup)
+          commService.sendSpecificGroupChanged('common-emoji-group', updatedCommonGroup)
+        }
+      } catch (notifyError) {
+        log('Error sending common group update notification (Firefox):', notifyError)
       }
     }
 

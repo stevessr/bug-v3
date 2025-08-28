@@ -146,7 +146,7 @@ let cacheVersion = 0
 let lastDataFetch = 0
 const CACHE_EXPIRE_TIME = 600000 // 10分钟缓存过期时间
 
-// 监听数据更新消息
+// 监听数据更新消息 - 增强版
 commService.onGroupsChanged(() => {
   console.log('[Emoji Picker] 接收到表情组更新消息，将在下次打开时重新获取数据')
   cacheVersion++ // 增加版本号，标记缓存无效
@@ -155,6 +155,70 @@ commService.onGroupsChanged(() => {
 commService.onUsageRecorded(() => {
   console.log('[Emoji Picker] 接收到使用记录更新消息，将在下次打开时重新获取数据')
   cacheVersion++ // 增加版本号，标记缓存无效
+})
+
+// 🚀 关键修复：添加常用表情组专门的监听器
+commService.onCommonEmojiGroupChanged((data) => {
+  try {
+    console.log('[Emoji Picker] 接收到常用表情组专门更新消息')
+
+    if (data && data.group) {
+      // 更新常用表情组缓存
+      cacheUtils.updateCommonGroupCache(data.group)
+
+      // 如果存在活跃的表情选择器，立即刷新界面
+      const activePicker = document.querySelector(
+        '.fk-d-menu[data-identifier="emoji-picker"], .modal-container .emoji-picker',
+      )
+      if (activePicker) {
+        console.log('[Emoji Picker] 发现活跃的表情选择器，触发界面刷新事件')
+
+        // 触发界面刷新事件
+        window.dispatchEvent(
+          new CustomEvent('emoji-common-group-refreshed', {
+            detail: {
+              group: data.group,
+              timestamp: data.timestamp || Date.now(),
+            },
+          }),
+        )
+      }
+    }
+  } catch (error) {
+    console.error('[Emoji Picker] 处理常用表情组更新失败:', error)
+  }
+})
+
+// 🚀 关键修复：添加特定表情组更新监听器
+commService.onSpecificGroupChanged((data) => {
+  try {
+    if (data && data.groupUUID === 'common-emoji-group' && data.group) {
+      console.log('[Emoji Picker] 接收到常用表情组特定更新消息')
+
+      // 更新常用表情组缓存
+      cacheUtils.updateCommonGroupCache(data.group)
+
+      // 如果存在活跃的表情选择器，立即刷新界面
+      const activePicker = document.querySelector(
+        '.fk-d-menu[data-identifier="emoji-picker"], .modal-container .emoji-picker',
+      )
+      if (activePicker) {
+        console.log('[Emoji Picker] 发现活跃的表情选择器，触发界面刷新事件')
+
+        // 触发界面刷新事件
+        window.dispatchEvent(
+          new CustomEvent('emoji-common-group-refreshed', {
+            detail: {
+              group: data.group,
+              timestamp: data.timestamp || Date.now(),
+            },
+          }),
+        )
+      }
+    }
+  } catch (error) {
+    console.error('[Emoji Picker] 处理特定表情组更新失败:', error)
+  }
 })
 
 // 记录表情使用的函数
@@ -255,9 +319,22 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
     console.log('[组级缓存] 使用默认表情数据')
   }
 
-  // 确保常用表情分组显示在第一位
-  const commonGroupIndex = groups.findIndex((g) => g.UUID === 'common-emoji-group')
-  if (commonGroupIndex > 0) {
+  // 🚀 关键修复：确保常用表情分组存在并显示在第一位
+  let commonGroupIndex = groups.findIndex((g) => g.UUID === 'common-emoji-group')
+
+  if (commonGroupIndex === -1) {
+    // 如果没有常用表情分组，创建一个空的
+    const emptyCommonGroup: EmojiGroup = {
+      UUID: 'common-emoji-group',
+      displayName: '常用表情',
+      icon: '⭐',
+      order: 0,
+      emojis: [],
+    }
+    groups.unshift(emptyCommonGroup)
+    console.log('[组级缓存] 创建空的常用表情分组')
+  } else if (commonGroupIndex > 0) {
+    // 如果常用表情分组不在第一位，移动到第一位
     const commonGroup = groups.splice(commonGroupIndex, 1)[0]
     groups.unshift(commonGroup)
     console.log('[组级缓存] 将常用表情分组移动到第一位')
@@ -630,6 +707,143 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
         })
       }
     })
+  }
+
+  // 🚀 关键修复：监听常用表情组实时刷新事件
+  const commonGroupRefreshHandler = (event: CustomEvent) => {
+    try {
+      const updatedGroup = event.detail?.group
+      if (updatedGroup && updatedGroup.UUID === 'common-emoji-group') {
+        console.log('[表情选择器] 收到常用表情组刷新事件')
+
+        // 找到常用表情组的容器
+        const commonSection = picker.querySelector('[data-section="common-emoji-group"]')
+        if (commonSection) {
+          // 更新常用表情组的内容
+          const emojisContainer = commonSection.querySelector('.emoji-picker__section-emojis')
+          if (emojisContainer && Array.isArray(updatedGroup.emojis)) {
+            let groupEmojisHtml = ''
+            updatedGroup.emojis.forEach((emojiData: any, index: number) => {
+              const nameEsc = String(emojiData.displayName || '').replace(/"/g, '&quot;')
+              const tabindex = index === 0 ? '0' : '-1'
+              const displayUrl = emojiData.displayUrl || emojiData.realUrl
+              const emojiUUID = emojiData.UUID || ''
+              groupEmojisHtml += `<img width="32" height="32" class="emoji" src="${displayUrl}" tabindex="${tabindex}" data-emoji="${nameEsc}" data-uuid="${emojiUUID}" alt="${nameEsc}" title=":${nameEsc}:" loading="lazy" />\n`
+            })
+
+            emojisContainer.innerHTML = groupEmojisHtml
+
+            // 重新绑定新添加的表情的点击事件
+            const newEmojiImages = emojisContainer.querySelectorAll('img.emoji')
+            newEmojiImages.forEach((img) => {
+              img.addEventListener('click', async (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+
+                const clickStartTime = performance.now()
+                console.log('[异步点击] 开始处理表情点击')
+
+                // 获取表情数据
+                const dataEmoji = img.getAttribute('data-emoji')
+                const dataUuid = img.getAttribute('data-uuid')
+                const imgSrc = img.getAttribute('src')
+                const altText = img.getAttribute('alt')
+
+                if (!imgSrc) {
+                  console.error('[异步点击] 表情缺少图片URL')
+                  return
+                }
+
+                const emojiData: emoji = {
+                  id: dataEmoji || altText || '',
+                  displayName: dataEmoji || altText || '',
+                  realUrl: new URL(imgSrc),
+                  displayUrl: new URL(imgSrc),
+                  order: 0,
+                  UUID: dataUuid || '',
+                }
+
+                const originalUUID = dataUuid
+
+                // 并行处理：记录使用统计 + 插入表情
+                const tasks = []
+
+                // 任务 1: 记录使用统计（如果有 UUID）
+                if (originalUUID) {
+                  const usageTask = recordEmojiUsage(originalUUID)
+                    .then(() => {
+                      console.log('[异步点击] 成功记录表情使用:', originalUUID)
+                      return true
+                    })
+                    .catch((error) => {
+                      console.error('[异步点击] 记录表情使用失败:', error)
+                      return false
+                    })
+                  tasks.push(usageTask)
+                } else {
+                  tasks.push(Promise.resolve(false))
+                }
+
+                // 任务 2: 插入表情
+                const insertTask = insertEmoji(emojiData)
+                  .then(() => {
+                    console.log('[异步点击] 成功插入表情')
+                    return true
+                  })
+                  .catch((error) => {
+                    console.error('[异步点击] 插入表情失败:', error)
+                    return false
+                  })
+                tasks.push(insertTask)
+
+                // 等待所有任务完成
+                try {
+                  const results = await Promise.allSettled(tasks)
+                  const clickDuration = performance.now() - clickStartTime
+
+                  console.log(`[异步点击] 所有任务完成，总耗时: ${Math.round(clickDuration)}ms`)
+
+                  // 只要插入成功就关闭选择器
+                  const insertResult = results[1]
+                  if (insertResult.status === 'fulfilled') {
+                    closePicker(picker, isMobilePicker)
+                  } else {
+                    console.warn('[异步点击] 插入失败，但仍然关闭选择器')
+                    closePicker(picker, isMobilePicker)
+                  }
+                } catch (error) {
+                  console.error('[异步点击] 处理表情点击时出错:', error)
+                  closePicker(picker, isMobilePicker)
+                }
+              })
+            })
+
+            console.log('[表情选择器] 常用表情组刷新完成')
+          }
+        } else {
+          console.warn('[表情选择器] 未找到常用表情组容器')
+        }
+      }
+    } catch (error) {
+      console.error('[表情选择器] 处理常用表情组刷新事件失败:', error)
+    }
+  }
+
+  // 添加监听器
+  window.addEventListener(
+    'emoji-common-group-refreshed',
+    commonGroupRefreshHandler as EventListener,
+  )
+
+  // 在选择器被关闭时移除监听器
+  const originalRemove = picker.remove.bind(picker)
+  picker.remove = function () {
+    console.log('[表情选择器] 移除常用表情组刷新监听器')
+    window.removeEventListener(
+      'emoji-common-group-refreshed',
+      commonGroupRefreshHandler as EventListener,
+    )
+    originalRemove()
   }
 
   const renderEndTime = performance.now()
