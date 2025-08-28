@@ -86,19 +86,7 @@ function createImgBed() {
         imgBedReturnFormat: imgBedReturnFormat.value,
         imgBedUploadFolder: imgBedUploadFolder.value,
       }
-      // write via central storage handler so it goes to localStorage and extension storage
-      try {
-        try {
-          storage.setItem(IMG_BED_KEY, cfg)
-        } catch (_) {
-          // fallback to localStorage
-          try {
-            localStorage.setItem(IMG_BED_KEY, JSON.stringify(cfg))
-          } catch (_) {}
-        }
-      } catch (e) {
-        // noop
-      }
+      storage.setItem(IMG_BED_KEY, cfg)
     } catch (e) {
       console.error('保存 ImgBed 配置失败', e)
       message.error('保存 ImgBed 配置失败')
@@ -107,24 +95,11 @@ function createImgBed() {
 
   const loadImgBedConfig = () => {
     try {
-      // try central storage getter first
-      let cfg: any = null
-      try {
-        cfg = storage.getItem(IMG_BED_KEY)
-      } catch (_) {
-        cfg = null
+      const cfg = storage.getItem(IMG_BED_KEY)
+      if (cfg) {
+        // merge with defaults by applying only valid values
+        setImgBedConfig(cfg)
       }
-      if (!cfg) {
-        const raw = localStorage.getItem(IMG_BED_KEY)
-        if (!raw) return
-        try {
-          cfg = JSON.parse(raw)
-        } catch (_) {
-          return
-        }
-      }
-      // merge with defaults by applying only valid values
-      setImgBedConfig(cfg)
     } catch (e) {
       console.error('加载 ImgBed 配置失败', e)
     }

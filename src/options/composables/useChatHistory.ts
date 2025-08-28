@@ -1,11 +1,11 @@
 import { ref, nextTick, watch, onBeforeUnmount, readonly, type Ref } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { 
-  saveChatHistory, 
-  loadChatHistory, 
+import {
+  saveChatHistory,
+  loadChatHistory,
   clearChatHistory,
   type ChatHistoryData,
-  type ChatMessage as StoredChatMessage
+  type ChatMessage as StoredChatMessage,
 } from '../../data/update/storage'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -44,7 +44,7 @@ export function useChatHistory({
   const importChatData = ref('')
   const importError = ref('')
   const replaceExistingChat = ref(false)
-  
+
   // 新增：自动保存相关状态
   const sessionId = ref(uuidv4()) // 会话ID
   const sessionCreatedTime = ref(new Date()) // 会话创建时间
@@ -80,7 +80,7 @@ export function useChatHistory({
   })
 
   // 保存当前对话历史
-  const saveCurrentHistory = () => {
+  const saveCurrentHistory = async () => {
     try {
       if (messages.value.length === 0) {
         return // 空对话不保存
@@ -96,8 +96,8 @@ export function useChatHistory({
           createdAt: sessionCreatedTime.value,
         },
       }
-      
-      saveChatHistory(historyData)
+
+      await saveChatHistory(historyData)
       console.log('[ChatHistory] Auto-saved chat history with', messages.value.length, 'messages')
     } catch (error) {
       console.warn('[ChatHistory] Failed to save chat history:', error)
@@ -105,14 +105,14 @@ export function useChatHistory({
   }
 
   // 手动触发保存
-  const manualSave = () => {
-    saveCurrentHistory()
+  const manualSave = async () => {
+    await saveCurrentHistory()
   }
 
   // 恢复对话历史
   const restoreHistory = async () => {
     try {
-      const savedHistory = loadChatHistory()
+      const savedHistory = await loadChatHistory()
       if (!savedHistory || !savedHistory.messages || savedHistory.messages.length === 0) {
         console.log('[ChatHistory] No saved history found')
         return false
@@ -121,7 +121,7 @@ export function useChatHistory({
       // 检查是否是最近的会话（小于24小时）
       const lastModified = new Date(savedHistory.lastModified)
       const hoursSinceLastModified = (Date.now() - lastModified.getTime()) / (1000 * 60 * 60)
-      
+
       if (hoursSinceLastModified > 24) {
         console.log('[ChatHistory] Saved history is too old, skipping restore')
         return false
@@ -148,24 +148,26 @@ export function useChatHistory({
         // 恢复消息
         const restoredMessages = savedHistory.messages.map(convertFromStoredMessage)
         messages.value = restoredMessages
-        
+
         // 恢复模型选择
         if (savedHistory.selectedModel) {
-          const modelExists = modelOptions.value.some((opt) => opt.value === savedHistory.selectedModel)
+          const modelExists = modelOptions.value.some(
+            (opt) => opt.value === savedHistory.selectedModel,
+          )
           if (modelExists) {
             selectedModel.value = savedHistory.selectedModel
           }
         }
-        
+
         // 恢复会话ID和创建时间
         sessionId.value = savedHistory.sessionId || uuidv4()
         sessionCreatedTime.value = new Date(savedHistory.metadata.createdAt)
-        
+
         // 滚动到底部
         nextTick(() => {
           scrollToBottom()
         })
-        
+
         message.success(`已恢复 ${restoredMessages.length} 条对话记录`)
         console.log('[ChatHistory] Restored chat history:', restoredMessages.length, 'messages')
         return true
@@ -178,9 +180,9 @@ export function useChatHistory({
   }
 
   // 清除对话历史的增强版本
-  const clearChatHistoryEnhanced = () => {
+  const clearChatHistoryEnhanced = async () => {
     try {
-      clearChatHistory()
+      await clearChatHistory()
       // 重置会话ID和创建时间
       sessionId.value = uuidv4()
       sessionCreatedTime.value = new Date()
@@ -200,7 +202,7 @@ export function useChatHistory({
       () => {
         debouncedSave()
       },
-      { deep: true }
+      { deep: true },
     )
 
     // 定时保存（每30秒）
@@ -220,7 +222,7 @@ export function useChatHistory({
     }
 
     onBeforeUnmount(cleanup)
-    
+
     return cleanup
   }
 

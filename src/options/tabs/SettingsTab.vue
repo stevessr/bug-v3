@@ -130,7 +130,7 @@ export default defineComponent({
         const defaultPayload = await loadConvertedDefaults()
 
         // 使用导入功能完全重置数据
-        const success = store.importPayload(defaultPayload)
+        const success = await store.importPayload(defaultPayload)
         if (success) {
           // 更新表单显示
           const newSettings = defaultPayload.Settings

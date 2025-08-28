@@ -17,6 +17,39 @@ const KEY_CONTAINER_SIZE = 'openrouter-container-size' // 容器大小设置
 // in-memory cache mirroring chrome.storage.local for synchronous reads
 let extCache: Record<string, any> = {}
 
+// Sync management
+let lastSyncTime = 0
+const SYNC_INTERVAL = 5000 // 5 seconds minimum
+let syncTimer: number | null = null
+let pendingSync = false
+
+// Message broadcasting for real-time updates
+const messageListeners: Set<(data: any) => void> = new Set()
+
+// Export message listener management for external use
+export function addMessageListener(listener: (data: any) => void) {
+  messageListeners.add(listener)
+  return () => messageListeners.delete(listener)
+}
+
+function broadcastMessage(type: string, data: any) {
+  const message = { type, data, timestamp: Date.now() }
+  messageListeners.forEach((listener) => {
+    try {
+      listener(message)
+    } catch (error) {
+      console.warn('[Storage] Message listener error:', error)
+    }
+  })
+
+  // Also dispatch as custom event for backward compatibility
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('storage-update', { detail: message }))
+    } catch (_) {}
+  }
+}
+
 // 创建常用表情分组（硬编码）
 function createCommonEmojiGroup(): EmojiGroup {
   return {
@@ -28,54 +61,142 @@ function createCommonEmojiGroup(): EmojiGroup {
   }
 }
 
-// 确保常用表情分组存在
+// 确保常用表情分组存在 - 同步版本，优先使用localStorage
 function ensureCommonEmojiGroup() {
   try {
-    // 检查 localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
       const existing = window.localStorage.getItem(KEY_COMMON_EMOJIS)
       if (!existing) {
         const commonGroup = createCommonEmojiGroup()
         window.localStorage.setItem(KEY_COMMON_EMOJIS, JSON.stringify(commonGroup))
         console.log('[Storage] Created common emoji group in localStorage')
+        // 标记需要同步到扩展存储
+        scheduleSyncToExtension()
       }
-    }
-
-    // 检查 chrome.storage.local
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get([KEY_COMMON_EMOJIS], (items: any) => {
-        if (!items[KEY_COMMON_EMOJIS]) {
-          const commonGroup = createCommonEmojiGroup()
-          const storeObj: any = {}
-          storeObj[KEY_COMMON_EMOJIS] = commonGroup
-          chrome.storage.local.set(storeObj, () => {
-            console.log('[Storage] Created common emoji group in chrome.storage.local')
-          })
-        }
-      })
     }
   } catch (error) {
     console.warn('[Storage] Failed to ensure common emoji group:', error)
   }
 }
 
-// try to populate extCache from chrome.storage.local (async)
-try {
-  if (
-    typeof chrome !== 'undefined' &&
-    chrome.storage &&
-    chrome.storage.local &&
-    typeof chrome.storage.local.get === 'function'
-  ) {
-    try {
-      chrome.storage.local.get(null, (items: any) => {
-        try {
-          extCache = items || {}
-        } catch (_) {}
-      })
-    } catch (_) {}
+// Schedule sync to extension storage
+function scheduleSyncToExtension() {
+  const now = Date.now()
+  if (now - lastSyncTime < SYNC_INTERVAL && syncTimer) {
+    return // Already scheduled and within interval
   }
-} catch (_) {}
+
+  if (syncTimer) {
+    clearTimeout(syncTimer)
+  }
+
+  const delay = Math.max(0, SYNC_INTERVAL - (now - lastSyncTime))
+  syncTimer = window.setTimeout(() => {
+    syncToExtensionStorage().finally(() => {
+      syncTimer = null
+    })
+  }, delay)
+}
+
+// Sync localStorage to extension storage
+async function syncToExtensionStorage(): Promise<void> {
+  if (pendingSync) return
+
+  try {
+    pendingSync = true
+    lastSyncTime = Date.now()
+
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return
+    }
+
+    // Get all data from localStorage
+    const storeObj: any = {}
+
+    // Copy settings
+    try {
+      const settingsRaw = window.localStorage.getItem(KEY_SETTINGS)
+      if (settingsRaw) {
+        storeObj[KEY_SETTINGS] = JSON.parse(settingsRaw)
+      }
+    } catch (_) {}
+
+    // Copy ungrouped
+    try {
+      const ungroupedRaw = window.localStorage.getItem(KEY_UNGROUPED)
+      if (ungroupedRaw) {
+        storeObj[KEY_UNGROUPED] = JSON.parse(ungroupedRaw)
+      }
+    } catch (_) {}
+
+    // Copy common emoji group
+    try {
+      const commonRaw = window.localStorage.getItem(KEY_COMMON_EMOJIS)
+      if (commonRaw) {
+        storeObj[KEY_COMMON_EMOJIS] = JSON.parse(commonRaw)
+      }
+    } catch (_) {}
+
+    // Copy emoji groups and build index
+    const index: string[] = []
+    try {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i)
+        if (key && key.startsWith(KEY_EMOJI_PREFIX) && key !== KEY_COMMON_EMOJIS) {
+          try {
+            const groupRaw = window.localStorage.getItem(key)
+            if (groupRaw) {
+              const group = JSON.parse(groupRaw)
+              storeObj[key] = group
+              if (group.UUID) {
+                index.push(group.UUID)
+              }
+            }
+          } catch (_) {}
+        }
+      }
+      storeObj[KEY_EMOJI_INDEX] = index
+    } catch (_) {}
+
+    // Copy chat history and container size
+    try {
+      const chatRaw = window.localStorage.getItem(KEY_CHAT_HISTORY)
+      if (chatRaw) {
+        storeObj[KEY_CHAT_HISTORY] = JSON.parse(chatRaw)
+      }
+    } catch (_) {}
+
+    try {
+      const containerRaw = window.localStorage.getItem(KEY_CONTAINER_SIZE)
+      if (containerRaw) {
+        storeObj[KEY_CONTAINER_SIZE] = JSON.parse(containerRaw)
+      }
+    } catch (_) {}
+
+    // Sync to extension storage
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      await new Promise<void>((resolve) => {
+        chrome.storage.local.set(storeObj, () => {
+          if (chrome.runtime && chrome.runtime.lastError) {
+            console.warn('[Storage] Extension sync error:', chrome.runtime.lastError)
+          } else {
+            console.log(
+              '[Storage] Synced to extension storage, keys:',
+              Object.keys(storeObj).length,
+            )
+            // Update in-memory cache
+            Object.assign(extCache, storeObj)
+          }
+          resolve()
+        })
+      })
+    }
+  } catch (error) {
+    console.warn('[Storage] Sync to extension failed:', error)
+  } finally {
+    pendingSync = false
+  }
+}
 
 export type PersistPayload = {
   Settings: Settings
@@ -85,71 +206,76 @@ export type PersistPayload = {
 }
 
 export function loadPayload(): PersistPayload | null {
-  if (typeof window === 'undefined' || !window.localStorage) return null
+  if (typeof window === 'undefined' || !window.localStorage) {
+    // Fallback to extension storage for non-browser environments
+    return loadFromExtensionStorageSync()
+  }
+
   try {
-    // backward compat: if monolithic payload exists, use it
+    // Primary: Load from localStorage (fast, synchronous)
+    const payload = loadFromLocalStorage()
+    if (payload) {
+      return payload
+    }
+
+    // Fallback: Load from extension storage if localStorage is empty
+    return loadFromExtensionStorageSync()
+  } catch (error) {
+    console.warn('[Storage] Failed to load payload:', error)
+    return null
+  }
+}
+
+// Load from localStorage (synchronous, fast)
+function loadFromLocalStorage(): PersistPayload | null {
+  try {
+    // Check for monolithic payload (backward compatibility)
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (raw) {
       try {
         return JSON.parse(raw) as PersistPayload
       } catch (_) {
-        // fallthrough to try split keys
+        // Continue to split keys
       }
     }
 
-    // assemble from split keys
+    // Load from split keys
     const settingsRaw = window.localStorage.getItem(KEY_SETTINGS)
     const ungroupedRaw = window.localStorage.getItem(KEY_UNGROUPED)
 
     const Settings = settingsRaw ? JSON.parse(settingsRaw) : null
     const ungrouped = ungroupedRaw ? JSON.parse(ungroupedRaw) : []
 
-    // collect emoji groups by using an index if present (preserve order), otherwise scan keys
+    // Load emoji groups using index
     const emojiGroups: any[] = []
 
-    // 首先加载常用表情分组
+    // First load common emoji group
     try {
       const commonGroupRaw = window.localStorage.getItem(KEY_COMMON_EMOJIS)
       if (commonGroupRaw) {
         const commonGroup = JSON.parse(commonGroupRaw)
         emojiGroups.push(commonGroup)
-      } else {
-        // 如果不存在，创建默认的常用表情分组
-        const commonGroup = createCommonEmojiGroup()
-        window.localStorage.setItem(KEY_COMMON_EMOJIS, JSON.stringify(commonGroup))
-        emojiGroups.push(commonGroup)
       }
-    } catch (error) {
-      console.warn('[Storage] Failed to load common emoji group:', error)
-      // 如果加载失败，创建默认分组
-      emojiGroups.push(createCommonEmojiGroup())
-    }
+    } catch (_) {}
 
+    // Load other groups using index
     try {
       const indexRaw = window.localStorage.getItem(KEY_EMOJI_INDEX)
       if (indexRaw) {
-        try {
-          const uuids: string[] = JSON.parse(indexRaw) || []
-          for (const u of uuids) {
-            try {
-              const k = `${KEY_EMOJI_PREFIX}${u}`
-              const rawG = window.localStorage.getItem(k)
-              if (!rawG) continue
-              const g = JSON.parse(rawG)
-              emojiGroups.push(g)
-            } catch (_) {}
+        const uuids: string[] = JSON.parse(indexRaw) || []
+        for (const uuid of uuids) {
+          const k = `${KEY_EMOJI_PREFIX}${uuid}`
+          const rawG = window.localStorage.getItem(k)
+          if (rawG) {
+            const g = JSON.parse(rawG)
+            emojiGroups.push(g)
           }
-        } catch (_) {
-          // fallthrough to scan
         }
-      }
-
-      if (emojiGroups.length === 0) {
-        // fallback: scan all keys
+      } else {
+        // Fallback: scan all keys
         for (let i = 0; i < window.localStorage.length; i++) {
           const k = window.localStorage.key(i)
-          if (!k) continue
-          if (k.startsWith(KEY_EMOJI_PREFIX)) {
+          if (k && k.startsWith(KEY_EMOJI_PREFIX) && k !== KEY_COMMON_EMOJIS) {
             try {
               const g = JSON.parse(window.localStorage.getItem(k) as string)
               emojiGroups.push(g)
@@ -159,234 +285,161 @@ export function loadPayload(): PersistPayload | null {
       }
     } catch (_) {}
 
-    if (!Settings && emojiGroups.length === 0 && (!ungrouped || ungrouped.length === 0)) return null
+    if (!Settings && emojiGroups.length === 0 && (!ungrouped || ungrouped.length === 0)) {
+      return null
+    }
 
     return { Settings: Settings || ({} as any), emojiGroups, ungrouped }
-  } catch (_) {
+  } catch (error) {
+    console.warn('[Storage] Failed to load from localStorage:', error)
+    return null
+  }
+}
+
+// Load from extension storage (synchronous fallback using cached data)
+function loadFromExtensionStorageSync(): PersistPayload | null {
+  try {
+    if (!extCache || Object.keys(extCache).length === 0) {
+      return null
+    }
+
+    const Settings = extCache[KEY_SETTINGS] || null
+    const ungrouped = extCache[KEY_UNGROUPED] || []
+
+    const emojiGroups: any[] = []
+
+    // Load common emoji group
+    if (extCache[KEY_COMMON_EMOJIS]) {
+      emojiGroups.push(extCache[KEY_COMMON_EMOJIS])
+    }
+
+    // Load other groups using index
+    const indexList = extCache[KEY_EMOJI_INDEX] || []
+    if (Array.isArray(indexList)) {
+      for (const uuid of indexList) {
+        const groupKey = `${KEY_EMOJI_PREFIX}${uuid}`
+        const group = extCache[groupKey]
+        if (group) {
+          emojiGroups.push(group)
+        }
+      }
+    }
+
+    if (!Settings && emojiGroups.length === 0) {
+      return null
+    }
+
+    return { Settings: Settings || ({} as any), emojiGroups, ungrouped }
+  } catch (error) {
+    console.warn('[Storage] Failed to load from extension cache:', error)
     return null
   }
 }
 
 export function savePayload(payload: PersistPayload) {
-  if (typeof window === 'undefined' || !window.localStorage) return
+  if (typeof window === 'undefined' || !window.localStorage) {
+    console.warn('[Storage] localStorage not available, cannot save payload')
+    return
+  }
+
   try {
-    // saved emoji index for use when mirroring to extension storage
-    let savedEmojiIndex: string[] | null = null
-    // Write Settings
-    try {
-      window.localStorage.setItem(KEY_SETTINGS, JSON.stringify(payload.Settings || {}))
-    } catch (_) {}
+    // Immediate save to localStorage (fast, synchronous)
+    saveToLocalStorage(payload)
 
-    // Write ungrouped
-    try {
-      window.localStorage.setItem(KEY_UNGROUPED, JSON.stringify(payload.ungrouped || []))
-    } catch (_) {}
+    // Broadcast change message immediately for real-time updates
+    broadcastMessage('payload-updated', payload)
 
-    // Write each emoji group into its own key: emojiGroups-$ID
-    try {
-      // Remove any existing emojiGroups-* keys that are not present in the new payload to avoid stale groups
-      const existingKeys: string[] = []
-      for (let i = 0; i < window.localStorage.length; i++) {
-        const k = window.localStorage.key(i)
-        if (k && k.startsWith(KEY_EMOJI_PREFIX) && k !== KEY_COMMON_EMOJIS) {
-          // 保留常用表情分组
-          existingKeys.push(k)
-        }
-      }
+    // Schedule background sync to extension storage
+    scheduleSyncToExtension()
 
-      const incomingKeys: string[] = []
-      const incomingIndex: string[] = []
-
-      // 处理常用表情分组（特殊处理）
-      const commonGroup = (payload.emojiGroups || []).find(
-        (g: any) => g.UUID === 'common-emoji-group' || g.displayName?.includes('常用'),
-      )
-      if (commonGroup) {
-        try {
-          window.localStorage.setItem(KEY_COMMON_EMOJIS, JSON.stringify(commonGroup))
-          console.log('[Storage] Saved common emoji group')
-        } catch (error) {
-          console.warn('[Storage] Failed to save common emoji group:', error)
-        }
-      }
-
-      ;(payload.emojiGroups || []).forEach((g: any) => {
-        try {
-          // 跳过常用表情分组，它已经在上面特殊处理了
-          if (g.UUID === 'common-emoji-group' || g.displayName?.includes('常用')) {
-            return
-          }
-
-          // clone group to avoid mutating caller's object
-          const group = g && typeof g === 'object' ? { ...g } : { ...g }
-          let uuid =
-            group &&
-            (typeof group.uuid === 'string'
-              ? group.uuid
-              : group.uuid != null
-                ? String(group.uuid)
-                : null)
-          if (!uuid) {
-            uuid = uuidv4()
-            try {
-              group.uuid = uuid
-            } catch (_) {}
-          }
-          const k = `${KEY_EMOJI_PREFIX}${uuid}`
-          incomingKeys.push(k)
-          incomingIndex.push(uuid)
-          try {
-            window.localStorage.setItem(k, JSON.stringify(group))
-          } catch (_) {}
-        } catch (_) {
-          // skip malformed group
-        }
-      })
-
-      // remove stale keys
-      existingKeys.forEach((k) => {
-        if (!incomingKeys.includes(k)) {
-          try {
-            window.localStorage.removeItem(k)
-          } catch (_) {}
-        }
-      })
-      // persist index of groups (order)
-      try {
-        window.localStorage.setItem(KEY_EMOJI_INDEX, JSON.stringify(incomingIndex))
-        savedEmojiIndex = incomingIndex
-      } catch (_) {
-        savedEmojiIndex = incomingIndex
-      }
-    } catch (_) {}
-
-    // set a local flag indicating session sync is pending for this tab
-    try {
-      window.localStorage.setItem('bugcopilot_flag_session_pending', 'true')
-    } catch (_) {}
-
-    // notify background that localStorage payload updated (send assembled payload)
-    try {
-      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-        try {
-          chrome.runtime.sendMessage({ type: 'payload-updated', payload }, (_resp: any) => {
-            try {
-              if (chrome.runtime && chrome.runtime.lastError) {
-                // ignore but log
-              }
-            } catch (_) {}
-          })
-        } catch (_) {}
-      }
-    } catch (_) {}
-
-    // also write to extension storage (async) if available
-    try {
-      if (
-        typeof chrome !== 'undefined' &&
-        chrome.storage &&
-        chrome.storage.local &&
-        typeof chrome.storage.local.set === 'function'
-      ) {
-        const storeObj: any = {}
-        storeObj[KEY_SETTINGS] = payload.Settings || {}
-        storeObj[KEY_UNGROUPED] = payload.ungrouped || []
-
-        // 特殊处理常用表情分组
-        const commonGroup = (payload.emojiGroups || []).find(
-          (g: any) => g.UUID === 'common-emoji-group' || g.displayName?.includes('常用'),
-        )
-        if (commonGroup) {
-          storeObj[KEY_COMMON_EMOJIS] = commonGroup
-        }
-
-        ;(payload.emojiGroups || []).forEach((g: any) => {
-          try {
-            // 跳过常用表情分组，它已经在上面特殊处理了
-            if (g.UUID === 'common-emoji-group' || g.displayName?.includes('常用')) {
-              return
-            }
-
-            const group = g && typeof g === 'object' ? { ...g } : { ...g }
-            let uuid =
-              group &&
-              (typeof group.uuid === 'string'
-                ? group.uuid
-                : group.uuid != null
-                  ? String(group.uuid)
-                  : null)
-            if (!uuid) {
-              uuid = uuidv4()
-              try {
-                group.uuid = uuid
-              } catch (_) {}
-            }
-            storeObj[`${KEY_EMOJI_PREFIX}${uuid}`] = group
-            try {
-              // track index for storeObj
-              if (!Array.isArray(storeObj[KEY_EMOJI_INDEX])) storeObj[KEY_EMOJI_INDEX] = []
-              storeObj[KEY_EMOJI_INDEX].push(uuid)
-            } catch (_) {}
-          } catch (_) {}
-        })
-        try {
-          // also ensure KEY_EMOJI_INDEX present even if empty
-          if (!storeObj[KEY_EMOJI_INDEX]) storeObj[KEY_EMOJI_INDEX] = savedEmojiIndex || []
-        } catch (_) {}
-        try {
-          chrome.storage.local.set(storeObj, () => {
-            try {
-              // ignore errors; no need to block
-            } catch (_) {}
-          })
-        } catch (_) {}
-        try {
-          // update in-memory mirror
-          Object.keys(storeObj).forEach((k) => {
-            try {
-              extCache[k] = storeObj[k]
-            } catch (_) {}
-          })
-        } catch (_) {}
-      }
-    } catch (_) {}
-  } catch (_) {
-    // ignore
+    console.log('[Storage] Payload saved to localStorage, sync scheduled')
+  } catch (error) {
+    console.warn('[Storage] Failed to save payload:', error)
   }
 }
 
-// Generic helpers to read/write arbitrary keys using the same dual-write strategy
+// Save to localStorage (immediate, synchronous)
+function saveToLocalStorage(payload: PersistPayload) {
+  try {
+    // Save settings
+    window.localStorage.setItem(KEY_SETTINGS, JSON.stringify(payload.Settings || {}))
+
+    // Save ungrouped
+    window.localStorage.setItem(KEY_UNGROUPED, JSON.stringify(payload.ungrouped || []))
+
+    // Handle emoji groups
+    const index: string[] = []
+
+    // Clear old group keys first
+    const keysToRemove: string[] = []
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i)
+      if (key && key.startsWith(KEY_EMOJI_PREFIX) && key !== KEY_COMMON_EMOJIS) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach((key) => {
+      try {
+        window.localStorage.removeItem(key)
+      } catch (_) {}
+    })
+
+    // Save emoji groups
+    ;(payload.emojiGroups || []).forEach((group: any) => {
+      if (!group || !group.UUID) return
+
+      try {
+        // Special handling for common emoji group
+        if (group.UUID === 'common-emoji-group' || group.displayName?.includes('常用')) {
+          window.localStorage.setItem(KEY_COMMON_EMOJIS, JSON.stringify(group))
+        } else {
+          const groupKey = `${KEY_EMOJI_PREFIX}${group.UUID}`
+          window.localStorage.setItem(groupKey, JSON.stringify(group))
+          index.push(group.UUID)
+        }
+      } catch (error) {
+        console.warn('[Storage] Failed to save group:', group.UUID, error)
+      }
+    })
+
+    // Save index
+    window.localStorage.setItem(KEY_EMOJI_INDEX, JSON.stringify(index))
+
+    // Remove monolithic key if present (cleanup)
+    try {
+      window.localStorage.removeItem(STORAGE_KEY)
+    } catch (_) {}
+  } catch (error) {
+    console.warn('[Storage] Failed to save to localStorage:', error)
+    throw error
+  }
+}
+
+// Generic helpers to read/write arbitrary keys - localStorage priority
 export function setItem(key: string, value: any) {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        window.localStorage.setItem(key, JSON.stringify(value))
-      } catch (_) {}
-    }
-  } catch (_) {}
+      // Immediate save to localStorage
+      window.localStorage.setItem(key, JSON.stringify(value))
 
-  try {
-    if (
-      typeof chrome !== 'undefined' &&
-      chrome.storage &&
-      chrome.storage.local &&
-      typeof chrome.storage.local.set === 'function'
-    ) {
-      try {
-        const obj: any = {}
-        obj[key] = value
-        chrome.storage.local.set(obj, () => {})
-        try {
-          // keep in-memory cache in sync for fast reads
-          extCache[key] = value
-        } catch (_) {}
-      } catch (_) {}
+      // Broadcast change message
+      broadcastMessage('item-updated', { key, value })
+
+      // Schedule background sync to extension storage
+      scheduleSyncToExtension()
+
+      console.log(`[Storage] Saved ${key} to localStorage, sync scheduled`)
+    } else {
+      console.warn('[Storage] localStorage not available for setItem:', key)
     }
-  } catch (_) {}
+  } catch (error) {
+    console.warn('[Storage] Failed to setItem:', key, error)
+  }
 }
 
 export function getItem(key: string): any | null {
   try {
+    // Primary: Read from localStorage (fast)
     if (typeof window !== 'undefined' && window.localStorage) {
       const raw = window.localStorage.getItem(key)
       if (raw) {
@@ -397,20 +450,23 @@ export function getItem(key: string): any | null {
         }
       }
     }
-  } catch (_) {}
-  try {
-    // fallback to in-memory mirror of chrome.storage.local
+
+    // Fallback: Read from extension cache
     if (extCache && Object.prototype.hasOwnProperty.call(extCache, key)) {
       return extCache[key]
     }
-  } catch (_) {}
-  return null
+
+    return null
+  } catch (error) {
+    console.warn('[Storage] Failed to getItem:', key, error)
+    return null
+  }
 }
 
 // 获取常用表情分组
 export function getCommonEmojiGroup(): EmojiGroup | null {
   try {
-    // 从 localStorage 获取
+    // Primary: Read from localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
       const raw = window.localStorage.getItem(KEY_COMMON_EMOJIS)
       if (raw) {
@@ -418,12 +474,12 @@ export function getCommonEmojiGroup(): EmojiGroup | null {
       }
     }
 
-    // 从 chrome.storage.local 获取
+    // Fallback: Read from extension cache
     if (extCache && extCache[KEY_COMMON_EMOJIS]) {
       return extCache[KEY_COMMON_EMOJIS]
     }
 
-    // 如果都没有，返回默认分组
+    // Create default if not found
     return createCommonEmojiGroup()
   } catch (error) {
     console.warn('[Storage] Failed to get common emoji group:', error)
@@ -431,24 +487,20 @@ export function getCommonEmojiGroup(): EmojiGroup | null {
   }
 }
 
-// 保存常用表情分组
+// 保存常用表惁分组
 export function saveCommonEmojiGroup(group: EmojiGroup) {
   try {
-    // 保存到 localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
+      // Immediate save to localStorage
       window.localStorage.setItem(KEY_COMMON_EMOJIS, JSON.stringify(group))
-    }
 
-    // 保存到 chrome.storage.local
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      const storeObj: any = {}
-      storeObj[KEY_COMMON_EMOJIS] = group
-      chrome.storage.local.set(storeObj, () => {
-        console.log('[Storage] Saved common emoji group to extension storage')
-      })
+      // Broadcast change message
+      broadcastMessage('common-emoji-updated', group)
 
-      // 更新内存缓存
-      extCache[KEY_COMMON_EMOJIS] = group
+      // Schedule background sync
+      scheduleSyncToExtension()
+
+      console.log('[Storage] Saved common emoji group to localStorage, sync scheduled')
     }
   } catch (error) {
     console.warn('[Storage] Failed to save common emoji group:', error)
@@ -486,7 +538,7 @@ export interface ContainerSizeSettings {
 }
 
 // 保存对话历史
-export function saveChatHistory(historyData: ChatHistoryData): void {
+export function saveChatHistory(historyData: ChatHistoryData) {
   setItem(KEY_CHAT_HISTORY, historyData)
 }
 
@@ -496,7 +548,7 @@ export function loadChatHistory(): ChatHistoryData | null {
 }
 
 // 保存容器大小设置
-export function saveContainerSize(sizeSettings: ContainerSizeSettings): void {
+export function saveContainerSize(sizeSettings: ContainerSizeSettings) {
   setItem(KEY_CONTAINER_SIZE, sizeSettings)
 }
 
@@ -506,21 +558,60 @@ export function loadContainerSize(): ContainerSizeSettings | null {
 }
 
 // 清除对话历史
-export function clearChatHistory(): void {
+export function clearChatHistory() {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.removeItem(KEY_CHAT_HISTORY)
-    }
-    
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.remove([KEY_CHAT_HISTORY], () => {
-        console.log('[Storage] Cleared chat history from extension storage')
-      })
-      // 清除内存缓存
-      delete extCache[KEY_CHAT_HISTORY]
+
+      // Broadcast change message
+      broadcastMessage('chat-history-cleared', null)
+
+      // Schedule sync to remove from extension storage too
+      scheduleSyncToExtension()
+
+      console.log('[Storage] Cleared chat history from localStorage')
     }
   } catch (error) {
     console.warn('[Storage] Failed to clear chat history:', error)
+  }
+}
+
+// Initialize extension storage cache and sync mechanism
+function initializeStorageSystem() {
+  // Load extension storage into cache (for fallback)
+  try {
+    if (
+      typeof chrome !== 'undefined' &&
+      chrome.storage &&
+      chrome.storage.local &&
+      typeof chrome.storage.local.get === 'function'
+    ) {
+      chrome.storage.local.get(null, (items: any) => {
+        try {
+          if (!chrome.runtime.lastError) {
+            extCache = items || {}
+            console.log(
+              '[Storage] Extension cache loaded with',
+              Object.keys(extCache).length,
+              'keys',
+            )
+          }
+        } catch (_) {}
+      })
+    }
+  } catch (_) {}
+
+  // Ensure common emoji group exists
+  ensureCommonEmojiGroup()
+
+  // Start periodic sync timer (every 30 seconds to ensure data consistency)
+  if (typeof window !== 'undefined') {
+    setInterval(() => {
+      if (Date.now() - lastSyncTime > 30000) {
+        // 30 seconds
+        syncToExtensionStorage()
+      }
+    }, 30000)
   }
 }
 
@@ -538,7 +629,10 @@ export default {
   saveContainerSize,
   loadContainerSize,
   clearChatHistory,
+  addMessageListener,
+  scheduleSyncToExtension,
+  syncToExtensionStorage,
 }
 
-// 初始化常用表情分组
-ensureCommonEmojiGroup()
+// Initialize the storage system
+initializeStorageSystem()

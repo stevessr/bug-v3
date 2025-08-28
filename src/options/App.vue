@@ -6,6 +6,7 @@ import settingsStore from '../data/update/settingsStore'
 import emojiGroupsStore from '../data/update/emojiGroupsStore'
 import storage from '../data/update/storage'
 import store from '../data/store/main'
+import { initializeData } from '../data/store/main'
 import { createOptionsCommService } from '../services/communication'
 
 import ToolsTab from './tabs/ToolsTab.vue'
@@ -193,23 +194,30 @@ export default defineComponent({
       return withUsage.slice(0, 50)
     })
 
-    onMounted(() => {
-      loadGroups()
-      refreshExport()
+    onMounted(async () => {
+      try {
+        // 🚀 关键修复：异步初始化数据
+        await initializeData()
 
-      // 监听来自其他页面的消息
-      commService.onSettingsChanged((newSettings) => {
-        Object.assign(form, newSettings)
-      })
+        loadGroups()
+        refreshExport()
 
-      commService.onGroupsChanged((newGroups) => {
-        groups.value = newGroups
-      })
+        // 监听来自其他页面的消息
+        commService.onSettingsChanged((newSettings) => {
+          Object.assign(form, newSettings)
+        })
 
-      commService.onUsageRecorded((data) => {
-        // 可以在这里更新常用表情列表
-        // hot.value = store.getHot()
-      })
+        commService.onGroupsChanged((newGroups) => {
+          groups.value = newGroups
+        })
+
+        commService.onUsageRecorded((data) => {
+          // 可以在这里更新常用表情列表
+          // hot.value = store.getHot()
+        })
+      } catch (error) {
+        console.error('Failed to initialize options page:', error)
+      }
     })
 
     return {

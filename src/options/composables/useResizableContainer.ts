@@ -13,12 +13,12 @@ export function useResizableContainer(containerRef: Ref<HTMLElement | undefined>
   const maxHeight = ref(0)
 
   // 加载保存的高度设置
-  onMounted(() => {
+  onMounted(async () => {
     // 设置最大高度为窗口高度的100倍
     maxHeight.value = window.innerHeight * 100
 
     try {
-      const savedSize = loadContainerSize()
+      const savedSize = await loadContainerSize()
       if (savedSize && savedSize.height) {
         const height = Math.min(Math.max(savedSize.height, minHeight), maxHeight.value)
         containerHeight.value = height
@@ -29,12 +29,12 @@ export function useResizableContainer(containerRef: Ref<HTMLElement | undefined>
     }
 
     // 监听窗口大小变化，更新最大高度
-    const updateMaxHeight = () => {
+    const updateMaxHeight = async () => {
       maxHeight.value = window.innerHeight * 0.8
       // 如果当前高度超过新的最大高度，则调整
       if (containerHeight.value > maxHeight.value) {
         containerHeight.value = maxHeight.value
-        saveHeight()
+        await saveHeight()
       }
     }
 
@@ -47,14 +47,14 @@ export function useResizableContainer(containerRef: Ref<HTMLElement | undefined>
   })
 
   // 保存高度设置
-  const saveHeight = () => {
+  const saveHeight = async () => {
     try {
       const sizeSettings: ContainerSizeSettings = {
         height: containerHeight.value,
         isUserModified: true,
         lastModified: new Date(),
       }
-      saveContainerSize(sizeSettings)
+      await saveContainerSize(sizeSettings)
       console.log('[ResizableContainer] Saved height:', containerHeight.value)
     } catch (error) {
       console.warn('[ResizableContainer] Failed to save container size:', error)
@@ -78,12 +78,12 @@ export function useResizableContainer(containerRef: Ref<HTMLElement | undefined>
       containerHeight.value = newHeight
     }
 
-    const handleMouseUp = () => {
+    const handleMouseUp = async () => {
       if (!isDragging.value) return
 
       isResizing.value = false
       isDragging.value = false
-      saveHeight()
+      await saveHeight()
 
       // 清理事件监听器
       document.removeEventListener('mousemove', handleMouseMove)
@@ -104,16 +104,16 @@ export function useResizableContainer(containerRef: Ref<HTMLElement | undefined>
   }
 
   // 重置为默认大小
-  const resetToDefault = () => {
+  const resetToDefault = async () => {
     containerHeight.value = 400
-    saveHeight()
+    await saveHeight()
   }
 
   // 设置特定高度
-  const setHeight = (height: number) => {
+  const setHeight = async (height: number) => {
     const newHeight = Math.min(Math.max(height, minHeight), maxHeight.value)
     containerHeight.value = newHeight
-    saveHeight()
+    await saveHeight()
   }
 
   // 获取当前约束信息

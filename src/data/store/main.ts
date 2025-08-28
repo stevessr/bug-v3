@@ -1,7 +1,117 @@
 import settingsStore from '../update/settingsStore'
 import emojiGroupsStore from '../update/emojiGroupsStore'
-import storage from '../update/storage'
+import storage, { addMessageListener } from '../update/storage'
 import { createOptionsCommService } from '../../services/communication'
+
+// 存储消息监听器（用于立即响应机制）
+let messageListenerCleanup: (() => void) | null = null
+
+// 初始化存储消息监听器
+function initializeMessageListener() {
+  if (messageListenerCleanup) {
+    return // 已经初始化过了
+  }
+
+  try {
+    messageListenerCleanup = addMessageListener((message: any) => {
+      try {
+        if (!message || !message.type) return
+
+        // 立即处理存储更新消息，确保前端脚本直接响应
+        switch (message.type) {
+          case 'payload-updated':
+            // 全局数据更新，通知UI刷新
+            if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('app:data-updated', { detail: message.data }))
+            }
+            break
+
+          case 'item-updated':
+            // 单项数据更新
+            if (message.data && message.data.key) {
+              const customEventData = {
+                key: message.data.key,
+                value: message.data.value,
+                timestamp: message.timestamp,
+              }
+              if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+                window.dispatchEvent(
+                  new CustomEvent('app:item-updated', { detail: customEventData }),
+                )
+              }
+            }
+            break
+
+          case 'common-emoji-updated':
+            // 常用表情更新
+            if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('app:common-emoji-updated', { detail: message.data }),
+              )
+            }
+            break
+
+          default:
+            // 其他类型的消息，通用处理
+            if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('app:storage-message', { detail: message }))
+            }
+            break
+        }
+
+        console.log('[main.ts] Processed storage message:', message.type)
+      } catch (error) {
+        console.warn('[main.ts] Error processing storage message:', error)
+      }
+    })
+
+    console.log('[main.ts] Storage message listener initialized')
+  } catch (error) {
+    console.warn('[main.ts] Failed to initialize message listener:', error)
+  }
+}
+
+// 清理消息监听器
+function cleanupMessageListener() {
+  if (messageListenerCleanup) {
+    try {
+      messageListenerCleanup()
+      messageListenerCleanup = null
+      console.log('[main.ts] Storage message listener cleaned up')
+    } catch (error) {
+      console.warn('[main.ts] Error cleaning up message listener:', error)
+    }
+  }
+}
+
+// 异步初始化数据（用于页面加载时）
+export async function initializeData() {
+  try {
+    // 🚀 关键：首先启动消息监听器，确保立即响应机制
+    initializeMessageListener()
+
+    // 这会触发异步的数据加载和缓存
+    await storage.loadPayload()
+    log('Data initialized successfully')
+    return true
+  } catch (error) {
+    log('Failed to initialize data:', error)
+    return false
+  }
+}
+
+// 刷新所有数据的异步函数
+export async function refreshAllData() {
+  try {
+    // 重新加载数据
+    await storage.loadPayload()
+    log('All data refreshed successfully')
+    return true
+  } catch (error) {
+    log('Failed to refresh data:', error)
+    return false
+  }
+}
 
 function log(...args: any[]) {
   try {
@@ -209,7 +319,15 @@ export function reorderGroups(fromIndex: number, toIndex: number) {
   }
 }
 
+// 导出清理函数，供外部调用
+export function cleanup() {
+  cleanupMessageListener()
+}
+
 export default {
+  initializeData,
+  refreshAllData,
+  cleanup,
   getSettings,
   saveSettings,
   getGroups,
@@ -217,6 +335,7 @@ export default {
   getCommonEmojiGroup,
   getUngrouped,
   getHot,
+  recordUsage,
   resetHot,
   exportPayload,
   importPayload,

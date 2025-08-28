@@ -7,16 +7,20 @@ let emojiGroups: EmojiGroup[] = []
 let ungrouped: any[] = []
 
 function initFromStorage() {
-  const p = storage.loadPayload()
-  if (p) {
-    emojiGroups = Array.isArray(p.emojiGroups)
-      ? p.emojiGroups.map((g) => ({ ...g, emojis: [...g.emojis] }))
-      : []
-    ungrouped = Array.isArray(p.ungrouped) ? p.ungrouped.map((e) => ({ ...e })) : []
-    return
+  try {
+    const p = storage.loadPayload()
+    if (p) {
+      emojiGroups = Array.isArray(p.emojiGroups)
+        ? p.emojiGroups.map((g) => ({ ...g, emojis: [...g.emojis] }))
+        : []
+      ungrouped = Array.isArray(p.ungrouped) ? p.ungrouped.map((e) => ({ ...e })) : []
+      return
+    }
+  } catch (error) {
+    console.warn('[EmojiGroupsStore] Failed to load from storage:', error)
   }
 
-  // No payload in localStorage: try to load converted defaults from bundled JSON and persist them.
+  // No payload in storage: try to load converted defaults from bundled JSON and persist them.
   try {
     if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
       fetch('/static/config/converted_payload.json')
@@ -109,7 +113,7 @@ function getUngrouped() {
 
 function setEmojiGroups(gs: EmojiGroup[]) {
   emojiGroups = gs.map((g) => ({ ...g, emojis: [...g.emojis] }))
-  // persist together with settings
+  // persist together with settings (sync)
   settingsStore.save(emojiGroups, ungrouped)
 }
 

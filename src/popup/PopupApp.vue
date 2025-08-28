@@ -12,7 +12,7 @@ import {
   onBeforeUnmount,
 } from 'vue'
 
-import store, { recordUsage } from '../data/store/main'
+import store, { recordUsage, initializeData } from '../data/store/main'
 import { createPopupCommService } from '../services/communication'
 // lightweight local icon to avoid importing ant-design icons in popup build
 const SettingOutlined = {
@@ -240,8 +240,20 @@ export default defineComponent({
       } catch (_) {}
     }
 
-    onMounted(() => {
+    onMounted(async () => {
       try {
+        // 🚀 关键修复：异步初始化数据
+        await initializeData()
+
+        // 重新加载数据以确保获取最新的
+        try {
+          normalGroups.value = store.getNormalGroups()
+          commonEmojiGroup.value = store.getCommonEmojiGroup()
+          ungrouped.value = store.getUngrouped()
+          hot.value = store.getHot()
+        } catch (error) {
+          console.warn('[PopupApp] 数据加载失败:', error)
+        }
         // 监听设置变更消息
         commService.onSettingsChanged((newSettings) => {
           console.log('Popup received settings change:', newSettings)

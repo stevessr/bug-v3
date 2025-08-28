@@ -19,7 +19,20 @@ type Listener = (s: Settings) => void
 const listeners: Listener[] = []
 
 function initFromPayload(p?: PersistPayload | null) {
+  if (!p) {
+    // Try to load from storage if no payload provided
+    try {
+      const loadedPayload = storage.loadPayload()
+      if (loadedPayload) {
+        p = loadedPayload
+      }
+    } catch (error) {
+      console.warn('[SettingsStore] Failed to load payload during init:', error)
+    }
+  }
+
   if (!p) return
+
   current = { ...defaults, ...(p.Settings || {}) }
   if (current.lastModified && typeof (current.lastModified as any) === 'string') {
     current.lastModified = new Date(current.lastModified as any as string)

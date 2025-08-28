@@ -10,22 +10,13 @@ export function useApiKeys(openRouterService: OpenRouterService) {
   const tempApiKeys = ref<string[]>([''])
   const showKeys = ref<boolean[]>([false])
 
-  const loadApiKeys = () => {
+  const loadApiKeys = async () => {
     try {
       let saved: any = null
       try {
-        saved = storage.getItem('openrouter-api-keys')
+        saved = await storage.getItem('openrouter-api-keys')
       } catch (_) {
         saved = null
-      }
-
-      if (!saved) {
-        try {
-          const raw = localStorage.getItem('openrouter-api-keys')
-          if (raw) saved = JSON.parse(raw)
-        } catch (_) {
-          saved = null
-        }
       }
 
       if (saved) {
@@ -40,19 +31,9 @@ export function useApiKeys(openRouterService: OpenRouterService) {
     }
   }
 
-  const saveApiKeysToStorage = () => {
+  const saveApiKeysToStorage = async () => {
     try {
-      try {
-        storage.setItem('openrouter-api-keys', apiKeys.value)
-        return
-      } catch (_) {
-        // fallback
-      }
-      try {
-        localStorage.setItem('openrouter-api-keys', JSON.stringify(apiKeys.value))
-      } catch (e) {
-        console.error('Failed to save API keys:', e)
-      }
+      await storage.setItem('openrouter-api-keys', apiKeys.value)
     } catch (e) {
       console.error('Failed to save API keys:', e)
     }
