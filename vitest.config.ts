@@ -7,7 +7,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
-      setupFiles: ['./test/setupTests.ts'],
+      setupFiles: ['./test/utils/setupTests.ts'],
       // Add reporters so CI/local runs output a machine-readable JSON report
       reporters: [['default'], ['json', { outputFile: './test-results/vitest-report.json' }]],
       exclude: [...configDefaults.exclude, 'e2e/**'],

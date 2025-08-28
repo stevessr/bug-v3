@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import PopupApp from '../src/popup/PopupApp.vue'
+import PopupApp from '../../src/popup/PopupApp.vue'
 
 // Mock dependencies
-vi.mock('../src/data/store/main', () => ({
+vi.mock('../../src/data/store/main', () => ({
   default: {
     getSettings: vi.fn(() => ({
       gridColumns: 4,
@@ -34,7 +34,7 @@ vi.mock('../src/data/store/main', () => ({
   recordUsage: vi.fn(),
 }))
 
-vi.mock('../src/services/communication', () => ({
+vi.mock('../../src/services/communication', () => ({
   createPopupCommService: vi.fn(() => ({
     sendSettingsChanged: vi.fn(),
     sendUsageRecorded: vi.fn(),

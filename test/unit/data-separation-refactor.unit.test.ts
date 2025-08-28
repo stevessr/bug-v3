@@ -37,7 +37,7 @@ const mockUngrouped = [
 ]
 
 // 模拟 emojiGroupsStore
-vi.mock('../src/data/update/emojiGroupsStore', () => ({
+vi.mock('../../src/data/update/emojiGroupsStore', () => ({
   default: {
     getEmojiGroups: vi.fn(() => mockEmojiGroups.map((g) => ({ ...g, emojis: [...g.emojis] }))),
     getNormalGroups: vi.fn(() =>
@@ -84,7 +84,7 @@ describe('数据分离重构验证', () => {
 
   it('should separate normal groups correctly', async () => {
     // 动态导入以确保mock生效
-    const { default: mainStore } = await import('../src/data/store/main')
+    const { default: mainStore } = await import('../../src/data/store/main')
     store = mainStore
 
     const normalGroups = store.getNormalGroups()
@@ -107,7 +107,7 @@ describe('数据分离重构验证', () => {
   })
 
   it('should get common emoji group correctly', async () => {
-    const { default: mainStore } = await import('../src/data/store/main')
+    const { default: mainStore } = await import('../../src/data/store/main')
     store = mainStore
 
     const commonGroup = store.getCommonEmojiGroup()
@@ -121,7 +121,7 @@ describe('数据分离重构验证', () => {
   })
 
   it('should get hot emojis correctly sorted by usage', async () => {
-    const { default: mainStore } = await import('../src/data/store/main')
+    const { default: mainStore } = await import('../../src/data/store/main')
     store = mainStore
 
     const hotEmojis = store.getHot()
@@ -142,7 +142,7 @@ describe('数据分离重构验证', () => {
   })
 
   it('should maintain data independence', async () => {
-    const { default: mainStore } = await import('../src/data/store/main')
+    const { default: mainStore } = await import('../../src/data/store/main')
     store = mainStore
 
     // 获取不同类型的数据
@@ -167,7 +167,7 @@ describe('数据分离重构验证', () => {
 
   it('should handle empty or missing data gracefully', async () => {
     // 模拟空数据情况
-    vi.doMock('../src/data/update/emojiGroupsStore', () => ({
+    vi.doMock('../../src/data/update/emojiGroupsStore', () => ({
       default: {
         getEmojiGroups: vi.fn(() => []),
         getNormalGroups: vi.fn(() => []),
@@ -177,7 +177,7 @@ describe('数据分离重构验证', () => {
       },
     }))
 
-    const { default: mainStore } = await import('../src/data/store/main')
+    const { default: mainStore } = await import('../../src/data/store/main')
     store = mainStore
 
     // 验证空数据处理
