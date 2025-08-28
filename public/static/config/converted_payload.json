@@ -5,7 +5,7 @@
     {
       "UUID": "common-emoji-group",
       "id": "common-emoji-group",
-      "displayName": "常用表情",
+      "displayName": "常用",
       "icon": "⭐",
       "order": 0,
       "emojis": [

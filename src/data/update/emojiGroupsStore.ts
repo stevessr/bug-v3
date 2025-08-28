@@ -8,7 +8,9 @@ let ungrouped: any[] = []
 function initFromStorage() {
   const p = storage.loadPayload()
   if (p) {
-    emojiGroups = Array.isArray(p.emojiGroups) ? p.emojiGroups.map((g) => ({ ...g, emojis: [...g.emojis] })) : []
+    emojiGroups = Array.isArray(p.emojiGroups)
+      ? p.emojiGroups.map((g) => ({ ...g, emojis: [...g.emojis] }))
+      : []
     ungrouped = Array.isArray(p.ungrouped) ? p.ungrouped.map((e) => ({ ...e })) : []
     return
   }
@@ -27,7 +29,10 @@ function initFromStorage() {
             const gs = Array.isArray(payload.emojiGroups) ? payload.emojiGroups : []
             const ug = Array.isArray(payload.ungrouped) ? payload.ungrouped : []
             // initialize in-memory copies
-            emojiGroups = gs.map((g: any) => ({ ...g, emojis: Array.isArray(g.emojis) ? [...g.emojis] : [] }))
+            emojiGroups = gs.map((g: any) => ({
+              ...g,
+              emojis: Array.isArray(g.emojis) ? [...g.emojis] : [],
+            }))
             ungrouped = ug.map((e: any) => ({ ...e }))
             // persist using settingsStore so storage.savePayload is used consistently
             try {
@@ -47,6 +52,54 @@ function initFromStorage() {
 
 function getEmojiGroups() {
   return emojiGroups.map((g) => ({ ...g, emojis: [...g.emojis] }))
+}
+
+// 获取普通表情分组（排除常用表情分组）
+function getNormalGroups() {
+  return emojiGroups
+    .filter((g) => {
+      // 排除常用表情分组（使用UUID匹配）
+      if (g.UUID === 'common-emoji-group') return false
+
+      // 排除显示名称包含常用的分组（备用方案）
+      const displayName = g.displayName || ''
+      if (
+        displayName.includes('常用') ||
+        displayName.includes('收藏') ||
+        displayName.includes('最近')
+      ) {
+        return false
+      }
+
+      return true
+    })
+    .map((g) => ({ ...g, emojis: [...g.emojis] }))
+}
+
+// 获取常用表情分组
+function getCommonEmojiGroup() {
+  const commonGroup = emojiGroups.find((g) => g.UUID === 'common-emoji-group')
+  if (commonGroup) {
+    return { ...commonGroup, emojis: [...commonGroup.emojis] }
+  }
+  return null
+}
+
+// 获取热门表情（基于使用计数）
+function getHotEmojis() {
+  // 从所有分组收集带使用统计的表情
+  const all: any[] = []
+  for (const g of emojiGroups) {
+    if (Array.isArray(g.emojis))
+      all.push(...g.emojis.map((e: any) => ({ ...e, groupUUID: g.UUID })))
+  }
+
+  // 添加未分组表情
+  all.push(...ungrouped.map((e: any) => ({ ...e, groupUUID: 'ungrouped' })))
+
+  const withUsage = all.filter((e) => typeof e.usageCount === 'number' && e.usageCount > 0)
+  withUsage.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
+  return withUsage.slice(0, 50)
 }
 
 function getUngrouped() {
@@ -248,6 +301,9 @@ initFromStorage()
 export default {
   resetAllUsageCounts,
   getEmojiGroups,
+  getNormalGroups,
+  getCommonEmojiGroup,
+  getHotEmojis,
   getUngrouped,
   setEmojiGroups,
   findGroupByUUID,

@@ -38,7 +38,25 @@ export function saveSettings(s: any) {
 
 export function getGroups() {
   const g = emojiGroupsStore.getEmojiGroups()
-  log('getGroups', { count: g.length })
+  log('getGroups (all)', { count: g.length })
+  return g
+}
+
+// 获取普通表情分组（排除常用表情分组）
+export function getNormalGroups() {
+  const g = (emojiGroupsStore as any).getNormalGroups
+    ? (emojiGroupsStore as any).getNormalGroups()
+    : []
+  log('getNormalGroups', { count: g.length })
+  return g
+}
+
+// 获取常用表情分组
+export function getCommonEmojiGroup() {
+  const g = (emojiGroupsStore as any).getCommonEmojiGroup
+    ? (emojiGroupsStore as any).getCommonEmojiGroup()
+    : null
+  log('getCommonEmojiGroup', { exists: !!g })
   return g
 }
 
@@ -49,17 +67,10 @@ export function getUngrouped() {
 }
 
 export function getHot() {
-  // best-effort: gather emojis with usageCount
-  const all: any[] = []
-  for (const g of getGroups()) {
-    if (Array.isArray(g.emojis))
-      all.push(...g.emojis.map((e: any) => ({ ...e, groupUUID: g.UUID })))
-  }
-  const withUsage = all.filter((e) => typeof e.usageCount === 'number')
-  withUsage.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
-  const top = withUsage.slice(0, 50)
-  log('getHot', { count: top.length })
-  return top
+  // 使用新的分离接口，不再需要手动计算
+  const hot = (emojiGroupsStore as any).getHotEmojis ? (emojiGroupsStore as any).getHotEmojis() : []
+  log('getHot', { count: hot.length })
+  return hot
 }
 
 export function recordUsage(uuid: string) {
@@ -202,6 +213,8 @@ export default {
   getSettings,
   saveSettings,
   getGroups,
+  getNormalGroups,
+  getCommonEmojiGroup,
   getUngrouped,
   getHot,
   resetHot,

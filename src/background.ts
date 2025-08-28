@@ -56,11 +56,11 @@ async function loadFromChromeStorage(): Promise<any> {
             // Assemble payload from storage items
             const Settings = items[KEY_SETTINGS] || {}
             const ungrouped = items[KEY_UNGROUPED] || []
-            
+
             // Collect emoji groups using index
             const emojiGroups: any[] = []
             const indexList = items[KEY_EMOJI_INDEX] || []
-            
+
             if (Array.isArray(indexList)) {
               for (const uuid of indexList) {
                 const groupKey = `${KEY_EMOJI_PREFIX}${uuid}`
@@ -73,7 +73,7 @@ async function loadFromChromeStorage(): Promise<any> {
 
             // If no groups found via index, scan for all emojiGroups-* keys
             if (emojiGroups.length === 0) {
-              Object.keys(items).forEach(key => {
+              Object.keys(items).forEach((key) => {
                 if (key.startsWith(KEY_EMOJI_PREFIX)) {
                   const group = items[key]
                   if (group) {
@@ -86,13 +86,13 @@ async function loadFromChromeStorage(): Promise<any> {
             const payload = {
               Settings,
               emojiGroups,
-              ungrouped
+              ungrouped,
             }
 
             log('Loaded from chrome storage:', {
               settingsKeys: Object.keys(Settings).length,
               groupsCount: emojiGroups.length,
-              ungroupedCount: ungrouped.length
+              ungroupedCount: ungrouped.length,
             })
 
             resolve(payload)
@@ -217,68 +217,84 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         if (msg && msg.type === 'GET_EMOJI_DATA') {
           try {
             // Refresh data from chrome storage before responding
-            loadFromChromeStorage().then((freshPayload) => {
-              try {
-                const payload = freshPayload || lastPayload
-                if (payload && payload.emojiGroups && Array.isArray(payload.emojiGroups)) {
-                  const response = {
-                    success: true,
-                    data: {
-                      groups: payload.emojiGroups,
-                      settings: payload.Settings || {},
-                      ungroupedEmojis: payload.ungrouped || []
+            loadFromChromeStorage()
+              .then((freshPayload) => {
+                try {
+                  const payload = freshPayload || lastPayload
+                  if (payload && payload.emojiGroups && Array.isArray(payload.emojiGroups)) {
+                    const response = {
+                      success: true,
+                      data: {
+                        groups: payload.emojiGroups,
+                        // 增加分离数据结构支持
+                        normalGroups: (payload.emojiGroups || []).filter(
+                          (g: any) => g.UUID !== 'common-emoji-group',
+                        ),
+                        commonEmojiGroup:
+                          (payload.emojiGroups || []).find(
+                            (g: any) => g.UUID === 'common-emoji-group',
+                          ) || null,
+                        hotEmojis: [], // 后续实现热门表情计算
+                        settings: payload.Settings || {},
+                        ungroupedEmojis: payload.ungrouped || [],
+                      },
                     }
+                    log('Responding to GET_EMOJI_DATA with', payload.emojiGroups.length, 'groups')
+                    sendResponse && sendResponse(response)
+                  } else {
+                    log('No emoji data available for GET_EMOJI_DATA request')
+                    sendResponse &&
+                      sendResponse({
+                        success: false,
+                        error: 'No emoji data available',
+                      })
                   }
-                  log('Responding to GET_EMOJI_DATA with', payload.emojiGroups.length, 'groups')
-                  sendResponse && sendResponse(response)
-                } else {
-                  log('No emoji data available for GET_EMOJI_DATA request')
-                  sendResponse && sendResponse({ 
-                    success: false, 
-                    error: 'No emoji data available' 
-                  })
+                } catch (error) {
+                  log('Error preparing GET_EMOJI_DATA response:', error)
+                  sendResponse &&
+                    sendResponse({
+                      success: false,
+                      error: error instanceof Error ? error.message : String(error),
+                    })
                 }
-              } catch (error) {
-                log('Error preparing GET_EMOJI_DATA response:', error)
-                sendResponse && sendResponse({ 
-                  success: false, 
-                  error: error instanceof Error ? error.message : String(error)
-                })
-              }
-            }).catch((error) => {
-              log('Error loading fresh data for GET_EMOJI_DATA:', error)
-              try {
-                // Fallback to cached payload
-                const payload = lastPayload
-                if (payload && payload.emojiGroups && Array.isArray(payload.emojiGroups)) {
-                  const response = {
-                    success: true,
-                    data: {
-                      groups: payload.emojiGroups,
-                      settings: payload.Settings || {},
-                      ungroupedEmojis: payload.ungrouped || []
+              })
+              .catch((error) => {
+                log('Error loading fresh data for GET_EMOJI_DATA:', error)
+                try {
+                  // Fallback to cached payload
+                  const payload = lastPayload
+                  if (payload && payload.emojiGroups && Array.isArray(payload.emojiGroups)) {
+                    const response = {
+                      success: true,
+                      data: {
+                        groups: payload.emojiGroups,
+                        settings: payload.Settings || {},
+                        ungroupedEmojis: payload.ungrouped || [],
+                      },
                     }
+                    sendResponse && sendResponse(response)
+                  } else {
+                    sendResponse &&
+                      sendResponse({
+                        success: false,
+                        error: 'No emoji data available',
+                      })
                   }
-                  sendResponse && sendResponse(response)
-                } else {
-                  sendResponse && sendResponse({ 
-                    success: false, 
-                    error: 'No emoji data available' 
-                  })
+                } catch (_) {
+                  sendResponse &&
+                    sendResponse({
+                      success: false,
+                      error: 'Failed to load emoji data',
+                    })
                 }
-              } catch (_) {
-                sendResponse && sendResponse({ 
-                  success: false, 
-                  error: 'Failed to load emoji data' 
-                })
-              }
-            })
+              })
           } catch (error) {
             try {
-              sendResponse && sendResponse({ 
-                success: false, 
-                error: error instanceof Error ? error.message : String(error)
-              })
+              sendResponse &&
+                sendResponse({
+                  success: false,
+                  error: error instanceof Error ? error.message : String(error),
+                })
             } catch (_) {}
           }
           // Return true to indicate async response
@@ -320,60 +336,75 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
 
       // Handle GET_EMOJI_DATA for Firefox
       if (msg && msg.type === 'GET_EMOJI_DATA') {
-        return loadFromChromeStorage().then((freshPayload) => {
-          try {
-            const payload = freshPayload || lastPayload
-            if (payload && payload.emojiGroups && Array.isArray(payload.emojiGroups)) {
-              const response = {
-                success: true,
-                data: {
-                  groups: payload.emojiGroups,
-                  settings: payload.Settings || {},
-                  ungroupedEmojis: payload.ungrouped || []
+        return loadFromChromeStorage()
+          .then((freshPayload) => {
+            try {
+              const payload = freshPayload || lastPayload
+              if (payload && payload.emojiGroups && Array.isArray(payload.emojiGroups)) {
+                const response = {
+                  success: true,
+                  data: {
+                    groups: payload.emojiGroups,
+                    // 增加分离数据结构支持
+                    normalGroups: (payload.emojiGroups || []).filter(
+                      (g: any) => g.UUID !== 'common-emoji-group',
+                    ),
+                    commonEmojiGroup:
+                      (payload.emojiGroups || []).find(
+                        (g: any) => g.UUID === 'common-emoji-group',
+                      ) || null,
+                    hotEmojis: [], // 后续实现热门表情计算
+                    settings: payload.Settings || {},
+                    ungroupedEmojis: payload.ungrouped || [],
+                  },
+                }
+                log(
+                  'Responding to GET_EMOJI_DATA (browser) with',
+                  payload.emojiGroups.length,
+                  'groups',
+                )
+                return response
+              } else {
+                log('No emoji data available for GET_EMOJI_DATA request (browser)')
+                return {
+                  success: false,
+                  error: 'No emoji data available',
                 }
               }
-              log('Responding to GET_EMOJI_DATA (browser) with', payload.emojiGroups.length, 'groups')
-              return response
-            } else {
-              log('No emoji data available for GET_EMOJI_DATA request (browser)')
-              return { 
-                success: false, 
-                error: 'No emoji data available' 
-              }
-            }
-          } catch (error) {
-            log('Error preparing GET_EMOJI_DATA response (browser):', error)
-            return { 
-              success: false, 
-              error: error instanceof Error ? error.message : String(error)
-            }
-          }
-        }).catch((error) => {
-          log('Error loading fresh data for GET_EMOJI_DATA (browser):', error)
-          try {
-            const payload = lastPayload
-            if (payload && payload.emojiGroups && Array.isArray(payload.emojiGroups)) {
+            } catch (error) {
+              log('Error preparing GET_EMOJI_DATA response (browser):', error)
               return {
-                success: true,
-                data: {
-                  groups: payload.emojiGroups,
-                  settings: payload.Settings || {},
-                  ungroupedEmojis: payload.ungrouped || []
+                success: false,
+                error: error instanceof Error ? error.message : String(error),
+              }
+            }
+          })
+          .catch((error) => {
+            log('Error loading fresh data for GET_EMOJI_DATA (browser):', error)
+            try {
+              const payload = lastPayload
+              if (payload && payload.emojiGroups && Array.isArray(payload.emojiGroups)) {
+                return {
+                  success: true,
+                  data: {
+                    groups: payload.emojiGroups,
+                    settings: payload.Settings || {},
+                    ungroupedEmojis: payload.ungrouped || [],
+                  },
+                }
+              } else {
+                return {
+                  success: false,
+                  error: 'No emoji data available',
                 }
               }
-            } else {
-              return { 
-                success: false, 
-                error: 'No emoji data available' 
+            } catch (_) {
+              return {
+                success: false,
+                error: 'Failed to load emoji data',
               }
             }
-          } catch (_) {
-            return { 
-              success: false, 
-              error: 'Failed to load emoji data' 
-            }
-          }
-        })
+          })
       }
     } catch (_) {}
     return { ok: true, echo: msg }

@@ -155,7 +155,9 @@ export default defineComponent({
   setup() {
     const commService = createPopupCommService()
     const settings = reactive({ ...store.getSettings() })
-    const groups = ref(store.getGroups())
+    // 使用新的分离接口，不再需要在组件中进行过滤
+    const normalGroups = ref(store.getNormalGroups())
+    const commonEmojiGroup = ref(store.getCommonEmojiGroup())
     const ungrouped = ref(store.getUngrouped())
     const hot = ref(store.getHot())
     const selectedGroup = ref<'all' | 'hot' | string>('all')
@@ -174,8 +176,9 @@ export default defineComponent({
     })
 
     const filteredGroups = computed(() => {
-      if (!searchQuery.value) return groups.value
-      return groups.value
+      // 使用已经在数据层分离的普通分组，不需要再过滤
+      if (!searchQuery.value) return normalGroups.value
+      return normalGroups.value
         .map((g: any) => ({
           ...g,
           emojis: g.emojis.filter(
@@ -201,9 +204,12 @@ export default defineComponent({
       const items: any[] = []
       items.push({ key: 'all', label: '全部' })
       items.push({ key: 'hot', label: '常用' })
-      groups.value.forEach((g: any) => {
+
+      // 使用已经在数据层过滤的普通分组
+      normalGroups.value.forEach((g: any) => {
         items.push({ key: g.UUID, label: g.displayName || g.name || 'group' })
       })
+
       items.push({ key: 'ungrouped', label: '未分组' })
       return items
     })
@@ -362,26 +368,24 @@ export default defineComponent({
           })
         })
 
-        // 监听表情组变更消息：从 store 重新读取最新数据以避免序列化/Proxy 导致的不一致
+        // 监听表情组变更消息：使用新的分离接口重新读取数据
         commService.onGroupsChanged((_newGroups) => {
           try {
-            // prefer fresh data from store which is the single source of truth
-            groups.value = store.getGroups()
+            // 使用新的分离接口
+            normalGroups.value = store.getNormalGroups()
+            commonEmojiGroup.value = store.getCommonEmojiGroup()
+            ungrouped.value = store.getUngrouped()
+            hot.value = store.getHot()
           } catch (e) {
-            // fallback to payload if store read fails
+            console.warn('更新分组数据失败:', e)
+            // 如果新接口失败，回退到原始方式
             try {
-              groups.value = Array.isArray(_newGroups) ? _newGroups : []
+              const allGroups = store.getGroups()
+              normalGroups.value = allGroups.filter((g: any) => g.UUID !== 'common-emoji-group')
             } catch (_) {
-              groups.value = []
+              normalGroups.value = []
             }
           }
-          // also refresh ungrouped and hot lists
-          try {
-            ungrouped.value = store.getUngrouped()
-          } catch (_) {}
-          try {
-            hot.value = store.getHot()
-          } catch (_) {}
         })
 
         // 监听使用记录消息
@@ -432,7 +436,8 @@ export default defineComponent({
 
     return {
       settings,
-      groups,
+      normalGroups,
+      commonEmojiGroup,
       ungrouped,
       hot,
       filteredGroups,

@@ -825,10 +825,34 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             hasSettings: !!settings,
           })
 
+          // 使用新的分离接口返回数据
+          let normalGroups = groups
+          let commonEmojiGroup = null
+          let hotEmojis = []
+
+          try {
+            if (emojiGroupsStore && emojiGroupsStore.getNormalGroups) {
+              normalGroups = emojiGroupsStore.getNormalGroups()
+            }
+            if (emojiGroupsStore && emojiGroupsStore.getCommonEmojiGroup) {
+              commonEmojiGroup = emojiGroupsStore.getCommonEmojiGroup()
+            }
+            if (emojiGroupsStore && emojiGroupsStore.getHotEmojis) {
+              hotEmojis = emojiGroupsStore.getHotEmojis()
+            }
+          } catch (err) {
+            // 如果新接口不可用，使用简单过滤
+            normalGroups = groups.filter((g: any) => g.UUID !== 'common-emoji-group')
+            commonEmojiGroup = groups.find((g: any) => g.UUID === 'common-emoji-group') || null
+          }
+
           sendResponse({
             success: true,
             data: {
-              groups,
+              groups, // 保持原始完整数据以兼容
+              normalGroups, // 新增：普通分组
+              commonEmojiGroup, // 新增：常用表情分组
+              hotEmojis, // 新增：热门表情
               settings,
               ungroupedEmojis,
             },

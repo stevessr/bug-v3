@@ -37,6 +37,22 @@ function sendMessageToBackground(message: any): Promise<BackgroundResponse> {
 // 创建通信服务用于实时通知其他页面
 const commService = createContentScriptCommService()
 
+// 缓存状态管理
+let cacheVersion = 0
+let lastDataFetch = 0
+const CACHE_EXPIRE_TIME = 600000 // 10分钟缓存过期时间
+
+// 监听数据更新消息
+commService.onGroupsChanged(() => {
+  console.log('[Emoji Picker] 接收到表情组更新消息，将在下次打开时重新获取数据')
+  cacheVersion++ // 增加版本号，标记缓存无效
+})
+
+commService.onUsageRecorded(() => {
+  console.log('[Emoji Picker] 接收到使用记录更新消息，将在下次打开时重新获取数据')
+  cacheVersion++ // 增加版本号，标记缓存无效
+})
+
 // 记录表情使用的函数
 async function recordEmojiUsage(uuid: string): Promise<boolean> {
   try {
@@ -103,7 +119,53 @@ function closePicker(picker: HTMLElement, isMobilePicker: boolean) {
 }
 
 export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLElement> {
-  const groups = cachedState.emojiGroups.length > 0 ? cachedState.emojiGroups : getDefaultEmojis()
+  const now = Date.now()
+  const shouldRefreshCache =
+    cacheVersion === 0 || // 第一次加载
+    now - lastDataFetch > CACHE_EXPIRE_TIME || // 缓存过期
+    cacheVersion > 0 // 有更新消息
+
+  let groups = cachedState.emojiGroups
+
+  // 只在需要时才获取最新数据
+  if (shouldRefreshCache) {
+    console.log('[Emoji Picker] 缓存无效或过期，获取最新表情数据...')
+    try {
+      const response = await sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
+      if (response && response.success && response.data && response.data.groups) {
+        const freshGroups = response.data.groups.filter(
+          (g: any) => g && typeof g.UUID === 'string' && Array.isArray(g.emojis),
+        )
+        if (freshGroups.length > 0) {
+          groups = freshGroups
+          // 更新缓存状态
+          cachedState.emojiGroups = groups
+          lastDataFetch = now
+          cacheVersion = 0 // 重置版本号
+          console.log(`[Emoji Picker] 成功获取 ${groups.length} 个表情组（数据已缓存）`)
+        }
+      }
+    } catch (error) {
+      console.warn('[Emoji Picker] 获取最新数据失败，使用缓存数据:', error)
+    }
+  } else {
+    console.log(`[Emoji Picker] 使用缓存数据（${groups.length} 个分组）`)
+  }
+
+  // 如果仍然没有数据，使用默认表情
+  if (!groups || groups.length === 0) {
+    groups = getDefaultEmojis()
+    console.log('[Emoji Picker] 使用默认表情数据')
+  }
+
+  // 确保常用表情分组显示在第一位
+  const commonGroupIndex = groups.findIndex((g) => g.UUID === 'common-emoji-group')
+  if (commonGroupIndex > 0) {
+    // 如果常用表情不在第一位，将其移动到第一位
+    const commonGroup = groups.splice(commonGroupIndex, 1)[0]
+    groups.unshift(commonGroup)
+    console.log('[Emoji Picker] 将常用表情分组移动到第一位')
+  }
 
   // Generate sections navigation HTML
   let sectionsNavHtml = ''
@@ -435,21 +497,34 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
 }
 
 async function insertEmoji(emojiData: emoji) {
+  console.log('[Emoji Insert] 开始插入表情:', emojiData)
+
   // 首先尝试主动查找文本框（参考simple.js的实现）
   const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
   const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
+  console.log('[Emoji Insert] 找到输入框:', { textArea: !!textArea, richEle: !!richEle })
+
   if (!textArea && !richEle) {
-    console.error('找不到输入框')
+    console.error('[Emoji Insert] 找不到输入框')
     return
   }
 
   // 获取图片尺寸信息
   let width = '500'
   let height = '500'
-  const imgSrc = emojiData.realUrl.toString()
+  const imgSrc = emojiData.realUrl
+    ? emojiData.realUrl.toString()
+    : emojiData.displayUrl
+      ? emojiData.displayUrl.toString()
+      : ''
 
-  // 尝试从URL中提取尺寸
+  if (!imgSrc) {
+    console.error('[Emoji Insert] 表情没有有效的URL')
+    return
+  }
+
+  // 尝试从 URL 中提取尺寸
   const match = imgSrc.match(/_(\d{3,})x(\d{3,})\./)
   if (match) {
     width = match[1]
@@ -473,8 +548,13 @@ async function insertEmoji(emojiData: emoji) {
 
   // 获取缩放比例
   const imageScale = currentSettings.imageScale || 30
+  console.log('[Emoji Insert] 使用设置:', {
+    outputFormat: currentSettings.outputFormat,
+    imageScale,
+  })
 
   if (textArea) {
+    console.log('[Emoji Insert] 处理普通文本框插入')
     // 对于普通文本框，根据输出格式生成不同的文本
     let emojiText: string
     switch (currentSettings.outputFormat) {
@@ -494,33 +574,45 @@ async function insertEmoji(emojiData: emoji) {
         break
     }
 
+    console.log('[Emoji Insert] 生成的表情文本:', emojiText)
+
     const start = textArea.selectionStart || 0
     const end = textArea.selectionEnd || 0
     const text = textArea.value
 
+    // 插入表情文本
     textArea.value = text.substring(0, start) + emojiText + text.substring(end)
     textArea.selectionStart = textArea.selectionEnd = start + emojiText.length
     textArea.focus()
 
     // Trigger input event
-    textArea.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))
+    const inputEvent = new Event('input', { bubbles: true, cancelable: true })
+    textArea.dispatchEvent(inputEvent)
+
+    console.log('[Emoji Insert] 成功插入表情到文本框')
   } else if (richEle) {
+    console.log('[Emoji Insert] 处理富文本编辑器插入')
     // 对于富文本编辑器，使用HTML模板（参考simple.js的实现）
     const scaledWidth = Math.round((parseInt(width) * imageScale) / 100)
     const scaledHeight = Math.round((parseInt(height) * imageScale) / 100)
     // 使用指定的HTML格式，包含完整的属性
     const imgTemplate = `<img src="${imgSrc}" title=":${emojiData.displayName}:" class="emoji only-emoji" alt=":${emojiData.displayName}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};">`
 
+    console.log('[Emoji Insert] 生成的HTML模板:', imgTemplate)
+
     try {
       const dt = new DataTransfer()
       dt.setData('text/html', imgTemplate)
       const evt = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true })
       richEle.dispatchEvent(evt)
-    } catch (_) {
+      console.log('[Emoji Insert] 通过粘贴事件插入表情成功')
+    } catch (e1) {
+      console.warn('[Emoji Insert] 粘贴事件失败，尝试execCommand:', e1)
       try {
-        document.execCommand('insertHTML', false, imgTemplate)
-      } catch (e) {
-        console.error('无法向富文本编辑器中插入表情', e)
+        const result = document.execCommand('insertHTML', false, imgTemplate)
+        console.log('[Emoji Insert] execCommand结果:', result)
+      } catch (e2) {
+        console.error('[Emoji Insert] 无法向富文本编辑器中插入表情:', e2)
       }
     }
   }
