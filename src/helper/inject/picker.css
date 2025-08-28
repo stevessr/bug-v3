@@ -15,3 +15,241 @@
   width: 95px;
   height: 100px;
 }
+
+/* 上传队列面板样式 */
+.upload-queue-panel {
+  position: fixed;
+  top: 50px;
+  right: 20px;
+  width: 400px;
+  max-height: 600px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10001;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.upload-queue-panel h3 {
+  margin: 0;
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.upload-queue-controls {
+  padding: 8px 16px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.upload-queue-controls .btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.upload-queue-controls .btn:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+}
+
+.upload-queue-filters {
+  padding: 8px 16px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  gap: 4px;
+}
+
+.upload-queue-filters .filter-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #666;
+}
+
+.upload-queue-filters .filter-btn:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+}
+
+.upload-queue-filters .filter-btn.active {
+  background: #007cba;
+  border-color: #007cba;
+  color: white;
+}
+
+.upload-queue-summary {
+  padding: 8px 16px;
+  background: #f8f9fa;
+  font-size: 14px;
+  color: #666;
+  border-bottom: 1px solid #eee;
+}
+
+.upload-queue-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.upload-queue-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.upload-queue-item.status-waiting {
+  background: #fff3cd;
+  border-color: #ffeaa7;
+}
+
+.upload-queue-item.status-uploading {
+  background: #e3f2fd;
+  border-color: #bbdefb;
+}
+
+.upload-queue-item.status-success {
+  background: #e8f5e8;
+  border-color: #c8e6c9;
+}
+
+.upload-queue-item.status-failed {
+  background: #ffebee;
+  border-color: #ffcdd2;
+}
+
+.upload-queue-item .status-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.upload-queue-item .progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #eee;
+  border-radius: 2px;
+  margin: 4px 0;
+  overflow: hidden;
+}
+
+.upload-queue-item .progress-bar div {
+  height: 100%;
+  background: #007cba;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.upload-queue-actions {
+  padding: 16px;
+  border-top: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.upload-queue-actions .btn {
+  width: 100%;
+  padding: 8px 16px;
+  font-size: 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.upload-queue-actions .btn-primary {
+  background: #007cba;
+  color: white;
+}
+
+.upload-queue-actions .btn-primary:hover {
+  background: #0056b3;
+}
+
+/* 上传按钮样式 */
+.emoji-picker__upload-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.emoji-picker__upload-trigger:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+}
+
+.emoji-picker__upload-trigger svg {
+  width: 20px;
+  height: 20px;
+  color: #666;
+}
+
+.emoji-picker__upload-trigger:hover svg {
+  color: #333;
+}
+
+/* 响应式样式 */
+@media (max-width: 768px) {
+  .upload-queue-panel {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: 80vh;
+  }
+  
+  .upload-queue-controls {
+    flex-wrap: wrap;
+  }
+  
+  .upload-queue-filters {
+    flex-wrap: wrap;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.upload-queue-panel {
+  animation: fadeIn 0.3s ease;
+}
+
+.upload-queue-item {
+  animation: fadeIn 0.2s ease;
+}

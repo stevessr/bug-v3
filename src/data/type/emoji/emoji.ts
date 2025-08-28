@@ -22,9 +22,11 @@ interface UngroupedEmoji extends emoji {
 interface EmojiGroup {
   icon: string | URL
   UUID: UUID
+  id?: string
   displayName: string
   emojis: emoji[]
   order: number
+  originalId?: string
 }
 interface ungrouped {
   emojis: UngroupedEmoji[]
