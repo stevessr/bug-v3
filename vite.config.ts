@@ -9,6 +9,7 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: './', // Use relative paths for browser extension
   plugins: [
     vue(),
     vueJsx(),
@@ -22,24 +23,17 @@ export default defineConfig({
     }),
   ],
   build: {
+    emptyOutDir: false,
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         options: fileURLToPath(new URL('./options.html', import.meta.url)),
         popup: fileURLToPath(new URL('./popup.html', import.meta.url)),
-        // build background entry so it outputs dist/background.js
-        background: fileURLToPath(new URL('./src/background/index.ts', import.meta.url)),
-        // build content-script entry so it outputs dist/content-script.js
-        'content-script': fileURLToPath(
-          new URL('./src/content-script/content-script.ts', import.meta.url),
-        ),
       },
       output: {
         // Ensure background entry is emitted as dist/background.js so manifest can reference it
         // while keeping other bundles hashed under assets/.
         entryFileNames: (chunkInfo: any) => {
-          if (chunkInfo && chunkInfo.name === 'background') return 'background.js'
-          if (chunkInfo && chunkInfo.name === 'content-script') return 'content-script.js'
           return 'assets/[name]-[hash].js'
         },
         chunkFileNames: 'assets/[name]-[hash].js',

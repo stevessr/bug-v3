@@ -8,6 +8,7 @@ export default defineConfig({
   build: {
     target: 'es2019',
     sourcemap: false,
+    outDir: 'dist',
     rollupOptions: {
       input: fileURLToPath(new URL('./src/content-script/content-script.ts', import.meta.url)),
       output: {

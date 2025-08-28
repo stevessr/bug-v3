@@ -3,27 +3,64 @@ import { getDefaultEmojis } from './default'
 import type { emoji } from './types'
 
 export function isMobile(): boolean {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    (window.innerWidth <= 768)
+  return (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.innerWidth <= 768
+  )
 }
 
 export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLElement> {
   const groups = cachedState.emojiGroups.length > 0 ? cachedState.emojiGroups : getDefaultEmojis()
-  
-  // Generate emoji images HTML
-  let imagesHtml = ''
-  groups.forEach(group => {
+
+  // Generate sections navigation HTML
+  let sectionsNavHtml = ''
+  let sectionsHtml = ''
+
+  groups.forEach((group, groupIndex) => {
     if (group.emojis && Array.isArray(group.emojis)) {
+      const groupId = group.UUID || `group-${groupIndex}`
+      const groupIcon = group.icon || '😀'
+      const groupName = group.displayName || `分组 ${groupIndex + 1}`
+      const isActive = groupIndex === 0 ? 'active' : ''
+
+      // Add navigation button for this group
+      sectionsNavHtml += `
+        <button class="btn no-text btn-flat emoji-picker__section-btn ${isActive}" tabindex="-1" data-section="${groupId}" type="button">
+          <span style="font-size: 20px;">${groupIcon}</span>
+        </button>
+      `
+
+      // Generate emoji images for this group
+      let groupEmojisHtml = ''
       group.emojis.forEach((emojiData: emoji, index: number) => {
         const nameEsc = String(emojiData.displayName || '').replace(/"/g, '&quot;')
-        const tabindex = index === 0 ? '0' : '-1'
+        const tabindex = index === 0 && groupIndex === 0 ? '0' : '-1'
         const dataEmoji = nameEsc
         const displayUrl = emojiData.displayUrl || emojiData.realUrl
-        imagesHtml += `<img width="32" height="32" class="emoji" src="${displayUrl}" tabindex="${tabindex}" data-emoji="${dataEmoji}" alt="${nameEsc}" title=":${nameEsc}:" loading="lazy" />\n`
+        groupEmojisHtml += `<img width="32" height="32" class="emoji" src="${displayUrl}" tabindex="${tabindex}" data-emoji="${dataEmoji}" alt="${nameEsc}" title=":${nameEsc}:" loading="lazy" />\n`
       })
+
+      // Add section for this group
+      const sectionStyle = groupIndex === 0 ? '' : ' style="display: none;"'
+      sectionsHtml += `
+        <div class="emoji-picker__section" data-section="${groupId}" role="region" aria-label="${groupName}"${sectionStyle}>
+          <div class="emoji-picker__section-title-container">
+            <h2 class="emoji-picker__section-title">${groupName}</h2>
+            <button class="btn no-text btn-icon btn-transparent" type="button">
+              <svg class="fa d-icon d-icon-trash-can svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                <use href="#trash-can"></use>
+              </svg>
+              <span aria-hidden="true">&ZeroWidthSpace;</span>
+            </button>
+          </div>
+          <div class="emoji-picker__section-emojis">
+            ${groupEmojisHtml}
+          </div>
+        </div>
+      `
     }
   })
-  
+
   // Create the picker element matching the target structure
   const picker = document.createElement('div')
   picker.className = 'fk-d-menu -animated -expanded'
@@ -32,7 +69,7 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
   picker.setAttribute('aria-labelledby', 'ember161')
   picker.setAttribute('aria-expanded', 'true')
   picker.setAttribute('role', 'dialog')
-  
+
   if (isMobilePicker) {
     picker.style.cssText = `
       position: fixed;
@@ -81,26 +118,11 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
       </div>
       <div class="emoji-picker__content">
         <div class="emoji-picker__sections-nav">
-          <button class="btn no-text btn-flat emoji-picker__section-btn active" tabindex="-1" data-section="favorites" type="button">
-            <img width="20" height="20" src="/images/emoji/twemoji/star.png" title="star" alt="star" class="emoji" />
-          </button>
+          ${sectionsNavHtml}
         </div>
         <div class="emoji-picker__scrollable-content">
           <div class="emoji-picker__sections" role="button">
-            <div class="emoji-picker__section" data-section="favorites" role="region" aria-label="常用">
-              <div class="emoji-picker__section-title-container">
-                <h2 class="emoji-picker__section-title">常用</h2>
-                <button class="btn no-text btn-icon btn-transparent" type="button">
-                  <svg class="fa d-icon d-icon-trash-can svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                    <use href="#trash-can"></use>
-                  </svg>
-                  <span aria-hidden="true">&ZeroWidthSpace;</span>
-                </button>
-              </div>
-              <div class="emoji-picker__section-emojis">
-                ${imagesHtml}
-              </div>
-            </div>
+            ${sectionsHtml}
           </div>
         </div>
       </div>
@@ -110,7 +132,7 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
 
   // Add click handlers for emoji images
   const emojiImages = picker.querySelectorAll('.emoji-picker__section-emojis .emoji')
-  emojiImages.forEach(img => {
+  emojiImages.forEach((img) => {
     img.addEventListener('click', () => {
       const emojiData: emoji = {
         id: img.getAttribute('data-emoji') || img.getAttribute('alt') || '',
@@ -118,10 +140,39 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
         realUrl: new URL(img.getAttribute('src') || ''),
         displayUrl: new URL(img.getAttribute('src') || ''),
         order: 0,
-        UUID: crypto.randomUUID() as any
+        UUID: crypto.randomUUID() as any,
       }
       insertEmoji(emojiData)
       picker.remove()
+    })
+  })
+
+  // Add section navigation functionality
+  const sectionButtons = picker.querySelectorAll('.emoji-picker__section-btn')
+  const sections = picker.querySelectorAll('.emoji-picker__section')
+
+  sectionButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const targetSection = button.getAttribute('data-section')
+
+      // Remove active class from all buttons
+      sectionButtons.forEach((btn) => btn.classList.remove('active'))
+      // Add active class to clicked button
+      button.classList.add('active')
+
+      // Hide all sections
+      sections.forEach((section) => {
+        const sectionEl = section as HTMLElement
+        sectionEl.style.display = 'none'
+      })
+
+      // Show target section
+      const targetSectionEl = picker.querySelector(
+        `[data-section="${targetSection}"]`,
+      ) as HTMLElement
+      if (targetSectionEl && targetSectionEl.classList.contains('emoji-picker__section')) {
+        targetSectionEl.style.display = 'block'
+      }
     })
   })
 
@@ -138,18 +189,50 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
   if (filterInput) {
     filterInput.addEventListener('input', (e) => {
       const searchTerm = (e.target as HTMLInputElement).value.toLowerCase()
-      emojiImages.forEach(img => {
-        const alt = img.getAttribute('alt') || ''
-        const title = img.getAttribute('title') || ''
-        const dataEmoji = img.getAttribute('data-emoji') || ''
-        
-        const shouldShow = alt.toLowerCase().includes(searchTerm) || 
-                          title.toLowerCase().includes(searchTerm) || 
-                          dataEmoji.toLowerCase().includes(searchTerm)
-        
-        const htmlImg = img as HTMLElement
-        htmlImg.style.display = shouldShow ? 'block' : 'none'
-      })
+
+      if (searchTerm.trim() === '') {
+        // If search is empty, show only active section
+        sections.forEach((section) => {
+          const sectionEl = section as HTMLElement
+          sectionEl.style.display = 'none'
+        })
+        const activeButton = picker.querySelector('.emoji-picker__section-btn.active')
+        if (activeButton) {
+          const activeSection = activeButton.getAttribute('data-section')
+          const activeSectionEl = picker.querySelector(
+            `[data-section="${activeSection}"].emoji-picker__section`,
+          ) as HTMLElement
+          if (activeSectionEl) {
+            activeSectionEl.style.display = 'block'
+          }
+        }
+
+        // Show all emojis in visible sections
+        emojiImages.forEach((img) => {
+          const htmlImg = img as HTMLElement
+          htmlImg.style.display = 'block'
+        })
+      } else {
+        // If searching, show all sections and filter emojis
+        sections.forEach((section) => {
+          const sectionEl = section as HTMLElement
+          sectionEl.style.display = 'block'
+        })
+
+        emojiImages.forEach((img) => {
+          const alt = img.getAttribute('alt') || ''
+          const title = img.getAttribute('title') || ''
+          const dataEmoji = img.getAttribute('data-emoji') || ''
+
+          const shouldShow =
+            alt.toLowerCase().includes(searchTerm) ||
+            title.toLowerCase().includes(searchTerm) ||
+            dataEmoji.toLowerCase().includes(searchTerm)
+
+          const htmlImg = img as HTMLElement
+          htmlImg.style.display = shouldShow ? 'block' : 'none'
+        })
+      }
     })
   }
 
@@ -158,13 +241,13 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
 
 function insertEmoji(emojiData: emoji) {
   const activeElement = document.activeElement as HTMLElement
-  
+
   if (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT') {
     const input = activeElement as HTMLTextAreaElement | HTMLInputElement
     const start = input.selectionStart || 0
     const end = input.selectionEnd || 0
     const text = input.value
-    
+
     let emojiText: string
     switch (cachedState.settings.outputFormat) {
       case 'html':
@@ -178,10 +261,10 @@ function insertEmoji(emojiData: emoji) {
         emojiText = `![${emojiData.displayName}](${emojiData.realUrl.toString()})`
         break
     }
-    
+
     input.value = text.substring(0, start) + emojiText + text.substring(end)
     input.selectionStart = input.selectionEnd = start + emojiText.length
-    
+
     // Trigger input event
     input.dispatchEvent(new Event('input', { bubbles: true }))
   }
