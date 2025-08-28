@@ -30,7 +30,179 @@ let lastPayloadGlobal: any = null
 let emojiGroupsStore: any = null
 let settingsStore: any = null
 
-// Load emoji data directly from chrome.storage.local 
+// 独立的表情使用记录处理函数
+
+/**
+ * 通用的表情使用计数更新逻辑
+ * @param uuid 表情的UUID
+ * @param freshData 从存储加载的新鲜数据
+ * @returns {boolean} 是否成功找到并更新了表情
+ */
+function updateEmojiUsageInData(uuid: string, freshData: any): boolean {
+  if (!freshData || !freshData.emojiGroups) {
+    return false
+  }
+
+  // Find and update the emoji in the data
+  for (const group of freshData.emojiGroups) {
+    if (group.emojis && Array.isArray(group.emojis)) {
+      for (const emoji of group.emojis) {
+        if (emoji.UUID === uuid) {
+          const now = Date.now()
+          if (!emoji.lastUsed) {
+            emoji.usageCount = 1
+            emoji.lastUsed = now
+          } else {
+            const days = Math.floor((now - (emoji.lastUsed || 0)) / (24 * 60 * 60 * 1000))
+            if (days >= 1 && typeof emoji.usageCount === 'number') {
+              emoji.usageCount = Math.floor(emoji.usageCount * Math.pow(0.8, days))
+            }
+            emoji.usageCount = (emoji.usageCount || 0) + 1
+            emoji.lastUsed = now
+          }
+          return true
+        }
+      }
+    }
+  }
+  return false
+}
+
+/**
+ * Chrome环境下的表情使用记录处理函数（主要用于桌面端）
+ * @param uuid 表情UUID
+ * @param sendResponse 响应回调函数
+ */
+async function handleEmojiUsageChrome(uuid: string, sendResponse: (resp: any) => void) {
+  try {
+    log('Recording emoji usage for UUID (Chrome):', uuid)
+    let success = false
+
+    // Try to use emoji groups store if available
+    if (emojiGroupsStore && typeof emojiGroupsStore.recordUsageByUUID === 'function') {
+      try {
+        success = emojiGroupsStore.recordUsageByUUID(uuid)
+        log('recordUsageByUUID result (Chrome):', success)
+      } catch (error) {
+        log('Error calling recordUsageByUUID (Chrome):', error)
+      }
+    }
+
+    // If direct store call failed, try to load fresh data and update
+    if (!success) {
+      try {
+        const freshData: any = await loadFromChromeStorage()
+        if (updateEmojiUsageInData(uuid, freshData)) {
+          // Save back to storage using Chrome API
+          try {
+            if (chrome.storage && chrome.storage.local && chrome.storage.local.set) {
+              const saveData: any = {}
+              freshData.emojiGroups.forEach((group: any) => {
+                saveData[`emojiGroups-${group.UUID}`] = group
+              })
+              chrome.storage.local.set(saveData, () => {
+                if (chrome.runtime.lastError) {
+                  log('Error saving emoji usage update (Chrome):', chrome.runtime.lastError)
+                  sendResponse({
+                    success: false,
+                    error: 'Failed to save to Chrome storage',
+                  })
+                } else {
+                  log('Successfully saved emoji usage update (Chrome)')
+                  // Update global cache
+                  lastPayloadGlobal = freshData
+                  sendResponse({
+                    success: true,
+                    message: 'Usage recorded successfully',
+                  })
+                }
+              })
+              return // Early return to avoid double response
+            }
+          } catch (saveError) {
+            log('Error saving emoji usage (Chrome):', saveError)
+          }
+        }
+      } catch (error) {
+        log('Error updating emoji usage in fresh data (Chrome):', error)
+      }
+    }
+
+    // Send response if not already sent
+    sendResponse({
+      success: success,
+      message: success ? 'Usage recorded successfully' : 'Failed to record usage',
+    })
+  } catch (error) {
+    log('Error handling RECORD_EMOJI_USAGE (Chrome):', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/**
+ * Firefox环境下的表情使用记录处理函数（主要用于移动端）
+ * @param uuid 表情UUID
+ * @returns Promise<object> 响应对象
+ */
+async function handleEmojiUsageFirefox(uuid: string): Promise<object> {
+  try {
+    log('Recording emoji usage for UUID (Firefox):', uuid)
+    let success = false
+
+    // Try to use emoji groups store if available
+    if (emojiGroupsStore && typeof emojiGroupsStore.recordUsageByUUID === 'function') {
+      try {
+        success = emojiGroupsStore.recordUsageByUUID(uuid)
+        log('recordUsageByUUID result (Firefox):', success)
+      } catch (error) {
+        log('Error calling recordUsageByUUID (Firefox):', error)
+      }
+    }
+
+    // If direct store call failed, try to load fresh data and update
+    if (!success) {
+      try {
+        const freshData: any = await loadFromChromeStorage()
+        if (updateEmojiUsageInData(uuid, freshData)) {
+          // Save back to storage using Firefox API
+          try {
+            if (browser.storage && browser.storage.local && browser.storage.local.set) {
+              const saveData: any = {}
+              freshData.emojiGroups.forEach((group: any) => {
+                saveData[`emojiGroups-${group.UUID}`] = group
+              })
+              await browser.storage.local.set(saveData)
+              log('Successfully saved emoji usage update (Firefox)')
+              success = true
+              // Update global cache
+              lastPayloadGlobal = freshData
+            }
+          } catch (saveError) {
+            log('Error saving emoji usage (Firefox):', saveError)
+          }
+        }
+      } catch (error) {
+        log('Error updating emoji usage in fresh data (Firefox):', error)
+      }
+    }
+
+    return {
+      success: success,
+      message: success ? 'Usage recorded successfully' : 'Failed to record usage',
+    }
+  } catch (error) {
+    log('Error handling RECORD_EMOJI_USAGE (Firefox):', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+// Load emoji data directly from chrome.storage.local
 async function loadFromChromeStorage(): Promise<any> {
   try {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
@@ -46,11 +218,11 @@ async function loadFromChromeStorage(): Promise<any> {
             // Assemble payload from storage items
             const Settings = items['Settings'] || {}
             const ungrouped = items['ungrouped'] || []
-            
+
             // Collect emoji groups using index
             const emojiGroups: any[] = []
             const indexList = items['emojiGroups-index'] || []
-            
+
             if (Array.isArray(indexList)) {
               for (const uuid of indexList) {
                 const groupKey = `emojiGroups-${uuid}`
@@ -63,7 +235,7 @@ async function loadFromChromeStorage(): Promise<any> {
 
             // If no groups found via index, scan for all emojiGroups-* keys
             if (emojiGroups.length === 0) {
-              Object.keys(items).forEach(key => {
+              Object.keys(items).forEach((key) => {
                 if (key.startsWith('emojiGroups-') && key !== 'emojiGroups-index') {
                   const group = items[key]
                   if (group) {
@@ -76,13 +248,13 @@ async function loadFromChromeStorage(): Promise<any> {
             const payload = {
               Settings,
               emojiGroups,
-              ungrouped
+              ungrouped,
             }
 
             log('Loaded from chrome storage:', {
               settingsKeys: Object.keys(Settings).length,
               groupsCount: emojiGroups.length,
-              ungroupedCount: ungrouped.length
+              ungroupedCount: ungrouped.length,
             })
 
             resolve(payload)
@@ -105,40 +277,40 @@ async function loadFromChromeStorage(): Promise<any> {
     // Try to import the stores
     const [emojiModule, settingsModule] = await Promise.all([
       import('../data/update/emojiGroupsStore'),
-      import('../data/update/settingsStore')
+      import('../data/update/settingsStore'),
     ])
-    
+
     emojiGroupsStore = emojiModule.default
     settingsStore = settingsModule.default
-    
+
     log('Emoji stores imported successfully')
-    
+
     // Wait a bit for the emojiGroupsStore.initFromStorage() to complete its async loading
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
     // Try to get data from stores first (they load from extension storage)
     try {
       const groups = emojiGroupsStore.getEmojiGroups() || []
       const settings = settingsStore.getSettings() || {}
       const ungrouped = emojiGroupsStore.getUngrouped() || []
-      
+
       if (groups.length > 0) {
         // Data successfully loaded from emojiGroupsStore
         lastPayloadGlobal = {
           Settings: settings,
           emojiGroups: groups,
-          ungrouped: ungrouped
+          ungrouped: ungrouped,
         }
         log('Loaded data from emojiGroupsStore:', {
           groupsCount: groups.length,
-          emojisCount: groups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0)
+          emojisCount: groups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0),
         })
         return
       }
     } catch (err) {
       log('Failed to get data from stores:', err)
     }
-    
+
     // If stores don't have data, try loading directly from chrome storage
     try {
       const storagePayload: any = await loadFromChromeStorage()
@@ -146,14 +318,17 @@ async function loadFromChromeStorage(): Promise<any> {
         lastPayloadGlobal = storagePayload
         log('Loaded data directly from chrome storage:', {
           groupsCount: storagePayload.emojiGroups.length,
-          emojisCount: storagePayload.emojiGroups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0)
+          emojisCount: storagePayload.emojiGroups.reduce(
+            (sum: number, g: any) => sum + (g.emojis?.length || 0),
+            0,
+          ),
         })
         return
       }
     } catch (err) {
       log('Failed to load from chrome storage:', err)
     }
-    
+
     log('No emoji data found in extension storage - data needs to be imported via options page')
   } catch (err) {
     log('Failed to import emoji stores:', err)
@@ -604,7 +779,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
   chrome.runtime.onMessage.addListener(
     async (msg: any, sender: any, sendResponse: (resp: any) => void) => {
       log('onMessage', { msg, from: sender })
-      
+
       // Handle GET_EMOJI_DATA request from content scripts
       if (msg && msg.type === 'GET_EMOJI_DATA') {
         try {
@@ -647,7 +822,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             groupsCount: groups.length,
             emojisCount: groups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0),
             ungroupedCount: ungroupedEmojis.length,
-            hasSettings: !!settings
+            hasSettings: !!settings,
           })
 
           sendResponse({
@@ -655,19 +830,25 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
             data: {
               groups,
               settings,
-              ungroupedEmojis
-            }
+              ungroupedEmojis,
+            },
           })
         } catch (error) {
           log('Error handling GET_EMOJI_DATA:', error)
           sendResponse({
             success: false,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           })
         }
         return true
       }
-      
+
+      // Handle RECORD_EMOJI_USAGE request from content scripts
+      if (msg && msg.type === 'RECORD_EMOJI_USAGE' && msg.uuid) {
+        handleEmojiUsageChrome(msg.uuid, sendResponse)
+        return true
+      }
+
       // handle payload-updated events from page localStorage
       try {
         if (msg && msg.type === 'payload-updated') {
@@ -770,7 +951,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
 } else if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.onMessage) {
   browser.runtime.onMessage.addListener(async (msg: any, sender: any) => {
     log('onMessage', { msg, from: sender })
-    
+
     // Handle GET_EMOJI_DATA request from content scripts
     if (msg && msg.type === 'GET_EMOJI_DATA') {
       try {
@@ -813,17 +994,22 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
           data: {
             groups,
             settings,
-            ungroupedEmojis
-          }
+            ungroupedEmojis,
+          },
         })
       } catch (error) {
         return Promise.resolve({
           success: false,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         })
       }
     }
-    
+
+    // Handle RECORD_EMOJI_USAGE request from content scripts
+    if (msg && msg.type === 'RECORD_EMOJI_USAGE' && msg.uuid) {
+      return handleEmojiUsageFirefox(msg.uuid)
+    }
+
     try {
       if (msg && msg.type === 'payload-updated') {
         try {
@@ -832,7 +1018,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
         } catch (_) {}
         return Promise.resolve({ ok: true })
       }
-      
+
       if (msg && msg.type === 'broadcast') {
         const payload = {
           type: 'broadcast',

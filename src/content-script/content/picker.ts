@@ -1,6 +1,7 @@
 import { cachedState } from './state'
 import { getDefaultEmojis } from './default'
 import type { emoji } from './types'
+import { createContentScriptCommService } from '../../services/communication'
 
 // 导入后台通信函数
 interface BackgroundResponse {
@@ -31,6 +32,48 @@ function sendMessageToBackground(message: any): Promise<BackgroundResponse> {
       resolve({ success: false, error: e instanceof Error ? e.message : String(e) })
     }
   })
+}
+
+// 创建通信服务用于实时通知其他页面
+const commService = createContentScriptCommService()
+
+// 记录表情使用的函数
+async function recordEmojiUsage(uuid: string): Promise<boolean> {
+  try {
+    console.log('[Emoji Usage] 记录表情使用:', uuid)
+
+    // 通过后台通信更新使用计数
+    const response = await sendMessageToBackground({
+      type: 'RECORD_EMOJI_USAGE',
+      uuid: uuid,
+    })
+
+    if (response && response.success) {
+      console.log('[Emoji Usage] 成功更新使用计数')
+      // 通知其他页面使用记录已更新
+      commService.sendUsageRecorded(uuid)
+      return true
+    } else {
+      console.warn('[Emoji Usage] 后台更新失败，尝试直接调用 recordUsageByUUID')
+
+      // 回退方案：如果后台通信失败，尝试直接访问存储模块
+      try {
+        const { recordUsage } = await import('../../data/store/main')
+        const result = recordUsage(uuid)
+        if (result) {
+          console.log('[Emoji Usage] 直接调用成功')
+          commService.sendUsageRecorded(uuid)
+          return true
+        }
+      } catch (error) {
+        console.error('[Emoji Usage] 直接调用也失败:', error)
+      }
+    }
+  } catch (error) {
+    console.error('[Emoji Usage] 记录使用失败:', error)
+  }
+
+  return false
 }
 
 export function isMobile(): boolean {
@@ -87,7 +130,9 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
         const tabindex = index === 0 && groupIndex === 0 ? '0' : '-1'
         const dataEmoji = nameEsc
         const displayUrl = emojiData.displayUrl || emojiData.realUrl
-        groupEmojisHtml += `<img width="32" height="32" class="emoji" src="${displayUrl}" tabindex="${tabindex}" data-emoji="${dataEmoji}" alt="${nameEsc}" title=":${nameEsc}:" loading="lazy" />\n`
+        const emojiUUID = emojiData.UUID || ''
+        // 添加 data-uuid 属性来保留原始 UUID 信息
+        groupEmojisHtml += `<img width="32" height="32" class="emoji" src="${displayUrl}" tabindex="${tabindex}" data-emoji="${dataEmoji}" data-uuid="${emojiUUID}" alt="${nameEsc}" title=":${nameEsc}:" loading="lazy" />\n`
       })
 
       // Check if this is a "frequently used" or "favorite" group that should have delete button
@@ -225,15 +270,32 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
   // Add click handlers for emoji images
   const emojiImages = picker.querySelectorAll('.emoji-picker__section-emojis .emoji')
   emojiImages.forEach((img) => {
-    img.addEventListener('click', () => {
+    img.addEventListener('click', async () => {
+      // 获取原始 UUID 信息
+      const originalUUID = img.getAttribute('data-uuid') || ''
+
       const emojiData: emoji = {
         id: img.getAttribute('data-emoji') || img.getAttribute('alt') || '',
         displayName: img.getAttribute('data-emoji') || img.getAttribute('alt') || '',
         realUrl: new URL(img.getAttribute('src') || ''),
         displayUrl: new URL(img.getAttribute('src') || ''),
         order: 0,
-        UUID: crypto.randomUUID() as any,
+        UUID: (originalUUID as any) || (crypto.randomUUID() as any),
       }
+
+      // 先记录使用统计（如果有原始 UUID）
+      if (originalUUID) {
+        try {
+          await recordEmojiUsage(originalUUID)
+          console.log('[Emoji Picker] 成功记录表情使用:', originalUUID)
+        } catch (error) {
+          console.error('[Emoji Picker] 记录表情使用失败:', error)
+        }
+      } else {
+        console.warn('[Emoji Picker] 表情缺少 UUID 信息，无法记录使用统计')
+      }
+
+      // 插入表情
       insertEmoji(emojiData)
         .then(() => {
           closePicker(picker, isMobilePicker)
