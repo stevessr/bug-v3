@@ -26,7 +26,7 @@ function loadGitignorePatterns() {
 
   try {
     const content = fs.readFileSync(gitignorePath, 'utf8')
-    content.split('\n').forEach(line => {
+    content.split('\n').forEach((line) => {
       line = line.trim()
       // 跳过空行和注释
       if (line && !line.startsWith('#')) {
@@ -90,10 +90,10 @@ function startBuild() {
   buildProcess = spawn(process.execPath, [path.join(__dirname, 'build.js'), 'build'], {
     stdio: 'inherit',
     shell: true,
-    env: process.env
+    env: process.env,
   })
 
-  buildProcess.on('exit', code => {
+  buildProcess.on('exit', (code) => {
     buildProcess = null
     console.log(`构建结束，退出码: ${code}`)
 

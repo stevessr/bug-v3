@@ -1,3 +1,5 @@
+<script lang="ts" src="./OpenRouterChat.ts"></script>
+
 <template>
   <div class="tools-container">
     <a-card title="OpenRouter 对话工具" style="margin-bottom: 16px">
@@ -266,8 +268,6 @@
     </a-modal>
   </div>
 </template>
-
-<script lang="ts" src="./OpenRouterChat.ts"></script>
 
 <style scoped>
 @import './OpenRouterChat.css';

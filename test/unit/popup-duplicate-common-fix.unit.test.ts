@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+
 import PopupApp from '../../src/popup/PopupApp.vue'
 
 // Mock dependencies

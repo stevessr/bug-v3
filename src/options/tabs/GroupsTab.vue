@@ -1,82 +1,10 @@
-<template>
-  <a-card title="表情组管理">
-    <div
-      style="
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 8px;
-        gap: 8px;
-        align-items: center;
-      "
-    >
-      <a-button type="primary" @click="showNew = true">新建分组</a-button>
-      <a-button size="small" @click="toggleEditMode" :type="editMode ? 'primary' : 'default'">
-        {{ editMode ? '退出编辑模式' : '进入编辑模式' }}
-      </a-button>
-    </div>
-
-    <!-- 卡片视图仅在“表情组顺序管理”标签中显示 -->
-
-    <!-- Tabs: default list and group order management -->
-    <a-tabs v-model:value="activeTab">
-      <a-tab-pane key="list" tab="默认视图">
-        <a-collapse>
-          <GroupPanel
-            v-for="g in filteredGroups"
-            :key="g.UUID"
-            :group="g"
-            :gridCols="gridCols"
-            :editMode="editMode"
-            :setContainer="setContainer"
-            :isLikelyUrl="isLikelyUrl"
-            @edit="onEdit"
-            @add-emoji="onAddEmoji"
-            @import="onImport"
-            @export="onExport"
-            @delete="onDelete"
-            @edit-emoji="onEditEmoji"
-            @delete-emoji="onDeleteEmoji"
-          />
-        </a-collapse>
-      </a-tab-pane>
-
-      <a-tab-pane key="order" tab="表情组顺序管理">
-        <draggable v-model="allGroups" class="group-cards" item-key="UUID" @end="onDragEnd">
-          <template #item="{ element: g }">
-            <CustomDraggableCard :group="g" />
-          </template>
-        </draggable>
-      </a-tab-pane>
-    </a-tabs>
-    <new-group-modal v-model:modelValue="showNew" @created="onCreated" />
-    <edit-group-modal v-model:modelValue="showEdit" :group="editingGroup" @save="onSaved" />
-    <add-emoji-modal v-model:modelValue="showAddEmoji" @added="onEmojiAdded" />
-    <edit-emoji-modal
-      v-if="editingEmoji"
-      v-model:modelValue="showEditEmoji"
-      :emoji="editingEmoji"
-      @saved="onEmojiSaved"
-      @deleted="onEmojiDeletedFromModal"
-    />
-    <group-import-modal
-      v-model:modelValue="showImport"
-      :groupUUID="importGroupUUID"
-      @imported="onImported"
-    />
-    <import-conflict-modal
-      v-if="showConflict"
-      v-model:modelValue="showConflict"
-      :conflicts="currentConflicts"
-      @resolved="onResolved"
-    />
-  </a-card>
-</template>
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick, defineExpose, computed } from 'vue'
 import draggable from 'vuedraggable'
+import { Modal } from 'ant-design-vue'
+
 import CustomDraggableCard from '../components/CustomDraggableCard.vue'
 import GroupPanel from '../components/GroupPanel.vue'
-import { Modal } from 'ant-design-vue'
 import store from '../../data/store/main'
 import { createOptionsCommService } from '../../services/communication'
 import { isLikelyUrl } from '../utils/isLikelyUrl'
@@ -559,6 +487,79 @@ defineExpose({
   gridCols,
 })
 </script>
+<template>
+  <a-card title="表情组管理">
+    <div
+      style="
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 8px;
+        gap: 8px;
+        align-items: center;
+      "
+    >
+      <a-button type="primary" @click="showNew = true">新建分组</a-button>
+      <a-button size="small" @click="toggleEditMode" :type="editMode ? 'primary' : 'default'">
+        {{ editMode ? '退出编辑模式' : '进入编辑模式' }}
+      </a-button>
+    </div>
+
+    <!-- 卡片视图仅在“表情组顺序管理”标签中显示 -->
+
+    <!-- Tabs: default list and group order management -->
+    <a-tabs v-model:value="activeTab">
+      <a-tab-pane key="list" tab="默认视图">
+        <a-collapse>
+          <GroupPanel
+            v-for="g in filteredGroups"
+            :key="g.UUID"
+            :group="g"
+            :gridCols="gridCols"
+            :editMode="editMode"
+            :setContainer="setContainer"
+            :isLikelyUrl="isLikelyUrl"
+            @edit="onEdit"
+            @add-emoji="onAddEmoji"
+            @import="onImport"
+            @export="onExport"
+            @delete="onDelete"
+            @edit-emoji="onEditEmoji"
+            @delete-emoji="onDeleteEmoji"
+          />
+        </a-collapse>
+      </a-tab-pane>
+
+      <a-tab-pane key="order" tab="表情组顺序管理">
+        <draggable v-model="allGroups" class="group-cards" item-key="UUID" @end="onDragEnd">
+          <template #item="{ element: g }">
+            <CustomDraggableCard :group="g" />
+          </template>
+        </draggable>
+      </a-tab-pane>
+    </a-tabs>
+    <new-group-modal v-model:modelValue="showNew" @created="onCreated" />
+    <edit-group-modal v-model:modelValue="showEdit" :group="editingGroup" @save="onSaved" />
+    <add-emoji-modal v-model:modelValue="showAddEmoji" @added="onEmojiAdded" />
+    <edit-emoji-modal
+      v-if="editingEmoji"
+      v-model:modelValue="showEditEmoji"
+      :emoji="editingEmoji"
+      @saved="onEmojiSaved"
+      @deleted="onEmojiDeletedFromModal"
+    />
+    <group-import-modal
+      v-model:modelValue="showImport"
+      :groupUUID="importGroupUUID"
+      @imported="onImported"
+    />
+    <import-conflict-modal
+      v-if="showConflict"
+      v-model:modelValue="showConflict"
+      :conflicts="currentConflicts"
+      @resolved="onResolved"
+    />
+  </a-card>
+</template>
 
 <style scoped>
 /* Styles for group/emoji grid moved to GroupPanel.vue to avoid duplication */

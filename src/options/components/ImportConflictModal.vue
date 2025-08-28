@@ -1,36 +1,3 @@
-<template>
-  <a-modal v-model:open="visible" title="导入冲突处理" @ok="onOk" @cancel="close" width="800">
-    <div v-if="conflicts.length === 0">没有冲突。</div>
-    <a-list v-else :dataSource="conflicts" bordered>
-      <a-list-item v-for="(c, idx) in conflicts" :key="c.key">
-        <a-list-item-meta :title="c.displayName || c.realUrl" :description="c.key" />
-        <template #actions>
-          <div style="display: flex; gap: 8px; align-items: center">
-            <a-radio-group v-model:value="decisions[idx]">
-              <a-radio value="skip">跳过</a-radio>
-              <a-radio value="overwrite">覆盖</a-radio>
-            </a-radio-group>
-            <div style="margin-left: 12px; text-align: right">
-              <img
-                :src="c.existing.displayUrl || c.existing.realUrl"
-                style="width: 64px; height: 64px; object-fit: cover; border-radius: 4px"
-              />
-              <div style="font-size: 12px; color: var(--ant-text-color-secondary)">现有</div>
-            </div>
-            <div style="margin-left: 8px; text-align: right">
-              <img
-                :src="c.incoming.displayUrl || c.incoming.realUrl"
-                style="width: 64px; height: 64px; object-fit: cover; border-radius: 4px"
-              />
-              <div style="font-size: 12px; color: var(--ant-text-color-secondary)">导入</div>
-            </div>
-          </div>
-        </template>
-      </a-list-item>
-    </a-list>
-  </a-modal>
-</template>
-
 <script lang="ts">
 import { defineComponent, ref, watch } from 'vue'
 import type { PropType } from 'vue'
@@ -76,3 +43,36 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <a-modal v-model:open="visible" title="导入冲突处理" @ok="onOk" @cancel="close" width="800">
+    <div v-if="conflicts.length === 0">没有冲突。</div>
+    <a-list v-else :dataSource="conflicts" bordered>
+      <a-list-item v-for="(c, idx) in conflicts" :key="c.key">
+        <a-list-item-meta :title="c.displayName || c.realUrl" :description="c.key" />
+        <template #actions>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <a-radio-group v-model:value="decisions[idx]">
+              <a-radio value="skip">跳过</a-radio>
+              <a-radio value="overwrite">覆盖</a-radio>
+            </a-radio-group>
+            <div style="margin-left: 12px; text-align: right">
+              <img
+                :src="c.existing.displayUrl || c.existing.realUrl"
+                style="width: 64px; height: 64px; object-fit: cover; border-radius: 4px"
+              />
+              <div style="font-size: 12px; color: var(--ant-text-color-secondary)">现有</div>
+            </div>
+            <div style="margin-left: 8px; text-align: right">
+              <img
+                :src="c.incoming.displayUrl || c.incoming.realUrl"
+                style="width: 64px; height: 64px; object-fit: cover; border-radius: 4px"
+              />
+              <div style="font-size: 12px; color: var(--ant-text-color-secondary)">导入</div>
+            </div>
+          </div>
+        </template>
+      </a-list-item>
+    </a-list>
+  </a-modal>
+</template>

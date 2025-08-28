@@ -1,112 +1,9 @@
-<template>
-  <a-card title="未分组表情">
-    <template #extra>
-      <a-button type="primary" @click="showAddEmojiModal">添加表情</a-button>
-    </template>
-    <div v-if="items.length === 0" style="text-align: center; padding: 20px">
-      当前没有未分组表情
-    </div>
-    <div v-else>
-      <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center">
-        <a-select v-model:value="targetGroup" style="min-width: 220px" placeholder="选择目标分组">
-          <a-select-option v-for="g in groups" :key="g.UUID" :value="g.UUID"
-            >{{ g.displayName }} ({{ g.UUID }})</a-select-option
-          >
-        </a-select>
-        <a-button
-          type="primary"
-          :disabled="!targetGroup || selected.length === 0"
-          @click="moveSelected"
-          >移动到分组</a-button
-        >
-        <a-button @click="selectAll">全选</a-button>
-        <a-button @click="clearSelection">清空</a-button>
-      </div>
-      <a-row :gutter="[16, 16]">
-        <a-col v-for="e in items" :key="e.UUID" :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-          <a-card hoverable>
-            <template #cover>
-              <img
-                alt="emoji"
-                :src="toSrc(e.displayUrl || e.realUrl)"
-                style="
-                  width: 100%;
-                  height: 150px;
-                  object-fit: contain;
-                  padding: 10px;
-                  cursor: pointer;
-                "
-                @click="openPreview(e)"
-              />
-            </template>
-            <a-card-meta :title="e.displayName || '（无名）'">
-              <template #description>
-                <a-tooltip :title="e.UUID">
-                  <span>{{ e.UUID.substring(0, 8) }}...</span>
-                </a-tooltip>
-              </template>
-            </a-card-meta>
-            <div style="margin-top: 10px; text-align: right">
-              <a-checkbox v-model:checked="selectedMap[e.UUID]" @change="onCheck(e)" />
-              <a-button size="small" style="margin-left: 8px" @click="moveSingle(e)">移动</a-button>
-              <a-button size="small" danger style="margin-left: 8px" @click="deleteEmoji(e)"
-                >删除</a-button
-              >
-              <a-button
-                v-if="isBase64Image(e.realUrl)"
-                size="small"
-                style="margin-left: 8px"
-                :loading="uploadingEmojiUUID === e.UUID"
-                :disabled="!imgBedAuthCode"
-                @click="uploadEmojiImageToImgbed(e)"
-              >
-                {{ uploadingEmojiUUID === e.UUID ? '上传中...' : '上传到Imgbed' }}
-              </a-button>
-            </div>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
-
-    <a-modal
-      title="添加新表情"
-      v-model:open="addEmojiModalVisible"
-      @ok="handleAddEmoji"
-      @cancel="cancelAddEmoji"
-    >
-      <a-form :model="newEmojiForm" layout="vertical">
-        <a-form-item label="表情名称" name="displayName">
-          <a-input v-model:value="newEmojiForm.displayName" />
-        </a-form-item>
-        <a-form-item label="图片URL" name="realUrl">
-          <a-input v-model:value="newEmojiForm.realUrl" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-  </a-card>
-  <a-modal
-    v-model:open="previewVisible"
-    title="表情预览"
-    @cancel="closePreview"
-    ok-text="删除"
-    @ok="confirmDeletePreview"
-  >
-    <div style="text-align: center">
-      <img
-        v-if="previewEmoji"
-        :src="toSrc(previewEmoji.displayUrl || previewEmoji.realUrl)"
-        style="max-width: 100%; max-height: 60vh; object-fit: contain"
-      />
-      <div style="margin-top: 8px">{{ previewEmoji?.displayName || '（无名）' }}</div>
-    </div>
-  </a-modal>
-</template>
-
 <script lang="ts">
 import { defineComponent, ref, onMounted, computed, reactive } from 'vue'
+import { Modal, message } from 'ant-design-vue'
+
 import store from '../../data/store/main'
 import emojiGroupsStore from '../../data/update/emojiGroupsStore'
-import { Modal, message } from 'ant-design-vue'
 import type { UngroupedEmoji } from '../../data/type/emoji/emoji'
 import { useFileUpload } from '../composables/useFileUpload'
 import { useImgBed } from '../composables/useImgBed'
@@ -347,6 +244,110 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <a-card title="未分组表情">
+    <template #extra>
+      <a-button type="primary" @click="showAddEmojiModal">添加表情</a-button>
+    </template>
+    <div v-if="items.length === 0" style="text-align: center; padding: 20px">
+      当前没有未分组表情
+    </div>
+    <div v-else>
+      <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center">
+        <a-select v-model:value="targetGroup" style="min-width: 220px" placeholder="选择目标分组">
+          <a-select-option v-for="g in groups" :key="g.UUID" :value="g.UUID"
+            >{{ g.displayName }} ({{ g.UUID }})</a-select-option
+          >
+        </a-select>
+        <a-button
+          type="primary"
+          :disabled="!targetGroup || selected.length === 0"
+          @click="moveSelected"
+          >移动到分组</a-button
+        >
+        <a-button @click="selectAll">全选</a-button>
+        <a-button @click="clearSelection">清空</a-button>
+      </div>
+      <a-row :gutter="[16, 16]">
+        <a-col v-for="e in items" :key="e.UUID" :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
+          <a-card hoverable>
+            <template #cover>
+              <img
+                alt="emoji"
+                :src="toSrc(e.displayUrl || e.realUrl)"
+                style="
+                  width: 100%;
+                  height: 150px;
+                  object-fit: contain;
+                  padding: 10px;
+                  cursor: pointer;
+                "
+                @click="openPreview(e)"
+              />
+            </template>
+            <a-card-meta :title="e.displayName || '（无名）'">
+              <template #description>
+                <a-tooltip :title="e.UUID">
+                  <span>{{ e.UUID.substring(0, 8) }}...</span>
+                </a-tooltip>
+              </template>
+            </a-card-meta>
+            <div style="margin-top: 10px; text-align: right">
+              <a-checkbox v-model:checked="selectedMap[e.UUID]" @change="onCheck(e)" />
+              <a-button size="small" style="margin-left: 8px" @click="moveSingle(e)">移动</a-button>
+              <a-button size="small" danger style="margin-left: 8px" @click="deleteEmoji(e)"
+                >删除</a-button
+              >
+              <a-button
+                v-if="isBase64Image(e.realUrl)"
+                size="small"
+                style="margin-left: 8px"
+                :loading="uploadingEmojiUUID === e.UUID"
+                :disabled="!imgBedAuthCode"
+                @click="uploadEmojiImageToImgbed(e)"
+              >
+                {{ uploadingEmojiUUID === e.UUID ? '上传中...' : '上传到Imgbed' }}
+              </a-button>
+            </div>
+          </a-card>
+        </a-col>
+      </a-row>
+    </div>
+
+    <a-modal
+      title="添加新表情"
+      v-model:open="addEmojiModalVisible"
+      @ok="handleAddEmoji"
+      @cancel="cancelAddEmoji"
+    >
+      <a-form :model="newEmojiForm" layout="vertical">
+        <a-form-item label="表情名称" name="displayName">
+          <a-input v-model:value="newEmojiForm.displayName" />
+        </a-form-item>
+        <a-form-item label="图片URL" name="realUrl">
+          <a-input v-model:value="newEmojiForm.realUrl" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+  </a-card>
+  <a-modal
+    v-model:open="previewVisible"
+    title="表情预览"
+    @cancel="closePreview"
+    ok-text="删除"
+    @ok="confirmDeletePreview"
+  >
+    <div style="text-align: center">
+      <img
+        v-if="previewEmoji"
+        :src="toSrc(previewEmoji.displayUrl || previewEmoji.realUrl)"
+        style="max-width: 100%; max-height: 60vh; object-fit: contain"
+      />
+      <div style="margin-top: 8px">{{ previewEmoji?.displayName || '（无名）' }}</div>
+    </div>
+  </a-modal>
+</template>
 
 <style scoped>
 /* Add any specific styles for your cards here */

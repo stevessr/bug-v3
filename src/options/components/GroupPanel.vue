@@ -1,3 +1,20 @@
+<script lang="ts">
+import { defineComponent } from 'vue'
+
+export default defineComponent({
+  name: 'GroupPanel',
+  props: {
+    group: { type: Object, required: true },
+    gridCols: { type: Number, required: true },
+    editMode: { type: Boolean, default: false },
+    setContainer: { type: Function, required: false },
+    isLikelyUrl: { type: Function, required: false },
+    asCard: { type: Boolean, default: false },
+  },
+  emits: ['edit', 'add-emoji', 'import', 'export', 'delete', 'edit-emoji', 'delete-emoji'],
+})
+</script>
+
 <template>
   <template v-if="asCard">
     <a-card :key="group.UUID" :data-group="group.UUID" class="group-card">
@@ -167,23 +184,6 @@
     </a-collapse-panel>
   </template>
 </template>
-
-<script lang="ts">
-import { defineComponent } from 'vue'
-
-export default defineComponent({
-  name: 'GroupPanel',
-  props: {
-    group: { type: Object, required: true },
-    gridCols: { type: Number, required: true },
-    editMode: { type: Boolean, default: false },
-    setContainer: { type: Function, required: false },
-    isLikelyUrl: { type: Function, required: false },
-    asCard: { type: Boolean, default: false },
-  },
-  emits: ['edit', 'add-emoji', 'import', 'export', 'delete', 'edit-emoji', 'delete-emoji'],
-})
-</script>
 
 <style scoped>
 .emoji-grid {

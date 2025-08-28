@@ -28,7 +28,7 @@ class UploadQueue {
         retryCount: 0,
         timestamp: Date.now(),
         resolve,
-        reject
+        reject,
       }
 
       this.queue.push(item)
@@ -42,7 +42,7 @@ class UploadQueue {
       return
     }
 
-    const nextItem = this.queue.find(item => item.status === 'waiting')
+    const nextItem = this.queue.find((item) => item.status === 'waiting')
     if (!nextItem) {
       return
     }
@@ -59,7 +59,7 @@ class UploadQueue {
       nextItem.resolve?.(result)
     } catch (error) {
       nextItem.error = error
-      
+
       if (nextItem.retryCount < this.maxRetries) {
         nextItem.retryCount++
         nextItem.status = 'waiting'
@@ -73,7 +73,7 @@ class UploadQueue {
       this.activeUploads--
       this.processing = false
       this.updateProgressUI()
-      
+
       // Continue processing queue
       setTimeout(() => this.processQueue(), 100)
     }
@@ -89,7 +89,7 @@ class UploadQueue {
     const response = await fetch('/uploads.json', {
       method: 'POST',
       body: formData,
-      credentials: 'same-origin'
+      credentials: 'same-origin',
     })
 
     if (!response.ok) {
@@ -102,51 +102,51 @@ class UploadQueue {
 
   private updateProgressUI() {
     const totalItems = this.queue.length
-    const completedItems = this.queue.filter(item => 
-      item.status === 'success' || item.status === 'failed'
+    const completedItems = this.queue.filter(
+      (item) => item.status === 'success' || item.status === 'failed',
     ).length
-    const failedItems = this.queue.filter(item => item.status === 'failed').length
-    
+    const failedItems = this.queue.filter((item) => item.status === 'failed').length
+
     // Emit progress event
-    window.dispatchEvent(new CustomEvent('upload-progress', {
-      detail: {
-        total: totalItems,
-        completed: completedItems,
-        failed: failedItems,
-        queue: this.queue.map(item => ({
-          id: item.id,
-          fileName: item.file.name,
-          status: item.status,
-          progress: item.progress,
-          error: item.error
-        }))
-      }
-    }))
+    window.dispatchEvent(
+      new CustomEvent('upload-progress', {
+        detail: {
+          total: totalItems,
+          completed: completedItems,
+          failed: failedItems,
+          queue: this.queue.map((item) => ({
+            id: item.id,
+            fileName: item.file.name,
+            status: item.status,
+            progress: item.progress,
+            error: item.error,
+          })),
+        },
+      }),
+    )
   }
 
   getQueueStatus() {
     return {
-      items: this.queue.map(item => ({
+      items: this.queue.map((item) => ({
         id: item.id,
         fileName: item.file.name,
         status: item.status,
         progress: item.progress,
-        error: item.error
+        error: item.error,
       })),
       activeUploads: this.activeUploads,
-      processing: this.processing
+      processing: this.processing,
     }
   }
 
   clearCompleted() {
-    this.queue = this.queue.filter(item => 
-      item.status !== 'success' && item.status !== 'failed'
-    )
+    this.queue = this.queue.filter((item) => item.status !== 'success' && item.status !== 'failed')
     this.updateProgressUI()
   }
 
   retryFailed() {
-    this.queue.forEach(item => {
+    this.queue.forEach((item) => {
       if (item.status === 'failed') {
         item.status = 'waiting'
         item.retryCount = 0

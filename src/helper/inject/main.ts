@@ -1,8 +1,8 @@
-import { createEmojiButtonElement } from './genbotton'
-import { PICKER_CLASS, BUTTON_CLASS } from './css'
 import { startExternalButtonListenerLoop } from '../loop/main'
-import { recordUsage } from '../../data/store/main'
-import store from '../../data/store/main'
+import store, { recordUsage } from '../../data/store/main'
+
+import { PICKER_CLASS, BUTTON_CLASS } from './css'
+import { createEmojiButtonElement } from './genbotton'
 
 export type InjectorConfig = {
   toolbarSelector?: string

@@ -1,63 +1,3 @@
-<template>
-  <a-modal :open="visible" title="编辑分组" @ok="onOk" @cancel="close">
-    <a-form layout="vertical">
-      <a-form-item label="分组名称">
-        <a-input v-model:value="name" />
-      </a-form-item>
-      <a-form-item label="图标 (文字 或 URL)">
-        <a-radio-group v-model:value="mode">
-          <a-radio value="auto">自动</a-radio>
-          <a-radio value="text">文字</a-radio>
-          <a-radio value="url">URL</a-radio>
-        </a-radio-group>
-        <div style="font-size: 12px; color: var(--ant-text-color-secondary); margin-top: 8px">
-          {{ hint }}
-        </div>
-        <a-input
-          v-model:value="iconInput"
-          placeholder="输入图标文字或图片 URL"
-          style="margin-top: 8px"
-        />
-        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: flex-start">
-          <template v-if="isUrlPreview">
-            <div
-              style="
-                width: 56px;
-                height: 56px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 1px solid var(--ant-border-color);
-                border-radius: 6px;
-              "
-            >
-              <img
-                :src="iconPreview"
-                style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px"
-              />
-            </div>
-          </template>
-          <template v-else>
-            <div
-              style="
-                padding: 6px 10px;
-                border: 1px solid var(--ant-border-color);
-                border-radius: 6px;
-                font-size: 18px;
-                font-weight: 600;
-                white-space: normal;
-                word-break: break-word;
-              "
-            >
-              {{ iconPreview || 'A' }}
-            </div>
-          </template>
-        </div>
-      </a-form-item>
-    </a-form>
-  </a-modal>
-</template>
-
 <script lang="ts">
 import { defineComponent, ref, watch } from 'vue'
 
@@ -164,3 +104,63 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <a-modal :open="visible" title="编辑分组" @ok="onOk" @cancel="close">
+    <a-form layout="vertical">
+      <a-form-item label="分组名称">
+        <a-input v-model:value="name" />
+      </a-form-item>
+      <a-form-item label="图标 (文字 或 URL)">
+        <a-radio-group v-model:value="mode">
+          <a-radio value="auto">自动</a-radio>
+          <a-radio value="text">文字</a-radio>
+          <a-radio value="url">URL</a-radio>
+        </a-radio-group>
+        <div style="font-size: 12px; color: var(--ant-text-color-secondary); margin-top: 8px">
+          {{ hint }}
+        </div>
+        <a-input
+          v-model:value="iconInput"
+          placeholder="输入图标文字或图片 URL"
+          style="margin-top: 8px"
+        />
+        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: flex-start">
+          <template v-if="isUrlPreview">
+            <div
+              style="
+                width: 56px;
+                height: 56px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid var(--ant-border-color);
+                border-radius: 6px;
+              "
+            >
+              <img
+                :src="iconPreview"
+                style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px"
+              />
+            </div>
+          </template>
+          <template v-else>
+            <div
+              style="
+                padding: 6px 10px;
+                border: 1px solid var(--ant-border-color);
+                border-radius: 6px;
+                font-size: 18px;
+                font-weight: 600;
+                white-space: normal;
+                word-break: break-word;
+              "
+            >
+              {{ iconPreview || 'A' }}
+            </div>
+          </template>
+        </div>
+      </a-form-item>
+    </a-form>
+  </a-modal>
+</template>

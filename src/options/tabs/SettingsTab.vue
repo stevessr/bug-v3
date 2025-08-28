@@ -1,76 +1,7 @@
-<template>
-  <a-card title="设置">
-    <a-form-item>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap">
-        <a-popconfirm
-          title="确认要将设置重置为默认值吗？此操作会覆盖当前设置。"
-          ok-text="确认"
-          cancel-text="取消"
-          @confirm="onConfirmResetSettings"
-          @cancel="onCancel"
-        >
-          <a-button type="default">重置设置</a-button>
-        </a-popconfirm>
-
-        <a-popconfirm
-          title="确认要将默认设置应用到当前设置吗？此操作会覆盖相关设置但不会刷新分组。"
-          ok-text="确认"
-          cancel-text="取消"
-          @confirm="onConfirmApplyDefaults"
-          @cancel="onCancel"
-        >
-          <a-button type="primary">应用默认（不刷新分组）</a-button>
-        </a-popconfirm>
-
-        <a-popconfirm
-          title="确认要重置所有数据吗？这将删除所有自定义表情组和设置，恢复到默认状态。此操作不可撤销！"
-          ok-text="确认"
-          cancel-text="取消"
-          @confirm="onConfirmResetAllData"
-          @cancel="onCancel"
-        >
-          <a-button type="danger">完全重置（包括分组）</a-button>
-        </a-popconfirm>
-      </div>
-      <div style="margin-top: 8px; font-size: 12px; color: #666">
-        重置功能将使用转换后的默认配置文件 (converted_payload.json)
-      </div>
-    </a-form-item>
-
-    <a-form :model="form" layout="vertical">
-      <a-form-item label="图片缩放 (%)">
-        <div style="display: flex; gap: 12px; align-items: center">
-          <a-slider v-model:value="form.imageScale" :min="1" :max="100" style="flex: 1" />
-          <a-input-number v-model:value="form.imageScale" :min="1" :max="100" />
-        </div>
-      </a-form-item>
-
-      <a-form-item label="默认表情组">
-        <default-group-select v-model:modelValue="form.defaultEmojiGroupUUID" />
-      </a-form-item>
-
-      <a-form-item label="列数">
-        <a-select v-model:value="form.gridColumns">
-          <a-select-option v-for="n in 8" :key="n" :value="n">{{ n }}</a-select-option>
-        </a-select>
-      </a-form-item>
-
-      <a-form-item label="输出格式">
-        <a-select v-model:value="form.outputFormat">
-          <a-select-option value="markdown">Markdown</a-select-option>
-          <a-select-option value="html">HTML</a-select-option>
-          <a-select-option value="bbcode">BBCode</a-select-option>
-        </a-select>
-      </a-form-item>
-
-      <a-form-item> <a-switch v-model:checked="form.MobileMode" /> 移动端视图 </a-form-item>
-    </a-form>
-  </a-card>
-</template>
-
 <script lang="ts">
 import { defineComponent, reactive, watch, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
+
 import store from '../../data/store/main'
 import { createOptionsCommService } from '../../services/communication'
 import settingsStore from '../../data/update/settingsStore'
@@ -278,3 +209,73 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <a-card title="设置">
+    <a-form-item>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <a-popconfirm
+          title="确认要将设置重置为默认值吗？此操作会覆盖当前设置。"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="onConfirmResetSettings"
+          @cancel="onCancel"
+        >
+          <a-button type="default">重置设置</a-button>
+        </a-popconfirm>
+
+        <a-popconfirm
+          title="确认要将默认设置应用到当前设置吗？此操作会覆盖相关设置但不会刷新分组。"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="onConfirmApplyDefaults"
+          @cancel="onCancel"
+        >
+          <a-button type="primary">应用默认（不刷新分组）</a-button>
+        </a-popconfirm>
+
+        <a-popconfirm
+          title="确认要重置所有数据吗？这将删除所有自定义表情组和设置，恢复到默认状态。此操作不可撤销！"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="onConfirmResetAllData"
+          @cancel="onCancel"
+        >
+          <a-button type="danger">完全重置（包括分组）</a-button>
+        </a-popconfirm>
+      </div>
+      <div style="margin-top: 8px; font-size: 12px; color: #666">
+        重置功能将使用转换后的默认配置文件 (converted_payload.json)
+      </div>
+    </a-form-item>
+
+    <a-form :model="form" layout="vertical">
+      <a-form-item label="图片缩放 (%)">
+        <div style="display: flex; gap: 12px; align-items: center">
+          <a-slider v-model:value="form.imageScale" :min="1" :max="100" style="flex: 1" />
+          <a-input-number v-model:value="form.imageScale" :min="1" :max="100" />
+        </div>
+      </a-form-item>
+
+      <a-form-item label="默认表情组">
+        <default-group-select v-model:modelValue="form.defaultEmojiGroupUUID" />
+      </a-form-item>
+
+      <a-form-item label="列数">
+        <a-select v-model:value="form.gridColumns">
+          <a-select-option v-for="n in 8" :key="n" :value="n">{{ n }}</a-select-option>
+        </a-select>
+      </a-form-item>
+
+      <a-form-item label="输出格式">
+        <a-select v-model:value="form.outputFormat">
+          <a-select-option value="markdown">Markdown</a-select-option>
+          <a-select-option value="html">HTML</a-select-option>
+          <a-select-option value="bbcode">BBCode</a-select-option>
+        </a-select>
+      </a-form-item>
+
+      <a-form-item> <a-switch v-model:checked="form.MobileMode" /> 移动端视图 </a-form-item>
+    </a-form>
+  </a-card>
+</template>

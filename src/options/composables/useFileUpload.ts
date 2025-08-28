@@ -1,6 +1,8 @@
 import { ref } from 'vue'
 import { message } from 'ant-design-vue'
+
 import emojiGroupsStore from '../../data/update/emojiGroupsStore'
+
 import { useImgBed } from './useImgBed'
 
 // Helper function to convert a file to a data URL

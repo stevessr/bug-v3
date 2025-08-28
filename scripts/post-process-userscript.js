@@ -12,7 +12,7 @@ const buildType = process.env.npm_lifecycle_event || 'build:userscript'
 function getUserscriptHeader(minified = false) {
   const version = '1.0.0'
   const name = minified ? 'Linux.do 表情包扩展 (Minified)' : 'Linux.do 表情包扩展'
-  
+
   return `// ==UserScript==
 // @name         ${name}
 // @namespace    https://github.com/stevessr/bug-v3
@@ -46,28 +46,28 @@ async function runESLint(filePath) {
   try {
     console.log(`🔍 Running ESLint validation on ${filePath}...`)
     const { ESLint } = await import('eslint')
-    
-    const eslint = new ESLint({ 
+
+    const eslint = new ESLint({
       useEslintrc: false,
       baseConfig: {
         env: { browser: true, es2021: true },
         extends: ['eslint:recommended'],
-        parserOptions: { ecmaVersion: 2021, sourceType: 'script' }
-      }
+        parserOptions: { ecmaVersion: 2021, sourceType: 'script' },
+      },
     })
-    
+
     const results = await eslint.lintFiles([filePath])
     const formatter = await eslint.loadFormatter('stylish')
     const resultText = formatter.format(results)
-    
+
     if (resultText) {
       console.log('📋 ESLint Results:')
       console.log(resultText)
     } else {
       console.log('✅ ESLint validation passed')
     }
-    
-    return results.every(result => result.errorCount === 0)
+
+    return results.every((result) => result.errorCount === 0)
   } catch (error) {
     console.warn('⚠️  ESLint validation skipped:', error.message)
     return true // Don't fail build for ESLint issues
@@ -83,7 +83,7 @@ function processUserscript() {
     __dirname,
     '..',
     outputDir,
-    `emoji-extension${isMinified ? '-min' : ''}.user.js`
+    `emoji-extension${isMinified ? '-min' : ''}.user.js`,
   )
   const managerFile = path.resolve(__dirname, '..', 'emoji-manager.html')
   const managerOutput = path.resolve(__dirname, '..', outputDir, 'emoji-manager.html')
@@ -142,7 +142,7 @@ async function main() {
 
     // Run ESLint validation
     await runESLint(outputFile)
-    
+
     console.log('🎉 Userscript build and validation completed successfully!')
     process.exit(0)
   } catch (error) {

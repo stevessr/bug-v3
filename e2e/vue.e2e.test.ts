@@ -1,6 +1,7 @@
-import { test, expect, chromium } from '@playwright/test'
 import path from 'path'
 import { fileURLToPath } from 'url'
+
+import { test, expect, chromium } from '@playwright/test'
 
 test('visits the extension popup', async () => {
   const __filename = fileURLToPath(import.meta.url)

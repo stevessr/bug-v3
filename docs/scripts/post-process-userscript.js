@@ -53,43 +53,43 @@ function runESLint(filePath) {
       ['eslint', filePath, '--fix', '--no-ignore', '-c', configPath],
       {
         stdio: 'pipe',
-        shell: true
-      }
+        shell: true,
+      },
     )
 
     let fixOutput = ''
     let fixError = ''
 
-    fixProcess.stdout.on('data', data => {
+    fixProcess.stdout.on('data', (data) => {
       fixOutput += data.toString()
     })
 
-    fixProcess.stderr.on('data', data => {
+    fixProcess.stderr.on('data', (data) => {
       fixError += data.toString()
     })
 
-    fixProcess.on('close', fixCode => {
+    fixProcess.on('close', (fixCode) => {
       if (fixCode === 0) {
         console.log(`✅ ESLint auto-fix completed for ${path.basename(filePath)}`)
 
         // Now run ESLint again to check for remaining issues
         const checkProcess = spawn('npx', ['eslint', filePath, '--no-ignore', '-c', configPath], {
           stdio: 'pipe',
-          shell: true
+          shell: true,
         })
 
         let checkOutput = ''
         let checkError = ''
 
-        checkProcess.stdout.on('data', data => {
+        checkProcess.stdout.on('data', (data) => {
           checkOutput += data.toString()
         })
 
-        checkProcess.stderr.on('data', data => {
+        checkProcess.stderr.on('data', (data) => {
           checkError += data.toString()
         })
 
-        checkProcess.on('close', checkCode => {
+        checkProcess.on('close', (checkCode) => {
           if (checkCode === 0) {
             console.log(`✅ ESLint validation passed for ${path.basename(filePath)}`)
             resolve()
@@ -132,7 +132,7 @@ function processUserscript() {
     __dirname,
     '..',
     outputDir,
-    `emoji-extension${isMinified ? '-min' : ''}.user.js`
+    `emoji-extension${isMinified ? '-min' : ''}.user.js`,
   )
   const managerFile = path.resolve(__dirname, '..', 'emoji-manager.html')
   const managerOutput = path.resolve(__dirname, '..', outputDir, 'emoji-manager.html')

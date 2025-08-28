@@ -1,7 +1,8 @@
+import { createContentScriptCommService } from '../../services/communication'
+
 import { cachedState, cacheManager, cacheUtils } from './state'
 import type { EmojiGroup, Settings } from './types'
 import { defaultSettings, createDefaultEmojiGroup } from './types'
-import { createContentScriptCommService } from '../../services/communication'
 
 // 创建通信服务实例
 const commService = createContentScriptCommService()

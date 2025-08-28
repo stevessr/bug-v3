@@ -1,5 +1,6 @@
 import { ref, nextTick, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
+
 import type { ChatMessage } from '../types'
 
 interface ChatHistoryDeps {
@@ -25,7 +26,12 @@ interface ImportedChatData {
   timestamp?: string
 }
 
-export function useChatHistory({ messages, selectedModel, modelOptions, scrollToBottom }: ChatHistoryDeps) {
+export function useChatHistory({
+  messages,
+  selectedModel,
+  modelOptions,
+  scrollToBottom,
+}: ChatHistoryDeps) {
   const showImportModal = ref(false)
   const importChatData = ref('')
   const importError = ref('')
@@ -35,11 +41,11 @@ export function useChatHistory({ messages, selectedModel, modelOptions, scrollTo
     const chatData = {
       timestamp: new Date().toISOString(),
       model: selectedModel.value,
-      messages: messages.value.map(msg => ({
+      messages: messages.value.map((msg) => ({
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp.toISOString(),
-        images: msg.images
+        images: msg.images,
       })),
     }
     const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' })
@@ -60,7 +66,7 @@ export function useChatHistory({ messages, selectedModel, modelOptions, scrollTo
 
     try {
       const data: unknown = JSON.parse(importChatData.value.trim())
-      
+
       if (!data || typeof data !== 'object') {
         importError.value = '无效的数据格式：必须是对象'
         return
@@ -109,7 +115,7 @@ export function useChatHistory({ messages, selectedModel, modelOptions, scrollTo
       }
 
       if (typedData.model && typeof typedData.model === 'string') {
-        const modelExists = modelOptions.value.some(opt => opt.value === typedData.model)
+        const modelExists = modelOptions.value.some((opt) => opt.value === typedData.model)
         if (modelExists) {
           selectedModel.value = typedData.model
         }
@@ -119,13 +125,13 @@ export function useChatHistory({ messages, selectedModel, modelOptions, scrollTo
       importChatData.value = ''
       importError.value = ''
       replaceExistingChat.value = false
-      
+
       nextTick(() => {
         scrollToBottom()
       })
-      
     } catch (error) {
-      importError.value = '解析 JSON 数据失败：' + (error instanceof Error ? error.message : '未知错误')
+      importError.value =
+        '解析 JSON 数据失败：' + (error instanceof Error ? error.message : '未知错误')
     }
   }
 
@@ -139,14 +145,14 @@ export function useChatHistory({ messages, selectedModel, modelOptions, scrollTo
   const handleChatFileUpload = (event: Event) => {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
-    
+
     if (!file) return
-    
+
     if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
       importError.value = '请选择 JSON 格式的文件'
       return
     }
-    
+
     const reader = new FileReader()
     reader.onload = (e) => {
       const content = e.target?.result as string

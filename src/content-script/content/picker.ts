@@ -1,7 +1,8 @@
+import { createContentScriptCommService } from '../../services/communication'
+
 import { cachedState, cacheManager, cacheUtils } from './state'
 import { getDefaultEmojis } from './default'
 import type { emoji, EmojiGroup } from './types'
-import { createContentScriptCommService } from '../../services/communication'
 import { performanceMonitor, measureAsync } from './performance'
 
 // 导入后台通信函数
@@ -143,7 +144,7 @@ async function checkForUpdatesInBackground(): Promise<void> {
 
 // 缓存状态管理
 let cacheVersion = 0
-let lastDataFetch = 0
+const lastDataFetch = 0
 const CACHE_EXPIRE_TIME = 600000 // 10分钟缓存过期时间
 
 // 监听数据更新消息 - 增强版
@@ -320,7 +321,7 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
   }
 
   // 🚀 关键修复：确保常用表情分组存在并显示在第一位
-  let commonGroupIndex = groups.findIndex((g) => g.UUID === 'common-emoji-group')
+  const commonGroupIndex = groups.findIndex((g) => g.UUID === 'common-emoji-group')
 
   if (commonGroupIndex === -1) {
     // 如果没有常用表情分组，创建一个空的

@@ -28,7 +28,7 @@ function runBuild() {
   console.log('🔨 Running build...')
   const res = spawnSync('node', ['./scripts/build.js', 'build:minimal'], {
     stdio: 'inherit',
-    shell: true
+    shell: true,
   })
   if (res.status !== 0) {
     console.error('Build failed. Aborting pack.')
@@ -57,7 +57,7 @@ function ensureKey(keyPath) {
     modulusLength: 2048,
     publicExponent: 0x10001,
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-    publicKeyEncoding: { type: 'spki', format: 'pem' }
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
   })
   fs.writeFileSync(generatedPath, privateKey, { mode: 0o600 })
   return generatedPath
@@ -86,7 +86,7 @@ function packWithCrx(distPath, keyPath, outPath) {
   }
 
   console.error(
-    'Failed to pack using npx crx. Please ensure the `crx` package is installed (devDependency) and try running `pnpm install` first.'
+    'Failed to pack using npx crx. Please ensure the `crx` package is installed (devDependency) and try running `pnpm install` first.',
   )
   process.exit(res2.status || res.status || 1)
 }

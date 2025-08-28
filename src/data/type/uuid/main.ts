@@ -1,6 +1,5 @@
 type UUID = string
-import { v5 as uuidv5, v4 as uuidv4 } from 'uuid'
-import { validate, version } from 'uuid'
+import { v5 as uuidv5, v4 as uuidv4, validate, version } from 'uuid'
 function genUUIDv5(name: string): UUID {
   return uuidv5(name, uuidv5.DNS) as UUID
 }

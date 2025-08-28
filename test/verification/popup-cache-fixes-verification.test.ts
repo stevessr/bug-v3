@@ -102,7 +102,7 @@ describe('popup重复显示和缓存优化修复验证', () => {
     test('接收到更新消息后应该重新获取数据', () => {
       // 模拟初始状态
       let cacheVersion = 0
-      let lastDataFetch = Date.now()
+      const lastDataFetch = Date.now()
 
       // 模拟接收到更新消息
       cacheVersion++ // 增加版本号，标记缓存无效
@@ -121,8 +121,8 @@ describe('popup重复显示和缓存优化修复验证', () => {
 
     test('缓存过期后应该重新获取数据', () => {
       const CACHE_EXPIRE_TIME = 600000 // 10分钟
-      let cacheVersion = 0
-      let lastDataFetch = Date.now() - 700000 // 700秒前获取的数据
+      const cacheVersion = 0
+      const lastDataFetch = Date.now() - 700000 // 700秒前获取的数据
 
       const now = Date.now()
       const shouldRefreshCache =

@@ -6,7 +6,6 @@ import {
   DeleteOutlined,
   PlusOutlined,
 } from '@ant-design/icons-vue'
-import ImgBedConfig from './ImgBedConfig.vue'
 
 import { OpenRouterService } from '../../services/openrouter'
 import { useApiKeys } from '../composables/useApiKeys'
@@ -14,6 +13,8 @@ import { useImgBed } from '../composables/useImgBed'
 import { useFileUpload } from '../composables/useFileUpload'
 import { useChatHistory } from '../composables/useChatHistory'
 import { useChat } from '../composables/useChat'
+
+import ImgBedConfig from './ImgBedConfig.vue'
 
 export default defineComponent({
   name: 'OpenRouterChat',

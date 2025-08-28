@@ -1,43 +1,23 @@
-<template>
-  <a-layout style="min-height: 100vh; padding: 24px">
-    <a-layout-sider width="240" collapsible :collapsed="siderCollapsed" @collapse="toggleSider">
-      <a-menu mode="inline" :selectedKeys="[currentTab]" style="height: 100%">
-        <a-menu-item key="groups" @click="select('groups')">表情管理</a-menu-item>
-        <a-menu-item key="ungrouped" @click="select('ungrouped')">未分组表情</a-menu-item>
-        <a-menu-item key="hot" @click="select('hot')">常用表情</a-menu-item>
-        <a-menu-item key="tools" @click="select('tools')">小工具</a-menu-item>
-        <a-menu-item key="importexport" @click="select('importexport')">配置导入/导出</a-menu-item>
-        <a-menu-item key="settings" @click="select('settings')">设置</a-menu-item>
-      </a-menu>
-    </a-layout-sider>
-
-    <a-layout-content style="padding: 16px">
-      <GroupsTab v-if="currentTab === 'groups'" />
-      <UngroupedTab v-if="currentTab === 'ungrouped'" />
-      <HotTab v-if="currentTab === 'hot'" />
-      <ToolsTab v-if="currentTab === 'tools'" />
-      <ImportExportTab v-if="currentTab === 'importexport'" />
-      <SettingsTab v-if="currentTab === 'settings'" />
-    </a-layout-content>
-  </a-layout>
-</template>
-
 <script lang="ts">
 import { defineComponent, reactive, ref, onMounted, computed } from 'vue'
+import { Modal } from 'ant-design-vue'
+
 import settingsStore from '../data/update/settingsStore'
 import emojiGroupsStore from '../data/update/emojiGroupsStore'
 import storage from '../data/update/storage'
 import store from '../data/store/main'
-import { Modal } from 'ant-design-vue'
 import { createOptionsCommService } from '../services/communication'
+
 import ToolsTab from './tabs/ToolsTab.vue'
 export default defineComponent({
   components: {
-    ToolsTab
+    ToolsTab,
   },
   setup() {
     const commService = createOptionsCommService()
-    const currentTab = ref<'groups' | 'ungrouped' | 'hot' | 'tools' | 'importexport' | 'settings'>('groups')
+    const currentTab = ref<'groups' | 'ungrouped' | 'hot' | 'tools' | 'importexport' | 'settings'>(
+      'groups',
+    )
     const s = settingsStore.getSettings()
     const siderCollapsed = ref(!!s.sidebarCollapsed)
 
@@ -253,3 +233,27 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <a-layout style="min-height: 100vh; padding: 24px">
+    <a-layout-sider width="240" collapsible :collapsed="siderCollapsed" @collapse="toggleSider">
+      <a-menu mode="inline" :selectedKeys="[currentTab]" style="height: 100%">
+        <a-menu-item key="groups" @click="select('groups')">表情管理</a-menu-item>
+        <a-menu-item key="ungrouped" @click="select('ungrouped')">未分组表情</a-menu-item>
+        <a-menu-item key="hot" @click="select('hot')">常用表情</a-menu-item>
+        <a-menu-item key="tools" @click="select('tools')">小工具</a-menu-item>
+        <a-menu-item key="importexport" @click="select('importexport')">配置导入/导出</a-menu-item>
+        <a-menu-item key="settings" @click="select('settings')">设置</a-menu-item>
+      </a-menu>
+    </a-layout-sider>
+
+    <a-layout-content style="padding: 16px">
+      <GroupsTab v-if="currentTab === 'groups'" />
+      <UngroupedTab v-if="currentTab === 'ungrouped'" />
+      <HotTab v-if="currentTab === 'hot'" />
+      <ToolsTab v-if="currentTab === 'tools'" />
+      <ImportExportTab v-if="currentTab === 'importexport'" />
+      <SettingsTab v-if="currentTab === 'settings'" />
+    </a-layout-content>
+  </a-layout>
+</template>

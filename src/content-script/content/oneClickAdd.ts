@@ -30,7 +30,7 @@ interface AddEmojiButtonData {
  * @param data 表情数据
  */
 function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) {
-  button.addEventListener('click', async e => {
+  button.addEventListener('click', async (e) => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -42,7 +42,7 @@ function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) 
       // 发送消息到background script，执行添加表情的操作
       await chrome.runtime.sendMessage({
         action: 'addEmojiFromWeb',
-        emojiData: data
+        emojiData: data,
       })
 
       // 显示成功提示
@@ -120,7 +120,7 @@ function extractNameFromUrl(url: string): string {
  */
 function extractEmojiDataFromMfp(
   imgElement: HTMLImageElement,
-  titleContainer: Element
+  titleContainer: Element,
 ): AddEmojiButtonData | null {
   const src = imgElement.src
   if (!src || !src.startsWith('http')) {
@@ -150,7 +150,7 @@ function extractEmojiDataFromMfp(
 
   return {
     displayName,
-    realUrl: new URL(src)
+    realUrl: new URL(src),
   }
 }
 
@@ -274,7 +274,7 @@ function addEmojiButtonToMfp(mfpContainer: Element) {
 function scanForMagnificPopup() {
   const mfpContainers = document.querySelectorAll('.mfp-wrap.mfp-gallery')
 
-  mfpContainers.forEach(container => {
+  mfpContainers.forEach((container) => {
     if (isMagnificPopup(container)) {
       addEmojiButtonToMfp(container)
     }
@@ -285,13 +285,13 @@ function scanForMagnificPopup() {
  * 监听 DOM 变化，当 Magnific Popup 出现时自动执行扫描。
  */
 function observeMagnificPopup() {
-  const observer = new MutationObserver(mutations => {
+  const observer = new MutationObserver((mutations) => {
     let hasMfpChanges = false
 
-    mutations.forEach(mutation => {
+    mutations.forEach((mutation) => {
       if (mutation.type === 'childList') {
         // 检查是否有新的节点被添加，并且是 Magnific Popup 相关的
-        mutation.addedNodes.forEach(node => {
+        mutation.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) {
             const element = node as Element
             if (element.classList && element.classList.contains('mfp-wrap')) {
@@ -311,7 +311,7 @@ function observeMagnificPopup() {
   // 监听 body 的子节点变化，包括子树
   observer.observe(document.body, {
     childList: true,
-    subtree: true
+    subtree: true,
   })
 }
 

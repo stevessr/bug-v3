@@ -1,104 +1,3 @@
-<template>
-  <div :class="['popup-root', { mobile: settings.MobileMode }]">
-    <div class="popup-header">
-      <div class="center">
-        <div class="menu-scroll">
-          <a-menu v-model:selectedKeys="selectedKeys" mode="horizontal" :items="menuItems" />
-        </div>
-      </div>
-      <div class="right">
-        <a-button type="text" size="small" @click="openOptions">
-          <template #icon>
-            <setting-outlined />
-          </template>
-          设置
-        </a-button>
-      </div>
-    </div>
-
-    <!-- 搜索和图片缩放控制栏 -->
-    <div class="controls-section">
-      <!-- 搜索栏 -->
-      <div class="search-control">
-        <a-input
-          v-model:value="searchQuery"
-          placeholder="搜索表情..."
-          allowClear
-          @input="onSearchInput"
-        >
-          <template #prefix>
-            <search-outlined />
-          </template>
-        </a-input>
-      </div>
-
-      <!-- 图片缩放控制栏 -->
-      <div class="scale-control">
-        <div class="scale-control-content">
-          <span class="scale-label">图片缩放</span>
-          <a-slider
-            v-model:value="settings.imageScale"
-            :min="1"
-            :max="100"
-            class="scale-slider"
-            @change="onScaleChange"
-          />
-          <span class="scale-value">{{ settings.imageScale }}%</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="popup-body">
-      <div class="group-list">
-        <!-- 常用 -->
-        <div
-          v-if="(selectedGroup === 'all' || selectedGroup === 'hot') && filteredHot.length"
-          class="group-section"
-        >
-          <div class="group-title">常用</div>
-          <div class="emoji-grid" :style="gridStyle">
-            <div v-for="e in filteredHot" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
-              <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
-            </div>
-          </div>
-        </div>
-
-        <!-- 普通分组（按选中或全部显示） -->
-        <template v-for="g in filteredGroups" :key="g.UUID">
-          <div class="group-section" v-if="selectedGroup === 'all' || selectedGroup === g.UUID">
-            <div class="group-title">{{ g.displayName }}</div>
-            <div class="emoji-grid" :style="gridStyle">
-              <div v-for="e in g.emojis" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
-                <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <!-- 未分组 -->
-        <div
-          v-if="
-            (selectedGroup === 'all' || selectedGroup === 'ungrouped') && filteredUngrouped.length
-          "
-          class="group-section"
-        >
-          <div class="group-title">未分组</div>
-          <div class="emoji-grid" :style="gridStyle">
-            <div
-              v-for="e in filteredUngrouped"
-              :key="e.UUID"
-              class="emoji-cell"
-              @click="onEmojiClick(e)"
-            >
-              <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script lang="ts">
 declare const chrome: any
 import {
@@ -112,6 +11,7 @@ import {
   h,
   onBeforeUnmount,
 } from 'vue'
+
 import store, { recordUsage } from '../data/store/main'
 import { createPopupCommService } from '../services/communication'
 // lightweight local icon to avoid importing ant-design icons in popup build
@@ -488,6 +388,107 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <div class="popup-root" :class="[{ mobile: settings.MobileMode }]">
+    <div class="popup-header">
+      <div class="center">
+        <div class="menu-scroll">
+          <a-menu v-model:selectedKeys="selectedKeys" mode="horizontal" :items="menuItems" />
+        </div>
+      </div>
+      <div class="right">
+        <a-button type="text" size="small" @click="openOptions">
+          <template #icon>
+            <SettingOutlined />
+          </template>
+          设置
+        </a-button>
+      </div>
+    </div>
+
+    <!-- 搜索和图片缩放控制栏 -->
+    <div class="controls-section">
+      <!-- 搜索栏 -->
+      <div class="search-control">
+        <a-input
+          v-model:value="searchQuery"
+          placeholder="搜索表情..."
+          allowClear
+          @input="onSearchInput"
+        >
+          <template #prefix>
+            <SearchOutlined />
+          </template>
+        </a-input>
+      </div>
+
+      <!-- 图片缩放控制栏 -->
+      <div class="scale-control">
+        <div class="scale-control-content">
+          <span class="scale-label">图片缩放</span>
+          <a-slider
+            v-model:value="settings.imageScale"
+            :min="1"
+            :max="100"
+            class="scale-slider"
+            @change="onScaleChange"
+          />
+          <span class="scale-value">{{ settings.imageScale }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-body">
+      <div class="group-list">
+        <!-- 常用 -->
+        <div
+          v-if="(selectedGroup === 'all' || selectedGroup === 'hot') && filteredHot.length"
+          class="group-section"
+        >
+          <div class="group-title">常用</div>
+          <div class="emoji-grid" :style="gridStyle">
+            <div v-for="e in filteredHot" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
+              <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 普通分组（按选中或全部显示） -->
+        <template v-for="g in filteredGroups" :key="g.UUID">
+          <div class="group-section" v-if="selectedGroup === 'all' || selectedGroup === g.UUID">
+            <div class="group-title">{{ g.displayName }}</div>
+            <div class="emoji-grid" :style="gridStyle">
+              <div v-for="e in g.emojis" :key="e.UUID" class="emoji-cell" @click="onEmojiClick(e)">
+                <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- 未分组 -->
+        <div
+          v-if="
+            (selectedGroup === 'all' || selectedGroup === 'ungrouped') && filteredUngrouped.length
+          "
+          class="group-section"
+        >
+          <div class="group-title">未分组</div>
+          <div class="emoji-grid" :style="gridStyle">
+            <div
+              v-for="e in filteredUngrouped"
+              :key="e.UUID"
+              class="emoji-cell"
+              @click="onEmojiClick(e)"
+            >
+              <img :src="stringifyUrl(e.displayUrl || e.realUrl)" :style="emojiStyle as any" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .popup-root {

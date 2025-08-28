@@ -1,28 +1,3 @@
-<template>
-  <a-modal :open="visible" title="添加表情" @ok="onOk" @cancel="close">
-    <a-form layout="vertical">
-      <a-form-item label="图片URL">
-        <a-input v-model:value="url" />
-      </a-form-item>
-      <a-form-item label="预览 URL (可选)">
-        <a-input
-          v-model:value="previewUrl"
-          placeholder="用于列表/缩略图的预览地址，若为空使用图片URL"
-        />
-      </a-form-item>
-      <a-form-item label="显示名称">
-        <a-input v-model:value="displayName" />
-      </a-form-item>
-      <a-form-item label="变种 (JSON，可选)">
-        <a-textarea
-          v-model:value="variantsText"
-          placeholder='例如: {"1x":"https://...","2x":"https://..."}'
-        />
-      </a-form-item>
-    </a-form>
-  </a-modal>
-</template>
-
 <script lang="ts">
 import { defineComponent, ref, watch } from 'vue'
 export default defineComponent({
@@ -92,3 +67,28 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <a-modal :open="visible" title="添加表情" @ok="onOk" @cancel="close">
+    <a-form layout="vertical">
+      <a-form-item label="图片URL">
+        <a-input v-model:value="url" />
+      </a-form-item>
+      <a-form-item label="预览 URL (可选)">
+        <a-input
+          v-model:value="previewUrl"
+          placeholder="用于列表/缩略图的预览地址，若为空使用图片URL"
+        />
+      </a-form-item>
+      <a-form-item label="显示名称">
+        <a-input v-model:value="displayName" />
+      </a-form-item>
+      <a-form-item label="变种 (JSON，可选)">
+        <a-textarea
+          v-model:value="variantsText"
+          placeholder='例如: {"1x":"https://...","2x":"https://..."}'
+        />
+      </a-form-item>
+    </a-form>
+  </a-modal>
+</template>

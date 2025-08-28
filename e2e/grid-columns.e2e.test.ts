@@ -1,6 +1,7 @@
-import { test, expect, chromium } from '@playwright/test'
 import path from 'path'
 import { fileURLToPath } from 'url'
+
+import { test, expect, chromium } from '@playwright/test'
 
 function makePayload(gridColumns: number) {
   return {

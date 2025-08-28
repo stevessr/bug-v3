@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+
 import GroupsTab from '../options/tabs/GroupsTab.vue'
 import PopupApp from '../popup/PopupApp.vue'
 import store from '../data/store/main'

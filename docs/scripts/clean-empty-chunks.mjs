@@ -22,7 +22,7 @@ function removeEmptyFiles(dir) {
       if (stat.isFile() && stat.size <= 1) {
         fs.unlinkSync(p)
         console.log(
-          `[clean-empty-chunks] removed ${path.relative(process.cwd(), p)} (size ${stat.size})`
+          `[clean-empty-chunks] removed ${path.relative(process.cwd(), p)} (size ${stat.size})`,
         )
         removed++
       }

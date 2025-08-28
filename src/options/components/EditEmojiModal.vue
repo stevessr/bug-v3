@@ -1,69 +1,3 @@
-<template>
-  <a-modal :open="visible" title="编辑表情" @cancel="close" :footer="null">
-    <a-form layout="vertical">
-      <a-form-item label="图片URL">
-        <a-input v-model:value="url" />
-      </a-form-item>
-      <a-form-item label="图片 & 预览">
-        <div style="display: flex; gap: 16px; align-items: flex-start">
-          <div style="flex: 1">
-            <div style="font-size: 12px; color: rgba(0, 0, 0, 0.85); margin-bottom: 4px">图片</div>
-            <div style="display: flex; align-items: center; gap: 8px">
-              <img
-                v-if="url"
-                :src="url"
-                style="max-width: 120px; max-height: 80px; border: 1px solid #eee; padding: 4px"
-              />
-              <div v-else style="color: #888">暂无预览</div>
-            </div>
-          </div>
-          <div style="flex: 1">
-            <div style="font-size: 12px; color: rgba(0, 0, 0, 0.85); margin-bottom: 4px">预览</div>
-            <div style="display: flex; align-items: center; gap: 8px">
-              <img
-                v-if="previewUrl"
-                :src="previewUrl"
-                style="max-width: 120px; max-height: 80px; border: 1px solid #eee; padding: 4px"
-              />
-              <div v-else style="color: #888">暂无预览</div>
-            </div>
-          </div>
-        </div>
-      </a-form-item>
-      <a-form-item label="预览 URL (可选)">
-        <a-input
-          v-model:value="previewUrl"
-          placeholder="用于列表/缩略图的预览地址，若为空使用图片URL"
-        />
-      </a-form-item>
-      <a-form-item label="显示名称">
-        <a-input v-model:value="displayName" />
-      </a-form-item>
-      <a-form-item label="变种 (JSON，可选)">
-        <a-textarea
-          v-model:value="variantsText"
-          placeholder='例如: {"1x":"https://...","2x":"https://..."}'
-        />
-      </a-form-item>
-      <div style="display: flex; justify-content: space-between; align-items: center">
-        <a-popconfirm
-          title="确认删除该表情？"
-          ok-text="是"
-          cancel-text="否"
-          @confirm="onConfirmDelete"
-          @cancel="onCancelDelete"
-        >
-          <a-button danger>删除表情</a-button>
-        </a-popconfirm>
-        <div>
-          <a-button @click="close" style="margin-right: 8px">取消</a-button>
-          <a-button type="primary" @click="onOk">保存</a-button>
-        </div>
-      </div>
-    </a-form>
-  </a-modal>
-</template>
-
 <script lang="ts">
 import { defineComponent, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
@@ -193,3 +127,69 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <a-modal :open="visible" title="编辑表情" @cancel="close" :footer="null">
+    <a-form layout="vertical">
+      <a-form-item label="图片URL">
+        <a-input v-model:value="url" />
+      </a-form-item>
+      <a-form-item label="图片 & 预览">
+        <div style="display: flex; gap: 16px; align-items: flex-start">
+          <div style="flex: 1">
+            <div style="font-size: 12px; color: rgba(0, 0, 0, 0.85); margin-bottom: 4px">图片</div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <img
+                v-if="url"
+                :src="url"
+                style="max-width: 120px; max-height: 80px; border: 1px solid #eee; padding: 4px"
+              />
+              <div v-else style="color: #888">暂无预览</div>
+            </div>
+          </div>
+          <div style="flex: 1">
+            <div style="font-size: 12px; color: rgba(0, 0, 0, 0.85); margin-bottom: 4px">预览</div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <img
+                v-if="previewUrl"
+                :src="previewUrl"
+                style="max-width: 120px; max-height: 80px; border: 1px solid #eee; padding: 4px"
+              />
+              <div v-else style="color: #888">暂无预览</div>
+            </div>
+          </div>
+        </div>
+      </a-form-item>
+      <a-form-item label="预览 URL (可选)">
+        <a-input
+          v-model:value="previewUrl"
+          placeholder="用于列表/缩略图的预览地址，若为空使用图片URL"
+        />
+      </a-form-item>
+      <a-form-item label="显示名称">
+        <a-input v-model:value="displayName" />
+      </a-form-item>
+      <a-form-item label="变种 (JSON，可选)">
+        <a-textarea
+          v-model:value="variantsText"
+          placeholder='例如: {"1x":"https://...","2x":"https://..."}'
+        />
+      </a-form-item>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <a-popconfirm
+          title="确认删除该表情？"
+          ok-text="是"
+          cancel-text="否"
+          @confirm="onConfirmDelete"
+          @cancel="onCancelDelete"
+        >
+          <a-button danger>删除表情</a-button>
+        </a-popconfirm>
+        <div>
+          <a-button @click="close" style="margin-right: 8px">取消</a-button>
+          <a-button type="primary" @click="onOk">保存</a-button>
+        </div>
+      </div>
+    </a-form>
+  </a-modal>
+</template>

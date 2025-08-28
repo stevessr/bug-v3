@@ -1,10 +1,3 @@
-<template>
-  <div
-    ref="editorContainer"
-    style="height: 300px; border: 1px solid #d9d9d9; border-radius: 6px"
-  ></div>
-</template>
-
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted, watch } from 'vue'
 
@@ -212,3 +205,10 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <div
+    ref="editorContainer"
+    style="height: 300px; border: 1px solid #d9d9d9; border-radius: 6px"
+  ></div>
+</template>

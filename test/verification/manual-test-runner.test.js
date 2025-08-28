@@ -11,7 +11,7 @@ import path from 'path'
 const testResults = {
   passed: 0,
   failed: 0,
-  skipped: 0
+  skipped: 0,
 }
 
 function log(message) {
@@ -138,7 +138,7 @@ async function verifyComponentFiles() {
       'src/options/components/ImageEditorTab.vue',
       'src/options/components/AIGeneratorTab.vue',
       'src/options/components/EmojiNamingTab.vue',
-      'src/options/components/ExternalImportTab.vue'
+      'src/options/components/ExternalImportTab.vue',
     ]
 
     for (const file of componentFiles) {
@@ -222,7 +222,7 @@ async function verifyTestFiles() {
       'scripts/tests/ai-generator.spec.ts',
       'scripts/tests/emoji-renaming.spec.ts',
       'scripts/tests/external-import.spec.ts',
-      'scripts/tests/integration.spec.ts'
+      'scripts/tests/integration.spec.ts',
     ]
 
     for (const file of testFiles) {
@@ -274,7 +274,7 @@ async function runAllTests() {
 }
 
 // Run the tests
-runAllTests().catch(error => {
+runAllTests().catch((error) => {
   console.error('Test runner failed:', error)
   process.exit(1)
 })

@@ -1,6 +1,6 @@
-import { chromium } from 'playwright'
 import path from 'path'
 
+import { chromium } from 'playwright'
 ;(async () => {
   const extensionPath = path.resolve('./dist')
   const userDataDir = path.resolve('./.pw-user-data-observe')

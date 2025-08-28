@@ -1,4 +1,5 @@
 import type { EmojiGroup } from '../type/emoji/emoji'
+
 import storage from './storage'
 import settingsStore from './settingsStore'
 

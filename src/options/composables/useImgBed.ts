@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
+
 import type { ImgBedUploadChannel } from '../types'
 import storage from '../../data/update/storage'
 

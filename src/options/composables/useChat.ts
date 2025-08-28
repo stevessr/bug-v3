@@ -1,5 +1,6 @@
 import { ref, nextTick, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
+
 import type { OpenRouterService, OpenRouterMessage } from '../../services/openrouter'
 import type { ChatMessage } from '../types'
 
@@ -95,7 +96,7 @@ export function useChat({ openRouterService, apiKeys, fileList, pendingImages }:
 
       if (enableStreaming.value) {
         let assistantContent = ''
-        let assistantImages: any[] = []
+        const assistantImages: any[] = []
         const stream = enableImageGeneration.value
           ? openRouterService.streamImage(userMessage, selectedModel.value)
           : openRouterService.streamText(apiMessages, selectedModel.value)
@@ -188,8 +189,8 @@ export function useChat({ openRouterService, apiKeys, fileList, pendingImages }:
             const newImages = chunk.choices[0].delta.images.map((img: any) => {
               if (img.image_url?.url)
                 return { type: 'image_url', image_url: { url: img.image_url.url } }
-              let raw = img.url || (typeof img === 'string' ? img : '')
-              let url =
+              const raw = img.url || (typeof img === 'string' ? img : '')
+              const url =
                 raw && !raw.startsWith('data:') && !raw.startsWith('http')
                   ? `data:image/png;base64,${raw}`
                   : raw

@@ -61,7 +61,7 @@ if (typeof window !== 'undefined') {
 function shouldInjectEmoji(): boolean {
   // Check for discourse meta tags
   const discourseMetaTags = document.querySelectorAll(
-    'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
+    'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]',
   )
   if (discourseMetaTags.length > 0) {
     console.log('[Emoji Userscript] Discourse detected via meta tags')
@@ -81,14 +81,14 @@ function shouldInjectEmoji(): boolean {
   // Check current domain - allow linux.do and other known sites
   const hostname = window.location.hostname.toLowerCase()
   const allowedDomains = ['linux.do', 'meta.discourse.org']
-  if (allowedDomains.some(domain => hostname.includes(domain))) {
+  if (allowedDomains.some((domain) => hostname.includes(domain))) {
     console.log('[Emoji Userscript] Allowed domain detected:', hostname)
     return true
   }
 
   // Check for editor elements that suggest a discussion platform
   const editors = document.querySelectorAll(
-    'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
+    'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea',
   )
   if (editors.length > 0) {
     console.log('[Emoji Userscript] Discussion editor detected')
@@ -102,7 +102,7 @@ function shouldInjectEmoji(): boolean {
 // Initialize the emoji feature
 function initializeEmoji() {
   console.log('[Emoji Userscript] Initializing emoji feature...')
-  
+
   try {
     const picker = installDefaultNachonekoPicker()
     if (picker && typeof picker.stop === 'function') {
@@ -118,7 +118,7 @@ function initializeEmoji() {
 // Only inject if compatible platform is detected
 if (shouldInjectEmoji()) {
   console.log('[Emoji Userscript] Starting emoji injection...')
-  
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeEmoji)
   } else {
@@ -147,9 +147,11 @@ if (shouldInjectEmoji()) {
     `
     managementEntry.textContent = '表情管理'
     managementEntry.title = '点击打开表情包管理界面'
-    
+
     managementEntry.addEventListener('click', () => {
-      const managementUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(`
+      const managementUrl =
+        'data:text/html;charset=utf-8,' +
+        encodeURIComponent(`
         <!DOCTYPE html>
         <html>
         <head>
@@ -217,17 +219,17 @@ if (shouldInjectEmoji()) {
       `)
       window.open(managementUrl, '_blank', 'width=800,height=600')
     })
-    
+
     managementEntry.addEventListener('mouseenter', () => {
       managementEntry.style.opacity = '1'
     })
-    
+
     managementEntry.addEventListener('mouseleave', () => {
       managementEntry.style.opacity = '0.8'
     })
-    
+
     document.body.appendChild(managementEntry)
-    
+
     // Auto-hide after 5 seconds
     setTimeout(() => {
       managementEntry.style.display = 'none'

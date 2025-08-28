@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
+
 import NewGroupModal from '../options/components/NewGroupModal.vue'
 
 describe('NewGroupModal icon parsing', () => {

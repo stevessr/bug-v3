@@ -75,7 +75,7 @@ export const defaultEmojiGroups: EmojiGroup[] = ${JSON.stringify(configData.grou
 
           // 通知客户端重新加载
           server.ws.send({
-            type: 'full-reload'
+            type: 'full-reload',
           })
         } catch (error) {
           console.error('❌ 重新生成 defaultEmojiGroups.ts 失败:', error)
@@ -83,6 +83,6 @@ export const defaultEmojiGroups: EmojiGroup[] = ${JSON.stringify(configData.grou
 
         return []
       }
-    }
+    },
   }
 }

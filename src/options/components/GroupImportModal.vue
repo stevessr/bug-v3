@@ -1,101 +1,8 @@
-<template>
-  <a-modal
-    v-model:open="visible"
-    title="导入分组表情"
-    :width="1000"
-    :bodyStyle="{ maxHeight: '72vh', overflow: 'auto' }"
-    @ok="onOk"
-    @cancel="close"
-  >
-    <a-form layout="vertical">
-      <a-form-item
-        label="输入要导入的内容 (支持单个 URL / Markdown / BBCode / HTML / 或分组导出 JSON)"
-      >
-        <a-textarea v-model:value="text" rows="6" />
-        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center">
-          <a-upload
-            :file-list="fileList"
-            :before-upload="beforeUpload"
-            accept="application/json,text/*"
-            :show-upload-list="false"
-          >
-            <a-button type="dashed" style="border-radius: 6px">
-              <template #icon>
-                <upload-outlined />
-              </template>
-              选择文件导入
-            </a-button>
-          </a-upload>
-          <span style="font-size: 12px; color: var(--ant-text-color-secondary)"
-            >支持 JSON / 文本格式</span
-          >
-        </div>
-      </a-form-item>
-      <a-form-item label="导入格式">
-        <a-select v-model:value="format" style="width: 220px">
-          <a-select-option value="auto">自动检测</a-select-option>
-          <a-select-option value="text">纯文本 / URL 列表 / BBCode</a-select-option>
-          <a-select-option value="markdown">Markdown 图片语法</a-select-option>
-          <a-select-option value="html">HTML（img / a.lightbox）</a-select-option>
-          <a-select-option value="group-json">分组导出 JSON</a-select-option>
-        </a-select>
-        <a-button style="margin-left: 12px" @click="parse">解析预览</a-button>
-      </a-form-item>
-      <a-list v-if="preview.length" :dataSource="preview" bordered>
-        <a-list-item v-for="(p, idx) in preview" :key="p.id">
-          <template #avatar>
-            <img
-              :src="selected[idx] || p.displayUrl || p.realUrl"
-              style="width: 56px; height: 56px; object-fit: cover; border-radius: 6px"
-            />
-          </template>
-          <a-list-item-meta :title="p.displayName || p.realUrl" :description="p.realUrl" />
-          <template #actions>
-            <div style="display: flex; flex-direction: column; gap: 8px; width: 420px">
-              <div
-                class="variant-grid"
-                :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }"
-              >
-                <div
-                  v-for="(v, vi) in variantList(p)"
-                  :key="vi"
-                  class="variant-item"
-                  :class="{ selected: selected[idx] === v.url }"
-                >
-                  <img :src="v.url" alt="variant" />
-                  <div class="variant-label">{{ v.label }}</div>
-                </div>
-              </div>
-              <a-select
-                v-model:value="selected[idx]"
-                style="width: 100%"
-                placeholder="选择作为预览 URL"
-              >
-                <a-select-option v-for="(v, vi) in variantList(p)" :key="vi" :value="v.url"
-                  >{{ v.label }} — {{ truncate(v.url) }}</a-select-option
-                >
-              </a-select>
-              <div style="font-size: 12px; color: var(--ant-text-color-secondary)">
-                使用上方下拉选择要作为条目的预览 URL
-              </div>
-            </div>
-          </template>
-        </a-list-item>
-      </a-list>
-    </a-form>
-    <a-form-item style="display: flex; gap: 8px; align-items: center">
-      <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
-        <span style="font-size: 12px; color: var(--ant-text-color-secondary)">网格列数</span>
-        <a-input-number v-model:value="gridCols" :min="2" :max="6" />
-      </div>
-    </a-form-item>
-  </a-modal>
-</template>
-
 <script lang="ts">
 import { defineComponent, ref, watch } from 'vue'
-import { parseEmojisFromText } from '../utils/parser'
 import { UploadOutlined } from '@ant-design/icons-vue'
+
+import { parseEmojisFromText } from '../utils/parser'
 
 export default defineComponent({
   components: {
@@ -392,6 +299,100 @@ export default defineComponent({
   },
 })
 </script>
+
+<template>
+  <a-modal
+    v-model:open="visible"
+    title="导入分组表情"
+    :width="1000"
+    :bodyStyle="{ maxHeight: '72vh', overflow: 'auto' }"
+    @ok="onOk"
+    @cancel="close"
+  >
+    <a-form layout="vertical">
+      <a-form-item
+        label="输入要导入的内容 (支持单个 URL / Markdown / BBCode / HTML / 或分组导出 JSON)"
+      >
+        <a-textarea v-model:value="text" rows="6" />
+        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center">
+          <a-upload
+            :file-list="fileList"
+            :before-upload="beforeUpload"
+            accept="application/json,text/*"
+            :show-upload-list="false"
+          >
+            <a-button type="dashed" style="border-radius: 6px">
+              <template #icon>
+                <UploadOutlined />
+              </template>
+              选择文件导入
+            </a-button>
+          </a-upload>
+          <span style="font-size: 12px; color: var(--ant-text-color-secondary)"
+            >支持 JSON / 文本格式</span
+          >
+        </div>
+      </a-form-item>
+      <a-form-item label="导入格式">
+        <a-select v-model:value="format" style="width: 220px">
+          <a-select-option value="auto">自动检测</a-select-option>
+          <a-select-option value="text">纯文本 / URL 列表 / BBCode</a-select-option>
+          <a-select-option value="markdown">Markdown 图片语法</a-select-option>
+          <a-select-option value="html">HTML（img / a.lightbox）</a-select-option>
+          <a-select-option value="group-json">分组导出 JSON</a-select-option>
+        </a-select>
+        <a-button style="margin-left: 12px" @click="parse">解析预览</a-button>
+      </a-form-item>
+      <a-list v-if="preview.length" :dataSource="preview" bordered>
+        <a-list-item v-for="(p, idx) in preview" :key="p.id">
+          <template #avatar>
+            <img
+              :src="selected[idx] || p.displayUrl || p.realUrl"
+              style="width: 56px; height: 56px; object-fit: cover; border-radius: 6px"
+            />
+          </template>
+          <a-list-item-meta :title="p.displayName || p.realUrl" :description="p.realUrl" />
+          <template #actions>
+            <div style="display: flex; flex-direction: column; gap: 8px; width: 420px">
+              <div
+                class="variant-grid"
+                :style="{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }"
+              >
+                <div
+                  v-for="(v, vi) in variantList(p)"
+                  :key="vi"
+                  class="variant-item"
+                  :class="{ selected: selected[idx] === v.url }"
+                >
+                  <img :src="v.url" alt="variant" />
+                  <div class="variant-label">{{ v.label }}</div>
+                </div>
+              </div>
+              <a-select
+                v-model:value="selected[idx]"
+                style="width: 100%"
+                placeholder="选择作为预览 URL"
+              >
+                <a-select-option v-for="(v, vi) in variantList(p)" :key="vi" :value="v.url"
+                  >{{ v.label }} — {{ truncate(v.url) }}</a-select-option
+                >
+              </a-select>
+              <div style="font-size: 12px; color: var(--ant-text-color-secondary)">
+                使用上方下拉选择要作为条目的预览 URL
+              </div>
+            </div>
+          </template>
+        </a-list-item>
+      </a-list>
+    </a-form>
+    <a-form-item style="display: flex; gap: 8px; align-items: center">
+      <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
+        <span style="font-size: 12px; color: var(--ant-text-color-secondary)">网格列数</span>
+        <a-input-number v-model:value="gridCols" :min="2" :max="6" />
+      </div>
+    </a-form-item>
+  </a-modal>
+</template>
 
 <style scoped>
 .variant-grid {

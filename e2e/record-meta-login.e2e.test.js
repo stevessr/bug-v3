@@ -1,8 +1,7 @@
-const { chromium } = require('playwright')
 const path = require('path')
 const readline = require('readline')
 
-;(async () => {
+const { chromium } = require('playwright')(async () => {
   try {
     const extensionPath = path.resolve(__dirname, '..', 'dist')
     const userDataDir = path.join(__dirname, '.meta-user-data')

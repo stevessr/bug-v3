@@ -1,5 +1,6 @@
 import type { Settings } from '../type/settings/settings'
 import type { EmojiGroup } from '../type/emoji/emoji'
+
 import storage from './storage'
 import type { PersistPayload } from './storage'
 
@@ -34,7 +35,8 @@ function setSettings(patch: Partial<Settings>, groups?: EmojiGroup[]) {
   save(groups)
 }
 
-function save(groups?: EmojiGroup[], ungrouped?: any[]) { // Added ungrouped parameter
+function save(groups?: EmojiGroup[], ungrouped?: any[]) {
+  // Added ungrouped parameter
   current.lastModified = new Date()
   // preserve any existing ungrouped payload if present
   const existing = storage.loadPayload()

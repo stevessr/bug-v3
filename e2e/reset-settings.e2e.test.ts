@@ -1,6 +1,8 @@
-import { test, expect, chromium, Page } from '@playwright/test'
 import path from 'path'
 import { fileURLToPath } from 'url'
+
+import { test, expect, chromium, Page } from '@playwright/test'
+
 import { Antd, VDialog, VTab } from './utils'
 
 function makePayload(gridColumns: number, syncConfig: object) {

@@ -1,6 +1,7 @@
 import type { Settings } from '../type/settings/settings'
 declare const chrome: any
 import type { EmojiGroup } from '../type/emoji/emoji'
+
 import { v4 as uuidv4 } from 'uuid'
 
 const STORAGE_KEY = 'bugcopilot_settings_v1'
@@ -20,7 +21,7 @@ function createCommonEmojiGroup(): EmojiGroup {
     displayName: '常用表情',
     icon: '⭐',
     order: 0,
-    emojis: [] // 初始为空，由用户添加
+    emojis: [], // 初始为空，由用户添加
   }
 }
 
@@ -36,7 +37,7 @@ function ensureCommonEmojiGroup() {
         console.log('[Storage] Created common emoji group in localStorage')
       }
     }
-    
+
     // 检查 chrome.storage.local
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get([KEY_COMMON_EMOJIS], (items: any) => {
@@ -102,7 +103,7 @@ export function loadPayload(): PersistPayload | null {
 
     // collect emoji groups by using an index if present (preserve order), otherwise scan keys
     const emojiGroups: any[] = []
-    
+
     // 首先加载常用表情分组
     try {
       const commonGroupRaw = window.localStorage.getItem(KEY_COMMON_EMOJIS)
@@ -120,7 +121,7 @@ export function loadPayload(): PersistPayload | null {
       // 如果加载失败，创建默认分组
       emojiGroups.push(createCommonEmojiGroup())
     }
-    
+
     try {
       const indexRaw = window.localStorage.getItem(KEY_EMOJI_INDEX)
       if (indexRaw) {
@@ -184,17 +185,18 @@ export function savePayload(payload: PersistPayload) {
       const existingKeys: string[] = []
       for (let i = 0; i < window.localStorage.length; i++) {
         const k = window.localStorage.key(i)
-        if (k && k.startsWith(KEY_EMOJI_PREFIX) && k !== KEY_COMMON_EMOJIS) { // 保留常用表情分组
+        if (k && k.startsWith(KEY_EMOJI_PREFIX) && k !== KEY_COMMON_EMOJIS) {
+          // 保留常用表情分组
           existingKeys.push(k)
         }
       }
 
       const incomingKeys: string[] = []
       const incomingIndex: string[] = []
-      
+
       // 处理常用表情分组（特殊处理）
       const commonGroup = (payload.emojiGroups || []).find(
-        (g: any) => g.UUID === 'common-emoji-group' || g.displayName?.includes('常用')
+        (g: any) => g.UUID === 'common-emoji-group' || g.displayName?.includes('常用'),
       )
       if (commonGroup) {
         try {
@@ -204,14 +206,14 @@ export function savePayload(payload: PersistPayload) {
           console.warn('[Storage] Failed to save common emoji group:', error)
         }
       }
-      
+
       ;(payload.emojiGroups || []).forEach((g: any) => {
         try {
           // 跳过常用表情分组，它已经在上面特殊处理了
           if (g.UUID === 'common-emoji-group' || g.displayName?.includes('常用')) {
             return
           }
-          
+
           // clone group to avoid mutating caller's object
           const group = g && typeof g === 'object' ? { ...g } : { ...g }
           let uuid =
@@ -286,22 +288,22 @@ export function savePayload(payload: PersistPayload) {
         const storeObj: any = {}
         storeObj[KEY_SETTINGS] = payload.Settings || {}
         storeObj[KEY_UNGROUPED] = payload.ungrouped || []
-        
+
         // 特殊处理常用表情分组
         const commonGroup = (payload.emojiGroups || []).find(
-          (g: any) => g.UUID === 'common-emoji-group' || g.displayName?.includes('常用')
+          (g: any) => g.UUID === 'common-emoji-group' || g.displayName?.includes('常用'),
         )
         if (commonGroup) {
           storeObj[KEY_COMMON_EMOJIS] = commonGroup
         }
-        
+
         ;(payload.emojiGroups || []).forEach((g: any) => {
           try {
             // 跳过常用表情分组，它已经在上面特殊处理了
             if (g.UUID === 'common-emoji-group' || g.displayName?.includes('常用')) {
               return
             }
-            
+
             const group = g && typeof g === 'object' ? { ...g } : { ...g }
             let uuid =
               group &&
@@ -412,12 +414,12 @@ export function getCommonEmojiGroup(): EmojiGroup | null {
         return JSON.parse(raw)
       }
     }
-    
+
     // 从 chrome.storage.local 获取
     if (extCache && extCache[KEY_COMMON_EMOJIS]) {
       return extCache[KEY_COMMON_EMOJIS]
     }
-    
+
     // 如果都没有，返回默认分组
     return createCommonEmojiGroup()
   } catch (error) {
@@ -433,7 +435,7 @@ export function saveCommonEmojiGroup(group: EmojiGroup) {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem(KEY_COMMON_EMOJIS, JSON.stringify(group))
     }
-    
+
     // 保存到 chrome.storage.local
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       const storeObj: any = {}
@@ -441,7 +443,7 @@ export function saveCommonEmojiGroup(group: EmojiGroup) {
       chrome.storage.local.set(storeObj, () => {
         console.log('[Storage] Saved common emoji group to extension storage')
       })
-      
+
       // 更新内存缓存
       extCache[KEY_COMMON_EMOJIS] = group
     }
@@ -450,15 +452,15 @@ export function saveCommonEmojiGroup(group: EmojiGroup) {
   }
 }
 
-export default { 
-  loadPayload, 
-  savePayload, 
-  setItem, 
-  getItem, 
-  getCommonEmojiGroup, 
+export default {
+  loadPayload,
+  savePayload,
+  setItem,
+  getItem,
+  getCommonEmojiGroup,
   saveCommonEmojiGroup,
   createCommonEmojiGroup,
-  ensureCommonEmojiGroup
+  ensureCommonEmojiGroup,
 }
 
 // 初始化常用表情分组

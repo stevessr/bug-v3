@@ -15,7 +15,7 @@ export function copyHtmlToRootPlugin(): Plugin {
       }
 
       // Get all HTML files from src/html in dist
-      const htmlFiles = fs.readdirSync(htmlSrcDir).filter(file => file.endsWith('.html'))
+      const htmlFiles = fs.readdirSync(htmlSrcDir).filter((file) => file.endsWith('.html'))
 
       // Copy each HTML file to root of dist
       for (const htmlFile of htmlFiles) {
@@ -37,6 +37,6 @@ export function copyHtmlToRootPlugin(): Plugin {
       } catch (error) {
         console.warn(`⚠️ Failed to clean up src directory:`, error)
       }
-    }
+    },
   }
 }

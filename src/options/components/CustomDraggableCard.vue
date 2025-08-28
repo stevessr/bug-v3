@@ -1,10 +1,24 @@
+<script setup lang="ts">
+import { isLikelyUrl } from '../utils/isLikelyUrl'
+import type { EmojiGroup } from '../../data/type/emoji/emoji'
+
+defineProps<{
+  group: EmojiGroup
+}>()
+</script>
+
 <template>
   <div class="custom-card">
     <div class="card-header">
       <span>{{ group.displayName }}</span>
     </div>
     <div class="card-cover">
-      <img v-if="isLikelyUrl(group.icon.toString())" :src="group.icon.toString()" alt="Group Icon" class="cover-image" />
+      <img
+        v-if="isLikelyUrl(group.icon.toString())"
+        :src="group.icon.toString()"
+        alt="Group Icon"
+        class="cover-image"
+      />
       <div v-else class="cover-text">
         {{ group.icon }}
       </div>
@@ -15,15 +29,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { isLikelyUrl } from '../utils/isLikelyUrl';
-import type { EmojiGroup } from '../../data/type/emoji/emoji';
-
-defineProps<{
-  group: EmojiGroup;
-}>();
-</script>
 
 <style scoped>
 .custom-card {
@@ -48,7 +53,6 @@ defineProps<{
   font-weight: 500;
   border-bottom: 1px solid #f0f0f0;
 }
-
 
 .card-cover {
   height: 150px;
