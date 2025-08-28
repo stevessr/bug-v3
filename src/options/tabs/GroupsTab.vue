@@ -22,7 +22,7 @@
       <a-tab-pane key="list" tab="默认视图">
         <a-collapse>
           <GroupPanel
-            v-for="g in groups"
+            v-for="g in filteredGroups"
             :key="g.UUID"
             :group="g"
             :gridCols="gridCols"
@@ -41,7 +41,7 @@
       </a-tab-pane>
 
       <a-tab-pane key="order" tab="表情组顺序管理">
-        <draggable v-model="groups" class="group-cards" item-key="UUID" @end="onDragEnd">
+        <draggable v-model="allGroups" class="group-cards" item-key="UUID" @end="onDragEnd">
           <template #item="{ element: g }">
             <CustomDraggableCard :group="g" />
           </template>
@@ -72,7 +72,7 @@
   </a-card>
 </template>
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick, defineExpose } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, defineExpose, computed } from 'vue'
 import draggable from 'vuedraggable'
 import CustomDraggableCard from '../components/CustomDraggableCard.vue'
 import GroupPanel from '../components/GroupPanel.vue'
@@ -83,6 +83,25 @@ import { isLikelyUrl } from '../utils/isLikelyUrl'
 import type { EmojiGroup } from '../../data/type/emoji/emoji'
 
 const groups = ref<EmojiGroup[]>([])
+
+// 过滤掉常用表情分组，不在默认视图中显示
+const filteredGroups = computed(() => {
+  return groups.value.filter((g) => g.UUID !== 'common-emoji-group')
+})
+
+// 获取所有分组（排除常用表情），用于顺序管理
+const allGroups = computed({
+  get: () => groups.value.filter((g) => g.UUID !== 'common-emoji-group'),
+  set: (value) => {
+    // 保留常用表情分组，只更新其他分组的顺序
+    const commonGroup = groups.value.find((g) => g.UUID === 'common-emoji-group')
+    if (commonGroup) {
+      groups.value = [commonGroup, ...value]
+    } else {
+      groups.value = value
+    }
+  },
+})
 const gridCols = ref<number>(
   (() => {
     try {

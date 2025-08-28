@@ -49,6 +49,12 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
     return !!(replyEle && replyEle.className.includes('hide-preview') && window.innerWidth < 1600)
   }
 
+  // 检测移动端模式（设备检测或设置强制移动端）
+  const isMobileMode = () => {
+    // 首先检查设置中的移动端模式
+    return store.getSettings().MobileMode
+  }
+
   function attachPickerBehavior(emojiButton: HTMLElement) {
     function handleClick(event: MouseEvent) {
       event.stopPropagation()
@@ -77,9 +83,37 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
               try {
                 emojiPicker.classList.add(config.emojiPickerClass)
               } catch (_) {}
-              // append the generator-produced root node directly
-              document.body.appendChild(emojiPicker)
-              createdNodes.push(emojiPicker)
+
+              // 检查是否为移动端模式，如果是则创建 modal-container
+              if (isMobileMode()) {
+                let modalContainer = document.querySelector('.modal-container') as HTMLElement
+                if (!modalContainer) {
+                  modalContainer = document.createElement('div')
+                  modalContainer.className = 'modal-container'
+                  document.body.appendChild(modalContainer)
+                }
+
+                modalContainer.innerHTML = '' // 清除之前的内容
+
+                const backdrop = document.createElement('div')
+                backdrop.className = 'd-modal__backdrop'
+                backdrop.addEventListener('click', () => {
+                  modalContainer.remove()
+                  try {
+                    emojiButton.setAttribute('aria-expanded', 'false')
+                  } catch (_) {}
+                })
+
+                modalContainer.appendChild(emojiPicker)
+                modalContainer.appendChild(backdrop)
+                createdNodes.push(modalContainer)
+
+                console.log('[nacho-inject] 移动端模态表情选择器已创建')
+              } else {
+                // 桌面端模式，直接添加到 body
+                document.body.appendChild(emojiPicker)
+                createdNodes.push(emojiPicker)
+              }
             } catch (_) {}
           })
         } else {
@@ -100,8 +134,36 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
       } catch (_) {}
       // append the generator-produced root node directly (if not already appended by async branch)
       if (!document.body.contains(emojiPicker)) {
-        document.body.appendChild(emojiPicker)
-        createdNodes.push(emojiPicker)
+        // 检查是否为移动端模式，如果是则创建 modal-container
+        if (isMobileMode()) {
+          let modalContainer = document.querySelector('.modal-container') as HTMLElement
+          if (!modalContainer) {
+            modalContainer = document.createElement('div')
+            modalContainer.className = 'modal-container'
+            document.body.appendChild(modalContainer)
+          }
+
+          modalContainer.innerHTML = '' // 清除之前的内容
+
+          const backdrop = document.createElement('div')
+          backdrop.className = 'd-modal__backdrop'
+          backdrop.addEventListener('click', () => {
+            modalContainer.remove()
+            try {
+              emojiButton.setAttribute('aria-expanded', 'false')
+            } catch (_) {}
+          })
+
+          modalContainer.appendChild(emojiPicker)
+          modalContainer.appendChild(backdrop)
+          createdNodes.push(modalContainer)
+
+          console.log('[nacho-inject] 移动端模态表情选择器已创建（同步）')
+        } else {
+          // 桌面端模式，直接添加到 body
+          document.body.appendChild(emojiPicker)
+          createdNodes.push(emojiPicker)
+        }
       } else {
         createdNodes.push(emojiPicker)
       }
@@ -165,7 +227,19 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
       }
 
       function handleClickOutside(e: MouseEvent) {
-        if (emojiPicker && !emojiPicker.contains(e.target as Node)) {
+        // 在移动端模式下，查找 modal-container
+        const modalContainer = document.querySelector('.modal-container')
+        if (modalContainer && isMobileMode()) {
+          // 移动端模式：检查点击是否在模态容器外部
+          if (!modalContainer.contains(e.target as Node)) {
+            modalContainer.remove()
+            try {
+              emojiButton.setAttribute('aria-expanded', 'false')
+            } catch (_) {}
+            document.removeEventListener('click', handleClickOutside)
+          }
+        } else if (emojiPicker && !emojiPicker.contains(e.target as Node)) {
+          // 桌面端模式：原有逻辑
           emojiPicker.remove()
           try {
             emojiButton.setAttribute('aria-expanded', 'false')
@@ -247,7 +321,10 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
           if (textArea) {
             let emojiText = ''
             if (outputFormat === 'html') {
-              emojiText = `<img src="${imgElement.src}" alt="${imgElement.alt}" width="${Math.round((parseInt(width) * imageScale) / 100)}" height="${Math.round((parseInt(height) * imageScale) / 100)}" />`
+              const scaledWidth = Math.round((parseInt(width) * imageScale) / 100)
+              const scaledHeight = Math.round((parseInt(height) * imageScale) / 100)
+              // 使用指定的HTML格式，包含完整的属性
+              emojiText = `<img src="${imgElement.src}" title=":${imgElement.alt}:" class="emoji only-emoji" alt=":${imgElement.alt}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};">`
             } else {
               // Default to markdown format
               emojiText = `![${imgElement.alt}|${width}x${height},${imageScale}%](${imgElement.src}) `
@@ -266,7 +343,8 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
           } else if (richEle) {
             const scaledWidth = Math.round((parseInt(width) * imageScale) / 100)
             const scaledHeight = Math.round((parseInt(height) * imageScale) / 100)
-            const imgTemplate = `<img src="${imgElement.src}" alt="${imgElement.alt}" width="${width}" height="${height}" data-scale="${imageScale}" style="width: ${scaledWidth}px; height: ${scaledHeight}px">`
+            // 使用指定的HTML格式，包含完整的属性
+            const imgTemplate = `<img src="${imgElement.src}" title=":${imgElement.alt}:" class="emoji only-emoji" alt=":${imgElement.alt}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};">`
             try {
               const dt = new DataTransfer()
               dt.setData('text/html', imgTemplate)

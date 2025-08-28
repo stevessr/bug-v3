@@ -2,6 +2,37 @@ import { cachedState } from './state'
 import { getDefaultEmojis } from './default'
 import type { emoji } from './types'
 
+// 导入后台通信函数
+interface BackgroundResponse {
+  success: boolean
+  data?: {
+    groups?: any[]
+    settings?: any
+    ungroupedEmojis?: any[]
+  }
+  error?: string
+}
+
+function sendMessageToBackground(message: any): Promise<BackgroundResponse> {
+  return new Promise((resolve) => {
+    try {
+      if (
+        (window as any).chrome &&
+        (window as any).chrome.runtime &&
+        (window as any).chrome.runtime.sendMessage
+      ) {
+        ;(window as any).chrome.runtime.sendMessage(message, (response: BackgroundResponse) => {
+          resolve(response)
+        })
+      } else {
+        resolve({ success: false, error: 'chrome.runtime.sendMessage not available' })
+      }
+    } catch (e) {
+      resolve({ success: false, error: e instanceof Error ? e.message : String(e) })
+    }
+  })
+}
+
 export function isMobile(): boolean {
   return (
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -40,18 +71,33 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
         groupEmojisHtml += `<img width="32" height="32" class="emoji" src="${displayUrl}" tabindex="${tabindex}" data-emoji="${dataEmoji}" alt="${nameEsc}" title=":${nameEsc}:" loading="lazy" />\n`
       })
 
-      // Add section for this group
-      const sectionStyle = groupIndex === 0 ? '' : ' style="display: none;"'
+      // Check if this is a "frequently used" or "favorite" group that should have delete button
+      const isFrequentlyUsedGroup =
+        groupName.includes('常用') ||
+        groupName.includes('收藏') ||
+        groupName.includes('最近') ||
+        groupId === 'default-uuid' ||
+        groupId.includes('frequent') ||
+        groupId.includes('favorite')
+
+      // Generate delete button only for frequently used groups
+      const deleteButtonHtml = isFrequentlyUsedGroup
+        ? `
+        <button class="btn no-text btn-icon btn-transparent" type="button">
+          <svg class="fa d-icon d-icon-trash-can svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+            <use href="#trash-can"></use>
+          </svg>
+          <span aria-hidden="true">&ZeroWidthSpace;</span>
+        </button>
+      `
+        : ''
+
+      // Add section for this group - always visible
       sectionsHtml += `
-        <div class="emoji-picker__section" data-section="${groupId}" role="region" aria-label="${groupName}"${sectionStyle}>
+        <div class="emoji-picker__section" data-section="${groupId}" role="region" aria-label="${groupName}">
           <div class="emoji-picker__section-title-container">
             <h2 class="emoji-picker__section-title">${groupName}</h2>
-            <button class="btn no-text btn-icon btn-transparent" type="button">
-              <svg class="fa d-icon d-icon-trash-can svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                <use href="#trash-can"></use>
-              </svg>
-              <span aria-hidden="true">&ZeroWidthSpace;</span>
-            </button>
+            ${deleteButtonHtml}
           </div>
           <div class="emoji-picker__section-emojis">
             ${groupEmojisHtml}
@@ -63,30 +109,57 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
 
   // Create the picker element matching the target structure
   const picker = document.createElement('div')
-  picker.className = 'fk-d-menu -animated -expanded'
-  picker.setAttribute('data-identifier', 'emoji-picker')
-  picker.setAttribute('data-content', '')
-  picker.setAttribute('aria-labelledby', 'ember161')
-  picker.setAttribute('aria-expanded', 'true')
-  picker.setAttribute('role', 'dialog')
 
   if (isMobilePicker) {
-    picker.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90%;
-      max-width: 400px;
-      max-height: 80vh;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      z-index: 10000;
-      overflow-y: auto;
-      visibility: visible;
+    // 移动端模式：使用modal-container结构
+    picker.className = 'modal-container'
+    picker.innerHTML = `
+      <div class="modal d-modal fk-d-menu-modal emoji-picker-content" data-keyboard="false" aria-modal="true" role="dialog" data-identifier="emoji-picker" data-content="">
+        <div class="d-modal__container">
+          <div class="d-modal__body" tabindex="-1">
+            <div class="emoji-picker">
+              <div class="emoji-picker__filter-container">
+                <div class="emoji-picker__filter filter-input-container">
+                  <input class="filter-input" placeholder="按表情符号名称和别名搜索…" type="text" />
+                  <svg class="fa d-icon d-icon-magnifying-glass svg-icon -right svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <use href="#magnifying-glass"></use>
+                  </svg>
+                </div>
+                <button class="btn no-text fk-d-menu__trigger -trigger emoji-picker__diversity-trigger btn-transparent" aria-expanded="false" data-trigger="" type="button" id="ember85">
+                  <img width="20" height="20" src="/images/emoji/twemoji/clap.png" title="clap" alt="clap" class="emoji" />
+                </button>
+                <button class="btn no-text btn-icon btn-transparent emoji-picker__close-btn" type="button">
+                  <svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <use href="#xmark"></use>
+                  </svg>
+                  <span aria-hidden="true">&ZeroWidthSpace;</span>
+                </button>
+              </div>
+              <div class="emoji-picker__content">
+                <div class="emoji-picker__sections-nav">
+                  ${sectionsNavHtml}
+                </div>
+                <div class="emoji-picker__scrollable-content">
+                  <div class="emoji-picker__sections" role="button">
+                    ${sectionsHtml}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-modal__backdrop"></div>
     `
   } else {
+    // 桌面端模式：使用原有的fk-d-menu结构
+    picker.className = 'fk-d-menu -animated -expanded'
+    picker.setAttribute('data-identifier', 'emoji-picker')
+    picker.setAttribute('data-content', '')
+    picker.setAttribute('aria-labelledby', 'ember161')
+    picker.setAttribute('aria-expanded', 'true')
+    picker.setAttribute('role', 'dialog')
+
     picker.style.cssText = `
       position: absolute;
       background: white;
@@ -100,35 +173,35 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
       overflow-y: auto;
       visibility: visible;
     `
-  }
 
-  picker.innerHTML = `
-  <div class="fk-d-menu__inner-content">
-    <div class="emoji-picker">
-      <div class="emoji-picker__filter-container">
-        <div class="emoji-picker__filter filter-input-container">
-          <input class="filter-input" placeholder="按表情符号名称和别名搜索…" type="text" />
-          <svg class="fa d-icon d-icon-magnifying-glass svg-icon -right svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-            <use href="#magnifying-glass"></use>
-          </svg>
-        </div>
-        <button class="btn no-text fk-d-menu__trigger -trigger emoji-picker__diversity-trigger btn-transparent" aria-expanded="false" data-trigger="" type="button" id="ember162">
-          <img width="20" height="20" src="/images/emoji/twemoji/clap.png" title="clap" alt="clap" class="emoji" />
-        </button>
-      </div>
-      <div class="emoji-picker__content">
-        <div class="emoji-picker__sections-nav">
-          ${sectionsNavHtml}
-        </div>
-        <div class="emoji-picker__scrollable-content">
-          <div class="emoji-picker__sections" role="button">
-            ${sectionsHtml}
+    picker.innerHTML = `
+      <div class="fk-d-menu__inner-content">
+        <div class="emoji-picker">
+          <div class="emoji-picker__filter-container">
+            <div class="emoji-picker__filter filter-input-container">
+              <input class="filter-input" placeholder="按表情符号名称和别名搜索…" type="text" />
+              <svg class="fa d-icon d-icon-magnifying-glass svg-icon -right svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                <use href="#magnifying-glass"></use>
+              </svg>
+            </div>
+            <button class="btn no-text fk-d-menu__trigger -trigger emoji-picker__diversity-trigger btn-transparent" aria-expanded="false" data-trigger="" type="button" id="ember162">
+              <img width="20" height="20" src="/images/emoji/twemoji/clap.png" title="clap" alt="clap" class="emoji" />
+            </button>
+          </div>
+          <div class="emoji-picker__content">
+            <div class="emoji-picker__sections-nav">
+              ${sectionsNavHtml}
+            </div>
+            <div class="emoji-picker__scrollable-content">
+              <div class="emoji-picker__sections" role="button">
+                ${sectionsHtml}
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-  `
+    `
+  }
 
   // Add click handlers for emoji images
   const emojiImages = picker.querySelectorAll('.emoji-picker__section-emojis .emoji')
@@ -143,45 +216,96 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
         UUID: crypto.randomUUID() as any,
       }
       insertEmoji(emojiData)
-      picker.remove()
+        .then(() => {
+          picker.remove()
+        })
+        .catch((error) => {
+          console.error('[Emoji Insert] 插入表情失败:', error)
+          picker.remove()
+        })
     })
   })
 
-  // Add section navigation functionality
+  // Add section navigation functionality - scroll to target section
   const sectionButtons = picker.querySelectorAll('.emoji-picker__section-btn')
   const sections = picker.querySelectorAll('.emoji-picker__section')
+  const scrollableContent = picker.querySelector('.emoji-picker__scrollable-content') as HTMLElement
 
   sectionButtons.forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+
       const targetSection = button.getAttribute('data-section')
+      console.log('[Emoji Picker] Navigation button clicked, target:', targetSection)
 
       // Remove active class from all buttons
       sectionButtons.forEach((btn) => btn.classList.remove('active'))
       // Add active class to clicked button
       button.classList.add('active')
 
-      // Hide all sections
-      sections.forEach((section) => {
-        const sectionEl = section as HTMLElement
-        sectionEl.style.display = 'none'
-      })
-
-      // Show target section
+      // Find target section
       const targetSectionEl = picker.querySelector(
-        `[data-section="${targetSection}"]`,
+        `[data-section="${targetSection}"].emoji-picker__section`,
       ) as HTMLElement
-      if (targetSectionEl && targetSectionEl.classList.contains('emoji-picker__section')) {
-        targetSectionEl.style.display = 'block'
+
+      if (targetSectionEl && scrollableContent) {
+        console.log('[Emoji Picker] Found target section, scrolling...', targetSectionEl)
+
+        // Calculate the position of target section relative to scrollable container
+        const containerRect = scrollableContent.getBoundingClientRect()
+        const targetRect = targetSectionEl.getBoundingClientRect()
+        const scrollTop = scrollableContent.scrollTop
+
+        // Calculate target scroll position
+        const targetScrollTop = scrollTop + (targetRect.top - containerRect.top)
+
+        // Smooth scroll to target position
+        scrollableContent.scrollTo({
+          top: targetScrollTop,
+          behavior: 'smooth',
+        })
+
+        console.log('[Emoji Picker] Scrolled to position:', targetScrollTop)
+      } else {
+        console.warn('[Emoji Picker] Target section or scrollable content not found')
       }
     })
   })
 
-  // Add close functionality
-  const closeBtn = picker.querySelector('.emoji-picker__section-title-container button')
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
+  // Add close functionality for delete buttons (only exists in frequently used groups)
+  const deleteButtons = picker.querySelectorAll('.emoji-picker__section-title-container button')
+  deleteButtons.forEach((deleteBtn) => {
+    deleteBtn.addEventListener('click', () => {
       picker.remove()
     })
+  })
+
+  // Add mobile-specific close functionality
+  if (isMobilePicker) {
+    // Add close button functionality
+    const closeButton = picker.querySelector('.emoji-picker__close-btn')
+    if (closeButton) {
+      closeButton.addEventListener('click', () => {
+        picker.remove()
+      })
+    }
+
+    // Add backdrop click to close functionality
+    const backdrop = picker.querySelector('.d-modal__backdrop')
+    if (backdrop) {
+      backdrop.addEventListener('click', () => {
+        picker.remove()
+      })
+    }
+
+    // Prevent modal content clicks from bubbling to backdrop
+    const modalContent = picker.querySelector('.d-modal__container')
+    if (modalContent) {
+      modalContent.addEventListener('click', (e) => {
+        e.stopPropagation()
+      })
+    }
   }
 
   // Add filter functionality
@@ -191,23 +315,13 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
       const searchTerm = (e.target as HTMLInputElement).value.toLowerCase()
 
       if (searchTerm.trim() === '') {
-        // If search is empty, show only active section
+        // If search is empty, show all sections normally
         sections.forEach((section) => {
           const sectionEl = section as HTMLElement
-          sectionEl.style.display = 'none'
+          sectionEl.style.display = 'block'
         })
-        const activeButton = picker.querySelector('.emoji-picker__section-btn.active')
-        if (activeButton) {
-          const activeSection = activeButton.getAttribute('data-section')
-          const activeSectionEl = picker.querySelector(
-            `[data-section="${activeSection}"].emoji-picker__section`,
-          ) as HTMLElement
-          if (activeSectionEl) {
-            activeSectionEl.style.display = 'block'
-          }
-        }
 
-        // Show all emojis in visible sections
+        // Show all emojis
         emojiImages.forEach((img) => {
           const htmlImg = img as HTMLElement
           htmlImg.style.display = 'block'
@@ -239,33 +353,94 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
   return picker
 }
 
-function insertEmoji(emojiData: emoji) {
-  const activeElement = document.activeElement as HTMLElement
+async function insertEmoji(emojiData: emoji) {
+  // 首先尝试主动查找文本框（参考simple.js的实现）
+  const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
+  const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
-  if (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT') {
-    const input = activeElement as HTMLTextAreaElement | HTMLInputElement
-    const start = input.selectionStart || 0
-    const end = input.selectionEnd || 0
-    const text = input.value
+  if (!textArea && !richEle) {
+    console.error('找不到输入框')
+    return
+  }
 
+  // 获取图片尺寸信息
+  let width = '500'
+  let height = '500'
+  const imgSrc = emojiData.realUrl.toString()
+
+  // 尝试从URL中提取尺寸
+  const match = imgSrc.match(/_(\d{3,})x(\d{3,})\./)
+  if (match) {
+    width = match[1]
+    height = match[2]
+  }
+
+  // 实时从后端获取最新设置
+  let currentSettings = cachedState.settings // 默认使用缓存设置作为备用
+  try {
+    console.log('[Emoji Insert] 实时获取最新设置...')
+    const response = await sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
+    if (response && response.success && response.data && response.data.settings) {
+      currentSettings = { ...cachedState.settings, ...response.data.settings }
+      console.log('[Emoji Insert] 成功获取最新设置:', currentSettings)
+    } else {
+      console.warn('[Emoji Insert] 获取最新设置失败，使用缓存设置')
+    }
+  } catch (error) {
+    console.error('[Emoji Insert] 获取设置时出错:', error)
+  }
+
+  // 获取缩放比例
+  const imageScale = currentSettings.imageScale || 30
+
+  if (textArea) {
+    // 对于普通文本框，根据输出格式生成不同的文本
     let emojiText: string
-    switch (cachedState.settings.outputFormat) {
+    switch (currentSettings.outputFormat) {
       case 'html':
-        emojiText = `<img src="${emojiData.realUrl.toString()}" alt="${emojiData.displayName}" />`
+        const scaledWidth = Math.round((parseInt(width) * imageScale) / 100)
+        const scaledHeight = Math.round((parseInt(height) * imageScale) / 100)
+        // 使用指定的HTML格式，包含完整的属性
+        emojiText = `<img src="${imgSrc}" title=":${emojiData.displayName}:" class="emoji only-emoji" alt=":${emojiData.displayName}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};">`
         break
       case 'bbcode':
-        emojiText = `[img]${emojiData.realUrl.toString()}[/img]`
+        emojiText = `[img]${imgSrc}[/img]`
         break
       case 'markdown':
       default:
-        emojiText = `![${emojiData.displayName}](${emojiData.realUrl.toString()})`
+        // 使用类似simple.js的格式：![alt|widthxheight,scale%](url)
+        emojiText = `![${emojiData.displayName}|${width}x${height},${imageScale}%](${imgSrc}) `
         break
     }
 
-    input.value = text.substring(0, start) + emojiText + text.substring(end)
-    input.selectionStart = input.selectionEnd = start + emojiText.length
+    const start = textArea.selectionStart || 0
+    const end = textArea.selectionEnd || 0
+    const text = textArea.value
+
+    textArea.value = text.substring(0, start) + emojiText + text.substring(end)
+    textArea.selectionStart = textArea.selectionEnd = start + emojiText.length
+    textArea.focus()
 
     // Trigger input event
-    input.dispatchEvent(new Event('input', { bubbles: true }))
+    textArea.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))
+  } else if (richEle) {
+    // 对于富文本编辑器，使用HTML模板（参考simple.js的实现）
+    const scaledWidth = Math.round((parseInt(width) * imageScale) / 100)
+    const scaledHeight = Math.round((parseInt(height) * imageScale) / 100)
+    // 使用指定的HTML格式，包含完整的属性
+    const imgTemplate = `<img src="${imgSrc}" title=":${emojiData.displayName}:" class="emoji only-emoji" alt=":${emojiData.displayName}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};">`
+
+    try {
+      const dt = new DataTransfer()
+      dt.setData('text/html', imgTemplate)
+      const evt = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true })
+      richEle.dispatchEvent(evt)
+    } catch (_) {
+      try {
+        document.execCommand('insertHTML', false, imgTemplate)
+      } catch (e) {
+        console.error('无法向富文本编辑器中插入表情', e)
+      }
+    }
   }
 }

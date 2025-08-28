@@ -2,6 +2,11 @@
   脚本：将旧格式（public/static/config/default.json）转换为新的持久化 payload
   输出：打印 JSON 到 stdout，并写入 public/static/config/converted_payload.json
 
+  特殊处理：
+  - 自动创建常用表情分组（UUID: common-emoji-group）
+  - 将旧的 favorites 分组转换为常用表情分组
+  - 默认分组设置为常用表情分组
+
   运行（在仓库根目录）:
     node scripts/convert-old-settings.cjs
 */
@@ -23,7 +28,47 @@ function processGroups(groups) {
   const processedGroups = []
   const ungrouped = []
 
+  // 首先创建常用表情分组（硬编码）
+  const commonGroup = {
+    UUID: 'common-emoji-group',
+    id: 'common-emoji-group',
+    displayName: '常用表情',
+    icon: '⭐',
+    order: 0,
+    emojis: [], // 初始为空，用户后续添加
+    originalId: 'favorites', // 映射旧的favorites ID
+  }
+  processedGroups.push(commonGroup)
+  idToUuidMap['favorites'] = 'common-emoji-group'
+  idToUuidMap['common'] = 'common-emoji-group'
+
   groups.forEach((group) => {
+    // 如果是旧的favorites分组，跳过因为已经创建了常用表情分组
+    if (group.id === 'favorites' || group.id === 'common') {
+      // 将旧的favorites表情移到常用表情分组中
+      if (group.emojis && group.emojis.length > 0) {
+        const processedEmojis = group.emojis.map((emoji) => {
+          const processedEmoji = {
+            ...emoji,
+            originalName: typeof emoji.name !== 'undefined' ? emoji.name : undefined,
+            displayName: typeof emoji.name !== 'undefined' ? emoji.name : emoji.displayName,
+            UUID: generateUUID(),
+            groupUUID: 'common-emoji-group',
+            groupId: 'common-emoji-group',
+          }
+
+          if (emoji.url) {
+            processedEmoji.realUrl = emoji.url
+            processedEmoji.displayUrl = emoji.url
+          }
+
+          return processedEmoji
+        })
+        commonGroup.emojis = processedEmojis
+      }
+      return
+    }
+
     const uuid = generateUUID()
     idToUuidMap[group.id] = uuid
 
@@ -85,8 +130,8 @@ function mapSettings(old, idToUuidMap) {
   if (typeof old.defaultGroup !== 'undefined') {
     s.defaultEmojiGroupUUID = idToUuidMap[old.defaultGroup] || old.defaultGroup
   } else {
-    // 如果没有defaultGroup，使用第一个组的UUID或生成一个默认的
-    s.defaultEmojiGroupUUID = '00000000-0000-0000-0000-000000000000'
+    // 如果没有defaultGroup，使用常用表情分组作为默认
+    s.defaultEmojiGroupUUID = 'common-emoji-group'
   }
 
   if (typeof old.gridColumns !== 'undefined') s.gridColumns = old.gridColumns
@@ -126,6 +171,7 @@ try {
   console.log('Converted payload written to', out)
   console.log('ID to UUID mapping:', idToUuidMap)
   console.log('Total groups converted:', processedGroups.length)
+  console.log('Common emoji group created with UUID: common-emoji-group')
   console.log('Settings defaultEmojiGroupUUID:', payload.Settings.defaultEmojiGroupUUID)
 
   // 输出完整的转换结果（截断以避免终端输出过长）

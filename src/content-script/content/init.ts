@@ -19,7 +19,7 @@ function checkAndReinjectButtons() {
 
 // Setup reply button listeners
 function setupReplyButtonListeners() {
-  // Selectors for different types of reply buttons
+  // Selectors for different types of reply buttons and create buttons
   const replyButtonSelectors = [
     // Topic footer reply button
     'button.btn.btn-icon-text.btn-primary.create.topic-footer-button[title*="回复"]',
@@ -27,6 +27,12 @@ function setupReplyButtonListeners() {
     'button.btn.no-text.btn-icon.btn-default.create.reply-to-post[title*="回复"]',
     // Post action menu reply button
     'button.btn.btn-icon-text.post-action-menu__reply.reply.create[title*="回复"]',
+    // Create topic button
+    'button.btn.btn-icon-text.btn-default#create-topic',
+    // Draft button
+    'button.btn.btn-icon-text.btn-secondary[title*="草稿"], button.btn.btn-icon-text.btn-secondary:has(.d-button-label:contains("草稿"))',
+    // Additional reply button variants
+    'button.btn.btn-icon-text.post-action-menu__reply.reply.create.fade-out.btn-flat[title*="回复"]',
   ]
 
   // Use event delegation to handle dynamically added buttons
@@ -134,12 +140,19 @@ export async function initializeEmojiFeature(
       }
     })
 
-    if (injectedCount > 0 || toolbars.length > 0) {
-      // Success - we found toolbars and injected or they already have buttons
+    // If we found toolbars and successfully injected, we're done
+    if (injectedCount > 0) {
+      logger.log(`[Mr Emoji] Successfully injected ${injectedCount} buttons`)
       return
     }
 
-    // No toolbars found, continue retry logic
+    // If we found toolbars but they already have buttons, that's also success
+    if (toolbars.length > 0) {
+      logger.log(`[Mr Emoji] Found ${toolbars.length} toolbars, buttons already present`)
+      return
+    }
+
+    // No toolbars found, continue retry logic only for the first round
     if (injectionAttempts < maxInjectionAttempts) {
       logger.log(
         `[Mr Emoji] Toolbar not found, attempt ${injectionAttempts}/${maxInjectionAttempts}. Retrying ${
@@ -147,21 +160,9 @@ export async function initializeEmojiFeature(
         } s.`,
       )
       setTimeout(attemptInjection, delay)
-    } else if (maxInjectionAttempts < 20) {
-      initializeEmojiFeature(20, 2000)
-    } else if (maxInjectionAttempts < 40) {
-      initializeEmojiFeature(40, 4000)
-    } else if (maxInjectionAttempts < 80) {
-      initializeEmojiFeature(80, 8000)
-    } else if (maxInjectionAttempts < 160) {
-      initializeEmojiFeature(160, 16000)
-    } else if (maxInjectionAttempts < 320) {
-      initializeEmojiFeature(320, 32000)
-    } else if (maxInjectionAttempts < 640) {
-      initializeEmojiFeature(640, 64000)
     } else {
-      logger.error(
-        '[Mr Emoji] Failed to find toolbar after multiple attempts. Button injection failed. 我感觉你是人机',
+      logger.warn(
+        '[Mr Emoji] Failed to find toolbar after initial attempts. Relying on event-based injection.',
       )
     }
   }
