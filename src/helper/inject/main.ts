@@ -58,14 +58,33 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
   function attachPickerBehavior(emojiButton: HTMLElement) {
     function handleClick(event: MouseEvent) {
       event.stopPropagation()
-      const existingPicker = document.querySelector(`.${config.emojiPickerClass}`)
-      if (existingPicker) {
-        existingPicker.remove()
-        try {
-          emojiButton.setAttribute('aria-expanded', 'false')
-        } catch (_) {}
-        document.removeEventListener('click', handleClickOutside)
-        return
+
+      // 在移动端模式下，检查modal-container的状态
+      if (isMobileMode()) {
+        const modalContainer = document.querySelector('.modal-container') as HTMLElement
+        if (modalContainer) {
+          // 如果modal-container存在且有内容，则清空它
+          if (modalContainer.innerHTML.trim() !== '') {
+            modalContainer.innerHTML = ''
+            try {
+              emojiButton.setAttribute('aria-expanded', 'false')
+            } catch (_) {}
+            document.removeEventListener('click', handleClickOutside)
+            return
+          }
+          // 如果modal-container存在但为空，则继续创建内容
+        }
+      } else {
+        // 桌面端模式：使用原有逻辑
+        const existingPicker = document.querySelector(`.${config.emojiPickerClass}`)
+        if (existingPicker) {
+          existingPicker.remove()
+          try {
+            emojiButton.setAttribute('aria-expanded', 'false')
+          } catch (_) {}
+          document.removeEventListener('click', handleClickOutside)
+          return
+        }
       }
 
       // generator() returns the full picker markup (root element like in simple.html).
@@ -98,7 +117,8 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
                 const backdrop = document.createElement('div')
                 backdrop.className = 'd-modal__backdrop'
                 backdrop.addEventListener('click', () => {
-                  modalContainer.remove()
+                  // 移动端模式：清空modal-container内容而不是隐藏
+                  modalContainer.innerHTML = ''
                   try {
                     emojiButton.setAttribute('aria-expanded', 'false')
                   } catch (_) {}
@@ -148,7 +168,8 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
           const backdrop = document.createElement('div')
           backdrop.className = 'd-modal__backdrop'
           backdrop.addEventListener('click', () => {
-            modalContainer.remove()
+            // 移动端模式：清空modal-container内容而不是隐藏
+            modalContainer.innerHTML = ''
             try {
               emojiButton.setAttribute('aria-expanded', 'false')
             } catch (_) {}
@@ -228,11 +249,12 @@ export function injectNachonekoEmojiFeature(cfg: InjectorConfig) {
 
       function handleClickOutside(e: MouseEvent) {
         // 在移动端模式下，查找 modal-container
-        const modalContainer = document.querySelector('.modal-container')
+        const modalContainer = document.querySelector('.modal-container') as HTMLElement
         if (modalContainer && isMobileMode()) {
           // 移动端模式：检查点击是否在模态容器外部
           if (!modalContainer.contains(e.target as Node)) {
-            modalContainer.remove()
+            // 清空而不是隐藏modal-container
+            modalContainer.innerHTML = ''
             try {
               emojiButton.setAttribute('aria-expanded', 'false')
             } catch (_) {}

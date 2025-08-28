@@ -40,6 +40,25 @@ export function isMobile(): boolean {
   )
 }
 
+// 专门处理表情选择器关闭的函数
+function closePicker(picker: HTMLElement, isMobilePicker: boolean) {
+  if (isMobilePicker) {
+    // 移动端模式：保留modal-container但清空其内容
+    const modalContainer = picker.closest('.modal-container') as HTMLElement
+    if (modalContainer) {
+      // 清空modal-container内容，但保留容器本身
+      modalContainer.innerHTML = ''
+      console.log('[Emoji Picker] 清空移动端模态容器内容')
+    } else {
+      // 如果找不到modal-container，则使用传统方式
+      picker.remove()
+    }
+  } else {
+    // 桌面端模式：直接移除
+    picker.remove()
+  }
+}
+
 export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLElement> {
   const groups = cachedState.emojiGroups.length > 0 ? cachedState.emojiGroups : getDefaultEmojis()
 
@@ -217,11 +236,11 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
       }
       insertEmoji(emojiData)
         .then(() => {
-          picker.remove()
+          closePicker(picker, isMobilePicker)
         })
         .catch((error) => {
           console.error('[Emoji Insert] 插入表情失败:', error)
-          picker.remove()
+          closePicker(picker, isMobilePicker)
         })
     })
   })
@@ -277,7 +296,7 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
   const deleteButtons = picker.querySelectorAll('.emoji-picker__section-title-container button')
   deleteButtons.forEach((deleteBtn) => {
     deleteBtn.addEventListener('click', () => {
-      picker.remove()
+      closePicker(picker, isMobilePicker)
     })
   })
 
@@ -287,7 +306,7 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
     const closeButton = picker.querySelector('.emoji-picker__close-btn')
     if (closeButton) {
       closeButton.addEventListener('click', () => {
-        picker.remove()
+        closePicker(picker, isMobilePicker)
       })
     }
 
@@ -295,7 +314,7 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
     const backdrop = picker.querySelector('.d-modal__backdrop')
     if (backdrop) {
       backdrop.addEventListener('click', () => {
-        picker.remove()
+        closePicker(picker, isMobilePicker)
       })
     }
 
