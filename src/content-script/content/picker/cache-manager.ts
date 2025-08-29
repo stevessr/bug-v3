@@ -136,6 +136,16 @@ export async function checkForUpdatesInBackground(): Promise<void> {
 
       if (hasUpdates) {
         console.log('[组级缓存] 检测到更新，已同步缓存')
+
+        // 🚀 关键修复：当检测到更新时，触发界面刷新事件
+        window.dispatchEvent(
+          new CustomEvent('emoji-groups-cache-updated', {
+            detail: {
+              groups: freshGroups,
+              timestamp: Date.now(),
+            },
+          }),
+        )
       } else {
         console.log('[组级缓存] 未检测到更新')
       }
@@ -157,7 +167,7 @@ export function getCacheStats() {
     version: cacheVersion,
     expireTime: CACHE_EXPIRE_TIME,
     cachedGroupsCount: cachedState.emojiGroups.length,
-    hasCommonGroup: cachedState.emojiGroups.some(g => g.UUID === 'common-emoji-group'),
+    hasCommonGroup: cachedState.emojiGroups.some((g) => g.UUID === 'common-emoji-group'),
     cacheUtils: cacheUtils.getCacheStats(),
   }
 }
@@ -234,6 +244,20 @@ export function setupCacheListeners() {
               },
             }),
           )
+        }
+      }
+
+      // 🚀 关键修复：处理其他组的更新
+      if (data && data.groupUUID && data.group && data.groupUUID !== 'common-emoji-group') {
+        console.log(`[Emoji Picker] 接收到组 ${data.groupUUID} 更新消息`)
+
+        // 更新组缓存
+        cacheUtils.updateGroupCache(data.groupUUID, data.group)
+
+        // 更新主缓存
+        const index = cachedState.emojiGroups.findIndex((g) => g.UUID === data.groupUUID)
+        if (index >= 0) {
+          cachedState.emojiGroups[index] = data.group
         }
       }
     } catch (error) {

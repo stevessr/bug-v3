@@ -195,7 +195,13 @@ class CommunicationService {
 
   // 发送表情使用记录消息
   sendUsageRecorded(uuid: string) {
-    this.send('app:usage-recorded', { uuid, timestamp: Date.now() })
+    try {
+      const payload = { uuid, timestamp: Date.now() }
+      console.log(`[Communication:${this.context}] Sending usage recorded message:`, payload)
+      this.send('app:usage-recorded', payload)
+    } catch (error) {
+      console.error(`[Communication:${this.context}] Failed to send usage recorded message:`, error)
+    }
   }
 
   // 发送数据导入消息
@@ -281,11 +287,31 @@ class CommunicationService {
   // 监听表情使用记录
   onUsageRecorded(handler: (data: { uuid: string; timestamp: number }) => void) {
     this.on('app:usage-recorded', (message) => {
-      if (message && typeof message === 'object') {
-        const payload = message.payload !== undefined ? message.payload : message
-        handler(payload)
-      } else {
-        handler(message)
+      try {
+        console.log(`[Communication:${this.context}] Received usage recorded message:`, message)
+
+        if (message && typeof message === 'object') {
+          const payload = message.payload !== undefined ? message.payload : message
+
+          // 验证payload格式
+          if (payload && typeof payload === 'object' && payload.uuid) {
+            handler(payload)
+          } else {
+            console.warn(`[Communication:${this.context}] Invalid usage recorded payload:`, payload)
+          }
+        } else {
+          // 处理简单格式的消息
+          if (message && typeof message === 'string') {
+            handler({ uuid: message, timestamp: Date.now() })
+          } else {
+            handler(message)
+          }
+        }
+      } catch (error) {
+        console.error(
+          `[Communication:${this.context}] Error handling usage recorded message:`,
+          error,
+        )
       }
     })
   }

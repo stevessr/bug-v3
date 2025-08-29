@@ -176,15 +176,37 @@ export function getUngrouped() {
   return ug
 }
 
-export function getHot() {
-  // 使用新的分离接口，不再需要手动计算
-  const hot = (emojiGroupsStore as any).getHotEmojis ? (emojiGroupsStore as any).getHotEmojis() : []
-  log('getHot', { count: hot.length })
-  return hot
+// 获取热门表情（支持强制刷新）
+export function getHot(forceRefresh = false) {
+  try {
+    if (emojiGroupsStore && typeof emojiGroupsStore.getHotEmojis === 'function') {
+      return emojiGroupsStore.getHotEmojis(forceRefresh)
+    }
+    // 回退到旧的实现
+    return getGroups()
+      .flatMap((g: any) => g.emojis || [])
+      .filter((e: any) => typeof e.usageCount === 'number' && e.usageCount > 0)
+      .sort((a: any, b: any) => (b.usageCount || 0) - (a.usageCount || 0))
+      .slice(0, 50)
+  } catch (err) {
+    console.warn('[store] getHot failed:', err)
+    return []
+  }
 }
 
 export function recordUsage(uuid: string) {
-  return (emojiGroupsStore as any).recordUsageByUUID(uuid)
+  // 使用统一的 log 封装，避免直接使用 console.log
+  log('[Store] Recording usage for UUID:', uuid)
+  try {
+    const result = (emojiGroupsStore as any).recordUsageByUUID(uuid)
+    // 记录结果也使用统一的 log
+    log('[Store] recordUsageByUUID result:', result)
+    return result
+  } catch (error) {
+    // 保持警告风格，避免违反 no-console 规则
+    console.warn('[Store] recordUsage failed:', error)
+    return false
+  }
 }
 
 export function resetHot() {

@@ -37,6 +37,16 @@ async function recordEmojiUsage(uuid: string): Promise<boolean> {
     }
   } catch (error) {
     console.error('[Emoji Usage] 记录使用失败:', error)
+
+    // 添加额外的错误处理：即使记录失败也要确保UI能正确更新
+    try {
+      // 发送使用记录消息到其他页面，确保UI同步
+      const commService = await import('../../../services/communication')
+      const contentComm = commService.createContentScriptCommService()
+      contentComm.sendUsageRecorded(uuid)
+    } catch (commError) {
+      console.error('[Emoji Usage] 发送使用记录消息失败:', commError)
+    }
   }
 
   return false
@@ -73,7 +83,7 @@ async function insertEmoji(emojiData: emoji): Promise<void> {
     // 直接实现表情插入逻辑，类似于main.ts中的实现
     const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement
     const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement
-    
+
     if (!textArea && !richEle) {
       console.warn('[表情插入] 未找到可用的文本输入框')
       return
@@ -81,7 +91,7 @@ async function insertEmoji(emojiData: emoji): Promise<void> {
 
     // 获取表情数据
     const emojiText = `![${emojiData.displayName}](${emojiData.displayUrl || emojiData.realUrl}) `
-    
+
     if (textArea) {
       // 处理普通文本框
       const startPos = textArea.selectionStart
@@ -143,7 +153,7 @@ function closePicker(picker: HTMLElement, isMobilePicker: boolean): void {
  */
 export function setupEmojiClickHandlers(picker: HTMLElement, isMobilePicker: boolean): void {
   const emojiImages = picker.querySelectorAll('.emoji-picker__section-emojis .emoji')
-  
+
   emojiImages.forEach((img) => {
     img.addEventListener('click', async () => {
       const clickStartTime = performance.now()
@@ -379,10 +389,10 @@ export function setupUploadHandlers(picker: HTMLElement): void {
       e.preventDefault()
       e.stopPropagation()
       console.log('[上传功能] 点击上传按钮')
-      
+
       // 显示上传队列UI
       uploadQueueUI.showPanel()
-      
+
       // 触发文件选择
       fileInput.click()
     })
@@ -391,23 +401,30 @@ export function setupUploadHandlers(picker: HTMLElement): void {
     fileInput.addEventListener('change', async (e) => {
       const target = e.target as HTMLInputElement
       const files = Array.from(target.files || [])
-      
+
       if (files.length === 0) {
         console.log('[上传功能] 未选择文件')
         return
       }
 
-      console.log(`[上传功能] 选择了 ${files.length} 个文件:`, files.map(f => f.name))
-      
+      console.log(
+        `[上传功能] 选择了 ${files.length} 个文件:`,
+        files.map((f) => f.name),
+      )
+
       try {
         // 检查是否要进行差分上传
-        const activeTextArea = document.querySelector('textarea:focus, .d-editor-input:focus') as HTMLTextAreaElement
+        const activeTextArea = document.querySelector(
+          'textarea:focus, .d-editor-input:focus',
+        ) as HTMLTextAreaElement
         let shouldUseDiffUpload = false
         let existingContent = ''
-        
+
         if (activeTextArea && activeTextArea.value.trim()) {
           existingContent = activeTextArea.value
-          shouldUseDiffUpload = confirm('检测到文本框中已有内容，是否只上传不存在的文件？\n\n点击"确定"进行差分上传（跳过已存在的文件）\n点击"取消"上传所有选择的文件')
+          shouldUseDiffUpload = confirm(
+            '检测到文本框中已有内容，是否只上传不存在的文件？\n\n点击"确定"进行差分上传（跳过已存在的文件）\n点击"取消"上传所有选择的文件',
+          )
         }
 
         // 根据选择进行上传
@@ -418,7 +435,7 @@ export function setupUploadHandlers(picker: HTMLElement): void {
           console.log('[上传功能] 执行批量上传')
           await uploadQueue.uploadBatchFiles(files)
         }
-        
+
         console.log('[上传功能] 文件已加入上传队列')
       } catch (error) {
         console.error('[上传功能] 上传失败:', error)

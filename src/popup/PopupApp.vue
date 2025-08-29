@@ -197,47 +197,93 @@ export default defineComponent({
     })
 
     async function onEmojiClick(e: any) {
+      console.log('[PopupApp] Emoji clicked:', e.displayName, 'UUID:', e.UUID)
+
       try {
-        // record usage and quick copy to clipboard (displayUrl preferred)
+        // 🚀 关键修复：改进使用记录和UI刷新逻辑
+        let usageRecorded = false
+
+        // 尝试记录使用统计
         try {
-          recordUsage(e.UUID)
-          // 发送使用记录消息到其他页面
-          commService.sendUsageRecorded(e.UUID)
-          // 本页也立即刷新常用列表，确保 UI 立刻反映使用变化
+          console.log('[PopupApp] Recording usage for emoji:', e.UUID)
+          const result = recordUsage(e.UUID)
+          if (result) {
+            console.log('[PopupApp] Usage recorded successfully')
+            usageRecorded = true
+
+            // 发送使用记录消息到其他页面
+            commService.sendUsageRecorded(e.UUID)
+            console.log('[PopupApp] Usage recorded message sent to other pages')
+          } else {
+            console.warn('[PopupApp] recordUsage returned false')
+          }
+        } catch (error) {
+          console.error('[PopupApp] Primary recordUsage failed:', error)
+
+          // 回退方案：直接调用store的recordUsage方法
           try {
-            hot.value = store.getHot()
-          } catch (_) {}
-        } catch (_) {
-          try {
-            ;(store as any).recordUsage && (store as any).recordUsage(e.UUID)
-            try {
-              hot.value = store.getHot()
-            } catch (_) {}
-          } catch (_) {}
+            if ((store as any).recordUsage && typeof (store as any).recordUsage === 'function') {
+              const result = (store as any).recordUsage(e.UUID)
+              if (result) {
+                console.log('[PopupApp] Fallback recordUsage succeeded')
+                usageRecorded = true
+                commService.sendUsageRecorded(e.UUID)
+              }
+            }
+          } catch (fallbackError) {
+            console.error('[PopupApp] Fallback recordUsage also failed:', fallbackError)
+          }
         }
 
+        // 🚀 关键修复：强制刷新UI，无论使用记录是否成功
+        try {
+          console.log('[PopupApp] Refreshing hot emojis list')
+          // 强制刷新热门表情列表
+          hot.value = store.getHot(true) // 传递true强制刷新
+          console.log('[PopupApp] Hot emojis refreshed, count:', hot.value.length)
+
+          // 同时刷新常用表情组
+          commonEmojiGroup.value = store.getCommonEmojiGroup()
+          console.log('[PopupApp] Common emoji group refreshed')
+        } catch (refreshError) {
+          console.error('[PopupApp] UI refresh failed:', refreshError)
+        }
+
+        // 复制到剪贴板
         const txt = stringifyUrl(e.displayUrl || e.realUrl) || ''
         try {
           await navigator.clipboard.writeText(txt)
-          // 显示提示（使用全局缓存的 antd message）
+          console.log('[PopupApp] Emoji URL copied to clipboard:', txt)
+
+          // 显示成功提示
           try {
             const msg = (window as any).__popup_message
-            if (msg && typeof msg.success === 'function') msg.success('格式已经复制到剪贴板')
-            else alert('格式已经复制到剪贴板')
+            if (msg && typeof msg.success === 'function') {
+              msg.success(usageRecorded ? '表情已复制，使用次数已更新' : '表情已复制到剪贴板')
+            } else {
+              alert(usageRecorded ? '表情已复制，使用次数已更新' : '表情已复制到剪贴板')
+            }
           } catch (_) {
-            alert('格式已经复制到剪贴板')
+            alert(usageRecorded ? '表情已复制，使用次数已更新' : '表情已复制到剪贴板')
           }
         } catch (err) {
-          // 复制失败也尝试提示
+          console.error('[PopupApp] Failed to copy to clipboard:', err)
+
+          // 复制失败提示
           try {
             const msg = (window as any).__popup_message
-            if (msg && typeof msg.error === 'function') msg.error('复制到剪贴板失败')
-            else alert('复制到剪贴板失败')
+            if (msg && typeof msg.error === 'function') {
+              msg.error('复制到剪贴板失败')
+            } else {
+              alert('复制到剪贴板失败')
+            }
           } catch (_) {
             alert('复制到剪贴板失败')
           }
         }
-      } catch (_) {}
+      } catch (error) {
+        console.error('[PopupApp] onEmojiClick error:', error)
+      }
     }
 
     onMounted(async () => {
@@ -300,10 +346,24 @@ export default defineComponent({
           }
         })
 
-        // 监听使用记录消息
-        commService.onUsageRecorded((_data) => {
-          // 可以在这里更新常用表情列表
-          hot.value = store.getHot()
+        // 🚀 关键修复：监听使用记录消息并强制刷新UI
+        commService.onUsageRecorded((data) => {
+          try {
+            console.log('[PopupApp] Received usage recorded message for UUID:', data?.uuid)
+
+            // 强制刷新热门表情列表
+            hot.value = store.getHot(true) // 传递true强制刷新
+            console.log(
+              '[PopupApp] Hot emojis refreshed from usage message, count:',
+              hot.value.length,
+            )
+
+            // 同时刷新常用表情组
+            commonEmojiGroup.value = store.getCommonEmojiGroup()
+            console.log('[PopupApp] Common emoji group refreshed from usage message')
+          } catch (error) {
+            console.error('[PopupApp] Failed to refresh UI from usage message:', error)
+          }
         })
 
         // 🚀 关键修复：添加常用表情组专门的监听器

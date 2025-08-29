@@ -3,29 +3,29 @@
 import { getDefaultEmojis } from '../default'
 import type { EmojiGroup } from '../types'
 import { performanceMonitor } from '../performance'
-import { 
-  loadGroupsFromBackground, 
-  checkForUpdatesInBackground, 
-  isAggressiveMode, 
+import {
+  loadGroupsFromBackground,
+  checkForUpdatesInBackground,
+  isAggressiveMode,
   getAllCachedGroups,
-  setupCacheListeners
+  setupCacheListeners,
 } from './cache-manager'
-import { 
-  generateSectionNavHTML, 
-  generateSectionHTML, 
-  generateDesktopPickerHTML, 
+import {
+  generateSectionNavHTML,
+  generateSectionHTML,
+  generateDesktopPickerHTML,
   generateMobilePickerHTML,
   applyDesktopStyles,
   applyMobileStyles,
-  isMobile 
+  isMobile,
 } from './render-utils'
-import { 
+import {
   setupEmojiClickHandlers,
   setupSectionNavigationHandlers,
   setupCloseHandlers,
   setupFilterHandlers,
   setupUploadHandlers,
-  setupCommonGroupRefreshHandler
+  setupCommonGroupRefreshHandler,
 } from './event-handlers'
 
 /**
@@ -81,7 +81,7 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
       icon: '⭐',
       order: 0,
       emojis: [],
-      originalId: 'favorites'
+      originalId: 'favorites',
     }
     groups.unshift(emptyCommonGroup)
     console.log('[组级缓存] 创建空的常用表情分组')
@@ -153,7 +153,10 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
  * @param groups 表情组数组
  * @returns { sectionsNavHtml: string, sectionsHtml: string }
  */
-function generatePickerContent(groups: EmojiGroup[]): { sectionsNavHtml: string, sectionsHtml: string } {
+function generatePickerContent(groups: EmojiGroup[]): {
+  sectionsNavHtml: string
+  sectionsHtml: string
+} {
   let sectionsNavHtml = ''
   let sectionsHtml = ''
 
@@ -177,27 +180,101 @@ function generatePickerContent(groups: EmojiGroup[]): { sectionsNavHtml: string,
 function setupAllEventHandlers(picker: HTMLElement, isMobilePicker: boolean): void {
   // 设置表情点击事件
   setupEmojiClickHandlers(picker, isMobilePicker)
-  
+
   // 设置分组导航事件
   setupSectionNavigationHandlers(picker)
-  
+
   // 设置关闭按钮事件
   setupCloseHandlers(picker, isMobilePicker)
-  
+
   // 设置过滤器事件
   setupFilterHandlers(picker)
-  
+
   // 设置上传功能事件
   setupUploadHandlers(picker)
-  
+
   // 设置常用表情组刷新监听器
   const cleanupRefreshHandler = setupCommonGroupRefreshHandler(picker)
-  
+
+  // 🚀 关键修复：添加缓存更新监听器
+  const cacheUpdateHandler = (event: CustomEvent) => {
+    try {
+      console.log('[表情选择器] 接收到缓存更新事件，重新加载数据')
+      // 重新加载并刷新整个选择器
+      reloadPickerData(picker, isMobilePicker)
+    } catch (error) {
+      console.error('[表情选择器] 处理缓存更新事件失败:', error)
+    }
+  }
+
+  window.addEventListener('emoji-groups-cache-updated', cacheUpdateHandler as EventListener)
+
   // 在选择器被关闭时移除监听器
   const originalRemove = picker.remove.bind(picker)
   picker.remove = function () {
     cleanupRefreshHandler()
+    window.removeEventListener('emoji-groups-cache-updated', cacheUpdateHandler as EventListener)
     originalRemove()
+  }
+}
+
+/**
+ * 重新加载选择器数据
+ * @param picker 选择器元素
+ * @param isMobilePicker 是否为移动端
+ */
+async function reloadPickerData(picker: HTMLElement, isMobilePicker: boolean): Promise<void> {
+  try {
+    console.log('[表情选择器] 开始重新加载数据')
+
+    // 从后台获取最新数据
+    const groups = await loadGroupsFromBackground()
+
+    if (!groups || groups.length === 0) {
+      console.warn('[表情选择器] 重新加载数据失败，使用缓存数据')
+      return
+    }
+
+    // 确保常用表情分组存在并显示在第一位
+    const commonGroupIndex = groups.findIndex((g) => g.UUID === 'common-emoji-group')
+    if (commonGroupIndex === -1) {
+      const emptyCommonGroup: EmojiGroup = {
+        UUID: 'common-emoji-group',
+        id: 'common-emoji-group',
+        displayName: '常用',
+        icon: '⭐',
+        order: 0,
+        emojis: [],
+        originalId: 'favorites',
+      }
+      groups.unshift(emptyCommonGroup)
+    } else if (commonGroupIndex > 0) {
+      const commonGroup = groups.splice(commonGroupIndex, 1)[0]
+      groups.unshift(commonGroup)
+    }
+
+    // 重新生成内容
+    const { sectionsNavHtml, sectionsHtml } = generatePickerContent(groups)
+
+    // 更新导航部分
+    const navContainer = picker.querySelector('.emoji-picker__nav')
+    if (navContainer) {
+      navContainer.innerHTML = sectionsNavHtml
+      // 重新绑定导航事件
+      setupSectionNavigationHandlers(picker)
+    }
+
+    // 更新内容部分
+    const contentContainer = picker.querySelector('.emoji-picker__scrollable-content')
+    if (contentContainer) {
+      contentContainer.innerHTML = sectionsHtml
+      // 重新绑定表情点击事件
+      setupEmojiClickHandlers(picker, isMobilePicker)
+    }
+
+    console.log('[表情选择器] 数据重新加载完成')
+  } catch (error) {
+    console.error('[表情选择器] 重新加载数据失败:', error)
   }
 }
 

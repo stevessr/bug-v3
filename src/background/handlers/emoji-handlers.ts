@@ -1,10 +1,67 @@
+/* eslint-disable no-unused-vars */
 // background/handlers/emoji-handlers.ts - 表情相关处理器
 
 import { loadFromChromeStorage } from '../utils/storage-utils'
 import { ensureCommonEmojiGroup } from '../utils/common-group-utils'
 
-declare const chrome: any
-declare const browser: any
+// 精确化 chrome/browser 的最小声明，避免使用 any
+declare const chrome: {
+  storage?: {
+    local?: {
+      // chrome.storage.local.set(items, callback)
+      set?(_items: Record<string, unknown>, callback?: () => void): void
+    }
+  }
+  runtime?: {
+    lastError?: unknown
+  }
+}
+
+declare const browser: {
+  storage?: {
+    local?: {
+      // browser.storage.local.set 返回 Promise
+      set?(_items: Record<string, unknown>): Promise<void>
+    }
+  }
+}
+
+// 新增接口：避免使用 any，列出文件中实际调用到的方法（可选方法用 ?）
+interface EmojiGroupsStore {
+  // 记录使用，返回是否成功
+  recordUsageByUUID(uuid: string): boolean
+  // 查找表情及其所在分组
+  findEmojiByUUID?(uuid: string): { emoji: any; group: any } | null
+  // 将最新数据设置到缓存
+  setCache?(data: any): void
+  // 获取常用分组
+  getCommonEmojiGroup?(): any
+  // 通过 UUID 查找分组
+  findGroupByUUID?(uuid: string): any
+  // 获取全部分组
+  getEmojiGroups?(): any[]
+  // 新接口：普通分组
+  getNormalGroups?(): any[]
+  // 新接口：热门表情
+  getHotEmojis?(): any[]
+  // 未分组表情
+  getUngrouped?(): any[]
+}
+
+interface CommunicationService {
+  sendCommonEmojiGroupChanged(group: any): void
+  sendSpecificGroupChanged(groupUUID: string, group: any): void
+  sendUsageRecorded(uuid: string): void
+}
+
+interface SettingsStore {
+  getSettings(): any
+}
+
+// 新增：为响应回调定义类型别名，避免在函数类型里命名参数导致未使用警告
+type ResponseCallback = (
+  response?: { success?: boolean; message?: string; error?: string } | null,
+) => void
 
 function log(...args: any[]) {
   try {
@@ -23,6 +80,8 @@ export function updateEmojiUsageInData(uuid: string, freshData: any): boolean {
     return false
   }
 
+  let updatedGroupUUID = null // 记录被更新的表情所在的组UUID
+
   // Find and update the emoji in the data
   for (const group of freshData.emojiGroups) {
     if (group.emojis && Array.isArray(group.emojis)) {
@@ -40,12 +99,15 @@ export function updateEmojiUsageInData(uuid: string, freshData: any): boolean {
             emoji.usageCount = (emoji.usageCount || 0) + 1
             emoji.lastUsed = now
           }
-          return true
+          updatedGroupUUID = group.UUID // 记录被更新的组
+          break
         }
       }
     }
+    if (updatedGroupUUID) break // 找到并更新后退出循环
   }
-  return false
+
+  return updatedGroupUUID !== null
 }
 
 /**
@@ -57,23 +119,49 @@ export function updateEmojiUsageInData(uuid: string, freshData: any): boolean {
  * @param lastPayloadGlobal 全局缓存的最后负载
  */
 export async function handleEmojiUsageChrome(
-  uuid: string, 
-  sendResponse: (resp: any) => void,
-  emojiGroupsStore: any,
-  commService: any,
-  lastPayloadGlobal: any
+  uuid: string,
+  _resp: ResponseCallback | null, // 使用类型别名，移除内联命名参数以避免未使用报错
+  emojiGroupsStore: EmojiGroupsStore | null,
+  commService: CommunicationService,
+
+  _lastPayloadGlobal: unknown, // 重命名并改为 unknown
 ) {
   try {
     log('Recording emoji usage for UUID (Chrome):', uuid)
     let success = false
     let shouldNotifyCommonGroup = false
+    let updatedGroupUUID = null // 记录被更新的表情所在的组UUID
+    let emojiInfo = null // 记录表情信息用于日志
 
     // Try to use emoji groups store if available
     if (emojiGroupsStore && typeof emojiGroupsStore.recordUsageByUUID === 'function') {
       try {
+        // 🚀 关键修复：先查找表情信息用于日志和通知
+        if (typeof emojiGroupsStore.findEmojiByUUID === 'function') {
+          const found = emojiGroupsStore.findEmojiByUUID(uuid)
+          if (found && found.emoji && found.group) {
+            emojiInfo = {
+              name: found.emoji.displayName,
+              groupUUID: found.group.UUID,
+              oldUsageCount: found.emoji.usageCount || 0,
+            }
+            updatedGroupUUID = found.group.UUID
+            log('Found emoji before update (Chrome):', emojiInfo)
+          }
+        }
+
         success = emojiGroupsStore.recordUsageByUUID(uuid)
         log('recordUsageByUUID result (Chrome):', success)
-        shouldNotifyCommonGroup = success
+
+        if (success && emojiInfo) {
+          shouldNotifyCommonGroup = true
+          log('Successfully updated emoji usage (Chrome):', {
+            uuid,
+            name: emojiInfo.name,
+            groupUUID: emojiInfo.groupUUID,
+            oldCount: emojiInfo.oldUsageCount,
+          })
+        }
       } catch (error) {
         log('Error calling recordUsageByUUID (Chrome):', error)
       }
@@ -97,21 +185,29 @@ export async function handleEmojiUsageChrome(
                 }
               })
               chrome.storage.local.set(saveData, () => {
-                if (chrome.runtime.lastError) {
+                if (chrome.runtime && chrome.runtime.lastError) {
                   log('Error saving emoji usage update (Chrome):', chrome.runtime.lastError)
-                  sendResponse({
+                  // 安全调用，避免 _resp 为 null 时调用
+                  _resp?.({
                     success: false,
                     error: 'Failed to save to Chrome storage',
                   })
                 } else {
                   log('Successfully saved emoji usage update (Chrome)')
-                  // Update global cache
-                  lastPayloadGlobal = freshData
+                  // 不再直接赋值到入参，改为通过 store 更新缓存（若提供）
+                  try {
+                    if (emojiGroupsStore && typeof emojiGroupsStore.setCache === 'function') {
+                      emojiGroupsStore.setCache(freshData)
+                    }
+                  } catch (cacheErr) {
+                    log('Error updating store cache after Chrome save:', cacheErr)
+                  }
                   success = true
                   shouldNotifyCommonGroup = true
 
                   // 发送响应
-                  sendResponse({
+                  // 安全调用
+                  _resp?.({
                     success: true,
                     message: 'Usage recorded successfully',
                   })
@@ -150,7 +246,8 @@ export async function handleEmojiUsageChrome(
     }
 
     // Send response if not already sent
-    sendResponse({
+    // 安全调用，避免可能为 null
+    _resp?.({
       success: success,
       message: success ? 'Usage recorded successfully' : 'Failed to record usage',
     })
@@ -158,6 +255,11 @@ export async function handleEmojiUsageChrome(
     // 🚀 关键修复：如果通过 store 更新成功，也要发送通知
     if (shouldNotifyCommonGroup) {
       try {
+        log('Sending usage recorded notification (Chrome):', { uuid, emojiInfo })
+
+        // 发送使用记录通知
+        commService.sendUsageRecorded(uuid)
+
         // 获取更新后的常用表情组
         const updatedCommonGroup = emojiGroupsStore?.getCommonEmojiGroup
           ? emojiGroupsStore.getCommonEmojiGroup()
@@ -168,16 +270,33 @@ export async function handleEmojiUsageChrome(
           commService.sendCommonEmojiGroupChanged(updatedCommonGroup)
           commService.sendSpecificGroupChanged('common-emoji-group', updatedCommonGroup)
         }
+
+        // 如果更新的不是常用表情组，也发送特定组的更新通知
+        if (updatedGroupUUID && updatedGroupUUID !== 'common-emoji-group') {
+          try {
+            const updatedGroup = emojiGroupsStore?.findGroupByUUID
+              ? emojiGroupsStore.findGroupByUUID(updatedGroupUUID)
+              : null
+            if (updatedGroup) {
+              log('Sending specific group update notification (Chrome):', updatedGroupUUID)
+              commService.sendSpecificGroupChanged(updatedGroupUUID, updatedGroup)
+            }
+          } catch (groupError) {
+            log('Error sending specific group notification (Chrome):', groupError)
+          }
+        }
       } catch (notifyError) {
         log('Error sending common group update notification:', notifyError)
       }
     }
   } catch (error) {
     log('Error handling RECORD_EMOJI_USAGE (Chrome):', error)
-    sendResponse({
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    })
+    // 保留原有的空值检查风格（等价）
+    _resp &&
+      _resp({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      })
   }
 }
 
@@ -191,9 +310,9 @@ export async function handleEmojiUsageChrome(
  */
 export async function handleEmojiUsageFirefox(
   uuid: string,
-  emojiGroupsStore: any,
-  commService: any,
-  lastPayloadGlobal: any
+  emojiGroupsStore: EmojiGroupsStore | null,
+  commService: CommunicationService,
+  _lastPayloadGlobal: unknown, // 重命名并改为 unknown
 ): Promise<object> {
   try {
     log('Recording emoji usage for UUID (Firefox):', uuid)
@@ -232,8 +351,14 @@ export async function handleEmojiUsageFirefox(
               log('Successfully saved emoji usage update (Firefox)')
               success = true
               shouldNotifyCommonGroup = true
-              // Update global cache
-              lastPayloadGlobal = freshData
+              // 不再直接赋值到入参，改为通过 store 更新缓存（若提供）
+              try {
+                if (emojiGroupsStore && typeof emojiGroupsStore.setCache === 'function') {
+                  emojiGroupsStore.setCache(freshData)
+                }
+              } catch (cacheErr) {
+                log('Error updating store cache after Firefox save:', cacheErr)
+              }
             }
           } catch (saveError) {
             log('Error saving emoji usage (Firefox):', saveError)
@@ -278,14 +403,14 @@ export async function handleEmojiUsageFirefox(
 /**
  * 处理获取表情数据的请求
  * @param emojiGroupsStore 表情组存储实例
- * @param settingsStore 设置存储实例  
+ * @param settingsStore 设置存储实例
  * @param lastPayloadGlobal 全局缓存的最后负载
  * @returns Promise<object> 响应对象
  */
 export async function handleGetEmojiData(
-  emojiGroupsStore: any,
-  settingsStore: any,
-  lastPayloadGlobal: any
+  emojiGroupsStore: EmojiGroupsStore | null,
+  settingsStore: SettingsStore | null,
+  _lastPayloadGlobal: unknown, // 重命名并改为 unknown
 ): Promise<object> {
   try {
     let groups = []
@@ -293,15 +418,40 @@ export async function handleGetEmojiData(
     let ungroupedEmojis = []
 
     // First try to get from global cache
-    if (lastPayloadGlobal) {
-      groups = lastPayloadGlobal.emojiGroups || []
-      settings = lastPayloadGlobal.Settings || {}
-      ungroupedEmojis = lastPayloadGlobal.ungrouped || []
+    if (
+      _lastPayloadGlobal &&
+      typeof _lastPayloadGlobal === 'object' &&
+      _lastPayloadGlobal !== null
+    ) {
+      const cached = _lastPayloadGlobal as {
+        emojiGroups?: unknown
+        Settings?: unknown
+        ungrouped?: unknown
+      }
+      groups = (cached.emojiGroups as any) || []
+      settings = (cached.Settings as any) || {}
+      ungroupedEmojis = (cached.ungrouped as any) || []
     } else if (emojiGroupsStore && settingsStore) {
       try {
-        groups = emojiGroupsStore.getEmojiGroups() || []
-        settings = settingsStore.getSettings() || {}
-        ungroupedEmojis = emojiGroupsStore.getUngrouped() || []
+        // 安全调用：先判断方法是否存在并且是函数，避免 "不能调用可能是未定义的对象" 的编译/运行错误
+        if (typeof emojiGroupsStore.getEmojiGroups === 'function') {
+          groups = emojiGroupsStore.getEmojiGroups() || []
+        } else {
+          groups = []
+        }
+
+        if (typeof settingsStore.getSettings === 'function') {
+          settings = settingsStore.getSettings() || {}
+        } else {
+          settings = {}
+        }
+
+        if (typeof emojiGroupsStore.getUngrouped === 'function') {
+          ungroupedEmojis = emojiGroupsStore.getUngrouped() || []
+        } else {
+          ungroupedEmojis = []
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (_) {}
     }
 
@@ -315,8 +465,14 @@ export async function handleGetEmojiData(
           groups = ensuredData.emojiGroups || []
           settings = ensuredData.Settings || {}
           ungroupedEmojis = ensuredData.ungrouped || []
-          // Update cache
-          lastPayloadGlobal = ensuredData
+          // 不再直接赋值到入参，改为通过 store 更新缓存（若提供）
+          try {
+            if (emojiGroupsStore && typeof emojiGroupsStore.setCache === 'function') {
+              emojiGroupsStore.setCache(ensuredData)
+            }
+          } catch (cacheErr) {
+            log('Error updating store cache after GET_EMOJI_DATA refresh:', cacheErr)
+          }
           log('Refreshed data from chrome storage for GET_EMOJI_DATA')
         }
       } catch (err) {
@@ -335,7 +491,7 @@ export async function handleGetEmojiData(
           icon: '⭐',
           order: 0,
           emojis: [],
-          originalId: 'favorites'
+          originalId: 'favorites',
         }
         groups.unshift(commonGroup)
         log('补充了常用表情组到响应数据中')
@@ -357,6 +513,7 @@ export async function handleGetEmojiData(
       if (emojiGroupsStore && emojiGroupsStore.getHotEmojis) {
         hotEmojis = emojiGroupsStore.getHotEmojis()
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       // 如果新接口不可用，使用简单过滤
       normalGroups = groups.filter((g: any) => g.UUID !== 'common-emoji-group')
