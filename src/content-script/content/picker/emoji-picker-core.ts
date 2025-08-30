@@ -10,6 +10,7 @@ import {
   getAllCachedGroups,
   setupCacheListeners,
 } from './cache-manager'
+import { cachedState } from '../state'
 import {
   generateSectionNavHTML,
   generateSectionHTML,
@@ -67,6 +68,34 @@ export async function createEmojiPicker(isMobilePicker: boolean): Promise<HTMLEl
   if (!groups || groups.length === 0) {
     groups = getDefaultEmojis()
     console.log('[组级缓存] 使用默认表情数据')
+  }
+
+  // 🚀 新增：处理未分组表情，将其作为一个特殊的组显示
+  try {
+    const ungroupedEmojis = cachedState.ungroupedEmojis || []
+    if (ungroupedEmojis.length > 0) {
+      const ungroupedGroup: EmojiGroup = {
+        UUID: 'ungrouped-emojis',
+        id: 'ungrouped-emojis',
+        displayName: '未分组',
+        icon: '📦',
+        order: 999, // 显示在最后
+        emojis: ungroupedEmojis,
+        originalId: 'ungrouped',
+      }
+      
+      // 检查是否已经存在未分组组
+      const existingUngroupedIndex = groups.findIndex(g => g.UUID === 'ungrouped-emojis')
+      if (existingUngroupedIndex >= 0) {
+        groups[existingUngroupedIndex] = ungroupedGroup
+      } else {
+        groups.push(ungroupedGroup)
+      }
+      
+      console.log(`[组级缓存] 添加未分组表情组，包含 ${ungroupedEmojis.length} 个表情`)
+    }
+  } catch (error) {
+    console.warn('[组级缓存] 处理未分组表情失败:', error)
   }
 
   // 🚀 关键修复：确保常用表情分组存在并显示在第一位
@@ -251,6 +280,34 @@ async function reloadPickerData(picker: HTMLElement, isMobilePicker: boolean): P
     } else if (commonGroupIndex > 0) {
       const commonGroup = groups.splice(commonGroupIndex, 1)[0]
       groups.unshift(commonGroup)
+    }
+
+    // 🚀 新增：处理未分组表情
+    try {
+      const ungroupedEmojis = cachedState.ungroupedEmojis || []
+      if (ungroupedEmojis.length > 0) {
+        const ungroupedGroup: EmojiGroup = {
+          UUID: 'ungrouped-emojis',
+          id: 'ungrouped-emojis',
+          displayName: '未分组',
+          icon: '📦',
+          order: 999,
+          emojis: ungroupedEmojis,
+          originalId: 'ungrouped',
+        }
+        
+        // 检查是否已经存在未分组组
+        const existingUngroupedIndex = groups.findIndex(g => g.UUID === 'ungrouped-emojis')
+        if (existingUngroupedIndex >= 0) {
+          groups[existingUngroupedIndex] = ungroupedGroup
+        } else {
+          groups.push(ungroupedGroup)
+        }
+        
+        console.log(`[表情选择器] 重新加载时添加未分组表情组，包含 ${ungroupedEmojis.length} 个表情`)
+      }
+    } catch (error) {
+      console.warn('[表情选择器] 重新加载时处理未分组表情失败:', error)
     }
 
     // 重新生成内容

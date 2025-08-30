@@ -507,6 +507,49 @@ export function saveCommonEmojiGroup(group: EmojiGroup) {
   }
 }
 
+// 🚀 新增：保存未分组表情
+export function saveUngroupedEmojis(ungroupedEmojis: any[]) {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      // Immediate save to localStorage
+      window.localStorage.setItem(KEY_UNGROUPED, JSON.stringify(ungroupedEmojis))
+
+      // Broadcast change message
+      broadcastMessage('ungrouped-emojis-updated', ungroupedEmojis)
+
+      // Schedule background sync
+      scheduleSyncToExtension()
+
+      console.log('[Storage] Saved ungrouped emojis to localStorage, sync scheduled')
+    }
+  } catch (error) {
+    console.warn('[Storage] Failed to save ungrouped emojis:', error)
+  }
+}
+
+// 🚀 新增：获取未分组表情
+export function getUngroupedEmojis(): any[] {
+  try {
+    // Primary: Read from localStorage
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(KEY_UNGROUPED)
+      if (raw) {
+        return JSON.parse(raw)
+      }
+    }
+
+    // Fallback: Read from extension cache
+    if (extCache && extCache[KEY_UNGROUPED]) {
+      return extCache[KEY_UNGROUPED]
+    }
+
+    return []
+  } catch (error) {
+    console.warn('[Storage] Failed to get ungrouped emojis:', error)
+    return []
+  }
+}
+
 // 对话历史和容器大小的数据类型
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -622,6 +665,8 @@ export default {
   getItem,
   getCommonEmojiGroup,
   saveCommonEmojiGroup,
+  saveUngroupedEmojis,
+  getUngroupedEmojis,
   createCommonEmojiGroup,
   ensureCommonEmojiGroup,
   saveChatHistory,

@@ -204,16 +204,128 @@ export default defineComponent({
 
         // 监听来自其他页面的消息
         commService.onSettingsChanged((newSettings) => {
+          console.log('[Options] Received settings changed:', newSettings)
           Object.assign(form, newSettings)
         })
 
         commService.onGroupsChanged((newGroups) => {
+          console.log('[Options] Received groups changed:', newGroups.length, 'groups')
           groups.value = newGroups
+          refreshExport() // 自动刷新导出数据
         })
 
         commService.onUsageRecorded((data) => {
-          // 可以在这里更新常用表情列表
-          // hot.value = store.getHot()
+          console.log('[Options] Received usage recorded:', data)
+          // 刷新表情组数据以获取最新的使用统计
+          loadGroups()
+        })
+
+        // 🚀 新增：监听常用表情组专门更新
+        commService.onCommonEmojiGroupChanged((data) => {
+          console.log('[Options] Received common emoji group changed:', data)
+          if (data && data.group) {
+            // 更新常用表情组
+            const commonGroupIndex = groups.value.findIndex(g => g.UUID === 'common-emoji-group')
+            if (commonGroupIndex >= 0) {
+              groups.value[commonGroupIndex] = data.group
+            } else {
+              // 如果不存在常用表情组，添加到开头
+              groups.value.unshift(data.group)
+            }
+            refreshExport() // 自动刷新导出数据
+          }
+        })
+
+        // 🚀 新增：监听特定表情组更新
+        commService.onSpecificGroupChanged((data) => {
+          console.log('[Options] Received specific group changed:', data)
+          if (data && data.groupUUID && data.group) {
+            const groupIndex = groups.value.findIndex(g => g.UUID === data.groupUUID)
+            if (groupIndex >= 0) {
+              groups.value[groupIndex] = data.group
+              refreshExport() // 自动刷新导出数据
+            }
+          }
+        })
+
+        // 🚀 新增：监听普通表情组变更
+        commService.onNormalGroupsChanged((data) => {
+          console.log('[Options] Received normal groups changed:', data)
+          if (data && data.groups) {
+            // 保留常用表情组，更新其他组
+            const commonGroup = groups.value.find(g => g.UUID === 'common-emoji-group')
+            groups.value = commonGroup ? [commonGroup, ...data.groups] : data.groups
+            refreshExport() // 自动刷新导出数据
+          }
+        })
+
+        // 🚀 新增：监听未分组表情变更
+        commService.onUngroupedEmojisChanged((data) => {
+          console.log('[Options] Received ungrouped emojis changed:', data)
+          // 触发未分组标签页的数据刷新
+          if (currentTab.value === 'ungrouped') {
+            // 可以通过事件总线通知未分组标签页刷新
+            window.dispatchEvent(new CustomEvent('ungrouped-emojis-updated', {
+              detail: data
+            }))
+          }
+        })
+
+        // 🚀 新增：监听数据导入完成
+        commService.onDataImported((data) => {
+          console.log('[Options] Received data imported:', data)
+          // 重新加载所有数据
+          loadGroups()
+          refreshExport()
+          
+          // 通知用户导入成功
+          try {
+            Modal.success({
+              title: '导入成功',
+              content: '数据已成功导入并同步到所有页面'
+            })
+          } catch (error) {
+            console.log('Data imported successfully')
+          }
+        })
+
+        // 🚀 新增：监听实时同步消息
+        commService.onCommonEmojiUpdated((commonGroup) => {
+          console.log('[Options] Received common emoji updated (realtime):', commonGroup)
+          if (commonGroup) {
+            const commonGroupIndex = groups.value.findIndex(g => g.UUID === 'common-emoji-group')
+            if (commonGroupIndex >= 0) {
+              groups.value[commonGroupIndex] = commonGroup
+            }
+          }
+        })
+
+        commService.onEmojiOrderChanged((groupUUID, updatedOrder) => {
+          console.log('[Options] Received emoji order changed (realtime):', groupUUID, updatedOrder)
+          const group = groups.value.find(g => g.UUID === groupUUID)
+          if (group && group.emojis) {
+            // 重新排序表情
+            const reorderedEmojis = updatedOrder.map(uuid => 
+              group.emojis.find((e: any) => e.UUID === uuid)
+            ).filter(Boolean)
+            group.emojis = reorderedEmojis
+          }
+        })
+
+        commService.onGroupIconUpdated((groupUUID, iconUrl) => {
+          console.log('[Options] Received group icon updated (realtime):', groupUUID, iconUrl)
+          const group = groups.value.find(g => g.UUID === groupUUID)
+          if (group) {
+            group.icon = iconUrl
+          }
+        })
+
+        commService.onUngroupedEmojisChangedSync((ungroupedEmojis) => {
+          console.log('[Options] Received ungrouped emojis changed (realtime):', ungroupedEmojis.length)
+          // 触发未分组标签页的实时刷新
+          window.dispatchEvent(new CustomEvent('ungrouped-emojis-realtime-updated', {
+            detail: { emojis: ungroupedEmojis, timestamp: Date.now() }
+          }))
         })
       } catch (error) {
         console.error('Failed to initialize options page:', error)

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent, ref, onMounted, computed, reactive } from 'vue'
+import { defineComponent, ref, onMounted, onUnmounted, computed, reactive } from 'vue'
 import { Modal, message } from 'ant-design-vue'
 
 import store from '../../data/store/main'
@@ -211,6 +211,35 @@ export default defineComponent({
 
     onMounted(() => {
       load()
+      
+      // 🚀 新增：监听未分组表情的实时更新
+      const handleUngroupedUpdate = (event: CustomEvent) => {
+        console.log('[UngroupedTab] Received ungrouped emojis update:', event.detail)
+        load() // 重新加载数据
+      }
+
+      const handleUngroupedRealtimeUpdate = (event: CustomEvent) => {
+        console.log('[UngroupedTab] Received ungrouped emojis realtime update:', event.detail)
+        if (event.detail && event.detail.emojis) {
+          // 直接更新items，避免重新加载整个页面数据
+          items.value = event.detail.emojis
+        } else {
+          load() // 如果没有具体数据，重新加载
+        }
+      }
+
+      // 添加事件监听器
+      window.addEventListener('ungrouped-emojis-updated', handleUngroupedUpdate as EventListener)
+      window.addEventListener('ungrouped-emojis-realtime-updated', handleUngroupedRealtimeUpdate as EventListener)
+
+      // 组件卸载时清理监听器
+      const cleanup = () => {
+        window.removeEventListener('ungrouped-emojis-updated', handleUngroupedUpdate as EventListener)
+        window.removeEventListener('ungrouped-emojis-realtime-updated', handleUngroupedRealtimeUpdate as EventListener)
+      }
+
+      // 组件卸载时清理监听器
+      onUnmounted(cleanup)
     })
 
     return {

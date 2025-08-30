@@ -8,6 +8,43 @@ export interface Message {
   timestamp?: number
 }
 
+// 新增：表情同步相关的消息类型
+export interface SyncMessage extends Message {
+  type: 'COMMON_EMOJI_UPDATED' | 'EMOJI_ORDER_CHANGED' | 'GROUP_ICON_UPDATED' | 'UNGROUPED_EMOJIS_CHANGED'
+  payload: SyncMessagePayload
+}
+
+// 同步消息的payload结构
+export interface SyncMessagePayload {
+  uuid?: string
+  groupUUID?: string
+  commonGroup?: EmojiGroup
+  updatedOrder?: string[]
+  iconUrl?: string
+  ungroupedEmojis?: Emoji[]
+  timestamp: number
+}
+
+// 表情相关的数据类型定义
+export interface EmojiGroup {
+  UUID: string
+  id: string
+  displayName: string
+  icon: string
+  order: number
+  emojis: Emoji[]
+  originalId?: string
+}
+
+export interface Emoji {
+  UUID: string
+  displayName: string
+  url?: string
+  usageCount?: number
+  lastUsed?: number
+  groupUUID?: string
+}
+
 export interface MessageHandler {
   (message: Message): void
 }
@@ -209,6 +246,65 @@ class CommunicationService {
     this.send('app:data-imported', data)
   }
 
+  // 新增：发送同步消息的方法
+  // 发送常用表情更新消息
+  sendCommonEmojiUpdated(commonGroup: EmojiGroup) {
+    try {
+      const payload: SyncMessagePayload = {
+        commonGroup,
+        timestamp: Date.now()
+      }
+      console.log(`[Communication:${this.context}] Sending common emoji updated:`, payload)
+      this.send('COMMON_EMOJI_UPDATED', payload)
+    } catch (error) {
+      console.error(`[Communication:${this.context}] Failed to send common emoji updated:`, error)
+    }
+  }
+
+  // 发送表情排序变更消息
+  sendEmojiOrderChanged(groupUUID: string, updatedOrder: string[]) {
+    try {
+      const payload: SyncMessagePayload = {
+        groupUUID,
+        updatedOrder,
+        timestamp: Date.now()
+      }
+      console.log(`[Communication:${this.context}] Sending emoji order changed:`, payload)
+      this.send('EMOJI_ORDER_CHANGED', payload)
+    } catch (error) {
+      console.error(`[Communication:${this.context}] Failed to send emoji order changed:`, error)
+    }
+  }
+
+  // 发送分组图标更新消息
+  sendGroupIconUpdated(groupUUID: string, iconUrl: string) {
+    try {
+      const payload: SyncMessagePayload = {
+        groupUUID,
+        iconUrl,
+        timestamp: Date.now()
+      }
+      console.log(`[Communication:${this.context}] Sending group icon updated:`, payload)
+      this.send('GROUP_ICON_UPDATED', payload)
+    } catch (error) {
+      console.error(`[Communication:${this.context}] Failed to send group icon updated:`, error)
+    }
+  }
+
+  // 发送未分组表情变更消息（新版本）
+  sendUngroupedEmojisChangedSync(ungroupedEmojis: Emoji[]) {
+    try {
+      const payload: SyncMessagePayload = {
+        ungroupedEmojis,
+        timestamp: Date.now()
+      }
+      console.log(`[Communication:${this.context}] Sending ungrouped emojis changed:`, payload)
+      this.send('UNGROUPED_EMOJIS_CHANGED', payload)
+    } catch (error) {
+      console.error(`[Communication:${this.context}] Failed to send ungrouped emojis changed:`, error)
+    }
+  }
+
   // 监听设置变更
   onSettingsChanged(handler: (settings: any) => void) {
     this.on('app:settings-changed', (message) => {
@@ -324,6 +420,91 @@ class CommunicationService {
         handler(payload)
       } else {
         handler(message)
+      }
+    })
+  }
+
+  // 新增：同步消息的监听器方法
+  // 监听常用表情更新
+  onCommonEmojiUpdated(handler: (commonGroup: EmojiGroup) => void) {
+    this.on('COMMON_EMOJI_UPDATED', (message) => {
+      try {
+        console.log(`[Communication:${this.context}] Received common emoji updated:`, message)
+        
+        if (message && typeof message === 'object') {
+          const payload = message.payload !== undefined ? message.payload : message
+          
+          if (payload && payload.commonGroup) {
+            handler(payload.commonGroup)
+          } else {
+            console.warn(`[Communication:${this.context}] Invalid common emoji updated payload:`, payload)
+          }
+        }
+      } catch (error) {
+        console.error(`[Communication:${this.context}] Error handling common emoji updated:`, error)
+      }
+    })
+  }
+
+  // 监听表情排序变更
+  onEmojiOrderChanged(handler: (groupUUID: string, updatedOrder: string[]) => void) {
+    this.on('EMOJI_ORDER_CHANGED', (message) => {
+      try {
+        console.log(`[Communication:${this.context}] Received emoji order changed:`, message)
+        
+        if (message && typeof message === 'object') {
+          const payload = message.payload !== undefined ? message.payload : message
+          
+          if (payload && payload.groupUUID && payload.updatedOrder) {
+            handler(payload.groupUUID, payload.updatedOrder)
+          } else {
+            console.warn(`[Communication:${this.context}] Invalid emoji order changed payload:`, payload)
+          }
+        }
+      } catch (error) {
+        console.error(`[Communication:${this.context}] Error handling emoji order changed:`, error)
+      }
+    })
+  }
+
+  // 监听分组图标更新
+  onGroupIconUpdated(handler: (groupUUID: string, iconUrl: string) => void) {
+    this.on('GROUP_ICON_UPDATED', (message) => {
+      try {
+        console.log(`[Communication:${this.context}] Received group icon updated:`, message)
+        
+        if (message && typeof message === 'object') {
+          const payload = message.payload !== undefined ? message.payload : message
+          
+          if (payload && payload.groupUUID && payload.iconUrl) {
+            handler(payload.groupUUID, payload.iconUrl)
+          } else {
+            console.warn(`[Communication:${this.context}] Invalid group icon updated payload:`, payload)
+          }
+        }
+      } catch (error) {
+        console.error(`[Communication:${this.context}] Error handling group icon updated:`, error)
+      }
+    })
+  }
+
+  // 监听未分组表情变更（新版本）
+  onUngroupedEmojisChangedSync(handler: (ungroupedEmojis: Emoji[]) => void) {
+    this.on('UNGROUPED_EMOJIS_CHANGED', (message) => {
+      try {
+        console.log(`[Communication:${this.context}] Received ungrouped emojis changed:`, message)
+        
+        if (message && typeof message === 'object') {
+          const payload = message.payload !== undefined ? message.payload : message
+          
+          if (payload && payload.ungroupedEmojis) {
+            handler(payload.ungroupedEmojis)
+          } else {
+            console.warn(`[Communication:${this.context}] Invalid ungrouped emojis changed payload:`, payload)
+          }
+        }
+      } catch (error) {
+        console.error(`[Communication:${this.context}] Error handling ungrouped emojis changed:`, error)
       }
     })
   }

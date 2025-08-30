@@ -264,6 +264,138 @@ export function setupCacheListeners() {
       console.error('[Emoji Picker] 处理特定表情组更新失败:', error)
     }
   })
+
+  // 🚀 新增：监听常用表情实时更新消息
+  commService.onCommonEmojiUpdated((commonGroup) => {
+    try {
+      console.log('[Emoji Picker] 接收到常用表情实时更新消息')
+
+      if (commonGroup) {
+        // 立即更新常用表情组缓存
+        cacheUtils.updateCommonGroupCache(commonGroup)
+
+        // 更新主缓存中的常用表情组
+        const index = cachedState.emojiGroups.findIndex((g) => g.UUID === 'common-emoji-group')
+        if (index >= 0) {
+          cachedState.emojiGroups[index] = commonGroup
+        }
+
+        // 如果存在活跃的表情选择器，立即刷新常用表情显示
+        const activePicker = document.querySelector(
+          '.fk-d-menu[data-identifier="emoji-picker"], .modal-container .emoji-picker',
+        )
+        if (activePicker) {
+          console.log('[Emoji Picker] 立即刷新常用表情显示')
+          refreshCommonEmojiSection(activePicker, commonGroup)
+        }
+      }
+    } catch (error) {
+      console.error('[Emoji Picker] 处理常用表情实时更新失败:', error)
+    }
+  })
+
+  // 🚀 新增：监听表情排序变更消息
+  commService.onEmojiOrderChanged((groupUUID, updatedOrder) => {
+    try {
+      console.log('[Emoji Picker] 接收到表情排序变更消息')
+
+      if (groupUUID && updatedOrder) {
+        // 更新对应组的缓存
+        if (groupUUID === 'common-emoji-group') {
+          const commonGroup = cacheUtils.getCommonGroupCache()
+          if (commonGroup && commonGroup.emojis) {
+            // 重新排序表情
+            const reorderedEmojis = updatedOrder.map((uuid: string) =>
+              commonGroup.emojis.find((e: any) => e.UUID === uuid)
+            ).filter(Boolean)
+            
+            commonGroup.emojis = reorderedEmojis
+            cacheUtils.updateCommonGroupCache(commonGroup)
+          }
+        } else {
+          const group = cacheUtils.getGroupCache(groupUUID)
+          if (group && group.emojis) {
+            // 重新排序表情
+            const reorderedEmojis = updatedOrder.map((uuid: string) =>
+              group.emojis.find((e: any) => e.UUID === uuid)
+            ).filter(Boolean)
+            
+            group.emojis = reorderedEmojis
+            cacheUtils.updateGroupCache(groupUUID, group)
+          }
+        }
+
+        // 如果存在活跃的表情选择器，立即刷新对应组的显示
+        const activePicker = document.querySelector(
+          '.fk-d-menu[data-identifier="emoji-picker"], .modal-container .emoji-picker',
+        )
+        if (activePicker) {
+          console.log(`[Emoji Picker] 立即刷新组 ${groupUUID} 的表情排序`)
+          refreshGroupEmojiOrder(activePicker, groupUUID, updatedOrder)
+        }
+      }
+    } catch (error) {
+      console.error('[Emoji Picker] 处理表情排序变更失败:', error)
+    }
+  })
+
+  // 🚀 新增：监听分组图标更新消息
+  commService.onGroupIconUpdated((groupUUID, iconUrl) => {
+    try {
+      console.log('[Emoji Picker] 接收到分组图标更新消息')
+
+      if (groupUUID && iconUrl) {
+        // 更新对应组的图标缓存
+        if (groupUUID === 'common-emoji-group') {
+          const commonGroup = cacheUtils.getCommonGroupCache()
+          if (commonGroup) {
+            commonGroup.icon = iconUrl
+            cacheUtils.updateCommonGroupCache(commonGroup)
+          }
+        } else {
+          const group = cacheUtils.getGroupCache(groupUUID)
+          if (group) {
+            group.icon = iconUrl
+            cacheUtils.updateGroupCache(groupUUID, group)
+          }
+        }
+
+        // 如果存在活跃的表情选择器，立即刷新图标显示
+        const activePicker = document.querySelector(
+          '.fk-d-menu[data-identifier="emoji-picker"], .modal-container .emoji-picker',
+        )
+        if (activePicker) {
+          console.log(`[Emoji Picker] 立即刷新组 ${groupUUID} 的图标`)
+          refreshGroupIcon(activePicker, groupUUID, iconUrl)
+        }
+      }
+    } catch (error) {
+      console.error('[Emoji Picker] 处理分组图标更新失败:', error)
+    }
+  })
+
+  // 🚀 新增：监听未分组表情变更消息
+  commService.onUngroupedEmojisChangedSync((ungroupedEmojis) => {
+    try {
+      console.log('[Emoji Picker] 接收到未分组表情变更消息')
+
+      if (ungroupedEmojis) {
+        // 更新未分组表情缓存
+        cachedState.ungroupedEmojis = ungroupedEmojis
+
+        // 如果存在活跃的表情选择器，立即刷新未分组表情显示
+        const activePicker = document.querySelector(
+          '.fk-d-menu[data-identifier="emoji-picker"], .modal-container .emoji-picker',
+        )
+        if (activePicker) {
+          console.log('[Emoji Picker] 立即刷新未分组表情显示')
+          refreshUngroupedEmojisSection(activePicker, ungroupedEmojis)
+        }
+      }
+    } catch (error) {
+      console.error('[Emoji Picker] 处理未分组表情变更失败:', error)
+    }
+  })
 }
 
 /**
@@ -286,6 +418,149 @@ export function isAggressiveMode(): boolean {
  */
 export function getAllCachedGroups(): EmojiGroup[] {
   return cacheUtils.getAllCachedGroups()
+}
+
+/**
+ * 刷新常用表情组显示
+ */
+function refreshCommonEmojiSection(picker: Element, commonGroup: any) {
+  try {
+    const commonSection = picker.querySelector('[data-group-uuid="common-emoji-group"]')
+    if (!commonSection) {
+      console.warn('[Emoji Picker] 未找到常用表情组区域')
+      return
+    }
+
+    // 重新生成常用表情组的HTML
+    const emojisHtml = commonGroup.emojis.map((emoji: any) => 
+      `<div class="emoji-item" data-emoji-uuid="${emoji.UUID}" title="${emoji.displayName}">
+        <img src="${emoji.url}" alt="${emoji.displayName}" loading="lazy" />
+      </div>`
+    ).join('')
+
+    const sectionContent = commonSection.querySelector('.emoji-section-content')
+    if (sectionContent) {
+      sectionContent.innerHTML = emojisHtml
+      console.log('[Emoji Picker] 常用表情组显示已刷新')
+    }
+  } catch (error) {
+    console.error('[Emoji Picker] 刷新常用表情组显示失败:', error)
+  }
+}
+
+/**
+ * 刷新组内表情排序
+ */
+function refreshGroupEmojiOrder(picker: Element, groupUUID: string, updatedOrder: string[]) {
+  try {
+    const groupSection = picker.querySelector(`[data-group-uuid="${groupUUID}"]`)
+    if (!groupSection) {
+      console.warn(`[Emoji Picker] 未找到组 ${groupUUID} 的区域`)
+      return
+    }
+
+    const sectionContent = groupSection.querySelector('.emoji-section-content')
+    if (!sectionContent) {
+      return
+    }
+
+    // 获取现有的表情元素
+    const existingEmojis = Array.from(sectionContent.querySelectorAll('.emoji-item'))
+    const emojiMap = new Map()
+    
+    existingEmojis.forEach(emoji => {
+      const uuid = emoji.getAttribute('data-emoji-uuid')
+      if (uuid) {
+        emojiMap.set(uuid, emoji)
+      }
+    })
+
+    // 按新顺序重新排列
+    const reorderedElements: Element[] = []
+    updatedOrder.forEach(uuid => {
+      const element = emojiMap.get(uuid)
+      if (element) {
+        reorderedElements.push(element)
+      }
+    })
+
+    // 清空并重新添加
+    sectionContent.innerHTML = ''
+    reorderedElements.forEach(element => {
+      sectionContent.appendChild(element)
+    })
+
+    console.log(`[Emoji Picker] 组 ${groupUUID} 的表情排序已刷新`)
+  } catch (error) {
+    console.error('[Emoji Picker] 刷新表情排序失败:', error)
+  }
+}
+
+/**
+ * 刷新分组图标
+ */
+function refreshGroupIcon(picker: Element, groupUUID: string, iconUrl: string) {
+  try {
+    // 更新导航栏中的图标
+    const navButton = picker.querySelector(`[data-group-uuid="${groupUUID}"]`)
+    if (navButton) {
+      const iconElement = navButton.querySelector('.emoji-nav-icon, img, .icon')
+      if (iconElement) {
+        if (iconElement.tagName === 'IMG') {
+          (iconElement as HTMLImageElement).src = iconUrl
+        } else {
+          iconElement.textContent = iconUrl
+        }
+      }
+    }
+
+    // 更新组标题中的图标（如果有）
+    const groupSection = picker.querySelector(`[data-group-uuid="${groupUUID}"]`)
+    if (groupSection) {
+      const titleIcon = groupSection.querySelector('.emoji-section-title .icon, .emoji-section-title img')
+      if (titleIcon) {
+        if (titleIcon.tagName === 'IMG') {
+          (titleIcon as HTMLImageElement).src = iconUrl
+        } else {
+          titleIcon.textContent = iconUrl
+        }
+      }
+    }
+
+    console.log(`[Emoji Picker] 组 ${groupUUID} 的图标已刷新`)
+  } catch (error) {
+    console.error('[Emoji Picker] 刷新分组图标失败:', error)
+  }
+}
+
+/**
+ * 刷新未分组表情显示
+ */
+function refreshUngroupedEmojisSection(picker: Element, ungroupedEmojis: any[]) {
+  try {
+    // 查找未分组表情的显示区域
+    const ungroupedSection = picker.querySelector('[data-group-uuid="ungrouped"], .ungrouped-emojis-section')
+    if (!ungroupedSection) {
+      // 如果没有未分组区域，可能需要创建一个
+      console.log('[Emoji Picker] 未找到未分组表情区域，可能需要创建')
+      return
+    }
+
+    // 重新生成未分组表情的HTML
+    const emojisHtml = ungroupedEmojis.map((emoji: any) => 
+      `<div class="emoji-item" data-emoji-uuid="${emoji.UUID}" title="${emoji.displayName}">
+        <img src="${emoji.url}" alt="${emoji.displayName}" loading="lazy" />
+      </div>`
+    ).join('')
+
+    const sectionContent = ungroupedSection.querySelector('.emoji-section-content')
+    if (sectionContent) {
+      sectionContent.innerHTML = emojisHtml
+      console.log('[Emoji Picker] 未分组表情显示已刷新')
+    }
+  } catch (error) {
+    console.error('[Emoji Picker] 刷新未分组表情显示失败:', error)
+  }
 }
 
 export { cacheVersion, CACHE_EXPIRE_TIME, commService }
