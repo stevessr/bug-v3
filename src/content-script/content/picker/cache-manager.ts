@@ -277,7 +277,24 @@ export function setupCacheListeners() {
         // 更新主缓存中的常用表情组
         const index = cachedState.emojiGroups.findIndex((g) => g.UUID === 'common-emoji-group')
         if (index >= 0) {
-          cachedState.emojiGroups[index] = commonGroup
+          // Convert communication service EmojiGroup to data type EmojiGroup
+          const convertedGroup = {
+            ...commonGroup,
+            icon:
+              typeof commonGroup.icon === 'string' ? commonGroup.icon : commonGroup.icon.toString(),
+            emojis: commonGroup.emojis.map((emoji: any) => ({
+              ...emoji,
+              id: emoji.id || emoji.UUID,
+              realUrl: emoji.url || emoji.realUrl || '',
+              displayUrl: new URL(
+                emoji.url ||
+                  emoji.displayUrl ||
+                  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>',
+              ),
+              order: emoji.order || 0,
+            })),
+          }
+          cachedState.emojiGroups[index] = convertedGroup
         }
 
         // 如果存在活跃的表情选择器，立即刷新常用表情显示
@@ -305,10 +322,10 @@ export function setupCacheListeners() {
           const commonGroup = cacheUtils.getCommonGroupCache()
           if (commonGroup && commonGroup.emojis) {
             // 重新排序表情
-            const reorderedEmojis = updatedOrder.map((uuid: string) =>
-              commonGroup.emojis.find((e: any) => e.UUID === uuid)
-            ).filter(Boolean)
-            
+            const reorderedEmojis = updatedOrder
+              .map((uuid: string) => commonGroup.emojis.find((e: any) => e.UUID === uuid))
+              .filter(Boolean)
+
             commonGroup.emojis = reorderedEmojis
             cacheUtils.updateCommonGroupCache(commonGroup)
           }
@@ -316,10 +333,10 @@ export function setupCacheListeners() {
           const group = cacheUtils.getGroupCache(groupUUID)
           if (group && group.emojis) {
             // 重新排序表情
-            const reorderedEmojis = updatedOrder.map((uuid: string) =>
-              group.emojis.find((e: any) => e.UUID === uuid)
-            ).filter(Boolean)
-            
+            const reorderedEmojis = updatedOrder
+              .map((uuid: string) => group.emojis.find((e: any) => e.UUID === uuid))
+              .filter(Boolean)
+
             group.emojis = reorderedEmojis
             cacheUtils.updateGroupCache(groupUUID, group)
           }
@@ -380,8 +397,18 @@ export function setupCacheListeners() {
       console.log('[Emoji Picker] 接收到未分组表情变更消息')
 
       if (ungroupedEmojis) {
-        // 更新未分组表情缓存
-        cachedState.ungroupedEmojis = ungroupedEmojis
+        // 更新未分组表情缓存 - Convert communication service Emoji to data type emoji
+        cachedState.ungroupedEmojis = ungroupedEmojis.map((emoji: any) => ({
+          ...emoji,
+          id: emoji.id || emoji.UUID,
+          realUrl: emoji.url || emoji.realUrl || '',
+          displayUrl: new URL(
+            emoji.url ||
+              emoji.displayUrl ||
+              'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>',
+          ),
+          order: emoji.order || 0,
+        }))
 
         // 如果存在活跃的表情选择器，立即刷新未分组表情显示
         const activePicker = document.querySelector(
@@ -432,11 +459,14 @@ function refreshCommonEmojiSection(picker: Element, commonGroup: any) {
     }
 
     // 重新生成常用表情组的HTML
-    const emojisHtml = commonGroup.emojis.map((emoji: any) => 
-      `<div class="emoji-item" data-emoji-uuid="${emoji.UUID}" title="${emoji.displayName}">
+    const emojisHtml = commonGroup.emojis
+      .map(
+        (emoji: any) =>
+          `<div class="emoji-item" data-emoji-uuid="${emoji.UUID}" title="${emoji.displayName}">
         <img src="${emoji.url}" alt="${emoji.displayName}" loading="lazy" />
-      </div>`
-    ).join('')
+      </div>`,
+      )
+      .join('')
 
     const sectionContent = commonSection.querySelector('.emoji-section-content')
     if (sectionContent) {
@@ -467,8 +497,8 @@ function refreshGroupEmojiOrder(picker: Element, groupUUID: string, updatedOrder
     // 获取现有的表情元素
     const existingEmojis = Array.from(sectionContent.querySelectorAll('.emoji-item'))
     const emojiMap = new Map()
-    
-    existingEmojis.forEach(emoji => {
+
+    existingEmojis.forEach((emoji) => {
       const uuid = emoji.getAttribute('data-emoji-uuid')
       if (uuid) {
         emojiMap.set(uuid, emoji)
@@ -477,7 +507,7 @@ function refreshGroupEmojiOrder(picker: Element, groupUUID: string, updatedOrder
 
     // 按新顺序重新排列
     const reorderedElements: Element[] = []
-    updatedOrder.forEach(uuid => {
+    updatedOrder.forEach((uuid) => {
       const element = emojiMap.get(uuid)
       if (element) {
         reorderedElements.push(element)
@@ -486,7 +516,7 @@ function refreshGroupEmojiOrder(picker: Element, groupUUID: string, updatedOrder
 
     // 清空并重新添加
     sectionContent.innerHTML = ''
-    reorderedElements.forEach(element => {
+    reorderedElements.forEach((element) => {
       sectionContent.appendChild(element)
     })
 
@@ -507,7 +537,7 @@ function refreshGroupIcon(picker: Element, groupUUID: string, iconUrl: string) {
       const iconElement = navButton.querySelector('.emoji-nav-icon, img, .icon')
       if (iconElement) {
         if (iconElement.tagName === 'IMG') {
-          (iconElement as HTMLImageElement).src = iconUrl
+          ;(iconElement as HTMLImageElement).src = iconUrl
         } else {
           iconElement.textContent = iconUrl
         }
@@ -517,10 +547,12 @@ function refreshGroupIcon(picker: Element, groupUUID: string, iconUrl: string) {
     // 更新组标题中的图标（如果有）
     const groupSection = picker.querySelector(`[data-group-uuid="${groupUUID}"]`)
     if (groupSection) {
-      const titleIcon = groupSection.querySelector('.emoji-section-title .icon, .emoji-section-title img')
+      const titleIcon = groupSection.querySelector(
+        '.emoji-section-title .icon, .emoji-section-title img',
+      )
       if (titleIcon) {
         if (titleIcon.tagName === 'IMG') {
-          (titleIcon as HTMLImageElement).src = iconUrl
+          ;(titleIcon as HTMLImageElement).src = iconUrl
         } else {
           titleIcon.textContent = iconUrl
         }
@@ -539,7 +571,9 @@ function refreshGroupIcon(picker: Element, groupUUID: string, iconUrl: string) {
 function refreshUngroupedEmojisSection(picker: Element, ungroupedEmojis: any[]) {
   try {
     // 查找未分组表情的显示区域
-    const ungroupedSection = picker.querySelector('[data-group-uuid="ungrouped"], .ungrouped-emojis-section')
+    const ungroupedSection = picker.querySelector(
+      '[data-group-uuid="ungrouped"], .ungrouped-emojis-section',
+    )
     if (!ungroupedSection) {
       // 如果没有未分组区域，可能需要创建一个
       console.log('[Emoji Picker] 未找到未分组表情区域，可能需要创建')
@@ -547,11 +581,14 @@ function refreshUngroupedEmojisSection(picker: Element, ungroupedEmojis: any[]) 
     }
 
     // 重新生成未分组表情的HTML
-    const emojisHtml = ungroupedEmojis.map((emoji: any) => 
-      `<div class="emoji-item" data-emoji-uuid="${emoji.UUID}" title="${emoji.displayName}">
+    const emojisHtml = ungroupedEmojis
+      .map(
+        (emoji: any) =>
+          `<div class="emoji-item" data-emoji-uuid="${emoji.UUID}" title="${emoji.displayName}">
         <img src="${emoji.url}" alt="${emoji.displayName}" loading="lazy" />
-      </div>`
-    ).join('')
+      </div>`,
+      )
+      .join('')
 
     const sectionContent = ungroupedSection.querySelector('.emoji-section-content')
     if (sectionContent) {

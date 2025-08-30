@@ -194,12 +194,12 @@ function setEmojiGroups(gs: EmojiGroup[]) {
 
 function addUngrouped(emoji: any) {
   console.log('[EmojiGroupsStore] Adding ungrouped emoji:', emoji.displayName || emoji.UUID)
-  
+
   ungrouped.push(emoji)
-  
+
   try {
     settingsStore.save(emojiGroups, ungrouped)
-    
+
     // 🚀 新增：发送未分组表情变更的实时同步消息
     try {
       const comm = getCommService()
@@ -210,7 +210,7 @@ function addUngrouped(emoji: any) {
     } catch (syncError) {
       console.warn('[EmojiGroupsStore] Failed to send ungrouped sync message:', syncError)
     }
-    
+
     // 保存到专用存储键
     try {
       storage.saveUngroupedEmojis(ungrouped)
@@ -218,7 +218,6 @@ function addUngrouped(emoji: any) {
     } catch (storageError) {
       console.warn('[EmojiGroupsStore] Failed to save to dedicated ungrouped key:', storageError)
     }
-    
   } catch (error) {
     console.error('[EmojiGroupsStore] Failed to save ungrouped emojis:', error)
   }
@@ -226,15 +225,15 @@ function addUngrouped(emoji: any) {
 
 function removeUngroupedByUUID(uuid: string) {
   console.log('[EmojiGroupsStore] Removing ungrouped emoji by UUID:', uuid)
-  
+
   const idx = ungrouped.findIndex((e) => e.UUID === (uuid as any))
   if (idx >= 0) {
     const removedEmoji = ungrouped[idx]
     ungrouped.splice(idx, 1)
-    
+
     try {
       settingsStore.save(emojiGroups, ungrouped)
-      
+
       // 🚀 新增：发送未分组表情变更的实时同步消息
       try {
         const comm = getCommService()
@@ -245,7 +244,7 @@ function removeUngroupedByUUID(uuid: string) {
       } catch (syncError) {
         console.warn('[EmojiGroupsStore] Failed to send ungrouped sync message:', syncError)
       }
-      
+
       // 保存到专用存储键
       try {
         storage.saveUngroupedEmojis(ungrouped)
@@ -253,15 +252,18 @@ function removeUngroupedByUUID(uuid: string) {
       } catch (storageError) {
         console.warn('[EmojiGroupsStore] Failed to save to dedicated ungrouped key:', storageError)
       }
-      
-      console.log('[EmojiGroupsStore] Successfully removed ungrouped emoji:', removedEmoji.displayName || uuid)
+
+      console.log(
+        '[EmojiGroupsStore] Successfully removed ungrouped emoji:',
+        removedEmoji.displayName || uuid,
+      )
       return true
     } catch (error) {
       console.error('[EmojiGroupsStore] Failed to save after removing ungrouped emoji:', error)
       return false
     }
   }
-  
+
   console.warn('[EmojiGroupsStore] Ungrouped emoji not found with UUID:', uuid)
   return false
 }
@@ -511,31 +513,35 @@ function resetUsageCountByUUID(uuid: string) {
 // 🚀 新增：批量更新未分组表情
 function setUngroupedEmojis(newUngrouped: any[]) {
   console.log('[EmojiGroupsStore] Setting ungrouped emojis, count:', newUngrouped.length)
-  
+
   ungrouped = newUngrouped.map((e) => ({ ...e }))
-  
+
   try {
     settingsStore.save(emojiGroups, ungrouped)
-    
+
     // 🚀 发送未分组表情变更的实时同步消息
     try {
       const comm = getCommService()
       if (comm) {
         comm.sendUngroupedEmojisChangedSync([...ungrouped])
-        console.log('[EmojiGroupsStore] Sent ungrouped emojis changed sync message after batch update')
+        console.log(
+          '[EmojiGroupsStore] Sent ungrouped emojis changed sync message after batch update',
+        )
       }
     } catch (syncError) {
       console.warn('[EmojiGroupsStore] Failed to send ungrouped sync message:', syncError)
     }
-    
+
     // 保存到专用存储键
     try {
       storage.saveUngroupedEmojis(ungrouped)
-      console.log('[EmojiGroupsStore] Saved batch updated ungrouped emojis to dedicated storage key')
+      console.log(
+        '[EmojiGroupsStore] Saved batch updated ungrouped emojis to dedicated storage key',
+      )
     } catch (storageError) {
       console.warn('[EmojiGroupsStore] Failed to save to dedicated ungrouped key:', storageError)
     }
-    
+
     return true
   } catch (error) {
     console.error('[EmojiGroupsStore] Failed to save batch updated ungrouped emojis:', error)
@@ -546,28 +552,28 @@ function setUngroupedEmojis(newUngrouped: any[]) {
 // 🚀 新增：移动表情从分组到未分组
 function moveEmojiToUngrouped(groupUUID: string, emojiUUID: string) {
   console.log('[EmojiGroupsStore] Moving emoji from group to ungrouped:', groupUUID, emojiUUID)
-  
+
   const group = emojiGroups.find((g) => g.UUID === (groupUUID as any))
   if (!group) {
     console.warn('[EmojiGroupsStore] Group not found:', groupUUID)
     return false
   }
-  
+
   const emojiIndex = group.emojis.findIndex((e) => e.UUID === (emojiUUID as any))
   if (emojiIndex < 0) {
     console.warn('[EmojiGroupsStore] Emoji not found in group:', emojiUUID)
     return false
   }
-  
+
   // 移除表情从分组
   const [emoji] = group.emojis.splice(emojiIndex, 1)
-  
+
   // 添加到未分组
   ungrouped.push(emoji)
-  
+
   try {
     settingsStore.save(emojiGroups, ungrouped)
-    
+
     // 🚀 发送未分组表情变更的实时同步消息
     try {
       const comm = getCommService()
@@ -578,7 +584,7 @@ function moveEmojiToUngrouped(groupUUID: string, emojiUUID: string) {
     } catch (syncError) {
       console.warn('[EmojiGroupsStore] Failed to send ungrouped sync message:', syncError)
     }
-    
+
     // 保存到专用存储键
     try {
       storage.saveUngroupedEmojis(ungrouped)
@@ -586,8 +592,11 @@ function moveEmojiToUngrouped(groupUUID: string, emojiUUID: string) {
     } catch (storageError) {
       console.warn('[EmojiGroupsStore] Failed to save to dedicated ungrouped key:', storageError)
     }
-    
-    console.log('[EmojiGroupsStore] Successfully moved emoji to ungrouped:', emoji.displayName || emojiUUID)
+
+    console.log(
+      '[EmojiGroupsStore] Successfully moved emoji to ungrouped:',
+      emoji.displayName || emojiUUID,
+    )
     return true
   } catch (error) {
     console.error('[EmojiGroupsStore] Failed to save after moving emoji to ungrouped:', error)
@@ -597,53 +606,64 @@ function moveEmojiToUngrouped(groupUUID: string, emojiUUID: string) {
 
 // 🚀 新增：移动表情从未分组到分组
 function moveEmojiFromUngrouped(emojiUUID: string, targetGroupUUID: string, position?: number) {
-  console.log('[EmojiGroupsStore] Moving emoji from ungrouped to group:', emojiUUID, targetGroupUUID)
-  
+  console.log(
+    '[EmojiGroupsStore] Moving emoji from ungrouped to group:',
+    emojiUUID,
+    targetGroupUUID,
+  )
+
   const emojiIndex = ungrouped.findIndex((e) => e.UUID === (emojiUUID as any))
   if (emojiIndex < 0) {
     console.warn('[EmojiGroupsStore] Emoji not found in ungrouped:', emojiUUID)
     return false
   }
-  
+
   const targetGroup = emojiGroups.find((g) => g.UUID === (targetGroupUUID as any))
   if (!targetGroup) {
     console.warn('[EmojiGroupsStore] Target group not found:', targetGroupUUID)
     return false
   }
-  
+
   // 移除表情从未分组
   const [emoji] = ungrouped.splice(emojiIndex, 1)
-  
+
   // 添加到目标分组
   if (typeof position === 'number' && position >= 0 && position <= targetGroup.emojis.length) {
     targetGroup.emojis.splice(position, 0, emoji)
   } else {
     targetGroup.emojis.push(emoji)
   }
-  
+
   try {
     settingsStore.save(emojiGroups, ungrouped)
-    
+
     // 🚀 发送未分组表情变更的实时同步消息
     try {
       const comm = getCommService()
       if (comm) {
         comm.sendUngroupedEmojisChangedSync([...ungrouped])
-        console.log('[EmojiGroupsStore] Sent ungrouped emojis changed sync message after move from ungrouped')
+        console.log(
+          '[EmojiGroupsStore] Sent ungrouped emojis changed sync message after move from ungrouped',
+        )
       }
     } catch (syncError) {
       console.warn('[EmojiGroupsStore] Failed to send ungrouped sync message:', syncError)
     }
-    
+
     // 保存到专用存储键
     try {
       storage.saveUngroupedEmojis(ungrouped)
-      console.log('[EmojiGroupsStore] Saved ungrouped emojis after move from ungrouped to dedicated storage key')
+      console.log(
+        '[EmojiGroupsStore] Saved ungrouped emojis after move from ungrouped to dedicated storage key',
+      )
     } catch (storageError) {
       console.warn('[EmojiGroupsStore] Failed to save to dedicated ungrouped key:', storageError)
     }
-    
-    console.log('[EmojiGroupsStore] Successfully moved emoji from ungrouped to group:', emoji.displayName || emojiUUID)
+
+    console.log(
+      '[EmojiGroupsStore] Successfully moved emoji from ungrouped to group:',
+      emoji.displayName || emojiUUID,
+    )
     return true
   } catch (error) {
     console.error('[EmojiGroupsStore] Failed to save after moving emoji from ungrouped:', error)
@@ -654,19 +674,19 @@ function moveEmojiFromUngrouped(emojiUUID: string, targetGroupUUID: string, posi
 // 🚀 新增：更新分组图标
 function updateGroupIcon(groupUUID: string, newIcon: string) {
   console.log('[EmojiGroupsStore] Updating group icon:', groupUUID, newIcon)
-  
+
   const group = emojiGroups.find((g) => g.UUID === (groupUUID as any))
   if (!group) {
     console.warn('[EmojiGroupsStore] Group not found for icon update:', groupUUID)
     return false
   }
-  
+
   const oldIcon = group.icon
   group.icon = newIcon
-  
+
   try {
     settingsStore.save(emojiGroups, ungrouped)
-    
+
     // 🚀 发送分组图标更新的实时同步消息
     try {
       const comm = getCommService()
@@ -677,17 +697,22 @@ function updateGroupIcon(groupUUID: string, newIcon: string) {
     } catch (syncError) {
       console.warn('[EmojiGroupsStore] Failed to send group icon sync message:', syncError)
     }
-    
+
     // 如果是常用表情组，保存到专用存储键
     if (groupUUID === 'common-emoji-group') {
       try {
         storage.saveCommonEmojiGroup(group)
-        console.log('[EmojiGroupsStore] Saved common emoji group with updated icon to dedicated storage key')
+        console.log(
+          '[EmojiGroupsStore] Saved common emoji group with updated icon to dedicated storage key',
+        )
       } catch (storageError) {
-        console.warn('[EmojiGroupsStore] Failed to save common group with updated icon:', storageError)
+        console.warn(
+          '[EmojiGroupsStore] Failed to save common group with updated icon:',
+          storageError,
+        )
       }
     }
-    
+
     console.log('[EmojiGroupsStore] Successfully updated group icon from', oldIcon, 'to', newIcon)
     return true
   } catch (error) {
@@ -699,32 +724,32 @@ function updateGroupIcon(groupUUID: string, newIcon: string) {
 // 🚀 新增：批量更新分组图标
 function updateMultipleGroupIcons(iconUpdates: Array<{ groupUUID: string; icon: string }>) {
   console.log('[EmojiGroupsStore] Updating multiple group icons, count:', iconUpdates.length)
-  
+
   const updatedGroups: Array<{ groupUUID: string; oldIcon: string; newIcon: string }> = []
-  
+
   for (const update of iconUpdates) {
     const group = emojiGroups.find((g) => g.UUID === (update.groupUUID as any))
     if (group) {
-      const oldIcon = group.icon
+      const oldIcon = typeof group.icon === 'string' ? group.icon : group.icon.toString()
       group.icon = update.icon
       updatedGroups.push({
         groupUUID: update.groupUUID,
         oldIcon,
-        newIcon: update.icon
+        newIcon: update.icon,
       })
     } else {
       console.warn('[EmojiGroupsStore] Group not found for batch icon update:', update.groupUUID)
     }
   }
-  
+
   if (updatedGroups.length === 0) {
     console.warn('[EmojiGroupsStore] No groups were updated in batch icon update')
     return false
   }
-  
+
   try {
     settingsStore.save(emojiGroups, ungrouped)
-    
+
     // 🚀 发送每个分组图标更新的实时同步消息
     try {
       const comm = getCommService()
@@ -737,21 +762,26 @@ function updateMultipleGroupIcons(iconUpdates: Array<{ groupUUID: string; icon: 
     } catch (syncError) {
       console.warn('[EmojiGroupsStore] Failed to send batch group icon sync messages:', syncError)
     }
-    
+
     // 保存常用表情组到专用存储键（如果有更新）
-    const commonGroupUpdate = updatedGroups.find(u => u.groupUUID === 'common-emoji-group')
+    const commonGroupUpdate = updatedGroups.find((u) => u.groupUUID === 'common-emoji-group')
     if (commonGroupUpdate) {
       try {
-        const commonGroup = emojiGroups.find(g => g.UUID === 'common-emoji-group')
+        const commonGroup = emojiGroups.find((g) => g.UUID === 'common-emoji-group')
         if (commonGroup) {
           storage.saveCommonEmojiGroup(commonGroup)
-          console.log('[EmojiGroupsStore] Saved common emoji group with updated icon to dedicated storage key')
+          console.log(
+            '[EmojiGroupsStore] Saved common emoji group with updated icon to dedicated storage key',
+          )
         }
       } catch (storageError) {
-        console.warn('[EmojiGroupsStore] Failed to save common group with updated icon:', storageError)
+        console.warn(
+          '[EmojiGroupsStore] Failed to save common group with updated icon:',
+          storageError,
+        )
       }
     }
-    
+
     console.log('[EmojiGroupsStore] Successfully updated', updatedGroups.length, 'group icons')
     return true
   } catch (error) {
@@ -768,7 +798,7 @@ function cacheGroupIcon(groupUUID: string, iconUrl: string, blob?: Blob) {
   iconCache.set(groupUUID, {
     url: iconUrl,
     timestamp: Date.now(),
-    blob
+    blob,
   })
   console.log('[EmojiGroupsStore] Cached icon for group:', groupUUID)
 }
@@ -778,14 +808,14 @@ function getCachedGroupIcon(groupUUID: string): { url: string; blob?: Blob } | n
   if (!cached) {
     return null
   }
-  
+
   // 检查缓存是否过期
   if (Date.now() - cached.timestamp > ICON_CACHE_DURATION) {
     iconCache.delete(groupUUID)
     console.log('[EmojiGroupsStore] Icon cache expired for group:', groupUUID)
     return null
   }
-  
+
   console.log('[EmojiGroupsStore] Using cached icon for group:', groupUUID)
   return { url: cached.url, blob: cached.blob }
 }
@@ -803,35 +833,36 @@ function clearIconCache(groupUUID?: string) {
 // 🚀 新增：预加载分组图标
 async function preloadGroupIcons(groupUUIDs: string[]) {
   console.log('[EmojiGroupsStore] Preloading icons for groups:', groupUUIDs)
-  
+
   const preloadPromises = groupUUIDs.map(async (groupUUID) => {
-    const group = emojiGroups.find(g => g.UUID === groupUUID)
+    const group = emojiGroups.find((g) => g.UUID === groupUUID)
     if (!group || !group.icon) {
       return
     }
-    
+
     // 检查是否已缓存
     if (getCachedGroupIcon(groupUUID)) {
       return
     }
-    
+
     try {
       // 如果图标是URL，尝试预加载
-      if (group.icon.startsWith('http') || group.icon.startsWith('data:')) {
-        const response = await fetch(group.icon)
+      const iconStr = typeof group.icon === 'string' ? group.icon : group.icon.toString()
+      if (iconStr.startsWith('http') || iconStr.startsWith('data:')) {
+        const response = await fetch(iconStr)
         if (response.ok) {
           const blob = await response.blob()
-          cacheGroupIcon(groupUUID, group.icon, blob)
+          cacheGroupIcon(groupUUID, iconStr, blob)
         }
       } else {
         // 如果是emoji字符，直接缓存
-        cacheGroupIcon(groupUUID, group.icon)
+        cacheGroupIcon(groupUUID, iconStr)
       }
     } catch (error) {
       console.warn('[EmojiGroupsStore] Failed to preload icon for group:', groupUUID, error)
     }
   })
-  
+
   await Promise.all(preloadPromises)
   console.log('[EmojiGroupsStore] Completed preloading icons')
 }

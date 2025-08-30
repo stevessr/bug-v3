@@ -155,6 +155,20 @@ export const cacheUtils = {
     return null
   },
 
+  // 获取常用表情组缓存
+  getCommonGroupCache() {
+    if (cacheManager.commonGroupCache.data) {
+      cacheManager.stats.hitCount++
+      cacheManager.stats.lastHit = Date.now()
+      console.log(`[缓存] 命中常用表情组缓存`)
+      return cacheManager.commonGroupCache.data
+    }
+    cacheManager.stats.missCount++
+    cacheManager.stats.lastMiss = Date.now()
+    console.log(`[缓存] 未命中常用表情组缓存`)
+    return null
+  },
+
   // 获取所有缓存的表情组
   getAllCachedGroups() {
     const groups = []

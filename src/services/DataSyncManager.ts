@@ -1,6 +1,10 @@
 // 数据同步管理器
 import type { EmojiGroup, Emoji } from './communication'
-import { BatchUpdateManager, type UpdateOperation, type BatchProcessResult } from './BatchUpdateManager'
+import {
+  BatchUpdateManager,
+  type UpdateOperation,
+  type BatchProcessResult,
+} from './BatchUpdateManager'
 
 // Chrome Storage API 声明
 declare const chrome: {
@@ -50,7 +54,7 @@ export class DataSyncManager {
       high: 50,
       normal: 200,
       low: 1000,
-      maxBatchSize: 15
+      maxBatchSize: 15,
     })
     this.init()
     this.setupBatchHandlers()
@@ -131,8 +135,13 @@ export class DataSyncManager {
    */
   private setupStorageWatcher() {
     try {
-      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local && chrome.storage.local.onChanged) {
-        chrome.storage.local.onChanged.addListener((changes: any, areaName: string) => {
+      if (
+        typeof chrome !== 'undefined' &&
+        chrome.storage &&
+        chrome.storage.local &&
+        chrome.storage.local.onChanged
+      ) {
+        chrome.storage.local.onChanged.addListener?.((changes: any, areaName: string) => {
           if (areaName === 'local') {
             this.handleStorageChanges(changes)
           }
@@ -151,18 +160,18 @@ export class DataSyncManager {
    */
   private handleStorageChanges(changes: any) {
     console.log('[DataSyncManager] Storage changes detected:', changes)
-    
+
     for (const key in changes) {
       const change = changes[key]
       const storageChange: StorageChange = {
         key,
         oldValue: change.oldValue,
         newValue: change.newValue,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
 
       // 通知所有监听器
-      this.storageChangeListeners.forEach(listener => {
+      this.storageChangeListeners.forEach((listener) => {
         try {
           listener(storageChange)
         } catch (error) {
@@ -186,31 +195,31 @@ export class DataSyncManager {
         type: 'common-emoji',
         data: change.newValue,
         timestamp: change.timestamp,
-        priority: 'high'
+        priority: 'high',
       }
     } else if (change.key.startsWith('emojiGroups-') && change.key !== 'emojiGroups-index') {
       notificationItem = {
         type: 'group-icon',
         data: {
           groupUUID: change.key.replace('emojiGroups-', ''),
-          group: change.newValue
+          group: change.newValue,
         },
         timestamp: change.timestamp,
-        priority: 'normal'
+        priority: 'normal',
       }
     } else if (change.key === 'ungrouped-emojis') {
       notificationItem = {
         type: 'ungrouped-emojis',
         data: change.newValue,
         timestamp: change.timestamp,
-        priority: 'normal'
+        priority: 'normal',
       }
     } else if (change.key === 'emoji-order-cache') {
       notificationItem = {
         type: 'emoji-order',
         data: change.newValue,
         timestamp: change.timestamp,
-        priority: 'normal'
+        priority: 'normal',
       }
     }
 
@@ -225,17 +234,20 @@ export class DataSyncManager {
   private queueNotification(item: NotificationItem) {
     // 按优先级插入队列
     const insertIndex = this.notificationQueue.findIndex(
-      queueItem => this.getPriorityValue(queueItem.priority) > this.getPriorityValue(item.priority)
+      (queueItem) =>
+        this.getPriorityValue(queueItem.priority) > this.getPriorityValue(item.priority),
     )
-    
+
     if (insertIndex === -1) {
       this.notificationQueue.push(item)
     } else {
       this.notificationQueue.splice(insertIndex, 0, item)
     }
 
-    console.log(`[DataSyncManager] Queued ${item.type} notification, queue length: ${this.notificationQueue.length}`)
-    
+    console.log(
+      `[DataSyncManager] Queued ${item.type} notification, queue length: ${this.notificationQueue.length}`,
+    )
+
     // 防抖处理队列
     this.debouncedProcessQueue()
   }
@@ -245,10 +257,14 @@ export class DataSyncManager {
    */
   private getPriorityValue(priority: NotificationItem['priority']): number {
     switch (priority) {
-      case 'high': return 1
-      case 'normal': return 2
-      case 'low': return 3
-      default: return 2
+      case 'high':
+        return 1
+      case 'normal':
+        return 2
+      case 'low':
+        return 3
+      default:
+        return 2
     }
   }
 
@@ -295,17 +311,17 @@ export class DataSyncManager {
    */
   async syncStorages(): Promise<void> {
     console.log('[DataSyncManager] Starting storage synchronization')
-    
+
     try {
       // 从 Chrome Storage 读取数据
       const chromeData = await this.getChromeStorageData()
-      
+
       // 从 localStorage 读取数据
       const localData = this.getLocalStorageData()
-      
+
       // 比较并同步数据
       const syncResult = this.compareAndSync(chromeData, localData)
-      
+
       console.log('[DataSyncManager] Storage synchronization completed:', syncResult)
     } catch (error) {
       console.error('[DataSyncManager] Storage synchronization failed:', error)
@@ -341,11 +357,11 @@ export class DataSyncManager {
    */
   private getLocalStorageData(): any {
     const data: any = {}
-    
+
     try {
       // 获取所有相关的 localStorage 键
       const keys = ['emojiGroups-common', 'ungrouped-emojis', 'emoji-order-cache']
-      
+
       for (const key of keys) {
         const value = localStorage.getItem(key)
         if (value) {
@@ -359,14 +375,17 @@ export class DataSyncManager {
     } catch (error) {
       console.error('[DataSyncManager] Failed to read localStorage:', error)
     }
-    
+
     return data
   }
 
   /**
    * 比较并同步数据
    */
-  private compareAndSync(chromeData: any, localData: any): { synced: boolean; conflicts: string[] } {
+  private compareAndSync(
+    chromeData: any,
+    localData: any,
+  ): { synced: boolean; conflicts: string[] } {
     const conflicts: string[] = []
     let synced = false
 
@@ -375,7 +394,7 @@ export class DataSyncManager {
       if (chromeData['emojiGroups-common'] && localData['emojiGroups-common']) {
         const chromeTimestamp = chromeData['emojiGroups-common'].lastUpdated || 0
         const localTimestamp = localData['emojiGroups-common'].lastUpdated || 0
-        
+
         if (chromeTimestamp !== localTimestamp) {
           conflicts.push('emojiGroups-common')
           // 使用时间戳较新的数据
@@ -392,7 +411,7 @@ export class DataSyncManager {
       if (chromeData['ungrouped-emojis'] && localData['ungrouped-emojis']) {
         const chromeLength = chromeData['ungrouped-emojis'].length || 0
         const localLength = localData['ungrouped-emojis'].length || 0
-        
+
         if (chromeLength !== localLength) {
           conflicts.push('ungrouped-emojis')
           // 使用数量较多的数据（假设是更新的）
@@ -404,7 +423,6 @@ export class DataSyncManager {
           synced = true
         }
       }
-
     } catch (error) {
       console.error('[DataSyncManager] Error during data comparison:', error)
     }
@@ -432,7 +450,10 @@ export class DataSyncManager {
       if (chrome.storage && chrome.storage.local && chrome.storage.local.set) {
         chrome.storage.local.set({ [key]: value }, () => {
           if (chrome.runtime && chrome.runtime.lastError) {
-            console.error(`[DataSyncManager] Failed to update Chrome storage key ${key}:`, chrome.runtime.lastError)
+            console.error(
+              `[DataSyncManager] Failed to update Chrome storage key ${key}:`,
+              chrome.runtime.lastError,
+            )
           } else {
             console.log(`[DataSyncManager] Updated Chrome storage key: ${key}`)
           }
@@ -452,12 +473,14 @@ export class DataSyncManager {
     }
 
     this.processingQueue = true
-    console.log(`[DataSyncManager] Processing ${this.notificationQueue.length} pending notifications`)
+    console.log(
+      `[DataSyncManager] Processing ${this.notificationQueue.length} pending notifications`,
+    )
 
     try {
       // 按优先级处理通知
       const processedItems: NotificationItem[] = []
-      
+
       while (this.notificationQueue.length > 0) {
         const item = this.notificationQueue.shift()!
         this.processNotification(item)
@@ -477,11 +500,11 @@ export class DataSyncManager {
    */
   private processNotification(item: NotificationItem): void {
     console.log(`[DataSyncManager] Processing ${item.type} notification`)
-    
+
     try {
       // 这里可以添加具体的通知处理逻辑
       // 例如发送消息到其他组件、更新UI等
-      
+
       // 触发自定义事件
       if (typeof window !== 'undefined') {
         const event = new CustomEvent('data-sync-notification', {
@@ -489,8 +512,8 @@ export class DataSyncManager {
             type: item.type,
             data: item.data,
             timestamp: item.timestamp,
-            priority: item.priority
-          }
+            priority: item.priority,
+          },
         })
         window.dispatchEvent(event)
       }
@@ -504,7 +527,9 @@ export class DataSyncManager {
    */
   addStorageChangeListener(listener: (change: StorageChange) => void): void {
     this.storageChangeListeners.push(listener)
-    console.log(`[DataSyncManager] Added storage change listener, total: ${this.storageChangeListeners.length}`)
+    console.log(
+      `[DataSyncManager] Added storage change listener, total: ${this.storageChangeListeners.length}`,
+    )
   }
 
   /**
@@ -514,7 +539,9 @@ export class DataSyncManager {
     const index = this.storageChangeListeners.indexOf(listener)
     if (index > -1) {
       this.storageChangeListeners.splice(index, 1)
-      console.log(`[DataSyncManager] Removed storage change listener, total: ${this.storageChangeListeners.length}`)
+      console.log(
+        `[DataSyncManager] Removed storage change listener, total: ${this.storageChangeListeners.length}`,
+      )
     }
   }
 
@@ -525,7 +552,7 @@ export class DataSyncManager {
     return {
       length: this.notificationQueue.length,
       processing: this.processingQueue,
-      watching: this.isWatching
+      watching: this.isWatching,
     }
   }
 
@@ -551,13 +578,13 @@ export class DataSyncManager {
     type: 'common-emoji' | 'emoji-order' | 'group-icon' | 'ungrouped-emojis' | 'cache-invalidation',
     data: any,
     priority: 'immediate' | 'high' | 'normal' | 'low' = 'normal',
-    maxRetries: number = 3
+    maxRetries: number = 3,
   ): string {
     return this.batchUpdateManager.queueUpdate({
       type,
       priority,
       data,
-      maxRetries
+      maxRetries,
     })
   }
 
@@ -566,13 +593,13 @@ export class DataSyncManager {
    */
   async processImmediateUpdate(
     type: 'common-emoji' | 'emoji-order' | 'group-icon' | 'ungrouped-emojis' | 'cache-invalidation',
-    data: any
+    data: any,
   ): Promise<boolean> {
     return await this.batchUpdateManager.processImmediate({
       type,
       priority: 'immediate',
       data,
-      maxRetries: 1
+      maxRetries: 1,
     })
   }
 
@@ -593,15 +620,15 @@ export class DataSyncManager {
       // 更新存储
       this.updateChromeStorage('emojiGroups-common', data)
       this.updateLocalStorage('emojiGroups-common', data)
-      
+
       // 发送通知事件
       if (typeof window !== 'undefined') {
         const event = new CustomEvent('common-emoji-batch-updated', {
-          detail: { data, timestamp: Date.now() }
+          detail: { data, timestamp: Date.now() },
         })
         window.dispatchEvent(event)
       }
-      
+
       console.log('[DataSyncManager] Common emoji batch update completed')
     } catch (error) {
       console.error('[DataSyncManager] Common emoji batch update error:', error)
@@ -615,26 +642,26 @@ export class DataSyncManager {
   private async handleEmojiOrderUpdate(data: any): Promise<void> {
     try {
       const { groupUUID, order } = data
-      
+
       // 更新排序缓存
       const orderCache = {
         [groupUUID]: {
           order,
-          lastUpdated: Date.now()
-        }
+          lastUpdated: Date.now(),
+        },
       }
-      
+
       this.updateChromeStorage('emoji-order-cache', orderCache)
       this.updateLocalStorage('emoji-order-cache', orderCache)
-      
+
       // 发送通知事件
       if (typeof window !== 'undefined') {
         const event = new CustomEvent('emoji-order-batch-updated', {
-          detail: { groupUUID, order, timestamp: Date.now() }
+          detail: { groupUUID, order, timestamp: Date.now() },
         })
         window.dispatchEvent(event)
       }
-      
+
       console.log('[DataSyncManager] Emoji order batch update completed')
     } catch (error) {
       console.error('[DataSyncManager] Emoji order batch update error:', error)
@@ -648,21 +675,21 @@ export class DataSyncManager {
   private async handleGroupIconUpdate(data: any): Promise<void> {
     try {
       const { groupUUID, iconUrl, group } = data
-      
+
       // 更新分组数据
       if (group) {
         this.updateChromeStorage(`emojiGroups-${groupUUID}`, group)
         this.updateLocalStorage(`emojiGroups-${groupUUID}`, group)
       }
-      
+
       // 发送通知事件
       if (typeof window !== 'undefined') {
         const event = new CustomEvent('group-icon-batch-updated', {
-          detail: { groupUUID, iconUrl, timestamp: Date.now() }
+          detail: { groupUUID, iconUrl, timestamp: Date.now() },
         })
         window.dispatchEvent(event)
       }
-      
+
       console.log('[DataSyncManager] Group icon batch update completed')
     } catch (error) {
       console.error('[DataSyncManager] Group icon batch update error:', error)
@@ -678,15 +705,15 @@ export class DataSyncManager {
       // 更新未分组表情
       this.updateChromeStorage('ungrouped-emojis', data)
       this.updateLocalStorage('ungrouped-emojis', data)
-      
+
       // 发送通知事件
       if (typeof window !== 'undefined') {
         const event = new CustomEvent('ungrouped-emojis-batch-updated', {
-          detail: { data, timestamp: Date.now() }
+          detail: { data, timestamp: Date.now() },
         })
         window.dispatchEvent(event)
       }
-      
+
       console.log('[DataSyncManager] Ungrouped emojis batch update completed')
     } catch (error) {
       console.error('[DataSyncManager] Ungrouped emojis batch update error:', error)
@@ -700,7 +727,7 @@ export class DataSyncManager {
   private async handleCacheInvalidation(data: any): Promise<void> {
     try {
       const { keys } = data
-      
+
       // 清除指定的缓存键
       if (Array.isArray(keys)) {
         for (const key of keys) {
@@ -708,15 +735,15 @@ export class DataSyncManager {
           console.log(`[DataSyncManager] Invalidating cache for key: ${key}`)
         }
       }
-      
+
       // 发送通知事件
       if (typeof window !== 'undefined') {
         const event = new CustomEvent('cache-invalidated', {
-          detail: { keys, timestamp: Date.now() }
+          detail: { keys, timestamp: Date.now() },
         })
         window.dispatchEvent(event)
       }
-      
+
       console.log('[DataSyncManager] Cache invalidation completed')
     } catch (error) {
       console.error('[DataSyncManager] Cache invalidation error:', error)

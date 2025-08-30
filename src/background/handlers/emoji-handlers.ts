@@ -51,6 +51,7 @@ interface EmojiGroupsStore {
 
 interface CommunicationService {
   sendCommonEmojiGroupChanged(group: any): void
+  sendCommonEmojiUpdated(group: any): void
   sendSpecificGroupChanged(groupUUID: string, group: any): void
   sendUsageRecorded(uuid: string): void
 }
@@ -177,7 +178,7 @@ export async function handleEmojiUsageChrome(
           // 🚀 新增：使用DataSyncManager进行实时同步
           try {
             const syncManager = getDataSyncManager()
-            
+
             // 立即处理常用表情更新
             if (emojiInfo.groupUUID === 'common-emoji-group' || shouldNotifyCommonGroup) {
               const commonGroup = emojiGroupsStore.getCommonEmojiGroup?.()
@@ -185,9 +186,9 @@ export async function handleEmojiUsageChrome(
                 await syncManager.processImmediateUpdate('common-emoji', {
                   group: commonGroup,
                   updatedEmoji: { uuid, name: emojiInfo.name },
-                  timestamp: Date.now()
+                  timestamp: Date.now(),
                 })
-                
+
                 // 发送实时同步消息
                 commService.sendCommonEmojiUpdated(commonGroup)
               }
@@ -197,11 +198,14 @@ export async function handleEmojiUsageChrome(
             await syncManager.syncStorages()
 
             // 队列缓存失效更新
-            syncManager.queueBatchUpdate('cache-invalidation', {
-              keys: ['emoji-usage-cache', `group-${emojiInfo.groupUUID}`],
-              reason: 'emoji-usage-updated'
-            }, 'high')
-
+            syncManager.queueBatchUpdate(
+              'cache-invalidation',
+              {
+                keys: ['emoji-usage-cache', `group-${emojiInfo.groupUUID}`],
+                reason: 'emoji-usage-updated',
+              },
+              'high',
+            )
           } catch (syncError) {
             log('DataSyncManager update failed:', syncError)
           }
@@ -266,32 +270,34 @@ export async function handleEmojiUsageChrome(
 
                       if (updatedCommonGroup) {
                         log('Sending common emoji group update notification after usage record')
-                        
+
                         // 🚀 新增：使用DataSyncManager进行实时同步
                         try {
                           const syncManager = getDataSyncManager()
-                          
+
                           // 立即处理常用表情更新
-                          syncManager.processImmediateUpdate('common-emoji', {
-                            group: updatedCommonGroup,
-                            updatedEmoji: { uuid },
-                            timestamp: Date.now()
-                          }).then(() => {
-                            // 发送实时同步消息
-                            commService.sendCommonEmojiUpdated(updatedCommonGroup)
-                          }).catch((syncError) => {
-                            log('DataSyncManager immediate update failed:', syncError)
-                          })
-                          
+                          syncManager
+                            .processImmediateUpdate('common-emoji', {
+                              group: updatedCommonGroup,
+                              updatedEmoji: { uuid },
+                              timestamp: Date.now(),
+                            })
+                            .then(() => {
+                              // 发送实时同步消息
+                              commService.sendCommonEmojiUpdated(updatedCommonGroup)
+                            })
+                            .catch((syncError) => {
+                              log('DataSyncManager immediate update failed:', syncError)
+                            })
+
                           // 同步localStorage和Chrome Storage
                           syncManager.syncStorages().catch((syncError) => {
                             log('DataSyncManager storage sync failed:', syncError)
                           })
-                          
                         } catch (syncError) {
                           log('DataSyncManager initialization failed:', syncError)
                         }
-                        
+
                         // 保持原有的通知机制
                         commService.sendCommonEmojiGroupChanged(updatedCommonGroup)
                         commService.sendSpecificGroupChanged(
@@ -450,28 +456,27 @@ export async function handleEmojiUsageFirefox(
 
         if (updatedCommonGroup) {
           log('Sending common emoji group update notification after usage record (Firefox)')
-          
+
           // 🚀 新增：使用DataSyncManager进行实时同步
           try {
             const syncManager = getDataSyncManager()
-            
+
             // 立即处理常用表情更新
             await syncManager.processImmediateUpdate('common-emoji', {
               group: updatedCommonGroup,
               updatedEmoji: { uuid },
-              timestamp: Date.now()
+              timestamp: Date.now(),
             })
-            
+
             // 发送实时同步消息
             commService.sendCommonEmojiUpdated(updatedCommonGroup)
-            
+
             // 同步localStorage和Chrome Storage
             await syncManager.syncStorages()
-            
           } catch (syncError) {
             log('DataSyncManager update failed (Firefox):', syncError)
           }
-          
+
           // 保持原有的通知机制
           commService.sendCommonEmojiGroupChanged(updatedCommonGroup)
           commService.sendSpecificGroupChanged('common-emoji-group', updatedCommonGroup)

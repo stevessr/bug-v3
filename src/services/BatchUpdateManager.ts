@@ -2,7 +2,12 @@
 import type { EmojiGroup, Emoji } from './communication'
 
 // 更新操作类型
-export type UpdateOperationType = 'common-emoji' | 'emoji-order' | 'group-icon' | 'ungrouped-emojis' | 'cache-invalidation'
+export type UpdateOperationType =
+  | 'common-emoji'
+  | 'emoji-order'
+  | 'group-icon'
+  | 'ungrouped-emojis'
+  | 'cache-invalidation'
 
 // 更新操作接口
 export interface UpdateOperation {
@@ -27,10 +32,10 @@ export interface BatchProcessResult {
 
 // 防抖和节流配置
 export interface ThrottleConfig {
-  immediate: number    // 立即处理的延迟 (ms)
-  high: number        // 高优先级的延迟 (ms)
-  normal: number      // 普通优先级的延迟 (ms)
-  low: number         // 低优先级的延迟 (ms)
+  immediate: number // 立即处理的延迟 (ms)
+  high: number // 高优先级的延迟 (ms)
+  normal: number // 普通优先级的延迟 (ms)
+  low: number // 低优先级的延迟 (ms)
   maxBatchSize: number // 最大批处理大小
 }
 
@@ -39,14 +44,17 @@ export class BatchUpdateManager {
   private updateQueue: UpdateOperation[] = []
   private processingBatch = false
   private timers: Map<UpdateOperationType, any> = new Map()
-  private operationHandlers: Map<UpdateOperationType, (operation: UpdateOperation) => Promise<boolean>> = new Map()
-  
+  private operationHandlers: Map<
+    UpdateOperationType,
+    (operation: UpdateOperation) => Promise<boolean>
+  > = new Map()
+
   private readonly config: ThrottleConfig = {
-    immediate: 0,      // 立即处理
-    high: 50,         // 50ms 延迟
-    normal: 200,      // 200ms 延迟
-    low: 1000,        // 1s 延迟
-    maxBatchSize: 10  // 最多批处理10个操作
+    immediate: 0, // 立即处理
+    high: 50, // 50ms 延迟
+    normal: 200, // 200ms 延迟
+    low: 1000, // 1s 延迟
+    maxBatchSize: 10, // 最多批处理10个操作
   }
 
   constructor(customConfig?: Partial<ThrottleConfig>) {
@@ -59,7 +67,10 @@ export class BatchUpdateManager {
   /**
    * 注册操作处理器
    */
-  registerHandler(type: UpdateOperationType, handler: (operation: UpdateOperation) => Promise<boolean>): void {
+  registerHandler(
+    type: UpdateOperationType,
+    handler: (operation: UpdateOperation) => Promise<boolean>,
+  ): void {
     this.operationHandlers.set(type, handler)
     console.log(`[BatchUpdateManager] Registered handler for ${type}`)
   }
@@ -72,41 +83,50 @@ export class BatchUpdateManager {
       ...operation,
       id: this.generateOperationId(),
       timestamp: Date.now(),
-      retryCount: 0
+      retryCount: 0,
     }
 
     // 检查是否有相同类型的操作可以合并
     const existingIndex = this.findMergeableOperation(fullOperation)
     if (existingIndex !== -1) {
       // 合并操作
-      this.updateQueue[existingIndex] = this.mergeOperations(this.updateQueue[existingIndex], fullOperation)
-      console.log(`[BatchUpdateManager] Merged operation ${fullOperation.id} with existing operation`)
+      this.updateQueue[existingIndex] = this.mergeOperations(
+        this.updateQueue[existingIndex],
+        fullOperation,
+      )
+      console.log(
+        `[BatchUpdateManager] Merged operation ${fullOperation.id} with existing operation`,
+      )
     } else {
       // 按优先级插入队列
       this.insertByPriority(fullOperation)
-      console.log(`[BatchUpdateManager] Queued ${fullOperation.type} operation with priority ${fullOperation.priority}`)
+      console.log(
+        `[BatchUpdateManager] Queued ${fullOperation.type} operation with priority ${fullOperation.priority}`,
+      )
     }
 
     // 根据优先级调度处理
     this.scheduleProcessing(fullOperation.priority, fullOperation.type)
-    
+
     return fullOperation.id
   }
 
   /**
    * 立即处理高优先级更新
    */
-  async processImmediate(operation: Omit<UpdateOperation, 'id' | 'timestamp' | 'retryCount'>): Promise<boolean> {
+  async processImmediate(
+    operation: Omit<UpdateOperation, 'id' | 'timestamp' | 'retryCount'>,
+  ): Promise<boolean> {
     const immediateOperation: UpdateOperation = {
       ...operation,
       id: this.generateOperationId(),
       timestamp: Date.now(),
       retryCount: 0,
-      priority: 'immediate'
+      priority: 'immediate',
     }
 
     console.log(`[BatchUpdateManager] Processing immediate operation: ${immediateOperation.type}`)
-    
+
     try {
       const handler = this.operationHandlers.get(immediateOperation.type)
       if (!handler) {
@@ -114,19 +134,19 @@ export class BatchUpdateManager {
       }
 
       const success = await handler(immediateOperation)
-      
+
       if (immediateOperation.callback) {
         immediateOperation.callback(success)
       }
-      
+
       return success
     } catch (error) {
       console.error(`[BatchUpdateManager] Immediate operation failed:`, error)
-      
+
       if (immediateOperation.callback) {
         immediateOperation.callback(false, error as Error)
       }
-      
+
       return false
     }
   }
@@ -141,21 +161,23 @@ export class BatchUpdateManager {
         succeeded: 0,
         failed: 0,
         errors: [],
-        duration: 0
+        duration: 0,
       }
     }
 
     this.processingBatch = true
     const startTime = Date.now()
-    
-    console.log(`[BatchUpdateManager] Starting batch processing of ${this.updateQueue.length} operations`)
+
+    console.log(
+      `[BatchUpdateManager] Starting batch processing of ${this.updateQueue.length} operations`,
+    )
 
     const result: BatchProcessResult = {
       processed: 0,
       succeeded: 0,
       failed: 0,
       errors: [],
-      duration: 0
+      duration: 0,
     }
 
     try {
@@ -175,9 +197,7 @@ export class BatchUpdateManager {
             return { type, results: operations.map(() => false) }
           }
 
-          const results = await Promise.allSettled(
-            operations.map(op => handler(op))
-          )
+          const results = await Promise.allSettled(operations.map((op) => handler(op)))
 
           const operationResults = results.map((result, index) => {
             const operation = operations[index]
@@ -197,10 +217,12 @@ export class BatchUpdateManager {
 
           return {
             type,
-            results: operationResults.map(r => r.success),
-            errors: operationResults.filter(r => r.error).map(r => ({ operationId: r.operation.id, error: r.error! }))
+            results: operationResults.map((r) => r.success),
+            errors: operationResults
+              .filter((r) => r.error)
+              .map((r) => ({ operationId: r.operation.id, error: r.error! })),
           }
-        }
+        },
       )
 
       const processingResults = await Promise.all(processingPromises)
@@ -215,21 +237,22 @@ export class BatchUpdateManager {
           }
         }
         // 合并错误
-        result.errors.push(...errors)
+        if (errors && Array.isArray(errors)) {
+          result.errors.push(...errors)
+        }
       }
 
       // 处理失败的操作（重试逻辑）
       await this.handleFailedOperations(operationsToProcess, result)
-
     } catch (error) {
       console.error('[BatchUpdateManager] Batch processing error:', error)
       result.errors.push({ operationId: 'batch', error: error as Error })
     } finally {
       result.duration = Date.now() - startTime
       this.processingBatch = false
-      
+
       console.log(`[BatchUpdateManager] Batch processing completed:`, result)
-      
+
       // 如果队列中还有操作，继续处理
       if (this.updateQueue.length > 0) {
         this.scheduleNextBatch()
@@ -260,7 +283,7 @@ export class BatchUpdateManager {
       length: this.updateQueue.length,
       processing: this.processingBatch,
       byPriority,
-      byType
+      byType,
     }
   }
 
@@ -289,9 +312,9 @@ export class BatchUpdateManager {
   }
 
   private findMergeableOperation(operation: UpdateOperation): number {
-    return this.updateQueue.findIndex(existing => 
-      existing.type === operation.type && 
-      this.canMergeOperations(existing, operation)
+    return this.updateQueue.findIndex(
+      (existing) =>
+        existing.type === operation.type && this.canMergeOperations(existing, operation),
     )
   }
 
@@ -304,16 +327,17 @@ export class BatchUpdateManager {
   private mergeOperations(existing: UpdateOperation, incoming: UpdateOperation): UpdateOperation {
     // 合并操作数据，保留最新的时间戳和更高的优先级
     const priorityOrder = { immediate: 4, high: 3, normal: 2, low: 1 }
-    const higherPriority = priorityOrder[incoming.priority] > priorityOrder[existing.priority] 
-      ? incoming.priority 
-      : existing.priority
+    const higherPriority =
+      priorityOrder[incoming.priority] > priorityOrder[existing.priority]
+        ? incoming.priority
+        : existing.priority
 
     return {
       ...existing,
       priority: higherPriority,
       data: this.mergeOperationData(existing.data, incoming.data),
       timestamp: incoming.timestamp,
-      callback: incoming.callback || existing.callback
+      callback: incoming.callback || existing.callback,
     }
   }
 
@@ -322,11 +346,11 @@ export class BatchUpdateManager {
     if (Array.isArray(existingData) && Array.isArray(incomingData)) {
       return [...existingData, ...incomingData]
     }
-    
+
     if (typeof existingData === 'object' && typeof incomingData === 'object') {
       return { ...existingData, ...incomingData }
     }
-    
+
     // 默认使用新数据
     return incomingData
   }
@@ -334,9 +358,9 @@ export class BatchUpdateManager {
   private insertByPriority(operation: UpdateOperation): void {
     const priorityOrder = { immediate: 4, high: 3, normal: 2, low: 1 }
     const insertIndex = this.updateQueue.findIndex(
-      existing => priorityOrder[existing.priority] < priorityOrder[operation.priority]
+      (existing) => priorityOrder[existing.priority] < priorityOrder[operation.priority],
     )
-    
+
     if (insertIndex === -1) {
       this.updateQueue.push(operation)
     } else {
@@ -344,7 +368,10 @@ export class BatchUpdateManager {
     }
   }
 
-  private scheduleProcessing(priority: UpdateOperation['priority'], type: UpdateOperationType): void {
+  private scheduleProcessing(
+    priority: UpdateOperation['priority'],
+    type: UpdateOperationType,
+  ): void {
     // 清除现有的定时器
     const existingTimer = this.timers.get(type)
     if (existingTimer) {
@@ -353,12 +380,12 @@ export class BatchUpdateManager {
 
     // 根据优先级设置延迟
     const delay = this.config[priority]
-    
+
     const timer = setTimeout(() => {
       this.processBatch()
       this.timers.delete(type)
     }, delay)
-    
+
     this.timers.set(type, timer)
   }
 
@@ -371,39 +398,48 @@ export class BatchUpdateManager {
     }, 100)
   }
 
-  private groupOperationsByType(operations: UpdateOperation[]): Map<UpdateOperationType, UpdateOperation[]> {
+  private groupOperationsByType(
+    operations: UpdateOperation[],
+  ): Map<UpdateOperationType, UpdateOperation[]> {
     const grouped = new Map<UpdateOperationType, UpdateOperation[]>()
-    
+
     for (const operation of operations) {
       if (!grouped.has(operation.type)) {
         grouped.set(operation.type, [])
       }
       grouped.get(operation.type)!.push(operation)
     }
-    
+
     return grouped
   }
 
-  private async handleFailedOperations(operations: UpdateOperation[], result: BatchProcessResult): Promise<void> {
+  private async handleFailedOperations(
+    operations: UpdateOperation[],
+    result: BatchProcessResult,
+  ): Promise<void> {
     const failedOperations = operations.filter((_, index) => {
       // 这里需要根据实际的处理结果来判断哪些操作失败了
       // 简化处理：假设所有在 errors 中的操作都失败了
-      return result.errors.some(error => error.operationId === operations[index].id)
+      return result.errors.some((error) => error.operationId === operations[index].id)
     })
 
     for (const operation of failedOperations) {
       if (operation.retryCount < operation.maxRetries) {
         operation.retryCount++
         operation.timestamp = Date.now()
-        
+
         // 降低优先级并重新加入队列
         if (operation.priority === 'high') operation.priority = 'normal'
         else if (operation.priority === 'normal') operation.priority = 'low'
-        
+
         this.insertByPriority(operation)
-        console.log(`[BatchUpdateManager] Retrying operation ${operation.id} (attempt ${operation.retryCount}/${operation.maxRetries})`)
+        console.log(
+          `[BatchUpdateManager] Retrying operation ${operation.id} (attempt ${operation.retryCount}/${operation.maxRetries})`,
+        )
       } else {
-        console.error(`[BatchUpdateManager] Operation ${operation.id} failed after ${operation.maxRetries} retries`)
+        console.error(
+          `[BatchUpdateManager] Operation ${operation.id} failed after ${operation.maxRetries} retries`,
+        )
       }
     }
   }
