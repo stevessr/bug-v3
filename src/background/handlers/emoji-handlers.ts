@@ -299,11 +299,16 @@ export async function handleEmojiUsageChrome(
                         }
 
                         // 保持原有的通知机制
+                        log(
+                          '🚀 Sending common emoji group changed notification:',
+                          updatedCommonGroup.displayName,
+                        )
                         commService.sendCommonEmojiGroupChanged(updatedCommonGroup)
                         commService.sendSpecificGroupChanged(
                           'common-emoji-group',
                           updatedCommonGroup,
                         )
+                        log('✅ Common emoji group notifications sent')
                       }
                     } catch (notifyError) {
                       log('Error sending common group update notification:', notifyError)

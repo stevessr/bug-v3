@@ -1,6 +1,10 @@
 // background/handlers/message-handlers.ts - 消息处理器
 
-import { handleGetEmojiData, handleEmojiUsageChrome, handleEmojiUsageFirefox } from './emoji-handlers'
+import {
+  handleGetEmojiData,
+  handleEmojiUsageChrome,
+  handleEmojiUsageFirefox,
+} from './emoji-handlers'
 
 declare const chrome: any
 declare const browser: any
@@ -75,7 +79,7 @@ export function setupChromeMessageListener(
   settingsStore: any,
   commService: any,
   lastPayloadGlobal: any,
-  SyncManager: any
+  SyncManager: any,
 ) {
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener(
@@ -85,22 +89,24 @@ export function setupChromeMessageListener(
         // Handle GET_EMOJI_DATA request from content scripts
         if (msg && msg.type === 'GET_EMOJI_DATA') {
           handleGetEmojiData(emojiGroupsStore, settingsStore, lastPayloadGlobal)
-            .then(response => sendResponse(response))
-            .catch(error => sendResponse({
-              success: false,
-              error: error instanceof Error ? error.message : String(error),
-            }))
+            .then((response) => sendResponse(response))
+            .catch((error) =>
+              sendResponse({
+                success: false,
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            )
           return true // Keep the message channel open for async response
         }
 
         // Handle RECORD_EMOJI_USAGE request from content scripts
         if (msg && msg.type === 'RECORD_EMOJI_USAGE' && msg.uuid) {
           handleEmojiUsageChrome(
-            msg.uuid, 
-            sendResponse, 
-            emojiGroupsStore, 
-            commService, 
-            lastPayloadGlobal
+            msg.uuid,
+            sendResponse,
+            emojiGroupsStore,
+            commService,
+            lastPayloadGlobal,
           )
           return true // Keep the message channel open for async response
         }
@@ -113,6 +119,34 @@ export function setupChromeMessageListener(
             } catch (_) {}
             sendResponse({ ok: true })
             return
+          }
+
+          // 🚀 关键修复：添加一个通用消息中继器
+          // 捕获所有未被特殊处理的消息，并将它们转发给其他页面
+          // 这是确保 popup 和 options 之间实时同步的关键
+          if (msg && msg.from && msg.from !== 'background') {
+            log('🔄 Relaying message:', msg.type, 'from:', msg.from)
+
+            // 转发到其他扩展页面（popup, options）
+            try {
+              chrome.runtime.sendMessage(msg, (_response: any) => {
+                if (chrome.runtime.lastError) {
+                  // 忽略错误，因为可能没有活动的接收者
+                  log('⚠️ Message relay error (expected):', chrome.runtime.lastError.message)
+                } else {
+                  log('✅ Message relayed successfully:', msg.type)
+                }
+              })
+            } catch (error) {
+              log('❌ Message relay exception:', error)
+            }
+
+            // 转发到所有内容脚本
+            broadcastToTabs(msg)
+
+            // 确认消息已被处理
+            sendResponse({ ok: true, relayed: true })
+            return true
           }
 
           if (msg && msg.type === 'broadcast') {
@@ -176,7 +210,7 @@ export function setupFirefoxMessageListener(
   settingsStore: any,
   commService: any,
   lastPayloadGlobal: any,
-  SyncManager: any
+  SyncManager: any,
 ) {
   if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.onMessage) {
     browser.runtime.onMessage.addListener(async (msg: any, sender: any) => {

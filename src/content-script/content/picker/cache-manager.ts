@@ -281,7 +281,7 @@ export function setupCacheListeners() {
           const convertedGroup = {
             ...commonGroup,
             icon:
-              typeof commonGroup.icon === 'string' ? commonGroup.icon : commonGroup.icon.toString(),
+              typeof commonGroup.icon === 'string' ? commonGroup.icon : String(commonGroup.icon),
             emojis: commonGroup.emojis.map((emoji: any) => ({
               ...emoji,
               id: emoji.id || emoji.UUID,
