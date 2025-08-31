@@ -99,6 +99,78 @@ function initCommunicationListeners() {
       })
   })
 
+  // 🚀 新增：监听background的心跳消息，确保连接正常
+  commService.on('background:heartbeat', (message) => {
+    console.log('[缓存] 收到background心跳:', message.payload?.timestamp)
+    // 检查数据是否需要更新
+    if (message.payload?.stats) {
+      const bgStats = message.payload.stats
+      const localStats = {
+        groupsCount: cachedState.emojiGroups.length,
+        emojisCount: cachedState.emojiGroups.reduce((sum, g) => sum + (g.emojis?.length || 0), 0),
+        ungroupedCount: cachedState.ungroupedEmojis.length
+      }
+      
+      // 如果数据不同步，触发重新加载
+      if (bgStats.groupsCount !== localStats.groupsCount || 
+          bgStats.emojisCount !== localStats.emojisCount ||
+          bgStats.ungroupedCount !== localStats.ungroupedCount) {
+        console.log('[缓存] 检测到数据不同步，触发重新加载')
+        console.log('[缓存] Background stats:', bgStats)
+        console.log('[缓存] Local stats:', localStats)
+        loadDataFromStorage(true).catch(console.error)
+      }
+    }
+  })
+
+  // 🚀 新增：监听payload-updated消息，处理来自options页面的更新
+  commService.on('payload-updated', (message) => {
+    console.log('[缓存] 收到payload更新信号')
+    if (message.payload) {
+      try {
+        const payload = message.payload
+        
+        // 更新表情组
+        if (Array.isArray(payload.emojiGroups)) {
+          cachedState.emojiGroups = payload.emojiGroups
+          payload.emojiGroups.forEach((group: any) => {
+            if (group.UUID === 'common-emoji-group') {
+              cacheUtils.updateCommonGroupCache(group)
+            } else {
+              cacheUtils.updateGroupCache(group.UUID, group)
+            }
+          })
+        }
+        
+        // 更新设置
+        if (payload.Settings) {
+          cachedState.settings = { ...cachedState.settings, ...payload.Settings }
+          cacheUtils.updateSettingsCache(payload.Settings)
+        }
+        
+        // 更新未分组表情
+        if (Array.isArray(payload.ungrouped)) {
+          cachedState.ungroupedEmojis = payload.ungrouped
+          cacheUtils.updateUngroupedCache(payload.ungrouped)
+        }
+        
+        console.log('[缓存] Payload更新完成:', {
+          groupsCount: cachedState.emojiGroups.length,
+          ungroupedCount: cachedState.ungroupedEmojis.length
+        })
+        
+        // 触发界面刷新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('emoji-data-updated', {
+            detail: { timestamp: Date.now() }
+          }))
+        }
+      } catch (error) {
+        console.error('[缓存] 处理payload更新失败:', error)
+      }
+    }
+  })
+
   console.log('[缓存] 通信监听器初始化完成')
 }
 

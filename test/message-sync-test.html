@@ -1,0 +1,469 @@
+// test/message-sync-test.html - 消息同步测试页面
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>消息同步测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            border-left: 4px solid #007cba;
+            padding-left: 16px;
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #005a87;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 8px 16px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        .status.online {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.offline {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .log {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f8f9fa;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin-bottom: 2px;
+            padding: 2px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 消息传递系统测试</h1>
+        <p>测试 Background Script、Content Script、Popup 和 Options 页面之间的消息传递</p>
+        
+        <div class="test-section">
+            <h2>🔗 连接状态</h2>
+            <div id="connection-status" class="status offline">❌ 未连接到Extension Runtime</div>
+        </div>
+
+        <div class="test-section">
+            <h2>📡 Background Script 通信测试</h2>
+            <button onclick="testBackgroundConnection()">测试Background连接</button>
+            <button onclick="testGetEmojiData()">获取表情数据</button>
+            <button onclick="testRecordUsage()">记录表情使用</button>
+            <div id="background-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 数据同步测试</h2>
+            <button onclick="testDataSync()">测试数据同步</button>
+            <button onclick="testCommonGroupSync()">测试常用表情组同步</button>
+            <button onclick="simulateUsageUpdate()">模拟使用统计更新</button>
+            <div id="sync-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 消息广播测试</h2>
+            <button onclick="testMessageBroadcast()">测试消息广播</button>
+            <button onclick="testHeartbeat()">测试心跳监听</button>
+            <button onclick="clearMessageLog()">清除消息日志</button>
+            <div id="broadcast-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 消息日志</h2>
+            <div id="message-log" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔍 当前状态</h2>
+            <div id="current-status"></div>
+        </div>
+    </div>
+
+    <script>
+        // 消息日志
+        const messageLog = [];
+        
+        function logMessage(type, message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = { timestamp, type, message, data };
+            messageLog.push(entry);
+            
+            // 更新显示
+            updateMessageLog();
+            
+            console.log(`[${timestamp}] ${type}: ${message}`, data);
+        }
+        
+        function updateMessageLog() {
+            const logDiv = document.getElementById('message-log');
+            logDiv.innerHTML = messageLog.slice(-20).map(entry => 
+                `<div class="log-entry">
+                    <span class="timestamp">[${entry.timestamp}]</span>
+                    <strong>${entry.type}:</strong> ${entry.message}
+                    ${entry.data ? `<br><small>${JSON.stringify(entry.data, null, 2)}</small>` : ''}
+                </div>`
+            ).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function clearMessageLog() {
+            messageLog.length = 0;
+            updateMessageLog();
+        }
+        
+        function showResult(containerId, result, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = result;
+            container.appendChild(div);
+            
+            // 自动清理旧结果
+            setTimeout(() => {
+                if (container.children.length > 5) {
+                    container.removeChild(container.firstChild);
+                }
+            }, 100);
+        }
+        
+        // 检查Extension Runtime连接
+        function checkExtensionConnection() {
+            const statusDiv = document.getElementById('connection-status');
+            
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+                statusDiv.className = 'status online';
+                statusDiv.textContent = '✅ 已连接到Extension Runtime';
+                logMessage('SYSTEM', 'Extension Runtime连接正常');
+                return true;
+            } else {
+                statusDiv.className = 'status offline';
+                statusDiv.textContent = '❌ 未连接到Extension Runtime';
+                logMessage('ERROR', 'Extension Runtime连接失败');
+                return false;
+            }
+        }
+        
+        // 发送消息到Background Script
+        async function sendToBackground(message) {
+            return new Promise((resolve) => {
+                if (!checkExtensionConnection()) {
+                    resolve({ success: false, error: 'No extension runtime' });
+                    return;
+                }
+                
+                chrome.runtime.sendMessage(message, (response) => {
+                    if (chrome.runtime.lastError) {
+                        logMessage('ERROR', 'Background通信错误', chrome.runtime.lastError);
+                        resolve({ success: false, error: chrome.runtime.lastError.message });
+                    } else {
+                        resolve(response || { success: true });
+                    }
+                });
+            });
+        }
+        
+        // 测试Background连接
+        async function testBackgroundConnection() {
+            logMessage('TEST', '开始测试Background连接');
+            
+            const result = await sendToBackground({ 
+                type: 'ping', 
+                timestamp: Date.now() 
+            });
+            
+            if (result.success !== false) {
+                showResult('background-results', '✅ Background连接正常', 'success');
+                logMessage('SUCCESS', 'Background连接测试通过', result);
+            } else {
+                showResult('background-results', `❌ Background连接失败: ${result.error}`, 'error');
+                logMessage('ERROR', 'Background连接测试失败', result);
+            }
+        }
+        
+        // 测试获取表情数据
+        async function testGetEmojiData() {
+            logMessage('TEST', '开始测试获取表情数据');
+            
+            const result = await sendToBackground({ type: 'GET_EMOJI_DATA' });
+            
+            if (result.success) {
+                const stats = {
+                    groupsCount: result.data?.groups?.length || 0,
+                    emojisCount: result.data?.groups?.reduce((sum, g) => sum + (g.emojis?.length || 0), 0) || 0,
+                    ungroupedCount: result.data?.ungroupedEmojis?.length || 0,
+                    hasCommonGroup: result.data?.groups?.some(g => g.UUID === 'common-emoji-group') || false
+                };
+                
+                showResult('background-results', 
+                    `✅ 表情数据获取成功: ${stats.groupsCount}组, ${stats.emojisCount}个表情, ${stats.ungroupedCount}个未分组表情, 常用组: ${stats.hasCommonGroup ? '有' : '无'}`, 
+                    'success'
+                );
+                logMessage('SUCCESS', '表情数据获取成功', stats);
+            } else {
+                showResult('background-results', `❌ 表情数据获取失败: ${result.error}`, 'error');
+                logMessage('ERROR', '表情数据获取失败', result);
+            }
+        }
+        
+        // 测试记录表情使用
+        async function testRecordUsage() {
+            logMessage('TEST', '开始测试记录表情使用');
+            
+            const testUUID = 'test_emoji_' + Date.now();
+            const result = await sendToBackground({ 
+                type: 'RECORD_EMOJI_USAGE', 
+                uuid: testUUID 
+            });
+            
+            if (result.success) {
+                showResult('background-results', `✅ 表情使用记录成功: ${testUUID}`, 'success');
+                logMessage('SUCCESS', '表情使用记录成功', { uuid: testUUID, result });
+            } else {
+                showResult('background-results', `❌ 表情使用记录失败: ${result.error}`, 'error');
+                logMessage('ERROR', '表情使用记录失败', result);
+            }
+        }
+        
+        // 测试数据同步
+        async function testDataSync() {
+            logMessage('TEST', '开始测试数据同步');
+            
+            // 监听同步消息
+            let syncReceived = false;
+            const syncListener = (message) => {
+                if (message.type && message.type.includes('changed')) {
+                    syncReceived = true;
+                    logMessage('SYNC', `收到同步消息: ${message.type}`, message.payload);
+                }
+            };
+            
+            chrome.runtime.onMessage.addListener(syncListener);
+            
+            // 触发数据更新
+            await testRecordUsage();
+            
+            // 等待同步消息
+            setTimeout(() => {
+                chrome.runtime.onMessage.removeListener(syncListener);
+                
+                if (syncReceived) {
+                    showResult('sync-results', '✅ 数据同步测试通过', 'success');
+                    logMessage('SUCCESS', '数据同步测试通过');
+                } else {
+                    showResult('sync-results', '⚠️ 未收到同步消息', 'error');
+                    logMessage('WARNING', '数据同步测试：未收到同步消息');
+                }
+            }, 2000);
+        }
+        
+        // 测试常用表情组同步
+        async function testCommonGroupSync() {
+            logMessage('TEST', '开始测试常用表情组同步');
+            
+            let commonGroupReceived = false;
+            const commonListener = (message) => {
+                if (message.type === 'app:common-group-changed') {
+                    commonGroupReceived = true;
+                    logMessage('SYNC', '收到常用表情组同步消息', message.payload);
+                }
+            };
+            
+            chrome.runtime.onMessage.addListener(commonListener);
+            
+            // 模拟常用表情更新
+            const testUUID = 'common_test_' + Date.now();
+            await sendToBackground({ type: 'RECORD_EMOJI_USAGE', uuid: testUUID });
+            
+            setTimeout(() => {
+                chrome.runtime.onMessage.removeListener(commonListener);
+                
+                if (commonGroupReceived) {
+                    showResult('sync-results', '✅ 常用表情组同步测试通过', 'success');
+                    logMessage('SUCCESS', '常用表情组同步测试通过');
+                } else {
+                    showResult('sync-results', '⚠️ 未收到常用表情组同步消息', 'error');
+                    logMessage('WARNING', '常用表情组同步测试：未收到同步消息');
+                }
+            }, 3000);
+        }
+        
+        // 模拟使用统计更新
+        async function simulateUsageUpdate() {
+            logMessage('TEST', '开始模拟使用统计更新');
+            
+            const updates = ['emoji1', 'emoji2', 'emoji3'].map(id => 
+                sendToBackground({ type: 'RECORD_EMOJI_USAGE', uuid: `test_${id}_${Date.now()}` })
+            );
+            
+            try {
+                const results = await Promise.all(updates);
+                const successCount = results.filter(r => r.success).length;
+                
+                showResult('sync-results', 
+                    `✅ 模拟更新完成: ${successCount}/${results.length} 成功`, 
+                    successCount === results.length ? 'success' : 'error'
+                );
+                logMessage('SUCCESS', `模拟使用统计更新完成: ${successCount}/${results.length}`);
+            } catch (error) {
+                showResult('sync-results', `❌ 模拟更新失败: ${error.message}`, 'error');
+                logMessage('ERROR', '模拟使用统计更新失败', error);
+            }
+        }
+        
+        // 测试消息广播
+        function testMessageBroadcast() {
+            logMessage('TEST', '开始测试消息广播');
+            
+            let messageCount = 0;
+            const broadcastListener = (message) => {
+                messageCount++;
+                logMessage('BROADCAST', `收到广播消息 #${messageCount}`, message);
+            };
+            
+            chrome.runtime.onMessage.addListener(broadcastListener);
+            
+            // 10秒后停止监听
+            setTimeout(() => {
+                chrome.runtime.onMessage.removeListener(broadcastListener);
+                showResult('broadcast-results', 
+                    `📡 消息广播测试完成: 收到 ${messageCount} 条消息`, 
+                    messageCount > 0 ? 'success' : 'error'
+                );
+                logMessage('SUCCESS', `消息广播测试完成，收到${messageCount}条消息`);
+            }, 10000);
+            
+            showResult('broadcast-results', '🔍 正在监听消息广播 (10秒)...', 'info');
+        }
+        
+        // 测试心跳监听
+        function testHeartbeat() {
+            logMessage('TEST', '开始测试心跳监听');
+            
+            let heartbeatReceived = false;
+            const heartbeatListener = (message) => {
+                if (message.type === 'background:heartbeat') {
+                    heartbeatReceived = true;
+                    logMessage('HEARTBEAT', '收到心跳消息', message.payload);
+                    showResult('broadcast-results', '💓 收到心跳消息', 'success');
+                }
+            };
+            
+            chrome.runtime.onMessage.addListener(heartbeatListener);
+            
+            // 35秒后检查结果（心跳间隔30秒）
+            setTimeout(() => {
+                chrome.runtime.onMessage.removeListener(heartbeatListener);
+                
+                if (!heartbeatReceived) {
+                    showResult('broadcast-results', '⚠️ 未收到心跳消息', 'error');
+                    logMessage('WARNING', '心跳监听测试：未收到心跳消息');
+                }
+            }, 35000);
+            
+            showResult('broadcast-results', '🔍 正在监听心跳消息 (35秒)...', 'info');
+        }
+        
+        // 更新当前状态
+        function updateCurrentStatus() {
+            const statusDiv = document.getElementById('current-status');
+            
+            const status = {
+                timestamp: new Date().toLocaleString(),
+                extensionConnected: checkExtensionConnection(),
+                messageLogCount: messageLog.length,
+                userAgent: navigator.userAgent,
+                url: window.location.href
+            };
+            
+            statusDiv.innerHTML = `
+                <div class="test-result info">
+                    <strong>时间:</strong> ${status.timestamp}<br>
+                    <strong>Extension连接:</strong> ${status.extensionConnected ? '✅' : '❌'}<br>
+                    <strong>消息日志条数:</strong> ${status.messageLogCount}<br>
+                    <strong>用户代理:</strong> ${status.userAgent}<br>
+                    <strong>页面URL:</strong> ${status.url}
+                </div>
+            `;
+        }
+        
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            logMessage('SYSTEM', '消息同步测试页面加载完成');
+            checkExtensionConnection();
+            updateCurrentStatus();
+            
+            // 定期更新状态
+            setInterval(updateCurrentStatus, 5000);
+            
+            // 监听所有消息用于调试
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+                    logMessage('RECEIVED', '收到消息', { message, sender });
+                });
+            }
+        });
+    </script>
+</body>
+</html>
