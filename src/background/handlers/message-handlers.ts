@@ -5,6 +5,7 @@ import {
   handleEmojiUsageChrome,
   handleEmojiUsageFirefox,
 } from './emoji-handlers'
+import type { BackgroundDataManager } from '../data-manager'
 
 declare const chrome: any
 declare const browser: any
@@ -68,17 +69,13 @@ function broadcastToTabs(payload: any) {
 
 /**
  * 设置Chrome环境下的消息监听器
- * @param emojiGroupsStore 表情组存储实例
- * @param settingsStore 设置存储实例
+ * @param dataManager 全局数据管理器
  * @param commService 通信服务实例
- * @param lastPayloadGlobal 全局缓存的最后负载
  * @param SyncManager 同步管理器
  */
 export function setupChromeMessageListener(
-  emojiGroupsStore: any,
-  settingsStore: any,
+  dataManager: BackgroundDataManager,
   commService: any,
-  lastPayloadGlobal: any,
   SyncManager: any,
 ) {
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
@@ -88,7 +85,7 @@ export function setupChromeMessageListener(
 
         // Handle GET_EMOJI_DATA request from content scripts
         if (msg && msg.type === 'GET_EMOJI_DATA') {
-          handleGetEmojiData(emojiGroupsStore, settingsStore, lastPayloadGlobal)
+          handleGetEmojiData(dataManager)
             .then((response) => sendResponse(response))
             .catch((error) =>
               sendResponse({
@@ -104,9 +101,8 @@ export function setupChromeMessageListener(
           handleEmojiUsageChrome(
             msg.uuid,
             sendResponse,
-            emojiGroupsStore,
-            commService,
-            lastPayloadGlobal,
+            dataManager,
+            commService
           )
           return true // Keep the message channel open for async response
         }
@@ -129,17 +125,26 @@ export function setupChromeMessageListener(
               source: 'web_batch_add'
             }
             
-            // Add to ungrouped emojis through the store
-            if (emojiGroupsStore && typeof emojiGroupsStore.addUngrouped === 'function') {
-              emojiGroupsStore.addUngrouped(newEmoji)
-              log(`Successfully added emoji: ${displayName}`)
-              sendResponse({ success: true, emoji: newEmoji })
-            } else {
-              log('EmojiGroupsStore not available or addUngrouped method missing')
-              sendResponse({ success: false, error: 'Storage not available' })
-            }
+            // Add to ungrouped emojis through the data manager
+            dataManager.addEmojiToUngrouped(newEmoji)
+              .then((success) => {
+                if (success) {
+                  log(`Successfully added emoji: ${displayName}`)
+                  sendResponse({ success: true, emoji: newEmoji })
+                } else {
+                  log('Failed to add emoji - data manager error')
+                  sendResponse({ success: false, error: 'Failed to add emoji' })
+                }
+              })
+              .catch((error) => {
+                log('Error adding emoji:', error)
+                sendResponse({ 
+                  success: false, 
+                  error: error instanceof Error ? error.message : 'Unknown error' 
+                })
+              })
           } catch (error) {
-            log('Error adding emoji from web:', error)
+            log('Error processing add emoji request:', error)
             sendResponse({ 
               success: false, 
               error: error instanceof Error ? error.message : 'Unknown error' 
@@ -152,7 +157,6 @@ export function setupChromeMessageListener(
           if (msg && msg.type === 'payload-updated') {
             try {
               SyncManager.onLocalPayloadUpdated(msg.payload)
-              lastPayloadGlobal = msg.payload
             } catch (_) {}
             sendResponse({ ok: true })
             return
@@ -236,17 +240,13 @@ export function setupChromeMessageListener(
 
 /**
  * 设置Firefox环境下的消息监听器
- * @param emojiGroupsStore 表情组存储实例
- * @param settingsStore 设置存储实例
+ * @param dataManager 全局数据管理器
  * @param commService 通信服务实例
- * @param lastPayloadGlobal 全局缓存的最后负载
  * @param SyncManager 同步管理器
  */
 export function setupFirefoxMessageListener(
-  emojiGroupsStore: any,
-  settingsStore: any,
+  dataManager: BackgroundDataManager,
   commService: any,
-  lastPayloadGlobal: any,
   SyncManager: any,
 ) {
   if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.onMessage) {
@@ -255,12 +255,12 @@ export function setupFirefoxMessageListener(
 
       // Handle GET_EMOJI_DATA request from content scripts
       if (msg && msg.type === 'GET_EMOJI_DATA') {
-        return handleGetEmojiData(emojiGroupsStore, settingsStore, lastPayloadGlobal)
+        return handleGetEmojiData(dataManager)
       }
 
       // Handle RECORD_EMOJI_USAGE request from content scripts
       if (msg && msg.type === 'RECORD_EMOJI_USAGE' && msg.uuid) {
-        return handleEmojiUsageFirefox(msg.uuid, emojiGroupsStore, commService, lastPayloadGlobal)
+        return handleEmojiUsageFirefox(msg.uuid, dataManager, commService)
       }
 
       // Handle ADD_EMOJI_FROM_WEB request (batch emoji adding) 
@@ -281,14 +281,14 @@ export function setupFirefoxMessageListener(
             source: 'web_batch_add'
           }
           
-          // Add to ungrouped emojis through the store
-          if (emojiGroupsStore && typeof emojiGroupsStore.addUngrouped === 'function') {
-            emojiGroupsStore.addUngrouped(newEmoji)
+          // Add to ungrouped emojis through the data manager
+          const success = await dataManager.addEmojiToUngrouped(newEmoji)
+          if (success) {
             log(`Successfully added emoji: ${displayName}`)
             return Promise.resolve({ success: true, emoji: newEmoji })
           } else {
-            log('EmojiGroupsStore not available or addUngrouped method missing')
-            return Promise.resolve({ success: false, error: 'Storage not available' })
+            log('Failed to add emoji - data manager error')
+            return Promise.resolve({ success: false, error: 'Failed to add emoji' })
           }
         } catch (error) {
           log('Error adding emoji from web:', error)
@@ -303,7 +303,6 @@ export function setupFirefoxMessageListener(
         if (msg && msg.type === 'payload-updated') {
           try {
             SyncManager.onLocalPayloadUpdated(msg.payload)
-            lastPayloadGlobal = msg.payload
           } catch (_) {}
           return Promise.resolve({ ok: true })
         }

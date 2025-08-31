@@ -6,9 +6,10 @@ declare const browser: any
 
 import { getRuntimeSyncConfig } from '../data/sync-config'
 import { createBackgroundCommService } from '../services/communication'
-import { ensureCommonEmojiGroupInStorage, loadFromChromeStorage, appendTelemetry } from './utils/storage-utils'
-import { ensureCommonEmojiGroup } from './utils/common-group-utils'
+import { appendTelemetry } from './utils/storage-utils'
 import { setupChromeMessageListener, setupFirefoxMessageListener, setupChromeConnectListener } from './handlers/message-handlers'
+import globalDataManager from './data-manager'
+import globalBroadcaster from './message-broadcaster'
 
 // 创建通信服务实例
 const commService = createBackgroundCommService()
@@ -30,21 +31,20 @@ try {
   })
 } catch (_) {}
 
-// expose last payload so tabs that open late can request it
-let lastPayloadGlobal: any = null
-
-// Import data stores for accessing emoji data
-let emojiGroupsStore: any = null
-let settingsStore: any = null
-
 // Simple sync manager
 const SyncManager = {
   onLocalPayloadUpdated(payload: any) {
     try {
-      lastPayloadGlobal = payload
-      log('SyncManager: local updated')
+      // 使用全局数据管理器更新状态
+      globalDataManager.handlePayloadUpdate(payload)
+      log('SyncManager: local updated via data manager')
       appendTelemetry({ event: 'local_payload_updated' })
-    } catch (_) {}
+      
+      // 广播更新到所有页面
+      globalBroadcaster.broadcastMessage('payload-updated', payload, 'background')
+    } catch (error) {
+      log('SyncManager error:', error)
+    }
   }
 }
 
@@ -54,88 +54,100 @@ function log(...args: any[]) {
   } catch (_) {}
 }
 
-// Initialize stores and load data from chrome storage
+// Initialize data manager and set up broadcasting
 ;(async () => {
   try {
-    // 首先确保常用表情组在存储中存在
-    await ensureCommonEmojiGroupInStorage()
+    log('🚀 Initializing background service...')
     
-    // Try to import the stores
-    const [emojiModule, settingsModule] = await Promise.all([
-      import('../data/update/emojiGroupsStore'),
-      import('../data/update/settingsStore'),
-    ])
-
-    emojiGroupsStore = emojiModule.default
-    settingsStore = settingsModule.default
-
-    log('Emoji stores imported successfully')
-
-    // Wait a bit for the emojiGroupsStore.initFromStorage() to complete its async loading
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Try to get data from stores first (they load from extension storage)
-    try {
-      const groups = emojiGroupsStore.getEmojiGroups() || []
-      const settings = settingsStore.getSettings() || {}
-      const ungrouped = emojiGroupsStore.getUngrouped() || []
-
-      if (groups.length > 0) {
-        // Data successfully loaded from emojiGroupsStore
-        lastPayloadGlobal = {
-          Settings: settings,
-          emojiGroups: groups,
-          ungrouped: ungrouped,
+    // 初始化全局数据管理器
+    await globalDataManager.initialize()
+    
+    const stats = globalDataManager.getStats()
+    log('✅ Background service initialized successfully:', stats)
+    
+    // 设置数据更新监听器
+    globalDataManager.addUpdateListener(() => {
+      const newStats = globalDataManager.getStats()
+      log('📡 Data updated, broadcasting to connected clients:', newStats)
+      
+      // 广播数据更新到所有连接的页面
+      try {
+        const data = globalDataManager.getData()
+        
+        // 使用新的广播系统发送更新
+        globalBroadcaster.broadcastMessage('app:groups-changed', data.emojiGroups, 'background')
+        globalBroadcaster.broadcastMessage('app:settings-changed', data.settings, 'background')
+        globalBroadcaster.broadcastMessage('app:ungrouped-changed', { 
+          emojis: data.ungroupedEmojis, 
+          timestamp: Date.now() 
+        }, 'background')
+        
+        // 分别广播不同类型的表情组
+        const normalGroups = data.emojiGroups.filter((g: any) => g.UUID !== 'common-emoji-group')
+        const commonGroup = data.emojiGroups.find((g: any) => g.UUID === 'common-emoji-group')
+        
+        if (normalGroups.length > 0) {
+          globalBroadcaster.broadcastMessage('app:normal-groups-changed', { 
+            groups: normalGroups, 
+            timestamp: Date.now() 
+          }, 'background')
         }
-        log('Loaded data from emojiGroupsStore:', {
-          groupsCount: groups.length,
-          emojisCount: groups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0),
-        })
-        return
+        
+        if (commonGroup) {
+          globalBroadcaster.broadcastMessage('app:common-group-changed', { 
+            group: commonGroup, 
+            timestamp: Date.now() 
+          }, 'background')
+        }
+        
+        log('📡 All data updates broadcast via new system')
+      } catch (broadcastError) {
+        log('Failed to broadcast data update:', broadcastError)
       }
-    } catch (err) {
-      log('Failed to get data from stores:', err)
-    }
-
-    // If stores don't have data, try loading directly from chrome storage
-    try {
-      const storagePayload: any = await loadFromChromeStorage()
-      if (storagePayload && storagePayload.emojiGroups && storagePayload.emojiGroups.length > 0) {
-        lastPayloadGlobal = storagePayload
-        log('Loaded data directly from chrome storage:', {
-          groupsCount: storagePayload.emojiGroups.length,
-          emojisCount: storagePayload.emojiGroups.reduce(
-            (sum: number, g: any) => sum + (g.emojis?.length || 0),
-            0,
-          ),
-        })
-        return
+    })
+    
+    // 设置定期状态广播
+    setInterval(() => {
+      const status = globalBroadcaster.getQueueStatus()
+      if (status.queueSize > 10) {
+        log('⚠️ Message broadcaster queue status:', status)
       }
-    } catch (err) {
-      log('Failed to load from chrome storage:', err)
-    }
-
-    log('No emoji data found in extension storage - data needs to be imported via options page')
+      
+      // 定期广播心跳以保持连接
+      globalBroadcaster.broadcastMessage('background:heartbeat', {
+        timestamp: Date.now(),
+        stats: globalDataManager.getStats()
+      }, 'background')
+    }, 30000) // 每30秒
+    
   } catch (err) {
-    log('Failed to import emoji stores:', err)
+    log('❌ Failed to initialize background service:', err)
   }
 })()
 
-// Setup message listeners
+// Setup message listeners with data manager and broadcaster
 setupChromeMessageListener(
-  emojiGroupsStore,
-  settingsStore,
+  globalDataManager,
   commService,
-  lastPayloadGlobal,
   SyncManager
 )
 
 setupFirefoxMessageListener(
-  emojiGroupsStore,
-  settingsStore,
+  globalDataManager,
   commService,
-  lastPayloadGlobal,
   SyncManager
 )
 
 setupChromeConnectListener()
+
+// Export for debugging
+if (typeof globalThis !== 'undefined') {
+  (globalThis as any).debugBackground = {
+    dataManager: globalDataManager,
+    broadcaster: globalBroadcaster,
+    getStats: () => ({
+      dataManager: globalDataManager.getStats(),
+      broadcaster: globalBroadcaster.getQueueStatus()
+    })
+  }
+}
