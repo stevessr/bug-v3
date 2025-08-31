@@ -111,6 +111,43 @@ export function setupChromeMessageListener(
           return true // Keep the message channel open for async response
         }
 
+        // Handle ADD_EMOJI_FROM_WEB request (batch emoji adding)
+        if (msg && msg.action === 'addEmojiFromWeb' && msg.emojiData) {
+          try {
+            const { displayName, realUrl } = msg.emojiData
+            
+            // Generate a unique UUID for the emoji
+            const emojiUUID = `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            
+            // Create emoji object compatible with the storage format
+            const newEmoji = {
+              UUID: emojiUUID,
+              displayName: displayName || '表情',
+              realUrl: realUrl.href,
+              localUrl: '', // Will be populated when downloaded
+              addTime: Date.now(),
+              source: 'web_batch_add'
+            }
+            
+            // Add to ungrouped emojis through the store
+            if (emojiGroupsStore && typeof emojiGroupsStore.addUngrouped === 'function') {
+              emojiGroupsStore.addUngrouped(newEmoji)
+              log(`Successfully added emoji: ${displayName}`)
+              sendResponse({ success: true, emoji: newEmoji })
+            } else {
+              log('EmojiGroupsStore not available or addUngrouped method missing')
+              sendResponse({ success: false, error: 'Storage not available' })
+            }
+          } catch (error) {
+            log('Error adding emoji from web:', error)
+            sendResponse({ 
+              success: false, 
+              error: error instanceof Error ? error.message : 'Unknown error' 
+            })
+          }
+          return true // Keep the message channel open for async response
+        }
+
         try {
           if (msg && msg.type === 'payload-updated') {
             try {
@@ -224,6 +261,42 @@ export function setupFirefoxMessageListener(
       // Handle RECORD_EMOJI_USAGE request from content scripts
       if (msg && msg.type === 'RECORD_EMOJI_USAGE' && msg.uuid) {
         return handleEmojiUsageFirefox(msg.uuid, emojiGroupsStore, commService, lastPayloadGlobal)
+      }
+
+      // Handle ADD_EMOJI_FROM_WEB request (batch emoji adding) 
+      if (msg && msg.action === 'addEmojiFromWeb' && msg.emojiData) {
+        try {
+          const { displayName, realUrl } = msg.emojiData
+          
+          // Generate a unique UUID for the emoji
+          const emojiUUID = `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          
+          // Create emoji object compatible with the storage format
+          const newEmoji = {
+            UUID: emojiUUID,
+            displayName: displayName || '表情',
+            realUrl: realUrl.href,
+            localUrl: '', // Will be populated when downloaded
+            addTime: Date.now(),
+            source: 'web_batch_add'
+          }
+          
+          // Add to ungrouped emojis through the store
+          if (emojiGroupsStore && typeof emojiGroupsStore.addUngrouped === 'function') {
+            emojiGroupsStore.addUngrouped(newEmoji)
+            log(`Successfully added emoji: ${displayName}`)
+            return Promise.resolve({ success: true, emoji: newEmoji })
+          } else {
+            log('EmojiGroupsStore not available or addUngrouped method missing')
+            return Promise.resolve({ success: false, error: 'Storage not available' })
+          }
+        } catch (error) {
+          log('Error adding emoji from web:', error)
+          return Promise.resolve({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          })
+        }
       }
 
       try {

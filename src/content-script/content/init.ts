@@ -1,6 +1,7 @@
 import { loadDataFromStorage } from './storage'
 import { findAllToolbars, injectButton } from './injector'
 import { initOneClickAdd } from './oneClickAdd'
+import { initBatchEmojiAdd } from './batchEmojiAdd'
 import { logger } from './buildFlags'
 
 // Function to check and re-inject buttons if needed
@@ -122,6 +123,9 @@ export async function initializeEmojiFeature(
 
   // 初始化一键添加表情功能
   initOneClickAdd()
+
+  // 初始化批量添加表情功能
+  initBatchEmojiAdd()
 
   // 初始化回复按钮监听器
   setupReplyButtonListeners()

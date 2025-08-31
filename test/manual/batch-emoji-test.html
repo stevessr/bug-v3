@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>批量表情添加 - 手动测试</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      padding: 20px; 
+      background: #f8fafc;
+    }
+    .container { 
+      max-width: 1000px; 
+      margin: 0 auto; 
+      background: white; 
+      border-radius: 12px; 
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #8b5cf6, #a855f7);
+      color: white;
+      padding: 24px;
+      text-align: center;
+    }
+    .test-section { 
+      margin: 20px; 
+      padding: 20px; 
+      border: 1px solid #e5e7eb; 
+      border-radius: 8px;
+      background: #f9fafb;
+    }
+    .emoji-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); 
+      gap: 12px; 
+      margin: 20px 0;
+    }
+    .emoji-item { 
+      width: 100px; 
+      height: 100px; 
+      border: 2px solid #d1d5db; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      cursor: pointer; 
+      background: white;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      font-size: 24px;
+      position: relative;
+    }
+    .emoji-item:hover { 
+      border-color: #8b5cf6; 
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+    }
+    .emoji-item.selected { 
+      border-color: #8b5cf6; 
+      background: #f3e8ff;
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
+    }
+    .emoji-item.success {
+      border-color: #10b981;
+      background: #dcfce7;
+    }
+    .emoji-item.error {
+      border-color: #ef4444;
+      background: #fecaca;
+    }
+    .controls { 
+      margin: 20px 0; 
+      display: flex; 
+      gap: 12px; 
+      flex-wrap: wrap;
+    }
+    button { 
+      padding: 10px 20px; 
+      background: #4f46e5; 
+      color: white; 
+      border: none; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      font-weight: 500;
+      transition: background 0.2s ease;
+    }
+    button:hover { background: #3730a3; }
+    button:disabled { 
+      background: #9ca3af; 
+      cursor: not-allowed; 
+    }
+    button.danger { background: #dc2626; }
+    button.danger:hover { background: #b91c1c; }
+    button.success { background: #059669; }
+    button.success:hover { background: #047857; }
+    .status { 
+      padding: 16px; 
+      margin: 16px 0; 
+      background: #f0f9ff; 
+      border-left: 4px solid #0ea5e9; 
+      border-radius: 0 6px 6px 0;
+      font-weight: 500;
+    }
+    .status.selecting {
+      background: #f3e8ff;
+      border-left-color: #8b5cf6;
+    }
+    .status.processing {
+      background: #fef3c7;
+      border-left-color: #f59e0b;
+    }
+    .progress-container {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    .progress-bar {
+      width: 100%; 
+      height: 24px; 
+      background: #e5e7eb; 
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%; 
+      background: linear-gradient(135deg, #10b981, #059669); 
+      border-radius: 12px; 
+      transition: width 0.3s ease;
+      position: relative;
+    }
+    .progress-text {
+      margin-top: 12px;
+      text-align: center;
+      font-weight: 500;
+      color: #374151;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .stat-item {
+      text-align: center;
+      padding: 16px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    .stat-number {
+      font-size: 28px;
+      font-weight: bold;
+      color: #1f2937;
+    }
+    .stat-label {
+      font-size: 14px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    .mfp-simulation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .mfp-content-sim {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 90%;
+      max-height: 90%;
+      overflow: auto;
+      position: relative;
+    }
+    .mfp-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 批量表情添加功能测试</h1>
+      <p>模拟 Magnific Popup 环境中的批量表情添加功能</p>
+    </div>
+    
+    <div class="test-section">
+      <h3>🖼️ 模拟表情图片选择</h3>
+      <p>点击下方表情进行选择，模拟在图片查看器中批量选择表情的场景</p>
+      
+      <div class="controls">
+        <button onclick="toggleSelectionMode()" id="toggleBtn">进入选择模式</button>
+        <button onclick="selectAll()" id="selectAllBtn" disabled>全选</button>
+        <button onclick="clearSelection()" id="clearBtn" disabled>清空选择</button>
+        <button onclick="startBatchProcess()" id="processBtn" disabled class="success">开始批量添加</button>
+        <button onclick="simulateMagnificPopup()">模拟弹窗</button>
+      </div>
+      
+      <div class="emoji-grid" id="emojiGrid">
+        <!-- 将通过JavaScript动态生成 -->
+      </div>
+      
+      <div class="status" id="status">
+        状态：等待操作... 点击"进入选择模式"开始
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h3>📊 处理进度与统计</h3>
+      <div class="stats">
+        <div class="stat-item">
+          <div class="stat-number" id="selectedCount">0</div>
+          <div class="stat-label">已选择</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="successCount">0</div>
+          <div class="stat-label">成功</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="errorCount">0</div>
+          <div class="stat-label">失败</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="totalProcessed">0</div>
+          <div class="stat-label">总处理</div>
+        </div>
+      </div>
+      
+      <div class="progress-container" id="progressContainer" style="display: none;">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+        </div>
+        <div class="progress-text" id="progressText">进度：0/0 (0%)</div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h3>🔧 功能说明</h3>
+      <ul>
+        <li><strong>选择模式：</strong>点击"进入选择模式"后，可以点击表情进行选择</li>
+        <li><strong>批量操作：</strong>选择表情后，点击"开始批量添加"模拟发送到扩展后台</li>
+        <li><strong>实时反馈：</strong>处理过程中会显示进度条和状态变化</li>
+        <li><strong>错误处理：</strong>模拟20%的失败率，测试错误处理机制</li>
+        <li><strong>弹窗模拟：</strong>点击"模拟弹窗"体验真实的模态框环境</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 模拟 Magnific Popup -->
+  <div class="mfp-simulation" id="mfpModal">
+    <div class="mfp-content-sim">
+      <button class="mfp-close" onclick="closeMagnificPopup()">×</button>
+      <h2>模拟 Magnific Popup 图片查看器</h2>
+      <p>这里模拟了真实的图片查看器环境，批量添加按钮应该出现在此类模态框中</p>
+      <div class="emoji-grid" id="modalEmojiGrid">
+        <!-- 模态框中的表情 -->
+      </div>
+      <div style="margin-top: 20px; text-align: center;">
+        <button onclick="closeMagnificPopup()">关闭模态框</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 模拟Chrome扩展环境
+    window.chrome = {
+      runtime: {
+        sendMessage: async (message) => {
+          console.log('📤 发送消息到 background script:', message);
+          
+          // 模拟随机成功/失败（80%成功率）
+          const success = Math.random() > 0.2;
+          const delay = 100 + Math.random() * 300; // 随机延迟100-400ms
+          
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              if (success) {
+                resolve({ 
+                  success: true, 
+                  emoji: { 
+                    UUID: 'test_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    displayName: message.emojiData.displayName,
+                    realUrl: message.emojiData.realUrl.href,
+                    addTime: Date.now()
+                  }
+                });
+              } else {
+                resolve({ 
+                  success: false, 
+                  error: '模拟的网络错误或存储失败' 
+                });
+              }
+            }, delay);
+          });
+        }
+      }
+    };
+
+    // 测试状态
+    let isSelecting = false;
+    let selectedEmojis = new Set();
+    let isProcessing = false;
+    let stats = {
+      selected: 0,
+      success: 0,
+      error: 0,
+      total: 0
+    };
+
+    // 生成测试表情数据
+    const testEmojis = [
+      { emoji: '😀', name: '笑脸表情' },
+      { emoji: '❤️', name: '爱心表情' },
+      { emoji: '😮', name: '惊讶表情' },
+      { emoji: '😢', name: '哭泣表情' },
+      { emoji: '😠', name: '生气表情' },
+      { emoji: '🤔', name: '思考表情' },
+      { emoji: '😎', name: '酷炫表情' },
+      { emoji: '🥳', name: '庆祝表情' },
+      { emoji: '😴', name: '睡觉表情' },
+      { emoji: '🤗', name: '拥抱表情' },
+      { emoji: '🙄', name: '翻白眼表情' },
+      { emoji: '😋', name: '美味表情' },
+      { emoji: '🥰', name: '爱心眼表情' },
+      { emoji: '😏', name: '得意表情' },
+      { emoji: '🤯', name: '爆炸表情' },
+      { emoji: '🥺', name: '请求表情' }
+    ];
+
+    // 生成表情网格
+    function generateEmojiGrid(containerId = 'emojiGrid') {
+      const grid = document.getElementById(containerId);
+      grid.innerHTML = '';
+
+      testEmojis.forEach((emoji, index) => {
+        const item = document.createElement('div');
+        item.className = 'emoji-item';
+        item.dataset.index = index;
+        item.dataset.name = emoji.name;
+        item.innerHTML = `
+          <div style="text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 4px;">${emoji.emoji}</div>
+            <div style="font-size: 10px; color: #6b7280;">${emoji.name}</div>
+          </div>
+        `;
+        
+        if (containerId === 'emojiGrid') {
+          item.onclick = () => toggleEmojiSelection(index);
+        }
+        
+        grid.appendChild(item);
+      });
+    }
+
+    // 切换表情选择状态
+    function toggleEmojiSelection(index) {
+      if (!isSelecting || isProcessing) return;
+
+      const item = document.querySelector(`[data-index="${index}"]`);
+      if (selectedEmojis.has(index)) {
+        selectedEmojis.delete(index);
+        item.classList.remove('selected');
+      } else {
+        selectedEmojis.add(index);
+        item.classList.add('selected');
+      }
+
+      updateStats();
+      updateUI();
+    }
+
+    // 切换选择模式
+    function toggleSelectionMode() {
+      if (isProcessing) return;
+      
+      isSelecting = !isSelecting;
+      
+      if (!isSelecting) {
+        clearSelection();
+      }
+      
+      updateUI();
+    }
+
+    // 全选
+    function selectAll() {
+      if (!isSelecting || isProcessing) return;
+      
+      testEmojis.forEach((_, index) => {
+        selectedEmojis.add(index);
+        const item = document.querySelector(`[data-index="${index}"]`);
+        item.classList.add('selected');
+      });
+      
+      updateStats();
+      updateUI();
+    }
+
+    // 清空选择
+    function clearSelection() {
+      selectedEmojis.clear();
+      document.querySelectorAll('.emoji-item').forEach(item => {
+        item.classList.remove('selected', 'success', 'error');
+      });
+      updateStats();
+      updateUI();
+    }
+
+    // 开始批量处理
+    async function startBatchProcess() {
+      if (selectedEmojis.size === 0) {
+        alert('请先选择表情！');
+        return;
+      }
+
+      if (isProcessing) {
+        alert('正在处理中，请稍候...');
+        return;
+      }
+
+      isProcessing = true;
+      stats.success = 0;
+      stats.error = 0;
+      stats.total = selectedEmojis.size;
+      
+      // 显示进度条
+      document.getElementById('progressContainer').style.display = 'block';
+      
+      let completed = 0;
+      updateProgress(0, stats.total);
+
+      console.log(`🚀 开始批量处理 ${stats.total} 个表情`);
+
+      for (const index of selectedEmojis) {
+        const item = document.querySelector(`[data-index="${index}"]`);
+        const emojiData = testEmojis[index];
+        
+        // 重置状态
+        item.classList.remove('success', 'error');
+        
+        try {
+          console.log(`📤 处理表情: ${emojiData.name}`);
+          
+          const result = await chrome.runtime.sendMessage({
+            action: 'addEmojiFromWeb',
+            emojiData: {
+              displayName: emojiData.name,
+              realUrl: new URL(`https://example.com/emojis/${emojiData.name.replace(/表情$/, '')}.png`)
+            }
+          });
+
+          if (result.success) {
+            stats.success++;
+            item.classList.add('success');
+            console.log(`✅ 成功添加: ${emojiData.name}`, result.emoji);
+          } else {
+            stats.error++;
+            item.classList.add('error');
+            console.log(`❌ 添加失败: ${emojiData.name}`, result.error);
+          }
+        } catch (error) {
+          stats.error++;
+          item.classList.add('error');
+          console.log(`❌ 网络错误: ${emojiData.name}`, error);
+        }
+
+        completed++;
+        updateProgress(completed, stats.total);
+        updateStats();
+        
+        // 添加小延迟让用户看到处理过程
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+
+      // 处理完成
+      isProcessing = false;
+      console.log(`🎉 批量处理完成！成功: ${stats.success}, 失败: ${stats.error}`);
+      
+      alert(`批量处理完成！\n✅ 成功：${stats.success}/${stats.total}\n❌ 失败：${stats.error}/${stats.total}`);
+      
+      // 3秒后自动隐藏进度条
+      setTimeout(() => {
+        document.getElementById('progressContainer').style.display = 'none';
+      }, 3000);
+      
+      updateUI();
+    }
+
+    // 更新进度条
+    function updateProgress(completed, total) {
+      const percentage = total > 0 ? (completed / total) * 100 : 0;
+      document.getElementById('progressFill').style.width = percentage + '%';
+      document.getElementById('progressText').textContent = 
+        `进度：${completed}/${total} (${Math.round(percentage)}%)`;
+    }
+
+    // 更新统计数据
+    function updateStats() {
+      stats.selected = selectedEmojis.size;
+      
+      document.getElementById('selectedCount').textContent = stats.selected;
+      document.getElementById('successCount').textContent = stats.success;
+      document.getElementById('errorCount').textContent = stats.error;
+      document.getElementById('totalProcessed').textContent = stats.success + stats.error;
+    }
+
+    // 更新UI状态
+    function updateUI() {
+      const toggleBtn = document.getElementById('toggleBtn');
+      const selectAllBtn = document.getElementById('selectAllBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const processBtn = document.getElementById('processBtn');
+      const status = document.getElementById('status');
+
+      // 更新按钮状态
+      if (isProcessing) {
+        toggleBtn.textContent = '处理中...';
+        toggleBtn.disabled = true;
+        selectAllBtn.disabled = true;
+        clearBtn.disabled = true;
+        processBtn.disabled = true;
+        processBtn.textContent = '处理中...';
+        
+        status.textContent = `状态：正在批量处理 ${stats.total} 个表情...`;
+        status.className = 'status processing';
+      } else if (isSelecting) {
+        toggleBtn.textContent = '退出选择模式';
+        toggleBtn.className = 'danger';
+        selectAllBtn.disabled = false;
+        clearBtn.disabled = false;
+        processBtn.disabled = selectedEmojis.size === 0;
+        processBtn.textContent = `开始批量添加 (${selectedEmojis.size})`;
+        
+        status.textContent = `状态：选择模式 - 已选择 ${selectedEmojis.size} 个表情`;
+        status.className = 'status selecting';
+      } else {
+        toggleBtn.textContent = '进入选择模式';
+        toggleBtn.className = '';
+        selectAllBtn.disabled = true;
+        clearBtn.disabled = true;
+        processBtn.disabled = true;
+        processBtn.textContent = '开始批量添加';
+        
+        status.textContent = '状态：等待操作... 点击"进入选择模式"开始';
+        status.className = 'status';
+      }
+    }
+
+    // 模拟 Magnific Popup
+    function simulateMagnificPopup() {
+      const modal = document.getElementById('mfpModal');
+      modal.style.display = 'flex';
+      generateEmojiGrid('modalEmojiGrid');
+      
+      // 添加模态框特有的类名，模拟真实环境
+      modal.classList.add('mfp-wrap');
+      modal.querySelector('.mfp-content-sim').classList.add('mfp-content');
+    }
+
+    function closeMagnificPopup() {
+      document.getElementById('mfpModal').style.display = 'none';
+    }
+
+    // 初始化
+    function init() {
+      generateEmojiGrid();
+      updateStats();
+      updateUI();
+      
+      console.log('🎯 批量表情添加测试页面已加载');
+      console.log('📖 使用说明：');
+      console.log('1. 点击"进入选择模式"激活选择功能');
+      console.log('2. 点击表情进行选择/取消选择');
+      console.log('3. 点击"开始批量添加"模拟发送到扩展后台');
+      console.log('4. 观察进度条和状态变化');
+      console.log('5. 查看控制台日志了解详细处理过程');
+    }
+
+    // 启动应用
+    init();
+
+    // 模拟扩展环境检测
+    setTimeout(() => {
+      if (window.chrome && window.chrome.runtime) {
+        console.log('✅ Chrome 扩展环境模拟成功');
+      } else {
+        console.warn('⚠️ 未检测到 Chrome 扩展环境');
+      }
+    }, 1000);
+  </script>
+</body>
+</html>
