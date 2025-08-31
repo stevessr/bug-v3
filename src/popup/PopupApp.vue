@@ -198,24 +198,29 @@ export default defineComponent({
 
     async function onEmojiClick(e: any) {
       console.log('[PopupApp] Emoji clicked:', e.displayName, 'UUID:', e.UUID)
+      console.log('[PopupApp] Current hot emojis count before click:', hot.value.length)
 
       try {
         // 🚀 关键修复：改进使用记录和UI刷新逻辑
         let usageRecorded = false
+        const timestamp = Date.now()
 
         // 尝试记录使用统计
         try {
-          console.log('[PopupApp] Recording usage for emoji:', e.UUID)
+          console.log('[PopupApp] Recording usage for emoji:', e.UUID, 'at timestamp:', timestamp)
           const result = recordUsage(e.UUID)
+          console.log('[PopupApp] recordUsage result:', result)
+          
           if (result) {
             console.log('[PopupApp] Usage recorded successfully')
             usageRecorded = true
 
             // 发送使用记录消息到其他页面
+            console.log('[PopupApp] Sending usage recorded message to other pages')
             commService.sendUsageRecorded(e.UUID)
-            console.log('[PopupApp] Usage recorded message sent to other pages')
+            console.log('[PopupApp] Usage recorded message sent successfully')
           } else {
-            console.warn('[PopupApp] recordUsage returned false')
+            console.warn('[PopupApp] recordUsage returned false - usage not recorded')
           }
         } catch (error) {
           console.error('[PopupApp] Primary recordUsage failed:', error)
@@ -237,14 +242,36 @@ export default defineComponent({
 
         // 🚀 关键修复：强制刷新UI，无论使用记录是否成功
         try {
-          console.log('[PopupApp] Refreshing hot emojis list')
+          console.log('[PopupApp] Refreshing hot emojis list with force refresh')
+          const oldCount = hot.value.length
+          
           // 强制刷新热门表情列表
           hot.value = store.getHot(true) // 传递true强制刷新
-          console.log('[PopupApp] Hot emojis refreshed, count:', hot.value.length)
+          console.log('[PopupApp] Hot emojis refreshed - old count:', oldCount, 'new count:', hot.value.length)
+          
+          // 验证刷新结果
+          if (hot.value.length > 0) {
+            console.log('[PopupApp] Top hot emojis after refresh:', 
+              hot.value.slice(0, 6).map(emoji => ({
+                name: emoji.displayName,
+                count: emoji.usageCount,
+                group: emoji.groupUUID
+              }))
+            )
+          }
 
           // 同时刷新常用表情组
+          const oldCommonGroup = commonEmojiGroup.value
           commonEmojiGroup.value = store.getCommonEmojiGroup()
-          console.log('[PopupApp] Common emoji group refreshed')
+          console.log('[PopupApp] Common emoji group refreshed - emoji count:', 
+            commonEmojiGroup.value?.emojis?.length || 0)
+            
+          // 验证常用表情组更新
+          if (oldCommonGroup?.emojis?.length !== commonEmojiGroup.value?.emojis?.length) {
+            console.log('[PopupApp] Common emoji group size changed from', 
+              oldCommonGroup?.emojis?.length || 0, 'to', 
+              commonEmojiGroup.value?.emojis?.length || 0)
+          }
         } catch (refreshError) {
           console.error('[PopupApp] UI refresh failed:', refreshError)
         }

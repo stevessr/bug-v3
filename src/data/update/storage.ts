@@ -82,31 +82,52 @@ function ensureCommonEmojiGroup() {
 // Schedule sync to extension storage
 function scheduleSyncToExtension() {
   const now = Date.now()
+  console.log(
+    '[Storage] scheduleSyncToExtension called, current time:',
+    now,
+    'last sync:',
+    lastSyncTime,
+  )
+
   if (now - lastSyncTime < SYNC_INTERVAL && syncTimer) {
+    console.log('[Storage] Sync already scheduled and within interval, skipping')
     return // Already scheduled and within interval
   }
 
   if (syncTimer) {
+    console.log('[Storage] Clearing existing sync timer')
     clearTimeout(syncTimer)
   }
 
   const delay = Math.max(0, SYNC_INTERVAL - (now - lastSyncTime))
+  console.log('[Storage] Scheduling sync to extension storage with delay:', delay, 'ms')
+
   syncTimer = window.setTimeout(() => {
+    console.log('[Storage] Executing scheduled sync to extension storage')
     syncToExtensionStorage().finally(() => {
       syncTimer = null
+      console.log('[Storage] Sync timer cleared')
     })
   }, delay)
 }
 
 // Sync localStorage to extension storage
-async function syncToExtensionStorage(): Promise<void> {
-  if (pendingSync) return
+async function syncToExtensionStorage(retryCount = 0): Promise<void> {
+  const maxRetries = 3
+
+  if (pendingSync) {
+    console.log('[Storage] Sync already in progress, skipping')
+    return
+  }
 
   try {
     pendingSync = true
     lastSyncTime = Date.now()
 
+    console.log('[Storage] Starting sync to extension storage, attempt:', retryCount + 1)
+
     if (typeof window === 'undefined' || !window.localStorage) {
+      console.warn('[Storage] localStorage not available')
       return
     }
 
@@ -175,26 +196,61 @@ async function syncToExtensionStorage(): Promise<void> {
 
     // Sync to extension storage
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      await new Promise<void>((resolve) => {
+      console.log('[Storage] Syncing', Object.keys(storeObj).length, 'keys to extension storage')
+
+      await new Promise<void>((resolve, reject) => {
         chrome.storage.local.set(storeObj, () => {
           if (chrome.runtime && chrome.runtime.lastError) {
-            console.warn('[Storage] Extension sync error:', chrome.runtime.lastError)
+            const error = chrome.runtime.lastError
+            console.error('[Storage] Extension sync error:', error)
+            reject(new Error(`Extension sync failed: ${error.message}`))
           } else {
             console.log(
-              '[Storage] Synced to extension storage, keys:',
+              '[Storage] Successfully synced to extension storage, keys:',
               Object.keys(storeObj).length,
             )
             // Update in-memory cache
             Object.assign(extCache, storeObj)
+
+            // 🚀 关键修复：验证同步结果
+            console.log('[Storage] Verifying sync - checking common emoji group')
+            if (storeObj[KEY_COMMON_EMOJIS]) {
+              console.log(
+                '[Storage] Common emoji group synced with',
+                storeObj[KEY_COMMON_EMOJIS].emojis?.length || 0,
+                'emojis',
+              )
+            }
+            resolve()
           }
-          resolve()
         })
       })
+    } else {
+      console.warn('[Storage] Chrome storage API not available')
     }
   } catch (error) {
-    console.warn('[Storage] Sync to extension failed:', error)
+    console.error('[Storage] Sync to extension failed:', error)
+
+    // 🚀 关键修复：实现重试机制
+    if (retryCount < maxRetries) {
+      console.log(`[Storage] Retrying sync (${retryCount + 1}/${maxRetries}) in 2 seconds...`)
+      pendingSync = false // Reset flag for retry
+
+      setTimeout(() => {
+        syncToExtensionStorage(retryCount + 1).catch((retryError) => {
+          console.error('[Storage] Retry failed:', retryError)
+        })
+      }, 2000)
+    } else {
+      console.error('[Storage] Max retries reached, sync failed permanently')
+      // 🚀 关键修复：广播同步失败消息
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      broadcastMessage('sync-failed', { error: errorMessage, retryCount })
+    }
   } finally {
-    pendingSync = false
+    if (retryCount >= maxRetries) {
+      pendingSync = false
+    }
   }
 }
 
@@ -490,20 +546,70 @@ export function getCommonEmojiGroup(): EmojiGroup | null {
 // 保存常用表惁分组
 export function saveCommonEmojiGroup(group: EmojiGroup) {
   try {
+    console.log('[Storage] saveCommonEmojiGroup called with group:', {
+      UUID: group.UUID,
+      displayName: group.displayName,
+      emojiCount: group.emojis?.length || 0,
+      emojis: group.emojis?.map((e) => ({ name: e.displayName, count: e.usageCount })) || [],
+    })
+
     if (typeof window !== 'undefined' && window.localStorage) {
       // Immediate save to localStorage
-      window.localStorage.setItem(KEY_COMMON_EMOJIS, JSON.stringify(group))
+      const serializedGroup = JSON.stringify(group)
+      window.localStorage.setItem(KEY_COMMON_EMOJIS, serializedGroup)
+      console.log(
+        '[Storage] Successfully saved to localStorage, size:',
+        serializedGroup.length,
+        'chars',
+      )
+
+      // Verify the save
+      const saved = window.localStorage.getItem(KEY_COMMON_EMOJIS)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        console.log('[Storage] Verification: saved group has', parsed.emojis?.length || 0, 'emojis')
+      }
 
       // Broadcast change message
       broadcastMessage('common-emoji-updated', group)
+      console.log('[Storage] Broadcasted common-emoji-updated message')
 
       // Schedule background sync
       scheduleSyncToExtension()
 
       console.log('[Storage] Saved common emoji group to localStorage, sync scheduled')
+    } else {
+      console.warn('[Storage] localStorage not available')
     }
   } catch (error) {
-    console.warn('[Storage] Failed to save common emoji group:', error)
+    console.error('[Storage] Failed to save common emoji group:', error)
+
+    // 🚀 关键修复：尝试恢复机制
+    try {
+      console.log('[Storage] Attempting recovery by clearing localStorage and retrying')
+      // 尝试清除可能损坏的数据并重试
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const backup = JSON.stringify(group)
+        window.localStorage.removeItem(KEY_COMMON_EMOJIS)
+        window.localStorage.setItem(KEY_COMMON_EMOJIS, backup)
+        console.log('[Storage] Recovery successful')
+
+        // 广播恢复成功消息
+        broadcastMessage('common-emoji-recovered', group)
+      }
+    } catch (recoveryError) {
+      console.error('[Storage] Recovery failed:', recoveryError)
+      // 广播失败消息
+      const originalErrorMessage = error instanceof Error ? error.message : String(error)
+      const recoveryErrorMessage =
+        recoveryError instanceof Error ? recoveryError.message : String(recoveryError)
+      broadcastMessage('common-emoji-save-failed', {
+        originalError: originalErrorMessage,
+        recoveryError: recoveryErrorMessage,
+      })
+    }
+
+    throw error // Re-throw to ensure calling code knows about the failure
   }
 }
 

@@ -2,9 +2,14 @@
 
 ## 1. 概述
 
-本文档描述了浏览器扩展中表情数据实时同步功能的技术设计。该功能旨在解决当前扩展中表情使用统计、显示顺序、分组图标等数据在不同组件间（前端注入脚本、后台服务、选项页面、弹出页面）无法实时同步的问题。
+本文档描述了修复popup到options页面表情数据实时同步问题的技术设计。该功能旨在解决当前扩展中的关键问题：**popup页面使用表情后，options页面的常用表情列表无法实时更新，需要刷新后才能看到更新**。
 
-设计基于现有的通信架构，通过增强消息传递机制、优化数据存储策略和改进UI响应机制来实现实时同步。
+根据日志分析，问题的根本原因是：
+1. 数据缓存机制导致options页面无法获取最新的热门表情数据
+2. localStorage和扩展存储的同步存在延迟
+3. options页面的消息监听器虽然接收到了更新消息，但数据刷新逻辑不够强制
+
+设计基于现有的通信架构，通过优化数据缓存策略、强化消息处理机制和改进UI刷新逻辑来实现实时同步。
 
 ## 2. 架构
 
@@ -16,43 +21,55 @@
 - **选项页面 (Options Page)**: 管理表情分组和设置
 - **弹出页面 (Popup)**: 快速访问表情功能
 
-### 2.2 同步架构设计
+### 2.2 问题修复架构设计
 
 ```mermaid
 graph TB
-    A[内容脚本表情选择器] --> B[后台服务]
-    C[选项页面] --> B
-    D[弹出页面] --> B
+    A[Popup页面] --> B[表情点击事件]
+    B --> C[recordUsageByUUID]
+    C --> D[更新表情使用统计]
+    D --> E[清除热门表情缓存]
+    E --> F[保存到localStorage和Chrome Storage]
+    F --> G[发送usage-recorded消息]
+    G --> H[Options页面HotTab]
+    H --> I[强制刷新热门表情数据]
+    I --> J[重新计算并显示热门表情]
     
-    B --> E[Chrome Storage]
-    B --> F[LocalStorage同步器]
-    
-    B --> G[实时通知分发器]
-    G --> A
-    G --> C
-    G --> D
-    
-    H[数据一致性检查器] --> E
-    H --> F
+    K[数据一致性问题] --> L[缓存失效机制]
+    L --> M[强制数据重新加载]
+    M --> N[UI立即更新]
 ```
 
 ## 3. 组件和接口
 
-### 3.1 增强的通信服务
+### 3.1 关键问题分析
 
-**新增消息类型:**
+**当前消息流程:**
 ```typescript
-interface SyncMessage extends Message {
-  type: 'COMMON_EMOJI_UPDATED' | 'EMOJI_ORDER_CHANGED' | 'GROUP_ICON_UPDATED' | 'UNGROUPED_EMOJIS_CHANGED'
-  payload: {
-    uuid?: string
-    groupUUID?: string
-    commonGroup?: EmojiGroup
-    updatedOrder?: string[]
-    iconUrl?: string
-    ungroupedEmojis?: Emoji[]
-    timestamp: number
-  }
+// Popup页面点击表情
+onEmojiClick(emoji) -> recordUsage(uuid) -> sendUsageRecorded(uuid)
+
+// Options页面接收消息
+onUsageRecorded(data) -> refreshHotData() -> store.getHot(true)
+
+// 问题：缓存机制导致数据不一致
+cachedHotEmojis.data // 可能包含过期数据
+```
+
+**修复策略:**
+```typescript
+interface FixedSyncFlow {
+  // 1. 强制清除缓存
+  clearHotEmojiCache(): void
+  
+  // 2. 强制重新计算热门表情
+  forceRecalculateHotEmojis(): Emoji[]
+  
+  // 3. 立即更新UI
+  immediateUIUpdate(): void
+  
+  // 4. 验证数据一致性
+  validateDataConsistency(): boolean
 }
 ```
 
@@ -73,26 +90,34 @@ interface EnhancedCommunicationService extends CommunicationService {
 }
 ```
 
-### 3.2 数据同步管理器
+### 3.2 缓存失效机制
 
-**新组件: DataSyncManager**
+**修复缓存问题的核心组件:**
 ```typescript
-class DataSyncManager {
-  private storageWatcher: StorageWatcher
-  private consistencyChecker: ConsistencyChecker
-  private notificationQueue: NotificationQueue
+class HotEmojiCacheManager {
+  private cachedHotEmojis = {
+    data: null as any[] | null,
+    timestamp: 0
+  }
   
-  // 监控存储变化
-  watchStorageChanges(): void
+  // 强制清除缓存
+  clearCache(): void {
+    this.cachedHotEmojis.data = null
+    this.cachedHotEmojis.timestamp = 0
+  }
   
-  // 检查数据一致性
-  checkConsistency(): Promise<boolean>
+  // 检查缓存是否有效
+  isCacheValid(): boolean {
+    const now = Date.now()
+    return this.cachedHotEmojis.data !== null && 
+           (now - this.cachedHotEmojis.timestamp < 60000)
+  }
   
-  // 同步localStorage和Chrome Storage
-  syncStorages(): Promise<void>
-  
-  // 批量处理通知
-  processPendingNotifications(): void
+  // 强制重新计算热门表情
+  forceRecalculate(): Emoji[] {
+    this.clearCache()
+    return this.calculateHotEmojis()
+  }
 }
 ```
 
@@ -115,25 +140,36 @@ class ConsistencyChecker {
 }
 ```
 
-### 3.4 实时UI更新器
+### 3.3 Options页面强制刷新机制
 
-**增强的UI组件响应机制:**
+**修复Options页面数据不同步的核心组件:**
 ```typescript
-interface RealtimeUIUpdater {
-  // 立即更新常用表情显示
-  updateCommonEmojis(commonGroup: EmojiGroup): void
+interface OptionsPageRefreshManager {
+  // 强制刷新热门表情数据
+  async forceRefreshHotData(): Promise<void> {
+    // 1. 清除所有相关缓存
+    this.clearAllCaches()
+    
+    // 2. 强制从存储重新加载
+    const hotEmojis = store.getHot(true) // 强制刷新
+    
+    // 3. 立即更新UI
+    this.updateUI(hotEmojis)
+    
+    // 4. 验证数据一致性
+    this.validateConsistency()
+  }
   
-  // 立即更新表情排序
-  updateEmojiOrder(groupUUID: string, newOrder: string[]): void
-  
-  // 立即更新分组图标
-  updateGroupIcon(groupUUID: string, iconUrl: string): void
-  
-  // 立即显示未分组表情
-  updateUngroupedEmojis(emojis: Emoji[]): void
-  
-  // 强制刷新UI组件
-  forceRefresh(): void
+  // 处理使用记录更新消息
+  async handleUsageRecorded(data: {uuid: string, timestamp: number}): Promise<void> {
+    console.log('[HotTab] Received usage recorded message for UUID:', data.uuid)
+    
+    // 立即强制刷新，不依赖缓存
+    await this.forceRefreshHotData()
+    
+    // 更新统计信息
+    this.updateStats()
+  }
 }
 ```
 
