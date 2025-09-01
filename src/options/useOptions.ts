@@ -482,10 +482,6 @@ export default function useOptions() {
     editingEmojiIndex,
     // grid
     localGridColumns,
-    updateImageScale,
-    updateShowSearchBar,
-    updateOutputFormat,
-    updateForceMobileMode,
     // drag/drop
     handleDragStart,
     handleDrop,
