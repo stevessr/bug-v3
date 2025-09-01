@@ -4,7 +4,7 @@ import { computed, ref } from 'vue'
 import type { EmojiGroup } from '../../types/emoji'
 
 const props = defineProps<{ emojiStore: any }>()
-defineEmits<{
+const emit = defineEmits<{
   (e: 'remove', groupId: string, idx: number): void
   (e: 'edit', emoji: any, groupId: string, idx: number): void
 }>()
@@ -223,14 +223,14 @@ const cancelCreateGroup = () => {
             <!-- 非多选模式下的编辑/删除按钮 -->
             <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
               <button
-                @click="$emit('edit', emoji, ungroup.id, idx)"
+                @click="emit('edit', emoji, ungroup.id, idx)"
                 title="编辑"
                 class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded"
               >
                 编辑
               </button>
               <button
-                @click="$emit('remove', ungroup.id, idx)"
+                @click="emit('remove', ungroup.id, idx)"
                 title="移除"
                 class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded"
               >

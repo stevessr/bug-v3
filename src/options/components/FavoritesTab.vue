@@ -4,7 +4,7 @@ const props = defineProps<{
   emojiStore: any
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'remove', groupId: string, idx: number): void
   (e: 'edit', emoji: any, groupId: string, idx: number): void
 }>()
@@ -59,14 +59,14 @@ const favoritesGroup = computed(() =>
             </div>
             <div class="absolute top-1 right-1 flex gap-1">
               <button
-                @click="$emit('edit', emoji, 'favorites', idx)"
+                @click="emit('edit', emoji, 'favorites', idx)"
                 title="编辑"
                 class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100"
               >
                 编辑
               </button>
               <button
-                @click="$emit('remove', 'favorites', idx)"
+                @click="emit('remove', 'favorites', idx)"
                 title="移除"
                 class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100"
               >

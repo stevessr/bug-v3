@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const emits = defineEmits([
+const emit = defineEmits([
   'open-create-group',
   'group-dragstart',
   'group-drop',
@@ -48,7 +48,7 @@ onMounted(() => {
         const groupData = (element as any).__groupData
         if (groupData) {
           const syntheticEvent = new DragEvent('dragstart')
-          emits('group-dragstart', groupData, syntheticEvent)
+          emit('group-dragstart', groupData, syntheticEvent)
         }
       } catch (err) {
         // ignore synthetic event creation errors in older browsers
@@ -73,7 +73,7 @@ onMounted(() => {
         if (groupData && targetData && groupData.id !== targetData.id) {
           // Create synthetic drag event for compatibility
           const syntheticEvent = new DragEvent('drop')
-          emits('group-drop', targetData, syntheticEvent)
+          emit('group-drop', targetData, syntheticEvent)
         }
       }
     }
@@ -87,7 +87,7 @@ onMounted(() => {
         const emojiData = (element as any).__emojiData
         if (emojiData) {
           const syntheticEvent = new DragEvent('dragstart')
-          emits(
+          emit(
             'emoji-drag-start',
             emojiData.emoji,
             emojiData.groupId,
@@ -107,7 +107,7 @@ onMounted(() => {
         if (emojiData && targetData) {
           // Create synthetic drag event for compatibility
           const syntheticEvent = new DragEvent('drop')
-          emits('emoji-drop', targetData.groupId, targetData.index, syntheticEvent)
+          emit('emoji-drop', targetData.groupId, targetData.index, syntheticEvent)
         }
       }
     }
@@ -148,7 +148,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
         <div class="flex justify-between items-center">
           <h2 class="text-lg font-semibold text-gray-900">表情分组管理</h2>
           <button
-            @click="$emit('open-create-group')"
+            @click="emit('open-create-group')"
             class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             新建分组
@@ -163,9 +163,9 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
             :key="group.id"
             class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
             :draggable="group.id !== 'favorites'"
-            @dragstart="$emit('group-dragstart', group, $event)"
+            @dragstart="emit('group-dragstart', group, $event)"
             @dragover.prevent
-            @drop="$emit('group-drop', group, $event)"
+            @drop="emit('group-drop', group, $event)"
             :ref="el => el && addGroupTouchEvents(el as HTMLElement, group)"
           >
             <div class="flex items-center justify-between p-4" v-if="group.name != '未分组'">
@@ -178,7 +178,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                       :src="group.icon"
                       alt="group icon"
                       class="w-6 h-6 object-contain rounded"
-                      @error="$emit('image-error', $event)"
+                      @error="emit('image-error', $event)"
                     />
                   </template>
                   <template v-else>
@@ -194,27 +194,27 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
               </div>
               <div class="flex items-center gap-2">
                 <button
-                  @click="$emit('toggle-expand', group.id)"
+                  @click="emit('toggle-expand', group.id)"
                   class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
                 >
                   {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
                 </button>
                 <button
                   v-if="group.id !== 'favorites'"
-                  @click="$emit('open-edit-group', group)"
+                  @click="emit('open-edit-group', group)"
                   class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
                 >
                   编辑
                 </button>
                 <button
-                  @click="$emit('export-group', group)"
+                  @click="emit('export-group', group)"
                   class="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                 >
                   导出
                 </button>
                 <button
                   v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
-                  @click="$emit('confirm-delete-group', group)"
+                  @click="emit('confirm-delete-group', group)"
                   class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
                 >
                   删除
@@ -236,9 +236,9 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     :key="`${group.id}-${index}`"
                     class="emoji-item relative group cursor-move"
                     :draggable="true"
-                    @dragstart="$emit('emoji-drag-start', emoji, group.id, index, $event)"
+                    @dragstart="emit('emoji-drag-start', emoji, group.id, index, $event)"
                     @dragover.prevent
-                    @drop="$emit('emoji-drop', group.id, index, $event)"
+                    @drop="emit('emoji-drop', group.id, index, $event)"
                     :ref="
                       el => el && addEmojiTouchEvents(el as HTMLElement, emoji, group.id, index)
                     "
@@ -253,7 +253,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     </div>
                     <!-- Edit button in bottom right corner -->
                     <button
-                      @click="$emit('edit-emoji', emoji, group.id, index)"
+                      @click="emit('edit-emoji', emoji, group.id, index)"
                       class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                       title="编辑表情"
                     >
@@ -261,7 +261,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     </button>
                     <!-- Remove button in top right corner -->
                     <button
-                      @click="$emit('remove-emoji', group.id, index)"
+                      @click="emit('remove-emoji', group.id, index)"
                       class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       ×
@@ -272,7 +272,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                 <!-- Add emoji button (hidden for favorites group) -->
                 <div v-if="group.id !== 'favorites'" class="mt-4">
                   <button
-                    @click="$emit('open-add-emoji', group.id)"
+                    @click="emit('open-add-emoji', group.id)"
                     class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full"
                   >
                     + 添加表情

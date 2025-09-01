@@ -55,7 +55,7 @@ const handleOutputFormatChange = (event: Event) => {
         <div class="flex items-center gap-3">
           <input
             :value="settings.imageScale"
-            @input="$emit('update:imageScale', $event)"
+            @input="emit('update:imageScale', $event)"
             type="range"
             min="5"
             max="150"
@@ -83,7 +83,7 @@ const handleOutputFormatChange = (event: Event) => {
           <input
             type="checkbox"
             :checked="settings.showSearchBar"
-            @change="$emit('update:showSearchBar', $event)"
+            @change="emit('update:showSearchBar', $event)"
             class="sr-only peer"
           />
           <div
@@ -116,7 +116,7 @@ const handleOutputFormatChange = (event: Event) => {
           <input
             type="checkbox"
             :checked="settings.forceMobileMode"
-            @change="$emit('update:forceMobileMode', $event)"
+            @change="emit('update:forceMobileMode', $event)"
             class="sr-only peer"
           />
           <div

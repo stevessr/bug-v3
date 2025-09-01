@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 const props = defineProps<{ emojiStore: any }>()
-const emits = defineEmits(['open-add-emoji', 'delete-emoji', 'image-error'])
+const emit = defineEmits(['open-add-emoji', 'delete-emoji', 'image-error'])
 
 const selectedGroupId = ref('')
 
@@ -28,7 +28,7 @@ const filteredEmojis = computed(() => {
             </option>
           </select>
           <button
-            @click="$emit('open-add-emoji')"
+            @click="emit('open-add-emoji')"
             class="px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
           >
             添加表情
@@ -48,12 +48,12 @@ const filteredEmojis = computed(() => {
             :src="emoji.url"
             :alt="emoji.name"
             class="w-full h-16 object-contain mb-2"
-            @error="$emit('image-error', $event)"
+            @error="emit('image-error', $event)"
           />
           <p class="text-xs text-gray-600 truncate">{{ emoji.name }}</p>
           <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
-              @click="$emit('delete-emoji', emoji.id)"
+              @click="emit('delete-emoji', emoji.id)"
               class="w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors"
             >
               ×
