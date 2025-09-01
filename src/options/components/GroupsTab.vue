@@ -68,12 +68,16 @@ onMounted(() => {
     onDragEnd: (element, dropTarget) => {
       element.classList.remove('touch-dragging')
       if (dropTarget) {
-        const groupData = (element as any).__groupData
-        const targetData = (dropTarget as any).__groupData
-        if (groupData && targetData && groupData.id !== targetData.id) {
-          // Create synthetic drag event for compatibility
-          const syntheticEvent = new DragEvent('drop')
-          emit('group-drop', targetData, syntheticEvent)
+        try {
+          const groupData = (element as any).__groupData
+          const targetData = (dropTarget as any).__groupData
+          if (groupData && targetData && groupData.id !== targetData.id) {
+            // Create synthetic drag event for compatibility
+            const syntheticEvent = new DragEvent('drop')
+            emit('group-drop', targetData, syntheticEvent)
+          }
+        } catch (error) {
+          console.error('Error in group touch drop:', error)
         }
       }
     }
@@ -102,12 +106,16 @@ onMounted(() => {
     onDragEnd: (element, dropTarget) => {
       element.classList.remove('touch-dragging')
       if (dropTarget) {
-        const emojiData = (element as any).__emojiData
-        const targetData = (dropTarget as any).__emojiData
-        if (emojiData && targetData) {
-          // Create synthetic drag event for compatibility
-          const syntheticEvent = new DragEvent('drop')
-          emit('emoji-drop', targetData.groupId, targetData.index, syntheticEvent)
+        try {
+          const emojiData = (element as any).__emojiData
+          const targetData = (dropTarget as any).__emojiData
+          if (emojiData && targetData) {
+            // Create synthetic drag event for compatibility
+            const syntheticEvent = new DragEvent('drop')
+            emit('emoji-drop', targetData.groupId, targetData.index, syntheticEvent)
+          }
+        } catch (error) {
+          console.error('Error in emoji touch drop:', error)
         }
       }
     }
@@ -148,7 +156,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
         <div class="flex justify-between items-center">
           <h2 class="text-lg font-semibold text-gray-900">表情分组管理</h2>
           <button
-            @click="emit('open-create-group')"
+            @click.stop="emit('open-create-group')"
             class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             新建分组
@@ -194,27 +202,27 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
               </div>
               <div class="flex items-center gap-2">
                 <button
-                  @click="emit('toggle-expand', group.id)"
+                  @click.stop="emit('toggle-expand', group.id)"
                   class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
                 >
                   {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
                 </button>
                 <button
                   v-if="group.id !== 'favorites'"
-                  @click="emit('open-edit-group', group)"
+                  @click.stop="emit('open-edit-group', group)"
                   class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
                 >
                   编辑
                 </button>
                 <button
-                  @click="emit('export-group', group)"
+                  @click.stop="emit('export-group', group)"
                   class="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                 >
                   导出
                 </button>
                 <button
                   v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
-                  @click="emit('confirm-delete-group', group)"
+                  @click.stop="emit('confirm-delete-group', group)"
                   class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
                 >
                   删除
@@ -253,7 +261,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     </div>
                     <!-- Edit button in bottom right corner -->
                     <button
-                      @click="emit('edit-emoji', emoji, group.id, index)"
+                      @click.stop="emit('edit-emoji', emoji, group.id, index)"
                       class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                       title="编辑表情"
                     >
@@ -261,7 +269,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     </button>
                     <!-- Remove button in top right corner -->
                     <button
-                      @click="emit('remove-emoji', group.id, index)"
+                      @click.stop="emit('remove-emoji', group.id, index)"
                       class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       ×

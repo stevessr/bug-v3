@@ -173,35 +173,44 @@ export default function useOptions() {
     }
   }
 
-  const handleEmojiDrop = (targetGroupId: string, targetIndex: number, event: DragEvent) => {
+  const handleEmojiDrop = async (targetGroupId: string, targetIndex: number, event: DragEvent) => {
     event.preventDefault()
     if (draggedEmoji.value && draggedEmojiGroupId.value) {
-      emojiStore.moveEmoji(
-        draggedEmojiGroupId.value,
-        draggedEmojiIndex.value,
-        targetGroupId,
-        targetIndex
-      )
-      void flushBuffer(true).then(() =>
+      try {
+        await emojiStore.moveEmoji(
+          draggedEmojiGroupId.value,
+          draggedEmojiIndex.value,
+          targetGroupId,
+          targetIndex
+        )
+        await flushBuffer(true)
         console.log('[Options] moveEmoji flushed to IndexedDB', {
           from: draggedEmojiGroupId.value,
-          to: targetGroupId
+          to: targetGroupId,
+          index: targetIndex
         })
-      )
-      showSuccess('表情已移动')
+        showSuccess('表情已移动')
+      } catch (error) {
+        console.error('Error moving emoji:', error)
+        showError('表情移动失败')
+      }
     }
     resetEmojiDrag()
   }
 
-  const removeEmojiFromGroup = (groupId: string, index: number) => {
-    emojiStore.removeEmojiFromGroup(groupId, index)
-    void flushBuffer(true).then(() =>
+  const removeEmojiFromGroup = async (groupId: string, index: number) => {
+    try {
+      emojiStore.removeEmojiFromGroup(groupId, index)
+      await flushBuffer(true)
       console.log('[Options] removeEmojiFromGroup flushed to IndexedDB', {
         groupId,
         index
       })
-    )
-    showSuccess('表情已删除')
+      showSuccess('表情已删除')
+    } catch (error) {
+      console.error('Error removing emoji:', error)
+      showError('表情删除失败')
+    }
   }
 
   const resetEmojiDrag = () => {
