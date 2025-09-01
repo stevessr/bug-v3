@@ -1,26 +1,80 @@
 <script setup lang="ts">
-import GridColumnsSelector from '../components/GridColumnsSelector.vue'
-import AboutSection from '../components/AboutSection.vue'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import type { MenuProps } from 'ant-design-vue'
 
+import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import HeaderControls from './components/HeaderControls.vue'
-import GlobalSettings from './components/GlobalSettings.vue'
-import EmojiStats from './components/EmojiStats.vue'
 import ImportConfigModal from './modals/ImportConfigModal.vue'
 import ImportEmojisModal from './modals/ImportEmojisModal.vue'
 import CreateGroupModal from './modals/CreateGroupModal.vue'
 import AddEmojiModal from './modals/AddEmojiModal.vue'
 import ConfirmDeleteModal from './modals/ConfirmDeleteModal.vue'
 import NotificationToasts from './components/NotificationToasts.vue'
-import GroupsTab from './components/GroupsTab.vue'
-import FavoritesTab from './components/FavoritesTab.vue'
-import UngroupedTab from './components/UngroupedTab.vue'
-import ExternalImportTab from './components/ExternalImportTab.vue'
 import EditEmojiModal from './modals/EditEmojiModal.vue'
 import EditGroupModal from './modals/EditGroupModal.vue'
+
 // composable
 import useOptions from './useOptions'
 
+const router = useRouter()
 const options = useOptions()
+
+// Ant Design layout state
+const collapsed = ref(false)
+const selectedKeys = ref([router.currentRoute.value.name as string])
+
+// Menu items
+const menuItems: MenuProps['items'] = [
+  {
+    key: 'settings',
+    icon: '⚙️',
+    label: '设置'
+  },
+  {
+    key: 'groups',
+    icon: '📁',
+    label: '分组管理'
+  },
+  {
+    key: 'favorites',
+    icon: '⭐',
+    label: '收藏夹'
+  },
+  {
+    key: 'ungrouped',
+    icon: '📋',
+    label: '未分组'
+  },
+  {
+    key: 'import',
+    icon: '📥',
+    label: '外部导入'
+  },
+  {
+    key: 'stats',
+    icon: '📊',
+    label: '统计信息'
+  },
+  {
+    key: 'about',
+    icon: 'ℹ️',
+    label: '关于'
+  }
+]
+
+// Handle menu click
+const handleMenuClick = ({ key }: { key: string }) => {
+  selectedKeys.value = [key]
+  router.push({ name: key })
+}
+
+// Watch route changes to update selected menu
+router.afterEach(to => {
+  if (to.name) {
+    selectedKeys.value = [to.name as string]
+  }
+})
 
 // expose used components to template for linter
 const _modalComponents = {
@@ -35,8 +89,6 @@ void Object.keys(_modalComponents)
 const {
   emojiStore,
   isImageUrl,
-  activeTab,
-  tabs,
   totalEmojis,
   expandedGroups,
   toggleGroupExpansion,
@@ -90,116 +142,87 @@ const {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <a-layout style="min-height: 100vh">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">表情管理</h1>
-            <p class="text-sm text-gray-600">管理表情包分组、自定义表情和扩展设置</p>
-          </div>
-          <HeaderControls
-            @open-import="showImportModal = true"
-            @open-import-emojis="showImportEmojiModal = true"
-            @reset-settings="resetSettings"
-            @sync-to-chrome="syncToChrome"
-            @export-configuration="exportConfiguration"
-          />
-        </div>
-      </div>
-    </header>
-
-    <!-- Navigation Tabs -->
-    <nav class="bg-white border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex space-x-8">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            @click="activeTab = tab.id"
-            class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
-            :class="[
-              activeTab === tab.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            ]"
+    <a-layout-header style="background: #fff; padding: 0; box-shadow: 0 1px 4px rgba(0,21,41,.08)">
+      <div style="padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 100%">
+        <div style="display: flex; align-items: center">
+          <a-button
+            type="text"
+            @click="collapsed = !collapsed"
+            style="margin-right: 16px"
           >
-            {{ tab.label }}
-          </button>
+            {{ collapsed ? '➤' : '⬅️' }}
+          </a-button>
+          <div>
+            <h1 style="margin: 0; font-size: 20px; font-weight: 600">🐈‍⬛ 表情管理</h1>
+            <p style="margin: 0; font-size: 12px; color: #666">管理表情包分组、自定义表情和扩展设置</p>
+          </div>
         </div>
+        <HeaderControls
+          @open-import="showImportModal = true"
+          @open-import-emojis="showImportEmojiModal = true"
+          @reset-settings="resetSettings"
+          @sync-to-chrome="syncToChrome"
+          @export-configuration="exportConfiguration"
+        />
       </div>
-    </nav>
+    </a-layout-header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Settings Tab -->
-      <div v-if="activeTab === 'settings'" class="space-y-8">
-        <GlobalSettings
+    <a-layout>
+      <!-- Sidebar Menu -->
+      <a-layout-sider
+        v-model:collapsed="collapsed"
+        :trigger="null"
+        collapsible
+        :width="200"
+        style="background: #fff"
+      >
+        <a-menu
+          :items="menuItems"
+          :selected-keys="selectedKeys"
+          mode="inline"
+          @click="handleMenuClick"
+          style="height: 100%; border-right: 0"
+        />
+      </a-layout-sider>
+
+      <!-- Main Content -->
+      <a-layout-content style="margin: 24px 16px; padding: 24px; background: #f0f2f5">
+        <router-view
+          :emojiStore="emojiStore"
+          :expandedGroups="expandedGroups"
+          :isImageUrl="isImageUrl"
           :settings="emojiStore.settings"
-          @update:imageScale="e => updateImageScale(e)"
-          @update:showSearchBar="e => updateShowSearchBar(e)"
-          @update:outputFormat="value => updateOutputFormat(value)"
-          @update:forceMobileMode="e => updateForceMobileMode(e)"
+          :totalEmojis="totalEmojis"
+          :groupCount="emojiStore.groups.length"
+          :favoritesCount="emojiStore.favorites.size"
+          @update:imageScale="updateImageScale"
+          @update:showSearchBar="updateShowSearchBar"
+          @update:outputFormat="updateOutputFormat"
+          @update:forceMobileMode="updateForceMobileMode"
+          @open-create-group="showCreateGroupModal = true"
+          @group-dragstart="handleDragStart"
+          @group-drop="handleDrop"
+          @toggle-expand="toggleGroupExpansion"
+          @open-edit-group="openEditGroup"
+          @export-group="exportGroup"
+          @confirm-delete-group="confirmDeleteGroup"
+          @open-add-emoji="openAddEmojiModal"
+          @emoji-drag-start="handleEmojiDragStart"
+          @emoji-drop="handleEmojiDrop"
+          @remove-emoji="removeEmojiFromGroup"
+          @edit-emoji="openEditEmoji"
+          @image-error="handleImageError"
+          @remove="removeEmojiFromGroup"
+          @edit="openEditEmoji"
         >
           <template #grid-selector>
             <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
           </template>
-        </GlobalSettings>
-      </div>
-
-      <GroupsTab
-        :emojiStore="emojiStore"
-        :expandedGroups="expandedGroups"
-        :isImageUrl="isImageUrl"
-        :activeTab="activeTab"
-        @open-create-group="showCreateGroupModal = true"
-        @group-dragstart="handleDragStart"
-        @group-drop="handleDrop"
-        @toggle-expand="toggleGroupExpansion"
-        @open-edit-group="openEditGroup"
-        @export-group="exportGroup"
-        @confirm-delete-group="confirmDeleteGroup"
-        @open-add-emoji="openAddEmojiModal"
-        @emoji-drag-start="handleEmojiDragStart"
-        @emoji-drop="handleEmojiDrop"
-        @remove-emoji="removeEmojiFromGroup"
-        @edit-emoji="openEditEmoji"
-        @image-error="handleImageError"
-      />
-
-      <FavoritesTab
-        v-if="activeTab === 'favorites'"
-        :emojiStore="emojiStore"
-        @remove="removeEmojiFromGroup"
-        @edit="openEditEmoji"
-      />
-
-      <!-- Ungrouped Tab -->
-      <UngroupedTab
-        v-if="activeTab === 'ungrouped'"
-        :emojiStore="emojiStore"
-        @remove="removeEmojiFromGroup"
-        @edit="openEditEmoji"
-      />
-
-      <!-- External Import Tab -->
-      <ExternalImportTab v-if="activeTab === 'import'" />
-
-      <!-- Statistics Tab -->
-      <div v-if="activeTab === 'stats'" class="space-y-8">
-        <EmojiStats
-          :groupCount="emojiStore.groups.length"
-          :totalEmojis="totalEmojis"
-          :favoritesCount="emojiStore.favorites.size"
-        />
-      </div>
-
-      <!-- About Tab -->
-      <div v-if="activeTab === 'about'" class="space-y-8">
-        <AboutSection />
-      </div>
-    </main>
+        </router-view>
+      </a-layout-content>
+    </a-layout>
 
     <!-- Create Group and Add Emoji modals extracted into components -->
     <CreateGroupModal v-model:show="showCreateGroupModal" @created="onGroupCreated" />
@@ -263,5 +286,5 @@ const {
       v-model:showError="showErrorToast"
       :errorMessage="errorMessage"
     />
-  </div>
+  </a-layout>
 </template>

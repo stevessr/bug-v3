@@ -30,7 +30,8 @@
     "eslint": "^9.34.0",
     "globals": "^16.3.0",
     "pinia": "^2.1.7",
-    "vue": "^3.4.21"
+    "vue": "^3.4.21",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@ant-design/icons-vue": "^7.0.1",
@@ -71,5 +72,6 @@
   "peerDependenciesMeta": {},
   "bundledDependencies": [],
   "overrides": {},
-  "engines": {}
+  "engines": {},
+  "bundleDependencies": []
 }
