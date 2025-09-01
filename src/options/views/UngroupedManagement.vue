@@ -15,5 +15,5 @@ defineProps<{
   emojiStore: any
 }>()
 
-defineEmits(['remove', 'edit'])
+const emit = defineEmits(['remove', 'edit'])
 </script>

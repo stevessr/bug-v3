@@ -31,7 +31,7 @@ defineProps<{
   isImageUrl?: (s: string) => boolean
 }>()
 
-defineEmits([
+const emit = defineEmits([
   'open-create-group',
   'group-dragstart',
   'group-drop',
