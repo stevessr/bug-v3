@@ -210,9 +210,17 @@ export default function useOptions() {
     draggedEmojiIndex.value = -1
   }
 
-  const updateImageScale = (event: Event) => {
-    const target = event.target as HTMLInputElement
-    emojiStore.updateSettings({ imageScale: parseInt(target.value) })
+  const updateImageScale = (valueOrEvent: number | Event) => {
+    let value: number
+    if (typeof valueOrEvent === 'number') {
+      value = valueOrEvent
+    } else {
+      const target = valueOrEvent.target as HTMLInputElement
+      value = parseInt(target.value)
+    }
+    if (!Number.isNaN(value)) {
+      emojiStore.updateSettings({ imageScale: value })
+    }
   }
 
   const localGridColumns = ref<number>(emojiStore.settings.gridColumns || 4)
@@ -223,19 +231,31 @@ export default function useOptions() {
     }
   })
 
-  const updateShowSearchBar = (event: Event) => {
-    const target = event.target as HTMLInputElement
-    emojiStore.updateSettings({ showSearchBar: target.checked })
+  const updateShowSearchBar = (valueOrEvent: boolean | Event) => {
+    let checked: boolean
+    if (typeof valueOrEvent === 'boolean') {
+      checked = valueOrEvent
+    } else {
+      const target = valueOrEvent.target as HTMLInputElement
+      checked = target.checked
+    }
+    emojiStore.updateSettings({ showSearchBar: checked })
   }
 
   const updateOutputFormat = (value: string) => {
     emojiStore.updateSettings({ outputFormat: value as 'markdown' | 'html' })
   }
 
-  const updateForceMobileMode = (event: Event) => {
-    const target = event.target as HTMLInputElement
+  const updateForceMobileMode = (valueOrEvent: boolean | Event) => {
+    let checked: boolean
+    if (typeof valueOrEvent === 'boolean') {
+      checked = valueOrEvent
+    } else {
+      const target = valueOrEvent.target as HTMLInputElement
+      checked = target.checked
+    }
     // Cast to any to allow setting properties not present on the AppSettings type
-    emojiStore.updateSettings({ forceMobileMode: target.checked } as any)
+    emojiStore.updateSettings({ forceMobileMode: checked } as any)
   }
 
   const openEditGroup = (group: EmojiGroup) => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, isRef } from 'vue'
+import { Slider as ASlider } from 'ant-design-vue'
 
 const props = defineProps<{ settings: any }>()
 // allow flexible typing (either a reactive ref or a plain object)
@@ -31,6 +32,19 @@ watch(
   }
 )
 
+// local reactive copy for imageScale for smooth drag interaction
+const localImageScale = ref<number>(settings.imageScale || 30)
+
+// Watch for external imageScale changes to keep local state in sync
+watch(
+  () => settings.imageScale,
+  newValue => {
+    if (newValue !== localImageScale.value) {
+      localImageScale.value = newValue || 30
+    }
+  }
+)
+
 const handleOutputFormatChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
   if (target) {
@@ -40,8 +54,12 @@ const handleOutputFormatChange = (event: Event) => {
   }
 }
 
-const handleImageScaleChange = (event: Event) => {
-  emit('update:imageScale', event)
+// Use Ant Design slider's afterChange to update settings when drag finishes.
+const handleImageScaleAfterChange = (value: number | number[]) => {
+  // value might be a number or [number, number] for range sliders; we expect a single number.
+  const num = Array.isArray(value) ? value[0] : value
+  // emit numeric value asynchronously to avoid blocking caller
+  setTimeout(() => emit('update:imageScale', num), 0)
 }
 </script>
 
@@ -57,16 +75,16 @@ const handleImageScaleChange = (event: Event) => {
           <p class="text-sm text-gray-500">控制插入表情的默认尺寸</p>
         </div>
         <div class="flex items-center gap-3">
-          <input
-            :value="settings.imageScale"
-            @input="handleImageScaleChange"
-            type="range"
-            min="5"
-            max="150"
-            step="5"
+          <ASlider
+            id="imageScaleSlider"
+            v-model:value="localImageScale"
+            :min="5"
+            :max="150"
+            :step="5"
             class="w-32"
+            @afterChange="handleImageScaleAfterChange"
           />
-          <span class="text-sm text-gray-600 w-12">{{ settings.imageScale }}%</span>
+          <span class="text-sm text-gray-600 w-12">{{ localImageScale }}%</span>
         </div>
       </div>
 
@@ -87,7 +105,7 @@ const handleImageScaleChange = (event: Event) => {
           <input
             type="checkbox"
             :checked="settings.showSearchBar"
-            @change="$emit('update:showSearchBar', $event)"
+            @change="e => $emit('update:showSearchBar', (e.target as HTMLInputElement).checked)"
             class="sr-only peer"
           />
           <div
@@ -120,7 +138,7 @@ const handleImageScaleChange = (event: Event) => {
           <input
             type="checkbox"
             :checked="settings.forceMobileMode"
-            @change="$emit('update:forceMobileMode', $event)"
+            @change="e => $emit('update:forceMobileMode', (e.target as HTMLInputElement).checked)"
             class="sr-only peer"
           />
           <div

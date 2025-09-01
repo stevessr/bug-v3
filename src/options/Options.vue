@@ -137,10 +137,10 @@ const {
       <div v-if="activeTab === 'settings'" class="space-y-8">
         <GlobalSettings
           :settings="emojiStore.settings"
-          @update:imageScale="e => updateImageScale(e)"
-          @update:showSearchBar="e => updateShowSearchBar(e)"
+          @update:imageScale="value => updateImageScale(value)"
+          @update:showSearchBar="value => updateShowSearchBar(value)"
           @update:outputFormat="value => updateOutputFormat(value)"
-          @update:forceMobileMode="e => updateForceMobileMode(e)"
+          @update:forceMobileMode="value => updateForceMobileMode(value)"
         >
           <template #grid-selector>
             <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
