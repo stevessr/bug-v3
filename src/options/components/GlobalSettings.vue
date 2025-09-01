@@ -39,6 +39,10 @@ const handleOutputFormatChange = (event: Event) => {
     emit('update:outputFormat', target.value)
   }
 }
+
+const handleImageScaleChange = (event: Event) => {
+  emit('update:imageScale', event)
+}
 </script>
 
 <template>
@@ -55,7 +59,7 @@ const handleOutputFormatChange = (event: Event) => {
         <div class="flex items-center gap-3">
           <input
             :value="settings.imageScale"
-            @input="$emit('update:imageScale', $event)"
+            @input="handleImageScaleChange"
             type="range"
             min="5"
             max="150"

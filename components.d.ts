@@ -17,5 +17,7 @@ declare module 'vue' {
     ImageUpload: typeof import('./src/components/ImageGenerator/ImageUpload.vue')['default']
     PromptInput: typeof import('./src/components/ImageGenerator/PromptInput.vue')['default']
     ResultDisplay: typeof import('./src/components/ImageGenerator/ResultDisplay.vue')['default']
+    RouterLink: typeof import('vue-router')['RouterLink']
+    RouterView: typeof import('vue-router')['RouterView']
   }
 }
