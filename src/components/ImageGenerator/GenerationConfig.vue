@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 
 import { ASPECT_RATIOS, ART_STYLES, IMAGE_COUNTS } from '@/types/imageGenerator'
 
@@ -33,6 +35,36 @@ const emit = defineEmits<{
 const imageCount = ref(props.modelValue.imageCount)
 const aspectRatio = ref(props.modelValue.aspectRatio)
 const style = ref(props.modelValue.style)
+
+const onImageCountSelect = (info: any) => {
+  imageCount.value = Number(info.key)
+  onImageCountChange()
+}
+
+const onAspectRatioSelect = (info: any) => {
+  aspectRatio.value = String(info.key)
+  onAspectRatioChange()
+}
+
+const onStyleSelect = (info: any) => {
+  style.value = String(info.key)
+  onStyleChange()
+}
+
+const imageCountLabel = computed(() => {
+  const item = IMAGE_COUNTS.find(i => i.value === imageCount.value)
+  return item ? item.label : String(imageCount.value)
+})
+
+const aspectRatioLabel = computed(() => {
+  const item = ASPECT_RATIOS.find(i => i.value === aspectRatio.value)
+  return item ? item.label : aspectRatio.value
+})
+
+const styleLabel = computed(() => {
+  const item = ART_STYLES.find(i => i.value === style.value)
+  return item ? item.label : style
+})
 
 const emitChange = () => {
   const config = {
@@ -74,43 +106,57 @@ watch(
     <div class="config-grid">
       <div class="config-item">
         <label for="imageCount">生成数量</label>
-        <select
-          id="imageCount"
-          v-model="imageCount"
-          @change="onImageCountChange"
-          class="form-select"
-        >
-          <option v-for="count in IMAGE_COUNTS" :key="count.value" :value="count.value">
-            {{ count.label }}
-          </option>
-        </select>
+        <ADropdown>
+          <template #overlay>
+            <AMenu @click="info => onImageCountSelect(info)">
+              <AMenu.Item v-for="count in IMAGE_COUNTS" :key="count.value" :value="count.value">
+                {{ count.label }}
+              </AMenu.Item>
+            </AMenu>
+          </template>
+          <AButton>
+            {{ imageCountLabel }}
+            <DownOutlined />
+          </AButton>
+        </ADropdown>
       </div>
 
       <div class="config-item">
         <label for="aspectRatio">宽高比</label>
-        <select
-          id="aspectRatio"
-          v-model="aspectRatio"
-          @change="onAspectRatioChange"
-          class="form-select"
-        >
-          <option v-for="ratio in ASPECT_RATIOS" :key="ratio.value" :value="ratio.value">
-            {{ ratio.label }}
-          </option>
-        </select>
+        <ADropdown>
+          <template #overlay>
+            <AMenu @click="info => onAspectRatioSelect(info)">
+              <AMenu.Item v-for="ratio in ASPECT_RATIOS" :key="ratio.value" :value="ratio.value">
+                {{ ratio.label }}
+              </AMenu.Item>
+            </AMenu>
+          </template>
+          <AButton>
+            {{ aspectRatioLabel }}
+            <DownOutlined />
+          </AButton>
+        </ADropdown>
       </div>
 
       <div class="config-item">
         <label for="style">艺术风格</label>
-        <select id="style" v-model="style" @change="onStyleChange" class="form-select">
-          <option
-            v-for="styleOption in ART_STYLES"
-            :key="styleOption.value"
-            :value="styleOption.value"
-          >
-            {{ styleOption.label }}
-          </option>
-        </select>
+        <ADropdown>
+          <template #overlay>
+            <AMenu @click="info => onStyleSelect(info)">
+              <AMenu.Item
+                v-for="styleOption in ART_STYLES"
+                :key="styleOption.value"
+                :value="styleOption.value"
+              >
+                {{ styleOption.label }}
+              </AMenu.Item>
+            </AMenu>
+          </template>
+          <AButton>
+            {{ styleLabel }}
+            <DownOutlined />
+          </AButton>
+        </ADropdown>
       </div>
     </div>
   </div>

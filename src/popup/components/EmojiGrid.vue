@@ -15,6 +15,9 @@ const props = defineProps<{
   showAddButton: boolean
 }>()
 
+// Declare emitted events to satisfy TypeScript/vue compiler
+defineEmits(['select', 'openOptions'])
+
 const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton } = toRefs(props)
 </script>
 
@@ -79,7 +82,7 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
     <p class="text-sm text-gray-600">{{ emptyMessage }}</p>
     <button
       v-if="showAddButton"
-      @click="$emit('open-options')"
+      @click="$emit('openOptions')"
       class="mt-2 text-xs text-blue-600 hover:text-blue-800"
     >
       去添加表情

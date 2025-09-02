@@ -1,8 +1,18 @@
 <script setup lang="ts">
-const props = defineProps<{ groupCount: number; totalEmojis: number; favoritesCount: number }>()
-const groupCount = props.groupCount
-const totalEmojis = props.totalEmojis
-const favoritesCount = props.favoritesCount
+import { computed } from 'vue'
+
+import { useEmojiStore } from '../../stores/emojiStore'
+
+const emojiStore = useEmojiStore()
+
+const groupCount = computed(() => emojiStore.sortedGroups.length)
+const totalEmojis = computed(() =>
+  emojiStore.sortedGroups.reduce((sum, g) => sum + (g.emojis?.length || 0), 0)
+)
+const favoritesCount = computed(() => {
+  const fav = emojiStore.sortedGroups.find(g => g.id === 'favorites')
+  return fav?.emojis?.length || 0
+})
 </script>
 
 <template>

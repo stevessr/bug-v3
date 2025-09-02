@@ -161,7 +161,7 @@
                         v-model:value="settings.imageScale"
                         :min="5"
                         :max="150"
-                        :step="5"
+                        :step="1"
                         :marks="{30: '30%', 50: '50%', 100: '100%'}"
                       />
                       <div>当前: {{ settings.imageScale }}%</div>
@@ -513,11 +513,23 @@
           deleteGroup(groupId) {
             const index = this.emojiGroups.findIndex(g => g.id === groupId)
             if (index !== -1) {
-              if (confirm('确定要删除这个分组吗？')) {
-                this.emojiGroups.splice(index, 1)
-                this.saveData()
-                message.success('分组删除成功')
-              }
+              ;(async () => {
+                try {
+                  const mod = await import('./src/utils/confirmService.js')
+                  const ok = await mod.requestConfirmation('确定要删除这个分组吗？')
+                  if (ok) {
+                    this.emojiGroups.splice(index, 1)
+                    this.saveData()
+                    message.success('分组删除成功')
+                  }
+                } catch (e) {
+                  if (window.confirm('确定要删除这个分组吗？')) {
+                    this.emojiGroups.splice(index, 1)
+                    this.saveData()
+                    message.success('分组删除成功')
+                  }
+                }
+              })()
             }
           },
 

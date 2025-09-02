@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
 
@@ -21,6 +23,14 @@ const nextPos = ref('')
 // Search options
 const searchLimit = ref(12)
 const contentFilter = ref('high')
+
+const onSearchLimitSelect = (info: any) => {
+  searchLimit.value = Number(String(info.key))
+}
+
+const onContentFilterSelect = (info: any) => {
+  contentFilter.value = String(info.key)
+}
 
 // Group selection
 const showGroupModal = ref(false)
@@ -311,21 +321,38 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 
           <!-- Advanced Options -->
           <div class="mt-4 flex gap-4 text-sm">
-            <label class="flex items-center">
-              <select v-model="searchLimit" class="border-gray-300 rounded text-sm">
-                <option value="12">12 个结果</option>
-                <option value="24">24 个结果</option>
-                <option value="48">48 个结果</option>
-              </select>
-            </label>
-            <label class="flex items-center">
-              <select v-model="contentFilter" class="border-gray-300 rounded text-sm">
-                <option value="high">高安全级别</option>
-                <option value="medium">中等安全级别</option>
-                <option value="low">低安全级别</option>
-                <option value="off">关闭过滤</option>
-              </select>
-            </label>
+            <div class="flex items-center">
+              <ADropdown>
+                <template #overlay>
+                  <AMenu @click="info => onSearchLimitSelect(info)">
+                    <AMenu.Item key="12">12 个结果</AMenu.Item>
+                    <AMenu.Item key="24">24 个结果</AMenu.Item>
+                    <AMenu.Item key="48">48 个结果</AMenu.Item>
+                  </AMenu>
+                </template>
+                <AButton>
+                  {{ searchLimit }} 个结果
+                  <DownOutlined />
+                </AButton>
+              </ADropdown>
+            </div>
+
+            <div class="flex items-center">
+              <ADropdown>
+                <template #overlay>
+                  <AMenu @click="info => onContentFilterSelect(info)">
+                    <AMenu.Item key="high">高安全级别</AMenu.Item>
+                    <AMenu.Item key="medium">中等安全级别</AMenu.Item>
+                    <AMenu.Item key="low">低安全级别</AMenu.Item>
+                    <AMenu.Item key="off">关闭过滤</AMenu.Item>
+                  </AMenu>
+                </template>
+                <AButton>
+                  {{ contentFilter }}
+                  <DownOutlined />
+                </AButton>
+              </ADropdown>
+            </div>
           </div>
         </div>
 

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 
 const props = defineProps<{
   modelValue: number
@@ -21,20 +23,23 @@ const options = computed(() => {
   return arr
 })
 
-const onChange = (e: Event) => {
-  const target = e.target as HTMLSelectElement
-  emit('update:modelValue', Number(target.value))
+const onMenuClick = (key: string) => {
+  emit('update:modelValue', Number(key))
 }
 </script>
 
 <template>
-  <select
-    :value="modelValue"
-    @change="onChange"
-    class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-  >
-    <option v-for="col in options" :key="col" :value="col">{{ col }} 列</option>
-  </select>
+  <ADropdown>
+    <template #overlay>
+      <AMenu @click="info => onMenuClick(String(info.key))">
+        <AMenu.Item v-for="col in options" :key="col" :value="col">{{ col }} 列</AMenu.Item>
+      </AMenu>
+    </template>
+    <AButton>
+      {{ modelValue }} 列
+      <DownOutlined />
+    </AButton>
+  </ADropdown>
 </template>
 
 <style scoped>

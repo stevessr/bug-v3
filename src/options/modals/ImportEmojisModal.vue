@@ -4,10 +4,7 @@ import { ref, defineEmits, defineProps } from 'vue'
 const props = defineProps<{ modelValue: boolean }>()
 // reference prop to satisfy TS/linter
 void props.modelValue
-const emit = defineEmits<{
-  (e: 'update:modelValue', v: boolean): void
-  (e: 'imported', payload: { items: any[]; targetGroupId?: string } | null): void
-}>()
+const emit = defineEmits(['update:modelValue', 'imported'])
 
 const text = ref('')
 const targetGroupId = ref('')
@@ -55,7 +52,7 @@ const doImport = () => {
 
     // otherwise invalid
     emit('imported', null)
-  } catch (err) {
+  } catch {
     emit('imported', null)
   }
 }

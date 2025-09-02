@@ -918,12 +918,12 @@ export async function showImageUploadDialog(): Promise<void> {
 
       if (filesToUpload.length < files.length) {
         const skippedCount = files.length - filesToUpload.length
-        const proceed = confirm(
+        const { requestConfirmation } = await import('../utils/confirmService')
+        const proceed = await requestConfirmation(
+          '跳过已存在图片',
           `发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`
         )
-        if (!proceed) {
-          return
-        }
+        if (!proceed) return
       }
 
       cleanup()

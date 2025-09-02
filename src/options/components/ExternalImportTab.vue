@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { importConfigurationToStore, importEmojisToStore } from '../utils/importUtils'
@@ -16,6 +18,14 @@ const markdownText = ref('')
 const isImporting = ref(false)
 const importStatus = ref('')
 const importResults = ref<{ success: boolean; message: string; details?: string } | null>(null)
+
+const onSelectedTargetGroup = (info: { key: string | number }) => {
+  selectedTargetGroup.value = String(info.key)
+}
+
+const onSelectedTargetGroupForMarkdown = (info: { key: string | number }) => {
+  selectedTargetGroupForMarkdown.value = String(info.key)
+}
 
 // Methods
 const openImportConfig = () => {
@@ -208,15 +218,24 @@ const importFromMarkdown = async () => {
             <!-- Target group selection -->
             <div v-if="showTargetGroupSelector" class="flex items-center space-x-3">
               <label class="text-sm font-medium text-gray-700">目标分组:</label>
-              <select
-                v-model="selectedTargetGroup"
-                class="block w-40 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              >
-                <option value="">自动创建分组</option>
-                <option v-for="group in emojiStore.groups" :key="group.id" :value="group.id">
-                  {{ group.name }}
-                </option>
-              </select>
+              <ADropdown>
+                <template #overlay>
+                  <AMenu @click="onSelectedTargetGroup">
+                    <AMenu.Item key="">自动创建分组</AMenu.Item>
+                    <AMenu.Item
+                      v-for="group in emojiStore.groups"
+                      :key="group.id"
+                      :value="group.id"
+                    >
+                      {{ group.name }}
+                    </AMenu.Item>
+                  </AMenu>
+                </template>
+                <AButton>
+                  {{ selectedTargetGroup || '自动创建分组' }}
+                  <DownOutlined />
+                </AButton>
+              </ADropdown>
             </div>
           </div>
         </div>
@@ -249,15 +268,24 @@ const importFromMarkdown = async () => {
                 </svg>
                 导入文本中的表情
               </button>
-              <select
-                v-model="selectedTargetGroupForMarkdown"
-                class="block w-40 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              >
-                <option value="">自动创建分组</option>
-                <option v-for="group in emojiStore.groups" :key="group.id" :value="group.id">
-                  {{ group.name }}
-                </option>
-              </select>
+              <ADropdown>
+                <template #overlay>
+                  <AMenu @click="onSelectedTargetGroupForMarkdown">
+                    <AMenu.Item key="">自动创建分组</AMenu.Item>
+                    <AMenu.Item
+                      v-for="group in emojiStore.groups"
+                      :key="group.id"
+                      :value="group.id"
+                    >
+                      {{ group.name }}
+                    </AMenu.Item>
+                  </AMenu>
+                </template>
+                <AButton>
+                  {{ selectedTargetGroupForMarkdown || '自动创建分组' }}
+                  <DownOutlined />
+                </AButton>
+              </ADropdown>
             </div>
           </div>
         </div>

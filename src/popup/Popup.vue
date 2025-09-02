@@ -4,6 +4,10 @@ import EmojiGrid from './components/EmojiGrid.vue'
 import { usePopup } from './usePopup'
 
 const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions } = usePopup()
+
+const setActiveHandler = (id: string) => {
+  emojiStore.activeGroupId = id
+}
 </script>
 
 <template>
@@ -79,7 +83,7 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
     <GroupTabs
       :groups="emojiStore.sortedGroups"
       :activeGroupId="emojiStore.activeGroupId"
-      :setActive="(id: string) => (emojiStore.activeGroupId = id)"
+      :setActive="setActiveHandler"
     />
 
     <!-- Emoji Grid -->
@@ -91,7 +95,7 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
       :emptyMessage="emojiStore.searchQuery ? '没有找到匹配的表情' : '该分组还没有表情'"
       :showAddButton="!emojiStore.searchQuery"
       @select="selectEmoji"
-      @open-options="openOptions"
+      @openOptions="openOptions"
     />
 
     <!-- Copy Success Toast -->

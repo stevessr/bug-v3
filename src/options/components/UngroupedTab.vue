@@ -1,27 +1,33 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 
 import type { EmojiGroup } from '../../types/emoji'
+import { useEmojiStore } from '../../stores/emojiStore'
 
-const props = defineProps<{ emojiStore: any }>()
-defineEmits<{
-  (e: 'remove', groupId: string, idx: number): void
-  (e: 'edit', emoji: any, groupId: string, idx: number): void
-}>()
+defineEmits(['remove', 'edit'])
+
+// use store instance directly
+const emojiStore = useEmojiStore()
 
 // 多选功能相关状态
 const isMultiSelectMode = ref(false)
 const selectedEmojis = ref(new Set<number>())
 const targetGroupId = ref('')
+
+const onTargetGroupSelect = (info: { key: string | number }) => {
+  targetGroupId.value = String(info.key)
+}
 const showCreateGroupDialog = ref(false)
 const newGroupName = ref('')
 const newGroupIcon = ref('')
 
-const ungroup = computed(() => props.emojiStore?.groups?.find((g: any) => g.id === 'ungrouped'))
+const ungroup = computed(() => emojiStore.groups.find((g: EmojiGroup) => g.id === 'ungrouped'))
 
 // 可用的分组列表（排除未分组）
 const availableGroups = computed(
-  () => props.emojiStore?.groups?.filter((g: EmojiGroup) => g.id !== 'ungrouped') || []
+  () => emojiStore.groups.filter((g: EmojiGroup) => g.id !== 'ungrouped') || []
 )
 
 // 多选模式变化处理
@@ -42,6 +48,11 @@ const toggleEmojiSelection = (idx: number) => {
   selectedEmojis.value = new Set(selectedEmojis.value)
 }
 
+// 处理点击行为：在多选模式下切换选择，非多选模式不作处理
+const handleEmojiClick = (idx: number) => {
+  if (isMultiSelectMode.value) toggleEmojiSelection(idx)
+}
+
 // 清空选择
 const clearSelection = () => {
   selectedEmojis.value.clear()
@@ -54,29 +65,27 @@ const moveSelectedEmojis = async () => {
   if (!targetGroupId.value || selectedEmojis.value.size === 0) return
 
   try {
-    let targetGroup
-
     // 如果选择创建新分组
     if (targetGroupId.value === '__create_new__') {
       showCreateGroupDialog.value = true
       return
     }
 
-    targetGroup = props.emojiStore.groups.find((g: EmojiGroup) => g.id === targetGroupId.value)
+    const targetGroup = emojiStore.groups.find((g: EmojiGroup) => g.id === targetGroupId.value)
     if (!targetGroup) return
 
     // 获取选中的表情索引（按降序排列，避免删除时索引变化）
     const sortedIndices = Array.from(selectedEmojis.value).sort((a, b) => b - a)
 
     // 开始批量操作
-    props.emojiStore.beginBatch()
+    emojiStore.beginBatch()
 
     try {
       // 逐个移动表情
       for (const index of sortedIndices) {
-        if (index < ungroup.value.emojis.length) {
+        if (ungroup.value && index < ungroup.value.emojis.length) {
           // 使用store的moveEmoji方法移动表情
-          props.emojiStore.moveEmoji(
+          emojiStore.moveEmoji(
             'ungrouped',
             index,
             targetGroupId.value,
@@ -86,15 +95,13 @@ const moveSelectedEmojis = async () => {
       }
     } finally {
       // 结束批量操作，触发保存
-      await props.emojiStore.endBatch()
+      await emojiStore.endBatch()
     }
 
     // 清空选择
     clearSelection()
-
-    console.log(`已移动 ${sortedIndices.length} 个表情到分组: ${targetGroup.name}`)
-  } catch (error) {
-    console.error('移动表情时出错:', error)
+  } catch {
+    // ignore errors during move
   }
 }
 
@@ -104,10 +111,7 @@ const confirmCreateGroup = async () => {
 
   try {
     // 创建新分组
-    const newGroup = props.emojiStore.createGroup(
-      newGroupName.value.trim(),
-      newGroupIcon.value || '📁'
-    )
+    const newGroup = emojiStore.createGroup(newGroupName.value.trim(), newGroupIcon.value || '📁')
 
     // 设置目标分组ID并关闭对话框
     targetGroupId.value = newGroup.id
@@ -119,10 +123,8 @@ const confirmCreateGroup = async () => {
 
     // 立即执行移动操作
     await moveSelectedEmojis()
-
-    console.log(`已创建新分组: ${newGroup.name}`)
-  } catch (error) {
-    console.error('创建分组时出错:', error)
+  } catch {
+    // ignore errors during group creation
   }
 }
 
@@ -148,16 +150,22 @@ const cancelCreateGroup = () => {
               class="flex items-center gap-2"
             >
               <span class="text-sm text-gray-600">已选择 {{ selectedEmojis.size }} 个</span>
-              <select
-                v-model="targetGroupId"
-                class="text-sm border border-gray-300 rounded px-2 py-1"
-              >
-                <option value="">选择目标分组</option>
-                <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-                  {{ group.name }}
-                </option>
-                <option value="__create_new__">+ 创建新分组</option>
-              </select>
+              <!-- 原生 select 已替换为 ADropdown（下方） -->
+              <ADropdown>
+                <template #overlay>
+                  <AMenu @click="onTargetGroupSelect">
+                    <AMenu.Item key="">选择目标分组</AMenu.Item>
+                    <AMenu.Item v-for="group in availableGroups" :key="group.id" :value="group.id">
+                      {{ group.name }}
+                    </AMenu.Item>
+                    <AMenu.Item key="__create_new__">+ 创建新分组</AMenu.Item>
+                  </AMenu>
+                </template>
+                <AButton>
+                  {{ targetGroupId || '选择目标分组' }}
+                  <DownOutlined />
+                </AButton>
+              </ADropdown>
               <button
                 @click="moveSelectedEmojis"
                 :disabled="!targetGroupId"
@@ -205,7 +213,7 @@ const cancelCreateGroup = () => {
                 'cursor-pointer': isMultiSelectMode,
                 'ring-2 ring-blue-500': isMultiSelectMode && selectedEmojis.has(idx)
               }"
-              @click="isMultiSelectMode ? toggleEmojiSelection(idx) : null"
+              @click="handleEmojiClick(idx)"
             >
               <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" />
             </div>

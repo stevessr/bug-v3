@@ -6,10 +6,7 @@ const { show, group } = defineProps<{
   group: { id?: string; name?: string } | null
 }>()
 
-const emit = defineEmits<{
-  (e: 'update:show', value: boolean): void
-  (e: 'confirm'): void
-}>()
+const emit = defineEmits(['update:show', 'confirm'])
 
 const close = () => emit('update:show', false)
 const cancel = () => emit('update:show', false)

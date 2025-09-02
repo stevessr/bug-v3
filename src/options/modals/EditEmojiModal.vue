@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/emoji'
@@ -11,11 +13,7 @@ const props = defineProps<{
   index?: number
 }>()
 
-const emit = defineEmits<{
-  'update:show': [value: boolean]
-  save: [payload: { emoji: Emoji; groupId: string; index: number; targetGroupId?: string }]
-  'image-error': [event: Event]
-}>()
+const emit = defineEmits(['update:show', 'save', 'imageError'])
 
 const emojiStore = useEmojiStore()
 
@@ -30,6 +28,15 @@ const selectedGroupId = ref<string>('')
 // 可用的分组列表（排除常用分组）
 const availableGroups = computed(() => {
   return emojiStore.groups.filter(g => g.id !== 'favorites')
+})
+
+const onEditGroupSelect = (info: { key: string | number }) => {
+  selectedGroupId.value = String(info.key)
+}
+
+const editSelectedGroupLabel = computed(() => {
+  const g = availableGroups.value.find(x => x.id === selectedGroupId.value)
+  return g ? `${g.icon ? g.icon + ' ' : ''}${g.name}` : '选择分组'
 })
 
 watch(
@@ -129,7 +136,7 @@ const handleSubmit = () => {
                 :src="localEmoji.displayUrl || localEmoji.url"
                 :alt="localEmoji.name"
                 class="w-full h-full object-cover"
-                @error="$emit('image-error', $event)"
+                @error="$emit('imageError', $event)"
               />
             </div>
           </div>
@@ -183,15 +190,19 @@ const handleSubmit = () => {
             <label for="emoji-group" class="block text-sm font-medium text-gray-700">
               选择分组
             </label>
-            <select
-              id="emoji-group"
-              v-model="selectedGroupId"
-              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-                {{ group.icon }} {{ group.name }}
-              </option>
-            </select>
+            <ADropdown>
+              <template #overlay>
+                <AMenu @click="onEditGroupSelect">
+                  <AMenu.Item v-for="group in availableGroups" :key="group.id" :value="group.id">
+                    {{ group.icon }} {{ group.name }}
+                  </AMenu.Item>
+                </AMenu>
+              </template>
+              <AButton>
+                {{ editSelectedGroupLabel }}
+                <DownOutlined />
+              </AButton>
+            </ADropdown>
           </div>
 
           <!-- Buttons -->

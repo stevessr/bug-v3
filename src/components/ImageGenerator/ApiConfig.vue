@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 
 import { PROVIDER_CONFIGS } from '@/types/imageGenerator'
 import type { ProviderManager } from '@/utils/imageProviders'
@@ -19,6 +21,24 @@ const emit = defineEmits<{
 const selectedProvider = ref('gemini')
 const apiKey = ref('')
 const selectedModel = ref('')
+
+const onProviderSelect = (info: any) => {
+  selectedProvider.value = String(info.key)
+  onProviderChange()
+}
+
+const onModelSelect = (info: any) => {
+  selectedModel.value = String(info.key)
+  onModelChange()
+}
+
+const providerDisplay = computed(() => getProviderDisplayName(selectedProvider.value))
+
+const selectedModelLabel = computed(() => {
+  const models = currentProviderConfig.value?.models || []
+  const m = models.find((x: any) => x.id === selectedModel.value)
+  return m ? m.name : models[0]?.name || ''
+})
 
 const providerNames = computed(() => props.providerManager.getProviderNames())
 
@@ -91,16 +111,19 @@ watch(
     <!-- Provider Selection -->
     <div class="config-item">
       <label for="providerSelect">选择服务商</label>
-      <select
-        id="providerSelect"
-        v-model="selectedProvider"
-        @change="onProviderChange"
-        class="form-select"
-      >
-        <option v-for="provider in providerNames" :key="provider" :value="provider">
-          {{ getProviderDisplayName(provider) }}
-        </option>
-      </select>
+      <ADropdown>
+        <template #overlay>
+          <AMenu @click="info => onProviderSelect(info)">
+            <AMenu.Item v-for="provider in providerNames" :key="provider" :value="provider">
+              {{ getProviderDisplayName(provider) }}
+            </AMenu.Item>
+          </AMenu>
+        </template>
+        <AButton>
+          {{ providerDisplay }}
+          <DownOutlined />
+        </AButton>
+      </ADropdown>
     </div>
 
     <!-- API Key Input -->
@@ -123,11 +146,23 @@ watch(
     <!-- Model Selection for providers that support it -->
     <div v-if="currentProviderConfig?.supportsModels" class="config-item">
       <label for="modelSelect">选择模型</label>
-      <select id="modelSelect" v-model="selectedModel" @change="onModelChange" class="form-select">
-        <option v-for="model in currentProviderConfig.models" :key="model.id" :value="model.id">
-          {{ model.name }}
-        </option>
-      </select>
+      <ADropdown>
+        <template #overlay>
+          <AMenu @click="info => onModelSelect(info)">
+            <AMenu.Item
+              v-for="model in currentProviderConfig.models"
+              :key="model.id"
+              :value="model.id"
+            >
+              {{ model.name }}
+            </AMenu.Item>
+          </AMenu>
+        </template>
+        <AButton>
+          {{ selectedModelLabel }}
+          <DownOutlined />
+        </AButton>
+      </ADropdown>
     </div>
   </div>
 </template>

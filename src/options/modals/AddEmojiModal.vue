@@ -1,18 +1,29 @@
 <script setup lang="ts">
-import { ref, watch, toRefs, reactive } from 'vue'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ref, watch, toRefs, reactive, computed } from 'vue'
+// UI imports first to satisfy import/order
+import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { flushBuffer } from '../../utils/indexedDB'
 
-const props = defineProps<{ show: boolean; groups: any[]; defaultGroupId?: string }>()
+const props = defineProps<{ show: boolean; groups: unknown[]; defaultGroupId?: string }>()
 
-// expose groups as a reactive ref for template and internal use
-const { groups } = toRefs(props as any)
+// expose props as refs for template and internal use
+const { groups, show, defaultGroupId } = toRefs(props as any)
 
-const emits = defineEmits<{
-  (e: 'update:show', value: boolean): void
-  (e: 'added', payload: { groupId: string; name: string }): void
-}>()
+const emits = defineEmits(['update:show', 'added'])
+
+const onVariantSelectForItem = (index: number, info: { key: string | number }) => {
+  const item = parsedItems.value[index]
+  if (item) setItemSelectedVariant(item, info)
+}
+
+const onParsedImageError = (e: Event) => {
+  const target = e.target as HTMLImageElement
+  target.style.display = 'none'
+}
 
 const name = ref('')
 const url = ref('')
@@ -20,44 +31,61 @@ const displayUrl = ref('')
 const inputMode = ref<'url' | 'markdown' | 'html'>('url')
 const pasteText = ref('')
 const parsedItems = ref<ImageVariant[]>([])
-// initialize groupId from reactive props; don't destructure props to keep reactivity
-const groupId = ref(props.defaultGroupId || props.groups?.[0]?.id || '')
+// initialize groupId from reactive props
+const groupId = ref(
+  (defaultGroupId?.value as string) || (groups?.value && groups.value[0]?.id) || ''
+)
 
 // Keep groupId in sync when defaultGroupId prop changes
-watch(
-  () => props.defaultGroupId,
-  v => {
-    if (v) groupId.value = v
-  }
-)
+watch(defaultGroupId, v => {
+  if (v) groupId.value = v
+})
 
 // If groups list changes (e.g. first load), ensure we have a sensible default
 watch(
-  () => props.groups,
+  groups,
   g => {
-    if ((!groupId.value || !g?.find((x: any) => x.id === groupId.value)) && g && g.length) {
-      groupId.value = props.defaultGroupId || g[0].id || ''
+    const list = g as any[]
+    if (
+      (!groupId.value || !list?.find((x: any) => x.id === groupId.value)) &&
+      list &&
+      list.length
+    ) {
+      groupId.value = (defaultGroupId?.value as string) || list[0].id || ''
     }
   },
   { immediate: true }
 )
 
 // Reset fields when the modal opens so repeated opens work without refresh
-watch(
-  () => props.show,
-  v => {
-    if (v) {
-      name.value = ''
-      url.value = ''
-      groupId.value = props.defaultGroupId || (groups.value && groups.value[0]?.id) || ''
-      pasteText.value = ''
-      parsedItems.value = []
-      inputMode.value = 'url'
-    }
+watch(show, v => {
+  if (v) {
+    name.value = ''
+    url.value = ''
+    groupId.value = (defaultGroupId?.value as string) || (groups.value && groups.value[0]?.id) || ''
+    pasteText.value = ''
+    parsedItems.value = []
+    inputMode.value = 'url'
   }
-)
+})
 
 const emojiStore = useEmojiStore()
+
+// Antd dropdown already imported above
+
+const onInputModeSelect = (info: any) => {
+  inputMode.value = String(info.key) as 'url' | 'markdown' | 'html'
+}
+
+const onGroupSelect = (info: any) => {
+  groupId.value = String(info.key)
+}
+
+const selectedGroupLabel = computed(() => {
+  const list = (groups.value as any[]) || []
+  const g = list.find((x: { id?: string }) => x.id === groupId.value) as any
+  return g ? `${g.icon ? g.icon + ' ' : ''}${g.name}` : '选择分组'
+})
 
 const handleImageError = (event: Event) => {
   const target = event.target as HTMLImageElement
@@ -242,7 +270,7 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
         items.push(item)
       }
     })
-  } catch (e) {
+  } catch {
     // parsing failed, return empty
   }
   return items
@@ -277,6 +305,10 @@ const previewParse = () => {
   })
 }
 
+const setItemSelectedVariant = (item: ImageVariant, info: { key: string | number }) => {
+  item.selectedVariant = String(info.key)
+}
+
 const close = () => {
   emits('update:show', false)
 }
@@ -289,19 +321,14 @@ const add = () => {
       emojiStore.beginBatch()
       try {
         parsedItems.value.forEach(it => {
-          console.log('[AddEmojiModal] Processing item:', {
-            name: it.name,
-            originalUrl: it.url,
-            selectedVariant: it.selectedVariant,
-            variants: it.variants.map(v => ({ label: v.label, url: v.url }))
-          })
+          // debug log removed
           const selectedUrl = it.selectedVariant || it.url
-          console.log('[AddEmojiModal] Using URL:', selectedUrl)
+          // debug log removed
           const emojiData = { packet: Date.now(), name: it.name, url: selectedUrl }
           emojiStore.addEmojiWithoutSave(groupId.value, emojiData)
           emits('added', { groupId: groupId.value, name: emojiData.name })
         })
-        void flushBuffer(true).then(() => console.log('[AddEmojiModal] bulk addEmoji flushed'))
+        void flushBuffer(true).then(() => {})
       } finally {
         void emojiStore.endBatch()
       }
@@ -320,7 +347,7 @@ const add = () => {
     ...(displayUrl.value.trim() && { displayUrl: displayUrl.value.trim() })
   }
   emojiStore.addEmoji(groupId.value, emojiData)
-  void flushBuffer(true).then(() => console.log('[AddEmojiModal] addEmoji flushed'))
+  void flushBuffer(true).then(() => {})
   emits('added', { groupId: groupId.value, name: emojiData.name })
   emits('update:show', false)
   name.value = ''
@@ -335,19 +362,14 @@ const importParsed = () => {
   emojiStore.beginBatch()
   try {
     parsedItems.value.forEach(it => {
-      console.log('[AddEmojiModal] importParsed - Processing item:', {
-        name: it.name,
-        originalUrl: it.url,
-        selectedVariant: it.selectedVariant,
-        variants: it.variants.map(v => ({ label: v.label, url: v.url }))
-      })
+      // debug log removed
       const selectedUrl = it.selectedVariant || it.url
-      console.log('[AddEmojiModal] importParsed - Using URL:', selectedUrl)
+      // debug log removed
       const emojiData = { packet: Date.now(), name: it.name, url: selectedUrl }
       emojiStore.addEmojiWithoutSave(groupId.value, emojiData)
       emits('added', { groupId: groupId.value, name: emojiData.name })
     })
-    void flushBuffer(true).then(() => console.log('[AddEmojiModal] importParsed flushed'))
+    void flushBuffer(true).then(() => {})
   } finally {
     void emojiStore.endBatch()
   }
@@ -378,14 +400,19 @@ const importParsed = () => {
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">输入模式</label>
           <div class="flex items-center gap-2">
-            <select
-              v-model="inputMode"
-              class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="url">单个 URL</option>
-              <option value="markdown">Markdown (批量)</option>
-              <option value="html">HTML (批量)</option>
-            </select>
+            <ADropdown>
+              <template #overlay>
+                <AMenu @click="onInputModeSelect">
+                  <AMenu.Item key="url">单个 URL</AMenu.Item>
+                  <AMenu.Item key="markdown">Markdown (批量)</AMenu.Item>
+                  <AMenu.Item key="html">HTML (批量)</AMenu.Item>
+                </AMenu>
+              </template>
+              <AButton>
+                {{ inputMode }}
+                <DownOutlined />
+              </AButton>
+            </ADropdown>
             <div class="text-xs text-gray-500">已解析: {{ parsedItems.length }} 个</div>
           </div>
         </div>
@@ -441,12 +468,19 @@ const importParsed = () => {
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">所属分组</label>
-          <select
-            v-model="groupId"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option v-for="g in groups" :key="g.id" :value="g.id">{{ g.name }}</option>
-          </select>
+          <ADropdown>
+            <template #overlay>
+              <AMenu @click="onGroupSelect">
+                <AMenu.Item v-for="g in groups" :key="g.id" :value="g.id" :title="g.id">
+                  {{ g.name }}
+                </AMenu.Item>
+              </AMenu>
+            </template>
+            <AButton>
+              {{ selectedGroupLabel }}
+              <DownOutlined />
+            </AButton>
+          </ADropdown>
         </div>
 
         <!-- 解析结果预览和URL变种选择 -->
@@ -474,34 +508,29 @@ const importParsed = () => {
                   :src="item.selectedVariant || item.url"
                   :alt="item.name"
                   class="w-12 h-12 object-cover rounded border flex-shrink-0"
-                  @error="e => ((e.target as HTMLImageElement).style.display = 'none')"
+                  @error="onParsedImageError"
                 />
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium text-gray-900 truncate">{{ item.name }}</div>
                   <div v-if="item.variants.length > 1" class="mt-2">
                     <label class="block text-xs text-gray-600 mb-1">选择URL变种:</label>
-                    <select
-                      v-model="item.selectedVariant"
-                      @change="
-                        e => {
-                          item.selectedVariant = (e.target as HTMLSelectElement).value
-                          console.log(
-                            '[AddEmojiModal] Variant changed:',
-                            item.name,
-                            item.selectedVariant
-                          )
-                        }
-                      "
-                      class="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option
-                        v-for="variant in item.variants"
-                        :key="variant.url"
-                        :value="variant.url"
-                      >
-                        {{ variant.label }}
-                      </option>
-                    </select>
+                    <ADropdown>
+                      <template #overlay>
+                        <AMenu @click="onVariantSelectForItem(index, $event)">
+                          <AMenu.Item
+                            v-for="variant in item.variants"
+                            :key="variant.url"
+                            :value="variant.url"
+                          >
+                            {{ variant.label }}
+                          </AMenu.Item>
+                        </AMenu>
+                      </template>
+                      <AButton>
+                        {{ item.selectedVariant || item.variants[0].url }}
+                        <DownOutlined />
+                      </AButton>
+                    </ADropdown>
                   </div>
                   <div v-else class="mt-1">
                     <span class="text-xs text-gray-500">
