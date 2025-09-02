@@ -62,7 +62,8 @@ export class ProviderManager {
   loadSelectedProvider(): void {
     const saved = localStorage.getItem('selected_provider')
     if (saved && this.providers.has(saved)) {
-      this.currentProvider = this.providers.get(saved)!
+      const p = this.providers.get(saved)
+      if (p) this.currentProvider = p
     }
   }
 

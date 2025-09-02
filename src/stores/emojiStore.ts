@@ -5,6 +5,7 @@ import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji'
 import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
 import { newStorageHelpers } from '../utils/newStorage'
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from '@/config/buildFlags'
 
 export const useEmojiStore = defineStore('emojiExtension', () => {

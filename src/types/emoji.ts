@@ -31,6 +31,7 @@ export interface AppSettings {
   lastModified?: number // timestamp for sync comparison
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface DefaultEmojiData {
   groups: EmojiGroup[]
   settings: AppSettings
