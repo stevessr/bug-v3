@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
 import { logger } from '../config/buildFlags'
@@ -243,7 +242,7 @@ function debouncedSync(fn: () => Promise<void>) {
     try {
       await fn()
     } catch (error) {
-      console.error('[Storage] Debounced sync failed:', error)
+      logger.error('[Storage] Debounced sync failed:', error)
     }
   }, SYNC_DEBOUNCE_DELAY)
 }

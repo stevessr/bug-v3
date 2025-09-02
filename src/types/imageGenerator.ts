@@ -28,12 +28,12 @@ export interface ProviderConfig {
 export interface ImageProvider {
   name: string
   displayName?: string
-  generateImages(request: GenerateRequest): Promise<string[]>
-  setApiKey(key: string): void
+  generateImages(_request: GenerateRequest): Promise<string[]>
+  setApiKey(_key: string): void
   loadApiKey(): string
-  downloadImage?(url: string, filename: string): Promise<void>
-  copyToClipboard?(url: string): Promise<void>
-  setModel?(model: string): void
+  downloadImage?(_url: string, _filename: string): Promise<void>
+  copyToClipboard?(_url: string): Promise<void>
+  setModel?(_model: string): void
   loadSelectedModel?(): void
   selectedModel?: string
 }

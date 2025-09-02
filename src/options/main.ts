@@ -1,6 +1,8 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
+import { useEmojiStore } from '../stores/emojiStore'
+
 import Options from './Options.vue'
 import '../styles/main.css'
 
@@ -11,7 +13,5 @@ app.use(pinia)
 app.mount('#app')
 
 // Initialize store data
-import { useEmojiStore } from '../stores/emojiStore'
-
 const store = useEmojiStore(pinia)
 store.loadData()

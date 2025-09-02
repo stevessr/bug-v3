@@ -9,6 +9,8 @@ import {
   type UserscriptStorage
 } from './userscript-storage'
 
+import { logger } from '@/config/buildFlags'
+
 // Global state for userscript
 const userscriptState: UserscriptStorage = {
   emojiGroups: [],
@@ -36,7 +38,7 @@ function shouldInjectEmoji(): boolean {
     'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
   )
   if (discourseMetaTags.length > 0) {
-    console.log('[Emoji Extension Userscript] Discourse detected via meta tags')
+    logger.log('[Emoji Extension Userscript] Discourse detected via meta tags')
     return true
   }
 
@@ -45,7 +47,7 @@ function shouldInjectEmoji(): boolean {
   if (generatorMeta) {
     const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
     if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
-      console.log('[Emoji Extension Userscript] Forum platform detected via generator meta')
+      logger.log('[Emoji Extension Userscript] Forum platform detected via generator meta')
       return true
     }
   }
@@ -54,7 +56,7 @@ function shouldInjectEmoji(): boolean {
   const hostname = window.location.hostname.toLowerCase()
   const allowedDomains = ['linux.do', 'meta.discourse.org']
   if (allowedDomains.some(domain => hostname.includes(domain))) {
-    console.log('[Emoji Extension Userscript] Allowed domain detected:', hostname)
+    logger.log('[Emoji Extension Userscript] Allowed domain detected:', hostname)
     return true
   }
 
@@ -63,23 +65,23 @@ function shouldInjectEmoji(): boolean {
     'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
   )
   if (editors.length > 0) {
-    console.log('[Emoji Extension Userscript] Discussion editor detected')
+    logger.log('[Emoji Extension Userscript] Discussion editor detected')
     return true
   }
 
-  console.log('[Emoji Extension Userscript] No compatible platform detected')
+  logger.log('[Emoji Extension Userscript] No compatible platform detected')
   return false
 }
 
 // Insert emoji into editor (adapted from content script)
 function insertEmojiIntoEditor(emoji: any) {
-  console.log('[Emoji Extension Userscript] Inserting emoji:', emoji)
+  logger.log('[Emoji Extension Userscript] Inserting emoji:', emoji)
 
   const textarea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
   const proseMirror = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
   if (!textarea && !proseMirror) {
-    console.error('找不到输入框')
+    logger.error('找不到输入框')
     return
   }
 
@@ -138,7 +140,7 @@ function insertEmojiIntoEditor(emoji: any) {
         // Fallback to execCommand
         document.execCommand('insertHTML', false, htmlContent)
       } catch (fallbackError) {
-        console.error('无法向富文本编辑器中插入表情', fallbackError)
+        logger.error('无法向富文本编辑器中插入表情', fallbackError)
       }
     }
   }
@@ -385,10 +387,10 @@ function openManagementInterface() {
       // Fallback: Show instructions modal
       showManagementModal()
     } else {
-      console.log('[Emoji Extension Userscript] Opened management interface')
+      logger.log('[Emoji Extension Userscript] Opened management interface')
     }
   } catch (error) {
-    console.error('[Emoji Extension Userscript] Failed to open management interface:', error)
+    logger.error('[Emoji Extension Userscript] Failed to open management interface:', error)
     showManagementModal()
   }
 }
@@ -762,13 +764,13 @@ function injectEmojiButton(toolbar: HTMLElement) {
       toolbar.appendChild(button)
     }
   } catch (error) {
-    console.error('[Emoji Extension Userscript] Failed to inject button:', error)
+    logger.error('[Emoji Extension Userscript] Failed to inject button:', error)
   }
 }
 
 // Initialize one-click add functionality for image lightboxes
 function initOneClickAdd() {
-  console.log('[Emoji Extension Userscript] Initializing one-click add functionality')
+  logger.log('[Emoji Extension Userscript] Initializing one-click add functionality')
 
   function extractEmojiFromImage(img: HTMLImageElement, titleElement: HTMLElement) {
     const url = img.src
@@ -878,7 +880,7 @@ function initOneClickAdd() {
           link.style.cssText = originalStyle
         }, 2000)
       } catch (error) {
-        console.error('[Emoji Extension Userscript] Failed to add emoji:', error)
+        logger.error('[Emoji Extension Userscript] Failed to add emoji:', error)
 
         link.innerHTML = `
           <svg class="fa d-icon d-icon-times svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
@@ -972,7 +974,7 @@ function initOneClickAdd() {
 
 // Main initialization function
 async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 1000) {
-  console.log('[Emoji Extension Userscript] Initializing...')
+  logger.log('[Emoji Extension Userscript] Initializing...')
 
   initializeUserscriptData()
   initOneClickAdd()
@@ -987,7 +989,7 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
 
     toolbars.forEach(toolbar => {
       if (!toolbar.querySelector('.emoji-extension-button')) {
-        console.log('[Emoji Extension Userscript] Toolbar found, injecting button.')
+        logger.log('[Emoji Extension Userscript] Toolbar found, injecting button.')
         injectEmojiButton(toolbar)
         injectedCount++
       }
@@ -998,12 +1000,12 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
     }
 
     if (attempts < maxAttempts) {
-      console.log(
+      logger.log(
         `[Emoji Extension Userscript] Toolbar not found, attempt ${attempts}/${maxAttempts}. Retrying in ${delay / 1000}s.`
       )
       setTimeout(attemptInjection, delay)
     } else {
-      console.error('[Emoji Extension Userscript] Failed to find toolbar after multiple attempts.')
+      logger.error('[Emoji Extension Userscript] Failed to find toolbar after multiple attempts.')
     }
   }
 
@@ -1018,7 +1020,7 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
     const toolbars = findAllToolbars()
     toolbars.forEach(toolbar => {
       if (!toolbar.querySelector('.emoji-extension-button')) {
-        console.log('[Emoji Extension Userscript] New toolbar found, injecting button.')
+        logger.log('[Emoji Extension Userscript] New toolbar found, injecting button.')
         injectEmojiButton(toolbar)
       }
     })
@@ -1027,10 +1029,10 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
 
 // Entry point
 if (shouldInjectEmoji()) {
-  console.log('[Emoji Extension Userscript] Initializing emoji feature')
+  logger.log('[Emoji Extension Userscript] Initializing emoji feature')
   initializeEmojiFeature()
 } else {
-  console.log('[Emoji Extension Userscript] Skipping injection - incompatible platform')
+  logger.log('[Emoji Extension Userscript] Skipping injection - incompatible platform')
 }
 
 export {}

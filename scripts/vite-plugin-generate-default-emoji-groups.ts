@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-properties */
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 

@@ -1,4 +1,6 @@
 import './utils'
+import { logger } from '../config/buildFlags'
+
 import { setupOnInstalledListener } from './init'
 import {
   setupMessageListener,
@@ -7,7 +9,7 @@ import {
   setupPeriodicCleanup
 } from './handlers'
 
-console.log('Emoji Extension Background script loaded.')
+logger.log('Emoji Extension Background script loaded.')
 
 // Wire up listeners and periodic jobs
 setupOnInstalledListener()

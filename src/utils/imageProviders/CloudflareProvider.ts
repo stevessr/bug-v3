@@ -1,6 +1,7 @@
 import { BaseProvider } from './BaseProvider'
 
 import type { GenerateRequest } from '@/types/imageGenerator'
+import { logger } from '@/config/buildFlags'
 
 export class CloudflareProvider extends BaseProvider {
   name = 'cloudflare'
@@ -157,7 +158,7 @@ export class CloudflareProvider extends BaseProvider {
         await super.downloadImage(url, filename)
       }
     } catch (error) {
-      console.error('Download failed:', error)
+      logger.error('Download failed:', error)
       throw new Error('下载失败，请稍后重试')
     }
   }

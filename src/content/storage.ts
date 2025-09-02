@@ -1,6 +1,8 @@
 import { cachedState } from './state'
 import { getDefaultEmojis } from './default'
 
+import { logger } from '@/config/buildFlags'
+
 function sendMessageToBackground(message: any): Promise<any> {
   return new Promise(resolve => {
     try {
@@ -23,14 +25,14 @@ function sendMessageToBackground(message: any): Promise<any> {
 
 export async function loadDataFromStorage(): Promise<void> {
   try {
-    console.log('[Emoji Extension] Requesting emoji data from background')
+    logger.log('[Emoji Extension] Requesting emoji data from background')
     const resp = await sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
 
     if (resp && resp.success && resp.data) {
       const groups = resp.data.groups || []
       const settings = resp.data.settings || {}
 
-      console.log('[Emoji Extension] Received groups from background:', groups?.length || 0)
+      logger.log('[Emoji Extension] Received groups from background:', groups?.length || 0)
 
       if (Array.isArray(groups) && groups.length > 0) {
         let validGroups = 0
@@ -44,17 +46,17 @@ export async function loadDataFromStorage(): Promise<void> {
 
         if (validGroups > 0 && totalEmojis > 0) {
           cachedState.emojiGroups = groups
-          console.log(
+          logger.log(
             `[Emoji Extension] Successfully loaded ${validGroups} valid groups with ${totalEmojis} total emojis (from background)`
           )
         } else {
-          console.warn(
+          logger.warn(
             '[Emoji Extension] Groups exist but contain no valid emojis, using defaults (from background)'
           )
           cachedState.emojiGroups = []
         }
       } else {
-        console.warn(
+        logger.warn(
           '[Emoji Extension] No valid emoji groups found in background response, using defaults'
         )
         cachedState.emojiGroups = []
@@ -62,10 +64,10 @@ export async function loadDataFromStorage(): Promise<void> {
 
       if (settings && typeof settings === 'object') {
         cachedState.settings = { ...cachedState.settings, ...settings }
-        console.log('[Emoji Extension] Loaded settings (from background):', cachedState.settings)
+        logger.log('[Emoji Extension] Loaded settings (from background):', cachedState.settings)
       }
     } else {
-      console.warn(
+      logger.warn(
         '[Emoji Extension] Background did not return emoji data, falling back to defaults'
       )
       cachedState.emojiGroups = []
@@ -84,13 +86,13 @@ export async function loadDataFromStorage(): Promise<void> {
       if (g?.emojis?.length) finalEmojisCount += g.emojis.length
     })
 
-    console.log('[Emoji Extension] Final cache state (from background):', {
+    logger.log('[Emoji Extension] Final cache state (from background):', {
       groupsCount: cachedState.emojiGroups.length,
       emojisCount: finalEmojisCount,
       settings: cachedState.settings
     })
   } catch (error) {
-    console.error('[Emoji Extension] Failed to load from background (module):', error)
+    logger.error('[Emoji Extension] Failed to load from background (module):', error)
     cachedState.emojiGroups = []
     cachedState.settings = {
       imageScale: 30,

@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 
 import { ProviderManager } from '@/utils/imageProviders'
 import type { GenerateRequest } from '@/types/imageGenerator'
+import { logger } from '@/config/buildFlags'
 
 export function useImageGenerator() {
   const providerManager = new ProviderManager()
@@ -54,7 +55,7 @@ export function useImageGenerator() {
       generatedImages.value = images
     } catch (err: any) {
       error.value = err.message || '生成图片时发生错误，请稍后重试'
-      console.error('Generation failed:', err)
+      logger.error('Generation failed:', err)
     } finally {
       isGenerating.value = false
     }

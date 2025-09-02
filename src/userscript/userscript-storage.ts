@@ -1,6 +1,8 @@
 // Storage adapter for userscript environment using localStorage
 import { getDefaultEmojis } from '../content/default'
 
+import { logger } from '@/config/buildFlags'
+
 export interface UserscriptStorage {
   emojiGroups: any[]
   settings: {
@@ -29,7 +31,7 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
           emojiGroups = parsed
         }
       } catch (e) {
-        console.warn('[Userscript] Failed to parse stored emoji groups:', e)
+        logger.warn('[Userscript] Failed to parse stored emoji groups:', e)
       }
     }
 
@@ -65,11 +67,11 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
           settings = { ...settings, ...parsed }
         }
       } catch (e) {
-        console.warn('[Userscript] Failed to parse stored settings:', e)
+        logger.warn('[Userscript] Failed to parse stored settings:', e)
       }
     }
 
-    console.log('[Userscript] Loaded data from localStorage:', {
+    logger.log('[Userscript] Loaded data from localStorage:', {
       groupsCount: emojiGroups.length,
       emojisCount: emojiGroups.reduce((acc, g) => acc + (g.emojis?.length || 0), 0),
       settings
@@ -77,7 +79,7 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
 
     return { emojiGroups, settings }
   } catch (error) {
-    console.error('[Userscript] Failed to load from localStorage:', error)
+    logger.error('[Userscript] Failed to load from localStorage:', error)
 
     // Return defaults on error
     const defaultEmojis = getDefaultEmojis()
@@ -112,7 +114,7 @@ export function saveDataToLocalStorage(data: Partial<UserscriptStorage>): void {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings))
     }
   } catch (error) {
-    console.error('[Userscript] Failed to save to localStorage:', error)
+    logger.error('[Userscript] Failed to save to localStorage:', error)
   }
 }
 
@@ -146,12 +148,12 @@ export function addEmojiToUserscript(emojiData: { name: string; url: string }): 
       })
 
       saveDataToLocalStorage({ emojiGroups: data.emojiGroups })
-      console.log('[Userscript] Added emoji to user group:', emojiData.name)
+      logger.log('[Userscript] Added emoji to user group:', emojiData.name)
     } else {
-      console.log('[Userscript] Emoji already exists:', emojiData.name)
+      logger.log('[Userscript] Emoji already exists:', emojiData.name)
     }
   } catch (error) {
-    console.error('[Userscript] Failed to add emoji:', error)
+    logger.error('[Userscript] Failed to add emoji:', error)
   }
 }
 
@@ -160,7 +162,7 @@ export function exportUserscriptData(): string {
     const data = loadDataFromLocalStorage()
     return JSON.stringify(data, null, 2)
   } catch (error) {
-    console.error('[Userscript] Failed to export data:', error)
+    logger.error('[Userscript] Failed to export data:', error)
     return ''
   }
 }
@@ -177,10 +179,10 @@ export function importUserscriptData(jsonData: string): boolean {
       saveDataToLocalStorage({ settings: data.settings })
     }
 
-    console.log('[Userscript] Data imported successfully')
+    logger.log('[Userscript] Data imported successfully')
     return true
   } catch (error) {
-    console.error('[Userscript] Failed to import data:', error)
+    logger.error('[Userscript] Failed to import data:', error)
     return false
   }
 }
@@ -210,12 +212,12 @@ export function syncFromManager(): boolean {
     }
 
     if (updated) {
-      console.log('[Userscript] Synced data from manager')
+      logger.log('[Userscript] Synced data from manager')
     }
 
     return updated
   } catch (error) {
-    console.error('[Userscript] Failed to sync from manager:', error)
+    logger.error('[Userscript] Failed to sync from manager:', error)
     return false
   }
 }

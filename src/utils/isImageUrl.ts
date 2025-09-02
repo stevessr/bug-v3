@@ -9,7 +9,7 @@ export function isImageUrl(value: string | null | undefined): boolean {
       return /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
     }
     return false
-  } catch (e) {
+  } catch {
     return false
   }
 }
