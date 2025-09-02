@@ -54,7 +54,12 @@ const onDragOver = (event: DragEvent) => {
 const onDragLeave = (event: DragEvent) => {
   event.preventDefault()
   // Only set to false if we're leaving the upload area itself
-  if (!event.currentTarget?.contains(event.relatedTarget as Node)) {
+  const current = event.currentTarget
+  if (current instanceof Element) {
+    if (!current.contains(event.relatedTarget as Node)) {
+      isDragOver.value = false
+    }
+  } else {
     isDragOver.value = false
   }
 }

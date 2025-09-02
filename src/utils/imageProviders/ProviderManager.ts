@@ -3,7 +3,7 @@ import { SiliconFlowProvider } from './SiliconFlowProvider'
 import { CloudflareProvider } from './CloudflareProvider'
 import { ChutesAIProvider } from './ChutesAIProvider'
 
-import type { ImageProvider, GenerateRequest } from '@/types/imageGenerator'
+import type { GenerateRequest, ImageProvider } from '@/types/imageGenerator'
 
 export class ProviderManager {
   private providers: Map<string, ImageProvider> = new Map()
@@ -94,8 +94,16 @@ export class ProviderManager {
     }
   }
 
-  copyToClipboard(url: string): Promise<void> {
-    return this.currentProvider.copyToClipboard(url)
+  async copyToClipboard(url: string): Promise<void> {
+    if (this.currentProvider.copyToClipboard) {
+      return this.currentProvider.copyToClipboard(url)
+    }
+    // fallback: write to clipboard using navigator
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch (e) {
+      throw new Error('复制失败')
+    }
   }
 
   // Provider-specific methods

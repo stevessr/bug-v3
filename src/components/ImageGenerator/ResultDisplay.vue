@@ -7,7 +7,8 @@ interface Props {
   images: string[]
 }
 
-const props = defineProps<Props>()
+// props are defined for template typing but not used directly in script
+defineProps<Props>()
 
 const emit = defineEmits<{
   downloadImage: [url: string, filename: string]

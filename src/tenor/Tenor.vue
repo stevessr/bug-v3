@@ -5,13 +5,22 @@ import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
 
+type TenorGif = {
+  id: string
+  content_description?: string
+  media_formats: {
+    tinygif?: { url: string }
+    gif?: { url: string }
+  }
+}
+
 const emojiStore = useEmojiStore()
 
 // State
 const tenorApiKey = ref('')
 const inputApiKey = ref('')
 const searchQuery = ref('')
-const searchResults = ref<any[]>([])
+const searchResults = ref<TenorGif[]>([])
 const selectedGifs = ref(new Set<string>())
 const isSearching = ref(false)
 const isLoadingMore = ref(false)
@@ -24,11 +33,11 @@ const nextPos = ref('')
 const searchLimit = ref(12)
 const contentFilter = ref('high')
 
-const onSearchLimitSelect = (info: any) => {
+const onSearchLimitSelect = (info: { key: string | number }) => {
   searchLimit.value = Number(String(info.key))
 }
 
-const onContentFilterSelect = (info: any) => {
+const onContentFilterSelect = (info: { key: string | number }) => {
   contentFilter.value = String(info.key)
 }
 
@@ -165,7 +174,7 @@ const loadMore = async () => {
   }
 }
 
-const toggleSelection = (gif: any) => {
+const toggleSelection = (gif: TenorGif) => {
   if (selectedGifs.value.has(gif.id)) {
     selectedGifs.value.delete(gif.id)
   } else {
@@ -194,8 +203,12 @@ const confirmImport = async () => {
     for (const gif of gifsToImport) {
       try {
         const emoji = {
+          packet: Date.now(),
           name: gif.content_description || `tenor-${gif.id}`,
-          url: gif.media_formats.gif.url // Use full GIF for storage
+          url:
+            (gif.media_formats.gif && gif.media_formats.gif.url) ||
+            (gif.media_formats.tinygif && gif.media_formats.tinygif.url) ||
+            ''
         }
 
         emojiStore.addEmoji(selectedGroupId.value, emoji)
@@ -386,7 +399,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                 }"
               >
                 <img
-                  :src="gif.media_formats.tinygif.url"
+                  :src="gif.media_formats?.tinygif?.url || gif.media_formats?.gif?.url || ''"
                   :alt="gif.content_description"
                   class="w-full h-full object-cover"
                   loading="lazy"

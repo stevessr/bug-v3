@@ -23,7 +23,10 @@ export function useImageGenerator() {
   const canGenerate = computed(() => {
     const hasPrompt = prompt.value.trim().length > 0
     const currentProvider = providerManager.getCurrentProvider()
-    const hasApiKey = currentProvider.loadApiKey().length > 0
+    const hasApiKey =
+      currentProvider && typeof currentProvider.loadApiKey === 'function'
+        ? currentProvider.loadApiKey().length > 0
+        : false
     const hasImageForEdit = generationMode.value === 'edit' ? !!uploadedImage.value : true
 
     return hasPrompt && hasApiKey && hasImageForEdit && !isGenerating.value

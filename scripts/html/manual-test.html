@@ -183,7 +183,7 @@
       document.getElementById('testGenerator').addEventListener('click', () => {
         updateStatus('正在打开AI图片生成器...', 'info')
         try {
-          const url = chrome.runtime.getURL('image-generator.html')
+          // image-generator page removed
           window.open(url, '_blank')
           addResult('✅ AI图片生成器页面已打开', 'success')
         } catch (error) {

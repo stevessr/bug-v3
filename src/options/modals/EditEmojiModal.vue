@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
+import {
+  Dropdown as ADropdown,
+  Menu as AMenu,
+  Button as AButton,
+  Card as ACard
+} from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
@@ -129,16 +134,19 @@ const handleSubmit = () => {
         </div>
 
         <form @submit.prevent="handleSubmit" class="mt-5 space-y-4">
-          <!-- Preview -->
+          <!-- Preview (使用 a-card 风格) -->
           <div class="flex justify-center">
-            <div class="w-24 h-24 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-              <img
-                :src="localEmoji.displayUrl || localEmoji.url"
-                :alt="localEmoji.name"
-                class="w-full h-full object-cover"
-                @error="$emit('imageError', $event)"
-              />
-            </div>
+            <ACard hoverable style="width: 96px">
+              <template #cover>
+                <img
+                  alt="emoji"
+                  :src="localEmoji.displayUrl || localEmoji.url"
+                  class="w-full h-24 object-cover"
+                  @error="$emit('imageError', $event)"
+                />
+              </template>
+              <div class="p-2 text-center text-sm truncate">{{ localEmoji.name }}</div>
+            </ACard>
           </div>
 
           <!-- Name field -->

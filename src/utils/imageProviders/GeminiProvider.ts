@@ -1,6 +1,6 @@
 import { BaseProvider } from './BaseProvider'
 
-import type { GenerateRequest, GeminiGenerateResponse } from '@/types/imageGenerator'
+import type { GenerateRequest } from '@/types/imageGenerator'
 
 export class GeminiProvider extends BaseProvider {
   name = 'gemini'
@@ -56,7 +56,7 @@ export class GeminiProvider extends BaseProvider {
         )
       }
 
-      const data: GeminiGenerateResponse = await response.json()
+      const data: any = await response.json()
 
       if (!data.candidates || data.candidates.length === 0) {
         throw new Error('没有生成任何图片，请尝试修改您的描述')
@@ -76,12 +76,12 @@ export class GeminiProvider extends BaseProvider {
       }
 
       return imageUrls
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.handleApiError(error, 'Gemini')
     }
   }
 
-  private async editImage(request: GenerateRequest): Promise<string[]> {
+  private async editImage(request: any): Promise<string[]> {
     const editEndpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent'
 
@@ -145,7 +145,7 @@ export class GeminiProvider extends BaseProvider {
       }
 
       return imageUrls
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.handleApiError(error, 'Gemini')
     }
   }

@@ -1,13 +1,13 @@
 import { BaseProvider } from './BaseProvider'
 
-import type { GenerateRequest, CloudflareGenerateResponse } from '@/types/imageGenerator'
+import type { GenerateRequest } from '@/types/imageGenerator'
 
 export class CloudflareProvider extends BaseProvider {
   name = 'cloudflare'
   displayName = 'Cloudflare Workers AI'
   private apiToken: string = ''
   private accountId: string = ''
-  private selectedModel: string = '@cf/black-forest-labs/flux-1-schnell'
+  selectedModel: string = '@cf/black-forest-labs/flux-1-schnell'
 
   setApiKey(key: string): void {
     // For Cloudflare, we expect the key in format: "accountId:apiToken"
@@ -121,7 +121,7 @@ export class CloudflareProvider extends BaseProvider {
           )
         }
 
-        const data: CloudflareGenerateResponse = await response.json()
+        const data: any = await response.json()
 
         if (!data.success || !data.result?.image) {
           throw new Error(data.errors?.[0]?.message || '没有生成任何图片，请尝试修改您的描述')
@@ -133,7 +133,7 @@ export class CloudflareProvider extends BaseProvider {
       }
 
       return imageUrls
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.handleApiError(error, 'Cloudflare')
     }
   }

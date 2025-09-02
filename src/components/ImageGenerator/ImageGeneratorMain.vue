@@ -34,7 +34,7 @@ const onProviderChanged = (provider: string) => {
   }
 }
 
-const onApiKeyChanged = (key: string) => {
+const onApiKeyChanged = (_key: string) => {
   console.log('API key changed')
 }
 
@@ -54,7 +54,7 @@ const onImageChanged = (image: string | undefined) => {
   console.log('Image changed:', !!image)
 }
 
-const onPromptChanged = (newPrompt: string) => {
+const onPromptChanged = (_newPrompt: string) => {
   console.log('Prompt changed')
 }
 

@@ -5,16 +5,17 @@ import {
   exportUserscriptData,
   importUserscriptData,
   syncFromManager,
-  saveDataToLocalStorage
+  saveDataToLocalStorage,
+  type UserscriptStorage
 } from './userscript-storage'
 
 // Global state for userscript
-const userscriptState = {
+const userscriptState: UserscriptStorage = {
   emojiGroups: [],
   settings: {
     imageScale: 30,
     gridColumns: 4,
-    outputFormat: 'markdown' as const,
+    outputFormat: 'markdown',
     forceMobileMode: false,
     defaultGroup: 'nachoneko',
     showSearchBar: true
@@ -74,8 +75,8 @@ function shouldInjectEmoji(): boolean {
 function insertEmojiIntoEditor(emoji: any) {
   console.log('[Emoji Extension Userscript] Inserting emoji:', emoji)
 
-  const textarea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement
-  const proseMirror = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement
+  const textarea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
+  const proseMirror = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
   if (!textarea && !proseMirror) {
     console.error('找不到输入框')
@@ -347,7 +348,9 @@ async function createEmojiPicker(): Promise<HTMLElement> {
 
     sections.querySelectorAll('.emoji-picker__section').forEach(section => {
       const visibleImages = section.querySelectorAll('img:not([style*="none"])')
-      const titleContainer = section.querySelector('.emoji-picker__section-title-container')
+      const titleContainer = section.querySelector(
+        '.emoji-picker__section-title-container'
+      ) as HTMLElement | null
       if (titleContainer) {
         titleContainer.style.display = visibleImages.length > 0 ? '' : 'none'
       }
@@ -496,7 +499,7 @@ function showManagementModal() {
   })
 
   content.querySelector('#importBtn')?.addEventListener('click', () => {
-    const importSection = content.querySelector('#importSection')
+    const importSection = content.querySelector('#importSection') as HTMLElement | null
     if (importSection) {
       importSection.style.display = importSection.style.display === 'none' ? 'block' : 'none'
     }
@@ -518,7 +521,7 @@ function showManagementModal() {
   })
 
   content.querySelector('#cancelImport')?.addEventListener('click', () => {
-    const importSection = content.querySelector('#importSection')
+    const importSection = content.querySelector('#importSection') as HTMLElement | null
     if (importSection) {
       importSection.style.display = 'none'
     }
@@ -726,9 +729,11 @@ function injectEmojiButton(toolbar: HTMLElement) {
 
     // Position the picker
     const buttonRect = button.getBoundingClientRect()
-    currentPicker.style.position = 'fixed'
-    currentPicker.style.top = buttonRect.bottom + 5 + 'px'
-    currentPicker.style.left = buttonRect.left + 'px'
+    if (currentPicker) {
+      currentPicker.style.position = 'fixed'
+      currentPicker.style.top = buttonRect.bottom + 5 + 'px'
+      currentPicker.style.left = buttonRect.left + 'px'
+    }
 
     // Close on outside click
     setTimeout(() => {
@@ -898,8 +903,8 @@ function initOneClickAdd() {
   function processLightbox(lightbox: HTMLElement) {
     if (lightbox.querySelector('.emoji-add-link')) return
 
-    const img = lightbox.querySelector('.mfp-img') as HTMLImageElement
-    const title = lightbox.querySelector('.mfp-title') as HTMLElement
+    const img = lightbox.querySelector('.mfp-img') as HTMLImageElement | null
+    const title = lightbox.querySelector('.mfp-title') as HTMLElement | null
 
     if (!img || !title) return
 

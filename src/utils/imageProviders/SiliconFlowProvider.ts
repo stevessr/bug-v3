@@ -1,6 +1,6 @@
 import { BaseProvider } from './BaseProvider'
 
-import type { GenerateRequest, SiliconFlowGenerateResponse } from '@/types/imageGenerator'
+import type { GenerateRequest } from '@/types/imageGenerator'
 
 export class SiliconFlowProvider extends BaseProvider {
   name = 'siliconflow'
@@ -51,14 +51,14 @@ export class SiliconFlowProvider extends BaseProvider {
         )
       }
 
-      const data: SiliconFlowGenerateResponse = await response.json()
+      const data: any = await response.json()
 
       if (!data.data || data.data.length === 0) {
         throw new Error('没有生成任何图片，请尝试修改您的描述')
       }
 
-      return data.data.map(item => item.url)
-    } catch (error: any) {
+      return data.data.map((item: { url: string }) => item.url)
+    } catch (error: unknown) {
       this.handleApiError(error, 'SiliconFlow')
     }
   }
