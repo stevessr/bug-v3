@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, defineEmits, defineProps } from 'vue'
 
 const props = defineProps<{ modelValue: boolean }>()

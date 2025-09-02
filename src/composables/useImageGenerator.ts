@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { ProviderManager } from '@/utils/imageProviders'
 import type { GenerateRequest } from '@/types/imageGenerator'
 import { logger } from '@/config/buildFlags'
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export function useImageGenerator() {
   const providerManager = new ProviderManager()

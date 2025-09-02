@@ -1,4 +1,5 @@
 /* eslint-disable no-restricted-properties */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 

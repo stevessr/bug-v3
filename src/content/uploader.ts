@@ -160,7 +160,8 @@ class ImageUploader {
     this.isProcessing = true
 
     while (this.waitingQueue.length > 0) {
-      const item = this.waitingQueue.shift()!
+      const item = this.waitingQueue.shift()
+      if (!item) continue
       this.moveToQueue(item, 'uploading')
 
       try {
@@ -912,7 +913,7 @@ export async function showImageUploadDialog(): Promise<void> {
       })
 
       if (filesToUpload.length === 0) {
-        alert('所有选择的图片都已在markdown文本中存在，无需上传。')
+        logger.log('所有选择的图片都已在markdown文本中存在，无需上传。')
         return
       }
 
@@ -923,7 +924,9 @@ export async function showImageUploadDialog(): Promise<void> {
           '跳过已存在图片',
           `发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`
         )
-        if (!proceed) return
+        if (!proceed) {
+          return
+        }
       }
 
       cleanup()

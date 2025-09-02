@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, toRefs } from 'vue'
+import { defineProps, toRefs, type Ref } from 'vue'
 
 import type { EmojiGroup } from '../../types/emoji'
 import { isImageUrl } from '../../utils/isImageUrl'
@@ -11,7 +11,11 @@ const props = defineProps<{
 }>()
 
 // Preserve reactivity for primitive props (like activeGroupId) by using toRefs
-const { groups, activeGroupId, setActive } = toRefs(props) as any
+const { groups, activeGroupId, setActive } = toRefs(props) as {
+  groups: Ref<EmojiGroup[]>
+  activeGroupId: Ref<string | null>
+  setActive: Ref<(id: string) => void>
+}
 
 // isImageUrl is imported and usable directly in the template
 </script>

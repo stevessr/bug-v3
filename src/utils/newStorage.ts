@@ -405,7 +405,8 @@ class NewStorageManager {
 
     // Clear any existing timer for this key
     if (this.writeTimers.has(key)) {
-      clearTimeout(this.writeTimers.get(key)!)
+      const t = this.writeTimers.get(key)
+      if (t) clearTimeout(t)
     }
 
     try {
@@ -450,7 +451,8 @@ class NewStorageManager {
 
     // Clear any pending timer
     if (this.writeTimers.has(key)) {
-      clearTimeout(this.writeTimers.get(key)!)
+      const t = this.writeTimers.get(key)
+      if (t) clearTimeout(t)
       this.writeTimers.delete(key)
     }
 

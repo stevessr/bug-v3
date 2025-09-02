@@ -18,6 +18,8 @@ export default [
       '*.min.js',
       'referense/**',
       'public/**',
+      'src/config/default.json',
+      '*.yaml',
       'playwright-report/**',
       'test-results/**',
       '*.config.*s',
