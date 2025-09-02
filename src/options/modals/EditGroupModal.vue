@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-const props = defineProps<{
-  show: boolean
-  editingGroupId: string
-  initialName: string
-  initialIcon: string
-  isImageUrl?: (s: string) => boolean
-}>()
-const emits = defineEmits(['update:show', 'save', 'image-error'])
+const props = defineProps({
+  show: { type: Boolean, required: true },
+  editingGroupId: { type: String, required: true },
+  initialName: { type: String, required: true },
+  initialIcon: { type: String, required: true },
+  isImageUrl: { type: Function }
+})
+const emits = defineEmits(['update:show', 'save', 'imageError'])
 
 const localName = ref(props.initialName || '')
 const localIcon = ref(props.initialIcon || '')
@@ -61,7 +61,7 @@ const save = () => {
               :src="localIcon"
               alt="预览"
               class="w-10 h-10 object-contain mx-auto border border-gray-200 rounded"
-              @error="$emit('image-error', $event)"
+              @error="$emit('imageError', $event)"
             />
           </div>
         </div>

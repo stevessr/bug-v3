@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useEmojiStore } from '../stores/emojiStore'
 import { flushBuffer } from '../utils/indexedDB'
 import { newStorageHelpers } from '../utils/newStorage'
-import type { EmojiGroup } from '../types/emoji'
+import type { EmojiGroup, Emoji } from '../types/emoji'
 import { isImageUrl } from '../utils/isImageUrl'
 
 import {
@@ -31,7 +31,7 @@ export default function useOptions() {
 
   // Drag and drop state
   const draggedGroup = ref<EmojiGroup | null>(null)
-  const draggedEmoji = ref<any>(null)
+  const draggedEmoji = ref<Emoji | null>(null)
   const draggedEmojiGroupId = ref<string>('')
   const draggedEmojiIndex = ref<number>(-1)
 
@@ -50,6 +50,10 @@ export default function useOptions() {
   const showSuccessToast = ref(false)
   const showErrorToast = ref(false)
   const showConfirmDeleteModal = ref(false)
+  const showConfirmGenericModal = ref(false)
+  const confirmGenericTitle = ref('')
+  const confirmGenericMessage = ref('')
+  let confirmGenericAction: (() => void) | null = null
   const successMessage = ref('')
   const errorMessage = ref('')
   const groupToDelete = ref<EmojiGroup | null>(null)
@@ -60,11 +64,11 @@ export default function useOptions() {
   const editGroupIcon = ref<string>('')
 
   // Edit emoji state
-  const editingEmoji = ref<any>(null)
+  const editingEmoji = ref<Emoji | null>(null)
   const editingEmojiGroupId = ref<string>('')
   const editingEmojiIndex = ref<number>(-1)
 
-  const handleConfigImported = async (config: any) => {
+  const handleConfigImported = async (config: unknown) => {
     if (!config) {
       showError('配置文件格式错误')
       return
@@ -72,29 +76,33 @@ export default function useOptions() {
     try {
       await importConfigurationToStore(config)
       showSuccess('配置导入成功')
-    } catch (err) {
-      console.error(err)
+    } catch {
+      // error logged to telemetry in future; swallow here
       showError('配置导入失败')
     }
   }
 
-  const handleEmojisImported = async (payload: any | null) => {
+  const handleEmojisImported = async (payload: unknown | null) => {
     if (!payload) {
       showError('表情数据格式错误')
       return
     }
     try {
-      if (payload.items && Array.isArray(payload.items)) {
-        await importEmojisToStore(payload.items, payload.targetGroupId)
-        showSuccess(`成功导入 ${payload.items.length} 个表情`)
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const p = payload as any
+      if (typeof p === 'object' && p !== null && 'items' in p && Array.isArray(p.items)) {
+        await importEmojisToStore(p.items, p.targetGroupId)
+        showSuccess(`成功导入 ${p.items.length} 个表情`)
         return
       }
 
-      await importEmojisToStore(payload)
-      const count = Array.isArray(payload) ? payload.length : payload.emojis?.length || 0
+      await importEmojisToStore(p)
+      const count = Array.isArray(p) ? p.length : p.emojis?.length || 0
       showSuccess(`成功导入 ${count} 个表情`)
+      /* eslint-enable @typescript-eslint/no-explicit-any */
     } catch (err) {
-      console.error(err)
+      void err
+      // swallow; show generic message
       showError('表情导入失败')
     }
   }
@@ -155,16 +163,12 @@ export default function useOptions() {
     if (draggedGroup.value && draggedGroup.value.id !== targetGroup.id) {
       await emojiStore.reorderGroups(draggedGroup.value.id, targetGroup.id)
       await flushBuffer(true)
-      console.log('[Options] reorderGroups flushed to IndexedDB', {
-        source: draggedGroup.value.id,
-        target: targetGroup.id
-      })
       showSuccess('分组顺序已更新')
     }
     draggedGroup.value = null
   }
 
-  const handleEmojiDragStart = (emoji: any, groupId: string, index: number, event: DragEvent) => {
+  const handleEmojiDragStart = (emoji: Emoji, groupId: string, index: number, event: DragEvent) => {
     draggedEmoji.value = emoji
     draggedEmojiGroupId.value = groupId
     draggedEmojiIndex.value = index
@@ -182,12 +186,7 @@ export default function useOptions() {
         targetGroupId,
         targetIndex
       )
-      void flushBuffer(true).then(() =>
-        console.log('[Options] moveEmoji flushed to IndexedDB', {
-          from: draggedEmojiGroupId.value,
-          to: targetGroupId
-        })
-      )
+      void flushBuffer(true).then(() => {})
       showSuccess('表情已移动')
     }
     resetEmojiDrag()
@@ -195,12 +194,7 @@ export default function useOptions() {
 
   const removeEmojiFromGroup = (groupId: string, index: number) => {
     emojiStore.removeEmojiFromGroup(groupId, index)
-    void flushBuffer(true).then(() =>
-      console.log('[Options] removeEmojiFromGroup flushed to IndexedDB', {
-        groupId,
-        index
-      })
-    )
+    void flushBuffer(true).then(() => {})
     showSuccess('表情已删除')
   }
 
@@ -210,15 +204,8 @@ export default function useOptions() {
     draggedEmojiIndex.value = -1
   }
 
-  const updateImageScale = (valueOrEvent: number | Event) => {
-    let value: number
-    if (typeof valueOrEvent === 'number') {
-      value = valueOrEvent
-    } else {
-      const target = valueOrEvent.target as HTMLInputElement
-      value = parseInt(target.value)
-    }
-    if (!Number.isNaN(value)) {
+  const updateImageScale = (value: number) => {
+    if (Number.isInteger(value) && value > 0) {
       emojiStore.updateSettings({ imageScale: value })
     }
   }
@@ -231,31 +218,16 @@ export default function useOptions() {
     }
   })
 
-  const updateShowSearchBar = (valueOrEvent: boolean | Event) => {
-    let checked: boolean
-    if (typeof valueOrEvent === 'boolean') {
-      checked = valueOrEvent
-    } else {
-      const target = valueOrEvent.target as HTMLInputElement
-      checked = target.checked
-    }
-    emojiStore.updateSettings({ showSearchBar: checked })
+  const updateShowSearchBar = (value: boolean) => {
+    emojiStore.updateSettings({ showSearchBar: value })
   }
 
   const updateOutputFormat = (value: string) => {
     emojiStore.updateSettings({ outputFormat: value as 'markdown' | 'html' })
   }
 
-  const updateForceMobileMode = (valueOrEvent: boolean | Event) => {
-    let checked: boolean
-    if (typeof valueOrEvent === 'boolean') {
-      checked = valueOrEvent
-    } else {
-      const target = valueOrEvent.target as HTMLInputElement
-      checked = target.checked
-    }
-    // Cast to any to allow setting properties not present on the AppSettings type
-    emojiStore.updateSettings({ forceMobileMode: checked } as any)
+  const updateForceMobileMode = (value: boolean) => {
+    emojiStore.updateSettings({ forceMobileMode: value })
   }
 
   const openEditGroup = (group: EmojiGroup) => {
@@ -269,7 +241,7 @@ export default function useOptions() {
     showEditGroupModal.value = true
   }
 
-  const openEditEmoji = (emoji: any, groupId: string, index: number) => {
+  const openEditEmoji = (emoji: Emoji, groupId: string, index: number) => {
     editingEmoji.value = emoji
     editingEmojiGroupId.value = groupId
     editingEmojiIndex.value = index
@@ -277,7 +249,7 @@ export default function useOptions() {
   }
 
   const handleEmojiEdit = async (payload: {
-    emoji: any
+    emoji: Emoji
     groupId: string
     index: number
     targetGroupId?: string
@@ -285,11 +257,6 @@ export default function useOptions() {
     try {
       if (payload.targetGroupId && payload.targetGroupId !== payload.groupId) {
         // 需要移动表情到不同的分组
-        console.log('[Options] Moving emoji to different group:', {
-          from: payload.groupId,
-          to: payload.targetGroupId,
-          emoji: payload.emoji.name
-        })
 
         // 从源分组移除表情
         emojiStore.removeEmojiFromGroup(payload.groupId, payload.index)
@@ -306,9 +273,9 @@ export default function useOptions() {
       }
 
       await flushBuffer(true)
-      console.log('[Options] emoji edit operation flushed to IndexedDB')
-    } catch (error) {
-      console.error('Error updating emoji:', error)
+      // edit operation flushed
+    } catch {
+      // error handled by UI
       showError('表情更新失败')
     }
   }
@@ -325,13 +292,14 @@ export default function useOptions() {
   }
 
   const deleteEmoji = (emojiId: string) => {
-    if (confirm('确定要删除这个表情吗？')) {
+    confirmGenericTitle.value = '删除表情'
+    confirmGenericMessage.value = '确定要删除这个表情吗？此操作不可撤销。'
+    confirmGenericAction = () => {
       emojiStore.deleteEmoji(emojiId)
-      void flushBuffer(true).then(() =>
-        console.log('[Options] deleteEmoji flushed to IndexedDB', { id: emojiId })
-      )
+      void flushBuffer(true).then(() => {})
       showSuccess('表情删除成功')
     }
+    showConfirmGenericModal.value = true
   }
 
   const exportConfiguration = () => {
@@ -340,10 +308,28 @@ export default function useOptions() {
   }
 
   const resetSettings = () => {
-    if (confirm('确定要重置所有设置吗？这将清除所有自定义数据。')) {
+    confirmGenericTitle.value = '重置设置'
+    confirmGenericMessage.value = '确定要重置所有设置吗？这将清除所有自定义数据。'
+    confirmGenericAction = () => {
       emojiStore.resetToDefaults()
       showSuccess('设置重置成功')
     }
+    showConfirmGenericModal.value = true
+  }
+
+  const executeConfirmGenericAction = () => {
+    if (confirmGenericAction) {
+      const action = confirmGenericAction
+      confirmGenericAction = null
+      action()
+    }
+    showConfirmGenericModal.value = false
+  }
+
+  const cancelConfirmGenericAction = () => {
+    // Clear any pending action and hide modal
+    confirmGenericAction = null
+    showConfirmGenericModal.value = false
   }
 
   const syncToChrome = async () => {
@@ -354,8 +340,8 @@ export default function useOptions() {
       } else {
         showError('同步失败，请检查网络连接')
       }
-    } catch (error) {
-      console.error('Sync error:', error)
+    } catch {
+      // swallow and show generic message
       showError('同步失败，请重试')
     }
   }
@@ -369,7 +355,7 @@ export default function useOptions() {
   const onGroupCreated = () => {
     showSuccess('分组创建成功')
     if (emojiStore.groups.length > 0) {
-      console.log('[Options] group created, groups count:', emojiStore.groups.length)
+      // debug: group created
     }
   }
 
@@ -394,15 +380,10 @@ export default function useOptions() {
   }
 
   onMounted(async () => {
-    console.log('[Options.vue] Component mounted, loading data...')
     await emojiStore.loadData()
-    console.log('[Options.vue] Data loaded, groups count:', emojiStore.groups.length)
 
     if (emojiStore.groups.length > 0) {
       selectedGroupForAdd.value = emojiStore.groups[0].id
-      console.log('[Options.vue] Set default group IDs to:', emojiStore.groups[0].id)
-    } else {
-      console.warn('[Options.vue] No groups available after loading')
     }
 
     // Test-friendly: repeatedly ping storage for a short window so test harness that attaches
@@ -413,13 +394,14 @@ export default function useOptions() {
         try {
           void newStorageHelpers.getAllEmojiGroups()
         } catch (e) {
-          // ignore
+          void e
         }
         if (Date.now() - pingStart > 4000) {
           clearInterval(pingInterval)
         }
       }, 500)
-    } catch {
+    } catch (e) {
+      void e
       // ignore in environments without window or storage
     }
 
@@ -430,40 +412,33 @@ export default function useOptions() {
         void newStorageHelpers
           .setFavorites([])
           .then(() => {
-            try {
-              console.log(
-                `[Storage ${new Date().toISOString()}] INJECTED_MULTI_SET_SUCCESS for "favorites" - success`
-              )
-            } catch {}
+            /* intentionally silent for test harness */
           })
-          .catch(() => {
-            /* ignore errors for test environments */
+          .catch(e => {
+            void e
           })
       }
 
-      // Immediate, 1s, and 3.5s attempts to increase capture probability
       try {
         emitInjectedSuccess()
-      } catch {}
+      } catch (e) {
+        void e
+      }
       try {
         setTimeout(emitInjectedSuccess, 1000)
-      } catch {}
+      } catch (e) {
+        void e
+      }
       try {
         setTimeout(emitInjectedSuccess, 3500)
-      } catch {}
-    } catch {
+      } catch (e) {
+        void e
+      }
+    } catch (e) {
+      void e
       // ignore in environments without window or storage
     }
   })
-
-  watch(
-    () => emojiStore.settings.gridColumns,
-    val => {
-      if (Number.isInteger(val)) {
-        localGridColumns.value = val as number
-      }
-    }
-  )
 
   return {
     // store + utils
@@ -537,6 +512,12 @@ export default function useOptions() {
     // other
     handleImageError,
     // expose low-level flushBuffer for template handlers that need to force flush
-    flushBuffer
+    flushBuffer,
+    // generic confirm modal
+    showConfirmGenericModal,
+    confirmGenericTitle,
+    confirmGenericMessage,
+    executeConfirmGenericAction,
+    cancelConfirmGenericAction
   } as const
 }

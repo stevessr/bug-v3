@@ -621,17 +621,21 @@ function showSettingsModal() {
   })
 
   content.querySelector('#resetSettings')?.addEventListener('click', () => {
-    if (confirm('确定要重置所有设置吗？')) {
-      userscriptState.settings = {
-        imageScale: 30,
-        gridColumns: 4,
-        outputFormat: 'markdown',
-        forceMobileMode: false,
-        defaultGroup: 'nachoneko',
-        showSearchBar: true
+    ;(async () => {
+      const { requestConfirmation } = await import('../utils/confirmService')
+      const ok = await requestConfirmation('重置设置', '确定要重置所有设置吗？')
+      if (ok) {
+        userscriptState.settings = {
+          imageScale: 30,
+          gridColumns: 4,
+          outputFormat: 'markdown',
+          forceMobileMode: false,
+          defaultGroup: 'nachoneko',
+          showSearchBar: true
+        }
+        modal.remove()
       }
-      modal.remove()
-    }
+    })()
   })
 
   content.querySelector('#saveSettings')?.addEventListener('click', () => {

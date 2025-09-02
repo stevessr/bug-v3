@@ -7,10 +7,7 @@ import { isImageUrl } from '../../utils/isImageUrl'
 
 const { show } = defineProps<{ show: boolean }>()
 
-const emits = defineEmits<{
-  (e: 'update:show', value: boolean): void
-  (e: 'created'): void
-}>()
+const emits = defineEmits(['update:show', 'created'])
 
 const name = ref('')
 const icon = ref('📁')
@@ -37,10 +34,15 @@ const close = () => {
   emits('update:show', false)
 }
 
+const selectColor = (color: string) => {
+  selectedColor.value = color
+}
+
 const create = () => {
   if (!name.value.trim()) return
   emojiStore.createGroup(name.value.trim(), icon.value || '📁')
-  void flushBuffer(true).then(() => console.log('[CreateGroupModal] created group flushed'))
+  // fire-and-forget flush; intentionally not awaited
+  void flushBuffer(true)
   name.value = ''
   icon.value = '📁'
   selectedColor.value = '#3B82F6'
@@ -93,7 +95,7 @@ const create = () => {
               class="w-8 h-8 rounded cursor-pointer border-2"
               :class="[selectedColor === color ? 'border-gray-900' : 'border-gray-300']"
               :style="{ backgroundColor: color }"
-              @click="selectedColor = color"
+              @click="selectColor(color)"
             ></div>
           </div>
         </div>

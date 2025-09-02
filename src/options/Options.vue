@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { onMounted, onBeforeUnmount } from 'vue'
+
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import AboutSection from '../components/AboutSection.vue'
+import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
 
 import HeaderControls from './components/HeaderControls.vue'
 import GlobalSettings from './components/GlobalSettings.vue'
@@ -10,6 +13,7 @@ import ImportEmojisModal from './modals/ImportEmojisModal.vue'
 import CreateGroupModal from './modals/CreateGroupModal.vue'
 import AddEmojiModal from './modals/AddEmojiModal.vue'
 import ConfirmDeleteModal from './modals/ConfirmDeleteModal.vue'
+import ConfirmGenericModal from './modals/ConfirmGenericModal.vue'
 import NotificationToasts from './components/NotificationToasts.vue'
 import GroupsTab from './components/GroupsTab.vue'
 import FavoritesTab from './components/FavoritesTab.vue'
@@ -21,6 +25,13 @@ import EditGroupModal from './modals/EditGroupModal.vue'
 import useOptions from './useOptions'
 
 const options = useOptions()
+
+// pending resolver for requestConfirmation -> modal bridge
+
+// resolver saved when requestConfirmation() is called; resolved by modal handlers
+// resolver saved when requestConfirmation() is called; resolved by modal handlers
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let pendingConfirmResolver: any = null
 
 // expose used components to template for linter
 const _modalComponents = {
@@ -49,6 +60,11 @@ const {
   showSuccessToast,
   showErrorToast,
   showConfirmDeleteModal,
+  showConfirmGenericModal,
+  confirmGenericTitle,
+  confirmGenericMessage,
+  executeConfirmGenericAction,
+  cancelConfirmGenericAction,
   successMessage,
   errorMessage,
   groupToDelete,
@@ -87,6 +103,69 @@ const {
   editingEmojiIndex,
   handleEmojiEdit
 } = options
+
+onMounted(() => {
+  setConfirmHandler((title?: string, message?: string) => {
+    return new Promise<boolean>(resolve => {
+      // save resolver so modal handlers can resolve when user acts
+      pendingConfirmResolver = resolve
+
+      confirmGenericTitle.value = title || ''
+      confirmGenericMessage.value = message || ''
+      showConfirmGenericModal.value = true
+    })
+  })
+})
+
+onBeforeUnmount(() => {
+  // clear any pending resolver and registered handler
+  pendingConfirmResolver = null
+  clearConfirmHandler()
+})
+
+// modal-level handlers: resolve pending promise if present; otherwise delegate to composable actions
+const onModalConfirm = () => {
+  // if someone awaited requestConfirmation, resolve it
+  if (pendingConfirmResolver) {
+    try {
+      pendingConfirmResolver(true)
+    } finally {
+      pendingConfirmResolver = null
+    }
+    // hide modal
+    showConfirmGenericModal.value = false
+    return
+  }
+
+  // otherwise, this modal is being used for composable actions (delete/reset)
+  executeConfirmGenericAction()
+}
+
+const onModalCancel = () => {
+  if (pendingConfirmResolver) {
+    try {
+      pendingConfirmResolver(false)
+    } finally {
+      pendingConfirmResolver = null
+    }
+    showConfirmGenericModal.value = false
+    return
+  }
+
+  cancelConfirmGenericAction()
+}
+
+// Extracted handler for EditGroupModal save to avoid inline template expression
+const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } | null) => {
+  if (payload && payload.id) {
+    emojiStore.updateGroup(payload.id, {
+      name: payload.name,
+      icon: payload.icon
+    })
+    void flushBuffer(true).then(() => {})
+    showSuccess('\u5206\u7ec4\u5df2\u66f4\u65b0')
+  }
+}
 </script>
 
 <template>
@@ -100,11 +179,11 @@ const {
             <p class="text-sm text-gray-600">管理表情包分组、自定义表情和扩展设置</p>
           </div>
           <HeaderControls
-            @open-import="showImportModal = true"
-            @open-import-emojis="showImportEmojiModal = true"
-            @reset-settings="resetSettings"
-            @sync-to-chrome="syncToChrome"
-            @export-configuration="exportConfiguration"
+            @openImport="showImportModal = true"
+            @openImportEmojis="showImportEmojiModal = true"
+            @resetSettings="resetSettings"
+            @syncToChrome="syncToChrome"
+            @exportConfiguration="exportConfiguration"
           />
         </div>
       </div>
@@ -137,10 +216,10 @@ const {
       <div v-if="activeTab === 'settings'" class="space-y-8">
         <GlobalSettings
           :settings="emojiStore.settings"
-          @update:imageScale="value => updateImageScale(value)"
-          @update:showSearchBar="value => updateShowSearchBar(value)"
-          @update:outputFormat="value => updateOutputFormat(value)"
-          @update:forceMobileMode="value => updateForceMobileMode(value)"
+          @update:imageScale="updateImageScale"
+          @update:showSearchBar="updateShowSearchBar"
+          @update:outputFormat="updateOutputFormat"
+          @update:forceMobileMode="updateForceMobileMode"
         >
           <template #grid-selector>
             <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
@@ -153,19 +232,19 @@ const {
         :expandedGroups="expandedGroups"
         :isImageUrl="isImageUrl"
         :activeTab="activeTab"
-        @open-create-group="showCreateGroupModal = true"
-        @group-dragstart="handleDragStart"
-        @group-drop="handleDrop"
-        @toggle-expand="toggleGroupExpansion"
-        @open-edit-group="openEditGroup"
-        @export-group="exportGroup"
-        @confirm-delete-group="confirmDeleteGroup"
-        @open-add-emoji="openAddEmojiModal"
-        @emoji-drag-start="handleEmojiDragStart"
-        @emoji-drop="handleEmojiDrop"
-        @remove-emoji="removeEmojiFromGroup"
-        @edit-emoji="openEditEmoji"
-        @image-error="handleImageError"
+        @openCreateGroup="showCreateGroupModal = true"
+        @groupDragStart="handleDragStart"
+        @groupDrop="handleDrop"
+        @toggleExpand="toggleGroupExpansion"
+        @openEditGroup="openEditGroup"
+        @exportGroup="exportGroup"
+        @confirmDeleteGroup="confirmDeleteGroup"
+        @openAddEmoji="openAddEmojiModal"
+        @emojiDragStart="handleEmojiDragStart"
+        @emojiDrop="handleEmojiDrop"
+        @removeEmoji="removeEmojiFromGroup"
+        @editEmoji="openEditEmoji"
+        @imageError="handleImageError"
       />
 
       <FavoritesTab
@@ -217,24 +296,8 @@ const {
       :initialName="editGroupName"
       :initialIcon="editGroupIcon"
       :isImageUrl="isImageUrl"
-      @save="
-        payload => {
-          if (payload && payload.id) {
-            emojiStore.updateGroup(payload.id, {
-              name: payload.name,
-              icon: payload.icon
-            })
-            void flushBuffer(true).then(() =>
-              console.log('[Options] saveEditGroup flushed to IndexedDB', {
-                id: payload.id,
-                name: payload.name
-              })
-            )
-            showSuccess('分组已更新')
-          }
-        }
-      "
-      @image-error="handleImageError"
+      @save="handleSaveGroup"
+      @imageError="handleImageError"
     />
 
     <!-- Import modals (components) -->
@@ -250,11 +313,11 @@ const {
 
     <EditEmojiModal
       v-model:show="showEditEmojiModal"
-      :emoji="editingEmoji"
+      :emoji="editingEmoji || undefined"
       :groupId="editingEmojiGroupId"
       :index="editingEmojiIndex"
       @save="handleEmojiEdit"
-      @image-error="handleImageError"
+      @imageError="handleImageError"
     />
 
     <NotificationToasts
@@ -262,6 +325,14 @@ const {
       :successMessage="successMessage"
       v-model:showError="showErrorToast"
       :errorMessage="errorMessage"
+    />
+
+    <ConfirmGenericModal
+      v-model:show="showConfirmGenericModal"
+      :title="confirmGenericTitle"
+      :message="confirmGenericMessage"
+      @confirm="onModalConfirm"
+      @cancel="onModalCancel"
     />
   </div>
 </template>

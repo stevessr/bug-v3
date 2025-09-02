@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-const props = defineProps<{
-  emojiStore: any
-}>()
 
-defineEmits<{
-  (e: 'remove', groupId: string, idx: number): void
-  (e: 'edit', emoji: any, groupId: string, idx: number): void
-}>()
+import { useEmojiStore } from '../../stores/emojiStore'
 
-const favoritesGroup = computed(() =>
-  props.emojiStore?.sortedGroups?.find((g: any) => g.id === 'favorites')
-)
+defineEmits(['remove', 'edit'])
+
+const emojiStore = useEmojiStore()
+
+const favoritesGroup = computed(() => {
+  return emojiStore.sortedGroups.find(g => g.id === 'favorites')
+})
 </script>
 
 <template>

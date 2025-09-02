@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref, watch, isRef } from 'vue'
-import { Slider as ASlider } from 'ant-design-vue'
+import { ref, watch, isRef, type Ref } from 'vue'
+import {
+  Slider as ASlider,
+  Dropdown as ADropdown,
+  Menu as AMenu,
+  Button as AButton
+} from 'ant-design-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 
-const props = defineProps<{ settings: any }>()
+import type { AppSettings } from '../../types/emoji'
+
+const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 // allow flexible typing (either a reactive ref or a plain object)
-const settings: any = props.settings
+const settings = props.settings as AppSettings | Ref<AppSettings>
 const emit = defineEmits([
   'update:imageScale',
   'update:showSearchBar',
@@ -15,9 +23,8 @@ const emit = defineEmits([
 // support both ref(settings) and plain settings object
 const getOutputFormat = () => {
   try {
-    if (isRef(settings))
-      return (settings.value && (settings.value as any).outputFormat) || 'markdown'
-    return (settings && (settings as any).outputFormat) || 'markdown'
+    if (isRef(settings)) return (settings.value && settings.value.outputFormat) || 'markdown'
+    return (settings && (settings as AppSettings).outputFormat) || 'markdown'
   } catch {
     return 'markdown'
   }
@@ -33,11 +40,13 @@ watch(
 )
 
 // local reactive copy for imageScale for smooth drag interaction
-const localImageScale = ref<number>(settings.imageScale || 30)
+const localImageScale = ref<number>(
+  (isRef(settings) ? settings.value.imageScale : (settings as AppSettings).imageScale) || 30
+)
 
 // Watch for external imageScale changes to keep local state in sync
 watch(
-  () => settings.imageScale,
+  () => (isRef(settings) ? settings.value.imageScale : (settings as AppSettings).imageScale),
   newValue => {
     if (newValue !== localImageScale.value) {
       localImageScale.value = newValue || 30
@@ -45,21 +54,32 @@ watch(
   }
 )
 
-const handleOutputFormatChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  if (target) {
-    // keep local state in sync and notify parent
-    localOutputFormat.value = target.value
-    emit('update:outputFormat', target.value)
-  }
+// removed unused handleOutputFormatChange (dropdown is used instead)
+
+const handleOutputFormatSelect = (key: string) => {
+  localOutputFormat.value = key
+  emit('update:outputFormat', key)
+}
+
+const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
+  handleOutputFormatSelect(String(info.key))
 }
 
 // Use Ant Design slider's afterChange to update settings when drag finishes.
-const handleImageScaleAfterChange = (value: number | number[]) => {
-  // value might be a number or [number, number] for range sliders; we expect a single number.
+const handleImageScaleChange = (value: number | number[]) => {
   const num = Array.isArray(value) ? value[0] : value
-  // emit numeric value asynchronously to avoid blocking caller
+  // emit immediately so UI updates take effect while dragging
   setTimeout(() => emit('update:imageScale', num), 0)
+}
+
+const handleShowSearchBarChange = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  emit('update:showSearchBar', target.checked)
+}
+
+const handleForceMobileModeChange = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  emit('update:forceMobileMode', target.checked)
 }
 </script>
 
@@ -82,7 +102,7 @@ const handleImageScaleAfterChange = (value: number | number[]) => {
             :max="150"
             :step="5"
             class="w-32"
-            @afterChange="handleImageScaleAfterChange"
+            @change="handleImageScaleChange"
           />
           <span class="text-sm text-gray-600 w-12">{{ localImageScale }}%</span>
         </div>
@@ -105,7 +125,7 @@ const handleImageScaleAfterChange = (value: number | number[]) => {
           <input
             type="checkbox"
             :checked="settings.showSearchBar"
-            @change="e => $emit('update:showSearchBar', (e.target as HTMLInputElement).checked)"
+            @change="handleShowSearchBarChange"
             class="sr-only peer"
           />
           <div
@@ -119,14 +139,18 @@ const handleImageScaleAfterChange = (value: number | number[]) => {
           <label class="text-sm font-medium text-gray-900">输出格式</label>
           <p class="text-sm text-gray-500">插入表情时使用的格式</p>
         </div>
-        <select
-          v-model="localOutputFormat"
-          @change="handleOutputFormatChange"
-          class="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="markdown">Markdown 格式</option>
-          <option value="html">HTML 格式</option>
-        </select>
+        <ADropdown>
+          <template #overlay>
+            <AMenu @click="handleOutputFormatSelectInfo">
+              <AMenu.Item key="markdown">Markdown 格式</AMenu.Item>
+              <AMenu.Item key="html">HTML 格式</AMenu.Item>
+            </AMenu>
+          </template>
+          <AButton>
+            {{ localOutputFormat === 'markdown' ? 'Markdown 格式' : 'HTML 格式' }}
+            <DownOutlined />
+          </AButton>
+        </ADropdown>
       </div>
 
       <div class="flex items-center justify-between">
@@ -138,7 +162,7 @@ const handleImageScaleAfterChange = (value: number | number[]) => {
           <input
             type="checkbox"
             :checked="settings.forceMobileMode"
-            @change="e => $emit('update:forceMobileMode', (e.target as HTMLInputElement).checked)"
+            @change="handleForceMobileModeChange"
             class="sr-only peer"
           />
           <div
