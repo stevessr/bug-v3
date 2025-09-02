@@ -254,6 +254,14 @@ export default [
     }
   },
 
+  // Ignore prettier checks on generated/third-party JSON config used at runtime
+  {
+    files: ['src/config/default.json'],
+    rules: {
+      'prettier/prettier': 'off'
+    }
+  },
+
   // Temporarily allow console in backend, userscript and utility code to reduce noise
   // Note: we no longer globally allow console; instead prefer migrating to logger
 

@@ -1,4 +1,4 @@
-import { logger } from '@/config/buildFlags'
+import { logger } from './buildFlags'
 
 // oneClickAdd.ts - 一键添加表情功能（支持 Magnific Popup 和 cooked 内容区域）
 declare const chrome: any

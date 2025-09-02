@@ -13,10 +13,17 @@ const emit = defineEmits([
   'emojiDrop',
   'removeEmoji',
   'imageError',
-  'editEmoji'
+  'editEmoji',
+  'changeTab',
+  'update:activeTab'
 ])
 // props: only expandedGroups / isImageUrl / activeTab are expected from parent
 import { computed, ref, onMounted, onUnmounted, type PropType } from 'vue'
+
+function setTab(tab: string) {
+  emit('changeTab', tab)
+  emit('update:activeTab', tab)
+}
 
 const { expandedGroups, activeTab, isImageUrl } = defineProps({
   expandedGroups: { type: Object as PropType<Set<string>>, required: true },
@@ -26,6 +33,8 @@ const { expandedGroups, activeTab, isImageUrl } = defineProps({
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { TouchDragHandler } from '../../utils/touchDragDrop'
+
+import GroupsCardView from './GroupsCardView.vue'
 
 // computed list that excludes the favorites group so it doesn't appear in group management
 const emojiStore = useEmojiStore()
@@ -144,148 +153,172 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
 </script>
 
 <template>
-  <div v-if="activeTab === 'groups'" class="space-y-8">
-    <div class="bg-white rounded-lg shadow-sm border">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex justify-between items-center">
-          <h2 class="text-lg font-semibold text-gray-900">表情分组管理</h2>
-          <button
-            @click="$emit('openCreateGroup')"
-            class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            新建分组
-          </button>
-        </div>
-      </div>
-
-      <div class="p-6">
-        <div class="space-y-4">
-          <div
-            v-for="group in displayGroups"
-            :key="group.id"
-            class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
-            :draggable="group.id !== 'favorites'"
-            @dragstart="$emit('groupDragStart', group, $event)"
-            @dragover.prevent
-            @drop="$emit('groupDrop', group, $event)"
-            :ref="el => el && addGroupTouchEvents(el as HTMLElement, group)"
-          >
-            <div class="flex items-center justify-between p-4" v-if="group.name != '未分组'">
-              <div class="flex items-center gap-3" data-group-move>
-                <div v-if="group.id !== 'favorites'" class="cursor-move text-gray-400">⋮⋮</div>
-                <div v-else class="w-6 text-yellow-500">⭐</div>
-                <div class="text-lg">
-                  <template v-if="isImageUrl && isImageUrl(group.icon)">
-                    <img
-                      :src="group.icon"
-                      alt="group icon"
-                      class="w-6 h-6 object-contain rounded"
-                      @error="$emit('imageError', $event)"
-                    />
-                  </template>
-                  <template v-else>
-                    {{ group.icon }}
-                  </template>
-                </div>
-                <div>
-                  <h3 class="font-medium text-gray-900">
-                    {{ group.name }}
-                  </h3>
-                  <p class="text-sm text-gray-500">{{ group.emojis?.length || 0 }} 个表情</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
+  <div>
+    <div v-if="activeTab === 'groups'" class="space-y-8">
+      <div class="bg-white rounded-lg shadow-sm border">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <h2 class="text-lg font-semibold text-gray-900">表情分组管理</h2>
+              <div class="ml-4 inline-flex rounded-md bg-gray-50 p-1">
                 <button
-                  @click="$emit('toggleExpand', group.id)"
-                  class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                  class="px-3 py-1 text-sm rounded"
+                  @click="setTab('groups')"
+                  :class="{ 'bg-white shadow': (activeTab as any) === 'groups' }"
                 >
-                  {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
+                  列表
                 </button>
                 <button
-                  v-if="group.id !== 'favorites'"
-                  @click="$emit('openEditGroup', group)"
-                  class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  class="px-3 py-1 text-sm rounded"
+                  @click="setTab('groups-card')"
+                  :class="{ 'bg-white shadow': (activeTab as any) === 'groups-card' }"
                 >
-                  编辑
-                </button>
-                <button
-                  @click="$emit('exportGroup', group)"
-                  class="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                >
-                  导出
-                </button>
-                <button
-                  v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
-                  @click="$emit('confirmDeleteGroup', group)"
-                  class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
-                >
-                  删除
+                  卡片
                 </button>
               </div>
             </div>
+            <button
+              @click="$emit('openCreateGroup')"
+              class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              新建分组
+            </button>
+          </div>
+        </div>
 
-            <!-- Expanded emoji display -->
-            <div v-if="expandedGroups.has(group.id)" class="px-4 pb-4 border-t border-gray-100">
-              <div class="mt-4">
-                <div
-                  class="grid gap-3"
-                  :style="{
-                    gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
-                  }"
-                >
-                  <div
-                    v-for="(emoji, index) in group.emojis"
-                    :key="`${group.id}-${index}`"
-                    class="emoji-item relative group cursor-move"
-                    :draggable="true"
-                    @dragstart="$emit('emojiDragStart', emoji, group.id, index, $event)"
-                    @dragover.prevent
-                    @drop="$emit('emojiDrop', group.id, index, $event)"
-                    :ref="
-                      el => el && addEmojiTouchEvents(el as HTMLElement, emoji, group.id, index)
-                    "
-                  >
-                    <div
-                      class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors"
-                    >
-                      <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" />
-                    </div>
-                    <div class="text-xs text-center text-gray-600 mt-1 truncate">
-                      {{ emoji.name }}
-                    </div>
-                    <!-- Edit button in bottom right corner -->
-                    <button
-                      @click="$emit('editEmoji', emoji, group.id, index)"
-                      class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                      title="编辑表情"
-                    >
-                      ✎
-                    </button>
-                    <!-- Remove button in top right corner -->
-                    <button
-                      @click="$emit('removeEmoji', group.id, index)"
-                      class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      ×
-                    </button>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div
+              v-for="group in displayGroups"
+              :key="group.id"
+              class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+              :draggable="group.id !== 'favorites'"
+              @dragstart="$emit('groupDragStart', group, $event)"
+              @dragover.prevent
+              @drop="$emit('groupDrop', group, $event)"
+              :ref="el => el && addGroupTouchEvents(el as HTMLElement, group)"
+            >
+              <div class="flex items-center justify-between p-4" v-if="group.name != '未分组'">
+                <div class="flex items-center gap-3" data-group-move>
+                  <div v-if="group.id !== 'favorites'" class="cursor-move text-gray-400">⋮⋮</div>
+                  <div v-else class="w-6 text-yellow-500">⭐</div>
+                  <div class="text-lg">
+                    <template v-if="isImageUrl && isImageUrl(group.icon)">
+                      <img
+                        :src="group.icon"
+                        alt="group icon"
+                        class="w-6 h-6 object-contain rounded"
+                        @error="$emit('imageError', $event)"
+                      />
+                    </template>
+                    <template v-else>
+                      {{ group.icon }}
+                    </template>
+                  </div>
+                  <div>
+                    <h3 class="font-medium text-gray-900">
+                      {{ group.name }}
+                    </h3>
+                    <p class="text-sm text-gray-500">{{ group.emojis?.length || 0 }} 个表情</p>
                   </div>
                 </div>
-
-                <!-- Add emoji button (hidden for favorites group) -->
-                <div v-if="group.id !== 'favorites'" class="mt-4">
+                <div class="flex items-center gap-2">
                   <button
-                    @click="$emit('openAddEmoji', group.id)"
-                    class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full"
+                    @click="$emit('toggleExpand', group.id)"
+                    class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
                   >
-                    + 添加表情
+                    {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
+                  </button>
+                  <button
+                    v-if="group.id !== 'favorites'"
+                    @click="$emit('openEditGroup', group)"
+                    class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  >
+                    编辑
+                  </button>
+                  <button
+                    @click="$emit('exportGroup', group)"
+                    class="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                  >
+                    导出
+                  </button>
+                  <button
+                    v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
+                    @click="$emit('confirmDeleteGroup', group)"
+                    class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                  >
+                    删除
                   </button>
                 </div>
-                <!-- For favorites group, show info instead -->
-                <div v-if="group.id === 'favorites'" class="mt-4">
+              </div>
+
+              <!-- Expanded emoji display -->
+              <div v-if="expandedGroups.has(group.id)" class="px-4 pb-4 border-t border-gray-100">
+                <div class="mt-4">
                   <div
-                    class="px-3 py-2 text-sm text-gray-500 text-center border border-gray-200 rounded-lg bg-gray-50"
+                    class="grid gap-3"
+                    :style="{
+                      gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
+                    }"
                   >
-                    使用表情会自动添加到常用分组
+                    <div
+                      v-for="(emoji, index) in group.emojis"
+                      :key="`${group.id}-${index}`"
+                      class="emoji-item relative group cursor-move"
+                      :draggable="true"
+                      @dragstart="$emit('emojiDragStart', emoji, group.id, index, $event)"
+                      @dragover.prevent
+                      @drop="$emit('emojiDrop', group.id, index, $event)"
+                      :ref="
+                        el => el && addEmojiTouchEvents(el as HTMLElement, emoji, group.id, index)
+                      "
+                    >
+                      <div
+                        class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors"
+                      >
+                        <img
+                          :src="emoji.url"
+                          :alt="emoji.name"
+                          class="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div class="text-xs text-center text-gray-600 mt-1 truncate">
+                        {{ emoji.name }}
+                      </div>
+                      <!-- Edit button in bottom right corner -->
+                      <button
+                        @click="$emit('editEmoji', emoji, group.id, index)"
+                        class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        title="编辑表情"
+                      >
+                        ✎
+                      </button>
+                      <!-- Remove button in top right corner -->
+                      <button
+                        @click="$emit('removeEmoji', group.id, index)"
+                        class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Add emoji button (hidden for favorites group) -->
+                  <div v-if="group.id !== 'favorites'" class="mt-4">
+                    <button
+                      @click="$emit('openAddEmoji', group.id)"
+                      class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full"
+                    >
+                      + 添加表情
+                    </button>
+                  </div>
+                  <!-- For favorites group, show info instead -->
+                  <div v-if="group.id === 'favorites'" class="mt-4">
+                    <div
+                      class="px-3 py-2 text-sm text-gray-500 text-center border border-gray-200 rounded-lg bg-gray-50"
+                    >
+                      使用表情会自动添加到常用分组
+                    </div>
                   </div>
                 </div>
               </div>
@@ -293,6 +326,22 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Card view for groups (moved to separate component) -->
+    <div v-else-if="activeTab === 'groups-card'">
+      <GroupsCardView
+        :displayGroups="displayGroups"
+        :isImageUrl="isImageUrl"
+        :expandedGroups="expandedGroups"
+        :touchRefFn="addGroupTouchEvents"
+        @groupDragStart="(...args) => $emit('groupDragStart', ...args)"
+        @groupDrop="(...args) => $emit('groupDrop', ...args)"
+        @toggleExpand="(...args) => $emit('toggleExpand', ...args)"
+        @openEditGroup="(...args) => $emit('openEditGroup', ...args)"
+        @exportGroup="(...args) => $emit('exportGroup', ...args)"
+        @imageError="(...args) => $emit('imageError', ...args)"
+      />
     </div>
   </div>
 </template>
