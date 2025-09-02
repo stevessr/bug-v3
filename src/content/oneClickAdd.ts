@@ -1,3 +1,5 @@
+import { logger } from '@/config/buildFlags'
+
 // oneClickAdd.ts - 一键添加表情功能（支持 Magnific Popup 和 cooked 内容区域）
 declare const chrome: any
 
@@ -62,7 +64,7 @@ function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) 
         button.style.cssText = originalStyle
       }, 2000)
     } catch (error) {
-      console.error('[OneClickAdd] 添加表情失败:', error)
+      logger.error('[OneClickAdd] 添加表情失败:', error)
 
       // 显示失败提示
       button.innerHTML = `
@@ -467,7 +469,7 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
           })
           successCount++
         } catch (error) {
-          console.error('[OneClickAdd] 添加表情失败:', emojiData.name, error)
+          logger.error('[OneClickAdd] 添加表情失败:', emojiData.name, error)
           failCount++
         }
       }
@@ -489,7 +491,7 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
         button.disabled = false
       }, 3000)
     } catch (error) {
-      console.error('[OneClickAdd] 批量解析失败:', error)
+      logger.error('[OneClickAdd] 批量解析失败:', error)
 
       // 显示失败状态
       button.innerHTML = `
@@ -595,7 +597,7 @@ function observeCookedContent() {
  * 初始化一键添加功能。
  */
 export function initOneClickAdd() {
-  console.log('[OneClickAdd] 初始化一键添加表情功能（支持 Magnific Popup 和 cooked 内容）')
+  logger.log('[OneClickAdd] 初始化一键添加表情功能（支持 Magnific Popup 和 cooked 内容）')
 
   // 注入CSS动画
   injectCSSAnimation()

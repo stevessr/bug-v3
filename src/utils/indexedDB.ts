@@ -31,11 +31,14 @@ function logDB(operation: string, store: string, key?: string, data?: any, error
         return { preview: s.slice(0, 500) + '... (truncated)', size }
       }
       return { preview: JSON.parse(s), size }
-    } catch (e) {
+    } catch (_e) {
+      // mark as referenced for linters
+      void _e
       try {
         // Fallback to toString
         return { preview: String(d) }
-      } catch {
+      } catch (_err) {
+        void _err
         return { preview: '[unserializable data]' }
       }
     }
@@ -87,7 +90,9 @@ function logDB(operation: string, store: string, key?: string, data?: any, error
 let dbInstance: IDBDatabase | null = null
 
 // --- In-memory buffer between app and IndexedDB ---
+
 const bufferState = {
+  // intentionally allow `any` here to avoid wide typing changes during refactor
   groups: new Map<string, any>(),
   settings: undefined as any,
   favorites: undefined as string[] | undefined,
@@ -113,12 +118,14 @@ if (typeof window !== 'undefined' && window.addEventListener) {
       try {
         // synchronous attempt: schedule a forced flush (best-effort)
         void flushBuffer(true)
-      } catch {
+      } catch (_e) {
         // swallow errors during unload
+        void _e
       }
     })
-  } catch {
+  } catch (_e) {
     // ignore environments where addEventListener may not be available
+    void _e
   }
 }
 
@@ -155,7 +162,9 @@ async function flushBuffer(force = false) {
             )
             try {
               saveFallbackToLocal(String(id), value, 'invalid key')
-            } catch {}
+            } catch (e) {
+              void e
+            }
             continue
           }
 
@@ -178,8 +187,8 @@ async function flushBuffer(force = false) {
             // Attempt to persist the failed item to a local fallback store to avoid data loss
             const fallback = cleanDataForStorage(value)
             saveFallbackToLocal(id, fallback, e)
-          } catch {
-            // ignore fallback failures
+          } catch (e) {
+            void e
           }
         }
       }
@@ -211,6 +220,7 @@ async function flushBuffer(force = false) {
         }
       } catch (e) {
         logDB('FLUSH_CLEANUP_FAILED', STORES.GROUPS, undefined, undefined, e)
+        void e
       }
 
       bufferState.dirty.groups = false
@@ -281,11 +291,14 @@ async function getDB(): Promise<IDBDatabase> {
           logDB('VERSION_CHANGE', 'database')
           try {
             dbInstance?.close()
-          } catch {}
+          } catch (e) {
+            void e
+          }
           dbInstance = null
         }
-      } catch {
+      } catch (e) {
         // non-fatal if handler cannot be attached
+        void e
       }
 
       logDB('OPEN', 'database', undefined, 'success')

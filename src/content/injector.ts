@@ -2,6 +2,8 @@ import { createEmojiPicker } from './picker'
 import { cachedState } from './state'
 import { showImageUploadDialog } from './uploader'
 
+import { logger } from '@/config/buildFlags'
+
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [
   '.d-editor-button-bar[role="toolbar"]', // Standard editor toolbar
@@ -280,6 +282,6 @@ export function injectButton(toolbar: Element) {
       toolbar.appendChild(emojiButton)
     }
   } catch (e) {
-    console.error('[Emoji Extension] Failed to inject buttons (module):', e)
+    logger.error('[Emoji Extension] Failed to inject buttons (module):', e)
   }
 }

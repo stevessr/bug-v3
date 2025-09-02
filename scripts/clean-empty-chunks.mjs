@@ -26,8 +26,9 @@ function removeEmptyFiles(dir) {
         )
         removed++
       }
-    } catch (e) {
+    } catch (_e) {
       // ignore
+      void _e
     }
   }
   return removed

@@ -291,6 +291,8 @@
         document.body.appendChild(emojiPicker)
 
         const buttonRect = emojiButton.getBoundingClientRect()
+        // mark intentionally-unused to satisfy linters in the repository
+        void buttonRect
         if (isMobileDevice()) {
           const replyRect = document.querySelector('#reply-control').getBoundingClientRect()
           emojiPicker.style.position = 'fixed'

@@ -7,6 +7,7 @@ import GenerateButton from './GenerateButton.vue'
 import ResultDisplay from './ResultDisplay.vue'
 
 import { useImageGenerator } from '@/composables/useImageGenerator'
+import { logger } from '@/config/buildFlags'
 
 // Use the composable
 const {
@@ -27,7 +28,7 @@ const {
 
 // Event handlers
 const onProviderChanged = (provider: string) => {
-  console.log('Provider changed to:', provider)
+  logger.log('Provider changed to:', provider)
   // Reset edit mode if new provider doesn't support it
   if (generationMode.value === 'edit' && !providerManager.supportsImageEditing()) {
     generationMode.value = 'generate'
@@ -35,15 +36,15 @@ const onProviderChanged = (provider: string) => {
 }
 
 const onApiKeyChanged = (_key: string) => {
-  console.log('API key changed')
+  logger.log('API key changed')
 }
 
 const onModelChanged = (model: string) => {
-  console.log('Model changed to:', model)
+  logger.log('Model changed to:', model)
 }
 
 const onModeChanged = (mode: 'generate' | 'edit') => {
-  console.log('Mode changed to:', mode)
+  logger.log('Mode changed to:', mode)
   // Clear uploaded image when switching to generate mode
   if (mode === 'generate') {
     uploadedImage.value = undefined
@@ -51,15 +52,15 @@ const onModeChanged = (mode: 'generate' | 'edit') => {
 }
 
 const onImageChanged = (image: string | undefined) => {
-  console.log('Image changed:', !!image)
+  logger.log('Image changed:', !!image)
 }
 
 const onPromptChanged = (_newPrompt: string) => {
-  console.log('Prompt changed')
+  logger.log('Prompt changed')
 }
 
 const onConfigChanged = (config: typeof generationConfig.value) => {
-  console.log('Config changed:', config)
+  logger.log('Config changed:', config)
 }
 
 const onGenerate = async () => {

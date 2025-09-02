@@ -1,4 +1,5 @@
 import { newStorageHelpers } from '../utils/newStorage'
+import { logger } from '../config/buildFlags'
 
 import { getChromeAPI } from './utils'
 
@@ -6,7 +7,9 @@ export function setupMessageListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onMessage) {
     chromeAPI.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
-      console.log('Background received message:', message)
+      logger.log('Background received message:', message)
+      // mark unused sender as intentionally unused
+      void _sender
 
       switch (message.type) {
         case 'GET_EMOJI_DATA':
@@ -22,7 +25,9 @@ export function setupMessageListener() {
           return true
 
         default:
-          console.log('Unknown message type:', message.type)
+          logger.log('Unknown message type:', message.type)
+          // mark message.type as referenced for linters
+          void message.type
           sendResponse({ success: false, error: 'Unknown message type' })
       }
 
@@ -37,7 +42,9 @@ export function setupMessageListener() {
             return true
 
           default:
-            console.log('Unknown action:', message.action)
+            logger.log('Unknown action:', message.action)
+            // mark message.action as referenced for linters
+            void message.action
             sendResponse({ success: false, error: 'Unknown action' })
         }
       }
@@ -45,7 +52,9 @@ export function setupMessageListener() {
   }
 }
 
-export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: (response: any) => void) {
+export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
+  // reference the callback to avoid unused-var lint in some configurations
+  void sendResponse
   try {
     // 获取所有表情组
     const groups = await newStorageHelpers.getAllEmojiGroups()
@@ -86,27 +95,29 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: (respo
     // 保存到存储
     await newStorageHelpers.setAllEmojiGroups(groups)
 
-    console.log('[Background] 成功添加表情到未分组:', newEmoji.name)
+    logger.log('[Background] 成功添加表情到未分组:', newEmoji.name)
     sendResponse({ success: true, message: '表情已添加到未分组' })
   } catch (error) {
-    console.error('[Background] 添加表情失败:', error)
+    logger.error('[Background] 添加表情失败:', error)
     sendResponse({ success: false, error: error instanceof Error ? error.message : '添加失败' })
   }
 }
 
-export async function handleAddToFavorites(emoji: any, sendResponse: (response: any) => void) {
+export async function handleAddToFavorites(emoji: any, sendResponse: any) {
+  // mark callback as referenced to avoid unused-var lint
+  void sendResponse
   try {
     // Use the unified newStorageHelpers to read/update groups for consistency
     const groups = await newStorageHelpers.getAllEmojiGroups()
     const favoritesGroup = groups.find((g: any) => g.id === 'favorites')
     if (!favoritesGroup) {
-      console.warn('Favorites group not found - creating one')
+      logger.warn('Favorites group not found - creating one')
       const newFavorites = { id: 'favorites', name: 'Favorites', icon: '⭐', order: 0, emojis: [] }
       groups.unshift(newFavorites)
     }
 
     const finalGroups = groups
-    const favGroup = finalGroups.find((g: any) => g.id === 'favorites')!
+    const favGroup = finalGroups.find((g: any) => g.id === 'favorites') as any
 
     const now = Date.now()
     const existingEmojiIndex = favGroup.emojis.findIndex((e: any) => e.url === emoji.url)
@@ -151,14 +162,15 @@ export async function handleAddToFavorites(emoji: any, sendResponse: (response: 
             else resolve()
           })
         })
-      } catch (e) {
-        // ignore
+      } catch (_e) {
+        // ignored intentionally
+        void _e
       }
     }
 
     sendResponse({ success: true, message: 'Added to favorites' })
   } catch (error) {
-    console.error('Failed to add emoji to favorites:', error)
+    logger.error('Failed to add emoji to favorites:', error)
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -166,10 +178,13 @@ export async function handleAddToFavorites(emoji: any, sendResponse: (response: 
   }
 }
 
-export async function handleGetEmojiData(sendResponse: (response: any) => void) {
+export async function handleGetEmojiData(_sendResponse: (_resp: any) => void) {
+  // mark callback as referenced
+  void _sendResponse
+  // no additional args expected here
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.storage) {
-    sendResponse({ success: false, error: 'Chrome storage API not available' })
+    _sendResponse({ success: false, error: 'Chrome storage API not available' })
     return
   }
 
@@ -188,7 +203,7 @@ export async function handleGetEmojiData(sendResponse: (response: any) => void) 
       }
     }
 
-    sendResponse({
+    _sendResponse({
       success: true,
       data: {
         groups: data.emojiGroups || [],
@@ -197,31 +212,43 @@ export async function handleGetEmojiData(sendResponse: (response: any) => void) 
       }
     })
   } catch (error: any) {
-    console.error('Failed to get emoji data:', error)
-    sendResponse({ success: false, error: error.message })
+    logger.error('Failed to get emoji data:', error)
+    _sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 }
 
-export async function handleSaveEmojiData(data: any, sendResponse: (response: any) => void) {
+export async function handleSaveEmojiData(data: any, _sendResponse: (_resp: any) => void) {
+  // mark callback as referenced
+  void _sendResponse
+  // no additional args expected here
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.storage) {
-    sendResponse({ success: false, error: 'Chrome storage API not available' })
+    _sendResponse({ success: false, error: 'Chrome storage API not available' })
     return
   }
 
   try {
     await chromeAPI.storage.local.set(data)
-    sendResponse({ success: true })
+    _sendResponse({ success: true })
   } catch (error: any) {
-    console.error('Failed to save emoji data:', error)
-    sendResponse({ success: false, error: error.message })
+    logger.error('Failed to save emoji data:', error)
+    _sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 }
 
-export async function handleSyncSettings(settings: any, sendResponse: (response: any) => void) {
+export async function handleSyncSettings(settings: any, _sendResponse: (_resp: any) => void) {
+  // mark callback as referenced
+  void _sendResponse
+  // no additional args expected here
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.storage || !chromeAPI.tabs) {
-    sendResponse({ success: false, error: 'Chrome API not available' })
+    _sendResponse({ success: false, error: 'Chrome API not available' })
     return
   }
 
@@ -249,10 +276,13 @@ export async function handleSyncSettings(settings: any, sendResponse: (response:
       }
     }
 
-    sendResponse({ success: true })
+    _sendResponse({ success: true })
   } catch (error: any) {
-    console.error('Failed to sync settings:', error)
-    sendResponse({ success: false, error: error.message })
+    logger.error('Failed to sync settings:', error)
+    _sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 }
 
@@ -260,7 +290,7 @@ export function setupStorageChangeListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.storage && chromeAPI.storage.onChanged) {
     chromeAPI.storage.onChanged.addListener((changes: any, namespace: any) => {
-      console.log('Storage changed:', changes, namespace)
+      logger.log('Storage changed:', changes, namespace)
       // Placeholder for cloud sync or other reactions
     })
   }
@@ -352,10 +382,10 @@ export function setupPeriodicCleanup() {
       try {
         const data = await chromeAPI.storage.local.get(['emojiGroups'])
         if (data.emojiGroups) {
-          console.log('Storage cleanup check completed')
+          logger.log('Storage cleanup check completed')
         }
       } catch (error) {
-        console.error('Storage cleanup error:', error)
+        logger.error('Storage cleanup error:', error)
       }
     },
     24 * 60 * 60 * 1000

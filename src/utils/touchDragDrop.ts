@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 // Touch drag and drop utility for mobile devices
 export interface TouchDragState {
   isDragging: boolean
@@ -168,7 +167,6 @@ export class TouchDragHandler {
       previews.forEach(p => {
         if (p.parentElement) p.parentElement.removeChild(p)
       })
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       // ignore DOM errors
     }

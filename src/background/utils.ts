@@ -1,9 +1,11 @@
 // Utilities for background scripts
+import { logger } from '../config/buildFlags'
+
 export const getChromeAPI = () => {
   try {
     return (globalThis as any).chrome || (self as any).chrome
   } catch (e) {
-    console.error('Chrome API not available:', e)
+    logger.error('Chrome API not available:', e)
     return null
   }
 }

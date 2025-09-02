@@ -22,7 +22,7 @@ function insertIntoEditor(text: string) {
   const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
   if (!textArea && !richEle) {
-    console.error('找不到输入框')
+    logger.error('找不到输入框')
     return
   }
 

@@ -1,4 +1,4 @@
-/* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
+/* eslint-disable no-alert */
 let handler: any = null
 
 export function setConfirmHandler(h: any) {

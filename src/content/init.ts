@@ -37,8 +37,9 @@ function setupReplyButtonListeners() {
     const isReplyButton = replyButtonSelectors.some(selector => {
       try {
         return target.matches(selector) || target.closest(selector)
-      } catch (e) {
+      } catch (_e) {
         // Handle invalid selector gracefully
+        void _e
         return false
       }
     })
@@ -72,7 +73,8 @@ function setupReplyButtonListeners() {
           const hasReplyButtons = replyButtonSelectors.some(selector => {
             try {
               return element.matches(selector) || element.querySelector(selector)
-            } catch (e) {
+            } catch (_e) {
+              void _e
               return false
             }
           })
@@ -174,8 +176,8 @@ export async function initializeEmojiFeature(
 
   // storage change listener (using chrome.storage.onChanged if available)
   if ((window as any).chrome?.storage?.onChanged) {
-    ;(window as any).chrome.storage.onChanged.addListener((changes: any, namespace: string) => {
-      if (namespace === 'local') {
+    ;(window as any).chrome.storage.onChanged.addListener((changes: any, _namespace: string) => {
+      if (_namespace === 'local') {
         const relevantKeys = ['emojiGroups', 'emojiGroupIndex', 'appSettings']
         const hasRelevant = Object.keys(changes).some(
           k => relevantKeys.includes(k) || k.startsWith('emojiGroup_')
@@ -192,6 +194,9 @@ export async function initializeEmojiFeature(
   if ((window as any).chrome?.runtime?.onMessage) {
     ;(window as any).chrome.runtime.onMessage.addListener(
       (message: any, _sender: any, _sendResponse: any) => {
+        // mark intentionally-unused params
+        void _sender
+        void _sendResponse
         if (message.type === 'SETTINGS_UPDATED') {
           logger.log('[Emoji Extension] Settings updated from background, reloading data')
           loadDataFromStorage()
