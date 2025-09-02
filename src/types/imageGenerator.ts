@@ -1,50 +1,17 @@
+// Minimal, single source of types for image generator
 export interface GenerateRequest {
   prompt: string
   aspectRatio: string
   numberOfImages: number
   style?: string
-  inputImage?: string // Base64 encoded image for editing
-  editMode?: boolean // Whether this is an edit operation
+  inputImage?: string // Base64 or URL
+  editMode?: boolean
 }
 
-export interface GeminiGenerateResponse {
-  candidates: Array<{
-    images: Array<{
-      uri: string
-    }>
-  }>
-}
-
-export interface SiliconFlowGenerateResponse {
-  data: Array<{
-    url: string
-  }>
-}
-
-export interface CloudflareGenerateResponse {
-  result?: {
-    image?: string // Base64 encoded image
-  }
-  success: boolean
-  errors?: Array<{
-    message: string
-  }>
-}
-
-export interface ChutesAIGenerateResponse {
-  success: boolean
-  data?: {
-    url: string
-  }
-  error?: string
-}
-
-export interface ImageProvider {
+export interface ModelConfig {
+  id: string
   name: string
-  displayName: string
-  generateImages(request: GenerateRequest): Promise<string[]>
-  setApiKey(key: string): void
-  loadApiKey(): string
+  description?: string
 }
 
 export interface ProviderConfig {
@@ -58,10 +25,17 @@ export interface ProviderConfig {
   models?: ModelConfig[]
 }
 
-export interface ModelConfig {
-  id: string
+export interface ImageProvider {
   name: string
-  description?: string
+  displayName?: string
+  generateImages(request: GenerateRequest): Promise<string[]>
+  setApiKey(key: string): void
+  loadApiKey(): string
+  downloadImage?(url: string, filename: string): Promise<void>
+  copyToClipboard?(url: string): Promise<void>
+  setModel?(model: string): void
+  loadSelectedModel?(): void
+  selectedModel?: string
 }
 
 export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
@@ -88,14 +62,8 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     helpLink: 'https://dash.cloudflare.com/profile/api-tokens',
     supportsModels: true,
     models: [
-      {
-        id: '@cf/black-forest-labs/flux-1-schnell',
-        name: 'Flux 1 Schnell (快速)'
-      },
-      {
-        id: '@cf/bytedance/stable-diffusion-xl-lightning',
-        name: 'Stable Diffusion XL Lightning'
-      }
+      { id: '@cf/black-forest-labs/flux-1-schnell', name: 'Flux 1 Schnell (快速)' },
+      { id: '@cf/bytedance/stable-diffusion-xl-lightning', name: 'Stable Diffusion XL Lightning' }
     ]
   },
   chutesai: {
@@ -106,18 +74,9 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     helpLink: 'https://chutes.ai',
     supportsModels: true,
     models: [
-      {
-        id: 'neta-lumina',
-        name: 'Neta Lumina'
-      },
-      {
-        id: 'chroma',
-        name: 'Chroma'
-      },
-      {
-        id: 'JuggernautXL',
-        name: 'JuggernautXL'
-      }
+      { id: 'neta-lumina', name: 'Neta Lumina' },
+      { id: 'chroma', name: 'Chroma' },
+      { id: 'JuggernautXL', name: 'JuggernautXL' }
     ]
   }
 }

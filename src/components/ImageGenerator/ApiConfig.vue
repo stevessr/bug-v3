@@ -59,7 +59,9 @@ const onProviderChange = () => {
 
 const onApiKeyChange = () => {
   const provider = props.providerManager.getCurrentProvider()
-  provider.setApiKey(apiKey.value)
+  if (provider && typeof provider.setApiKey === 'function') {
+    provider.setApiKey(apiKey.value)
+  }
   emit('apiKeyChanged', apiKey.value)
 }
 
@@ -70,7 +72,7 @@ const onModelChange = () => {
 
 const loadApiKey = () => {
   const provider = props.providerManager.getCurrentProvider()
-  apiKey.value = provider.loadApiKey()
+  apiKey.value = typeof provider.loadApiKey === 'function' ? provider.loadApiKey() : ''
 }
 
 const loadModel = () => {

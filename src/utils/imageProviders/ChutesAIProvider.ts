@@ -1,12 +1,12 @@
 import { BaseProvider } from './BaseProvider'
 
-import type { GenerateRequest, ChutesAIGenerateResponse } from '@/types/imageGenerator'
+import type { GenerateRequest } from '@/types/imageGenerator'
 
 export class ChutesAIProvider extends BaseProvider {
   name = 'chutesai'
   displayName = 'Chutes AI'
   private apiEndpoint = 'https://image.chutes.ai/generate'
-  private selectedModel: string = 'neta-lumina'
+  selectedModel: string = 'neta-lumina'
 
   setModel(model: string): void {
     this.selectedModel = model
@@ -100,7 +100,7 @@ export class ChutesAIProvider extends BaseProvider {
           throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
         }
 
-        const data: ChutesAIGenerateResponse = await response.json()
+        const data: any = await response.json()
 
         if (!data.success || !data.data?.url) {
           throw new Error(data.error || '没有生成任何图片，请尝试修改您的描述')
@@ -110,8 +110,8 @@ export class ChutesAIProvider extends BaseProvider {
       }
 
       return imageUrls
-    } catch (error: any) {
-      this.handleApiError(error, 'Chutes AI')
+    } catch (error: unknown) {
+      this.handleApiError(error, 'ChutesAI')
     }
   }
 }

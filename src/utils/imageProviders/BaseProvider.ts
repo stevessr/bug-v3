@@ -1,11 +1,13 @@
-import type { ImageProvider, GenerateRequest } from '@/types/imageGenerator'
+import type { GenerateRequest } from '@/types/imageGenerator'
 
-export abstract class BaseProvider implements ImageProvider {
+export abstract class BaseProvider {
   abstract name: string
   abstract displayName: string
   protected apiKey: string = ''
 
-  abstract generateImages(request: GenerateRequest): Promise<string[]>
+  // Implementations must provide a typed generateImages method
+  // Use a leading underscore to avoid 'defined but never used' lint warnings in base class
+  abstract generateImages(_request: GenerateRequest): Promise<string[]>
 
   setApiKey(key: string): void {
     this.apiKey = key
@@ -52,17 +54,20 @@ export abstract class BaseProvider implements ImageProvider {
     })
   }
 
-  protected handleApiError(error: any, providerName: string): never {
+  protected handleApiError(error: unknown, providerName: string): never {
     console.error(`${providerName} image generation failed:`, error)
 
-    if (error.message.includes('401') || error.message.includes('API_KEY_INVALID')) {
+    const message = typeof error === 'string' ? error : (error as any)?.message || ''
+
+    if (message.includes('401') || message.includes('API_KEY_INVALID')) {
       throw new Error('API Key 无效，请检查您的密钥')
-    } else if (error.message.includes('429') || error.message.includes('QUOTA_EXCEEDED')) {
+    } else if (message.includes('429') || message.includes('QUOTA_EXCEEDED')) {
       throw new Error('API 请求过于频繁或配额已用完，请稍后重试')
-    } else if (error.message.includes('403') || error.message.includes('PERMISSION_DENIED')) {
+    } else if (message.includes('403') || message.includes('PERMISSION_DENIED')) {
       throw new Error('权限被拒绝，请检查 API Key 权限设置')
     }
 
-    throw error
+    if (typeof error === 'string') throw new Error(error)
+    throw error as Error
   }
 }

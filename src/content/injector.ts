@@ -1,4 +1,4 @@
-import { createEmojiPicker, isMobile } from './picker'
+import { createEmojiPicker } from './picker'
 import { cachedState } from './state'
 import { showImageUploadDialog } from './uploader'
 
@@ -149,8 +149,8 @@ function createUploadMenu(): HTMLElement {
   })
   generateOption.addEventListener('click', () => {
     menu.remove()
-    // Open image generator in new tab
-    window.open(chrome.runtime.getURL('image-generator.html'), '_blank')
+    // Image generator removed: fallback to opening upload dialog
+    showImageUploadDialog()
   })
 
   menu.appendChild(uploadOption)
