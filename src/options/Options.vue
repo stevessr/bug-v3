@@ -231,7 +231,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         :emojiStore="emojiStore"
         :expandedGroups="expandedGroups"
         :isImageUrl="isImageUrl"
-        :activeTab="activeTab"
+        v-model:activeTab="activeTab"
         @openCreateGroup="showCreateGroupModal = true"
         @groupDragStart="handleDragStart"
         @groupDrop="handleDrop"

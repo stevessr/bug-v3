@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AboutSection: typeof import('./src/components/AboutSection.vue')['default']
+    ACardMeta: typeof import('ant-design-vue/es')['CardMeta']
     ApiConfig: typeof import('./src/components/ImageGenerator/ApiConfig.vue')['default']
     GenerateButton: typeof import('./src/components/ImageGenerator/GenerateButton.vue')['default']
     GenerationConfig: typeof import('./src/components/ImageGenerator/GenerationConfig.vue')['default']
