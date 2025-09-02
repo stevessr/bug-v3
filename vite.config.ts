@@ -17,6 +17,12 @@ export default defineConfig(({ mode }) => {
     css: {
       postcss: './postcss.config.js'
     },
+    // resolve alias so imports using @/xxx map to src/xxx
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url))
+      }
+    },
     define: {
       // 编译期标志定义
       __ENABLE_LOGGING__: enableLogging,
