@@ -1,8 +1,7 @@
 import { createEmojiPicker } from './picker'
 import { cachedState } from './state'
 import { showImageUploadDialog } from './uploader'
-
-import { logger } from '@/config/buildFlags'
+import { logger } from './buildFlags'
 
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [
@@ -100,63 +99,67 @@ async function injectMobilePicker() {
 }
 
 function createUploadMenu(): HTMLElement {
+  // Build a popout-style menu matching referense/popout.html structure
   const menu = document.createElement('div')
-  menu.className = 'upload-menu'
-  menu.style.cssText = `
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    padding: 8px 0;
-    min-width: 180px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  `
+  menu.className =
+    'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
+  menu.setAttribute('data-identifier', 'toolbar-menu__options')
+  menu.setAttribute('role', 'dialog')
+  // Reuse site's CSS by relying on the same class names; do not inject visual styles here.
 
-  const uploadOption = document.createElement('div')
-  uploadOption.className = 'upload-option'
-  uploadOption.style.cssText = `
-    padding: 12px 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    transition: background-color 0.2s;
-  `
-  uploadOption.innerHTML = `
-    <span style="margin-right: 8px;">📁</span>
-    <span>上传本地图片</span>
-  `
-  uploadOption.addEventListener('mouseenter', () => {
-    uploadOption.style.backgroundColor = '#f5f5f5'
-  })
-  uploadOption.addEventListener('mouseleave', () => {
-    uploadOption.style.backgroundColor = 'transparent'
-  })
-  uploadOption.addEventListener('click', async () => {
+  const inner = document.createElement('div')
+  inner.className = 'fk-d-menu__inner-content'
+
+  const list = document.createElement('ul')
+  list.className = 'dropdown-menu'
+
+  function createListItem(titleText: string, emoji: string, onClick: () => void) {
+    const li = document.createElement('li')
+    li.className = 'dropdown-menu__item'
+
+    const btn = document.createElement('button')
+    btn.className = 'btn btn-icon-text'
+    btn.type = 'button'
+    btn.title = titleText
+    btn.addEventListener('click', onClick)
+
+    const emojiSpan = document.createElement('span')
+    emojiSpan.textContent = emoji
+
+    const labelWrap = document.createElement('span')
+    labelWrap.className = 'd-button-label'
+    const labelText = document.createElement('span')
+    labelText.className = 'd-button-label__text'
+    labelText.textContent = titleText
+
+    labelWrap.appendChild(labelText)
+    btn.appendChild(emojiSpan)
+    btn.appendChild(labelWrap)
+
+    // Visual hover/active styles are provided by the page's CSS; do not inject styles here.
+
+    li.appendChild(btn)
+    return li
+  }
+
+  const uploadLi = createListItem('上传本地图片', '📁', async () => {
     menu.remove()
     await showImageUploadDialog()
   })
 
-  const generateOption = document.createElement('div')
-  generateOption.className = 'upload-option'
-  generateOption.style.cssText = uploadOption.style.cssText
-  generateOption.innerHTML = `
-    <span style="margin-right: 8px;">🎨</span>
-    <span>AI 生成图片</span>
-  `
-  generateOption.addEventListener('mouseenter', () => {
-    generateOption.style.backgroundColor = '#f5f5f5'
-  })
-  generateOption.addEventListener('mouseleave', () => {
-    generateOption.style.backgroundColor = 'transparent'
-  })
-  generateOption.addEventListener('click', () => {
+  const generateLi = createListItem('AI 生成图片', '🎨', () => {
     menu.remove()
-    // Image generator removed: fallback to opening upload dialog
-    showImageUploadDialog()
+    try {
+      window.open('https://gemini-image.smnet.studio/', '_blank')
+    } catch (e) {
+      window.location.href = 'https://gemini-image.smnet.studio/'
+    }
   })
 
-  menu.appendChild(uploadOption)
-  menu.appendChild(generateOption)
+  list.appendChild(uploadLi)
+  list.appendChild(generateLi)
+  inner.appendChild(list)
+  menu.appendChild(inner)
 
   return menu
 }
@@ -237,22 +240,28 @@ export function injectButton(toolbar: Element) {
 
   uploadButton.addEventListener('click', async event => {
     event.stopPropagation()
-
-    // Show menu with upload options
+    // Show menu with upload options and mount it into #d-menu-portals
     const menu = createUploadMenu()
-    document.body.appendChild(menu)
+
+    // Ensure portal container exists
+    let portal = document.querySelector('#d-menu-portals') as HTMLElement | null
+    if (!portal) {
+      portal = document.createElement('div')
+      portal.id = 'd-menu-portals'
+      document.body.appendChild(portal)
+    }
+
+    portal.appendChild(menu)
 
     // Position menu near button
     const rect = uploadButton.getBoundingClientRect()
-    menu.style.position = 'fixed'
     menu.style.top = rect.bottom + 5 + 'px'
     menu.style.left = rect.left + 'px'
-    menu.style.zIndex = '10000'
 
-    // Remove menu when clicking outside
+    // Remove/unmount menu when clicking outside
     const removeMenu = (e: Event) => {
       if (!menu.contains(e.target as Node)) {
-        menu.remove()
+        if (menu.parentElement) menu.parentElement.removeChild(menu)
         document.removeEventListener('click', removeMenu)
       }
     }
