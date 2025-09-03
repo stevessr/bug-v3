@@ -4,6 +4,7 @@ defineEmits([
   'openImportEmojis',
   'resetSettings',
   'syncToChrome',
+  'forceLocalToExtension',
   'exportConfiguration'
 ])
 </script>
@@ -47,6 +48,12 @@ defineEmits([
       class="px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
     >
       上传到Chrome同步
+    </button>
+    <button
+      @click="$emit('forceLocalToExtension')"
+      class="px-4 py-2 text-sm bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors"
+    >
+      强制本地同步到扩展存储
     </button>
     <button
       @click="$emit('exportConfiguration')"

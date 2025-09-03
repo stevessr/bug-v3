@@ -93,6 +93,7 @@ const {
   onEmojiAdded,
   resetSettings,
   syncToChrome,
+  forceLocalToExtension,
   showSuccess,
   flushBuffer,
   handleImageError,
@@ -183,6 +184,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
             @openImportEmojis="showImportEmojiModal = true"
             @resetSettings="resetSettings"
             @syncToChrome="syncToChrome"
+            @forceLocalToExtension="forceLocalToExtension"
             @exportConfiguration="exportConfiguration"
           />
         </div>

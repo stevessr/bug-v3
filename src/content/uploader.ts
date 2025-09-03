@@ -913,15 +913,17 @@ export async function showImageUploadDialog(): Promise<void> {
       })
 
       if (filesToUpload.length === 0) {
-        logger.log('所有选择的图片都已在markdown文本中存在，无需上传。')
+        // Allow alert here to inform users when no files need uploading
+        // eslint-disable-next-line no-alert
+        alert('所有选择的图片都已在markdown文本中存在，无需上传。')
         return
       }
 
       if (filesToUpload.length < files.length) {
         const skippedCount = files.length - filesToUpload.length
-        const { requestConfirmation } = await import('../utils/confirmService')
-        const proceed = await requestConfirmation(
-          '跳过已存在图片',
+        // Use native confirm to avoid external dependency
+        // eslint-disable-next-line no-alert
+        const proceed = confirm(
           `发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`
         )
         if (!proceed) {
