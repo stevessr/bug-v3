@@ -10,6 +10,7 @@ import {
 } from './userscript-storage'
 
 import { logger } from '@/config/buildFlags'
+import { uploader } from '@/content/uploader'
 
 // Global state for userscript
 const userscriptState: UserscriptStorage = {
@@ -864,6 +865,13 @@ function initOneClickAdd() {
 
       try {
         addEmojiToUserscript(emojiData)
+
+        // Show upload queue dialog so user can see upload progress manually
+        try {
+          uploader.showProgressDialog()
+        } catch (e) {
+          logger.warn('[Userscript] uploader.showProgressDialog failed:', e)
+        }
 
         link.innerHTML = `
           <svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
