@@ -98,8 +98,9 @@ async function injectMobilePicker() {
   currentPicker = modalContainer as HTMLElement
 }
 
-function createUploadMenu(): HTMLElement {
+function createUploadMenu(isMobile: boolean = false): HTMLElement {
   // Build a popout-style menu matching referense/popout.html structure
+  // If isMobile is true, return a modal-style container compatible with mobile popout
   const menu = document.createElement('div')
   menu.className =
     'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
@@ -160,6 +161,52 @@ function createUploadMenu(): HTMLElement {
   list.appendChild(generateLi)
   inner.appendChild(list)
   menu.appendChild(inner)
+
+  if (isMobile) {
+    // Build modal wrapper like referense/popoutmobile.html
+    const modalContainer = document.createElement('div')
+    modalContainer.className = 'modal-container'
+
+    const modal = document.createElement('div')
+    modal.className =
+      'modal d-modal fk-d-menu-modal toolbar-menu__options-content toolbar-popup-menu-options'
+    modal.setAttribute('data-keyboard', 'false')
+    modal.setAttribute('aria-modal', 'true')
+    modal.setAttribute('role', 'dialog')
+    modal.setAttribute('data-identifier', 'toolbar-menu__options')
+    modal.setAttribute('data-content', '')
+
+    const modalContainerInner = document.createElement('div')
+    modalContainerInner.className = 'd-modal__container'
+
+    const modalBody = document.createElement('div')
+    modalBody.className = 'd-modal__body'
+    modalBody.tabIndex = -1
+
+    const grip = document.createElement('div')
+    grip.className = 'fk-d-menu-modal__grip'
+    grip.setAttribute('aria-hidden', 'true')
+
+    // move our existing menu (which contains inner -> ul.dropdown-menu) into modalBody
+    modalBody.appendChild(grip)
+    // the 'inner' contains the ul, append it
+    modalBody.appendChild(inner.querySelector('.dropdown-menu') as Node)
+
+    modalContainerInner.appendChild(modalBody)
+    modal.appendChild(modalContainerInner)
+
+    const backdrop = document.createElement('div')
+    backdrop.className = 'd-modal__backdrop'
+    backdrop.addEventListener('click', () => {
+      // remove modal container when backdrop clicked
+      if (modalContainer.parentElement) modalContainer.parentElement.removeChild(modalContainer)
+    })
+
+    modalContainer.appendChild(modal)
+    modalContainer.appendChild(backdrop)
+
+    return modalContainer
+  }
 
   return menu
 }
@@ -240,29 +287,81 @@ export function injectButton(toolbar: Element) {
 
   uploadButton.addEventListener('click', async event => {
     event.stopPropagation()
-    // Show menu with upload options and mount it into #d-menu-portals
-    const menu = createUploadMenu()
+    // Show menu with upload options and mount it into #d-menu-portals or mobile modal container
+    const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
+    const isMobile = forceMobile || toolbar.classList.contains('chat-composer__inner-container')
+    const menu = createUploadMenu(isMobile)
 
-    // Ensure portal container exists
-    let portal = document.querySelector('#d-menu-portals') as HTMLElement | null
-    if (!portal) {
-      portal = document.createElement('div')
-      portal.id = 'd-menu-portals'
-      document.body.appendChild(portal)
+    if (isMobile) {
+      // Try to find existing modal container on the page and reuse it
+      const modalPortal = document.querySelector('.modal-container') as HTMLElement | null
+      if (!modalPortal) {
+        // If no modal container exists, append to body
+        document.body.appendChild(menu)
+      } else {
+        modalPortal.appendChild(menu)
+      }
+    } else {
+      // Ensure portal container exists
+      let portal = document.querySelector('#d-menu-portals') as HTMLElement | null
+      if (!portal) {
+        portal = document.createElement('div')
+        portal.id = 'd-menu-portals'
+        document.body.appendChild(portal)
+      }
+
+      // Append hidden first to measure size
+      portal.appendChild(menu)
+
+      // Position menu near button for non-mobile mode using fixed positioning
+      const rect = uploadButton.getBoundingClientRect()
+      menu.style.position = 'fixed'
+      menu.style.visibility = 'hidden'
+      menu.style.zIndex = '10000'
+      menu.style.maxWidth = '400px'
+
+      // Force a reflow to ensure sizes are available
+      const menuRect = menu.getBoundingClientRect()
+
+      // Calculate centered left and preferred top (above button)
+      let top = rect.top - menuRect.height - 5
+      let left = rect.left + rect.width / 2 - menuRect.width / 2
+      let placement = 'top'
+
+      // If there's not enough space above, place below
+      if (top < 0) {
+        top = rect.bottom + 5
+        placement = 'bottom'
+      }
+
+      // Clamp left to viewport
+      left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8))
+
+      menu.style.top = `${top}px`
+      menu.style.left = `${left}px`
+      menu.style.visibility = 'visible'
+      menu.setAttribute('data-strategy', 'absolute')
+      menu.setAttribute('data-placement', placement)
     }
-
-    portal.appendChild(menu)
-
-    // Position menu near button
-    const rect = uploadButton.getBoundingClientRect()
-    menu.style.top = rect.bottom + 5 + 'px'
-    menu.style.left = rect.left + 'px'
 
     // Remove/unmount menu when clicking outside
     const removeMenu = (e: Event) => {
-      if (!menu.contains(e.target as Node)) {
-        if (menu.parentElement) menu.parentElement.removeChild(menu)
-        document.removeEventListener('click', removeMenu)
+      // If mobile, menu is modal-container; if click outside modal content, remove modal container
+      if (isMobile) {
+        const modalContainer =
+          menu.classList && (menu as HTMLElement).classList.contains('modal-container')
+            ? (menu as HTMLElement)
+            : (document.querySelector('.modal-container') as HTMLElement | null)
+
+        if (modalContainer && !modalContainer.contains(e.target as Node)) {
+          if (modalContainer.parentElement) modalContainer.parentElement.removeChild(modalContainer)
+          document.removeEventListener('click', removeMenu)
+        }
+      } else {
+        if (!menu.contains(e.target as Node)) {
+          if (menu.parentElement) menu.parentElement.removeChild(menu)
+          document.removeEventListener('click', removeMenu)
+        }
       }
     }
 
