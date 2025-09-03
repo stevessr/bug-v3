@@ -2,7 +2,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
 import { flushBuffer } from '../utils/indexedDB'
-import { newStorageHelpers } from '../utils/newStorage'
+import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import type { EmojiGroup, Emoji } from '../types/emoji'
 import { isImageUrl } from '../utils/isImageUrl'
 
@@ -347,6 +347,71 @@ export default function useOptions() {
     }
   }
 
+  // Force copy from localStorage to chrome.storage.local for keys used by the app
+  const forceLocalToExtension = async () => {
+    try {
+      if (typeof localStorage === 'undefined') {
+        showError('本地存储不可用')
+        return
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
+      if (!chromeAPI || !chromeAPI.storage || !chromeAPI.storage.local) {
+        showError('扩展存储 API 不可用')
+        return
+      }
+
+      const keys: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (!key) continue
+        if (
+          key === STORAGE_KEYS.SETTINGS ||
+          key === STORAGE_KEYS.FAVORITES ||
+          key === STORAGE_KEYS.GROUP_INDEX ||
+          key.startsWith(STORAGE_KEYS.GROUP_PREFIX)
+        ) {
+          keys.push(key)
+        }
+      }
+
+      if (keys.length === 0) {
+        showError('未发现可同步的本地存储键')
+        return
+      }
+
+      const payload: Record<string, unknown> = {}
+      keys.forEach(k => {
+        const raw = localStorage.getItem(k)
+        try {
+          payload[k] = raw ? JSON.parse(raw) : null
+        } catch {
+          payload[k] = raw
+        }
+      })
+
+      await new Promise<void>((resolve, reject) => {
+        try {
+          chromeAPI.storage.local.set(payload, () => {
+            if (chromeAPI.runtime && chromeAPI.runtime.lastError) {
+              reject(chromeAPI.runtime.lastError)
+            } else {
+              resolve()
+            }
+          })
+        } catch (e) {
+          reject(e)
+        }
+      })
+
+      showSuccess('已将本地存储强制同步到扩展存储')
+    } catch (e) {
+      void e
+      showError('强制同步失败，请查看控制台')
+    }
+  }
+
   const handleImageError = (event: Event) => {
     const target = event.target as HTMLImageElement
     target.src =
@@ -507,6 +572,7 @@ export default function useOptions() {
     // sync / settings
     resetSettings,
     syncToChrome,
+    forceLocalToExtension,
     // feedback
     showSuccess,
     showError,
