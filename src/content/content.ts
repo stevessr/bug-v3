@@ -1,6 +1,7 @@
 // Entry point: 初始化模块并启动功能
 import { logger } from './buildFlags'
 import { initializeEmojiFeature } from './init'
+import { Uninject } from './Uninject'
 
 logger.log('[Emoji Extension] Content script loaded (entry)')
 
@@ -51,6 +52,7 @@ if (shouldInjectEmoji()) {
   logger.log('[Emoji Extension] Initializing emoji feature')
   initializeEmojiFeature()
 } else {
+  Uninject()
   logger.log('[Emoji Extension] Skipping injection - incompatible platform')
 }
 

@@ -193,6 +193,7 @@ const cancelCreateGroup = () => {
           </div>
         </div>
       </div>
+      <div class="px-6 py-3 border-b border-gray-100 flex items-center justify-end gap-2"></div>
 
       <div class="p-6">
         <div

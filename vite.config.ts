@@ -48,12 +48,10 @@ export default defineConfig(({ mode }) => {
         input: {
           popup: fileURLToPath(new URL('popup.html', import.meta.url)),
           options: fileURLToPath(new URL('options.html', import.meta.url)),
-          // image-generator entry removed
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
-          // image-generator-js entry removed
         },
         output: {
           entryFileNames: chunkInfo => {
