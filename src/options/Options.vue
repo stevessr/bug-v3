@@ -12,7 +12,6 @@ import ImportConfigModal from './modals/ImportConfigModal.vue'
 import ImportEmojisModal from './modals/ImportEmojisModal.vue'
 import CreateGroupModal from './modals/CreateGroupModal.vue'
 import AddEmojiModal from './modals/AddEmojiModal.vue'
-import ConfirmDeleteModal from './modals/ConfirmDeleteModal.vue'
 import ConfirmGenericModal from './modals/ConfirmGenericModal.vue'
 import NotificationToasts from './components/NotificationToasts.vue'
 import GroupsTab from './components/GroupsTab.vue'
@@ -59,7 +58,6 @@ const {
   showImportEmojiModal,
   showSuccessToast,
   showErrorToast,
-  showConfirmDeleteModal,
   showConfirmGenericModal,
   confirmGenericTitle,
   confirmGenericMessage,
@@ -67,7 +65,6 @@ const {
   cancelConfirmGenericAction,
   successMessage,
   errorMessage,
-  groupToDelete,
   editingGroupId,
   editGroupName,
   editGroupIcon,
@@ -86,7 +83,6 @@ const {
   exportGroup,
   exportConfiguration,
   confirmDeleteGroup,
-  deleteGroup,
   openEditGroup,
   openAddEmojiModal,
   onGroupCreated,
@@ -306,12 +302,6 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
     <ImportConfigModal v-model="showImportModal" @imported="handleConfigImported" />
 
     <ImportEmojisModal v-model="showImportEmojiModal" @imported="handleEmojisImported" />
-
-    <ConfirmDeleteModal
-      v-model:show="showConfirmDeleteModal"
-      :group="groupToDelete"
-      @confirm="deleteGroup"
-    />
 
     <EditEmojiModal
       v-model:show="showEditEmojiModal"

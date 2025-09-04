@@ -50,7 +50,6 @@ export default function useOptions() {
   const showImportEmojiModal = ref(false)
   const showSuccessToast = ref(false)
   const showErrorToast = ref(false)
-  const showConfirmDeleteModal = ref(false)
   const showConfirmGenericModal = ref(false)
   const confirmGenericTitle = ref('')
   const confirmGenericMessage = ref('')
@@ -130,16 +129,16 @@ export default function useOptions() {
 
   const confirmDeleteGroup = (group: EmojiGroup) => {
     groupToDelete.value = group
-    showConfirmDeleteModal.value = true
-  }
-
-  const deleteGroup = async () => {
-    if (groupToDelete.value) {
-      await emojiStore.deleteGroup(groupToDelete.value.id)
-      showSuccess(`分组 "${groupToDelete.value.name}" 已删除`)
-      showConfirmDeleteModal.value = false
-      groupToDelete.value = null
+    confirmGenericTitle.value = '确认删除'
+    confirmGenericMessage.value = `确定要删除分组 "${group.name}" 吗？分组中的表情也会被删除。`
+    confirmGenericAction = () => {
+      if (groupToDelete.value) {
+        emojiStore.deleteGroup(groupToDelete.value.id)
+        showSuccess(`分组 "${groupToDelete.value.name}" 已删除`)
+        groupToDelete.value = null
+      }
     }
+    showConfirmGenericModal.value = true
   }
 
   const handleDragStart = (group: EmojiGroup, event: DragEvent) => {
@@ -530,7 +529,6 @@ export default function useOptions() {
     showImportEmojiModal,
     showSuccessToast,
     showErrorToast,
-    showConfirmDeleteModal,
     successMessage,
     errorMessage,
     groupToDelete,
@@ -561,7 +559,6 @@ export default function useOptions() {
     exportConfiguration,
     // group operations
     confirmDeleteGroup,
-    deleteGroup,
     openEditGroup,
     openEditEmoji,
     handleEmojiEdit,
