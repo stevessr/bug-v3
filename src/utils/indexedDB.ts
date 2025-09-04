@@ -1,6 +1,7 @@
 // IndexedDB utility for emoji extension
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 import { logger, indexedDBWrapper } from '../config/buildFlags'
+import { formatPreview } from './formatUtils'
 
 const DB_NAME = 'EmojiExtensionDB'
 const DB_VERSION = 1
@@ -21,28 +22,6 @@ function logDB(operation: string, store: string, key?: string, data?: any, error
 
   const timestamp = new Date().toISOString()
   const logPrefix = `[IndexedDB ${timestamp}]`
-
-  // Helper to format a safe preview of the data (avoid huge dumps or circular refs)
-  function formatPreview(d: any) {
-    try {
-      const s = JSON.stringify(d)
-      const size = s.length
-      if (size > 2000) {
-        return { preview: s.slice(0, 500) + '... (truncated)', size }
-      }
-      return { preview: JSON.parse(s), size }
-    } catch (_e) {
-      // mark as referenced for linters
-      void _e
-      try {
-        // Fallback to toString
-        return { preview: String(d) }
-      } catch (_err) {
-        void _err
-        return { preview: '[unserializable data]' }
-      }
-    }
-  }
 
   if (error) {
     // Make error output human readable (include name/message) while preserving the original error object

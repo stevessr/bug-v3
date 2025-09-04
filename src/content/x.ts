@@ -1,4 +1,4 @@
-import { logger } from './buildFlags'
+import { logger } from '../config/buildFlags'
 
 declare const chrome: any
 

@@ -1,7 +1,7 @@
 import { loadDataFromStorage } from './storage'
 import { findAllToolbars, injectButton } from './injector'
 import { initOneClickAdd } from './oneClickAdd'
-import { logger } from './buildFlags'
+import { logger } from '../config/buildFlags'
 
 // Function to check and re-inject buttons if needed
 function checkAndReinjectButtons() {

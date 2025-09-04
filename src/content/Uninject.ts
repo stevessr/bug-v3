@@ -1,4 +1,4 @@
-import { logger } from './buildFlags'
+import { logger } from '../config/buildFlags'
 import { initPixiv } from './pixiv'
 import { initBilibili } from './bilibili'
 import { initX } from './x'
