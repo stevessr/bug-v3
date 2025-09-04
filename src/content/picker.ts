@@ -1,7 +1,7 @@
 import { cachedState } from './state'
 import { insertEmojiIntoEditor } from './editor'
 import { ensureDefaultIfEmpty } from './storage'
-import { logger } from './buildFlags'
+import { logger } from '../config/buildFlags'
 
 // Inline isImageUrl function to avoid external import
 function isImageUrl(value: string | null | undefined): boolean {
