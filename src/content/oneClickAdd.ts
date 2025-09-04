@@ -1,4 +1,5 @@
 import { logger } from '../config/buildFlags'
+
 import { initDiscourse } from './discourse'
 
 // oneClickAdd.ts - 仅保留一键添加核心逻辑，平台注入移至各自模块

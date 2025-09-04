@@ -1,7 +1,8 @@
+import { logger } from '../config/buildFlags'
+
 import { createEmojiPicker } from './picker'
 import { cachedState } from './state'
 import { showImageUploadDialog } from './uploader'
-import { logger } from '../config/buildFlags'
 
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [

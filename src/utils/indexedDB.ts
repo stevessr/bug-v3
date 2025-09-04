@@ -1,6 +1,7 @@
 // IndexedDB utility for emoji extension
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 import { logger, indexedDBWrapper } from '../config/buildFlags'
+
 import { formatPreview } from './formatUtils'
 
 const DB_NAME = 'EmojiExtensionDB'
