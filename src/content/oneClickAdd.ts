@@ -1,5 +1,5 @@
-import { logger } from './buildFlags'
-import { initPixiv } from './pixiv'
+import { logger } from '../config/buildFlags'
+
 import { initDiscourse } from './discourse'
 
 // oneClickAdd.ts - 仅保留一键添加核心逻辑，平台注入移至各自模块
@@ -33,11 +33,5 @@ export function initOneClickAdd() {
     initDiscourse()
   } catch (e) {
     logger.error('[OneClickAdd] initDiscourse failed', e)
-  }
-
-  try {
-    initPixiv()
-  } catch (e) {
-    logger.error('[OneClickAdd] initPixiv failed', e)
   }
 }

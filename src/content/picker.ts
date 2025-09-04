@@ -1,19 +1,10 @@
+import { logger } from '../config/buildFlags'
+import { isImageUrl } from '../utils/isImageUrl'
+
 import { cachedState } from './state'
 import { insertEmojiIntoEditor } from './editor'
 import { ensureDefaultIfEmpty } from './storage'
-import { logger } from './buildFlags'
 
-// Inline isImageUrl function to avoid external import
-function isImageUrl(value: string | null | undefined): boolean {
-  if (!value || typeof value !== 'string') return false
-  try {
-    const url = new URL(value)
-    const pathname = url.pathname.toLowerCase()
-    return /\.(jpg|jpeg|png|gif|bmp|webp|svg|ico)(\?.*)?$/i.test(pathname)
-  } catch {
-    return false
-  }
-}
 export const isMobile = (): boolean => {
   const userAgent = navigator.userAgent
   const mobileKeywords = ['Android', 'iPhone', 'iPad', 'iPod', 'Windows Phone']

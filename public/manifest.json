@@ -3,7 +3,7 @@
   "name": "Emoji Extension",
   "version": "1.0.0",
   "description": "An emoji extension built with Vue 3 and Vite.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": ["storage", "activeTab", "scripting", "downloads"],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
     "https://linux.do/*"
