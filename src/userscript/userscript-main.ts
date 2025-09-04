@@ -8,6 +8,7 @@ import {
   saveDataToLocalStorage,
   type UserscriptStorage
 } from './userscript-storage'
+import { isImageUrl } from '../utils/isImageUrl'
 
 import { logger } from '@/config/buildFlags'
 import { uploader } from '@/content/uploader'
@@ -160,16 +161,6 @@ function findAllToolbars(): HTMLElement[] {
 }
 
 // Check if URL is an image
-function isImageUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') return false
-  try {
-    const pathname = new URL(url).pathname.toLowerCase()
-    return /\.(jpg|jpeg|png|gif|bmp|webp|svg|ico)(\?.*)?$/i.test(pathname)
-  } catch {
-    return false
-  }
-}
-
 // Create emoji picker (simplified version)
 async function createEmojiPicker(): Promise<HTMLElement> {
   const groups = userscriptState.emojiGroups
