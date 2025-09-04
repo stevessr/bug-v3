@@ -1,11 +1,9 @@
-/* eslint-disable no-restricted-properties */
 // Build-time flags for development and production
 // These values are replaced at build time by Vite
 
-declare global {
-  const __ENABLE_LOGGING__: boolean
-  const __ENABLE_INDEXEDDB__: boolean
-}
+// NOTE: global build-time declarations live in src/config/buildFlags.ts
+// This file must NOT redeclare the same `declare global` block to avoid
+// duplicate identifier errors during `tsc`.
 
 // Runtime flags that can be set by build configuration
 export const BUILD_FLAGS = {

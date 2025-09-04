@@ -131,7 +131,9 @@ onUnmounted(() => {
 })
 
 // Function to add touch events to group elements
-const addGroupTouchEvents = (element: HTMLElement, group: any) => {
+// Accept nullable element because Vue ref callbacks may be invoked with null
+const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
+  if (!element) return
   if (group.id !== 'favorites') {
     ;(element as any).__groupData = group
     groupTouchHandler.value?.addTouchEvents(element, true)
