@@ -1,4 +1,4 @@
-import { logger } from './buildFlags'
+import { logger } from '../config/buildFlags'
 
 declare const chrome: any
 
@@ -25,16 +25,82 @@ function extractNameFromUrl(url: string): string {
   }
 }
 
+async function performPixivDownloadFlow(data: AddEmojiButtonData) {
+  try {
+    const chromeAPI = (window as any).chrome
+
+    const resp: any = await new Promise((resolve, reject) => {
+      try {
+        chromeAPI.runtime.sendMessage(
+          { action: 'downloadForUser', payload: { url: data.url } },
+          (r: any) => {
+            if (!r) return reject(new Error('no response'))
+            resolve(r)
+          }
+        )
+      } catch (e) {
+        reject(e)
+      }
+    })
+
+    if (!resp || !resp.success) {
+      throw new Error(resp && resp.error ? String(resp.error) : 'download failed')
+    }
+
+    // If background saved the file via chrome.downloads, response contains downloadId
+    if (resp.downloadId) {
+      return { success: true, downloadId: resp.downloadId }
+    }
+
+    // If background fell back, we may receive arrayBuffer for page-side download
+    if (resp.fallback && resp.arrayBuffer) {
+      const arrayBuffer = resp.arrayBuffer as ArrayBuffer
+      const mimeType = resp.mimeType || 'application/octet-stream'
+      const filename = resp.filename || 'image'
+
+      const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+
+      return { success: true, fallback: true }
+    }
+
+    // unknown response shape
+    throw new Error('unexpected download response')
+  } catch (error) {
+    logger.error('[PixivOneClick] performPixivDownloadFlow failed', error)
+    return { success: false, error }
+  }
+}
+
 function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) {
-  button.addEventListener('click', async e => {
-    e.preventDefault()
-    e.stopPropagation()
+  let running = false
+
+  const handle = async (origEvent: Event) => {
+    try {
+      origEvent.preventDefault()
+      origEvent.stopPropagation()
+    } catch (_e) {
+      void _e
+    }
+    if (running) return
+    running = true
+
+    // disable pointer events to avoid accidental double clicks
+    const prevPointerEvents = button.style.pointerEvents
+    button.style.pointerEvents = 'none'
 
     const originalContent = button.innerHTML
     const originalStyle = button.style.cssText
 
     try {
-      await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
+      await performPixivDownloadFlow(data)
 
       button.innerHTML = `\n        <svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">\n          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>\n        </svg>已添加\n      `
       button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
@@ -45,6 +111,8 @@ function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) 
       setTimeout(() => {
         button.innerHTML = originalContent
         button.style.cssText = originalStyle
+        button.style.pointerEvents = prevPointerEvents
+        running = false
       }, 2000)
     } catch (error) {
       logger.error('[PixivOneClick] 添加表情失败:', error)
@@ -57,9 +125,15 @@ function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) 
       setTimeout(() => {
         button.innerHTML = originalContent
         button.style.cssText = originalStyle
+        button.style.pointerEvents = prevPointerEvents
+        running = false
       }, 2000)
     }
-  })
+  }
+
+  // Attach both pointerdown and click to maximize reliability across Pixiv UI
+  button.addEventListener('pointerdown', handle)
+  button.addEventListener('click', handle)
 }
 
 /** Pixiv-specific logic **/
@@ -76,11 +150,22 @@ function isPixivViewer(element: Element): boolean {
 }
 
 function extractEmojiDataFromPixiv(container: Element): AddEmojiButtonData | null {
+  // Find the image and prefer the surrounding anchor (the clickable link) which typically points to the original
   const img = container.querySelector('img[src*="i.pximg.net"]') as HTMLImageElement | null
   if (!img) return null
-  const src = img.src || ''
+
+  let src = ''
+  const anchor = img.closest('a') as HTMLAnchorElement | null
+  if (anchor && anchor.href) {
+    src = anchor.href
+  } else if (img.src) {
+    // fallback to the image src (may be master); the common Pixiv UI usually provides an anchor to original
+    src = img.src
+  }
+
   if (!src || !src.startsWith('http')) return null
-  let name = (img.alt || img.getAttribute('title') || '').trim()
+
+  let name = (img?.alt || img?.getAttribute('title') || '')?.trim() || ''
   if (!name || name.length < 2) name = extractNameFromUrl(src)
   name = name.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim()
   if (name.length === 0) name = '表情'
@@ -91,22 +176,35 @@ function createPixivEmojiButton(data: AddEmojiButtonData): HTMLElement {
   const button = document.createElement('button')
   button.type = 'button'
   button.className = 'emoji-add-link-pixiv'
+  // Use absolute positioning with a very high z-index so the button floats above Pixiv's UI/overlays
+  // and remains clickable. Keep visual styles similar but remove inline margin and inline flow.
   button.style.cssText = `
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    z-index: 100000;
     color: #ffffff;
     background: linear-gradient(135deg, #ef4444, #f97316);
-    border: 2px solid rgba(255,255,255,0.9);
+    border: 2px solid rgba(255,255,255,0.95);
     border-radius: 6px;
     padding: 6px 10px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    margin-left: 6px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    pointer-events: auto;
   `
-  button.innerHTML = `\n    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">\n      <path d="M12 4c.55 0 1 .45 1 1v6h6c.55 0 1 .45 1 1s-.45 1-1 1h-6v6c0 .55-.45 1-1 1s-1-.45-1-1v-6H5c-.55 0-1-.45-1-1s.45-1 1-1h6V5c0-.55.45-1 1-1z"/>\n    </svg>\n    添加到表情\n  `
-  button.title = '添加到未分组表情'
+  button.innerHTML = `\n    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">\n      <path d="M12 4c.55 0 1 .45 1 1v6h6c.55 0 1 .45 1 1s-.45 1-1 1h-6v6c0 .55-.45 1-1 1s-1-.45-1-1v-6H5c-.55 0-1-.45-1-1s.45-1 1-1h6V5c0-.55.45-1 1-1z"/>\n    </svg>\n    一键下载\n  `
+  button.title = '一键下载'
+  // store data as dataset for robustness
+  try {
+    button.dataset.emojiName = data.name
+    button.dataset.emojiUrl = data.url
+  } catch (_e) {
+    void _e
+  }
   setupButtonClickHandler(button, data)
   return button
 }
@@ -117,12 +215,17 @@ function addEmojiButtonToPixiv(pixivContainer: Element) {
   const emojiData = extractEmojiDataFromPixiv(pixivContainer)
   if (!emojiData) return
   const addButton = createPixivEmojiButton(emojiData)
-  const targetButton = pixivContainer.querySelector('button')
-  if (targetButton && targetButton.parentElement) {
-    targetButton.parentElement.insertBefore(addButton, targetButton)
-  } else {
-    pixivContainer.appendChild(addButton)
+  // Ensure the container can be the positioning context for our absolute button
+  try {
+    const parentEl = pixivContainer as HTMLElement
+    const computed = window.getComputedStyle(parentEl)
+    if (computed.position === 'static' || !computed.position) parentEl.style.position = 'relative'
+  } catch (_e) {
+    // ignore
   }
+
+  // Append the absolute-positioned button directly into the pixiv container so it floats above overlays
+  pixivContainer.appendChild(addButton)
 }
 
 function scanForPixivViewer() {

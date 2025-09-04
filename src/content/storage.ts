@@ -1,6 +1,7 @@
+import { logger } from '../config/buildFlags'
+
 import { cachedState } from './state'
 import { getDefaultEmojis } from './default'
-import { logger } from './buildFlags'
 
 function sendMessageToBackground(message: any): Promise<any> {
   return new Promise(resolve => {

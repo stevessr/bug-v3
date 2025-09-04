@@ -1,4 +1,6 @@
 // Main userscript entry point - adapted from content script
+import { isImageUrl } from '../utils/isImageUrl'
+
 import {
   loadDataFromLocalStorage,
   addEmojiToUserscript,
@@ -160,16 +162,6 @@ function findAllToolbars(): HTMLElement[] {
 }
 
 // Check if URL is an image
-function isImageUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') return false
-  try {
-    const pathname = new URL(url).pathname.toLowerCase()
-    return /\.(jpg|jpeg|png|gif|bmp|webp|svg|ico)(\?.*)?$/i.test(pathname)
-  } catch {
-    return false
-  }
-}
-
 // Create emoji picker (simplified version)
 async function createEmojiPicker(): Promise<HTMLElement> {
   const groups = userscriptState.emojiGroups

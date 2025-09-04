@@ -2,6 +2,8 @@ import { newStorageHelpers } from '../utils/newStorage'
 import { logger } from '../config/buildFlags'
 
 import { getChromeAPI } from './utils'
+import { handleDownloadAndSendToDiscourse, handleDownloadForUser } from './downloadAndSend'
+import { handleAddEmojiFromWeb } from './handlers/addEmojiFromWeb'
 
 export function setupMessageListener() {
   const chromeAPI = getChromeAPI()
@@ -41,6 +43,18 @@ export function setupMessageListener() {
             handleAddEmojiFromWeb(message.emojiData, sendResponse)
             return true
 
+          case 'downloadAndSendToDiscourse':
+            handleDownloadAndSendToDiscourse(message.payload, sendResponse)
+            return true
+
+          case 'downloadForUser':
+            handleDownloadForUser(message.payload, sendResponse)
+            return true
+
+          case 'saveLastDiscourse':
+            handleSaveLastDiscourse(message.payload, sendResponse)
+            return true
+
           default:
             logger.log('Unknown action:', message.action)
             // mark message.action as referenced for linters
@@ -52,56 +66,9 @@ export function setupMessageListener() {
   }
 }
 
-export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
-  // reference the callback to avoid unused-var lint in some configurations
-  void sendResponse
-  try {
-    // 获取所有表情组
-    const groups = await newStorageHelpers.getAllEmojiGroups()
+// ...existing code...
 
-    // 找到未分组表情组
-    let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
-    if (!ungroupedGroup) {
-      // 如果未分组表情组不存在，创建一个
-      ungroupedGroup = {
-        id: 'ungrouped',
-        name: '未分组',
-        icon: '📦',
-        order: 999,
-        emojis: []
-      }
-      groups.push(ungroupedGroup)
-    }
-
-    // 检查是否已存在相同URL的表情
-    const existingEmoji = ungroupedGroup.emojis.find((e: any) => e.url === emojiData.url)
-    if (existingEmoji) {
-      sendResponse({ success: false, error: '此表情已存在于未分组中' })
-      return
-    }
-
-    // 创建新表情
-    const newEmoji = {
-      id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      packet: Date.now(),
-      name: emojiData.name,
-      url: emojiData.url,
-      groupId: 'ungrouped',
-      addedAt: Date.now()
-    }
-
-    ungroupedGroup.emojis.push(newEmoji)
-
-    // 保存到存储
-    await newStorageHelpers.setAllEmojiGroups(groups)
-
-    logger.log('[Background] 成功添加表情到未分组:', newEmoji.name)
-    sendResponse({ success: true, message: '表情已添加到未分组' })
-  } catch (error) {
-    logger.error('[Background] 添加表情失败:', error)
-    sendResponse({ success: false, error: error instanceof Error ? error.message : '添加失败' })
-  }
-}
+// handleAddEmojiFromWeb moved to ./handlers/addEmojiFromWeb.ts
 
 export async function handleAddToFavorites(emoji: any, sendResponse: any) {
   // mark callback as referenced to avoid unused-var lint
@@ -177,6 +144,8 @@ export async function handleAddToFavorites(emoji: any, sendResponse: any) {
     })
   }
 }
+
+// downloadAndSendToDiscourse is implemented in ./downloadAndSend and imported above
 
 export async function handleGetEmojiData(_sendResponse: (_resp: any) => void) {
   // mark callback as referenced
@@ -283,6 +252,34 @@ export async function handleSyncSettings(settings: any, _sendResponse: (_resp: a
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     })
+  }
+}
+
+export async function handleSaveLastDiscourse(payload: any, sendResponse: any) {
+  void sendResponse
+  try {
+    const chromeAPI = getChromeAPI()
+    if (!chromeAPI || !chromeAPI.storage || !chromeAPI.storage.local) {
+      sendResponse({ success: false, error: 'chrome storage not available' })
+      return
+    }
+
+    // Expect payload to be { base: string, cookie?: string, csrf?: string }
+    await new Promise<void>((resolve, reject) => {
+      try {
+        chromeAPI.storage.local.set({ lastDiscourse: payload }, () => {
+          if (chromeAPI.runtime.lastError) reject(chromeAPI.runtime.lastError)
+          else resolve()
+        })
+      } catch (e) {
+        reject(e)
+      }
+    })
+
+    sendResponse({ success: true })
+  } catch (error) {
+    logger.error('Failed to save lastDiscourse', error)
+    sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
   }
 }
 
