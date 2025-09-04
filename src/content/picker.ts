@@ -1,8 +1,9 @@
+import { logger } from '../config/buildFlags'
+import { isImageUrl } from '../utils/isImageUrl'
+
 import { cachedState } from './state'
 import { insertEmojiIntoEditor } from './editor'
 import { ensureDefaultIfEmpty } from './storage'
-import { logger } from '../config/buildFlags'
-import { isImageUrl } from '../utils/isImageUrl'
 
 export const isMobile = (): boolean => {
   const userAgent = navigator.userAgent

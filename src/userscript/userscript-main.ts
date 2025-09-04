@@ -1,4 +1,6 @@
 // Main userscript entry point - adapted from content script
+import { isImageUrl } from '../utils/isImageUrl'
+
 import {
   loadDataFromLocalStorage,
   addEmojiToUserscript,
@@ -8,7 +10,6 @@ import {
   saveDataToLocalStorage,
   type UserscriptStorage
 } from './userscript-storage'
-import { isImageUrl } from '../utils/isImageUrl'
 
 import { logger } from '@/config/buildFlags'
 import { uploader } from '@/content/uploader'

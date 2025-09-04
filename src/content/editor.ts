@@ -1,5 +1,6 @@
 // editor.ts - 负责把选中的表情插入到编辑器
 import { logger } from '../config/buildFlags'
+
 import { cachedState } from './state'
 
 export function insertEmojiIntoEditor(emoji: unknown) {
