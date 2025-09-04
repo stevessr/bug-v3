@@ -49,6 +49,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-promise": "^7.2.1",
     "eslint-plugin-vue": "^10.4.0",
+    "jsonc-eslint-parser": "^1.4.1",
     "less": "^4.4.1",
     "playwright": "^1.55.0",
     "postcss": "^8.5.6",
