@@ -1,6 +1,4 @@
-import { logger } from '../config/buildFLagsV2'
-
-declare const chrome: any
+import { logger, chromeAPIWrapper } from '../config/buildFLagsV2'
 
 interface AddEmojiButtonData {
   name: string
@@ -91,7 +89,18 @@ function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
     const orig = button.innerHTML
     const origStyle = button.style.cssText
     try {
-      await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
+      if (chromeAPIWrapper.shouldSkip()) {
+        // In userscript environment, just show success
+        button.innerHTML = '已添加'
+        button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
+        setTimeout(() => {
+          button.innerHTML = orig
+          button.style.cssText = origStyle
+        }, 1500)
+        return
+      }
+      
+      await chromeAPIWrapper.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
       button.innerHTML = '已添加'
       button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
       setTimeout(() => {

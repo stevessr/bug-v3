@@ -1,5 +1,5 @@
 // editor.ts - 负责把选中的表情插入到编辑器
-import { logger } from '../config/buildFLagsV2'
+import { logger, chromeAPIWrapper } from '../config/buildFLagsV2'
 
 import { cachedState } from './state'
 
@@ -10,20 +10,14 @@ export function insertEmojiIntoEditor(emoji: unknown) {
   const em = emoji as any
   void em
 
-  // Add emoji to favorites automatically
-  try {
-    chrome.runtime.sendMessage({
+  // Add emoji to favorites automatically (only in Chrome extension environment)
+  if (!chromeAPIWrapper.shouldSkip()) {
+    chromeAPIWrapper.sendMessage({
       action: 'addToFavorites',
       emoji: emoji
+    }).catch(error => {
+      logger.warn('[Emoji Extension] Failed to add to favorites:', error)
     })
-  } catch (_e) {
-    // Some environments may not support promise-based sendMessage
-    try {
-      ;(chrome as any).runtime.sendMessage({ action: 'addToFavorites', emoji })
-    } catch (_ignored) {
-      void _ignored
-    }
-    void _e
   }
 
   const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null

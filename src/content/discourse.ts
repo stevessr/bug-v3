@@ -1,6 +1,4 @@
-import { logger } from '../config/buildFLagsV2'
-
-declare const chrome: any
+import { logger, chromeAPIWrapper } from '../config/buildFLagsV2'
 
 interface AddEmojiButtonData {
   name: string
@@ -28,7 +26,18 @@ function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) 
     const originalContent = button.innerHTML
     const originalStyle = button.style.cssText
     try {
-      await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
+      if (chromeAPIWrapper.shouldSkip()) {
+        // In userscript environment, just show success
+        button.innerHTML = '已添加'
+        button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
+        setTimeout(() => {
+          button.innerHTML = originalContent
+          button.style.cssText = originalStyle
+        }, 2000)
+        return
+      }
+      
+      await chromeAPIWrapper.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
       button.innerHTML = '已添加'
       button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
       setTimeout(() => {
@@ -173,8 +182,13 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
       let successCount = 0
       for (const emojiData of allEmojiData) {
         try {
-          await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData })
-          successCount++
+          if (chromeAPIWrapper.shouldSkip()) {
+            // In userscript environment, just count as success
+            successCount++
+          } else {
+            await chromeAPIWrapper.sendMessage({ action: 'addEmojiFromWeb', emojiData })
+            successCount++
+          }
         } catch (e) {
           logger.error('[DiscourseOneClick] 添加图片失败', emojiData.name, e)
         }
@@ -279,7 +293,8 @@ export function initDiscourse() {
 }
 
 // Listen for background messages instructing to upload a blob to Discourse
-if ((window as any).chrome?.runtime?.onMessage) {
+// Only available in Chrome extension environment
+if (!chromeAPIWrapper.shouldSkip() && (window as any).chrome?.runtime?.onMessage) {
   ;(window as any).chrome.runtime.onMessage.addListener(async (message: any, _sender: any) => {
     if (message && message.action === 'uploadBlobToDiscourse') {
       try {
@@ -320,21 +335,21 @@ if ((window as any).chrome?.runtime?.onMessage) {
         })
         if (!resp.ok) {
           const data = await resp.json().catch(() => null)
-          ;(window as any).chrome.runtime.sendMessage({
+          await chromeAPIWrapper.sendMessage({
             type: 'UPLOAD_RESULT',
             success: false,
             details: data
           })
         } else {
           const data = await resp.json()
-          ;(window as any).chrome.runtime.sendMessage({
+          await chromeAPIWrapper.sendMessage({
             type: 'UPLOAD_RESULT',
             success: true,
             data
           })
         }
       } catch (e) {
-        ;(window as any).chrome.runtime.sendMessage({
+        await chromeAPIWrapper.sendMessage({
           type: 'UPLOAD_RESULT',
           success: false,
           error: String(e)

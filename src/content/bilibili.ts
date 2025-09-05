@@ -1,6 +1,4 @@
-import { logger } from '../config/buildFLagsV2'
-
-declare const chrome: any
+import { logger, chromeAPIWrapper } from '../config/buildFLagsV2'
 
 interface AddEmojiButtonData {
   name: string
@@ -86,7 +84,18 @@ function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) 
     const originalContent = button.innerHTML
     const originalStyle = button.style.cssText
     try {
-      await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
+      if (chromeAPIWrapper.shouldSkip()) {
+        // In userscript environment, just show success
+        button.innerHTML = '已添加'
+        button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
+        setTimeout(() => {
+          button.innerHTML = originalContent
+          button.style.cssText = originalStyle
+        }, 1500)
+        return
+      }
+      
+      await chromeAPIWrapper.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
       button.innerHTML = '已添加'
       button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
       setTimeout(() => {
@@ -181,11 +190,16 @@ function scanAndInject() {
           if (!url) continue
           const name = extractNameFromUrl(url)
           try {
-            await chrome.runtime.sendMessage({
-              action: 'addEmojiFromWeb',
-              emojiData: { name, url }
-            })
-            success++
+            if (chromeAPIWrapper.shouldSkip()) {
+              // In userscript environment, just count as success
+              success++
+            } else {
+              await chromeAPIWrapper.sendMessage({
+                action: 'addEmojiFromWeb',
+                emojiData: { name, url }
+              })
+              success++
+            }
           } catch (err) {
             logger.error('[BiliOneClick] 批量添加失败', url, err)
           }

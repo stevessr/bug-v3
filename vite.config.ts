@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
   const enableLogging = process.env.ENABLE_LOGGING === 'true' || isDev
   const enableIndexedDB = process.env.ENABLE_INDEXEDDB !== 'false' // 默认启用，除非明确禁用
+  const enableChrome = process.env.ENABLE_CHROME !== 'false' // 默认启用Chrome API，除非明确禁用
 
   return {
     css: {
@@ -26,7 +27,8 @@ export default defineConfig(({ mode }) => {
     define: {
       // 编译期标志定义
       __ENABLE_LOGGING__: enableLogging,
-      __ENABLE_INDEXEDDB__: enableIndexedDB
+      __ENABLE_INDEXEDDB__: enableIndexedDB,
+      __ENABLE_CHROME__: enableChrome
     },
     plugins: [
       generateDefaultEmojiGroupsPlugin(),

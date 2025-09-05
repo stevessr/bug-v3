@@ -1,32 +1,27 @@
-import { logger } from '../config/buildFLagsV2'
+import { logger, chromeAPIWrapper } from '../config/buildFLagsV2'
 
 import { cachedState } from './state'
 import { getDefaultEmojis } from './default'
 
-function sendMessageToBackground(message: any): Promise<any> {
-  return new Promise(resolve => {
-    try {
-      if (
-        (window as any).chrome &&
-        (window as any).chrome.runtime &&
-        (window as any).chrome.runtime.sendMessage
-      ) {
-        ;(window as any).chrome.runtime.sendMessage(message, (response: any) => {
-          resolve(response)
-        })
-      } else {
-        resolve({ success: false, error: 'chrome.runtime.sendMessage not available' })
-      }
-    } catch (e) {
-      resolve({ success: false, error: e instanceof Error ? e.message : String(e) })
-    }
-  })
-}
-
 export async function loadDataFromStorage(): Promise<void> {
   try {
+    if (chromeAPIWrapper.shouldSkip()) {
+      logger.log('[Emoji Extension] Chrome APIs disabled, skipping background data load')
+      // Load defaults for userscript environment
+      cachedState.emojiGroups = []
+      cachedState.settings = {
+        imageScale: 30,
+        gridColumns: 4,
+        outputFormat: 'markdown',
+        forceMobileMode: false,
+        defaultGroup: 'nachoneko',
+        showSearchBar: true
+      }
+      return
+    }
+
     logger.log('[Emoji Extension] Requesting emoji data from background')
-    const resp = await sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
+    const resp = await chromeAPIWrapper.sendMessage({ type: 'GET_EMOJI_DATA' })
 
     if (resp && resp.success && resp.data) {
       const groups = resp.data.groups || []

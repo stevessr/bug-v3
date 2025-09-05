@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
   const enableLogging = process.env.ENABLE_LOGGING !== 'false' // Always enable logging for userscripts unless explicitly disabled
   const enableIndexedDB = false // Userscripts don't use IndexedDB
+  const enableChrome = false // Userscripts don't have Chrome extension APIs
 
   return {
     // resolve alias so imports using @/xxx map to src/xxx
@@ -18,7 +19,8 @@ export default defineConfig(({ mode }) => {
     define: {
       // Compilation flags for userscript
       __ENABLE_LOGGING__: enableLogging,
-      __ENABLE_INDEXEDDB__: enableIndexedDB
+      __ENABLE_INDEXEDDB__: enableIndexedDB,
+      __ENABLE_CHROME__: enableChrome
     },
     build: {
       minify: process.env.BUILD_MINIFIED === 'true' ? 'terser' : false,

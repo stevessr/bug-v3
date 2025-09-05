@@ -1,6 +1,4 @@
-import { logger } from '../config/buildFLagsV2'
-
-declare const chrome: any
+import { logger, chromeAPIWrapper } from '../config/buildFLagsV2'
 
 interface AddEmojiButtonData {
   name: string
@@ -80,12 +78,16 @@ async function performPixivDownloadFlow(data: AddEmojiButtonData) {
     const baseName = data.name && data.name.length > 0 ? data.name : extractNameFromUrl(data.url)
     const filename = baseName.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || 'image'
 
-    const chromeAPI = (window as any).chrome
-
     // helper to read proxy config from extension storage (sync then local)
     const readProxyFromStorage = () =>
       new Promise<any>(resolve => {
+        if (chromeAPIWrapper.shouldSkip()) {
+          resolve(null)
+          return
+        }
+        
         try {
+          const chromeAPI = (window as any).chrome
           if (
             chromeAPI &&
             chromeAPI.storage &&
@@ -112,20 +114,17 @@ async function performPixivDownloadFlow(data: AddEmojiButtonData) {
       storedProxy = await readProxyFromStorage()
       if (storedProxy && storedProxy.enabled && storedProxy.url) {
         // If chrome runtime is available, prefer asking the background to use the stored proxy.
-        if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
+        if (!chromeAPIWrapper.shouldSkip()) {
           try {
-            const bgResp: any = await new Promise(resolve => {
-              try {
-                chromeAPI.runtime.sendMessage(
-                  {
-                    action: 'downloadForUser',
-                    payload: {
-                      url: data.url,
-                      filename,
-                      directDownload: true,
-                      useStorageProxy: true
-                    }
-                  },
+            const bgResp: any = await chromeAPIWrapper.sendMessage({
+              action: 'downloadForUser',
+              payload: {
+                url: data.url,
+                filename,
+                directDownload: true,
+                useStorageProxy: true
+              }
+            })
                   (r: any) => resolve(r)
                 )
               } catch (e) {
