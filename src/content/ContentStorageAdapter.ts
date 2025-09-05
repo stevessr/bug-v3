@@ -1,5 +1,5 @@
 import { defaultSettings } from '../types/emoji'
-import { logger } from '../config/buildFlags'
+import { logger } from '../config/buildFlagsV2'
 
 export class ContentStorageAdapter {
   // Read from extension storage with fallback to local/session storage

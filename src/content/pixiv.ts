@@ -1,4 +1,4 @@
-import { logger } from '../config/buildFlags'
+import { logger } from '../config/buildFlagsV2'
 
 declare const chrome: any
 
@@ -29,10 +29,14 @@ async function performPixivDownloadFlow(data: AddEmojiButtonData) {
   try {
     const chromeAPI = (window as any).chrome
 
+    const baseName = data.name && data.name.length > 0 ? data.name : extractNameFromUrl(data.url)
+    const filename = baseName.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || 'image'
+
+    // ask background to perform a direct browser download of the remote URL
     const resp: any = await new Promise((resolve, reject) => {
       try {
         chromeAPI.runtime.sendMessage(
-          { action: 'downloadForUser', payload: { url: data.url } },
+          { action: 'downloadForUser', payload: { url: data.url, directDownload: true, filename } },
           (r: any) => {
             if (!r) return reject(new Error('no response'))
             resolve(r)
@@ -47,34 +51,27 @@ async function performPixivDownloadFlow(data: AddEmojiButtonData) {
       throw new Error(resp && resp.error ? String(resp.error) : 'download failed')
     }
 
-    // If background saved the file via chrome.downloads, response contains downloadId
-    if (resp.downloadId) {
-      return { success: true, downloadId: resp.downloadId }
+    if (resp.downloadId) return { success: true, downloadId: resp.downloadId }
+
+    // background may return fallback when downloads API unavailable
+    if (resp.fallback) {
+      try {
+        window.open(data.url, '_blank')
+        return { success: true, fallback: 'opened' }
+      } catch (_e) {
+        void _e
+      }
     }
 
-    // If background fell back, we may receive arrayBuffer for page-side download
-    if (resp.fallback && resp.arrayBuffer) {
-      const arrayBuffer = resp.arrayBuffer as ArrayBuffer
-      const mimeType = resp.mimeType || 'application/octet-stream'
-      const filename = resp.filename || 'image'
-
-      const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(url), 5000)
-
-      return { success: true, fallback: true }
-    }
-
-    // unknown response shape
-    throw new Error('unexpected download response')
+    return { success: true }
   } catch (error) {
     logger.error('[PixivOneClick] performPixivDownloadFlow failed', error)
+    try {
+      window.open(data.url, '_blank')
+      return { success: true, fallback: 'opened_on_error' }
+    } catch (_e) {
+      void _e
+    }
     return { success: false, error }
   }
 }

@@ -96,6 +96,43 @@ export async function handleDownloadForUser(payload: any, sendResponse: any) {
 
     const url: string = payload.url
 
+    // If content requested a direct browser download, try to use chrome.downloads.download
+    if (payload.directDownload) {
+      try {
+        const chromeAPI = getChromeAPI()
+        if (chromeAPI && chromeAPI.downloads && chromeAPI.downloads.download) {
+          const filename =
+            payload.filename ||
+            (() => {
+              try {
+                const u = new URL(url)
+                return (u.pathname.split('/').pop() || 'image').replace(/\?.*$/, '')
+              } catch (_e) {
+                return 'image'
+              }
+            })()
+
+          const downloadId: number = await new Promise((resolve, reject) => {
+            try {
+              chromeAPI.downloads.download({ url, filename }, (id: number) => {
+                if (chromeAPI.runtime && chromeAPI.runtime.lastError)
+                  reject(chromeAPI.runtime.lastError)
+                else resolve(id)
+              })
+            } catch (e) {
+              reject(e)
+            }
+          })
+
+          sendResponse({ success: true, downloadId })
+          return
+        }
+      } catch (e) {
+        // Fall through to normal fetch-based download below
+        void e
+      }
+    }
+
     const defaultHeaders: Record<string, string> = {
       Accept:
         'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
