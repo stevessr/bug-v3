@@ -1,12 +1,12 @@
 import { logger } from '../config/buildFLagsV2'
 
-import { initPixiv } from './pixiv'
+//import { initPixiv } from './pixiv'
 import { initBilibili } from './bilibili'
 import { initX } from './x'
 
 export function Uninject() {
   try {
-    initPixiv()
+    //initPixiv() //for bad
   } catch (e) {
     logger.error('[OneClickAdd] initPixiv failed', e)
   }

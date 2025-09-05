@@ -21,15 +21,27 @@ export function generateDefaultEmojiGroupsPlugin(): Plugin {
       try {
         console.log('📦 正在从 default.json 生成 defaultEmojiGroups.ts...')
 
-        const configContent = readFileSync(configPath, 'utf-8')
-        const configData: ConfigData = JSON.parse(configContent)
+        // If building the userscript remote variant, generate an empty placeholder
+        const variant = process.env.USERSCRIPT_VARIANT || 'default'
+        if (variant === 'remote') {
+          const tsContent = `import { EmojiGroup } from "./emoji";
 
-        if (!configData.groups || !Array.isArray(configData.groups)) {
-          throw new Error('default.json 中缺少有效的 groups 数组')
-        }
+// Remote variant: default emoji groups are fetched at runtime. This file is intentionally empty.
 
-        // 生成 TypeScript 文件内容
-        const tsContent = `import { EmojiGroup } from "./emoji";
+export const defaultEmojiGroups: EmojiGroup[] = [];
+`
+          writeFileSync(outputPath, tsContent, 'utf-8')
+          console.log('ℹ️ USERSCRIPT_VARIANT=remote -> generated empty defaultEmojiGroups.ts')
+        } else {
+          const configContent = readFileSync(configPath, 'utf-8')
+          const configData: ConfigData = JSON.parse(configContent)
+
+          if (!configData.groups || !Array.isArray(configData.groups)) {
+            throw new Error('default.json 中缺少有效的 groups 数组')
+          }
+
+          // 生成 TypeScript 文件内容
+          const tsContent = `import { EmojiGroup } from "./emoji";
 
 // 这个文件是在构建时从 src/config/default.json 自动生成的
 // 请不要手动修改此文件，而是修改 src/config/default.json
@@ -37,8 +49,9 @@ export function generateDefaultEmojiGroupsPlugin(): Plugin {
 export const defaultEmojiGroups: EmojiGroup[] = ${JSON.stringify(configData.groups, null, 2)};
 `
 
-        writeFileSync(outputPath, tsContent, 'utf-8')
-        console.log('✅ defaultEmojiGroups.ts 已成功生成')
+          writeFileSync(outputPath, tsContent, 'utf-8')
+          console.log('✅ defaultEmojiGroups.ts 已成功生成')
+        }
 
         // 添加文件监听，当 default.json 改变时重新生成
         this.addWatchFile(configPath)

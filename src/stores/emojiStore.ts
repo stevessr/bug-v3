@@ -2,8 +2,9 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 
 import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji'
-import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
 import { newStorageHelpers } from '../utils/newStorage'
+
+import { defaultEmojiGroups, defaultSettings } from '@/types/emoji'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from '@/config/buildFlags'
@@ -473,6 +474,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const emoji = group.emojis.find(e => e.id === emojiId)
       if (emoji) return emoji
     }
+    return undefined
   }
 
   // --- One-click Add Emoji from Web ---
