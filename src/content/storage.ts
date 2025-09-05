@@ -1,4 +1,4 @@
-import { logger } from '../config/buildFlags'
+import { logger } from '../config/buildFlagsV2'
 
 import { cachedState } from './state'
 import { getDefaultEmojis } from './default'
