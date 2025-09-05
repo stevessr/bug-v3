@@ -8,17 +8,35 @@ export default defineConfig(({ mode }) => {
   const enableLogging = process.env.ENABLE_LOGGING !== 'false' // Always enable logging for userscripts unless explicitly disabled
   const enableIndexedDB = false // Userscripts don't use IndexedDB
 
+  const variant = process.env.USERSCRIPT_VARIANT || 'default'
+
   return {
     // resolve alias so imports using @/xxx map to src/xxx
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url))
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        // When building remote variant, point the generated big data file to an empty placeholder
+        ...(variant === 'remote'
+          ? (() => {
+              const emptyPath = fileURLToPath(
+                new URL('./src/types/defaultEmojiGroups.empty.ts', import.meta.url)
+              )
+              return {
+                '@/types/defaultEmojiGroups': emptyPath,
+                // In case some modules import via relative or non-alias paths, map the actual source paths too
+                [fileURLToPath(new URL('./src/types/defaultEmojiGroups.ts', import.meta.url))]:
+                  emptyPath,
+                'src/types/defaultEmojiGroups': emptyPath
+              }
+            })()
+          : {})
       }
     },
     define: {
       // Compilation flags for userscript
       __ENABLE_LOGGING__: enableLogging,
-      __ENABLE_INDEXEDDB__: enableIndexedDB
+      __ENABLE_INDEXEDDB__: enableIndexedDB,
+      __USERSCRIPT_REMOTE_DEFAULTS__: variant === 'remote'
     },
     build: {
       minify: process.env.BUILD_MINIFIED === 'true' ? 'terser' : false,

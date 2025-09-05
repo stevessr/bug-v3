@@ -1,7 +1,8 @@
-import { defaultEmojiGroups } from '../types/defaultEmojiGroups'
 import { logger } from '../config/buildFlags'
 
 import { getChromeAPI } from './utils'
+
+import { defaultEmojiGroups } from '@/types/defaultEmojiGroups'
 
 export async function initializeDefaultData() {
   const chromeAPI = getChromeAPI()

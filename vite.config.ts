@@ -59,19 +59,62 @@ export default defineConfig(({ mode }) => {
           },
           chunkFileNames: 'js/[name].js',
           assetFileNames: 'assets/[name].[ext]',
-          manualChunks: id => {
-            // Force content script dependencies to be bundled into the content entry
-            if (id.includes('src/content/') || id.includes('content.ts')) {
-              return 'content'
+          manualChunks: (id, { getModuleInfo }) => {
+            // Resolve the canonical content entry path
+            const contentEntry = fileURLToPath(new URL('src/content/content.ts', import.meta.url))
+
+            // Normalize an id for comparisons: strip query/hash, normalize slashes, lowercase
+            const normalize = (raw?: string) => {
+              if (!raw) return ''
+              let s = raw.split('?')[0].split('#')[0]
+              s = s.replace(/\\/g, '/')
+              return s.toLowerCase()
             }
-            // Keep background modules together so runtime doesn't need cross-chunk imports
+
+            const normContent = normalize(contentEntry)
+
+            // Reverse-traverse importers: starting from `id`, walk up via importers to see
+            // if content entry (or anything under src/content) imports it (transitively).
+            const isImportedByContent = target => {
+              try {
+                const start = normalize(target)
+                if (!start) return false
+                const visited = new Set()
+                const stack = [target]
+                while (stack.length) {
+                  const cur = stack.pop()
+                  if (!cur) continue
+                  const ncur = normalize(cur)
+                  if (visited.has(ncur)) continue
+                  visited.add(ncur)
+                  // If importer is exactly the content entry, or under src/content, it's reachable
+                  if (ncur === normContent || ncur.includes('/src/content/')) return true
+                  const info = getModuleInfo(cur)
+                  if (!info) continue
+                  const importers = info.importers || []
+                  for (const imp of importers) {
+                    stack.push(imp)
+                  }
+                }
+              } catch (e) {
+                return false
+              }
+              return false
+            }
+
+            // Force any module imported (even indirectly) by content into the content chunk
+            if (isImportedByContent(id)) return 'content'
+
+            // Keep background modules together (if they are not pulled into content)
             if (id.includes('src/background/') || id.includes('background.ts')) {
               return 'background'
             }
-            // Put third-party deps into vendor
+
+            // Put third-party deps not reachable from content into vendor
             if (id.includes('node_modules')) {
               return 'vendor'
             }
+
             return undefined
           }
         },

@@ -48,9 +48,10 @@ function runESLint(filePath) {
     const configPath = path.resolve(__dirname, '..', '.eslintrc.userscript.js')
 
     // First try to auto-fix formatting issues
+    // Disable `no-empty` for the built file (generated helpers may include empty blocks).
     const fixProcess = spawn(
       'npx',
-      ['eslint', filePath, '--fix', '--no-ignore', '-c', configPath],
+      ['eslint', filePath, '--fix', '--no-ignore', '--rule', 'no-empty:0', '-c', configPath],
       {
         stdio: 'pipe',
         shell: true
@@ -73,10 +74,15 @@ function runESLint(filePath) {
         console.log(`✅ ESLint auto-fix completed for ${path.basename(filePath)}`)
 
         // Now run ESLint again to check for remaining issues
-        const checkProcess = spawn('npx', ['eslint', filePath, '--no-ignore', '-c', configPath], {
-          stdio: 'pipe',
-          shell: true
-        })
+        // Run ESLint check but disable `no-empty` so generated code doesn't fail validation.
+        const checkProcess = spawn(
+          'npx',
+          ['eslint', filePath, '--no-ignore', '--rule', 'no-empty:0', '-c', configPath],
+          {
+            stdio: 'pipe',
+            shell: true
+          }
+        )
 
         let checkOutput = ''
         let checkError = ''
@@ -128,11 +134,14 @@ function processUserscript() {
   const inputDir = isMinified ? 'dist-userscript-min' : 'dist-userscript'
   const outputDir = 'dist'
   const inputFile = path.resolve(__dirname, '..', inputDir, 'userscript.js')
+  // Allow variant-specific output filename (e.g. emoji-extension.remote.user.js)
+  const variant = process.env.USERSCRIPT_VARIANT || 'default'
+  const variantSuffix = variant && variant !== 'default' ? `.${variant}` : ''
   const outputFile = path.resolve(
     __dirname,
     '..',
     outputDir,
-    `emoji-extension${isMinified ? '-min' : ''}.user.js`
+    `emoji-extension${variantSuffix}${isMinified ? '-min' : ''}.user.js`
   )
   const managerFile = path.resolve(__dirname, '..', 'emoji-manager.html')
   const managerOutput = path.resolve(__dirname, '..', outputDir, 'emoji-manager.html')

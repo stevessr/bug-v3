@@ -101,8 +101,8 @@ function isValidUrl(string: string): boolean {
   }
 }
 
-// Default emoji data loaded from JSON
-import { defaultEmojiGroups } from './defaultEmojiGroups'
+// Default emoji data loaded from generated file (use alias so vite can swap for remote builds)
+import { defaultEmojiGroups } from '@/types/defaultEmojiGroups'
 
 const defaultSettings: AppSettings = {
   imageScale: 100,

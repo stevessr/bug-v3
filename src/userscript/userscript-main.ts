@@ -1,8 +1,12 @@
 // Main userscript entry point - adapted from content script
 import { isImageUrl } from '../utils/isImageUrl'
 
+// Compile-time flag injected by vite config: when true the build is the remote variant
+declare const __USERSCRIPT_REMOTE_DEFAULTS__: boolean
+
 import {
   loadDataFromLocalStorage,
+  loadDataFromLocalStorageAsync,
   addEmojiToUserscript,
   exportUserscriptData,
   importUserscriptData,
@@ -28,8 +32,14 @@ const userscriptState: UserscriptStorage = {
 }
 
 // Initialize from localStorage
-function initializeUserscriptData() {
-  const data = loadDataFromLocalStorage()
+async function initializeUserscriptData() {
+  const data = await loadDataFromLocalStorageAsync().catch((err: any) => {
+    logger.warn(
+      '[Userscript] loadDataFromLocalStorageAsync failed, falling back to sync loader',
+      err
+    )
+    return loadDataFromLocalStorage()
+  })
   userscriptState.emojiGroups = data.emojiGroups
   userscriptState.settings = data.settings
 }
@@ -458,6 +468,64 @@ function showManagementModal() {
   modal.appendChild(content)
   document.body.appendChild(modal)
 
+  // 如果构建为 remote 变体，则在简易设置中显示远程默认配置 URL 输入
+  if (typeof __USERSCRIPT_REMOTE_DEFAULTS__ !== 'undefined' && __USERSCRIPT_REMOTE_DEFAULTS__) {
+    const remoteSection = document.createElement('div')
+    remoteSection.style.cssText = 'margin-bottom: 12px;'
+    remoteSection.innerHTML = `
+      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">远程默认配置 URL:</label>
+      <input id="remoteConfigUrl" type="url" placeholder="https://example.com/default-config.json" 
+             style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+      <div style="font-size:12px;color:#888;margin-top:6px;">如果设置此 URL，用户脚本将在没有本地数据时从该 URL 拉取默认配置并保存到 localStorage。</div>
+    `
+
+    // Insert before button row
+    const buttonRow = content.querySelector(
+      'div[style*="display: flex; gap: 8px; justify-content: flex-end;"]'
+    ) as HTMLElement | null
+    if (buttonRow && buttonRow.parentElement) {
+      content.insertBefore(remoteSection, buttonRow)
+    } else {
+      content.appendChild(remoteSection)
+    }
+
+    // Populate input with existing value or default
+    const inputEl = remoteSection.querySelector('#remoteConfigUrl') as HTMLInputElement | null
+    const saved = localStorage.getItem('emoji_extension_remote_config_url')
+    if (inputEl) {
+      inputEl.value = saved || 'https://example.com/default-config.json'
+    }
+  }
+
+  // 如果构建为 remote 变体，则在设置中显示远程默认配置 URL 输入
+  if (typeof __USERSCRIPT_REMOTE_DEFAULTS__ !== 'undefined' && __USERSCRIPT_REMOTE_DEFAULTS__) {
+    const remoteSection = document.createElement('div')
+    remoteSection.style.cssText = 'margin-bottom: 16px;'
+    remoteSection.innerHTML = `
+      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">远程默认配置 URL:</label>
+      <input id="remoteConfigUrl" type="url" placeholder="https://example.com/default-config.json" 
+             style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+      <div style="font-size:12px;color:#888;margin-top:6px;">如果设置此 URL，用户脚本将在没有本地数据时从该 URL 拉取默认配置并保存到 localStorage。</div>
+    `
+
+    // Insert before the button row if exists, otherwise append
+    const buttonRow = content.querySelector(
+      'div[style*="display: flex; gap: 8px; justify-content: flex-end;"]'
+    ) as HTMLElement | null
+    if (buttonRow && buttonRow.parentElement) {
+      content.insertBefore(remoteSection, buttonRow)
+    } else {
+      content.appendChild(remoteSection)
+    }
+
+    // Populate input with existing value or default
+    const inputEl = remoteSection.querySelector('#remoteConfigUrl') as HTMLInputElement | null
+    const saved = localStorage.getItem('emoji_extension_remote_config_url')
+    if (inputEl) {
+      inputEl.value = saved || 'https://example.com/default-config.json'
+    }
+  }
+
   // Event listeners
   content.querySelector('#closeModal')?.addEventListener('click', () => {
     modal.remove()
@@ -654,6 +722,15 @@ function showSettingsModal() {
 
     // Save to localStorage
     saveDataToLocalStorage({ settings: userscriptState.settings })
+    // Also persist remote config URL for remote variant
+    try {
+      const remoteInput = content.querySelector('#remoteConfigUrl') as HTMLInputElement | null
+      if (remoteInput && remoteInput.value.trim()) {
+        localStorage.setItem('emoji_extension_remote_config_url', remoteInput.value.trim())
+      }
+    } catch (e) {
+      // ignore
+    }
     alert('设置已保存')
 
     modal.remove()

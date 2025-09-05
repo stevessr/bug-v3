@@ -11,6 +11,7 @@
     "build:no-indexeddb": "node scripts/build.js build:no-indexeddb",
     "build:minimal": "node scripts/build.js build:minimal",
     "build:userscript": "node scripts/build.js build:userscript",
+    "build:userscript:remote": "node scripts/build.js build:userscript remote",
     "build:userscript:min": "node scripts/build.js build:userscript:min",
     "serve": "vite preview",
     "test": "playwright test",
@@ -63,8 +64,8 @@
     "vue-eslint-parser": "^10.2.0",
     "vue-tsc": "^3.0.6"
   },
-  "dependenciesMeta": {},
   "devDependenciesExtra": {},
+  "dependenciesMeta": {},
   "devDependenciesAdditions": {},
   "devDependencies2": {},
   "peerDependenciesMeta": {},
