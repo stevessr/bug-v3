@@ -1,4 +1,4 @@
-import { logger } from '../config/buildFlagsV2'
+import { logger } from '../config/buildFLagsV2'
 
 import { cachedState } from './state'
 import { insertEmojiIntoEditor } from './editor'

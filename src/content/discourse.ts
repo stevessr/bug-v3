@@ -1,4 +1,4 @@
-import { logger } from '../config/buildFlagsV2'
+import { logger } from '../config/buildFLagsV2'
 
 declare const chrome: any
 
@@ -272,23 +272,7 @@ export function initDiscourse() {
     setTimeout(scanForCookedContent, 300)
     observeMagnificPopup()
     observeCookedContent()
-    // save-last-discourse button injection moved to separate module
-    try {
-      // 明确处理 import 的 Promise 拒绝情况，避免 "Expected catch() or return" 报错
-      void import('./discourse-save-last')
-        .then(m => {
-          try {
-            m.initSaveLastDiscourse()
-          } catch (e) {
-            void e
-          }
-        })
-        .catch(() => {
-          // 忽略加载/初始化错误
-        })
-    } catch (e) {
-      void e
-    }
+    // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages
   } catch (e) {
     logger.error('[DiscourseOneClick] init failed', e)
   }

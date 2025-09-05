@@ -1,6 +1,7 @@
 import { logger } from '../config/buildFlags'
 
 import { getChromeAPI } from './utils'
+import { defaultProxyConfig } from './proxyConfig'
 
 export async function handleDownloadAndSendToDiscourse(payload: any, sendResponse: any) {
   void sendResponse
@@ -90,14 +91,113 @@ export async function handleDownloadForUser(payload: any, sendResponse: any) {
   void sendResponse
   try {
     if (!payload || !payload.url) {
+      logger.error('[Background] handleDownloadForUser missing payload.url')
       sendResponse({ success: false, error: 'missing payload.url' })
       return
     }
 
     const url: string = payload.url
 
-    // If content requested a direct browser download, try to use chrome.downloads.download
+    // If content requested a direct browser download, try proxy first (if configured),
+    // otherwise try chrome.downloads.download directly.
     if (payload.directDownload) {
+      // payload may contain proxy override
+      let proxy = payload.proxy || defaultProxyConfig
+
+      // If content requested to use storage proxy, try to read proxy config from chrome.storage
+      if (payload.useStorageProxy) {
+        try {
+          const chromeAPI = getChromeAPI()
+          const readStorageProxy = () =>
+            new Promise<any>(resolve => {
+              try {
+                if (chromeAPI.storage && chromeAPI.storage.sync && chromeAPI.storage.sync.get) {
+                  chromeAPI.storage.sync.get(['proxy'], (res: any) => resolve(res?.proxy || null))
+                } else if (
+                  chromeAPI.storage &&
+                  chromeAPI.storage.local &&
+                  chromeAPI.storage.local.get
+                ) {
+                  chromeAPI.storage.local.get(['proxy'], (res: any) => resolve(res?.proxy || null))
+                } else resolve(null)
+              } catch (_e) {
+                resolve(null)
+              }
+            })
+
+          const stored = await readStorageProxy()
+          if (stored && stored.enabled && stored.url) proxy = stored
+        } catch (e) {
+          logger.error('[Background] failed to read proxy from storage', e)
+        }
+      }
+      if (proxy && proxy.enabled && proxy.url) {
+        try {
+          logger.log('[Background] attempting proxy download', { proxy: proxy.url, url })
+          const proxyUrl = new URL(proxy.url)
+          proxyUrl.searchParams.set('url', url)
+          if (proxy.password) proxyUrl.searchParams.set('pw', proxy.password)
+
+          const proxyResp = await fetch(proxyUrl.toString(), { method: 'GET' })
+          if (proxyResp.ok) {
+            // proxy returned the image body; create object URL and download
+            const arrayBuffer = await proxyResp.arrayBuffer()
+            const contentType = proxyResp.headers.get('content-type') || 'application/octet-stream'
+            const blob = new Blob([new Uint8Array(arrayBuffer)], { type: contentType })
+            const objectUrl = URL.createObjectURL(blob)
+            const chromeAPI = getChromeAPI()
+            if (chromeAPI && chromeAPI.downloads && chromeAPI.downloads.download) {
+              const filename =
+                payload.filename ||
+                ((): string => {
+                  try {
+                    const u = new URL(url)
+                    return (u.pathname.split('/').pop() || 'image').replace(/\?.*$/, '')
+                  } catch (_e) {
+                    return 'image'
+                  }
+                })()
+              try {
+                const downloadId: number = await new Promise((resolve, reject) => {
+                  try {
+                    chromeAPI.downloads.download({ url: objectUrl, filename }, (id: number) => {
+                      if (chromeAPI.runtime && chromeAPI.runtime.lastError)
+                        reject(chromeAPI.runtime.lastError)
+                      else resolve(id)
+                    })
+                  } catch (e) {
+                    reject(e)
+                  }
+                })
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
+                sendResponse({ success: true, downloadId, via: 'proxy' })
+                return
+              } catch (e) {
+                void e
+                // fall through to other paths
+              }
+            } else {
+              // no downloads API available; return arrayBuffer fallback
+              sendResponse({
+                success: true,
+                fallback: true,
+                arrayBuffer,
+                mimeType: contentType,
+                filename: payload.filename || 'image'
+              })
+              return
+            }
+          } else {
+            logger.error('[Background] proxy fetch failed', { status: proxyResp.status })
+            // fall through to try direct download
+          }
+        } catch (e) {
+          logger.error('[Background] proxy attempt error', e)
+          // fall through to try direct download
+        }
+      }
+
+      // Try direct chrome.downloads.download next
       try {
         const chromeAPI = getChromeAPI()
         if (chromeAPI && chromeAPI.downloads && chromeAPI.downloads.download) {
@@ -112,24 +212,33 @@ export async function handleDownloadForUser(payload: any, sendResponse: any) {
               }
             })()
 
+          logger.log('[Background] attempting directDownload', { url, filename })
+
           const downloadId: number = await new Promise((resolve, reject) => {
             try {
               chromeAPI.downloads.download({ url, filename }, (id: number) => {
-                if (chromeAPI.runtime && chromeAPI.runtime.lastError)
-                  reject(chromeAPI.runtime.lastError)
-                else resolve(id)
+                const le = chromeAPI.runtime && chromeAPI.runtime.lastError
+                if (le) {
+                  // provide structured error to caller
+                  reject(le)
+                } else resolve(id)
               })
             } catch (e) {
               reject(e)
             }
           })
 
+          logger.log('[Background] directDownload started', { downloadId, url })
           sendResponse({ success: true, downloadId })
           return
         }
-      } catch (e) {
-        // Fall through to normal fetch-based download below
-        void e
+      } catch (e: any) {
+        // Log and fall through to normal fetch-based download below
+        logger.error(
+          '[Background] directDownload attempt failed, will fallback to fetch',
+          e && e.message ? e.message : e
+        )
+        // don't return here; fall back to fetch path to try another approach
       }
     }
 

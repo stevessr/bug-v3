@@ -1,4 +1,4 @@
-import { logger } from '../config/buildFlagsV2'
+import { logger } from '../config/buildFLagsV2'
 
 declare const chrome: any
 
@@ -25,53 +25,253 @@ function extractNameFromUrl(url: string): string {
   }
 }
 
-async function performPixivDownloadFlow(data: AddEmojiButtonData) {
-  try {
-    const chromeAPI = (window as any).chrome
+// First try to use canvas to obtain the image binary in-page (avoids downloads API).
+// If canvas is tainted by CORS or any step fails, the caller should fall back to
+// asking background to perform a direct browser download (chrome.downloads) which
+// bypasses CORS restrictions.
+async function tryGetImageViaCanvas(
+  url: string
+): Promise<{ success: true; blob: Blob } | { success: false; error: any }> {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = async () => {
+      try {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        canvas.width = img.naturalWidth || img.width
+        canvas.height = img.naturalHeight || img.height
+        if (!ctx) throw new Error('no-2d-context')
+        ctx.drawImage(img, 0, 0)
 
+        // Try to use toBlob first; if it throws due to taint, catch and fallback
+        try {
+          canvas.toBlob(b => {
+            if (b) resolve({ success: true, blob: b })
+            else resolve({ success: false, error: 'no-blob' })
+          })
+        } catch (e) {
+          // toBlob may throw SecurityError if canvas is tainted
+          try {
+            const dataUrl = canvas.toDataURL()
+            fetch(dataUrl)
+              .then(r => r.blob())
+              .then(b => resolve({ success: true, blob: b }))
+              .catch(err => resolve({ success: false, error: err }))
+          } catch (err2) {
+            resolve({ success: false, error: err2 })
+          }
+        }
+      } catch (err) {
+        resolve({ success: false, error: err })
+      }
+    }
+    img.onerror = () => resolve({ success: false, error: new Error('image load failed') })
+    // assign src last to start loading
+    img.src = url
+  })
+}
+
+async function performPixivDownloadFlow(data: AddEmojiButtonData) {
+  // Contract:
+  // - input: { name, url }
+  // - tries: proxy-from-storage -> canvas -> background directDownload -> open URL
+  try {
     const baseName = data.name && data.name.length > 0 ? data.name : extractNameFromUrl(data.url)
     const filename = baseName.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || 'image'
 
-    // ask background to perform a direct browser download of the remote URL
-    const resp: any = await new Promise((resolve, reject) => {
-      try {
-        chromeAPI.runtime.sendMessage(
-          { action: 'downloadForUser', payload: { url: data.url, directDownload: true, filename } },
-          (r: any) => {
-            if (!r) return reject(new Error('no response'))
-            resolve(r)
+    const chromeAPI = (window as any).chrome
+
+    // helper to read proxy config from extension storage (sync then local)
+    const readProxyFromStorage = () =>
+      new Promise<any>(resolve => {
+        try {
+          if (
+            chromeAPI &&
+            chromeAPI.storage &&
+            chromeAPI.storage.sync &&
+            chromeAPI.storage.sync.get
+          ) {
+            chromeAPI.storage.sync.get(['proxy'], (res: any) => resolve(res?.proxy || null))
+          } else if (
+            chromeAPI &&
+            chromeAPI.storage &&
+            chromeAPI.storage.local &&
+            chromeAPI.storage.local.get
+          ) {
+            chromeAPI.storage.local.get(['proxy'], (res: any) => resolve(res?.proxy || null))
+          } else resolve(null)
+        } catch (_e) {
+          resolve(null)
+        }
+      })
+
+    // 1) If storage proxy is enabled, ask background to use it and avoid loading image here
+    let storedProxy: any = null
+    try {
+      storedProxy = await readProxyFromStorage()
+      if (storedProxy && storedProxy.enabled && storedProxy.url) {
+        // If chrome runtime is available, prefer asking the background to use the stored proxy.
+        if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
+          try {
+            const bgResp: any = await new Promise(resolve => {
+              try {
+                chromeAPI.runtime.sendMessage(
+                  {
+                    action: 'downloadForUser',
+                    payload: {
+                      url: data.url,
+                      filename,
+                      directDownload: true,
+                      useStorageProxy: true
+                    }
+                  },
+                  (r: any) => resolve(r)
+                )
+              } catch (e) {
+                resolve(null)
+              }
+            })
+
+            if (bgResp && bgResp.success)
+              return {
+                success: true,
+                source: 'background',
+                downloadId: bgResp.downloadId
+              }
+            if (bgResp && bgResp.fallback && bgResp.arrayBuffer) {
+              try {
+                const arrayBuffer = bgResp.arrayBuffer as ArrayBuffer
+                const mimeType = bgResp.mimeType || 'application/octet-stream'
+                const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
+                const objectUrl = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = objectUrl
+                a.download = filename
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
+                return { success: true, source: 'background-fallback' }
+              } catch (_e) {
+                // fall through
+              }
+            }
+          } catch (err) {
+            logger.error('[PixivOneClick] proxy background request failed', err)
+            // fall through to other options
           }
-        )
-      } catch (e) {
-        reject(e)
-      }
-    })
+        } else {
+          // No chrome runtime (likely userscript). Fetch proxy directly from the page to avoid CORS.
+          try {
+            const proxyUrl = new URL(storedProxy.url)
+            proxyUrl.searchParams.set('url', data.url)
+            if (storedProxy.password) proxyUrl.searchParams.set('pw', storedProxy.password)
 
-    if (!resp || !resp.success) {
-      throw new Error(resp && resp.error ? String(resp.error) : 'download failed')
+            const resp = await fetch(proxyUrl.toString(), { method: 'GET' })
+            if (resp.ok) {
+              const arrayBuffer = await resp.arrayBuffer()
+              const mimeType = resp.headers.get('content-type') || 'application/octet-stream'
+              const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
+              const objectUrl = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = objectUrl
+              a.download = filename
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+              setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
+              return { success: true, source: 'proxy-direct' }
+            } else {
+              logger.error('[PixivOneClick] proxy direct fetch failed', { status: resp.status })
+            }
+          } catch (err) {
+            logger.error('[PixivOneClick] proxy direct fetch error', err)
+          }
+        }
+      }
+    } catch (err) {
+      logger.error('[PixivOneClick] read proxy failed', err)
     }
 
-    if (resp.downloadId) return { success: true, downloadId: resp.downloadId }
-
-    // background may return fallback when downloads API unavailable
-    if (resp.fallback) {
-      try {
-        window.open(data.url, '_blank')
-        return { success: true, fallback: 'opened' }
-      } catch (_e) {
-        void _e
+    // 2) Canvas attempt (best-effort) — will fail with tainted canvas if CORS
+    try {
+      const canvasResult = await tryGetImageViaCanvas(data.url)
+      if (canvasResult.success) {
+        const objectUrl = URL.createObjectURL(canvasResult.blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
+        return { success: true, source: 'canvas' }
       }
+    } catch (e) {
+      logger.error('[PixivOneClick] canvas extraction failed', e)
     }
 
-    return { success: true }
-  } catch (error) {
-    logger.error('[PixivOneClick] performPixivDownloadFlow failed', error)
+    // 3) Ask background to perform directDownload (may itself use proxy if configured there)
+    try {
+      if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
+        const bgResp: any = await new Promise(resolve => {
+          try {
+            chromeAPI.runtime.sendMessage(
+              {
+                action: 'downloadForUser',
+                payload: {
+                  url: data.url,
+                  filename,
+                  directDownload: true
+                }
+              },
+              (r: any) => resolve(r)
+            )
+          } catch (e) {
+            resolve(null)
+          }
+        })
+
+        if (bgResp && bgResp.success)
+          return {
+            success: true,
+            source: 'background',
+            downloadId: bgResp.downloadId
+          }
+        if (bgResp && bgResp.fallback && bgResp.arrayBuffer) {
+          try {
+            const arrayBuffer = bgResp.arrayBuffer as ArrayBuffer
+            const mimeType = bgResp.mimeType || 'application/octet-stream'
+            const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
+            const objectUrl = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = objectUrl
+            a.download = filename
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
+            return { success: true, source: 'background-fallback' }
+          } catch (e) {
+            void e
+          }
+        }
+      }
+    } catch (e) {
+      logger.error('[PixivOneClick] background directDownload attempt failed', e)
+    }
+
+    // 4) Final fallback: open in new tab
     try {
       window.open(data.url, '_blank')
-      return { success: true, fallback: 'opened_on_error' }
-    } catch (_e) {
-      void _e
+      return { success: true, fallback: 'opened' }
+    } catch (e) {
+      logger.error('[PixivOneClick] failed to open url', e)
+      return { success: false, error: e }
     }
+  } catch (error) {
+    logger.error('[PixivOneClick] performPixivDownloadFlow failed', error)
     return { success: false, error }
   }
 }
@@ -264,6 +464,12 @@ export function initPixiv() {
 
     setTimeout(scanForPixivViewer, 100)
     observePixivViewer()
+    // inject lightweight proxy settings UI for testing/config
+    try {
+      createProxySettingsUI()
+    } catch (_e) {
+      void _e
+    }
   } catch (e) {
     logger.error('[PixivOneClick] init failed', e)
   }
@@ -307,5 +513,120 @@ function isPixivPage(): boolean {
   } catch (e) {
     logger.error('[PixivOneClick] isPixivPage check failed', e)
     return false
+  }
+}
+
+// --- In-page proxy settings UI (simple, stored in chrome.storage) ---
+function createProxySettingsUI() {
+  try {
+    const chromeAPI = (window as any).chrome
+    if (!chromeAPI) return
+
+    // avoid duplicate UI
+    if (document.getElementById('pixiv-proxy-open-btn')) return
+
+    // styles
+    const style = document.createElement('style')
+    style.id = 'pixiv-proxy-style'
+    style.textContent = `
+      #pixiv-proxy-open-btn { position: fixed; right: 12px; top: 12px; z-index: 200000; width:36px; height:36px; border-radius:6px; background:#111827; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.4); }
+      #pixiv-proxy-panel { position: fixed; right: 12px; top: 56px; z-index: 200000; width:320px; max-width:calc(100vw - 24px); background:#fff; color:#111827; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.35); padding:12px; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+      #pixiv-proxy-panel input[type="text"], #pixiv-proxy-panel input[type="password"] { width:100%; box-sizing:border-box; padding:6px; margin:6px 0 10px 0; }
+      #pixiv-proxy-panel label { font-size:12px; }
+      #pixiv-proxy-panel .row { display:flex; gap:8px; align-items:center; }
+      #pixiv-proxy-panel button { margin-top:6px; padding:6px 10px; cursor:pointer; }
+    `
+    document.head.appendChild(style)
+
+    // open button (gear)
+    const openBtn = document.createElement('button')
+    openBtn.id = 'pixiv-proxy-open-btn'
+    openBtn.title = 'Proxy 设置'
+    openBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path fill="currentColor" d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z"/>
+        <path fill="currentColor" d="M19.43 12.98a7.5 7.5 0 0 0 0-1.96l2.11-1.65a.5.5 0 0 0 .12-.62l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.7 7.7 0 0 0-1.7-.98L14.5 2.5a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0-.5.5l-.38 2.39c-.6.24-1.17.55-1.7.98l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.62L4.57 11a7.5 7.5 0 0 0 0 1.96L2.46 14.6a.5.5 0 0 0-.12.62l2 3.46c.15.26.46.36.74.26l2.49-1c.53.43 1.1.74 1.7.98l.38 2.39c.07.32.35.55.68.55h4c.33 0 .61-.23.68-.55l.38-2.39c.6-.24 1.17-.55 1.7-.98l2.49 1c.28.1.59 0 .74-.26l2-3.46a.5.5 0 0 0-.12-.62l-2.11-1.62z"/>
+      </svg>
+    `
+    document.body.appendChild(openBtn)
+
+    // panel (hidden initially)
+    const panel = document.createElement('div')
+    panel.id = 'pixiv-proxy-panel'
+    panel.style.display = 'none'
+    panel.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">Proxy 设置</div>
+      <label><input id="pixiv-proxy-enabled" type="checkbox"> 启用代理</label>
+      <div style="margin-top:6px"><label>Proxy URL</label><input id="pixiv-proxy-url" type="text" placeholder="https://your-proxy.example/" /></div>
+      <div><label>Password (可选)</label><input id="pixiv-proxy-pw" type="password" placeholder="密码" /></div>
+      <div class="row"><button id="pixiv-proxy-save">保存</button><button id="pixiv-proxy-close">关闭</button></div>
+      <div id="pixiv-proxy-msg" style="margin-top:8px;font-size:12px;color:#666"></div>
+    `
+    document.body.appendChild(panel)
+
+    const togglePanel = (show?: boolean) => {
+      if (typeof show === 'boolean') {
+        panel.style.display = show ? 'block' : 'none'
+        return
+      }
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none'
+    }
+
+    openBtn.addEventListener('click', () => togglePanel())
+    panel.querySelector('#pixiv-proxy-close')?.addEventListener('click', () => togglePanel(false))
+
+    const saveBtn = panel.querySelector('#pixiv-proxy-save') as HTMLButtonElement
+    const msgEl = panel.querySelector('#pixiv-proxy-msg') as HTMLElement
+
+    const load = () =>
+      new Promise(resolve => {
+        try {
+          if (chromeAPI.storage && chromeAPI.storage.sync && chromeAPI.storage.sync.get) {
+            chromeAPI.storage.sync.get(['proxy'], (res: any) => resolve(res?.proxy || null))
+          } else if (chromeAPI.storage && chromeAPI.storage.local && chromeAPI.storage.local.get) {
+            chromeAPI.storage.local.get(['proxy'], (res: any) => resolve(res?.proxy || null))
+          } else resolve(null)
+        } catch (_e) {
+          resolve(null)
+        }
+      })
+
+    const save = (cfg: any) =>
+      new Promise(resolve => {
+        try {
+          if (chromeAPI.storage && chromeAPI.storage.sync && chromeAPI.storage.sync.set) {
+            chromeAPI.storage.sync.set({ proxy: cfg }, () => resolve(true))
+          } else if (chromeAPI.storage && chromeAPI.storage.local && chromeAPI.storage.local.set) {
+            chromeAPI.storage.local.set({ proxy: cfg }, () => resolve(true))
+          } else resolve(false)
+        } catch (_e) {
+          resolve(false)
+        }
+      })
+
+    // populate
+    ;(async () => {
+      const cfg: any = await load()
+      const enabled = panel.querySelector('#pixiv-proxy-enabled') as HTMLInputElement
+      const url = panel.querySelector('#pixiv-proxy-url') as HTMLInputElement
+      const pw = panel.querySelector('#pixiv-proxy-pw') as HTMLInputElement
+      if (cfg) {
+        enabled.checked = !!cfg.enabled
+        url.value = cfg.url || ''
+        pw.value = cfg.password || ''
+      }
+    })()
+
+    saveBtn.addEventListener('click', async () => {
+      const enabled = (panel.querySelector('#pixiv-proxy-enabled') as HTMLInputElement).checked
+      const url = (panel.querySelector('#pixiv-proxy-url') as HTMLInputElement).value.trim()
+      const pw = (panel.querySelector('#pixiv-proxy-pw') as HTMLInputElement).value
+      const cfg = { enabled: !!enabled, url, password: pw }
+      const ok: any = await save(cfg)
+      msgEl.textContent = ok ? '已保存' : '保存失败'
+      setTimeout(() => (msgEl.textContent = ''), 2000)
+    })
+  } catch (_e) {
+    // non-fatal
   }
 }

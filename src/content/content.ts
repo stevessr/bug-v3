@@ -1,5 +1,5 @@
 // Entry point: 初始化模块并启动功能
-import { logger } from '../config/buildFlagsV2'
+import { logger } from '../config/buildFLagsV2'
 
 import { initializeEmojiFeature } from './init'
 import { Uninject } from './Uninject'

@@ -5,6 +5,7 @@
   "description": "An emoji extension built with Vue 3 and Vite.",
   "permissions": ["storage", "activeTab", "scripting", "downloads"],
   "host_permissions": [
+    "https://i.pximg.net/*",
     "https://generativelanguage.googleapis.com/*",
     "https://linux.do/*"
   ],
