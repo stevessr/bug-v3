@@ -1,5 +1,5 @@
 // Storage adapter for userscript environment using localStorage
-import { getDefaultEmojis } from '../content/default'
+import { defaultEmojiGroups } from '../types/defaultEmojiGroups'
 
 import { logger } from '@/config/buildFlags'
 
@@ -35,18 +35,19 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
       }
     }
 
-    // If no valid groups, use defaults
+    // If no valid groups, use generated defaults (all groups)
     if (emojiGroups.length === 0) {
-      const defaultEmojis = getDefaultEmojis()
-      emojiGroups = [
-        {
-          id: 'default',
-          name: '默认表情',
-          icon: '😀',
-          order: 0,
-          emojis: defaultEmojis
-        }
-      ]
+      // clone so we don't mutate the generated constant at runtime
+      try {
+        emojiGroups = JSON.parse(JSON.stringify(defaultEmojiGroups))
+      } catch (e) {
+        // fallback to an empty array if cloning fails for any reason
+        logger.warn(
+          '[Userscript] Failed to clone defaultEmojiGroups, falling back to empty groups',
+          e
+        )
+        emojiGroups = []
+      }
     }
 
     // Load settings
@@ -71,6 +72,9 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
       }
     }
 
+    // 在 userscript 模式下，不显示常用 (favorites) 分组
+    emojiGroups = emojiGroups.filter(g => g.id !== 'favorites')
+
     logger.log('[Userscript] Loaded data from localStorage:', {
       groupsCount: emojiGroups.length,
       emojisCount: emojiGroups.reduce((acc, g) => acc + (g.emojis?.length || 0), 0),
@@ -81,25 +85,34 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
   } catch (error) {
     logger.error('[Userscript] Failed to load from localStorage:', error)
 
-    // Return defaults on error
-    const defaultEmojis = getDefaultEmojis()
-    return {
-      emojiGroups: [
-        {
-          id: 'default',
-          name: '默认表情',
-          icon: '😀',
-          order: 0,
-          emojis: defaultEmojis
+    // Return defaults on error: provide generated default groups and default settings
+    try {
+      const cloned = JSON.parse(JSON.stringify(defaultEmojiGroups))
+      // userscript 不需要显示 favorites
+      const filtered = cloned.filter((g: any) => g.id !== 'favorites')
+      return {
+        emojiGroups: filtered,
+        settings: {
+          imageScale: 30,
+          gridColumns: 4,
+          outputFormat: 'markdown',
+          forceMobileMode: false,
+          defaultGroup: 'nachoneko',
+          showSearchBar: true
         }
-      ],
-      settings: {
-        imageScale: 30,
-        gridColumns: 4,
-        outputFormat: 'markdown',
-        forceMobileMode: false,
-        defaultGroup: 'nachoneko',
-        showSearchBar: true
+      }
+    } catch (e) {
+      logger.error('[Userscript] Failed to clone defaultEmojiGroups in error fallback:', e)
+      return {
+        emojiGroups: [],
+        settings: {
+          imageScale: 30,
+          gridColumns: 4,
+          outputFormat: 'markdown',
+          forceMobileMode: false,
+          defaultGroup: 'nachoneko',
+          showSearchBar: true
+        }
       }
     }
   }
