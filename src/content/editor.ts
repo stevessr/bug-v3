@@ -1,5 +1,5 @@
 // editor.ts - 负责把选中的表情插入到编辑器
-import { logger } from '../config/buildFlagsV2'
+import { logger } from '../config/buildFLagsV2'
 
 import { cachedState } from './state'
 

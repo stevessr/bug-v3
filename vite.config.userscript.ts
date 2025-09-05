@@ -1,4 +1,4 @@
-import { fileURLToPath } from 'url'
+import { fileURLToPath, URL } from 'url'
 
 import { defineConfig } from 'vite'
 
@@ -9,6 +9,12 @@ export default defineConfig(({ mode }) => {
   const enableIndexedDB = false // Userscripts don't use IndexedDB
 
   return {
+    // resolve alias so imports using @/xxx map to src/xxx
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url))
+      }
+    },
     define: {
       // Compilation flags for userscript
       __ENABLE_LOGGING__: enableLogging,
