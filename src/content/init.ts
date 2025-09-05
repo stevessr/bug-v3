@@ -1,4 +1,4 @@
-import { logger } from '../config/buildFLagsV2'
+import { logger, chromeAPIWrapper } from '../config/buildFlags'
 
 import { loadDataFromStorage } from './storage'
 import { findAllToolbars, injectButton } from './injector'
@@ -175,8 +175,8 @@ export async function initializeEmojiFeature(
     attemptInjection()
   }
 
-  // storage change listener (using chrome.storage.onChanged if available)
-  if ((window as any).chrome?.storage?.onChanged) {
+  // storage change listener (using chrome.storage.onChanged if available in extension environment)
+  if (!chromeAPIWrapper.shouldSkip() && (window as any).chrome?.storage?.onChanged) {
     ;(window as any).chrome.storage.onChanged.addListener((changes: any, _namespace: string) => {
       if (_namespace === 'local') {
         const relevantKeys = ['emojiGroups', 'emojiGroupIndex', 'appSettings']
@@ -191,8 +191,8 @@ export async function initializeEmojiFeature(
     })
   }
 
-  // Listen for settings updates from background script
-  if ((window as any).chrome?.runtime?.onMessage) {
+  // Listen for settings updates from background script (extension environment only)
+  if (!chromeAPIWrapper.shouldSkip() && (window as any).chrome?.runtime?.onMessage) {
     ;(window as any).chrome.runtime.onMessage.addListener(
       (message: any, _sender: any, _sendResponse: any) => {
         // mark intentionally-unused params

@@ -1,11 +1,11 @@
 import { defaultSettings } from '../types/emoji'
-import { logger } from '../config/buildFLagsV2'
+import { logger, chromeAPIWrapper } from '../config/buildFlags'
 
 export class ContentStorageAdapter {
   // Read from extension storage with fallback to local/session storage
   async get(key: string): Promise<any> {
-    // Try extension storage first (main source for content scripts)
-    if (chrome?.storage?.local) {
+    // Try extension storage first (main source for content scripts) - only in Chrome extension environment
+    if (!chromeAPIWrapper.shouldSkip() && chrome?.storage?.local) {
       try {
         const result = await chrome.storage.local.get({ [key]: null })
         const value = result[key]

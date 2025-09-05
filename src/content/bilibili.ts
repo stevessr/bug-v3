@@ -1,4 +1,4 @@
-import { logger, chromeAPIWrapper } from '../config/buildFLagsV2'
+import { logger, chromeAPIWrapper } from '../config/buildFlags'
 
 interface AddEmojiButtonData {
   name: string

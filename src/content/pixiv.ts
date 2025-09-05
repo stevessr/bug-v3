@@ -1,4 +1,4 @@
-import { logger, chromeAPIWrapper } from '../config/buildFLagsV2'
+import { logger, chromeAPIWrapper } from '../config/buildFlags'
 
 interface AddEmojiButtonData {
   name: string
@@ -125,12 +125,6 @@ async function performPixivDownloadFlow(data: AddEmojiButtonData) {
                 useStorageProxy: true
               }
             })
-                  (r: any) => resolve(r)
-                )
-              } catch (e) {
-                resolve(null)
-              }
-            })
 
             if (bgResp && bgResp.success)
               return {
@@ -213,22 +207,13 @@ async function performPixivDownloadFlow(data: AddEmojiButtonData) {
 
     // 3) Ask background to perform directDownload (may itself use proxy if configured there)
     try {
-      if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
-        const bgResp: any = await new Promise(resolve => {
-          try {
-            chromeAPI.runtime.sendMessage(
-              {
-                action: 'downloadForUser',
-                payload: {
-                  url: data.url,
-                  filename,
-                  directDownload: true
-                }
-              },
-              (r: any) => resolve(r)
-            )
-          } catch (e) {
-            resolve(null)
+      if (!chromeAPIWrapper.shouldSkip()) {
+        const bgResp: any = await chromeAPIWrapper.sendMessage({
+          action: 'downloadForUser',
+          payload: {
+            url: data.url,
+            filename,
+            directDownload: true
           }
         })
 
