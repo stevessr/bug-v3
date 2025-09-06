@@ -5,8 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>表情管理器 - Emoji Extension Manager</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/ant-design-vue@4/dist/antd.min.js"></script>
-    <link href="https://unpkg.com/ant-design-vue@4/dist/reset.css" rel="stylesheet" />
+    <!-- Provide a minimal safe dayjs stub to satisfy libraries that call dayjs.extend
+         (Some CDN bundles can conflict; the stub avoids runtime errors while still
+         allowing a full dayjs to be loaded later if desired) -->
+    <script>
+      ;(function () {
+        try {
+          if (!window.dayjs) {
+            // minimal dayjs-like function
+            function dayjs_stub(input) {
+              return {
+                toString() {
+                  return input == null ? '' : String(input)
+                }
+              }
+            }
+            dayjs_stub.extend = function () {
+              // No-op for plugins
+            }
+            // internal marker used by some builds
+            dayjs_stub.$i = dayjs_stub.$i || {}
+            window.dayjs = dayjs_stub
+            console.debug('Inserted dayjs stub')
+          }
+        } catch (e) {
+          console.warn('Failed to install dayjs stub', e)
+        }
+      })()
+    </script>
+    <!-- Use a different CDN for ant-design-vue to avoid potential unpkg issues -->
+    <script src="https://cdn.jsdelivr.net/npm/ant-design-vue@4/dist/antd.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/ant-design-vue@4/dist/reset.css" rel="stylesheet" />
     <link
       href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
       rel="stylesheet"
@@ -62,7 +91,36 @@
             <h1 style="color: white; margin: 0; font-size: 18px">🐈‍⬛ 表情管理器</h1>
             <div>
               <a-button @click="exportData" style="margin-right: 8px">导出数据</a-button>
-              <a-button @click="showImportModal = true" type="primary">导入数据</a-button>
+              <a-button @click="openImportModal" type="primary">导入数据</a-button>
+
+              <!-- WebSocket controls -->
+              <div style="display: inline-block; margin-left: 16px; vertical-align: middle">
+                <input
+                  v-model="wsUrl"
+                  placeholder="ws://localhost:8765"
+                  style="width: 220px; margin-right: 8px"
+                />
+                <a-button
+                  size="small"
+                  @click="connectWebSocket"
+                  :disabled="wsConnected"
+                  style="margin-right: 6px"
+                >
+                  连接 WS
+                </a-button>
+                <a-button
+                  size="small"
+                  type="default"
+                  @click="disconnectWebSocket"
+                  :disabled="!wsConnected"
+                >
+                  断开 WS
+                </a-button>
+                <span style="margin-left: 8px; color: #999">
+                  状态:
+                  <strong>{{ wsConnected ? '已连接' : '未连接' }}</strong>
+                </span>
+              </div>
             </div>
           </div>
         </a-layout-header>
@@ -71,7 +129,7 @@
           <!-- Sidebar -->
           <a-layout-sider width="200" style="background: #fff">
             <a-menu
-              v-model:selectedKeys="selectedKeys"
+              v-model:selected-keys="selectedKeys"
               mode="inline"
               style="height: 100%; border-right: 0"
             >
@@ -104,7 +162,7 @@
                   "
                 >
                   <h2>表情分组管理</h2>
-                  <a-button type="primary" @click="showCreateGroupModal = true">创建分组</a-button>
+                  <a-button type="primary" @click="openCreateGroupModal">创建分组</a-button>
                 </div>
 
                 <!-- Groups List -->
@@ -114,7 +172,7 @@
                       <template #actions>
                         <a @click="editGroup(group)">编辑</a>
                         <a @click="deleteGroup(group.id)">删除</a>
-                        <a @click="showAddEmojiModal(group.id)">添加表情</a>
+                        <a @click="openAddEmojiModal(group.id)">添加表情</a>
                       </template>
 
                       <div class="group-header">
@@ -254,7 +312,7 @@
                 <div>
                   <h3>数据导入</h3>
                   <p>从备份文件或其他来源导入表情数据</p>
-                  <a-button @click="showImportModal = true">导入数据</a-button>
+                  <a-button @click="openImportModal">导入数据</a-button>
                 </div>
               </a-space>
             </div>
@@ -263,7 +321,7 @@
       </a-layout>
 
       <!-- Create Group Modal -->
-      <a-modal v-model:open="showCreateGroupModal" title="创建分组" @ok="createGroup">
+      <a-modal v-model:open="openCreateGroupModalFlag" title="创建分组" @ok="createGroup">
         <a-form layout="vertical">
           <a-form-item label="分组名称" required>
             <a-input v-model:value="newGroup.name" placeholder="输入分组名称" />
@@ -287,7 +345,7 @@
       </a-modal>
 
       <!-- Add Emoji Modal -->
-      <a-modal v-model:open="showAddEmojiModal" title="添加表情" @ok="addEmoji">
+      <a-modal v-model:open="openAddEmojiModalFlag" title="添加表情" @ok="addEmoji">
         <a-form layout="vertical">
           <a-form-item label="表情名称" required>
             <a-input v-model:value="newEmoji.name" placeholder="输入表情名称" />
@@ -302,7 +360,7 @@
       </a-modal>
 
       <!-- Import Modal -->
-      <a-modal v-model:open="showImportModal" title="导入数据" @ok="importData">
+      <a-modal v-model:open="openImportModalFlag" title="导入数据" @ok="performImport">
         <a-form layout="vertical">
           <a-form-item label="数据格式">
             <a-radio-group v-model:value="importFormat">
@@ -319,6 +377,152 @@
 
     <script>
       const { createApp } = Vue
+      // Safely resolve the global variable that the UMD build of ant-design-vue exposes.
+      // Different CDN/builds may expose different globals, so try several common names.
+      const resolvedAntd =
+        window.antd ||
+        window['ant-design-vue'] ||
+        window.Antd ||
+        window.antdv ||
+        window.antDesignVue
+      if (!resolvedAntd) {
+        // Keep a helpful console error for debugging if the CDN changed or failed to load.
+        console.error(
+          'Ant Design Vue (antd) is not available on window. UI components may fail to initialize.'
+        )
+      }
+      console.debug(
+        'resolvedAntd (debug):',
+        resolvedAntd,
+        'window.keys sample:',
+        Object.keys(window).slice(0, 50)
+      )
+
+      // Provide minimal fallback stubs to avoid Vue complaining about unresolved components
+      const safeFallback = {
+        // Basic functional stubs that render their children as plain elements
+        Layout: {
+          render() {
+            return null
+          }
+        },
+        LayoutHeader: {
+          render() {
+            return null
+          }
+        },
+        LayoutSider: {
+          render() {
+            return null
+          }
+        },
+        LayoutContent: {
+          render() {
+            return null
+          }
+        },
+        Menu: {
+          render() {
+            return null
+          }
+        },
+        MenuItem: {
+          render() {
+            return null
+          }
+        },
+        Button: {
+          render() {
+            return null
+          }
+        },
+        List: {
+          render() {
+            return null
+          }
+        },
+        ListItem: {
+          render() {
+            return null
+          }
+        },
+        Tag: {
+          render() {
+            return null
+          }
+        },
+        Form: {
+          render() {
+            return null
+          }
+        },
+        FormItem: {
+          render() {
+            return null
+          }
+        },
+        Input: {
+          render() {
+            return null
+          }
+        },
+        Slider: {
+          render() {
+            return null
+          }
+        },
+        RadioGroup: {
+          render() {
+            return null
+          }
+        },
+        Radio: {
+          render() {
+            return null
+          }
+        },
+        Checkbox: {
+          render() {
+            return null
+          }
+        },
+        Space: {
+          render() {
+            return null
+          }
+        },
+        Divider: {
+          render() {
+            return null
+          }
+        },
+        Modal: {
+          render() {
+            return null
+          }
+        },
+        Textarea: {
+          render() {
+            return null
+          }
+        },
+        Row: {
+          render() {
+            return null
+          }
+        },
+        Col: {
+          render() {
+            return null
+          }
+        },
+        message: {
+          success: msg => console.log('[message.success]', msg),
+          error: msg => console.error('[message.error]', msg),
+          info: msg => console.info('[message.info]', msg)
+        }
+      }
+
       const {
         Layout,
         LayoutHeader,
@@ -344,7 +548,7 @@
         Row,
         Col,
         message
-      } = antd
+      } = resolvedAntd || safeFallback
 
       createApp({
         components: {
@@ -386,19 +590,53 @@
               showSearchBar: true
             },
             favorites: [],
-            showCreateGroupModal: false,
+            // modal flags renamed to avoid collision with method names
+            openCreateGroupModalFlag: false,
             showEditGroupModal: false,
-            showAddEmojiModal: false,
-            showImportModal: false,
+            openAddEmojiModalFlag: false,
+            openImportModalFlag: false,
             newGroup: { name: '', icon: '📁' },
             editingGroup: { id: '', name: '', icon: '' },
             newEmoji: { name: '', url: '', groupId: '' },
             importData: '',
-            importFormat: 'json'
+            importFormat: 'json',
+            // WebSocket state for userscript integration
+            wsUrl: 'ws://localhost:8765',
+            wsConnected: false,
+            wsInstance: null
           }
         },
         mounted() {
           this.loadData()
+          // Broadcast presence for userscripts to auto-discover manager and WS URL
+          try {
+            if (typeof BroadcastChannel !== 'undefined') {
+              this.__bc = new BroadcastChannel('emoji-manager-channel')
+              const sendPresence = () => {
+                try {
+                  this.__bc.postMessage({
+                    type: 'manager:presence',
+                    wsUrl: this.wsUrl,
+                    wsConnected: this.wsConnected
+                  })
+                } catch (e) {
+                  // ignore
+                }
+              }
+              sendPresence()
+              this.__bcInterval = setInterval(sendPresence, 5000)
+
+              // Cleanup on unload
+              window.addEventListener('beforeunload', () => {
+                try {
+                  clearInterval(this.__bcInterval)
+                  this.__bc.close()
+                } catch (e) {}
+              })
+            }
+          } catch (e) {
+            // ignore if BroadcastChannel unavailable
+          }
         },
         methods: {
           loadData() {
@@ -474,6 +712,14 @@
             ]
           },
 
+          openCreateGroupModal() {
+            this.openCreateGroupModalFlag = true
+          },
+
+          openImportModal() {
+            this.openImportModalFlag = true
+          },
+
           createGroup() {
             if (!this.newGroup.name.trim()) {
               message.error('请输入分组名称')
@@ -533,9 +779,9 @@
             }
           },
 
-          showAddEmojiModal(groupId) {
+          openAddEmojiModal(groupId) {
             this.newEmoji.groupId = groupId
-            this.showAddEmojiModal = true
+            this.openAddEmojiModalFlag = true
           },
 
           addEmoji() {
@@ -580,38 +826,229 @@
           },
 
           exportData() {
-            const data = {
-              groups: this.emojiGroups,
-              settings: this.settings,
-              favorites: this.favorites,
-              version: '1.0.0',
-              exportTime: new Date().toISOString()
-            }
+            const safeFallback = (function () {
+              // helper to create a component that renders its default slot inside a tag
+              function slotWrapper(tag = 'div') {
+                return {
+                  inheritAttrs: false,
+                  render() {
+                    const children = this.$slots && this.$slots.default ? this.$slots.default() : []
+                    return Vue.h(tag, this.$attrs || {}, children)
+                  }
+                }
+              }
 
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `emoji-extension-backup-${new Date().toISOString().split('T')[0]}.json`
-            a.click()
-            URL.revokeObjectURL(url)
-            message.success('数据导出成功')
+              const Button = {
+                inheritAttrs: false,
+                render() {
+                  const children = this.$slots && this.$slots.default ? this.$slots.default() : []
+                  return Vue.h(
+                    'button',
+                    Object.assign({}, this.$attrs, {
+                      onClick: e => {
+                        this.$emit && this.$emit('click', e)
+                      }
+                    }),
+                    children
+                  )
+                }
+              }
+
+              const Input = {
+                inheritAttrs: false,
+                props: ['value', 'modelValue'],
+                render() {
+                  const value = this.modelValue !== undefined ? this.modelValue : this.value
+                  return Vue.h(
+                    'input',
+                    Object.assign({}, this.$attrs, {
+                      value: value,
+                      onInput: e => {
+                        const v = e.target.value
+                        this.$emit && this.$emit('update:modelValue', v)
+                        this.$emit && this.$emit('update:value', v)
+                      }
+                    })
+                  )
+                }
+              }
+
+              const Modal = {
+                inheritAttrs: false,
+                props: ['open'],
+                render() {
+                  if (!this.open) return null
+                  const body = this.$slots && this.$slots.default ? this.$slots.default() : []
+                  const footer = Vue.h('div', { style: { marginTop: '12px' } }, [
+                    Vue.h(
+                      'button',
+                      {
+                        onClick: () => {
+                          this.$emit && this.$emit('ok')
+                          this.$emit && this.$emit('update:open', false)
+                        }
+                      },
+                      'OK'
+                    )
+                  ])
+                  return Vue.h(
+                    'div',
+                    {
+                      class: 'modal-fallback',
+                      style: { border: '1px solid #ddd', padding: '12px', background: '#fff' }
+                    },
+                    [body, footer]
+                  )
+                }
+              }
+
+              return {
+                Layout: slotWrapper('div'),
+                LayoutHeader: slotWrapper('header'),
+                LayoutSider: slotWrapper('aside'),
+                LayoutContent: slotWrapper('main'),
+                Menu: slotWrapper('div'),
+                MenuItem: slotWrapper('div'),
+                Button: Button,
+                List: slotWrapper('div'),
+                ListItem: slotWrapper('div'),
+                Tag: slotWrapper('span'),
+                Form: slotWrapper('form'),
+                FormItem: slotWrapper('div'),
+                Input: Input,
+                Slider: slotWrapper('input'),
+                RadioGroup: slotWrapper('div'),
+                Radio: slotWrapper('input'),
+                Checkbox: slotWrapper('input'),
+                Space: slotWrapper('div'),
+                Divider: slotWrapper('hr'),
+                Modal: Modal,
+                Textarea: slotWrapper('textarea'),
+                Row: slotWrapper('div'),
+                Col: slotWrapper('div'),
+                message: {
+                  success: msg => console.log('[message.success]', msg),
+                  error: msg => console.error('[message.error]', msg),
+                  info: msg => console.info('[message.info]', msg)
+                }
+              }
+            })()
+            message.success('用户脚本数据导出成功')
           },
 
           exportForUserscript() {
-            const data = {
-              emojiGroups: this.emojiGroups,
-              settings: this.settings
-            }
+            try {
+              const payload = {
+                emojiGroups: this.emojiGroups,
+                settings: this.settings,
+                favorites: this.favorites
+              }
+              const json = JSON.stringify(payload, null, 2)
 
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `userscript-data-${new Date().toISOString().split('T')[0]}.json`
-            a.click()
-            URL.revokeObjectURL(url)
-            message.success('用户脚本数据导出成功')
+              // Try to copy to clipboard (convenience for userscript authors)
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard
+                  .writeText(json)
+                  .then(() => {
+                    message.success('已复制用户脚本格式到剪贴板')
+                  })
+                  .catch(() => {
+                    message.info('复制到剪贴板失败，请手动保存导出文件')
+                  })
+              }
+
+              // Trigger file download
+              const blob = new Blob([json], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = 'emoji_userscript_export.json'
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+              URL.revokeObjectURL(url)
+            } catch (error) {
+              console.error('exportForUserscript failed', error)
+              message.error(
+                '导出用户脚本数据失败: ' + (error && error.message ? error.message : '')
+              )
+            }
+          },
+
+          getUserscriptPayload() {
+            return {
+              emojiGroups: this.emojiGroups,
+              settings: this.settings,
+              favorites: this.favorites
+            }
+          },
+
+          connectWebSocket() {
+            if (!this.wsUrl) {
+              message.error('请先填写 WebSocket URL')
+              return
+            }
+            try {
+              this.wsInstance = new WebSocket(this.wsUrl)
+              this.wsInstance.onopen = () => {
+                this.wsConnected = true
+                message.success('WebSocket 已连接')
+              }
+              this.wsInstance.onclose = () => {
+                this.wsConnected = false
+                this.wsInstance = null
+                message.info('WebSocket 已断开')
+              }
+              this.wsInstance.onerror = err => {
+                console.error('WebSocket error', err)
+                message.error('WebSocket 错误')
+              }
+              this.wsInstance.onmessage = ev => {
+                try {
+                  const msg = JSON.parse(ev.data)
+                  // Support a simple request/response protocol
+                  if (msg && msg.type === 'request_export') {
+                    const payload = this.getUserscriptPayload()
+                    const res = { type: 'export', payload }
+                    this.wsSend(res)
+                    message.success('已通过 WebSocket 发送导出数据')
+                  } else {
+                    // For debugging: show incoming messages in console
+                    console.debug('WS message received', msg)
+                  }
+                } catch (e) {
+                  console.warn('Failed to parse WS message', ev.data)
+                }
+              }
+            } catch (error) {
+              console.error('connectWebSocket failed', error)
+              message.error('连接 WebSocket 失败: ' + (error && error.message ? error.message : ''))
+            }
+          },
+
+          disconnectWebSocket() {
+            try {
+              if (this.wsInstance) {
+                this.wsInstance.close()
+                this.wsInstance = null
+              }
+              this.wsConnected = false
+            } catch (error) {
+              console.error('disconnectWebSocket failed', error)
+            }
+          },
+
+          wsSend(obj) {
+            try {
+              if (!this.wsInstance || this.wsInstance.readyState !== WebSocket.OPEN) {
+                message.error('WebSocket 未连接')
+                return
+              }
+              const text = typeof obj === 'string' ? obj : JSON.stringify(obj)
+              this.wsInstance.send(text)
+            } catch (error) {
+              console.error('wsSend failed', error)
+            }
           },
 
           syncToUserscript() {
@@ -631,7 +1068,7 @@
             }
           },
 
-          importData() {
+          performImport() {
             try {
               const data = JSON.parse(this.importData)
 
@@ -655,7 +1092,7 @@
               }
 
               this.saveData()
-              this.showImportModal = false
+              this.openImportModalFlag = false
               this.importData = ''
               message.success('数据导入成功')
             } catch (error) {
