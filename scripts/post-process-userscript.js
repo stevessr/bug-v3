@@ -21,6 +21,7 @@ function getUserscriptHeader(minified = false) {
 // @match        https://linux.do/*
 // @match        https://meta.discourse.org/*
 // @match        https://*.discourse.org/*
+// @match        http://localhost:5173/*
 // @grant        none
 // @license      MIT
 // @homepageURL  https://github.com/stevessr/bug-v3
