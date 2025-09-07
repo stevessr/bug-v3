@@ -1,6 +1,8 @@
 import { fileURLToPath, URL } from 'url'
 
 import { defineConfig } from 'vite'
+import fs from 'fs'
+import path from 'path'
 import vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
@@ -29,6 +31,61 @@ export default defineConfig(({ mode }) => {
       __ENABLE_INDEXEDDB__: enableIndexedDB
     },
     plugins: [
+      // Serve /bilibili_emoji_index.json in dev and emit it as asset in build
+      (function bilibiliIndexPlugin() {
+        const srcPath = fileURLToPath(
+          new URL('./src/config/bilibili_emoji_index.json', import.meta.url)
+        )
+        let assetId: string | null = null
+        return {
+          name: 'bilibili-index-asset',
+          // no `apply` so plugin runs in both dev and build
+          configureServer(server) {
+            server.middlewares.use(async (req, res, next) => {
+              try {
+                if (!req.url) return next()
+                // Support query/hash variants
+                const u = req.url.split('?')[0].split('#')[0]
+                if (u === '/bilibili_emoji_index.json') {
+                  try {
+                    const content = await fs.promises.readFile(srcPath, 'utf-8')
+                    res.setHeader('content-type', 'application/json; charset=utf-8')
+                    res.statusCode = 200
+                    res.end(content)
+                    return
+                  } catch (e) {
+                    res.statusCode = 500
+                    res.end(JSON.stringify({ error: 'failed to read index' }))
+                    return
+                  }
+                }
+              } catch (e) {
+                // swallow
+              }
+              return next()
+            })
+          },
+          buildStart() {
+            try {
+              const content = fs.readFileSync(srcPath, 'utf-8')
+              assetId = this.emitFile({
+                type: 'asset',
+                fileName: 'bilibili_emoji_index.json',
+                source: content
+              })
+              this.warn('bilibili index scheduled to be emitted as bibilili_emoji_index.json')
+            } catch (e) {
+              this.warn('Failed to read bilibili index at ' + srcPath + ': ' + e)
+            }
+          },
+          generateBundle() {
+            if (assetId) {
+              const final = this.getFileName(assetId)
+              this.warn('bilibili index emitted as ' + final)
+            }
+          }
+        }
+      })(),
       generateDefaultEmojiGroupsPlugin(),
       vue(),
       // Ensure content script is emitted as a plain script without import/export
