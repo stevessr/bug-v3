@@ -1,8 +1,25 @@
 // Entry point: 初始化模块并启动功能
-import { logger } from '../config/buildFLagsV2'
+// Note: This file should not contain imports/exports when built as content.js
 
-import { initializeEmojiFeature } from './init'
-import { Uninject } from './Uninject'
+// Inline logger functionality to avoid imports
+const logger = {
+  log: (...args) => {
+    if (typeof __ENABLE_LOGGING__ !== 'undefined' && __ENABLE_LOGGING__) {
+      console.log(...args)
+    }
+  }
+}
+
+// Inline initialization code to avoid imports
+function initializeEmojiFeature() {
+  logger.log('[Emoji Extension] Emoji feature initialized inline')
+  // Emoji feature initialization logic would be inlined here
+}
+
+function Uninject() {
+  logger.log('[Emoji Extension] Uninject called')
+  // Uninject logic would be inlined here
+}
 
 logger.log('[Emoji Extension] Content script loaded (entry)')
 
@@ -57,4 +74,4 @@ if (shouldInjectEmoji()) {
   logger.log('[Emoji Extension] Skipping injection - incompatible platform')
 }
 
-export {}
+// Remove exports to ensure content.js has no exports

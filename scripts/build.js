@@ -155,13 +155,25 @@ child.on('exit', code => {
 
       cleanChild.on('exit', cleanCode => {
         if (cleanCode === 0) {
-          // Vite produced the content.js chunk according to rollupOptions.manualChunks
-          // and output file names; no separate bundling step is required.
-          console.log('✅ 构建完成！')
+          // Process content.js to remove imports/exports
+          console.log('🔧 Processing content.js...')
+          const processChild = spawn('node', ['./scripts/process-content-js.js', distDir], {
+            stdio: 'inherit',
+            shell: true
+          })
+
+          processChild.on('exit', processCode => {
+            if (processCode === 0) {
+              console.log('✅ 构建完成！')
+            } else {
+              console.error('❌ content.js 处理出错')
+            }
+            process.exit(processCode)
+          })
         } else {
           console.error('❌ 清理过程出错')
+          process.exit(cleanCode)
         }
-        process.exit(cleanCode)
       })
     }
   } else {

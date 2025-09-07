@@ -102,7 +102,7 @@ export default defineConfig(({ mode }) => {
               return false
             }
 
-            // Force any module imported (even indirectly) by content into the content chunk
+            // Force ALL modules imported by content into the content chunk (inline everything)
             if (isImportedByContent(id)) return 'content'
 
             // Keep background modules together (if they are not pulled into content)
