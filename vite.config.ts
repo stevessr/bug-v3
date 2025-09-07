@@ -31,19 +31,46 @@ export default defineConfig(({ mode }) => {
     plugins: [
       generateDefaultEmojiGroupsPlugin(),
       vue(),
+      // Ensure content script is emitted as a plain script without import/export
+      // and avoid other bundles importing from the content chunk.
+      {
+        name: 'content-script-plain',
+        generateBundle(_options, bundle) {
+          for (const [fileName, chunk] of Object.entries(bundle)) {
+            // chunk is a RollupOutputChunk
+            // We target the chunk named 'content' (set in rollupOptions.input)
+            // and its rendered file name (usually js/content.js)
+            // @ts-ignore
+            if (chunk && chunk.type === 'chunk' && chunk.name === 'content') {
+              // @ts-ignore
+              let code = chunk.code
+              // Remove any remaining import/export statements conservatively
+              code = code.replace(/(^|\n)\s*(import|export)[^\n]*\n/g, '\n')
+              // Wrap in IIFE so it becomes a plain script
+              code = `(function(){\n${code}\n})();\n`
+              // @ts-ignore
+              chunk.code = code
+            }
+          }
+        }
+      },
       // auto register components and import styles for ant-design-vue
       Components({
         resolvers: [AntDesignVueResolver({ importStyle: 'less' })]
       })
     ],
     build: {
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: !enableLogging, // 根据日志开关决定是否移除 console
-          drop_debugger: !isDev // 生产环境移除 debugger
-        }
-      },
+      // Allow disabling minification for debug builds via BUILD_MINIFIED env var
+      minify: process.env.BUILD_MINIFIED === 'false' ? false : 'terser',
+      terserOptions:
+        process.env.BUILD_MINIFIED === 'false'
+          ? undefined
+          : {
+              compress: {
+                drop_console: !enableLogging, // 根据日志开关决定是否移除 console
+                drop_debugger: !isDev // 生产环境移除 debugger
+              }
+            },
       rollupOptions: {
         input: {
           popup: fileURLToPath(new URL('popup.html', import.meta.url)),
@@ -102,8 +129,53 @@ export default defineConfig(({ mode }) => {
               return false
             }
 
-            // Force any module imported (even indirectly) by content into the content chunk
-            if (isImportedByContent(id)) return 'content'
+            // Decide whether module is reachable from content and whether it's
+            // also reachable from other non-content entrypoints. If it's shared,
+            // don't place it into the content chunk to avoid other bundles
+            // importing from content.
+            const isReachableFromContent = isImportedByContent(id)
+            if (isReachableFromContent) {
+              // Check if it's also reachable from any other top-level entries
+              const otherEntryHints = [
+                'src/background/',
+                'popup.html',
+                'options.html',
+                'src/tenor/',
+                'src/waline/'
+              ]
+              const isShared = (() => {
+                try {
+                  const visited = new Set()
+                  const stack = [id]
+                  while (stack.length) {
+                    const cur = stack.pop()
+                    if (!cur) continue
+                    const ncur = normalize(cur)
+                    if (visited.has(ncur)) continue
+                    visited.add(ncur)
+                    if (ncur === normContent || ncur.includes('/src/content/')) {
+                      // reachable from content; continue
+                    }
+                    // If any importer is under otherEntryHints, mark shared
+                    const info = getModuleInfo(cur)
+                    if (!info) continue
+                    const importers = info.importers || []
+                    for (const imp of importers) {
+                      const nimp = normalize(imp)
+                      for (const hint of otherEntryHints) {
+                        if (nimp.includes(hint)) return true
+                      }
+                      stack.push(imp)
+                    }
+                  }
+                } catch (e) {
+                  return true
+                }
+                return false
+              })()
+
+              if (!isShared) return 'content'
+            }
 
             // Keep background modules together (if they are not pulled into content)
             if (id.includes('src/background/') || id.includes('background.ts')) {
