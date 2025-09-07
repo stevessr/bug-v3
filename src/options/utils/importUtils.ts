@@ -60,6 +60,9 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
   let items: any[] = []
   let inferredGroupName: string | undefined
 
+  // 支持多种导入格式：
+  // 1) 直接数组 -> 每项为 emoji
+  // 2) { emojis: [...] } -> 兼容旧导出格式
   if (Array.isArray(payload)) {
     items = payload
   } else if (payload && Array.isArray(payload.emojis)) {
@@ -121,4 +124,92 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
   } finally {
     await store.endBatch()
   }
+}
+
+// Helper to add already-normalized items array into store (reused by bilibili importer)
+async function addItemsToStore(
+  store: ReturnType<typeof useEmojiStore>,
+  items: any[],
+  targetGroupId?: string,
+  inferredGroupName?: string
+) {
+  store.beginBatch()
+  try {
+    if (targetGroupId) {
+      items.forEach(emoji => {
+        const emojiData = {
+          packet: Number.isInteger(emoji.packet)
+            ? emoji.packet
+            : Date.now() + Math.floor(Math.random() * 1000),
+          name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
+          url: emoji.url || emoji.src,
+          ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
+        }
+        store.addEmojiWithoutSave(targetGroupId, emojiData)
+      })
+    } else {
+      const groupMap = new Map<string, string>()
+      store.groups.forEach((g: EmojiGroup) => {
+        if (g && g.name && g.id) groupMap.set(g.name, g.id)
+      })
+
+      items.forEach(emoji => {
+        const rawGroup = emoji.groupId || emoji.group || inferredGroupName || '\u672a\u5206\u7ec4'
+        const groupName = rawGroup.toString()
+        let targetId = groupMap.get(groupName)
+        if (!targetId) {
+          const created = store.createGroupWithoutSave(groupName, '\ud83d\udcc1')
+          if (created && created.id) {
+            targetId = created.id
+            groupMap.set(groupName, targetId)
+          } else {
+            targetId = store.groups[0]?.id || 'nachoneko'
+            if (targetId) groupMap.set(groupName, targetId)
+          }
+        }
+        const emojiData = {
+          packet: Number.isInteger(emoji.packet)
+            ? emoji.packet
+            : Date.now() + Math.floor(Math.random() * 1000),
+          name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
+          url: emoji.url || emoji.src,
+          ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
+        }
+        if (targetId) store.addEmojiWithoutSave(targetId, emojiData)
+      })
+    }
+
+    await store.saveData()
+  } finally {
+    await store.endBatch()
+  }
+}
+
+// 专门用于解析 bilibili 风格的 JSON 并导入
+export async function importBilibiliToStore(payload: any, targetGroupId?: string) {
+  const store = useEmojiStore()
+  if (!payload || !payload.data || !Array.isArray(payload.data.packages)) {
+    throw new Error('invalid bilibili payload')
+  }
+
+  const packages = payload.data.packages
+  const converted: any[] = []
+  for (const pkg of packages) {
+    const groupName = (pkg && (pkg.text || pkg.label || pkg.id))?.toString() || undefined
+    const emotes = Array.isArray(pkg.emote) ? pkg.emote : []
+    for (const e of emotes) {
+      const name =
+        e?.meta?.alias || e?.text || (e?.id ? String(e.id) : undefined) || '\u672a\u547d\u540d'
+      const url = e?.url || e?.file || e?.src
+      if (!url) continue
+      converted.push({
+        name,
+        url,
+        packet: e?.package_id ?? pkg?.id,
+        group: groupName
+      })
+    }
+  }
+
+  await addItemsToStore(store, converted, targetGroupId)
 }
