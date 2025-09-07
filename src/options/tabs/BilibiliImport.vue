@@ -51,6 +51,130 @@ const applySearch = () => {
   displayPackages.value = filteredPackages.value
 }
 
+// --- ID-based fetch by calling Bilibili API ---
+const fetchIdStart = ref<string>('')
+// 默认连续空响应阈值。脚本示例使用 5000，这里默认 50，用户可修改。
+const consecutiveNullsToStop = ref<string>('50')
+const isFetchingById = ref(false)
+const fetchStatus = ref('')
+const fetchProgress = ref<{ id: number; msg: string }[]>([])
+const importToStoreOnFetch = ref(false)
+
+async function fetchIdOnce(idNum: number) {
+  const url = `https://api.bilibili.com/x/emote/package?ids=${idNum}&business=reply`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`请求失败: ${res.status}`)
+  try {
+    return await res.json()
+  } catch (err) {
+    throw new Error('JSON 解析失败')
+  }
+}
+
+async function fetchByIdLoop() {
+  const start = Number(fetchIdStart.value)
+  const stopThreshold = Number(consecutiveNullsToStop.value) || 50
+  if (!Number.isFinite(start) || start <= 0) {
+    fetchStatus.value = '请输入合法的起始 ID（正整数）'
+    return
+  }
+
+  isFetchingById.value = true
+  fetchStatus.value = `开始从 ID ${start} 连续拉取，直到连续 ${stopThreshold} 次空响应为止`
+  fetchProgress.value = []
+
+  let consecutiveNulls = 0
+  let idCursor = start
+
+  try {
+    while (consecutiveNulls < stopThreshold && isFetchingById.value) {
+      try {
+        const json = await fetchIdOnce(idCursor)
+        if (json && json.data && json.data.packages) {
+          // 将返回的包追加到 packages 中，方便用户查看/选择
+          const pkgs = Array.isArray(json.data.packages) ? json.data.packages : []
+          if (pkgs.length > 0) {
+            for (const p of pkgs) packages.value.push(p as BiliPackage)
+            fetchProgress.value.push({ id: idCursor, msg: `获得 ${pkgs.length} 个包` })
+            consecutiveNulls = 0
+            // 如果用户选择自动导入到 store，则直接导入当前包集合
+            if (importToStoreOnFetch.value) {
+              try {
+                // 调用现有导入方法，传入 data.packages 结构
+                // importBilibiliToStore 接受 { data: { packages: [...] } }
+                await importBilibiliToStore({ data: { packages: pkgs } })
+                fetchProgress.value.push({ id: idCursor, msg: '已导入到 Store' })
+              } catch (impErr) {
+                fetchProgress.value.push({
+                  id: idCursor,
+                  msg: `导入失败: ${impErr instanceof Error ? impErr.message : String(impErr)}`
+                })
+              }
+            }
+          } else {
+            for (const p of pkgs) packages.value.push(p as BiliPackage)
+            fetchProgress.value.push({ id: idCursor, msg: 'packages 为空' })
+          }
+        } else {
+          consecutiveNulls++
+          fetchProgress.value.push({ id: idCursor, msg: '无有效 packages（空响应）' })
+        }
+      } catch (err) {
+        consecutiveNulls++
+        fetchProgress.value.push({
+          id: idCursor,
+          msg: `请求/解析失败: ${err instanceof Error ? err.message : String(err)}`
+        })
+        // 小幅退避
+        await new Promise(r => setTimeout(r, 300))
+      }
+      idCursor++
+      // 小间隔，避免短时间内触发速率限制
+      await new Promise(r => setTimeout(r, 100))
+    }
+
+    fetchStatus.value = `停止：已连续 ${consecutiveNulls} 个空响应，最后检查 ID ${idCursor - 1}`
+  } finally {
+    isFetchingById.value = false
+  }
+}
+
+const stopFetchingById = () => {
+  isFetchingById.value = false
+  fetchStatus.value = '用户已停止拉取'
+}
+
+// 单次拉取（由 UI 调用）
+const fetchSingleId = async () => {
+  const start = Number(fetchIdStart.value)
+  if (!Number.isFinite(start) || start <= 0) {
+    fetchStatus.value = '请输入合法的 ID（正整数）'
+    return
+  }
+  fetchStatus.value = `正在获取 ID ${start}...`
+  try {
+    const json = await fetchIdOnce(start)
+    if (
+      json &&
+      json.data &&
+      json.data.packages &&
+      Array.isArray(json.data.packages) &&
+      json.data.packages.length > 0
+    ) {
+      const pkgs = json.data.packages
+      for (const p of pkgs) packages.value.push(p as BiliPackage)
+      fetchStatus.value = `ID ${start} 获取到 ${pkgs.length} 个包`
+      if (importToStoreOnFetch.value) {
+        await importBilibiliToStore({ data: { packages: pkgs } })
+        fetchStatus.value += '，已导入到 Store'
+      }
+    } else {
+      fetchStatus.value = `ID ${start} 无有效 packages`
+    }
+  } catch (err) {
+    fetchStatus.value = `ID ${start} 请求失败: ${err instanceof Error ? err.message : String(err)}`
+  }
+}
 function normalizeBilibiliIndex(json: unknown): BiliPackage[] | null {
   if (!json) return null
 
@@ -287,6 +411,39 @@ const importSelectedFromIndex = async () => {
             <AButton type="primary" @click="applySearch">搜索</AButton>
             <AButton type="default" @click="query = ''">清空</AButton>
             <AButton type="primary" @click="importSelectedFromIndex">导入选中包</AButton>
+          </div>
+
+          <!-- ID 拉取区 -->
+          <div class="mt-4 p-3 border rounded bg-gray-50">
+            <div class="flex items-center space-x-3">
+              <AInput v-model:value="fetchIdStart" placeholder="起始 ID（例如 10600）" />
+              <AInput
+                v-model:value="consecutiveNullsToStop"
+                placeholder="连续空响应阈值（默认 50）"
+              />
+              <label class="flex items-center space-x-2">
+                <input type="checkbox" v-model="importToStoreOnFetch" />
+                <span class="text-sm">自动导入到 Store</span>
+              </label>
+            </div>
+            <div class="mt-3 flex items-center space-x-3">
+              <AButton type="primary" @click="fetchSingleId">单次获取</AButton>
+              <AButton type="primary" @click="fetchByIdLoop" :disabled="isFetchingById">
+                开始连续拉取
+              </AButton>
+              <AButton type="default" @click="stopFetchingById" :disabled="!isFetchingById">
+                停止
+              </AButton>
+            </div>
+            <div class="mt-3 text-sm text-gray-700">
+              <div>{{ fetchStatus }}</div>
+              <div
+                v-if="fetchProgress && fetchProgress.length"
+                class="mt-2 max-h-40 overflow-auto text-xs"
+              >
+                <div v-for="p in fetchProgress" :key="p.id">ID {{ p.id }} — {{ p.msg }}</div>
+              </div>
+            </div>
           </div>
 
           <div class="mt-3">
