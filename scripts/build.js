@@ -44,6 +44,13 @@ const configs = {
     ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production',
     BUILD_MINIFIED: 'true'
+  },
+  // 新增：仅编译、不混淆（调试用）
+  'build:debug': {
+    ENABLE_LOGGING: 'true',
+    ENABLE_INDEXEDDB: 'true',
+    NODE_ENV: 'production',
+    BUILD_MINIFIED: 'false'
   }
 }
 

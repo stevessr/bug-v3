@@ -13,6 +13,7 @@
     "build:userscript": "node scripts/build.js build:userscript",
     "build:userscript:remote": "node scripts/build.js build:userscript remote",
     "build:userscript:min": "node scripts/build.js build:userscript:min",
+    "build:debug": "node scripts/build.js build:debug",
     "serve": "vite preview",
     "test": "playwright test",
     "test:debug": "playwright test --debug",
