@@ -95,14 +95,44 @@ export default defineConfig(({ mode }) => {
         generateBundle(_options, bundle) {
           for (const [fileName, chunk] of Object.entries(bundle)) {
             // chunk is a RollupOutputChunk
-            // We target the chunk named 'content' (set in rollupOptions.input)
-            // and its rendered file name (usually js/content.js)
+            // We want to target the content entry. Depending on rollup optimizations
+            // the chunk may be named 'content', rendered to 'js/content.js', or
+            // have a facadeModuleId pointing to the original entry file.
             // @ts-ignore
-            if (chunk && chunk.type === 'chunk' && chunk.name === 'content') {
+            const isChunk = chunk && chunk.type === 'chunk'
+            // Try several heuristics to reliably detect the content chunk
+            const looksLikeContent =
+              isChunk &&
+              // primary: chunk name set to 'content'
+              (chunk.name === 'content' ||
+                // common emitted filename: js/content.js
+                fileName === 'js/content.js' ||
+                // facadeModuleId references the original entry file
+                // (normalize to posix style for safety)
+                (!!(chunk as any).facadeModuleId &&
+                  (function () {
+                    const fid = String((chunk as any).facadeModuleId).replace(/\\\\/g, '/')
+                    const lf = fid.toLowerCase()
+                    // Accept several variants: exact content entry, any file under src/content,
+                    // or paths that end with the expected filename. Use lowercase to be
+                    // robust on Windows where drive letters / casing may vary.
+                    return (
+                      lf.includes('/src/content/content.ts') ||
+                      lf.includes('/src/content/') ||
+                      lf.endsWith('/src/content/content.ts')
+                    )
+                  })()))
+
+            if (looksLikeContent) {
               // @ts-ignore
               let code = chunk.code
-              // Remove any remaining import/export statements conservatively
-              code = code.replace(/(^|\n)\s*(import|export)[^\n]*\n/g, '\n')
+              // Conservatively remove any remaining import/export statements
+              // including cases where imports are minified to single-line or
+              // separated by semicolons. Also strip dynamic import(...) calls.
+              // Match import/export statements ending with semicolon or linebreak.
+              code = code.replace(/(^|\n|\;)\s*(?:import|export)[^;\n]*;?/g, '\n')
+              // Remove dynamic import(...) calls (allow spaces inside parens)
+              code = code.replace(/\bimport\(\s*[^)]*\s*\)/g, '')
               // Wrap in IIFE so it becomes a plain script
               code = `(function(){\n${code}\n})();\n`
               // @ts-ignore

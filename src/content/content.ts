@@ -56,5 +56,3 @@ if (shouldInjectEmoji()) {
   Uninject()
   logger.log('[Emoji Extension] Skipping injection - incompatible platform')
 }
-
-export {}
