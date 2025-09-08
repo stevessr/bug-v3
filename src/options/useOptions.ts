@@ -232,6 +232,14 @@ export default function useOptions() {
     emojiStore.updateSettings({ forceMobileMode: value })
   }
 
+  const updateEnableLinuxDoInjection = (value: boolean) => {
+    emojiStore.updateSettings({ enableLinuxDoInjection: value })
+  }
+
+  const updateEnableXcomExtraSelectors = (value: boolean) => {
+    emojiStore.updateSettings({ enableXcomExtraSelectors: value })
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -558,6 +566,8 @@ export default function useOptions() {
     updateShowSearchBar,
     updateOutputFormat,
     updateForceMobileMode,
+    updateEnableLinuxDoInjection,
+    updateEnableXcomExtraSelectors,
     // drag/drop
     handleDragStart,
     handleDrop,
