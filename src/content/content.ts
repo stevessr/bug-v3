@@ -56,3 +56,40 @@ if (shouldInjectEmoji()) {
   Uninject()
   logger.log('[Emoji Extension] Skipping injection - incompatible platform')
 }
+
+// Add message listener for linux.do CSRF token requests
+if (window.location.hostname.includes('linux.do')) {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.type === 'GET_CSRF_TOKEN') {
+      try {
+        // Try to get CSRF token from meta tag
+        const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement
+        if (metaToken) {
+          sendResponse({ csrfToken: metaToken.content })
+          return
+        }
+
+        // Try to get from cookie
+        const match = document.cookie.match(/csrf_token=([^;]+)/)
+        if (match) {
+          sendResponse({ csrfToken: decodeURIComponent(match[1]) })
+          return
+        }
+
+        // Fallback - try to extract from any form
+        const hiddenInput = document.querySelector(
+          'input[name="authenticity_token"]'
+        ) as HTMLInputElement
+        if (hiddenInput) {
+          sendResponse({ csrfToken: hiddenInput.value })
+          return
+        }
+
+        sendResponse({ csrfToken: '' })
+      } catch (error) {
+        logger.warn('[Emoji Extension] Failed to get CSRF token:', error)
+        sendResponse({ csrfToken: '' })
+      }
+    }
+  })
+}

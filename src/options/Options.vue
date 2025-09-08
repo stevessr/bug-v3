@@ -74,6 +74,8 @@ const {
   updateShowSearchBar,
   updateOutputFormat,
   updateForceMobileMode,
+  updateEnableLinuxDoInjection,
+  updateEnableXcomExtraSelectors,
   handleDragStart,
   handleDrop,
   handleEmojiDragStart,
@@ -220,6 +222,8 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
           @update:showSearchBar="updateShowSearchBar"
           @update:outputFormat="updateOutputFormat"
           @update:forceMobileMode="updateForceMobileMode"
+          @update:enableLinuxDoInjection="updateEnableLinuxDoInjection"
+          @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
         >
           <template #grid-selector>
             <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
