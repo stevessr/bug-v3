@@ -3,8 +3,10 @@ import { computed, ref } from 'vue'
 import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
-import type { EmojiGroup } from '../../types/emoji'
+import type { EmojiGroup, Emoji } from '../../types/emoji'
 import { useEmojiStore } from '../../stores/emojiStore'
+import { emojiPreviewUploader } from '../../utils/emojiPreviewUploader'
+import { logger } from '../../config/buildFLagsV2'
 
 defineEmits(['remove', 'edit'])
 
@@ -15,6 +17,9 @@ const emojiStore = useEmojiStore()
 const isMultiSelectMode = ref(false)
 const selectedEmojis = ref(new Set<number>())
 const targetGroupId = ref('')
+
+// Upload functionality
+const uploadingEmojiIds = ref(new Set<number>())
 
 const onTargetGroupSelect = (info: { key: string | number }) => {
   targetGroupId.value = String(info.key)
@@ -29,6 +34,114 @@ const ungroup = computed(() => emojiStore.groups.find((g: EmojiGroup) => g.id ==
 const availableGroups = computed(
   () => emojiStore.groups.filter((g: EmojiGroup) => g.id !== 'ungrouped') || []
 )
+
+// Check if we should show upload buttons (not on linux.do)
+const shouldShowUploadButton = computed(() => {
+  return !window.location.href.includes('linux.do')
+})
+
+// Upload single emoji to linux.do
+const uploadSingleEmoji = async (emoji: Emoji, index: number) => {
+  if (!emoji.url || uploadingEmojiIds.value.has(index)) return
+
+  uploadingEmojiIds.value.add(index)
+
+  try {
+    // Convert image URL to blob
+    const response = await fetch(emoji.url)
+    const blob = await response.blob()
+
+    // Create file with proper name
+    const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
+    const file = new File([blob], fileName, { type: blob.type })
+
+    // Upload to linux.do
+    await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+
+    // Show upload progress dialog
+    emojiPreviewUploader.showProgressDialog()
+  } catch (error) {
+    logger.error('Upload failed:', error)
+  } finally {
+    uploadingEmojiIds.value.delete(index)
+  }
+}
+
+// Upload selected emojis in batch
+const uploadSelectedEmojis = async () => {
+  if (selectedEmojis.value.size === 0 || !ungroup.value) return
+
+  const emojisToUpload = Array.from(selectedEmojis.value)
+    .map(index => ({ emoji: ungroup.value!.emojis[index], index }))
+    .filter(({ emoji }) => emoji && emoji.url)
+
+  if (emojisToUpload.length === 0) return
+
+  // Mark all as uploading
+  emojisToUpload.forEach(({ index }) => uploadingEmojiIds.value.add(index))
+
+  try {
+    // Show upload progress dialog
+    emojiPreviewUploader.showProgressDialog()
+
+    // Upload all selected emojis
+    const uploadPromises = emojisToUpload.map(async ({ emoji }) => {
+      try {
+        const response = await fetch(emoji.url!)
+        const blob = await response.blob()
+        const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
+        const file = new File([blob], fileName, { type: blob.type })
+        return emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+      } catch (error) {
+        logger.error('Failed to upload emoji:', emoji.name, error)
+        throw error
+      }
+    })
+
+    await Promise.allSettled(uploadPromises)
+  } finally {
+    // Clear uploading state
+    emojisToUpload.forEach(({ index }) => uploadingEmojiIds.value.delete(index))
+  }
+}
+
+// Upload all ungrouped emojis
+const uploadAllEmojis = async () => {
+  if (!ungroup.value || ungroup.value.emojis.length === 0) return
+
+  const emojisToUpload = ungroup.value.emojis
+    .map((emoji, index) => ({ emoji, index }))
+    .filter(({ emoji }) => emoji && emoji.url)
+
+  if (emojisToUpload.length === 0) return
+
+  // Mark all as uploading
+  emojisToUpload.forEach(({ index }) => uploadingEmojiIds.value.add(index))
+
+  try {
+    // Show upload progress dialog
+    emojiPreviewUploader.showProgressDialog()
+
+    // Upload all emojis
+    const uploadPromises = emojisToUpload.map(async ({ emoji }) => {
+      try {
+        const response = await fetch(emoji.url!)
+        const blob = await response.blob()
+        const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
+        const file = new File([blob], fileName, { type: blob.type })
+        return emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+      } catch (error) {
+        logger.error('Failed to upload emoji:', emoji.name, error)
+        throw error
+      }
+    })
+
+    await Promise.allSettled(uploadPromises)
+  } finally {
+    // Clear uploading state
+    emojisToUpload.forEach(({ index }) => uploadingEmojiIds.value.delete(index))
+  }
+}
 
 // 多选模式变化处理
 const onMultiSelectModeChange = () => {
@@ -193,7 +306,27 @@ const cancelCreateGroup = () => {
           </div>
         </div>
       </div>
-      <div class="px-6 py-3 border-b border-gray-100 flex items-center justify-end gap-2"></div>
+      <div class="px-6 py-3 border-b border-gray-100 flex items-center justify-end gap-2">
+        <!-- Upload all button when not on linux.do -->
+        <button
+          v-if="shouldShowUploadButton && ungroup && ungroup.emojis?.length > 0"
+          @click="uploadAllEmojis"
+          class="text-sm px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2"
+          title="上传所有未分组表情到 linux.do"
+        >
+          📤 上传全部
+        </button>
+
+        <!-- Upload selected button when in multi-select mode -->
+        <button
+          v-if="shouldShowUploadButton && isMultiSelectMode && selectedEmojis.size > 0"
+          @click="uploadSelectedEmojis"
+          class="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
+          title="上传选中的表情到 linux.do"
+        >
+          📤 上传选中 ({{ selectedEmojis.size }})
+        </button>
+      </div>
 
       <div class="p-6">
         <div
@@ -229,8 +362,18 @@ const cancelCreateGroup = () => {
               />
             </div>
 
-            <!-- 非多选模式下的编辑/删除按钮 -->
+            <!-- 非多选模式下的编辑/删除/上传按钮 -->
             <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
+              <!-- Upload button when not on linux.do -->
+              <button
+                v-if="shouldShowUploadButton"
+                @click="uploadSingleEmoji(emoji, idx)"
+                :disabled="uploadingEmojiIds.has(idx)"
+                title="上传到 linux.do"
+                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {{ uploadingEmojiIds.has(idx) ? '⏳' : '📤' }}
+              </button>
               <button
                 @click="$emit('edit', emoji, ungroup.id, idx)"
                 title="编辑"
