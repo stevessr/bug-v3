@@ -82,6 +82,7 @@ const {
   handleConfigImported,
   handleEmojisImported,
   exportGroup,
+  exportGroupZip,
   exportConfiguration,
   confirmDeleteGroup,
   openEditGroup,
@@ -237,6 +238,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         @toggleExpand="toggleGroupExpansion"
         @openEditGroup="openEditGroup"
         @exportGroup="exportGroup"
+        @exportGroupZip="exportGroupZip"
         @confirmDeleteGroup="confirmDeleteGroup"
         @openAddEmoji="openAddEmojiModal"
         @emojiDragStart="handleEmojiDragStart"

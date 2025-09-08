@@ -28,6 +28,7 @@ const emit = defineEmits([
   'toggleExpand',
   'openEditGroup',
   'exportGroup',
+  'exportGroupZip',
   'imageError'
 ])
 
@@ -93,6 +94,12 @@ const columns = computed(() => emojiStore.settings?.gridColumns || 3)
             </button>
             <button @click="$emit('exportGroup', group)" class="px-3 py-1 text-sm rounded border">
               导出
+            </button>
+            <button
+              @click="$emit('exportGroupZip', group)"
+              class="px-3 py-1 text-sm rounded border"
+            >
+              打包下载
             </button>
           </div>
         </ACard>
