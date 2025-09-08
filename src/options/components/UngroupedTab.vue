@@ -6,6 +6,7 @@ import { DownOutlined } from '@ant-design/icons-vue'
 import type { EmojiGroup } from '../../types/emoji'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../../content/emojiPreviewUploader'
+import { logger } from '../../config/buildFLagsV2'
 
 defineEmits(['remove', 'edit'])
 
@@ -147,7 +148,7 @@ const uploadSingleEmoji = async (emoji: any, index: number) => {
 
   try {
     uploadingEmojiIds.value.add(emoji.id)
-    
+
     // 获取图片文件
     const response = await fetch(emoji.url)
     const blob = await response.blob()
@@ -156,12 +157,11 @@ const uploadSingleEmoji = async (emoji: any, index: number) => {
 
     // 上传到linux.do
     await emojiPreviewUploader.uploadEmojiImage(file, emoji.name)
-    
+
     // 显示上传进度对话框
     emojiPreviewUploader.showProgressDialog()
-    
-  } catch (error) {
-    console.error('表情上传失败:', error)
+  } catch (error: any) {
+    logger.error('表情上传失败:', error)
     alert(`表情 "${emoji.name}" 上传失败: ${error.message || '未知错误'}`)
   } finally {
     uploadingEmojiIds.value.delete(emoji.id)
@@ -174,22 +174,22 @@ const uploadSelectedEmojis = async () => {
 
   try {
     isUploading.value = true
-    
+
     const selectedIndices = Array.from(selectedEmojis.value)
     const emojisToUpload = selectedIndices.map(idx => ungroup.value!.emojis[idx]).filter(Boolean)
-    
+
     if (emojisToUpload.length === 0) return
-    
+
     // 显示上传进度对话框
     emojiPreviewUploader.showProgressDialog()
-    
+
     // 逐个上传表情
     for (const emoji of emojisToUpload) {
       if (!emoji.url || uploadingEmojiIds.value.has(emoji.id)) continue
-      
+
       try {
         uploadingEmojiIds.value.add(emoji.id)
-        
+
         // 获取图片文件
         const response = await fetch(emoji.url)
         const blob = await response.blob()
@@ -198,16 +198,14 @@ const uploadSelectedEmojis = async () => {
 
         // 上传到linux.do
         await emojiPreviewUploader.uploadEmojiImage(file, emoji.name)
-        
-      } catch (error) {
-        console.error(`表情 "${emoji.name}" 上传失败:`, error)
+      } catch (error: any) {
+        logger.error(`表情 "${emoji.name}" 上传失败:`, error)
       } finally {
         uploadingEmojiIds.value.delete(emoji.id)
       }
     }
-    
-  } catch (error) {
-    console.error('批量上传失败:', error)
+  } catch (error: any) {
+    logger.error('批量上传失败:', error)
     alert(`批量上传失败: ${error.message || '未知错误'}`)
   } finally {
     isUploading.value = false
@@ -220,17 +218,17 @@ const uploadAllEmojis = async () => {
 
   try {
     isUploading.value = true
-    
+
     // 显示上传进度对话框
     emojiPreviewUploader.showProgressDialog()
-    
+
     // 逐个上传所有表情
     for (const emoji of ungroup.value.emojis) {
       if (!emoji.url || uploadingEmojiIds.value.has(emoji.id)) continue
-      
+
       try {
         uploadingEmojiIds.value.add(emoji.id)
-        
+
         // 获取图片文件
         const response = await fetch(emoji.url)
         const blob = await response.blob()
@@ -239,16 +237,14 @@ const uploadAllEmojis = async () => {
 
         // 上传到linux.do
         await emojiPreviewUploader.uploadEmojiImage(file, emoji.name)
-        
-      } catch (error) {
-        console.error(`表情 "${emoji.name}" 上传失败:`, error)
+      } catch (error: any) {
+        logger.error(`表情 "${emoji.name}" 上传失败:`, error)
       } finally {
         uploadingEmojiIds.value.delete(emoji.id)
       }
     }
-    
-  } catch (error) {
-    console.error('全部上传失败:', error)
+  } catch (error: any) {
+    logger.error('全部上传失败:', error)
     alert(`全部上传失败: ${error.message || '未知错误'}`)
   } finally {
     isUploading.value = false
