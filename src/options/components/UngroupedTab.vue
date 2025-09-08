@@ -5,8 +5,6 @@ import { DownOutlined } from '@ant-design/icons-vue'
 
 import type { EmojiGroup } from '../../types/emoji'
 import { useEmojiStore } from '../../stores/emojiStore'
-import { emojiPreviewUploader } from '../../content/emojiPreviewUploader'
-import { logger } from '../../config/buildFLagsV2'
 
 defineEmits(['remove', 'edit'])
 
@@ -137,119 +135,6 @@ const cancelCreateGroup = () => {
   newGroupIcon.value = ''
   targetGroupId.value = ''
 }
-
-// 一键上传功能
-const isUploading = ref(false)
-const uploadingEmojiIds = ref(new Set<string>())
-
-// 上传单个表情预览到linux.do
-const uploadSingleEmoji = async (emoji: any, index: number) => {
-  if (!emoji.url || uploadingEmojiIds.value.has(emoji.id)) return
-
-  try {
-    uploadingEmojiIds.value.add(emoji.id)
-
-    // 获取图片文件
-    const response = await fetch(emoji.url)
-    const blob = await response.blob()
-    const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
-    const file = new File([blob], fileName, { type: blob.type })
-
-    // 上传到linux.do
-    await emojiPreviewUploader.uploadEmojiImage(file, emoji.name)
-
-    // 显示上传进度对话框
-    emojiPreviewUploader.showProgressDialog()
-  } catch (error: any) {
-    logger.error('表情上传失败:', error)
-    alert(`表情 "${emoji.name}" 上传失败: ${error.message || '未知错误'}`)
-  } finally {
-    uploadingEmojiIds.value.delete(emoji.id)
-  }
-}
-
-// 批量上传选中的表情预览到linux.do
-const uploadSelectedEmojis = async () => {
-  if (!ungroup.value || selectedEmojis.value.size === 0 || isUploading.value) return
-
-  try {
-    isUploading.value = true
-
-    const selectedIndices = Array.from(selectedEmojis.value)
-    const emojisToUpload = selectedIndices.map(idx => ungroup.value!.emojis[idx]).filter(Boolean)
-
-    if (emojisToUpload.length === 0) return
-
-    // 显示上传进度对话框
-    emojiPreviewUploader.showProgressDialog()
-
-    // 逐个上传表情
-    for (const emoji of emojisToUpload) {
-      if (!emoji.url || uploadingEmojiIds.value.has(emoji.id)) continue
-
-      try {
-        uploadingEmojiIds.value.add(emoji.id)
-
-        // 获取图片文件
-        const response = await fetch(emoji.url)
-        const blob = await response.blob()
-        const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
-        const file = new File([blob], fileName, { type: blob.type })
-
-        // 上传到linux.do
-        await emojiPreviewUploader.uploadEmojiImage(file, emoji.name)
-      } catch (error: any) {
-        logger.error(`表情 "${emoji.name}" 上传失败:`, error)
-      } finally {
-        uploadingEmojiIds.value.delete(emoji.id)
-      }
-    }
-  } catch (error: any) {
-    logger.error('批量上传失败:', error)
-    alert(`批量上传失败: ${error.message || '未知错误'}`)
-  } finally {
-    isUploading.value = false
-  }
-}
-
-// 上传所有未分组表情预览到linux.do
-const uploadAllEmojis = async () => {
-  if (!ungroup.value || !ungroup.value.emojis?.length || isUploading.value) return
-
-  try {
-    isUploading.value = true
-
-    // 显示上传进度对话框
-    emojiPreviewUploader.showProgressDialog()
-
-    // 逐个上传所有表情
-    for (const emoji of ungroup.value.emojis) {
-      if (!emoji.url || uploadingEmojiIds.value.has(emoji.id)) continue
-
-      try {
-        uploadingEmojiIds.value.add(emoji.id)
-
-        // 获取图片文件
-        const response = await fetch(emoji.url)
-        const blob = await response.blob()
-        const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
-        const file = new File([blob], fileName, { type: blob.type })
-
-        // 上传到linux.do
-        await emojiPreviewUploader.uploadEmojiImage(file, emoji.name)
-      } catch (error: any) {
-        logger.error(`表情 "${emoji.name}" 上传失败:`, error)
-      } finally {
-        uploadingEmojiIds.value.delete(emoji.id)
-      }
-    }
-  } catch (error: any) {
-    logger.error('全部上传失败:', error)
-    alert(`全部上传失败: ${error.message || '未知错误'}`)
-  } finally {
-    isUploading.value = false
-  }
-}
 </script>
 
 <template>
@@ -259,31 +144,6 @@ const uploadAllEmojis = async () => {
         <div class="flex justify-between items-center">
           <h2 class="text-lg font-semibold text-gray-900">未分组表情</h2>
           <div class="flex items-center gap-4">
-            <!-- 上传功能按钮 -->
-            <div class="flex items-center gap-2">
-              <button
-                v-if="isMultiSelectMode && selectedEmojis.size > 0"
-                @click="uploadSelectedEmojis"
-                :disabled="isUploading"
-                class="text-sm px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
-                title="上传选中的表情预览到linux.do"
-              >
-                <span v-if="isUploading">⏳</span>
-                <span v-else>📤</span>
-                上传选中 ({{ selectedEmojis.size }})
-              </button>
-              <button
-                v-if="ungroup && ungroup.emojis?.length"
-                @click="uploadAllEmojis"
-                :disabled="isUploading"
-                class="text-sm px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
-                title="上传所有未分组表情预览到linux.do"
-              >
-                <span v-if="isUploading">⏳</span>
-                <span v-else>📤</span>
-                上传全部
-              </button>
-            </div>
             <!-- 批量操作控制 -->
             <div
               v-if="isMultiSelectMode && selectedEmojis.size > 0"
@@ -369,17 +229,8 @@ const uploadAllEmojis = async () => {
               />
             </div>
 
-            <!-- 非多选模式下的编辑/删除/上传按钮 -->
+            <!-- 非多选模式下的编辑/删除按钮 -->
             <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
-              <button
-                @click="uploadSingleEmoji(emoji, idx)"
-                :disabled="uploadingEmojiIds.has(emoji.id)"
-                title="上传到linux.do"
-                class="text-xs px-1 py-0.5 bg-green-500 text-white bg-opacity-80 rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                <span v-if="uploadingEmojiIds.has(emoji.id)">⏳</span>
-                <span v-else>📤</span>
-              </button>
               <button
                 @click="$emit('edit', emoji, ungroup.id, idx)"
                 title="编辑"

@@ -133,6 +133,9 @@ export default defineConfig(({ mode }) => {
               code = code.replace(/(^|\n|\;)\s*(?:import|export)[^;\n]*;?/g, '\n')
               // Remove dynamic import(...) calls (allow spaces inside parens)
               code = code.replace(/\bimport\(\s*[^)]*\s*\)/g, '')
+              // Remove TypeScript "as" type assertions (e.g., "variable as Type")
+              // This handles patterns like "element as HTMLElement", "(window as any)", etc.
+              code = code.replace(/\s+as\s+[A-Za-z_$][A-Za-z0-9_$<>|&\[\].]*/g, '')
               // Wrap in IIFE so it becomes a plain script
               code = `(function(){\n${code}\n})();\n`
               // @ts-ignore
