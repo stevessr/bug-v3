@@ -1,2 +1,2 @@
 export { importConfigurationToStore, importEmojisToStore } from './importUtils'
-export { exportConfigurationFile, exportGroupFile } from './exportUtils'
+export { exportConfigurationFile, exportGroupFile, exportGroupZip } from './exportUtils'

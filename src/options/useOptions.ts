@@ -10,7 +10,8 @@ import {
   importConfigurationToStore,
   importEmojisToStore,
   exportConfigurationFile,
-  exportGroupFile
+  exportGroupFile,
+  exportGroupZip as exportGroupZipUtil
 } from './utils'
 
 export default function useOptions() {
@@ -292,6 +293,17 @@ export default function useOptions() {
     showSuccess(`已导出分组 "${group.name}" (${(group.emojis || []).length} 个表情)`)
   }
 
+  const exportGroupZip = async (group: EmojiGroup) => {
+    if (!group) return
+    try {
+      await exportGroupZipUtil(group)
+      showSuccess(`已打包并下载分组 "${group.name}"`)
+    } catch (e) {
+      void e
+      showError('打包下载失败，已导出 JSON 作为回退')
+    }
+  }
+
   const deleteEmoji = (emojiId: string) => {
     confirmGenericTitle.value = '删除表情'
     confirmGenericMessage.value = '确定要删除这个表情吗？此操作不可撤销。'
@@ -557,6 +569,7 @@ export default function useOptions() {
     handleConfigImported,
     handleEmojisImported,
     exportGroup,
+    exportGroupZip,
     exportConfiguration,
     // group operations
     confirmDeleteGroup,

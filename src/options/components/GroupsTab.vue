@@ -7,6 +7,7 @@ const emit = defineEmits([
   'toggleExpand',
   'openEditGroup',
   'exportGroup',
+  'exportGroupZip',
   'confirmDeleteGroup',
   'openAddEmoji',
   'emojiDragStart',
@@ -243,6 +244,12 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     class="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                   >
                     导出
+                  </button>
+                  <button
+                    @click="$emit('exportGroupZip', group)"
+                    class="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded transition-colors"
+                  >
+                    打包下载
                   </button>
                   <button
                     v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
