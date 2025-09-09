@@ -17,7 +17,9 @@ const emit = defineEmits([
   'update:imageScale',
   'update:showSearchBar',
   'update:outputFormat',
-  'update:forceMobileMode'
+  'update:forceMobileMode',
+  'update:enableLinuxDoInjection',
+  'update:enableXcomExtraSelectors'
 ])
 
 // support both ref(settings) and plain settings object
@@ -80,6 +82,16 @@ const handleShowSearchBarChange = (e: Event) => {
 const handleForceMobileModeChange = (e: Event) => {
   const target = e.target as HTMLInputElement
   emit('update:forceMobileMode', target.checked)
+}
+
+const handleLinuxDoInjectionChange = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  emit('update:enableLinuxDoInjection', target.checked)
+}
+
+const handleXcomExtraSelectorsChange = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  emit('update:enableXcomExtraSelectors', target.checked)
 }
 </script>
 
@@ -163,6 +175,42 @@ const handleForceMobileModeChange = (e: Event) => {
             type="checkbox"
             :checked="settings.forceMobileMode"
             @change="handleForceMobileModeChange"
+            class="sr-only peer"
+          />
+          <div
+            class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
+          ></div>
+        </label>
+      </div>
+
+      <div class="flex items-center justify-between" v-if="false">
+        <div>
+          <label class="text-sm font-medium text-gray-900">启用Linux.do脚本注入</label>
+          <p class="text-sm text-gray-500">控制是否在linux.do注入表情功能脚本</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            :checked="settings.enableLinuxDoInjection"
+            @change="handleLinuxDoInjectionChange"
+            class="sr-only peer"
+          />
+          <div
+            class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
+          ></div>
+        </label>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium text-gray-900">启用X.com额外选择器</label>
+          <p class="text-sm text-gray-500">在X.com(Twitter)启用额外的选择器控制</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            :checked="settings.enableXcomExtraSelectors"
+            @change="handleXcomExtraSelectorsChange"
             class="sr-only peer"
           />
           <div

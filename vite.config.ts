@@ -88,59 +88,42 @@ export default defineConfig(({ mode }) => {
       })(),
       generateDefaultEmojiGroupsPlugin(),
       vue(),
-      // Ensure content script is emitted as a plain script without import/export
-      // and avoid other bundles importing from the content chunk.
+      // Small safe plugin: remove trailing `export { ... }` that Rollup may append
+      // to the content chunk. We only strip the final export block to avoid
+      // aggressive regex edits elsewhere.
       {
-        name: 'content-script-plain',
+        name: 'strip-content-exports',
         generateBundle(_options, bundle) {
           for (const [fileName, chunk] of Object.entries(bundle)) {
-            // chunk is a RollupOutputChunk
-            // We want to target the content entry. Depending on rollup optimizations
-            // the chunk may be named 'content', rendered to 'js/content.js', or
-            // have a facadeModuleId pointing to the original entry file.
             // @ts-ignore
             const isChunk = chunk && chunk.type === 'chunk'
-            // Try several heuristics to reliably detect the content chunk
+            if (!isChunk) continue
+            // Heuristic: target the content entry chunk by filename or facadeModuleId
             const looksLikeContent =
-              isChunk &&
-              // primary: chunk name set to 'content'
-              (chunk.name === 'content' ||
-                // common emitted filename: js/content.js
-                fileName === 'js/content.js' ||
-                // facadeModuleId references the original entry file
-                // (normalize to posix style for safety)
-                (!!(chunk as any).facadeModuleId &&
-                  (function () {
-                    const fid = String((chunk as any).facadeModuleId).replace(/\\\\/g, '/')
-                    const lf = fid.toLowerCase()
-                    // Accept several variants: exact content entry, any file under src/content,
-                    // or paths that end with the expected filename. Use lowercase to be
-                    // robust on Windows where drive letters / casing may vary.
-                    return (
-                      lf.includes('/src/content/content.ts') ||
-                      lf.includes('/src/content/') ||
-                      lf.endsWith('/src/content/content.ts')
-                    )
-                  })()))
+              fileName === 'js/content.js' ||
+              (!!(chunk as any).facadeModuleId &&
+                String((chunk as any).facadeModuleId)
+                  .replace(/\\/g, '/')
+                  .toLowerCase()
+                  .includes('/src/content/'))
 
             if (looksLikeContent) {
               // @ts-ignore
               let code = chunk.code
-              // Conservatively remove any remaining import/export statements
-              // including cases where imports are minified to single-line or
-              // separated by semicolons. Also strip dynamic import(...) calls.
-              // Match import/export statements ending with semicolon or linebreak.
-              code = code.replace(/(^|\n|\;)\s*(?:import|export)[^;\n]*;?/g, '\n')
-              // Remove dynamic import(...) calls (allow spaces inside parens)
-              code = code.replace(/\bimport\(\s*[^)]*\s*\)/g, '')
-              // Wrap in IIFE so it becomes a plain script
-              code = `(function(){\n${code}\n})();\n`
-              // @ts-ignore
+              // Remove a trailing export block like: export { logger as l };
+              code = code.replace(/export\s*\{[\s\S]*?\};?\s*$/m, '')
+              // Ensure file ends cleanly (keep existing IIFE if present)
               chunk.code = code
             }
           }
         }
       },
+      // Ensure content script is emitted as a plain script without import/export
+      // and avoid other bundles importing from the content chunk.
+      // NOTE: content-script-plain plugin removed. Handling content chunk as a plain
+      // script via regex proved fragile; prefer emitting a normal chunk and
+      // handling any runtime compatibility in source. If we need to reintroduce
+      // a transform for the content chunk, prefer an AST-based approach.
       // auto register components and import styles for ant-design-vue
       Components({
         resolvers: [AntDesignVueResolver({ importStyle: 'less' })]

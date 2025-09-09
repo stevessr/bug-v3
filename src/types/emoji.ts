@@ -29,6 +29,9 @@ export interface AppSettings {
   outputFormat: 'markdown' | 'html' // 输出格式选择
   forceMobileMode?: boolean // 强制移动模式
   lastModified?: number // timestamp for sync comparison
+  // New settings for linux.do injection and X.com selectors
+  enableLinuxDoInjection?: boolean // 控制是否在linux.do注入脚本
+  enableXcomExtraSelectors?: boolean // 控制是否在X.com启用额外选择器
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -110,7 +113,9 @@ const defaultSettings: AppSettings = {
   showSearchBar: true,
   gridColumns: 4,
   outputFormat: 'markdown', // 默认使用markdown格式
-  forceMobileMode: false // 默认不强制移动模式
+  forceMobileMode: false, // 默认不强制移动模式
+  enableLinuxDoInjection: true, // 默认启用linux.do注入
+  enableXcomExtraSelectors: false // 默认不启用X.com额外选择器
 }
 
 export { defaultEmojiGroups, defaultSettings }

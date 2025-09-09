@@ -3,7 +3,6 @@ import { ref, computed, watch, nextTick } from 'vue'
 
 import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji'
 import { newStorageHelpers } from '../utils/newStorage'
-
 import { defaultEmojiGroups, defaultSettings } from '@/types/emoji'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
