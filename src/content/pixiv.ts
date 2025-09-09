@@ -72,149 +72,31 @@ async function tryGetImageViaCanvas(
   })
 }
 
-async function performPixivDownloadFlow(data: AddEmojiButtonData) {
-  // Contract:
-  // - input: { name, url }
-  // - tries: proxy-from-storage -> canvas -> background directDownload -> open URL
+async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
+  // New flow: download emoji -> send binary to background -> upload to linux.do -> add emoji
   try {
     const baseName = data.name && data.name.length > 0 ? data.name : extractNameFromUrl(data.url)
     const filename = baseName.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || 'image'
 
     const chromeAPI = (window as any).chrome
 
-    // helper to read proxy config from extension storage (sync then local)
-    const readProxyFromStorage = () =>
-      new Promise<any>(resolve => {
-        try {
-          if (
-            chromeAPI &&
-            chromeAPI.storage &&
-            chromeAPI.storage.sync &&
-            chromeAPI.storage.sync.get
-          ) {
-            chromeAPI.storage.sync.get(['proxy'], (res: any) => resolve(res?.proxy || null))
-          } else if (
-            chromeAPI &&
-            chromeAPI.storage &&
-            chromeAPI.storage.local &&
-            chromeAPI.storage.local.get
-          ) {
-            chromeAPI.storage.local.get(['proxy'], (res: any) => resolve(res?.proxy || null))
-          } else resolve(null)
-        } catch (_e) {
-          resolve(null)
-        }
-      })
+    logger.log('[PixivAddEmoji] Starting add emoji flow for:', { name: baseName, url: data.url })
 
-    // 1) If storage proxy is enabled, ask background to use it and avoid loading image here
-    let storedProxy: any = null
-    try {
-      storedProxy = await readProxyFromStorage()
-      if (storedProxy && storedProxy.enabled && storedProxy.url) {
-        // If chrome runtime is available, prefer asking the background to use the stored proxy.
-        if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
-          try {
-            const bgResp: any = await new Promise(resolve => {
-              try {
-                chromeAPI.runtime.sendMessage(
-                  {
-                    action: 'downloadForUser',
-                    payload: {
-                      url: data.url,
-                      filename,
-                      directDownload: true,
-                      useStorageProxy: true
-                    }
-                  },
-                  (r: any) => resolve(r)
-                )
-              } catch (e) {
-                resolve(null)
-              }
-            })
-
-            if (bgResp && bgResp.success)
-              return {
-                success: true,
-                source: 'background',
-                downloadId: bgResp.downloadId
-              }
-            if (bgResp && bgResp.fallback && bgResp.arrayBuffer) {
-              try {
-                const arrayBuffer = bgResp.arrayBuffer as ArrayBuffer
-                const mimeType = bgResp.mimeType || 'application/octet-stream'
-                const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
-                const objectUrl = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = objectUrl
-                a.download = filename
-                document.body.appendChild(a)
-                a.click()
-                document.body.removeChild(a)
-                setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
-                return { success: true, source: 'background-fallback' }
-              } catch (_e) {
-                // fall through
-              }
-            }
-          } catch (err) {
-            logger.error('[PixivOneClick] proxy background request failed', err)
-            // fall through to other options
-          }
-        } else {
-          // No chrome runtime (likely userscript). Fetch proxy directly from the page to avoid CORS.
-          try {
-            const proxyUrl = new URL(storedProxy.url)
-            proxyUrl.searchParams.set('url', data.url)
-            if (storedProxy.password) proxyUrl.searchParams.set('pw', storedProxy.password)
-
-            const resp = await fetch(proxyUrl.toString(), { method: 'GET' })
-            if (resp.ok) {
-              const arrayBuffer = await resp.arrayBuffer()
-              const mimeType = resp.headers.get('content-type') || 'application/octet-stream'
-              const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
-              const objectUrl = URL.createObjectURL(blob)
-              const a = document.createElement('a')
-              a.href = objectUrl
-              a.download = filename
-              document.body.appendChild(a)
-              a.click()
-              document.body.removeChild(a)
-              setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
-              return { success: true, source: 'proxy-direct' }
-            } else {
-              logger.error('[PixivOneClick] proxy direct fetch failed', { status: resp.status })
-            }
-          } catch (err) {
-            logger.error('[PixivOneClick] proxy direct fetch error', err)
-          }
-        }
-      }
-    } catch (err) {
-      logger.error('[PixivOneClick] read proxy failed', err)
-    }
-
-    // 2) Canvas attempt (best-effort) — will fail with tainted canvas if CORS
+    // Step 1: Try to download image using canvas (primary method)
     try {
       const canvasResult = await tryGetImageViaCanvas(data.url)
       if (canvasResult.success) {
-        const objectUrl = URL.createObjectURL(canvasResult.blob)
-        const a = document.createElement('a')
-        a.href = objectUrl
-        a.download = filename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
-        return { success: true, source: 'canvas' }
+        logger.log('[PixivAddEmoji] Canvas download successful, sending to background')
+        return await sendEmojiToBackground(canvasResult.blob, baseName, filename)
       }
     } catch (e) {
-      logger.error('[PixivOneClick] canvas extraction failed', e)
+      logger.warn('[PixivAddEmoji] Canvas method failed:', e)
     }
 
-    // 3) Ask background to perform directDownload (may itself use proxy if configured there)
+    // Step 2: If canvas fails, try background download as fallback
     try {
       if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
+        logger.log('[PixivAddEmoji] Trying background download as fallback')
         const bgResp: any = await new Promise(resolve => {
           try {
             chromeAPI.runtime.sendMessage(
@@ -223,7 +105,7 @@ async function performPixivDownloadFlow(data: AddEmojiButtonData) {
                 payload: {
                   url: data.url,
                   filename,
-                  directDownload: true
+                  directDownload: false // We want the arrayBuffer, not file download
                 }
               },
               (r: any) => resolve(r)
@@ -233,46 +115,97 @@ async function performPixivDownloadFlow(data: AddEmojiButtonData) {
           }
         })
 
-        if (bgResp && bgResp.success)
-          return {
-            success: true,
-            source: 'background',
-            downloadId: bgResp.downloadId
-          }
-        if (bgResp && bgResp.fallback && bgResp.arrayBuffer) {
-          try {
-            const arrayBuffer = bgResp.arrayBuffer as ArrayBuffer
-            const mimeType = bgResp.mimeType || 'application/octet-stream'
-            const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
-            const objectUrl = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = objectUrl
-            a.download = filename
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
-            return { success: true, source: 'background-fallback' }
-          } catch (e) {
-            void e
-          }
+        if (bgResp && bgResp.success && bgResp.fallback && bgResp.arrayBuffer) {
+          const arrayBuffer = bgResp.arrayBuffer as ArrayBuffer
+          const mimeType = bgResp.mimeType || 'application/octet-stream'
+          const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
+          logger.log('[PixivAddEmoji] Background download successful, sending emoji to background')
+          return await sendEmojiToBackground(blob, baseName, filename)
         }
       }
     } catch (e) {
-      logger.error('[PixivOneClick] background directDownload attempt failed', e)
+      logger.warn('[PixivAddEmoji] Background download failed:', e)
     }
 
-    // 4) Final fallback: open in new tab
+    // Step 3: Final fallback - open image URL and inject download there
+    logger.log('[PixivAddEmoji] Direct methods failed, opening image URL for injection')
     try {
       window.open(data.url, '_blank')
-      return { success: true, fallback: 'opened' }
+      // TODO: We could inject a content script into the opened tab to try downloading there
+      return {
+        success: true,
+        source: 'opened',
+        message: '已在新标签页打开图片，请在图片页面重试添加表情'
+      }
     } catch (e) {
-      logger.error('[PixivOneClick] failed to open url', e)
-      return { success: false, error: e }
+      logger.error('[PixivAddEmoji] Failed to open image URL:', e)
+      return { success: false, error: '无法下载图片或打开图片页面', details: e }
     }
   } catch (error) {
-    logger.error('[PixivOneClick] performPixivDownloadFlow failed', error)
-    return { success: false, error }
+    logger.error('[PixivAddEmoji] Add emoji flow failed:', error)
+    return { success: false, error: '添加表情失败', details: error }
+  }
+}
+
+async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: string) {
+  try {
+    const arrayBuffer = await blob.arrayBuffer()
+    const chromeAPI = (window as any).chrome
+
+    if (!chromeAPI || !chromeAPI.runtime || !chromeAPI.runtime.sendMessage) {
+      throw new Error('Chrome extension API not available')
+    }
+
+    logger.log('[PixivAddEmoji] Sending emoji to background:', {
+      name: emojiName,
+      filename,
+      size: arrayBuffer.byteLength,
+      type: blob.type
+    })
+
+    const bgResp: any = await new Promise(resolve => {
+      try {
+        chromeAPI.runtime.sendMessage(
+          {
+            action: 'uploadAndAddEmoji',
+            payload: {
+              arrayBuffer,
+              filename,
+              mimeType: blob.type,
+              name: emojiName
+            }
+          },
+          (r: any) => resolve(r)
+        )
+      } catch (e) {
+        resolve({ success: false, error: 'Failed to send message to background' })
+      }
+    })
+
+    if (bgResp && bgResp.success) {
+      logger.log('[PixivAddEmoji] Emoji successfully added:', bgResp)
+      return {
+        success: true,
+        source: 'uploaded',
+        url: bgResp.url,
+        added: !!bgResp.added,
+        message: '表情已成功添加到未分组'
+      }
+    } else {
+      logger.error('[PixivAddEmoji] Background upload failed:', JSON.stringify(bgResp, null, 2))
+      return {
+        success: false,
+        error: '上传到linux.do失败',
+        details: bgResp?.error || bgResp?.details
+      }
+    }
+  } catch (error) {
+    logger.error('[PixivAddEmoji] Failed to send emoji to background:', error)
+    return {
+      success: false,
+      error: '发送数据到后台失败',
+      details: error
+    }
   }
 }
 
@@ -296,24 +229,71 @@ function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) 
     const originalContent = button.innerHTML
     const originalStyle = button.style.cssText
 
-    try {
-      await performPixivDownloadFlow(data)
+    // Show loading state
+    button.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="animation: spin 1s linear infinite;">
+        <style>
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        </style>
+        <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/>
+      </svg>
+      添加中...
+    `
+    button.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'
 
-      button.innerHTML = `\n        <svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">\n          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>\n        </svg>已添加\n      `
-      button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
-      button.style.color = '#ffffff'
-      button.style.border = '2px solid #ffffff'
-      button.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)'
+    try {
+      const resp = await performPixivAddEmojiFlow(data)
+
+      if (resp && resp.success) {
+        logger.log('[PixivAddEmoji] Successfully added emoji:', resp)
+
+        // Show success state
+        button.innerHTML = `
+          <svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>已添加
+        `
+        button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
+        button.style.color = '#ffffff'
+        button.style.border = '2px solid #ffffff'
+        button.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)'
+
+        // If it was just opened in new tab, show different message
+        if (resp.source === 'opened') {
+          button.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
+            </svg>已打开
+          `
+          button.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)'
+        }
+      } else {
+        // Handle different types of failures
+        const errorMessage =
+          typeof resp === 'object' && resp !== null
+            ? (resp as any).error || (resp as any).message || '添加表情失败'
+            : '添加表情失败'
+        throw new Error(String(errorMessage))
+      }
 
       setTimeout(() => {
         button.innerHTML = originalContent
         button.style.cssText = originalStyle
         button.style.pointerEvents = prevPointerEvents
         running = false
-      }, 2000)
+      }, 3000)
     } catch (error) {
-      logger.error('[PixivOneClick] 添加表情失败:', error)
-      button.innerHTML = `\n        <svg class="fa d-icon d-icon-times svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">\n          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>\n        </svg>失败\n      `
+      logger.error('[PixivAddEmoji] 添加表情失败:', error)
+
+      // Show error state
+      button.innerHTML = `
+        <svg class="fa d-icon d-icon-times svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>失败
+      `
       button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
       button.style.color = '#ffffff'
       button.style.border = '2px solid #ffffff'
@@ -324,7 +304,7 @@ function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) 
         button.style.cssText = originalStyle
         button.style.pointerEvents = prevPointerEvents
         running = false
-      }, 2000)
+      }, 3000)
     }
   }
 
@@ -381,7 +361,7 @@ function createPixivEmojiButton(data: AddEmojiButtonData): HTMLElement {
     top: 12px;
     z-index: 100000;
     color: #ffffff;
-    background: linear-gradient(135deg, #ef4444, #f97316);
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
     border: 2px solid rgba(255,255,255,0.95);
     border-radius: 6px;
     padding: 6px 10px;
@@ -393,8 +373,13 @@ function createPixivEmojiButton(data: AddEmojiButtonData): HTMLElement {
     gap: 6px;
     pointer-events: auto;
   `
-  button.innerHTML = `\n    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">\n      <path d="M12 4c.55 0 1 .45 1 1v6h6c.55 0 1 .45 1 1s-.45 1-1 1h-6v6c0 .55-.45 1-1 1s-1-.45-1-1v-6H5c-.55 0-1-.45-1-1s.45-1 1-1h6V5c0-.55.45-1 1-1z"/>\n    </svg>\n    一键下载\n  `
-  button.title = '一键下载'
+  button.innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </svg>
+    添加表情
+  `
+  button.title = '添加表情到收藏'
   // store data as dataset for robustness
   try {
     button.dataset.emojiName = data.name
@@ -432,7 +417,60 @@ function scanForPixivViewer() {
   })
 }
 
+function scanForImagePage() {
+  // Special handling for i.pximg.net image pages
+  const hostname = window.location.hostname.toLowerCase()
+  if (!hostname.includes('i.pximg.net') && !hostname.includes('pximg.net')) {
+    return
+  }
+
+  logger.log('[PixivAddEmoji] Scanning image page:', window.location.href)
+
+  // Look for the main image on the page
+  const images = document.querySelectorAll('img')
+
+  for (const img of images) {
+    // Skip if already has button
+    if (img.parentElement?.querySelector('.emoji-add-link-pixiv')) {
+      continue
+    }
+
+    // Check if this is likely the main image
+    if (img.src && (img.src.includes('i.pximg.net') || img.src.includes('pximg.net'))) {
+      // Extract image info
+      const imageUrl = img.src
+      const imageName = extractNameFromUrl(imageUrl)
+
+      logger.log('[PixivAddEmoji] Found image on image page:', { url: imageUrl, name: imageName })
+
+      // Create emoji data
+      const emojiData: AddEmojiButtonData = {
+        name: imageName,
+        url: imageUrl
+      }
+
+      // Create and add button
+      const button = createPixivEmojiButton(emojiData)
+
+      // Position button relative to the image
+      const imgContainer = img.parentElement || document.body
+      const computedStyle = window.getComputedStyle(imgContainer)
+      if (computedStyle.position === 'static') {
+        ;(imgContainer as HTMLElement).style.position = 'relative'
+      }
+
+      imgContainer.appendChild(button)
+
+      logger.log('[PixivAddEmoji] Added button to image page')
+      break // Only add button to the first suitable image
+    }
+  }
+}
+
 function observePixivViewer() {
+  const hostname = window.location.hostname.toLowerCase()
+  const isImageDomain = hostname.includes('i.pximg.net') || hostname.includes('pximg.net')
+
   const observer = new MutationObserver(mutations => {
     let shouldScan = false
     mutations.forEach(m => {
@@ -440,17 +478,36 @@ function observePixivViewer() {
         m.addedNodes.forEach(node => {
           if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as Element
-            if (el.getAttribute && el.getAttribute('role') === 'presentation') {
-              shouldScan = true
-            } else if (el.querySelector && el.querySelector('img[src*="i.pximg.net"]')) {
-              shouldScan = true
+
+            if (isImageDomain) {
+              // For image domains, look for new images
+              if (el.tagName === 'IMG' || (el.querySelector && el.querySelector('img'))) {
+                shouldScan = true
+              }
+            } else {
+              // For main Pixiv site, look for presentation elements
+              if (el.getAttribute && el.getAttribute('role') === 'presentation') {
+                shouldScan = true
+              } else if (el.querySelector && el.querySelector('img[src*="i.pximg.net"]')) {
+                shouldScan = true
+              }
             }
           }
         })
       }
     })
-    if (shouldScan) setTimeout(scanForPixivViewer, 120)
+
+    if (shouldScan) {
+      setTimeout(() => {
+        if (isImageDomain) {
+          scanForImagePage()
+        } else {
+          scanForPixivViewer()
+        }
+      }, 120)
+    }
   })
+
   observer.observe(document.body, { childList: true, subtree: true })
 }
 
@@ -458,33 +515,50 @@ export function initPixiv() {
   // 初始扫描与观察器（仅当页面为 Pixiv 时）
   try {
     if (!isPixivPage()) {
-      logger.log('[PixivOneClick] skipping init: not a Pixiv page')
+      logger.log('[PixivAddEmoji] skipping init: not a Pixiv page')
       return
     }
 
-    setTimeout(scanForPixivViewer, 100)
-    observePixivViewer()
-    // inject lightweight proxy settings UI for testing/config
-    try {
-      createProxySettingsUI()
-    } catch (_e) {
-      void _e
+    const hostname = window.location.hostname.toLowerCase()
+    const isImageDomain = hostname.includes('i.pximg.net') || hostname.includes('pximg.net')
+
+    if (isImageDomain) {
+      // For image pages, scan immediately and set up observation
+      setTimeout(scanForImagePage, 100)
+    } else {
+      // For main Pixiv site, use the standard viewer scanning
+      setTimeout(scanForPixivViewer, 100)
     }
+
+    observePixivViewer()
   } catch (e) {
-    logger.error('[PixivOneClick] init failed', e)
+    logger.error('[PixivAddEmoji] init failed', e)
   }
 }
 
 /**
- * 简单判断当前页面是否为 Pixiv：
- * - title 包含 pixiv
- * - meta[property="og:site_name"] 内容为 pixiv
- * - canonical 链接指向 pixiv.net
- * - meta[property="twitter:site"] 或 meta[property="twitter:site"] 包含 pixiv
+ * 判断当前页面是否为 Pixiv 相关页面：
+ * - pixiv.net 主站
+ * - i.pximg.net 图片域名
+ * - meta 标签包含 pixiv 信息
  */
 function isPixivPage(): boolean {
   try {
-    // Only inspect meta tags in <head>
+    const hostname = window.location.hostname.toLowerCase()
+
+    // Check if it's the image domain
+    if (hostname.includes('i.pximg.net') || hostname.includes('pximg.net')) {
+      logger.log('[PixivAddEmoji] Detected Pixiv image domain:', hostname)
+      return true
+    }
+
+    // Check if it's the main Pixiv site
+    if (hostname.includes('pixiv.net')) {
+      logger.log('[PixivAddEmoji] Detected Pixiv main site:', hostname)
+      return true
+    }
+
+    // Only inspect meta tags in <head> for other domains
     const ogSite =
       document.querySelector('meta[property="og:site_name"]')?.getAttribute('content') || ''
     if (ogSite.toLowerCase().includes('pixiv')) return true
@@ -511,122 +585,7 @@ function isPixivPage(): boolean {
 
     return false
   } catch (e) {
-    logger.error('[PixivOneClick] isPixivPage check failed', e)
+    logger.error('[PixivAddEmoji] isPixivPage check failed', e)
     return false
-  }
-}
-
-// --- In-page proxy settings UI (simple, stored in chrome.storage) ---
-function createProxySettingsUI() {
-  try {
-    const chromeAPI = (window as any).chrome
-    if (!chromeAPI) return
-
-    // avoid duplicate UI
-    if (document.getElementById('pixiv-proxy-open-btn')) return
-
-    // styles
-    const style = document.createElement('style')
-    style.id = 'pixiv-proxy-style'
-    style.textContent = `
-      #pixiv-proxy-open-btn { position: fixed; right: 12px; top: 12px; z-index: 200000; width:36px; height:36px; border-radius:6px; background:#111827; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.4); }
-      #pixiv-proxy-panel { position: fixed; right: 12px; top: 56px; z-index: 200000; width:320px; max-width:calc(100vw - 24px); background:#fff; color:#111827; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.35); padding:12px; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
-      #pixiv-proxy-panel input[type="text"], #pixiv-proxy-panel input[type="password"] { width:100%; box-sizing:border-box; padding:6px; margin:6px 0 10px 0; }
-      #pixiv-proxy-panel label { font-size:12px; }
-      #pixiv-proxy-panel .row { display:flex; gap:8px; align-items:center; }
-      #pixiv-proxy-panel button { margin-top:6px; padding:6px 10px; cursor:pointer; }
-    `
-    document.head.appendChild(style)
-
-    // open button (gear)
-    const openBtn = document.createElement('button')
-    openBtn.id = 'pixiv-proxy-open-btn'
-    openBtn.title = 'Proxy 设置'
-    openBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path fill="currentColor" d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z"/>
-        <path fill="currentColor" d="M19.43 12.98a7.5 7.5 0 0 0 0-1.96l2.11-1.65a.5.5 0 0 0 .12-.62l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.7 7.7 0 0 0-1.7-.98L14.5 2.5a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0-.5.5l-.38 2.39c-.6.24-1.17.55-1.7.98l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.62L4.57 11a7.5 7.5 0 0 0 0 1.96L2.46 14.6a.5.5 0 0 0-.12.62l2 3.46c.15.26.46.36.74.26l2.49-1c.53.43 1.1.74 1.7.98l.38 2.39c.07.32.35.55.68.55h4c.33 0 .61-.23.68-.55l.38-2.39c.6-.24 1.17-.55 1.7-.98l2.49 1c.28.1.59 0 .74-.26l2-3.46a.5.5 0 0 0-.12-.62l-2.11-1.62z"/>
-      </svg>
-    `
-    document.body.appendChild(openBtn)
-
-    // panel (hidden initially)
-    const panel = document.createElement('div')
-    panel.id = 'pixiv-proxy-panel'
-    panel.style.display = 'none'
-    panel.innerHTML = `
-      <div style="font-weight:700;margin-bottom:6px">Proxy 设置</div>
-      <label><input id="pixiv-proxy-enabled" type="checkbox"> 启用代理</label>
-      <div style="margin-top:6px"><label>Proxy URL</label><input id="pixiv-proxy-url" type="text" placeholder="https://your-proxy.example/" /></div>
-      <div><label>Password (可选)</label><input id="pixiv-proxy-pw" type="password" placeholder="密码" /></div>
-      <div class="row"><button id="pixiv-proxy-save">保存</button><button id="pixiv-proxy-close">关闭</button></div>
-      <div id="pixiv-proxy-msg" style="margin-top:8px;font-size:12px;color:#666"></div>
-    `
-    document.body.appendChild(panel)
-
-    const togglePanel = (show?: boolean) => {
-      if (typeof show === 'boolean') {
-        panel.style.display = show ? 'block' : 'none'
-        return
-      }
-      panel.style.display = panel.style.display === 'none' ? 'block' : 'none'
-    }
-
-    openBtn.addEventListener('click', () => togglePanel())
-    panel.querySelector('#pixiv-proxy-close')?.addEventListener('click', () => togglePanel(false))
-
-    const saveBtn = panel.querySelector('#pixiv-proxy-save') as HTMLButtonElement
-    const msgEl = panel.querySelector('#pixiv-proxy-msg') as HTMLElement
-
-    const load = () =>
-      new Promise(resolve => {
-        try {
-          if (chromeAPI.storage && chromeAPI.storage.sync && chromeAPI.storage.sync.get) {
-            chromeAPI.storage.sync.get(['proxy'], (res: any) => resolve(res?.proxy || null))
-          } else if (chromeAPI.storage && chromeAPI.storage.local && chromeAPI.storage.local.get) {
-            chromeAPI.storage.local.get(['proxy'], (res: any) => resolve(res?.proxy || null))
-          } else resolve(null)
-        } catch (_e) {
-          resolve(null)
-        }
-      })
-
-    const save = (cfg: any) =>
-      new Promise(resolve => {
-        try {
-          if (chromeAPI.storage && chromeAPI.storage.sync && chromeAPI.storage.sync.set) {
-            chromeAPI.storage.sync.set({ proxy: cfg }, () => resolve(true))
-          } else if (chromeAPI.storage && chromeAPI.storage.local && chromeAPI.storage.local.set) {
-            chromeAPI.storage.local.set({ proxy: cfg }, () => resolve(true))
-          } else resolve(false)
-        } catch (_e) {
-          resolve(false)
-        }
-      })
-
-    // populate
-    ;(async () => {
-      const cfg: any = await load()
-      const enabled = panel.querySelector('#pixiv-proxy-enabled') as HTMLInputElement
-      const url = panel.querySelector('#pixiv-proxy-url') as HTMLInputElement
-      const pw = panel.querySelector('#pixiv-proxy-pw') as HTMLInputElement
-      if (cfg) {
-        enabled.checked = !!cfg.enabled
-        url.value = cfg.url || ''
-        pw.value = cfg.password || ''
-      }
-    })()
-
-    saveBtn.addEventListener('click', async () => {
-      const enabled = (panel.querySelector('#pixiv-proxy-enabled') as HTMLInputElement).checked
-      const url = (panel.querySelector('#pixiv-proxy-url') as HTMLInputElement).value.trim()
-      const pw = (panel.querySelector('#pixiv-proxy-pw') as HTMLInputElement).value
-      const cfg = { enabled: !!enabled, url, password: pw }
-      const ok: any = await save(cfg)
-      msgEl.textContent = ok ? '已保存' : '保存失败'
-      setTimeout(() => (msgEl.textContent = ''), 2000)
-    })
-  } catch (_e) {
-    // non-fatal
   }
 }
