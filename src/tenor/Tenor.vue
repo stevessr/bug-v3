@@ -6,6 +6,7 @@ import { DownOutlined } from '@ant-design/icons-vue'
 import { useEmojiStore } from '../stores/emojiStore'
 
 import { logger } from '@/config/buildFlags'
+import defaultConfig from '@/config/default.json'
 
 type TenorGif = {
   id: string
@@ -63,9 +64,20 @@ onMounted(async () => {
     const result = await chrome.storage.local.get(['tenorApiKey'])
     if (result.tenorApiKey) {
       tenorApiKey.value = result.tenorApiKey
+    } else if (defaultConfig?.settings?.tenorApiKey) {
+      // Fallback to default config if storage has no key
+      tenorApiKey.value = defaultConfig.settings.tenorApiKey
     }
   } catch (error) {
     logger.error('Failed to load Tenor API key:', error)
+    // still try default config
+    try {
+      if (defaultConfig?.settings?.tenorApiKey) {
+        tenorApiKey.value = defaultConfig.settings.tenorApiKey
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 })
 
