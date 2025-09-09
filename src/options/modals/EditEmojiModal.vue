@@ -35,7 +35,7 @@ const uploadingEmojiIds = ref(new Set<string>())
 
 // Check if current URL contains linux.do
 const shouldShowUploadButton = computed(() => {
-  return !window.location.href.includes('linux.do')
+  return !localEmoji.value.url?.includes('linux.do')
 })
 
 // Upload single emoji to linux.do
