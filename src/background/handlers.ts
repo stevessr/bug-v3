@@ -154,38 +154,23 @@ export async function handleAddToFavorites(emoji: any, sendResponse: any) {
 export async function handleGetEmojiData(_sendResponse: (_resp: any) => void) {
   // mark callback as referenced
   void _sendResponse
-  // no additional args expected here
-  const chromeAPI = getChromeAPI()
-  if (!chromeAPI || !chromeAPI.storage) {
-    _sendResponse({ success: false, error: 'Chrome storage API not available' })
-    return
-  }
 
   try {
-    const data = await chromeAPI.storage.local.get(['emojiGroups', 'appSettings', 'favorites'])
-
-    // 解析新的存储格式，appSettings 现在是 { data: {...}, timestamp: ... } 的格式
-    let settings = {}
-    if (data.appSettings) {
-      if (data.appSettings.data && typeof data.appSettings.data === 'object') {
-        // 新格式：{ data: {...}, timestamp: ... }
-        settings = data.appSettings.data
-      } else if (typeof data.appSettings === 'object') {
-        // 兼容旧格式：直接是设置对象
-        settings = data.appSettings
-      }
-    }
+    // Use newStorageHelpers which understands the migrated storage layout
+    const groups = await newStorageHelpers.getAllEmojiGroups()
+    const settings = await newStorageHelpers.getSettings()
+    const favorites = await newStorageHelpers.getFavorites()
 
     _sendResponse({
       success: true,
       data: {
-        groups: data.emojiGroups || [],
-        settings: settings,
-        favorites: data.favorites || []
+        groups: groups || [],
+        settings: settings || {},
+        favorites: favorites || []
       }
     })
   } catch (error: any) {
-    logger.error('Failed to get emoji data:', error)
+    logger.error('Failed to get emoji data via newStorageHelpers:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
