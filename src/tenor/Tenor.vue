@@ -198,9 +198,10 @@ const toggleSelection = (gif: TenorGif) => {
 
 const importSelected = () => {
   if (selectedGifs.value.size === 0) return
-
   if (availableGroups.value.length > 0) {
-    selectedGroupId.value = availableGroups.value[0].id
+    // Prefer adding to the explicit 'ungrouped' group when available
+    const ungroup = availableGroups.value.find(g => g.id === 'ungrouped')
+    selectedGroupId.value = ungroup ? 'ungrouped' : availableGroups.value[0].id
   }
   showGroupModal.value = true
 }
