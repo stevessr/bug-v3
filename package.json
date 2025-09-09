@@ -17,6 +17,8 @@
     "serve": "vite preview",
     "test": "playwright test",
     "test:debug": "playwright test --debug",
+    "test:extension": "playwright test --config=playwright.extension.config.ts",
+    "test:extension:debug": "playwright test --config=playwright.extension.config.ts --debug",
     "release": "bash ./scripts/release.sh",
     "pack:crx": "node ./scripts/pack-crx.js",
     "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx",

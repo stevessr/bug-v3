@@ -9,8 +9,10 @@ import {
 } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
+import { logger } from '../../config/buildFlags'
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/emoji'
+import { emojiPreviewUploader } from '../../utils/emojiPreviewUploader'
 
 const props = defineProps<{
   show: boolean
@@ -28,6 +30,45 @@ const localEmoji = ref<Partial<Emoji>>({
   url: '',
   displayUrl: ''
 })
+
+// Upload functionality
+const uploadingEmojiIds = ref(new Set<string>())
+
+// Check if current URL contains linux.do
+const shouldShowUploadButton = computed(() => {
+  return !localEmoji.value.url?.includes('linux.do')
+})
+
+// Upload single emoji to linux.do
+const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
+  if (!emoji.url || !emoji.id || uploadingEmojiIds.value.has(emoji.id)) return
+
+  try {
+    uploadingEmojiIds.value.add(emoji.id)
+
+    // Get image file
+    const response = await fetch(emoji.url)
+    const blob = await response.blob()
+    const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
+    const file = new File([blob], fileName, { type: blob.type })
+
+    // Upload to linux.do and update store with returned url
+    try {
+      const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+      if (resp && resp.url && emoji.id) {
+        emojiStore.updateEmoji(emoji.id, { url: resp.url })
+      }
+    } finally {
+      // Show upload progress dialog regardless
+      emojiPreviewUploader.showProgressDialog()
+    }
+  } catch (error: any) {
+    logger.error('表情上传失败:', error)
+    alert(`表情 "${emoji.name}" 上传失败: ${error.message || '未知错误'}`)
+  } finally {
+    uploadingEmojiIds.value.delete(emoji.id)
+  }
+}
 
 // 图片宽高比与布局
 const imageRatio = ref(1) // 宽/高
@@ -241,20 +282,38 @@ const handleSubmit = () => {
                 </div>
 
                 <!-- Buttons -->
-                <div class="mt-4 grid grid-cols-2 gap-3">
-                  <button
-                    type="submit"
-                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
-                  >
-                    保存
-                  </button>
-                  <button
-                    type="button"
-                    @click="closeModal"
-                    class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm"
-                  >
-                    取消
-                  </button>
+                <div class="mt-4 space-y-3">
+                  <!-- Upload button (conditional) -->
+                  <div v-if="shouldShowUploadButton" class="w-full">
+                    <button
+                      type="button"
+                      @click="uploadSingleEmoji(localEmoji)"
+                      :disabled="uploadingEmojiIds.has(localEmoji.id || '')"
+                      title="上传到linux.do"
+                      class="w-full inline-flex justify-center items-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-500 text-base font-medium text-white hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-300 disabled:cursor-not-allowed sm:text-sm"
+                    >
+                      <span v-if="uploadingEmojiIds.has(localEmoji.id || '')" class="mr-2">⏳</span>
+                      <span v-else class="mr-2">📤</span>
+                      上传到linux.do
+                    </button>
+                  </div>
+
+                  <!-- Save and Cancel buttons -->
+                  <div class="grid grid-cols-2 gap-3">
+                    <button
+                      type="submit"
+                      class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                    >
+                      保存
+                    </button>
+                    <button
+                      type="button"
+                      @click="closeModal"
+                      class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm"
+                    >
+                      取消
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
