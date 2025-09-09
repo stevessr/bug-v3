@@ -398,18 +398,57 @@ export async function downloadAndUploadDirect(
 export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
   void sendResponse
   try {
-    if (!payload || !payload.arrayBuffer) {
-      sendResponse({ success: false, error: 'missing arrayBuffer' })
+    if (!payload) {
+      sendResponse({ success: false, error: 'missing payload' })
       return
     }
 
-    const arrayBuffer: ArrayBuffer = payload.arrayBuffer
+    // Diagnostics: log payload shape
+    try {
+      logger.log('[UploadAndAddEmoji] Received payload keys:', Object.keys(payload))
+    } catch (_e) {
+      void _e
+    }
+
+    if (!payload.arrayData) {
+      // Might receive Uint8Array or arrayBuffer in some cases — log and fail gracefully
+      logger.warn('[UploadAndAddEmoji] payload.arrayData missing; keys:', Object.keys(payload))
+      sendResponse({ success: false, error: 'missing arrayData' })
+      return
+    }
+
+    // 将数组数据转换回 ArrayBuffer
+    const arrayData: number[] = payload.arrayData
+    const arrayBuffer = new Uint8Array(arrayData).buffer
+    // Diagnostic: verify arrayBuffer type/length
+    try {
+      const abType = Object.prototype.toString.call(arrayBuffer)
+      const byteLen = arrayBuffer.byteLength
+      logger.log('[UploadAndAddEmoji] converted arrayData to arrayBuffer:', {
+        arrayDataLength: arrayData.length,
+        arrayBufferType: abType,
+        byteLength: byteLen
+      })
+    } catch (_e) {
+      void _e
+    }
     const filename: string = payload.filename || 'image'
     const mimeType: string = payload.mimeType || 'application/octet-stream'
     const name: string = payload.name || filename
 
+    logger.log(
+      '[UploadAndAddEmoji] Processing file:',
+      filename,
+      'size:',
+      arrayBuffer.byteLength,
+      'type:',
+      mimeType
+    )
+
     // build blob and form data similar to emojiPreviewUploader
     const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
+
+    logger.log('[UploadAndAddEmoji] Created blob size:', blob.size, 'type:', blob.type)
 
     const formData = new FormData()
     formData.append('upload_type', 'composer')
@@ -509,6 +548,163 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
       await newStorageHelpers.setAllEmojiGroups(groups)
 
       sendResponse({ success: true, url: finalUrl, added: true })
+      return
+    } catch (e) {
+      sendResponse({ success: true, url: uploadedUrl, added: false, error: String(e) })
+      return
+    }
+  } catch (error) {
+    sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
+  }
+}
+
+// 下载图片并上传到 linux.do 的处理器
+export async function handleDownloadAndUploadEmoji(payload: any, sendResponse: any) {
+  void sendResponse
+  try {
+    if (!payload || !payload.url) {
+      sendResponse({ success: false, error: 'missing url' })
+      return
+    }
+
+    const imageUrl: string = payload.url
+    const filename: string = payload.filename || 'image'
+    const name: string = payload.name || filename
+
+    logger.log('[DownloadAndUploadEmoji] Processing image:', filename, 'from:', imageUrl)
+
+    // Step 1: 下载图片
+    const defaultHeaders: Record<string, string> = {
+      Accept: 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+      'Cache-Control': 'max-age=0',
+      'sec-ch-ua': '"Not;A=Brand";v="99", "Microsoft Edge";v="139", "Chromium";v="139"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Sec-Fetch-Dest': 'image',
+      'Sec-Fetch-Mode': 'no-cors',
+      'Sec-Fetch-Site': 'cross-site',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+
+    // 为 pixiv 添加特殊的 Referer
+    if (imageUrl.includes('pximg.net')) {
+      defaultHeaders.Referer = 'https://www.pixiv.net/'
+    }
+
+    const imageResp = await fetch(imageUrl, {
+      method: 'GET',
+      headers: defaultHeaders,
+      credentials: 'omit'
+    })
+
+    if (!imageResp.ok) {
+      sendResponse({
+        success: false,
+        error: `Failed to download image: ${imageResp.status}`,
+        details: imageResp.statusText
+      })
+      return
+    }
+
+    const imageBlob = await imageResp.blob()
+    logger.log('[DownloadAndUploadEmoji] Image downloaded:', imageBlob.size, 'bytes')
+
+    // Step 2: 获取认证信息
+    const chromeAPI = getChromeAPI()
+    let authResp: any = { success: false, csrfToken: '', cookies: '' }
+    try {
+      if (chromeAPI && chromeAPI.cookies) {
+        const cookies = await chromeAPI.cookies.getAll({ domain: 'linux.do' })
+        const cookieString = cookies
+          .map((cookie: any) => `${cookie.name}=${cookie.value}`)
+          .join('; ')
+
+        let csrfToken = ''
+        try {
+          if (chromeAPI.tabs) {
+            const tabs = await chromeAPI.tabs.query({ url: 'https://linux.do/*' })
+            if (tabs.length > 0 && tabs[0].id) {
+              const response = await chromeAPI.tabs.sendMessage(tabs[0].id, {
+                type: 'GET_CSRF_TOKEN'
+              })
+              if (response && response.csrfToken) {
+                csrfToken = response.csrfToken
+              }
+            }
+          }
+        } catch (e) {
+          logger.warn('Failed to get CSRF token from linux.do tab:', e)
+        }
+
+        authResp = {
+          success: true,
+          csrfToken: csrfToken,
+          cookies: cookieString
+        }
+      }
+    } catch (_e) {
+      logger.error('Failed to get auth info:', _e)
+    }
+
+    // Step 3: 上传到 linux.do
+    const formData = new FormData()
+    formData.append('upload_type', 'composer')
+    formData.append('relativePath', 'null')
+    formData.append('name', filename)
+    formData.append('type', imageBlob.type)
+    formData.append('file', imageBlob, filename)
+
+    const headers: Record<string, string> = {}
+    if (authResp.csrfToken) headers['X-Csrf-Token'] = authResp.csrfToken
+    if (authResp.cookies) headers['Cookie'] = authResp.cookies
+
+    const uploadUrl = `https://linux.do/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8`
+
+    const uploadResp = await fetch(uploadUrl, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include'
+    })
+
+    if (!uploadResp.ok) {
+      const errData = await uploadResp.json().catch(() => null)
+      sendResponse({ success: false, error: 'upload failed', details: errData })
+      return
+    }
+
+    const uploadData = await uploadResp.json()
+    const uploadedUrl = uploadData && uploadData.url ? uploadData.url : null
+
+    if (!uploadedUrl) {
+      sendResponse({ success: false, error: 'no url returned from upload', details: uploadData })
+      return
+    }
+
+    // Step 4: 保存到本地存储
+    try {
+      const { newStorageHelpers } = await import('../utils/newStorage')
+      const groups = await newStorageHelpers.getAllEmojiGroups()
+      let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
+      if (!ungroupedGroup) {
+        ungroupedGroup = { id: 'ungrouped', name: '未分组', icon: '📦', order: 999, emojis: [] }
+        groups.push(ungroupedGroup)
+      }
+
+      const newEmoji = {
+        id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        packet: Date.now(),
+        name: name,
+        url: uploadedUrl,
+        groupId: 'ungrouped',
+        addedAt: Date.now()
+      }
+
+      ungroupedGroup.emojis.push(newEmoji)
+      await newStorageHelpers.setAllEmojiGroups(groups)
+
+      sendResponse({ success: true, url: uploadedUrl, added: true })
       return
     } catch (e) {
       sendResponse({ success: true, url: uploadedUrl, added: false, error: String(e) })

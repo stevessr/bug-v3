@@ -78,8 +78,6 @@ async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
     const baseName = data.name && data.name.length > 0 ? data.name : extractNameFromUrl(data.url)
     const filename = baseName.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || 'image'
 
-    const chromeAPI = (window as any).chrome
-
     logger.log('[PixivAddEmoji] Starting add emoji flow for:', { name: baseName, url: data.url })
 
     // Step 1: Try to download image using canvas (primary method)
@@ -93,38 +91,25 @@ async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
       logger.warn('[PixivAddEmoji] Canvas method failed:', e)
     }
 
-    // Step 2: If canvas fails, try background download as fallback
+    // Step 2: If canvas fails, try direct fetch with appropriate headers
     try {
-      if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
-        logger.log('[PixivAddEmoji] Trying background download as fallback')
-        const bgResp: any = await new Promise(resolve => {
-          try {
-            chromeAPI.runtime.sendMessage(
-              {
-                action: 'downloadForUser',
-                payload: {
-                  url: data.url,
-                  filename,
-                  directDownload: false // We want the arrayBuffer, not file download
-                }
-              },
-              (r: any) => resolve(r)
-            )
-          } catch (e) {
-            resolve(null)
-          }
-        })
+      logger.log('[PixivAddEmoji] Trying direct fetch as fallback')
+      const response = await fetch(data.url, {
+        method: 'GET',
+        headers: {
+          Referer: 'https://www.pixiv.net/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        credentials: 'omit'
+      })
 
-        if (bgResp && bgResp.success && bgResp.fallback && bgResp.arrayBuffer) {
-          const arrayBuffer = bgResp.arrayBuffer as ArrayBuffer
-          const mimeType = bgResp.mimeType || 'application/octet-stream'
-          const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
-          logger.log('[PixivAddEmoji] Background download successful, sending emoji to background')
-          return await sendEmojiToBackground(blob, baseName, filename)
-        }
+      if (response.ok) {
+        const blob = await response.blob()
+        logger.log('[PixivAddEmoji] Direct fetch successful, sending to background')
+        return await sendEmojiToBackground(blob, baseName, filename)
       }
     } catch (e) {
-      logger.warn('[PixivAddEmoji] Background download failed:', e)
+      logger.warn('[PixivAddEmoji] Direct fetch failed:', e)
     }
 
     // Step 3: Final fallback - open image URL and inject download there
@@ -149,27 +134,38 @@ async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
 
 async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: string) {
   try {
-    const arrayBuffer = await blob.arrayBuffer()
     const chromeAPI = (window as any).chrome
 
     if (!chromeAPI || !chromeAPI.runtime || !chromeAPI.runtime.sendMessage) {
       throw new Error('Chrome extension API not available')
     }
 
-    logger.log('[PixivAddEmoji] Sending emoji to background:', {
+    logger.log('[PixivAddEmoji] Converting blob to ArrayBuffer for background:', {
       name: emojiName,
       filename,
-      size: arrayBuffer.byteLength,
+      size: blob.size,
       type: blob.type
     })
 
+    // 将 Blob 转换为 ArrayBuffer，然后转为 Uint8Array 数组
+    const arrayBuffer = await blob.arrayBuffer()
+    const uint8Array = new Uint8Array(arrayBuffer)
+    const arrayData = Array.from(uint8Array)
+
+    logger.log('[PixivAddEmoji] Converted blob to array data:', {
+      originalBlobSize: blob.size,
+      arrayBufferSize: arrayBuffer.byteLength,
+      arrayDataLength: arrayData.length
+    })
+
+    // 发送数组数据给后台处理
     const bgResp: any = await new Promise(resolve => {
       try {
         chromeAPI.runtime.sendMessage(
           {
             action: 'uploadAndAddEmoji',
             payload: {
-              arrayBuffer,
+              arrayData,
               filename,
               mimeType: blob.type,
               name: emojiName
@@ -183,7 +179,7 @@ async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: st
     })
 
     if (bgResp && bgResp.success) {
-      logger.log('[PixivAddEmoji] Emoji successfully added:', bgResp)
+      logger.log('[PixivAddEmoji] Emoji successfully processed by background:', bgResp)
       return {
         success: true,
         source: 'uploaded',
@@ -192,19 +188,19 @@ async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: st
         message: '表情已成功添加到未分组'
       }
     } else {
-      logger.error('[PixivAddEmoji] Background upload failed:', JSON.stringify(bgResp, null, 2))
+      logger.error('[PixivAddEmoji] Background processing failed:', JSON.stringify(bgResp, null, 2))
       return {
         success: false,
-        error: '上传到linux.do失败',
+        error: '后台处理失败',
         details: bgResp?.error || bgResp?.details
       }
     }
   } catch (error) {
-    logger.error('[PixivAddEmoji] Failed to send emoji to background:', error)
+    logger.error('[PixivAddEmoji] Failed to send to background:', error)
     return {
       success: false,
       error: '发送数据到后台失败',
-      details: error
+      details: error instanceof Error ? error.message : String(error)
     }
   }
 }
