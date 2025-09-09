@@ -1,5 +1,4 @@
-import { defaultEmojiGroups } from '@/types/defaultEmojiGroups'
-
+const defaultEmojiGroups: any[] = []
 // 返回由 src/config/default.json 生成的默认分组的表情列表。
 // 优先返回 id 为 'nachoneko' 的分组，以保持原有默认体验；没有找到时回退到第一个有效分组。
 export function getDefaultEmojis() {
