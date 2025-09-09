@@ -271,7 +271,7 @@ export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => vo
   try {
     // Get linux.do cookies
     const cookies = await chromeAPI.cookies.getAll({ domain: 'linux.do' })
-    const cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
+    const cookieString = cookies.map((cookie: any) => `${cookie.name}=${cookie.value}`).join('; ')
 
     // Try to get CSRF token from linux.do tabs
     let csrfToken = ''

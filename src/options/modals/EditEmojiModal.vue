@@ -9,6 +9,7 @@ import {
 } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
+import { logger } from '../../config/buildFlags'
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/emoji'
 import { emojiPreviewUploader } from '../../utils/emojiPreviewUploader'
@@ -51,13 +52,18 @@ const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
     const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
     const file = new File([blob], fileName, { type: blob.type })
 
-    // Upload to linux.do
-    await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
-
-    // Show upload progress dialog
-    emojiPreviewUploader.showProgressDialog()
+    // Upload to linux.do and update store with returned url
+    try {
+      const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+      if (resp && resp.url && emoji.id) {
+        emojiStore.updateEmoji(emoji.id, { url: resp.url })
+      }
+    } finally {
+      // Show upload progress dialog regardless
+      emojiPreviewUploader.showProgressDialog()
+    }
   } catch (error: any) {
-    console.error('表情上传失败:', error)
+    logger.error('表情上传失败:', error)
     alert(`表情 "${emoji.name}" 上传失败: ${error.message || '未知错误'}`)
   } finally {
     uploadingEmojiIds.value.delete(emoji.id)

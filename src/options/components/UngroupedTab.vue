@@ -42,7 +42,8 @@ const shouldShowUploadButton = computed(() => {
 
 // Upload single emoji to linux.do
 const uploadSingleEmoji = async (emoji: Emoji, index: number) => {
-  if (!emoji.url || uploadingEmojiIds.value.has(index)) return
+  // Skip if no url, already uploading, or already hosted on linux.do
+  if (!emoji.url || uploadingEmojiIds.value.has(index) || emoji.url.includes('linux.do')) return
 
   uploadingEmojiIds.value.add(index)
 
@@ -55,11 +56,17 @@ const uploadSingleEmoji = async (emoji: Emoji, index: number) => {
     const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
     const file = new File([blob], fileName, { type: blob.type })
 
-    // Upload to linux.do
-    await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
-
-    // Show upload progress dialog
-    emojiPreviewUploader.showProgressDialog()
+    // Upload to linux.do and replace url on success
+    try {
+      const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+      if (resp && resp.url) {
+        // Update emoji url in store (ungrouped group)
+        emojiStore.updateEmojiInGroup('ungrouped', index, { url: resp.url })
+      }
+    } finally {
+      // Show upload progress dialog (always)
+      emojiPreviewUploader.showProgressDialog()
+    }
   } catch (error) {
     logger.error('Upload failed:', error)
   } finally {
@@ -67,13 +74,16 @@ const uploadSingleEmoji = async (emoji: Emoji, index: number) => {
   }
 }
 
+// Reference uploadSingleEmoji to avoid TS 'declared but its value is never read' when template uses $emit
+void uploadSingleEmoji
+
 // Upload selected emojis in batch
 const uploadSelectedEmojis = async () => {
   if (selectedEmojis.value.size === 0 || !ungroup.value) return
 
   const emojisToUpload = Array.from(selectedEmojis.value)
     .map(index => ({ emoji: ungroup.value!.emojis[index], index }))
-    .filter(({ emoji }) => emoji && emoji.url)
+    .filter(({ emoji }) => emoji && emoji.url && !emoji.url.includes('linux.do'))
 
   if (emojisToUpload.length === 0) return
 
@@ -85,13 +95,18 @@ const uploadSelectedEmojis = async () => {
     emojiPreviewUploader.showProgressDialog()
 
     // Upload all selected emojis
-    const uploadPromises = emojisToUpload.map(async ({ emoji }) => {
+    const uploadPromises = emojisToUpload.map(async ({ emoji, index }) => {
       try {
         const response = await fetch(emoji.url!)
         const blob = await response.blob()
         const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
         const file = new File([blob], fileName, { type: blob.type })
-        return emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+        const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+        if (resp && resp.url) {
+          // Find this emoji in ungrouped and update its url
+          emojiStore.updateEmojiInGroup('ungrouped', index, { url: resp.url })
+        }
+        return resp
       } catch (error) {
         logger.error('Failed to upload emoji:', emoji.name, error)
         throw error
@@ -111,7 +126,7 @@ const uploadAllEmojis = async () => {
 
   const emojisToUpload = ungroup.value.emojis
     .map((emoji, index) => ({ emoji, index }))
-    .filter(({ emoji }) => emoji && emoji.url)
+    .filter(({ emoji }) => emoji && emoji.url && !emoji.url.includes('linux.do'))
 
   if (emojisToUpload.length === 0) return
 
@@ -123,13 +138,17 @@ const uploadAllEmojis = async () => {
     emojiPreviewUploader.showProgressDialog()
 
     // Upload all emojis
-    const uploadPromises = emojisToUpload.map(async ({ emoji }) => {
+    const uploadPromises = emojisToUpload.map(async ({ emoji, index }) => {
       try {
         const response = await fetch(emoji.url!)
         const blob = await response.blob()
         const fileName = `${emoji.name}.${blob.type.split('/')[1] || 'png'}`
         const file = new File([blob], fileName, { type: blob.type })
-        return emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+        const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
+        if (resp && resp.url) {
+          emojiStore.updateEmojiInGroup('ungrouped', index, { url: resp.url })
+        }
+        return resp
       } catch (error) {
         logger.error('Failed to upload emoji:', emoji.name, error)
         throw error
