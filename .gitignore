@@ -155,3 +155,4 @@ src/types/defaultEmojiGroups.ts
 package-lock.json
 deno.lock
 components.d.ts
+default.json
