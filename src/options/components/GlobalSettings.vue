@@ -201,7 +201,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
         </label>
       </div>
 
-      <div class="flex items-center justify-between" v-if="false">
+      <div class="flex items-center justify-between">
         <div>
           <label class="text-sm font-medium text-gray-900">启用X.com额外选择器</label>
           <p class="text-sm text-gray-500">在X.com(Twitter)启用额外的选择器控制</p>
