@@ -390,3 +390,131 @@ export async function downloadAndUploadDirect(
   const data = await uploadResp.json()
   return data
 }
+
+/**
+ * Handler for content script sending arrayBuffer to be uploaded to linux.do and added as emoji
+ * payload: { arrayBuffer: ArrayBuffer, filename: string, mimeType?: string, name?: string }
+ */
+export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
+  void sendResponse
+  try {
+    if (!payload || !payload.arrayBuffer) {
+      sendResponse({ success: false, error: 'missing arrayBuffer' })
+      return
+    }
+
+    const arrayBuffer: ArrayBuffer = payload.arrayBuffer
+    const filename: string = payload.filename || 'image'
+    const mimeType: string = payload.mimeType || 'application/octet-stream'
+    const name: string = payload.name || filename
+
+    // build blob and form data similar to emojiPreviewUploader
+    const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
+
+    const formData = new FormData()
+    formData.append('upload_type', 'composer')
+    formData.append('relativePath', 'null')
+    formData.append('name', filename)
+    formData.append('type', blob.type)
+    // do not include sha1 here (optional)
+    formData.append('file', blob, filename)
+
+    // Get auth info directly instead of sending message to self
+    const chromeAPI = getChromeAPI()
+    let authResp: any = { success: false, csrfToken: '', cookies: '' }
+    try {
+      if (chromeAPI && chromeAPI.cookies) {
+        // Get linux.do cookies directly
+        const cookies = await chromeAPI.cookies.getAll({ domain: 'linux.do' })
+        const cookieString = cookies
+          .map((cookie: any) => `${cookie.name}=${cookie.value}`)
+          .join('; ')
+
+        // Try to get CSRF token from linux.do tabs
+        let csrfToken = ''
+        try {
+          if (chromeAPI.tabs) {
+            const tabs = await chromeAPI.tabs.query({ url: 'https://linux.do/*' })
+            if (tabs.length > 0 && tabs[0].id) {
+              const response = await chromeAPI.tabs.sendMessage(tabs[0].id, {
+                type: 'GET_CSRF_TOKEN'
+              })
+              if (response && response.csrfToken) {
+                csrfToken = response.csrfToken
+              }
+            }
+          }
+        } catch (e) {
+          logger.warn('Failed to get CSRF token from linux.do tab:', e)
+        }
+
+        authResp = {
+          success: true,
+          csrfToken: csrfToken,
+          cookies: cookieString
+        }
+      }
+    } catch (_e) {
+      logger.error('Failed to get auth info:', _e)
+    }
+
+    const headers: Record<string, string> = {}
+    if (authResp && authResp.csrfToken) headers['X-Csrf-Token'] = authResp.csrfToken
+    if (authResp && authResp.cookies) headers['Cookie'] = authResp.cookies
+
+    const uploadUrl = `https://linux.do/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8`
+
+    const resp = await fetch(uploadUrl, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include'
+    })
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => null)
+      sendResponse({ success: false, error: 'upload failed', details: errData })
+      return
+    }
+
+    const data = await resp.json()
+    const uploadedUrl = data && data.url ? data.url : null
+
+    if (!uploadedUrl) {
+      sendResponse({ success: false, error: 'no url returned from upload', details: data })
+      return
+    }
+
+    // Add to storage - mimic addEmojiFromWeb ungrouped insertion
+    try {
+      const { newStorageHelpers } = await import('../utils/newStorage')
+      const groups = await newStorageHelpers.getAllEmojiGroups()
+      let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
+      if (!ungroupedGroup) {
+        ungroupedGroup = { id: 'ungrouped', name: '未分组', icon: '📦', order: 999, emojis: [] }
+        groups.push(ungroupedGroup)
+      }
+
+      const finalUrl = uploadedUrl
+      const newEmoji = {
+        id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        packet: Date.now(),
+        name: name,
+        url: finalUrl,
+        groupId: 'ungrouped',
+        addedAt: Date.now()
+      }
+
+      ungroupedGroup.emojis.push(newEmoji)
+      await newStorageHelpers.setAllEmojiGroups(groups)
+
+      sendResponse({ success: true, url: finalUrl, added: true })
+      return
+    } catch (e) {
+      sendResponse({ success: true, url: uploadedUrl, added: false, error: String(e) })
+      return
+    }
+  } catch (error) {
+    sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
+  }
+}

@@ -17,6 +17,7 @@ import {
 
 import { logger } from '@/config/buildFlags'
 import { uploader } from '@/content/uploader'
+import { initPixiv } from '@/content/pixiv'
 
 // Global state for userscript
 const userscriptState: UserscriptStorage = {
@@ -67,7 +68,7 @@ function shouldInjectEmoji(): boolean {
 
   // Check current domain - allow linux.do and other known sites
   const hostname = window.location.hostname.toLowerCase()
-  const allowedDomains = ['linux.do', 'meta.discourse.org']
+  const allowedDomains = ['linux.do', 'meta.discourse.org', 'pixiv.net']
   if (allowedDomains.some(domain => hostname.includes(domain))) {
     logger.log('[Emoji Extension Userscript] Allowed domain detected:', hostname)
     return true
@@ -1055,6 +1056,12 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
 
   initializeUserscriptData()
   initOneClickAdd()
+  // Pixiv specific injection (use content/pixiv implementation)
+  try {
+    initPixiv()
+  } catch (e) {
+    logger.warn('[Userscript] initPixiv failed', e)
+  }
 
   let attempts = 0
 

@@ -1,6 +1,6 @@
 import { logger } from '../config/buildFLagsV2'
 
-//import { initPixiv } from './pixiv'
+import { initPixiv } from './pixiv'
 import { initBilibili } from './bilibili'
 import { initX } from './x'
 
@@ -32,7 +32,7 @@ function requestSettingsFromBackground(): Promise<any> {
 
 export function Uninject() {
   try {
-    //initPixiv() //for bad
+    initPixiv()
   } catch (e) {
     logger.error('[OneClickAdd] initPixiv failed', e)
   }

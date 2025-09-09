@@ -2,7 +2,11 @@ import { newStorageHelpers } from '../utils/newStorage'
 import { logger } from '../config/buildFlags'
 
 import { getChromeAPI } from './utils'
-import { handleDownloadAndSendToDiscourse, handleDownloadForUser } from './downloadAndSend'
+import {
+  handleDownloadAndSendToDiscourse,
+  handleDownloadForUser,
+  handleUploadAndAddEmoji
+} from './downloadAndSend'
 import { handleAddEmojiFromWeb } from './handlers/addEmojiFromWeb'
 
 export function setupMessageListener() {
@@ -13,30 +17,35 @@ export function setupMessageListener() {
       // mark unused sender as intentionally unused
       void _sender
 
-      switch (message.type) {
-        case 'GET_EMOJI_DATA':
-          handleGetEmojiData(sendResponse)
-          return true
+      // 首先检查 message.type
+      if (message.type) {
+        switch (message.type) {
+          case 'GET_EMOJI_DATA':
+            handleGetEmojiData(sendResponse)
+            return true
 
-        case 'SAVE_EMOJI_DATA':
-          handleSaveEmojiData(message.data, sendResponse)
-          return true
+          case 'SAVE_EMOJI_DATA':
+            handleSaveEmojiData(message.data, sendResponse)
+            return true
 
-        case 'SYNC_SETTINGS':
-          handleSyncSettings(message.settings, sendResponse)
-          return true
+          case 'SYNC_SETTINGS':
+            handleSyncSettings(message.settings, sendResponse)
+            return true
 
-        case 'REQUEST_LINUX_DO_AUTH':
-          handleLinuxDoAuthRequest(sendResponse)
-          return true
+          case 'REQUEST_LINUX_DO_AUTH':
+            handleLinuxDoAuthRequest(sendResponse)
+            return true
 
-        default:
-          logger.log('Unknown message type:', message.type)
-          // mark message.type as referenced for linters
-          void message.type
-          sendResponse({ success: false, error: 'Unknown message type' })
+          default:
+            logger.log('Unknown message type:', message.type)
+            // mark message.type as referenced for linters
+            void message.type
+            sendResponse({ success: false, error: 'Unknown message type' })
+            return false
+        }
       }
 
+      // 然后检查 message.action
       if (message.action) {
         switch (message.action) {
           case 'addToFavorites':
@@ -55,6 +64,10 @@ export function setupMessageListener() {
             handleDownloadForUser(message.payload, sendResponse)
             return true
 
+          case 'uploadAndAddEmoji':
+            handleUploadAndAddEmoji(message.payload, sendResponse)
+            return true
+
           case 'saveLastDiscourse':
             handleSaveLastDiscourse(message.payload, sendResponse)
             return true
@@ -64,8 +77,13 @@ export function setupMessageListener() {
             // mark message.action as referenced for linters
             void message.action
             sendResponse({ success: false, error: 'Unknown action' })
+            return false
         }
       }
+
+      // 如果既没有 type 也没有 action
+      logger.log('Message has no type or action:', message)
+      sendResponse({ success: false, error: 'Message has no type or action' })
     })
   }
 }
