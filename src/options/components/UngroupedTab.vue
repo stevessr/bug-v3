@@ -6,7 +6,7 @@ import { DownOutlined } from '@ant-design/icons-vue'
 import type { EmojiGroup, Emoji } from '../../types/emoji'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../../utils/emojiPreviewUploader'
-import { logger } from '../../config/buildFLagsV2'
+import { logger } from '../../config/buildFlags'
 
 defineEmits(['remove', 'edit'])
 
@@ -365,15 +365,6 @@ const cancelCreateGroup = () => {
             <!-- 非多选模式下的编辑/删除/上传按钮 -->
             <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
               <!-- Upload button when not on linux.do -->
-              <button
-                v-if="shouldShowUploadButton"
-                @click="uploadSingleEmoji(emoji, idx)"
-                :disabled="uploadingEmojiIds.has(idx)"
-                title="上传到 linux.do"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {{ uploadingEmojiIds.has(idx) ? '⏳' : '📤' }}
-              </button>
               <button
                 @click="$emit('edit', emoji, ungroup.id, idx)"
                 title="编辑"
