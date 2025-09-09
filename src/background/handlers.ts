@@ -5,7 +5,8 @@ import { getChromeAPI } from './utils'
 import {
   handleDownloadAndSendToDiscourse,
   handleDownloadForUser,
-  handleUploadAndAddEmoji
+  handleUploadAndAddEmoji,
+  handleDownloadAndUploadEmoji
 } from './downloadAndSend'
 import { handleAddEmojiFromWeb } from './handlers/addEmojiFromWeb'
 
@@ -66,6 +67,10 @@ export function setupMessageListener() {
 
           case 'uploadAndAddEmoji':
             handleUploadAndAddEmoji(message.payload, sendResponse)
+            return true
+
+          case 'downloadAndUploadEmoji':
+            handleDownloadAndUploadEmoji(message.payload, sendResponse)
             return true
 
           case 'saveLastDiscourse':

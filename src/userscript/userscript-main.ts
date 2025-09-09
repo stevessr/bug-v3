@@ -17,7 +17,6 @@ import {
 
 import { logger } from '@/config/buildFlags'
 import { uploader } from '@/content/uploader'
-import { initPixiv } from '@/content/pixiv'
 
 // Global state for userscript
 const userscriptState: UserscriptStorage = {
@@ -1058,7 +1057,7 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
   initOneClickAdd()
   // Pixiv specific injection (use content/pixiv implementation)
   try {
-    initPixiv()
+    //initPixiv()
   } catch (e) {
     logger.warn('[Userscript] initPixiv failed', e)
   }
