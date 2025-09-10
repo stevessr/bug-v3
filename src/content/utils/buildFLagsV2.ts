@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-properties */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // Build-time flags for development and production
 // These values are replaced at build time by Vite
 

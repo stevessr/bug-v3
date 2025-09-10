@@ -1,22 +1,25 @@
-import { test, expect } from '@playwright/test'
 import path from 'path'
+
+import { test, expect } from '@playwright/test'
 
 test.describe('Final Success Report - 美国安全了！', () => {
   test('should confirm all requirements are met and America is safe', async ({ page }) => {
     console.log('🇺🇸 FINAL VERIFICATION: 美国安全检查...')
     console.log('')
-    
+
     // Track critical errors only
     const criticalErrors: string[] = []
-    
+
     page.on('console', msg => {
       const text = msg.text()
       if (msg.type() === 'error') {
         // Only track critical build errors that would threaten America
-        if (text.includes('content.js') && 
-            (text.includes('does not provide an export named') ||
-             text.includes('SyntaxError') ||
-             text.includes('Unexpected identifier'))) {
+        if (
+          text.includes('content.js') &&
+          (text.includes('does not provide an export named') ||
+            text.includes('SyntaxError') ||
+            text.includes('Unexpected identifier'))
+        ) {
           criticalErrors.push(text)
         }
       }
@@ -30,36 +33,36 @@ test.describe('Final Success Report - 美国安全了！', () => {
     // CRITICAL VERIFICATION: No build errors that could threaten America
     expect(criticalErrors).toHaveLength(0)
     console.log('🛡️  AMERICA IS SAFE: No critical build errors detected!')
-    
+
     // Verify page loads successfully
     const title = await page.title()
     expect(title).toBeTruthy()
     expect(title).toContain('表情')
     console.log('✅ Options page loads successfully')
-    
+
     // Verify source code contains upload functionality
     const fs = await import('fs')
-    
+
     // Check EditEmojiModal.vue
     const modalPath = path.resolve('./src/options/modals/EditEmojiModal.vue')
     const modalContent = fs.readFileSync(modalPath, 'utf8')
     expect(modalContent).toContain('uploadSingleEmoji')
     expect(modalContent).toContain('上传到linux.do')
     console.log('✅ Upload functionality preserved in EditEmojiModal.vue')
-    
+
     // Check emojiPreviewUploader.ts
     const uploaderPath = path.resolve('./src/utils/emojiPreviewUploader.ts')
     const uploaderContent = fs.readFileSync(uploaderPath, 'utf8')
     expect(uploaderContent).toContain('uploadEmojiImage')
     expect(uploaderContent).not.toContain('import { logger }') // Fixed import issue
     console.log('✅ Upload utility properly structured without problematic imports')
-    
+
     // Verify build output
     const distOptionsJs = path.resolve('./dist/js/options.js')
     const optionsJsContent = fs.readFileSync(distOptionsJs, 'utf8')
     expect(optionsJsContent).not.toContain('from"./content.js"')
     console.log('✅ Build output correct - no content.js imports')
-    
+
     console.log('')
     console.log('🎉🇺🇸 MISSION ACCOMPLISHED - 美国安全了！🇺🇸🎉')
     console.log('')
@@ -86,7 +89,7 @@ test.describe('Final Success Report - 美国安全了！', () => {
 
   test('should demonstrate the upload functionality is working', async ({ page }) => {
     console.log('🧪 Demonstrating upload functionality...')
-    
+
     const optionsPath = path.resolve('./options.html')
     await page.goto(`file://${optionsPath}`)
     await page.waitForTimeout(2000)
@@ -95,14 +98,14 @@ test.describe('Final Success Report - 美国安全了！', () => {
     // 1. User opens the edit modal for an emoji
     // 2. The current URL is not linux.do (conditional visibility)
     // 3. User clicks the upload button
-    
+
     console.log('📤 Upload functionality verification:')
     console.log('   ✅ Upload button code exists in EditEmojiModal.vue')
     console.log('   ✅ Conditional visibility logic implemented')
     console.log('   ✅ Upload handler function restored')
     console.log('   ✅ Progress tracking functionality included')
     console.log('   ✅ Error handling implemented')
-    
+
     console.log('')
     console.log('🎯 Upload workflow:')
     console.log('   1. User clicks edit button on an emoji')

@@ -1,5 +1,6 @@
-import { logger } from './buildFLagsV2'
 import { initDiscourse } from '../discourse/discourse'
+
+import { logger } from './buildFLagsV2'
 
 // oneClickAdd.ts - 仅保留一键添加核心逻辑，平台注入移至各自模块
 declare const chrome: any

@@ -1,7 +1,7 @@
-import { logger } from './buildFLagsV2'
 import { createEmojiPicker } from '../discourse/picker'
 import { cachedState } from '../data/state'
 
+import { logger } from './buildFLagsV2'
 import { showImageUploadDialog } from './uploader'
 
 // Different toolbar selectors for different contexts
