@@ -2,7 +2,7 @@ import { logger } from '../config/buildFLagsV2'
 
 import { initPixiv } from './pixiv'
 import { initBilibili } from './bilibili'
-import { initX } from './x'
+import { initX } from './x/main'
 
 // Helper: request settings from background (uses GET_EMOJI_DATA which returns settings)
 function requestSettingsFromBackground(): Promise<any> {

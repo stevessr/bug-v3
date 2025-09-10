@@ -1,4 +1,6 @@
-import { logger } from '../config/buildFLagsV2'
+import { logger } from '../../config/buildFLagsV2'
+
+import { initVideoCopy } from './videoCopy'
 
 declare const chrome: any
 
@@ -187,6 +189,9 @@ export function initX() {
     }
     setTimeout(scanAndInject, 200)
     observe()
+    // video copy feature lives in separate module
+    // direct import instead of lazy import to avoid ESM issues
+    initVideoCopy()
     logger.log('[XOneClick] initialized')
   } catch (e) {
     logger.error('[XOneClick] init failed', e)
