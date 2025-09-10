@@ -53,7 +53,7 @@ export const defaultEmojiGroups: EmojiGroup[] = [];
           writeFileSync(outputPath, tsContent, 'utf-8')
           console.log('ℹ️ USERSCRIPT_VARIANT=remote -> generated empty defaultEmojiGroups.ts')
         } else {
-          // 生成 TypeScript 文件内容
+          // 生成 TypeScript 文件内容 (embedded)
           const tsContent = `import { EmojiGroup } from "./emoji";
 
 // 这个文件是在构建时从 src/config/default.json 自动生成的
@@ -64,6 +64,35 @@ export const defaultEmojiGroups: EmojiGroup[] = ${JSON.stringify(configData.grou
 
           writeFileSync(outputPath, tsContent, 'utf-8')
           console.log('✅ defaultEmojiGroups.ts 已成功生成')
+
+          // Also generate a static loader that returns the embedded defaults so
+          // userscript bundles do not include the dynamic fetch-based loader.
+          const loaderOutputPath = join(
+            process.cwd(),
+            'src',
+            'types',
+            'defaultEmojiGroups.loader.ts'
+          )
+          const loaderTsContent = `import { defaultEmojiGroups } from "./defaultEmojiGroups";
+import type { DefaultEmojiData } from "./emoji";
+
+export async function loadDefaultEmojiGroups(): Promise<any[]> {
+  return defaultEmojiGroups;
+}
+
+export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
+  return {
+    groups: defaultEmojiGroups,
+    settings: ${JSON.stringify(configData.settings || {}, null, 2)}
+  } as unknown as DefaultEmojiData;
+}
+`
+          try {
+            writeFileSync(loaderOutputPath, loaderTsContent, 'utf-8')
+            console.log('✅ generated static defaultEmojiGroups.loader.ts for embedded userscript')
+          } catch (e) {
+            console.warn('⚠️ failed to write static loader for userscript build:', e)
+          }
         }
 
         // 添加文件监听，当 default.json 改变时重新生成
