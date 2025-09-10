@@ -3,7 +3,7 @@ import { ref } from 'vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { flushBuffer } from '../../utils/indexedDB'
-import { isImageUrl } from '../../utils/isImageUrl'
+import { isImageUrl, normalizeImageUrl } from '../../utils/isImageUrl'
 
 const { show } = defineProps<{ show: boolean }>()
 
@@ -77,9 +77,9 @@ const create = () => {
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="例如：😀 或 https://..."
           />
-          <div v-if="isImageUrl(icon)" class="mt-2 text-center">
+          <div v-if="isImageUrl && isImageUrl(normalizeImageUrl(icon))" class="mt-2 text-center">
             <img
-              :src="icon"
+              :src="normalizeImageUrl(icon)"
               alt="预览"
               class="w-10 h-10 object-contain mx-auto border border-gray-200 rounded"
               @error="handleImageError"

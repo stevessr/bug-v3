@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+
+import { normalizeImageUrl } from '../../utils/isImageUrl'
 const props = defineProps({
   show: { type: Boolean, required: true },
   editingGroupId: { type: String, required: true },
@@ -56,9 +58,12 @@ const save = () => {
             placeholder="例如：😀 或 https://..."
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <div v-if="isImageUrl && isImageUrl(localIcon)" class="mt-2 text-center">
+          <div
+            v-if="isImageUrl && isImageUrl(normalizeImageUrl(localIcon))"
+            class="mt-2 text-center"
+          >
             <img
-              :src="localIcon"
+              :src="normalizeImageUrl(localIcon)"
               alt="预览"
               class="w-10 h-10 object-contain mx-auto border border-gray-200 rounded"
               @error="$emit('imageError', $event)"

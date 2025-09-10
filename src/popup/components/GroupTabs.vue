@@ -2,7 +2,7 @@
 import { defineProps, toRefs, type Ref } from 'vue'
 
 import type { EmojiGroup } from '../../types/emoji'
-import { isImageUrl } from '../../utils/isImageUrl'
+import { isImageUrl, normalizeImageUrl } from '../../utils/isImageUrl'
 
 const props = defineProps<{
   groups: EmojiGroup[]
@@ -34,9 +34,9 @@ const { groups, activeGroupId, setActive } = toRefs(props) as {
       ]"
     >
       <span class="mr-1">
-        <template v-if="isImageUrl(group.icon)">
+        <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
           <img
-            :src="group.icon"
+            :src="normalizeImageUrl(group.icon)"
             alt="group icon"
             class="w-4 h-4 mobile:w-5 mobile:h-5 object-contain inline-block"
           />

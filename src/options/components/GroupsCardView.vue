@@ -2,6 +2,7 @@
 import { computed, type PropType } from 'vue'
 import { Card as ACard } from 'ant-design-vue'
 
+import { normalizeImageUrl } from '../../utils/isImageUrl'
 import { useEmojiStore } from '../../stores/emojiStore'
 
 type Group = {
@@ -60,9 +61,9 @@ const columns = computed(() => emojiStore.settings?.gridColumns || 3)
 
           <template #cover>
             <div class="flex items-center justify-center h-24 bg-gray-50">
-              <template v-if="isImageUrl && isImageUrl(group.icon)">
+              <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
                 <img
-                  :src="group.icon"
+                  :src="normalizeImageUrl(group.icon)"
                   alt="icon"
                   class="h-16 object-contain"
                   @error="$emit('imageError', $event)"

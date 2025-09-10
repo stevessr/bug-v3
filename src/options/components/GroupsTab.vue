@@ -34,6 +34,7 @@ const { expandedGroups, activeTab, isImageUrl } = defineProps({
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { TouchDragHandler } from '../../utils/touchDragDrop'
+import { normalizeImageUrl } from '../../utils/isImageUrl'
 
 import GroupsCardView from './GroupsCardView.vue'
 
@@ -206,9 +207,9 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                   <div v-if="group.id !== 'favorites'" class="cursor-move text-gray-400">⋮⋮</div>
                   <div v-else class="w-6 text-yellow-500">⭐</div>
                   <div class="text-lg">
-                    <template v-if="isImageUrl && isImageUrl(group.icon)">
+                    <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
                       <img
-                        :src="group.icon"
+                        :src="normalizeImageUrl(group.icon)"
                         alt="group icon"
                         class="w-6 h-6 object-contain rounded"
                         @error="$emit('imageError', $event)"
