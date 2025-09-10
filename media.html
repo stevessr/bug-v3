@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Media 转换 — MP4 到 APNG</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial;
+        padding: 24px;
+        color: #111;
+      }
+      input[type='text'] {
+        width: 60%;
+        padding: 8px;
+      }
+      .row {
+        margin: 12px 0;
+      }
+      #progress {
+        width: 60%;
+        height: 14px;
+        background: #eee;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      #progress > i {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #06b6d4, #3b82f6);
+        width: 0;
+      }
+      #log {
+        white-space: pre-wrap;
+        max-width: 90%;
+        margin-top: 12px;
+        color: #333;
+      }
+      button {
+        padding: 8px 12px;
+        margin-left: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>MP4 → APNG</h1>
+    <p>可粘贴视频 URL（需支持 CORS）或上传本地 MP4 文件，点击“转换并下载”开始。</p>
+
+    <div class="row">
+      <label>视频 URL：</label>
+      <input type="text" id="videoUrl" placeholder="请输入可访问的 MP4 URL（可选）" />
+      <button id="useUrlBtn">使用 URL 转换</button>
+    </div>
+
+    <div class="row">
+      <label>或上传文件：</label>
+      <input type="file" id="fileInput" accept="video/mp4" />
+      <button id="useFileBtn">使用本地文件转换</button>
+    </div>
+
+    <div class="row">
+      <button id="convertBtn">转换并下载 APNG</button>
+      <button id="clearBtn">清除日志</button>
+    </div>
+
+    <div class="row">
+      <div id="progress"><i></i></div>
+      <div id="status">未开始</div>
+    </div>
+
+    <div id="log"></div>
+
+    <!-- 使用 CDN 的 ffmpeg.wasm 小包装器 -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.4/dist/ffmpeg.min.js"></script>
+    <script>
+      const { createFFmpeg, fetchFile } = FFmpeg
+      // 创建实例，启用日志以便调试
+      const ffmpeg = createFFmpeg({ log: true })
+
+      const statusEl = document.getElementById('status')
+      const progressBar = document.querySelector('#progress > i')
+      const logEl = document.getElementById('log')
+      const videoUrlInput = document.getElementById('videoUrl')
+      const fileInput = document.getElementById('fileInput')
+
+      let currentInputName = 'input.mp4'
+
+      function log(...args) {
+        const s = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ')
+        logEl.textContent += s + '\n'
+        logEl.scrollTop = logEl.scrollHeight
+      }
+
+      ffmpeg.setProgress(({ ratio }) => {
+        const pct = Math.round(ratio * 100)
+        progressBar.style.width = pct + '%'
+        statusEl.textContent = `ffmpeg 处理中：${pct}%`
+      })
+
+      async function ensureLoaded() {
+        if (!ffmpeg.isLoaded()) {
+          statusEl.textContent = '加载 ffmpeg-core（首次加载可能较慢）...'
+          await ffmpeg.load()
+          statusEl.textContent = 'ffmpeg 已加载'
+        }
+      }
+
+      // 把远端 URL 或本地文件写入 ffmpeg FS
+      async function prepareInputFromUrl(url) {
+        statusEl.textContent = '下载视频...'
+        log('fetch', url)
+        const data = await fetchFile(url)
+        currentInputName = 'input_from_url.mp4'
+        ffmpeg.FS('writeFile', currentInputName, data)
+        log('已写入', currentInputName)
+      }
+
+      async function prepareInputFromFile(file) {
+        statusEl.textContent = '读取本地文件...'
+        log('读取文件', file.name, file.size)
+        const data = await fetchFile(file)
+        currentInputName = 'input_from_file.mp4'
+        ffmpeg.FS('writeFile', currentInputName, data)
+        log('已写入', currentInputName)
+      }
+
+      async function convertToApng() {
+        try {
+          await ensureLoaded()
+
+          // 检查是否有输入文件在 FS 中
+          const files = ffmpeg.FS('readdir', '/')
+          if (!files.includes(currentInputName)) {
+            throw new Error('未找到输入文件，请先通过 URL 或上传文件准备输入。')
+          }
+
+          statusEl.textContent = '开始转换（可能需要几秒到几分钟，取决于文件大小）...'
+          log('开始转换', currentInputName)
+
+          // 输出为 APNG，-plays 0 表示无限循环，-f apng 强制 APNG 格式
+          const outputName = 'output.apng'
+          await ffmpeg.run('-i', currentInputName, '-plays', '0', '-f', 'apng', outputName)
+
+          statusEl.textContent = '转换完成，准备下载...'
+          const data = ffmpeg.FS('readFile', outputName)
+          const blob = new Blob([data.buffer], { type: 'image/apng' })
+          const url = URL.createObjectURL(blob)
+
+          const a = document.createElement('a')
+          a.href = url
+          a.download = 'output.apng'
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          URL.revokeObjectURL(url)
+
+          statusEl.textContent = '已触发下载'
+          log('生成文件', outputName, '大小', blob.size)
+        } catch (err) {
+          console.error(err)
+          statusEl.textContent = '错误：' + (err.message || err)
+          log('错误：', err)
+        }
+      }
+
+      document.getElementById('useUrlBtn').addEventListener('click', async () => {
+        const url = videoUrlInput.value.trim()
+        if (!url) {
+          alert('请输入视频 URL')
+          return
+        }
+        try {
+          await ensureLoaded()
+          // 清除之前写入的同名文件（若存在）
+          try {
+            ffmpeg.FS('unlink', 'input_from_url.mp4')
+          } catch (e) {}
+          await prepareInputFromUrl(url)
+          statusEl.textContent = 'URL 已准备，就绪进行转换。'
+        } catch (err) {
+          console.error(err)
+          statusEl.textContent = '下载或准备失败：' + err.message
+          log('下载失败', err)
+        }
+      })
+
+      document.getElementById('useFileBtn').addEventListener('click', async () => {
+        const f = fileInput.files[0]
+        if (!f) {
+          alert('请选择本地 MP4 文件')
+          return
+        }
+        try {
+          await ensureLoaded()
+          try {
+            ffmpeg.FS('unlink', 'input_from_file.mp4')
+          } catch (e) {}
+          await prepareInputFromFile(f)
+          statusEl.textContent = '本地文件已准备，就绪进行转换。'
+        } catch (err) {
+          console.error(err)
+          statusEl.textContent = '读取或准备失败：' + err.message
+          log('准备本地文件失败', err)
+        }
+      })
+
+      document.getElementById('convertBtn').addEventListener('click', async () => {
+        await convertToApng()
+      })
+
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        logEl.textContent = ''
+        statusEl.textContent = '已清除日志'
+        progressBar.style.width = '0%'
+      })
+
+      // 小提示：清理 ffmpeg FS 的临时文件
+      window.addEventListener('beforeunload', () => {
+        try {
+          ffmpeg.FS('unlink', currentInputName)
+        } catch (e) {}
+      })
+    </script>
+  </body>
+</html>
