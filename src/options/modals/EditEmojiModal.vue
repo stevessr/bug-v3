@@ -62,6 +62,7 @@ const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
       // Show upload progress dialog regardless
       emojiPreviewUploader.showProgressDialog()
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     logger.error('表情上传失败:', error)
     alert(`表情 "${emoji.name}" 上传失败: ${error.message || '未知错误'}`)
