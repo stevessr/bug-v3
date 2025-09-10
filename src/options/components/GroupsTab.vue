@@ -250,6 +250,12 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
   if (!element) return
   if (group.id !== 'favorites') {
     ;(element as any).__groupData = group
+    // mark as a valid drop target for touch drag detection
+    try {
+      element.setAttribute('data-drop-target', 'group')
+    } catch {
+      // ignore if attribute cannot be set
+    }
     groupTouchHandler.value?.addTouchEvents(element, true)
   }
 }
@@ -264,6 +270,12 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
   element.addEventListener('touchstart', stopTouch, { passive: false })
   // store reference so it can be removed later if needed
   ;(element as any).__stopEmojiTouch = stopTouch
+  // mark as a valid drop target and attach touch handler
+  try {
+    element.setAttribute('data-drop-target', 'emoji')
+  } catch {
+    // ignore
+  }
   emojiTouchHandler.value?.addTouchEvents(element, true)
 }
 </script>
@@ -453,8 +465,8 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
         :isImageUrl="isImageUrl"
         :expandedGroups="expandedGroups"
         :touchRefFn="addGroupTouchEvents"
-        @groupDragStart="$emit('groupDragStart', $event)"
-        @groupDrop="$emit('groupDrop', $event)"
+        @groupDragStart="(...args) => $emit('groupDragStart', ...args)"
+        @groupDrop="(...args) => $emit('groupDrop', ...args)"
         @toggleExpand="$emit('toggleExpand', $event)"
         @openEditGroup="$emit('openEditGroup', $event)"
         @exportGroup="$emit('exportGroup', $event)"

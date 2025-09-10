@@ -196,8 +196,13 @@ export class TouchDragHandler {
     let current: HTMLElement | null = element
     while (current && current !== document.body) {
       if (
+        // list view group items
         current.classList.contains('group-item') ||
+        // card view group items
+        current.classList.contains('group-card') ||
+        // emoji grid items
         current.classList.contains('emoji-item') ||
+        // explicit opt-in attribute
         current.hasAttribute('data-drop-target')
       ) {
         return current
