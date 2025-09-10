@@ -47,6 +47,70 @@ const displayGroups = computed(() => {
 // Touch drag handlers
 const groupTouchHandler = ref<TouchDragHandler | null>(null)
 const emojiTouchHandler = ref<TouchDragHandler | null>(null)
+const openMenu = ref<string | null>(null)
+// feedback messages per group id (short-lived)
+const dedupeMessage = ref<Record<string, string>>({})
+
+const showDedupeMessage = (groupId: string, msg: string, ms = 2000) => {
+  dedupeMessage.value = { ...dedupeMessage.value, [groupId]: msg }
+  setTimeout(() => {
+    const copy = { ...dedupeMessage.value }
+    delete copy[groupId]
+    dedupeMessage.value = copy
+  }, ms)
+}
+
+const toggleMenu = (groupId: string) => {
+  openMenu.value = openMenu.value === groupId ? null : groupId
+}
+
+const closeMenu = () => {
+  openMenu.value = null
+}
+
+const onEdit = (group: any) => {
+  closeMenu()
+  emit('openEditGroup', group)
+}
+
+const onExport = (group: any) => {
+  closeMenu()
+  emit('exportGroup', group)
+}
+
+const onExportZip = (group: any) => {
+  closeMenu()
+  emit('exportGroupZip', group)
+}
+
+const onDedupe = (group: any) => {
+  closeMenu()
+  // open a small chooser: by name or by url
+  chooseDedupeFor.value = group.id
+}
+
+const chooseDedupeFor = ref<string | null>(null)
+
+const performDedupeChoice = (groupId: string | null, mode: 'name' | 'url') => {
+  // Accept nullable groupId from template and validate here
+  chooseDedupeFor.value = null
+  if (!groupId) return
+  try {
+    let removed = 0
+    if (mode === 'name') removed = emojiStore.dedupeGroupByName(groupId)
+    else removed = emojiStore.dedupeGroup(groupId)
+
+    if (removed > 0) showDedupeMessage(groupId, `已去重 ${removed} 个表情`)
+    else showDedupeMessage(groupId, `未发现重复`)
+  } catch {
+    // ignore
+  }
+}
+
+const onDelete = (group: any) => {
+  closeMenu()
+  emit('confirmDeleteGroup', group)
+}
 
 onMounted(() => {
   // Initialize touch handlers
@@ -233,32 +297,57 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                   >
                     {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
                   </button>
-                  <button
-                    v-if="group.id !== 'favorites'"
-                    @click="$emit('openEditGroup', group)"
-                    class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                  >
-                    编辑
-                  </button>
-                  <button
-                    @click="$emit('exportGroup', group)"
-                    class="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                  >
-                    导出
-                  </button>
-                  <button
-                    @click="$emit('exportGroupZip', group)"
-                    class="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded transition-colors"
-                  >
-                    打包下载
-                  </button>
-                  <button
-                    v-if="group.id !== 'favorites' && group.id !== 'nachoneko'"
-                    @click="$emit('confirmDeleteGroup', group)"
-                    class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
-                  >
-                    删除
-                  </button>
+
+                  <!-- Unified action menu -->
+                  <div class="relative" v-if="group.id !== 'favorites'">
+                    <button
+                      @click="toggleMenu(group.id)"
+                      class="px-3 py-1 text-sm rounded border bg-white"
+                    >
+                      操作 ▾
+                    </button>
+                    <div
+                      v-if="openMenu === group.id"
+                      class="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-50"
+                    >
+                      <button
+                        class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                        @click.prevent="onEdit(group)"
+                      >
+                        编辑
+                      </button>
+                      <button
+                        class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                        @click.prevent="onExport(group)"
+                      >
+                        导出
+                      </button>
+                      <button
+                        class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                        @click.prevent="onExportZip(group)"
+                      >
+                        打包下载
+                      </button>
+                      <button
+                        class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                        @click.prevent="onDedupe(group)"
+                      >
+                        去重
+                      </button>
+                      <button
+                        class="w-full text-left px-3 py-2 hover:bg-gray-50 text-red-600"
+                        @click.prevent="onDelete(group)"
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="dedupeMessage[group.id]" class="ml-2 text-sm text-green-600">
+                    {{ dedupeMessage[group.id] }}
+                  </div>
+                  <div v-else-if="group.id === 'favorites'" class="text-sm text-gray-500 px-2">
+                    系统分组
+                  </div>
                 </div>
               </div>
 
@@ -352,6 +441,31 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
         @exportGroup="(...args) => $emit('exportGroup', ...args)"
         @imageError="(...args) => $emit('imageError', ...args)"
       />
+    </div>
+    <!-- Inline chooser modal for dedupe -->
+    <div v-if="chooseDedupeFor" class="fixed inset-0 flex items-center justify-center z-60">
+      <div class="bg-black/40 absolute inset-0"></div>
+      <div class="bg-white p-4 rounded shadow-lg z-70 w-80">
+        <h3 class="font-medium mb-2">去重方式</h3>
+        <p class="text-sm text-gray-600 mb-4">请选择按名称还是按 URL 去重</p>
+        <div class="flex gap-2 justify-end">
+          <button class="px-3 py-1 border rounded" @click.prevent="chooseDedupeFor = null">
+            取消
+          </button>
+          <button
+            class="px-3 py-1 bg-blue-600 text-white rounded"
+            @click.prevent="performDedupeChoice(chooseDedupeFor, 'name')"
+          >
+            按名称
+          </button>
+          <button
+            class="px-3 py-1 bg-green-600 text-white rounded"
+            @click.prevent="performDedupeChoice(chooseDedupeFor, 'url')"
+          >
+            按 URL
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
