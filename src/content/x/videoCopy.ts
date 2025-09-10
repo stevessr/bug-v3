@@ -5,7 +5,16 @@ declare const chrome: any
 function isXPage(): boolean {
   try {
     const host = window.location.hostname.toLowerCase()
-    return host === 'x.com' || host.endsWith('.twitter.com') || host.includes('twitter.com')
+    // Include X/Twitter and common media hosts so direct image/video pages are handled
+    return (
+      host === 'x.com' ||
+      host.endsWith('.twitter.com') ||
+      host.includes('twitter.com') ||
+      host === 'pbs.twimg.com' ||
+      host.endsWith('.twimg.com') ||
+      host.includes('twimg.com') ||
+      host.includes('pbs.twimg')
+    )
   } catch {
     return false
   }
@@ -27,6 +36,7 @@ function getVideoUrl(video: HTMLVideoElement): string | null {
 async function downloadBlob(url: string): Promise<void> {
   try {
     const response = await fetch(url)
+    if (!response.ok) throw new Error(`网络请求失败: ${response.status} ${response.statusText}`)
     const blob = await response.blob()
 
     // Create download link
@@ -43,7 +53,44 @@ async function downloadBlob(url: string): Promise<void> {
     // Clean up
     URL.revokeObjectURL(downloadUrl)
   } catch (error) {
-    throw new Error(`下载失败: ${error}`)
+    // Log and inform user via alert
+    try {
+      logger.error('[XVideoCopy] 下载失败', error)
+    } catch {
+      // ignore logger failures
+    }
+    try {
+      const msg = error && (error as Error).message ? (error as Error).message : String(error)
+      safeAlert('下载失败: ' + msg)
+    } catch {
+      // ignore alert failures
+    }
+    throw error
+  }
+}
+
+function safeAlert(message: string) {
+  try {
+    // Send message to background to show notification (best-effort)
+    if (
+      (window as any).chrome &&
+      (window as any).chrome.runtime &&
+      (window as any).chrome.runtime.sendMessage
+    ) {
+      try {
+        ;(window as any).chrome.runtime.sendMessage({
+          type: 'SHOW_NOTIFICATION',
+          payload: {
+            message
+          }
+        })
+        return
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // ignore
   }
 }
 
