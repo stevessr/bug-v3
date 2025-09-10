@@ -2,7 +2,7 @@
  * Bilibili PhotoSwipe 预览器相关工具函数
  */
 
-import { createControlButton, createFloatingButton } from '../components/bilibili-buttons'
+import { createFloatingButton, createPhotoSwipeButton } from '../components/bilibili-buttons'
 
 import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-utils'
 
@@ -66,16 +66,21 @@ export function hasPhotoSwipeButton(): boolean {
 }
 
 /**
- * 向PhotoSwipe顶部栏添加按钮
+ * 向PhotoSwipe顶部栏添加按钮，定位在关闭按钮旁边
  */
 export function addButtonToPhotoSwipeTopBar(name: string, url: string): boolean {
   const topBar = document.querySelector('.pswp__top-bar')
   if (!topBar || topBar.querySelector('.bili-emoji-add-btn')) return false
 
-  const btn = createControlButton({ name, url })
-  btn.style.cssText +=
-    'margin-left: 12px; background: rgba(0,0,0,0.6); color: white; font-size: 12px;'
-  topBar.appendChild(btn)
+  // Find the close button to position our button next to it
+  const closeButton = topBar.querySelector('.pswp__button--close')
+  if (!closeButton) return false
+
+  // Create a PhotoSwipe-style button instead of using the control button
+  const btn = createPhotoSwipeButton({ name, url })
+
+  // Insert the button right before the close button
+  topBar.insertBefore(btn, closeButton)
   return true
 }
 

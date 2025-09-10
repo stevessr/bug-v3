@@ -65,14 +65,14 @@ if (window.location.hostname.includes('linux.do')) {
         const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement
         if (metaToken) {
           sendResponse({ csrfToken: metaToken.content })
-          return
+          return true // 表示异步响应
         }
 
         // Try to get from cookie
         const match = document.cookie.match(/csrf_token=([^;]+)/)
         if (match) {
           sendResponse({ csrfToken: decodeURIComponent(match[1]) })
-          return
+          return true // 表示异步响应
         }
 
         // Fallback - try to extract from any form
@@ -81,14 +81,17 @@ if (window.location.hostname.includes('linux.do')) {
         ) as HTMLInputElement
         if (hiddenInput) {
           sendResponse({ csrfToken: hiddenInput.value })
-          return
+          return true // 表示异步响应
         }
 
         sendResponse({ csrfToken: '' })
+        return true // 表示异步响应
       } catch (error) {
         logger.warn('[Emoji Extension] Failed to get CSRF token:', error)
         sendResponse({ csrfToken: '' })
+        return true // 表示异步响应
       }
     }
+    return false // 对于其他消息类型，不处理
   })
 }

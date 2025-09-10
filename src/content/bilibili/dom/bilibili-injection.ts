@@ -17,26 +17,73 @@ import {
 declare const chrome: any
 
 /**
- * 获取当前显示的图片
+ * 获取当前显示的图片 - 改进URL解析
  */
 export function getCurrentDisplayedImage(): Element | null {
-  // Try to find the currently displayed image in the viewer
+  // 扩展选择器列表以覆盖更多场景
   const selectors = [
+    // 主要图片查看器内容
     '.bili-album__watch__content img',
     '.bili-album__watch__content picture',
     '.bili-album__watch__content .bili-album__preview__picture__img',
-    '.bili-album__watch__content [style*="background-image"]'
+    '.bili-album__watch__content [style*="background-image"]',
+
+    // 当前活动的图片项
+    '.bili-album__watch__track__item.active img',
+    '.bili-album__watch__track__item.active picture',
+
+    // 图片预览区域
+    '.bili-album__preview__picture img',
+    '.bili-album__preview__picture picture',
+
+    // 大图显示区域
+    '.bili-album__watch__main img',
+    '.bili-album__watch__main picture',
+
+    // 备用选择器
+    '.bili-album img[src*="i0.hdslb.com"]',
+    '.bili-album img[src*="i1.hdslb.com"]',
+    '.bili-album img[src*="i2.hdslb.com"]',
+    'img[src*="hdslb.com"]'
   ]
 
+  // 首先尝试找到最相关的图片
   for (const selector of selectors) {
-    const element = document.querySelector(selector)
-    if (element) {
+    const elements = document.querySelectorAll(selector)
+    for (const element of elements) {
       const url = extractImageUrlFromPicture(element)
-      if (url) return element
+      if (url) {
+        // 验证URL是否为有效的图片URL
+        if (isValidImageUrl(url)) {
+          return element
+        }
+      }
     }
   }
 
   return null
+}
+
+/**
+ * 验证是否为有效的图片URL
+ */
+function isValidImageUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url)
+    // 检查是否为B站的图片域名
+    const validDomains = ['i0.hdslb.com', 'i1.hdslb.com', 'i2.hdslb.com', 'hdslb.com']
+    const isValidDomain = validDomains.some(domain => urlObj.hostname.includes(domain))
+
+    // 检查是否为图片文件扩展名
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif']
+    const hasValidExtension = validExtensions.some(ext =>
+      urlObj.pathname.toLowerCase().includes(ext)
+    )
+
+    return isValidDomain && (hasValidExtension || urlObj.pathname.includes('/'))
+  } catch {
+    return false
+  }
 }
 
 /**
