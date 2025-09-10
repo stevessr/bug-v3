@@ -117,6 +117,83 @@ function createFloatingButton(data: AddEmojiButtonData): HTMLElement {
   return btn
 }
 
+function createControlButton(data: AddEmojiButtonData): HTMLElement {
+  const btn = document.createElement('div')
+  btn.className = 'bili-album__watch__control__option add-emoji'
+  btn.title = '添加到未分组表情'
+  btn.style.cssText = `cursor:pointer;display:flex;align-items:center;gap:4px;padding:8px 12px;border-radius:6px;background:rgba(255,255,255,0.1);color:#fff;font-size:12px;font-weight:500;transition:background-color 0.2s ease;user-select:none;`
+
+  // Create the emoji icon (14x14px smiley face SVG)
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  icon.setAttribute('width', '14')
+  icon.setAttribute('height', '14')
+  icon.setAttribute('viewBox', '0 0 14 14')
+  icon.setAttribute('fill', 'currentColor')
+  icon.innerHTML = `
+    <path d="M7 0C3.134 0 0 3.134 0 7s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7zM5.5 4.5c.552 0 1 .448 1 1s-.448 1-1 1-1-.448-1-1 .448-1 1-1zm3 0c.552 0 1 .448 1 1s-.448 1-1 1-1-.448-1-1 .448-1 1-1zM7 11c-1.657 0-3-1.343-3-3h6c0 1.657-1.343 3-3 3z"/>
+  `
+
+  // Create the text label
+  const text = document.createElement('span')
+  text.textContent = '添加表情'
+
+  btn.appendChild(icon)
+  btn.appendChild(text)
+
+  // Add hover effect
+  btn.addEventListener('mouseenter', () => {
+    btn.style.background = 'rgba(255,255,255,0.2)'
+  })
+  btn.addEventListener('mouseleave', () => {
+    btn.style.background = 'rgba(255,255,255,0.1)'
+  })
+
+  setupButtonClickHandler(btn, data)
+  return btn
+}
+
+function getCurrentDisplayedImage(): Element | null {
+  // Try to find the currently displayed image in the viewer
+  const selectors = [
+    '.bili-album__watch__content img',
+    '.bili-album__watch__content picture',
+    '.bili-album__watch__content .bili-album__preview__picture__img',
+    '.bili-album__watch__content [style*="background-image"]'
+  ]
+
+  for (const selector of selectors) {
+    const element = document.querySelector(selector)
+    if (element) {
+      const url = extractImageUrlFromPicture(element)
+      if (url) return element
+    }
+  }
+
+  return null
+}
+
+function addButtonToControlSection(controlSection: Element) {
+  try {
+    // Check if button already exists
+    if (controlSection.querySelector('.add-emoji')) return
+
+    // Find the currently displayed image
+    const currentImage = getCurrentDisplayedImage()
+    if (!currentImage) return
+
+    const url = extractImageUrlFromPicture(currentImage)
+    if (!url) return
+
+    const name = extractNameFromUrl(url)
+    const btn = createControlButton({ name, url })
+
+    // Add the button to the control section
+    controlSection.appendChild(btn)
+  } catch (e) {
+    void e
+  }
+}
+
 function addButtonToPicture(pictureEl: Element) {
   try {
     if ((pictureEl as Element).querySelector('.bili-emoji-add-btn')) return
@@ -150,6 +227,12 @@ function scanAndInject() {
   })
 
   set.forEach(el => addButtonToPicture(el))
+
+  // Add button to control sections (image viewer controls)
+  const controlSections = document.querySelectorAll('.bili-album__watch__control')
+  controlSections.forEach(controlSection => {
+    addButtonToControlSection(controlSection)
+  })
 
   // Add batch parse button for full album container
   const albumContainers = document.querySelectorAll('.bili-album')
