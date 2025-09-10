@@ -125,8 +125,20 @@ function createBtn(data: AddEmojiButtonData) {
 function addButtonToEl(el: Element) {
   try {
     if ((el as Element).querySelector('.x-emoji-add-btn')) return
+    // If the element is an <img> or contains an <img> with an explicit empty alt (alt=""), skip injection.
+    // This avoids injecting buttons for decorative/ignored images.
+    let containedImg: HTMLImageElement | null = null
+    if (el instanceof HTMLImageElement) {
+      containedImg = el as HTMLImageElement
+    } else {
+      containedImg = el.querySelector('img') as HTMLImageElement | null
+    }
+    if (containedImg && containedImg.getAttribute('alt') !== '') {
+      return
+    }
     const url = extractImageUrl(el)
     if (!url) return
+    if (url.includes('profile_images')) return
     const name = extractNameFromUrl(url)
     const parent = el as HTMLElement
     const computed = window.getComputedStyle(parent)
