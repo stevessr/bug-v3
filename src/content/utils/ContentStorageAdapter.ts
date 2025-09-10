@@ -1,5 +1,8 @@
 import { defaultSettings } from '../../types/emoji'
+
 import { logger } from './buildFLagsV2'
+
+import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 export class ContentStorageAdapter {
   // Read from extension storage with fallback to local/session storage
@@ -176,7 +179,25 @@ export class ContentStorageAdapter {
     logger.log('[Content Storage] Getting settings')
     const settings = await this.get('appSettings')
     // Merge with central defaultSettings so fields like outputFormat are always present
-    const result = settings ? { ...defaultSettings, ...settings } : { ...defaultSettings }
+    if (settings && typeof settings === 'object') {
+      const result = { ...defaultSettings, ...settings }
+      logger.log('[Content Storage] Settings loaded:', result)
+      return result
+    }
+
+    // Fallback to packaged defaults (runtime JSON) when no stored settings
+    try {
+      const packaged = await loadPackagedDefaults()
+      if (packaged && packaged.settings && Object.keys(packaged.settings).length > 0) {
+        const result = { ...defaultSettings, ...packaged.settings }
+        logger.log('[Content Storage] Settings loaded from packaged defaults:', result)
+        return result
+      }
+    } catch (e) {
+      // ignore loader errors
+    }
+
+    const result = { ...defaultSettings }
     logger.log('[Content Storage] Settings loaded:', result)
     return result
   }

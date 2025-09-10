@@ -1,5 +1,5 @@
 import { logger } from '../utils/buildFLagsV2'
-import { getDefaultEmojis } from '../data/default'
+import { getDefaultEmojisAsync } from '../data/default'
 
 import { cachedState } from './state'
 
@@ -107,7 +107,7 @@ export async function loadDataFromStorage(): Promise<void> {
 
 export function ensureDefaultIfEmpty() {
   if (!Array.isArray(cachedState.emojiGroups) || cachedState.emojiGroups.length === 0) {
-    const defaultEmojis = getDefaultEmojis()
+    const defaultEmojis = getDefaultEmojisAsync()
     cachedState.emojiGroups = [
       { id: 'default', name: '默认表情', icon: '😀', order: 0, emojis: defaultEmojis }
     ]

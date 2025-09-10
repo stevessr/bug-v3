@@ -5,7 +5,7 @@ import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji'
 import { newStorageHelpers } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
 
-import { defaultSettings, loadDefaultEmojiGroups } from '@/types/emoji'
+import { defaultSettings } from '@/types/emoji'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from '@/config/buildFlags'
@@ -134,10 +134,6 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       }
       // Normalize any stored image URL-like values for safe rendering
       try {
-        // lazy import helper to avoid circular deps
-
-        const { normalizeImageUrl } =
-          require('../utils/isImageUrl') as typeof import('../utils/isImageUrl')
         for (const g of groups.value) {
           if (g && typeof g.icon === 'string') {
             g.icon = normalizeImageUrl(g.icon) || g.icon
