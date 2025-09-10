@@ -5,6 +5,8 @@ import { Card as ACard } from 'ant-design-vue'
 import { normalizeImageUrl } from '../../utils/isImageUrl'
 import { useEmojiStore } from '../../stores/emojiStore'
 
+import GroupActionsDropdown from './GroupActionsDropdown.vue'
+
 type Group = {
   id: string
   name: string
@@ -12,11 +14,10 @@ type Group = {
   emojis?: Array<unknown>
 }
 
-const { displayGroups, isImageUrl, expandedGroups, touchRefFn } = defineProps({
+const { displayGroups, isImageUrl, touchRefFn } = defineProps({
   displayGroups: { type: Array as PropType<Group[]>, required: true },
   // accept a generic Function to match parent's optional signature
   isImageUrl: { type: Function as PropType<Function> },
-  expandedGroups: { type: Object as PropType<Set<string>>, required: true },
   // function used to attach touch drag events from parent; accepts nullable el
   touchRefFn: {
     type: Function as PropType<((el: HTMLElement | null, group: Group) => void) | undefined>
@@ -26,7 +27,6 @@ const { displayGroups, isImageUrl, expandedGroups, touchRefFn } = defineProps({
 const emit = defineEmits([
   'groupDragStart',
   'groupDrop',
-  'toggleExpand',
   'openEditGroup',
   'exportGroup',
   'exportGroupZip',
@@ -48,9 +48,7 @@ const showDedupeMessageCard = (groupId: string, msg: string, ms = 2000) => {
   }, ms)
 }
 
-const toggleMenuCard = (groupId: string) => {
-  openMenuCard.value = openMenuCard.value === groupId ? null : groupId
-}
+// ...existing code...
 
 const onEditCard = (group: Group) => {
   openMenuCard.value = null
@@ -125,51 +123,15 @@ const onDedupeCard = (group: Group) => {
             </template>
           </ACard.Meta>
           <div class="mt-3 flex gap-2">
-            <button
-              @click="$emit('toggleExpand', group.id)"
-              class="px-3 py-1 text-sm rounded border"
-            >
-              {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
-            </button>
             <div v-if="group.id !== 'favorites'" class="relative">
-              <button @click="toggleMenuCard(group.id)" class="px-3 py-1 text-sm rounded border">
-                操作 ▾
-              </button>
-              <div
-                v-if="openMenuCard === group.id"
-                class="absolute right-0 mt-2 w-36 bg-white border rounded shadow z-50"
-              >
-                <button
-                  class="w-full text-left px-3 py-2 hover:bg-gray-50"
-                  @click.prevent="onEditCard(group)"
-                >
-                  编辑
-                </button>
-                <button
-                  class="w-full text-left px-3 py-2 hover:bg-gray-50"
-                  @click.prevent="onExportCard(group)"
-                >
-                  导出
-                </button>
-                <button
-                  class="w-full text-left px-3 py-2 hover:bg-gray-50"
-                  @click.prevent="onExportZipCard(group)"
-                >
-                  打包下载
-                </button>
-                <button
-                  class="w-full text-left px-3 py-2 hover:bg-gray-50"
-                  @click.prevent="onDedupeCard(group)"
-                >
-                  去重
-                </button>
-                <button
-                  class="w-full text-left px-3 py-2 hover:bg-gray-50 text-red-600"
-                  @click.prevent="$emit('confirmDeleteGroup', group)"
-                >
-                  删除
-                </button>
-              </div>
+              <GroupActionsDropdown
+                :group="group"
+                @edit="onEditCard"
+                @export="onExportCard"
+                @exportZip="onExportZipCard"
+                @dedupe="onDedupeCard"
+                @confirmDelete="g => $emit('confirmDeleteGroup', g)"
+              />
             </div>
             <div v-else class="text-sm text-gray-500">系统分组</div>
           </div>
