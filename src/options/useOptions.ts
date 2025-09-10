@@ -301,15 +301,30 @@ export default function useOptions() {
     showSuccess(`已导出分组 "${group.name}" (${(group.emojis || []).length} 个表情)`)
   }
 
+  // progress (0..100) for last export operation and current exporting group id
+  const exportProgress = ref<number>(0)
+  const exportProgressGroupId = ref<string | null>(null)
+
   const exportGroupZip = async (group: EmojiGroup) => {
     if (!group) return
     try {
-      await exportGroupZipUtil(group)
+      exportProgressGroupId.value = group.id
+      exportProgress.value = 0
+      await exportGroupZipUtil(group, (p: number) => {
+        exportProgress.value = Math.max(0, Math.min(100, Math.round(p)))
+      })
+      exportProgress.value = 100
       showSuccess(`已打包并下载分组 "${group.name}"`)
     } catch (e) {
       void e
+      exportProgress.value = 0
       showError('打包下载失败，已导出 JSON 作为回退')
     }
+    // clear group id after short delay so UI can show 100 briefly
+    setTimeout(() => {
+      exportProgressGroupId.value = null
+      exportProgress.value = 0
+    }, 800)
   }
 
   const deleteEmoji = (emojiId: string) => {
@@ -590,6 +605,9 @@ export default function useOptions() {
     onGroupCreated,
     onEmojiAdded,
     deleteEmoji,
+    // export progress
+    exportProgress,
+    exportProgressGroupId,
     // sync / settings
     resetSettings,
     syncToChrome,

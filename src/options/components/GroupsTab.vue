@@ -26,11 +26,14 @@ function setTab(tab: string) {
   emit('update:activeTab', tab)
 }
 
-const { expandedGroups, activeTab, isImageUrl } = defineProps({
-  expandedGroups: { type: Object as PropType<Set<string>>, required: true },
-  isImageUrl: { type: Function },
-  activeTab: { type: String }
-})
+const { expandedGroups, activeTab, isImageUrl, exportProgress, exportProgressGroupId } =
+  defineProps({
+    expandedGroups: { type: Object as PropType<Set<string>>, required: true },
+    isImageUrl: { type: Function },
+    activeTab: { type: String },
+    exportProgress: { type: Number, required: false },
+    exportProgressGroupId: { type: String as PropType<string | null>, required: false }
+  })
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { TouchDragHandler } from '../../utils/touchDragDrop'
@@ -344,6 +347,10 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                   </div>
                   <div v-if="dedupeMessage[group.id]" class="ml-2 text-sm text-green-600">
                     {{ dedupeMessage[group.id] }}
+                  </div>
+                  <div v-else-if="exportProgressGroupId === group.id" class="ml-2">
+                    <!-- show circular progress while exporting this group -->
+                    <a-progress type="circle" :percent="exportProgress || 0" />
                   </div>
                   <div v-else-if="group.id === 'favorites'" class="text-sm text-gray-500 px-2">
                     系统分组

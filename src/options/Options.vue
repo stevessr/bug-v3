@@ -86,6 +86,8 @@ const {
   exportGroup,
   exportGroupZip,
   exportConfiguration,
+  exportProgress,
+  exportProgressGroupId,
   confirmDeleteGroup,
   openEditGroup,
   openAddEmojiModal,
@@ -236,6 +238,8 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         :expandedGroups="expandedGroups"
         :isImageUrl="isImageUrl"
         v-model:activeTab="activeTab"
+        :exportProgress="exportProgress"
+        :exportProgressGroupId="exportProgressGroupId"
         @openCreateGroup="showCreateGroupModal = true"
         @groupDragStart="handleDragStart"
         @groupDrop="handleDrop"

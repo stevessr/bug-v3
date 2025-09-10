@@ -7,8 +7,6 @@ import vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 
-import { generateDefaultEmojiGroupsPlugin } from './scripts/vite-plugin-generate-default-emoji-groups'
-
 export default defineConfig(({ mode }) => {
   // 根据构建模式设置编译期标志
   const isDev = mode === 'development'
@@ -86,7 +84,7 @@ export default defineConfig(({ mode }) => {
           }
         }
       })(),
-      generateDefaultEmojiGroupsPlugin(),
+      // default emoji groups are now loaded at runtime from public assets
       vue(),
       // Small safe plugin: remove trailing `export { ... }` that Rollup may append
       // to the content chunk. We only strip the final export block to avoid

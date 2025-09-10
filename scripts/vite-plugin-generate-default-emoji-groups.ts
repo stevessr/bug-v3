@@ -17,11 +17,31 @@ export function generateDefaultEmojiGroupsPlugin(): Plugin {
       // 读取 default.json 文件
       const configPath = join(process.cwd(), 'src/config/default.json')
       const outputPath = join(process.cwd(), 'src/types/defaultEmojiGroups.ts')
+      const jsonOutputPath = join(process.cwd(), 'public', 'assets', 'defaultEmojiGroups.json')
 
       try {
         console.log('📦 正在从 default.json 生成 defaultEmojiGroups.ts...')
 
-        // If building the userscript remote variant, generate an empty placeholder
+        const configContent = readFileSync(configPath, 'utf-8')
+        const configData: ConfigData = JSON.parse(configContent)
+
+        if (!configData.groups || !Array.isArray(configData.groups)) {
+          throw new Error('default.json 中缺少有效的 groups 数组')
+        }
+
+        // Always write a runtime JSON into public/assets for loader consumption
+        try {
+          writeFileSync(
+            jsonOutputPath,
+            JSON.stringify({ groups: configData.groups }, null, 2),
+            'utf-8'
+          )
+          console.log(`✅ wrote runtime defaultEmojiGroups JSON to ${jsonOutputPath}`)
+        } catch (e) {
+          console.warn('⚠️ failed to write runtime defaultEmojiGroups JSON:', e)
+        }
+
+        // If not remote variant, also generate the TypeScript module for existing imports
         const variant = process.env.USERSCRIPT_VARIANT || 'default'
         if (variant === 'remote') {
           const tsContent = `import { EmojiGroup } from "./emoji";
@@ -33,13 +53,6 @@ export const defaultEmojiGroups: EmojiGroup[] = [];
           writeFileSync(outputPath, tsContent, 'utf-8')
           console.log('ℹ️ USERSCRIPT_VARIANT=remote -> generated empty defaultEmojiGroups.ts')
         } else {
-          const configContent = readFileSync(configPath, 'utf-8')
-          const configData: ConfigData = JSON.parse(configContent)
-
-          if (!configData.groups || !Array.isArray(configData.groups)) {
-            throw new Error('default.json 中缺少有效的 groups 数组')
-          }
-
           // 生成 TypeScript 文件内容
           const tsContent = `import { EmojiGroup } from "./emoji";
 

@@ -5,7 +5,8 @@ import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji'
 import { newStorageHelpers } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
 
-import { defaultEmojiGroups, defaultSettings } from '@/types/emoji'
+import { defaultSettings, loadDefaultEmojiGroups } from '@/types/emoji'
+import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from '@/config/buildFlags'
 
@@ -119,10 +120,18 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         favoritesCount: favoritesData?.length || 0
       })
 
-      groups.value =
-        groupsData && groupsData.length > 0
-          ? groupsData
-          : JSON.parse(JSON.stringify(defaultEmojiGroups))
+      if (groupsData && groupsData.length > 0) {
+        groups.value = groupsData
+      } else {
+        // No groups from storage - try runtime loader first
+        try {
+          const packaged = await loadPackagedDefaults()
+          groups.value =
+            packaged && packaged.groups && packaged.groups.length > 0 ? packaged.groups : []
+        } catch (e) {
+          groups.value = []
+        }
+      }
       // Normalize any stored image URL-like values for safe rendering
       try {
         // lazy import helper to avoid circular deps
@@ -148,7 +157,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         // ignore normalization errors - not critical
         void e
       }
-      settings.value = { ...defaultSettings, ...settingsData }
+      // Merge with packaged defaults where available
+      try {
+        const packaged = await loadPackagedDefaults()
+        settings.value = { ...defaultSettings, ...(packaged?.settings || {}), ...settingsData }
+      } catch (e) {
+        settings.value = { ...defaultSettings, ...settingsData }
+      }
       favorites.value = new Set(favoritesData || [])
 
       logger.log('[EmojiStore] Final groups after assignment:', {
@@ -176,9 +191,20 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     } catch (error) {
       const e: any = error
       logger.error('[EmojiStore] Failed to load initial data:', e?.stack || e)
-      // Fallback to defaults in case of error
-      groups.value = JSON.parse(JSON.stringify(defaultEmojiGroups))
-      settings.value = { ...defaultSettings }
+      // Fallback to runtime loader or empty
+      try {
+        const packaged = await loadPackagedDefaults()
+        groups.value =
+          packaged && packaged.groups && packaged.groups.length > 0 ? packaged.groups : []
+      } catch (e) {
+        groups.value = []
+      }
+      try {
+        const packaged = await loadPackagedDefaults()
+        settings.value = { ...defaultSettings, ...(packaged?.settings || {}) }
+      } catch (e) {
+        settings.value = { ...defaultSettings }
+      }
       favorites.value = new Set()
     } finally {
       isLoading.value = false

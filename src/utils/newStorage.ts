@@ -4,7 +4,8 @@ import { logger } from '../config/buildFlags'
 import { formatPreview } from './formatUtils'
 import indexedDBHelpers from './indexedDB'
 
-import { defaultEmojiGroups, defaultSettings } from '@/types/emoji'
+import { defaultSettings } from '@/types/emoji'
+import { loadDefaultEmojiGroups, loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 // In build/test environments `chrome` may not be declared. Provide a loose declaration
 declare const chrome: any
@@ -512,7 +513,14 @@ export const newStorageHelpers = {
   async getAllEmojiGroups(): Promise<EmojiGroup[]> {
     const index = await this.getEmojiGroupIndex()
     if (!index.length) {
-      return defaultEmojiGroups
+      // Try runtime loader for packaged JSON first, fallback to generated module
+      try {
+        const runtime = await loadDefaultEmojiGroups()
+        if (runtime && runtime.length) return runtime
+      } catch (e) {
+        // ignore loader errors and fallback to empty list
+      }
+      return []
     }
 
     const groups = await Promise.all(
@@ -539,7 +547,19 @@ export const newStorageHelpers = {
   // Settings management
   async getSettings(): Promise<AppSettings> {
     const settings = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
-    return { ...defaultSettings, ...settings }
+    if (settings && typeof settings === 'object') return { ...defaultSettings, ...settings }
+
+    // No persisted settings: prefer packaged defaults
+    try {
+      const packaged = await loadPackagedDefaults()
+      if (packaged && packaged.settings && Object.keys(packaged.settings).length > 0) {
+        return { ...defaultSettings, ...packaged.settings }
+      }
+    } catch (e) {
+      // ignore loader errors
+    }
+
+    return { ...defaultSettings }
   },
 
   async setSettings(settings: AppSettings): Promise<void> {
@@ -647,7 +667,15 @@ export const newStorageHelpers = {
     logStorage('RESET_DEFAULTS', 'start')
 
     try {
-      await this.setAllEmojiGroups(defaultEmojiGroups)
+      // Prefer runtime JSON loader if available
+      try {
+        const packaged = await loadPackagedDefaults()
+        await this.setAllEmojiGroups(
+          packaged && packaged.groups && packaged.groups.length ? packaged.groups : []
+        )
+      } catch (e) {
+        await this.setAllEmojiGroups([])
+      }
       await this.setSettings(defaultSettings)
       await this.setFavorites([])
 
