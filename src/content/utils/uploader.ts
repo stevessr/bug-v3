@@ -1,4 +1,4 @@
-import { logger } from '../../config/buildFLagsV2'
+import { logger } from './buildFLagsV2'
 
 // Function to parse image filenames from markdown text
 function parseImageFilenamesFromMarkdown(markdownText: string): string[] {

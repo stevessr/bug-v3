@@ -2,7 +2,7 @@
  * Bilibili按钮组件创建和处理
  */
 
-import { logger } from '../../config/buildFLagsV2'
+import { logger } from '../utils/buildFLagsV2'
 import type { AddEmojiButtonData } from '../utils/bilibili-utils'
 
 declare const chrome: any

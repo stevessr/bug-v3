@@ -1,6 +1,6 @@
-import { logger } from '../config/buildFLagsV2'
+import { logger } from './buildFLagsV2'
+import { loadDataFromStorage } from '../data/storage'
 
-import { loadDataFromStorage } from './storage'
 import { findAllToolbars, injectButton } from './injector'
 import { initOneClickAdd } from './oneClickAdd'
 

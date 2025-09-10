@@ -1,8 +1,8 @@
-import { logger } from '../config/buildFLagsV2'
+import { logger } from './buildFLagsV2'
+import { createEmojiPicker } from '../discourse/picker'
+import { cachedState } from '../data/state'
 
-import { createEmojiPicker } from './picker'
-import { cachedState } from './state'
-import { showImageUploadDialog } from './utils/uploader'
+import { showImageUploadDialog } from './uploader'
 
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [

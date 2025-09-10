@@ -1,5 +1,5 @@
-import { defaultSettings } from '../types/emoji'
-import { logger } from '../config/buildFLagsV2'
+import { defaultSettings } from '../../types/emoji'
+import { logger } from './buildFLagsV2'
 
 export class ContentStorageAdapter {
   // Read from extension storage with fallback to local/session storage
