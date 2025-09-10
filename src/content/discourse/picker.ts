@@ -1,8 +1,8 @@
-import { logger } from '../config/buildFLagsV2'
+import { logger } from '../utils/buildFLagsV2'
+import { cachedState } from '../data/state'
+import { ensureDefaultIfEmpty } from '../data/storage'
 
-import { cachedState } from './state'
 import { insertEmojiIntoEditor } from './editor'
-import { ensureDefaultIfEmpty } from './storage'
 
 export const isMobile = (): boolean => {
   const userAgent = navigator.userAgent

@@ -1,7 +1,7 @@
-import { logger } from '../config/buildFLagsV2'
+import { logger } from '../utils/buildFLagsV2'
+import { getDefaultEmojis } from '../data/default'
 
 import { cachedState } from './state'
-import { getDefaultEmojis } from './default'
 
 function sendMessageToBackground(message: any): Promise<any> {
   return new Promise(resolve => {

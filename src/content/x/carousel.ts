@@ -1,4 +1,4 @@
-import { logger } from '../../config/buildFLagsV2'
+import { logger } from '../utils/buildFLagsV2'
 
 import { tryInjectTwitterMedia } from './twitterMediaInject'
 

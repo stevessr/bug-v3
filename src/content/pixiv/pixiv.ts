@@ -1,0 +1,1 @@
+export { initPixiv } from './index'
