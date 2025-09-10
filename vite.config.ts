@@ -156,6 +156,10 @@ export default defineConfig(({ mode }) => {
           },
           chunkFileNames: 'js/[name].js',
           assetFileNames: 'assets/[name].[ext]',
+          // Disable manualChunks splitting to avoid creating a shared "background.js"
+          // chunk that other entrypoints (like content) would import from. Keeping
+          // modules inlined per-entry ensures content scripts do not contain
+          // top-level ESM imports which cause runtime SyntaxError in some hosts.
           manualChunks: (id, { getModuleInfo }) => {
             // Resolve the canonical content entry path
             const contentEntry = fileURLToPath(new URL('src/content/content.ts', import.meta.url))
@@ -199,64 +203,12 @@ export default defineConfig(({ mode }) => {
               return false
             }
 
-            // Decide whether module is reachable from content and whether it's
-            // also reachable from other non-content entrypoints. If it's shared,
-            // don't place it into the content chunk to avoid other bundles
-            // importing from content.
-            const isReachableFromContent = isImportedByContent(id)
-            if (isReachableFromContent) {
-              // Check if it's also reachable from any other top-level entries
-              const otherEntryHints = [
-                'src/background/',
-                'popup.html',
-                'options.html',
-                'src/tenor/',
-                'src/waline/'
-              ]
-              const isShared = (() => {
-                try {
-                  const visited = new Set()
-                  const stack = [id]
-                  while (stack.length) {
-                    const cur = stack.pop()
-                    if (!cur) continue
-                    const ncur = normalize(cur)
-                    if (visited.has(ncur)) continue
-                    visited.add(ncur)
-                    if (ncur === normContent || ncur.includes('/src/content/')) {
-                      // reachable from content; continue
-                    }
-                    // If any importer is under otherEntryHints, mark shared
-                    const info = getModuleInfo(cur)
-                    if (!info) continue
-                    const importers = info.importers || []
-                    for (const imp of importers) {
-                      const nimp = normalize(imp)
-                      for (const hint of otherEntryHints) {
-                        if (nimp.includes(hint)) return true
-                      }
-                      stack.push(imp)
-                    }
-                  }
-                } catch (e) {
-                  return true
-                }
-                return false
-              })()
-
-              if (!isShared) return 'content'
-            }
-
-            // Keep background modules together (if they are not pulled into content)
-            if (id.includes('src/background/') || id.includes('background.ts')) {
-              return 'background'
-            }
-
-            // Put third-party deps not reachable from content into vendor
-            if (id.includes('node_modules')) {
-              return 'vendor'
-            }
-
+            // Previously we had complex heuristics here to split shared
+            // modules, but that produced a separate background chunk which
+            // content.js then imported via ESM. For extension content
+            // scripts we must avoid producing top-level imports between
+            // extension files. Returning undefined disables manual chunking
+            // and lets Rollup inline modules per-entry.
             return undefined
           }
         },
