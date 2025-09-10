@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 
 import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji'
 import { newStorageHelpers } from '../utils/newStorage'
+
 import { defaultEmojiGroups, defaultSettings } from '@/types/emoji'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -122,6 +123,31 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         groupsData && groupsData.length > 0
           ? groupsData
           : JSON.parse(JSON.stringify(defaultEmojiGroups))
+      // Normalize any stored image URL-like values for safe rendering
+      try {
+        // lazy import helper to avoid circular deps
+
+        const { normalizeImageUrl } =
+          require('../utils/isImageUrl') as typeof import('../utils/isImageUrl')
+        for (const g of groups.value) {
+          if (g && typeof g.icon === 'string') {
+            g.icon = normalizeImageUrl(g.icon) || g.icon
+          }
+          if (Array.isArray(g.emojis)) {
+            for (const e of g.emojis) {
+              if (e && typeof e.url === 'string') {
+                e.url = normalizeImageUrl(e.url) || e.url
+              }
+              if (e && typeof e.displayUrl === 'string') {
+                e.displayUrl = normalizeImageUrl(e.displayUrl) || e.displayUrl
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // ignore normalization errors - not critical
+        void e
+      }
       settings.value = { ...defaultSettings, ...settingsData }
       favorites.value = new Set(favoritesData || [])
 
