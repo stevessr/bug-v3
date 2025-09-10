@@ -104,8 +104,7 @@ function isValidUrl(string: string): boolean {
   }
 }
 
-// Default emoji data loaded from generated file (use alias so vite can swap for remote builds)
-import { defaultEmojiGroups } from '@/types/defaultEmojiGroups'
+import { loadDefaultEmojiGroups } from '@/types/defaultEmojiGroups.loader'
 
 const defaultSettings: AppSettings = {
   imageScale: 100,
@@ -117,16 +116,7 @@ const defaultSettings: AppSettings = {
   enableLinuxDoInjection: true, // 默认启用linux.do注入
   enableXcomExtraSelectors: false // 默认不启用X.com额外选择器
 }
+export { defaultSettings }
 
-export { defaultEmojiGroups, defaultSettings }
-
-// Legacy support - export flat emoji list for backward compatibility
-export const defaultEmojiSet = defaultEmojiGroups
-  .flatMap(group => group.emojis)
-  .map(emoji => ({
-    packet: emoji.packet,
-    name: emoji.name,
-    url: emoji.url,
-    width: emoji.width,
-    height: emoji.height
-  }))
+// Runtime loader for default emoji groups
+export { loadDefaultEmojiGroups }

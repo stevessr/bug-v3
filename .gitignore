@@ -156,3 +156,4 @@ package-lock.json
 deno.lock
 components.d.ts
 default.json
+public/assets/defaultEmojiGroups.json

@@ -14,22 +14,9 @@ export default defineConfig(({ mode }) => {
     // resolve alias so imports using @/xxx map to src/xxx
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        '@': fileURLToPath(new URL('./src', import.meta.url))
         // When building remote variant, point the generated big data file to an empty placeholder
-        ...(variant === 'remote'
-          ? (() => {
-              const emptyPath = fileURLToPath(
-                new URL('./src/types/defaultEmojiGroups.empty.ts', import.meta.url)
-              )
-              return {
-                '@/types/defaultEmojiGroups': emptyPath,
-                // In case some modules import via relative or non-alias paths, map the actual source paths too
-                [fileURLToPath(new URL('./src/types/defaultEmojiGroups.ts', import.meta.url))]:
-                  emptyPath,
-                'src/types/defaultEmojiGroups': emptyPath
-              }
-            })()
-          : {})
+        // defaultEmojiGroups is loaded at runtime from public assets; no build-time aliasing
       }
     },
     define: {

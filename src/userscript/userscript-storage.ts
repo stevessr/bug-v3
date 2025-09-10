@@ -1,5 +1,5 @@
 // Storage adapter for userscript environment using localStorage
-import { defaultEmojiGroups } from '@/types/defaultEmojiGroups'
+import { loadDefaultEmojiGroups } from '@/types/defaultEmojiGroups.loader'
 import { logger } from '@/config/buildFlags'
 
 export interface UserscriptStorage {
@@ -34,19 +34,9 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
       }
     }
 
-    // If no valid groups, use generated defaults (all groups)
+    // If no valid groups, start with empty list (fast sync fallback)
     if (emojiGroups.length === 0) {
-      // clone so we don't mutate the generated constant at runtime
-      try {
-        emojiGroups = JSON.parse(JSON.stringify(defaultEmojiGroups))
-      } catch (e) {
-        // fallback to an empty array if cloning fails for any reason
-        logger.warn(
-          '[Userscript] Failed to clone defaultEmojiGroups, falling back to empty groups',
-          e
-        )
-        emojiGroups = []
-      }
+      emojiGroups = []
     }
 
     // Load settings
@@ -84,34 +74,17 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
   } catch (error) {
     logger.error('[Userscript] Failed to load from localStorage:', error)
 
-    // Return defaults on error: provide generated default groups and default settings
-    try {
-      const cloned = JSON.parse(JSON.stringify(defaultEmojiGroups))
-      // userscript 不需要显示 favorites
-      const filtered = cloned.filter((g: any) => g.id !== 'favorites')
-      return {
-        emojiGroups: filtered,
-        settings: {
-          imageScale: 30,
-          gridColumns: 4,
-          outputFormat: 'markdown',
-          forceMobileMode: false,
-          defaultGroup: 'nachoneko',
-          showSearchBar: true
-        }
-      }
-    } catch (e) {
-      logger.error('[Userscript] Failed to clone defaultEmojiGroups in error fallback:', e)
-      return {
-        emojiGroups: [],
-        settings: {
-          imageScale: 30,
-          gridColumns: 4,
-          outputFormat: 'markdown',
-          forceMobileMode: false,
-          defaultGroup: 'nachoneko',
-          showSearchBar: true
-        }
+    // Return defaults on error: empty groups and default settings
+    logger.error('[Userscript] Failed to load from localStorage:', error)
+    return {
+      emojiGroups: [],
+      settings: {
+        imageScale: 30,
+        gridColumns: 4,
+        outputFormat: 'markdown',
+        forceMobileMode: false,
+        defaultGroup: 'nachoneko',
+        showSearchBar: true
       }
     }
   }
@@ -166,9 +139,11 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
       }
     }
 
-    // No remote or failed: use generated defaults (filter favorites)
+    // No remote or failed: try runtime loader, then fallback to empty list
     try {
-      const cloned = JSON.parse(JSON.stringify(defaultEmojiGroups))
+      const runtime = await loadDefaultEmojiGroups()
+      const source = runtime && runtime.length ? runtime : []
+      const cloned = JSON.parse(JSON.stringify(source))
       const filtered = cloned.filter((g: any) => g.id !== 'favorites')
       // Save to localStorage for future fast loads
       try {
@@ -178,7 +153,7 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
       }
       return { emojiGroups: filtered, settings: local.settings }
     } catch (e) {
-      logger.error('[Userscript] Failed to clone defaultEmojiGroups in async fallback:', e)
+      logger.error('[Userscript] Failed to load default groups in async fallback:', e)
       return { emojiGroups: [], settings: local.settings }
     }
   } catch (error) {

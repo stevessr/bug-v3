@@ -32,8 +32,7 @@
     "eslint": "^9.34.0",
     "globals": "^16.3.0",
     "pinia": "^2.1.7",
-    "vue": "^3.4.21",
-    "jszip": "^3.10.1"
+    "vue": "^3.4.21"
   },
   "devDependencies": {
     "@ant-design/icons-vue": "^7.0.1",

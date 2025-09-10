@@ -2,7 +2,7 @@ import { logger } from '../config/buildFlags'
 
 import { getChromeAPI } from './utils'
 
-import { defaultEmojiGroups } from '@/types/defaultEmojiGroups'
+import { loadDefaultEmojiGroups } from '@/types/defaultEmojiGroups.loader'
 
 export async function initializeDefaultData() {
   const chromeAPI = getChromeAPI()
@@ -15,7 +15,12 @@ export async function initializeDefaultData() {
     const existingData = await chromeAPI.storage.local.get(['emojiGroups', 'appSettings'])
 
     if (!existingData.emojiGroups) {
-      await chromeAPI.storage.local.set({ emojiGroups: defaultEmojiGroups })
+      try {
+        const runtime = await loadDefaultEmojiGroups()
+        await chromeAPI.storage.local.set({ emojiGroups: runtime && runtime.length ? runtime : [] })
+      } catch (e) {
+        await chromeAPI.storage.local.set({ emojiGroups: [] })
+      }
       logger.log('Default emoji groups initialized')
     }
 

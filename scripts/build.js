@@ -90,21 +90,25 @@ Object.assign(process.env, config)
 // 把可选的构建变体注入环境变量，供 vite 配置读取
 process.env.USERSCRIPT_VARIANT = variant
 
-// If building remote userscript, ensure the generated defaultEmojiGroups.ts is empty
-if (variant === 'remote') {
-  try {
-    const placeholderPath = path.resolve(process.cwd(), 'src/types/defaultEmojiGroups.ts')
-    const placeholderContent = `import { EmojiGroup } from "./emoji";
+// Note: build-time generation of defaultEmojiGroups.ts has been removed.
 
-// Remote variant build - default emoji groups are fetched at runtime. Generated placeholder.
-
-export const defaultEmojiGroups: EmojiGroup[] = [];
-`
-    fs.writeFileSync(placeholderPath, placeholderContent, 'utf-8')
-    console.log('ℹ️ Wrote remote placeholder to src/types/defaultEmojiGroups.ts')
-  } catch (e) {
-    console.warn('⚠️ Failed to write remote placeholder for defaultEmojiGroups:', e)
+// Also, ensure a runtime JSON is available in public/assets for the loader
+try {
+  const configPath = path.resolve(process.cwd(), 'src/config/default.json')
+  const jsonOut = path.resolve(process.cwd(), 'public', 'assets', 'defaultEmojiGroups.json')
+  const configContent = fs.readFileSync(configPath, 'utf-8')
+  const configData = JSON.parse(configContent)
+  if (configData && Array.isArray(configData.groups)) {
+    try {
+      fs.mkdirSync(path.dirname(jsonOut), { recursive: true })
+      fs.writeFileSync(jsonOut, JSON.stringify({ groups: configData.groups }, null, 2), 'utf-8')
+      console.log(`ℹ️ Wrote runtime defaultEmojiGroups JSON to ${jsonOut}`)
+    } catch (e) {
+      console.warn('⚠️ Failed to write runtime defaultEmojiGroups JSON:', e)
+    }
   }
+} catch (e) {
+  // ignore
 }
 
 // 打印配置信息
