@@ -3,9 +3,9 @@ import { ref, computed, watch, nextTick } from 'vue'
 
 import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji'
 import { newStorageHelpers } from '../utils/newStorage'
+import { normalizeImageUrl } from '../utils/isImageUrl'
 
 import { defaultEmojiGroups, defaultSettings } from '@/types/emoji'
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from '@/config/buildFlags'
 
@@ -412,6 +412,82 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
+  // Remove duplicate emojis within a group based on normalized URL
+  const dedupeGroup = (groupId: string) => {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) return 0
+
+    try {
+      const seen = new Set<string>()
+      const originalLength = group.emojis.length
+      const kept: typeof group.emojis = []
+
+      for (const e of group.emojis) {
+        const url =
+          e && typeof (e as any).url === 'string'
+            ? normalizeImageUrl((e as any).url) || (e as any).url
+            : ''
+        if (!url) {
+          // keep items without url (can't dedupe reliably)
+          kept.push(e)
+          continue
+        }
+        if (!seen.has(url)) {
+          seen.add(url)
+          kept.push(e)
+        }
+      }
+
+      group.emojis = kept
+      const removed = originalLength - group.emojis.length
+      if (removed > 0) {
+        logger.log('[EmojiStore] dedupeGroup', { groupId, removed })
+        maybeSave()
+      }
+      return removed
+    } catch (err) {
+      logger.error('[EmojiStore] dedupeGroup error', err)
+      return 0
+    }
+  }
+
+  // Remove duplicate emojis within a group based on emoji name (case-insensitive)
+  const dedupeGroupByName = (groupId: string) => {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) return 0
+
+    try {
+      const seen = new Set<string>()
+      const originalLength = group.emojis.length
+      const kept: typeof group.emojis = []
+
+      for (const e of group.emojis) {
+        const name =
+          e && typeof (e as any).name === 'string' ? (e as any).name.trim().toLowerCase() : ''
+        if (!name) {
+          // keep items without name
+          kept.push(e)
+          continue
+        }
+        if (!seen.has(name)) {
+          seen.add(name)
+          kept.push(e)
+        }
+      }
+
+      group.emojis = kept
+      const removed = originalLength - group.emojis.length
+      if (removed > 0) {
+        logger.log('[EmojiStore] dedupeGroupByName', { groupId, removed })
+        maybeSave()
+      }
+      return removed
+    } catch (err) {
+      logger.error('[EmojiStore] dedupeGroupByName error', err)
+      return 0
+    }
+  }
+
   const updateEmojiInGroup = (groupId: string, index: number, updatedEmoji: Partial<Emoji>) => {
     const group = groups.value.find(g => g.id === groupId)
     if (group && index >= 0 && index < group.emojis.length) {
@@ -687,6 +763,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     importConfiguration,
     resetToDefaults,
     forceSync,
+    dedupeGroup,
+    dedupeGroupByName,
     // expose batching helpers for bulk operations
     beginBatch,
     endBatch,
