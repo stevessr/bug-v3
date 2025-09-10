@@ -40,6 +40,8 @@ import { TouchDragHandler } from '../../utils/touchDragDrop'
 import { normalizeImageUrl } from '../../utils/isImageUrl'
 
 import GroupsCardView from './GroupsCardView.vue'
+import GroupActionsDropdown from './GroupActionsDropdown.vue'
+import DedupeChooser from './DedupeChooser.vue'
 
 // computed list that excludes the favorites group so it doesn't appear in group management
 const emojiStore = useEmojiStore()
@@ -63,9 +65,7 @@ const showDedupeMessage = (groupId: string, msg: string, ms = 2000) => {
   }, ms)
 }
 
-const toggleMenu = (groupId: string) => {
-  openMenu.value = openMenu.value === groupId ? null : groupId
-}
+// ...existing code...
 
 const closeMenu = () => {
   openMenu.value = null
@@ -90,9 +90,54 @@ const onDedupe = (group: any) => {
   closeMenu()
   // open a small chooser: by name or by url
   chooseDedupeFor.value = group.id
+  // compute preview counts for confirmation
+  computeDedupePreview(group.id)
 }
 
 const chooseDedupeFor = ref<string | null>(null)
+
+// preview counts for the chooser (computed when opening chooser)
+const previewDedupeByNameCount = ref<number | null>(null)
+const previewDedupeByUrlCount = ref<number | null>(null)
+
+const computeDedupePreview = (groupId: string | null) => {
+  previewDedupeByNameCount.value = null
+  previewDedupeByUrlCount.value = null
+  if (!groupId) return
+  try {
+    const groups = (emojiStore.sortedGroups || []) as any[]
+    const group = groups.find(g => g.id === groupId)
+    if (!group || !Array.isArray(group.emojis)) return
+    const emojis = group.emojis as any[]
+
+    // by name
+    const nameMap = new Map<string, number>()
+    for (const e of emojis) {
+      const n = String(e?.name ?? '')
+      const c = nameMap.get(n) || 0
+      nameMap.set(n, c + 1)
+    }
+    let removedByName = 0
+    for (const v of nameMap.values()) if (v > 1) removedByName += v - 1
+
+    // by url (ignore items without url)
+    const urlMap = new Map<string, number>()
+    for (const e of emojis) {
+      const u = e?.url
+      if (!u) continue
+      const s = String(u)
+      const c = urlMap.get(s) || 0
+      urlMap.set(s, c + 1)
+    }
+    let removedByUrl = 0
+    for (const v of urlMap.values()) if (v > 1) removedByUrl += v - 1
+
+    previewDedupeByNameCount.value = removedByName
+    previewDedupeByUrlCount.value = removedByUrl
+  } catch (e) {
+    // ignore
+  }
+}
 
 const performDedupeChoice = (groupId: string | null, mode: 'name' | 'url') => {
   // Accept nullable groupId from template and validate here
@@ -301,49 +346,16 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
                   </button>
 
-                  <!-- Unified action menu -->
+                  <!-- Unified action menu (use AntD dropdown) -->
                   <div class="relative" v-if="group.id !== 'favorites'">
-                    <button
-                      @click="toggleMenu(group.id)"
-                      class="px-3 py-1 text-sm rounded border bg-white"
-                    >
-                      操作 ▾
-                    </button>
-                    <div
-                      v-if="openMenu === group.id"
-                      class="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-50"
-                    >
-                      <button
-                        class="w-full text-left px-3 py-2 hover:bg-gray-50"
-                        @click.prevent="onEdit(group)"
-                      >
-                        编辑
-                      </button>
-                      <button
-                        class="w-full text-left px-3 py-2 hover:bg-gray-50"
-                        @click.prevent="onExport(group)"
-                      >
-                        导出
-                      </button>
-                      <button
-                        class="w-full text-left px-3 py-2 hover:bg-gray-50"
-                        @click.prevent="onExportZip(group)"
-                      >
-                        打包下载
-                      </button>
-                      <button
-                        class="w-full text-left px-3 py-2 hover:bg-gray-50"
-                        @click.prevent="onDedupe(group)"
-                      >
-                        去重
-                      </button>
-                      <button
-                        class="w-full text-left px-3 py-2 hover:bg-gray-50 text-red-600"
-                        @click.prevent="onDelete(group)"
-                      >
-                        删除
-                      </button>
-                    </div>
+                    <GroupActionsDropdown
+                      :group="group"
+                      @edit="onEdit"
+                      @export="onExport"
+                      @exportZip="onExportZip"
+                      @dedupe="onDedupe"
+                      @confirmDelete="onDelete"
+                    />
                   </div>
                   <div v-if="dedupeMessage[group.id]" class="ml-2 text-sm text-green-600">
                     {{ dedupeMessage[group.id] }}
@@ -441,39 +453,22 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
         :isImageUrl="isImageUrl"
         :expandedGroups="expandedGroups"
         :touchRefFn="addGroupTouchEvents"
-        @groupDragStart="(...args) => $emit('groupDragStart', ...args)"
-        @groupDrop="(...args) => $emit('groupDrop', ...args)"
-        @toggleExpand="(...args) => $emit('toggleExpand', ...args)"
-        @openEditGroup="(...args) => $emit('openEditGroup', ...args)"
-        @exportGroup="(...args) => $emit('exportGroup', ...args)"
-        @imageError="(...args) => $emit('imageError', ...args)"
+        @groupDragStart="$emit('groupDragStart', $event)"
+        @groupDrop="$emit('groupDrop', $event)"
+        @toggleExpand="$emit('toggleExpand', $event)"
+        @openEditGroup="$emit('openEditGroup', $event)"
+        @exportGroup="$emit('exportGroup', $event)"
+        @imageError="$emit('imageError', $event)"
       />
     </div>
-    <!-- Inline chooser modal for dedupe -->
-    <div v-if="chooseDedupeFor" class="fixed inset-0 flex items-center justify-center z-60">
-      <div class="bg-black/40 absolute inset-0"></div>
-      <div class="bg-white p-4 rounded shadow-lg z-70 w-80">
-        <h3 class="font-medium mb-2">去重方式</h3>
-        <p class="text-sm text-gray-600 mb-4">请选择按名称还是按 URL 去重</p>
-        <div class="flex gap-2 justify-end">
-          <button class="px-3 py-1 border rounded" @click.prevent="chooseDedupeFor = null">
-            取消
-          </button>
-          <button
-            class="px-3 py-1 bg-blue-600 text-white rounded"
-            @click.prevent="performDedupeChoice(chooseDedupeFor, 'name')"
-          >
-            按名称
-          </button>
-          <button
-            class="px-3 py-1 bg-green-600 text-white rounded"
-            @click.prevent="performDedupeChoice(chooseDedupeFor, 'url')"
-          >
-            按 URL
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Dedupe chooser component -->
+    <DedupeChooser
+      :visible="chooseDedupeFor"
+      :previewByNameCount="previewDedupeByNameCount"
+      :previewByUrlCount="previewDedupeByUrlCount"
+      @update:visible="v => (chooseDedupeFor = v)"
+      @confirm="(groupId, mode) => performDedupeChoice(groupId, mode)"
+    />
   </div>
 </template>
 

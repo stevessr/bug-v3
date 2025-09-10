@@ -1,0 +1,47 @@
+<script setup lang="ts">
+import { defineProps, defineEmits } from 'vue'
+
+// Accept the project's Group shape when used from parent components
+type LooseGroup = Record<string, unknown>
+const props = defineProps<{ group: LooseGroup }>()
+
+// use untyped emits to avoid tight coupling with parent Group types
+const emit = defineEmits(['edit', 'export', 'exportZip', 'dedupe', 'confirmDelete'])
+
+const onEdit = () => emit('edit', props.group)
+const onExport = () => emit('export', props.group)
+const onExportZip = () => emit('exportZip', props.group)
+const onDedupe = () => emit('dedupe', props.group)
+const onConfirmDelete = () => emit('confirmDelete', props.group)
+</script>
+
+<template>
+  <div class="relative">
+    <a-dropdown placement="bottomRight">
+      <a-button class="px-3 py-1 text-sm rounded border bg-white">更多操作</a-button>
+      <template #overlay>
+        <a-menu>
+          <a-menu-item @click.prevent="onEdit">编辑</a-menu-item>
+          <a-menu-item @click.prevent="onExport">导出</a-menu-item>
+          <a-popconfirm
+            placement="top"
+            title="确认要打包下载此分组吗？"
+            ok-text="确定"
+            cancel-text="取消"
+            @confirm="onExportZip"
+          >
+            <a-menu-item>打包下载</a-menu-item>
+          </a-popconfirm>
+          <a-menu-item @click.prevent="onDedupe">去重</a-menu-item>
+          <a-menu-item @click.prevent="onConfirmDelete">
+            <span style="color: #e11d48">删除</span>
+          </a-menu-item>
+        </a-menu>
+      </template>
+    </a-dropdown>
+  </div>
+</template>
+
+<style scoped>
+/* styling intentionally minimal; parent components provide spacing */
+</style>
