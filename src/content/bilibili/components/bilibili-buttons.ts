@@ -54,13 +54,16 @@ export function createFloatingButton(data: AddEmojiButtonData): HTMLElement {
 }
 
 /**
- * 创建控制按钮
+ * 创建控制按钮 - 修复样式一致性问题
  */
 export function createControlButton(data: AddEmojiButtonData): HTMLElement {
   const btn = document.createElement('div')
   btn.className = 'bili-album__watch__control__option add-emoji'
   btn.title = '添加到未分组表情'
-  btn.style.cssText = `cursor:pointer;display:flex;align-items:center;gap:4px;padding:8px 12px;border-radius:6px;background:rgba(255,255,255,0.1);color:#fff;font-size:12px;font-weight:500;transition:background-color 0.2s ease;user-select:none;`
+
+  // 移除过多的内联样式，让 Bilibili 的原生 CSS 类处理样式
+  // 只保留必要的样式以确保功能正常
+  btn.style.cssText = 'cursor: pointer;'
 
   // Create the emoji icon (14x14px smiley face SVG)
   const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
@@ -79,12 +82,51 @@ export function createControlButton(data: AddEmojiButtonData): HTMLElement {
   btn.appendChild(icon)
   btn.appendChild(text)
 
-  // Add hover effect
+  // 移除自定义悬停效果，让 Bilibili 的原生样式处理
+  // 这样可以确保与其他控制按钮的行为一致
+
+  setupButtonClickHandler(btn, data)
+  return btn
+}
+
+/**
+ * 创建PhotoSwipe样式的按钮（用于顶部栏）
+ */
+export function createPhotoSwipeButton(data: AddEmojiButtonData): HTMLElement {
+  const btn = document.createElement('button')
+  btn.className = 'pswp__button bili-emoji-add-btn'
+  btn.type = 'button'
+  btn.title = '添加到未分组表情'
+
+  // PhotoSwipe button styling to match existing buttons
+  btn.style.cssText = `
+    position: relative;
+    display: block;
+    width: 44px;
+    height: 44px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    overflow: visible;
+    appearance: none;
+    box-shadow: none;
+    opacity: 0.75;
+    transition: opacity 0.2s;
+    color: #fff;
+    font-size: 18px;
+    line-height: 44px;
+    text-align: center;
+  `
+
+  // Add emoji icon
+  btn.innerHTML = '➕'
+
+  // Hover effect
   btn.addEventListener('mouseenter', () => {
-    btn.style.background = 'rgba(255,255,255,0.2)'
+    btn.style.opacity = '1'
   })
   btn.addEventListener('mouseleave', () => {
-    btn.style.background = 'rgba(255,255,255,0.1)'
+    btn.style.opacity = '0.75'
   })
 
   setupButtonClickHandler(btn, data)

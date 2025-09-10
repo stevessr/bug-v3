@@ -286,12 +286,37 @@ export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => vo
     try {
       const tabs = await chromeAPI.tabs.query({ url: 'https://linux.do/*' })
       if (tabs.length > 0 && tabs[0].id) {
-        const response = await chromeAPI.tabs.sendMessage(tabs[0].id, {
-          type: 'GET_CSRF_TOKEN'
-        })
-        if (response && response.csrfToken) {
-          csrfToken = response.csrfToken
+        try {
+          const response = await chromeAPI.tabs.sendMessage(tabs[0].id, {
+            type: 'GET_CSRF_TOKEN'
+          })
+          if (response && response.csrfToken) {
+            csrfToken = response.csrfToken
+          }
+        } catch (sendMessageError) {
+          // 尝试其他 linux.do 标签页
+          for (let i = 1; i < tabs.length; i++) {
+            if (tabs[i].id) {
+              try {
+                const response = await chromeAPI.tabs.sendMessage(tabs[i].id, {
+                  type: 'GET_CSRF_TOKEN'
+                })
+                if (response && response.csrfToken) {
+                  csrfToken = response.csrfToken
+                  break
+                }
+              } catch (e) {
+                // 继续尝试下一个标签页
+                continue
+              }
+            }
+          }
+          if (!csrfToken) {
+            logger.warn('Failed to get CSRF token from any linux.do tab:', sendMessageError)
+          }
         }
+      } else {
+        logger.warn('No linux.do tabs found')
       }
     } catch (e) {
       logger.warn('Failed to get CSRF token from linux.do tab:', e)

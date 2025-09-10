@@ -52,56 +52,111 @@ export function normalizeBiliUrl(raw: string): string | null {
 }
 
 /**
- * 从图片容器中提取图片URL
+ * 从图片容器中提取图片URL - 改进版本
  */
 export function extractImageUrlFromPicture(container: Element): string | null {
-  // If the container itself is an <img>, use it directly
-  if (container instanceof HTMLImageElement) {
-    const src =
-      container.getAttribute('src') || container.getAttribute('data-src') || container.src || ''
-    const normalized = normalizeBiliUrl(src)
-    if (normalized) return normalized
-  }
+  // 尝试多种方式获取图片URL
+  const urlSources: (() => string | null)[] = [
+    // 1. 如果容器本身是 <img>
+    () => {
+      if (container instanceof HTMLImageElement) {
+        return (
+          container.getAttribute('src') ||
+          container.getAttribute('data-src') ||
+          container.getAttribute('data-original') ||
+          container.src ||
+          null
+        )
+      }
+      return null
+    },
 
-  // If it's a <picture>, prefer <img> inside or <source>
-  if (container instanceof HTMLPictureElement) {
-    const img = container.querySelector('img') as HTMLImageElement | null
-    if (img) {
-      const src = img.getAttribute('src') || img.getAttribute('data-src') || img.src || ''
-      const normalized = normalizeBiliUrl(src)
-      if (normalized) return normalized
+    // 2. 如果是 <picture> 元素
+    () => {
+      if (container instanceof HTMLPictureElement) {
+        const img = container.querySelector('img') as HTMLImageElement | null
+        if (img) {
+          return (
+            img.getAttribute('src') ||
+            img.getAttribute('data-src') ||
+            img.getAttribute('data-original') ||
+            img.src ||
+            null
+          )
+        }
+
+        const source = container.querySelector(
+          'source[srcset], source[src]'
+        ) as HTMLSourceElement | null
+        if (source) {
+          return source.getAttribute('srcset') || source.getAttribute('src') || null
+        }
+      }
+      return null
+    },
+
+    // 3. 查找容器内的 img 元素
+    () => {
+      const innerImg = container.querySelector('img') as HTMLImageElement | null
+      if (innerImg) {
+        return (
+          innerImg.getAttribute('src') ||
+          innerImg.getAttribute('data-src') ||
+          innerImg.getAttribute('data-original') ||
+          innerImg.src ||
+          null
+        )
+      }
+      return null
+    },
+
+    // 4. 查找容器内的 source 元素
+    () => {
+      const innerSource = container.querySelector(
+        'source[srcset], source[src]'
+      ) as HTMLSourceElement | null
+      if (innerSource) {
+        return innerSource.getAttribute('srcset') || innerSource.getAttribute('src') || null
+      }
+      return null
+    },
+
+    // 5. 检查容器的 data 属性
+    () => {
+      const element = container as HTMLElement
+      return (
+        element.getAttribute('data-src') ||
+        element.getAttribute('data-original') ||
+        element.getAttribute('data-url') ||
+        null
+      )
+    },
+
+    // 6. 检查背景图片样式
+    () => {
+      const element = container as HTMLElement
+      const style = element.style.backgroundImage || getComputedStyle(element).backgroundImage
+      if (style && style !== 'none') {
+        const match = style.match(/url\(['"]?([^'"]+)['"]?\)/)
+        return match ? match[1] : null
+      }
+      return null
     }
-    const source = container.querySelector(
-      'source[srcset], source[src]'
-    ) as HTMLSourceElement | null
-    if (source) {
-      const srcset = source.getAttribute('srcset') || source.getAttribute('src') || ''
-      const normalized = normalizeBiliUrl(srcset)
-      if (normalized) return normalized
+  ]
+
+  // 尝试每种方法，返回第一个有效的URL
+  for (const getUrl of urlSources) {
+    try {
+      const rawUrl = getUrl()
+      if (rawUrl) {
+        const normalized = normalizeBiliUrl(rawUrl)
+        if (normalized) return normalized
+      }
+    } catch (e) {
+      // 忽略单个方法的错误，继续尝试下一个
+      continue
     }
   }
-
-  // Generic container: look for img or source inside
-  const innerImg = container.querySelector('img') as HTMLImageElement | null
-  if (innerImg) {
-    const src =
-      innerImg.getAttribute('src') || innerImg.getAttribute('data-src') || innerImg.src || ''
-    const normalized = normalizeBiliUrl(src)
-    if (normalized) return normalized
-  }
-
-  const innerSource = container.querySelector(
-    'source[srcset], source[src]'
-  ) as HTMLSourceElement | null
-  if (innerSource) {
-    const srcset = innerSource.getAttribute('srcset') || innerSource.getAttribute('src') || ''
-    const normalized = normalizeBiliUrl(srcset)
-    if (normalized) return normalized
-  }
-
-  // try data attributes on container itself
-  const dataSrc = (container as HTMLElement).getAttribute('data-src')
-  if (dataSrc) return normalizeBiliUrl(dataSrc)
 
   return null
 }
