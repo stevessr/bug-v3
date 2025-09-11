@@ -1,9 +1,0 @@
-[name]
-name = "pixiv-proxy"
-compatibility_date = "2025-09-05"
-
-# To deploy:
-# 1. npm i -g wrangler
-# 2. wrangler login
-# 3. Set secret: wrangler secret put PROXY_PASSWORD
-# 4. wrangler publish
