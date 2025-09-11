@@ -513,14 +513,9 @@ export const newStorageHelpers = {
   async getAllEmojiGroups(): Promise<EmojiGroup[]> {
     const index = await this.getEmojiGroupIndex()
     if (!index.length) {
-      // Try runtime loader for packaged JSON first, fallback to generated module
-      try {
-        const runtime = await loadDefaultEmojiGroups()
-        if (runtime && runtime.length) return runtime
-      } catch (e) {
-        // ignore loader errors and fallback to empty list
-      }
-      return []
+      // 加载压缩的默认数据，失败时抛出错误
+      const runtime = await loadDefaultEmojiGroups()
+      return runtime
     }
 
     const groups = await Promise.all(
@@ -549,17 +544,9 @@ export const newStorageHelpers = {
     const settings = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
     if (settings && typeof settings === 'object') return { ...defaultSettings, ...settings }
 
-    // No persisted settings: prefer packaged defaults
-    try {
-      const packaged = await loadPackagedDefaults()
-      if (packaged && packaged.settings && Object.keys(packaged.settings).length > 0) {
-        return { ...defaultSettings, ...packaged.settings }
-      }
-    } catch (e) {
-      // ignore loader errors
-    }
-
-    return { ...defaultSettings }
+    // No persisted settings: load packaged defaults (压缩版本)
+    const packaged = await loadPackagedDefaults()
+    return { ...defaultSettings, ...packaged.settings }
   },
 
   async setSettings(settings: AppSettings): Promise<void> {
@@ -667,15 +654,9 @@ export const newStorageHelpers = {
     logStorage('RESET_DEFAULTS', 'start')
 
     try {
-      // Prefer runtime JSON loader if available
-      try {
-        const packaged = await loadPackagedDefaults()
-        await this.setAllEmojiGroups(
-          packaged && packaged.groups && packaged.groups.length ? packaged.groups : []
-        )
-      } catch (e) {
-        await this.setAllEmojiGroups([])
-      }
+      // 加载压缩的默认数据
+      const packaged = await loadPackagedDefaults()
+      await this.setAllEmojiGroups(packaged.groups)
       await this.setSettings(defaultSettings)
       await this.setFavorites([])
 

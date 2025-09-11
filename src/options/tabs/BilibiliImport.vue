@@ -14,8 +14,8 @@ const importResults = ref<{ success: boolean; message: string; details?: string 
 
 // Search / dynamic index UI
 const query = ref('')
-// default to the emitted asset path
-const indexUrl = ref('/bilibili_emoji_index.json')
+// default to the compressed asset path
+const indexUrl = ref('/assets/bilibiliEmojiIndex.json.br')
 const packages = ref<BiliPackage[]>([])
 const selected = ref<Record<string, boolean>>({})
 // packages that are currently displayed after clicking '搜索'
@@ -283,15 +283,25 @@ const loadIndexFromUrl = async (url?: string) => {
   importStatus.value = '正在加载索引...'
   importResults.value = null
   try {
-    const res = await fetch(u)
-    if (!res.ok) throw new Error(`请求失败: ${res.status}`)
     let json: unknown
-    const txt = await res.text()
-    try {
-      json = JSON.parse(txt)
-    } catch (parseErr) {
-      json = safeParseJson(txt)
+    
+    // Check if this is a compressed file (.br extension)
+    if (u.endsWith('.br')) {
+      // Use the brotli loader for compressed files
+      const { loadCompressedBilibiliEmojiIndex } = await import('@/utils/bilibiliEmojiLoader')
+      json = await loadCompressedBilibiliEmojiIndex()
+    } else {
+      // Handle regular JSON files
+      const res = await fetch(u)
+      if (!res.ok) throw new Error(`请求失败: ${res.status}`)
+      const txt = await res.text()
+      try {
+        json = JSON.parse(txt)
+      } catch (parseErr) {
+        json = safeParseJson(txt)
+      }
     }
+    
     const normalized = normalizeBilibiliIndex(json)
     if (!normalized || !Array.isArray(normalized)) {
       throw new Error('无效的索引格式')

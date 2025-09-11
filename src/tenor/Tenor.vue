@@ -6,7 +6,7 @@ import { DownOutlined } from '@ant-design/icons-vue'
 import { useEmojiStore } from '../stores/emojiStore'
 
 import { logger } from '@/config/buildFlags'
-import defaultConfig from '@/config/default.json'
+// 移除直接导入 JSON 文件，改为使用压缩版本
 
 type TenorGif = {
   id: string
@@ -64,16 +64,20 @@ onMounted(async () => {
     const result = await chrome.storage.local.get(['tenorApiKey'])
     if (result.tenorApiKey) {
       tenorApiKey.value = result.tenorApiKey
-    } else if (defaultConfig?.settings?.tenorApiKey) {
-      // Fallback to default config if storage has no key
-      tenorApiKey.value = defaultConfig.settings.tenorApiKey
+    } else {
+      // 从 emojiStore 的设置中获取默认 API key
+      const settings = emojiStore.settings
+      if (settings?.tenorApiKey) {
+        tenorApiKey.value = settings.tenorApiKey
+      }
     }
   } catch (error) {
     logger.error('Failed to load Tenor API key:', error)
-    // still try default config
+    // 降级到 emojiStore 设置
     try {
-      if (defaultConfig?.settings?.tenorApiKey) {
-        tenorApiKey.value = defaultConfig.settings.tenorApiKey
+      const settings = emojiStore.settings
+      if (settings?.tenorApiKey) {
+        tenorApiKey.value = settings.tenorApiKey
       }
     } catch (e) {
       // ignore

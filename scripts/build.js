@@ -3,6 +3,7 @@
 import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+import { brotliCompressSync } from 'zlib'
 
 // 定义环境变量配置
 const configs = {
@@ -92,23 +93,59 @@ process.env.USERSCRIPT_VARIANT = variant
 
 // Note: build-time generation of defaultEmojiGroups.ts has been removed.
 
-// Also, ensure a runtime JSON is available in public/assets for the loader
+// Generate compressed runtime JSON for the loader
 try {
   const configPath = path.resolve(process.cwd(), 'src/config/default.json')
-  const jsonOut = path.resolve(process.cwd(), 'public', 'assets', 'defaultEmojiGroups.json')
+  const jsonOut = path.resolve(process.cwd(), 'public', 'assets', 'defaultEmojiGroups.json.br')
   const configContent = fs.readFileSync(configPath, 'utf-8')
   const configData = JSON.parse(configContent)
   if (configData && Array.isArray(configData.groups)) {
     try {
       fs.mkdirSync(path.dirname(jsonOut), { recursive: true })
-      fs.writeFileSync(jsonOut, JSON.stringify({ groups: configData.groups }, null, 2), 'utf-8')
-      console.log(`ℹ️ Wrote runtime defaultEmojiGroups JSON to ${jsonOut}`)
+      
+      // 只生成 brotli 压缩版本
+      const jsonString = JSON.stringify({ groups: configData.groups }, null, 2)
+      const compressedData = brotliCompressSync(Buffer.from(jsonString, 'utf-8'))
+      
+      // 写入压缩后的数据
+      fs.writeFileSync(jsonOut, compressedData)
+      console.log(`✅ Generated compressed defaultEmojiGroups: ${jsonOut}`)
+      console.log(`📊 Compression: ${configContent.length} → ${compressedData.length} bytes (${Math.round((1 - compressedData.length / configContent.length) * 100)}% reduction)`)
     } catch (e) {
-      console.warn('⚠️ Failed to write runtime defaultEmojiGroups JSON:', e)
+      console.error('❌ Failed to generate compressed defaultEmojiGroups:', e)
+      process.exit(1)
     }
   }
 } catch (e) {
-  // ignore
+  console.error('❌ Failed to read source config:', e)
+  process.exit(1)
+}
+
+// Generate compressed bilibili emoji index
+try {
+  const bilibiliConfigPath = path.resolve(process.cwd(), 'src/config/bilibili_emoji_index.json')
+  const bilibiliJsonOut = path.resolve(process.cwd(), 'public', 'assets', 'bilibiliEmojiIndex.json.br')
+  const bilibiliConfigContent = fs.readFileSync(bilibiliConfigPath, 'utf-8')
+  const bilibiliConfigData = JSON.parse(bilibiliConfigContent)
+  
+  try {
+    fs.mkdirSync(path.dirname(bilibiliJsonOut), { recursive: true })
+    
+    // 生成 brotli 压缩版本
+    const bilibiliJsonString = JSON.stringify(bilibiliConfigData, null, 2)
+    const bilibiliCompressedData = brotliCompressSync(Buffer.from(bilibiliJsonString, 'utf-8'))
+    
+    // 写入压缩后的数据
+    fs.writeFileSync(bilibiliJsonOut, bilibiliCompressedData)
+    console.log(`✅ Generated compressed bilibiliEmojiIndex: ${bilibiliJsonOut}`)
+    console.log(`📊 Compression: ${bilibiliConfigContent.length} → ${bilibiliCompressedData.length} bytes (${Math.round((1 - bilibiliCompressedData.length / bilibiliConfigContent.length) * 100)}% reduction)`)
+  } catch (e) {
+    console.error('❌ Failed to generate compressed bilibiliEmojiIndex:', e)
+    process.exit(1)
+  }
+} catch (e) {
+  console.error('❌ Failed to read bilibili emoji config:', e)
+  process.exit(1)
 }
 
 // 打印配置信息
