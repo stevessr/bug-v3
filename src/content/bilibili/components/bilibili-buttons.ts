@@ -26,7 +26,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
         button.style.cssText = originalStyle
       }, 1500)
     } catch (error) {
-      console.error('[BiliOneClick] 添加表情失败:', error)
+      console.error('[哔哩哔哩] 添加表情失败:', error)
       button.innerHTML = '失败'
       button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
       setTimeout(() => {
@@ -167,7 +167,7 @@ export function createBatchParseButton(container: Element): HTMLElement {
           })
           success++
         } catch (err) {
-          console.error('[BiliOneClick] 批量添加失败', url, err)
+          console.error('[哔哩哔哩] 批量添加失败', url, err)
         }
       }
       btn.innerHTML = `已处理 ${success}/${pics.length} 张图片`
@@ -176,7 +176,7 @@ export function createBatchParseButton(container: Element): HTMLElement {
         btn.disabled = false
       }, 2000)
     } catch (err) {
-      console.error('[BiliOneClick] 批量解析失败', err)
+      console.error('[哔哩哔哩] 批量解析失败', err)
       btn.innerHTML = '解析失败'
       setTimeout(() => {
         btn.innerHTML = original

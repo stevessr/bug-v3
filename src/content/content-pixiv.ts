@@ -3,5 +3,5 @@ import { initPixiv } from './pixiv'
 try {
   initPixiv()
 } catch (e) {
-  // silent
+  console.error('[pixiv] 注入失败', e)
 }

@@ -116,6 +116,6 @@ function createOverlayBtn(data: AddEmojiButtonData, target: Element) {
     if (!src) return
     const name = src.split('/').pop()?.split('?')[0] || '表情'
     createOverlayBtn({ name, url: src }, img)
-    console.log('[Emoji extension] images/image-inject.ts 已注入表情按钮', { name, src })
+    console.log('[Emoji拓展] images/image-inject.ts 已注入表情按钮', { name, src })
   }, 200)
 })()

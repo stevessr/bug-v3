@@ -1,6 +1,6 @@
 // Unified content autodetect loader (keeps previous behavior)
-console.log('[Emoji extension] 自动检测注入')
-console.log('[Emoji extension] 位置:', {
+console.log('[Emoji拓展] 自动检测注入')
+console.log('[Emoji拓展] 位置:', {
   href: window.location.href,
   hostname: window.location.hostname,
   pathname: window.location.pathname
@@ -10,15 +10,15 @@ function detectPageType(): string {
     const hostname = window.location.hostname.toLowerCase()
     // quick host checks
     if (hostname.includes('bilibili') || hostname.includes('hdslb.com')) {
-      console.debug('[Emoji extension] detectPageType: matched bilibili by hostname', hostname)
+      console.debug('[Emoji拓展] detectPageType: matched bilibili by hostname', hostname)
       return 'bilibili'
     }
     if (hostname.includes('pixiv') || hostname.includes('pximg.net')) {
-      console.debug('[Emoji extension] detectPageType: matched pixiv by hostname', hostname)
+      console.debug('[Emoji拓展] detectPageType: matched pixiv by hostname', hostname)
       return 'pixiv'
     }
     if (hostname.includes('twitter') || hostname.includes('x.com')) {
-      console.debug('[Emoji extension] detectPageType: matched x/twitter by hostname', hostname)
+      console.debug('[Emoji拓展] detectPageType: matched x/twitter by hostname', hostname)
       return 'x'
     }
 
@@ -27,7 +27,7 @@ function detectPageType(): string {
       'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
     )
     if (discourseMetaTags.length > 0) {
-      console.debug('[Emoji extension] detectPageType: matched discourse by meta tags')
+      console.debug('[Emoji拓展] detectPageType: matched discourse by meta tags')
       return 'discourse'
     }
 
@@ -39,20 +39,14 @@ function detectPageType(): string {
         genContent.includes('flarum') ||
         genContent.includes('phpbb')
       ) {
-        console.debug(
-          '[Emoji extension] detectPageType: matched discourse by generator meta',
-          genContent
-        )
+        console.debug('[Emoji拓展] detectPageType: matched discourse by generator meta', genContent)
         return 'discourse'
       }
     }
 
     const allowedDomains = ['linux.do', 'meta.discourse.org']
     if (allowedDomains.some(domain => hostname.includes(domain))) {
-      console.debug(
-        '[Emoji extension] detectPageType: matched discourse by allowed domain',
-        hostname
-      )
+      console.debug('[Emoji拓展] detectPageType: matched discourse by allowed domain', hostname)
       return 'discourse'
     }
 
@@ -61,17 +55,14 @@ function detectPageType(): string {
       'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
     )
     if (editors.length > 0) {
-      console.debug(
-        '[Emoji extension] detectPageType: matched generic editor presence',
-        editors.length
-      )
+      console.debug('[Emoji拓展] detectPageType: matched generic editor presence', editors.length)
       return 'generic'
     }
 
-    console.debug('[Emoji extension] detectPageType: no match for hostname', hostname)
+    console.debug('[Emoji拓展] detectPageType: no match for hostname', hostname)
     return '' // No specific page type detected
   } catch (e) {
-    console.warn('[Emoji extension] detectPageType failed', e)
+    console.warn('[Emoji拓展] detectPageType failed', e)
     return ''
   }
 }
@@ -82,17 +73,15 @@ if (pageType) {
   try {
     if ((window as any).chrome?.runtime?.sendMessage) {
       const payload = { action: 'requestInject', pageType }
-      console.info('[Emoji extension] 请求后端注入', payload)
+      console.info('[Emoji拓展] 请求后端注入', payload)
       ;(window as any).chrome.runtime.sendMessage(payload, (response: any) => {
-        console.info('[Emoji extension] background requestInject response', { pageType, response })
+        console.info('[Emoji拓展] background requestInject response', { pageType, response })
       })
     } else {
-      console.warn(
-        '[Emoji extension] chrome.runtime.sendMessage not available; cannot request injection'
-      )
+      console.warn('[Emoji拓展] chrome.runtime.sendMessage not available; cannot request injection')
     }
   } catch (e) {
-    console.error('[Emoji extension] failed to request background inject', e)
+    console.error('[Emoji拓展] failed to request background inject', e)
   }
 }
 
@@ -124,7 +113,7 @@ if (window.location.hostname.includes('linux.do') && (window as any).chrome?.run
           sendResponse({ csrfToken: '' })
           return true
         } catch (error) {
-          console.warn('[Emoji Extension] Failed to get CSRF token:', error)
+          console.warn('[Emoji拓展] Failed to get CSRF token:', error)
           sendResponse({ csrfToken: '' })
           return true
         }
@@ -165,11 +154,9 @@ function isImageDirectLinkPage() {
 if (isImageDirectLinkPage()) {
   if ((window as any).chrome?.runtime?.sendMessage) {
     chrome.runtime.sendMessage({ action: 'injectImageScript' }, (response: any) => {
-      console.log('[Emoji extension] 请求 background 注入 images/image-inject.js', response)
+      console.log('[Emoji拓展] 请求 background 注入 images/image-inject.js', response)
     })
   } else {
-    console.warn(
-      '[Emoji extension] chrome.runtime.sendMessage not available; 无法请求 background 注入'
-    )
+    console.warn('[Emoji拓展] chrome.runtime.sendMessage not available; 无法请求 background 注入')
   }
 }

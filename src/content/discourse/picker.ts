@@ -10,7 +10,7 @@ export const isMobile = (): boolean => {
 }
 
 export async function createEmojiPicker(isMobileView: boolean): Promise<HTMLElement> {
-  console.log('[Emoji Extension] Creating picker for isMobileView:', isMobileView)
+  console.log('[Emoji拓展] Creating picker for isMobileView:', isMobileView)
   if (isMobileView) {
     return createMobileEmojiPicker()
   }

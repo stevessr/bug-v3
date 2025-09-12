@@ -15,7 +15,7 @@ import { scanAndInject, observeMutations } from './dom/bilibili-injection'
 function initBilibili() {
   try {
     if (!isBilibiliOpusPage()) {
-      console.log('[BiliOneClick] skipping init: not a Bilibili opus page')
+      console.log('[哔哩哔哩] skipping init: not a Bilibili opus page')
       return
     }
 
@@ -25,9 +25,9 @@ function initBilibili() {
     // initial scan and observe
     setTimeout(scanAndInject, 200)
     observeMutations()
-    console.log('[BiliOneClick] initialized')
+    console.log('[哔哩哔哩] initialized')
   } catch (e) {
-    console.error('[BiliOneClick] init failed', e)
+    console.error('[哔哩哔哩] init failed', e)
   }
 }
 

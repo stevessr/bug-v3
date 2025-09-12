@@ -11,7 +11,7 @@ window.addEventListener('message', event => {
   try {
     chrome.runtime.sendMessage(msg.payload)
   } catch (e) {
-    console.warn('[injectedBridge] sendMessage failed', e)
+    console.warn('[注入helper] sendMessage failed', e)
   }
 })
 

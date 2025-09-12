@@ -93,7 +93,7 @@ function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
         button.style.cssText = origStyle
       }, 1500)
     } catch (err) {
-      console.error('[XCarousel] 添加失败', err)
+      console.error('[X轮播] 添加失败', err)
       button.innerHTML = '失败'
       button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
       setTimeout(() => {
@@ -421,7 +421,7 @@ function addCarouselButtonToEl(el: Element) {
       if (menuBar && !menuBar.querySelector('.x-emoji-add-btn-carousel')) {
         // 如果找到菜单栏且还没有添加按钮，则添加到菜单栏
         createMenuBarBtn({ name, url }, menuBar)
-        console.log('[XCarousel] Added button to menu bar')
+        console.log('[X轮播] Added button to menu bar')
       } else {
         // 回退到原来的悬浮按钮方式
         const parent = targetContainer
@@ -489,5 +489,5 @@ export function scanAndInjectCarousel() {
   selectors.forEach(s => document.querySelectorAll(s).forEach(el => set.add(el)))
   set.forEach(el => addCarouselButtonToEl(el))
 
-  console.log(`[XCarousel] Processed ${set.size} carousel elements`)
+  console.log(`[X轮播] Processed ${set.size} carousel elements`)
 }

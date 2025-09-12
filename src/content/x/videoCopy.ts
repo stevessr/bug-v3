@@ -53,7 +53,7 @@ async function downloadBlob(url: string): Promise<void> {
   } catch (error) {
     // Log and inform user via alert
     try {
-      console.error('[XVideoCopy] 下载失败', error)
+      console.error('[X视频] 下载失败', error)
     } catch {
       // ignore console failures
     }
@@ -124,7 +124,7 @@ function setupCopyClick(btn: HTMLElement, url: string) {
         }, 1400)
       }
     } catch (err) {
-      console.error('[XVideoCopy] 操作失败', err)
+      console.error('[X视频] 操作失败', err)
       btn.innerHTML = '失败'
       btn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
       setTimeout(() => {
@@ -303,13 +303,13 @@ function observeVideos() {
 export function initVideoCopy() {
   try {
     if (!isXPage()) {
-      console.log('[XVideoCopy] skipping init: not X/Twitter host')
+      console.log('[X视频] skipping init: not X/Twitter host')
       return
     }
     setTimeout(scanAndInjectVideo, 200)
     observeVideos()
-    console.log('[XVideoCopy] initialized')
+    console.log('[X视频] initialized')
   } catch (e) {
-    console.error('[XVideoCopy] init failed', e)
+    console.error('[X视频] init failed', e)
   }
 }

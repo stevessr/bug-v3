@@ -3,5 +3,5 @@ import { initBilibili } from './bilibili/bilibili'
 try {
   initBilibili()
 } catch (e) {
-  // Fail silently; background injection may call init directly instead
+  console.error('[哔哩哔哩] 注入失败', e)
 }
