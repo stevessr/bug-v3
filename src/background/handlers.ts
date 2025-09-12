@@ -1,6 +1,7 @@
 import { newStorageHelpers } from '../utils/newStorage'
 
 import { getChromeAPI } from './utils'
+import { injectContentForTab } from './scripting'
 import {
   handleDownloadAndSendToDiscourse,
   handleDownloadForUser,
@@ -55,6 +56,36 @@ export function setupMessageListener() {
           case 'addEmojiFromWeb':
             handleAddEmojiFromWeb(message.emojiData, sendResponse)
             return true
+
+          case 'requestInject': {
+            // handle asynchronously and return true to indicate we'll call sendResponse later
+            (async () => {
+              try {
+                const senderTabId = _sender && _sender.tab && _sender.tab.id ? _sender.tab.id : undefined
+                let tabId = senderTabId
+                const chromeAPI = getChromeAPI()
+                if (!tabId && chromeAPI && chromeAPI.tabs) {
+                  try {
+                    const tabs = await chromeAPI.tabs.query({ active: true, currentWindow: true })
+                    if (tabs && tabs[0] && tabs[0].id) tabId = tabs[0].id
+                  } catch (_e) {
+                    void _e
+                  }
+                }
+
+                if (!tabId) {
+                  sendResponse({ success: false, error: 'No tabId available' })
+                  return
+                }
+
+                const result = await injectContentForTab(tabId, message.pageType || 'generic')
+                sendResponse(result)
+              } catch (e) {
+                sendResponse({ success: false, error: String(e) })
+              }
+            })()
+            return true
+          }
 
           case 'downloadAndSendToDiscourse':
             handleDownloadAndSendToDiscourse(message.payload, sendResponse)

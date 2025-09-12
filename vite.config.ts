@@ -21,47 +21,9 @@ export default defineConfig(({ mode }) => {
       }
     },
     plugins: [
-      // bilibili_emoji_index.json is now handled by brotli compression in build script
-      // No longer emit as uncompressed asset
-      // default emoji groups are now loaded at runtime from public assets
+      // bilibili_emoji_index.json is handled by the build script; default groups
+      // are loaded at runtime from public assets. Register Vue and UI components.
       vue(),
-      // Small safe plugin: remove trailing `export { ... }` that Rollup may append
-      // to the content chunk. We only strip the final export block to avoid
-      // aggressive regex edits elsewhere.
-      {
-        name: 'strip-content-exports',
-        generateBundle(_options, bundle) {
-          for (const [fileName, chunk] of Object.entries(bundle)) {
-            // @ts-ignore
-            const isChunk = chunk && chunk.type === 'chunk'
-            if (!isChunk) continue
-            // Heuristic: target the content entry chunk by filename or facadeModuleId
-            const looksLikeContent =
-              fileName === 'js/content.js' ||
-              (!!(chunk as any).facadeModuleId &&
-                String((chunk as any).facadeModuleId)
-                  .replace(/\\/g, '/')
-                  .toLowerCase()
-                  .includes('/src/content/'))
-
-            if (looksLikeContent) {
-              // @ts-ignore
-              let code = chunk.code
-              // Remove a trailing export block like: export { logger as l };
-              code = code.replace(/export\s*\{[\s\S]*?\};?\s*$/m, '')
-              // Ensure file ends cleanly (keep existing IIFE if present)
-              chunk.code = code
-            }
-          }
-        }
-      },
-      // Ensure content script is emitted as a plain script without import/export
-      // and avoid other bundles importing from the content chunk.
-      // NOTE: content-script-plain plugin removed. Handling content chunk as a plain
-      // script via regex proved fragile; prefer emitting a normal chunk and
-      // handling any runtime compatibility in source. If we need to reintroduce
-      // a transform for the content chunk, prefer an AST-based approach.
-      // auto register components and import styles for ant-design-vue
       Components({
         resolvers: [AntDesignVueResolver({ importStyle: 'less' })]
       })
@@ -83,6 +45,8 @@ export default defineConfig(({ mode }) => {
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
           // content entry now uses the autodetect loader which decides whether to initialize
           content: fileURLToPath(new URL('src/content/content-autodetect.ts', import.meta.url)),
+          // bridge helper that will be injected into pages (isolated world)
+          'content-bridge': fileURLToPath(new URL('src/content/injectedBridge.ts', import.meta.url)),
           // Per-site content scripts - injected by background as needed
           'discourse-content': fileURLToPath(new URL('src/content/content-discourse.ts', import.meta.url)),
           'bilibili-content': fileURLToPath(new URL('src/content/content-bilibili.ts', import.meta.url)),
@@ -92,6 +56,14 @@ export default defineConfig(({ mode }) => {
         },
         output: {
           entryFileNames: chunkInfo => {
+            // Emit content-related entries to js/content/<site>.js and remove 'content' suffix
+            const name = String(chunkInfo.name)
+            if (name === 'content') return 'js/content/autodetect.js'
+            if (name === 'content-bridge') return 'js/content/bridge.js'
+            if (name.endsWith('-content')) {
+              const base = name.replace(/-content$/, '')
+              return `js/content/${base}.js`
+            }
             return 'js/[name].js'
           },
           chunkFileNames: 'js/[name].js',

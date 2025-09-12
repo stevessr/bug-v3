@@ -12,6 +12,7 @@ export interface Emoji {
   name: string
   url: string
   displayUrl?: string // Optional display URL, different from output URL
+  hiddenUrl?: string // Optional cached URL for uploads to linux.do (not shown by default)
   width?: number
   height?: number
   groupId: string

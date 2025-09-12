@@ -99,3 +99,6 @@ function injectBilibiliButtonStyles() {
   style.textContent = css
   document.head.appendChild(style)
 }
+
+// Expose init on window so content wrapper can call without ESM imports
+;(window as any).__emoji_bilibili_init = initBilibili

@@ -25,31 +25,10 @@
     "service_worker": "js/background.js",
     "type": "module"
   },
-  "content_scripts": [
+    "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["js/content.js"],
-      "type": "module"
-    }
-    ,
-    {
-      "matches": ["*://*.discourse.org/*", "*://linux.do/*", "*://meta.discourse.org/*"],
-      "js": ["js/discourse-content.js"],
-      "type": "module"
-    },
-    {
-      "matches": ["*://*.bilibili.com/*"],
-      "js": ["js/bilibili-content.js"],
-      "type": "module"
-    },
-    {
-      "matches": ["*://*.twitter.com/*", "*://*.x.com/*"],
-      "js": ["js/x-content.js"],
-      "type": "module"
-    },
-    {
-      "matches": ["*://*.pixiv.net/*"],
-      "js": ["js/pixiv-content.js"],
+      "js": ["js/content/autodetect.js"],
       "type": "module"
     }
   ],

@@ -14,8 +14,8 @@ const importResults = ref<{ success: boolean; message: string; details?: string 
 
 // Search / dynamic index UI
 const query = ref('')
-// default to the compressed asset path
-const indexUrl = ref('/assets/bilibiliEmojiIndex.json.gz')
+// default to the uncompressed asset path
+const indexUrl = ref('/assets/bilibiliEmojiIndex.json')
 const packages = ref<BiliPackage[]>([])
 const selected = ref<Record<string, boolean>>({})
 // packages that are currently displayed after clicking '搜索'
@@ -285,21 +285,14 @@ const loadIndexFromUrl = async (url?: string) => {
   try {
     let json: unknown
     
-    // Check if this is a compressed file (.gz extension)
-    if (u.endsWith('.gz')) {
-      // Use the gzip loader for compressed files
-      const { loadCompressedBilibiliEmojiIndex } = await import('@/utils/bilibiliEmojiLoader')
-      json = await loadCompressedBilibiliEmojiIndex()
-    } else {
-      // Handle regular JSON files
-      const res = await fetch(u)
-      if (!res.ok) throw new Error(`请求失败: ${res.status}`)
-      const txt = await res.text()
-      try {
-        json = JSON.parse(txt)
-      } catch (parseErr) {
-        json = safeParseJson(txt)
-      }
+    // Prefer plain JSON. If a .gz URL is provided, still attempt to fetch and parse text
+    const res = await fetch(u)
+    if (!res.ok) throw new Error(`请求失败: ${res.status}`)
+    const txt = await res.text()
+    try {
+      json = JSON.parse(txt)
+    } catch (parseErr) {
+      json = safeParseJson(txt)
     }
     
     const normalized = normalizeBilibiliIndex(json)

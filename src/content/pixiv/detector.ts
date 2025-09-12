@@ -210,3 +210,6 @@ export function initPixiv() {
     console.error('[PixivAddEmoji] init failed', e)
   }
 }
+
+// expose init to window for content wrapper
+;(window as any).__emoji_pixiv_init = initPixiv

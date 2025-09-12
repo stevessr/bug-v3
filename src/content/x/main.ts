@@ -392,3 +392,5 @@ export function initX() {
     console.error('[XOneClick] init failed', e)
   }
 }
+// 挂到 window 供 content wrapper 调用
+(window as any).__emoji_x_init = initX

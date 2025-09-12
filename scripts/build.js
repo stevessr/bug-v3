@@ -96,21 +96,17 @@ process.env.USERSCRIPT_VARIANT = variant
 // Generate compressed runtime JSON for the loader
 try {
   const configPath = path.resolve(process.cwd(), 'src/config/default.json')
-  const jsonOut = path.resolve(process.cwd(), 'public', 'assets', 'defaultEmojiGroups.json.gz')
+  const jsonOut = path.resolve(process.cwd(), 'public', 'assets', 'defaultEmojiGroups.json')
   const configContent = fs.readFileSync(configPath, 'utf-8')
   const configData = JSON.parse(configContent)
   if (configData && Array.isArray(configData.groups)) {
     try {
       fs.mkdirSync(path.dirname(jsonOut), { recursive: true })
       
-  // 生成 gzip 压缩版本（使用最高压缩等级）
+  // Write plain JSON for runtime loader
   const jsonString = JSON.stringify({ groups: configData.groups }, null, 2)
-  const compressedData = gzipSync(Buffer.from(jsonString, 'utf-8'), { level: zlibConstants.Z_BEST_COMPRESSION })
-      
-      // 写入压缩后的数据
-  fs.writeFileSync(jsonOut, compressedData)
-      console.log(`✅ Generated compressed defaultEmojiGroups: ${jsonOut}`)
-  console.log(`📊 Compression: ${configContent.length} → ${compressedData.length} bytes (${Math.round((1 - compressedData.length / configContent.length) * 100)}% reduction)`)
+  fs.writeFileSync(jsonOut, jsonString, 'utf-8')
+  console.log(`✅ Generated defaultEmojiGroups JSON: ${jsonOut}`)
     } catch (e) {
       console.error('❌ Failed to generate compressed defaultEmojiGroups:', e)
       process.exit(1)
@@ -124,21 +120,17 @@ try {
 // Generate compressed bilibili emoji index
 try {
   const bilibiliConfigPath = path.resolve(process.cwd(), 'src/config/bilibili_emoji_index.json')
-  const bilibiliJsonOut = path.resolve(process.cwd(), 'public', 'assets', 'bilibiliEmojiIndex.json.gz')
+  const bilibiliJsonOut = path.resolve(process.cwd(), 'public', 'assets', 'bilibiliEmojiIndex.json')
   const bilibiliConfigContent = fs.readFileSync(bilibiliConfigPath, 'utf-8')
   const bilibiliConfigData = JSON.parse(bilibiliConfigContent)
   
   try {
     fs.mkdirSync(path.dirname(bilibiliJsonOut), { recursive: true })
     
-  // 生成 gzip 压缩版本（使用最高压缩等级）
+  // Write plain JSON for runtime loader
   const bilibiliJsonString = JSON.stringify(bilibiliConfigData, null, 2)
-  const bilibiliCompressedData = gzipSync(Buffer.from(bilibiliJsonString, 'utf-8'), { level: zlibConstants.Z_BEST_COMPRESSION })
-    
-    // 写入压缩后的数据
-  fs.writeFileSync(bilibiliJsonOut, bilibiliCompressedData)
-    console.log(`✅ Generated compressed bilibiliEmojiIndex: ${bilibiliJsonOut}`)
-  console.log(`📊 Compression: ${bilibiliConfigContent.length} → ${bilibiliCompressedData.length} bytes (${Math.round((1 - bilibiliCompressedData.length / bilibiliConfigContent.length) * 100)}% reduction)`) 
+  fs.writeFileSync(bilibiliJsonOut, bilibiliJsonString, 'utf-8')
+  console.log(`✅ Generated bilibiliEmojiIndex JSON: ${bilibiliJsonOut}`)
   } catch (e) {
     console.error('❌ Failed to generate compressed bilibiliEmojiIndex:', e)
     process.exit(1)

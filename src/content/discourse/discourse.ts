@@ -277,6 +277,8 @@ export function initDiscourse() {
     console.error('[DiscourseOneClick] init failed', e)
   }
 }
+// 挂到 window 供 content wrapper 调用
+(window as any).__emoji_discourse_init = initDiscourse
 
 // Listen for background messages instructing to upload a blob to Discourse
 if ((window as any).chrome?.runtime?.onMessage) {

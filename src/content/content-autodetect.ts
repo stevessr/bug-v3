@@ -34,8 +34,46 @@ function shouldInjectEmoji(): boolean {
 }
 
 if (shouldInjectEmoji()) {
-  console.log('[Emoji Extension] autodetect: initializing emoji feature')
-  initializeEmojiFeature()
+  console.log('[Emoji Extension] autodetect: requesting background to inject content')
+
+  // Determine a coarse pageType to inform background which scripts to inject
+  function detectPageType(): string {
+    try {
+      const hostname = window.location.hostname.toLowerCase()
+      if (hostname.includes('bilibili')) return 'bilibili'
+      if (hostname.includes('pixiv')) return 'pixiv'
+      if (hostname.includes('twitter') || hostname.includes('x.com')) return 'x'
+      // discourse-like
+      const discourseMeta = document.querySelectorAll('meta[name*="discourse"], meta[content*="discourse"]').length
+      if (discourseMeta > 0) return 'discourse'
+      return 'generic'
+    } catch (e) {
+      return 'generic'
+    }
+  }
+
+  const pageType = detectPageType()
+
+  if ((window as any).chrome && (window as any).chrome.runtime && (window as any).chrome.runtime.sendMessage) {
+    try {
+      ;(window as any).chrome.runtime.sendMessage({ action: 'requestInject', pageType }, (response: any) => {
+        if (response && response.success) {
+          console.log('[Emoji Extension] background injected content:', response.message)
+        } else {
+          console.warn('[Emoji Extension] background failed to inject, falling back to local init')
+          // fallback to legacy in-page initialization
+          initializeEmojiFeature()
+        }
+      })
+    } catch (e) {
+      console.warn('[Emoji Extension] sendMessage failed, falling back to local init', e)
+      initializeEmojiFeature()
+    }
+  } else {
+    // If runtime not available, run local init (best-effort)
+    console.warn('[Emoji Extension] chrome.runtime not available in content script; running local init')
+    initializeEmojiFeature()
+  }
 } else {
   Uninject()
   console.log('[Emoji Extension] autodetect: skipping injection - incompatible platform')

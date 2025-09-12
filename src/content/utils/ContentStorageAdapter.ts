@@ -2,7 +2,7 @@ import { defaultSettings } from '../../types/emoji'
 
 
 
-import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
+// no runtime packaged defaults loader needed in this adapter
 
 export class ContentStorageAdapter {
   // Read from extension storage with fallback to local/session storage
@@ -192,17 +192,4 @@ export class ContentStorageAdapter {
     return result
   }
 }
-ckaged.settings && Object.keys(packaged.settings).length > 0) {
-        const result = { ...defaultSettings, ...packaged.settings }
-        console.log('[Content Storage] Settings loaded from packaged defaults:', result)
-        return result
-      }
-    } catch (e) {
-      // ignore loader errors
-    }
 
-    const result = { ...defaultSettings }
-    console.log('[Content Storage] Settings loaded:', result)
-    return result
-  }
-}

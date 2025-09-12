@@ -55,7 +55,19 @@ const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
     try {
       const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
       if (resp && resp.url && emoji.id) {
-        emojiStore.updateEmoji(emoji.id, { url: resp.url })
+        // Cache old URL into hiddenUrl for ungrouped uploads so we can restore/track it later
+        const previousUrl = emoji.url
+        const updates: Record<string, unknown> = { url: resp.url }
+        // Always cache the previous URL into hiddenUrl when uploading
+        updates.hiddenUrl = previousUrl
+
+        emojiStore.updateEmoji(emoji.id, updates)
+
+        // Update local preview state so modal reflects new URL immediately
+        if (localEmoji.value && localEmoji.value.id === emoji.id) {
+          localEmoji.value.url = resp.url
+          if (updates.hiddenUrl) localEmoji.value.hiddenUrl = previousUrl
+        }
       }
     } finally {
       // Show upload progress dialog regardless
@@ -79,11 +91,40 @@ function handleImageLoad(e: Event) {
   if (img && img.naturalWidth && img.naturalHeight) {
     imageRatio.value = img.naturalWidth / img.naturalHeight
     isVertical.value = imageRatio.value < 1
+    // 图片加载成功则清除加载失败标记
+    imageLoadFailed.value = false
   }
 }
 
+// 图片加载失败标记（当图片 404 时为 true）
+const imageLoadFailed = ref(false)
+
 // 图片预览可见性（用于 a-image preview group）
 const visible = ref(false)
+
+// 图片加载错误处理（标记失败）
+function handleImageError(e: string | Event) {
+  imageLoadFailed.value = true
+  // 也向外发出事件，以便外部监听（兼容之前行为）
+  emit('imageError', e)
+}
+
+// 从 hiddenUrl 恢复原始链接并更新 store
+function restoreHiddenUrl() {
+  const hid = localEmoji.value.hiddenUrl
+  const id = localEmoji.value.id
+  if (hid && id) {
+    localEmoji.value.url = hid
+    localEmoji.value.hiddenUrl = undefined
+    // 更新 store
+    try {
+      emojiStore.updateEmoji(id, { url: hid, hiddenUrl: undefined })
+    } catch (err) {
+      // ignore
+    }
+    imageLoadFailed.value = false
+  }
+}
 
 const selectedGroupId = ref<string>('')
 
@@ -139,6 +180,7 @@ const handleSubmit = () => {
       name: localEmoji.value.name,
       url: localEmoji.value.url,
       displayUrl: localEmoji.value.displayUrl || undefined,
+      hiddenUrl: localEmoji.value.hiddenUrl,
       groupId: selectedGroupId.value,
       width: localEmoji.value.width,
       height: localEmoji.value.height,
@@ -186,7 +228,7 @@ const handleSubmit = () => {
                 class="object-contain w-full h-full"
                 @load="handleImageLoad"
                 @click="visible = true"
-                @error="$emit('imageError', $event)"
+                @error="handleImageError"
               />
             </div>
             <div v-else class="w-full flex items-center justify-center">
@@ -196,7 +238,7 @@ const handleSubmit = () => {
                 class="object-contain max-h-full max-w-full"
                 @load="handleImageLoad"
                 @click="visible = true"
-                @error="$emit('imageError', $event)"
+                @error="handleImageError"
               />
             </div>
 
@@ -295,6 +337,17 @@ const handleSubmit = () => {
                       <span v-if="uploadingEmojiIds.has(localEmoji.id || '')" class="mr-2">⏳</span>
                       <span v-else class="mr-2">📤</span>
                       上传到linux.do
+                    </button>
+                  </div>
+
+                  <!-- 恢复原始链接按钮（当存在 hiddenUrl 且图片404时显示） -->
+                  <div v-if="localEmoji.hiddenUrl && imageLoadFailed" class="w-full">
+                    <button
+                      type="button"
+                      @click="restoreHiddenUrl"
+                      class="w-full inline-flex justify-center rounded-md border border-yellow-400 shadow-sm px-4 py-2 bg-yellow-300 text-base font-medium text-black hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:text-sm"
+                    >
+                      恢复原始链接
                     </button>
                   </div>
 
