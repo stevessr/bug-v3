@@ -46,36 +46,40 @@ function isValidImageUrl(url: string): boolean {
   try {
     const urlObj = new URL(url)
     const pathname = urlObj.pathname.toLowerCase()
-    return pathname.includes('pximg.net') && 
-           (pathname.endsWith('.jpg') || pathname.endsWith('.jpeg') || 
-            pathname.endsWith('.png') || pathname.endsWith('.gif') || 
-            pathname.endsWith('.webp'))
+    return (
+      pathname.includes('pximg.net') ||
+      pathname.endsWith('.jpg') ||
+      pathname.endsWith('.jpeg') ||
+      pathname.endsWith('.png') ||
+      pathname.endsWith('.gif') ||
+      pathname.endsWith('.webp')
+    )
   } catch (e) {
     return false
   }
 }
 
 function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
-  button.addEventListener('click', async (e) => {
+  button.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     const originalText = button.innerHTML
     const originalStyle = button.style.cssText
-    
+
     try {
       button.innerHTML = '添加中...'
       button.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)'
-      
+
       if ((window as any).chrome?.runtime?.sendMessage) {
         await (window as any).chrome.runtime.sendMessage({
           action: 'addEmojiFromWeb',
           emojiData: data
         })
-        
+
         button.innerHTML = '已添加'
         button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
-        
+
         setTimeout(() => {
           button.innerHTML = originalText
           button.style.cssText = originalStyle
@@ -87,7 +91,7 @@ function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
       console.error('[Pixiv] Add emoji failed:', error)
       button.innerHTML = '失败'
       button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
-      
+
       setTimeout(() => {
         button.innerHTML = originalText
         button.style.cssText = originalStyle
@@ -102,7 +106,7 @@ function createOverlayButton(data: AddEmojiButtonData, targetElement: Element): 
   button.type = 'button'
   button.title = '添加到表情包'
   button.innerHTML = '➕'
-  
+
   button.style.cssText = `
     position: absolute;
     top: 8px;
@@ -127,9 +131,9 @@ function createOverlayButton(data: AddEmojiButtonData, targetElement: Element): 
     justify-content: center;
     pointer-events: auto;
   `
-  
+
   setupButtonClick(button, data)
-  
+
   // Show/hide on hover
   let isHovered = false
   const showButton = () => {
@@ -140,12 +144,12 @@ function createOverlayButton(data: AddEmojiButtonData, targetElement: Element): 
     isHovered = false
     button.style.opacity = '0'
   }
-  
+
   targetElement.addEventListener('mouseenter', showButton)
   targetElement.addEventListener('mouseleave', hideButton)
   button.addEventListener('mouseenter', showButton)
   button.addEventListener('mouseleave', hideButton)
-  
+
   return button
 }
 
@@ -164,57 +168,61 @@ function findPixivImages(): Element[] {
     // General Pixiv images
     'img[src*="pximg.net"]'
   ]
-  
+
   const images: Element[] = []
   selectors.forEach(selector => {
     const elements = document.querySelectorAll(selector)
     images.push(...Array.from(elements))
   })
-  
-  return images.filter((img, index, self) => 
-    self.indexOf(img) === index // Remove duplicates
+
+  return images.filter(
+    (img, index, self) => self.indexOf(img) === index // Remove duplicates
   )
 }
 
 function scanAndInjectPixivImages() {
   try {
     const images = findPixivImages()
-    
-    images.forEach((img) => {
+
+    images.forEach(img => {
       // Skip if already processed
-      if (img.closest('.pixiv-emoji-processed') || img.parentElement?.querySelector('.pixiv-emoji-add-btn')) {
+      if (
+        img.closest('.pixiv-emoji-processed') ||
+        img.parentElement?.querySelector('.pixiv-emoji-add-btn')
+      ) {
         return
       }
-      
+
       const imageUrl = (img as HTMLImageElement).src
       if (!imageUrl || !isValidImageUrl(imageUrl)) {
         return
       }
-      
+
       // Find appropriate container
       let container = img.parentElement
-      
+
       // Look for better container (artwork container, link container, etc.)
-      const artworkContainer = img.closest('div[role="presentation"]') || 
-                              img.closest('a[href*="/artworks/"]') ||
-                              img.closest('.gtm-expand-full-size-illust')
-      
+      const artworkContainer =
+        img.closest('div[role="presentation"]') ||
+        img.closest('a[href*="/artworks/"]') ||
+        img.closest('.gtm-expand-full-size-illust')
+
       if (artworkContainer) {
         container = artworkContainer as HTMLElement
       }
-      
+
       if (container) {
         container.classList.add('pixiv-emoji-processed')
-        
+
         // Make container relative for positioning
         const computedStyle = window.getComputedStyle(container)
         if (computedStyle.position === 'static') {
-          (container as HTMLElement).style.position = 'relative'
+          ;(container as HTMLElement).style.position = 'relative'
         }
-        
+
         const name = extractFilenameFromUrl(imageUrl)
         const data: AddEmojiButtonData = { name, url: imageUrl }
-        
+
         const button = createOverlayButton(data, container)
         container.appendChild(button)
       }
@@ -234,29 +242,29 @@ function detectPixivViewer() {
       '.gtm-expand-full-size-illust',
       'div[data-gtm-value*="expand_illust"]'
     ]
-    
+
     viewerSelectors.forEach(selector => {
       const viewers = document.querySelectorAll(selector)
-      
-      viewers.forEach((viewer) => {
+
+      viewers.forEach(viewer => {
         if (viewer.classList.contains('pixiv-viewer-processed')) {
           return
         }
-        
+
         viewer.classList.add('pixiv-viewer-processed')
-        
+
         const img = viewer.querySelector('img[src*="pximg.net"]')
         if (img) {
           const imageUrl = (img as HTMLImageElement).src
           if (isValidImageUrl(imageUrl)) {
             const computedStyle = window.getComputedStyle(viewer)
             if (computedStyle.position === 'static') {
-              (viewer as HTMLElement).style.position = 'relative'
+              ;(viewer as HTMLElement).style.position = 'relative'
             }
-            
+
             const name = extractFilenameFromUrl(imageUrl)
             const data: AddEmojiButtonData = { name, url: imageUrl }
-            
+
             const button = createOverlayButton(data, viewer)
             viewer.appendChild(button)
           }
@@ -271,22 +279,24 @@ function detectPixivViewer() {
 // ===== MUTATION OBSERVER =====
 
 function observeForChanges() {
-  const observer = new MutationObserver((mutations) => {
+  const observer = new MutationObserver(mutations => {
     let shouldScan = false
-    
-    mutations.forEach((mutation) => {
+
+    mutations.forEach(mutation => {
       if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
         for (const node of mutation.addedNodes) {
           if (node.nodeType === Node.ELEMENT_NODE) {
             const element = node as Element
-            
+
             // Check for new images or containers
-            if (element.matches('img[src*="pximg.net"]') ||
-                element.querySelector('img[src*="pximg.net"]') ||
-                element.matches('div[role="presentation"]') ||
-                element.querySelector('div[role="presentation"]') ||
-                element.matches('.gtm-expand-full-size-illust') ||
-                element.querySelector('.gtm-expand-full-size-illust')) {
+            if (
+              element.matches('img[src*="pximg.net"]') ||
+              element.querySelector('img[src*="pximg.net"]') ||
+              element.matches('div[role="presentation"]') ||
+              element.querySelector('div[role="presentation"]') ||
+              element.matches('.gtm-expand-full-size-illust') ||
+              element.querySelector('.gtm-expand-full-size-illust')
+            ) {
               shouldScan = true
               break
             }
@@ -294,7 +304,7 @@ function observeForChanges() {
         }
       }
     })
-    
+
     if (shouldScan) {
       setTimeout(() => {
         scanAndInjectPixivImages()
@@ -302,7 +312,7 @@ function observeForChanges() {
       }, 100)
     }
   })
-  
+
   observer.observe(document.body, {
     childList: true,
     subtree: true
@@ -313,16 +323,16 @@ function observeForChanges() {
 
 function observeUrlChanges() {
   let currentUrl = window.location.href
-  
+
   const checkUrlChange = () => {
     if (window.location.href !== currentUrl) {
       currentUrl = window.location.href
-      
+
       // Clear processed markers when URL changes
       document.querySelectorAll('.pixiv-emoji-processed, .pixiv-viewer-processed').forEach(el => {
         el.classList.remove('pixiv-emoji-processed', 'pixiv-viewer-processed')
       })
-      
+
       // Re-scan after URL change
       setTimeout(() => {
         scanAndInjectPixivImages()
@@ -330,10 +340,10 @@ function observeUrlChanges() {
       }, 500)
     }
   }
-  
+
   // Check for URL changes periodically (for SPA navigation)
   setInterval(checkUrlChange, 1000)
-  
+
   // Also listen for popstate events
   window.addEventListener('popstate', () => {
     setTimeout(checkUrlChange, 100)
@@ -344,23 +354,18 @@ function observeUrlChanges() {
 
 function initPixiv() {
   try {
-    if (!isPixivPage()) {
-      console.log('[Pixiv] Skipping init: not a Pixiv page')
-      return
-    }
-    
     console.log('[Pixiv] Initializing autonomous content script')
-    
+
     // Initial scans
     setTimeout(() => {
       scanAndInjectPixivImages()
       detectPixivViewer()
     }, 200)
-    
+
     // Set up observers
     observeForChanges()
     observeUrlChanges()
-    
+
     console.log('[Pixiv] Autonomous content script initialized')
   } catch (e) {
     console.error('[Pixiv] Initialization failed:', e)

@@ -31,26 +31,26 @@ interface AddEmojiButtonData {
 }
 
 function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
-  button.addEventListener('click', async (e) => {
+  button.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     const originalText = button.innerHTML
     const originalStyle = button.style.cssText
-    
+
     try {
       button.innerHTML = '添加中...'
       button.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)'
-      
+
       if ((window as any).chrome?.runtime?.sendMessage) {
         await (window as any).chrome.runtime.sendMessage({
           action: 'addEmojiFromWeb',
           emojiData: data
         })
-        
+
         button.innerHTML = '已添加'
         button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
-        
+
         setTimeout(() => {
           button.innerHTML = originalText
           button.style.cssText = originalStyle
@@ -62,7 +62,7 @@ function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
       console.error('[X] Add emoji failed:', error)
       button.innerHTML = '失败'
       button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
-      
+
       setTimeout(() => {
         button.innerHTML = originalText
         button.style.cssText = originalStyle
@@ -77,7 +77,7 @@ function createOverlayButton(data: AddEmojiButtonData, targetElement: Element): 
   button.type = 'button'
   button.title = '添加到表情包'
   button.innerHTML = '➕'
-  
+
   button.style.cssText = `
     position: absolute;
     top: 8px;
@@ -102,9 +102,9 @@ function createOverlayButton(data: AddEmojiButtonData, targetElement: Element): 
     justify-content: center;
     pointer-events: auto;
   `
-  
+
   setupButtonClick(button, data)
-  
+
   // Show/hide on hover
   let isHovered = false
   const showButton = () => {
@@ -115,12 +115,12 @@ function createOverlayButton(data: AddEmojiButtonData, targetElement: Element): 
     isHovered = false
     button.style.opacity = '0'
   }
-  
+
   targetElement.addEventListener('mouseenter', showButton)
   targetElement.addEventListener('mouseleave', hideButton)
   button.addEventListener('mouseenter', showButton)
   button.addEventListener('mouseleave', hideButton)
-  
+
   return button
 }
 
@@ -147,35 +147,38 @@ function scanAndInjectImages() {
       '[data-testid="card.layoutLarge.media"] img',
       'article img[src*="pbs.twimg.com"]'
     ]
-    
+
     imageSelectors.forEach(selector => {
       const images = document.querySelectorAll(selector)
-      
-      images.forEach((img) => {
+
+      images.forEach(img => {
         // Skip if already processed
-        if (img.closest('.x-emoji-processed') || img.parentElement?.querySelector('.x-emoji-add-btn')) {
+        if (
+          img.closest('.x-emoji-processed') ||
+          img.parentElement?.querySelector('.x-emoji-add-btn')
+        ) {
           return
         }
-        
+
         const imageUrl = (img as HTMLImageElement).src
         if (!imageUrl || !imageUrl.includes('twimg.com')) {
           return
         }
-        
+
         // Mark as processed
         const container = img.closest('div') || img.parentElement
         if (container) {
           container.classList.add('x-emoji-processed')
-          
+
           // Make container relative for positioning
           const computedStyle = window.getComputedStyle(container)
           if (computedStyle.position === 'static') {
-            (container as HTMLElement).style.position = 'relative'
+            ;(container as HTMLElement).style.position = 'relative'
           }
-          
+
           const name = extractImageName(imageUrl)
           const data: AddEmojiButtonData = { name, url: imageUrl }
-          
+
           const button = createOverlayButton(data, container)
           container.appendChild(button)
         }
@@ -197,33 +200,33 @@ function scanAndInjectCarousel() {
       '.r-1p0dtai', // Twitter carousel class
       '[role="group"][aria-label*="image"]'
     ]
-    
+
     carouselSelectors.forEach(selector => {
       const carousels = document.querySelectorAll(selector)
-      
-      carousels.forEach((carousel) => {
+
+      carousels.forEach(carousel => {
         if (carousel.classList.contains('x-carousel-processed')) {
           return
         }
-        
+
         carousel.classList.add('x-carousel-processed')
-        
+
         // Find images within carousel
         const images = carousel.querySelectorAll('img[src*="twimg.com"]')
-        images.forEach((img) => {
+        images.forEach(img => {
           const imageUrl = (img as HTMLImageElement).src
           if (!imageUrl) return
-          
+
           const container = img.closest('div[role="button"]') || img.parentElement
           if (container && !container.querySelector('.x-emoji-add-btn')) {
             const computedStyle = window.getComputedStyle(container)
             if (computedStyle.position === 'static') {
-              (container as HTMLElement).style.position = 'relative'
+              ;(container as HTMLElement).style.position = 'relative'
             }
-            
+
             const name = extractImageName(imageUrl)
             const data: AddEmojiButtonData = { name, url: imageUrl }
-            
+
             const button = createOverlayButton(data, container)
             container.appendChild(button)
           }
@@ -240,37 +243,38 @@ function scanAndInjectCarousel() {
 function initImagePage() {
   try {
     // Check if this is an image page (single image display)
-    const isImagePage = window.location.pathname.includes('/photo/') || 
-                       document.querySelector('[data-testid="photoViewer"]') !== null
-    
+    const isImagePage =
+      window.location.pathname.includes('/photo/') ||
+      document.querySelector('[data-testid="photoViewer"]') !== null
+
     if (!isImagePage) return
-    
+
     const observer = new MutationObserver(() => {
       const photoViewer = document.querySelector('[data-testid="photoViewer"]')
       if (photoViewer && !photoViewer.classList.contains('x-photo-processed')) {
         photoViewer.classList.add('x-photo-processed')
-        
+
         const img = photoViewer.querySelector('img[src*="twimg.com"]')
         if (img) {
           const imageUrl = (img as HTMLImageElement).src
           const container = img.parentElement
-          
+
           if (container && !container.querySelector('.x-emoji-add-btn')) {
             const computedStyle = window.getComputedStyle(container)
             if (computedStyle.position === 'static') {
-              (container as HTMLElement).style.position = 'relative'
+              ;(container as HTMLElement).style.position = 'relative'
             }
-            
+
             const name = extractImageName(imageUrl)
             const data: AddEmojiButtonData = { name, url: imageUrl }
-            
+
             const button = createOverlayButton(data, container)
             container.appendChild(button)
           }
         }
       }
     })
-    
+
     observer.observe(document.body, {
       childList: true,
       subtree: true
@@ -286,19 +290,21 @@ function initVideoCopy() {
   try {
     // Add video URL copy functionality for X videos
     const observer = new MutationObserver(() => {
-      const videos = document.querySelectorAll('video[src*="video.twimg.com"], video[poster*="twimg.com"]')
-      
-      videos.forEach((video) => {
+      const videos = document.querySelectorAll(
+        'video[src*="video.twimg.com"], video[poster*="twimg.com"]'
+      )
+
+      videos.forEach(video => {
         if (video.classList.contains('x-video-processed')) return
         video.classList.add('x-video-processed')
-        
+
         const container = video.closest('div[data-testid="videoComponent"]') || video.parentElement
         if (container) {
           const copyButton = document.createElement('button')
           copyButton.className = 'x-video-copy-btn'
           copyButton.innerHTML = '📋'
           copyButton.title = '复制视频链接'
-          
+
           copyButton.style.cssText = `
             position: absolute;
             top: 8px;
@@ -321,13 +327,14 @@ function initVideoCopy() {
             align-items: center;
             justify-content: center;
           `
-          
-          copyButton.addEventListener('click', async (e) => {
+
+          copyButton.addEventListener('click', async e => {
             e.preventDefault()
             e.stopPropagation()
-            
+
             try {
-              const videoSrc = (video as HTMLVideoElement).src || (video as HTMLVideoElement).currentSrc
+              const videoSrc =
+                (video as HTMLVideoElement).src || (video as HTMLVideoElement).currentSrc
               if (videoSrc) {
                 await navigator.clipboard.writeText(videoSrc)
                 copyButton.innerHTML = '✅'
@@ -343,7 +350,7 @@ function initVideoCopy() {
               }, 1000)
             }
           })
-          
+
           // Show/hide on hover
           container.addEventListener('mouseenter', () => {
             copyButton.style.opacity = '1'
@@ -351,17 +358,17 @@ function initVideoCopy() {
           container.addEventListener('mouseleave', () => {
             copyButton.style.opacity = '0'
           })
-          
+
           const computedStyle = window.getComputedStyle(container)
           if (computedStyle.position === 'static') {
-            (container as HTMLElement).style.position = 'relative'
+            ;(container as HTMLElement).style.position = 'relative'
           }
-          
+
           container.appendChild(copyButton)
         }
       })
     })
-    
+
     observer.observe(document.body, {
       childList: true,
       subtree: true
@@ -374,32 +381,36 @@ function initVideoCopy() {
 // ===== MAIN OBSERVER =====
 
 function observeForChanges() {
-  const observer = new MutationObserver((mutations) => {
+  const observer = new MutationObserver(mutations => {
     let shouldScanImages = false
     let shouldScanCarousel = false
-    
-    mutations.forEach((mutation) => {
+
+    mutations.forEach(mutation => {
       if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
         for (const node of mutation.addedNodes) {
           if (node.nodeType === Node.ELEMENT_NODE) {
             const element = node as Element
-            
+
             // Check for new images
-            if (element.matches('img[src*="twimg.com"]') || 
-                element.querySelector('img[src*="twimg.com"]')) {
+            if (
+              element.matches('img[src*="twimg.com"]') ||
+              element.querySelector('img[src*="twimg.com"]')
+            ) {
               shouldScanImages = true
             }
-            
+
             // Check for new carousels
-            if (element.matches('[data-testid="carousel"], [data-testid="swiper-0"]') ||
-                element.querySelector('[data-testid="carousel"], [data-testid="swiper-0"]')) {
+            if (
+              element.matches('[data-testid="carousel"], [data-testid="swiper-0"]') ||
+              element.querySelector('[data-testid="carousel"], [data-testid="swiper-0"]')
+            ) {
               shouldScanCarousel = true
             }
           }
         }
       }
     })
-    
+
     if (shouldScanImages) {
       setTimeout(scanAndInjectImages, 100)
     }
@@ -407,7 +418,7 @@ function observeForChanges() {
       setTimeout(scanAndInjectCarousel, 100)
     }
   })
-  
+
   observer.observe(document.body, {
     childList: true,
     subtree: true
@@ -418,26 +429,21 @@ function observeForChanges() {
 
 function initX() {
   try {
-    if (!isXPage()) {
-      console.log('[X] Skipping init: not an X/Twitter page')
-      return
-    }
-    
     console.log('[X] Initializing autonomous content script')
-    
+
     // Initial scans
     setTimeout(() => {
       scanAndInjectImages()
       scanAndInjectCarousel()
     }, 200)
-    
+
     // Initialize specialized handlers
     initImagePage()
     initVideoCopy()
-    
+
     // Set up observer for dynamic content
     observeForChanges()
-    
+
     console.log('[X] Autonomous content script initialized')
   } catch (e) {
     console.error('[X] Initialization failed:', e)
