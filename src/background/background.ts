@@ -1,11 +1,11 @@
 import { getChromeAPI } from './utils'
-import { setupOnInstalledListener } from './init'
+import { setupOnInstalledListener } from './init/init'
 import {
   setupMessageListener,
   setupStorageChangeListener,
   setupContextMenu,
   setupPeriodicCleanup
-} from './handlers'
+} from './handlers/systemHandlers'
 import { injectBridgeIntoTab, injectAutodetectIntoTab } from './scripting'
 
 console.log('Emoji Extension Background script loaded.')

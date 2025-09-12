@@ -29,6 +29,13 @@ export async function handleRequestInject(message: any, _sender: any, sendRespon
 
 export async function handleInjectImageScript(_message: any, _sender: any, sendResponse: any) {
   try {
+    // Diagnostic: log sender info to help debug missing tabId cases
+    try {
+      console.log('[后台] handleInjectImageScript sender:', _sender)
+    } catch (e) {
+      // ignore logging errors
+    }
+
     const senderTabId = _sender && _sender.tab && _sender.tab.id ? _sender.tab.id : undefined
     let tabId = senderTabId
     const chromeAPI = getChromeAPI()
@@ -42,12 +49,16 @@ export async function handleInjectImageScript(_message: any, _sender: any, sendR
     }
 
     if (!tabId) {
+      console.warn('[后台] handleInjectImageScript: no tabId could be determined')
       sendResponse({ success: false, error: 'No tabId available' })
       return
     }
 
+    console.log('[后台] handleInjectImageScript: injecting into tabId', tabId)
     const result = await injectImageScriptIntoTab(tabId)
-    sendResponse(result)
+    console.log('[后台] handleInjectImageScript: inject result', { tabId, result })
+    // include tabId in the response to make diagnosis easier from content side
+    sendResponse({ ...result, tabId })
   } catch (e) {
     sendResponse({ success: false, error: String(e) })
   }

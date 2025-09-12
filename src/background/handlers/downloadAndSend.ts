@@ -1,5 +1,4 @@
 import { getChromeAPI } from '../utils'
-// defaultProxyConfig not currently used in this module
 
 export async function handleDownloadAndSendToDiscourse(payload: any, sendResponse: any) {
   void sendResponse

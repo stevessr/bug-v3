@@ -47,10 +47,10 @@ export async function injectContentForTab(tabId: number, pageType: string) {
   if (!chromeAPI || !chromeAPI.scripting) return { success: false, error: 'scripting unavailable' }
 
   const mapping: Record<string, string[]> = {
-    bilibili: ['js/bilibili.js', 'js/content/bilibili.js'],
-    pixiv: ['js/pixiv.js', 'js/content/pixiv.js'],
-    discourse: ['js/discourse.js', 'js/content/discourse.js'],
-    x: ['js/x.js', 'js/content/x.js'],
+    bilibili: ['js/content/bilibili.js'],
+    pixiv: ['js/content/pixiv.js'],
+    discourse: ['js/content/discourse.js'],
+    x: ['js/content/x.js'],
     generic: ['js/content/autodetect.js']
   }
 
@@ -75,11 +75,11 @@ export async function injectImageScriptIntoTab(tabId: number) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.scripting) return { success: false, error: 'scripting unavailable' }
   try {
-    await chromeAPI.scripting.executeScript({
-      target: { tabId },
-      files: ['js/content/images/image-inject.js']
-    })
-    return { success: true }
+    const files = ['js/content/images/image-inject.js']
+    console.log('[后台] injectImageScriptIntoTab: executing script', { tabId, files })
+    await chromeAPI.scripting.executeScript({ target: { tabId }, files })
+    console.log('[后台] injectImageScriptIntoTab: executeScript completed', { tabId, files })
+    return { success: true, files }
   } catch (e) {
     console.warn('[后台] Failed to inject image-inject into tab', tabId, e)
     return { success: false, error: String(e) }

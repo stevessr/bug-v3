@@ -1,5 +1,5 @@
 import { getChromeAPI } from './utils'
-import { defaultProxyConfig } from './proxyConfig'
+import { defaultProxyConfig } from './proxy/proxyConfig'
 
 export async function handleDownloadAndSendToDiscourse(payload: any, sendResponse: any) {
   void sendResponse
