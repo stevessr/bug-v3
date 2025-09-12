@@ -7,7 +7,12 @@
   "host_permissions": [
     "https://i.pximg.net/*",
     "https://generativelanguage.googleapis.com/*",
-    "https://linux.do/*"
+    "https://linux.do/*",
+    "https://www.bilibili.com/*",
+    "https://i0.hdslb.com/*",
+    "https://www.pixiv.net/*",
+    "https://twitter.com/*",
+    "https://x.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -25,13 +30,7 @@
     "service_worker": "js/background.js",
     "type": "module"
   },
-    "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["js/content/autodetect.js"],
-      "type": "module"
-    }
-  ],
+  
   "icons": {
     "48": "img/48.png",
     "64": "img/64.png",

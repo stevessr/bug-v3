@@ -3,8 +3,8 @@ console.log('[Emoji Extension] Content autodetect loader')
 function detectPageType(): string {
   try {
     const hostname = window.location.hostname.toLowerCase()
-    if (hostname.includes('bilibili')) return 'bilibili'
-    if (hostname.includes('pixiv')) return 'pixiv'
+    if (hostname.includes('bilibili') || hostname.includes('hdslb.com')) return 'bilibili'
+    if (hostname.includes('pixiv') || hostname.includes('pximg.net')) return 'pixiv'
     if (hostname.includes('twitter') || hostname.includes('x.com')) return 'x'
 
     // Discourse and other forums

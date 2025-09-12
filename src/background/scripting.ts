@@ -1,6 +1,25 @@
 import { getChromeAPI } from './utils'
 
 /**
+ * Inject the autodetect script into the specified tab to detect page type.
+ * This uses chrome.scripting.executeScript (MV3) for programmatic injection.
+ */
+export async function injectAutodetectIntoTab(tabId: number) {
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI || !chromeAPI.scripting) return
+
+  try {
+    await chromeAPI.scripting.executeScript({
+      target: { tabId },
+      files: ['js/content/autodetect.js']
+    })
+  } catch (e) {
+    // swallow errors - tab may be a chrome page or unavailable
+    console.warn('[scripting] Failed to inject autodetect into tab', tabId, e)
+  }
+}
+
+/**
  * Inject the isolated-world content bridge into the specified tab.
  * This uses chrome.scripting.executeScript (MV3) so the injected script runs
  * in the extension isolated world and can use chrome.runtime APIs.
@@ -27,10 +46,13 @@ export async function injectBridgeIntoAllTabs() {
   try {
     const tabs = await chromeAPI.tabs.query({})
     for (const tab of tabs) {
-      if (tab.id) await injectBridgeIntoTab(tab.id)
+      if (tab.id) {
+        await injectAutodetectIntoTab(tab.id)
+        await injectBridgeIntoTab(tab.id)
+      }
     }
   } catch (e) {
-    console.warn('[scripting] Failed to inject bridge into all tabs', e)
+    console.warn('[scripting] Failed to inject scripts into all tabs', e)
   }
 }
 
