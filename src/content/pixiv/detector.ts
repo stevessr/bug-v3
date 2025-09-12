@@ -1,210 +1,112 @@
-import type { AddEmojiButtonData } from './types'
-import { extractNameFromUrl } from './helpers'
+import { CONSTANTS } from './config'
+import { logger } from './utils'
 import { createPixivEmojiButton } from './button'
+import {
+  isPixivPage,
+  getPageType,
+  scanForPixivViewer,
+  scanForImagePage,
+  extractEmojiDataFromPixiv,
+  hasEmojiButton,
+  ensureRelativePositioning,
+  startDomObserver
+} from './detectors'
+import { extractNameFromUrl } from './helpers/url'
 
-function isPixivViewer(element: Element): boolean {
-  try {
-    if (!element) return false
-    if (element.getAttribute && element.getAttribute('role') === 'presentation') {
-      return !!element.querySelector('img[src*="i.pximg.net"]')
-    }
-    return false
-  } catch (_e) {
-    return false
-  }
-}
+/**
+ * 主要的初始化和检测逻辑
+ */
 
-function extractEmojiDataFromPixiv(container: Element): AddEmojiButtonData | null {
-  const img = container.querySelector('img[src*="i.pximg.net"]') as HTMLImageElement | null
-  if (!img) return null
-
-  let src = ''
-  const anchor = img.closest('a') as HTMLAnchorElement | null
-  if (anchor && anchor.href) {
-    src = anchor.href
-  } else if (img.src) {
-    src = img.src
-  }
-
-  if (!src || !src.startsWith('http')) return null
-
-  let name = (img?.alt || img?.getAttribute('title') || '')?.trim() || ''
-  if (!name || name.length < 2) name = extractNameFromUrl(src)
-  name = name.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim()
-  if (name.length === 0) name = '表情'
-  return { name, url: src }
-}
-
-function addEmojiButtonToPixiv(pixivContainer: Element) {
-  if (!pixivContainer) return
-  if (pixivContainer.querySelector('.emoji-add-link-pixiv')) return
-  const emojiData = extractEmojiDataFromPixiv(pixivContainer)
-  if (!emojiData) return
-  const addButton = createPixivEmojiButton(emojiData)
-  try {
-    const parentEl = pixivContainer as HTMLElement
-    const computed = window.getComputedStyle(parentEl)
-    if (computed.position === 'static' || !computed.position) parentEl.style.position = 'relative'
-  } catch (_e) {
-    // ignore
-  }
-
-  pixivContainer.appendChild(addButton)
-}
-
-function scanForPixivViewer() {
-  const candidates = document.querySelectorAll('[role="presentation"]')
-  candidates.forEach(c => {
-    if (isPixivViewer(c)) addEmojiButtonToPixiv(c)
-  })
-}
-
-function scanForImagePage() {
-  const hostname = window.location.hostname.toLowerCase()
-  if (!hostname.includes('i.pximg.net') && !hostname.includes('pximg.net')) {
+// 为Pixiv容器添加表情按钮
+function addEmojiButtonToPixiv(pixivContainer: Element): void {
+  if (!pixivContainer || hasEmojiButton(pixivContainer)) {
     return
   }
 
-  console.log('[PixivAddEmoji] Scanning image page:', window.location.href)
+  const emojiData = extractEmojiDataFromPixiv(pixivContainer)
+  if (!emojiData) {
+    return
+  }
 
-  const images = document.querySelectorAll('img')
+  const addButton = createPixivEmojiButton(emojiData)
 
-  for (const img of images) {
-    if (img.parentElement?.querySelector('.emoji-add-link-pixiv')) {
-      continue
-    }
+  // 确保容器有相对定位
+  ensureRelativePositioning(pixivContainer)
 
-    if (img.src && (img.src.includes('i.pximg.net') || img.src.includes('pximg.net'))) {
-      const imageUrl = img.src
-      const imageName = extractNameFromUrl(imageUrl)
+  pixivContainer.appendChild(addButton)
+  logger.debug('已添加表情按钮到容器')
+}
 
-      console.log('[PixivAddEmoji] Found image on image page:', { url: imageUrl, name: imageName })
+// 为图片页面添加表情按钮
+function addEmojiButtonToImage(img: Element): void {
+  const imgElement = img as HTMLImageElement
 
-      const emojiData: AddEmojiButtonData = {
-        name: imageName,
-        url: imageUrl
-      }
+  if (
+    !imgElement.src ||
+    (!imgElement.src.includes('i.pximg.net') && !imgElement.src.includes('pximg.net'))
+  ) {
+    return
+  }
 
-      const button = createPixivEmojiButton(emojiData)
+  const container = imgElement.parentElement || document.body
+  if (container.querySelector('.emoji-add-link-pixiv')) {
+    return
+  }
 
-      const imgContainer = img.parentElement || document.body
-      const computedStyle = window.getComputedStyle(imgContainer)
-      if (computedStyle.position === 'static') {
-        ;(imgContainer as HTMLElement).style.position = 'relative'
-      }
+  const imageUrl = imgElement.src
+  const imageName = extractNameFromUrl(imageUrl)
 
-      imgContainer.appendChild(button)
+  logger.debug('在图片页面发现图片:', { url: imageUrl, name: imageName })
 
-      console.log('[PixivAddEmoji] Added button to image page')
-      break
-    }
+  const emojiData = {
+    name: imageName,
+    url: imageUrl
+  }
+
+  const button = createPixivEmojiButton(emojiData)
+
+  // 确保容器有相对定位
+  ensureRelativePositioning(container)
+
+  container.appendChild(button)
+  logger.debug('已添加按钮到图片页面')
+}
+
+// 执行初始扫描
+function performInitialScan(): void {
+  const pageType = getPageType()
+
+  if (pageType === 'image') {
+    // 图片页面：扫描图片元素
+    const images = scanForImagePage()
+    images.forEach(addEmojiButtonToImage)
+  } else {
+    // 主站：扫描查看器
+    const viewers = scanForPixivViewer()
+    viewers.forEach(addEmojiButtonToPixiv)
   }
 }
 
-function observePixivViewer() {
-  const hostname = window.location.hostname.toLowerCase()
-  const isImageDomain = hostname.includes('i.pximg.net') || hostname.includes('pximg.net')
-
-  const observer = new MutationObserver(mutations => {
-    let shouldScan = false
-    mutations.forEach(m => {
-      if (m.type === 'childList') {
-        m.addedNodes.forEach(node => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as Element
-
-            if (isImageDomain) {
-              if (el.tagName === 'IMG' || (el.querySelector && el.querySelector('img'))) {
-                shouldScan = true
-              }
-            } else {
-              if (el.getAttribute && el.getAttribute('role') === 'presentation') {
-                shouldScan = true
-              } else if (el.querySelector && el.querySelector('img[src*="i.pximg.net"]')) {
-                shouldScan = true
-              }
-            }
-          }
-        })
-      }
-    })
-
-    if (shouldScan) {
-      setTimeout(() => {
-        if (isImageDomain) {
-          scanForImagePage()
-        } else {
-          scanForPixivViewer()
-        }
-      }, 120)
-    }
-  })
-
-  observer.observe(document.body, { childList: true, subtree: true })
-}
-
-export function isPixivPage(): boolean {
-  try {
-    const hostname = window.location.hostname.toLowerCase()
-
-    if (hostname.includes('i.pximg.net') || hostname.includes('pximg.net')) {
-      console.log('[PixivAddEmoji] Detected Pixiv image domain:', hostname)
-      return true
-    }
-
-    if (hostname.includes('pixiv.net')) {
-      console.log('[PixivAddEmoji] Detected Pixiv main site:', hostname)
-      return true
-    }
-
-    const ogSite =
-      document.querySelector('meta[property="og:site_name"]')?.getAttribute('content') || ''
-    if (ogSite.toLowerCase().includes('pixiv')) return true
-
-    const twitterMeta =
-      document.querySelector('meta[property="twitter:site"]') ||
-      document.querySelector('meta[name="twitter:site"]')
-    const twitterSite = (twitterMeta && twitterMeta.getAttribute('content')) || ''
-    if (twitterSite.toLowerCase().includes('pixiv')) return true
-
-    const desc = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
-    if (desc.toLowerCase().includes('pixiv')) return true
-
-    const ogImage =
-      document.querySelector('meta[property="og:image"]')?.getAttribute('content') || ''
-    if (
-      ogImage.includes('pixiv.net') ||
-      ogImage.includes('pximg.net') ||
-      ogImage.includes('embed.pixiv.net')
-    ) {
-      return true
-    }
-
-    return false
-  } catch (e) {
-    console.error('[PixivAddEmoji] isPixivPage check failed', e)
-    return false
-  }
-}
-
-export function initPixiv() {
+// 主初始化函数
+export function initPixiv(): void {
   try {
     if (!isPixivPage()) {
-      console.log('[PixivAddEmoji] skipping init: not a Pixiv page')
+      logger.info('跳过初始化：非Pixiv页面')
       return
     }
 
-    const hostname = window.location.hostname.toLowerCase()
-    const isImageDomain = hostname.includes('i.pximg.net') || hostname.includes('pximg.net')
+    logger.info('开始初始化Pixiv表情添加功能')
 
-    if (isImageDomain) {
-      setTimeout(scanForImagePage, 100)
-    } else {
-      setTimeout(scanForPixivViewer, 100)
-    }
+    // 延迟执行初始扫描
+    setTimeout(() => {
+      performInitialScan()
+    }, CONSTANTS.DEFAULTS.SCAN_DELAY)
 
-    observePixivViewer()
-  } catch (e) {
-    console.error('[PixivAddEmoji] init failed', e)
+    // 启动DOM观察器
+    startDomObserver()
+
+    logger.info('Pixiv表情添加功能初始化完成')
+  } catch (error) {
+    logger.error('初始化失败', error)
   }
 }
