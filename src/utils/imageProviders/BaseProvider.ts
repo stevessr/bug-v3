@@ -1,5 +1,4 @@
 import type { GenerateRequest } from '@/types/imageGenerator'
-import { logger } from '@/config/buildFlags'
 
 export abstract class BaseProvider {
   abstract name: string
@@ -38,7 +37,7 @@ export abstract class BaseProvider {
       document.body.removeChild(a)
       URL.revokeObjectURL(downloadUrl)
     } catch (error) {
-      logger.error('Download failed:', error)
+      console.error('Download failed:', error)
       throw new Error('下载失败，请稍后重试')
     }
   }
@@ -56,7 +55,7 @@ export abstract class BaseProvider {
   }
 
   protected handleApiError(error: unknown, providerName: string): never {
-    logger.error(`${providerName} image generation failed:`, error)
+    console.error(`${providerName} image generation failed:`, error)
 
     const message = typeof error === 'string' ? error : (error as any)?.message || ''
 

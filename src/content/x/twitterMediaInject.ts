@@ -19,7 +19,7 @@ export function tryInjectTwitterMedia(
       targetContainer.querySelector('.x-emoji-add-btn-carousel') ||
       targetContainer.querySelector('.x-emoji-add-btn')
     ) {
-      logger.log('[TwitterMedia] button already exists, skipping injection')
+      console.log('[TwitterMedia] button already exists, skipping injection')
       return true
     }
 
@@ -36,15 +36,15 @@ export function tryInjectTwitterMedia(
     // Use the provided overlay creation function to inject a floating button
     try {
       createOverlayFn({ name, url }, target)
-      logger.log('[TwitterMedia] injected floating overlay for media:', url)
+      console.log('[TwitterMedia] injected floating overlay for media:', url)
       return true
     } catch (e) {
       // overlay creation failed
-      logger.log('[TwitterMedia] overlay injection failed', e)
+      console.log('[TwitterMedia] overlay injection failed', e)
       return false
     }
   } catch (e) {
-    logger.log('[TwitterMedia] error processing URL:', url, e)
+    console.log('[TwitterMedia] error processing URL:', url, e)
     return false
   }
 }

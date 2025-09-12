@@ -1,7 +1,6 @@
 // Independent uploader for ungrouped emoji previews to linux.do
 // This is a copy of the front-end upload functionality to maintain code independence
 
-import { logger } from '../config/buildFlags'
 
 interface EmojiUploadResponse {
   id: number
@@ -507,7 +506,7 @@ class EmojiPreviewUploader {
       return hiddenInput.value
     }
 
-    logger.warn('[Emoji Preview Uploader] No CSRF token found')
+    console.warn('[Emoji Preview Uploader] No CSRF token found')
     return ''
   }
 
@@ -523,7 +522,7 @@ class EmojiPreviewUploader {
         const hashArray = Array.from(new Uint8Array(hashBuffer))
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
       } catch (e) {
-        logger.warn('[Emoji Preview Uploader] Could not calculate SHA1, using fallback')
+        console.warn('[Emoji Preview Uploader] Could not calculate SHA1, using fallback')
       }
     }
 

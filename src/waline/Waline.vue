@@ -2,7 +2,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-import { logger } from '../config/buildFlags'
 import { useEmojiStore } from '../stores/emojiStore'
 
 const emojiStore = useEmojiStore()
@@ -154,7 +153,7 @@ const parseWalineConfig = (data: any): Array<{ name: string; url: string }> => {
       }
     }
   } catch (error) {
-    logger.error('Error parsing Waline config:', error)
+    console.error('Error parsing Waline config:', error)
   }
 
   return emojis
@@ -205,7 +204,7 @@ const importFromUrl = async () => {
     urlInput.value = ''
     urlGroupName.value = ''
   } catch (error) {
-    logger.error('Import from URL failed:', error)
+    console.error('Import from URL failed:', error)
     const errorMessage = error instanceof Error ? error.message : '导入失败'
 
     importResults.value.unshift({
@@ -261,7 +260,7 @@ const importFromJson = async () => {
     jsonInput.value = ''
     jsonGroupName.value = ''
   } catch (error) {
-    logger.error('Import from JSON failed:', error)
+    console.error('Import from JSON failed:', error)
     const errorMessage = error instanceof Error ? error.message : '导入失败'
 
     importResults.value.unshift({
@@ -316,7 +315,7 @@ const importFromSource = async (source: any) => {
 
     showMessage(`成功导入 ${source.name} (${emojis.length} 个表情)`, 'success')
   } catch (error) {
-    logger.error('Import from source failed:', error)
+    console.error('Import from source failed:', error)
     const errorMessage = error instanceof Error ? error.message : '导入失败'
 
     importResults.value.unshift({

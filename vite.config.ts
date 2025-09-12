@@ -8,10 +8,7 @@ import Components from 'unplugin-vue-components/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig(({ mode }) => {
-  // 根据构建模式设置编译期标志
   const isDev = mode === 'development'
-  const enableLogging = process.env.ENABLE_LOGGING === 'true' || isDev
-  const enableIndexedDB = process.env.ENABLE_INDEXEDDB !== 'false' // 默认启用，除非明确禁用
 
   return {
     css: {
@@ -22,11 +19,6 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url))
       }
-    },
-    define: {
-      // 编译期标志定义
-      __ENABLE_LOGGING__: enableLogging,
-      __ENABLE_INDEXEDDB__: enableIndexedDB
     },
     plugins: [
       // bilibili_emoji_index.json is now handled by brotli compression in build script
@@ -76,16 +68,13 @@ export default defineConfig(({ mode }) => {
     ],
     build: {
       // Allow disabling minification for debug builds via BUILD_MINIFIED env var
-      minify: process.env.BUILD_MINIFIED === 'false' ? false : 'terser',
-      terserOptions:
-        process.env.BUILD_MINIFIED === 'false'
-          ? undefined
-          : {
-              compress: {
-                drop_console: !enableLogging, // 根据日志开关决定是否移除 console
-                drop_debugger: !isDev // 生产环境移除 debugger
-              }
-            },
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: !isDev,
+          drop_debugger: !isDev
+        }
+      },
       rollupOptions: {
         input: {
           popup: fileURLToPath(new URL('popup.html', import.meta.url)),

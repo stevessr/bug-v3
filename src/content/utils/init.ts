@@ -12,7 +12,7 @@ function checkAndReinjectButtons() {
       !toolbar.querySelector('.emoji-extension-button') &&
       !toolbar.querySelector('.image-upload-button')
     ) {
-      logger.log('[Emoji Extension] Buttons missing after reply button click, re-injecting...')
+      console.log('[Emoji Extension] Buttons missing after reply button click, re-injecting...')
       injectButton(toolbar)
     }
   })
@@ -46,7 +46,7 @@ function setupReplyButtonListeners() {
     })
 
     if (isReplyButton) {
-      logger.log('[Emoji Extension] Reply button clicked, checking for injection needs...')
+      console.log('[Emoji Extension] Reply button clicked, checking for injection needs...')
 
       // Delay check to allow the editor to be created
       setTimeout(() => {
@@ -88,7 +88,7 @@ function setupReplyButtonListeners() {
     })
 
     if (shouldCheck) {
-      logger.log('[Emoji Extension] Reply buttons detected in DOM changes, checking injection...')
+      console.log('[Emoji Extension] Reply buttons detected in DOM changes, checking injection...')
       setTimeout(() => {
         checkAndReinjectButtons()
       }, 500)
@@ -101,14 +101,14 @@ function setupReplyButtonListeners() {
     subtree: true
   })
 
-  logger.log('[Emoji Extension] Reply button listeners initialized')
+  console.log('[Emoji Extension] Reply button listeners initialized')
 }
 
 export async function initializeEmojiFeature(
   maxInjectionAttempts: number = 10,
   delay: number = 1000
 ) {
-  logger.log('[Emoji Extension] Initializing (module)...')
+  console.log('[Emoji Extension] Initializing (module)...')
   await loadDataFromStorage()
 
   // 初始化一键添加表情功能
@@ -131,7 +131,7 @@ export async function initializeEmojiFeature(
         !toolbar.querySelector('.emoji-extension-button') &&
         !toolbar.querySelector('.image-upload-button')
       ) {
-        logger.log('[Emoji Extension] Toolbar found, injecting buttons.')
+        console.log('[Emoji Extension] Toolbar found, injecting buttons.')
         injectButton(toolbar)
         injectedCount++
       }
@@ -144,7 +144,7 @@ export async function initializeEmojiFeature(
 
     // No toolbars found, continue retry logic
     if (injectionAttempts < maxInjectionAttempts) {
-      logger.log(
+      console.log(
         `[Emoji Extension] Toolbar not found, attempt ${injectionAttempts}/${maxInjectionAttempts}. Retrying ${
           delay / 1000
         } s.`
@@ -163,7 +163,7 @@ export async function initializeEmojiFeature(
     } else if (maxInjectionAttempts < 640) {
       initializeEmojiFeature(640, 64000)
     } else {
-      logger.error(
+      console.error(
         '[Emoji Extension] Failed to find toolbar after multiple attempts. Button injection failed. 我感觉你是人机'
       )
     }
@@ -184,7 +184,7 @@ export async function initializeEmojiFeature(
           k => relevantKeys.includes(k) || k.startsWith('emojiGroup_')
         )
         if (hasRelevant) {
-          logger.log('[Emoji Extension] Storage change detected (module), reloading data')
+          console.log('[Emoji Extension] Storage change detected (module), reloading data')
           loadDataFromStorage()
         }
       }
@@ -199,7 +199,7 @@ export async function initializeEmojiFeature(
         void _sender
         void _sendResponse
         if (message.type === 'SETTINGS_UPDATED') {
-          logger.log('[Emoji Extension] Settings updated from background, reloading data')
+          console.log('[Emoji Extension] Settings updated from background, reloading data')
           loadDataFromStorage()
         }
       }
@@ -214,14 +214,14 @@ export async function initializeEmojiFeature(
         !toolbar.querySelector('.emoji-extension-button') &&
         !toolbar.querySelector('.image-upload-button')
       ) {
-        logger.log('[Emoji Extension] Toolbar found but buttons missing, injecting... (module)')
+        console.log('[Emoji Extension] Toolbar found but buttons missing, injecting... (module)')
         injectButton(toolbar)
       }
     })
   }, 30000)
 
   setInterval(() => {
-    logger.log('[Emoji Extension] Periodic data reload (module)')
+    console.log('[Emoji Extension] Periodic data reload (module)')
     loadDataFromStorage()
   }, 120000)
 }

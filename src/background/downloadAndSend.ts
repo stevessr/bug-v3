@@ -1,4 +1,3 @@
-import { logger } from '../config/buildFlags'
 
 import { getChromeAPI } from './utils'
 import { defaultProxyConfig } from './proxyConfig'
@@ -82,7 +81,7 @@ export async function handleDownloadAndSendToDiscourse(payload: any, sendRespons
 
     sendResponse({ success: true, message: `sent to ${sent} tab(s)` })
   } catch (error) {
-    logger.error('[Background] downloadAndSendToDiscourse failed', error)
+    console.error('[Background] downloadAndSendToDiscourse failed', error)
     sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
   }
 }
@@ -91,7 +90,7 @@ export async function handleDownloadForUser(payload: any, sendResponse: any) {
   void sendResponse
   try {
     if (!payload || !payload.url) {
-      logger.error('[Background] handleDownloadForUser missing payload.url')
+      console.error('[Background] handleDownloadForUser missing payload.url')
       sendResponse({ success: false, error: 'missing payload.url' })
       return
     }
@@ -128,12 +127,12 @@ export async function handleDownloadForUser(payload: any, sendResponse: any) {
           const stored = await readStorageProxy()
           if (stored && stored.enabled && stored.url) proxy = stored
         } catch (e) {
-          logger.error('[Background] failed to read proxy from storage', e)
+          console.error('[Background] failed to read proxy from storage', e)
         }
       }
       if (proxy && proxy.enabled && proxy.url) {
         try {
-          logger.log('[Background] attempting proxy download', { proxy: proxy.url, url })
+          console.log('[Background] attempting proxy download', { proxy: proxy.url, url })
           const proxyUrl = new URL(proxy.url)
           proxyUrl.searchParams.set('url', url)
           if (proxy.password) proxyUrl.searchParams.set('pw', proxy.password)
@@ -188,11 +187,11 @@ export async function handleDownloadForUser(payload: any, sendResponse: any) {
               return
             }
           } else {
-            logger.error('[Background] proxy fetch failed', { status: proxyResp.status })
+            console.error('[Background] proxy fetch failed', { status: proxyResp.status })
             // fall through to try direct download
           }
         } catch (e) {
-          logger.error('[Background] proxy attempt error', e)
+          console.error('[Background] proxy attempt error', e)
           // fall through to try direct download
         }
       }
@@ -212,7 +211,7 @@ export async function handleDownloadForUser(payload: any, sendResponse: any) {
               }
             })()
 
-          logger.log('[Background] attempting directDownload', { url, filename })
+          console.log('[Background] attempting directDownload', { url, filename })
 
           const downloadId: number = await new Promise((resolve, reject) => {
             try {
@@ -228,13 +227,13 @@ export async function handleDownloadForUser(payload: any, sendResponse: any) {
             }
           })
 
-          logger.log('[Background] directDownload started', { downloadId, url })
+          console.log('[Background] directDownload started', { downloadId, url })
           sendResponse({ success: true, downloadId })
           return
         }
       } catch (e: any) {
         // Log and fall through to normal fetch-based download below
-        logger.error(
+        console.error(
           '[Background] directDownload attempt failed, will fallback to fetch',
           e && e.message ? e.message : e
         )
@@ -324,7 +323,7 @@ export async function handleDownloadForUser(payload: any, sendResponse: any) {
       return
     }
   } catch (error) {
-    logger.error('[Background] handleDownloadForUser failed', error)
+    console.error('[Background] handleDownloadForUser failed', error)
     sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
   }
 }
@@ -405,14 +404,14 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
 
     // Diagnostics: log payload shape
     try {
-      logger.log('[UploadAndAddEmoji] Received payload keys:', Object.keys(payload))
+      console.log('[UploadAndAddEmoji] Received payload keys:', Object.keys(payload))
     } catch (_e) {
       void _e
     }
 
     if (!payload.arrayData) {
       // Might receive Uint8Array or arrayBuffer in some cases — log and fail gracefully
-      logger.warn('[UploadAndAddEmoji] payload.arrayData missing; keys:', Object.keys(payload))
+      console.warn('[UploadAndAddEmoji] payload.arrayData missing; keys:', Object.keys(payload))
       sendResponse({ success: false, error: 'missing arrayData' })
       return
     }
@@ -424,7 +423,7 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
     try {
       const abType = Object.prototype.toString.call(arrayBuffer)
       const byteLen = arrayBuffer.byteLength
-      logger.log('[UploadAndAddEmoji] converted arrayData to arrayBuffer:', {
+      console.log('[UploadAndAddEmoji] converted arrayData to arrayBuffer:', {
         arrayDataLength: arrayData.length,
         arrayBufferType: abType,
         byteLength: byteLen
@@ -436,7 +435,7 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
     const mimeType: string = payload.mimeType || 'application/octet-stream'
     const name: string = payload.name || filename
 
-    logger.log(
+    console.log(
       '[UploadAndAddEmoji] Processing file:',
       filename,
       'size:',
@@ -448,7 +447,7 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
     // build blob and form data similar to emojiPreviewUploader
     const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
 
-    logger.log('[UploadAndAddEmoji] Created blob size:', blob.size, 'type:', blob.type)
+    console.log('[UploadAndAddEmoji] Created blob size:', blob.size, 'type:', blob.type)
 
     const formData = new FormData()
     formData.append('upload_type', 'composer')
@@ -501,15 +500,15 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
                   }
                 }
                 if (!csrfToken) {
-                  logger.warn('Failed to get CSRF token from any linux.do tab:', sendMessageError)
+                  console.warn('Failed to get CSRF token from any linux.do tab:', sendMessageError)
                 }
               }
             } else {
-              logger.warn('No linux.do tabs found')
+              console.warn('No linux.do tabs found')
             }
           }
         } catch (e) {
-          logger.warn('Failed to get CSRF token from linux.do tab:', e)
+          console.warn('Failed to get CSRF token from linux.do tab:', e)
         }
 
         authResp = {
@@ -519,7 +518,7 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
         }
       }
     } catch (_e) {
-      logger.error('Failed to get auth info:', _e)
+      console.error('Failed to get auth info:', _e)
     }
 
     const headers: Record<string, string> = {}
@@ -596,7 +595,7 @@ export async function handleDownloadAndUploadEmoji(payload: any, sendResponse: a
     const filename: string = payload.filename || 'image'
     const name: string = payload.name || filename
 
-    logger.log('[DownloadAndUploadEmoji] Processing image:', filename, 'from:', imageUrl)
+    console.log('[DownloadAndUploadEmoji] Processing image:', filename, 'from:', imageUrl)
 
     // Step 1: 下载图片
     const defaultHeaders: Record<string, string> = {
@@ -633,7 +632,7 @@ export async function handleDownloadAndUploadEmoji(payload: any, sendResponse: a
     }
 
     const imageBlob = await imageResp.blob()
-    logger.log('[DownloadAndUploadEmoji] Image downloaded:', imageBlob.size, 'bytes')
+    console.log('[DownloadAndUploadEmoji] Image downloaded:', imageBlob.size, 'bytes')
 
     // Step 2: 获取认证信息
     const chromeAPI = getChromeAPI()
@@ -676,15 +675,15 @@ export async function handleDownloadAndUploadEmoji(payload: any, sendResponse: a
                   }
                 }
                 if (!csrfToken) {
-                  logger.warn('Failed to get CSRF token from any linux.do tab:', sendMessageError)
+                  console.warn('Failed to get CSRF token from any linux.do tab:', sendMessageError)
                 }
               }
             } else {
-              logger.warn('No linux.do tabs found')
+              console.warn('No linux.do tabs found')
             }
           }
         } catch (e) {
-          logger.warn('Failed to get CSRF token from linux.do tab:', e)
+          console.warn('Failed to get CSRF token from linux.do tab:', e)
         }
 
         authResp = {
@@ -694,7 +693,7 @@ export async function handleDownloadAndUploadEmoji(payload: any, sendResponse: a
         }
       }
     } catch (_e) {
-      logger.error('Failed to get auth info:', _e)
+      console.error('Failed to get auth info:', _e)
     }
 
     // Step 3: 上传到 linux.do

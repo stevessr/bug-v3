@@ -5,7 +5,6 @@ import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
 
-import { logger } from '@/config/buildFlags'
 // 移除直接导入 JSON 文件，改为使用压缩版本
 
 type TenorGif = {
@@ -72,7 +71,7 @@ onMounted(async () => {
       }
     }
   } catch (error) {
-    logger.error('Failed to load Tenor API key:', error)
+    console.error('Failed to load Tenor API key:', error)
     // 降级到 emojiStore 设置
     try {
       const settings = emojiStore.settings
@@ -95,7 +94,7 @@ const saveApiKey = async () => {
     inputApiKey.value = ''
     showMessage('API Key 已保存', 'success')
   } catch (error) {
-    logger.error('Failed to save API key:', error)
+    console.error('Failed to save API key:', error)
     showMessage('API Key 保存失败', 'error')
   }
 }
@@ -109,7 +108,7 @@ const clearApiKey = async () => {
     hasSearched.value = false
     showMessage('API Key 已清除', 'success')
   } catch (error) {
-    logger.error('Failed to clear API key:', error)
+    console.error('Failed to clear API key:', error)
     showMessage('API Key 清除失败', 'error')
   }
 }
@@ -148,7 +147,7 @@ const searchGifs = async () => {
       hasMore.value = false
     }
   } catch (error) {
-    logger.error('Search failed:', error)
+    console.error('Search failed:', error)
     showMessage('搜索失败，请检查 API Key 或网络连接', 'error')
     searchResults.value = []
     hasMore.value = false
@@ -185,7 +184,7 @@ const loadMore = async () => {
       hasMore.value = !!data.next
     }
   } catch (error) {
-    logger.error('Load more failed:', error)
+    console.error('Load more failed:', error)
     showMessage('加载更多失败', 'error')
   } finally {
     isLoadingMore.value = false
@@ -233,7 +232,7 @@ const confirmImport = async () => {
         emojiStore.addEmoji(selectedGroupId.value, emoji)
         successCount++
       } catch (error) {
-        logger.error('Failed to import GIF:', gif.id, error)
+        console.error('Failed to import GIF:', gif.id, error)
       }
     }
 
@@ -245,7 +244,7 @@ const confirmImport = async () => {
       showMessage('导入失败', 'error')
     }
   } catch (error) {
-    logger.error('Import failed:', error)
+    console.error('Import failed:', error)
     showMessage('导入失败', 'error')
   } finally {
     isImporting.value = false

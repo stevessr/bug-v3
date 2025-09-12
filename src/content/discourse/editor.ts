@@ -29,7 +29,7 @@ export function insertEmojiIntoEditor(emoji: unknown) {
   const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
   if (!textArea && !richEle) {
-    logger.warn('找不到输入框')
+    console.warn('找不到输入框')
     return
   }
 
@@ -90,7 +90,7 @@ export function insertEmojiIntoEditor(emoji: unknown) {
       try {
         document.execCommand('insertHTML', false, imgTemplate)
       } catch (e) {
-        logger.warn('无法向富文本编辑器中插入表情', e)
+        console.warn('无法向富文本编辑器中插入表情', e)
       }
       void _e
     }

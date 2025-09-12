@@ -1,5 +1,4 @@
 import { newStorageHelpers } from '../../utils/newStorage'
-import { logger } from '../../config/buildFlags'
 import { getChromeAPI } from '../utils'
 import { downloadAndUploadDirect } from '../downloadAndSend'
 
@@ -83,10 +82,10 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
     // 保存到存储
     await newStorageHelpers.setAllEmojiGroups(groups)
 
-    logger.log('[Background] 成功添加表情到未分组:', newEmoji.name)
+    console.log('[Background] 成功添加表情到未分组:', newEmoji.name)
     sendResponse({ success: true, message: '表情已添加到未分组' })
   } catch (error) {
-    logger.error('[Background] 添加表情失败:', error)
+    console.error('[Background] 添加表情失败:', error)
     sendResponse({ success: false, error: error instanceof Error ? error.message : '添加失败' })
   }
 }

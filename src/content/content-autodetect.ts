@@ -2,7 +2,7 @@ import { logger } from './utils/buildFLagsV2'
 import { initializeEmojiFeature } from './utils/init'
 import { Uninject } from './utils/Uninject'
 
-logger.log('[Emoji Extension] Content autodetect loader')
+console.log('[Emoji Extension] Content autodetect loader')
 
 function shouldInjectEmoji(): boolean {
   try {
@@ -28,17 +28,17 @@ function shouldInjectEmoji(): boolean {
 
     return false
   } catch (e) {
-    logger.error('[Emoji Extension] shouldInjectEmoji failed', e)
+    console.error('[Emoji Extension] shouldInjectEmoji failed', e)
     return false
   }
 }
 
 if (shouldInjectEmoji()) {
-  logger.log('[Emoji Extension] autodetect: initializing emoji feature')
+  console.log('[Emoji Extension] autodetect: initializing emoji feature')
   initializeEmojiFeature()
 } else {
   Uninject()
-  logger.log('[Emoji Extension] autodetect: skipping injection - incompatible platform')
+  console.log('[Emoji Extension] autodetect: skipping injection - incompatible platform')
 }
 
 // linux.do CSRF helper listener kept here for compatibility
@@ -64,7 +64,7 @@ if (window.location.hostname.includes('linux.do') && (window as any).chrome?.run
         sendResponse({ csrfToken: '' })
         return true
       } catch (error) {
-        logger.warn('[Emoji Extension] Failed to get CSRF token:', error)
+        console.warn('[Emoji Extension] Failed to get CSRF token:', error)
         sendResponse({ csrfToken: '' })
         return true
       }

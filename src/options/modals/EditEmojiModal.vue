@@ -9,7 +9,6 @@ import {
 } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
-import { logger } from '../../config/buildFlags'
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/emoji'
 import { emojiPreviewUploader } from '../../utils/emojiPreviewUploader'
@@ -64,7 +63,7 @@ const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    logger.error('表情上传失败:', error)
+    console.error('表情上传失败:', error)
     alert(`表情 "${emoji.name}" 上传失败: ${error.message || '未知错误'}`)
   } finally {
     uploadingEmojiIds.value.delete(emoji.id)

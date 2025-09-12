@@ -114,7 +114,7 @@ function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
         button.style.cssText = origStyle
       }, 1500)
     } catch (err) {
-      logger.error('[XOneClick] 添加失败', err)
+      console.error('[XOneClick] 添加失败', err)
       button.innerHTML = '失败'
       button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
       setTimeout(() => {
@@ -354,7 +354,7 @@ function scanAndInject() {
   // Handle carousel images separately
   scanAndInjectCarousel()
 
-  logger.log(`[XOneClick] Processed ${set.size} regular elements`)
+  console.log(`[XOneClick] Processed ${set.size} regular elements`)
 }
 
 function observe() {
@@ -379,7 +379,7 @@ function observe() {
 export function initX() {
   try {
     if (!isXPage()) {
-      logger.log('[XOneClick] skipping init: not X/Twitter host')
+      console.log('[XOneClick] skipping init: not X/Twitter host')
       return
     }
     setTimeout(scanAndInject, 200)
@@ -387,8 +387,8 @@ export function initX() {
     // video copy feature lives in separate module
     // direct import instead of lazy import to avoid ESM issues
     initVideoCopy()
-    logger.log('[XOneClick] initialized')
+    console.log('[XOneClick] initialized')
   } catch (e) {
-    logger.error('[XOneClick] init failed', e)
+    console.error('[XOneClick] init failed', e)
   }
 }

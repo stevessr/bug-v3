@@ -26,12 +26,12 @@ export function injectCSSAnimation() {
  * 初始化一键添加模块（注入CSS并启动平台注入器）
  */
 export function initOneClickAdd() {
-  logger.log('[OneClickAdd] 初始化一键添加表情核心')
+  console.log('[OneClickAdd] 初始化一键添加表情核心')
   injectCSSAnimation()
 
   try {
     initDiscourse()
   } catch (e) {
-    logger.error('[OneClickAdd] initDiscourse failed', e)
+    console.error('[OneClickAdd] initDiscourse failed', e)
   }
 }

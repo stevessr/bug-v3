@@ -2,7 +2,6 @@ import { ref, computed } from 'vue'
 
 import { ProviderManager } from '@/utils/imageProviders'
 import type { GenerateRequest } from '@/types/imageGenerator'
-import { logger } from '@/config/buildFlags'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export function useImageGenerator() {
@@ -56,7 +55,7 @@ export function useImageGenerator() {
       generatedImages.value = images
     } catch (err: any) {
       error.value = err.message || '生成图片时发生错误，请稍后重试'
-      logger.error('Generation failed:', err)
+      console.error('Generation failed:', err)
     } finally {
       isGenerating.value = false
     }

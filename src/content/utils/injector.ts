@@ -391,6 +391,6 @@ export function injectButton(toolbar: Element) {
       toolbar.appendChild(emojiButton)
     }
   } catch (e) {
-    logger.error('[Emoji Extension] Failed to inject buttons (module):', e)
+    console.error('[Emoji Extension] Failed to inject buttons (module):', e)
   }
 }
