@@ -1,6 +1,6 @@
 // Unified content autodetect loader (keeps previous behavior)
-console.log('[Emoji extension] autodetect injected')
-console.log('[Emoji extension] location:', {
+console.log('[Emoji extension] 自动检测注入')
+console.log('[Emoji extension] 位置:', {
   href: window.location.href,
   hostname: window.location.hostname,
   pathname: window.location.pathname
@@ -82,7 +82,7 @@ if (pageType) {
   try {
     if ((window as any).chrome?.runtime?.sendMessage) {
       const payload = { action: 'requestInject', pageType }
-      console.info('[Emoji extension] requesting background to inject content', payload)
+      console.info('[Emoji extension] 请求后端注入', payload)
       ;(window as any).chrome.runtime.sendMessage(payload, (response: any) => {
         console.info('[Emoji extension] background requestInject response', { pageType, response })
       })
@@ -132,4 +132,44 @@ if (window.location.hostname.includes('linux.do') && (window as any).chrome?.run
       return false
     }
   )
+}
+
+// 通用图片直链页面表情按钮注入（排除 pixiv）
+
+function isImageDirectLinkPage() {
+  const host = window.location.hostname.toLowerCase()
+  // 排除 pixiv 相关域名
+  if (host.includes('pximg.net') || host.includes('pixiv.net')) return false
+  // 只处理常见图片格式
+  const imgExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+  // allow URLs that end with image extensions OR have image format in query (e.g., ?format=jpg)
+  try {
+    const urlObj = new URL(window.location.href)
+    const pathname = urlObj.pathname.toLowerCase()
+    const search = urlObj.search.toLowerCase()
+    const hasExt = imgExt.some(ext => pathname.endsWith(ext))
+    const formatParamMatch = /format=(jpg|jpeg|png|gif|webp)/.test(search)
+    if (!hasExt && !formatParamMatch) return false
+  } catch (e) {
+    // If URL parsing fails, fallback to previous behavior
+    const url = window.location.href.split('?')[0].toLowerCase()
+    if (!imgExt.some(ext => url.endsWith(ext))) return false
+  }
+  // 页面只有一个 img 元素
+  const imgs = Array.from(document.querySelectorAll('img'))
+  if (imgs.length !== 1) return false
+  return true
+}
+
+// 智能判断后动态注入自治脚本
+if (isImageDirectLinkPage()) {
+  if ((window as any).chrome?.runtime?.sendMessage) {
+    chrome.runtime.sendMessage({ action: 'injectImageScript' }, (response: any) => {
+      console.log('[Emoji extension] 请求 background 注入 images/image-inject.js', response)
+    })
+  } else {
+    console.warn(
+      '[Emoji extension] chrome.runtime.sendMessage not available; 无法请求 background 注入'
+    )
+  }
 }

@@ -1,9 +1,5 @@
-import { getChromeAPI } from './utils'
+import { getChromeAPI } from '../utils'
 
-/**
- * Inject the autodetect script into the specified tab to detect page type.
- * This uses chrome.scripting.executeScript (MV3) for programmatic injection.
- */
 export async function injectAutodetectIntoTab(tabId: number) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.scripting) return
@@ -14,27 +10,17 @@ export async function injectAutodetectIntoTab(tabId: number) {
       files: ['js/content/autodetect.js']
     })
   } catch (e) {
-    // swallow errors - tab may be a chrome page or unavailable
     console.warn('[后台] Failed to inject autodetect into tab', tabId, e)
   }
 }
 
-/**
- * Inject the isolated-world content bridge into the specified tab.
- * This uses chrome.scripting.executeScript (MV3) so the injected script runs
- * in the extension isolated world and can use chrome.runtime APIs.
- */
 export async function injectBridgeIntoTab(tabId: number) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.scripting) return
 
   try {
-    await chromeAPI.scripting.executeScript({
-      target: { tabId },
-      files: ['js/content/bridge.js']
-    })
+    await chromeAPI.scripting.executeScript({ target: { tabId }, files: ['js/content/bridge.js'] })
   } catch (e) {
-    // swallow errors - tab may be a chrome page or unavailable
     console.warn('[后台] Failed to inject bridge into tab', tabId, e)
   }
 }
@@ -56,15 +42,10 @@ export async function injectBridgeIntoAllTabs() {
   }
 }
 
-/**
- * Inject site-specific content scripts based on pageType.
- * pageType is a coarse string such as 'bilibili', 'pixiv', 'discourse', 'x', 'generic'
- */
 export async function injectContentForTab(tabId: number, pageType: string) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.scripting) return { success: false, error: 'scripting unavailable' }
 
-  // 先注入实现文件，再注入 wrapper
   const mapping: Record<string, string[]> = {
     bilibili: ['js/bilibili.js', 'js/content/bilibili.js'],
     pixiv: ['js/pixiv.js', 'js/content/pixiv.js'],
@@ -77,20 +58,19 @@ export async function injectContentForTab(tabId: number, pageType: string) {
 
   try {
     for (const f of files) {
-      await chromeAPI.scripting.executeScript({ target: { tabId }, files: [f] })
+      await chromeAPI.scripting.executeScript({
+        target: { tabId },
+        files: [f]
+      })
     }
-    // always inject the bridge as well (bridge now built to js/content/bridge.js)
     await injectBridgeIntoTab(tabId)
     return { success: true, message: `Injected ${files.join(', ')}` }
   } catch (e) {
-    console.warn('[后台] 注入失败', e)
+    console.warn('[后台] injectContentForTab failed', e)
     return { success: false, error: String(e) }
   }
 }
 
-/**
- * Inject the images image-inject script into the specified tab.
- */
 export async function injectImageScriptIntoTab(tabId: number) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.scripting) return { success: false, error: 'scripting unavailable' }

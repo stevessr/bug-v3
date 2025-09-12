@@ -1,14 +1,19 @@
-import { newStorageHelpers } from '../utils/newStorage'
-
 import { getChromeAPI } from './utils'
-import { injectContentForTab } from './scripting'
+import { handleRequestInject, handleInjectImageScript } from './handlers/injectHandlers'
+import {
+  handleGetEmojiData,
+  handleSaveEmojiData,
+  handleSyncSettings
+} from './handlers/dataHandlers'
+import { handleLinuxDoAuthRequest, handleSaveLastDiscourse } from './handlers/miscHandlers'
+import { handleAddEmojiFromWeb } from './handlers/addEmojiFromWeb'
+import { handleAddToFavorites } from './handlers/favorites'
 import {
   handleDownloadAndSendToDiscourse,
   handleDownloadForUser,
   handleUploadAndAddEmoji,
   handleDownloadAndUploadEmoji
 } from './downloadAndSend'
-import { handleAddEmojiFromWeb } from './handlers/addEmojiFromWeb'
 
 export function setupMessageListener() {
   const chromeAPI = getChromeAPI()
@@ -58,33 +63,12 @@ export function setupMessageListener() {
             return true
 
           case 'requestInject': {
-            // handle asynchronously and return true to indicate we'll call sendResponse later
-            ;(async () => {
-              try {
-                const senderTabId =
-                  _sender && _sender.tab && _sender.tab.id ? _sender.tab.id : undefined
-                let tabId = senderTabId
-                const chromeAPI = getChromeAPI()
-                if (!tabId && chromeAPI && chromeAPI.tabs) {
-                  try {
-                    const tabs = await chromeAPI.tabs.query({ active: true, currentWindow: true })
-                    if (tabs && tabs[0] && tabs[0].id) tabId = tabs[0].id
-                  } catch (_e) {
-                    void _e
-                  }
-                }
+            handleRequestInject(message, _sender, sendResponse)
+            return true
+          }
 
-                if (!tabId) {
-                  sendResponse({ success: false, error: 'No tabId available' })
-                  return
-                }
-
-                const result = await injectContentForTab(tabId, message.pageType || 'generic')
-                sendResponse(result)
-              } catch (e) {
-                sendResponse({ success: false, error: String(e) })
-              }
-            })()
+          case 'injectImageScript': {
+            handleInjectImageScript(message, _sender, sendResponse)
             return true
           }
 
@@ -128,273 +112,7 @@ export function setupMessageListener() {
 
 // handleAddEmojiFromWeb moved to ./handlers/addEmojiFromWeb.ts
 
-export async function handleAddToFavorites(emoji: any, sendResponse: any) {
-  // mark callback as referenced to avoid unused-var lint
-  void sendResponse
-  try {
-    // Use the unified newStorageHelpers to read/update groups for consistency
-    const groups = await newStorageHelpers.getAllEmojiGroups()
-    const favoritesGroup = groups.find((g: any) => g.id === 'favorites')
-    if (!favoritesGroup) {
-      console.warn('Favorites group not found - creating one')
-      const newFavorites = { id: 'favorites', name: 'Favorites', icon: '⭐', order: 0, emojis: [] }
-      groups.unshift(newFavorites)
-    }
-
-    const finalGroups = groups
-    const favGroup = finalGroups.find((g: any) => g.id === 'favorites') as any
-
-    const now = Date.now()
-    const existingEmojiIndex = favGroup.emojis.findIndex((e: any) => e.url === emoji.url)
-
-    if (existingEmojiIndex !== -1) {
-      const existingEmoji = favGroup.emojis[existingEmojiIndex]
-      const lastUsed = existingEmoji.lastUsed || 0
-      const timeDiff = now - lastUsed
-      const twelveHours = 12 * 60 * 60 * 1000
-
-      if (timeDiff < twelveHours) {
-        existingEmoji.usageCount = (existingEmoji.usageCount || 0) + 1
-      } else {
-        const currentCount = existingEmoji.usageCount || 1
-        existingEmoji.usageCount = Math.floor(currentCount * 0.8) + 1
-        existingEmoji.lastUsed = now
-      }
-    } else {
-      const favoriteEmoji = {
-        ...emoji,
-        id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        groupId: 'favorites',
-        usageCount: 1,
-        lastUsed: now,
-        addedAt: now
-      }
-      favGroup.emojis.push(favoriteEmoji)
-    }
-
-    favGroup.emojis.sort((a: any, b: any) => (b.lastUsed || 0) - (a.lastUsed || 0))
-
-    // Persist via newStorageHelpers which updates group index and individual groups
-    await newStorageHelpers.setAllEmojiGroups(finalGroups)
-
-    // Notify content scripts by updating chrome.storage (legacy compatibility)
-    const chromeAPI = getChromeAPI()
-    if (chromeAPI && chromeAPI.storage && chromeAPI.storage.local) {
-      try {
-        await new Promise<void>((resolve, reject) => {
-          chromeAPI.storage.local.set({ emojiGroups: finalGroups }, () => {
-            if (chromeAPI.runtime.lastError) reject(chromeAPI.runtime.lastError)
-            else resolve()
-          })
-        })
-      } catch (_e) {
-        // ignored intentionally
-        void _e
-      }
-    }
-
-    sendResponse({ success: true, message: 'Added to favorites' })
-  } catch (error) {
-    console.error('Failed to add emoji to favorites:', error)
-    sendResponse({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
-
-// downloadAndSendToDiscourse is implemented in ./downloadAndSend and imported above
-
-export async function handleGetEmojiData(_sendResponse: (_resp: any) => void) {
-  // mark callback as referenced
-  void _sendResponse
-
-  try {
-    // Use newStorageHelpers which understands the migrated storage layout
-    const groups = await newStorageHelpers.getAllEmojiGroups()
-    const settings = await newStorageHelpers.getSettings()
-    const favorites = await newStorageHelpers.getFavorites()
-
-    _sendResponse({
-      success: true,
-      data: {
-        groups: groups || [],
-        settings: settings || {},
-        favorites: favorites || []
-      }
-    })
-  } catch (error: any) {
-    console.error('Failed to get emoji data via newStorageHelpers:', error)
-    _sendResponse({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
-
-export async function handleSaveEmojiData(data: any, _sendResponse: (_resp: any) => void) {
-  // mark callback as referenced
-  void _sendResponse
-  // no additional args expected here
-  const chromeAPI = getChromeAPI()
-  if (!chromeAPI || !chromeAPI.storage) {
-    _sendResponse({ success: false, error: 'Chrome storage API not available' })
-    return
-  }
-
-  try {
-    await chromeAPI.storage.local.set(data)
-    _sendResponse({ success: true })
-  } catch (error: any) {
-    console.error('Failed to save emoji data:', error)
-    _sendResponse({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
-
-export async function handleSyncSettings(settings: any, _sendResponse: (_resp: any) => void) {
-  // mark callback as referenced
-  void _sendResponse
-  // no additional args expected here
-  const chromeAPI = getChromeAPI()
-  if (!chromeAPI || !chromeAPI.storage || !chromeAPI.tabs) {
-    _sendResponse({ success: false, error: 'Chrome API not available' })
-    return
-  }
-
-  try {
-    // 保存为新的存储格式：{ data: {...}, timestamp: ... }
-    const timestamp = Date.now()
-    const appSettingsData = {
-      data: { ...settings, lastModified: timestamp },
-      timestamp: timestamp
-    }
-
-    await chromeAPI.storage.local.set({ appSettings: appSettingsData })
-
-    const tabs = await chromeAPI.tabs.query({})
-    for (const tab of tabs) {
-      if (tab.id) {
-        chromeAPI.tabs
-          .sendMessage(tab.id, {
-            type: 'SETTINGS_UPDATED',
-            settings: settings
-          })
-          .catch(() => {
-            // Ignore errors for tabs that don't have content script
-          })
-      }
-    }
-
-    _sendResponse({ success: true })
-  } catch (error: any) {
-    console.error('Failed to sync settings:', error)
-    _sendResponse({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
-
-export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => void) {
-  // Handler for requesting linux.do cookies and CSRF token from the options page
-  void _sendResponse
-  const chromeAPI = getChromeAPI()
-  if (!chromeAPI || !chromeAPI.tabs || !chromeAPI.cookies) {
-    _sendResponse({ success: false, error: 'Chrome API not available' })
-    return
-  }
-
-  try {
-    // Get linux.do cookies
-    const cookies = await chromeAPI.cookies.getAll({ domain: 'linux.do' })
-    const cookieString = cookies.map((cookie: any) => `${cookie.name}=${cookie.value}`).join('; ')
-
-    // Try to get CSRF token from linux.do tabs
-    let csrfToken = ''
-    try {
-      const tabs = await chromeAPI.tabs.query({ url: 'https://linux.do/*' })
-      if (tabs.length > 0 && tabs[0].id) {
-        try {
-          const response = await chromeAPI.tabs.sendMessage(tabs[0].id, {
-            type: 'GET_CSRF_TOKEN'
-          })
-          if (response && response.csrfToken) {
-            csrfToken = response.csrfToken
-          }
-        } catch (sendMessageError) {
-          // 尝试其他 linux.do 标签页
-          for (let i = 1; i < tabs.length; i++) {
-            if (tabs[i].id) {
-              try {
-                const response = await chromeAPI.tabs.sendMessage(tabs[i].id, {
-                  type: 'GET_CSRF_TOKEN'
-                })
-                if (response && response.csrfToken) {
-                  csrfToken = response.csrfToken
-                  break
-                }
-              } catch (e) {
-                // 继续尝试下一个标签页
-                continue
-              }
-            }
-          }
-          if (!csrfToken) {
-            console.warn('Failed to get CSRF token from any linux.do tab:', sendMessageError)
-          }
-        }
-      } else {
-        console.warn('No linux.do tabs found')
-      }
-    } catch (e) {
-      console.warn('Failed to get CSRF token from linux.do tab:', e)
-    }
-
-    _sendResponse({
-      success: true,
-      csrfToken: csrfToken,
-      cookies: cookieString
-    })
-  } catch (error: any) {
-    console.error('Failed to get linux.do auth info:', error)
-    _sendResponse({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
-
-export async function handleSaveLastDiscourse(payload: any, sendResponse: any) {
-  void sendResponse
-  try {
-    const chromeAPI = getChromeAPI()
-    if (!chromeAPI || !chromeAPI.storage || !chromeAPI.storage.local) {
-      sendResponse({ success: false, error: 'chrome storage not available' })
-      return
-    }
-
-    // Expect payload to be { base: string, cookie?: string, csrf?: string }
-    await new Promise<void>((resolve, reject) => {
-      try {
-        chromeAPI.storage.local.set({ lastDiscourse: payload }, () => {
-          if (chromeAPI.runtime.lastError) reject(chromeAPI.runtime.lastError)
-          else resolve()
-        })
-      } catch (e) {
-        reject(e)
-      }
-    })
-
-    sendResponse({ success: true })
-  } catch (error) {
-    console.error('Failed to save lastDiscourse', error)
-    sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
-  }
-}
-
+// Implementations moved to handlers/* modules to keep this file as dispatcher only
 export function setupStorageChangeListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.storage && chromeAPI.storage.onChanged) {

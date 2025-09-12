@@ -11,14 +11,7 @@
     "cookies"
   ],
   "host_permissions": [
-    "https://i.pximg.net/*",
-    "https://generativelanguage.googleapis.com/*",
-    "https://linux.do/*",
-    "https://www.bilibili.com/*",
-    "https://i0.hdslb.com/*",
-    "https://www.pixiv.net/*",
-    "https://twitter.com/*",
-    "https://x.com/*"
+    "<all_urls>"
   ],
   "action": {
     "default_popup": "popup.html",

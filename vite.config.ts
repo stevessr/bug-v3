@@ -57,7 +57,11 @@ export default defineConfig(({ mode }) => {
           ),
           'x-content': fileURLToPath(new URL('src/content/x/main.ts', import.meta.url)),
           'pixiv-content': fileURLToPath(new URL('src/content/pixiv/pixiv.ts', import.meta.url)),
-          background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
+          background: fileURLToPath(new URL('src/background/background.ts', import.meta.url)),
+          // Autonomous image-inject script for generic image direct-link pages
+          'content/images/image-inject': fileURLToPath(
+            new URL('src/content/images/image-inject.ts', import.meta.url)
+          )
         },
         output: {
           entryFileNames: chunkInfo => {
