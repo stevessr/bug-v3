@@ -1,26 +1,31 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
 
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
-import AboutSection from '../components/AboutSection.vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
 
 import HeaderControls from './components/HeaderControls.vue'
-import GlobalSettings from './components/GlobalSettings.vue'
-import EmojiStats from './components/EmojiStats.vue'
-import ImportConfigModal from './modals/ImportConfigModal.vue'
-import ImportEmojisModal from './modals/ImportEmojisModal.vue'
-import CreateGroupModal from './modals/CreateGroupModal.vue'
-import AddEmojiModal from './modals/AddEmojiModal.vue'
-import ConfirmGenericModal from './modals/ConfirmGenericModal.vue'
-import NotificationToasts from './components/NotificationToasts.vue'
 import GroupsTab from './components/GroupsTab.vue'
-import FavoritesTab from './components/FavoritesTab.vue'
-import UngroupedTab from './components/UngroupedTab.vue'
-import ExternalImportTab from './components/ExternalImportTab.vue'
-import BilibiliImport from './tabs/BilibiliImport.vue'
-import EditEmojiModal from './modals/EditEmojiModal.vue'
-import EditGroupModal from './modals/EditGroupModal.vue'
+
+// Lazy-loaded components
+const AboutSection = defineAsyncComponent(() => import('../components/AboutSection.vue'))
+const GlobalSettings = defineAsyncComponent(() => import('./components/GlobalSettings.vue'))
+const EmojiStats = defineAsyncComponent(() => import('./components/EmojiStats.vue'))
+const ImportConfigModal = defineAsyncComponent(() => import('./modals/ImportConfigModal.vue'))
+const ImportEmojisModal = defineAsyncComponent(() => import('./modals/ImportEmojisModal.vue'))
+const CreateGroupModal = defineAsyncComponent(() => import('./modals/CreateGroupModal.vue'))
+const AddEmojiModal = defineAsyncComponent(() => import('./modals/AddEmojiModal.vue'))
+const ConfirmGenericModal = defineAsyncComponent(() => import('./modals/ConfirmGenericModal.vue'))
+const NotificationToasts = defineAsyncComponent(
+  () => import('./components/NotificationToasts.vue')
+)
+const FavoritesTab = defineAsyncComponent(() => import('./components/FavoritesTab.vue'))
+const UngroupedTab = defineAsyncComponent(() => import('./components/UngroupedTab.vue'))
+const ExternalImportTab = defineAsyncComponent(() => import('./components/ExternalImportTab.vue'))
+const BilibiliImport = defineAsyncComponent(() => import('./tabs/BilibiliImport.vue'))
+const EditEmojiModal = defineAsyncComponent(() => import('./modals/EditEmojiModal.vue'))
+const EditGroupModal = defineAsyncComponent(() => import('./modals/EditGroupModal.vue'))
+
 // composable
 import useOptions from './useOptions'
 

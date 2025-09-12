@@ -9,6 +9,8 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
+  const enableLogging = process.env.ENABLE_LOGGING === 'true'
+  const buildMinified = process.env.BUILD_MINIFIED !== 'false'
 
   return {
     css: {
@@ -29,11 +31,10 @@ export default defineConfig(({ mode }) => {
       })
     ],
     build: {
-      // Allow disabling minification for debug builds via BUILD_MINIFIED env var
-      minify: 'terser',
+      minify: buildMinified ? 'terser' : false,
       terserOptions: {
         compress: {
-          drop_console: !isDev,
+          drop_console: !enableLogging,
           drop_debugger: !isDev
         }
       },
@@ -66,7 +67,22 @@ export default defineConfig(({ mode }) => {
             }
             return 'js/[name].js'
           },
-          chunkFileNames: 'js/[name].js',
+          chunkFileNames: (chunkInfo) => {
+            // List of components that are logically part of the options page
+            // but are located in the shared /src/components directory.
+            const optionsSpecificSharedComponents = ['AboutSection']
+
+            const facadeModuleId = chunkInfo.facadeModuleId || ''
+
+            if (
+              facadeModuleId.includes('/src/options/') ||
+              optionsSpecificSharedComponents.includes(chunkInfo.name)
+            ) {
+              return 'js/options/[name].js'
+            }
+
+            return 'js/[name].js'
+          },
           assetFileNames: 'assets/[name].[ext]',
           // Disable manualChunks splitting to avoid creating a shared "background.js"
           // chunk that other entrypoints (like content) would import from. Keeping

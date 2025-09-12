@@ -14,6 +14,7 @@
     "build:userscript:remote": "node scripts/build.js build:userscript remote",
     "build:userscript:min": "node scripts/build.js build:userscript:min",
     "build:debug": "node scripts/build.js build:debug",
+    "generate:json": "node scripts/generate-json.js",
     "serve": "vite preview",
     "test": "playwright test",
     "test:debug": "playwright test --debug",
