@@ -1,21 +1,21 @@
-# Brotli 压缩功能说明 (破坏性更新)
+# Gzip 压缩功能说明 (破坏性更新)
 
 ## 概述
 
-为了优化浏览器插件的加载性能，我们为 `src/config/default.json` 文件实现了 brotli 压缩功能。
+为了优化浏览器插件的加载性能，我们为 `src/config/default.json` 文件实现了 gzip 压缩功能（.gz）。
 
 **⚠️ 破坏性更新：只支持压缩版本，不提供降级方案！**
 
 ## 功能特性
 
 ### 1. 强制压缩
-- 在构建过程中，`src/config/default.json` 会被自动压缩为 `public/assets/defaultEmojiGroups.json.br`
+- 在构建过程中，`src/config/default.json` 会被自动压缩为 `public/assets/defaultEmojiGroups.json.gz`
 - 压缩率约 89%（从 476KB 压缩到 53KB）
 - **不再生成未压缩版本**
 
 ### 2. 严格加载
 - 运行时**只**加载压缩版本
-- 如果浏览器不支持 brotli，**直接报错**
+- 如果浏览器不支持 Gzip 的 DecompressionStream，**直接报错**（某些环境下可能无法使用，例如在非 HTTPS 的页面中）
 - **不提供任何降级方案**
 
 ### 3. 浏览器要求
@@ -74,9 +74,9 @@ const groups = await loadDefaultEmojiGroups()
 
 ## 测试
 
-访问 `/test-brotli.html` 页面可以测试压缩功能：
+访问 `/test-brotli.html` 页面可以测试 gzip 压缩功能（文件名与逻辑已更新）：
 
-1. 检查浏览器 brotli 支持
+1. 检查浏览器 Gzip 解压支持
 2. 测试加载压缩文件
 3. **不再提供降级测试**
 
@@ -84,28 +84,28 @@ const groups = await loadDefaultEmojiGroups()
 
 ### 压缩（构建时）
 ```javascript
-import { brotliCompressSync } from 'zlib'
+import { gzipSync } from 'zlib'
 
 const jsonString = JSON.stringify(data, null, 2)
-const compressedData = brotliCompressSync(Buffer.from(jsonString, 'utf-8'))
-fs.writeFileSync(outputPath + '.br', compressedData)
+const compressedData = gzipSync(Buffer.from(jsonString, 'utf-8'), { level: 9 })
+fs.writeFileSync(outputPath + '.gz', compressedData)
 ```
 
 ### 解压缩（运行时）
 ```javascript
-const response = await fetch('/assets/defaultEmojiGroups.json.br')
+const response = await fetch('/assets/defaultEmojiGroups.json.gz')
 const compressedData = await response.arrayBuffer()
 
-const stream = new DecompressionStream('br')
+const stream = new DecompressionStream('gzip')
 // ... 解压缩逻辑
 ```
 
 ## 注意事项
 
-1. **服务器配置**：确保服务器正确设置 `.br` 文件的 MIME 类型
+1. **服务器配置**：确保服务器正确设置 `.gz` 文件的 MIME 类型
 2. **缓存策略**：压缩文件可以设置更长的缓存时间
 3. **错误处理**：**不提供降级机制**，浏览器不支持时直接报错
-4. **开发调试**：开发模式也只有压缩版本，需要支持 brotli 的浏览器
+4. **开发调试**：开发模式也只有压缩版本，需要支持 Gzip DecompressionStream 的浏览器（非 HTTPS 页可能无法使用）
 
 ## 性能提升
 

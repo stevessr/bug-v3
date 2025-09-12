@@ -5,8 +5,8 @@ import type { DefaultEmojiData, EmojiGroup } from './emoji'
  * 破坏性更新：只支持压缩版本，不提供降级方案
  */
 export async function loadDefaultEmojiGroups(): Promise<EmojiGroup[]> {
-  const { loadCompressedDefaultGroups } = await import('../utils/brotliLoader')
-  return await loadCompressedDefaultGroups()
+  const { loadGzipDefaultGroups } = await import('../utils/gzipLoader')
+  return await loadGzipDefaultGroups()
 }
 
 /**
@@ -14,8 +14,8 @@ export async function loadDefaultEmojiGroups(): Promise<EmojiGroup[]> {
  * 破坏性更新：只支持压缩版本，不提供降级方案
  */
 export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
-  const { loadCompressedDefaultGroups } = await import('../utils/brotliLoader')
-  const groups = await loadCompressedDefaultGroups()
+  const { loadGzipDefaultGroups } = await import('../utils/gzipLoader')
+  const groups = await loadGzipDefaultGroups()
   
   // 返回固定的设置配置（不再从文件读取）
   return {

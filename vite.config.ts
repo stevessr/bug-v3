@@ -92,7 +92,13 @@ export default defineConfig(({ mode }) => {
           options: fileURLToPath(new URL('options.html', import.meta.url)),
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
-          content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
+          // content entry now uses the autodetect loader which decides whether to initialize
+          content: fileURLToPath(new URL('src/content/content-autodetect.ts', import.meta.url)),
+          // Per-site content scripts - injected by background as needed
+          'discourse-content': fileURLToPath(new URL('src/content/content-discourse.ts', import.meta.url)),
+          'bilibili-content': fileURLToPath(new URL('src/content/content-bilibili.ts', import.meta.url)),
+          'x-content': fileURLToPath(new URL('src/content/content-x.ts', import.meta.url)),
+          'pixiv-content': fileURLToPath(new URL('src/content/content-pixiv.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
         },
         output: {

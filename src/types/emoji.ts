@@ -32,6 +32,7 @@ export interface AppSettings {
   // New settings for linux.do injection and X.com selectors
   enableLinuxDoInjection?: boolean // 控制是否在linux.do注入脚本
   enableXcomExtraSelectors?: boolean // 控制是否在X.com启用额外选择器
+  tenorApiKey?: string // 可选的 Tenor API key
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

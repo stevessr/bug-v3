@@ -15,7 +15,7 @@ const importResults = ref<{ success: boolean; message: string; details?: string 
 // Search / dynamic index UI
 const query = ref('')
 // default to the compressed asset path
-const indexUrl = ref('/assets/bilibiliEmojiIndex.json.br')
+const indexUrl = ref('/assets/bilibiliEmojiIndex.json.gz')
 const packages = ref<BiliPackage[]>([])
 const selected = ref<Record<string, boolean>>({})
 // packages that are currently displayed after clicking '搜索'
@@ -285,9 +285,9 @@ const loadIndexFromUrl = async (url?: string) => {
   try {
     let json: unknown
     
-    // Check if this is a compressed file (.br extension)
-    if (u.endsWith('.br')) {
-      // Use the brotli loader for compressed files
+    // Check if this is a compressed file (.gz extension)
+    if (u.endsWith('.gz')) {
+      // Use the gzip loader for compressed files
       const { loadCompressedBilibiliEmojiIndex } = await import('@/utils/bilibiliEmojiLoader')
       json = await loadCompressedBilibiliEmojiIndex()
     } else {
