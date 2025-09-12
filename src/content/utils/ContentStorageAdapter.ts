@@ -1,6 +1,6 @@
 import { defaultSettings } from '../../types/emoji'
 
-import { logger } from './buildFLagsV2'
+
 
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
@@ -186,9 +186,13 @@ export class ContentStorageAdapter {
     }
 
     // Fallback to packaged defaults (runtime JSON) when no stored settings
-    try {
-      const packaged = await loadPackagedDefaults()
-      if (packaged && packaged.settings && Object.keys(packaged.settings).length > 0) {
+
+    const result = { ...defaultSettings }
+    console.log('[Content Storage] Settings loaded:', result)
+    return result
+  }
+}
+ckaged.settings && Object.keys(packaged.settings).length > 0) {
         const result = { ...defaultSettings, ...packaged.settings }
         console.log('[Content Storage] Settings loaded from packaged defaults:', result)
         return result

@@ -1,4 +1,4 @@
-import { logger } from '../utils/buildFLagsV2'
+
 
 declare const chrome: any
 
@@ -57,7 +57,7 @@ async function downloadBlob(url: string): Promise<void> {
     try {
       console.error('[XVideoCopy] 下载失败', error)
     } catch {
-      // ignore logger failures
+      // ignore console failures
     }
     try {
       const msg = error && (error as Error).message ? (error as Error).message : String(error)

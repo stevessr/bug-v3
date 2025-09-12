@@ -1,4 +1,11 @@
-import { AppSettings } from '../../types/emoji'
+interface AppSettings {
+  imageScale: number
+  gridColumns: number
+  outputFormat: string
+  forceMobileMode: boolean
+  defaultGroup: string
+  showSearchBar: boolean
+}
 
 // Shared mutable state for content scripts
 export const cachedState: {

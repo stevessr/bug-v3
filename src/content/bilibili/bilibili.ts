@@ -3,7 +3,7 @@
  * 主要初始化逻辑
  */
 
-import { logger } from '../utils/buildFLagsV2'
+
 
 import { isBilibiliOpusPage } from './utils/bilibili-utils'
 import { scanAndInject, observeMutations } from './dom/bilibili-injection'

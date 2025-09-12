@@ -1,6 +1,16 @@
 // IndexedDB utility for emoji extension
 import type { EmojiGroup, AppSettings } from '../types/emoji'
-import { indexedDBWrapper } from '../config/buildFlags';
+
+// The project removed the `src/config/buildFlags` provider; builds now rely on
+// compile-time globals injected by the bundler (teaser). Provide a small
+// local shim so modules that previously imported `indexedDBWrapper` keep
+// working during the migration.
+declare const __ENABLE_INDEXEDDB__: boolean | undefined
+
+export const indexedDBWrapper = {
+  isEnabled: () => typeof __ENABLE_INDEXEDDB__ !== 'undefined' ? __ENABLE_INDEXEDDB__ : true,
+  shouldSkip: () => typeof __ENABLE_INDEXEDDB__ !== 'undefined' ? !__ENABLE_INDEXEDDB__ : false
+}
 
 import { formatPreview } from './formatUtils'
 

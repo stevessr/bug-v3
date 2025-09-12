@@ -1,4 +1,4 @@
-import { logger } from '../utils/buildFLagsV2'
+
 
 declare const chrome: any
 

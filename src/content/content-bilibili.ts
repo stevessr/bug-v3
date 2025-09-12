@@ -1,4 +1,4 @@
-import { logger } from './utils/buildFLagsV2'
+
 import { initBilibili } from './bilibili/bilibili'
 
 console.log('[Emoji Extension] content-bilibili loaded')

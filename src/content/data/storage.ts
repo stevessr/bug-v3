@@ -1,4 +1,4 @@
-import { logger } from '../utils/buildFLagsV2'
+
 import { getDefaultEmojisAsync } from '../data/default'
 
 import { cachedState } from './state'

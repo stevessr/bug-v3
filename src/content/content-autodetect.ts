@@ -1,4 +1,4 @@
-import { logger } from './utils/buildFLagsV2'
+
 import { initializeEmojiFeature } from './utils/init'
 import { Uninject } from './utils/Uninject'
 

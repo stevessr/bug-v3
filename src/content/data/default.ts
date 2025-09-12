@@ -1,6 +1,12 @@
 // Content scripts need a reliable, synchronous copy of defaults because they
 // may run in environments where fetching runtime assets is unreliable.
-import type { EmojiGroup } from '@/types/emoji'
+interface EmojiGroup {
+  id: string
+  name: string
+  icon: string
+  order: number
+  emojis: any[]
+}
 // Small, content-specific local copy. Keep minimal to avoid huge bundles.
 // This ensures content has a dependable fallback when async loading fails.
 const contentDefaultEmojiGroups: EmojiGroup[] = [

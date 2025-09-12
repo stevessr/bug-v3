@@ -2,7 +2,7 @@ export function tryInjectTwitterMedia(
   url: string,
   targetContainer: Element,
   createOverlayFn: (data: { name: string; url: string }, target: Element) => HTMLElement | void,
-  logger: { log: (...args: any[]) => void }
+  console: { log: (...args: any[]) => void }
 ): boolean {
   try {
     const parsed = new URL(url)

@@ -1,4 +1,4 @@
-import { logger } from '../utils/buildFLagsV2'
+
 
 import type { AddEmojiButtonData } from './types'
 import { extractNameFromUrl } from './helpers'
