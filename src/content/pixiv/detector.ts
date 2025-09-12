@@ -1,5 +1,3 @@
-
-
 import type { AddEmojiButtonData } from './types'
 import { extractNameFromUrl } from './helpers'
 import { createPixivEmojiButton } from './button'
@@ -92,7 +90,7 @@ function scanForImagePage() {
       const imgContainer = img.parentElement || document.body
       const computedStyle = window.getComputedStyle(imgContainer)
       if (computedStyle.position === 'static') {
-        ;(imgContainer as HTMLElement).style.position = 'relative'
+        ; (imgContainer as HTMLElement).style.position = 'relative'
       }
 
       imgContainer.appendChild(button)
@@ -210,6 +208,3 @@ export function initPixiv() {
     console.error('[PixivAddEmoji] init failed', e)
   }
 }
-
-// expose init to window for content wrapper
-;(window as any).__emoji_pixiv_init = initPixiv

@@ -44,20 +44,17 @@ export default defineConfig(({ mode }) => {
           options: fileURLToPath(new URL('options.html', import.meta.url)),
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
-          // content entry now uses the autodetect loader which decides whether to initialize
           content: fileURLToPath(new URL('src/content/content-autodetect.ts', import.meta.url)),
-          // bridge helper that will be injected into pages (isolated world)
-          'content-bridge': fileURLToPath(new URL('src/content/injectedBridge.ts', import.meta.url)),
-
-          // Per-site content scripts (legacy wrappers)
-          discourse: fileURLToPath(new URL('src/content/content-discourse.ts', import.meta.url)),
-          bilibili: fileURLToPath(new URL('src/content/content-bilibili.ts', import.meta.url)),
-          x: fileURLToPath(new URL('src/content/content-x.ts', import.meta.url)),
-          pixiv: fileURLToPath(new URL('src/content/content-pixiv.ts', import.meta.url)),
-
-          // Per-site content scripts - injected by background as needed
-          'discourse-content': fileURLToPath(new URL('src/content/discourse/discourse.ts', import.meta.url)),
-          'bilibili-content': fileURLToPath(new URL('src/content/bilibili/bilibili.ts', import.meta.url)),
+          'content-bridge': fileURLToPath(
+            new URL('src/content/injectedBridge.ts', import.meta.url)
+          ),
+          // 新自动初始化入口
+          'discourse-content': fileURLToPath(
+            new URL('src/content/discourse/discourse.ts', import.meta.url)
+          ),
+          'bilibili-content': fileURLToPath(
+            new URL('src/content/bilibili/bilibili.ts', import.meta.url)
+          ),
           'x-content': fileURLToPath(new URL('src/content/x/main.ts', import.meta.url)),
           'pixiv-content': fileURLToPath(new URL('src/content/pixiv/pixiv.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
@@ -79,7 +76,7 @@ export default defineConfig(({ mode }) => {
             return 'js/[name].js'
           },
           format: 'es', // Keep ES modules for most scripts
-          chunkFileNames: (chunkInfo) => {
+          chunkFileNames: chunkInfo => {
             // List of components that are logically part of the options page
             // but are located in the shared /src/components directory.
             const optionsSpecificSharedComponents = ['AboutSection']

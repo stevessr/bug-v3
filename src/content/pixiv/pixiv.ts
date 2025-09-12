@@ -1,5 +1,5 @@
-// Import and expose initPixiv to window object instead of exporting
+// Per-site pixiv init entry
 import { initPixiv } from './index'
 
-    // Expose init function to window for content wrapper
-    ; (window as any).__emoji_pixiv_init = initPixiv
+// Export initPixiv for the per-site content bundle (pixiv-content)
+export { initPixiv }

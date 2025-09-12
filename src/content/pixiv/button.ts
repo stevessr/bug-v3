@@ -1,5 +1,3 @@
-
-
 import type { AddEmojiButtonData } from './types'
 import { performPixivAddEmojiFlow } from './helpers'
 

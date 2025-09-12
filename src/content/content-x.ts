@@ -1,7 +1,7 @@
-console.log('[Emoji Extension] content-x loaded')
+import { initX } from './x/main'
+
 try {
-  const init = (window as any).__emoji_x_init
-  if (typeof init === 'function') init()
+  initX()
 } catch (e) {
-  console.error('[content-x] initX failed', e)
+  // silent
 }

@@ -1,3 +1,9 @@
+// 自动初始化入口，注入即执行
+try {
+  initBilibili()
+} catch (e) {
+  console.error('[content-bilibili] initBilibili failed', e)
+}
 /**
  * Bilibili 页面表情按钮注入功能
  * 主要初始化逻辑
@@ -99,4 +105,4 @@ function injectBilibiliButtonStyles() {
 }
 
 // Expose init on window so content wrapper can call without ESM imports
-; (window as any).__emoji_bilibili_init = initBilibili
+export { initBilibili }

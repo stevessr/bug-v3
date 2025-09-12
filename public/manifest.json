@@ -3,7 +3,13 @@
   "name": "Emoji Extension",
   "version": "1.0.0",
   "description": "An emoji extension built with Vue 3 and Vite.",
-  "permissions": ["storage", "activeTab", "scripting", "downloads", "cookies"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "downloads",
+    "cookies"
+  ],
   "host_permissions": [
     "https://i.pximg.net/*",
     "https://generativelanguage.googleapis.com/*",
@@ -30,7 +36,6 @@
     "service_worker": "js/background.js",
     "type": "module"
   },
-  
   "icons": {
     "48": "img/48.png",
     "64": "img/64.png",
@@ -39,6 +44,13 @@
     "1000": "img/1000.png",
     "1200": "img/1200.jpg"
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["js/content/autodetect.js"],
+      "run_at": "document_start"
+    }
+  ],
   "web_accessible_resources": [
     {
       "resources": ["assets/*", "js/*", "*.html"],

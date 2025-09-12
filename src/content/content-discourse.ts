@@ -1,7 +1,7 @@
-console.log('[Emoji Extension] content-discourse loaded')
+import { initDiscourse } from './discourse/discourse'
+
 try {
-  const init = (window as any).__emoji_discourse_init
-  if (typeof init === 'function') init()
+  initDiscourse()
 } catch (e) {
-  console.error('[content-discourse] initDiscourse failed', e)
+  // silent
 }
