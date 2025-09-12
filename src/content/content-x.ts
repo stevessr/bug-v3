@@ -1,4 +1,3 @@
-
 console.log('[Emoji Extension] content-x loaded')
 try {
   const init = (window as any).__emoji_x_init

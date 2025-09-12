@@ -1,4 +1,3 @@
-
 console.log('[Emoji Extension] content-bilibili loaded')
 try {
   const init = (window as any).__emoji_bilibili_init

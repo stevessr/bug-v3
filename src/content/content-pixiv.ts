@@ -1,4 +1,3 @@
-
 console.log('[Emoji Extension] content-pixiv loaded')
 try {
   const init = (window as any).__emoji_pixiv_init

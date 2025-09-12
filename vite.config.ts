@@ -49,16 +49,20 @@ export default defineConfig(({ mode }) => {
           // bridge helper that will be injected into pages (isolated world)
           'content-bridge': fileURLToPath(new URL('src/content/injectedBridge.ts', import.meta.url)),
           // Per-site content scripts - injected by background as needed
-          'discourse-content': fileURLToPath(new URL('src/content/content-discourse.ts', import.meta.url)),
-          'bilibili-content': fileURLToPath(new URL('src/content/content-bilibili.ts', import.meta.url)),
-          'x-content': fileURLToPath(new URL('src/content/content-x.ts', import.meta.url)),
-          'pixiv-content': fileURLToPath(new URL('src/content/content-pixiv.ts', import.meta.url)),
+          'discourse-content': fileURLToPath(new URL('src/content/discourse/discourse.ts', import.meta.url)),
+          'bilibili-content': fileURLToPath(new URL('src/content/bilibili/bilibili.ts', import.meta.url)),
+          'x-content': fileURLToPath(new URL('src/content/x/main.ts', import.meta.url)),
+          'pixiv-content': fileURLToPath(new URL('src/content/pixiv/pixiv.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
         },
         output: {
           entryFileNames: chunkInfo => {
-            // Emit content-related entries to js/content/<site>.js and remove 'content' suffix
             const name = String(chunkInfo.name)
+            // Handle the options entry point
+            if (name === 'options') {
+              return 'js/options/options.js'
+            }
+            // Emit content-related entries to js/content/<site>.js and remove 'content' suffix
             if (name === 'content') return 'js/content/autodetect.js'
             if (name === 'content-bridge') return 'js/content/bridge.js'
             if (name.endsWith('-content')) {

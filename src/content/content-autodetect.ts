@@ -1,82 +1,62 @@
-
-import { initializeEmojiFeature } from './utils/init'
-import { Uninject } from './utils/Uninject'
-
 console.log('[Emoji Extension] Content autodetect loader')
 
-function shouldInjectEmoji(): boolean {
+function detectPageType(): string {
   try {
+    const hostname = window.location.hostname.toLowerCase()
+    if (hostname.includes('bilibili')) return 'bilibili'
+    if (hostname.includes('pixiv')) return 'pixiv'
+    if (hostname.includes('twitter') || hostname.includes('x.com')) return 'x'
+
+    // Discourse and other forums
     const discourseMetaTags = document.querySelectorAll(
       'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
     )
-    if (discourseMetaTags.length > 0) return true
+    if (discourseMetaTags.length > 0) return 'discourse'
 
     const generatorMeta = document.querySelector('meta[name="generator"]')
     if (generatorMeta) {
       const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
-      if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) return true
+      if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
+        return 'discourse'
+      }
     }
-
-    const hostname = window.location.hostname.toLowerCase()
+    
     const allowedDomains = ['linux.do', 'meta.discourse.org']
-    if (allowedDomains.some(domain => hostname.includes(domain))) return true
+    if (allowedDomains.some(domain => hostname.includes(domain))) return 'discourse'
 
+    // Fallback for editors that might be discourse
     const editors = document.querySelectorAll(
       'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
     )
-    if (editors.length > 0) return true
+    if (editors.length > 0) return 'generic'
 
-    return false
+
+    return '' // No specific page type detected
   } catch (e) {
-    console.error('[Emoji Extension] shouldInjectEmoji failed', e)
-    return false
+    console.warn('[Emoji Extension] detectPageType failed', e)
+    return ''
   }
 }
 
-if (shouldInjectEmoji()) {
-  console.log('[Emoji Extension] autodetect: requesting background to inject content')
+const pageType = detectPageType()
 
-  // Determine a coarse pageType to inform background which scripts to inject
-  function detectPageType(): string {
-    try {
-      const hostname = window.location.hostname.toLowerCase()
-      if (hostname.includes('bilibili')) return 'bilibili'
-      if (hostname.includes('pixiv')) return 'pixiv'
-      if (hostname.includes('twitter') || hostname.includes('x.com')) return 'x'
-      // discourse-like
-      const discourseMeta = document.querySelectorAll('meta[name*="discourse"], meta[content*="discourse"]').length
-      if (discourseMeta > 0) return 'discourse'
-      return 'generic'
-    } catch (e) {
-      return 'generic'
-    }
-  }
-
-  const pageType = detectPageType()
-
-  if ((window as any).chrome && (window as any).chrome.runtime && (window as any).chrome.runtime.sendMessage) {
-    try {
+if (pageType) {
+  console.log(`[Emoji Extension] Detected page type: ${pageType}. Requesting injection.`)
+  try {
+    if ((window as any).chrome?.runtime?.sendMessage) {
       ;(window as any).chrome.runtime.sendMessage({ action: 'requestInject', pageType }, (response: any) => {
         if (response && response.success) {
-          console.log('[Emoji Extension] background injected content:', response.message)
+          console.log('[Emoji Extension] Background injected content:', response.message)
         } else {
-          console.warn('[Emoji Extension] background failed to inject, falling back to local init')
-          // fallback to legacy in-page initialization
-          initializeEmojiFeature()
+          console.warn('[Emoji Extension] Background failed to inject content script.')
         }
       })
-    } catch (e) {
-      console.warn('[Emoji Extension] sendMessage failed, falling back to local init', e)
-      initializeEmojiFeature()
     }
-  } else {
-    // If runtime not available, run local init (best-effort)
-    console.warn('[Emoji Extension] chrome.runtime not available in content script; running local init')
-    initializeEmojiFeature()
+  } catch (e) {
+    console.warn('[Emoji Extension] Failed to send requestInject message', e)
   }
 } else {
-  Uninject()
-  console.log('[Emoji Extension] autodetect: skipping injection - incompatible platform')
+  console.log('[Emoji Extension] No specific page type detected. Skipping injection.')
 }
 
 // linux.do CSRF helper listener kept here for compatibility
