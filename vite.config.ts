@@ -1,8 +1,6 @@
 import { fileURLToPath, URL } from 'url'
 
 import { defineConfig } from 'vite'
-import fs from 'fs'
-import path from 'path'
 import vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
@@ -44,21 +42,25 @@ export default defineConfig(({ mode }) => {
           options: fileURLToPath(new URL('options.html', import.meta.url)),
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
-          content: fileURLToPath(new URL('src/content/content-autodetect.ts', import.meta.url)),
+          // Autonomous content scripts - self-contained with no external dependencies
+          'content-autodetect': fileURLToPath(
+            new URL('src/content/autodetect-autonomous.ts', import.meta.url)
+          ),
           'content-bridge': fileURLToPath(
             new URL('src/content/injectedBridge.ts', import.meta.url)
           ),
-          // 新自动初始化入口
-          'discourse-content': fileURLToPath(
-            new URL('src/content/discourse/discourse.ts', import.meta.url)
+          'content-bilibili': fileURLToPath(
+            new URL('src/content/bilibili-autonomous.ts', import.meta.url)
           ),
-          'bilibili-content': fileURLToPath(
-            new URL('src/content/bilibili/bilibili.ts', import.meta.url)
+          'content-discourse': fileURLToPath(
+            new URL('src/content/discourse-autonomous.ts', import.meta.url)
           ),
-          'x-content': fileURLToPath(new URL('src/content/x/main.ts', import.meta.url)),
-          'pixiv-content': fileURLToPath(new URL('src/content/pixiv/pixiv.ts', import.meta.url)),
+          'content-x': fileURLToPath(new URL('src/content/x-autonomous.ts', import.meta.url)),
+          'content-pixiv': fileURLToPath(
+            new URL('src/content/pixiv-autonomous.ts', import.meta.url)
+          ),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url)),
-          // Autonomous image-inject script for generic image direct-link pages
+          // Autonomous image-inject script for generic image direct-link pages (already autonomous)
           'content/images/image-inject': fileURLToPath(
             new URL('src/content/images/image-inject.ts', import.meta.url)
           )
@@ -70,13 +72,13 @@ export default defineConfig(({ mode }) => {
             if (name === 'options') {
               return 'js/options/options.js'
             }
-            // Emit content-related entries to js/content/<site>.js and remove 'content' suffix
-            if (name === 'content') return 'js/content/autodetect.js'
+            // Emit autonomous content scripts to js/content/ with clean names
+            if (name === 'content-autodetect') return 'js/content/autodetect.js'
             if (name === 'content-bridge') return 'js/content/bridge.js'
-            if (name.endsWith('-content')) {
-              const base = name.replace(/-content$/, '')
-              return `js/content/${base}.js`
-            }
+            if (name === 'content-bilibili') return 'js/content/bilibili.js'
+            if (name === 'content-discourse') return 'js/content/discourse.js'
+            if (name === 'content-x') return 'js/content/x.js'
+            if (name === 'content-pixiv') return 'js/content/pixiv.js'
             return 'js/[name].js'
           },
           format: 'es', // Keep ES modules for most scripts
@@ -97,61 +99,10 @@ export default defineConfig(({ mode }) => {
             return 'js/[name].js'
           },
           assetFileNames: 'assets/[name].[ext]',
-          // Disable manualChunks splitting to avoid creating a shared "background.js"
-          // chunk that other entrypoints (like content) would import from. Keeping
-          // modules inlined per-entry ensures content scripts do not contain
-          // top-level ESM imports which cause runtime SyntaxError in some hosts.
-          manualChunks: (id, { getModuleInfo }) => {
-            // Resolve the canonical content entry path
-            const contentEntry = fileURLToPath(new URL('src/content/content.ts', import.meta.url))
-
-            // Normalize an id for comparisons: strip query/hash, normalize slashes, lowercase
-            const normalize = (raw?: string) => {
-              if (!raw) return ''
-              let s = raw.split('?')[0].split('#')[0]
-              s = s.replace(/\\/g, '/')
-              return s.toLowerCase()
-            }
-
-            const normContent = normalize(contentEntry)
-
-            // Reverse-traverse importers: starting from `id`, walk up via importers to see
-            // if content entry (or anything under src/content) imports it (transitively).
-            const isImportedByContent = (target: any) => {
-              try {
-                const start = normalize(target)
-                if (!start) return false
-                const visited = new Set()
-                const stack = [target] // Corrected from [stack.pop()]
-                while (stack.length) {
-                  const cur = stack.pop()
-                  if (!cur) continue
-                  const ncur = normalize(cur)
-                  if (visited.has(ncur)) continue
-                  visited.add(ncur)
-                  // If importer is exactly the content entry, or under src/content, it's reachable
-                  if (ncur === normContent || ncur.includes('/src/content/')) return true
-                  const info = getModuleInfo(cur)
-                  if (!info) continue
-                  const importers = info.importers || []
-                  for (const imp of importers) {
-                    stack.push(imp)
-                  }
-                }
-              } catch (e) {
-                return false
-              }
-              return false
-            }
-
-            // Previously we had complex heuristics here to split shared
-            // modules, but that produced a separate background chunk which
-            // content.js then imported via ESM. For extension content
-            // scripts we must avoid producing top-level imports between
-            // extension files. Returning undefined disables manual chunking
-            // and lets Rollup inline modules per-entry.
-            return undefined
-          }
+          // Disable manualChunks splitting to ensure autonomous content scripts
+          // remain self-contained with no external dependencies. Each content
+          // script inlines all required utilities and functions.
+          manualChunks: undefined
         },
         external: (id: any) => {
           // 排除 default.json 文件，防止被打包

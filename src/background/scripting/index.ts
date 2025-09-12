@@ -46,6 +46,7 @@ export async function injectContentForTab(tabId: number, pageType: string) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.scripting) return { success: false, error: 'scripting unavailable' }
 
+  // Mapping for autonomous content scripts - each script is self-contained
   const mapping: Record<string, string[]> = {
     bilibili: ['js/content/bilibili.js'],
     pixiv: ['js/content/pixiv.js'],
@@ -63,8 +64,9 @@ export async function injectContentForTab(tabId: number, pageType: string) {
         files: [f]
       })
     }
+    // Bridge is still needed for extension communication
     await injectBridgeIntoTab(tabId)
-    return { success: true, message: `Injected ${files.join(', ')}` }
+    return { success: true, message: `Injected autonomous ${files.join(', ')}` }
   } catch (e) {
     console.warn('[后台] injectContentForTab failed', e)
     return { success: false, error: String(e) }

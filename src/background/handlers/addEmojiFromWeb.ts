@@ -17,7 +17,7 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
         id: 'ungrouped',
         name: '未分组',
         icon: '📦',
-        order: 999,
+        order: 9999,
         emojis: []
       }
       groups.push(ungroupedGroup)
