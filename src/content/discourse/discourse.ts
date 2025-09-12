@@ -17,7 +17,7 @@ function isDiscoursePage(): boolean {
   }
 }
 
-export function initDiscourse() {
+function initDiscourse() {
   try {
     if (!isDiscoursePage()) return
 

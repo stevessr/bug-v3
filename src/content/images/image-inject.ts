@@ -100,16 +100,11 @@ function createOverlayBtn(data: AddEmojiButtonData, target: Element) {
   return btn
 }
 
-// 自动检测并注入按钮
+// 直接注入按钮：不做 host/URL/数量检测，尝试为页面找到的首个 img 注入按钮
 ;(function () {
-  const host = window.location.hostname.toLowerCase()
-  if (host.includes('pximg.net') || host.includes('pixiv.net')) return
-  const imgExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-  const url = window.location.href.split('?')[0].toLowerCase()
-  if (!imgExt.some(ext => url.endsWith(ext))) return
-  const imgs = Array.from(document.querySelectorAll('img'))
-  if (imgs.length !== 1) return
+  console.log('[Emoji拓展] images/image-inject.ts 开始注入表情按钮')
   setTimeout(() => {
+    // 尝试找到第一个图片元素，如果没有则不做任何事
     const img = document.querySelector('img')
     if (!img) return
     const src = img.src || img.getAttribute('src') || ''
