@@ -1,8 +1,8 @@
 import type { DefaultEmojiData, EmojiGroup } from './emoji'
 
 /**
- * 加载默认表情组数据
- * 破坏性更新：只支持压缩版本，不提供降级方案
+ * 运行时加载默认表情组数据
+ * 从 gzipLoader 加载压缩的默认数据
  */
 export async function loadDefaultEmojiGroups(): Promise<EmojiGroup[]> {
   const { loadDefaultGroups } = await import('../utils/gzipLoader')
@@ -10,14 +10,14 @@ export async function loadDefaultEmojiGroups(): Promise<EmojiGroup[]> {
 }
 
 /**
- * 加载打包的默认数据
- * 破坏性更新：只支持压缩版本，不提供降级方案
+ * 运行时加载打包的默认数据
+ * 包含表情组和设置配置
  */
 export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
   const { loadDefaultGroups } = await import('../utils/gzipLoader')
   const groups = await loadDefaultGroups()
 
-  // 返回固定的设置配置（不再从文件读取）
+  // 返回固定的设置配置
   return {
     groups,
     settings: {

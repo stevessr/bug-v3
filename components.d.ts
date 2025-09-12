@@ -13,16 +13,8 @@ declare module 'vue' {
     ADropdown: typeof import('ant-design-vue/es')['Dropdown']
     AMenu: typeof import('ant-design-vue/es')['Menu']
     AMenuItem: typeof import('ant-design-vue/es')['MenuItem']
-    ApiConfig: typeof import('./src/components/ImageGenerator/ApiConfig.vue')['default']
     APopconfirm: typeof import('ant-design-vue/es')['Popconfirm']
     AProgress: typeof import('ant-design-vue/es')['Progress']
-    GenerateButton: typeof import('./src/components/ImageGenerator/GenerateButton.vue')['default']
-    GenerationConfig: typeof import('./src/components/ImageGenerator/GenerationConfig.vue')['default']
-    GenerationMode: typeof import('./src/components/ImageGenerator/GenerationMode.vue')['default']
     GridColumnsSelector: typeof import('./src/components/GridColumnsSelector.vue')['default']
-    ImageGeneratorMain: typeof import('./src/components/ImageGenerator/ImageGeneratorMain.vue')['default']
-    ImageUpload: typeof import('./src/components/ImageGenerator/ImageUpload.vue')['default']
-    PromptInput: typeof import('./src/components/ImageGenerator/PromptInput.vue')['default']
-    ResultDisplay: typeof import('./src/components/ImageGenerator/ResultDisplay.vue')['default']
   }
 }

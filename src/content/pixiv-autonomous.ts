@@ -68,22 +68,39 @@ function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
     const originalStyle = button.style.cssText
 
     try {
-      button.innerHTML = '添加中...'
+      button.innerHTML = '下载中...'
+      button.style.background = 'linear-gradient(135deg,#3b82f6,#2563eb)'
+
+      // Step 1: Download image from Pixiv page (respecting origin restrictions)
+      const imageData = await downloadPixivImage(data.url)
+
+      button.innerHTML = '上传中...'
       button.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)'
 
+      // Step 2: Send image data to background script
       if ((window as any).chrome?.runtime?.sendMessage) {
-        await (window as any).chrome.runtime.sendMessage({
-          action: 'addEmojiFromWeb',
-          emojiData: data
+        const response = await (window as any).chrome.runtime.sendMessage({
+          action: 'uploadPixivEmojiToLinuxDo',
+          imageData: {
+            arrayData: Array.from(imageData),
+            filename: extractFilenameFromUrl(data.url),
+            mimeType: 'image/jpeg', // Pixiv images are typically JPEG
+            name: data.name,
+            hiddenUrl: data.url // Original Pixiv URL
+          }
         })
 
-        button.innerHTML = '已添加'
-        button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
+        if (response && response.success) {
+          button.innerHTML = '已添加'
+          button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
 
-        setTimeout(() => {
-          button.innerHTML = originalText
-          button.style.cssText = originalStyle
-        }, 1500)
+          setTimeout(() => {
+            button.innerHTML = originalText
+            button.style.cssText = originalStyle
+          }, 1500)
+        } else {
+          throw new Error(response?.error || '上传失败')
+        }
       } else {
         throw new Error('Chrome runtime not available')
       }
@@ -97,6 +114,67 @@ function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
         button.style.cssText = originalStyle
       }, 1500)
     }
+  })
+}
+
+// Download image from Pixiv using canvas to respect origin restrictions
+async function downloadPixivImage(imageUrl: string): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) {
+          reject(new Error('Cannot get canvas context'))
+          return
+        }
+
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+
+        ctx.drawImage(img, 0, 0)
+
+        canvas.toBlob(
+          blob => {
+            if (!blob) {
+              reject(new Error('Failed to create blob'))
+              return
+            }
+
+            const reader = new FileReader()
+            reader.onload = () => {
+              const arrayBuffer = reader.result as ArrayBuffer
+              resolve(new Uint8Array(arrayBuffer))
+            }
+            reader.onerror = () => reject(new Error('Failed to read blob'))
+            reader.readAsArrayBuffer(blob)
+          },
+          'image/jpeg',
+          0.9
+        )
+      } catch (error) {
+        reject(error)
+      }
+    }
+
+    img.onerror = () => {
+      // Fallback: try direct fetch (may fail due to CORS)
+      fetch(imageUrl, {
+        headers: {
+          Referer: 'https://www.pixiv.net/'
+        }
+      })
+        .then(response => response.arrayBuffer())
+        .then(buffer => resolve(new Uint8Array(buffer)))
+        .catch(error => reject(new Error(`Failed to download image: ${error.message}`)))
+    }
+
+    // Set referer for Pixiv images
+    img.src = imageUrl
   })
 }
 
