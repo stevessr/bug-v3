@@ -5,9 +5,9 @@ import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
 
 import HeaderControls from './components/HeaderControls.vue'
-import GroupsTab from './components/GroupsTab.vue'
 
 // Lazy-loaded components
+const GroupsTab = defineAsyncComponent(() => import('./components/GroupsTab.vue'))
 const AboutSection = defineAsyncComponent(() => import('../components/AboutSection.vue'))
 const GlobalSettings = defineAsyncComponent(() => import('./components/GlobalSettings.vue'))
 const EmojiStats = defineAsyncComponent(() => import('./components/EmojiStats.vue'))
@@ -238,7 +238,8 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         </GlobalSettings>
       </div>
 
-      <GroupsTab
+            <GroupsTab
+        v-if="activeTab === 'groups' || activeTab === 'groups-card'"
         :emojiStore="emojiStore"
         :expandedGroups="expandedGroups"
         :isImageUrl="isImageUrl"

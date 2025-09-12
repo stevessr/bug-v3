@@ -113,7 +113,7 @@ export default defineConfig(({ mode }) => {
                 const start = normalize(target)
                 if (!start) return false
                 const visited = new Set()
-                const stack = [target]
+                const stack = [target] // Corrected from [stack.pop()]
                 while (stack.length) {
                   const cur = stack.pop()
                   if (!cur) continue
