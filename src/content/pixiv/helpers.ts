@@ -1,5 +1,3 @@
-
-
 import type { AddEmojiButtonData } from './types'
 
 // Duplicate minimal helpers here to avoid circular imports
@@ -114,7 +112,10 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
         message: '表情已成功添加到未分组'
       }
     } else {
-      console.error('[PixivAddEmoji] Background processing failed:', JSON.stringify(bgResp, null, 2))
+      console.error(
+        '[PixivAddEmoji] Background processing failed:',
+        JSON.stringify(bgResp, null, 2)
+      )
       return {
         success: false,
         error: '后台处理失败',

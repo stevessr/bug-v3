@@ -124,7 +124,10 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
             try {
               localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
             } catch (e) {
-              console.warn('[Userscript] Failed to persist fetched remote groups to localStorage', e)
+              console.warn(
+                '[Userscript] Failed to persist fetched remote groups to localStorage',
+                e
+              )
             }
 
             // Filter out favorites for userscript mode

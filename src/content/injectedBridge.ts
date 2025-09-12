@@ -43,7 +43,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
         const requestId = Math.random().toString(36).slice(2)
         window.addEventListener('message', listener)
-        window.postMessage({ __emoji_ext_bridge: true, payload: payload, requestId, from: 'page' }, '*')
+        window.postMessage(
+          { __emoji_ext_bridge: true, payload: payload, requestId, from: 'page' },
+          '*'
+        )
       } catch (e) {
         resolve(null)
       }

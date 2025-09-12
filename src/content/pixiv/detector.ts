@@ -90,7 +90,7 @@ function scanForImagePage() {
       const imgContainer = img.parentElement || document.body
       const computedStyle = window.getComputedStyle(imgContainer)
       if (computedStyle.position === 'static') {
-        ; (imgContainer as HTMLElement).style.position = 'relative'
+        ;(imgContainer as HTMLElement).style.position = 'relative'
       }
 
       imgContainer.appendChild(button)

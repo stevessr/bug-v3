@@ -1,7 +1,5 @@
 import { defaultSettings } from '../../types/emoji'
 
-
-
 // no runtime packaged defaults loader needed in this adapter
 
 export class ContentStorageAdapter {
@@ -192,4 +190,3 @@ export class ContentStorageAdapter {
     return result
   }
 }
-

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
 
-import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
+import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 
 import HeaderControls from './components/HeaderControls.vue'
 
@@ -16,9 +16,7 @@ const ImportEmojisModal = defineAsyncComponent(() => import('./modals/ImportEmoj
 const CreateGroupModal = defineAsyncComponent(() => import('./modals/CreateGroupModal.vue'))
 const AddEmojiModal = defineAsyncComponent(() => import('./modals/AddEmojiModal.vue'))
 const ConfirmGenericModal = defineAsyncComponent(() => import('./modals/ConfirmGenericModal.vue'))
-const NotificationToasts = defineAsyncComponent(
-  () => import('./components/NotificationToasts.vue')
-)
+const NotificationToasts = defineAsyncComponent(() => import('./components/NotificationToasts.vue'))
 const FavoritesTab = defineAsyncComponent(() => import('./components/FavoritesTab.vue'))
 const UngroupedTab = defineAsyncComponent(() => import('./components/UngroupedTab.vue'))
 const ExternalImportTab = defineAsyncComponent(() => import('./components/ExternalImportTab.vue'))
@@ -238,7 +236,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         </GlobalSettings>
       </div>
 
-            <GroupsTab
+      <GroupsTab
         v-if="activeTab === 'groups' || activeTab === 'groups-card'"
         :emojiStore="emojiStore"
         :expandedGroups="expandedGroups"

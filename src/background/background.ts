@@ -1,5 +1,4 @@
 import { getChromeAPI } from './utils'
-
 import { setupOnInstalledListener } from './init'
 import {
   setupMessageListener,

@@ -9,21 +9,11 @@ export const isMobile = (): boolean => {
   return mobileKeywords.some(keyword => userAgent.includes(keyword))
 }
 
-export async function createEmojiPicker(isMobileView: boolean): Promise<HTMLElement> {
-  console.log('[Emoji Extension] Creating picker for isMobileView:', isMobileView)
-  if (isMobileView) {
-    return createMobileEmojiPicker()
-  }
-  return createDesktopEmojiPicker()
-}
-
 export function isImageUrl(value: string | null | undefined): boolean {
   if (!value) return false
-  // Accept data URIs (base64) directly
   if (typeof value === 'string' && value.startsWith('data:image/')) return true
   try {
     const url = new URL(value)
-    // Accept http(s) with common image extensions
     if (url.protocol === 'http:' || url.protocol === 'https:') {
       return /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
     }
@@ -31,6 +21,11 @@ export function isImageUrl(value: string | null | undefined): boolean {
   } catch {
     return false
   }
+}
+
+export async function createEmojiPicker(isMobileView: boolean): Promise<HTMLElement> {
+  if (isMobileView) return createMobileEmojiPicker()
+  return createDesktopEmojiPicker()
 }
 
 async function createDesktopEmojiPicker(): Promise<HTMLElement> {
@@ -73,9 +68,7 @@ async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     if (!group?.emojis?.length) return
 
     const navButton = document.createElement('button')
-    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${
-      index === 0 ? 'active' : ''
-    }`
+    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? 'active' : ''}`
     navButton.setAttribute('tabindex', '-1')
     navButton.setAttribute('data-section', group.id)
     navButton.type = 'button'
@@ -354,4 +347,17 @@ async function createMobileEmojiPicker(): Promise<HTMLElement> {
   modal.appendChild(modalContainerDiv)
 
   return modal
+}
+
+export function initEmojiPicker() {
+  // noop for now — picker is created on demand via createEmojiPicker
+  // expose global for other modules
+  ;(window as any).__emojiPicker = { createEmojiPicker }
+}
+
+// auto-init
+try {
+  initEmojiPicker()
+} catch (e) {
+  console.error('[content-discourse] initEmojiPicker failed', e)
 }

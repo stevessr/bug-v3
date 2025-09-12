@@ -1,6 +1,5 @@
 import { loadDataFromStorage } from '../data/storage'
 
-
 import { findAllToolbars, injectButton } from './injector'
 import { initOneClickAdd } from './oneClickAdd'
 

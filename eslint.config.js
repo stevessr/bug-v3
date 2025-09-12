@@ -49,7 +49,6 @@ export default [
     rules: {
       // defensive: if ignore patterns are bypassed, silence all rules for this generated JSON
       'prettier/prettier': 'off',
-      'no-console': 'off',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': 'off'
     }
@@ -99,7 +98,6 @@ export default [
       'promise/no-promise-in-callback': 'warn',
 
       // 通用规则
-      'no-console': 'warn',
       'no-debugger': 'error',
       'no-alert': 'warn',
       'prefer-const': 'error',
@@ -165,7 +163,6 @@ export default [
       'promise/catch-or-return': 'error',
 
       // 通用规则
-      'no-console': 'warn',
       'no-debugger': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
@@ -203,7 +200,6 @@ export default [
       'promise/no-nesting': 'warn',
 
       // 通用规则
-      'no-console': 'warn',
       'no-debugger': 'error',
       'no-alert': 'warn',
       'prefer-const': 'error',

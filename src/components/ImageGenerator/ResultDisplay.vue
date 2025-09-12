@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-
 interface Props {
   isLoading: boolean
   error: string | null

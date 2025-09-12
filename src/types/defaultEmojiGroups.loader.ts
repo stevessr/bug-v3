@@ -16,7 +16,7 @@ export async function loadDefaultEmojiGroups(): Promise<EmojiGroup[]> {
 export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
   const { loadDefaultGroups } = await import('../utils/gzipLoader')
   const groups = await loadDefaultGroups()
-  
+
   // 返回固定的设置配置（不再从文件读取）
   return {
     groups,

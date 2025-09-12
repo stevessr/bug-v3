@@ -1,5 +1,6 @@
 // Compatibility shim: forward to gzip loader to maintain older import paths
 import type { EmojiGroup } from '../types/emoji'
+
 import { loadDefaultGroups } from './gzipLoader'
 
 export async function loadCompressedDefaultGroups(): Promise<EmojiGroup[]> {

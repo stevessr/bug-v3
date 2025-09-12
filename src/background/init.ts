@@ -1,4 +1,3 @@
-
 import { getChromeAPI } from './utils'
 
 import { loadDefaultEmojiGroups } from '@/types/defaultEmojiGroups.loader'

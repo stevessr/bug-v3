@@ -1,4 +1,3 @@
-
 import { getChromeAPI } from './utils'
 import { defaultProxyConfig } from './proxyConfig'
 

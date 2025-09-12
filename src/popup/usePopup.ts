@@ -13,12 +13,15 @@ export function usePopup() {
     // Guard against a hung loadData by racing with a short timeout.
     // If loadData does not resolve within 3s, fall back and ensure UI is not stuck.
     const timeoutMs = 3000
-    const timeout = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+    const timeout = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
     try {
       const result = (await Promise.race([
         // mark loaded on success; swallow errors so race resolves
-        emojiStore.loadData().then(() => 'loaded').catch(() => 'loaded'),
+        emojiStore
+          .loadData()
+          .then(() => 'loaded')
+          .catch(() => 'loaded'),
         timeout(timeoutMs).then(() => 'timeout')
       ])) as 'loaded' | 'timeout'
 
@@ -26,8 +29,12 @@ export function usePopup() {
         // loadData hasn't finished in time. Avoid stuck UI by clearing loading flag so
         // components can render a fallback state. The background load may still finish
         // later and update the store as normal.
-        // eslint-disable-next-line no-console
-        console.warn('[Popup] emojiStore.loadData timed out after', timeoutMs, 'ms; clearing isLoading')
+
+        console.warn(
+          '[Popup] emojiStore.loadData timed out after',
+          timeoutMs,
+          'ms; clearing isLoading'
+        )
         try {
           emojiStore.isLoading = false
         } catch (e) {
@@ -36,7 +43,7 @@ export function usePopup() {
       }
     } catch (e) {
       // loadData should handle internal errors; log any unexpected crash here.
-      // eslint-disable-next-line no-console
+
       console.error('[Popup] emojiStore.loadData crashed:', e)
     } finally {
       // Ensure localScale is always set from store defaults even if loadData timed out.

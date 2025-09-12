@@ -1,5 +1,3 @@
-
-
 declare const chrome: any
 
 function isXPage(): boolean {

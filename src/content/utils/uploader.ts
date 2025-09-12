@@ -1,5 +1,3 @@
-
-
 // Function to parse image filenames from markdown text
 function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
   const imageRegex = /!\[([^\]]*)\]\([^)]+\)/g

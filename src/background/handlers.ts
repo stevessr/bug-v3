@@ -59,9 +59,10 @@ export function setupMessageListener() {
 
           case 'requestInject': {
             // handle asynchronously and return true to indicate we'll call sendResponse later
-            (async () => {
+            ;(async () => {
               try {
-                const senderTabId = _sender && _sender.tab && _sender.tab.id ? _sender.tab.id : undefined
+                const senderTabId =
+                  _sender && _sender.tab && _sender.tab.id ? _sender.tab.id : undefined
                 let tabId = senderTabId
                 const chromeAPI = getChromeAPI()
                 if (!tabId && chromeAPI && chromeAPI.tabs) {

@@ -1,5 +1,3 @@
-
-
 import { tryInjectTwitterMedia } from './twitterMediaInject'
 
 declare const chrome: any

@@ -8,8 +8,8 @@ import type { EmojiGroup, AppSettings } from '../types/emoji'
 declare const __ENABLE_INDEXEDDB__: boolean | undefined
 
 export const indexedDBWrapper = {
-  isEnabled: () => typeof __ENABLE_INDEXEDDB__ !== 'undefined' ? __ENABLE_INDEXEDDB__ : true,
-  shouldSkip: () => typeof __ENABLE_INDEXEDDB__ !== 'undefined' ? !__ENABLE_INDEXEDDB__ : false
+  isEnabled: () => (typeof __ENABLE_INDEXEDDB__ !== 'undefined' ? __ENABLE_INDEXEDDB__ : true),
+  shouldSkip: () => (typeof __ENABLE_INDEXEDDB__ !== 'undefined' ? !__ENABLE_INDEXEDDB__ : false)
 }
 
 import { formatPreview } from './formatUtils'

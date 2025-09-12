@@ -284,7 +284,7 @@ const loadIndexFromUrl = async (url?: string) => {
   importResults.value = null
   try {
     let json: unknown
-    
+
     // Prefer plain JSON. If a .gz URL is provided, still attempt to fetch and parse text
     const res = await fetch(u)
     if (!res.ok) throw new Error(`请求失败: ${res.status}`)
@@ -294,7 +294,7 @@ const loadIndexFromUrl = async (url?: string) => {
     } catch (parseErr) {
       json = safeParseJson(txt)
     }
-    
+
     const normalized = normalizeBilibiliIndex(json)
     if (!normalized || !Array.isArray(normalized)) {
       throw new Error('无效的索引格式')

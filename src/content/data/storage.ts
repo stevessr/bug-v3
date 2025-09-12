@@ -1,4 +1,3 @@
-
 import { getDefaultEmojisAsync } from '../data/default'
 
 import { cachedState } from './state'
