@@ -3,12 +3,10 @@
  * 主要初始化逻辑
  */
 
-
-
 import { isBilibiliOpusPage } from './utils/bilibili-utils'
 import { scanAndInject, observeMutations } from './dom/bilibili-injection'
 
-export function initBilibili() {
+function initBilibili() {
   try {
     if (!isBilibiliOpusPage()) {
       console.log('[BiliOneClick] skipping init: not a Bilibili opus page')
@@ -101,4 +99,4 @@ function injectBilibiliButtonStyles() {
 }
 
 // Expose init on window so content wrapper can call without ESM imports
-;(window as any).__emoji_bilibili_init = initBilibili
+; (window as any).__emoji_bilibili_init = initBilibili

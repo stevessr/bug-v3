@@ -93,8 +93,6 @@ process.env.USERSCRIPT_VARIANT = variant
 
 // Note: build-time generation of defaultEmojiGroups.ts has been removed.
 
-
-
 // 打印配置信息
 console.log(`🚀 开始构建 (${buildType})`)
 console.log(`📋 配置:`)
@@ -139,24 +137,6 @@ child.on('exit', code => {
           console.error('❌ Userscript post-processing failed')
         }
         process.exit(postCode)
-      })
-    } else {
-      // Original Chrome extension build flow
-      console.log('🧹 清理空文件...')
-      const cleanChild = spawn('node', ['./scripts/clean-empty-chunks.mjs'], {
-        stdio: 'inherit',
-        shell: true
-      })
-
-      cleanChild.on('exit', cleanCode => {
-        if (cleanCode === 0) {
-          // Vite produced the content.js chunk according to rollupOptions.manualChunks
-          // and output file names; no separate bundling step is required.
-          console.log('✅ 构建完成！')
-        } else {
-          console.error('❌ 清理过程出错')
-        }
-        process.exit(cleanCode)
       })
     }
   } else {

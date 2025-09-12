@@ -1,5 +1,3 @@
-
-
 declare const chrome: any
 
 interface AddEmojiButtonData {
@@ -261,7 +259,7 @@ function isDiscoursePage(): boolean {
   }
 }
 
-export function initDiscourse() {
+function initDiscourse() {
   try {
     if (!isDiscoursePage()) {
       console.log('[DiscourseOneClick] skipping init: not a Discourse page')
@@ -278,11 +276,11 @@ export function initDiscourse() {
   }
 }
 // 挂到 window 供 content wrapper 调用
-(window as any).__emoji_discourse_init = initDiscourse
+; (window as any).__emoji_discourse_init = initDiscourse
 
 // Listen for background messages instructing to upload a blob to Discourse
 if ((window as any).chrome?.runtime?.onMessage) {
-  ;(window as any).chrome.runtime.onMessage.addListener(async (message: any, _sender: any) => {
+  ; (window as any).chrome.runtime.onMessage.addListener(async (message: any, _sender: any) => {
     if (message && message.action === 'uploadBlobToDiscourse') {
       try {
         const filename = message.filename || 'image.jpg'
@@ -322,21 +320,21 @@ if ((window as any).chrome?.runtime?.onMessage) {
         })
         if (!resp.ok) {
           const data = await resp.json().catch(() => null)
-          ;(window as any).chrome.runtime.sendMessage({
-            type: 'UPLOAD_RESULT',
-            success: false,
-            details: data
-          })
+            ; (window as any).chrome.runtime.sendMessage({
+              type: 'UPLOAD_RESULT',
+              success: false,
+              details: data
+            })
         } else {
           const data = await resp.json()
-          ;(window as any).chrome.runtime.sendMessage({
-            type: 'UPLOAD_RESULT',
-            success: true,
-            data
-          })
+            ; (window as any).chrome.runtime.sendMessage({
+              type: 'UPLOAD_RESULT',
+              success: true,
+              data
+            })
         }
       } catch (e) {
-        ;(window as any).chrome.runtime.sendMessage({
+        ; (window as any).chrome.runtime.sendMessage({
           type: 'UPLOAD_RESULT',
           success: false,
           error: String(e)

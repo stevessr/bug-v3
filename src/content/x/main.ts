@@ -1,5 +1,3 @@
-
-
 import { initVideoCopy } from './videoCopy'
 import { scanAndInjectCarousel } from './carousel'
 
@@ -176,8 +174,8 @@ function createOverlayBtn(data: AddEmojiButtonData, target: Element) {
     btn.style.opacity = '0'
   }
 
-  ;(target as HTMLElement).addEventListener('mouseenter', showButton)
-  ;(target as HTMLElement).addEventListener('mouseleave', hideButton)
+    ; (target as HTMLElement).addEventListener('mouseenter', showButton)
+    ; (target as HTMLElement).addEventListener('mouseleave', hideButton)
   btn.addEventListener('mouseenter', showButtonOnButtonHover)
   btn.addEventListener('mouseleave', hideButtonOnButtonLeave)
 
@@ -187,8 +185,8 @@ function createOverlayBtn(data: AddEmojiButtonData, target: Element) {
         // target removed — cleanup
         cancelAnimationFrame(raf)
         if (btn.parentElement) btn.parentElement.removeChild(btn)
-        ;(target as HTMLElement).removeEventListener('mouseenter', showButton)
-        ;(target as HTMLElement).removeEventListener('mouseleave', hideButton)
+          ; (target as HTMLElement).removeEventListener('mouseenter', showButton)
+          ; (target as HTMLElement).removeEventListener('mouseleave', hideButton)
         btn.removeEventListener('mouseenter', showButtonOnButtonHover)
         btn.removeEventListener('mouseleave', hideButtonOnButtonLeave)
         overlayMap.delete(target)
@@ -376,7 +374,7 @@ function observe() {
   obs.observe(document.body, { childList: true, subtree: true, attributes: true })
 }
 
-export function initX() {
+function initX() {
   try {
     if (!isXPage()) {
       console.log('[XOneClick] skipping init: not X/Twitter host')
@@ -393,4 +391,4 @@ export function initX() {
   }
 }
 // 挂到 window 供 content wrapper 调用
-(window as any).__emoji_x_init = initX
+; (window as any).__emoji_x_init = initX

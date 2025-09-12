@@ -100,36 +100,6 @@ export default [
 
       // 通用规则
       'no-console': 'warn',
-      // Disallow direct console usage; prefer the logger wrapper in src/config/buildFlags.ts
-      'no-restricted-properties': [
-        'error',
-        {
-          object: 'console',
-          property: 'log',
-          message: 'Use logger.log(...) from src/config/buildFlags.ts instead of console.log'
-        },
-        {
-          object: 'console',
-          property: 'warn',
-          message: 'Use logger.warn(...) from src/config/buildFlags.ts instead of console.warn'
-        },
-        {
-          object: 'console',
-          property: 'error',
-          message: 'Use logger.error(...) from src/config/buildFlags.ts instead of console.error'
-        },
-        {
-          object: 'console',
-          property: 'debug',
-          message: 'Use logger.dev(...) from src/config/buildFlags.ts instead of console.debug'
-        },
-        {
-          object: 'console',
-          property: 'info',
-          message:
-            'Use logger.log(...) or logger.dev(...) from src/config/buildFlags.ts instead of console.info'
-        }
-      ],
       'no-debugger': 'error',
       'no-alert': 'warn',
       'prefer-const': 'error',

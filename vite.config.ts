@@ -78,6 +78,7 @@ export default defineConfig(({ mode }) => {
             }
             return 'js/[name].js'
           },
+          format: 'es', // Keep ES modules for most scripts
           chunkFileNames: (chunkInfo) => {
             // List of components that are logically part of the options page
             // but are located in the shared /src/components directory.
@@ -115,7 +116,7 @@ export default defineConfig(({ mode }) => {
 
             // Reverse-traverse importers: starting from `id`, walk up via importers to see
             // if content entry (or anything under src/content) imports it (transitively).
-            const isImportedByContent = target => {
+            const isImportedByContent = (target: any) => {
               try {
                 const start = normalize(target)
                 if (!start) return false
@@ -151,7 +152,7 @@ export default defineConfig(({ mode }) => {
             return undefined
           }
         },
-        external: id => {
+        external: (id: any) => {
           // 排除 default.json 文件，防止被打包
           if (id.includes('src/config/default.json')) {
             return true
