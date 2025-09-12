@@ -535,8 +535,11 @@ function insertEmojiIntoEditor(emoji: any, settings: any) {
     const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
     const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
+    // Provide default settings if undefined
+    const safeSettings = settings || { outputFormat: 'markdown' }
+
     let text = ''
-    if (settings.outputFormat === 'html' && emoji.url) {
+    if (safeSettings.outputFormat === 'html' && emoji.url) {
       text = `<img src="${emoji.url}" alt="${emoji.name || ''}" width="24" height="24">`
     } else if (emoji.url) {
       text = `![${emoji.name || ''}](${emoji.url})`
@@ -719,8 +722,9 @@ function createUploadMenu(): HTMLElement {
   const optionsDiv = document.createElement('div')
   optionsDiv.style.cssText = `
     display: flex;
-    gap: 12px;
+    gap: 8px;
     margin-bottom: 16px;
+    flex-wrap: wrap;
   `
 
   const uploadButton = document.createElement('button')
@@ -728,7 +732,8 @@ function createUploadMenu(): HTMLElement {
   uploadButton.textContent = '选择文件'
   uploadButton.style.cssText = `
     flex: 1;
-    padding: 8px 16px;
+    min-width: 100px;
+    padding: 8px 12px;
     background: #3b82f6;
     color: white;
     border: none;
@@ -742,8 +747,24 @@ function createUploadMenu(): HTMLElement {
   parseButton.textContent = '差分上传'
   parseButton.style.cssText = `
     flex: 1;
-    padding: 8px 16px;
+    min-width: 100px;
+    padding: 8px 12px;
     background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  `
+
+  const urlButton = document.createElement('button')
+  urlButton.className = 'btn btn-secondary'
+  urlButton.textContent = '输入URL'
+  urlButton.style.cssText = `
+    flex: 1;
+    min-width: 100px;
+    padding: 8px 12px;
+    background: #059669;
     color: white;
     border: none;
     border-radius: 6px;
@@ -753,6 +774,7 @@ function createUploadMenu(): HTMLElement {
 
   optionsDiv.appendChild(uploadButton)
   optionsDiv.appendChild(parseButton)
+  optionsDiv.appendChild(urlButton)
 
   // Upload list
   const uploadList = document.createElement('div')
@@ -784,9 +806,54 @@ function createUploadMenu(): HTMLElement {
   menu.appendChild(innerContent)
 
   // Setup event handlers
-  setupUploadMenuHandlers(menu, uploadButton, parseButton, uploadList)
+  setupUploadMenuHandlers(menu, uploadButton, parseButton, urlButton, uploadList)
 
   return menu
+}
+
+// Make element draggable
+function makeDraggable(element: HTMLElement) {
+  const header = element.querySelector('div') as HTMLElement
+  if (!header) return
+
+  let isDragging = false
+  let startX = 0
+  let startY = 0
+  let initialX = 0
+  let initialY = 0
+
+  header.style.cursor = 'move'
+
+  header.addEventListener('mousedown', (e: MouseEvent) => {
+    isDragging = true
+    startX = e.clientX
+    startY = e.clientY
+
+    const rect = element.getBoundingClientRect()
+    initialX = rect.left
+    initialY = rect.top
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  })
+
+  function handleMouseMove(e: MouseEvent) {
+    if (!isDragging) return
+
+    const deltaX = e.clientX - startX
+    const deltaY = e.clientY - startY
+
+    element.style.left = `${initialX + deltaX}px`
+    element.style.top = `${initialY + deltaY}px`
+    element.style.right = 'auto'
+    element.style.bottom = 'auto'
+  }
+
+  function handleMouseUp() {
+    isDragging = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+  }
 }
 
 function createUploadButton(): HTMLElement {
@@ -806,30 +873,29 @@ function createUploadButton(): HTMLElement {
     e.preventDefault()
     e.stopPropagation()
 
-    // Remove existing menu
+    // Check if menu already exists
     const existingMenu = document.querySelector('.upload-menu')
     if (existingMenu) {
-      existingMenu.remove()
+      // Toggle visibility instead of removing
+      const isVisible = existingMenu.style.display !== 'none'
+      existingMenu.style.display = isVisible ? 'none' : 'block'
       return
     }
 
-    // Create and show upload menu
+    // Create and show persistent upload menu
     const menu = createUploadMenu()
     document.body.appendChild(menu)
 
-    // Position menu relative to button
-    const rect = button.getBoundingClientRect()
-    menu.style.left = `${rect.left}px`
-    menu.style.bottom = `${window.innerHeight - rect.top + 10}px`
+    // Position menu as floating window (top-right corner)
+    menu.style.cssText += `
+      top: 20px;
+      right: 20px;
+      max-width: 400px;
+      min-width: 350px;
+    `
 
-    // Close menu when clicking outside
-    const closeHandler = (event: Event) => {
-      if (!menu.contains(event.target as Node)) {
-        menu.remove()
-        document.removeEventListener('click', closeHandler)
-      }
-    }
-    setTimeout(() => document.addEventListener('click', closeHandler), 100)
+    // Make menu draggable
+    makeDraggable(menu)
   })
 
   return button
@@ -844,6 +910,7 @@ function setupUploadMenuHandlers(
   menu: HTMLElement,
   uploadButton: HTMLElement,
   parseButton: HTMLElement,
+  urlButton: HTMLElement,
   uploadList: HTMLElement
 ) {
   // File upload handler
@@ -877,6 +944,17 @@ function setupUploadMenuHandlers(
       } else {
         showNotification('未找到可解析的图片链接', 'warning')
       }
+    }
+  })
+
+  // URL input handler
+  urlButton.addEventListener('click', () => {
+    const url = prompt('请输入图片URL:')
+    if (url && url.trim()) {
+      const trimmedUrl = url.trim()
+      // Extract filename from URL
+      const filename = trimmedUrl.split('/').pop()?.split('?')[0] || 'image'
+      handleParseUpload([{ url: trimmedUrl, name: filename }], uploadList)
     }
   })
 
@@ -1114,19 +1192,20 @@ async function startUpload(item: UploadItem, uploadList: HTMLElement) {
   updateUploadItemStatus(item, uploadList)
 
   try {
-    // Convert file to base64
-    const base64 = await fileToBase64(item.file)
+    // Convert file to ArrayBuffer
+    const arrayBuffer = await item.file.arrayBuffer()
+    const arrayData = Array.from(new Uint8Array(arrayBuffer))
+
     item.progress = 30
     updateUploadItemStatus(item, uploadList)
 
-    // Send to background script
+    // Send to background script using the same format as downloadAndSend.ts
     const response = await sendToBackground({
-      action: 'uploadEmoji',
-      file: {
-        name: item.name,
-        data: base64,
-        type: item.file.type
-      }
+      action: 'uploadAndAddEmoji',
+      arrayData: arrayData,
+      filename: item.name,
+      mimeType: item.file.type,
+      name: item.name
     })
 
     item.progress = 100
@@ -1350,11 +1429,33 @@ function observeForToolbars() {
   }
 }
 
+// ===== CSS INJECTION =====
+
+function injectCustomCSS() {
+  const cssId = 'discourse-emoji-custom-css'
+  if (document.getElementById(cssId)) return
+
+  const style = document.createElement('style')
+  style.id = cssId
+  style.textContent = `
+    .emoji-picker__content {
+      height: auto;
+    }
+    .emoji-picker__sections-nav {
+      height: auto;
+    }
+  `
+  document.head.appendChild(style)
+}
+
 // ===== INITIALIZATION =====
 
 function initDiscourse() {
   try {
     console.log('[Discourse] Initializing autonomous content script')
+
+    // Inject custom CSS
+    injectCustomCSS()
 
     // Initial scan and setup observer
     setTimeout(scanAndInjectButtons, 200)

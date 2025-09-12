@@ -48,6 +48,7 @@ function isValidImageUrl(url: string): boolean {
     const pathname = urlObj.pathname.toLowerCase()
     return (
       pathname.includes('pximg.net') ||
+      pathname.includes('img-original') ||
       pathname.endsWith('.jpg') ||
       pathname.endsWith('.jpeg') ||
       pathname.endsWith('.png') ||
@@ -223,8 +224,11 @@ function createOverlayButton(data: AddEmojiButtonData, targetElement: Element): 
     button.style.opacity = '0'
   }
 
-  targetElement.addEventListener('mouseenter', showButton)
-  targetElement.addEventListener('mouseleave', hideButton)
+  // Safely add event listeners only if targetElement is a valid DOM element
+  if (targetElement && typeof targetElement.addEventListener === 'function') {
+    targetElement.addEventListener('mouseenter', showButton)
+    targetElement.addEventListener('mouseleave', hideButton)
+  }
   button.addEventListener('mouseenter', showButton)
   button.addEventListener('mouseleave', hideButton)
 
@@ -243,6 +247,11 @@ function findPixivImages(): Element[] {
     '.gtm-expand-full-size-illust img[src*="pximg.net"]',
     // User profile images
     'img[src*="pximg.net"][alt*="pixiv"]',
+    // Large preview images (new selector for big previews)
+    '.sc-890d9a80-1 img[src*="pximg.net"]',
+    '.sc-e4167f06-0 img[src*="pximg.net"]',
+    // Direct img-original images
+    'img[src*="img-original"]',
     // General Pixiv images
     'img[src*="pximg.net"]'
   ]
@@ -283,7 +292,10 @@ function scanAndInjectPixivImages() {
       const artworkContainer =
         img.closest('div[role="presentation"]') ||
         img.closest('a[href*="/artworks/"]') ||
-        img.closest('.gtm-expand-full-size-illust')
+        img.closest('.gtm-expand-full-size-illust') ||
+        img.closest('.sc-e4167f06-0') || // Large preview container
+        img.closest('.sc-890d9a80-0') || // Another preview container
+        img.closest('.sc-890d9a80-1') // Image wrapper container
 
       if (artworkContainer) {
         container = artworkContainer as HTMLElement

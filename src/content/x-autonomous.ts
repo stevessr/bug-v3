@@ -135,6 +135,38 @@ function extractImageName(url: string): string {
   }
 }
 
+function isEmojiImage(img: HTMLImageElement): boolean {
+  // Check if image is an emoji based on various criteria
+  const src = img.src
+  const alt = img.alt || ''
+  const title = img.title || ''
+  const className = img.className || ''
+
+  // Check for emoji-specific patterns
+  if (
+    src.includes('/emoji/') ||
+    src.includes('emoji.svg') ||
+    src.includes('twemoji') ||
+    className.includes('emoji') ||
+    className.includes('r-4qtqp9') || // Twitter emoji class
+    alt.length === 1 || // Single character alt (likely emoji)
+    alt.length === 2 || // Two character alt (likely emoji with modifier)
+    title.includes('emoji') ||
+    title.includes('Emoji')
+  ) {
+    return true
+  }
+
+  // Check if image dimensions suggest emoji (typically small and square)
+  const width = img.naturalWidth || img.width
+  const height = img.naturalHeight || img.height
+  if (width > 0 && height > 0 && width <= 32 && height <= 32 && width === height) {
+    return true
+  }
+
+  return false
+}
+
 // ===== IMAGE SCANNING AND INJECTION =====
 
 function scanAndInjectImages() {
@@ -162,6 +194,11 @@ function scanAndInjectImages() {
 
         const imageUrl = (img as HTMLImageElement).src
         if (!imageUrl || !imageUrl.includes('twimg.com')) {
+          return
+        }
+
+        // Skip emoji images
+        if (isEmojiImage(img as HTMLImageElement)) {
           return
         }
 
@@ -217,6 +254,11 @@ function scanAndInjectCarousel() {
           const imageUrl = (img as HTMLImageElement).src
           if (!imageUrl) return
 
+          // Skip emoji images
+          if (isEmojiImage(img as HTMLImageElement)) {
+            return
+          }
+
           const container = img.closest('div[role="button"]') || img.parentElement
           if (container && !container.querySelector('.x-emoji-add-btn')) {
             const computedStyle = window.getComputedStyle(container)
@@ -256,6 +298,11 @@ function initImagePage() {
 
         const img = photoViewer.querySelector('img[src*="twimg.com"]')
         if (img) {
+          // Skip emoji images
+          if (isEmojiImage(img as HTMLImageElement)) {
+            return
+          }
+
           const imageUrl = (img as HTMLImageElement).src
           const container = img.parentElement
 

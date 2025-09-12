@@ -220,21 +220,6 @@ export default [
     }
   },
 
-  // Temporarily relax rules for removed/neutralized ImageGenerator UI files
-  {
-    files: ['src/components/ImageGenerator/**'],
-    rules: {
-      // allow many violations in removed UI to reduce noise while backend work continues
-      '@typescript-eslint/no-explicit-any': 'off',
-      'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      'no-console': 'off',
-      'vue/custom-event-name-casing': 'off',
-      'vue/component-name-in-template-casing': 'off',
-      'vue/component-definition-name-casing': 'off'
-    }
-  },
-
   // 配置文件特殊配置
   {
     files: ['*.config.js', '*.config.ts', 'scripts/**/*'],
