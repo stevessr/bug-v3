@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => {
 
   const variant = process.env.USERSCRIPT_VARIANT || 'default'
 
+  const enableMinifiedEnv = process.env.ENABLE_MINIFIED
+  const buildMinified = typeof enableMinifiedEnv === 'string' ? enableMinifiedEnv === 'true' : !isDev
+
   return {
     // resolve alias so imports using @/xxx map to src/xxx
     resolve: {
@@ -19,22 +22,24 @@ export default defineConfig(({ mode }) => {
       }
     },
     build: {
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: !isDev,
-          drop_debugger: !isDev,
-          passes: 3 // Multiple passes for better compression
-        },
-        mangle: {
-          properties: {
-            regex: /^_/ // Mangle private properties
+      minify: buildMinified ? 'terser' : false,
+      terserOptions: buildMinified
+        ? {
+            compress: {
+              drop_console: !isDev,
+              drop_debugger: !isDev,
+              passes: 3 // Multiple passes for better compression
+            },
+            mangle: {
+              properties: {
+                regex: /^_/ // Mangle private properties
+              }
+            },
+            format: {
+              comments: false // Remove comments
+            }
           }
-        },
-        format: {
-          comments: false // Remove comments
-        }
-      },
+        : undefined,
       rollupOptions: {
         input: {
           userscript: fileURLToPath(new URL('src/userscript/userscript-main.ts', import.meta.url))
@@ -52,7 +57,7 @@ export default defineConfig(({ mode }) => {
         },
         external: () => false // Don't externalize anything
       },
-      outDir: process.env.BUILD_MINIFIED === 'true' ? 'dist-userscript-min' : 'dist-userscript',
+  outDir: buildMinified ? 'dist-userscript-min' : 'dist-userscript',
       emptyOutDir: true
     },
     plugins: [generateDefaultEmojiGroupsPlugin()]

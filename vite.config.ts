@@ -9,6 +9,13 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
+  // Allow overriding minification behavior via ENABLE_MINIFIED env var (matches project naming style).
+  // When ENABLE_MINIFIED is explicitly set to 'true', we enable dropping console/debugger.
+  const enableMinifiedEnv = process.env.ENABLE_MINIFIED
+  const buildMinified =
+    typeof enableMinifiedEnv === 'string' ? enableMinifiedEnv === 'true' : !isDev
+
+  const minifyOption: 'terser' | false = buildMinified ? 'terser' : false
 
   return {
     css: {
@@ -29,14 +36,16 @@ export default defineConfig(({ mode }) => {
       })
     ],
     build: {
-      // Allow disabling minification for debug builds via BUILD_MINIFIED env var
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: !isDev,
-          drop_debugger: !isDev
-        }
-      },
+      // Allow disabling minification for debug builds via ENABLE_MINIFIED env var
+      minify: minifyOption,
+      terserOptions: buildMinified
+        ? {
+            compress: {
+              drop_console: buildMinified,
+              drop_debugger: buildMinified
+            }
+          }
+        : undefined,
       rollupOptions: {
         input: {
           popup: fileURLToPath(new URL('popup.html', import.meta.url)),
@@ -46,10 +55,16 @@ export default defineConfig(({ mode }) => {
           // content entry now uses the autodetect loader which decides whether to initialize
           content: fileURLToPath(new URL('src/content/content-autodetect.ts', import.meta.url)),
           // bridge helper that will be injected into pages (isolated world)
-          'content-bridge': fileURLToPath(new URL('src/content/injectedBridge.ts', import.meta.url)),
+          'content-bridge': fileURLToPath(
+            new URL('src/content/injectedBridge.ts', import.meta.url)
+          ),
           // Per-site content scripts - injected by background as needed
-          'discourse-content': fileURLToPath(new URL('src/content/content-discourse.ts', import.meta.url)),
-          'bilibili-content': fileURLToPath(new URL('src/content/content-bilibili.ts', import.meta.url)),
+          'discourse-content': fileURLToPath(
+            new URL('src/content/content-discourse.ts', import.meta.url)
+          ),
+          'bilibili-content': fileURLToPath(
+            new URL('src/content/content-bilibili.ts', import.meta.url)
+          ),
           'x-content': fileURLToPath(new URL('src/content/content-x.ts', import.meta.url)),
           'pixiv-content': fileURLToPath(new URL('src/content/content-pixiv.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
@@ -64,9 +79,22 @@ export default defineConfig(({ mode }) => {
               const base = name.replace(/-content$/, '')
               return `js/content/${base}.js`
             }
+            // Route the options entry to js/options
+            if (name === 'options') return 'js/options/options.js'
             return 'js/[name].js'
           },
-          chunkFileNames: 'js/[name].js',
+          chunkFileNames: chunkInfo => {
+            // Default chunk name
+            const name = String(chunkInfo.name || '')
+
+            // If this chunk originates from the options entry (heuristic: name includes 'options' or module ids)
+            // Put it under js/options to keep options-related code isolated.
+            if (name.includes('options') || name.startsWith('options-')) {
+              return 'js/options/[name].js'
+            }
+
+            return 'js/[name].js'
+          },
           assetFileNames: 'assets/[name].[ext]',
           // Disable manualChunks splitting to avoid creating a shared "background.js"
           // chunk that other entrypoints (like content) would import from. Keeping

@@ -2,23 +2,24 @@
 import { onMounted, onBeforeUnmount } from 'vue'
 
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
+import { defineAsyncComponent } from 'vue'
 import AboutSection from '../components/AboutSection.vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
 
 import HeaderControls from './components/HeaderControls.vue'
 import GlobalSettings from './components/GlobalSettings.vue'
-import EmojiStats from './components/EmojiStats.vue'
+const EmojiStats = defineAsyncComponent(() => import('./components/EmojiStats.vue'))
 import ImportConfigModal from './modals/ImportConfigModal.vue'
 import ImportEmojisModal from './modals/ImportEmojisModal.vue'
 import CreateGroupModal from './modals/CreateGroupModal.vue'
 import AddEmojiModal from './modals/AddEmojiModal.vue'
 import ConfirmGenericModal from './modals/ConfirmGenericModal.vue'
 import NotificationToasts from './components/NotificationToasts.vue'
-import GroupsTab from './components/GroupsTab.vue'
-import FavoritesTab from './components/FavoritesTab.vue'
-import UngroupedTab from './components/UngroupedTab.vue'
-import ExternalImportTab from './components/ExternalImportTab.vue'
-import BilibiliImport from './tabs/BilibiliImport.vue'
+const GroupsTab = defineAsyncComponent(() => import('./components/GroupsTab.vue'))
+const FavoritesTab = defineAsyncComponent(() => import('./components/FavoritesTab.vue'))
+const UngroupedTab = defineAsyncComponent(() => import('./components/UngroupedTab.vue'))
+const ExternalImportTab = defineAsyncComponent(() => import('./components/ExternalImportTab.vue'))
+const BilibiliImport = defineAsyncComponent(() => import('./tabs/BilibiliImport.vue'))
 import EditEmojiModal from './modals/EditEmojiModal.vue'
 import EditGroupModal from './modals/EditGroupModal.vue'
 // composable
@@ -233,55 +234,93 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         </GlobalSettings>
       </div>
 
-      <GroupsTab
-        :emojiStore="emojiStore"
-        :expandedGroups="expandedGroups"
-        :isImageUrl="isImageUrl"
-        v-model:activeTab="activeTab"
-        :exportProgress="exportProgress"
-        :exportProgressGroupId="exportProgressGroupId"
-        @openCreateGroup="showCreateGroupModal = true"
-        @groupDragStart="handleDragStart"
-        @groupDrop="handleDrop"
-        @toggleExpand="toggleGroupExpansion"
-        @openEditGroup="openEditGroup"
-        @exportGroup="exportGroup"
-        @exportGroupZip="exportGroupZip"
-        @confirmDeleteGroup="confirmDeleteGroup"
-        @openAddEmoji="openAddEmojiModal"
-        @emojiDragStart="handleEmojiDragStart"
-        @emojiDrop="handleEmojiDrop"
-        @removeEmoji="removeEmojiFromGroup"
-        @editEmoji="openEditEmoji"
-        @imageError="handleImageError"
-      />
+      <Suspense>
+        <template #fallback>
+          <div class="py-8 text-center text-gray-500">正在加载分组…</div>
+        </template>
+        <template v-if="activeTab === 'groups'">
+          <GroupsTab
+            :emojiStore="emojiStore"
+            :expandedGroups="expandedGroups"
+            :isImageUrl="isImageUrl"
+            v-model:activeTab="activeTab"
+            :exportProgress="exportProgress"
+            :exportProgressGroupId="exportProgressGroupId"
+            @openCreateGroup="showCreateGroupModal = true"
+            @groupDragStart="handleDragStart"
+            @groupDrop="handleDrop"
+            @toggleExpand="toggleGroupExpansion"
+            @openEditGroup="openEditGroup"
+            @exportGroup="exportGroup"
+            @exportGroupZip="exportGroupZip"
+            @confirmDeleteGroup="confirmDeleteGroup"
+            @openAddEmoji="openAddEmojiModal"
+            @emojiDragStart="handleEmojiDragStart"
+            @emojiDrop="handleEmojiDrop"
+            @removeEmoji="removeEmojiFromGroup"
+            @editEmoji="openEditEmoji"
+            @imageError="handleImageError"
+          />
+        </template>
+      </Suspense>
 
-      <FavoritesTab
-        v-if="activeTab === 'favorites'"
-        :emojiStore="emojiStore"
-        @remove="removeEmojiFromGroup"
-        @edit="openEditEmoji"
-      />
+      <Suspense>
+        <template #fallback>
+          <div class="py-8 text-center text-gray-500">正在加载常用…</div>
+        </template>
+        <template v-if="activeTab === 'favorites'">
+          <FavoritesTab
+            :emojiStore="emojiStore"
+            @remove="removeEmojiFromGroup"
+            @edit="openEditEmoji"
+          />
+        </template>
+      </Suspense>
 
       <!-- Ungrouped Tab -->
-      <UngroupedTab
-        v-if="activeTab === 'ungrouped'"
-        :emojiStore="emojiStore"
-        @remove="removeEmojiFromGroup"
-        @edit="openEditEmoji"
-      />
+      <Suspense>
+        <template #fallback>
+          <div class="py-8 text-center text-gray-500">正在加载未分组…</div>
+        </template>
+        <template v-if="activeTab === 'ungrouped'">
+          <UngroupedTab
+            :emojiStore="emojiStore"
+            @remove="removeEmojiFromGroup"
+            @edit="openEditEmoji"
+          />
+        </template>
+      </Suspense>
 
       <!-- External Import Tab -->
-      <ExternalImportTab v-if="activeTab === 'import'" />
-      <BilibiliImport v-if="activeTab === 'bilibili'" />
+      <Suspense>
+        <template #fallback>
+          <div class="py-8 text-center text-gray-500">正在加载导入…</div>
+        </template>
+        <template v-if="activeTab === 'import'">
+          <ExternalImportTab />
+        </template>
+      </Suspense>
+      <Suspense>
+        <template #fallback>
+          <div class="py-8 text-center text-gray-500">正在加载 Bilibili 导入…</div>
+        </template>
+        <template v-if="activeTab === 'bilibili'">
+          <BilibiliImport />
+        </template>
+      </Suspense>
 
       <!-- Statistics Tab -->
       <div v-if="activeTab === 'stats'" class="space-y-8">
-        <EmojiStats
-          :groupCount="emojiStore.groups.length"
-          :totalEmojis="totalEmojis"
-          :favoritesCount="emojiStore.favorites.size"
-        />
+        <Suspense>
+          <template #fallback>
+            <div class="py-8 text-center text-gray-500">正在加载统计…</div>
+          </template>
+          <EmojiStats
+            :groupCount="emojiStore.groups.length"
+            :totalEmojis="totalEmojis"
+            :favoritesCount="emojiStore.favorites.size"
+          />
+        </Suspense>
       </div>
 
       <!-- About Tab -->

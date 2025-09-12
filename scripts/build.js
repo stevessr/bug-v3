@@ -38,20 +38,20 @@ const configs = {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production',
-    BUILD_MINIFIED: 'false'
+    ENABLE_MINIFIED: 'false'
   },
   'build:userscript:min': {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production',
-    BUILD_MINIFIED: 'true'
+    ENABLE_MINIFIED: 'true'
   },
   // 新增：仅编译、不混淆（调试用）
   'build:debug': {
     ENABLE_LOGGING: 'true',
     ENABLE_INDEXEDDB: 'true',
     NODE_ENV: 'production',
-    BUILD_MINIFIED: 'false'
+    ENABLE_MINIFIED: 'false'
   }
 }
 
@@ -102,11 +102,11 @@ try {
   if (configData && Array.isArray(configData.groups)) {
     try {
       fs.mkdirSync(path.dirname(jsonOut), { recursive: true })
-      
-  // Write plain JSON for runtime loader
-  const jsonString = JSON.stringify({ groups: configData.groups }, null, 2)
-  fs.writeFileSync(jsonOut, jsonString, 'utf-8')
-  console.log(`✅ Generated defaultEmojiGroups JSON: ${jsonOut}`)
+
+      // Write plain JSON for runtime loader
+      const jsonString = JSON.stringify({ groups: configData.groups }, null, 2)
+      fs.writeFileSync(jsonOut, jsonString, 'utf-8')
+      console.log(`✅ Generated defaultEmojiGroups JSON: ${jsonOut}`)
     } catch (e) {
       console.error('❌ Failed to generate compressed defaultEmojiGroups:', e)
       process.exit(1)
@@ -123,14 +123,14 @@ try {
   const bilibiliJsonOut = path.resolve(process.cwd(), 'public', 'assets', 'bilibiliEmojiIndex.json')
   const bilibiliConfigContent = fs.readFileSync(bilibiliConfigPath, 'utf-8')
   const bilibiliConfigData = JSON.parse(bilibiliConfigContent)
-  
+
   try {
     fs.mkdirSync(path.dirname(bilibiliJsonOut), { recursive: true })
-    
-  // Write plain JSON for runtime loader
-  const bilibiliJsonString = JSON.stringify(bilibiliConfigData, null, 2)
-  fs.writeFileSync(bilibiliJsonOut, bilibiliJsonString, 'utf-8')
-  console.log(`✅ Generated bilibiliEmojiIndex JSON: ${bilibiliJsonOut}`)
+
+    // Write plain JSON for runtime loader
+    const bilibiliJsonString = JSON.stringify(bilibiliConfigData, null, 2)
+    fs.writeFileSync(bilibiliJsonOut, bilibiliJsonString, 'utf-8')
+    console.log(`✅ Generated bilibiliEmojiIndex JSON: ${bilibiliJsonOut}`)
   } catch (e) {
     console.error('❌ Failed to generate compressed bilibiliEmojiIndex:', e)
     process.exit(1)
@@ -161,10 +161,21 @@ const viteCommand =
 const publicDir = path.resolve(process.cwd(), 'public')
 const distDir = path.resolve(process.cwd(), 'dist')
 
-const child = spawn('npx', viteCommand.split(' '), {
+// Helper: create a sanitized env for child processes to avoid npm adding
+// npm_config_* keys that later cause warnings in child tools.
+function sanitizedEnv() {
+  const env = { ...process.env }
+  // Remove npm config keys injected by npm which cause warnings
+  for (const k of Object.keys(env)) {
+    if (k.startsWith('npm_config_')) delete env[k]
+  }
+  return env
+}
+
+const childArgs = viteCommand.split(' ')
+const child = spawn('npx', childArgs, {
   stdio: 'inherit',
-  env: process.env,
-  shell: true
+  env: sanitizedEnv()
 })
 
 child.on('exit', code => {
@@ -174,7 +185,7 @@ child.on('exit', code => {
       console.log('🔧 Post-processing userscript...')
       const postProcessChild = spawn('node', ['./scripts/post-process-userscript.js', buildType], {
         stdio: 'inherit',
-        shell: true
+        env: sanitizedEnv()
       })
 
       postProcessChild.on('exit', postCode => {
@@ -190,7 +201,7 @@ child.on('exit', code => {
       console.log('🧹 清理空文件...')
       const cleanChild = spawn('node', ['./scripts/clean-empty-chunks.mjs'], {
         stdio: 'inherit',
-        shell: true
+        env: sanitizedEnv()
       })
 
       cleanChild.on('exit', cleanCode => {
