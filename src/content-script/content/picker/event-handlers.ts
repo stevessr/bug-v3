@@ -28,8 +28,47 @@ async function recordEmojiUsage(uuid: string): Promise<boolean> {
         const { recordUsage } = await import('../../../data/store/main')
         const result = recordUsage(uuid)
         if (result) {
-          console.log('[Emoji Usage] 直接调用成功')
+          console.log('[Emoji Usage] ✅ 直接调用成功')
+
+          // 🚀 强制触发存储同步
+          try {
+            const storageModule = await import('../../../data/update/storage')
+            if (
+              storageModule.default &&
+              typeof storageModule.default.scheduleSyncToExtension === 'function'
+            ) {
+              storageModule.default.scheduleSyncToExtension()
+              console.log('[Emoji Usage] 📡 已触发存储同步')
+            }
+          } catch (syncError) {
+            console.warn('[Emoji Usage] 触发存储同步失败:', syncError)
+          }
+
           return true
+        } else {
+          console.warn('[Emoji Usage] ⚠️ 直接调用返回 false，可能表情不存在于当前数据中')
+
+          // 🚀 尝试强制刷新数据后重试
+          try {
+            console.log('[Emoji Usage] 🔄 尝试刷新数据后重试...')
+            const emojiGroupsStore = await import('../../../data/update/emojiGroupsStore')
+
+            // 强制重新加载存储数据
+            const storageModule = await import('../../../data/update/storage')
+            const freshPayload = storageModule.default.loadPayload()
+
+            if (freshPayload) {
+              console.log('[Emoji Usage] 📊 数据已刷新，重试记录使用')
+
+              const retryResult = recordUsage(uuid)
+              if (retryResult) {
+                console.log('[Emoji Usage] ✅ 刷新后重试成功')
+                return true
+              }
+            }
+          } catch (refreshError) {
+            console.error('[Emoji Usage] 数据刷新失败:', refreshError)
+          }
         }
       } catch (error) {
         console.error('[Emoji Usage] 直接调用也失败:', error)

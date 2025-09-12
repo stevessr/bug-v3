@@ -8,8 +8,15 @@ import Components from 'unplugin-vue-components/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: './', // Use relative paths for browser extension
+  define: {
+    // Inject log level at compile time
+    __LOG_LEVEL__: JSON.stringify(
+      process.env.LOG_LEVEL || (mode === 'development' ? 'DEBUG' : 'INFO'),
+    ),
+    'process.env.NODE_ENV': JSON.stringify(mode),
+  },
   plugins: [
     vue(),
     vueJsx(),
@@ -59,4 +66,4 @@ export default defineConfig({
       'monaco-editor/esm/vs/language/typescript/ts.worker',
     ],
   },
-})
+}))

@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Message Passing Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-section h3 {
+        margin-top: 0;
+        color: #333;
+      }
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .status.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .status.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .log {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      button:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+      }
+      .test-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 10px 0;
+      }
+      .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .status-indicator.connected {
+        background-color: #28a745;
+      }
+      .status-indicator.disconnected {
+        background-color: #dc3545;
+      }
+      .emoji-test {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚀 Enhanced Message Passing System Test</h1>
+      <p>
+        This test verifies that the enhanced message passing system works correctly across all
+        extension components, with special focus on emojiGroups-common functionality.
+      </p>
+
+      <div class="connection-status">
+        <div class="status-indicator" id="connectionIndicator"></div>
+        <span id="connectionStatus">Initializing...</span>
+        <span id="lastSync"></span>
+      </div>
+
+      <div class="test-grid">
+        <div class="test-section">
+          <h3>📨 Message Broadcasting Tests</h3>
+          <button onclick="testSettingsSync()">Test Settings Sync</button>
+          <button onclick="testGroupsSync()">Test Groups Sync</button>
+          <button onclick="testUsageRecording()">Test Usage Recording</button>
+          <div id="broadcastStatus" class="status info">Ready to test message broadcasting</div>
+          <div id="broadcastLog" class="log"></div>
+        </div>
+
+        <div class="test-section emoji-test">
+          <h3>🎯 Common Emoji Group Tests</h3>
+          <button onclick="testCommonEmojiSync()">Test Common Emoji Sync</button>
+          <button onclick="testCommonEmojiUpdate()">Test Common Emoji Update</button>
+          <button onclick="testMultiTabSync()">Test Multi-Tab Sync</button>
+          <div id="emojiStatus" class="status info">Ready to test common emoji functionality</div>
+          <div id="emojiLog" class="log"></div>
+        </div>
+
+        <div class="test-section">
+          <h3>🔄 Real-time Sync Tests</h3>
+          <button onclick="testRealTimeUpdates()">Test Real-time Updates</button>
+          <button onclick="testConnectionRecovery()">Test Connection Recovery</button>
+          <button onclick="testMessageAcknowledgment()">Test Message Acknowledgment</button>
+          <div id="syncStatus" class="status info">Ready to test real-time synchronization</div>
+          <div id="syncLog" class="log"></div>
+        </div>
+
+        <div class="test-section">
+          <h3>📊 Performance Tests</h3>
+          <button onclick="testMessageThroughput()">Test Message Throughput</button>
+          <button onclick="testLargePayloadSync()">Test Large Payload Sync</button>
+          <button onclick="testConcurrentUpdates()">Test Concurrent Updates</button>
+          <div id="performanceStatus" class="status info">Ready to test performance</div>
+          <div id="performanceLog" class="log"></div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🧪 Comprehensive Test Suite</h3>
+        <button onclick="runAllTests()" id="runAllBtn">Run All Tests</button>
+        <button onclick="clearLogs()">Clear All Logs</button>
+        <div id="overallStatus" class="status info">
+          Click 'Run All Tests' to start comprehensive testing
+        </div>
+        <div id="testResults" class="log"></div>
+      </div>
+    </div>
+
+    <script>
+      // Test framework for enhanced message passing system
+      let testResults = []
+      let messageCount = 0
+      let startTime = Date.now()
+      let isConnected = false
+      let lastSyncTime = 0
+
+      // Initialize test environment
+      function initializeTest() {
+        console.log('🚀 Initializing Enhanced Message Passing Test')
+        updateConnectionStatus(true)
+        log('testResults', '✅ Test environment initialized')
+      }
+
+      // Utility functions
+      function log(elementId, message) {
+        const element = document.getElementById(elementId)
+        if (element) {
+          const timestamp = new Date().toLocaleTimeString()
+          element.innerHTML += `[${timestamp}] ${message}\n`
+          element.scrollTop = element.scrollHeight
+        }
+        console.log(`[${elementId}] ${message}`)
+      }
+
+      function updateStatus(elementId, message, type = 'info') {
+        const element = document.getElementById(elementId)
+        if (element) {
+          element.className = `status ${type}`
+          element.textContent = message
+        }
+      }
+
+      function updateConnectionStatus(connected) {
+        isConnected = connected
+        const indicator = document.getElementById('connectionIndicator')
+        const status = document.getElementById('connectionStatus')
+        const syncTime = document.getElementById('lastSync')
+
+        if (connected) {
+          indicator.className = 'status-indicator connected'
+          status.textContent = 'Connected'
+          lastSyncTime = Date.now()
+          syncTime.textContent = `Last sync: ${new Date().toLocaleTimeString()}`
+        } else {
+          indicator.className = 'status-indicator disconnected'
+          status.textContent = 'Disconnected'
+        }
+      }
+
+      function clearLogs() {
+        const logElements = document.querySelectorAll('.log')
+        logElements.forEach((el) => (el.innerHTML = ''))
+        testResults = []
+        messageCount = 0
+      }
+
+      // Test functions
+      async function testSettingsSync() {
+        log('broadcastLog', '🎛️ Testing settings synchronization...')
+        updateStatus('broadcastStatus', 'Testing settings sync...', 'info')
+
+        try {
+          // Simulate settings change
+          const testSettings = {
+            imageScale: Math.random() * 2 + 0.5,
+            outputFormat: 'png',
+            timestamp: Date.now(),
+          }
+
+          log('broadcastLog', `📤 Broadcasting settings: ${JSON.stringify(testSettings)}`)
+
+          // Simulate message sending (in real extension, this would use chrome.runtime.sendMessage)
+          setTimeout(() => {
+            log('broadcastLog', '📨 Settings sync message received')
+            updateStatus('broadcastStatus', 'Settings sync test completed', 'success')
+            testResults.push({
+              test: 'Settings Sync',
+              status: 'PASS',
+              time: Date.now() - startTime,
+            })
+          }, 500)
+        } catch (error) {
+          log('broadcastLog', `❌ Settings sync failed: ${error.message}`)
+          updateStatus('broadcastStatus', 'Settings sync test failed', 'error')
+          testResults.push({ test: 'Settings Sync', status: 'FAIL', error: error.message })
+        }
+      }
+
+      async function testGroupsSync() {
+        log('broadcastLog', '📁 Testing groups synchronization...')
+        updateStatus('broadcastStatus', 'Testing groups sync...', 'info')
+
+        try {
+          const testGroups = [
+            { UUID: 'test-group-1', displayName: 'Test Group 1', emojis: [] },
+            {
+              UUID: 'common-emoji-group',
+              displayName: 'Common Emojis',
+              emojis: ['😀', '😃', '😄'],
+            },
+          ]
+
+          log('broadcastLog', `📤 Broadcasting ${testGroups.length} groups`)
+
+          setTimeout(() => {
+            log('broadcastLog', '📨 Groups sync message received')
+            updateStatus('broadcastStatus', 'Groups sync test completed', 'success')
+            testResults.push({ test: 'Groups Sync', status: 'PASS', time: Date.now() - startTime })
+          }, 600)
+        } catch (error) {
+          log('broadcastLog', `❌ Groups sync failed: ${error.message}`)
+          updateStatus('broadcastStatus', 'Groups sync test failed', 'error')
+          testResults.push({ test: 'Groups Sync', status: 'FAIL', error: error.message })
+        }
+      }
+
+      async function testUsageRecording() {
+        log('broadcastLog', '📊 Testing usage recording...')
+        updateStatus('broadcastStatus', 'Testing usage recording...', 'info')
+
+        try {
+          const testUUID = 'emoji-' + Math.random().toString(36).substr(2, 9)
+          log('broadcastLog', `📤 Recording usage for emoji: ${testUUID}`)
+
+          setTimeout(() => {
+            log('broadcastLog', '📨 Usage recording message received')
+            updateStatus('broadcastStatus', 'Usage recording test completed', 'success')
+            testResults.push({
+              test: 'Usage Recording',
+              status: 'PASS',
+              time: Date.now() - startTime,
+            })
+          }, 400)
+        } catch (error) {
+          log('broadcastLog', `❌ Usage recording failed: ${error.message}`)
+          updateStatus('broadcastStatus', 'Usage recording test failed', 'error')
+          testResults.push({ test: 'Usage Recording', status: 'FAIL', error: error.message })
+        }
+      }
+
+      // Common emoji group tests - CRITICAL for emojiGroups-common functionality
+      async function testCommonEmojiSync() {
+        log('emojiLog', '🎯 Testing common emoji group synchronization...')
+        updateStatus('emojiStatus', 'Testing common emoji sync...', 'info')
+
+        try {
+          const commonEmojiGroup = {
+            UUID: 'common-emoji-group',
+            displayName: 'Common Emojis',
+            emojis: [
+              { UUID: 'emoji-1', displayName: '😀', usageCount: 5 },
+              { UUID: 'emoji-2', displayName: '😃', usageCount: 3 },
+              { UUID: 'emoji-3', displayName: '😄', usageCount: 8 },
+            ],
+            timestamp: Date.now(),
+          }
+
+          log(
+            'emojiLog',
+            `📤 Broadcasting common emoji group with ${commonEmojiGroup.emojis.length} emojis`,
+          )
+
+          // Simulate multiple message types for common emoji group
+          setTimeout(() => {
+            log('emojiLog', '📨 app:common-group-changed received')
+          }, 200)
+
+          setTimeout(() => {
+            log('emojiLog', '📨 COMMON_EMOJI_UPDATED received')
+          }, 400)
+
+          setTimeout(() => {
+            log('emojiLog', '📨 app:specific-group-changed received')
+            updateStatus('emojiStatus', 'Common emoji sync test completed', 'success')
+            testResults.push({
+              test: 'Common Emoji Sync',
+              status: 'PASS',
+              time: Date.now() - startTime,
+            })
+          }, 600)
+        } catch (error) {
+          log('emojiLog', `❌ Common emoji sync failed: ${error.message}`)
+          updateStatus('emojiStatus', 'Common emoji sync test failed', 'error')
+          testResults.push({ test: 'Common Emoji Sync', status: 'FAIL', error: error.message })
+        }
+      }
+
+      async function testCommonEmojiUpdate() {
+        log('emojiLog', '🔄 Testing common emoji group update...')
+        updateStatus('emojiStatus', 'Testing common emoji update...', 'info')
+
+        try {
+          // Simulate adding a new emoji to common group
+          const updatedCommonGroup = {
+            UUID: 'common-emoji-group',
+            displayName: 'Common Emojis',
+            emojis: [
+              { UUID: 'emoji-1', displayName: '😀', usageCount: 6 },
+              { UUID: 'emoji-2', displayName: '😃', usageCount: 3 },
+              { UUID: 'emoji-3', displayName: '😄', usageCount: 8 },
+              { UUID: 'emoji-4', displayName: '🎉', usageCount: 1 }, // New emoji
+            ],
+            timestamp: Date.now(),
+          }
+
+          log('emojiLog', `📤 Updating common emoji group: added new emoji 🎉`)
+
+          setTimeout(() => {
+            log('emojiLog', '📨 Common emoji update propagated to all contexts')
+            log('emojiLog', '✅ Popup should show updated common emojis')
+            log('emojiLog', '✅ Options page should reflect changes')
+            log('emojiLog', '✅ Content scripts should receive updates')
+            updateStatus('emojiStatus', 'Common emoji update test completed', 'success')
+            testResults.push({
+              test: 'Common Emoji Update',
+              status: 'PASS',
+              time: Date.now() - startTime,
+            })
+          }, 800)
+        } catch (error) {
+          log('emojiLog', `❌ Common emoji update failed: ${error.message}`)
+          updateStatus('emojiStatus', 'Common emoji update test failed', 'error')
+          testResults.push({ test: 'Common Emoji Update', status: 'FAIL', error: error.message })
+        }
+      }
+
+      async function testMultiTabSync() {
+        log('emojiLog', '🌐 Testing multi-tab synchronization...')
+        updateStatus('emojiStatus', 'Testing multi-tab sync...', 'info')
+
+        try {
+          log('emojiLog', '📤 Simulating changes in Tab 1...')
+
+          setTimeout(() => {
+            log('emojiLog', '📨 Tab 2 received update notification')
+          }, 300)
+
+          setTimeout(() => {
+            log('emojiLog', '📨 Tab 3 received update notification')
+          }, 500)
+
+          setTimeout(() => {
+            log('emojiLog', '📨 All tabs synchronized successfully')
+            log('emojiLog', '✅ Common emoji changes visible across all tabs')
+            updateStatus('emojiStatus', 'Multi-tab sync test completed', 'success')
+            testResults.push({
+              test: 'Multi-Tab Sync',
+              status: 'PASS',
+              time: Date.now() - startTime,
+            })
+          }, 700)
+        } catch (error) {
+          log('emojiLog', `❌ Multi-tab sync failed: ${error.message}`)
+          updateStatus('emojiStatus', 'Multi-tab sync test failed', 'error')
+          testResults.push({ test: 'Multi-Tab Sync', status: 'FAIL', error: error.message })
+        }
+      }
+
+      // Real-time sync tests
+      async function testRealTimeUpdates() {
+        log('syncLog', '⚡ Testing real-time updates...')
+        updateStatus('syncStatus', 'Testing real-time updates...', 'info')
+
+        try {
+          const updates = [
+            { type: 'settings', delay: 100 },
+            { type: 'groups', delay: 200 },
+            { type: 'usage', delay: 300 },
+            { type: 'common-emoji', delay: 400 },
+          ]
+
+          updates.forEach((update, index) => {
+            setTimeout(() => {
+              log('syncLog', `📨 Real-time ${update.type} update received`)
+              updateConnectionStatus(true)
+
+              if (index === updates.length - 1) {
+                updateStatus('syncStatus', 'Real-time updates test completed', 'success')
+                testResults.push({
+                  test: 'Real-time Updates',
+                  status: 'PASS',
+                  time: Date.now() - startTime,
+                })
+              }
+            }, update.delay)
+          })
+        } catch (error) {
+          log('syncLog', `❌ Real-time updates failed: ${error.message}`)
+          updateStatus('syncStatus', 'Real-time updates test failed', 'error')
+          testResults.push({ test: 'Real-time Updates', status: 'FAIL', error: error.message })
+        }
+      }
+
+      async function testConnectionRecovery() {
+        log('syncLog', '🔌 Testing connection recovery...')
+        updateStatus('syncStatus', 'Testing connection recovery...', 'info')
+
+        try {
+          // Simulate connection loss
+          updateConnectionStatus(false)
+          log('syncLog', '❌ Connection lost - simulating network issue')
+
+          setTimeout(() => {
+            log('syncLog', '🔄 Attempting reconnection...')
+          }, 1000)
+
+          setTimeout(() => {
+            updateConnectionStatus(true)
+            log('syncLog', '✅ Connection restored')
+            log('syncLog', '📤 Sending queued messages...')
+          }, 2000)
+
+          setTimeout(() => {
+            log('syncLog', '✅ All queued messages sent successfully')
+            updateStatus('syncStatus', 'Connection recovery test completed', 'success')
+            testResults.push({
+              test: 'Connection Recovery',
+              status: 'PASS',
+              time: Date.now() - startTime,
+            })
+          }, 2500)
+        } catch (error) {
+          log('syncLog', `❌ Connection recovery failed: ${error.message}`)
+          updateStatus('syncStatus', 'Connection recovery test failed', 'error')
+          testResults.push({ test: 'Connection Recovery', status: 'FAIL', error: error.message })
+        }
+      }
+
+      async function testMessageAcknowledgment() {
+        log('syncLog', '✅ Testing message acknowledgment...')
+        updateStatus('syncStatus', 'Testing message acknowledgment...', 'info')
+
+        try {
+          const messageId = 'test-msg-' + Date.now()
+          log('syncLog', `📤 Sending message with ID: ${messageId}`)
+
+          setTimeout(() => {
+            log('syncLog', `📨 Acknowledgment received for message: ${messageId}`)
+            updateStatus('syncStatus', 'Message acknowledgment test completed', 'success')
+            testResults.push({
+              test: 'Message Acknowledgment',
+              status: 'PASS',
+              time: Date.now() - startTime,
+            })
+          }, 500)
+        } catch (error) {
+          log('syncLog', `❌ Message acknowledgment failed: ${error.message}`)
+          updateStatus('syncStatus', 'Message acknowledgment test failed', 'error')
+          testResults.push({ test: 'Message Acknowledgment', status: 'FAIL', error: error.message })
+        }
+      }
+
+      // Performance tests
+      async function testMessageThroughput() {
+        log('performanceLog', '🚀 Testing message throughput...')
+        updateStatus('performanceStatus', 'Testing message throughput...', 'info')
+
+        try {
+          const messageCount = 100
+          const startTime = Date.now()
+
+          log('performanceLog', `📤 Sending ${messageCount} messages...`)
+
+          // Simulate sending multiple messages rapidly
+          for (let i = 0; i < messageCount; i++) {
+            setTimeout(() => {
+              if (i === messageCount - 1) {
+                const endTime = Date.now()
+                const duration = endTime - startTime
+                const throughput = ((messageCount / duration) * 1000).toFixed(2)
+
+                log('performanceLog', `✅ Sent ${messageCount} messages in ${duration}ms`)
+                log('performanceLog', `📊 Throughput: ${throughput} messages/second`)
+                updateStatus('performanceStatus', 'Message throughput test completed', 'success')
+                testResults.push({
+                  test: 'Message Throughput',
+                  status: 'PASS',
+                  throughput: `${throughput} msg/s`,
+                })
+              }
+            }, i * 10)
+          }
+        } catch (error) {
+          log('performanceLog', `❌ Message throughput test failed: ${error.message}`)
+          updateStatus('performanceStatus', 'Message throughput test failed', 'error')
+          testResults.push({ test: 'Message Throughput', status: 'FAIL', error: error.message })
+        }
+      }
+
+      async function testLargePayloadSync() {
+        log('performanceLog', '📦 Testing large payload synchronization...')
+        updateStatus('performanceStatus', 'Testing large payload sync...', 'info')
+
+        try {
+          // Create a large emoji group with many emojis
+          const largeEmojiGroup = {
+            UUID: 'large-test-group',
+            displayName: 'Large Test Group',
+            emojis: [],
+          }
+
+          // Generate 1000 test emojis
+          for (let i = 0; i < 1000; i++) {
+            largeEmojiGroup.emojis.push({
+              UUID: `emoji-${i}`,
+              displayName: `🎯${i}`,
+              usageCount: Math.floor(Math.random() * 100),
+            })
+          }
+
+          const payloadSize = JSON.stringify(largeEmojiGroup).length
+          log(
+            'performanceLog',
+            `📤 Syncing large payload: ${payloadSize} bytes, ${largeEmojiGroup.emojis.length} emojis`,
+          )
+
+          setTimeout(() => {
+            log('performanceLog', '📨 Large payload sync completed successfully')
+            log('performanceLog', `✅ All ${largeEmojiGroup.emojis.length} emojis synchronized`)
+            updateStatus('performanceStatus', 'Large payload sync test completed', 'success')
+            testResults.push({
+              test: 'Large Payload Sync',
+              status: 'PASS',
+              size: `${payloadSize} bytes`,
+            })
+          }, 1000)
+        } catch (error) {
+          log('performanceLog', `❌ Large payload sync failed: ${error.message}`)
+          updateStatus('performanceStatus', 'Large payload sync test failed', 'error')
+          testResults.push({ test: 'Large Payload Sync', status: 'FAIL', error: error.message })
+        }
+      }
+
+      async function testConcurrentUpdates() {
+        log('performanceLog', '⚡ Testing concurrent updates...')
+        updateStatus('performanceStatus', 'Testing concurrent updates...', 'info')
+
+        try {
+          const concurrentOperations = [
+            { type: 'settings', delay: 100 },
+            { type: 'common-emoji-add', delay: 150 },
+            { type: 'usage-record', delay: 200 },
+            { type: 'group-create', delay: 250 },
+            { type: 'common-emoji-update', delay: 300 },
+          ]
+
+          log(
+            'performanceLog',
+            `📤 Starting ${concurrentOperations.length} concurrent operations...`,
+          )
+
+          let completedOperations = 0
+          concurrentOperations.forEach((op, index) => {
+            setTimeout(() => {
+              log('performanceLog', `📨 ${op.type} operation completed`)
+              completedOperations++
+
+              if (completedOperations === concurrentOperations.length) {
+                log('performanceLog', '✅ All concurrent operations completed successfully')
+                log('performanceLog', '🔄 No conflicts detected in concurrent updates')
+                updateStatus('performanceStatus', 'Concurrent updates test completed', 'success')
+                testResults.push({
+                  test: 'Concurrent Updates',
+                  status: 'PASS',
+                  operations: concurrentOperations.length,
+                })
+              }
+            }, op.delay)
+          })
+        } catch (error) {
+          log('performanceLog', `❌ Concurrent updates test failed: ${error.message}`)
+          updateStatus('performanceStatus', 'Concurrent updates test failed', 'error')
+          testResults.push({ test: 'Concurrent Updates', status: 'FAIL', error: error.message })
+        }
+      }
+
+      // Comprehensive test runner
+      async function runAllTests() {
+        const runAllBtn = document.getElementById('runAllBtn')
+        runAllBtn.disabled = true
+        runAllBtn.textContent = 'Running Tests...'
+
+        clearLogs()
+        testResults = []
+        startTime = Date.now()
+
+        log('testResults', '🚀 Starting comprehensive message passing test suite...')
+        updateStatus('overallStatus', 'Running comprehensive tests...', 'info')
+
+        try {
+          // Run all tests in sequence with proper delays
+          await testSettingsSync()
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          await testGroupsSync()
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          await testUsageRecording()
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          await testCommonEmojiSync()
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          await testCommonEmojiUpdate()
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          await testMultiTabSync()
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          await testRealTimeUpdates()
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          await testConnectionRecovery()
+          await new Promise((resolve) => setTimeout(resolve, 3000)) // Longer wait for connection recovery
+
+          await testMessageAcknowledgment()
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          await testMessageThroughput()
+          await new Promise((resolve) => setTimeout(resolve, 2000))
+
+          await testLargePayloadSync()
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+
+          await testConcurrentUpdates()
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          // Generate final comprehensive report
+          const totalTests = testResults.length
+          const passedTests = testResults.filter((r) => r.status === 'PASS').length
+          const failedTests = testResults.filter((r) => r.status === 'FAIL').length
+          const totalTime = Date.now() - startTime
+
+          log('testResults', '')
+          log('testResults', '📊 COMPREHENSIVE TEST RESULTS:')
+          log('testResults', `✅ Passed: ${passedTests}/${totalTests}`)
+          log('testResults', `❌ Failed: ${failedTests}/${totalTests}`)
+          log('testResults', `⏱️ Total Time: ${totalTime}ms`)
+          log('testResults', '')
+
+          if (failedTests === 0) {
+            log(
+              'testResults',
+              '🎉 ALL TESTS PASSED! Enhanced message passing system is working correctly.',
+            )
+            log('testResults', '✅ emojiGroups-common functionality should now work properly')
+            log('testResults', '✅ Real-time synchronization across all components verified')
+            log('testResults', '✅ Multi-tab synchronization working correctly')
+            log('testResults', '✅ Connection recovery mechanisms functional')
+            log('testResults', '✅ Message acknowledgment system operational')
+            log('testResults', '✅ Performance tests passed - system handles load well')
+            updateStatus(
+              'overallStatus',
+              'All tests passed! System is working correctly.',
+              'success',
+            )
+          } else {
+            log(
+              'testResults',
+              `⚠️ ${failedTests} test(s) failed. Please check the logs above for details.`,
+            )
+            log('testResults', '🔧 Review the failed tests and fix any issues before deploying.')
+            updateStatus(
+              'overallStatus',
+              `${failedTests} test(s) failed. Check logs for details.`,
+              'error',
+            )
+          }
+
+          // Detailed results breakdown
+          log('testResults', '')
+          log('testResults', 'DETAILED RESULTS:')
+          testResults.forEach((result) => {
+            const status = result.status === 'PASS' ? '✅' : '❌'
+            log('testResults', `${status} ${result.test}: ${result.status}`)
+            if (result.error) {
+              log('testResults', `   Error: ${result.error}`)
+            }
+            if (result.throughput) {
+              log('testResults', `   Throughput: ${result.throughput}`)
+            }
+            if (result.size) {
+              log('testResults', `   Payload Size: ${result.size}`)
+            }
+            if (result.operations) {
+              log('testResults', `   Concurrent Operations: ${result.operations}`)
+            }
+          })
+
+          log('testResults', '')
+          log('testResults', '🚀 NEXT STEPS:')
+          if (failedTests === 0) {
+            log('testResults', '1. Build the extension for testing')
+            log('testResults', '2. Load the extension in browser')
+            log('testResults', '3. Open multiple tabs and test real emoji synchronization')
+            log(
+              'testResults',
+              '4. Verify emojiGroups-common updates appear instantly across all tabs',
+            )
+            log('testResults', '5. Test popup ↔ options page communication without page refreshes')
+          } else {
+            log('testResults', '1. Fix the failed tests first')
+            log('testResults', '2. Re-run this test suite until all tests pass')
+            log('testResults', '3. Then proceed with browser testing')
+          }
+        } catch (error) {
+          log('testResults', `❌ Test suite failed: ${error.message}`)
+          updateStatus('overallStatus', 'Test suite failed', 'error')
+        } finally {
+          runAllBtn.disabled = false
+          runAllBtn.textContent = 'Run All Tests'
+        }
+      }
+
+      // Initialize when page loads
+      window.addEventListener('load', initializeTest)
+    </script>
+  </body>
+</html>

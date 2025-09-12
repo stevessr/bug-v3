@@ -58,13 +58,46 @@ export async function handleEmojiUsageChrome(
 ) {
   try {
     log('🎯 Recording emoji usage for UUID (Chrome):', uuid)
-    
+
     // 确保数据已加载
     await dataManager.waitForData()
-    
-    // 通过数据管理器记录使用
-    const success = await dataManager.recordEmojiUsage(uuid)
-    
+
+    // 🚀 增强：先尝试直接记录使用
+    let success = await dataManager.recordEmojiUsage(uuid)
+
+    // 🚀 如果失败，尝试强制重新加载数据后重试
+    if (!success) {
+      log('⚠️ First attempt failed, reloading data and retrying...')
+
+      try {
+        // 强制重新加载数据
+        await dataManager.reloadData()
+
+        // 重试记录使用
+        success = await dataManager.recordEmojiUsage(uuid)
+
+        if (success) {
+          log('✅ Retry after reload succeeded (Chrome):', uuid)
+        } else {
+          log('❌ Retry after reload still failed (Chrome):', uuid)
+
+          // 🚀 最后尝试：直接操作存储
+          try {
+            const { recordUsage } = await import('../../data/store/main')
+            const directResult = recordUsage(uuid)
+            if (directResult) {
+              success = true
+              log('✅ Direct storage operation succeeded (Chrome):', uuid)
+            }
+          } catch (directError) {
+            log('❌ Direct storage operation failed (Chrome):', directError)
+          }
+        }
+      } catch (reloadError) {
+        log('❌ Data reload failed (Chrome):', reloadError)
+      }
+    }
+
     // 发送响应
     _resp?.({
       success: success,
@@ -73,22 +106,40 @@ export async function handleEmojiUsageChrome(
 
     if (success) {
       log('✅ Successfully recorded emoji usage (Chrome):', uuid)
-      
+
+      // 🚀 强制触发存储同步
+      try {
+        const storageModule = await import('../../data/update/storage')
+        if (
+          storageModule.default &&
+          typeof storageModule.default.scheduleSyncToExtension === 'function'
+        ) {
+          storageModule.default.scheduleSyncToExtension()
+          log('📡 Triggered storage sync after usage recording (Chrome)')
+        }
+      } catch (syncError) {
+        log('⚠️ Failed to trigger storage sync (Chrome):', syncError)
+      }
+
       // 发送使用记录通知
       commService.sendUsageRecorded(uuid)
-      
+
       // 获取更新后的数据并广播
       const data = dataManager.getData()
-      
+
       // 查找常用表情组并发送更新通知
       const commonGroup = data.emojiGroups.find((g: any) => g.UUID === 'common-emoji-group')
       if (commonGroup) {
         log('📡 Broadcasting common emoji group update (Chrome)')
         commService.sendCommonEmojiGroupChanged(commonGroup)
         commService.sendSpecificGroupChanged('common-emoji-group', commonGroup)
+
+        // 🚀 额外广播 COMMON_EMOJI_UPDATED 消息
+        commService.sendCommonEmojiUpdated(commonGroup)
+        log('📡 Sent COMMON_EMOJI_UPDATED message (Chrome)')
       }
     } else {
-      log('❌ Failed to record emoji usage (Chrome):', uuid)
+      log('❌ All attempts failed to record emoji usage (Chrome):', uuid)
     }
   } catch (error) {
     log('❌ Error handling RECORD_EMOJI_USAGE (Chrome):', error)
@@ -113,22 +164,22 @@ export async function handleEmojiUsageFirefox(
 ): Promise<object> {
   try {
     log('🎯 Recording emoji usage for UUID (Firefox):', uuid)
-    
+
     // 确保数据已加载
     await dataManager.waitForData()
-    
+
     // 通过数据管理器记录使用
     const success = await dataManager.recordEmojiUsage(uuid)
 
     if (success) {
       log('✅ Successfully recorded emoji usage (Firefox):', uuid)
-      
+
       // 发送使用记录通知
       commService.sendUsageRecorded(uuid)
-      
+
       // 获取更新后的数据并广播
       const data = dataManager.getData()
-      
+
       // 查找常用表情组并发送更新通知
       const commonGroup = data.emojiGroups.find((g: any) => g.UUID === 'common-emoji-group')
       if (commonGroup) {
@@ -158,31 +209,29 @@ export async function handleEmojiUsageFirefox(
  * @param dataManager 全局数据管理器
  * @returns Promise<object> 响应对象
  */
-export async function handleGetEmojiData(
-  dataManager: BackgroundDataManager,
-): Promise<object> {
+export async function handleGetEmojiData(dataManager: BackgroundDataManager): Promise<object> {
   try {
     log('🔍 Handling GET_EMOJI_DATA request')
-    
+
     // 确保数据已加载
     await dataManager.waitForData()
-    
+
     // 获取最新数据
     const data = dataManager.getData()
     const stats = dataManager.getStats()
-    
+
     log('📊 Returning emoji data:', {
       groupsCount: stats.groupsCount,
       emojisCount: stats.emojisCount,
       ungroupedCount: stats.ungroupedCount,
       isLoaded: stats.isLoaded,
-      dataAge: stats.dataAge
+      dataAge: stats.dataAge,
     })
 
     // 确保常用表情组存在
     let emojiGroups = [...data.emojiGroups]
     const hasCommonGroup = emojiGroups.some((g: any) => g.UUID === 'common-emoji-group')
-    
+
     if (!hasCommonGroup) {
       const commonGroup = {
         UUID: 'common-emoji-group',
@@ -200,7 +249,7 @@ export async function handleGetEmojiData(
     // 分离不同类型的数据
     const normalGroups = emojiGroups.filter((g: any) => g.UUID !== 'common-emoji-group')
     const commonEmojiGroup = emojiGroups.find((g: any) => g.UUID === 'common-emoji-group') || null
-    
+
     // 计算热门表情（基于使用次数）
     const hotEmojis: any[] = []
     emojiGroups.forEach((group: any) => {
@@ -209,25 +258,25 @@ export async function handleGetEmojiData(
           if (emoji.usageCount && emoji.usageCount > 0) {
             hotEmojis.push({
               ...emoji,
-              groupUUID: group.UUID
+              groupUUID: group.UUID,
             })
           }
         })
       }
     })
-    
+
     // 添加未分组表情中的热门表情
     if (data.ungroupedEmojis && Array.isArray(data.ungroupedEmojis)) {
       data.ungroupedEmojis.forEach((emoji: any) => {
         if (emoji.usageCount && emoji.usageCount > 0) {
           hotEmojis.push({
             ...emoji,
-            groupUUID: 'ungrouped'
+            groupUUID: 'ungrouped',
           })
         }
       })
     }
-    
+
     // 按使用次数排序
     hotEmojis.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
 

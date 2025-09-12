@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent, reactive, ref, onMounted, computed } from 'vue'
+import { defineComponent, reactive, ref, onMounted, onUnmounted, computed } from 'vue'
 import { Modal } from 'ant-design-vue'
 
 import settingsStore from '../data/update/settingsStore'
@@ -8,6 +8,7 @@ import storage from '../data/update/storage'
 import store from '../data/store/main'
 import { initializeData } from '../data/store/main'
 import { createOptionsCommService } from '../services/communication'
+import { optionsLogger } from '../utils/logger'
 
 import ToolsTab from './tabs/ToolsTab.vue'
 export default defineComponent({
@@ -15,20 +16,49 @@ export default defineComponent({
     ToolsTab,
   },
   setup() {
+    // Enhanced communication service with better error handling
     const commService = createOptionsCommService()
+
+    // 🚀 直接存储监听器管理
+    const storageUnsubscribers = ref<(() => void)[]>([])
+
     const currentTab = ref<'groups' | 'ungrouped' | 'hot' | 'tools' | 'importexport' | 'settings'>(
       'groups',
     )
     const s = settingsStore.getSettings()
     const siderCollapsed = ref(!!s.sidebarCollapsed)
 
-    function toggleSider(collapsed: boolean) {
-      siderCollapsed.value = collapsed
-      // persist
-      const newSettings = { sidebarCollapsed: collapsed }
-      store.saveSettings(newSettings)
-      // 发送设置变更消息到其他页面
-      commService.sendSettingsChanged(newSettings)
+    // Enhanced connection status tracking
+    const isConnected = ref(true)
+    const lastSyncTime = ref(Date.now())
+    const syncInProgress = ref(false)
+
+    console.log('[OptionsApp] 🚀 Enhanced options page initialized with communication service')
+
+    // Enhanced sidebar toggle with acknowledgment
+    async function toggleSider(collapsed: boolean) {
+      console.log('[OptionsApp] 🎛️ Toggling sidebar:', collapsed)
+      try {
+        siderCollapsed.value = collapsed
+
+        // Persist settings
+        const newSettings = { sidebarCollapsed: collapsed }
+        store.saveSettings(newSettings)
+
+        // Send settings change with acknowledgment
+        syncInProgress.value = true
+        const result = await commService.sendSettingsChanged(newSettings, true)
+        console.log('[OptionsApp] ✅ Sidebar settings sent successfully:', result)
+
+        // Update sync status
+        lastSyncTime.value = Date.now()
+        isConnected.value = true
+      } catch (error) {
+        console.error('[OptionsApp] ❌ Failed to sync sidebar settings:', error)
+        isConnected.value = false
+      } finally {
+        syncInProgress.value = false
+      }
     }
 
     const form = reactive({ ...s })
@@ -43,28 +73,88 @@ export default defineComponent({
       currentTab.value = key
     }
 
-    function save() {
-      const newSettings = {
-        imageScale: Number(form.imageScale),
-        defaultEmojiGroupUUID: form.defaultEmojiGroupUUID,
-        gridColumns: form.gridColumns as any,
-        outputFormat: form.outputFormat,
-        MobileMode: !!form.MobileMode,
+    // Enhanced settings save with acknowledgment and better error handling
+    async function save() {
+      console.log('[OptionsApp] 💾 Saving settings:', form)
+      try {
+        syncInProgress.value = true
+
+        const newSettings = {
+          imageScale: Number(form.imageScale),
+          defaultEmojiGroupUUID: form.defaultEmojiGroupUUID,
+          gridColumns: form.gridColumns as any,
+          outputFormat: form.outputFormat,
+          MobileMode: !!form.MobileMode,
+        }
+
+        // Save to store
+        settingsStore.setSettings(newSettings, groups.value)
+
+        // Send settings change with acknowledgment
+        const result = await commService.sendSettingsChanged(newSettings, true)
+        console.log('[OptionsApp] ✅ Settings saved and synced successfully:', result)
+
+        // Update sync status
+        lastSyncTime.value = Date.now()
+        isConnected.value = true
+
+        // Reload groups to ensure consistency
+        loadGroups()
+
+        // Show success feedback
+        try {
+          const msg = (window as any).__options_message
+          if (msg && typeof msg.success === 'function') {
+            msg.success('设置已保存并同步')
+          }
+        } catch (_) {}
+      } catch (error) {
+        console.error('[OptionsApp] ❌ Failed to save/sync settings:', error)
+        isConnected.value = false
+
+        // Show error feedback
+        try {
+          const msg = (window as any).__options_message
+          if (msg && typeof msg.error === 'function') {
+            msg.error('设置保存失败，请重试')
+          }
+        } catch (_) {}
+      } finally {
+        syncInProgress.value = false
       }
-      settingsStore.setSettings(newSettings, groups.value)
-      // 发送设置变更消息到其他页面
-      commService.sendSettingsChanged(newSettings)
-      loadGroups()
     }
 
-    function createGroup() {
-      const id =
-        typeof crypto !== 'undefined' && (crypto as any).randomUUID
-          ? (crypto as any).randomUUID()
-          : String(Date.now())
-      const group = { UUID: id, displayName: 'New Group', emojis: [], icon: '', order: 0 }
-      emojiGroupsStore.addGroup(group)
-      loadGroups()
+    // Enhanced group creation with real-time sync
+    async function createGroup() {
+      console.log('[OptionsApp] 🆕 Creating new group')
+      try {
+        syncInProgress.value = true
+
+        const id =
+          typeof crypto !== 'undefined' && (crypto as any).randomUUID
+            ? (crypto as any).randomUUID()
+            : String(Date.now())
+        const group = { UUID: id, displayName: 'New Group', emojis: [], icon: '', order: 0 }
+
+        // Add group to store
+        emojiGroupsStore.addGroup(group)
+
+        // Reload and sync groups
+        loadGroups()
+
+        // Send groups change notification
+        const result = await commService.sendGroupsChanged(groups.value, true)
+        console.log('[OptionsApp] ✅ New group created and synced:', result)
+
+        // Update sync status
+        lastSyncTime.value = Date.now()
+        isConnected.value = true
+      } catch (error) {
+        console.error('[OptionsApp] ❌ Failed to create/sync group:', error)
+        isConnected.value = false
+      } finally {
+        syncInProgress.value = false
+      }
     }
 
     function editGroup(item: any) {
@@ -202,37 +292,159 @@ export default defineComponent({
         loadGroups()
         refreshExport()
 
-        // 监听来自其他页面的消息
+        // Enhanced message listeners with better error handling and real-time sync
+        console.log('[OptionsApp] 🔧 Setting up enhanced message listeners')
+
+        // Enhanced settings change listener
         commService.onSettingsChanged((newSettings) => {
-          console.log('[Options] Received settings changed:', newSettings)
-          Object.assign(form, newSettings)
-        })
+          console.log('[OptionsApp] 📨 Received settings changed:', newSettings)
+          try {
+            if (newSettings && typeof newSettings === 'object') {
+              Object.assign(form, newSettings)
 
-        commService.onGroupsChanged((newGroups) => {
-          console.log('[Options] Received groups changed:', newGroups.length, 'groups')
-          groups.value = newGroups
-          refreshExport() // 自动刷新导出数据
-        })
+              // Update sync status
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
 
-        commService.onUsageRecorded((data) => {
-          console.log('[Options] Received usage recorded:', data)
-          // 刷新表情组数据以获取最新的使用统计
-          loadGroups()
-        })
-
-        // 🚀 新增：监听常用表情组专门更新
-        commService.onCommonEmojiGroupChanged((data) => {
-          console.log('[Options] Received common emoji group changed:', data)
-          if (data && data.group) {
-            // 更新常用表情组
-            const commonGroupIndex = groups.value.findIndex(g => g.UUID === 'common-emoji-group')
-            if (commonGroupIndex >= 0) {
-              groups.value[commonGroupIndex] = data.group
-            } else {
-              // 如果不存在常用表情组，添加到开头
-              groups.value.unshift(data.group)
+              console.log('[OptionsApp] ✅ Settings updated successfully')
             }
-            refreshExport() // 自动刷新导出数据
+          } catch (error) {
+            console.error('[OptionsApp] ❌ Error updating settings:', error)
+            isConnected.value = false
+          }
+        })
+
+        // Enhanced groups change listener
+        commService.onGroupsChanged((newGroups) => {
+          console.log('[OptionsApp] 📨 Received groups changed:', newGroups.length, 'groups')
+          try {
+            if (Array.isArray(newGroups)) {
+              groups.value = newGroups
+              refreshExport() // Auto-refresh export data
+
+              // Update sync status
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+
+              console.log('[OptionsApp] ✅ Groups updated successfully')
+            }
+          } catch (error) {
+            console.error('[OptionsApp] ❌ Error updating groups:', error)
+            isConnected.value = false
+          }
+        })
+
+        // Enhanced usage recording listener
+        commService.onUsageRecorded((data) => {
+          console.log('[OptionsApp] 📨 📊 Received usage recorded:', data)
+          try {
+            if (data && data.uuid) {
+              // Refresh emoji groups data to get latest usage statistics
+              loadGroups()
+
+              // Update sync status
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+
+              console.log('[OptionsApp] ✅ Usage data refreshed')
+            }
+          } catch (error) {
+            console.error('[OptionsApp] ❌ Error refreshing usage data:', error)
+            isConnected.value = false
+          }
+        })
+
+        // 🚀 存储标志位监听 - 完全替换消息传递机制
+        try {
+          const { onCommonEmojiChange, watchStorageFlags } = await import('../data/update/storage')
+
+          // 确保存储标志位监听已启动
+          watchStorageFlags()
+
+          // 监听常用表情变化
+          const unsubscribe1 = onCommonEmojiChange((group) => {
+            console.log('[OptionsApp] 📨 Direct storage: Common emoji group changed:', group)
+            try {
+              if (group && group.emojis) {
+                // Update common emoji group with enhanced error handling
+                const commonGroupIndex = groups.value.findIndex(
+                  (g) => g.UUID === 'common-emoji-group',
+                )
+                if (commonGroupIndex >= 0) {
+                  groups.value[commonGroupIndex] = group
+                  console.log(
+                    '[OptionsApp] ✅ Common emoji group updated at index via direct storage:',
+                    commonGroupIndex,
+                  )
+                } else {
+                  // If common emoji group doesn't exist, add it at the beginning
+                  groups.value.unshift(group)
+                  console.log(
+                    '[OptionsApp] ✅ Common emoji group added to beginning via direct storage',
+                  )
+                }
+
+                // Refresh export data
+                refreshExport()
+
+                // Update sync status
+                lastSyncTime.value = Date.now()
+                isConnected.value = true
+
+                console.log(
+                  '[OptionsApp] ✅ Common emoji group sync completed via direct storage:',
+                  group.displayName,
+                  'with',
+                  group.emojis?.length || 0,
+                  'emojis',
+                )
+              }
+            } catch (error) {
+              console.error('[OptionsApp] ❌ Error in direct storage listener:', error)
+              isConnected.value = false
+            }
+          })
+
+          storageUnsubscribers.value = [unsubscribe1]
+          console.log('[OptionsApp] ✅ Direct storage listeners registered successfully')
+          isConnected.value = true
+        } catch (error) {
+          console.error('[OptionsApp] ❌ Failed to setup direct storage listeners:', error)
+          isConnected.value = false
+        }
+
+        // Additional listener for COMMON_EMOJI_UPDATED sync messages
+        commService.onCommonEmojiUpdated((commonGroup) => {
+          console.log('[OptionsApp] 📨 🔄 Received common emoji updated sync message:', commonGroup)
+          try {
+            if (commonGroup) {
+              const commonGroupIndex = groups.value.findIndex(
+                (g) => g.UUID === 'common-emoji-group',
+              )
+              if (commonGroupIndex >= 0) {
+                groups.value[commonGroupIndex] = commonGroup
+              } else {
+                groups.value.unshift(commonGroup)
+              }
+
+              // Refresh export data
+              refreshExport()
+
+              // Update sync status
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+
+              console.log(
+                '[OptionsApp] ✅ Common emoji group synced:',
+                commonGroup.displayName,
+                'with',
+                commonGroup.emojis?.length || 0,
+                'emojis',
+              )
+            }
+          } catch (error) {
+            console.error('[OptionsApp] ❌ Error syncing common emoji group:', error)
+            isConnected.value = false
           }
         })
 
@@ -240,7 +452,7 @@ export default defineComponent({
         commService.onSpecificGroupChanged((data) => {
           console.log('[Options] Received specific group changed:', data)
           if (data && data.groupUUID && data.group) {
-            const groupIndex = groups.value.findIndex(g => g.UUID === data.groupUUID)
+            const groupIndex = groups.value.findIndex((g) => g.UUID === data.groupUUID)
             if (groupIndex >= 0) {
               groups.value[groupIndex] = data.group
               refreshExport() // 自动刷新导出数据
@@ -253,7 +465,7 @@ export default defineComponent({
           console.log('[Options] Received normal groups changed:', data)
           if (data && data.groups) {
             // 保留常用表情组，更新其他组
-            const commonGroup = groups.value.find(g => g.UUID === 'common-emoji-group')
+            const commonGroup = groups.value.find((g) => g.UUID === 'common-emoji-group')
             groups.value = commonGroup ? [commonGroup, ...data.groups] : data.groups
             refreshExport() // 自动刷新导出数据
           }
@@ -265,9 +477,11 @@ export default defineComponent({
           // 触发未分组标签页的数据刷新
           if (currentTab.value === 'ungrouped') {
             // 可以通过事件总线通知未分组标签页刷新
-            window.dispatchEvent(new CustomEvent('ungrouped-emojis-updated', {
-              detail: data
-            }))
+            window.dispatchEvent(
+              new CustomEvent('ungrouped-emojis-updated', {
+                detail: data,
+              }),
+            )
           }
         })
 
@@ -277,12 +491,12 @@ export default defineComponent({
           // 重新加载所有数据
           loadGroups()
           refreshExport()
-          
+
           // 通知用户导入成功
           try {
             Modal.success({
               title: '导入成功',
-              content: '数据已成功导入并同步到所有页面'
+              content: '数据已成功导入并同步到所有页面',
             })
           } catch (error) {
             console.log('Data imported successfully')
@@ -293,7 +507,7 @@ export default defineComponent({
         commService.onCommonEmojiUpdated((commonGroup) => {
           console.log('[Options] Received common emoji updated (realtime):', commonGroup)
           if (commonGroup) {
-            const commonGroupIndex = groups.value.findIndex(g => g.UUID === 'common-emoji-group')
+            const commonGroupIndex = groups.value.findIndex((g) => g.UUID === 'common-emoji-group')
             if (commonGroupIndex >= 0) {
               groups.value[commonGroupIndex] = commonGroup
             }
@@ -302,33 +516,64 @@ export default defineComponent({
 
         commService.onEmojiOrderChanged((groupUUID, updatedOrder) => {
           console.log('[Options] Received emoji order changed (realtime):', groupUUID, updatedOrder)
-          const group = groups.value.find(g => g.UUID === groupUUID)
+          const group = groups.value.find((g) => g.UUID === groupUUID)
           if (group && group.emojis) {
             // 重新排序表情
-            const reorderedEmojis = updatedOrder.map(uuid => 
-              group.emojis.find((e: any) => e.UUID === uuid)
-            ).filter(Boolean)
+            const reorderedEmojis = updatedOrder
+              .map((uuid) => group.emojis.find((e: any) => e.UUID === uuid))
+              .filter(Boolean)
             group.emojis = reorderedEmojis
           }
         })
 
         commService.onGroupIconUpdated((groupUUID, iconUrl) => {
           console.log('[Options] Received group icon updated (realtime):', groupUUID, iconUrl)
-          const group = groups.value.find(g => g.UUID === groupUUID)
+          const group = groups.value.find((g) => g.UUID === groupUUID)
           if (group) {
             group.icon = iconUrl
           }
         })
 
         commService.onUngroupedEmojisChangedSync((ungroupedEmojis) => {
-          console.log('[Options] Received ungrouped emojis changed (realtime):', ungroupedEmojis.length)
+          console.log(
+            '[Options] Received ungrouped emojis changed (realtime):',
+            ungroupedEmojis.length,
+          )
           // 触发未分组标签页的实时刷新
-          window.dispatchEvent(new CustomEvent('ungrouped-emojis-realtime-updated', {
-            detail: { emojis: ungroupedEmojis, timestamp: Date.now() }
-          }))
+          window.dispatchEvent(
+            new CustomEvent('ungrouped-emojis-realtime-updated', {
+              detail: { emojis: ungroupedEmojis, timestamp: Date.now() },
+            }),
+          )
         })
       } catch (error) {
-        console.error('Failed to initialize options page:', error)
+        console.error('[OptionsApp] ❌ Failed to initialize options page:', error)
+        isConnected.value = false
+      }
+    })
+
+    // Cleanup function for component unmounting
+    onUnmounted(() => {
+      console.log('[OptionsApp] 🧹 Cleaning up options component')
+      try {
+        // 清理直接存储监听器
+        if (storageUnsubscribers.value && storageUnsubscribers.value.length > 0) {
+          storageUnsubscribers.value.forEach((unsubscribe: () => void) => {
+            try {
+              unsubscribe()
+            } catch (error) {
+              console.warn('[OptionsApp] ⚠️ Error unsubscribing storage listener:', error)
+            }
+          })
+          console.log('[OptionsApp] ✅ Storage listeners cleaned up')
+        }
+
+        // 清理通信服务
+        if (commService && typeof commService.destroy === 'function') {
+          commService.destroy()
+        }
+      } catch (error) {
+        console.warn('[OptionsApp] ⚠️ Error during cleanup:', error)
       }
     })
 
@@ -348,6 +593,10 @@ export default defineComponent({
       hot,
       siderCollapsed,
       toggleSider,
+      // Enhanced connection status tracking
+      isConnected,
+      lastSyncTime,
+      syncInProgress,
       // components are auto-imported by unplugin-vue-components
     }
   },

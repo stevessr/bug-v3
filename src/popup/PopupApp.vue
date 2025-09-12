@@ -10,10 +10,12 @@ import {
   watch,
   h,
   onBeforeUnmount,
+  onUnmounted,
 } from 'vue'
 
 import store, { recordUsage, initializeData } from '../data/store/main'
 import { createPopupCommService } from '../services/communication'
+import { popupLogger } from '../utils/logger'
 // lightweight local icon to avoid importing ant-design icons in popup build
 const SettingOutlined = {
   name: 'SettingOutlined',
@@ -53,9 +55,14 @@ export default defineComponent({
     SearchOutlined,
   },
   setup() {
+    // Enhanced communication service with better error handling
     const commService = createPopupCommService()
+
+    // 🚀 直接存储监听器管理
+    const storageUnsubscribers = ref<(() => void)[]>([])
+
+    // Reactive state management
     const settings = reactive({ ...store.getSettings() })
-    // 使用新的分离接口，不再需要在组件中进行过滤
     const normalGroups = ref(store.getNormalGroups())
     const commonEmojiGroup = ref(store.getCommonEmojiGroup())
     const ungrouped = ref(store.getUngrouped())
@@ -64,6 +71,12 @@ export default defineComponent({
     const selectedKeys = ref<string[]>(['all'])
     const menuScroll = ref<HTMLElement | null>(null)
     const searchQuery = ref('')
+
+    // Connection status tracking
+    const isConnected = ref(true)
+    const lastSyncTime = ref(Date.now())
+
+    console.log('[PopupApp] 🚀 Enhanced popup initialized with communication service')
 
     // Filtered data based on search query
     const filteredHot = computed(() => {
@@ -134,19 +147,37 @@ export default defineComponent({
       objectFit: 'cover' as any,
     }))
 
-    function onScaleChange(value: number) {
+    // Enhanced settings change handler with acknowledgment
+    async function onScaleChange(value: number) {
       if (isUpdatingFromExternal) return // 避免循环更新
-      console.log('Scale changed to:', value)
+      console.log('[PopupApp] 🎛️ Scale changed to:', value)
+
       try {
-        // 更新本地设置对象
+        // Update local settings object
         settings.imageScale = value
-        // 更新全局设置，这个设置会影响其他地方的图片缩放
         const newSettings = { ...settings, imageScale: value }
+
+        // Save to store
         store.saveSettings(newSettings)
-        // 使用通信服务发送设置变更消息到所有页面
-        commService.sendSettingsChanged(newSettings)
+
+        // Send settings change with acknowledgment
+        const result = await commService.sendSettingsChanged(newSettings, true)
+        console.log('[PopupApp] ✅ Settings change sent successfully:', result)
+
+        // Update sync time
+        lastSyncTime.value = Date.now()
+        isConnected.value = true
       } catch (error) {
-        console.error('Failed to save image scale:', error)
+        console.error('[PopupApp] ❌ Failed to save image scale:', error)
+        isConnected.value = false
+
+        // Show user feedback for failed sync
+        try {
+          const msg = (window as any).__popup_message
+          if (msg && typeof msg.warning === 'function') {
+            msg.warning('设置同步失败，请检查网络连接')
+          }
+        } catch (_) {}
       }
     }
 
@@ -196,47 +227,71 @@ export default defineComponent({
       ;(window as any).__popup_message = message
     })
 
+    // Enhanced emoji click handler with better usage recording and real-time sync
     async function onEmojiClick(e: any) {
-      console.log('[PopupApp] Emoji clicked:', e.displayName, 'UUID:', e.UUID)
+      console.log('[PopupApp] 🎯 Emoji clicked:', e.displayName, 'UUID:', e.UUID)
       console.log('[PopupApp] Current hot emojis count before click:', hot.value.length)
 
       try {
-        // 🚀 关键修复：改进使用记录和UI刷新逻辑
         let usageRecorded = false
         const timestamp = Date.now()
 
-        // 尝试记录使用统计
+        // Enhanced usage recording with better error handling
         try {
-          console.log('[PopupApp] Recording usage for emoji:', e.UUID, 'at timestamp:', timestamp)
+          console.log(
+            '[PopupApp] 📊 Recording usage for emoji:',
+            e.UUID,
+            'at timestamp:',
+            timestamp,
+          )
           const result = recordUsage(e.UUID)
           console.log('[PopupApp] recordUsage result:', result)
-          
+
           if (result) {
-            console.log('[PopupApp] Usage recorded successfully')
+            console.log('[PopupApp] ✅ Usage recorded successfully in local store')
             usageRecorded = true
 
-            // 发送使用记录消息到其他页面
-            console.log('[PopupApp] Sending usage recorded message to other pages')
-            commService.sendUsageRecorded(e.UUID)
-            console.log('[PopupApp] Usage recorded message sent successfully')
+            // Send usage recorded message with acknowledgment
+            try {
+              const syncResult = await commService.sendUsageRecorded(e.UUID, true)
+              console.log('[PopupApp] ✅ Usage recorded message sent successfully:', syncResult)
+
+              // Update sync status
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+            } catch (syncError) {
+              console.warn(
+                '[PopupApp] ⚠️ Usage sync failed but local recording succeeded:',
+                syncError,
+              )
+              isConnected.value = false
+
+              // Still continue - local recording worked
+            }
           } else {
-            console.warn('[PopupApp] recordUsage returned false - usage not recorded')
+            console.warn('[PopupApp] ⚠️ recordUsage returned false - usage not recorded')
           }
         } catch (error) {
-          console.error('[PopupApp] Primary recordUsage failed:', error)
+          console.error('[PopupApp] ❌ Primary recordUsage failed:', error)
 
-          // 回退方案：直接调用store的recordUsage方法
+          // Enhanced fallback with multiple attempts
           try {
             if ((store as any).recordUsage && typeof (store as any).recordUsage === 'function') {
               const result = (store as any).recordUsage(e.UUID)
               if (result) {
-                console.log('[PopupApp] Fallback recordUsage succeeded')
+                console.log('[PopupApp] ✅ Fallback recordUsage succeeded')
                 usageRecorded = true
-                commService.sendUsageRecorded(e.UUID)
+
+                // Try to sync even with fallback
+                try {
+                  await commService.sendUsageRecorded(e.UUID, false) // Don't require ack for fallback
+                } catch (_) {
+                  console.warn('[PopupApp] Fallback sync also failed, but local recording worked')
+                }
               }
             }
           } catch (fallbackError) {
-            console.error('[PopupApp] Fallback recordUsage also failed:', fallbackError)
+            console.error('[PopupApp] ❌ Fallback recordUsage also failed:', fallbackError)
           }
         }
 
@@ -244,33 +299,44 @@ export default defineComponent({
         try {
           console.log('[PopupApp] Refreshing hot emojis list with force refresh')
           const oldCount = hot.value.length
-          
+
           // 强制刷新热门表情列表
           hot.value = store.getHot(true) // 传递true强制刷新
-          console.log('[PopupApp] Hot emojis refreshed - old count:', oldCount, 'new count:', hot.value.length)
-          
+          console.log(
+            '[PopupApp] Hot emojis refreshed - old count:',
+            oldCount,
+            'new count:',
+            hot.value.length,
+          )
+
           // 验证刷新结果
           if (hot.value.length > 0) {
-            console.log('[PopupApp] Top hot emojis after refresh:', 
-              hot.value.slice(0, 6).map(emoji => ({
+            console.log(
+              '[PopupApp] Top hot emojis after refresh:',
+              hot.value.slice(0, 6).map((emoji) => ({
                 name: emoji.displayName,
                 count: emoji.usageCount,
-                group: emoji.groupUUID
-              }))
+                group: emoji.groupUUID,
+              })),
             )
           }
 
           // 同时刷新常用表情组
           const oldCommonGroup = commonEmojiGroup.value
           commonEmojiGroup.value = store.getCommonEmojiGroup()
-          console.log('[PopupApp] Common emoji group refreshed - emoji count:', 
-            commonEmojiGroup.value?.emojis?.length || 0)
-            
+          console.log(
+            '[PopupApp] Common emoji group refreshed - emoji count:',
+            commonEmojiGroup.value?.emojis?.length || 0,
+          )
+
           // 验证常用表情组更新
           if (oldCommonGroup?.emojis?.length !== commonEmojiGroup.value?.emojis?.length) {
-            console.log('[PopupApp] Common emoji group size changed from', 
-              oldCommonGroup?.emojis?.length || 0, 'to', 
-              commonEmojiGroup.value?.emojis?.length || 0)
+            console.log(
+              '[PopupApp] Common emoji group size changed from',
+              oldCommonGroup?.emojis?.length || 0,
+              'to',
+              commonEmojiGroup.value?.emojis?.length || 0,
+            )
           }
         } catch (refreshError) {
           console.error('[PopupApp] UI refresh failed:', refreshError)
@@ -327,98 +393,238 @@ export default defineComponent({
         } catch (error) {
           console.warn('[PopupApp] 数据加载失败:', error)
         }
-        // 监听设置变更消息
+        // Enhanced settings change listener with better sync tracking
         commService.onSettingsChanged((newSettings) => {
-          console.log('Popup received settings change:', newSettings)
+          console.log('[PopupApp] 📨 Received settings change:', newSettings)
 
-          // 检查消息是否有效
-          if (!newSettings || typeof newSettings !== 'object') {
-            console.warn('Popup: Invalid settings message received:', newSettings)
-            return
-          }
-
-          isUpdatingFromExternal = true
-          // 更新本地设置对象，只更新有变化的属性
-          Object.keys(newSettings).forEach((key) => {
-            if (newSettings[key] !== undefined && newSettings[key] !== (settings as any)[key]) {
-              console.log(
-                `Popup updating ${key} from ${(settings as any)[key]} to ${newSettings[key]}`,
-              )
-              ;(settings as any)[key] = newSettings[key]
+          try {
+            // Enhanced validation
+            if (!newSettings || typeof newSettings !== 'object') {
+              console.warn('[PopupApp] ⚠️ Invalid settings message received:', newSettings)
+              return
             }
-          })
-          // 使用 nextTick 确保在 Vue 更新周期完成后重置标志
-          nextTick(() => {
-            isUpdatingFromExternal = false
-          })
+
+            isUpdatingFromExternal = true
+
+            // Update local settings object with change tracking
+            Object.keys(newSettings).forEach((key) => {
+              if (newSettings[key] !== undefined && newSettings[key] !== (settings as any)[key]) {
+                console.log(
+                  `[PopupApp] 🔄 Updating ${key} from ${(settings as any)[key]} to ${newSettings[key]}`,
+                )
+                ;(settings as any)[key] = newSettings[key]
+              }
+            })
+
+            // Update sync status
+            lastSyncTime.value = Date.now()
+            isConnected.value = true
+
+            // Use nextTick to ensure Vue update cycle completion
+            nextTick(() => {
+              isUpdatingFromExternal = false
+            })
+
+            console.log('[PopupApp] ✅ Settings updated successfully')
+          } catch (error) {
+            console.error('[PopupApp] ❌ Error updating settings:', error)
+            isConnected.value = false
+          }
         })
 
-        // 监听表情组变更消息：使用新的分离接口重新读取数据
+        // Enhanced groups change listener with better error handling
         commService.onGroupsChanged((_newGroups) => {
+          console.log('[PopupApp] 📨 Received groups changed message')
           try {
-            // 使用新的分离接口
+            // Use enhanced separated interface
             normalGroups.value = store.getNormalGroups()
             commonEmojiGroup.value = store.getCommonEmojiGroup()
             ungrouped.value = store.getUngrouped()
             hot.value = store.getHot()
+
+            // Update sync status
+            lastSyncTime.value = Date.now()
+            isConnected.value = true
+
+            console.log('[PopupApp] ✅ Groups updated successfully')
           } catch (e) {
-            console.warn('更新分组数据失败:', e)
-            // 如果新接口失败，回退到原始方式
+            console.warn('[PopupApp] ⚠️ Groups update failed:', e)
+            isConnected.value = false
+
+            // Enhanced fallback with better error handling
             try {
               const allGroups = store.getGroups()
               normalGroups.value = allGroups.filter((g: any) => g.UUID !== 'common-emoji-group')
-            } catch (_) {
+              console.log('[PopupApp] 🔄 Fallback groups update succeeded')
+            } catch (fallbackError) {
+              console.error('[PopupApp] ❌ Fallback groups update also failed:', fallbackError)
               normalGroups.value = []
             }
           }
         })
 
-        // 🚀 关键修复：监听使用记录消息并强制刷新UI
-        commService.onUsageRecorded((data) => {
+        // Enhanced normal groups change listener
+        commService.onNormalGroupsChanged((data) => {
+          console.log('[PopupApp] 📨 Received normal groups changed:', data)
           try {
-            console.log('[PopupApp] Received usage recorded message for UUID:', data?.uuid)
-
-            // 强制刷新热门表情列表
-            hot.value = store.getHot(true) // 传递true强制刷新
-            console.log(
-              '[PopupApp] Hot emojis refreshed from usage message, count:',
-              hot.value.length,
-            )
-
-            // 同时刷新常用表情组
-            commonEmojiGroup.value = store.getCommonEmojiGroup()
-            console.log('[PopupApp] Common emoji group refreshed from usage message')
-          } catch (error) {
-            console.error('[PopupApp] Failed to refresh UI from usage message:', error)
-          }
-        })
-
-        // 🚀 关键修复：添加常用表情组专门的监听器
-        commService.onCommonEmojiGroupChanged((data) => {
-          try {
-            console.log('[PopupApp] 收到常用表情组变更消息，刷新常用表情列表')
-            hot.value = store.getHot()
-            // 如果有更新的常用表情组数据，也更新commonEmojiGroup
-            if (data && data.group) {
-              commonEmojiGroup.value = data.group
+            if (data && data.groups && Array.isArray(data.groups)) {
+              normalGroups.value = data.groups
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+              console.log('[PopupApp] ✅ Normal groups updated, count:', data.groups.length)
             }
           } catch (error) {
-            console.error('[PopupApp] 处理常用表情组变更失败:', error)
+            console.error('[PopupApp] ❌ Error updating normal groups:', error)
+            isConnected.value = false
           }
         })
 
-        // 🚀 关键修复：监听特定表情组变更（针对常用表情组）
+        // 🚀 存储标志位监听 - 完全替换消息传递机制
+        try {
+          const { onCommonEmojiChange, watchStorageFlags } = await import('../data/update/storage')
+
+          // 确保存储标志位监听已启动
+          watchStorageFlags()
+
+          // 监听常用表情变化（基于存储标志位）
+          const unsubscribe1 = onCommonEmojiChange((group) => {
+            console.log('[PopupApp] 🚩 Storage flag: Common emoji group changed:', group)
+            try {
+              if (group && group.emojis) {
+                console.log(
+                  '[PopupApp] 🔄 Updating common emoji group with',
+                  group.emojis.length,
+                  'emojis',
+                )
+                commonEmojiGroup.value = group
+                lastSyncTime.value = Date.now()
+                isConnected.value = true
+                console.log('[PopupApp] ✅ Common emoji group updated via storage flag')
+              }
+            } catch (error) {
+              console.error('[PopupApp] ❌ Error in storage flag listener:', error)
+              isConnected.value = false
+            }
+          })
+
+          storageUnsubscribers.value = [unsubscribe1]
+          console.log('[PopupApp] ✅ Direct storage listeners registered successfully')
+          isConnected.value = true
+        } catch (error) {
+          console.error('[PopupApp] ❌ Failed to setup direct storage listeners:', error)
+          isConnected.value = false
+        }
+
+        // Additional listener for COMMON_EMOJI_UPDATED sync messages
+        commService.onCommonEmojiUpdated((commonGroup) => {
+          console.log('[PopupApp] 📨 🔄 Received common emoji updated sync message:', commonGroup)
+          try {
+            if (commonGroup) {
+              commonEmojiGroup.value = commonGroup
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+              console.log(
+                '[PopupApp] ✅ Synced common emoji group:',
+                commonGroup.displayName,
+                'with',
+                commonGroup.emojis?.length || 0,
+                'emojis',
+              )
+            }
+          } catch (error) {
+            console.error('[PopupApp] ❌ Error syncing common emoji group:', error)
+            isConnected.value = false
+          }
+        })
+
+        // 🚀 新增：监听 app:common-group-changed 消息
+        commService.onMessage('app:common-group-changed', (commonGroup) => {
+          console.log('[PopupApp] 📨 🔄 Received app:common-group-changed message:', commonGroup)
+          try {
+            if (commonGroup) {
+              commonEmojiGroup.value = commonGroup
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+              console.log(
+                '[PopupApp] ✅ Updated from app:common-group-changed:',
+                commonGroup.displayName,
+                'with',
+                commonGroup.emojis?.length || 0,
+                'emojis',
+              )
+            }
+          } catch (error) {
+            console.error('[PopupApp] ❌ Error handling app:common-group-changed:', error)
+            isConnected.value = false
+          }
+        })
+
+        // 🚀 新增：监听 extension-storage-synced 消息
+        commService.onMessage('extension-storage-synced', (data) => {
+          console.log('[PopupApp] 📨 🔄 Extension storage synced:', data)
+          try {
+            if (data.keys && data.keys.includes('emojiGroups-common-emoji-group')) {
+              console.log('[PopupApp] 🔄 Common emoji group was synced, refreshing data')
+              // 重新加载常用表情组
+              commonEmojiGroup.value = store.getCommonEmojiGroup()
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+              console.log('[PopupApp] ✅ Refreshed after extension storage sync')
+            }
+          } catch (error) {
+            console.error('[PopupApp] ❌ Error handling extension-storage-synced:', error)
+            isConnected.value = false
+          }
+        })
+
+        // Enhanced usage recording listener (removing duplicates as enhanced versions added above)
+        commService.onUsageRecorded((data) => {
+          console.log('[PopupApp] 📨 📊 Received usage recorded message for UUID:', data?.uuid)
+          try {
+            if (data && data.uuid) {
+              // Force refresh hot emojis list with enhanced tracking
+              hot.value = store.getHot(true) // Pass true for force refresh
+              console.log(
+                '[PopupApp] ✅ Hot emojis refreshed from usage message, count:',
+                hot.value.length,
+              )
+
+              // Refresh common emoji group as well
+              commonEmojiGroup.value = store.getCommonEmojiGroup()
+              console.log('[PopupApp] ✅ Common emoji group refreshed from usage message')
+
+              // Update sync status
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+            }
+          } catch (error) {
+            console.error('[PopupApp] ❌ Error handling usage recorded message:', error)
+            isConnected.value = false
+          }
+        })
+
+        // Enhanced specific group change listener (for common emoji group)
         commService.onSpecificGroupChanged((data) => {
+          console.log('[PopupApp] 📨 🎯 Received specific group changed message:', data)
           try {
             if (data && data.groupUUID === 'common-emoji-group') {
-              console.log('[PopupApp] 收到常用表情组特定变更消息，刷新数据')
+              console.log('[PopupApp] 🚀 Processing common emoji group specific change')
+
+              // Refresh hot emojis and common group
               hot.value = store.getHot()
               if (data.group) {
                 commonEmojiGroup.value = data.group
               }
+
+              // Update sync status
+              lastSyncTime.value = Date.now()
+              isConnected.value = true
+
+              console.log('[PopupApp] ✅ Common emoji group specific change processed')
             }
           } catch (error) {
-            console.error('[PopupApp] 处理特定表情组变更失败:', error)
+            console.error('[PopupApp] ❌ Error processing specific group change:', error)
+            isConnected.value = false
           }
         })
 
@@ -462,6 +668,31 @@ export default defineComponent({
       } catch (_) {}
     })
 
+    // Cleanup function for component unmounting
+    onUnmounted(() => {
+      console.log('[PopupApp] 🧹 Cleaning up popup component')
+      try {
+        // 清理直接存储监听器
+        if (storageUnsubscribers.value && storageUnsubscribers.value.length > 0) {
+          storageUnsubscribers.value.forEach((unsubscribe: () => void) => {
+            try {
+              unsubscribe()
+            } catch (error) {
+              console.warn('[PopupApp] ⚠️ Error unsubscribing storage listener:', error)
+            }
+          })
+          console.log('[PopupApp] ✅ Storage listeners cleaned up')
+        }
+
+        // 清理通信服务
+        if (commService && typeof commService.destroy === 'function') {
+          commService.destroy()
+        }
+      } catch (error) {
+        console.warn('[PopupApp] ⚠️ Error during cleanup:', error)
+      }
+    })
+
     return {
       settings,
       normalGroups,
@@ -483,6 +714,9 @@ export default defineComponent({
       openOptions,
       onEmojiClick,
       stringifyUrl,
+      // Enhanced connection status tracking
+      isConnected,
+      lastSyncTime,
     }
   },
 })

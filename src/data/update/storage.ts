@@ -29,16 +29,93 @@ const messageListeners: Set<(data: any) => void> = new Set()
 // Export message listener management for external use
 export function addMessageListener(listener: (data: any) => void) {
   messageListeners.add(listener)
-  return () => messageListeners.delete(listener)
+  console.log('[Storage] 📡 Added storage message listener, total:', messageListeners.size)
+  return () => {
+    messageListeners.delete(listener)
+    console.log('[Storage] 🗑️ Removed storage message listener, remaining:', messageListeners.size)
+  }
+}
+
+// 专门的常用表情监听器
+export function onCommonEmojiChange(callback: (commonGroup: any) => void) {
+  const listener = (message: any) => {
+    if (message.type === 'common-emoji-updated' || message.type === 'COMMON_EMOJI_UPDATED') {
+      console.log('[Storage] 🔔 Common emoji change detected, calling callback')
+      callback(message.data)
+    }
+  }
+  return addMessageListener(listener)
+}
+
+// 通用存储变化监听器
+export function onStorageChange(eventType: string, callback: (data: any) => void) {
+  const listener = (message: any) => {
+    if (message.type === eventType) {
+      console.log(`[Storage] 🔔 Storage change detected for ${eventType}, calling callback`)
+      callback(message.data)
+    }
+  }
+  return addMessageListener(listener)
+}
+
+// 🚀 新增：基于存储标志位的监听系统
+export function watchStorageFlags() {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    // 监听扩展存储变化
+    chrome.storage.local.onChanged.addListener((changes: any, areaName: string) => {
+      if (areaName === 'local' && changes['emoji-update-flag']) {
+        const flag = changes['emoji-update-flag'].newValue
+        if (flag && flag.updated) {
+          console.log('[Storage] 🚩 Detected storage flag update:', flag.type)
+
+          // 根据标志位类型触发相应事件
+          if (flag.type === 'common-emoji-updated' && flag.groupUUID) {
+            // 从存储中获取最新的常用表情组
+            chrome.storage.local.get([`emojiGroups-${flag.groupUUID}`], (result: any) => {
+              const group = result[`emojiGroups-${flag.groupUUID}`]
+              if (group) {
+                console.log('[Storage] 📡 Broadcasting common emoji update from storage flag')
+                broadcastMessage('common-emoji-updated', group)
+              }
+            })
+          }
+
+          // 清除标志位
+          chrome.storage.local.remove(['emoji-update-flag'])
+        }
+      }
+    })
+    console.log('[Storage] 🚩 Storage flag watcher initialized')
+  }
+}
+
+// 设置存储更新标志位
+export function setStorageUpdateFlag(type: string, data: any) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    const flag = {
+      type,
+      timestamp: Date.now(),
+      data,
+      updated: true,
+    }
+    chrome.storage.local.set({ 'emoji-update-flag': flag })
+    console.log(`[Storage] 🚩 Set storage update flag: ${type}`)
+  }
 }
 
 function broadcastMessage(type: string, data: any) {
   const message = { type, data, timestamp: Date.now() }
+
+  console.log(
+    `[Storage] 📡 Broadcasting storage message: ${type} to ${messageListeners.size} listeners`,
+  )
+
   messageListeners.forEach((listener) => {
     try {
       listener(message)
+      console.log(`[Storage] ✅ Storage message delivered: ${type}`)
     } catch (error) {
-      console.warn('[Storage] Message listener error:', error)
+      console.error(`[Storage] ❌ Message listener error for ${type}:`, error)
     }
   })
 
@@ -46,7 +123,28 @@ function broadcastMessage(type: string, data: any) {
   if (typeof window !== 'undefined') {
     try {
       window.dispatchEvent(new CustomEvent('storage-update', { detail: message }))
-    } catch (_) {}
+      console.log(`[Storage] 📡 Window event dispatched: ${type}`)
+    } catch (error) {
+      console.error('[Storage] Failed to dispatch window event:', error)
+    }
+  }
+
+  // 🚀 立即触发 localStorage 事件（如果支持）
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      // 触发 storage 事件，让其他标签页也能收到
+      const storageEvent = new StorageEvent('storage', {
+        key: `emoji-update-${type}`,
+        newValue: JSON.stringify(data),
+        oldValue: null,
+        storageArea: localStorage,
+        url: window.location.href,
+      })
+      window.dispatchEvent(storageEvent)
+      console.log(`[Storage] 📡 Storage event dispatched: ${type}`)
+    } catch (error) {
+      console.error('[Storage] Failed to dispatch storage event:', error)
+    }
   }
 }
 
@@ -116,15 +214,28 @@ async function syncToExtensionStorage(retryCount = 0): Promise<void> {
   const maxRetries = 3
 
   if (pendingSync) {
-    console.log('[Storage] Sync already in progress, skipping')
-    return
+    console.log('[Storage] Sync already in progress, waiting for completion...')
+    // 等待当前同步完成，而不是直接跳过
+    let waitCount = 0
+    while (pendingSync && waitCount < 50) {
+      // 最多等待5秒
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      waitCount++
+    }
+    if (pendingSync) {
+      console.warn('[Storage] Previous sync took too long, forcing new sync')
+      pendingSync = false // 强制重置
+    }
   }
 
   try {
     pendingSync = true
     lastSyncTime = Date.now()
 
-    console.log('[Storage] Starting sync to extension storage, attempt:', retryCount + 1)
+    console.log(
+      '[Storage] 🚀 Starting ENHANCED sync to extension storage, attempt:',
+      retryCount + 1,
+    )
 
     if (typeof window === 'undefined' || !window.localStorage) {
       console.warn('[Storage] localStorage not available')
@@ -206,21 +317,35 @@ async function syncToExtensionStorage(retryCount = 0): Promise<void> {
             reject(new Error(`Extension sync failed: ${error.message}`))
           } else {
             console.log(
-              '[Storage] Successfully synced to extension storage, keys:',
+              '[Storage] ✅ Successfully synced to extension storage, keys:',
               Object.keys(storeObj).length,
             )
             // Update in-memory cache
             Object.assign(extCache, storeObj)
 
-            // 🚀 关键修复：验证同步结果
-            console.log('[Storage] Verifying sync - checking common emoji group')
+            // 🚀 关键修复：验证同步结果并广播更新
+            console.log('[Storage] 🔍 Verifying sync - checking common emoji group')
             if (storeObj[KEY_COMMON_EMOJIS]) {
+              const commonGroup = storeObj[KEY_COMMON_EMOJIS]
               console.log(
-                '[Storage] Common emoji group synced with',
-                storeObj[KEY_COMMON_EMOJIS].emojis?.length || 0,
+                '[Storage] ✅ Common emoji group synced with',
+                commonGroup.emojis?.length || 0,
                 'emojis',
               )
+
+              // 🚀 立即广播常用表情更新消息
+              broadcastMessage('COMMON_EMOJI_UPDATED', commonGroup)
+              broadcastMessage('app:common-group-changed', commonGroup)
+              console.log('[Storage] 📡 Broadcasted common emoji sync completion')
             }
+
+            // 🚀 广播全局同步完成消息
+            broadcastMessage('extension-storage-synced', {
+              keys: Object.keys(storeObj),
+              timestamp: Date.now(),
+              syncAttempt: retryCount + 1,
+            })
+
             resolve()
           }
         })
@@ -229,27 +354,40 @@ async function syncToExtensionStorage(retryCount = 0): Promise<void> {
       console.warn('[Storage] Chrome storage API not available')
     }
   } catch (error) {
-    console.error('[Storage] Sync to extension failed:', error)
+    console.error('[Storage] ❌ Sync to extension failed:', error)
 
     // 🚀 关键修复：实现重试机制
     if (retryCount < maxRetries) {
-      console.log(`[Storage] Retrying sync (${retryCount + 1}/${maxRetries}) in 2 seconds...`)
+      console.log(`[Storage] 🔄 Retrying sync (${retryCount + 1}/${maxRetries}) in 2 seconds...`)
       pendingSync = false // Reset flag for retry
 
       setTimeout(() => {
         syncToExtensionStorage(retryCount + 1).catch((retryError) => {
-          console.error('[Storage] Retry failed:', retryError)
+          console.error('[Storage] ❌ Retry failed:', retryError)
+          pendingSync = false // 确保重试失败后也重置标志
         })
       }, 2000)
     } else {
-      console.error('[Storage] Max retries reached, sync failed permanently')
+      console.error('[Storage] ❌ Max retries reached, sync failed permanently')
       // 🚀 关键修复：广播同步失败消息
       const errorMessage = error instanceof Error ? error.message : String(error)
       broadcastMessage('sync-failed', { error: errorMessage, retryCount })
+      pendingSync = false // 确保失败后重置标志
     }
   } finally {
+    // 🚀 确保在所有情况下都重置 pendingSync 标志
     if (retryCount >= maxRetries) {
       pendingSync = false
+    }
+
+    // 只在最初调用时设置超时重置
+    if (retryCount === 0) {
+      setTimeout(() => {
+        if (pendingSync) {
+          console.warn('[Storage] ⚠️ Force resetting pendingSync flag after timeout')
+          pendingSync = false
+        }
+      }, 10000) // 10秒后强制重置
     }
   }
 }
@@ -544,7 +682,7 @@ export function getCommonEmojiGroup(): EmojiGroup | null {
 }
 
 // 保存常用表惁分组
-export function saveCommonEmojiGroup(group: EmojiGroup) {
+export async function saveCommonEmojiGroup(group: EmojiGroup) {
   try {
     console.log('[Storage] saveCommonEmojiGroup called with group:', {
       UUID: group.UUID,
@@ -570,14 +708,49 @@ export function saveCommonEmojiGroup(group: EmojiGroup) {
         console.log('[Storage] Verification: saved group has', parsed.emojis?.length || 0, 'emojis')
       }
 
-      // Broadcast change message
+      // 🚀 立即更新扩展存储键值 - 同时更新两个键确保兼容性
+      console.log('[Storage] 📡 Immediately updating both emojiGroups-common storage keys')
+
+      try {
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+          // 🚀 关键修复：同时更新所有相关存储键确保兼容性
+          const storageUpdates = {
+            [KEY_COMMON_EMOJIS]: group, // 主要键名：emojiGroups-common（用户期望的）
+            [`emojiGroups-${group.UUID}`]: group, // 备用键名：emojiGroups-common-emoji-group
+          }
+
+          // 同时更新扩展缓存
+          extCache[KEY_COMMON_EMOJIS] = group
+          extCache[`emojiGroups-${group.UUID}`] = group
+
+          await chrome.storage.local.set(storageUpdates)
+          console.log('[Storage] ✅ Immediately updated both storage keys:')
+          console.log(`  - ${KEY_COMMON_EMOJIS} (emojiGroups-common)`)
+          console.log(`  - emojiGroups-${group.UUID}`)
+          console.log('[Storage] ✅ Extension cache also updated for both keys')
+
+          // 设置更新标志位
+          const updateFlag = {
+            type: 'common-emoji-updated',
+            timestamp: Date.now(),
+            groupUUID: group.UUID,
+            updated: true,
+          }
+          await chrome.storage.local.set({ 'emoji-update-flag': updateFlag })
+          console.log('[Storage] 🚩 Set update flag in extension storage')
+        }
+      } catch (error) {
+        console.error('[Storage] ❌ Failed to immediately update extension storage:', error)
+      }
+
+      // 触发存储事件（不依赖消息传递）
       broadcastMessage('common-emoji-updated', group)
-      console.log('[Storage] Broadcasted common-emoji-updated message')
 
-      // Schedule background sync
-      scheduleSyncToExtension()
+      console.log('[Storage] ✅ Common emoji group updated with immediate storage sync')
 
-      console.log('[Storage] Saved common emoji group to localStorage, sync scheduled')
+      // 🚀 不再需要额外的同步调度，因为已经立即更新了存储
+
+      console.log('[Storage] ✅ Saved common emoji group to localStorage with immediate sync')
     } else {
       console.warn('[Storage] localStorage not available')
     }
@@ -787,3 +960,6 @@ export default {
 
 // Initialize the storage system
 initializeStorageSystem()
+
+// 🚀 初始化存储标志位监听系统
+watchStorageFlags()

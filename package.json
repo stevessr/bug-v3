@@ -9,6 +9,9 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm run type-check && pnpm run build-only && pnpm run build:content && pnpm run build:background",
+    "build:debug": "cross-env LOG_LEVEL=DEBUG pnpm run type-check && cross-env LOG_LEVEL=DEBUG pnpm run build-only && cross-env LOG_LEVEL=DEBUG pnpm run build:content && cross-env LOG_LEVEL=DEBUG pnpm run build:background",
+    "build:trace": "cross-env LOG_LEVEL=TRACE pnpm run type-check && cross-env LOG_LEVEL=TRACE pnpm run build-only && cross-env LOG_LEVEL=TRACE pnpm run build:content && cross-env LOG_LEVEL=TRACE pnpm run build:background",
+    "build:production": "cross-env LOG_LEVEL=WARN pnpm run type-check && cross-env LOG_LEVEL=WARN pnpm run build-only && cross-env LOG_LEVEL=WARN pnpm run build:content && cross-env LOG_LEVEL=WARN pnpm run build:background",
     "build:all": "pnpm run build-only && pnpm run build:scripts",
     "build:scripts": "pnpm run build:content && pnpm run build:background",
     "preview": "vite preview",
@@ -68,6 +71,7 @@
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
+    "cross-env": "^10.0.0",
     "eslint": "^9.34.0",
     "eslint-plugin-playwright": "^2.2.2",
     "eslint-plugin-vue": "~10.3.0",
