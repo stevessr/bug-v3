@@ -48,6 +48,13 @@ export default defineConfig(({ mode }) => {
           content: fileURLToPath(new URL('src/content/content-autodetect.ts', import.meta.url)),
           // bridge helper that will be injected into pages (isolated world)
           'content-bridge': fileURLToPath(new URL('src/content/injectedBridge.ts', import.meta.url)),
+
+          // Per-site content scripts (legacy wrappers)
+          discourse: fileURLToPath(new URL('src/content/content-discourse.ts', import.meta.url)),
+          bilibili: fileURLToPath(new URL('src/content/content-bilibili.ts', import.meta.url)),
+          x: fileURLToPath(new URL('src/content/content-x.ts', import.meta.url)),
+          pixiv: fileURLToPath(new URL('src/content/content-pixiv.ts', import.meta.url)),
+
           // Per-site content scripts - injected by background as needed
           'discourse-content': fileURLToPath(new URL('src/content/discourse/discourse.ts', import.meta.url)),
           'bilibili-content': fileURLToPath(new URL('src/content/bilibili/bilibili.ts', import.meta.url)),
