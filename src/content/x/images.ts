@@ -99,7 +99,29 @@ function createBtn(data: AddEmojiButtonData) {
   btn.type = 'button'
   btn.title = '添加到未分组表情'
   btn.innerHTML = '➕'
-  btn.style.cssText = `position:absolute;right:6px;top:6px;z-index:9999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.8);color:#fff;border:none;font-weight:700;width:auto;height:auto;min-width:32px;min-height:32px;max-width:48px;max-height:48px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;opacity:0;transition:opacity 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.3);backdrop-filter:blur(4px);`
+  btn.style.position = 'absolute'
+  btn.style.right = '6px'
+  btn.style.top = '6px'
+  btn.style.zIndex = '9999'
+  btn.style.cursor = 'pointer'
+  btn.style.borderRadius = '6px'
+  btn.style.padding = '6px 8px'
+  btn.style.background = 'rgba(0,0,0,0.8)'
+  btn.style.color = '#fff'
+  btn.style.border = 'none'
+  btn.style.fontWeight = '700'
+  btn.style.boxSizing = 'border-box'
+  btn.style.opacity = '0'
+  btn.style.transition = 'opacity 0.2s ease'
+  btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)'
+  btn.style.backdropFilter = 'blur(4px)'
+  btn.style.minWidth = '32px'
+  btn.style.minHeight = '32px'
+  btn.style.maxWidth = '48px'
+  btn.style.maxHeight = '48px'
+  btn.style.display = 'inline-flex'
+  btn.style.alignItems = 'center'
+  btn.style.justifyContent = 'center'
   btn.style.pointerEvents = 'auto'
   setupButtonClick(btn, data)
   return btn
@@ -151,7 +173,6 @@ export function createOverlayBtn(data: AddEmojiButtonData, target: Element) {
         overlayMap.delete(target)
         return
       }
-
       const isInLightbox = hasLightbox()
 
       const r = (target as Element).getBoundingClientRect()

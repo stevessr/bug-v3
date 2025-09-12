@@ -4,6 +4,7 @@ import { onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 
+// eslint-disable-next-line import/order
 import HeaderControls from './components/HeaderControls.vue'
 
 // Lazy-loaded components
@@ -31,7 +32,6 @@ const options = useOptions()
 
 // pending resolver for requestConfirmation -> modal bridge
 
-// resolver saved when requestConfirmation() is called; resolved by modal handlers
 // resolver saved when requestConfirmation() is called; resolved by modal handlers
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pendingConfirmResolver: any = null
