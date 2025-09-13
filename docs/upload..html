@@ -1,0 +1,684 @@
+<div
+  id="tag/Uploads/operation/createUpload"
+  data-section-id="tag/Uploads/operation/createUpload"
+  class="sc-dcJsrY kNjBFu"
+>
+  <div data-section-id="operation/createUpload" id="operation/createUpload" class="sc-kAyceB XMnSL">
+    <div class="sc-fqkvVR cEAxIC">
+      <h2 class="sc-jXbUNg copjkU">
+        <a
+          class="sc-jlZhew jrsfjb"
+          href="#tag/Uploads/operation/createUpload"
+          aria-label="tag/Uploads/operation/createUpload"
+        ></a>
+        Creates an
+        <mark data-markjs="true">upload</mark>
+      </h2>
+      <h5 class="sc-dAlyuH hNlDMA">
+        Request Body schema:
+        <span class="sc-cWSHoV TDHxu">multipart/form-data</span>
+      </h5>
+      <div class="sc-eeDRCY sc-eBMEME gvJSKt hzUya"></div>
+      <table class="sc-dAbbOL krDyRf">
+        <tbody>
+          <tr class="">
+            <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="type">
+              <span class="sc-gFqAkR Aouot"></span>
+              <span class="property-name">type</span>
+              <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+            </td>
+            <td class="sc-fPXMVe iMGXTw">
+              <div>
+                <div>
+                  <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                  <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string</span>
+                </div>
+                <div>
+                  <span class="sc-Nxspf lmPAIU">Enum:</span>
+                  <span class="sc-Nxspf sc-ddjGPC lmPAIU dEQDjv">"avatar"</span>
+                  <span class="sc-Nxspf sc-ddjGPC lmPAIU dEQDjv">"profile_background"</span>
+                  <span class="sc-Nxspf sc-ddjGPC lmPAIU dEQDjv">"card_background"</span>
+                  <span class="sc-Nxspf sc-ddjGPC lmPAIU dEQDjv">"custom_emoji"</span>
+                  <span class="sc-Nxspf sc-ddjGPC lmPAIU dEQDjv">"composer"</span>
+                </div>
+                <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+              </div>
+            </td>
+          </tr>
+          <tr class="">
+            <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="user_id">
+              <span class="sc-gFqAkR Aouot"></span>
+              <span class="property-name">user_id</span>
+            </td>
+            <td class="sc-fPXMVe iMGXTw">
+              <div>
+                <div>
+                  <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                  <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">integer</span>
+                </div>
+                <div>
+                  <div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA">
+                    <p>
+                      required if
+                      <mark data-markjs="true">upload</mark>
+                      ing an avatar
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr class="">
+            <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="synchronous">
+              <span class="sc-gFqAkR Aouot"></span>
+              <span class="property-name">synchronous</span>
+            </td>
+            <td class="sc-fPXMVe iMGXTw">
+              <div>
+                <div>
+                  <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                  <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">boolean</span>
+                </div>
+                <div>
+                  <div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA">
+                    <p>Use this flag to return an id and url</p>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr class="last">
+            <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="file">
+              <span class="sc-gFqAkR Aouot"></span>
+              <span class="property-name">file</span>
+            </td>
+            <td class="sc-fPXMVe iMGXTw">
+              <div>
+                <div>
+                  <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                  <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string</span>
+                  <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">&lt;binary&gt;</span>
+                </div>
+                <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div>
+        <h3 class="sc-fMMURN ciDERN">Responses</h3>
+        <div>
+          <button class="sc-kzqdkY fZRtWb" aria-expanded="true">
+            <svg
+              class="sc-cwHptR ztjAg"
+              version="1.1"
+              viewBox="0 0 24 24"
+              x="0"
+              xmlns="http://www.w3.org/2000/svg"
+              y="0"
+              aria-hidden="true"
+            >
+              <polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon>
+            </svg>
+            <strong class="sc-dSIIpw cMtbfc">200</strong>
+            <div class="sc-eeDRCY sc-eBMEME sc-dCFHLb gvJSKt dDrYQw ctYaUb">
+              <p>
+                file
+                <mark data-markjs="true">upload</mark>
+                ed
+              </p>
+            </div>
+          </button>
+          <div class="sc-bDpDS ctGfEE">
+            <h5 class="sc-dAlyuH hNlDMA">
+              Response Schema:
+              <span class="sc-cWSHoV TDHxu">application/json</span>
+            </h5>
+            <table class="sc-dAbbOL krDyRf">
+              <tbody>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="id">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">id</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">integer</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="url">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">url</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td
+                    class="sc-dLMFU sc-eldPxv bvNJXm evxOdD"
+                    kind="field"
+                    title="original_filename"
+                  >
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">original_filename</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="filesize">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">filesize</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">integer</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="width">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">width</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">integer</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="height">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">height</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">integer</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="thumbnail_width">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">thumbnail_width</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">integer</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td
+                    class="sc-dLMFU sc-eldPxv bvNJXm evxOdD"
+                    kind="field"
+                    title="thumbnail_height"
+                  >
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">thumbnail_height</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">integer</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="extension">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">extension</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="short_url">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">short_url</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="short_path">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">short_path</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="retain_hours">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">retain_hours</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string or null</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="human_filesize">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">human_filesize</span>
+                    <div class="sc-Nxspf sc-hRJfrW lmPAIU dBPdaM">required</div>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="">
+                  <td class="sc-dLMFU sc-eldPxv bvNJXm evxOdD" kind="field" title="dominant_color">
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <span class="property-name">dominant_color</span>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">string or null</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="last">
+                  <td
+                    class="sc-dLMFU sc-eldPxv sc-hCPjZK bvNJXm evxOdD bICIEW"
+                    kind="field"
+                    title="thumbnail"
+                  >
+                    <span class="sc-gFqAkR Aouot"></span>
+                    <button aria-label="expand thumbnail">
+                      <span class="property-name">thumbnail</span>
+                      <svg
+                        class="sc-cwHptR fFJptc"
+                        version="1.1"
+                        viewBox="0 0 24 24"
+                        x="0"
+                        xmlns="http://www.w3.org/2000/svg"
+                        y="0"
+                        aria-hidden="true"
+                      >
+                        <polygon
+                          points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "
+                        ></polygon>
+                      </svg>
+                    </button>
+                  </td>
+                  <td class="sc-fPXMVe iMGXTw">
+                    <div>
+                      <div>
+                        <span class="sc-Nxspf sc-cfxfcM lmPAIU bZSMCf"></span>
+                        <span class="sc-Nxspf sc-gFAWRd lmPAIU iHgalF">object or null</span>
+                      </div>
+                      <div><div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div></div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sc-iGgWBj sc-gsFSXq lbpUdJ bOFhJE">
+      <div class="sc-ejfMa-d jKIcgw">
+        <button class="sc-EgOXT kJYWtq">
+          <span type="post" class="sc-eZYNyq jjWbju http-verb post">post</span>
+          <span class="sc-iEXKAA lmuCWo">
+            /
+            <mark data-markjs="true">upload</mark>
+            s.json
+          </span>
+          <svg
+            class="sc-cwHptR hEFKzC"
+            version="1.1"
+            viewBox="0 0 24 24"
+            x="0"
+            xmlns="http://www.w3.org/2000/svg"
+            y="0"
+            aria-hidden="true"
+            style="margin-right: -25px"
+          >
+            <polygon points="17.3 8.3 12 13.6 6.7 8.3 5.3 9.7 12 16.4 18.7 9.7 "></polygon>
+          </svg>
+        </button>
+        <div aria-hidden="true" class="sc-dlWCHZ jLxaiG">
+          <div class="sc-hHOBiw fAZrna">
+            <div class="sc-eeDRCY sc-eBMEME gvJSKt FDQvA"></div>
+            <div tabindex="0" role="button">
+              <div class="sc-kWtpeL koYpNM">
+                <span>https://{defaultHost}</span>
+                /
+                <mark data-markjs="true">upload</mark>
+                s.json
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 class="sc-kpDqfm jhTHfM">Response samples</h3>
+        <div class="sc-bXCLTC cJteCP" data-rttabs="true">
+          <ul class="react-tabs__tab-list" role="tablist">
+            <li
+              class="tab-success react-tabs__tab--selected"
+              role="tab"
+              id="tab:r2o:0"
+              aria-selected="true"
+              aria-disabled="false"
+              aria-controls="panel:r2o:0"
+              tabindex="0"
+              data-rttab="true"
+            >
+              200
+            </li>
+          </ul>
+          <div
+            class="react-tabs__tab-panel react-tabs__tab-panel--selected"
+            role="tabpanel"
+            id="panel:r2o:0"
+            aria-labelledby="tab:r2o:0"
+          >
+            <div>
+              <div class="sc-bbSZdi fIhWJA">
+                <span class="sc-fjvvzt iQMUWd">Content type</span>
+                <div class="sc-JrDLc kqHFhX">application/json</div>
+              </div>
+              <div class="sc-uVWWZ hPVmXE">
+                <div class="sc-esYiGF fyLVJX">
+                  <div class="sc-koXPp fxOhoS">
+                    <button><div class="sc-fhzFiK esMkSs">Copy</div></button>
+                    <button>Expand all</button>
+                    <button>Collapse all</button>
+                  </div>
+                  <div tabindex="0" class="sc-eeDRCY gvJSKt sc-fXSgeo jJRLaa">
+                    <div class="redoc-json">
+                      <code>
+                        <button class="collapser" aria-label="collapse"></button>
+                        <span class="token punctuation">{</span>
+                        <span class="ellipsis"></span>
+                        <ul class="obj collapsible">
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"id"</span>
+                              :
+                              <span class="token number">0</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"url"</span>
+                              :
+                              <span class="token string">"string"</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"original_filename"</span>
+                              :
+                              <span class="token string">"string"</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"filesize"</span>
+                              :
+                              <span class="token number">0</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"width"</span>
+                              :
+                              <span class="token number">0</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"height"</span>
+                              :
+                              <span class="token number">0</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"thumbnail_width"</span>
+                              :
+                              <span class="token number">0</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"thumbnail_height"</span>
+                              :
+                              <span class="token number">0</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"extension"</span>
+                              :
+                              <span class="token string">"string"</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"short_url"</span>
+                              :
+                              <span class="token string">"string"</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"short_path"</span>
+                              :
+                              <span class="token string">"string"</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"retain_hours"</span>
+                              :
+                              <span class="token string">"string"</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"human_filesize"</span>
+                              :
+                              <span class="token string">"string"</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"dominant_color"</span>
+                              :
+                              <span class="token string">"string"</span>
+                              <span class="token punctuation">,</span>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="hoverable">
+                              <span class="property token string">"thumbnail"</span>
+                              :
+                              <button class="collapser" aria-label="collapse"></button>
+                              <span class="token punctuation">{</span>
+                              <span class="ellipsis"></span>
+                              <ul class="obj collapsible">
+                                <li>
+                                  <div class="hoverable collapsed">
+                                    <span class="property token string">"id"</span>
+                                    :
+                                    <span class="token number">0</span>
+                                    <span class="token punctuation">,</span>
+                                  </div>
+                                </li>
+                                <li>
+                                  <div class="hoverable collapsed">
+                                    <span class="property token string">
+                                      "
+                                      <mark data-markjs="true">upload</mark>
+                                      _id"
+                                    </span>
+                                    :
+                                    <span class="token number">0</span>
+                                    <span class="token punctuation">,</span>
+                                  </div>
+                                </li>
+                                <li>
+                                  <div class="hoverable collapsed">
+                                    <span class="property token string">"url"</span>
+                                    :
+                                    <span class="token string">"string"</span>
+                                    <span class="token punctuation">,</span>
+                                  </div>
+                                </li>
+                                <li>
+                                  <div class="hoverable collapsed">
+                                    <span class="property token string">"extension"</span>
+                                    :
+                                    <span class="token string">"string"</span>
+                                    <span class="token punctuation">,</span>
+                                  </div>
+                                </li>
+                                <li>
+                                  <div class="hoverable collapsed">
+                                    <span class="property token string">"width"</span>
+                                    :
+                                    <span class="token number">0</span>
+                                    <span class="token punctuation">,</span>
+                                  </div>
+                                </li>
+                                <li>
+                                  <div class="hoverable collapsed">
+                                    <span class="property token string">"height"</span>
+                                    :
+                                    <span class="token number">0</span>
+                                    <span class="token punctuation">,</span>
+                                  </div>
+                                </li>
+                                <li>
+                                  <div class="hoverable collapsed">
+                                    <span class="property token string">"filesize"</span>
+                                    :
+                                    <span class="token number">0</span>
+                                  </div>
+                                </li>
+                              </ul>
+                              <span class="token punctuation">}</span>
+                            </div>
+                          </li>
+                        </ul>
+                        <span class="token punctuation">}</span>
+                      </code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

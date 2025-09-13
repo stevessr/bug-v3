@@ -27,22 +27,95 @@ function isBilibiliOpusPage(): boolean {
   }
 }
 
+/**
+ * 规范化B站URL - 处理协议、尺寸参数等
+ */
+function normalizeBiliUrl(raw: string): string | null {
+  if (!raw) return null
+  raw = raw.trim()
+
+  // srcset may contain multiple entries separated by comma; take first token if so
+  if (raw.includes(',')) raw = raw.split(',')[0]
+  // remove descriptor after whitespace
+  raw = raw.split(' ')[0]
+
+  // ensure protocol - 处理//开头的URL
+  if (raw.startsWith('//')) raw = 'https:' + raw
+  else if (raw.startsWith('/')) raw = window.location.origin + raw
+
+  // strip size suffix starting with @ (e.g. ...jpg@264w_...avif)
+  // 去除@后面的尺寸参数获取原图URL
+  const atIndex = raw.indexOf('@')
+  if (atIndex !== -1) raw = raw.slice(0, atIndex)
+
+  // basic validation
+  if (!/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|avif)$/i.test(raw)) {
+    // if extension missing but path ends with jpg before @ it was preserved; otherwise try allow no ext
+    if (!/^https?:\/\/.+/.test(raw)) return null
+  }
+
+  return raw
+}
+
 function extractImageUrlFromPicture(pictureElement: Element): string | null {
   try {
-    // Try to find img element within picture
-    const img = pictureElement.querySelector('img')
-    if (img) {
-      return img.src || img.getAttribute('data-src') || img.getAttribute('src') || null
-    }
+    // 尝试多种方式获取图片URL
+    const urlSources: (() => string | null)[] = [
+      // 1. 如果容器本身是 <img>
+      () => {
+        if (pictureElement instanceof HTMLImageElement) {
+          return (
+            pictureElement.getAttribute('src') ||
+            pictureElement.getAttribute('data-src') ||
+            pictureElement.getAttribute('data-original') ||
+            pictureElement.src ||
+            null
+          )
+        }
+        return null
+      },
 
-    // Try to find source elements
-    const sources = pictureElement.querySelectorAll('source')
-    for (const source of sources) {
-      const srcset = source.getAttribute('srcset')
-      if (srcset) {
-        // Extract first URL from srcset
-        const match = srcset.match(/^([^\s]+)/)
-        if (match) return match[1]
+      // 2. 查找内部的 <img> 元素
+      () => {
+        const img = pictureElement.querySelector('img')
+        if (img) {
+          return (
+            img.getAttribute('src') ||
+            img.getAttribute('data-src') ||
+            img.getAttribute('data-original') ||
+            img.src ||
+            null
+          )
+        }
+        return null
+      },
+
+      // 3. 查找 <source> 元素的 srcset
+      () => {
+        const sources = pictureElement.querySelectorAll('source')
+        for (const source of sources) {
+          const srcset = source.getAttribute('srcset')
+          if (srcset) {
+            // Extract first URL from srcset
+            const match = srcset.match(/^([^\s,]+)/)
+            if (match) return match[1]
+          }
+        }
+        return null
+      }
+    ]
+
+    // 尝试每种方法，返回第一个有效的URL
+    for (const getUrl of urlSources) {
+      try {
+        const rawUrl = getUrl()
+        if (rawUrl) {
+          const normalized = normalizeBiliUrl(rawUrl)
+          if (normalized) return normalized
+        }
+      } catch (e) {
+        // 忽略单个方法的错误，继续尝试下一个
+        continue
       }
     }
 
@@ -179,14 +252,28 @@ function createControlButton(data: AddEmojiButtonData): HTMLElement {
 
 function scanAndInject() {
   try {
-    // Scan for Bilibili image containers
+    // Scan for Bilibili image containers, including pswp__img for large images
     const imageContainers = document.querySelectorAll(
-      '.bili-album__watch__content, .opus-module-content img, .bili-dyn-item img'
+      '.bili-album__watch__content, .opus-module-content img, .bili-dyn-item img, .pswp__img'
     )
 
     imageContainers.forEach(container => {
-      // Skip if already processed
-      if (container.querySelector('.bilibili-emoji-add-btn')) {
+      // Skip if already processed - 改进的重复检测
+      if (
+        container.querySelector('.bilibili-emoji-add-btn') ||
+        container.classList.contains('bilibili-processed') ||
+        container.closest('.bilibili-processed')
+      ) {
+        return
+      }
+
+      // 过滤掉头像 - Skip avatar images
+      if (
+        container.closest('.b-avatar__layer__res') ||
+        container.closest('.bili-avatar') ||
+        container.closest('.user-avatar') ||
+        container.matches('.avatar, .user-face, .bili-avatar img')
+      ) {
         return
       }
 
@@ -194,7 +281,18 @@ function scanAndInject() {
       let targetElement: Element = container
 
       if (container.tagName.toLowerCase() === 'img') {
-        imageUrl = (container as HTMLImageElement).src
+        const imgElement = container as HTMLImageElement
+        // 对于pswp__img，直接使用src
+        if (container.classList.contains('pswp__img')) {
+          imageUrl = normalizeBiliUrl(imgElement.src)
+        } else {
+          imageUrl = normalizeBiliUrl(
+            imgElement.src ||
+              imgElement.getAttribute('data-src') ||
+              imgElement.getAttribute('src') ||
+              ''
+          )
+        }
         targetElement = container.parentElement || container
       } else {
         // Look for picture or img elements within container
@@ -205,7 +303,16 @@ function scanAndInject() {
         } else {
           const img = container.querySelector('img')
           if (img) {
-            imageUrl = img.src
+            // 特别处理 bili-album__watch__content 容器中的图片
+            let rawUrl = ''
+            if (container.classList.contains('bili-album__watch__content')) {
+              // 对于大图区域，优先使用img的src属性，确保获取正确的图片URL
+              rawUrl = img.src || img.getAttribute('src') || img.getAttribute('data-src') || ''
+            } else {
+              rawUrl = img.src || img.getAttribute('data-src') || img.getAttribute('src') || ''
+            }
+
+            imageUrl = normalizeBiliUrl(rawUrl)
             targetElement = img.parentElement || img
           }
         }
@@ -223,13 +330,17 @@ function scanAndInject() {
           targetElement.parentElement.style.position = 'relative'
           targetElement.parentElement.appendChild(button)
         }
+
+        // Mark container as processed to prevent duplicate buttons
+        container.classList.add('bilibili-processed')
       }
     })
 
     // Also scan for control areas
     const controlAreas = document.querySelectorAll('.bili-album__watch__control')
     controlAreas.forEach(area => {
-      if (area.querySelector('.add-emoji')) return
+      if (area.querySelector('.add-emoji') || area.classList.contains('bilibili-control-processed'))
+        return
 
       // Find associated image
       const albumContent = area
@@ -244,6 +355,9 @@ function scanAndInject() {
             const data: AddEmojiButtonData = { name, url: imageUrl }
             const button = createControlButton(data)
             area.appendChild(button)
+
+            // Mark control area as processed
+            area.classList.add('bilibili-control-processed')
           }
         }
       }

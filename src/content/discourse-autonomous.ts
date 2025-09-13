@@ -901,6 +901,139 @@ function createUploadButton(): HTMLElement {
   return button
 }
 
+// ===== URL INPUT DIALOG =====
+
+function createUrlInputDialog(uploadList: HTMLElement) {
+  // Create overlay
+  const overlay = document.createElement('div')
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `
+
+  // Create dialog
+  const dialog = document.createElement('div')
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  `
+
+  // Create title
+  const title = document.createElement('h3')
+  title.textContent = '添加图片URL'
+  title.style.cssText = `
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+  `
+
+  // Create input
+  const input = document.createElement('input')
+  input.type = 'url'
+  input.placeholder = '请输入图片URL (支持 https://... 格式)'
+  input.style.cssText = `
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    box-sizing: border-box;
+  `
+
+  // Create buttons container
+  const buttonsContainer = document.createElement('div')
+  buttonsContainer.style.cssText = `
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  `
+
+  // Create cancel button
+  const cancelButton = document.createElement('button')
+  cancelButton.textContent = '取消'
+  cancelButton.style.cssText = `
+    padding: 8px 16px;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  `
+
+  // Create confirm button
+  const confirmButton = document.createElement('button')
+  confirmButton.textContent = '添加'
+  confirmButton.style.cssText = `
+    padding: 8px 16px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  `
+
+  // Add event listeners
+  const closeDialog = () => {
+    document.body.removeChild(overlay)
+  }
+
+  cancelButton.addEventListener('click', closeDialog)
+
+  const handleConfirm = () => {
+    const url = input.value.trim()
+    if (url) {
+      handleParseUpload([url], uploadList)
+      closeDialog()
+    }
+  }
+
+  confirmButton.addEventListener('click', handleConfirm)
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      handleConfirm()
+    } else if (e.key === 'Escape') {
+      closeDialog()
+    }
+  })
+
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      closeDialog()
+    }
+  })
+
+  // Assemble dialog
+  buttonsContainer.appendChild(cancelButton)
+  buttonsContainer.appendChild(confirmButton)
+  dialog.appendChild(title)
+  dialog.appendChild(input)
+  dialog.appendChild(buttonsContainer)
+  overlay.appendChild(dialog)
+
+  // Show dialog
+  document.body.appendChild(overlay)
+
+  // Focus input
+  setTimeout(() => input.focus(), 100)
+}
+
 // ===== UPLOAD MENU HANDLERS =====
 
 let uploadItems: UploadItem[] = []
@@ -947,15 +1080,9 @@ function setupUploadMenuHandlers(
     }
   })
 
-  // URL input handler
+  // URL input handler - 使用输入框而不是弹出
   urlButton.addEventListener('click', () => {
-    const url = prompt('请输入图片URL:')
-    if (url && url.trim()) {
-      const trimmedUrl = url.trim()
-      // Extract filename from URL
-      const filename = trimmedUrl.split('/').pop()?.split('?')[0] || 'image'
-      handleParseUpload([{ url: trimmedUrl, name: filename }], uploadList)
-    }
+    createUrlInputDialog(uploadList)
   })
 
   // Drag and drop support
@@ -1416,7 +1543,10 @@ function observeForToolbars() {
       })
 
       if (shouldScan) {
-        setTimeout(scanAndInjectButtons, 100)
+        setTimeout(() => {
+          scanAndInjectButtons()
+          applyCustomStyles() // Apply styles to newly added elements
+        }, 100)
       }
     })
 
@@ -1429,23 +1559,19 @@ function observeForToolbars() {
   }
 }
 
-// ===== CSS INJECTION =====
+// ===== STYLE APPLICATION =====
 
-function injectCustomCSS() {
-  const cssId = 'discourse-emoji-custom-css'
-  if (document.getElementById(cssId)) return
+function applyCustomStyles() {
+  // Apply styles directly to elements instead of injecting CSS
+  const emojiPickerContent = document.querySelector('.emoji-picker__content') as HTMLElement
+  if (emojiPickerContent) {
+    emojiPickerContent.style.height = 'auto'
+  }
 
-  const style = document.createElement('style')
-  style.id = cssId
-  style.textContent = `
-    .emoji-picker__content {
-      height: auto;
-    }
-    .emoji-picker__sections-nav {
-      height: auto;
-    }
-  `
-  document.head.appendChild(style)
+  const emojiPickerNav = document.querySelector('.emoji-picker__sections-nav') as HTMLElement
+  if (emojiPickerNav) {
+    emojiPickerNav.style.height = 'auto'
+  }
 }
 
 // ===== INITIALIZATION =====
@@ -1454,8 +1580,8 @@ function initDiscourse() {
   try {
     console.log('[Discourse] Initializing autonomous content script')
 
-    // Inject custom CSS
-    injectCustomCSS()
+    // Apply custom styles directly to elements
+    applyCustomStyles()
 
     // Initial scan and setup observer
     setTimeout(scanAndInjectButtons, 200)

@@ -81,8 +81,8 @@ function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
       // Step 2: Send image data to background script
       if ((window as any).chrome?.runtime?.sendMessage) {
         const response = await (window as any).chrome.runtime.sendMessage({
-          action: 'uploadPixivEmojiToLinuxDo',
-          imageData: {
+          action: 'uploadAndAddEmoji',
+          payload: {
             arrayData: Array.from(imageData),
             filename: extractFilenameFromUrl(data.url),
             mimeType: 'image/jpeg', // Pixiv images are typically JPEG
@@ -118,68 +118,42 @@ function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
   })
 }
 
-// Download image from Pixiv using canvas to respect origin restrictions
+// Download image from Pixiv using direct fetch
 async function downloadPixivImage(imageUrl: string): Promise<Uint8Array> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
+  try {
+    const response = await fetch(imageUrl, {
+      method: 'GET',
+      headers: {
+        Accept: 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Cache-Control': 'max-age=0',
+        Referer: 'https://www.pixiv.net/',
+        'sec-ch-ua': '"Not;A=Brand";v="99", "Microsoft Edge";v="139", "Chromium";v="139"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'Sec-Fetch-Dest': 'image',
+        'Sec-Fetch-Mode': 'no-cors',
+        'Sec-Fetch-Site': 'cross-site',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      credentials: 'omit'
+    })
 
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-
-        if (!ctx) {
-          reject(new Error('Cannot get canvas context'))
-          return
-        }
-
-        canvas.width = img.naturalWidth
-        canvas.height = img.naturalHeight
-
-        ctx.drawImage(img, 0, 0)
-
-        canvas.toBlob(
-          blob => {
-            if (!blob) {
-              reject(new Error('Failed to create blob'))
-              return
-            }
-
-            const reader = new FileReader()
-            reader.onload = () => {
-              const arrayBuffer = reader.result as ArrayBuffer
-              resolve(new Uint8Array(arrayBuffer))
-            }
-            reader.onerror = () => reject(new Error('Failed to read blob'))
-            reader.readAsArrayBuffer(blob)
-          },
-          'image/jpeg',
-          0.9
-        )
-      } catch (error) {
-        reject(error)
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
-    img.onerror = () => {
-      // Fallback: try direct fetch (may fail due to CORS)
-      fetch(imageUrl, {
-        headers: {
-          Referer: 'https://www.pixiv.net/'
-        }
-      })
-        .then(response => response.arrayBuffer())
-        .then(buffer => resolve(new Uint8Array(buffer)))
-        .catch(error => reject(new Error(`Failed to download image: ${error.message}`)))
-    }
-
-    // Set referer for Pixiv images
-    img.src = imageUrl
-  })
+    const arrayBuffer = await response.arrayBuffer()
+    return new Uint8Array(arrayBuffer)
+  } catch (error) {
+    console.error('[Pixiv] Direct fetch failed:', error)
+    throw new Error(
+      `Failed to download image: ${error instanceof Error ? error.message : String(error)}`
+    )
+  }
 }
 
-function createOverlayButton(data: AddEmojiButtonData, targetElement: Element): HTMLElement {
+function createOverlayButtonSP(data: AddEmojiButtonData, targetElement: Element): HTMLElement {
   const button = document.createElement('button')
   button.className = 'pixiv-emoji-add-btn'
   button.type = 'button'
@@ -262,9 +236,85 @@ function findPixivImages(): Element[] {
     images.push(...Array.from(elements))
   })
 
-  return images.filter(
+  // Remove duplicates and filter out preview images
+  const uniqueImages = images.filter(
     (img, index, self) => self.indexOf(img) === index // Remove duplicates
   )
+
+  return uniqueImages.filter(img => {
+    // 过滤预览图 - Filter out preview images
+    if (
+      img.closest('.sc-e85d81bc-0.eLoxRg') ||
+      img.closest('.sc-e85d81bc-0') ||
+      img.matches('.sc-e85d81bc-0 img') ||
+      img.closest('[class*="eLoxRg"]')
+    ) {
+      return false
+    }
+    return true
+  })
+}
+
+// Check if an image is an avatar/profile image - 检查是否为头像图片
+function isAvatarImage(img: Element): boolean {
+  // Check for avatar-related selectors
+  const avatarSelectors = [
+    // User profile avatar containers
+    'div[role="img"]', // Profile avatar containers
+    '.sc-3ec1b211-0', // Avatar wrapper class
+    'a[href*="/users/"]', // User profile links
+
+    // Avatar size indicators (typically small sizes)
+    'img[width="40"]', // 40px avatars
+    'img[width="50"]', // 50px avatars
+    'img[height="40"]', // 40px avatars
+    'img[height="50"]', // 50px avatars
+
+    // Profile-related containers
+    '.user-avatar',
+    '.profile-avatar',
+    '.avatar',
+
+    // Pixiv-specific avatar classes
+    '[class*="avatar"]',
+    '[class*="profile"]'
+  ]
+
+  // Check if image or its container matches avatar selectors
+  for (const selector of avatarSelectors) {
+    if (img.matches(selector) || img.closest(selector)) {
+      return true
+    }
+  }
+
+  // Check for small image dimensions (likely avatars)
+  const imgElement = img as HTMLImageElement
+  if (imgElement.naturalWidth > 0 && imgElement.naturalHeight > 0) {
+    if (imgElement.naturalWidth <= 60 && imgElement.naturalHeight <= 60) {
+      return true
+    }
+  }
+
+  // Check for user profile URL patterns in parent links
+  const parentLink = img.closest('a[href*="/users/"]')
+  if (parentLink) {
+    return true
+  }
+
+  // Check for specific avatar URL patterns
+  const src = imgElement.src
+  if (
+    src &&
+    (src.includes('user-profile') ||
+      src.includes('_50.') || // 50px profile images
+      src.includes('_40.') || // 40px profile images
+      src.includes('/profile/') ||
+      src.includes('/avatar/'))
+  ) {
+    return true
+  }
+
+  return false
 }
 
 function scanAndInjectPixivImages() {
@@ -280,7 +330,37 @@ function scanAndInjectPixivImages() {
         return
       }
 
-      const imageUrl = (img as HTMLImageElement).src
+      // Skip avatar images - 过滤头像图片
+      if (isAvatarImage(img)) {
+        return
+      }
+
+      // 优先从a标签href获取原图URL - Prioritize getting original image URL from a tag href
+      let imageUrl: string | null = null
+
+      // 1. 首先尝试从父级a标签获取原图URL
+      const parentLink =
+        img.closest('a[href*="i.pximg.net"]') || img.closest('a[href*="img-original"]')
+      if (parentLink) {
+        const href = parentLink.getAttribute('href')
+        if (href && (href.includes('i.pximg.net') || href.includes('img-original'))) {
+          imageUrl = href
+        }
+      }
+
+      // 2. 如果没有找到，使用img的src但尝试转换为原图URL
+      if (!imageUrl) {
+        const imgSrc = (img as HTMLImageElement).src
+        if (imgSrc) {
+          // 尝试将缩略图URL转换为原图URL
+          imageUrl = imgSrc
+            .replace(/\/c\/[^/]+\//, '/img-original/')
+            .replace(/\/custom-thumb\/[^/]+\//, '/img-original/')
+            .replace(/_square\d*\./, '.')
+            .replace(/_master\d*\./, '.')
+        }
+      }
+
       if (!imageUrl || !isValidImageUrl(imageUrl)) {
         return
       }
@@ -313,7 +393,7 @@ function scanAndInjectPixivImages() {
         const name = extractFilenameFromUrl(imageUrl)
         const data: AddEmojiButtonData = { name, url: imageUrl }
 
-        const button = createOverlayButton(data, container)
+        const button = createOverlayButtonSP(data, container)
         container.appendChild(button)
       }
     })
@@ -355,7 +435,7 @@ function detectPixivViewer() {
             const name = extractFilenameFromUrl(imageUrl)
             const data: AddEmojiButtonData = { name, url: imageUrl }
 
-            const button = createOverlayButton(data, viewer)
+            const button = createOverlayButtonSP(data, viewer)
             viewer.appendChild(button)
           }
         }

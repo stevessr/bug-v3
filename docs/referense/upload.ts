@@ -1,4 +1,5 @@
-import { getChromeAPI } from '../utils'
+import { getChromeAPI } from './utils'
+import { defaultProxyConfig } from './proxyConfig'
 
 export async function handleDownloadAndSendToDiscourse(payload: any, sendResponse: any) {
   void sendResponse
@@ -11,11 +12,14 @@ export async function handleDownloadAndSendToDiscourse(payload: any, sendRespons
     const url: string = payload.url
     const discourseBase: string | undefined = payload.discourseBase
 
+    // fetch the image with headers approximating a browser request to Pixiv
+    // use fetch's referrer option rather than trying to set User-Agent or restricted headers
     const defaultHeaders: Record<string, string> = {
       Accept:
         'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
       'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
       'Cache-Control': 'max-age=0',
+      // sec-ch-ua and related client hints — may be ignored by fetch/runtime but included to approximate the curl
       'sec-ch-ua': '"Not;A=Brand";v="99", "Microsoft Edge";v="139", "Chromium";v="139"',
       'sec-ch-ua-mobile': '?0',
       'sec-ch-ua-platform': '"Windows"',
@@ -23,6 +27,224 @@ export async function handleDownloadAndSendToDiscourse(payload: any, sendRespons
       'Sec-Fetch-Mode': 'navigate',
       'Sec-Fetch-Site': 'cross-site',
       'Upgrade-Insecure-Requests': '1'
+    }
+
+    const headers = Object.assign({}, defaultHeaders, payload.headers || {})
+
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers,
+      // set referrer to pixiv to emulate the browser Referer header
+      referrer: payload.referrer || 'https://www.pixiv.net/',
+      referrerPolicy: payload.referrerPolicy || 'no-referrer-when-downgrade',
+      cache: 'no-cache',
+      redirect: 'follow'
+    })
+
+    if (!resp.ok) {
+      sendResponse({ success: false, error: `failed to download image: ${resp.status}` })
+      return
+    }
+
+    const arrayBuffer = await resp.arrayBuffer()
+
+    // Find tabs that match discourseBase (if provided), otherwise send to all tabs
+    const chromeAPI = getChromeAPI()
+    const tabs = await (chromeAPI.tabs && chromeAPI.tabs.query ? chromeAPI.tabs.query({}) : [])
+
+    let sent = 0
+    for (const tab of tabs) {
+      try {
+        // If discourseBase provided, filter by URL
+        if (discourseBase && tab.url && !String(tab.url).startsWith(discourseBase)) continue
+
+        // send structured-cloneable payload
+        await chromeAPI.tabs.sendMessage(tab.id, {
+          action: 'uploadBlobToDiscourse',
+          filename: payload.filename || 'image.jpg',
+          mimeType: payload.mimeType || 'image/jpeg',
+          arrayBuffer,
+          discourseBase
+        })
+        sent++
+      } catch (e) {
+        // Ignore send errors for tabs without content script
+        void e
+      }
+    }
+
+    if (sent === 0) {
+      sendResponse({ success: false, error: 'no discourse tab found to receive upload' })
+      return
+    }
+
+    sendResponse({ success: true, message: `sent to ${sent} tab(s)` })
+  } catch (error) {
+    console.error('[Background] downloadAndSendToDiscourse failed', error)
+    sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
+  }
+}
+
+export async function handleDownloadForUser(payload: any, sendResponse: any) {
+  void sendResponse
+  try {
+    if (!payload || !payload.url) {
+      console.error('[Background] handleDownloadForUser missing payload.url')
+      sendResponse({ success: false, error: 'missing payload.url' })
+      return
+    }
+
+    const url: string = payload.url
+
+    // If content requested a direct browser download, try proxy first (if configured),
+    // otherwise try chrome.downloads.download directly.
+    if (payload.directDownload) {
+      // payload may contain proxy override
+      let proxy = payload.proxy || defaultProxyConfig
+
+      // If content requested to use storage proxy, try to read proxy config from chrome.storage
+      if (payload.useStorageProxy) {
+        try {
+          const chromeAPI = getChromeAPI()
+          const readStorageProxy = () =>
+            new Promise<any>(resolve => {
+              try {
+                if (chromeAPI.storage && chromeAPI.storage.sync && chromeAPI.storage.sync.get) {
+                  chromeAPI.storage.sync.get(['proxy'], (res: any) => resolve(res?.proxy || null))
+                } else if (
+                  chromeAPI.storage &&
+                  chromeAPI.storage.local &&
+                  chromeAPI.storage.local.get
+                ) {
+                  chromeAPI.storage.local.get(['proxy'], (res: any) => resolve(res?.proxy || null))
+                } else resolve(null)
+              } catch (_e) {
+                resolve(null)
+              }
+            })
+
+          const stored = await readStorageProxy()
+          if (stored && stored.enabled && stored.url) proxy = stored
+        } catch (e) {
+          console.error('[Background] failed to read proxy from storage', e)
+        }
+      }
+      if (proxy && proxy.enabled && proxy.url) {
+        try {
+          console.log('[Background] attempting proxy download', { proxy: proxy.url, url })
+          const proxyUrl = new URL(proxy.url)
+          proxyUrl.searchParams.set('url', url)
+          if (proxy.password) proxyUrl.searchParams.set('pw', proxy.password)
+
+          const proxyResp = await fetch(proxyUrl.toString(), { method: 'GET' })
+          if (proxyResp.ok) {
+            // proxy returned the image body; create object URL and download
+            const arrayBuffer = await proxyResp.arrayBuffer()
+            const contentType = proxyResp.headers.get('content-type') || 'application/octet-stream'
+            const blob = new Blob([new Uint8Array(arrayBuffer)], { type: contentType })
+            const objectUrl = URL.createObjectURL(blob)
+            const chromeAPI = getChromeAPI()
+            if (chromeAPI && chromeAPI.downloads && chromeAPI.downloads.download) {
+              const filename =
+                payload.filename ||
+                ((): string => {
+                  try {
+                    const u = new URL(url)
+                    return (u.pathname.split('/').pop() || 'image').replace(/\?.*$/, '')
+                  } catch (_e) {
+                    return 'image'
+                  }
+                })()
+              try {
+                const downloadId: number = await new Promise((resolve, reject) => {
+                  try {
+                    chromeAPI.downloads.download({ url: objectUrl, filename }, (id: number) => {
+                      if (chromeAPI.runtime && chromeAPI.runtime.lastError)
+                        reject(chromeAPI.runtime.lastError)
+                      else resolve(id)
+                    })
+                  } catch (e) {
+                    reject(e)
+                  }
+                })
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
+                sendResponse({ success: true, downloadId, via: 'proxy' })
+                return
+              } catch (e) {
+                void e
+                // fall through to other paths
+              }
+            } else {
+              // no downloads API available; return arrayBuffer fallback
+              sendResponse({
+                success: true,
+                fallback: true,
+                arrayBuffer,
+                mimeType: contentType,
+                filename: payload.filename || 'image'
+              })
+              return
+            }
+          } else {
+            console.error('[Background] proxy fetch failed', { status: proxyResp.status })
+            // fall through to try direct download
+          }
+        } catch (e) {
+          console.error('[Background] proxy attempt error', e)
+          // fall through to try direct download
+        }
+      }
+
+      // Try direct chrome.downloads.download next
+      try {
+        const chromeAPI = getChromeAPI()
+        if (chromeAPI && chromeAPI.downloads && chromeAPI.downloads.download) {
+          const filename =
+            payload.filename ||
+            (() => {
+              try {
+                const u = new URL(url)
+                return (u.pathname.split('/').pop() || 'image').replace(/\?.*$/, '')
+              } catch (_e) {
+                return 'image'
+              }
+            })()
+
+          console.log('[Background] attempting directDownload', { url, filename })
+
+          const downloadId: number = await new Promise((resolve, reject) => {
+            try {
+              chromeAPI.downloads.download({ url, filename }, (id: number) => {
+                const le = chromeAPI.runtime && chromeAPI.runtime.lastError
+                if (le) {
+                  // provide structured error to caller
+                  reject(le)
+                } else resolve(id)
+              })
+            } catch (e) {
+              reject(e)
+            }
+          })
+
+          console.log('[Background] directDownload started', { downloadId, url })
+          sendResponse({ success: true, downloadId })
+          return
+        }
+      } catch (e: any) {
+        // Log and fall through to normal fetch-based download below
+        console.error(
+          '[Background] directDownload attempt failed, will fallback to fetch',
+          e && e.message ? e.message : e
+        )
+        // don't return here; fall back to fetch path to try another approach
+      }
+    }
+
+    const defaultHeaders: Record<string, string> = {
+      Accept:
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+      'Cache-Control': 'max-age=0'
     }
 
     const headers = Object.assign({}, defaultHeaders, payload.headers || {})
@@ -42,58 +264,152 @@ export async function handleDownloadAndSendToDiscourse(payload: any, sendRespons
     }
 
     const arrayBuffer = await resp.arrayBuffer()
+    const contentType = resp.headers.get('content-type') || 'application/octet-stream'
 
-    const chromeAPI = getChromeAPI()
-    const tabs = await (chromeAPI.tabs && chromeAPI.tabs.query ? chromeAPI.tabs.query({}) : [])
-
-    let sent = 0
-    for (const tab of tabs) {
+    // attempt to determine filename from Content-Disposition or URL
+    let filename = payload.filename || ''
+    const cd = resp.headers.get('content-disposition') || ''
+    const m = /filename\*=UTF-8''([^;\n]+)/i.exec(cd) || /filename="?([^";\n]+)"?/i.exec(cd)
+    if (m && m[1]) filename = decodeURIComponent(m[1])
+    if (!filename) {
       try {
-        if (discourseBase && tab.url && !String(tab.url).startsWith(discourseBase)) continue
-
-        await chromeAPI.tabs.sendMessage(tab.id, {
-          action: 'uploadBlobToDiscourse',
-          filename: payload.filename || 'image.jpg',
-          mimeType: payload.mimeType || 'image/jpeg',
-          arrayBuffer,
-          discourseBase
-        })
-        sent++
-      } catch (e) {
-        void e
+        const u = new URL(url)
+        filename = (u.pathname.split('/').pop() || 'image').replace(/\?.*$/, '')
+      } catch (_e) {
+        filename = payload.filename || 'image'
       }
     }
 
-    if (sent === 0) {
-      sendResponse({ success: false, error: 'no discourse tab found to receive upload' })
+    // create blob and object URL and use chrome.downloads to save file
+    try {
+      const blob = new Blob([new Uint8Array(arrayBuffer)], { type: contentType })
+      const objectUrl = URL.createObjectURL(blob)
+      const chromeAPI = getChromeAPI()
+      let downloadId: number | undefined = undefined
+      if (chromeAPI && chromeAPI.downloads && chromeAPI.downloads.download) {
+        // chrome.downloads.download accepts a URL; we pass the object URL
+        downloadId = await new Promise<number>((resolve, reject) => {
+          try {
+            chromeAPI.downloads.download({ url: objectUrl, filename }, (id: number) => {
+              if (chromeAPI.runtime.lastError) reject(chromeAPI.runtime.lastError)
+              else resolve(id)
+            })
+          } catch (e) {
+            reject(e)
+          }
+        })
+      } else {
+        // Fallback: send arrayBuffer back to page if downloads API not available
+        sendResponse({
+          success: true,
+          fallback: true,
+          arrayBuffer,
+          mimeType: contentType,
+          filename
+        })
+        return
+      }
+
+      // revoke object URL after short delay
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 5000)
+
+      sendResponse({ success: true, downloadId })
+      return
+    } catch (e) {
+      // If downloads API failed, fallback to returning arrayBuffer
+      void e
+      sendResponse({ success: true, fallback: true, arrayBuffer, mimeType: contentType, filename })
       return
     }
-
-    sendResponse({ success: true, message: `sent to ${sent} tab(s)` })
   } catch (error) {
-    sendResponse({ success: false, error: String(error) })
+    console.error('[Background] handleDownloadForUser failed', error)
+    sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
   }
 }
 
-export async function handleDownloadForUser(_payload: any, sendResponse: any) {
-  void _payload
-  sendResponse({ success: false, error: 'Not implemented in handlers/downloadAndSend' })
+/**
+ * Download a remote image (with Referer) and upload it directly to a Discourse instance.
+ * Returns parsed upload response or throws on error.
+ */
+export async function downloadAndUploadDirect(
+  url: string,
+  filename: string,
+  opts: { discourseBase: string; cookie?: string; csrf?: string; mimeType?: string }
+) {
+  const { discourseBase, cookie, csrf, mimeType } = opts
+  // download
+  const defaultHeaders: Record<string, string> = {
+    Accept:
+      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+    'Cache-Control': 'max-age=0'
+  }
+
+  const resp = await fetch(url, {
+    method: 'GET',
+    headers: defaultHeaders,
+    referrer: 'https://www.pixiv.net/',
+    referrerPolicy: 'no-referrer-when-downgrade',
+    cache: 'no-cache',
+    redirect: 'follow'
+  })
+
+  if (!resp.ok) throw new Error(`failed to download image: ${resp.status}`)
+  const arrayBuffer = await resp.arrayBuffer()
+  const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType || 'image/png' })
+
+  // prepare form
+  const form = new FormData()
+  form.append('upload_type', 'composer')
+  form.append('relativePath', 'null')
+  form.append('name', filename)
+  form.append('type', blob.type)
+  form.append('file', blob, filename)
+
+  const uploadUrl = `${discourseBase.replace(/\/$/, '')}/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8`
+
+  const headers: Record<string, string> = {}
+  if (csrf) headers['X-Csrf-Token'] = csrf
+  if (cookie) headers['Cookie'] = cookie
+
+  const uploadResp = await fetch(uploadUrl, {
+    method: 'POST',
+    headers,
+    body: form,
+    credentials: 'include'
+  })
+  if (!uploadResp.ok) {
+    const data = await uploadResp.json().catch(() => null)
+    const err = new Error('upload failed') as any
+    err.details = data
+    throw err
+  }
+
+  const data = await uploadResp.json()
+  return data
 }
 
 /**
  * Handler for content script sending arrayBuffer to be uploaded to linux.do and added as emoji
- * payload: { arrayData: number[], filename: string, mimeType?: string, name?: string }
+ * payload: { arrayBuffer: ArrayBuffer, filename: string, mimeType?: string, name?: string }
  */
 export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
+  void sendResponse
   try {
     if (!payload) {
       sendResponse({ success: false, error: 'missing payload' })
       return
     }
 
-    console.log('[UploadAndAddEmoji] Received payload keys:', Object.keys(payload))
+    // Diagnostics: log payload shape
+    try {
+      console.log('[UploadAndAddEmoji] Received payload keys:', Object.keys(payload))
+    } catch (_e) {
+      void _e
+    }
 
     if (!payload.arrayData) {
+      // Might receive Uint8Array or arrayBuffer in some cases — log and fail gracefully
       console.warn('[UploadAndAddEmoji] payload.arrayData missing; keys:', Object.keys(payload))
       sendResponse({ success: false, error: 'missing arrayData' })
       return
@@ -102,6 +418,18 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
     // 将数组数据转换回 ArrayBuffer
     const arrayData: number[] = payload.arrayData
     const arrayBuffer = new Uint8Array(arrayData).buffer
+    // Diagnostic: verify arrayBuffer type/length
+    try {
+      const abType = Object.prototype.toString.call(arrayBuffer)
+      const byteLen = arrayBuffer.byteLength
+      console.log('[UploadAndAddEmoji] converted arrayData to arrayBuffer:', {
+        arrayDataLength: arrayData.length,
+        arrayBufferType: abType,
+        byteLength: byteLen
+      })
+    } catch (_e) {
+      void _e
+    }
     const filename: string = payload.filename || 'image'
     const mimeType: string = payload.mimeType || 'application/octet-stream'
     const name: string = payload.name || filename
@@ -115,33 +443,20 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
       mimeType
     )
 
-    // build blob and form data
+    // build blob and form data similar to emojiPreviewUploader
     const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
 
-    // Calculate SHA1 checksum for better upload reliability
-    let sha1Checksum = ''
-    try {
-      const crypto = globalThis.crypto
-      if (crypto && crypto.subtle) {
-        const hashBuffer = await crypto.subtle.digest('SHA-1', arrayBuffer)
-        const hashArray = Array.from(new Uint8Array(hashBuffer))
-        sha1Checksum = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-      }
-    } catch (e) {
-      console.warn('[UploadAndAddEmoji] Failed to calculate SHA1:', e)
-    }
+    console.log('[UploadAndAddEmoji] Created blob size:', blob.size, 'type:', blob.type)
 
     const formData = new FormData()
     formData.append('upload_type', 'composer')
     formData.append('relativePath', 'null')
     formData.append('name', filename)
     formData.append('type', blob.type)
-    if (sha1Checksum) {
-      formData.append('sha1_checksum', sha1Checksum)
-    }
+    // do not include sha1 here (optional)
     formData.append('file', blob, filename)
 
-    // Get auth info
+    // Get auth info directly instead of sending message to self
     const chromeAPI = getChromeAPI()
     let authResp: any = { success: false, csrfToken: '', cookies: '' }
     try {
@@ -178,6 +493,7 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
                         break
                       }
                     } catch (e) {
+                      // 继续尝试下一个标签页
                       continue
                     }
                   }
@@ -231,9 +547,9 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
       return
     }
 
-    // Add to storage
+    // Add to storage - mimic addEmojiFromWeb ungrouped insertion
     try {
-      const { newStorageHelpers } = await import('../../utils/newStorage')
+      const { newStorageHelpers } = await import('../utils/newStorage')
       const groups = await newStorageHelpers.getAllEmojiGroups()
       let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
       if (!ungroupedGroup) {
@@ -241,11 +557,12 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
         groups.push(ungroupedGroup)
       }
 
+      const finalUrl = uploadedUrl
       const newEmoji = {
         id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         packet: Date.now(),
         name: name,
-        url: uploadedUrl,
+        url: finalUrl,
         groupId: 'ungrouped',
         addedAt: Date.now()
       }
@@ -253,7 +570,7 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
       ungroupedGroup.emojis.push(newEmoji)
       await newStorageHelpers.setAllEmojiGroups(groups)
 
-      sendResponse({ success: true, url: uploadedUrl, added: true })
+      sendResponse({ success: true, url: finalUrl, added: true })
       return
     } catch (e) {
       sendResponse({ success: true, url: uploadedUrl, added: false, error: String(e) })
@@ -266,6 +583,7 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
 
 // 下载图片并上传到 linux.do 的处理器
 export async function handleDownloadAndUploadEmoji(payload: any, sendResponse: any) {
+  void sendResponse
   try {
     if (!payload || !payload.url) {
       sendResponse({ success: false, error: 'missing url' })
@@ -378,28 +696,11 @@ export async function handleDownloadAndUploadEmoji(payload: any, sendResponse: a
     }
 
     // Step 3: 上传到 linux.do
-    // Calculate SHA1 checksum for better upload reliability
-    let sha1Checksum = ''
-    try {
-      const crypto = globalThis.crypto
-      if (crypto && crypto.subtle) {
-        const arrayBuffer = await imageBlob.arrayBuffer()
-        const hashBuffer = await crypto.subtle.digest('SHA-1', arrayBuffer)
-        const hashArray = Array.from(new Uint8Array(hashBuffer))
-        sha1Checksum = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-      }
-    } catch (e) {
-      console.warn('[DownloadAndUploadEmoji] Failed to calculate SHA1:', e)
-    }
-
     const formData = new FormData()
     formData.append('upload_type', 'composer')
     formData.append('relativePath', 'null')
     formData.append('name', filename)
     formData.append('type', imageBlob.type)
-    if (sha1Checksum) {
-      formData.append('sha1_checksum', sha1Checksum)
-    }
     formData.append('file', imageBlob, filename)
 
     const headers: Record<string, string> = {}
@@ -431,7 +732,7 @@ export async function handleDownloadAndUploadEmoji(payload: any, sendResponse: a
 
     // Step 4: 保存到本地存储
     try {
-      const { newStorageHelpers } = await import('../../utils/newStorage')
+      const { newStorageHelpers } = await import('../utils/newStorage')
       const groups = await newStorageHelpers.getAllEmojiGroups()
       let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
       if (!ungroupedGroup) {
