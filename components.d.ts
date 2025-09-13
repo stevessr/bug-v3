@@ -7,7 +7,6 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
-    AboutSection: typeof import('./src/components/AboutSection.vue')['default']
     AButton: typeof import('ant-design-vue/es')['Button']
     ACardMeta: typeof import('ant-design-vue/es')['CardMeta']
     ADropdown: typeof import('ant-design-vue/es')['Dropdown']
@@ -15,6 +14,5 @@ declare module 'vue' {
     AMenuItem: typeof import('ant-design-vue/es')['MenuItem']
     APopconfirm: typeof import('ant-design-vue/es')['Popconfirm']
     AProgress: typeof import('ant-design-vue/es')['Progress']
-    GridColumnsSelector: typeof import('./src/components/GridColumnsSelector.vue')['default']
   }
 }

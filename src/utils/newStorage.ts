@@ -5,7 +5,6 @@ import { formatPreview } from './formatUtils'
 import indexedDBHelpers from './indexedDB'
 
 import { defaultSettings } from '@/types/emoji'
-import { loadDefaultEmojiGroups, loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 // In build/test environments `chrome` may not be declared. Provide a loose declaration
 declare const chrome: any
@@ -340,12 +339,41 @@ class IndexedDBLayer {
 
 // --- New Storage Manager ---
 class NewStorageManager {
-  private localStorage = new LocalStorageLayer()
-  private sessionStorage = new SessionStorageLayer()
-  private extensionStorage = new ExtensionStorageLayer()
-  private indexedDBStorage = new IndexedDBLayer()
+  private _localStorage: LocalStorageLayer | null = null
+  private _sessionStorage: SessionStorageLayer | null = null
+  private _extensionStorage: ExtensionStorageLayer | null = null
+  private _indexedDBStorage: IndexedDBLayer | null = null
 
   private writeTimers = new Map<string, NodeJS.Timeout>()
+
+  // Lazy initialization to avoid DOM access at module load time
+  private get localStorage(): LocalStorageLayer {
+    if (!this._localStorage) {
+      this._localStorage = new LocalStorageLayer()
+    }
+    return this._localStorage
+  }
+
+  private get sessionStorage(): SessionStorageLayer {
+    if (!this._sessionStorage) {
+      this._sessionStorage = new SessionStorageLayer()
+    }
+    return this._sessionStorage
+  }
+
+  private get extensionStorage(): ExtensionStorageLayer {
+    if (!this._extensionStorage) {
+      this._extensionStorage = new ExtensionStorageLayer()
+    }
+    return this._extensionStorage
+  }
+
+  private get indexedDBStorage(): IndexedDBLayer {
+    if (!this._indexedDBStorage) {
+      this._indexedDBStorage = new IndexedDBLayer()
+    }
+    return this._indexedDBStorage
+  }
 
   // Read with priority: Local → Session → Extension → IndexedDB
   async get(key: string): Promise<any> {
@@ -521,7 +549,8 @@ export const newStorageHelpers = {
     if (!index.length) {
       // Try runtime loader for packaged JSON first, fallback to generated module
       try {
-        const runtime = await loadDefaultEmojiGroups()
+        const { getDefaultEmojiGroups } = await import('./defaultConfig')
+        const runtime = await getDefaultEmojiGroups()
         if (runtime && runtime.length) return runtime
       } catch (e) {
         // ignore loader errors and fallback to empty list
@@ -557,7 +586,8 @@ export const newStorageHelpers = {
 
     // No persisted settings: prefer packaged defaults
     try {
-      const packaged = await loadPackagedDefaults()
+      const { getPackagedDefaults } = await import('./defaultConfig')
+      const packaged = await getPackagedDefaults()
       if (packaged && packaged.settings && Object.keys(packaged.settings).length > 0) {
         return { ...defaultSettings, ...packaged.settings }
       }
@@ -675,7 +705,8 @@ export const newStorageHelpers = {
     try {
       // Prefer runtime JSON loader if available
       try {
-        const packaged = await loadPackagedDefaults()
+        const { getPackagedDefaults } = await import('./defaultConfig')
+        const packaged = await getPackagedDefaults()
         await this.setAllEmojiGroups(
           packaged && packaged.groups && packaged.groups.length ? packaged.groups : []
         )

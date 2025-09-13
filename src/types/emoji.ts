@@ -12,6 +12,7 @@ export interface Emoji {
   name: string
   url: string
   displayUrl?: string // Optional display URL, different from output URL
+  originUrl?: string // Optional original URL before any transformations
   width?: number
   height?: number
   groupId: string

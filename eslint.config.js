@@ -27,8 +27,6 @@ export default [
       'playwright-report/**',
       'test-results/**',
       'scripts/**',
-      'src/config/buildFlags.ts',
-      'src/content/utils/buildFLagsV2.ts',
       'server/**',
       '*.config.*s',
       '*.crx',
@@ -100,7 +98,7 @@ export default [
 
       // 通用规则
       'no-console': 'warn',
-      // Disallow direct console usage; prefer the logger wrapper in src/config/buildFlags.ts
+      // Disallow direct console usage; prefer the logger wrapper with Vite conditional compilation
       'no-restricted-properties': [
         'error',
         {
@@ -276,18 +274,9 @@ export default [
     }
   },
 
-  // Allow console inside the logger implementation file itself
+  // Allow console inside the Vite-based logger implementation file itself
   {
     files: ['src/config/buildFlags.ts'],
-    rules: {
-      'no-console': 'off',
-      'no-restricted-properties': 'off'
-    }
-  },
-
-  // Allow console usage in content buildFlags (project uses console there during migration)
-  {
-    files: ['src/content/buildFlags.ts'],
     rules: {
       'no-console': 'off',
       'no-restricted-properties': 'off'

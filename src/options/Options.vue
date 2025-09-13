@@ -19,7 +19,7 @@ const ErrorComponent = {
 
 // Lazy load components with loading states
 const GridColumnsSelector = defineAsyncComponent({
-  loader: () => import('../components/GridColumnsSelector.vue'),
+  loader: () => import('./components/GridColumnsSelector.vue'),
   loadingComponent: LoadingComponent,
   errorComponent: ErrorComponent,
   delay: 200,
@@ -27,7 +27,7 @@ const GridColumnsSelector = defineAsyncComponent({
 })
 
 const AboutSection = defineAsyncComponent({
-  loader: () => import('../components/AboutSection.vue'),
+  loader: () => import('./components/AboutSection.vue'),
   loadingComponent: LoadingComponent,
   errorComponent: ErrorComponent,
   delay: 200,

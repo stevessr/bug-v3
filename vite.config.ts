@@ -123,13 +123,18 @@ export default defineConfig(({ mode }) => {
       // handling any runtime compatibility in source. If we need to reintroduce
       // a transform for the content chunk, prefer an AST-based approach.
       // auto register components and import styles for ant-design-vue
+      // 禁用 AntDesignVueResolver，只依赖手动按需导入
       Components({
-        resolvers: [AntDesignVueResolver({ importStyle: 'less' })]
+        // resolvers: [] // 移除自动导入解析器，让项目完全依赖手动按需导入
+        dts: false // 禁用类型定义文件生成
       })
     ],
     build: {
+      target: 'esnext', // Chrome extensions run in modern Chrome, no need for compatibility
       // Allow disabling minification for debug builds via BUILD_MINIFIED env var
       minify: process.env.BUILD_MINIFIED === 'false' ? false : 'terser',
+      // 禁用模块预加载polyfill，减少兼容性代码
+      modulePreload: false,
       terserOptions:
         process.env.BUILD_MINIFIED === 'false'
           ? undefined
@@ -152,66 +157,81 @@ export default defineConfig(({ mode }) => {
           entryFileNames: chunkInfo => {
             return 'js/[name].js'
           },
-          chunkFileNames: 'js/[name].js',
-          assetFileNames: 'assets/[name].[ext]',
-          // Disable manualChunks splitting to avoid creating a shared "background.js"
-          // chunk that other entrypoints (like content) would import from. Keeping
-          // modules inlined per-entry ensures content scripts do not contain
-          // top-level ESM imports which cause runtime SyntaxError in some hosts.
-          manualChunks: (id, { getModuleInfo }) => {
-            // Resolve the canonical content entry path
-            const contentEntry = fileURLToPath(new URL('src/content/content.ts', import.meta.url))
-
-            // Normalize an id for comparisons: strip query/hash, normalize slashes, lowercase
-            const normalize = (raw?: string) => {
-              if (!raw) return ''
-              let s = raw.split('?')[0].split('#')[0]
-              s = s.replace(/\\/g, '/')
-              return s.toLowerCase()
-            }
-
-            const normContent = normalize(contentEntry)
-
-            // Reverse-traverse importers: starting from `id`, walk up via importers to see
-            // if content entry (or anything under src/content) imports it (transitively).
-            const isImportedByContent = target => {
-              try {
-                const start = normalize(target)
-                if (!start) return false
-                const visited = new Set()
-                const stack = [target]
-                while (stack.length) {
-                  const cur = stack.pop()
-                  if (!cur) continue
-                  const ncur = normalize(cur)
-                  if (visited.has(ncur)) continue
-                  visited.add(ncur)
-                  // If importer is exactly the content entry, or under src/content, it's reachable
-                  if (ncur === normContent || ncur.includes('/src/content/')) return true
-                  const info = getModuleInfo(cur)
-                  if (!info) continue
-                  const importers = info.importers || []
-                  for (const imp of importers) {
-                    stack.push(imp)
-                  }
-                }
-              } catch (e) {
-                return false
+          chunkFileNames: chunkInfo => {
+            // Organize chunks by their entry point
+            const facadeModuleId = chunkInfo.facadeModuleId
+            if (facadeModuleId) {
+              // Check if this chunk is related to options
+              if (
+                facadeModuleId.includes('/src/options/') ||
+                facadeModuleId.includes('options.html') ||
+                (chunkInfo.name && chunkInfo.name.includes('options'))
+              ) {
+                return 'js/options/[name].js'
               }
-              return false
+              // Check if this chunk is related to popup
+              if (
+                facadeModuleId.includes('/src/popup/') ||
+                facadeModuleId.includes('popup.html') ||
+                (chunkInfo.name && chunkInfo.name.includes('popup'))
+              ) {
+                return 'js/popup/[name].js'
+              }
             }
 
-            // Previously we had complex heuristics here to split shared
-            // modules, but that produced a separate background chunk which
-            // content.js then imported via ESM. For extension content
-            // scripts we must avoid producing top-level imports between
-            // extension files. Returning undefined disables manual chunking
-            // and lets Rollup inline modules per-entry.
+            // Check chunk name patterns for lazy-loaded components
+            if (chunkInfo.name) {
+              // Options-specific chunks (from webpackChunkName comments)
+              if (
+                chunkInfo.name.includes('emoji-tabs') ||
+                chunkInfo.name.includes('import-modals') ||
+                chunkInfo.name.includes('edit-modals') ||
+                chunkInfo.name.includes('create-modals') ||
+                chunkInfo.name.includes('import-tabs')
+              ) {
+                return 'js/options/[name].js'
+              }
+            }
+
+            return 'js/[name].js'
+          },
+          assetFileNames: 'assets/[name].[ext]',
+          // For Chrome extensions, we want to minimize the number of chunk files
+          // while keeping reasonable file sizes. Chrome extensions don't benefit from
+          // aggressive code splitting like web apps do.
+          manualChunks: (id, { getModuleInfo }) => {
+            // Special handling for default configuration - keep as separate chunk for caching
+            if (
+              id.includes('/src/utils/defaultConfig') ||
+              id.includes('/types/defaultEmojiGroups')
+            ) {
+              return 'defaultConfig'
+            }
+
+            // 将所有 node_modules 依赖合并到一个vendor chunk中
+            // 这样可以避免Vite生成多个es*.js文件
+            if (id.includes('node_modules/')) {
+              return 'vendor'
+            }
+
+            // For all other modules, return undefined to inline them
             return undefined
           }
         },
         external: id => {
-          return false // Don't externalize anything
+          // 排除 Ant Design Vue 的图标库，因为项目可能不需要所有图标
+          if (id.includes('@ant-design/icons') || id.includes('ant-design-vue/es/icon')) {
+            return true
+          }
+          return false // Don't externalize anything else
+        },
+        // 优化 ES 模块输出
+        experimentalMinChunkSize: 1000, // 最小 chunk 大小，避免过多小文件
+        treeshake: {
+          // 启用更激进的 tree shaking
+          moduleSideEffects: false,
+          propertyReadSideEffects: false,
+          tryCatchDeoptimization: false
         }
       }
     }

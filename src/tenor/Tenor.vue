@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
-import { DownOutlined } from '@ant-design/icons-vue'
-
-import { useEmojiStore } from '../stores/emojiStore'
-
+import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import { logger } from '@/config/buildFlags'
-import defaultConfig from '@/config/default.json'
+
+// Lazy load heavy components
+const ADropdown = defineAsyncComponent(() =>
+  import('ant-design-vue').then(m => ({ default: m.Dropdown }))
+)
+const AMenu = defineAsyncComponent(() => import('ant-design-vue').then(m => ({ default: m.Menu })))
+const AButton = defineAsyncComponent(() =>
+  import('ant-design-vue').then(m => ({ default: m.Button }))
+)
+const DownOutlined = defineAsyncComponent(() =>
+  import('@ant-design/icons-vue').then(m => ({ default: m.DownOutlined }))
+)
+
+// Default Tenor API key - moved from bundled config to inline constant
+const DEFAULT_TENOR_API_KEY = 'AIzaSyC-P6_qz3FzCoXGLk6tgitZo4jEJ5mLzD8'
 
 type TenorGif = {
   id: string
@@ -17,7 +26,8 @@ type TenorGif = {
   }
 }
 
-const emojiStore = useEmojiStore()
+// Lazy load emoji store
+let emojiStore: any = null
 
 // State
 const tenorApiKey = ref('')
@@ -53,31 +63,33 @@ const message = ref({ text: '', type: 'success' as 'success' | 'error' })
 
 // Computed
 const availableGroups = computed(() => {
-  return emojiStore.groups.filter(g => g.id !== 'favorites')
+  return emojiStore?.groups?.filter((g: any) => g.id !== 'favorites') || []
 })
 
-// Load API key from storage
+// Load API key from storage and initialize emoji store
 onMounted(async () => {
-  await emojiStore.loadData()
+  try {
+    // Lazy load emoji store
+    const { useEmojiStore } = await import('../stores/emojiStore')
+    emojiStore = useEmojiStore()
+    await emojiStore.loadData()
+  } catch (error) {
+    logger.error('Failed to load emoji store:', error)
+  }
 
   try {
     const result = await chrome.storage.local.get(['tenorApiKey'])
     if (result.tenorApiKey) {
       tenorApiKey.value = result.tenorApiKey
-    } else if (defaultConfig?.settings?.tenorApiKey) {
-      // Fallback to default config if storage has no key
-      tenorApiKey.value = defaultConfig.settings.tenorApiKey
+    } else {
+      // Fallback to default API key if storage has no key
+      tenorApiKey.value = DEFAULT_TENOR_API_KEY
+      logger.log('Using default Tenor API key')
     }
   } catch (error) {
     logger.error('Failed to load Tenor API key:', error)
-    // still try default config
-    try {
-      if (defaultConfig?.settings?.tenorApiKey) {
-        tenorApiKey.value = defaultConfig.settings.tenorApiKey
-      }
-    } catch (e) {
-      // ignore
-    }
+    // Fallback to default API key
+    tenorApiKey.value = DEFAULT_TENOR_API_KEY
   }
 })
 
@@ -197,17 +209,17 @@ const toggleSelection = (gif: TenorGif) => {
 }
 
 const importSelected = () => {
-  if (selectedGifs.value.size === 0) return
+  if (selectedGifs.value.size === 0 || !emojiStore) return
   if (availableGroups.value.length > 0) {
     // Prefer adding to the explicit 'ungrouped' group when available
-    const ungroup = availableGroups.value.find(g => g.id === 'ungrouped')
+    const ungroup = availableGroups.value.find((g: any) => g.id === 'ungrouped')
     selectedGroupId.value = ungroup ? 'ungrouped' : availableGroups.value[0].id
   }
   showGroupModal.value = true
 }
 
 const confirmImport = async () => {
-  if (!selectedGroupId.value || selectedGifs.value.size === 0) return
+  if (!selectedGroupId.value || selectedGifs.value.size === 0 || !emojiStore) return
 
   isImporting.value = true
 
@@ -226,7 +238,7 @@ const confirmImport = async () => {
             ''
         }
 
-        emojiStore.addEmoji(selectedGroupId.value, emoji)
+        await emojiStore.addEmoji(selectedGroupId.value, emoji)
         successCount++
       } catch (error) {
         logger.error('Failed to import GIF:', gif.id, error)
