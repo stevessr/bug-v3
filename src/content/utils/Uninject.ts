@@ -19,7 +19,19 @@ export function Uninject() {
           if (response && response.success) {
             console.log('[Uninject] background injected content for', pageType)
           } else {
-            console.warn('[Uninject] background failed to inject for', pageType, response)
+            let respLog = 'no response'
+            try {
+              if (response && typeof response === 'object') {
+                if (response.error) respLog = String(response.error)
+                else if (response.message) respLog = String(response.message)
+                else respLog = safeStringify(response)
+              } else if (response !== undefined) {
+                respLog = String(response)
+              }
+            } catch (e) {
+              respLog = String(e)
+            }
+            console.warn('[Uninject] background failed to inject for', pageType, respLog)
           }
         })
       } else {
@@ -35,4 +47,16 @@ export function Uninject() {
   requestBackgroundInject('bilibili')
   // Let background decide whether to inject X/Twitter (it can consult settings there).
   requestBackgroundInject('x')
+}
+
+// safe stringify helper (local copy to avoid cross-file imports)
+function safeStringify(obj: any) {
+  const seen = new WeakSet()
+  return JSON.stringify(obj, function (_key, value) {
+    if (value && typeof value === 'object') {
+      if (seen.has(value)) return '[Circular]'
+      seen.add(value)
+    }
+    return value
+  })
 }

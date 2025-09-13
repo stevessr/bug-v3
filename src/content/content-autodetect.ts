@@ -2,6 +2,18 @@
 import { initializeEmojiFeature } from './utils/init'
 import { Uninject } from './utils/Uninject'
 
+// Safe stringify helper to avoid [object Object] and handle circular refs
+function safeStringify(obj: any) {
+  const seen = new WeakSet()
+  return JSON.stringify(obj, function (_key, value) {
+    if (value && typeof value === 'object') {
+      if (seen.has(value)) return '[Circular]'
+      seen.add(value)
+    }
+    return value
+  })
+}
+
 console.log('[Emoji Extension] Content autodetect loader')
 
 function shouldInjectEmoji(): boolean {
@@ -60,7 +72,21 @@ if (shouldInjectEmoji()) {
         if (response && response.success) {
           console.log('[Emoji Extension] background injected content:', response.message)
         } else {
-          console.warn('[Emoji Extension] background failed to inject, falling back to local init')
+          // Prefer explicit error/message fields, otherwise safely stringify
+          let respLog: string = 'no response'
+          try {
+            if (response && typeof response === 'object') {
+              if (response.error) respLog = String(response.error)
+              else if (response.message) respLog = String(response.message)
+              else respLog = safeStringify(response)
+            } else if (response !== undefined) {
+              respLog = String(response)
+            }
+          } catch (e) {
+            respLog = String(e)
+          }
+
+          console.warn('[Emoji Extension] background failed to inject, falling back to local init', respLog)
           // fallback to legacy in-page initialization
           initializeEmojiFeature()
         }

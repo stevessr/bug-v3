@@ -20,6 +20,7 @@ export async function injectBridgeIntoTab(tabId: number) {
   }
 }
 
+
 export async function injectBridgeIntoAllTabs() {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.tabs) return
@@ -40,7 +41,9 @@ export async function injectBridgeIntoAllTabs() {
  */
 export async function injectContentForTab(tabId: number, pageType: string) {
   const chromeAPI = getChromeAPI()
-  if (!chromeAPI || !chromeAPI.scripting) return { success: false, error: 'scripting unavailable' }
+  if (!chromeAPI) return { success: false, error: 'chrome API unavailable' }
+
+  const canUseScripting = !!(chromeAPI.scripting && typeof chromeAPI.scripting.executeScript === 'function')
 
   // 先注入实现文件，再注入 wrapper
   const mapping: Record<string, string[]> = {
@@ -54,12 +57,52 @@ export async function injectContentForTab(tabId: number, pageType: string) {
   const files = mapping[pageType] || mapping.generic
 
   try {
-    for (const f of files) {
-      await chromeAPI.scripting.executeScript({ target: { tabId }, files: [f] })
+    if (canUseScripting) {
+      for (const f of files) {
+        await chromeAPI.scripting.executeScript({ target: { tabId }, files: [f] })
+      }
+      // always inject the bridge as well (bridge now built to js/content/bridge.js)
+      await injectBridgeIntoTab(tabId)
+      return { success: true, message: `Injected ${files.join(', ')}` }
     }
-    // always inject the bridge as well (bridge now built to js/content/bridge.js)
-    await injectBridgeIntoTab(tabId)
-    return { success: true, message: `Injected ${files.join(', ')}` }
+
+    // Fallback for older MV2-style APIs: try tabs.executeScript
+    if (chromeAPI.tabs && typeof chromeAPI.tabs.executeScript === 'function') {
+      for (const f of files) {
+        // tabs.executeScript expects code or file in different shapes; rely on file injection
+            await new Promise<void>((resolve, reject) => {
+          try {
+            chromeAPI.tabs.executeScript(tabId, { file: f }, (_: any) => {
+              const err = chromeAPI.runtime && chromeAPI.runtime.lastError
+              if (err) reject(err)
+              else resolve()
+            })
+          } catch (e) {
+            reject(e)
+          }
+        })
+      }
+      // Attempt to inject bridge via tabs.executeScript as well
+        try {
+        await new Promise<void>((resolve, reject) => {
+          try {
+            chromeAPI.tabs.executeScript(tabId, { file: 'js/content/bridge.js' }, (_: any) => {
+              const err = chromeAPI.runtime && chromeAPI.runtime.lastError
+              if (err) reject(err)
+              else resolve()
+            })
+          } catch (e) {
+            reject(e)
+          }
+        })
+        return { success: true, message: `Injected (tabs) ${files.join(', ')}` }
+      } catch (e) {
+        console.warn('[scripting] tabs.executeScript fallback failed', e)
+        return { success: false, error: String(e) }
+      }
+    }
+
+    return { success: false, error: 'scripting and tabs.executeScript are unavailable' }
   } catch (e) {
     console.warn('[scripting] injectContentForTab failed', e)
     return { success: false, error: String(e) }

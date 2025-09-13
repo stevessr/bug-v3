@@ -27,6 +27,37 @@ import useOptions from './useOptions'
 
 const options = useOptions()
 
+// Prefetch loaders for options tabs — calling these import() functions will
+// trigger the browser to fetch the corresponding chunk so when the user
+// actually opens the tab the component is already loaded.
+const prefetchMap: Record<string, () => Promise<unknown>> = {
+  groups: () => import('./components/GroupsTab.vue'),
+  favorites: () => import('./components/FavoritesTab.vue'),
+  ungrouped: () => import('./components/UngroupedTab.vue'),
+  import: () => import('./components/ExternalImportTab.vue'),
+  bilibili: () => import('./tabs/BilibiliImport.vue'),
+  stats: () => import('./components/EmojiStats.vue')
+}
+
+const handlePrefetch = (id?: string | null) => {
+  if (!id) return
+  const loader = prefetchMap[id]
+  if (!loader) return
+
+  // Use requestIdleCallback when available to avoid impacting responsiveness.
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    // @ts-ignore requestIdleCallback types
+    requestIdleCallback(() => {
+      void loader()
+    })
+  } else {
+    // Fallback: slight delay so we don't block immediate UI
+    setTimeout(() => {
+      void loader()
+    }, 150)
+  }
+}
+
 // pending resolver for requestConfirmation -> modal bridge
 
 // resolver saved when requestConfirmation() is called; resolved by modal handlers
@@ -202,6 +233,8 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
             v-for="tab in tabs"
             :key="tab.id"
             @click="activeTab = tab.id"
+            @pointerenter.prevent="handlePrefetch(tab.id)"
+            @focus="handlePrefetch(tab.id)"
             class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
             :class="[
               activeTab === tab.id
@@ -238,7 +271,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         <template #fallback>
           <div class="py-8 text-center text-gray-500">正在加载分组…</div>
         </template>
-        <template v-if="activeTab === 'groups'">
+        <template v-if="activeTab === 'groups' || activeTab === 'groups-card'">
           <GroupsTab
             :emojiStore="emojiStore"
             :expandedGroups="expandedGroups"
