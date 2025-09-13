@@ -7,8 +7,18 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
   // reference the callback to avoid unused-var lint in some configurations
   void sendResponse
   try {
+    logger.log('[AddEmojiFromWeb] Starting emoji addition:', emojiData)
+
+    // Guard against DOM access in service worker context
+    if (typeof document !== 'undefined') {
+      logger.warn(
+        '[AddEmojiFromWeb] Document object detected in background script - this should not happen'
+      )
+    }
+
     // 获取所有表情组
     const groups = await newStorageHelpers.getAllEmojiGroups()
+    logger.log('[AddEmojiFromWeb] Retrieved groups:', groups.length)
 
     // 找到未分组表情组
     let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
@@ -22,11 +32,19 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
         emojis: []
       }
       groups.push(ungroupedGroup)
+      logger.log('[AddEmojiFromWeb] Created new ungrouped group')
+    } else {
+      logger.log(
+        '[AddEmojiFromWeb] Found existing ungrouped group with',
+        ungroupedGroup.emojis?.length || 0,
+        'emojis'
+      )
     }
 
     // 检查是否已存在相同URL的表情
     const existingEmoji = ungroupedGroup.emojis.find((e: any) => e.url === emojiData.url)
     if (existingEmoji) {
+      logger.log('[AddEmojiFromWeb] Emoji already exists:', emojiData.url)
       sendResponse({ success: false, error: '此表情已存在于未分组中' })
       return
     }
@@ -79,14 +97,26 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
     }
 
     ungroupedGroup.emojis.push(newEmoji)
+    logger.log('[AddEmojiFromWeb] Added emoji to ungrouped group:', newEmoji.name)
 
     // 保存到存储
     await newStorageHelpers.setAllEmojiGroups(groups)
+    logger.log('[AddEmojiFromWeb] Successfully saved groups to storage')
 
-    logger.log('[Background] 成功添加表情到未分组:', newEmoji.name)
-    sendResponse({ success: true, message: '表情已添加到未分组' })
+    logger.log('[AddEmojiFromWeb] 成功添加表情到未分组:', newEmoji.name)
+    sendResponse({ success: true, message: '表情已添加到未分组', added: true })
   } catch (error) {
-    logger.error('[Background] 添加表情失败:', error)
-    sendResponse({ success: false, error: error instanceof Error ? error.message : '添加失败' })
+    logger.error('[AddEmojiFromWeb] 添加表情失败:', error)
+    // Include more detailed error information
+    const errorDetails = {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    }
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : '添加失败',
+      errorDetails
+    })
   }
 }

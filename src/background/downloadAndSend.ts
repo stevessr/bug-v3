@@ -551,12 +551,32 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
 
     // Add to storage - mimic addEmojiFromWeb ungrouped insertion
     try {
+      logger.log('[UploadAndAddEmoji] Starting storage operation...')
+
+      // Guard against DOM access in service worker context
+      if (typeof document !== 'undefined') {
+        logger.warn(
+          '[UploadAndAddEmoji] Document object detected in background script - this should not happen'
+        )
+      }
+
       const { newStorageHelpers } = await import('../utils/newStorage')
+      logger.log('[UploadAndAddEmoji] newStorageHelpers imported successfully')
+
       const groups = await newStorageHelpers.getAllEmojiGroups()
+      logger.log('[UploadAndAddEmoji] Retrieved groups:', groups.length)
+
       let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
       if (!ungroupedGroup) {
         ungroupedGroup = { id: 'ungrouped', name: '未分组', icon: '📦', order: 999, emojis: [] }
         groups.push(ungroupedGroup)
+        logger.log('[UploadAndAddEmoji] Created new ungrouped group')
+      } else {
+        logger.log(
+          '[UploadAndAddEmoji] Found existing ungrouped group with',
+          ungroupedGroup.emojis?.length || 0,
+          'emojis'
+        )
       }
 
       const finalUrl = uploadedUrl
@@ -570,12 +590,28 @@ export async function handleUploadAndAddEmoji(payload: any, sendResponse: any) {
       }
 
       ungroupedGroup.emojis.push(newEmoji)
+      logger.log('[UploadAndAddEmoji] Added emoji to ungrouped group:', newEmoji.name)
+
       await newStorageHelpers.setAllEmojiGroups(groups)
+      logger.log('[UploadAndAddEmoji] Successfully saved groups to storage')
 
       sendResponse({ success: true, url: finalUrl, added: true })
       return
     } catch (e) {
-      sendResponse({ success: true, url: uploadedUrl, added: false, error: String(e) })
+      logger.error('[UploadAndAddEmoji] Storage operation failed:', e)
+      // Include more detailed error information
+      const errorDetails = {
+        message: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack : undefined,
+        name: e instanceof Error ? e.name : undefined
+      }
+      sendResponse({
+        success: true,
+        url: uploadedUrl,
+        added: false,
+        error: String(e),
+        errorDetails
+      })
       return
     }
   } catch (error) {

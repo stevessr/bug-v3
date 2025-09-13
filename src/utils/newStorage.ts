@@ -106,7 +106,8 @@ function ensureSerializable<T>(data: T): T {
 class LocalStorageLayer {
   async get(key: string): Promise<any> {
     try {
-      if (typeof localStorage === 'undefined') return null
+      // Check if we're in a service worker context where localStorage doesn't exist
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') return null
       const value = localStorage.getItem(key)
       return value ? JSON.parse(value) : null
     } catch (error) {
@@ -117,7 +118,8 @@ class LocalStorageLayer {
 
   async set(key: string, value: any): Promise<void> {
     try {
-      if (typeof localStorage === 'undefined') return
+      // Check if we're in a service worker context where localStorage doesn't exist
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') return
       localStorage.setItem(key, JSON.stringify(value))
       logStorage('LOCAL_SET', key, value)
     } catch (error) {
@@ -128,7 +130,8 @@ class LocalStorageLayer {
 
   async remove(key: string): Promise<void> {
     try {
-      if (typeof localStorage === 'undefined') return
+      // Check if we're in a service worker context where localStorage doesn't exist
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') return
       localStorage.removeItem(key)
       logStorage('LOCAL_REMOVE', key)
     } catch (error) {
@@ -140,7 +143,8 @@ class LocalStorageLayer {
 class SessionStorageLayer {
   async get(key: string): Promise<any> {
     try {
-      if (typeof sessionStorage === 'undefined') return null
+      // Check if we're in a service worker context where sessionStorage doesn't exist
+      if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return null
       const value = sessionStorage.getItem(key)
       return value ? JSON.parse(value) : null
     } catch (error) {
@@ -151,7 +155,8 @@ class SessionStorageLayer {
 
   async set(key: string, value: any): Promise<void> {
     try {
-      if (typeof sessionStorage === 'undefined') return
+      // Check if we're in a service worker context where sessionStorage doesn't exist
+      if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return
       sessionStorage.setItem(key, JSON.stringify(value))
       logStorage('SESSION_SET', key, value)
     } catch (error) {
@@ -162,7 +167,8 @@ class SessionStorageLayer {
 
   async remove(key: string): Promise<void> {
     try {
-      if (typeof sessionStorage === 'undefined') return
+      // Check if we're in a service worker context where sessionStorage doesn't exist
+      if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return
       sessionStorage.removeItem(key)
       logStorage('SESSION_REMOVE', key)
     } catch (error) {

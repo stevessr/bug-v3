@@ -1,28 +1,174 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
 
-import GridColumnsSelector from '../components/GridColumnsSelector.vue'
-import AboutSection from '../components/AboutSection.vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
 
-import HeaderControls from './components/HeaderControls.vue'
-import GlobalSettings from './components/GlobalSettings.vue'
-import EmojiStats from './components/EmojiStats.vue'
-import ImportConfigModal from './modals/ImportConfigModal.vue'
-import ImportEmojisModal from './modals/ImportEmojisModal.vue'
-import CreateGroupModal from './modals/CreateGroupModal.vue'
-import AddEmojiModal from './modals/AddEmojiModal.vue'
-import ConfirmGenericModal from './modals/ConfirmGenericModal.vue'
-import NotificationToasts from './components/NotificationToasts.vue'
-import GroupsTab from './components/GroupsTab.vue'
-import FavoritesTab from './components/FavoritesTab.vue'
-import UngroupedTab from './components/UngroupedTab.vue'
-import ExternalImportTab from './components/ExternalImportTab.vue'
-import BilibiliImport from './tabs/BilibiliImport.vue'
-import EditEmojiModal from './modals/EditEmojiModal.vue'
-import EditGroupModal from './modals/EditGroupModal.vue'
 // composable
 import useOptions from './useOptions'
+
+// Loading component for async components
+const LoadingComponent = {
+  template:
+    '<div class="flex items-center justify-center p-4"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div></div>'
+}
+
+// Error component for async components
+const ErrorComponent = {
+  template: '<div class="text-red-500 p-4">组件加载失败，请刷新页面重试</div>'
+}
+
+// Lazy load components with loading states
+const GridColumnsSelector = defineAsyncComponent({
+  loader: () => import('../components/GridColumnsSelector.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const AboutSection = defineAsyncComponent({
+  loader: () => import('../components/AboutSection.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const HeaderControls = defineAsyncComponent({
+  loader: () => import('./components/HeaderControls.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const GlobalSettings = defineAsyncComponent({
+  loader: () => import('./components/GlobalSettings.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const EmojiStats = defineAsyncComponent({
+  loader: () => import('./components/EmojiStats.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const NotificationToasts = defineAsyncComponent({
+  loader: () => import('./components/NotificationToasts.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+// Tab components - grouped for better chunk optimization
+// Main emoji tabs are used together, so group them
+const GroupsTab = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "emoji-tabs" */ './components/GroupsTab.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const FavoritesTab = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "emoji-tabs" */ './components/FavoritesTab.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const UngroupedTab = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "emoji-tabs" */ './components/UngroupedTab.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+// Import tabs are used together, so group them
+const ExternalImportTab = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "import-tabs" */ './components/ExternalImportTab.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const BilibiliImport = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "import-tabs" */ './tabs/BilibiliImport.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+// Modal components - grouped for better chunk optimization
+// Import modals are used together, so group them
+const ImportConfigModal = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "import-modals" */ './modals/ImportConfigModal.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const ImportEmojisModal = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "import-modals" */ './modals/ImportEmojisModal.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+// Edit modals are used together, so group them
+const EditEmojiModal = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "edit-modals" */ './modals/EditEmojiModal.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const EditGroupModal = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "edit-modals" */ './modals/EditGroupModal.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+// Create/Add modals are used together, so group them
+const CreateGroupModal = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "create-modals" */ './modals/CreateGroupModal.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+const AddEmojiModal = defineAsyncComponent({
+  loader: () => import(/* webpackChunkName: "create-modals" */ './modals/AddEmojiModal.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
+
+// Utility modals - keep separate as they're used independently
+const ConfirmGenericModal = defineAsyncComponent({
+  loader: () => import('./modals/ConfirmGenericModal.vue'),
+  loadingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  delay: 200,
+  timeout: 3000
+})
 
 const options = useOptions()
 
