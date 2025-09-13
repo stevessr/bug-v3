@@ -1,6 +1,6 @@
 // IndexedDB utility for emoji extension
 import type { EmojiGroup, AppSettings } from '../types/emoji'
-import { logger, indexedDBWrapper } from '../config/buildFlags'
+import { indexedDBWrapper } from '@/utils/logger'
 
 import { formatPreview } from './formatUtils'
 
@@ -42,12 +42,12 @@ function logDB(operation: string, store: string, key?: string, data?: any, error
     // automated tests that assert no console.error output.
     const nonFatalFailure = operation.endsWith('_FAILED') || operation.startsWith('FLUSH')
     if (nonFatalFailure) {
-      logger.warn(
+      console.warn(
         `${logPrefix} ${operation} FAILED in "${store}"${key ? ` for key "${key}"` : ''}: ${errInfo}`,
         error
       )
     } else {
-      logger.error(
+      console.error(
         `${logPrefix} ${operation} FAILED in "${store}"${key ? ` for key "${key}"` : ''}: ${errInfo}`,
         error
       )
@@ -56,12 +56,12 @@ function logDB(operation: string, store: string, key?: string, data?: any, error
     if (typeof data !== 'undefined') {
       const p = formatPreview(data as any)
       // Print structured output: summary and preview
-      logger.log(
+      console.log(
         `${logPrefix} ${operation} in "${store}"${key ? ` for key "${key}"` : ''} - size: ${p.size ?? 'unknown'}`,
         p.preview
       )
     } else {
-      logger.log(`${logPrefix} ${operation} in "${store}"${key ? ` for key "${key}"` : ''}`)
+      console.log(`${logPrefix} ${operation} in "${store}"${key ? ` for key "${key}"` : ''}`)
     }
   }
 }

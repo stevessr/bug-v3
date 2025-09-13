@@ -2,7 +2,7 @@ import { initPixiv } from '../pixiv/pixiv'
 import { initBilibili } from '../bilibili/bilibili'
 import { initX } from '../x/main'
 
-import { logger } from './buildFLagsV2'
+// logger removed: replaced by direct console usage in migration
 
 // Helper: request settings from background (uses GET_EMOJI_DATA which returns settings)
 function requestSettingsFromBackground(): Promise<any> {
@@ -34,13 +34,13 @@ export function Uninject() {
   try {
     initPixiv()
   } catch (e) {
-    logger.error('[OneClickAdd] initPixiv failed', e)
+    console.error('[OneClickAdd] initPixiv failed', e)
   }
 
   try {
     initBilibili()
   } catch (e) {
-    logger.error('[OneClickAdd] initBilibili failed', e)
+    console.error('[OneClickAdd] initBilibili failed', e)
   }
 
   try {
@@ -53,13 +53,13 @@ export function Uninject() {
         if (enabled) {
           initX()
         } else {
-          logger.log('[XOneClick] skipping init: enableXcomExtraSelectors disabled in settings')
+          console.log('[XOneClick] skipping init: enableXcomExtraSelectors disabled in settings')
         }
       } catch (err) {
-        logger.error('[OneClickAdd] initX check failed', err)
+        console.error('[OneClickAdd] initX check failed', err)
       }
     })()
   } catch (e) {
-    logger.error('[OneClickAdd] initX failed', e)
+    console.error('[OneClickAdd] initX failed', e)
   }
 }

@@ -125,7 +125,7 @@ ENABLE_LOGGING=false ENABLE_INDEXEDDB=false npm run build
 ### 1. 日志使用
 
 ```typescript
-import { logger } from '../config/buildFlags'
+import { logger } from '@/utils/logger'
 
 // 这些调用会根据编译期开关决定是否输出
 logger.log('这是一条普通日志')
@@ -137,7 +137,7 @@ logger.dev('这是开发环境专用日志')
 ### 2. IndexedDB 检查
 
 ```typescript
-import { indexedDBWrapper } from '../config/buildFlags'
+import { indexedDBWrapper } from '@/utils/logger'
 
 // 检查 IndexedDB 是否被禁用
 if (indexedDBWrapper.shouldSkip()) {
@@ -173,7 +173,7 @@ if (indexedDBWrapper.isEnabled()) {
 
 如需添加更多编译期开关，请：
 
-1. 在 `src/config/buildFlags.ts` 中添加新的标志定义
+1. 在 `src/config/buildFlags.ts` 中添加新的标志定义 (or add to `@/utils/logger` shim)
 2. 在 `vite.config.ts` 中添加对应的环境变量处理
 3. 在 `scripts/build.js` 中添加新的构建配置
 4. 更新此文档说明新开关的用途

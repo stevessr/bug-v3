@@ -1,4 +1,4 @@
-import { logger } from './buildFLagsV2'
+// logger removed: replaced by direct console usage in migration
 
 // Function to parse image filenames from markdown text
 function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
@@ -22,7 +22,7 @@ function insertIntoEditor(text: string) {
   const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
   if (!textArea && !richEle) {
-    logger.error('找不到输入框')
+    console.error('找不到输入框')
     return
   }
 
@@ -540,7 +540,7 @@ class ImageUploader {
       return hiddenInput.value
     }
 
-    logger.warn('[Image Uploader] No CSRF token found')
+    console.warn('[Image Uploader] No CSRF token found')
     return ''
   }
 
@@ -557,7 +557,7 @@ class ImageUploader {
         const hashArray = Array.from(new Uint8Array(hashBuffer))
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
       } catch (e) {
-        logger.warn('[Image Uploader] Could not calculate SHA1, using fallback')
+        console.warn('[Image Uploader] Could not calculate SHA1, using fallback')
       }
     }
 
@@ -887,7 +887,7 @@ export async function showImageUploadDialog(): Promise<void> {
             const result = await uploader.uploadImage(file)
             return result
           } catch (error: any) {
-            logger.error('[Image Uploader] Upload failed:', error)
+            console.error('[Image Uploader] Upload failed:', error)
             throw error
           }
         })
@@ -942,7 +942,7 @@ export async function showImageUploadDialog(): Promise<void> {
             const result = await uploader.uploadImage(file)
             return result
           } catch (error: any) {
-            logger.error('[Image Uploader] Diff upload failed:', error)
+            console.error('[Image Uploader] Diff upload failed:', error)
             throw error
           }
         })

@@ -27,8 +27,7 @@ export default [
       'playwright-report/**',
       'test-results/**',
       'scripts/**',
-      'src/config/buildFlags.ts',
-      'src/content/utils/buildFLagsV2.ts',
+  // buildFlags shims removed - no longer ignored
       'server/**',
       '*.config.*s',
       '*.crx',
@@ -100,36 +99,6 @@ export default [
 
       // 通用规则
       'no-console': 'warn',
-      // Disallow direct console usage; prefer the logger wrapper in src/config/buildFlags.ts
-      'no-restricted-properties': [
-        'error',
-        {
-          object: 'console',
-          property: 'log',
-          message: 'Use logger.log(...) from src/config/buildFlags.ts instead of console.log'
-        },
-        {
-          object: 'console',
-          property: 'warn',
-          message: 'Use logger.warn(...) from src/config/buildFlags.ts instead of console.warn'
-        },
-        {
-          object: 'console',
-          property: 'error',
-          message: 'Use logger.error(...) from src/config/buildFlags.ts instead of console.error'
-        },
-        {
-          object: 'console',
-          property: 'debug',
-          message: 'Use logger.dev(...) from src/config/buildFlags.ts instead of console.debug'
-        },
-        {
-          object: 'console',
-          property: 'info',
-          message:
-            'Use logger.log(...) or logger.dev(...) from src/config/buildFlags.ts instead of console.info'
-        }
-      ],
       'no-debugger': 'error',
       'no-alert': 'warn',
       'prefer-const': 'error',
@@ -291,23 +260,7 @@ export default [
     }
   },
 
-  // Allow console inside the logger implementation file itself
-  {
-    files: ['src/config/buildFlags.ts'],
-    rules: {
-      'no-console': 'off',
-      'no-restricted-properties': 'off'
-    }
-  },
-
-  // Allow console usage in content buildFlags (project uses console there during migration)
-  {
-    files: ['src/content/buildFlags.ts'],
-    rules: {
-      'no-console': 'off',
-      'no-restricted-properties': 'off'
-    }
-  },
+  // (No special-case rules for buildFlags files; console usage is allowed generally where needed)
 
   // Temporarily relax @typescript-eslint/no-explicit-any for backend and utilities
   {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-import { logger } from '@/config/buildFlags'
+
 
 interface Props {
   isLoading: boolean
@@ -26,7 +26,7 @@ const onImageLoad = (event: Event) => {
 
 const onImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
-  logger.error('Failed to load image:', img.src)
+  console.error('Failed to load image:', img.src)
 }
 
 const downloadImage = (url: string, index: number) => {

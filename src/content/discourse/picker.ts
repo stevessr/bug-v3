@@ -1,4 +1,4 @@
-import { logger } from '../utils/buildFLagsV2'
+
 import { cachedState } from '../data/state'
 import { ensureDefaultIfEmpty } from '../data/storage'
 
@@ -11,7 +11,7 @@ export const isMobile = (): boolean => {
 }
 
 export async function createEmojiPicker(isMobileView: boolean): Promise<HTMLElement> {
-  logger.log('[Emoji Extension] Creating picker for isMobileView:', isMobileView)
+  console.log('[Emoji Extension] Creating picker for isMobileView:', isMobileView)
   if (isMobileView) {
     return createMobileEmojiPicker()
   }

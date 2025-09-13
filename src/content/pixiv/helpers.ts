@@ -1,4 +1,4 @@
-import { logger } from '../utils/buildFLagsV2'
+
 
 import type { AddEmojiButtonData } from './types'
 
@@ -68,7 +68,7 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
       throw new Error('Chrome extension API not available')
     }
 
-    logger.log('[PixivAddEmoji] Converting blob to ArrayBuffer for background:', {
+    console.log('[PixivAddEmoji] Converting blob to ArrayBuffer for background:', {
       name: emojiName,
       filename,
       size: blob.size,
@@ -79,7 +79,7 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
     const uint8Array = new Uint8Array(arrayBuffer)
     const arrayData = Array.from(uint8Array)
 
-    logger.log('[PixivAddEmoji] Converted blob to array data:', {
+    console.log('[PixivAddEmoji] Converted blob to array data:', {
       originalBlobSize: blob.size,
       arrayBufferSize: arrayBuffer.byteLength,
       arrayDataLength: arrayData.length
@@ -105,7 +105,7 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
     })
 
     if (bgResp && bgResp.success) {
-      logger.log('[PixivAddEmoji] Emoji successfully processed by background:', bgResp)
+      console.log('[PixivAddEmoji] Emoji successfully processed by background:', bgResp)
       return {
         success: true,
         source: 'uploaded',
@@ -114,7 +114,7 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
         message: '表情已成功添加到未分组'
       }
     } else {
-      logger.error('[PixivAddEmoji] Background processing failed:', JSON.stringify(bgResp, null, 2))
+      console.error('[PixivAddEmoji] Background processing failed:', JSON.stringify(bgResp, null, 2))
       return {
         success: false,
         error: '后台处理失败',
@@ -122,7 +122,7 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
       }
     }
   } catch (error) {
-    logger.error('[PixivAddEmoji] Failed to send to background:', error)
+    console.error('[PixivAddEmoji] Failed to send to background:', error)
     return {
       success: false,
       error: '发送数据到后台失败',
@@ -136,20 +136,20 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
     const baseName = data.name && data.name.length > 0 ? data.name : extractNameFromUrl(data.url)
     const filename = baseName.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || 'image'
 
-    logger.log('[PixivAddEmoji] Starting add emoji flow for:', { name: baseName, url: data.url })
+    console.log('[PixivAddEmoji] Starting add emoji flow for:', { name: baseName, url: data.url })
 
     try {
       const canvasResult = await tryGetImageViaCanvas(data.url)
       if (canvasResult.success) {
-        logger.log('[PixivAddEmoji] Canvas download successful, sending to background')
+        console.log('[PixivAddEmoji] Canvas download successful, sending to background')
         return await sendEmojiToBackground(canvasResult.blob, baseName, filename)
       }
     } catch (e) {
-      logger.warn('[PixivAddEmoji] Canvas method failed:', e)
+      console.warn('[PixivAddEmoji] Canvas method failed:', e)
     }
 
     try {
-      logger.log('[PixivAddEmoji] Trying direct fetch as fallback')
+      console.log('[PixivAddEmoji] Trying direct fetch as fallback')
       const response = await fetch(data.url, {
         method: 'GET',
         headers: {
@@ -161,14 +161,14 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
 
       if (response.ok) {
         const blob = await response.blob()
-        logger.log('[PixivAddEmoji] Direct fetch successful, sending to background')
+        console.log('[PixivAddEmoji] Direct fetch successful, sending to background')
         return await sendEmojiToBackground(blob, baseName, filename)
       }
     } catch (e) {
-      logger.warn('[PixivAddEmoji] Direct fetch failed:', e)
+      console.warn('[PixivAddEmoji] Direct fetch failed:', e)
     }
 
-    logger.log('[PixivAddEmoji] Direct methods failed, opening image URL for injection')
+    console.log('[PixivAddEmoji] Direct methods failed, opening image URL for injection')
     try {
       window.open(data.url, '_blank')
       return {
@@ -177,11 +177,11 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
         message: '已在新标签页打开图片，请在图片页面重试添加表情'
       }
     } catch (e) {
-      logger.error('[PixivAddEmoji] Failed to open image URL:', e)
+      console.error('[PixivAddEmoji] Failed to open image URL:', e)
       return { success: false, error: '无法下载图片或打开图片页面', details: e }
     }
   } catch (error) {
-    logger.error('[PixivAddEmoji] Add emoji flow failed:', error)
+    console.error('[PixivAddEmoji] Add emoji flow failed:', error)
     return { success: false, error: '添加表情失败', details: error }
   }
 }

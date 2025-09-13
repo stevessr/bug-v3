@@ -1,6 +1,6 @@
 import { defaultSettings } from '../../types/emoji'
 
-import { logger } from './buildFLagsV2'
+
 
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
@@ -13,7 +13,7 @@ export class ContentStorageAdapter {
         const result = await chrome.storage.local.get({ [key]: null })
         const value = result[key]
         if (value !== null && value !== undefined) {
-          logger.log(`[Content Storage] Found ${key} in extension storage`)
+          console.log(`[Content Storage] Found ${key} in extension storage`)
           // Handle both new storage format (with .data) and legacy format
           if (value && typeof value === 'object' && value.data !== undefined) {
             return value.data
@@ -21,7 +21,7 @@ export class ContentStorageAdapter {
           return value
         }
       } catch (error) {
-        logger.warn(`[Content Storage] Extension storage failed for ${key}:`, error)
+        console.warn(`[Content Storage] Extension storage failed for ${key}:`, error)
       }
     }
 
@@ -32,7 +32,7 @@ export class ContentStorageAdapter {
         if (value) {
           const parsed = JSON.parse(value)
           if (parsed !== null && parsed !== undefined) {
-            logger.log(`[Content Storage] Found ${key} in localStorage`)
+            console.log(`[Content Storage] Found ${key} in localStorage`)
             // Handle both new storage format (with .data) and legacy format
             if (parsed && typeof parsed === 'object' && parsed.data !== undefined) {
               return parsed.data
@@ -42,7 +42,7 @@ export class ContentStorageAdapter {
         }
       }
     } catch (error) {
-      logger.warn(`[Content Storage] localStorage failed for ${key}:`, error)
+      console.warn(`[Content Storage] localStorage failed for ${key}:`, error)
     }
 
     // Fallback to sessionStorage
@@ -52,7 +52,7 @@ export class ContentStorageAdapter {
         if (value) {
           const parsed = JSON.parse(value)
           if (parsed !== null && parsed !== undefined) {
-            logger.log(`[Content Storage] Found ${key} in sessionStorage`)
+            console.log(`[Content Storage] Found ${key} in sessionStorage`)
             // Handle both new storage format (with .data) and legacy format
             if (parsed && typeof parsed === 'object' && parsed.data !== undefined) {
               return parsed.data
@@ -62,30 +62,30 @@ export class ContentStorageAdapter {
         }
       }
     } catch (error) {
-      logger.warn(`[Content Storage] sessionStorage failed for ${key}:`, error)
+      console.warn(`[Content Storage] sessionStorage failed for ${key}:`, error)
     }
 
-    logger.log(`[Content Storage] No data found for ${key}`)
+    console.log(`[Content Storage] No data found for ${key}`)
     return null
   }
 
   async getAllEmojiGroups(): Promise<any[]> {
-    logger.log('[Content Storage] Getting all emoji groups')
+    console.log('[Content Storage] Getting all emoji groups')
 
     // First try to get the group index
     const groupIndex = await this.get('emojiGroupIndex')
-    logger.log('[Content Storage] Group index:', groupIndex)
+    console.log('[Content Storage] Group index:', groupIndex)
 
     if (groupIndex && Array.isArray(groupIndex) && groupIndex.length > 0) {
       const groups = []
       for (const groupInfo of groupIndex) {
-        logger.log(`[Content Storage] Processing group info:`, groupInfo)
+        console.log(`[Content Storage] Processing group info:`, groupInfo)
         if (groupInfo && groupInfo.id) {
           const group = await this.get(`emojiGroup_${groupInfo.id}`)
-          logger.log(`[Content Storage] Raw group data for ${groupInfo.id}:`, group)
+          console.log(`[Content Storage] Raw group data for ${groupInfo.id}:`, group)
 
           if (group) {
-            logger.log(`[Content Storage] Group structure:`, {
+            console.log(`[Content Storage] Group structure:`, {
               hasEmojis: !!group.emojis,
               emojisType: typeof group.emojis,
               isArray: Array.isArray(group.emojis),
@@ -98,7 +98,7 @@ export class ContentStorageAdapter {
             if (group.emojis && typeof group.emojis === 'object' && !Array.isArray(group.emojis)) {
               // Convert object to array if needed
               emojisArray = Object.values(group.emojis)
-              logger.log(
+              console.log(
                 `[Content Storage] Converting emojis object to array for ${group.name}, length: ${emojisArray.length}`
               )
             }
@@ -106,7 +106,7 @@ export class ContentStorageAdapter {
             if (emojisArray && Array.isArray(emojisArray)) {
               const processedGroup = { ...group, emojis: emojisArray, order: groupInfo.order || 0 }
               groups.push(processedGroup)
-              logger.log(
+              console.log(
                 `[Content Storage] ✅ Loaded group: ${group.name} with ${emojisArray.length} emojis`
               )
             } else if (groupInfo.id === 'favorites') {
@@ -117,11 +117,11 @@ export class ContentStorageAdapter {
                 order: groupInfo.order || 0
               }
               groups.push(favoritesGroup)
-              logger.log(
+              console.log(
                 `[Content Storage] ✅ Loaded favorites group with ${favoritesGroup.emojis.length} emojis`
               )
             } else {
-              logger.warn(
+              console.warn(
                 `[Content Storage] ❌ Group ${group.name || groupInfo.id} has invalid emojis after conversion:`,
                 {
                   hasEmojis: !!emojisArray,
@@ -132,17 +132,17 @@ export class ContentStorageAdapter {
               )
             }
           } else {
-            logger.warn(`[Content Storage] ❌ Group ${groupInfo.id} data is null/undefined`)
+            console.warn(`[Content Storage] ❌ Group ${groupInfo.id} data is null/undefined`)
           }
         }
       }
 
-      logger.log(
+      console.log(
         `[Content Storage] Processed ${groupIndex.length} groups, ${groups.length} valid groups found`
       )
 
       if (groups.length > 0) {
-        logger.log(
+        console.log(
           `[Content Storage] Successfully loaded ${groups.length} groups from new storage system`
         )
         // Ensure favorites group is always first
@@ -152,17 +152,17 @@ export class ContentStorageAdapter {
           .sort((a, b) => a.order - b.order)
         return favoritesGroup ? [favoritesGroup, ...otherGroups] : otherGroups
       } else {
-        logger.warn(
+        console.warn(
           `[Content Storage] No valid groups found in new storage system despite having group index`
         )
       }
     }
 
     // Fallback to legacy emojiGroups key
-    logger.log('[Content Storage] Trying legacy emojiGroups key')
+    console.log('[Content Storage] Trying legacy emojiGroups key')
     const legacyGroups = await this.get('emojiGroups')
     if (legacyGroups && Array.isArray(legacyGroups) && legacyGroups.length > 0) {
-      logger.log(`[Content Storage] Loaded ${legacyGroups.length} groups from legacy storage`)
+      console.log(`[Content Storage] Loaded ${legacyGroups.length} groups from legacy storage`)
       // Ensure favorites group is always first for legacy data too
       const favoritesGroup = legacyGroups.find(g => g.id === 'favorites')
       const otherGroups = legacyGroups
@@ -171,17 +171,17 @@ export class ContentStorageAdapter {
       return favoritesGroup ? [favoritesGroup, ...otherGroups] : otherGroups
     }
 
-    logger.log('[Content Storage] No groups found in storage')
+    console.log('[Content Storage] No groups found in storage')
     return []
   }
 
   async getSettings(): Promise<any> {
-    logger.log('[Content Storage] Getting settings')
+    console.log('[Content Storage] Getting settings')
     const settings = await this.get('appSettings')
     // Merge with central defaultSettings so fields like outputFormat are always present
     if (settings && typeof settings === 'object') {
       const result = { ...defaultSettings, ...settings }
-      logger.log('[Content Storage] Settings loaded:', result)
+      console.log('[Content Storage] Settings loaded:', result)
       return result
     }
 
@@ -190,7 +190,7 @@ export class ContentStorageAdapter {
       const packaged = await loadPackagedDefaults()
       if (packaged && packaged.settings && Object.keys(packaged.settings).length > 0) {
         const result = { ...defaultSettings, ...packaged.settings }
-        logger.log('[Content Storage] Settings loaded from packaged defaults:', result)
+        console.log('[Content Storage] Settings loaded from packaged defaults:', result)
         return result
       }
     } catch (e) {
@@ -198,7 +198,7 @@ export class ContentStorageAdapter {
     }
 
     const result = { ...defaultSettings }
-    logger.log('[Content Storage] Settings loaded:', result)
+    console.log('[Content Storage] Settings loaded:', result)
     return result
   }
 }

@@ -4,7 +4,7 @@ import { CloudflareProvider } from './CloudflareProvider'
 import { ChutesAIProvider } from './ChutesAIProvider'
 
 import type { GenerateRequest, ImageProvider } from '@/types/imageGenerator'
-import { logger } from '@/config/buildFlags'
+
 
 export class ProviderManager {
   private providers: Map<string, ImageProvider> = new Map()
@@ -91,7 +91,7 @@ export class ProviderManager {
       document.body.removeChild(a)
       URL.revokeObjectURL(downloadUrl)
     } catch (error) {
-      logger.error('Download failed:', error)
+      console.error('Download failed:', error)
       throw new Error('下载失败，请稍后重试')
     }
   }

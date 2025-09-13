@@ -6,7 +6,7 @@ import { DownOutlined } from '@ant-design/icons-vue'
 import type { EmojiGroup, Emoji } from '../../types/emoji'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../../utils/emojiPreviewUploader'
-import { logger } from '../../config/buildFlags'
+
 
 defineEmits(['remove', 'edit'])
 
@@ -68,7 +68,7 @@ const uploadSingleEmoji = async (emoji: Emoji, index: number) => {
       emojiPreviewUploader.showProgressDialog()
     }
   } catch (error) {
-    logger.error('Upload failed:', error)
+    console.error('Upload failed:', error)
   } finally {
     uploadingEmojiIds.value.delete(index)
   }
@@ -108,7 +108,7 @@ const uploadSelectedEmojis = async () => {
         }
         return resp
       } catch (error) {
-        logger.error('Failed to upload emoji:', emoji.name, error)
+        console.error('Failed to upload emoji:', emoji.name, error)
         throw error
       }
     })
@@ -150,7 +150,7 @@ const uploadAllEmojis = async () => {
         }
         return resp
       } catch (error) {
-        logger.error('Failed to upload emoji:', emoji.name, error)
+        console.error('Failed to upload emoji:', emoji.name, error)
         throw error
       }
     })

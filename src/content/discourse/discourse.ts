@@ -1,4 +1,4 @@
-import { logger } from '../utils/buildFLagsV2'
+
 
 declare const chrome: any
 
@@ -36,7 +36,7 @@ function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) 
         button.style.cssText = originalStyle
       }, 2000)
     } catch (error) {
-      logger.error('[DiscourseOneClick] 添加表情失败:', error)
+      console.error('[DiscourseOneClick] 添加表情失败:', error)
       button.innerHTML = '失败'
       button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
       setTimeout(() => {
@@ -176,7 +176,7 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
           await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData })
           successCount++
         } catch (e) {
-          logger.error('[DiscourseOneClick] 添加图片失败', emojiData.name, e)
+          console.error('[DiscourseOneClick] 添加图片失败', emojiData.name, e)
         }
       }
       button.innerHTML = `已处理 ${successCount}/${allEmojiData.length} 张图片`
@@ -187,7 +187,7 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
         button.disabled = false
       }, 3000)
     } catch (error) {
-      logger.error('[DiscourseOneClick] 批量解析失败:', error)
+      console.error('[DiscourseOneClick] 批量解析失败:', error)
       button.innerHTML = '解析失败'
       button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
       setTimeout(() => {
@@ -256,7 +256,7 @@ function isDiscoursePage(): boolean {
 
     return false
   } catch (e) {
-    logger.error('[DiscourseOneClick] isDiscoursePage check failed', e)
+    console.error('[DiscourseOneClick] isDiscoursePage check failed', e)
     return false
   }
 }
@@ -264,7 +264,7 @@ function isDiscoursePage(): boolean {
 export function initDiscourse() {
   try {
     if (!isDiscoursePage()) {
-      logger.log('[DiscourseOneClick] skipping init: not a Discourse page')
+      console.log('[DiscourseOneClick] skipping init: not a Discourse page')
       return
     }
 
@@ -274,7 +274,7 @@ export function initDiscourse() {
     observeCookedContent()
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages
   } catch (e) {
-    logger.error('[DiscourseOneClick] init failed', e)
+    console.error('[DiscourseOneClick] init failed', e)
   }
 }
 

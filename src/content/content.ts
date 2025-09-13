@@ -1,9 +1,9 @@
 // Entry point: 初始化模块并启动功能
-import { logger } from './utils/buildFLagsV2'
+
 import { initializeEmojiFeature } from './utils/init'
 import { Uninject } from './utils/Uninject'
 
-logger.log('[Emoji Extension] Content script loaded (entry)')
+console.log('[Emoji Extension] Content script loaded (entry)')
 
 // Function to check if current page should have emoji injection
 function shouldInjectEmoji(): boolean {
@@ -12,7 +12,7 @@ function shouldInjectEmoji(): boolean {
     'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
   )
   if (discourseMetaTags.length > 0) {
-    logger.log('[Emoji Extension] Discourse detected via meta tags')
+    console.log('[Emoji Extension] Discourse detected via meta tags')
     return true
   }
 
@@ -21,7 +21,7 @@ function shouldInjectEmoji(): boolean {
   if (generatorMeta) {
     const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
     if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
-      logger.log('[Emoji Extension] Forum platform detected via generator meta')
+      console.log('[Emoji Extension] Forum platform detected via generator meta')
       return true
     }
   }
@@ -30,7 +30,7 @@ function shouldInjectEmoji(): boolean {
   const hostname = window.location.hostname.toLowerCase()
   const allowedDomains = ['linux.do', 'meta.discourse.org']
   if (allowedDomains.some(domain => hostname.includes(domain))) {
-    logger.log('[Emoji Extension] Allowed domain detected:', hostname)
+    console.log('[Emoji Extension] Allowed domain detected:', hostname)
     return true
   }
 
@@ -39,21 +39,21 @@ function shouldInjectEmoji(): boolean {
     'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
   )
   if (editors.length > 0) {
-    logger.log('[Emoji Extension] Discussion editor detected')
+    console.log('[Emoji Extension] Discussion editor detected')
     return true
   }
 
-  logger.log('[Emoji Extension] No compatible platform detected')
+  console.log('[Emoji Extension] No compatible platform detected')
   return false
 }
 
 // Only inject if compatible platform is detected
 if (shouldInjectEmoji()) {
-  logger.log('[Emoji Extension] Initializing emoji feature')
+  console.log('[Emoji Extension] Initializing emoji feature')
   initializeEmojiFeature()
 } else {
   Uninject()
-  logger.log('[Emoji Extension] Skipping injection - incompatible platform')
+  console.log('[Emoji Extension] Skipping injection - incompatible platform')
 }
 
 // Add message listener for linux.do CSRF token requests
@@ -87,7 +87,7 @@ if (window.location.hostname.includes('linux.do')) {
         sendResponse({ csrfToken: '' })
         return true // 表示异步响应
       } catch (error) {
-        logger.warn('[Emoji Extension] Failed to get CSRF token:', error)
+        console.warn('[Emoji Extension] Failed to get CSRF token:', error)
         sendResponse({ csrfToken: '' })
         return true // 表示异步响应
       }

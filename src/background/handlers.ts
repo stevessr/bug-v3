@@ -1,5 +1,5 @@
 import { newStorageHelpers } from '../utils/newStorage'
-import { logger } from '../config/buildFlags'
+
 
 import { getChromeAPI } from './utils'
 import {
@@ -14,7 +14,7 @@ export function setupMessageListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onMessage) {
     chromeAPI.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
-      logger.log('Background received message:', message)
+      console.log('Background received message:', message)
       // mark unused sender as intentionally unused
       void _sender
 
@@ -38,7 +38,7 @@ export function setupMessageListener() {
             return true
 
           default:
-            logger.log('Unknown message type:', message.type)
+            console.log('Unknown message type:', message.type)
             // mark message.type as referenced for linters
             void message.type
             sendResponse({ success: false, error: 'Unknown message type' })
@@ -78,7 +78,7 @@ export function setupMessageListener() {
             return true
 
           default:
-            logger.log('Unknown action:', message.action)
+            console.log('Unknown action:', message.action)
             // mark message.action as referenced for linters
             void message.action
             sendResponse({ success: false, error: 'Unknown action' })
@@ -87,7 +87,7 @@ export function setupMessageListener() {
       }
 
       // 如果既没有 type 也没有 action
-      logger.log('Message has no type or action:', message)
+      console.log('Message has no type or action:', message)
       sendResponse({ success: false, error: 'Message has no type or action' })
     })
   }
@@ -105,7 +105,7 @@ export async function handleAddToFavorites(emoji: any, sendResponse: any) {
     const groups = await newStorageHelpers.getAllEmojiGroups()
     const favoritesGroup = groups.find((g: any) => g.id === 'favorites')
     if (!favoritesGroup) {
-      logger.warn('Favorites group not found - creating one')
+      console.warn('Favorites group not found - creating one')
       const newFavorites = { id: 'favorites', name: 'Favorites', icon: '⭐', order: 0, emojis: [] }
       groups.unshift(newFavorites)
     }
@@ -164,7 +164,7 @@ export async function handleAddToFavorites(emoji: any, sendResponse: any) {
 
     sendResponse({ success: true, message: 'Added to favorites' })
   } catch (error) {
-    logger.error('Failed to add emoji to favorites:', error)
+    console.error('Failed to add emoji to favorites:', error)
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -193,7 +193,7 @@ export async function handleGetEmojiData(_sendResponse: (_resp: any) => void) {
       }
     })
   } catch (error: any) {
-    logger.error('Failed to get emoji data via newStorageHelpers:', error)
+    console.error('Failed to get emoji data via newStorageHelpers:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -215,7 +215,7 @@ export async function handleSaveEmojiData(data: any, _sendResponse: (_resp: any)
     await chromeAPI.storage.local.set(data)
     _sendResponse({ success: true })
   } catch (error: any) {
-    logger.error('Failed to save emoji data:', error)
+    console.error('Failed to save emoji data:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -259,7 +259,7 @@ export async function handleSyncSettings(settings: any, _sendResponse: (_resp: a
 
     _sendResponse({ success: true })
   } catch (error: any) {
-    logger.error('Failed to sync settings:', error)
+    console.error('Failed to sync settings:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -312,14 +312,14 @@ export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => vo
             }
           }
           if (!csrfToken) {
-            logger.warn('Failed to get CSRF token from any linux.do tab:', sendMessageError)
+            console.warn('Failed to get CSRF token from any linux.do tab:', sendMessageError)
           }
         }
       } else {
-        logger.warn('No linux.do tabs found')
+        console.warn('No linux.do tabs found')
       }
     } catch (e) {
-      logger.warn('Failed to get CSRF token from linux.do tab:', e)
+      console.warn('Failed to get CSRF token from linux.do tab:', e)
     }
 
     _sendResponse({
@@ -328,7 +328,7 @@ export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => vo
       cookies: cookieString
     })
   } catch (error: any) {
-    logger.error('Failed to get linux.do auth info:', error)
+    console.error('Failed to get linux.do auth info:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -359,7 +359,7 @@ export async function handleSaveLastDiscourse(payload: any, sendResponse: any) {
 
     sendResponse({ success: true })
   } catch (error) {
-    logger.error('Failed to save lastDiscourse', error)
+    console.error('Failed to save lastDiscourse', error)
     sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) })
   }
 }
@@ -368,7 +368,7 @@ export function setupStorageChangeListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.storage && chromeAPI.storage.onChanged) {
     chromeAPI.storage.onChanged.addListener((changes: any, namespace: any) => {
-      logger.log('Storage changed:', changes, namespace)
+      console.log('Storage changed:', changes, namespace)
       // Placeholder for cloud sync or other reactions
     })
   }
@@ -460,10 +460,10 @@ export function setupPeriodicCleanup() {
       try {
         const data = await chromeAPI.storage.local.get(['emojiGroups'])
         if (data.emojiGroups) {
-          logger.log('Storage cleanup check completed')
+          console.log('Storage cleanup check completed')
         }
       } catch (error) {
-        logger.error('Storage cleanup error:', error)
+        console.error('Storage cleanup error:', error)
       }
     },
     24 * 60 * 60 * 1000

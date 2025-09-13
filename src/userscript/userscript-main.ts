@@ -15,7 +15,7 @@ import {
   type UserscriptStorage
 } from './userscript-storage'
 
-import { logger } from '@/config/buildFlags'
+
 import { uploader } from '@/content/utils/uploader'
 
 // Global state for userscript
@@ -34,7 +34,7 @@ const userscriptState: UserscriptStorage = {
 // Initialize from localStorage
 async function initializeUserscriptData() {
   const data = await loadDataFromLocalStorageAsync().catch((err: any) => {
-    logger.warn(
+    console.warn(
       '[Userscript] loadDataFromLocalStorageAsync failed, falling back to sync loader',
       err
     )
@@ -51,7 +51,7 @@ function shouldInjectEmoji(): boolean {
     'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
   )
   if (discourseMetaTags.length > 0) {
-    logger.log('[Emoji Extension Userscript] Discourse detected via meta tags')
+    console.log('[Emoji Extension Userscript] Discourse detected via meta tags')
     return true
   }
 
@@ -60,7 +60,7 @@ function shouldInjectEmoji(): boolean {
   if (generatorMeta) {
     const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
     if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
-      logger.log('[Emoji Extension Userscript] Forum platform detected via generator meta')
+      console.log('[Emoji Extension Userscript] Forum platform detected via generator meta')
       return true
     }
   }
@@ -69,7 +69,7 @@ function shouldInjectEmoji(): boolean {
   const hostname = window.location.hostname.toLowerCase()
   const allowedDomains = ['linux.do', 'meta.discourse.org', 'pixiv.net']
   if (allowedDomains.some(domain => hostname.includes(domain))) {
-    logger.log('[Emoji Extension Userscript] Allowed domain detected:', hostname)
+    console.log('[Emoji Extension Userscript] Allowed domain detected:', hostname)
     return true
   }
 
@@ -78,23 +78,23 @@ function shouldInjectEmoji(): boolean {
     'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
   )
   if (editors.length > 0) {
-    logger.log('[Emoji Extension Userscript] Discussion editor detected')
+    console.log('[Emoji Extension Userscript] Discussion editor detected')
     return true
   }
 
-  logger.log('[Emoji Extension Userscript] No compatible platform detected')
+  console.log('[Emoji Extension Userscript] No compatible platform detected')
   return false
 }
 
 // Insert emoji into editor (adapted from content script)
 function insertEmojiIntoEditor(emoji: any) {
-  logger.log('[Emoji Extension Userscript] Inserting emoji:', emoji)
+  console.log('[Emoji Extension Userscript] Inserting emoji:', emoji)
 
   const textarea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
   const proseMirror = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
   if (!textarea && !proseMirror) {
-    logger.error('找不到输入框')
+    console.error('找不到输入框')
     return
   }
 
@@ -153,7 +153,7 @@ function insertEmojiIntoEditor(emoji: any) {
         // Fallback to execCommand
         document.execCommand('insertHTML', false, htmlContent)
       } catch (fallbackError) {
-        logger.error('无法向富文本编辑器中插入表情', fallbackError)
+        console.error('无法向富文本编辑器中插入表情', fallbackError)
       }
     }
   }
@@ -390,10 +390,10 @@ function openManagementInterface() {
       // Fallback: Show instructions modal
       showManagementModal()
     } else {
-      logger.log('[Emoji Extension Userscript] Opened management interface')
+      console.log('[Emoji Extension Userscript] Opened management interface')
     }
   } catch (error) {
-    logger.error('[Emoji Extension Userscript] Failed to open management interface:', error)
+    console.error('[Emoji Extension Userscript] Failed to open management interface:', error)
     showManagementModal()
   }
 }
@@ -834,13 +834,13 @@ function injectEmojiButton(toolbar: HTMLElement) {
       toolbar.appendChild(button)
     }
   } catch (error) {
-    logger.error('[Emoji Extension Userscript] Failed to inject button:', error)
+    console.error('[Emoji Extension Userscript] Failed to inject button:', error)
   }
 }
 
 // Initialize one-click add functionality for image lightboxes
 function initOneClickAdd() {
-  logger.log('[Emoji Extension Userscript] Initializing one-click add functionality')
+  console.log('[Emoji Extension Userscript] Initializing one-click add functionality')
 
   function extractEmojiFromImage(img: HTMLImageElement, titleElement: HTMLElement) {
     const url = img.src
@@ -939,7 +939,7 @@ function initOneClickAdd() {
         try {
           uploader.showProgressDialog()
         } catch (e) {
-          logger.warn('[Userscript] uploader.showProgressDialog failed:', e)
+          console.warn('[Userscript] uploader.showProgressDialog failed:', e)
         }
 
         link.innerHTML = `
@@ -957,7 +957,7 @@ function initOneClickAdd() {
           link.style.cssText = originalStyle
         }, 2000)
       } catch (error) {
-        logger.error('[Emoji Extension Userscript] Failed to add emoji:', error)
+        console.error('[Emoji Extension Userscript] Failed to add emoji:', error)
 
         link.innerHTML = `
           <svg class="fa d-icon d-icon-times svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
@@ -1051,7 +1051,7 @@ function initOneClickAdd() {
 
 // Main initialization function
 async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 1000) {
-  logger.log('[Emoji Extension Userscript] Initializing...')
+  console.log('[Emoji Extension Userscript] Initializing...')
 
   initializeUserscriptData()
   initOneClickAdd()
@@ -1059,7 +1059,7 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
   try {
     //initPixiv()
   } catch (e) {
-    logger.warn('[Userscript] initPixiv failed', e)
+    console.warn('[Userscript] initPixiv failed', e)
   }
 
   let attempts = 0
@@ -1072,7 +1072,7 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
 
     toolbars.forEach(toolbar => {
       if (!toolbar.querySelector('.emoji-extension-button')) {
-        logger.log('[Emoji Extension Userscript] Toolbar found, injecting button.')
+        console.log('[Emoji Extension Userscript] Toolbar found, injecting button.')
         injectEmojiButton(toolbar)
         injectedCount++
       }
@@ -1083,12 +1083,12 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
     }
 
     if (attempts < maxAttempts) {
-      logger.log(
+      console.log(
         `[Emoji Extension Userscript] Toolbar not found, attempt ${attempts}/${maxAttempts}. Retrying in ${delay / 1000}s.`
       )
       setTimeout(attemptInjection, delay)
     } else {
-      logger.error('[Emoji Extension Userscript] Failed to find toolbar after multiple attempts.')
+      console.error('[Emoji Extension Userscript] Failed to find toolbar after multiple attempts.')
     }
   }
 
@@ -1103,7 +1103,7 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
     const toolbars = findAllToolbars()
     toolbars.forEach(toolbar => {
       if (!toolbar.querySelector('.emoji-extension-button')) {
-        logger.log('[Emoji Extension Userscript] New toolbar found, injecting button.')
+        console.log('[Emoji Extension Userscript] New toolbar found, injecting button.')
         injectEmojiButton(toolbar)
       }
     })
@@ -1112,10 +1112,10 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
 
 // Entry point
 if (shouldInjectEmoji()) {
-  logger.log('[Emoji Extension Userscript] Initializing emoji feature')
+  console.log('[Emoji Extension Userscript] Initializing emoji feature')
   initializeEmojiFeature()
 } else {
-  logger.log('[Emoji Extension Userscript] Skipping injection - incompatible platform')
+  console.log('[Emoji Extension Userscript] Skipping injection - incompatible platform')
 }
 
 // --- WebSocket integration with manager (automatic connect) ---
@@ -1130,17 +1130,17 @@ function connectToManagerWS() {
     if (!wsUrl) return
     if (managerWs && managerWs.readyState === WebSocket.OPEN) return
 
-    logger.log('[Userscript WS] Connecting to', wsUrl)
+    console.log('[Userscript WS] Connecting to', wsUrl)
     managerWs = new WebSocket(wsUrl)
 
     managerWs.onopen = () => {
-      logger.log('[Userscript WS] connected to manager')
+      console.log('[Userscript WS] connected to manager')
       wsReconnectAttempts = 0
       // Optionally request an export immediately
       try {
         managerWs?.send(JSON.stringify({ type: 'request_export' }))
       } catch (e) {
-        logger.warn('[Userscript WS] failed to send request_export', e)
+        console.warn('[Userscript WS] failed to send request_export', e)
       }
     }
 
@@ -1148,7 +1148,7 @@ function connectToManagerWS() {
       try {
         const msg = JSON.parse(ev.data)
         if (msg && msg.type === 'export' && msg.payload) {
-          logger.log('[Userscript WS] Received export payload from manager')
+          console.log('[Userscript WS] Received export payload from manager')
           const payload = msg.payload
           // Persist to userscript storage using existing API
           try {
@@ -1162,30 +1162,30 @@ function connectToManagerWS() {
             }
             // Refresh in-memory state
             initializeUserscriptData()
-            logger.log('[Userscript WS] Imported manager data into localStorage')
+            console.log('[Userscript WS] Imported manager data into localStorage')
           } catch (e) {
-            logger.error('[Userscript WS] Failed to persist manager payload', e)
+            console.error('[Userscript WS] Failed to persist manager payload', e)
           }
         } else {
-          logger.log('[Userscript WS] message', msg)
+          console.log('[Userscript WS] message', msg)
         }
       } catch (e) {
-        logger.warn('[Userscript WS] invalid message', ev.data)
+        console.warn('[Userscript WS] invalid message', ev.data)
       }
     }
 
     managerWs.onclose = () => {
-      logger.warn('[Userscript WS] connection closed')
+      console.warn('[Userscript WS] connection closed')
       managerWs = null
       scheduleWsReconnect()
     }
 
     managerWs.onerror = err => {
-      logger.error('[Userscript WS] error', err)
+      console.error('[Userscript WS] error', err)
       // Let onclose handle reconnect
     }
   } catch (error) {
-    logger.error('[Userscript WS] connect failed', error)
+    console.error('[Userscript WS] connect failed', error)
     scheduleWsReconnect()
   }
 }
@@ -1198,9 +1198,9 @@ function scheduleWsReconnect() {
     wsReconnectTimer = window.setTimeout(() => {
       connectToManagerWS()
     }, backoff)
-    logger.log('[Userscript WS] scheduled reconnect in', backoff, 'ms')
+    console.log('[Userscript WS] scheduled reconnect in', backoff, 'ms')
   } catch (e) {
-    logger.error('[Userscript WS] schedule reconnect failed', e)
+    console.error('[Userscript WS] schedule reconnect failed', e)
   }
 }
 
@@ -1211,7 +1211,7 @@ try {
     connectToManagerWS()
   }, 2000)
 } catch (e) {
-  logger.warn('[Userscript WS] failed to start auto-connect', e)
+  console.warn('[Userscript WS] failed to start auto-connect', e)
 }
 
 // Listen for manager presence via BroadcastChannel for auto-discovery
@@ -1222,22 +1222,22 @@ try {
       try {
         const msg = ev.data
         if (msg && msg.type === 'manager:presence' && msg.wsUrl) {
-          logger.log('[Userscript] Discovered manager wsUrl via BroadcastChannel:', msg.wsUrl)
+          console.log('[Userscript] Discovered manager wsUrl via BroadcastChannel:', msg.wsUrl)
           try {
             localStorage.setItem('emoji_extension_ws_url', msg.wsUrl)
           } catch (e) {
-            logger.warn('[Userscript] failed to persist ws url', e)
+            console.warn('[Userscript] failed to persist ws url', e)
           }
           // Attempt immediate connect
           connectToManagerWS()
         }
       } catch (e) {
-        logger.warn('[Userscript] BroadcastChannel message parse failed', e)
+        console.warn('[Userscript] BroadcastChannel message parse failed', e)
       }
     }
   }
 } catch (e) {
-  logger.warn('[Userscript] BroadcastChannel not available', e)
+  console.warn('[Userscript] BroadcastChannel not available', e)
 }
 
 export {}

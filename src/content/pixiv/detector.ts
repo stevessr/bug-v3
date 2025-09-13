@@ -1,4 +1,4 @@
-import { logger } from '../utils/buildFLagsV2'
+
 
 import type { AddEmojiButtonData } from './types'
 import { extractNameFromUrl } from './helpers'
@@ -67,7 +67,7 @@ function scanForImagePage() {
     return
   }
 
-  logger.log('[PixivAddEmoji] Scanning image page:', window.location.href)
+  console.log('[PixivAddEmoji] Scanning image page:', window.location.href)
 
   const images = document.querySelectorAll('img')
 
@@ -80,7 +80,7 @@ function scanForImagePage() {
       const imageUrl = img.src
       const imageName = extractNameFromUrl(imageUrl)
 
-      logger.log('[PixivAddEmoji] Found image on image page:', { url: imageUrl, name: imageName })
+      console.log('[PixivAddEmoji] Found image on image page:', { url: imageUrl, name: imageName })
 
       const emojiData: AddEmojiButtonData = {
         name: imageName,
@@ -97,7 +97,7 @@ function scanForImagePage() {
 
       imgContainer.appendChild(button)
 
-      logger.log('[PixivAddEmoji] Added button to image page')
+      console.log('[PixivAddEmoji] Added button to image page')
       break
     }
   }
@@ -150,12 +150,12 @@ export function isPixivPage(): boolean {
     const hostname = window.location.hostname.toLowerCase()
 
     if (hostname.includes('i.pximg.net') || hostname.includes('pximg.net')) {
-      logger.log('[PixivAddEmoji] Detected Pixiv image domain:', hostname)
+      console.log('[PixivAddEmoji] Detected Pixiv image domain:', hostname)
       return true
     }
 
     if (hostname.includes('pixiv.net')) {
-      logger.log('[PixivAddEmoji] Detected Pixiv main site:', hostname)
+      console.log('[PixivAddEmoji] Detected Pixiv main site:', hostname)
       return true
     }
 
@@ -184,7 +184,7 @@ export function isPixivPage(): boolean {
 
     return false
   } catch (e) {
-    logger.error('[PixivAddEmoji] isPixivPage check failed', e)
+    console.error('[PixivAddEmoji] isPixivPage check failed', e)
     return false
   }
 }
@@ -192,7 +192,7 @@ export function isPixivPage(): boolean {
 export function initPixiv() {
   try {
     if (!isPixivPage()) {
-      logger.log('[PixivAddEmoji] skipping init: not a Pixiv page')
+      console.log('[PixivAddEmoji] skipping init: not a Pixiv page')
       return
     }
 
@@ -207,6 +207,6 @@ export function initPixiv() {
 
     observePixivViewer()
   } catch (e) {
-    logger.error('[PixivAddEmoji] init failed', e)
+    console.error('[PixivAddEmoji] init failed', e)
   }
 }

@@ -1,6 +1,6 @@
 import { initDiscourse } from '../discourse/discourse'
 
-import { logger } from './buildFLagsV2'
+// logger removed: replaced with direct console usage
 
 // oneClickAdd.ts - 仅保留一键添加核心逻辑，平台注入移至各自模块
 declare const chrome: any
@@ -26,12 +26,12 @@ export function injectCSSAnimation() {
  * 初始化一键添加模块（注入CSS并启动平台注入器）
  */
 export function initOneClickAdd() {
-  logger.log('[OneClickAdd] 初始化一键添加表情核心')
+  console.log('[OneClickAdd] 初始化一键添加表情核心')
   injectCSSAnimation()
 
   try {
     initDiscourse()
   } catch (e) {
-    logger.error('[OneClickAdd] initDiscourse failed', e)
+    console.error('[OneClickAdd] initDiscourse failed', e)
   }
 }

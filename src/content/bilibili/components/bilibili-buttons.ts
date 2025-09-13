@@ -2,7 +2,7 @@
  * Bilibili按钮组件创建和处理
  */
 
-import { logger } from '../../utils/buildFLagsV2'
+
 import type { AddEmojiButtonData } from '../utils/bilibili-utils'
 import { extractImageUrlFromPicture, extractNameFromUrl } from '../utils/bilibili-utils'
 // Import utility functions dynamically to avoid circular dependencies
@@ -27,7 +27,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
         button.style.cssText = originalStyle
       }, 1500)
     } catch (error) {
-      logger.error('[BiliOneClick] 添加表情失败:', error)
+      console.error('[BiliOneClick] 添加表情失败:', error)
       button.innerHTML = '失败'
       button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
       setTimeout(() => {
@@ -168,7 +168,7 @@ export function createBatchParseButton(container: Element): HTMLElement {
           })
           success++
         } catch (err) {
-          logger.error('[BiliOneClick] 批量添加失败', url, err)
+          console.error('[BiliOneClick] 批量添加失败', url, err)
         }
       }
       btn.innerHTML = `已处理 ${success}/${pics.length} 张图片`
@@ -177,7 +177,7 @@ export function createBatchParseButton(container: Element): HTMLElement {
         btn.disabled = false
       }, 2000)
     } catch (err) {
-      logger.error('[BiliOneClick] 批量解析失败', err)
+      console.error('[BiliOneClick] 批量解析失败', err)
       btn.innerHTML = '解析失败'
       setTimeout(() => {
         btn.innerHTML = original

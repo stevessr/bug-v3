@@ -1,7 +1,7 @@
 import { createEmojiPicker } from '../discourse/picker'
 import { cachedState } from '../data/state'
 
-import { logger } from './buildFLagsV2'
+// logger removed: replaced by direct console usage in migration
 import { showImageUploadDialog } from './uploader'
 
 // Different toolbar selectors for different contexts
@@ -391,6 +391,6 @@ export function injectButton(toolbar: Element) {
       toolbar.appendChild(emojiButton)
     }
   } catch (e) {
-    logger.error('[Emoji Extension] Failed to inject buttons (module):', e)
+    console.error('[Emoji Extension] Failed to inject buttons (module):', e)
   }
 }

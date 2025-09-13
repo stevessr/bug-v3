@@ -1,5 +1,5 @@
 import type { EmojiGroup, AppSettings } from '../types/emoji'
-import { logger } from '../config/buildFlags'
+
 
 import { formatPreview } from './formatUtils'
 import indexedDBHelpers from './indexedDB'
@@ -51,7 +51,7 @@ function logStorage(operation: string, key: string, data?: any, error?: any) {
   const logPrefix = `[Storage ${timestamp}]`
 
   if (error) {
-    logger.error(`${logPrefix} ${operation} FAILED for "${key}":`, error)
+    console.error(`${logPrefix} ${operation} FAILED for "${key}":`, error)
   } else {
     // Ensure certain success messages explicitly contain the word 'success' so
     // automated tests that search for 'success' can reliably match them.
@@ -65,12 +65,12 @@ function logStorage(operation: string, key: string, data?: any, error?: any) {
 
     if (typeof data !== 'undefined') {
       const p = formatPreview(data)
-      logger.log(
+      console.log(
         `${logPrefix} ${operation} for "${key}" - size: ${p.size ?? 'unknown'}${successSuffix}`,
         p.preview
       )
     } else {
-      logger.log(`${logPrefix} ${operation} for "${key}"${successSuffix}`)
+      console.log(`${logPrefix} ${operation} for "${key}"${successSuffix}`)
     }
   }
 }

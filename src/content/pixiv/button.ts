@@ -1,4 +1,4 @@
-import { logger } from '../utils/buildFLagsV2'
+
 
 import type { AddEmojiButtonData } from './types'
 import { performPixivAddEmojiFlow } from './helpers'
@@ -40,7 +40,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
       const resp = await performPixivAddEmojiFlow(data)
 
       if (resp && resp.success) {
-        logger.log('[PixivAddEmoji] Successfully added emoji:', resp)
+        console.log('[PixivAddEmoji] Successfully added emoji:', resp)
 
         button.innerHTML = `
           <svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
@@ -75,7 +75,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
         running = false
       }, 3000)
     } catch (error) {
-      logger.error('[PixivAddEmoji] 添加表情失败:', error)
+      console.error('[PixivAddEmoji] 添加表情失败:', error)
 
       button.innerHTML = `
         <svg class="fa d-icon d-icon-times svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
