@@ -40,7 +40,7 @@ function startBuild() {
   }
 
   console.log('🔁 触发构建: node scripts/build.js build')
-  buildProcess = spawn(process.execPath, [path.join(__dirname, 'build.js'), 'build'], {
+  buildProcess = spawn(process.execPath, [path.join(__dirname, 'build.js'), 'build:debug'], {
     stdio: 'inherit',
     shell: true,
     env: process.env,
