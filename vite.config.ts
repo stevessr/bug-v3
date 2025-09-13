@@ -96,10 +96,10 @@ export default defineConfig(({ mode }) => {
             return 'js/[name].js'
           },
           assetFileNames: 'assets/[name].[ext]',
-          // Disable manualChunks splitting to avoid creating a shared "background.js"
-          // chunk that other entrypoints (like content) would import from. Keeping
-          // modules inlined per-entry ensures content scripts do not contain
-          // top-level ESM imports which cause runtime SyntaxError in some hosts.
+          // Manual chunking: keep content-related behavior unchanged, but place
+          // modules under `src/options` into their own chunks. This makes the
+          // options page lazy-load split into multiple small JS files.
+          // We keep other behavior undefined to avoid cross-entry shared chunks.
           manualChunks: (id, { getModuleInfo }) => {
             // Resolve the canonical content entry path
             const contentEntry = fileURLToPath(new URL('src/content/content.ts', import.meta.url))
@@ -143,12 +143,27 @@ export default defineConfig(({ mode }) => {
               return false
             }
 
-            // Previously we had complex heuristics here to split shared
-            // modules, but that produced a separate background chunk which
-            // content.js then imported via ESM. For extension content
-            // scripts we must avoid producing top-level imports between
-            // extension files. Returning undefined disables manual chunking
-            // and lets Rollup inline modules per-entry.
+            try {
+              if (!id) return undefined
+              // normalize path separators
+              const normalized = id.replace(/\\/g, '/').toLowerCase()
+
+              // Keep content-related modules untouched
+              if (normalized.includes('/src/content/')) return undefined
+
+              // If module comes from src/options, create a chunk per-file
+              const marker = '/src/options/'
+              const idx = normalized.indexOf(marker)
+              if (idx !== -1) {
+                const rel = normalized.slice(idx + marker.length)
+                // use last segment name as chunk key (without extension)
+                const m = rel.match(/([^/]+?)(?:\.[a-z0-9]+)?$/)
+                const base = m && m[1] ? m[1].replace(/[^a-z0-9_-]/g, '_') : rel.replace(/[^a-z0-9_-]/g, '_')
+                return `options-${base}`
+              }
+            } catch (e) {
+              void e
+            }
             return undefined
           }
         },
