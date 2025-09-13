@@ -42,7 +42,7 @@ function startBuild() {
   console.log('🔁 触发构建: node scripts/build.js build')
   buildProcess = spawn(process.execPath, [path.join(__dirname, 'build.js'), 'build'], {
     stdio: 'inherit',
-    shell: true,
+    shell: false,
     env: process.env,
     cwd: projectRoot // 确保子进程工作目录是项目根目录
   })

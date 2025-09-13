@@ -101,7 +101,9 @@ try {
   if (configData && Array.isArray(configData.groups)) {
     try {
       fs.mkdirSync(path.dirname(jsonOut), { recursive: true })
-      fs.writeFileSync(jsonOut, JSON.stringify({ groups: configData.groups }, null, 2), 'utf-8')
+      // Write compact (minified) JSON to reduce file size. Do NOT produce a .gz file here.
+      const jsonString = JSON.stringify({ groups: configData.groups })
+      fs.writeFileSync(jsonOut, jsonString, 'utf-8')
       console.log(`ℹ️ Wrote runtime defaultEmojiGroups JSON to ${jsonOut}`)
     } catch (e) {
       console.warn('⚠️ Failed to write runtime defaultEmojiGroups JSON:', e)
@@ -132,10 +134,10 @@ const viteCommand =
 const publicDir = path.resolve(process.cwd(), 'public')
 const distDir = path.resolve(process.cwd(), 'dist')
 
-const child = spawn('npx', viteCommand.split(' '), {
+const child = spawn('pnpm', ['exec', ...viteCommand.split(' ')], {
   stdio: 'inherit',
   env: process.env,
-  shell: true
+  shell: false
 })
 
 child.on('exit', code => {
@@ -145,7 +147,7 @@ child.on('exit', code => {
       console.log('🔧 Post-processing userscript...')
       const postProcessChild = spawn('node', ['./scripts/post-process-userscript.js', buildType], {
         stdio: 'inherit',
-        shell: true
+        shell: false
       })
 
       postProcessChild.on('exit', postCode => {
@@ -161,7 +163,7 @@ child.on('exit', code => {
       console.log('🧹 清理空文件...')
       const cleanChild = spawn('node', ['./scripts/clean-empty-chunks.mjs'], {
         stdio: 'inherit',
-        shell: true
+        shell: false
       })
 
       cleanChild.on('exit', cleanCode => {

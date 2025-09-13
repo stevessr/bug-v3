@@ -29,62 +29,7 @@ export default defineConfig(({ mode }) => {
       __ENABLE_INDEXEDDB__: enableIndexedDB
     },
     plugins: [
-      // Serve /bilibili_emoji_index.json in dev and emit it as asset in build
-      (function bilibiliIndexPlugin() {
-        const srcPath = fileURLToPath(
-          new URL('./src/config/bilibili_emoji_index.json', import.meta.url)
-        )
-        let assetId: string | null = null
-        return {
-          name: 'bilibili-index-asset',
-          // no `apply` so plugin runs in both dev and build
-          configureServer(server) {
-            server.middlewares.use(async (req, res, next) => {
-              try {
-                if (!req.url) return next()
-                // Support query/hash variants
-                const u = req.url.split('?')[0].split('#')[0]
-                if (u === '/bilibili_emoji_index.json') {
-                  try {
-                    const content = await fs.promises.readFile(srcPath, 'utf-8')
-                    res.setHeader('content-type', 'application/json; charset=utf-8')
-                    res.statusCode = 200
-                    res.end(content)
-                    return
-                  } catch (e) {
-                    res.statusCode = 500
-                    res.end(JSON.stringify({ error: 'failed to read index' }))
-                    return
-                  }
-                }
-              } catch (e) {
-                // swallow
-              }
-              return next()
-            })
-          },
-          buildStart() {
-            try {
-              const content = fs.readFileSync(srcPath, 'utf-8')
-              assetId = this.emitFile({
-                type: 'asset',
-                fileName: 'bilibili_emoji_index.json',
-                source: content
-              })
-              this.warn('bilibili index scheduled to be emitted as bibilili_emoji_index.json')
-            } catch (e) {
-              this.warn('Failed to read bilibili index at ' + srcPath + ': ' + e)
-            }
-          },
-          generateBundle() {
-            if (assetId) {
-              const final = this.getFileName(assetId)
-              this.warn('bilibili index emitted as ' + final)
-            }
-          }
-        }
-      })(),
-      // default emoji groups are now loaded at runtime from public assets
+  // default emoji groups are now loaded at runtime from public assets
       vue(),
       // Small safe plugin: remove trailing `export { ... }` that Rollup may append
       // to the content chunk. We only strip the final export block to avoid
@@ -174,7 +119,7 @@ export default defineConfig(({ mode }) => {
 
             // Reverse-traverse importers: starting from `id`, walk up via importers to see
             // if content entry (or anything under src/content) imports it (transitively).
-            const isImportedByContent = target => {
+            const isImportedByContent = (target: string) => {
               try {
                 const start = normalize(target)
                 if (!start) return false

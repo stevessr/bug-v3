@@ -51,11 +51,21 @@ function runESLint(filePath) {
     // First try to auto-fix formatting issues
     // Disable `no-empty` for the built file (generated helpers may include empty blocks).
     const fixProcess = spawn(
-      'npx',
-      ['eslint', filePath, '--fix', '--no-ignore', '--rule', 'no-empty:0', '-c', configPath],
+      'pnpm',
+      [
+        'exec',
+        'eslint',
+        filePath,
+        '--fix',
+        '--no-ignore',
+        '--rule',
+        'no-empty:0',
+        '-c',
+        configPath
+      ],
       {
         stdio: 'pipe',
-        shell: true
+        shell: false
       }
     )
 
@@ -77,11 +87,11 @@ function runESLint(filePath) {
         // Now run ESLint again to check for remaining issues
         // Run ESLint check but disable `no-empty` so generated code doesn't fail validation.
         const checkProcess = spawn(
-          'npx',
-          ['eslint', filePath, '--no-ignore', '--rule', 'no-empty:0', '-c', configPath],
+          'pnpm',
+          ['exec', 'eslint', filePath, '--no-ignore', '--rule', 'no-empty:0', '-c', configPath],
           {
             stdio: 'pipe',
-            shell: true
+            shell: false
           }
         )
 
