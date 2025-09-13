@@ -42,21 +42,43 @@ export async function injectContentForTab(tabId: number, pageType: string) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.scripting) return { success: false, error: 'scripting unavailable' }
 
-  // 先注入实现文件，再注入 wrapper
+  // First inject shared runtime and polyfills (if present) so implementation
+  // scripts can rely on shared globals. Then inject site-specific files,
+  // and finally the bridge.
   const mapping: Record<string, string[]> = {
-    bilibili: ['js/bilibili.js', 'js/content/bilibili.js'],
-    pixiv: ['js/pixiv.js', 'js/content/pixiv.js'],
-    discourse: ['js/discourse.js', 'js/content/discourse.js'],
-    x: ['js/x.js', 'js/content/x.js'],
+    bilibili: ['js/bilibili-impl.js', 'js/content/bilibili.js'],
+    pixiv: ['js/pixiv-impl.js', 'js/content/pixiv.js'],
+    discourse: ['js/content/discourse.js'],
+    x: ['js/content/x.js'],
     generic: ['js/content/autodetect.js']
   }
 
   const files = mapping[pageType] || mapping.generic
 
+  const preloads: string[] = []
+  // modulepreload polyfill and shared runtime are useful for implementation files
+  // check presence by attempting to inject; if missing, executeScript will throw and we ignore
+  preloads.push('js/modulepreload-polyfill.js')
+  preloads.push('js/shared.js')
+
   try {
+    // inject preloads first (ignore errors if a file doesn't exist in extension bundle)
+    for (const p of preloads) {
+      try {
+        // executeScript will throw if file not present; swallow that and continue
+        // run in isolated world so implementation attaches to the same window
+        await chromeAPI.scripting.executeScript({ target: { tabId }, files: [p] })
+      } catch (e) {
+        // not fatal - some builds may not produce these files
+        console.debug('[scripting] preload injection failed (ignored):', p, e)
+      }
+    }
+
+    // inject implementation files
     for (const f of files) {
       await chromeAPI.scripting.executeScript({ target: { tabId }, files: [f] })
     }
+
     // always inject the bridge as well (bridge now built to js/content/bridge.js)
     await injectBridgeIntoTab(tabId)
     return { success: true, message: `Injected ${files.join(', ')}` }

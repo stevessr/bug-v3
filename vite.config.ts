@@ -50,6 +50,10 @@ export default defineConfig(({ mode }) => {
         input: {
           popup: fileURLToPath(new URL('popup.html', import.meta.url)),
           options: fileURLToPath(new URL('options.html', import.meta.url)),
+          // Implementation bundles for site integrations so they can be injected
+          // independently into page tabs (expose init functions on window).
+          'pixiv-impl': fileURLToPath(new URL('src/content/pixiv/index.ts', import.meta.url)),
+          'bilibili-impl': fileURLToPath(new URL('src/content/bilibili/bilibili.ts', import.meta.url)),
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
           // content entry now uses the autodetect loader which decides whether to initialize
@@ -72,7 +76,12 @@ export default defineConfig(({ mode }) => {
         output: {
           entryFileNames: chunkInfo => {
             // Emit content-related entries to js/content/<site>.js and remove 'content' suffix
-            const name = String(chunkInfo.name)
+            let name = String(chunkInfo.name)
+            // Sanitize Vue SFC virtual-module suffixes like
+            // _vue_vue_type_script_setup_true_lang and similar to keep filenames shorter.
+            name = name.replace(/_vue_vue_type_[^_]+(?:_[^_]+)*_lang/g, '_vuepart')
+            name = name.replace(/_vue_vue_type_style_[^_]+_lang/g, '_styles')
+
             if (name === 'content') return 'js/content/autodetect.js'
             if (name === 'content-bridge') return 'js/content/bridge.js'
             if (name.endsWith('-content')) {
@@ -81,25 +90,30 @@ export default defineConfig(({ mode }) => {
             }
             // Route the options entry to js/options
             if (name === 'options') return 'js/options/options.js'
-            return 'js/[name].js'
+            return `js/${name}.js`
           },
           chunkFileNames: chunkInfo => {
             // Default chunk name
-            const name = String(chunkInfo.name || '')
+            let name = String(chunkInfo.name || '')
+
+            // Sanitize Vue SFC virtual-module suffixes to shorten names
+            name = name.replace(/_vue_vue_type_[^_]+(?:_[^_]+)*_lang/g, '_vuepart')
+            name = name.replace(/_vue_vue_type_style_[^_]+_lang/g, '_styles')
 
             // If this chunk originates from the options entry (heuristic: name includes 'options' or module ids)
             // Put it under js/options to keep options-related code isolated.
             if (name.includes('options') || name.startsWith('options-')) {
-              return 'js/options/[name].js'
+              return `js/options/${name}.js`
             }
 
-            return 'js/[name].js'
+            return `js/${name}.js`
           },
           assetFileNames: 'assets/[name].[ext]',
           // Manual chunking: keep content-related behavior unchanged, but place
           // modules under `src/options` into their own chunks. This makes the
           // options page lazy-load split into multiple small JS files.
-          // We keep other behavior undefined to avoid cross-entry shared chunks.
+          // Avoid forcing third-party libs into a single shared chunk so that
+          // site-specific impls remain independent.
           manualChunks: (id, { getModuleInfo }) => {
             // Resolve the canonical content entry path
             const contentEntry = fileURLToPath(new URL('src/content/content.ts', import.meta.url))
@@ -116,7 +130,7 @@ export default defineConfig(({ mode }) => {
 
             // Reverse-traverse importers: starting from `id`, walk up via importers to see
             // if content entry (or anything under src/content) imports it (transitively).
-            const isImportedByContent = target => {
+            const isImportedByContent = (target: string | undefined) => {
               try {
                 const start = normalize(target)
                 if (!start) return false
@@ -147,6 +161,7 @@ export default defineConfig(({ mode }) => {
               if (!id) return undefined
               // normalize path separators
               const normalized = id.replace(/\\/g, '/').toLowerCase()
+
 
               // Keep content-related modules untouched
               if (normalized.includes('/src/content/')) return undefined
