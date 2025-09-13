@@ -208,6 +208,26 @@ child.on('exit', code => {
         if (cleanCode === 0) {
           // Vite produced the content.js chunk according to rollupOptions.manualChunks
           // and output file names; no separate bundling step is required.
+          // Ensure legacy public/ layout also contains generated js files so
+          // development workflows that load public/ can find injected scripts.
+          try {
+            const from = path.resolve(process.cwd(), 'dist', 'js')
+            const to = path.resolve(process.cwd(), 'public', 'js')
+            if (fs.existsSync(from)) {
+              try {
+                if (fs.existsSync(to)) {
+                  fs.rmSync(to, { recursive: true, force: true })
+                }
+                fs.cpSync(from, to, { recursive: true })
+                console.log(`✅ Synced ${from} -> ${to}`)
+              } catch (copyErr) {
+                console.warn('Failed to sync dist/js to public/js:', copyErr)
+              }
+            }
+          } catch (e) {
+            console.warn('Error while syncing build output to public:', e)
+          }
+
           console.log('✅ 构建完成！')
         } else {
           console.error('❌ 清理过程出错')

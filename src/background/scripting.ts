@@ -47,10 +47,12 @@ export async function injectContentForTab(tabId: number, pageType: string) {
 
   // 先注入实现文件，再注入 wrapper
   const mapping: Record<string, string[]> = {
-    bilibili: ['js/bilibili.js', 'js/content/bilibili.js'],
-    pixiv: ['js/pixiv.js', 'js/content/pixiv.js'],
-    discourse: ['js/discourse.js', 'js/content/discourse.js'],
-    x: ['js/x.js', 'js/content/x.js'],
+    // Prefer the built content paths under js/content first (Vite outputs there),
+    // but keep legacy root-level js/<site>.js as fallback for older builds.
+    bilibili: ['js/content/bilibili.js', 'js/bilibili.js'],
+    pixiv: ['js/content/pixiv.js', 'js/pixiv.js'],
+    discourse: ['js/content/discourse.js', 'js/discourse.js'],
+    x: ['js/content/x.js', 'js/x.js'],
     generic: ['js/content/autodetect.js']
   }
 
@@ -58,32 +60,60 @@ export async function injectContentForTab(tabId: number, pageType: string) {
 
   try {
     if (canUseScripting) {
+      const injected: string[] = []
       for (const f of files) {
-        await chromeAPI.scripting.executeScript({ target: { tabId }, files: [f] })
+        try {
+          await chromeAPI.scripting.executeScript({ target: { tabId }, files: [f] })
+          injected.push(f)
+        } catch (e) {
+          // Log and continue to try other candidate paths
+          console.warn('[scripting] Failed to inject file, trying next candidate', f, e)
+        }
       }
+
+      if (injected.length === 0) {
+        return { success: false, error: `Could not inject any of: ${files.join(', ')}` }
+      }
+
       // always inject the bridge as well (bridge now built to js/content/bridge.js)
-      await injectBridgeIntoTab(tabId)
-      return { success: true, message: `Injected ${files.join(', ')}` }
+      try {
+        await injectBridgeIntoTab(tabId)
+      } catch (e) {
+        // ignore bridge injection errors; still consider content injected
+        console.warn('[scripting] injectBridgeIntoTab failed after content injection', e)
+      }
+
+      return { success: true, message: `Injected ${injected.join(', ')}` }
     }
 
     // Fallback for older MV2-style APIs: try tabs.executeScript
     if (chromeAPI.tabs && typeof chromeAPI.tabs.executeScript === 'function') {
+      const injected: string[] = []
       for (const f of files) {
-        // tabs.executeScript expects code or file in different shapes; rely on file injection
-            await new Promise<void>((resolve, reject) => {
-          try {
-            chromeAPI.tabs.executeScript(tabId, { file: f }, (_: any) => {
-              const err = chromeAPI.runtime && chromeAPI.runtime.lastError
-              if (err) reject(err)
-              else resolve()
-            })
-          } catch (e) {
-            reject(e)
-          }
-        })
-      }
-      // Attempt to inject bridge via tabs.executeScript as well
         try {
+          await new Promise<void>((resolve, reject) => {
+            try {
+              chromeAPI.tabs.executeScript(tabId, { file: f }, (_: any) => {
+                const err = chromeAPI.runtime && chromeAPI.runtime.lastError
+                if (err) reject(err)
+                else resolve()
+              })
+            } catch (e) {
+              reject(e)
+            }
+          })
+          injected.push(f)
+        } catch (e) {
+          console.warn('[scripting] tabs.executeScript failed for file, trying next candidate', f, e)
+        }
+      }
+
+      if (injected.length === 0) {
+        return { success: false, error: `Could not inject any of: ${files.join(', ')}` }
+      }
+
+      // Attempt to inject bridge via tabs.executeScript as well (best-effort)
+      try {
         await new Promise<void>((resolve, reject) => {
           try {
             chromeAPI.tabs.executeScript(tabId, { file: 'js/content/bridge.js' }, (_: any) => {
@@ -95,11 +125,11 @@ export async function injectContentForTab(tabId: number, pageType: string) {
             reject(e)
           }
         })
-        return { success: true, message: `Injected (tabs) ${files.join(', ')}` }
       } catch (e) {
-        console.warn('[scripting] tabs.executeScript fallback failed', e)
-        return { success: false, error: String(e) }
+        console.warn('[scripting] tabs.executeScript bridge injection failed', e)
       }
+
+      return { success: true, message: `Injected (tabs) ${injected.join(', ')}` }
     }
 
     return { success: false, error: 'scripting and tabs.executeScript are unavailable' }
