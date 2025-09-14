@@ -71,6 +71,27 @@ export default defineConfig(({ mode }) => {
       Components({
         resolvers: [AntDesignVueResolver({ importStyle: 'less' })]
       })
+      ,
+      // Copy static HTML pages (tenor.html, waline.html) to the output dir
+      {
+        name: 'emit-static-html',
+        writeBundle(options, bundle) {
+          try {
+            const outDir = (options && options.dir) || 'dist'
+            const files = ['tenor.html', 'waline.html']
+            for (const f of files) {
+              const src = path.resolve(process.cwd(), f)
+              const dest = path.resolve(process.cwd(), outDir, path.basename(f))
+              if (fs.existsSync(src)) {
+                fs.copyFileSync(src, dest)
+              }
+            }
+          } catch (e) {
+            // don't fail the build for this non-critical copy
+            console.warn('[emit-static-html] copy failed', e)
+          }
+        }
+      }
     ],
     build: {
       // Enable generating sourcemaps when BUILD_SOURCEMAP is set to 'true'.
@@ -95,6 +116,9 @@ export default defineConfig(({ mode }) => {
         input: {
           popup: fileURLToPath(new URL('popup.html', import.meta.url)),
           options: fileURLToPath(new URL('options.html', import.meta.url)),
+          // Tenor/waline entries are the source TS files; HTML pages will be
+          // copied to `dist/` by the emit-static-html plugin so they can
+          // reference the emitted /js/*.js bundles.
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
