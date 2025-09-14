@@ -1,41 +1,5 @@
 // Main userscript entry point - adapted from content script
 
-// START: Theme handling
-function applyTheme() {
-  const theme = localStorage.getItem('theme') || 'system';
-  const root = document.documentElement;
-
-  function apply(theme: string) {
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else if (theme === 'light') {
-      root.classList.remove('dark');
-    } else {
-      // system
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    }
-  }
-
-  apply(theme);
-
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-    const currentTheme = localStorage.getItem('theme') || 'system';
-    if (currentTheme === 'system') {
-      if (event.matches) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    }
-  });
-}
-applyTheme();
-// END: Theme handling
-
 import { isImageUrl } from '../utils/isImageUrl'
 
 // Compile-time flag injected by vite config: when true the build is the remote variant
@@ -51,6 +15,31 @@ import {
   saveDataToLocalStorage,
   type UserscriptStorage
 } from './userscript-storage'
+
+import { uploader } from '@/content/utils'
+
+// Global state for userscript
+const userscriptState: UserscriptStorage = {
+  emojiGroups: [],
+  settings: {
+    imageScale: 30,
+    gridColumns: 4,
+    outputFormat: 'markdown',
+    forceMobileMode: false,
+    defaultGroup: 'nachoneko',
+    showSearchBar: true
+  }
+}
+
+// Initialize from localStorage
+async function initializeUserscriptData() {
+  const data = await loadDataFromLocalStorageAsync().catch((err: any) => {
+    console.warn('[Userscript] loadDataFromLocalStorageAsync failed, falling back to sync loader', err)
+    return loadDataFromLocalStorage()
+  })
+  userscriptState.emojiGroups = data.emojiGroups || []
+  userscriptState.settings = data.settings || userscriptState.settings
+}
 
 // Function to check if current page should have emoji injection
 function shouldInjectEmoji(): boolean {
