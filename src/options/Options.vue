@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount } from 'vue'
 
-import GridColumnsSelector from '../components/GridColumnsSelector.vue'
-import AboutSection from '../components/AboutSection.vue'
+import GridColumnsSelector from './components/GridColumnsSelector.vue'
+import AboutSection from './components/AboutSection.vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
 
 import HeaderControls from './components/HeaderControls.vue'
