@@ -3,6 +3,7 @@ import { initBilibili } from '../bilibili/bilibili'
 import { initX } from '../x/init'
 import { initPbs } from '../x/init-pbs'
 import { initXhs } from '../xhs/init'
+import { initReddit } from '../reddit/reddit'
 import { requestSettingFromBackground } from './requestSetting'
 
 // logger removed: replaced by direct console usage in migration
@@ -22,6 +23,12 @@ export function Uninject() {
     initBilibili()
   } catch (e) {
     console.error('[OneClickAdd] initBilibili failed', e)
+  }
+
+  try {
+    initReddit()
+  } catch (e) {
+    console.error('[OneClickAdd] initReddit failed', e)
   }
 
   try {
