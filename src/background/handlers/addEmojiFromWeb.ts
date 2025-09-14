@@ -1,7 +1,7 @@
 import { newStorageHelpers } from '../../utils/newStorage'
 
-import { getChromeAPI } from '../utils'
-import { downloadAndUploadDirect } from '../downloadAndSend'
+import { getChromeAPI } from '../utils/main.ts'
+import { downloadAndUploadDirect } from './downloadAndSend'
 
 export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
   // reference the callback to avoid unused-var lint in some configurations

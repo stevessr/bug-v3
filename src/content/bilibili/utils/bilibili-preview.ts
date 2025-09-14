@@ -2,9 +2,9 @@
  * Bilibili PhotoSwipe 预览器相关工具函数
  */
 
-import { createFloatingButton, createPhotoSwipeButton } from '../components/bilibili-buttons'
+import { createFloatingButton, createPhotoSwipeButton } from './bilibili-buttons'
 
-import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-utils'
+import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
 
 // 防抖和状态管理
 let isProcessingPhotoSwipe = false

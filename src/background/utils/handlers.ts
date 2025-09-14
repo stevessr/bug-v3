@@ -1,5 +1,5 @@
-import { getChromeAPI } from './utils'
-import { handleAddEmojiFromWeb } from './handlers/addEmojiFromWeb'
+import { getChromeAPI } from './main.ts'
+import { handleAddEmojiFromWeb } from '../handlers/addEmojiFromWeb.ts'
 import {
   handleAddToFavorites,
   handleGetEmojiData,
@@ -9,7 +9,7 @@ import {
   setupStorageChangeListener,
   setupContextMenu,
   setupPeriodicCleanup
-} from './handlersImpl'
+} from '../handlers/main.ts'
 
 // Re-export setup functions so background entry can import them from ./handlers
 export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup }
@@ -61,15 +61,8 @@ export function setupMessageListener() {
             handleAddEmojiFromWeb(message.emojiData, sendResponse)
             return true
 
-          // 'downloadForUser' handler removed
-
-          // uploadAndAddEmoji and downloadAndUploadEmoji handlers were removed
-
-          // 'saveLastDiscourse' handler removed
-
           default:
             console.log('Unknown action:', message.action)
-            // mark message.action as referenced for linters
             void message.action
             sendResponse({ success: false, error: 'Unknown action' })
             return false
@@ -82,9 +75,3 @@ export function setupMessageListener() {
     })
   }
 }
-
-// ...existing code...
-
-// handleAddEmojiFromWeb moved to ./handlers/addEmojiFromWeb.ts
-
-// implementations moved to handlersImpl

@@ -1,4 +1,4 @@
-import { createEmojiPicker } from '../discourse/picker'
+import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
 
 // logger removed: replaced by direct console usage in migration

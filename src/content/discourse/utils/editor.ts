@@ -1,6 +1,6 @@
 // editor.ts - 负责把选中的表情插入到编辑器
 
-import { cachedState } from '../data/state'
+import { cachedState } from '../../data/state'
 
 export function insertEmojiIntoEditor(emoji: unknown) {
   // avoid noisy console in lint; keep only minimal info in debug environments

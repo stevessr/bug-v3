@@ -2,17 +2,17 @@
  * Bilibili DOM注入和操作相关功能
  */
 
-import { extractImageUrlFromPicture, extractNameFromUrl } from '../utils/bilibili-utils'
+import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
 import {
   addButtonToPhotoSwipeDebounced,
   observePhotoSwipeContainer,
   resetPhotoSwipeState
-} from '../utils/bilibili-preview'
+} from './bilibili-preview'
 import {
   createFloatingButton,
   createControlButton,
   createBatchParseButton
-} from '../components/bilibili-buttons'
+} from './bilibili-buttons'
 
 declare const chrome: any
 

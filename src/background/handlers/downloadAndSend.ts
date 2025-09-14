@@ -1,10 +1,3 @@
-// NOTE: handleDownloadAndSendToDiscourse removed — functionality to download and forward
-// image data to Discourse tabs has been deleted to reduce unused code. If you need this
-// behavior again, restore from git history or implement a new handler.
-
-// NOTE: handleDownloadForUser removed — direct download helper has been deleted.
-// If needed in future, restore from git history or implement a new download helper.
-
 /**
  * Download a remote image (with Referer) and upload it directly to a Discourse instance.
  * Returns parsed upload response or throws on error.

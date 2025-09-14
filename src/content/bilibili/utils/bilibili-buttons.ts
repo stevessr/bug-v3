@@ -3,8 +3,8 @@
  */
 
 
-import type { AddEmojiButtonData } from '../utils/bilibili-utils'
-import { extractImageUrlFromPicture, extractNameFromUrl } from '../utils/bilibili-utils'
+import type { AddEmojiButtonData } from './bilibili-helper'
+import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
 // Import utility functions dynamically to avoid circular dependencies
 
 declare const chrome: any

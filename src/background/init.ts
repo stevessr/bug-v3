@@ -1,6 +1,6 @@
 
 
-import { getChromeAPI } from './utils'
+import { getChromeAPI } from './utils/main.ts'
 
 import { loadDefaultEmojiGroups } from '@/types/defaultEmojiGroups.loader'
 
