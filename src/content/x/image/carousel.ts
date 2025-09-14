@@ -1,4 +1,4 @@
-import { tryInjectTwitterMedia } from './twitterMediaInject'
+import { tryInjectTwitterMedia } from './image/twitterMediaInject'
 import { normalizeUrl, extractImageUrl, extractNameFromUrl, setupButtonClick, AddEmojiButtonData } from '../utils'
 
 declare const chrome: any

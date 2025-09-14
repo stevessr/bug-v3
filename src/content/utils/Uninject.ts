@@ -1,6 +1,6 @@
 import { initPixiv } from '../pixiv/pixiv'
 import { initBilibili } from '../bilibili/bilibili'
-import { initX } from '../x/main'
+import { initX } from '../x/init'
 
 // logger removed: replaced by direct console usage in migration
 
