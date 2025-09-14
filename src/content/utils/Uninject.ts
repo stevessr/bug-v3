@@ -2,6 +2,7 @@ import { initPixiv } from '../pixiv/detector'
 import { initBilibili } from '../bilibili/bilibili'
 import { initX } from '../x/init'
 import { initPbs } from '../x/init-pbs'
+import { initXhs } from '../xhs/init'
 import { requestSettingFromBackground } from './requestSetting'
 
 // logger removed: replaced by direct console usage in migration
@@ -27,6 +28,12 @@ export function Uninject() {
     initXIfEnabled()
   } catch (e) {
     console.error('[OneClickAdd] initX failed', e)
+  }
+
+  try {
+    initXhs()
+  } catch (xhsErr) {
+    console.error('[XOneClick] initXhs failed', xhsErr)
   }
 }
 
