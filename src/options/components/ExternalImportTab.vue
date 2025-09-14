@@ -148,16 +148,16 @@ const importFromMarkdown = async () => {
 
 <template>
   <div class="space-y-8">
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">外部表情导入</h3>
-        <p class="mt-1 text-sm text-gray-600">从外部来源导入表情包或配置文件</p>
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">外部表情导入</h3>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">从外部来源导入表情包或配置文件</p>
       </div>
       <div class="p-6 space-y-6">
         <!-- Import Configuration Section -->
-        <div class="border rounded-lg p-4">
-          <h4 class="text-md font-medium text-gray-900 mb-3">导入配置文件</h4>
-          <p class="text-sm text-gray-600 mb-4">
+        <div class="border dark:border-gray-600 rounded-lg p-4">
+          <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">导入配置文件</h4>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
             导入之前导出的完整配置文件，包含所有分组、表情和设置
           </p>
           <div class="flex items-center space-x-3">
@@ -186,9 +186,9 @@ const importFromMarkdown = async () => {
         </div>
 
         <!-- Import Emojis Section -->
-        <div class="border rounded-lg p-4">
-          <h4 class="text-md font-medium text-gray-900 mb-3">导入表情包</h4>
-          <p class="text-sm text-gray-600 mb-4">导入单个表情包文件或包含多个表情的JSON文件</p>
+        <div class="border dark:border-gray-600 rounded-lg p-4">
+          <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">导入表情包</h4>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">导入单个表情包文件或包含多个表情的JSON文件</p>
           <div class="space-y-4">
             <div class="flex items-center space-x-3">
               <button
@@ -240,16 +240,16 @@ const importFromMarkdown = async () => {
         </div>
 
         <!-- Import from Text Section -->
-        <div class="border rounded-lg p-4">
-          <h4 class="text-md font-medium text-gray-900 mb-3">从文本导入</h4>
-          <p class="text-sm text-gray-600 mb-4">
+        <div class="border dark:border-gray-600 rounded-lg p-4">
+          <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">从文本导入</h4>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
             从Markdown格式文本导入表情，支持 ![名称](URL) 格式
           </p>
           <div class="space-y-4">
             <textarea
               v-model="markdownText"
               placeholder="粘贴包含 ![表情名](表情URL) 格式的文本..."
-              class="w-full h-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              class="w-full h-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             ></textarea>
             <div class="flex items-center space-x-3">
               <button

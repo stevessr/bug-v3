@@ -30,11 +30,11 @@ const confirmUrl = () => {
 <template>
   <div v-if="visible" class="fixed inset-0 flex items-center justify-center" style="z-index: 1000">
     <div class="bg-black/40 absolute inset-0" style="z-index: 1000" @click="close"></div>
-    <div class="bg-white p-4 rounded shadow-lg w-80" style="z-index: 1010; pointer-events: auto">
-      <h3 class="font-medium mb-2">去重方式</h3>
-      <p class="text-sm text-gray-600 mb-4">请选择按名称还是按 URL 去重</p>
+    <div class="bg-white dark:bg-gray-800 p-4 rounded shadow-lg w-80" style="z-index: 1010; pointer-events: auto">
+      <h3 class="font-medium mb-2 dark:text-gray-100">去重方式</h3>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">请选择按名称还是按 URL 去重</p>
       <div class="flex gap-2 justify-end">
-        <button class="px-3 py-1 border rounded" @click.prevent="close">取消</button>
+        <button class="px-3 py-1 border dark:border-gray-600 rounded dark:text-gray-200 dark:hover:bg-gray-700" @click.prevent="close">取消</button>
 
         <a-popconfirm
           placement="top"
