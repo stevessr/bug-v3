@@ -1,5 +1,6 @@
 import { getChromeAPI } from './main.ts'
 import { handleAddEmojiFromWeb } from '../handlers/addEmojiFromWeb.ts'
+import { handleUploadAndAddEmoji } from '../handlers/uploadAndAddEmoji.ts'
 import {
   handleAddToFavorites,
   handleGetEmojiData,
@@ -59,6 +60,10 @@ export function setupMessageListener() {
 
           case 'addEmojiFromWeb':
             handleAddEmojiFromWeb(message.emojiData, sendResponse)
+            return true
+
+          case 'uploadAndAddEmoji':
+            handleUploadAndAddEmoji(message, sendResponse)
             return true
 
           default:

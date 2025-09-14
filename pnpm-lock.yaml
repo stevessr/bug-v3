@@ -17,6 +17,9 @@ importers:
       eslint:
         specifier: ^9.35.0
         version: 9.35.0(jiti@1.21.7)
+      ignore:
+        specifier: ^7.0.5
+        version: 7.0.5
       pinia:
         specifier: ^2.3.1
         version: 2.3.1(typescript@5.9.2)(vue@3.5.21(typescript@5.9.2))
@@ -106,7 +109,7 @@ importers:
         specifier: ^0.26.0
         version: 0.26.0(@babel/parser@7.28.4)(rollup@4.47.1)(vue@3.5.21(typescript@5.9.2))
       vite:
-        specifier: npm:rolldown-vite@^7.1.9
+        specifier: npm:rolldown-vite@latest
         version: rolldown-vite@7.1.9(@types/node@24.3.3)(esbuild@0.25.9)(jiti@1.21.7)(less@4.4.1)(terser@5.44.0)(yaml@2.8.1)
       vue-eslint-parser:
         specifier: ^10.2.0

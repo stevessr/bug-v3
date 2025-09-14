@@ -11,6 +11,7 @@ export interface Emoji {
   packet: number
   name: string
   url: string
+  originUrl?: string // 原始来源链接（例如 Pixiv 原图 URL）
   displayUrl?: string // Optional display URL, different from output URL
   width?: number
   height?: number

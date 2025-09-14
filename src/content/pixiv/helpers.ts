@@ -60,7 +60,7 @@ export async function tryGetImageViaCanvas(
   })
 }
 
-export async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: string) {
+export async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: string, originUrl?: string) {
   try {
     const chromeAPI = (window as any).chrome
 
@@ -94,7 +94,8 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
               arrayData,
               filename,
               mimeType: blob.type,
-              name: emojiName
+              name: emojiName,
+              originUrl: originUrl
             }
           },
           (r: any) => resolve(r)
@@ -142,7 +143,7 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
       const canvasResult = await tryGetImageViaCanvas(data.url)
       if (canvasResult.success) {
         console.log('[PixivAddEmoji] Canvas download successful, sending to background')
-        return await sendEmojiToBackground(canvasResult.blob, baseName, filename)
+        return await sendEmojiToBackground(canvasResult.blob, baseName, filename, data.url)
       }
     } catch (e) {
       console.warn('[PixivAddEmoji] Canvas method failed:', e)
@@ -161,8 +162,8 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
 
       if (response.ok) {
         const blob = await response.blob()
-        console.log('[PixivAddEmoji] Direct fetch successful, sending to background')
-        return await sendEmojiToBackground(blob, baseName, filename)
+  console.log('[PixivAddEmoji] Direct fetch successful, sending to background')
+  return await sendEmojiToBackground(blob, baseName, filename, data.url)
       }
     } catch (e) {
       console.warn('[PixivAddEmoji] Direct fetch failed:', e)

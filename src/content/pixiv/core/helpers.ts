@@ -3,6 +3,7 @@ import type { AddEmojiButtonData } from '../types'
 // Duplicate minimal helpers here to avoid circular imports when used from UI
 export function extractNameFromUrl(url: string): string {
   try {
+    console.debug('[pixiv][helpers] extractNameFromUrl input', url)
     const urlObj = new URL(url)
     const pathname = urlObj.pathname
     const filename = pathname.split('/').pop() || ''
@@ -14,6 +15,7 @@ export function extractNameFromUrl(url: string): string {
     }
     return decoded || '表情'
   } catch {
+    console.warn('[pixiv][helpers] extractNameFromUrl failed, returning fallback "表情"', url)
     return '表情'
   }
 }
@@ -22,6 +24,7 @@ export async function tryGetImageViaCanvas(
   url: string
 ): Promise<{ success: true; blob: Blob } | { success: false; error: any }> {
   return new Promise(resolve => {
+    console.debug('[pixiv][helpers] tryGetImageViaCanvas start', url)
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = async () => {
@@ -35,8 +38,13 @@ export async function tryGetImageViaCanvas(
 
         try {
           canvas.toBlob(b => {
-            if (b) resolve({ success: true, blob: b })
-            else resolve({ success: false, error: 'no-blob' })
+            if (b) {
+              console.debug('[pixiv][helpers] tryGetImageViaCanvas produced blob', b)
+              resolve({ success: true, blob: b })
+            } else {
+              console.warn('[pixiv][helpers] tryGetImageViaCanvas no blob produced')
+              resolve({ success: false, error: 'no-blob' })
+            }
           })
         } catch (e) {
           try {
@@ -46,10 +54,12 @@ export async function tryGetImageViaCanvas(
               .then(b => resolve({ success: true, blob: b }))
               .catch(err => resolve({ success: false, error: err }))
           } catch (err2) {
+            console.warn('[pixiv][helpers] tryGetImageViaCanvas toDataURL fallback failed', err2)
             resolve({ success: false, error: err2 })
           }
         }
       } catch (err) {
+        console.warn('[pixiv][helpers] tryGetImageViaCanvas drawing/processing failed', err)
         resolve({ success: false, error: err })
       }
     }
@@ -58,11 +68,13 @@ export async function tryGetImageViaCanvas(
   })
 }
 
-export async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: string) {
+export async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: string, originUrl?: string) {
   try {
+    console.debug('[pixiv][helpers] sendEmojiToBackground start', { emojiName, filename, size: blob.size, type: blob.type })
     const chromeAPI = (window as any).chrome
 
     if (!chromeAPI || !chromeAPI.runtime || !chromeAPI.runtime.sendMessage) {
+      console.error('[pixiv][helpers] Chrome extension API not available')
       throw new Error('Chrome extension API not available')
     }
 
@@ -79,16 +91,19 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
               arrayData,
               filename,
               mimeType: blob.type,
-              name: emojiName
+              name: emojiName,
+              originUrl: originUrl
             }
           },
           (r: any) => resolve(r)
         )
       } catch (e) {
+        console.error('[pixiv][helpers] sendEmojiToBackground sendMessage failed', e)
         resolve({ success: false, error: 'Failed to send message to background' })
       }
     })
 
+    console.debug('[pixiv][helpers] sendEmojiToBackground background response', bgResp)
     if (bgResp && bgResp.success) {
       return {
         success: true,
@@ -98,6 +113,7 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
         message: '表情已成功添加到未分组'
       }
     } else {
+      console.warn('[pixiv][helpers] sendEmojiToBackground background indicated failure', bgResp)
       return {
         success: false,
         error: '后台处理失败',
@@ -105,6 +121,7 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
       }
     }
   } catch (error) {
+    console.error('[pixiv][helpers] sendEmojiToBackground exception', error)
     return {
       success: false,
       error: '发送数据到后台失败',
@@ -114,20 +131,25 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
 }
 
 export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
+  console.debug('[pixiv][helpers] performPixivAddEmojiFlow start', data)
   try {
     const baseName = data.name && data.name.length > 0 ? data.name : extractNameFromUrl(data.url)
     const filename = baseName.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || 'image'
 
     try {
+      console.debug('[pixiv][helpers] attempting tryGetImageViaCanvas', data.url)
       const canvasResult = await tryGetImageViaCanvas(data.url)
+      console.debug('[pixiv][helpers] tryGetImageViaCanvas result', canvasResult)
       if (canvasResult.success) {
-        return await sendEmojiToBackground(canvasResult.blob, baseName, filename)
+        return await sendEmojiToBackground(canvasResult.blob, baseName, filename, data.url)
       }
     } catch (e) {
+      console.warn('[pixiv][helpers] tryGetImageViaCanvas threw', e)
       // fallthrough
     }
 
     try {
+      console.debug('[pixiv][helpers] attempting fetch of image URL', data.url)
       const response = await fetch(data.url, {
         method: 'GET',
         headers: {
@@ -137,15 +159,19 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
         credentials: 'omit'
       })
 
+      console.debug('[pixiv][helpers] fetch response', { ok: response.ok, status: response.status })
       if (response.ok) {
         const blob = await response.blob()
-        return await sendEmojiToBackground(blob, baseName, filename)
+        console.debug('[pixiv][helpers] fetched blob size/type', { size: blob.size, type: blob.type })
+        return await sendEmojiToBackground(blob, baseName, filename, data.url)
       }
     } catch (e) {
+      console.warn('[pixiv][helpers] fetch failed', e)
       // fallthrough
     }
 
     try {
+      console.debug('[pixiv][helpers] opening image URL in new tab as fallback', data.url)
       window.open(data.url, '_blank')
       return {
         success: true,
@@ -153,9 +179,11 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
         message: '已在新标签页打开图片，请在图片页面重试添加表情'
       }
     } catch (e) {
+      console.error('[pixiv][helpers] failed to open image URL', e)
       return { success: false, error: '无法下载图片或打开图片页面', details: e }
     }
   } catch (error) {
+    console.error('[pixiv][helpers] performPixivAddEmojiFlow fatal error', error)
     return { success: false, error: '添加表情失败', details: error }
   }
 }
