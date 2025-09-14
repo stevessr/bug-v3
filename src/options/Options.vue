@@ -97,7 +97,6 @@ const {
   syncToChrome,
   forceLocalToExtension,
   showSuccess,
-  flushBuffer,
   handleImageError,
   openEditEmoji,
   showEditEmojiModal,

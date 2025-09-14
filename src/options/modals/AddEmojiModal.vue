@@ -6,7 +6,6 @@ import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-des
 import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
-import { flushBuffer } from '../../utils/indexedDB'
 
 const props = defineProps<{ show: boolean; groups: unknown[]; defaultGroupId?: string }>()
 
@@ -328,7 +327,7 @@ const add = () => {
           emojiStore.addEmojiWithoutSave(groupId.value, emojiData)
           emits('added', { groupId: groupId.value, name: emojiData.name })
         })
-        void flushBuffer(true).then(() => {})
+    // IndexedDB removed: flushBuffer not needed
       } finally {
         void emojiStore.endBatch()
       }
@@ -347,7 +346,7 @@ const add = () => {
     ...(displayUrl.value.trim() && { displayUrl: displayUrl.value.trim() })
   }
   emojiStore.addEmoji(groupId.value, emojiData)
-  void flushBuffer(true).then(() => {})
+  // IndexedDB removed: flushBuffer not needed
   emits('added', { groupId: groupId.value, name: emojiData.name })
   emits('update:show', false)
   name.value = ''
@@ -369,7 +368,7 @@ const importParsed = () => {
       emojiStore.addEmojiWithoutSave(groupId.value, emojiData)
       emits('added', { groupId: groupId.value, name: emojiData.name })
     })
-    void flushBuffer(true).then(() => {})
+  // IndexedDB removed: flushBuffer not needed
   } finally {
     void emojiStore.endBatch()
   }

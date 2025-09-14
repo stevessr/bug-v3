@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
-import { flushBuffer } from '../../utils/indexedDB'
 import { isImageUrl, normalizeImageUrl } from '../../utils/isImageUrl'
 
 const { show } = defineProps<{ show: boolean }>()
@@ -41,8 +40,7 @@ const selectColor = (color: string) => {
 const create = () => {
   if (!name.value.trim()) return
   emojiStore.createGroup(name.value.trim(), icon.value || '📁')
-  // fire-and-forget flush; intentionally not awaited
-  void flushBuffer(true)
+  // IndexedDB removed: flushBuffer not needed
   name.value = ''
   icon.value = '📁'
   selectedColor.value = '#3B82F6'

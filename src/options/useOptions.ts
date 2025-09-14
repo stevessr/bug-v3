@@ -1,7 +1,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
-import { flushBuffer } from '../utils/indexedDB'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import type { EmojiGroup, Emoji } from '../types/emoji'
 import { isImageUrl } from '../utils/isImageUrl'
@@ -164,7 +163,7 @@ export default function useOptions() {
     }
     if (draggedGroup.value && draggedGroup.value.id !== targetGroup.id) {
       await emojiStore.reorderGroups(draggedGroup.value.id, targetGroup.id)
-      await flushBuffer(true)
+      // IndexedDB removed: flushBuffer not needed
       showSuccess('分组顺序已更新')
     }
     draggedGroup.value = null
@@ -188,7 +187,7 @@ export default function useOptions() {
         targetGroupId,
         targetIndex
       )
-      void flushBuffer(true).then(() => {})
+      // IndexedDB removed: flushBuffer not needed
       showSuccess('表情已移动')
     }
     resetEmojiDrag()
@@ -196,14 +195,8 @@ export default function useOptions() {
 
   const removeEmojiFromGroup = (groupId: string, index: number) => {
     emojiStore.removeEmojiFromGroup(groupId, index)
-    void flushBuffer(true).then(() => {})
+    // IndexedDB removed: flushBuffer not needed
     showSuccess('表情已删除')
-  }
-
-  const resetEmojiDrag = () => {
-    draggedEmoji.value = null
-    draggedEmojiGroupId.value = ''
-    draggedEmojiIndex.value = -1
   }
 
   const updateImageScale = (value: number) => {
@@ -282,8 +275,7 @@ export default function useOptions() {
         showSuccess('表情已更新')
       }
 
-      await flushBuffer(true)
-      // edit operation flushed
+      // IndexedDB removed: flushBuffer not needed
     } catch {
       // error handled by UI
       showError('表情更新失败')
@@ -332,7 +324,7 @@ export default function useOptions() {
     confirmGenericMessage.value = '确定要删除这个表情吗？此操作不可撤销。'
     confirmGenericAction = () => {
       emojiStore.deleteEmoji(emojiId)
-      void flushBuffer(true).then(() => {})
+      // IndexedDB removed: flushBuffer not needed
       showSuccess('表情删除成功')
     }
     showConfirmGenericModal.value = true
@@ -617,8 +609,6 @@ export default function useOptions() {
     showError,
     // other
     handleImageError,
-    // expose low-level flushBuffer for template handlers that need to force flush
-    flushBuffer,
     // generic confirm modal
     showConfirmGenericModal,
     confirmGenericTitle,
