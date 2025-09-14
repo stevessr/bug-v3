@@ -49,7 +49,11 @@ export function Uninject() {
     ;(async () => {
       try {
         const settings = await requestSettingsFromBackground()
-        const enabled = !!(settings && settings.enableXcomExtraSelectors)
+        // If settings cannot be read (null), default to enabling X injection so
+        // we still attempt to initialize on x.com. If settings are present,
+        // respect the enableXcomExtraSelectors flag.
+        const enabled = settings == null ? true : !!settings.enableXcomExtraSelectors
+        console.log('[XOneClick] init check - settings:', settings, 'enabled:', enabled)
         if (enabled) {
           initX()
         } else {
