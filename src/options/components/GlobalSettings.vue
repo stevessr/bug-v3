@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { ref, watch, isRef, type Ref } from 'vue'
 import { DownOutlined } from '@ant-design/icons-vue'
+import ThemeColorPicker from './ThemeColorPicker.vue'
 
 import type { AppSettings } from '../../types/emoji'
 
@@ -15,9 +16,28 @@ const emit = defineEmits([
   'update:forceMobileMode',
   'update:enableLinuxDoInjection',
   'update:enableXcomExtraSelectors',
-  'update:theme'
+  'update:theme',
+  'update:customPrimaryColor',
+  'update:customColorScheme'
 ])
 
+const getCustomPrimaryColor = () => {
+  try {
+    if (isRef(settings)) return (settings.value && settings.value.customPrimaryColor) || '#1890ff'
+    return (settings && (settings as AppSettings).customPrimaryColor) || '#1890ff'
+  } catch {
+    return '#1890ff'
+  }
+}
+
+const getCustomColorScheme = () => {
+  try {
+    if (isRef(settings)) return (settings.value && settings.value.customColorScheme) || 'default'
+    return (settings && (settings as AppSettings).customColorScheme) || 'default'
+  } catch {
+    return 'default'
+  }
+}
 // support both ref(settings) and plain settings object
 const getOutputFormat = () => {
   try {
@@ -51,6 +71,23 @@ watch(
   () => getTheme(),
   val => {
     localTheme.value = val || 'system'
+  }
+)
+
+// local reactive copies for custom theme colors
+const localCustomPrimaryColor = ref<string>(getCustomPrimaryColor())
+watch(
+  () => getCustomPrimaryColor(),
+  val => {
+    localCustomPrimaryColor.value = val || '#1890ff'
+  }
+)
+
+const localCustomColorScheme = ref<string>(getCustomColorScheme())
+watch(
+  () => getCustomColorScheme(),
+  val => {
+    localCustomColorScheme.value = val || 'default'
   }
 )
 
@@ -89,6 +126,17 @@ const handleThemeSelectInfo = (info: { key: string | number }) => {
   handleThemeSelect(String(info.key))
 }
 
+// Custom color handlers
+const handleCustomPrimaryColorUpdate = (color: string) => {
+  localCustomPrimaryColor.value = color
+  emit('update:customPrimaryColor', color)
+}
+
+const handleCustomColorSchemeUpdate = (scheme: string) => {
+  localCustomColorScheme.value = scheme
+  emit('update:customColorScheme', scheme)
+}
+
 // Use Ant Design slider's afterChange to update settings when drag finishes.
 const handleImageScaleChange = (value: number | number[]) => {
   const num = Array.isArray(value) ? value[0] : value
@@ -125,8 +173,8 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900">主题</label>
-          <p class="text-sm text-gray-500">选择界面主题</p>
+          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">主题</label>
+          <p class="text-sm text-gray-500 dark:text-gray-400">选择界面主题</p>
         </div>
         <a-dropdown>
           <template #overlay>
@@ -149,10 +197,27 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
         </a-dropdown>
       </div>
 
+      <div class="flex flex-col space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <label class="text-sm font-medium text-gray-900 dark:text-gray-100">主题颜色</label>
+            <p class="text-sm text-gray-500 dark:text-gray-400">自定义界面主色调</p>
+          </div>
+          <div class="w-2/3">
+            <ThemeColorPicker
+              v-model="localCustomPrimaryColor"
+              :colorScheme="localCustomColorScheme"
+              @update:modelValue="handleCustomPrimaryColorUpdate"
+              @update:colorScheme="handleCustomColorSchemeUpdate"
+            />
+          </div>
+        </div>
+      </div>
+
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900">默认图片缩放</label>
-          <p class="text-sm text-gray-500">控制插入表情的默认尺寸</p>
+          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">默认图片缩放</label>
+          <p class="text-sm text-gray-500 dark:text-gray-400">控制插入表情的默认尺寸</p>
         </div>
         <div class="flex items-center gap-3">
           <ASlider

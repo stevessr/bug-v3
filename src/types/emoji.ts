@@ -36,6 +36,9 @@ export interface AppSettings {
   // Optional API key fields for third-party services
   tenorApiKey?: string
   theme?: 'system' | 'light' | 'dark'
+  // Custom theme colors
+  customPrimaryColor?: string // 主题主色
+  customColorScheme?: 'default' | 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'custom'
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -118,7 +121,9 @@ const defaultSettings: AppSettings = {
   outputFormat: 'markdown', // 默认使用markdown格式
   forceMobileMode: false, // 默认不强制移动模式
   enableLinuxDoInjection: true, // 默认启用linux.do注入
-  enableXcomExtraSelectors: false // 默认不启用X.com额外选择器
+  enableXcomExtraSelectors: false, // 默认不启用X.com额外选择器
+  customColorScheme: 'default', // 默认配色方案
+  customPrimaryColor: '#1890ff' // 默认主色（Ant Design 蓝色）
 }
 export { defaultSettings }
 

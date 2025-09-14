@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue'
 import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
+import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
 
 import GridColumnsSelector from './components/GridColumnsSelector.vue'
 import AboutSection from './components/AboutSection.vue'
@@ -26,6 +27,28 @@ import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
 
 const options = useOptions()
+
+// 主题相关状态
+const currentThemeMode = ref<'light' | 'dark'>(getCurrentThemeMode())
+
+// 响应式的 Ant Design Vue 主题配置
+const antdThemeConfig = computed(() => {
+  const primaryColor = options.emojiStore.settings.customPrimaryColor || '#1890ff'
+  return generateAntdTheme(currentThemeMode.value, primaryColor)
+})
+
+// 监听主题变化事件
+const handleThemeChange = (event: CustomEvent) => {
+  currentThemeMode.value = event.detail.mode
+}
+
+// 监听自定义主色变化
+watch(
+  () => options.emojiStore.settings.customPrimaryColor,
+  () => {
+    // 主色变化时会自动通过 computed 更新主题
+  }
+)
 
 // pending resolver for requestConfirmation -> modal bridge
 
@@ -77,6 +100,9 @@ const {
   updateForceMobileMode,
   updateEnableLinuxDoInjection,
   updateEnableXcomExtraSelectors,
+  updateTheme,
+  updateCustomPrimaryColor,
+  updateCustomColorScheme,
   handleDragStart,
   handleDrop,
   handleEmojiDragStart,
@@ -143,12 +169,21 @@ onMounted(() => {
       showConfirmGenericModal.value = true
     })
   })
+
+  // 监听主题变化事件
+  window.addEventListener('theme-changed', handleThemeChange as EventListener)
+  
+  // 初始化主题模式
+  currentThemeMode.value = getCurrentThemeMode()
 })
 
 onBeforeUnmount(() => {
   // clear any pending resolver and registered handler
   pendingConfirmResolver = null
   clearConfirmHandler()
+  
+  // 移除主题变化监听器
+  window.removeEventListener('theme-changed', handleThemeChange as EventListener)
 })
 
 // modal-level handlers: resolve pending promise if present; otherwise delegate to composable actions
@@ -197,21 +232,15 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
 </script>
 
 <template>
-  <AConfigProvider
-    :theme="{
-      token: {
-        
-      },
-    }"
-  >
-    <div class="min-h-screen bg-gray-50">
+  <AConfigProvider :theme="antdThemeConfig">
+    <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b">
+    <header class="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-6">
           <div>
-            <h1 class="text-2xl font-bold text-gray-900">表情管理</h1>
-            <p class="text-sm text-gray-600">管理表情包分组、自定义表情和扩展设置</p>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">表情管理</h1>
+            <p class="text-sm text-gray-600 dark:text-gray-400">管理表情包分组、自定义表情和扩展设置</p>
           </div>
           <HeaderControls
             @openImport="showImportModal = true"
@@ -226,7 +255,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
     </header>
 
     <!-- Navigation Tabs -->
-    <nav class="bg-white border-b border-gray-200">
+    <nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex space-x-8">
           <button
@@ -236,8 +265,8 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
             class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
             :class="[
               activeTab === tab.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
             ]"
           >
             {{ tab.label }}
@@ -259,6 +288,8 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
           @update:enableLinuxDoInjection="updateEnableLinuxDoInjection"
           @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
           @update:theme="updateTheme"
+          @update:customPrimaryColor="updateCustomPrimaryColor"
+          @update:customColorScheme="updateCustomColorScheme"
         >
           <template #grid-selector>
             <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
