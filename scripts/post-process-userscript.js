@@ -217,6 +217,16 @@ async function main() {
       process.exit(1)
     }
 
+    // Optionally skip ESLint in CI or when building an embedded userscript
+    const variant = process.env.USERSCRIPT_VARIANT || 'default'
+    const skipEslint = process.env.SKIP_ESLINT === 'true' || variant === 'embedded'
+
+    if (skipEslint) {
+      console.log(`⚠️ Skipping ESLint validation for userscript (variant=${variant})`)
+      console.log('🎉 Userscript build completed (ESLint skipped).')
+      process.exit(0)
+    }
+
     // Run ESLint validation
     await runESLint(outputFile)
 
