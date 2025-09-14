@@ -9,28 +9,6 @@
 		});
 		return target;
 	};
-	function isImageUrl(value) {
-		if (!value) return false;
-		let v = value.trim();
-		if (/^url\(/i.test(v)) {
-			const inner = v.replace(/^url\(/i, "").replace(/\)$/, "").trim();
-			if (inner.startsWith("\"") && inner.endsWith("\"") || inner.startsWith("'") && inner.endsWith("'")) v = inner.slice(1, -1).trim();
-			else v = inner;
-		}
-		if (v.startsWith("data:image/")) return true;
-		if (v.startsWith("blob:")) return true;
-		if (v.startsWith("//")) v = "https:" + v;
-		if (/\.(png|jpe?g|gif|webp|svg|avif|bmp|ico)(\?.*)?$/i.test(v)) return true;
-		try {
-			const url = new URL(v);
-			const protocol = url.protocol;
-			if (protocol === "http:" || protocol === "https:" || protocol.endsWith(":")) {
-				if (/\.(png|jpe?g|gif|webp|svg|avif|bmp|ico)(\?.*)?$/i.test(url.pathname)) return true;
-				if (/format=|ext=|type=image|image_type=/i.test(url.search)) return true;
-			}
-		} catch {}
-		return false;
-	}
 	async function fetchPackagedJSON() {
 		try {
 			if (typeof fetch === "undefined") return null;
@@ -46,8 +24,7 @@
 		if (packaged && Array.isArray(packaged.groups)) return packaged.groups;
 		return [];
 	}
-	var STORAGE_KEY = "emoji_extension_userscript_data";
-	var SETTINGS_KEY = "emoji_extension_userscript_settings";
+	var init_defaultEmojiGroups_loader = __esmMin((() => {}));
 	function loadDataFromLocalStorage() {
 		try {
 			const groupsData = localStorage.getItem(STORAGE_KEY);
@@ -247,17 +224,28 @@
 			return false;
 		}
 	}
-	const userscriptState = {
-		emojiGroups: [],
-		settings: {
-			imageScale: 30,
-			gridColumns: 4,
-			outputFormat: "markdown",
-			forceMobileMode: false,
-			defaultGroup: "nachoneko",
-			showSearchBar: true
-		}
-	};
+	var STORAGE_KEY, SETTINGS_KEY;
+	var init_userscript_storage = __esmMin((() => {
+		init_defaultEmojiGroups_loader();
+		STORAGE_KEY = "emoji_extension_userscript_data";
+		SETTINGS_KEY = "emoji_extension_userscript_settings";
+	}));
+	var userscriptState;
+	var init_state = __esmMin((() => {
+		userscriptState = {
+			emojiGroups: [],
+			settings: {
+				imageScale: 30,
+				gridColumns: 4,
+				outputFormat: "markdown",
+				forceMobileMode: false,
+				defaultGroup: "nachoneko",
+				showSearchBar: true
+			}
+		};
+	}));
+	init_state();
+	init_userscript_storage();
 	function insertIntoEditor(text) {
 		const textArea = document.querySelector("textarea.d-editor-input");
 		const richEle = document.querySelector(".ProseMirror.d-editor-input");
@@ -632,7 +620,197 @@
 		}
 	};
 	var uploader = new ImageUploader();
-	var __managerStylesInjected = false;
+	function extractEmojiFromImage(img, titleElement) {
+		const url = img.src;
+		if (!url || !url.startsWith("http")) return null;
+		let name = "";
+		const parts = (titleElement.textContent || "").split("·");
+		if (parts.length > 0) name = parts[0].trim();
+		if (!name || name.length < 2) name = img.alt || img.title || extractNameFromUrl(url);
+		name = name.trim();
+		if (name.length === 0) name = "表情";
+		return {
+			name,
+			url
+		};
+	}
+	function extractNameFromUrl(url) {
+		try {
+			const nameWithoutExt = (new URL(url).pathname.split("/").pop() || "").replace(/\.[^/.]+$/, "");
+			const decoded = decodeURIComponent(nameWithoutExt);
+			if (/^[0-9a-f]{8,}$/i.test(decoded) || decoded.length < 2) return "表情";
+			return decoded || "表情";
+		} catch {
+			return "表情";
+		}
+	}
+	function createAddButton(emojiData) {
+		const link = document.createElement("a");
+		link.className = "image-source-link emoji-add-link";
+		link.style.cssText = `
+    color: #ffffff;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    font-size: inherit;
+    font-family: inherit;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border: 2px solid #ffffff;
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin: 0 2px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    font-weight: 600;
+  `;
+		link.addEventListener("mouseenter", () => {
+			if (!link.innerHTML.includes("已添加") && !link.innerHTML.includes("失败")) {
+				link.style.background = "linear-gradient(135deg, #3730a3, #5b21b6)";
+				link.style.transform = "scale(1.05)";
+				link.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.3)";
+			}
+		});
+		link.addEventListener("mouseleave", () => {
+			if (!link.innerHTML.includes("已添加") && !link.innerHTML.includes("失败")) {
+				link.style.background = "linear-gradient(135deg, #4f46e5, #7c3aed)";
+				link.style.transform = "scale(1)";
+				link.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.2)";
+			}
+		});
+		link.innerHTML = `
+    <svg class="fa d-icon d-icon-plus svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
+      <path d="M12 4c.55 0 1 .45 1 1v6h6c.55 0 1 .45 1 1s-.45 1-1 1h-6v6c0 .55-.45 1-1 1s-1-.45-1-1v-6H5c-.55 0-1-.45-1-1s.45-1 1-1h6V5c0-.55.45-1 1-1z"/>
+    </svg>添加表情
+  `;
+		link.title = "添加到用户表情";
+		link.addEventListener("click", async (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const originalHTML = link.innerHTML;
+			const originalStyle = link.style.cssText;
+			try {
+				addEmojiToUserscript(emojiData);
+				try {
+					uploader.showProgressDialog();
+				} catch (e$1) {
+					console.warn("[Userscript] uploader.showProgressDialog failed:", e$1);
+				}
+				link.innerHTML = `
+        <svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+        </svg>已添加
+      `;
+				link.style.background = "linear-gradient(135deg, #10b981, #059669)";
+				link.style.color = "#ffffff";
+				link.style.border = "2px solid #ffffff";
+				link.style.boxShadow = "0 2px 4px rgba(16, 185, 129, 0.3)";
+				setTimeout(() => {
+					link.innerHTML = originalHTML;
+					link.style.cssText = originalStyle;
+				}, 2e3);
+			} catch (error) {
+				console.error("[Emoji Extension Userscript] Failed to add emoji:", error);
+				link.innerHTML = `
+        <svg class="fa d-icon d-icon-times svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>失败
+      `;
+				link.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
+				link.style.color = "#ffffff";
+				link.style.border = "2px solid #ffffff";
+				link.style.boxShadow = "0 2px 4px rgba(239, 68, 68, 0.3)";
+				setTimeout(() => {
+					link.innerHTML = originalHTML;
+					link.style.cssText = originalStyle;
+				}, 2e3);
+			}
+		});
+		return link;
+	}
+	function processLightbox(lightbox) {
+		if (lightbox.querySelector(".emoji-add-link")) return;
+		const img = lightbox.querySelector(".mfp-img");
+		const title = lightbox.querySelector(".mfp-title");
+		if (!img || !title) return;
+		const emojiData = extractEmojiFromImage(img, title);
+		if (!emojiData) return;
+		const addButton = createAddButton(emojiData);
+		const sourceLink = title.querySelector("a.image-source-link");
+		if (sourceLink) {
+			const separator = document.createTextNode(" · ");
+			title.insertBefore(separator, sourceLink);
+			title.insertBefore(addButton, sourceLink);
+		} else {
+			title.appendChild(document.createTextNode(" · "));
+			title.appendChild(addButton);
+		}
+	}
+	function processAllLightboxes() {
+		document.querySelectorAll(".mfp-wrap.mfp-gallery").forEach((lightbox) => {
+			if (lightbox.classList.contains("mfp-wrap") && lightbox.classList.contains("mfp-gallery") && lightbox.querySelector(".mfp-img")) processLightbox(lightbox);
+		});
+	}
+	function initOneClickAdd() {
+		console.log("[Emoji Extension Userscript] Initializing one-click add functionality");
+		setTimeout(processAllLightboxes, 500);
+		new MutationObserver((mutations) => {
+			let hasNewLightbox = false;
+			mutations.forEach((mutation) => {
+				if (mutation.type === "childList") mutation.addedNodes.forEach((node) => {
+					if (node.nodeType === Node.ELEMENT_NODE) {
+						const element = node;
+						if (element.classList && element.classList.contains("mfp-wrap")) hasNewLightbox = true;
+					}
+				});
+			});
+			if (hasNewLightbox) setTimeout(processAllLightboxes, 100);
+		}).observe(document.body, {
+			childList: true,
+			subtree: true
+		});
+		document.addEventListener("visibilitychange", () => {
+			if (!document.hidden) setTimeout(processAllLightboxes, 200);
+		});
+	}
+	function isImageUrl(value) {
+		if (!value) return false;
+		let v = value.trim();
+		if (/^url\(/i.test(v)) {
+			const inner = v.replace(/^url\(/i, "").replace(/\)$/, "").trim();
+			if (inner.startsWith("\"") && inner.endsWith("\"") || inner.startsWith("'") && inner.endsWith("'")) v = inner.slice(1, -1).trim();
+			else v = inner;
+		}
+		if (v.startsWith("data:image/")) return true;
+		if (v.startsWith("blob:")) return true;
+		if (v.startsWith("//")) v = "https:" + v;
+		if (/\.(png|jpe?g|gif|webp|svg|avif|bmp|ico)(\?.*)?$/i.test(v)) return true;
+		try {
+			const url = new URL(v);
+			const protocol = url.protocol;
+			if (protocol === "http:" || protocol === "https:" || protocol.endsWith(":")) {
+				if (/\.(png|jpe?g|gif|webp|svg|avif|bmp|ico)(\?.*)?$/i.test(url.pathname)) return true;
+				if (/format=|ext=|type=image|image_type=/i.test(url.search)) return true;
+			}
+		} catch {}
+		return false;
+	}
+	const __vitePreload = function preload(baseModule, deps, importerUrl) {
+		let promise = Promise.resolve();
+		function handlePreloadError(err$2) {
+			const e$1 = new Event("vite:preloadError", { cancelable: true });
+			e$1.payload = err$2;
+			window.dispatchEvent(e$1);
+			if (!e$1.defaultPrevented) throw err$2;
+		}
+		return promise.then((res) => {
+			for (const item of res || []) {
+				if (item.status !== "rejected") continue;
+				handlePreloadError(item.reason);
+			}
+			return baseModule().catch(handlePreloadError);
+		});
+	};
 	function injectManagerStyles() {
 		if (__managerStylesInjected) return;
 		__managerStylesInjected = true;
@@ -867,467 +1045,84 @@
 		style.textContent = css;
 		document.head.appendChild(style);
 	}
-	const __vitePreload = function preload(baseModule, deps, importerUrl) {
-		let promise = Promise.resolve();
-		function handlePreloadError(err$2) {
-			const e$1 = new Event("vite:preloadError", { cancelable: true });
-			e$1.payload = err$2;
-			window.dispatchEvent(e$1);
-			if (!e$1.defaultPrevented) throw err$2;
-		}
-		return promise.then((res) => {
-			for (const item of res || []) {
-				if (item.status !== "rejected") continue;
-				handlePreloadError(item.reason);
-			}
-			return baseModule().catch(handlePreloadError);
-		});
-	};
-	var confirmService_exports = __export({
-		clearConfirmHandler: () => clearConfirmHandler,
-		requestConfirmation: () => requestConfirmation,
-		setConfirmHandler: () => setConfirmHandler
-	});
-	function setConfirmHandler(h) {
-		handler = h;
-	}
-	function clearConfirmHandler() {
-		handler = null;
-	}
-	function requestConfirmation(title, message) {
-		if (handler) return handler(title, message);
-		try {
-			return Promise.resolve(window.confirm(message || title || "确定要继续吗？"));
-		} catch {
-			return Promise.resolve(false);
-		}
-	}
-	var handler;
-	var init_confirmService = __esmMin((() => {
-		handler = null;
+	var __managerStylesInjected;
+	var init_styles = __esmMin((() => {
+		__managerStylesInjected = false;
 	}));
-	async function initializeUserscriptData() {
-		const data = await loadDataFromLocalStorageAsync().catch((err) => {
-			console.warn("[Userscript] loadDataFromLocalStorageAsync failed, falling back to sync loader", err);
-			return loadDataFromLocalStorage();
+	var manager_exports = __export({ openManagementInterface: () => openManagementInterface });
+	function createEditorPopup(groupId, index, renderGroups, renderSelectedGroup) {
+		const group = userscriptState.emojiGroups.find((g) => g.id === groupId);
+		if (!group) return;
+		const emo = group.emojis[index];
+		if (!emo) return;
+		const backdrop = document.createElement("div");
+		backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+		const editorPanel = document.createElement("div");
+		editorPanel.className = "emoji-manager-editor-panel";
+		const editorTitle = document.createElement("h3");
+		editorTitle.textContent = "编辑表情";
+		editorTitle.style.cssText = "margin: 0 0 16px 0; text-align: center;";
+		const editorPreview = document.createElement("img");
+		editorPreview.className = "emoji-manager-editor-preview";
+		editorPreview.src = emo.url;
+		const editorNameInput = document.createElement("input");
+		editorNameInput.className = "form-control";
+		editorNameInput.placeholder = "名称 (alias)";
+		editorNameInput.value = emo.name || "";
+		const editorUrlInput = document.createElement("input");
+		editorUrlInput.className = "form-control";
+		editorUrlInput.placeholder = "表情图片 URL";
+		editorUrlInput.value = emo.url || "";
+		const buttonContainer = document.createElement("div");
+		buttonContainer.style.cssText = "display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;";
+		const editorSaveBtn = document.createElement("button");
+		editorSaveBtn.textContent = "保存修改";
+		editorSaveBtn.className = "btn btn-primary";
+		const editorCancelBtn = document.createElement("button");
+		editorCancelBtn.textContent = "取消";
+		editorCancelBtn.className = "btn";
+		buttonContainer.appendChild(editorCancelBtn);
+		buttonContainer.appendChild(editorSaveBtn);
+		editorPanel.appendChild(editorTitle);
+		editorPanel.appendChild(editorPreview);
+		editorPanel.appendChild(editorNameInput);
+		editorPanel.appendChild(editorUrlInput);
+		editorPanel.appendChild(buttonContainer);
+		backdrop.appendChild(editorPanel);
+		document.body.appendChild(backdrop);
+		editorUrlInput.addEventListener("input", () => {
+			editorPreview.src = editorUrlInput.value;
 		});
-		userscriptState.emojiGroups = data.emojiGroups || [];
-		userscriptState.settings = data.settings || userscriptState.settings;
-	}
-	function shouldInjectEmoji() {
-		if (document.querySelectorAll("meta[name*=\"discourse\"], meta[content*=\"discourse\"], meta[property*=\"discourse\"]").length > 0) {
-			console.log("[Emoji Extension Userscript] Discourse detected via meta tags");
-			return true;
-		}
-		const generatorMeta = document.querySelector("meta[name=\"generator\"]");
-		if (generatorMeta) {
-			const content = generatorMeta.getAttribute("content")?.toLowerCase() || "";
-			if (content.includes("discourse") || content.includes("flarum") || content.includes("phpbb")) {
-				console.log("[Emoji Extension Userscript] Forum platform detected via generator meta");
-				return true;
+		editorSaveBtn.addEventListener("click", () => {
+			const newName = (editorNameInput.value || "").trim();
+			const newUrl = (editorUrlInput.value || "").trim();
+			if (!newName || !newUrl) {
+				alert("名称和 URL 均不能为空");
+				return;
 			}
-		}
-		const hostname = window.location.hostname.toLowerCase();
-		if ([
-			"linux.do",
-			"meta.discourse.org",
-			"pixiv.net"
-		].some((domain) => hostname.includes(domain))) {
-			console.log("[Emoji Extension Userscript] Allowed domain detected:", hostname);
-			return true;
-		}
-		if (document.querySelectorAll("textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea").length > 0) {
-			console.log("[Emoji Extension Userscript] Discussion editor detected");
-			return true;
-		}
-		console.log("[Emoji Extension Userscript] No compatible platform detected");
-		return false;
-	}
-	function insertEmojiIntoEditor(emoji) {
-		console.log("[Emoji Extension Userscript] Inserting emoji:", emoji);
-		const textarea = document.querySelector("textarea.d-editor-input");
-		const proseMirror = document.querySelector(".ProseMirror.d-editor-input");
-		if (!textarea && !proseMirror) {
-			console.error("找不到输入框");
-			return;
-		}
-		const dimensionMatch = emoji.url?.match(/_(\d{3,})x(\d{3,})\./);
-		let width = "500";
-		let height = "500";
-		if (dimensionMatch) {
-			width = dimensionMatch[1];
-			height = dimensionMatch[2];
-		} else if (emoji.width && emoji.height) {
-			width = emoji.width.toString();
-			height = emoji.height.toString();
-		}
-		const scale = userscriptState.settings?.imageScale || 30;
-		const outputFormat = userscriptState.settings?.outputFormat || "markdown";
-		if (textarea) {
-			let insertText = "";
-			if (outputFormat === "html") {
-				const scaledWidth = Math.max(1, Math.round(Number(width) * (scale / 100)));
-				const scaledHeight = Math.max(1, Math.round(Number(height) * (scale / 100)));
-				insertText = `<img src="${emoji.url}" title=":${emoji.name}:" class="emoji only-emoji" alt=":${emoji.name}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};"> `;
-			} else insertText = `![${emoji.name}|${width}x${height},${scale}%](${emoji.url}) `;
-			const selectionStart = textarea.selectionStart;
-			const selectionEnd = textarea.selectionEnd;
-			textarea.value = textarea.value.substring(0, selectionStart) + insertText + textarea.value.substring(selectionEnd, textarea.value.length);
-			textarea.selectionStart = textarea.selectionEnd = selectionStart + insertText.length;
-			textarea.focus();
-			const inputEvent = new Event("input", {
-				bubbles: true,
-				cancelable: true
-			});
-			textarea.dispatchEvent(inputEvent);
-		} else if (proseMirror) {
-			const imgWidth = Number(width) || 500;
-			const scaledWidth = Math.max(1, Math.round(imgWidth * (scale / 100)));
-			const htmlContent = `<img src="${emoji.url}" alt="${emoji.name}" width="${width}" height="${height}" data-scale="${scale}" style="width: ${scaledWidth}px">`;
-			try {
-				const dataTransfer = new DataTransfer();
-				dataTransfer.setData("text/html", htmlContent);
-				const pasteEvent = new ClipboardEvent("paste", {
-					clipboardData: dataTransfer,
-					bubbles: true
-				});
-				proseMirror.dispatchEvent(pasteEvent);
-			} catch (error) {
-				try {
-					document.execCommand("insertHTML", false, htmlContent);
-				} catch (fallbackError) {
-					console.error("无法向富文本编辑器中插入表情", fallbackError);
-				}
-			}
-		}
-	}
-	var toolbarSelectors = [".d-editor-button-bar[role=\"toolbar\"]", ".chat-composer__inner-container"];
-	function findAllToolbars() {
-		const toolbars = [];
-		for (const selector of toolbarSelectors) {
-			const elements = document.querySelectorAll(selector);
-			toolbars.push(...Array.from(elements));
-		}
-		return toolbars;
-	}
-	function isMobileView() {
-		try {
-			return !!(userscriptState && userscriptState.settings && userscriptState.settings.forceMobileMode);
-		} catch (e) {
-			return false;
-		}
-	}
-	async function createEmojiPicker() {
-		const groups = userscriptState.emojiGroups;
-		if (isMobileView()) {
-			const modal = document.createElement("div");
-			modal.className = "modal d-modal fk-d-menu-modal emoji-picker-content";
-			modal.setAttribute("data-keyboard", "false");
-			modal.setAttribute("aria-modal", "true");
-			modal.setAttribute("role", "dialog");
-			modal.setAttribute("data-identifier", "emoji-picker");
-			const modalContainerDiv = document.createElement("div");
-			modalContainerDiv.className = "d-modal__container";
-			const modalBody = document.createElement("div");
-			modalBody.className = "d-modal__body";
-			modalBody.tabIndex = -1;
-			const emojiPickerDiv$1 = document.createElement("div");
-			emojiPickerDiv$1.className = "emoji-picker";
-			const filterContainer$1 = document.createElement("div");
-			filterContainer$1.className = "emoji-picker__filter-container";
-			const filterInputContainer = document.createElement("div");
-			filterInputContainer.className = "emoji-picker__filter filter-input-container";
-			const filterInput = document.createElement("input");
-			filterInput.className = "filter-input";
-			filterInput.placeholder = "按表情符号名称搜索…";
-			filterInput.type = "text";
-			filterInputContainer.appendChild(filterInput);
-			const closeButton = document.createElement("button");
-			closeButton.className = "btn no-text btn-icon btn-transparent emoji-picker__close-btn";
-			closeButton.type = "button";
-			closeButton.innerHTML = `<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>`;
-			closeButton.addEventListener("click", () => {
-				const container = modal.closest(".modal-container") || modal;
-				if (container) container.remove();
-			});
-			filterContainer$1.appendChild(filterInputContainer);
-			filterContainer$1.appendChild(closeButton);
-			const content$1 = document.createElement("div");
-			content$1.className = "emoji-picker__content";
-			const sectionsNav$1 = document.createElement("div");
-			sectionsNav$1.className = "emoji-picker__sections-nav";
-			const managementButton$1 = document.createElement("button");
-			managementButton$1.className = "btn no-text btn-flat emoji-picker__section-btn management-btn";
-			managementButton$1.setAttribute("tabindex", "-1");
-			managementButton$1.type = "button";
-			managementButton$1.innerHTML = "⚙️";
-			managementButton$1.title = "管理表情 - 点击打开完整管理界面";
-			managementButton$1.style.borderRight = "1px solid #ddd";
-			managementButton$1.addEventListener("click", () => {
-				openManagementInterface();
-			});
-			sectionsNav$1.appendChild(managementButton$1);
-			const settingsButton$1 = document.createElement("button");
-			settingsButton$1.className = "btn no-text btn-flat emoji-picker__section-btn settings-btn";
-			settingsButton$1.setAttribute("tabindex", "-1");
-			settingsButton$1.type = "button";
-			settingsButton$1.innerHTML = "🔧";
-			settingsButton$1.title = "设置";
-			settingsButton$1.style.borderRight = "1px solid #ddd";
-			settingsButton$1.addEventListener("click", () => {
-				showSettingsModal();
-			});
-			sectionsNav$1.appendChild(settingsButton$1);
-			const scrollableContent$1 = document.createElement("div");
-			scrollableContent$1.className = "emoji-picker__scrollable-content";
-			const sections$1 = document.createElement("div");
-			sections$1.className = "emoji-picker__sections";
-			sections$1.setAttribute("role", "button");
-			groups.forEach((group, index) => {
-				if (!group?.emojis?.length) return;
-				const navButton = document.createElement("button");
-				navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? "active" : ""}`;
-				navButton.setAttribute("tabindex", "-1");
-				navButton.setAttribute("data-section", group.id);
-				navButton.type = "button";
-				const iconVal = group.icon || "📁";
-				if (isImageUrl(iconVal)) {
-					const img = document.createElement("img");
-					img.src = iconVal;
-					img.alt = group.name || "";
-					img.className = "emoji";
-					img.style.width = "18px";
-					img.style.height = "18px";
-					img.style.objectFit = "contain";
-					navButton.appendChild(img);
-				} else navButton.textContent = String(iconVal);
-				navButton.title = group.name;
-				navButton.addEventListener("click", () => {
-					sectionsNav$1.querySelectorAll(".emoji-picker__section-btn").forEach((btn) => btn.classList.remove("active"));
-					navButton.classList.add("active");
-					const target = sections$1.querySelector(`[data-section="${group.id}"]`);
-					if (target) target.scrollIntoView({
-						behavior: "smooth",
-						block: "start"
-					});
-				});
-				sectionsNav$1.appendChild(navButton);
-				const section = document.createElement("div");
-				section.className = "emoji-picker__section";
-				section.setAttribute("data-section", group.id);
-				section.setAttribute("role", "region");
-				section.setAttribute("aria-label", group.name);
-				const titleContainer = document.createElement("div");
-				titleContainer.className = "emoji-picker__section-title-container";
-				const title = document.createElement("h2");
-				title.className = "emoji-picker__section-title";
-				title.textContent = group.name;
-				titleContainer.appendChild(title);
-				const sectionEmojis = document.createElement("div");
-				sectionEmojis.className = "emoji-picker__section-emojis";
-				group.emojis.forEach((emoji) => {
-					if (!emoji || typeof emoji !== "object" || !emoji.url || !emoji.name) return;
-					const img = document.createElement("img");
-					img.width = 32;
-					img.height = 32;
-					img.className = "emoji";
-					img.src = emoji.url;
-					img.tabIndex = 0;
-					img.dataset.emoji = emoji.name;
-					img.alt = emoji.name;
-					img.title = `:${emoji.name}:`;
-					img.loading = "lazy";
-					img.addEventListener("click", () => {
-						insertEmojiIntoEditor(emoji);
-						const modalContainer = modal.closest(".modal-container");
-						if (modalContainer) modalContainer.remove();
-						else modal.remove();
-					});
-					img.addEventListener("keydown", (e) => {
-						if (e.key === "Enter" || e.key === " ") {
-							e.preventDefault();
-							insertEmojiIntoEditor(emoji);
-							const modalContainer = modal.closest(".modal-container");
-							if (modalContainer) modalContainer.remove();
-							else modal.remove();
-						}
-					});
-					sectionEmojis.appendChild(img);
-				});
-				section.appendChild(titleContainer);
-				section.appendChild(sectionEmojis);
-				sections$1.appendChild(section);
-			});
-			filterInput.addEventListener("input", (e) => {
-				const q = (e.target.value || "").toLowerCase();
-				sections$1.querySelectorAll("img").forEach((img) => {
-					const emojiName = (img.dataset.emoji || "").toLowerCase();
-					img.style.display = q === "" || emojiName.includes(q) ? "" : "none";
-				});
-				sections$1.querySelectorAll(".emoji-picker__section").forEach((section) => {
-					const visibleEmojis = section.querySelectorAll("img:not([style*=\"display: none\"])");
-					section.style.display = visibleEmojis.length > 0 ? "" : "none";
-				});
-			});
-			scrollableContent$1.appendChild(sections$1);
-			content$1.appendChild(sectionsNav$1);
-			content$1.appendChild(scrollableContent$1);
-			emojiPickerDiv$1.appendChild(filterContainer$1);
-			emojiPickerDiv$1.appendChild(content$1);
-			modalBody.appendChild(emojiPickerDiv$1);
-			modalContainerDiv.appendChild(modalBody);
-			modal.appendChild(modalContainerDiv);
-			return modal;
-		}
-		const picker = document.createElement("div");
-		picker.className = "fk-d-menu -animated -expanded";
-		picker.setAttribute("data-identifier", "emoji-picker");
-		picker.setAttribute("role", "dialog");
-		picker.style.cssText = "max-width: 400px; visibility: visible; z-index: 999999;";
-		const innerContent = document.createElement("div");
-		innerContent.className = "fk-d-menu__inner-content";
-		const emojiPickerDiv = document.createElement("div");
-		emojiPickerDiv.className = "emoji-picker";
-		const filterContainer = document.createElement("div");
-		filterContainer.className = "emoji-picker__filter-container";
-		const filterDiv = document.createElement("div");
-		filterDiv.className = "emoji-picker__filter filter-input-container";
-		const searchInput = document.createElement("input");
-		searchInput.className = "filter-input";
-		searchInput.placeholder = "按表情符号名称搜索…";
-		searchInput.type = "text";
-		filterDiv.appendChild(searchInput);
-		filterContainer.appendChild(filterDiv);
-		const content = document.createElement("div");
-		content.className = "emoji-picker__content";
-		const sectionsNav = document.createElement("div");
-		sectionsNav.className = "emoji-picker__sections-nav";
-		const managementButton = document.createElement("button");
-		managementButton.className = "btn no-text btn-flat emoji-picker__section-btn management-btn";
-		managementButton.setAttribute("tabindex", "-1");
-		managementButton.type = "button";
-		managementButton.innerHTML = "⚙️";
-		managementButton.title = "管理表情 - 点击打开完整管理界面";
-		managementButton.style.borderRight = "1px solid #ddd";
-		managementButton.addEventListener("click", () => {
-			openManagementInterface();
+			emo.name = newName;
+			emo.url = newUrl;
+			renderGroups();
+			renderSelectedGroup();
+			backdrop.remove();
 		});
-		sectionsNav.appendChild(managementButton);
-		const settingsButton = document.createElement("button");
-		settingsButton.className = "btn no-text btn-flat emoji-picker__section-btn settings-btn";
-		settingsButton.setAttribute("tabindex", "-1");
-		settingsButton.type = "button";
-		settingsButton.innerHTML = "🔧";
-		settingsButton.title = "设置";
-		settingsButton.style.borderRight = "1px solid #ddd";
-		settingsButton.addEventListener("click", () => {
-			showSettingsModal();
+		editorCancelBtn.addEventListener("click", () => {
+			backdrop.remove();
 		});
-		sectionsNav.appendChild(settingsButton);
-		const scrollableContent = document.createElement("div");
-		scrollableContent.className = "emoji-picker__scrollable-content";
-		const sections = document.createElement("div");
-		sections.className = "emoji-picker__sections";
-		sections.setAttribute("role", "button");
-		groups.forEach((group, index) => {
-			if (!group?.emojis?.length) return;
-			const navButton = document.createElement("button");
-			navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? "active" : ""}`;
-			navButton.setAttribute("tabindex", "-1");
-			navButton.setAttribute("data-section", group.id);
-			navButton.type = "button";
-			const iconVal = group.icon || "📁";
-			if (isImageUrl(iconVal)) {
-				const img = document.createElement("img");
-				img.src = iconVal;
-				img.alt = group.name || "";
-				img.className = "emoji-group-icon";
-				img.style.width = "18px";
-				img.style.height = "18px";
-				img.style.objectFit = "contain";
-				navButton.appendChild(img);
-			} else navButton.textContent = String(iconVal);
-			navButton.title = group.name;
-			navButton.addEventListener("click", () => {
-				sectionsNav.querySelectorAll(".emoji-picker__section-btn").forEach((btn) => btn.classList.remove("active"));
-				navButton.classList.add("active");
-				const target = sections.querySelector(`[data-section="${group.id}"]`);
-				if (target) target.scrollIntoView({
-					behavior: "smooth",
-					block: "start"
-				});
-			});
-			sectionsNav.appendChild(navButton);
-			const section = document.createElement("div");
-			section.className = "emoji-picker__section";
-			section.setAttribute("data-section", group.id);
-			section.setAttribute("role", "region");
-			section.setAttribute("aria-label", group.name);
-			const titleContainer = document.createElement("div");
-			titleContainer.className = "emoji-picker__section-title-container";
-			const title = document.createElement("h2");
-			title.className = "emoji-picker__section-title";
-			title.textContent = group.name;
-			titleContainer.appendChild(title);
-			const sectionEmojis = document.createElement("div");
-			sectionEmojis.className = "emoji-picker__section-emojis";
-			let added = 0;
-			group.emojis.forEach((emoji) => {
-				if (!emoji || typeof emoji !== "object" || !emoji.url || !emoji.name) return;
-				const img = document.createElement("img");
-				img.width = 32;
-				img.height = 32;
-				img.className = "emoji";
-				img.src = emoji.url;
-				img.setAttribute("tabindex", "0");
-				img.setAttribute("data-emoji", emoji.name);
-				img.alt = emoji.name;
-				img.title = `:${emoji.name}:`;
-				img.loading = "lazy";
-				img.addEventListener("click", () => {
-					insertEmojiIntoEditor(emoji);
-					picker.remove();
-				});
-				img.addEventListener("keydown", (e) => {
-					if (e.key === "Enter" || e.key === " ") {
-						e.preventDefault();
-						insertEmojiIntoEditor(emoji);
-						picker.remove();
-					}
-				});
-				sectionEmojis.appendChild(img);
-				added++;
-			});
-			if (added === 0) {
-				const msg = document.createElement("div");
-				msg.textContent = `${group.name} 组暂无有效表情`;
-				msg.style.cssText = "padding: 20px; text-align: center; color: #999;";
-				sectionEmojis.appendChild(msg);
-			}
-			section.appendChild(titleContainer);
-			section.appendChild(sectionEmojis);
-			sections.appendChild(section);
+		backdrop.addEventListener("click", (e) => {
+			if (e.target === backdrop) backdrop.remove();
 		});
-		searchInput.addEventListener("input", (e) => {
-			const q = (e.target.value || "").toLowerCase();
-			sections.querySelectorAll("img").forEach((img) => {
-				const emojiName = img.getAttribute("data-emoji")?.toLowerCase() || "";
-				img.style.display = q === "" || emojiName.includes(q) ? "" : "none";
-			});
-			sections.querySelectorAll(".emoji-picker__section").forEach((section) => {
-				const visibleEmojis = section.querySelectorAll("img:not([style*=\"none\"])");
-				const titleContainer = section.querySelector(".emoji-picker__section-title-container");
-				if (titleContainer) titleContainer.style.display = visibleEmojis.length > 0 ? "" : "none";
-			});
-		});
-		scrollableContent.appendChild(sections);
-		content.appendChild(sectionsNav);
-		content.appendChild(scrollableContent);
-		emojiPickerDiv.appendChild(filterContainer);
-		emojiPickerDiv.appendChild(content);
-		innerContent.appendChild(emojiPickerDiv);
-		picker.appendChild(innerContent);
-		return picker;
 	}
 	function openManagementInterface() {
 		injectManagerStyles();
@@ -1452,82 +1247,8 @@
 				groupsList.appendChild(row);
 			});
 		}
-		function createEditorPopup(groupId, index) {
-			const group = userscriptState.emojiGroups.find((g) => g.id === groupId);
-			if (!group) return;
-			const emo = group.emojis[index];
-			if (!emo) return;
-			const backdrop = document.createElement("div");
-			backdrop.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
-			const editorPanel = document.createElement("div");
-			editorPanel.className = "emoji-manager-editor-panel";
-			const editorTitle = document.createElement("h3");
-			editorTitle.textContent = "编辑表情";
-			editorTitle.style.cssText = "margin: 0 0 16px 0; text-align: center;";
-			const editorPreview = document.createElement("img");
-			editorPreview.className = "emoji-manager-editor-preview";
-			editorPreview.src = emo.url;
-			const editorNameInput = document.createElement("input");
-			editorNameInput.className = "form-control";
-			editorNameInput.placeholder = "名称 (alias)";
-			editorNameInput.value = emo.name || "";
-			const editorUrlInput = document.createElement("input");
-			editorUrlInput.className = "form-control";
-			editorUrlInput.placeholder = "表情图片 URL";
-			editorUrlInput.value = emo.url || "";
-			const buttonContainer = document.createElement("div");
-			buttonContainer.style.cssText = "display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;";
-			const editorSaveBtn = document.createElement("button");
-			editorSaveBtn.textContent = "保存修改";
-			editorSaveBtn.className = "btn btn-primary";
-			const editorCancelBtn = document.createElement("button");
-			editorCancelBtn.textContent = "取消";
-			editorCancelBtn.className = "btn";
-			buttonContainer.appendChild(editorCancelBtn);
-			buttonContainer.appendChild(editorSaveBtn);
-			editorPanel.appendChild(editorTitle);
-			editorPanel.appendChild(editorPreview);
-			editorPanel.appendChild(editorNameInput);
-			editorPanel.appendChild(editorUrlInput);
-			editorPanel.appendChild(buttonContainer);
-			backdrop.appendChild(editorPanel);
-			document.body.appendChild(backdrop);
-			editorUrlInput.addEventListener("input", () => {
-				editorPreview.src = editorUrlInput.value;
-			});
-			editorSaveBtn.addEventListener("click", () => {
-				const newName = (editorNameInput.value || "").trim();
-				const newUrl = (editorUrlInput.value || "").trim();
-				if (!newName || !newUrl) {
-					alert("名称和 URL 均不能为空");
-					return;
-				}
-				emo.name = newName;
-				emo.url = newUrl;
-				renderGroups();
-				renderSelectedGroup();
-				backdrop.remove();
-			});
-			editorCancelBtn.addEventListener("click", () => {
-				backdrop.remove();
-			});
-			backdrop.addEventListener("click", (e) => {
-				if (e.target === backdrop) backdrop.remove();
-			});
-		}
 		function showEditorFor(groupId, index) {
-			createEditorPopup(groupId, index);
+			createEditorPopup(groupId, index, renderGroups, renderSelectedGroup);
 		}
 		function renderSelectedGroup() {
 			const group = userscriptState.emojiGroups.find((g) => g.id === selectedGroupId) || null;
@@ -1537,7 +1258,6 @@
 			(Array.isArray(group.emojis) ? group.emojis : []).forEach((emo, idx) => {
 				const card = document.createElement("div");
 				card.className = "emoji-manager-card";
-				card.classList.add("emoji-manager-card");
 				const img = document.createElement("img");
 				img.src = emo.url;
 				img.alt = emo.name;
@@ -1645,7 +1365,7 @@
 					if (!json) return;
 					if (importUserscriptData(json)) {
 						alert("导入成功，请保存以持久化");
-						initializeUserscriptData();
+						loadDataFromLocalStorage$1();
 						renderGroups();
 						renderSelectedGroup();
 					} else alert("导入失败：格式错误");
@@ -1667,7 +1387,7 @@
 			try {
 				if (syncFromManager()) {
 					alert("同步成功，已导入管理器数据");
-					initializeUserscriptData();
+					loadDataFromLocalStorage$1();
 					renderGroups();
 					renderSelectedGroup();
 				} else alert("同步未成功，未检测到管理器数据");
@@ -1687,6 +1407,14 @@
 			renderSelectedGroup();
 		}
 	}
+	function loadDataFromLocalStorage$1() {
+		console.log("Data reload requested");
+	}
+	var init_manager = __esmMin((() => {
+		init_styles();
+		init_userscript_storage();
+	}));
+	var settings_exports = __export({ showSettingsModal: () => showSettingsModal });
 	function showSettingsModal() {
 		const modal = document.createElement("div");
 		modal.style.cssText = `
@@ -1766,24 +1494,18 @@
 		content.querySelector("#closeModal")?.addEventListener("click", () => {
 			modal.remove();
 		});
-		content.querySelector("#resetSettings")?.addEventListener("click", () => {
-			(async () => {
-				const { requestConfirmation: requestConfirmation$1 } = await __vitePreload(async () => {
-					const { requestConfirmation: requestConfirmation$2 } = await Promise.resolve().then(() => (init_confirmService(), confirmService_exports));
-					return { requestConfirmation: requestConfirmation$2 };
-				}, void 0);
-				if (await requestConfirmation$1("重置设置", "确定要重置所有设置吗？")) {
-					userscriptState.settings = {
-						imageScale: 30,
-						gridColumns: 4,
-						outputFormat: "markdown",
-						forceMobileMode: false,
-						defaultGroup: "nachoneko",
-						showSearchBar: true
-					};
-					modal.remove();
-				}
-			})();
+		content.querySelector("#resetSettings")?.addEventListener("click", async () => {
+			if (confirm("确定要重置所有设置吗？")) {
+				userscriptState.settings = {
+					imageScale: 30,
+					gridColumns: 4,
+					outputFormat: "markdown",
+					forceMobileMode: false,
+					defaultGroup: "nachoneko",
+					showSearchBar: true
+				};
+				modal.remove();
+			}
 		});
 		content.querySelector("#saveSettings")?.addEventListener("click", () => {
 			userscriptState.settings.imageScale = parseInt(scaleSlider?.value || "30");
@@ -1804,6 +1526,421 @@
 		modal.addEventListener("click", (e) => {
 			if (e.target === modal) modal.remove();
 		});
+	}
+	var init_settings = __esmMin((() => {
+		init_state();
+		init_userscript_storage();
+	}));
+	init_state();
+	function isMobileView() {
+		try {
+			return !!(userscriptState && userscriptState.settings && userscriptState.settings.forceMobileMode);
+		} catch (e) {
+			return false;
+		}
+	}
+	function insertEmojiIntoEditor(emoji) {
+		console.log("[Emoji Extension Userscript] Inserting emoji:", emoji);
+		const textarea = document.querySelector("textarea.d-editor-input");
+		const proseMirror = document.querySelector(".ProseMirror.d-editor-input");
+		if (!textarea && !proseMirror) {
+			console.error("找不到输入框");
+			return;
+		}
+		const dimensionMatch = emoji.url?.match(/_(\d{3,})x(\d{3,})\./);
+		let width = "500";
+		let height = "500";
+		if (dimensionMatch) {
+			width = dimensionMatch[1];
+			height = dimensionMatch[2];
+		} else if (emoji.width && emoji.height) {
+			width = emoji.width.toString();
+			height = emoji.height.toString();
+		}
+		const scale = userscriptState.settings?.imageScale || 30;
+		const outputFormat = userscriptState.settings?.outputFormat || "markdown";
+		if (textarea) {
+			let insertText = "";
+			if (outputFormat === "html") {
+				const scaledWidth = Math.max(1, Math.round(Number(width) * (scale / 100)));
+				const scaledHeight = Math.max(1, Math.round(Number(height) * (scale / 100)));
+				insertText = `<img src="${emoji.url}" title=":${emoji.name}:" class="emoji only-emoji" alt=":${emoji.name}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};"> `;
+			} else insertText = `![${emoji.name}|${width}x${height},${scale}%](${emoji.url}) `;
+			const selectionStart = textarea.selectionStart;
+			const selectionEnd = textarea.selectionEnd;
+			textarea.value = textarea.value.substring(0, selectionStart) + insertText + textarea.value.substring(selectionEnd, textarea.value.length);
+			textarea.selectionStart = textarea.selectionEnd = selectionStart + insertText.length;
+			textarea.focus();
+			const inputEvent = new Event("input", {
+				bubbles: true,
+				cancelable: true
+			});
+			textarea.dispatchEvent(inputEvent);
+		} else if (proseMirror) {
+			const imgWidth = Number(width) || 500;
+			const scaledWidth = Math.max(1, Math.round(imgWidth * (scale / 100)));
+			const htmlContent = `<img src="${emoji.url}" alt="${emoji.name}" width="${width}" height="${height}" data-scale="${scale}" style="width: ${scaledWidth}px">`;
+			try {
+				const dataTransfer = new DataTransfer();
+				dataTransfer.setData("text/html", htmlContent);
+				const pasteEvent = new ClipboardEvent("paste", {
+					clipboardData: dataTransfer,
+					bubbles: true
+				});
+				proseMirror.dispatchEvent(pasteEvent);
+			} catch (error) {
+				try {
+					document.execCommand("insertHTML", false, htmlContent);
+				} catch (fallbackError) {
+					console.error("无法向富文本编辑器中插入表情", fallbackError);
+				}
+			}
+		}
+	}
+	function createMobileEmojiPicker(groups) {
+		const modal = document.createElement("div");
+		modal.className = "modal d-modal fk-d-menu-modal emoji-picker-content";
+		modal.setAttribute("data-keyboard", "false");
+		modal.setAttribute("aria-modal", "true");
+		modal.setAttribute("role", "dialog");
+		modal.setAttribute("data-identifier", "emoji-picker");
+		const modalContainerDiv = document.createElement("div");
+		modalContainerDiv.className = "d-modal__container";
+		const modalBody = document.createElement("div");
+		modalBody.className = "d-modal__body";
+		modalBody.tabIndex = -1;
+		const emojiPickerDiv = document.createElement("div");
+		emojiPickerDiv.className = "emoji-picker";
+		const filterContainer = document.createElement("div");
+		filterContainer.className = "emoji-picker__filter-container";
+		const filterInputContainer = document.createElement("div");
+		filterInputContainer.className = "emoji-picker__filter filter-input-container";
+		const filterInput = document.createElement("input");
+		filterInput.className = "filter-input";
+		filterInput.placeholder = "按表情符号名称搜索…";
+		filterInput.type = "text";
+		filterInputContainer.appendChild(filterInput);
+		const closeButton = document.createElement("button");
+		closeButton.className = "btn no-text btn-icon btn-transparent emoji-picker__close-btn";
+		closeButton.type = "button";
+		closeButton.innerHTML = `<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>`;
+		closeButton.addEventListener("click", () => {
+			const container = modal.closest(".modal-container") || modal;
+			if (container) container.remove();
+		});
+		filterContainer.appendChild(filterInputContainer);
+		filterContainer.appendChild(closeButton);
+		const content = document.createElement("div");
+		content.className = "emoji-picker__content";
+		const sectionsNav = document.createElement("div");
+		sectionsNav.className = "emoji-picker__sections-nav";
+		const managementButton = document.createElement("button");
+		managementButton.className = "btn no-text btn-flat emoji-picker__section-btn management-btn";
+		managementButton.setAttribute("tabindex", "-1");
+		managementButton.type = "button";
+		managementButton.innerHTML = "⚙️";
+		managementButton.title = "管理表情 - 点击打开完整管理界面";
+		managementButton.style.borderRight = "1px solid #ddd";
+		managementButton.addEventListener("click", () => {
+			__vitePreload(async () => {
+				const { openManagementInterface: openManagementInterface$1 } = await Promise.resolve().then(() => (init_manager(), manager_exports));
+				return { openManagementInterface: openManagementInterface$1 };
+			}, void 0).then(({ openManagementInterface: openManagementInterface$1 }) => {
+				openManagementInterface$1();
+			});
+		});
+		sectionsNav.appendChild(managementButton);
+		const settingsButton = document.createElement("button");
+		settingsButton.className = "btn no-text btn-flat emoji-picker__section-btn settings-btn";
+		settingsButton.setAttribute("tabindex", "-1");
+		settingsButton.type = "button";
+		settingsButton.innerHTML = "🔧";
+		settingsButton.title = "设置";
+		settingsButton.style.borderRight = "1px solid #ddd";
+		settingsButton.addEventListener("click", () => {
+			__vitePreload(async () => {
+				const { showSettingsModal: showSettingsModal$1 } = await Promise.resolve().then(() => (init_settings(), settings_exports));
+				return { showSettingsModal: showSettingsModal$1 };
+			}, void 0).then(({ showSettingsModal: showSettingsModal$1 }) => {
+				showSettingsModal$1();
+			});
+		});
+		sectionsNav.appendChild(settingsButton);
+		const scrollableContent = document.createElement("div");
+		scrollableContent.className = "emoji-picker__scrollable-content";
+		const sections = document.createElement("div");
+		sections.className = "emoji-picker__sections";
+		sections.setAttribute("role", "button");
+		groups.forEach((group, index) => {
+			if (!group?.emojis?.length) return;
+			const navButton = document.createElement("button");
+			navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? "active" : ""}`;
+			navButton.setAttribute("tabindex", "-1");
+			navButton.setAttribute("data-section", group.id);
+			navButton.type = "button";
+			const iconVal = group.icon || "📁";
+			if (isImageUrl(iconVal)) {
+				const img = document.createElement("img");
+				img.src = iconVal;
+				img.alt = group.name || "";
+				img.className = "emoji";
+				img.style.width = "18px";
+				img.style.height = "18px";
+				img.style.objectFit = "contain";
+				navButton.appendChild(img);
+			} else navButton.textContent = String(iconVal);
+			navButton.title = group.name;
+			navButton.addEventListener("click", () => {
+				sectionsNav.querySelectorAll(".emoji-picker__section-btn").forEach((btn) => btn.classList.remove("active"));
+				navButton.classList.add("active");
+				const target = sections.querySelector(`[data-section="${group.id}"]`);
+				if (target) target.scrollIntoView({
+					behavior: "smooth",
+					block: "start"
+				});
+			});
+			sectionsNav.appendChild(navButton);
+			const section = document.createElement("div");
+			section.className = "emoji-picker__section";
+			section.setAttribute("data-section", group.id);
+			section.setAttribute("role", "region");
+			section.setAttribute("aria-label", group.name);
+			const titleContainer = document.createElement("div");
+			titleContainer.className = "emoji-picker__section-title-container";
+			const title = document.createElement("h2");
+			title.className = "emoji-picker__section-title";
+			title.textContent = group.name;
+			titleContainer.appendChild(title);
+			const sectionEmojis = document.createElement("div");
+			sectionEmojis.className = "emoji-picker__section-emojis";
+			group.emojis.forEach((emoji) => {
+				if (!emoji || typeof emoji !== "object" || !emoji.url || !emoji.name) return;
+				const img = document.createElement("img");
+				img.width = 32;
+				img.height = 32;
+				img.className = "emoji";
+				img.src = emoji.url;
+				img.tabIndex = 0;
+				img.dataset.emoji = emoji.name;
+				img.alt = emoji.name;
+				img.title = `:${emoji.name}:`;
+				img.loading = "lazy";
+				img.addEventListener("click", () => {
+					insertEmojiIntoEditor(emoji);
+					const modalContainer = modal.closest(".modal-container");
+					if (modalContainer) modalContainer.remove();
+					else modal.remove();
+				});
+				img.addEventListener("keydown", (e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						insertEmojiIntoEditor(emoji);
+						const modalContainer = modal.closest(".modal-container");
+						if (modalContainer) modalContainer.remove();
+						else modal.remove();
+					}
+				});
+				sectionEmojis.appendChild(img);
+			});
+			section.appendChild(titleContainer);
+			section.appendChild(sectionEmojis);
+			sections.appendChild(section);
+		});
+		filterInput.addEventListener("input", (e) => {
+			const q = (e.target.value || "").toLowerCase();
+			sections.querySelectorAll("img").forEach((img) => {
+				const emojiName = (img.dataset.emoji || "").toLowerCase();
+				img.style.display = q === "" || emojiName.includes(q) ? "" : "none";
+			});
+			sections.querySelectorAll(".emoji-picker__section").forEach((section) => {
+				const visibleEmojis = section.querySelectorAll("img:not([style*=\"display: none\"])");
+				section.style.display = visibleEmojis.length > 0 ? "" : "none";
+			});
+		});
+		scrollableContent.appendChild(sections);
+		content.appendChild(sectionsNav);
+		content.appendChild(scrollableContent);
+		emojiPickerDiv.appendChild(filterContainer);
+		emojiPickerDiv.appendChild(content);
+		modalBody.appendChild(emojiPickerDiv);
+		modalContainerDiv.appendChild(modalBody);
+		modal.appendChild(modalContainerDiv);
+		return modal;
+	}
+	function createDesktopEmojiPicker(groups) {
+		const picker = document.createElement("div");
+		picker.className = "fk-d-menu -animated -expanded";
+		picker.setAttribute("data-identifier", "emoji-picker");
+		picker.setAttribute("role", "dialog");
+		picker.style.cssText = "max-width: 400px; visibility: visible; z-index: 999999;";
+		const innerContent = document.createElement("div");
+		innerContent.className = "fk-d-menu__inner-content";
+		const emojiPickerDiv = document.createElement("div");
+		emojiPickerDiv.className = "emoji-picker";
+		const filterContainer = document.createElement("div");
+		filterContainer.className = "emoji-picker__filter-container";
+		const filterDiv = document.createElement("div");
+		filterDiv.className = "emoji-picker__filter filter-input-container";
+		const searchInput = document.createElement("input");
+		searchInput.className = "filter-input";
+		searchInput.placeholder = "按表情符号名称搜索…";
+		searchInput.type = "text";
+		filterDiv.appendChild(searchInput);
+		filterContainer.appendChild(filterDiv);
+		const content = document.createElement("div");
+		content.className = "emoji-picker__content";
+		const sectionsNav = document.createElement("div");
+		sectionsNav.className = "emoji-picker__sections-nav";
+		const managementButton = document.createElement("button");
+		managementButton.className = "btn no-text btn-flat emoji-picker__section-btn management-btn";
+		managementButton.setAttribute("tabindex", "-1");
+		managementButton.type = "button";
+		managementButton.innerHTML = "⚙️";
+		managementButton.title = "管理表情 - 点击打开完整管理界面";
+		managementButton.style.borderRight = "1px solid #ddd";
+		managementButton.addEventListener("click", () => {
+			__vitePreload(async () => {
+				const { openManagementInterface: openManagementInterface$1 } = await Promise.resolve().then(() => (init_manager(), manager_exports));
+				return { openManagementInterface: openManagementInterface$1 };
+			}, void 0).then(({ openManagementInterface: openManagementInterface$1 }) => {
+				openManagementInterface$1();
+			});
+		});
+		sectionsNav.appendChild(managementButton);
+		const settingsButton = document.createElement("button");
+		settingsButton.className = "btn no-text btn-flat emoji-picker__section-btn settings-btn";
+		settingsButton.setAttribute("tabindex", "-1");
+		settingsButton.type = "button";
+		settingsButton.innerHTML = "🔧";
+		settingsButton.title = "设置";
+		settingsButton.style.borderRight = "1px solid #ddd";
+		settingsButton.addEventListener("click", () => {
+			__vitePreload(async () => {
+				const { showSettingsModal: showSettingsModal$1 } = await Promise.resolve().then(() => (init_settings(), settings_exports));
+				return { showSettingsModal: showSettingsModal$1 };
+			}, void 0).then(({ showSettingsModal: showSettingsModal$1 }) => {
+				showSettingsModal$1();
+			});
+		});
+		sectionsNav.appendChild(settingsButton);
+		const scrollableContent = document.createElement("div");
+		scrollableContent.className = "emoji-picker__scrollable-content";
+		const sections = document.createElement("div");
+		sections.className = "emoji-picker__sections";
+		sections.setAttribute("role", "button");
+		groups.forEach((group, index) => {
+			if (!group?.emojis?.length) return;
+			const navButton = document.createElement("button");
+			navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? "active" : ""}`;
+			navButton.setAttribute("tabindex", "-1");
+			navButton.setAttribute("data-section", group.id);
+			navButton.type = "button";
+			const iconVal = group.icon || "📁";
+			if (isImageUrl(iconVal)) {
+				const img = document.createElement("img");
+				img.src = iconVal;
+				img.alt = group.name || "";
+				img.className = "emoji-group-icon";
+				img.style.width = "18px";
+				img.style.height = "18px";
+				img.style.objectFit = "contain";
+				navButton.appendChild(img);
+			} else navButton.textContent = String(iconVal);
+			navButton.title = group.name;
+			navButton.addEventListener("click", () => {
+				sectionsNav.querySelectorAll(".emoji-picker__section-btn").forEach((btn) => btn.classList.remove("active"));
+				navButton.classList.add("active");
+				const target = sections.querySelector(`[data-section="${group.id}"]`);
+				if (target) target.scrollIntoView({
+					behavior: "smooth",
+					block: "start"
+				});
+			});
+			sectionsNav.appendChild(navButton);
+			const section = document.createElement("div");
+			section.className = "emoji-picker__section";
+			section.setAttribute("data-section", group.id);
+			section.setAttribute("role", "region");
+			section.setAttribute("aria-label", group.name);
+			const titleContainer = document.createElement("div");
+			titleContainer.className = "emoji-picker__section-title-container";
+			const title = document.createElement("h2");
+			title.className = "emoji-picker__section-title";
+			title.textContent = group.name;
+			titleContainer.appendChild(title);
+			const sectionEmojis = document.createElement("div");
+			sectionEmojis.className = "emoji-picker__section-emojis";
+			let added = 0;
+			group.emojis.forEach((emoji) => {
+				if (!emoji || typeof emoji !== "object" || !emoji.url || !emoji.name) return;
+				const img = document.createElement("img");
+				img.width = 32;
+				img.height = 32;
+				img.className = "emoji";
+				img.src = emoji.url;
+				img.setAttribute("tabindex", "0");
+				img.setAttribute("data-emoji", emoji.name);
+				img.alt = emoji.name;
+				img.title = `:${emoji.name}:`;
+				img.loading = "lazy";
+				img.addEventListener("click", () => {
+					insertEmojiIntoEditor(emoji);
+					picker.remove();
+				});
+				img.addEventListener("keydown", (e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						insertEmojiIntoEditor(emoji);
+						picker.remove();
+					}
+				});
+				sectionEmojis.appendChild(img);
+				added++;
+			});
+			if (added === 0) {
+				const msg = document.createElement("div");
+				msg.textContent = `${group.name} 组暂无有效表情`;
+				msg.style.cssText = "padding: 20px; text-align: center; color: #999;";
+				sectionEmojis.appendChild(msg);
+			}
+			section.appendChild(titleContainer);
+			section.appendChild(sectionEmojis);
+			sections.appendChild(section);
+		});
+		searchInput.addEventListener("input", (e) => {
+			const q = (e.target.value || "").toLowerCase();
+			sections.querySelectorAll("img").forEach((img) => {
+				const emojiName = img.getAttribute("data-emoji")?.toLowerCase() || "";
+				img.style.display = q === "" || emojiName.includes(q) ? "" : "none";
+			});
+			sections.querySelectorAll(".emoji-picker__section").forEach((section) => {
+				const visibleEmojis = section.querySelectorAll("img:not([style*=\"none\"])");
+				const titleContainer = section.querySelector(".emoji-picker__section-title-container");
+				if (titleContainer) titleContainer.style.display = visibleEmojis.length > 0 ? "" : "none";
+			});
+		});
+		scrollableContent.appendChild(sections);
+		content.appendChild(sectionsNav);
+		content.appendChild(scrollableContent);
+		emojiPickerDiv.appendChild(filterContainer);
+		emojiPickerDiv.appendChild(content);
+		innerContent.appendChild(emojiPickerDiv);
+		picker.appendChild(innerContent);
+		return picker;
+	}
+	async function createEmojiPicker() {
+		const groups = userscriptState.emojiGroups;
+		if (isMobileView()) return createMobileEmojiPicker(groups);
+		else return createDesktopEmojiPicker(groups);
+	}
+	var toolbarSelectors = [".d-editor-button-bar[role=\"toolbar\"]", ".chat-composer__inner-container"];
+	function findAllToolbars() {
+		const toolbars = [];
+		for (const selector of toolbarSelectors) {
+			const elements = document.querySelectorAll(selector);
+			toolbars.push(...Array.from(elements));
+		}
+		return toolbars;
 	}
 	var currentPicker = null;
 	function closeCurrentPicker() {
@@ -1881,183 +2018,22 @@
 			console.error("[Emoji Extension Userscript] Failed to inject button:", error);
 		}
 	}
-	function initOneClickAdd() {
-		console.log("[Emoji Extension Userscript] Initializing one-click add functionality");
-		function extractEmojiFromImage(img, titleElement) {
-			const url = img.src;
-			if (!url || !url.startsWith("http")) return null;
-			let name = "";
-			const parts = (titleElement.textContent || "").split("·");
-			if (parts.length > 0) name = parts[0].trim();
-			if (!name || name.length < 2) name = img.alt || img.title || extractNameFromUrl(url);
-			name = name.trim();
-			if (name.length === 0) name = "表情";
-			return {
-				name,
-				url
-			};
-		}
-		function extractNameFromUrl(url) {
-			try {
-				const nameWithoutExt = (new URL(url).pathname.split("/").pop() || "").replace(/\.[^/.]+$/, "");
-				const decoded = decodeURIComponent(nameWithoutExt);
-				if (/^[0-9a-f]{8,}$/i.test(decoded) || decoded.length < 2) return "表情";
-				return decoded || "表情";
-			} catch {
-				return "表情";
+	function attemptInjection() {
+		const toolbars = findAllToolbars();
+		let injectedCount = 0;
+		toolbars.forEach((toolbar) => {
+			if (!toolbar.querySelector(".emoji-extension-button")) {
+				console.log("[Emoji Extension Userscript] Toolbar found, injecting button.");
+				injectEmojiButton(toolbar);
+				injectedCount++;
 			}
-		}
-		function createAddButton(emojiData) {
-			const link = document.createElement("a");
-			link.className = "image-source-link emoji-add-link";
-			link.style.cssText = `
-      color: #ffffff;
-      text-decoration: none;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      font-size: inherit;
-      font-family: inherit;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      border: 2px solid #ffffff;
-      border-radius: 6px;
-      padding: 4px 8px;
-      margin: 0 2px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      transition: all 0.2s ease;
-      font-weight: 600;
-    `;
-			link.addEventListener("mouseenter", () => {
-				if (!link.innerHTML.includes("已添加") && !link.innerHTML.includes("失败")) {
-					link.style.background = "linear-gradient(135deg, #3730a3, #5b21b6)";
-					link.style.transform = "scale(1.05)";
-					link.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.3)";
-				}
-			});
-			link.addEventListener("mouseleave", () => {
-				if (!link.innerHTML.includes("已添加") && !link.innerHTML.includes("失败")) {
-					link.style.background = "linear-gradient(135deg, #4f46e5, #7c3aed)";
-					link.style.transform = "scale(1)";
-					link.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.2)";
-				}
-			});
-			link.innerHTML = `
-      <svg class="fa d-icon d-icon-plus svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
-        <path d="M12 4c.55 0 1 .45 1 1v6h6c.55 0 1 .45 1 1s-.45 1-1 1h-6v6c0 .55-.45 1-1 1s-1-.45-1-1v-6H5c-.55 0-1-.45-1-1s.45-1 1-1h6V5c0-.55.45-1 1-1z"/>
-      </svg>添加表情
-    `;
-			link.title = "添加到用户表情";
-			link.addEventListener("click", async (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				const originalHTML = link.innerHTML;
-				const originalStyle = link.style.cssText;
-				try {
-					addEmojiToUserscript(emojiData);
-					try {
-						uploader.showProgressDialog();
-					} catch (e$1) {
-						console.warn("[Userscript] uploader.showProgressDialog failed:", e$1);
-					}
-					link.innerHTML = `
-          <svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-          </svg>已添加
-        `;
-					link.style.background = "linear-gradient(135deg, #10b981, #059669)";
-					link.style.color = "#ffffff";
-					link.style.border = "2px solid #ffffff";
-					link.style.boxShadow = "0 2px 4px rgba(16, 185, 129, 0.3)";
-					setTimeout(() => {
-						link.innerHTML = originalHTML;
-						link.style.cssText = originalStyle;
-					}, 2e3);
-				} catch (error) {
-					console.error("[Emoji Extension Userscript] Failed to add emoji:", error);
-					link.innerHTML = `
-          <svg class="fa d-icon d-icon-times svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-          </svg>失败
-        `;
-					link.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
-					link.style.color = "#ffffff";
-					link.style.border = "2px solid #ffffff";
-					link.style.boxShadow = "0 2px 4px rgba(239, 68, 68, 0.3)";
-					setTimeout(() => {
-						link.innerHTML = originalHTML;
-						link.style.cssText = originalStyle;
-					}, 2e3);
-				}
-			});
-			return link;
-		}
-		function processLightbox(lightbox) {
-			if (lightbox.querySelector(".emoji-add-link")) return;
-			const img = lightbox.querySelector(".mfp-img");
-			const title = lightbox.querySelector(".mfp-title");
-			if (!img || !title) return;
-			const emojiData = extractEmojiFromImage(img, title);
-			if (!emojiData) return;
-			const addButton = createAddButton(emojiData);
-			const sourceLink = title.querySelector("a.image-source-link");
-			if (sourceLink) {
-				const separator = document.createTextNode(" · ");
-				title.insertBefore(separator, sourceLink);
-				title.insertBefore(addButton, sourceLink);
-			} else {
-				title.appendChild(document.createTextNode(" · "));
-				title.appendChild(addButton);
-			}
-		}
-		function processAllLightboxes() {
-			document.querySelectorAll(".mfp-wrap.mfp-gallery").forEach((lightbox) => {
-				if (lightbox.classList.contains("mfp-wrap") && lightbox.classList.contains("mfp-gallery") && lightbox.querySelector(".mfp-img")) processLightbox(lightbox);
-			});
-		}
-		setTimeout(processAllLightboxes, 500);
-		new MutationObserver((mutations) => {
-			let hasNewLightbox = false;
-			mutations.forEach((mutation) => {
-				if (mutation.type === "childList") mutation.addedNodes.forEach((node) => {
-					if (node.nodeType === Node.ELEMENT_NODE) {
-						const element = node;
-						if (element.classList && element.classList.contains("mfp-wrap")) hasNewLightbox = true;
-					}
-				});
-			});
-			if (hasNewLightbox) setTimeout(processAllLightboxes, 100);
-		}).observe(document.body, {
-			childList: true,
-			subtree: true
 		});
-		document.addEventListener("visibilitychange", () => {
-			if (!document.hidden) setTimeout(processAllLightboxes, 200);
-		});
+		return {
+			injectedCount,
+			totalToolbars: toolbars.length
+		};
 	}
-	async function initializeEmojiFeature(maxAttempts = 10, delay = 1e3) {
-		console.log("[Emoji Extension Userscript] Initializing...");
-		initializeUserscriptData();
-		initOneClickAdd();
-		let attempts = 0;
-		function attemptInjection() {
-			attempts++;
-			const toolbars = findAllToolbars();
-			let injectedCount = 0;
-			toolbars.forEach((toolbar) => {
-				if (!toolbar.querySelector(".emoji-extension-button")) {
-					console.log("[Emoji Extension Userscript] Toolbar found, injecting button.");
-					injectEmojiButton(toolbar);
-					injectedCount++;
-				}
-			});
-			if (injectedCount > 0 || toolbars.length > 0) return;
-			if (attempts < maxAttempts) {
-				console.log(`[Emoji Extension Userscript] Toolbar not found, attempt ${attempts}/${maxAttempts}. Retrying in ${delay / 1e3}s.`);
-				setTimeout(attemptInjection, delay);
-			} else console.error("[Emoji Extension Userscript] Failed to find toolbar after multiple attempts.");
-		}
-		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", attemptInjection);
-		else attemptInjection();
+	function startPeriodicInjection() {
 		setInterval(() => {
 			findAllToolbars().forEach((toolbar) => {
 				if (!toolbar.querySelector(".emoji-extension-button")) {
@@ -2066,6 +2042,66 @@
 				}
 			});
 		}, 3e4);
+	}
+	init_userscript_storage();
+	init_state();
+	async function initializeUserscriptData() {
+		const data = await loadDataFromLocalStorageAsync().catch((err) => {
+			console.warn("[Userscript] loadDataFromLocalStorageAsync failed, falling back to sync loader", err);
+			return loadDataFromLocalStorage();
+		});
+		userscriptState.emojiGroups = data.emojiGroups || [];
+		userscriptState.settings = data.settings || userscriptState.settings;
+	}
+	function shouldInjectEmoji() {
+		if (document.querySelectorAll("meta[name*=\"discourse\"], meta[content*=\"discourse\"], meta[property*=\"discourse\"]").length > 0) {
+			console.log("[Emoji Extension Userscript] Discourse detected via meta tags");
+			return true;
+		}
+		const generatorMeta = document.querySelector("meta[name=\"generator\"]");
+		if (generatorMeta) {
+			const content = generatorMeta.getAttribute("content")?.toLowerCase() || "";
+			if (content.includes("discourse") || content.includes("flarum") || content.includes("phpbb")) {
+				console.log("[Emoji Extension Userscript] Forum platform detected via generator meta");
+				return true;
+			}
+		}
+		const hostname = window.location.hostname.toLowerCase();
+		if ([
+			"linux.do",
+			"meta.discourse.org",
+			"pixiv.net"
+		].some((domain) => hostname.includes(domain))) {
+			console.log("[Emoji Extension Userscript] Allowed domain detected:", hostname);
+			return true;
+		}
+		if (document.querySelectorAll("textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea").length > 0) {
+			console.log("[Emoji Extension Userscript] Discussion editor detected");
+			return true;
+		}
+		console.log("[Emoji Extension Userscript] No compatible platform detected");
+		return false;
+	}
+	async function initializeEmojiFeature(maxAttempts = 10, delay = 1e3) {
+		console.log("[Emoji Extension Userscript] Initializing...");
+		await initializeUserscriptData();
+		initOneClickAdd();
+		let attempts = 0;
+		function attemptToolbarInjection() {
+			attempts++;
+			const result = attemptInjection();
+			if (result.injectedCount > 0 || result.totalToolbars > 0) {
+				console.log(`[Emoji Extension Userscript] Injection successful: ${result.injectedCount} buttons injected into ${result.totalToolbars} toolbars`);
+				return;
+			}
+			if (attempts < maxAttempts) {
+				console.log(`[Emoji Extension Userscript] Toolbar not found, attempt ${attempts}/${maxAttempts}. Retrying in ${delay / 1e3}s.`);
+				setTimeout(attemptToolbarInjection, delay);
+			} else console.error("[Emoji Extension Userscript] Failed to find toolbar after multiple attempts.");
+		}
+		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", attemptToolbarInjection);
+		else attemptToolbarInjection();
+		startPeriodicInjection();
 	}
 	if (shouldInjectEmoji()) {
 		console.log("[Emoji Extension Userscript] Initializing emoji feature");
