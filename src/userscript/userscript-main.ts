@@ -1054,6 +1054,13 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
 
   initializeUserscriptData()
   initOneClickAdd()
+  // Register userscript menu commands (Tampermonkey / Greasemonkey) to allow
+  // toggling forceMobileMode and opening settings/manager quickly.
+  try {
+    registerUserscriptMenu()
+  } catch (e) {
+    console.warn('[Userscript] registerUserscriptMenu failed', e)
+  }
   // Pixiv specific injection (use content/pixiv implementation)
   try {
     //initPixiv()
@@ -1240,3 +1247,80 @@ try {
 }
 
 export {}
+
+// Register userscript menu and fallbacks
+function registerUserscriptMenu() {
+  // Helper to toggle forceMobileMode and persist
+  const toggleForceMobile = () => {
+    try {
+      const current = userscriptState.settings.forceMobileMode || false
+      const next = !current
+      userscriptState.settings.forceMobileMode = next
+      saveDataToLocalStorage({ settings: userscriptState.settings })
+      alert(`强制移动模式已 ${next ? '开启' : '关闭'}`)
+    } catch (e) {
+      console.warn('[Userscript] toggleForceMobile failed', e)
+    }
+  }
+
+  const openSettings = () => {
+    try {
+      showSettingsModal()
+    } catch (e) {
+      console.warn('[Userscript] openSettings failed', e)
+    }
+  }
+
+  const openManager = () => {
+    try {
+      openManagementInterface()
+    } catch (e) {
+      console.warn('[Userscript] openManager failed', e)
+    }
+  }
+
+  // Tampermonkey / Greasemonkey API
+  // @ts-ignore
+  const gmRegister = (typeof GM_registerMenuCommand !== 'undefined' && GM_registerMenuCommand) || null
+
+  if (gmRegister) {
+    try {
+      // Register toggle (shows up with current state in label)
+      const label = userscriptState.settings.forceMobileMode ? '关闭强制移动模式' : '开启强制移动模式'
+      // @ts-ignore
+      GM_registerMenuCommand(label, toggleForceMobile)
+      // @ts-ignore
+      GM_registerMenuCommand('打开设置', openSettings)
+      // @ts-ignore
+      GM_registerMenuCommand('打开表情管理界面', openManager)
+    } catch (e) {
+      console.warn('[Userscript] GM_registerMenuCommand registration failed', e)
+    }
+  } else {
+    // Fallback: keyboard shortcut Alt+M to toggle, Alt+O for settings, Alt+G for manager
+    window.addEventListener('keydown', (ev: KeyboardEvent) => {
+      if (ev.altKey && !ev.shiftKey && !ev.ctrlKey) {
+        if (ev.key.toLowerCase() === 'm') {
+          toggleForceMobile()
+        } else if (ev.key.toLowerCase() === 'o') {
+          openSettings()
+        } else if (ev.key.toLowerCase() === 'g') {
+          openManager()
+        }
+      }
+    })
+
+    // Inform the user how to use shortcuts the first time
+    try {
+      const shownKey = 'emoji_extension_userscript_shortcut_shown'
+      if (!localStorage.getItem(shownKey)) {
+        localStorage.setItem(shownKey, '1')
+        setTimeout(() => {
+          alert('提示：按 Alt+M 切换强制移动模式，Alt+O 打开设置，Alt+G 打开管理界面')
+        }, 500)
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+}

@@ -52,16 +52,13 @@ export default defineConfig(({ mode }) => {
           userscript: fileURLToPath(new URL('src/userscript/userscript-main.ts', import.meta.url))
         },
         output: {
-          entryFileNames: chunkInfo => {
-            return `${chunkInfo.name}.js`
-          },
+          entryFileNames: chunkInfo => `${chunkInfo.name}.js`,
           chunkFileNames: `[name].js`,
           assetFileNames: `[name].[ext]`,
-          // Bundle everything into a single file for userscript
-          manualChunks: () => {
-            return 'userscript' // Force everything into one chunk
-          }
+          // Produce a single-file bundle by using IIFE format and inlining dynamic imports
+          format: 'iife'
         },
+        inlineDynamicImports: true,
         external: () => false // Don't externalize anything
       },
       outDir: process.env.BUILD_MINIFIED === 'true' ? 'dist-userscript-min' : 'dist-userscript',

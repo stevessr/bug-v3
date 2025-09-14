@@ -88,7 +88,13 @@ if (!config) {
 // 设置环境变量
 Object.assign(process.env, config)
 // 把可选的构建变体注入环境变量，供 vite 配置读取
-process.env.USERSCRIPT_VARIANT = variant
+// For userscript builds, default to 'embedded' unless caller explicitly set a variant.
+if (buildType.startsWith('build:userscript') && process.env.USERSCRIPT_VARIANT === undefined && args.length <= 1) {
+  // If user didn't pass an explicit variant, embed defaults into the userscript bundle.
+  process.env.USERSCRIPT_VARIANT = 'embedded'
+} else {
+  process.env.USERSCRIPT_VARIANT = variant
+}
 
 // Note: build-time generation of defaultEmojiGroups.ts has been removed.
 

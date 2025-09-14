@@ -147,7 +147,9 @@ function processUserscript() {
   const inputFile = path.resolve(__dirname, '..', inputDir, 'userscript.js')
   // Allow variant-specific output filename (e.g. emoji-extension.remote.user.js)
   const variant = process.env.USERSCRIPT_VARIANT || 'default'
-  const variantSuffix = variant && variant !== 'default' ? `.${variant}` : ''
+  // Treat the internal 'embedded' variant as the default output (no suffix)
+  const normalizedVariant = variant === 'embedded' ? 'default' : variant
+  const variantSuffix = normalizedVariant && normalizedVariant !== 'default' ? `.${normalizedVariant}` : ''
   const outputFile = path.resolve(
     __dirname,
     '..',
@@ -170,7 +172,39 @@ function processUserscript() {
       throw new Error(`Input file not found: ${inputFile}`)
     }
 
-    const userscriptContent = fs.readFileSync(inputFile, 'utf8')
+      let userscriptContent = fs.readFileSync(inputFile, 'utf8')
+
+      // Inline simple top-level import statements that reference local chunks
+      // e.g. import "./userscript2.js"; -> prepend the contents of that file and remove the import line
+      // This keeps the final userscript as a single flat file (required for userscript packaging)
+      const importLineRegex = /^\s*import\s+["'](.+)["'];?\s*$/gm
+      const imports = []
+      let importMatch
+      while ((importMatch = importLineRegex.exec(userscriptContent)) !== null) {
+        imports.push(importMatch[1])
+      }
+
+      let inlinedPrefix = ''
+      for (const importPath of imports) {
+        try {
+          const importedFile = path.resolve(__dirname, '..', inputDir, importPath)
+          if (fs.existsSync(importedFile)) {
+            const importedContent = fs.readFileSync(importedFile, 'utf8')
+            inlinedPrefix += `\n/* inlined ${path.basename(importedFile)} */\n` + importedContent + '\n'
+          } else {
+            inlinedPrefix += `\n/* missing import ${importPath} removed */\n`
+          }
+        } catch (e) {
+          inlinedPrefix += `\n/* failed to inline ${importPath} */\n`
+        }
+      }
+
+      if (imports.length > 0) {
+        // Remove all import lines we matched
+        userscriptContent = userscriptContent.replace(importLineRegex, '')
+        // Prepend the inlined contents so dependencies run first
+        userscriptContent = inlinedPrefix + '\n' + userscriptContent
+      }
 
     // Combine header + content + footer
     const header = getUserscriptHeader(isMinified)
