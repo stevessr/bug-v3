@@ -1,13 +1,13 @@
-import './main.ts'
+import './utils/main.ts'
 
 
-import { setupOnInstalledListener } from '../init.ts'
+import { setupOnInstalledListener } from './init'
 import {
   setupMessageListener,
   setupStorageChangeListener,
   setupContextMenu,
   setupPeriodicCleanup
-} from './handlers.ts'
+} from './utils/handlers'
 
 console.log('Emoji Extension Background script loaded.')
 
