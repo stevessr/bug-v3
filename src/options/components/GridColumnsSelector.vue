@@ -30,7 +30,7 @@ const onMenuClick = (key: string) => {
 <template>
   <a-dropdown>
     <template #overlay>
-      <a-menu @click="(info: { key: any; }) => onMenuClick(String(info.key))">
+      <a-menu @click="(info: { key: any }) => onMenuClick(String(info.key))">
         <a-menu-item v-for="col in options" :key="col" :value="col">{{ col }} 列</a-menu-item>
       </a-menu>
     </template>

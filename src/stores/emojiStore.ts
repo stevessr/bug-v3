@@ -741,11 +741,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       if (!changedKeys.length) return
 
       // Only consider changes to settings, favorites, group index or individual group keys
-      const isRelevant = changedKeys.some(k =>
-        k === STORAGE_KEYS.SETTINGS ||
-        k === STORAGE_KEYS.FAVORITES ||
-        k === STORAGE_KEYS.GROUP_INDEX ||
-        k.startsWith(STORAGE_KEYS.GROUP_PREFIX)
+      const isRelevant = changedKeys.some(
+        k =>
+          k === STORAGE_KEYS.SETTINGS ||
+          k === STORAGE_KEYS.FAVORITES ||
+          k === STORAGE_KEYS.GROUP_INDEX ||
+          k.startsWith(STORAGE_KEYS.GROUP_PREFIX)
       )
 
       if (!isRelevant) {
@@ -767,7 +768,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       // If incoming changes are older or equal to the last processed one, skip
       if (maxIncomingTs && maxIncomingTs <= lastExternalChangeTs) {
-        console.log('[EmojiStore] Ignored storage change - older timestamp', { maxIncomingTs, lastExternalChangeTs })
+        console.log('[EmojiStore] Ignored storage change - older timestamp', {
+          maxIncomingTs,
+          lastExternalChangeTs
+        })
         return
       }
 
@@ -776,121 +780,136 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       // Debounce and coalesce multiple notifications
       if (externalChangeTimer) clearTimeout(externalChangeTimer)
-          // Capture the changes for processing inside debounce
-          const capturedChanges = changes
-          const capturedKeys = changedKeys
-          externalChangeTimer = setTimeout(async () => {
-            externalChangeTimer = null
-            isUpdatingFromStorage = true
+      // Capture the changes for processing inside debounce
+      const capturedChanges = changes
+      const capturedKeys = changedKeys
+      externalChangeTimer = setTimeout(async () => {
+        externalChangeTimer = null
+        isUpdatingFromStorage = true
+        try {
+          console.log(
+            '[EmojiStore] Applying external storage update - processing relevant keys',
+            capturedKeys
+          )
+
+          // Process each relevant key individually to avoid full reloads
+          for (const k of capturedKeys) {
             try {
-              console.log('[EmojiStore] Applying external storage update - processing relevant keys', capturedKeys)
+              // Group-level change
+              if (k.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
+                const groupId = k.replace(STORAGE_KEYS.GROUP_PREFIX, '')
+                // Try to read new group data from change payload first
+                let newGroup: any = null
+                const change = capturedChanges[k]
+                if (change && change.newValue && typeof change.newValue === 'object') {
+                  newGroup = change.newValue.data || null
+                }
+                // Fallback to storage read (conflict resolution) if not present
+                if (!newGroup) {
+                  try {
+                    newGroup = await newStorageHelpers.getEmojiGroup(groupId)
+                  } catch (e) {
+                    newGroup = null
+                  }
+                }
 
-              // Process each relevant key individually to avoid full reloads
-              for (const k of capturedKeys) {
-                try {
-                  // Group-level change
-                  if (k.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
-                    const groupId = k.replace(STORAGE_KEYS.GROUP_PREFIX, '')
-                    // Try to read new group data from change payload first
-                    let newGroup: any = null
-                    const change = capturedChanges[k]
-                    if (change && change.newValue && typeof change.newValue === 'object') {
-                      newGroup = change.newValue.data || null
+                // If group deleted (null), remove locally; otherwise upsert
+                if (newGroup == null) {
+                  groups.value = groups.value.filter(g => g.id !== groupId)
+                  console.log(
+                    '[EmojiStore] Removed group from store due to external change',
+                    groupId
+                  )
+                } else {
+                  // Normalize image URLs similar to loadData
+                  try {
+                    if (newGroup && typeof newGroup.icon === 'string') {
+                      newGroup.icon = normalizeImageUrl(newGroup.icon) || newGroup.icon
                     }
-                    // Fallback to storage read (conflict resolution) if not present
-                    if (!newGroup) {
-                      try {
-                        newGroup = await newStorageHelpers.getEmojiGroup(groupId)
-                      } catch (e) {
-                        newGroup = null
+                    if (Array.isArray(newGroup.emojis)) {
+                      for (const e of newGroup.emojis) {
+                        if (e && typeof e.url === 'string')
+                          e.url = normalizeImageUrl(e.url) || e.url
+                        if (e && typeof e.displayUrl === 'string')
+                          e.displayUrl = normalizeImageUrl(e.displayUrl) || e.displayUrl
                       }
                     }
-
-                    // If group deleted (null), remove locally; otherwise upsert
-                    if (newGroup == null) {
-                      groups.value = groups.value.filter(g => g.id !== groupId)
-                      console.log('[EmojiStore] Removed group from store due to external change', groupId)
-                    } else {
-                      // Normalize image URLs similar to loadData
-                      try {
-                        if (newGroup && typeof newGroup.icon === 'string') {
-                          newGroup.icon = normalizeImageUrl(newGroup.icon) || newGroup.icon
-                        }
-                        if (Array.isArray(newGroup.emojis)) {
-                          for (const e of newGroup.emojis) {
-                            if (e && typeof e.url === 'string') e.url = normalizeImageUrl(e.url) || e.url
-                            if (e && typeof e.displayUrl === 'string') e.displayUrl = normalizeImageUrl(e.displayUrl) || e.displayUrl
-                          }
-                        }
-                      } catch (e) {
-                        // ignore normalization errors
-                      }
-
-                      const idx = groups.value.findIndex(g => g.id === newGroup.id)
-                      if (idx !== -1) {
-                        // Merge existing metadata but prefer incoming data
-                        const merged = { ...groups.value[idx], ...newGroup }
-                        groups.value = [...groups.value.slice(0, idx), merged, ...groups.value.slice(idx + 1)]
-                        console.log('[EmojiStore] Updated group in-place from external change', newGroup.id)
-                      } else {
-                        groups.value = [...groups.value, newGroup]
-                        console.log('[EmojiStore] Inserted new group from external change', newGroup.id)
-                      }
-                    }
+                  } catch (e) {
+                    // ignore normalization errors
                   }
 
-                  // Settings change
-                  else if (k === STORAGE_KEYS.SETTINGS) {
-                    const change = capturedChanges[k]
-                    const data = change && change.newValue ? change.newValue.data : null
-                    if (data && typeof data === 'object') {
-                      settings.value = { ...defaultSettings, ...data }
-                      console.log('[EmojiStore] Updated settings from external storage')
-                    }
+                  const idx = groups.value.findIndex(g => g.id === newGroup.id)
+                  if (idx !== -1) {
+                    // Merge existing metadata but prefer incoming data
+                    const merged = { ...groups.value[idx], ...newGroup }
+                    groups.value = [
+                      ...groups.value.slice(0, idx),
+                      merged,
+                      ...groups.value.slice(idx + 1)
+                    ]
+                    console.log(
+                      '[EmojiStore] Updated group in-place from external change',
+                      newGroup.id
+                    )
+                  } else {
+                    groups.value = [...groups.value, newGroup]
+                    console.log('[EmojiStore] Inserted new group from external change', newGroup.id)
                   }
-
-                  // Favorites change
-                  else if (k === STORAGE_KEYS.FAVORITES) {
-                    const change = capturedChanges[k]
-                    const data = change && change.newValue ? change.newValue.data : null
-                    if (Array.isArray(data)) {
-                      favorites.value = new Set(data)
-                      console.log('[EmojiStore] Updated favorites from external storage')
-                    }
-                  }
-
-                  // Group index (order) changed - refresh index and apply order
-                  else if (k === STORAGE_KEYS.GROUP_INDEX) {
-                    try {
-                      const index = await newStorageHelpers.getEmojiGroupIndex()
-                      if (Array.isArray(index) && index.length) {
-                        // Map order by id
-                        const orderMap = new Map(index.map((i: any) => [i.id, i.order]))
-                        const reordered = [...groups.value].sort((a, b) => {
-                          const oa = orderMap.has(a.id) ? orderMap.get(a.id) : a.order ?? 0
-                          const ob = orderMap.has(b.id) ? orderMap.get(b.id) : b.order ?? 0
-                          return oa - ob
-                        })
-                        groups.value = reordered.map((g, idx) => ({ ...g, order: idx }))
-                        console.log('[EmojiStore] Reordered groups from external group index')
-                      }
-                    } catch (e) {
-                      // ignore
-                    }
-                  }
-                } catch (innerErr) {
-                  console.error('[EmojiStore] Error processing external key', k, innerErr)
                 }
               }
-            } catch (e) {
-              console.error('[EmojiStore] Failed to process storage change', e)
-            } finally {
-              setTimeout(() => {
-                isUpdatingFromStorage = false
-                console.log('[EmojiStore] External storage processing completed')
-              }, 200)
+
+              // Settings change
+              else if (k === STORAGE_KEYS.SETTINGS) {
+                const change = capturedChanges[k]
+                const data = change && change.newValue ? change.newValue.data : null
+                if (data && typeof data === 'object') {
+                  settings.value = { ...defaultSettings, ...data }
+                  console.log('[EmojiStore] Updated settings from external storage')
+                }
+              }
+
+              // Favorites change
+              else if (k === STORAGE_KEYS.FAVORITES) {
+                const change = capturedChanges[k]
+                const data = change && change.newValue ? change.newValue.data : null
+                if (Array.isArray(data)) {
+                  favorites.value = new Set(data)
+                  console.log('[EmojiStore] Updated favorites from external storage')
+                }
+              }
+
+              // Group index (order) changed - refresh index and apply order
+              else if (k === STORAGE_KEYS.GROUP_INDEX) {
+                try {
+                  const index = await newStorageHelpers.getEmojiGroupIndex()
+                  if (Array.isArray(index) && index.length) {
+                    // Map order by id
+                    const orderMap = new Map(index.map((i: any) => [i.id, i.order]))
+                    const reordered = [...groups.value].sort((a, b) => {
+                      const oa = orderMap.has(a.id) ? orderMap.get(a.id) : (a.order ?? 0)
+                      const ob = orderMap.has(b.id) ? orderMap.get(b.id) : (b.order ?? 0)
+                      return oa - ob
+                    })
+                    groups.value = reordered.map((g, idx) => ({ ...g, order: idx }))
+                    console.log('[EmojiStore] Reordered groups from external group index')
+                  }
+                } catch (e) {
+                  // ignore
+                }
+              }
+            } catch (innerErr) {
+              console.error('[EmojiStore] Error processing external key', k, innerErr)
             }
-          }, EXTERNAL_CHANGE_DEBOUNCE_MS)
+          }
+        } catch (e) {
+          console.error('[EmojiStore] Failed to process storage change', e)
+        } finally {
+          setTimeout(() => {
+            isUpdatingFromStorage = false
+            console.log('[EmojiStore] External storage processing completed')
+          }, 200)
+        }
+      }, EXTERNAL_CHANGE_DEBOUNCE_MS)
     })
   }
 

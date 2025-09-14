@@ -7,7 +7,7 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
   btn.type = 'button'
   btn.title = '添加到未分组表情'
   btn.innerHTML = '➕'
-  btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`;
+  btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
 
   const handler = async (ev: Event) => {
     try {
@@ -32,14 +32,14 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
             btn.style.background = 'linear-gradient(135deg, #10b981, #059669)'
             setTimeout(() => {
               btn.innerHTML = '➕'
-              btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`;
+              btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
             }, 1500)
           } else {
             btn.innerHTML = '失败'
             btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
             setTimeout(() => {
               btn.innerHTML = '➕'
-              btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`;
+              btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
             }, 1500)
           }
         } catch (_e) {
@@ -103,7 +103,11 @@ function extractEmojiDataFromReddit(container: Element): AddEmojiButtonData | nu
 function addEmojiButtonToContainer(container: Element) {
   try {
     if (!container) return
-    if (container.querySelector('.reddit-emoji-add-btn') || container.querySelector('.emoji-add-link-pixiv')) return
+    if (
+      container.querySelector('.reddit-emoji-add-btn') ||
+      container.querySelector('.emoji-add-link-pixiv')
+    )
+      return
 
     const data = extractEmojiDataFromReddit(container)
     if (!data) return
@@ -126,7 +130,9 @@ function addEmojiButtonToContainer(container: Element) {
 
 function scanForRedditImages() {
   try {
-    const candidates = Array.from(document.querySelectorAll('[role="presentation"], .media-lightbox-img, .preview-img'))
+    const candidates = Array.from(
+      document.querySelectorAll('[role="presentation"], .media-lightbox-img, .preview-img')
+    )
     candidates.forEach(c => {
       if (isRedditImageContainer(c)) addEmojiButtonToContainer(c)
     })
@@ -136,9 +142,17 @@ function scanForRedditImages() {
     for (const img of imgs) {
       const parent = img.parentElement
       if (!parent) continue
-      if (parent.querySelector('.reddit-emoji-add') || parent.querySelector('.emoji-add-link-pixiv')) continue
+      if (
+        parent.querySelector('.reddit-emoji-add') ||
+        parent.querySelector('.emoji-add-link-pixiv')
+      )
+        continue
       const className = (parent.className || '') as string
-      if (className.includes('media-lightbox-img') || className.includes('preview-img') || parent.getAttribute('data-test-id') === 'post-content') {
+      if (
+        className.includes('media-lightbox-img') ||
+        className.includes('preview-img') ||
+        parent.getAttribute('data-test-id') === 'post-content'
+      ) {
         addEmojiButtonToContainer(parent)
       }
     }

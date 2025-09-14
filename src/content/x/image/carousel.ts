@@ -230,19 +230,20 @@ function addCarouselButtonToEl(el: Element) {
 
     if (el instanceof HTMLImageElement) {
       const imgEl = el as HTMLImageElement
-        // If the image has an alt text, normally we skip injecting because
-        // it's likely inline content (avatars, emojis, etc). However Twitter's
-        // standalone image pages and some embeds may set alt text while the
-        // image src still points to pbs.twimg.com media. In that case we
-        // should still attempt injection. Only skip early when the image does
-        // not appear to be twitter media.
-        const altText = imgEl.getAttribute('alt') || ''
-        const src = imgEl.src || imgEl.getAttribute('src') || ''
-        const lowerSrc = (src || '').toLowerCase()
-        const looksLikeTwitterMedia = lowerSrc.includes('pbs.twimg.com') || lowerSrc.includes('twimg.com')
-        if (altText !== '' && !looksLikeTwitterMedia) {
-          return
-        }
+      // If the image has an alt text, normally we skip injecting because
+      // it's likely inline content (avatars, emojis, etc). However Twitter's
+      // standalone image pages and some embeds may set alt text while the
+      // image src still points to pbs.twimg.com media. In that case we
+      // should still attempt injection. Only skip early when the image does
+      // not appear to be twitter media.
+      const altText = imgEl.getAttribute('alt') || ''
+      const src = imgEl.src || imgEl.getAttribute('src') || ''
+      const lowerSrc = (src || '').toLowerCase()
+      const looksLikeTwitterMedia =
+        lowerSrc.includes('pbs.twimg.com') || lowerSrc.includes('twimg.com')
+      if (altText !== '' && !looksLikeTwitterMedia) {
+        return
+      }
       let parent = imgEl.parentElement
       while (parent && parent !== document.body) {
         if (parent.querySelector('.x-emoji-add-btn-carousel')) return
@@ -266,7 +267,8 @@ function addCarouselButtonToEl(el: Element) {
         const altText = containedImg.getAttribute('alt') || ''
         const src = containedImg.src || containedImg.getAttribute('src') || ''
         const lowerSrc = (src || '').toLowerCase()
-        const looksLikeTwitterMedia = lowerSrc.includes('pbs.twimg.com') || lowerSrc.includes('twimg.com')
+        const looksLikeTwitterMedia =
+          lowerSrc.includes('pbs.twimg.com') || lowerSrc.includes('twimg.com')
         if (altText !== '' && !looksLikeTwitterMedia) {
           return
         }
@@ -373,7 +375,7 @@ export function observeCarousel() {
         for (const n of Array.from(m.addedNodes)) {
           if (n.nodeType !== 1) continue
           const el = n as Element
-          if (el.tagName === 'IMG' || el.querySelector && el.querySelector('img')) {
+          if (el.tagName === 'IMG' || (el.querySelector && el.querySelector('img'))) {
             needsScan = true
             break
           }

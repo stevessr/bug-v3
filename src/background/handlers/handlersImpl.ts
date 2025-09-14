@@ -39,7 +39,10 @@ export async function handleGetEmojiSetting(key: string, _sendResponse: (_resp: 
     }
   } catch (error: any) {
     console.error('Failed to get emoji setting:', key, error)
-    _sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' })
+    _sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 }
 

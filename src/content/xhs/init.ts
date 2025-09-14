@@ -1,4 +1,9 @@
-import { extractImageUrl, extractNameFromUrl, setupButtonClick, AddEmojiButtonData } from '../x/utils'
+import {
+  extractImageUrl,
+  extractNameFromUrl,
+  setupButtonClick,
+  AddEmojiButtonData
+} from '../x/utils'
 
 declare const chrome: any
 
@@ -46,20 +51,24 @@ function addButtonToXhsImage(img: HTMLImageElement) {
     const parent = img.parentElement || (img as Element)
     if (!parent) return
     // avoid double-inserting
-    if ((parent as Element).querySelector && (parent as Element).querySelector('.xhs-emoji-add-btn')) return
+    if (
+      (parent as Element).querySelector &&
+      (parent as Element).querySelector('.xhs-emoji-add-btn')
+    )
+      return
 
     // ensure parent positioned
     const p = parent as HTMLElement
     const computed = window.getComputedStyle(p)
     if (computed.position === 'static' || !computed.position) p.style.position = 'relative'
 
-  // Prefer direct img.src for xhs CDN images because the shared
-  // normalizeUrl/extractImageUrl logic limits allowed hosts to twitter/x domains.
-  // Use raw src as a fallback to ensure buttons are created for xhs images.
-  const rawSrc = img.getAttribute('src') || (img as HTMLImageElement).src || ''
-  let url = rawSrc || extractImageUrl(img as Element)
-  if (!url) return
-  const name = extractNameFromUrl(url)
+    // Prefer direct img.src for xhs CDN images because the shared
+    // normalizeUrl/extractImageUrl logic limits allowed hosts to twitter/x domains.
+    // Use raw src as a fallback to ensure buttons are created for xhs images.
+    const rawSrc = img.getAttribute('src') || (img as HTMLImageElement).src || ''
+    const url = rawSrc || extractImageUrl(img as Element)
+    if (!url) return
+    const name = extractNameFromUrl(url)
     const btn = createXhsBtn({ name, url })
     p.appendChild(btn)
   } catch (e) {
@@ -109,7 +118,11 @@ export function observeXhs() {
         }
       } else if (m.type === 'attributes') {
         const tgt = m.target as Element
-        if (tgt.tagName === 'IMG' && (tgt as HTMLImageElement).classList.contains('note-slider-img')) needs = true
+        if (
+          tgt.tagName === 'IMG' &&
+          (tgt as HTMLImageElement).classList.contains('note-slider-img')
+        )
+          needs = true
       }
       if (needs) break
     }

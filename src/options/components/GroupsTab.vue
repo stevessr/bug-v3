@@ -26,12 +26,11 @@ function setTab(tab: string) {
   emit('update:activeTab', tab)
 }
 
-const { expandedGroups, activeTab, isImageUrl } =
-  defineProps({
-    expandedGroups: { type: Object as PropType<Set<string>>, required: true },
-    isImageUrl: { type: Function },
-    activeTab: { type: String }
-  })
+const { expandedGroups, activeTab, isImageUrl } = defineProps({
+  expandedGroups: { type: Object as PropType<Set<string>>, required: true },
+  isImageUrl: { type: Function },
+  activeTab: { type: String }
+})
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { TouchDragHandler } from '../../utils/touchDragDrop'

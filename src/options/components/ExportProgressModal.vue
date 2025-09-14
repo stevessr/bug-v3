@@ -50,13 +50,15 @@ const visible = ref(false)
     <div class="bg-white rounded shadow-lg p-4 w-96 z-10">
       <!-- Single preview image at the top -->
       <div>
-        <div class="w-full max-h-64 flex items-center justify-center bg-gray-100 rounded overflow-hidden p-2">
+        <div
+          class="w-full max-h-64 flex items-center justify-center bg-gray-100 rounded overflow-hidden p-2"
+        >
           <a-image
             v-if="currentDisplayPreview"
             :src="currentDisplayPreview"
             :preview="{ visible: false }"
             @click="visible = true"
-            style="max-width:100%; max-height:100%;"
+            style="max-width: 100%; max-height: 100%"
           />
           <div v-else class="text-sm text-gray-500 text-center px-2">无预览</div>
         </div>

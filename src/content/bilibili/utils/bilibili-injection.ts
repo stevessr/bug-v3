@@ -4,10 +4,10 @@
 
 import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
 import {
-    addButtonToPhotoSwipeDebounced,
-    observePhotoSwipeContainer,
-    resetPhotoSwipeState
-  } from './bilibili-preview'
+  addButtonToPhotoSwipeDebounced,
+  observePhotoSwipeContainer,
+  resetPhotoSwipeState
+} from './bilibili-preview'
 import getSelectorsForCurrentUrl from './selectors-by-url'
 import {
   createFloatingButton,

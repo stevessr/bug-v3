@@ -2,22 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --scrollbar-track-color: #f9fafb;
+    --scrollbar-thumb-color: #e5e7eb;
+    --scrollbar-thumb-hover-color: #d1d5db;
+  }
+
+  .dark {
+    --scrollbar-track-color: #1f2937;
+    --scrollbar-thumb-color: #4b5563;
+    --scrollbar-thumb-hover-color: #6b7280;
+  }
+}
+
 /* Custom utility classes for extension */
 @layer components {
   .emoji-picker-container {
-    @apply fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg;
+    @apply fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-700;
   }
 
   .emoji-button {
-    @apply flex items-center justify-center p-2 rounded hover:bg-gray-100 transition-colors cursor-pointer;
+    @apply flex items-center justify-center p-2 rounded hover:bg-gray-100 transition-colors cursor-pointer dark:hover:bg-gray-700;
   }
 
   .emoji-grid {
-    @apply gap-2 p-4;
+    @apply gap-2 p-4 dark:bg-gray-800;
     max-height: 300px;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #e5e7eb #f9fafb;
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
   }
 
   .emoji-grid::-webkit-scrollbar {
@@ -25,20 +39,20 @@
   }
 
   .emoji-grid::-webkit-scrollbar-track {
-    background: #f9fafb;
+    background: var(--scrollbar-track-color);
     border-radius: 3px;
   }
 
   .emoji-grid::-webkit-scrollbar-thumb {
-    background: #e5e7eb;
+    background: var(--scrollbar-thumb-color);
     border-radius: 3px;
   }
 
   .emoji-grid::-webkit-scrollbar-thumb:hover {
-    background: #d1d5db;
+    background: var(--scrollbar-thumb-hover-color);
   }
 
   .scale-control {
-    @apply flex items-center gap-2 p-2 bg-gray-50 rounded;
+    @apply flex items-center gap-2 p-2 bg-gray-50 rounded dark:bg-gray-700;
   }
 }

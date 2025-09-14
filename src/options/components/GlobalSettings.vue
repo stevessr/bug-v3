@@ -1,4 +1,5 @@
-'''<script setup lang="ts">
+'''
+<script setup lang="ts">
 import { ref, watch, isRef, type Ref } from 'vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
@@ -136,7 +137,13 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
             </a-menu>
           </template>
           <AButton>
-            {{ localTheme === 'system' ? '跟随系统' : localTheme === 'light' ? '亮色模式' : '暗色模式' }}
+            {{
+              localTheme === 'system'
+                ? '跟随系统'
+                : localTheme === 'light'
+                  ? '亮色模式'
+                  : '暗色模式'
+            }}
             <DownOutlined />
           </AButton>
         </a-dropdown>

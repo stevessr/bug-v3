@@ -6,7 +6,12 @@ export function requestSettingFromBackground(key: string): Promise<any> {
       const chromeAPI = (window as any).chrome
       if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
         chromeAPI.runtime.sendMessage({ type: 'GET_EMOJI_SETTING', key }, (resp: any) => {
-          if (resp && resp.success && resp.data && Object.prototype.hasOwnProperty.call(resp.data, 'value')) {
+          if (
+            resp &&
+            resp.success &&
+            resp.data &&
+            Object.prototype.hasOwnProperty.call(resp.data, 'value')
+          ) {
             resolve(resp.data.value)
           } else {
             resolve(null)

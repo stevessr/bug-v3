@@ -2,8 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import { useEmojiStore } from '../stores/emojiStore'
-
-import '../styles/main.css'
+import '../styles/main.ts'
 const pinia = createPinia()
 
 // Dynamically import the Options component to delay loading heavy code until options page is rendered

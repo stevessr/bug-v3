@@ -251,7 +251,7 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableXcomExtraSelectors: value })
   }
 
-    const updateTheme = (theme: 'system' | 'light' | 'dark') => {
+  const updateTheme = (theme: 'system' | 'light' | 'dark') => {
     emojiStore.updateSettings({ theme })
     localStorage.setItem('theme', theme)
     if (theme === 'dark') {

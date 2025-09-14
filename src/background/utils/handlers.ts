@@ -8,7 +8,8 @@ import {
   handleLinuxDoAuthRequest,
   setupStorageChangeListener,
   setupContextMenu,
-  setupPeriodicCleanup
+  setupPeriodicCleanup,
+  handleGetEmojiSetting
 } from '../handlers/main.ts'
 
 import { getChromeAPI } from './main.ts'
@@ -34,9 +35,6 @@ export function setupMessageListener() {
           case 'GET_EMOJI_SETTING':
             // message.key expected
             if (message.key) {
-              // Import on demand to avoid circular imports at module load time
-              // (handlers/main.ts already re-exports the handler)
-              const { handleGetEmojiSetting } = require('../handlers/main.ts') as any
               handleGetEmojiSetting(message.key, sendResponse)
               return true
             } else {

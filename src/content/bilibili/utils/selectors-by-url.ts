@@ -10,14 +10,25 @@ export function getSelectorsForCurrentUrl(): string[] {
     const isOpusPath = /\/opus\//.test(path)
     const isTDomain = host === 't.bilibili.com' || host.endsWith('.t.bilibili.com')
     if (isOpusPath || isTDomain) {
-      return [...OPUS_SELECTORS, '.bili-album__preview__picture__img', '.bili-album__preview__picture', '.bili-album__watch__track__item', '.bili-album__watch__content img']
+      return [
+        ...OPUS_SELECTORS,
+        '.bili-album__preview__picture__img',
+        '.bili-album__preview__picture',
+        '.bili-album__watch__track__item',
+        '.bili-album__watch__content img'
+      ]
     }
   } catch (e) {
     void e
   }
 
   // default selectors
-  return ['.bili-album__preview__picture__img', '.bili-album__preview__picture', '.bili-album__watch__track__item', '.bili-album__watch__content img']
+  return [
+    '.bili-album__preview__picture__img',
+    '.bili-album__preview__picture',
+    '.bili-album__watch__track__item',
+    '.bili-album__watch__content img'
+  ]
 }
 
 export default getSelectorsForCurrentUrl

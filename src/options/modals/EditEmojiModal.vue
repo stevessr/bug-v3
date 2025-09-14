@@ -315,7 +315,9 @@ const handleSubmit = () => {
       </transition>
     </div>
     <div style="display: none">
-      <a-image-preview-group :preview="{ visible, onVisibleChange: (vis: boolean) => (visible = vis) }">
+      <a-image-preview-group
+        :preview="{ visible, onVisibleChange: (vis: boolean) => (visible = vis) }"
+      >
         <a-image :src="localEmoji.displayUrl || localEmoji.url" />
       </a-image-preview-group>
     </div>

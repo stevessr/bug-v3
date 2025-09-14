@@ -4,6 +4,7 @@ import { initX } from '../x/init'
 import { initPbs } from '../x/init-pbs'
 import { initXhs } from '../xhs/init'
 import { initReddit } from '../reddit/reddit'
+
 import { requestSettingFromBackground } from './requestSetting'
 
 // logger removed: replaced by direct console usage in migration

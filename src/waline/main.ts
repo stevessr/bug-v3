@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import Waline from './Waline.vue'
-import '../styles/main.css'
+import '../styles/main.ts'
 
 const app = createApp(Waline)
 const pinia = createPinia()
