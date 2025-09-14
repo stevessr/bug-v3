@@ -28,6 +28,21 @@ export async function handleGetEmojiData(_sendResponse: (_resp: any) => void) {
   }
 }
 
+export async function handleGetEmojiSetting(key: string, _sendResponse: (_resp: any) => void) {
+  void _sendResponse
+  try {
+    const settings = await newStorageHelpers.getSettings()
+    if (settings && Object.prototype.hasOwnProperty.call(settings, key)) {
+      _sendResponse({ success: true, data: { value: (settings as any)[key] } })
+    } else {
+      _sendResponse({ success: true, data: { value: null } })
+    }
+  } catch (error: any) {
+    console.error('Failed to get emoji setting:', key, error)
+    _sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' })
+  }
+}
+
 export async function handleSaveEmojiData(data: any, _sendResponse: (_resp: any) => void) {
   // mark callback as referenced
   void _sendResponse

@@ -4,11 +4,7 @@
   "version": "1.0.0",
   "description": "An emoji extension built with Vue 3 and Vite.",
   "permissions": ["storage", "activeTab", "scripting", "downloads", "cookies"],
-  "host_permissions": [
-    "https://i.pximg.net/*",
-    "https://generativelanguage.googleapis.com/*",
-    "https://linux.do/*"
-  ],
+  "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

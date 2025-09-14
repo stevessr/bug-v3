@@ -31,6 +31,19 @@ export function setupMessageListener() {
             handleGetEmojiData(sendResponse)
             return true
 
+          case 'GET_EMOJI_SETTING':
+            // message.key expected
+            if (message.key) {
+              // Import on demand to avoid circular imports at module load time
+              // (handlers/main.ts already re-exports the handler)
+              const { handleGetEmojiSetting } = require('../handlers/main.ts') as any
+              handleGetEmojiSetting(message.key, sendResponse)
+              return true
+            } else {
+              sendResponse({ success: false, error: 'Missing key for GET_EMOJI_SETTING' })
+              return false
+            }
+
           case 'SAVE_EMOJI_DATA':
             handleSaveEmojiData(message.data, sendResponse)
             return true

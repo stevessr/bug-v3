@@ -317,6 +317,21 @@ export function scanAndInjectCarousel() {
 
   const set = new Set<Element>()
   selectors.forEach(s => document.querySelectorAll(s).forEach(el => set.add(el)))
+  // Special-case: when visiting a standalone twitter/pbs image page the document
+  // may simply contain one or more top-level <img> elements (or an image inside
+  // a minimal wrapper). Add any images whose src points to pbs.twimg.com so they
+  // are picked up by the existing injection logic.
+  try {
+    const host = window.location.hostname.toLowerCase()
+    if (host === 'pbs.twimg.com' || host.endsWith('.twimg.com') || host.includes('pbs.twimg')) {
+      document.querySelectorAll('img').forEach(img => {
+        const src = (img as HTMLImageElement).src || img.getAttribute('src') || ''
+        if (src && src.includes('pbs.twimg.com')) set.add(img)
+      })
+    }
+  } catch {
+    // ignore
+  }
   set.forEach(el => addCarouselButtonToEl(el))
 
   console.log(`[XCarousel] Processed ${set.size} carousel elements`)

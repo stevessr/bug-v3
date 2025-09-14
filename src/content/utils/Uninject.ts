@@ -1,34 +1,13 @@
 import { initPixiv } from '../pixiv/detector'
 import { initBilibili } from '../bilibili/bilibili'
 import { initX } from '../x/init'
+import { requestSettingFromBackground } from './requestSetting'
 
 // logger removed: replaced by direct console usage in migration
 
-// Helper: request settings from background (uses GET_EMOJI_DATA which returns settings)
-function requestSettingsFromBackground(): Promise<any> {
-  return new Promise(resolve => {
-    try {
-      if (
-        (window as any).chrome &&
-        (window as any).chrome.runtime &&
-        (window as any).chrome.runtime.sendMessage
-      ) {
-        ;(window as any).chrome.runtime.sendMessage({ type: 'GET_EMOJI_DATA' }, (resp: any) => {
-          if (resp && resp.success && resp.data && resp.data.settings) {
-            resolve(resp.data.settings)
-          } else {
-            resolve(null)
-          }
-        })
-      } else {
-        resolve(null)
-      }
-    } catch (e) {
-      void e
-      resolve(null)
-    }
-  })
-}
+// NOTE: Requesting the full configuration from background is deprecated for
+// this module. Consumers should use `requestSettingFromBackground` to fetch
+// single keys on demand to reduce IPC payload and improve performance.
 
 export function Uninject() {
   try {
@@ -44,26 +23,42 @@ export function Uninject() {
   }
 
   try {
-    // Only initialize X/Twitter injection if the user enabled it in settings.
-    // Use an async IIFE because this function is not async.
-    ;(async () => {
-      try {
-        const settings = await requestSettingsFromBackground()
-        // If settings cannot be read (null), default to enabling X injection so
-        // we still attempt to initialize on x.com. If settings are present,
-        // respect the enableXcomExtraSelectors flag.
-        const enabled = settings == null ? true : !!settings.enableXcomExtraSelectors
-        console.log('[XOneClick] init check - settings:', settings, 'enabled:', enabled)
-        if (enabled) {
-          initX()
-        } else {
-          console.log('[XOneClick] skipping init: enableXcomExtraSelectors disabled in settings')
-        }
-      } catch (err) {
-        console.error('[OneClickAdd] initX check failed', err)
-      }
-    })()
+    initXIfEnabled()
   } catch (e) {
     console.error('[OneClickAdd] initX failed', e)
+  }
+}
+
+// Exported helper: check settings and initialize X-specific injection if enabled.
+export async function initXIfEnabled(): Promise<void> {
+  try {
+    // Request only the single setting we care about to reduce payload and
+    // avoid requesting the entire configuration object.
+    const val = await requestSettingFromBackground('enableXcomExtraSelectors')
+
+    const enabled =
+      val === null || val === undefined
+        ? true
+        : !!val
+
+    if (val === null || val === undefined) {
+      console.log('[XOneClick] enableXcomExtraSelectors unavailable; defaulting to enabled for X injection')
+    } else {
+      console.log('[XOneClick] fetched enableXcomExtraSelectors from background:', val)
+    }
+    console.log('[XOneClick] init decision - enabled:', enabled)
+
+    if (enabled) {
+      try {
+        initX()
+        console.log('[XOneClick] initX invoked')
+      } catch (innerErr) {
+        console.error('[XOneClick] initX threw an error during invocation', innerErr)
+      }
+    } else {
+      console.log('[XOneClick] skipping init: enableXcomExtraSelectors disabled in settings')
+    }
+  } catch (err) {
+    console.error('[OneClickAdd] initX check failed', err)
   }
 }
