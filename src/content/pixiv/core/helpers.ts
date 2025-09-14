@@ -68,9 +68,19 @@ export async function tryGetImageViaCanvas(
   })
 }
 
-export async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: string, originUrl?: string) {
+export async function sendEmojiToBackground(
+  blob: Blob,
+  emojiName: string,
+  filename: string,
+  originUrl?: string
+) {
   try {
-    console.debug('[pixiv][helpers] sendEmojiToBackground start', { emojiName, filename, size: blob.size, type: blob.type })
+    console.debug('[pixiv][helpers] sendEmojiToBackground start', {
+      emojiName,
+      filename,
+      size: blob.size,
+      type: blob.type
+    })
     const chromeAPI = (window as any).chrome
 
     if (!chromeAPI || !chromeAPI.runtime || !chromeAPI.runtime.sendMessage) {
@@ -162,7 +172,10 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
       console.debug('[pixiv][helpers] fetch response', { ok: response.ok, status: response.status })
       if (response.ok) {
         const blob = await response.blob()
-        console.debug('[pixiv][helpers] fetched blob size/type', { size: blob.size, type: blob.type })
+        console.debug('[pixiv][helpers] fetched blob size/type', {
+          size: blob.size,
+          type: blob.type
+        })
         return await sendEmojiToBackground(blob, baseName, filename, data.url)
       }
     } catch (e) {

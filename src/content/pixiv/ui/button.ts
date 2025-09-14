@@ -1,11 +1,26 @@
 import type { AddEmojiButtonData } from '../types'
 import { performPixivAddEmojiFlow } from '../core/helpers'
 
+/*
+  修复说明：
+  Pixiv 页面会动态替换或延迟加载图片节点，原先在创建按钮时缓存的 `data.url` 可能不是点击时的最新图片 URL。
+  在按钮的点击处理逻辑中，我们现在会重新从 DOM 查找与按钮最近的 Pixiv <img> 元素（支持 data-src、data-original、srcset 等），
+  并在调用上传流程前用最新 `url`/`name` 更新 `data` 对象。这样可以避免因动态加载导致拿到过期 URL 的问题。
+
+  手动验证步骤：
+  1. 在 Pixiv 图片查看页面（或示例中延迟加载图片的场景）加载扩展/脚本。
+  2. 确保图片先延迟替换或通过懒加载加载。
+  3. 当图片显示后，点击“添加表情”按钮并观察控制台中 `[pixiv][button] starting performPixivAddEmojiFlow` 的 data.url 是否为当前图片 URL。
+*/
+
 export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) {
   let running = false
 
   try {
-    console.debug('[pixiv][button] setupButtonClickHandler initialized', { name: data.name, url: data.url })
+    console.debug('[pixiv][button] setupButtonClickHandler initialized', {
+      name: data.name,
+      url: data.url
+    })
   } catch (_e) {
     void _e
   }
@@ -23,6 +38,36 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
       return
     }
     running = true
+
+    // Re-read related image URL and name from DOM at click time to avoid stale data
+    try {
+      const closestImg = button
+        .closest('article, div, figure, [role="presentation"]')
+        ?.querySelector('img[src*="i.pximg.net"], img[src*="pximg.net"]') as HTMLImageElement | null
+      if (closestImg) {
+        // Prefer data-src/data-original or current src, also handle srcset
+        const urlFromData = (
+          closestImg.getAttribute('data-src') ||
+          closestImg.getAttribute('data-original') ||
+          ''
+        ).trim()
+        const srcset = closestImg.getAttribute('srcset') || ''
+        const srcCandidate =
+          urlFromData || closestImg.src || (srcset.split(',')[0] || '').split(' ')[0]
+        if (srcCandidate && srcCandidate.startsWith('http')) {
+          try {
+            data = { ...data, url: srcCandidate }
+            const derivedName =
+              (closestImg.alt || closestImg.getAttribute('title') || '').trim() || data.name
+            if (derivedName && derivedName.length > 0) data.name = derivedName
+          } catch (_e) {
+            // ignore
+          }
+        }
+      }
+    } catch (_e) {
+      // ignore DOM read errors
+    }
 
     const prevPointerEvents = button.style.pointerEvents
     button.style.pointerEvents = 'none'
@@ -46,6 +91,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
 
     console.debug('[pixiv][button] starting performPixivAddEmojiFlow', { data })
     try {
+      // pass the possibly-updated data
       const resp = await performPixivAddEmojiFlow(data)
       console.debug('[pixiv][button] performPixivAddEmojiFlow response', resp)
 

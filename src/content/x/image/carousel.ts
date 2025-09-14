@@ -1,5 +1,12 @@
+import {
+  normalizeUrl,
+  extractImageUrl,
+  extractNameFromUrl,
+  setupButtonClick,
+  AddEmojiButtonData
+} from '../utils'
+
 import { tryInjectTwitterMedia } from './twitterMediaInject'
-import { normalizeUrl, extractImageUrl, extractNameFromUrl, setupButtonClick, AddEmojiButtonData } from '../utils'
 
 declare const chrome: any
 
@@ -39,7 +46,9 @@ function createCarouselBtn(data: AddEmojiButtonData) {
     z-index: 9999;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     backdrop-filter: blur(4px);
-  `.replace(/\s+/g, ' ').trim()
+  `
+    .replace(/\s+/g, ' ')
+    .trim()
 
   btn.addEventListener('mouseenter', () => {
     btn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
@@ -74,12 +83,22 @@ function findButtonMenuBar(carouselElement: Element): Element | null {
     if (parent) {
       const buttonContainers = parent.querySelectorAll('[role="group"]')
       for (const container of buttonContainers) {
-        const hasReplyButton = container.querySelector('[data-testid="reply"], [aria-label*="reply"], [aria-label*="回复"]')
-        const hasLikeButton = container.querySelector('[data-testid="like"], [aria-label*="like"], [aria-label*="点赞"]')
-        const hasRetweetButton = container.querySelector('[data-testid="retweet"], [aria-label*="repost"], [aria-label*="转发"]')
+        const hasReplyButton = container.querySelector(
+          '[data-testid="reply"], [aria-label*="reply"], [aria-label*="回复"]'
+        )
+        const hasLikeButton = container.querySelector(
+          '[data-testid="like"], [aria-label*="like"], [aria-label*="点赞"]'
+        )
+        const hasRetweetButton = container.querySelector(
+          '[data-testid="retweet"], [aria-label*="repost"], [aria-label*="转发"]'
+        )
         const svgIcons = container.querySelectorAll('svg')
         const buttons = container.querySelectorAll('button, a[role="link"]')
-        if ((hasReplyButton || hasLikeButton || hasRetweetButton) && buttons.length >= 3 && svgIcons.length >= 3) {
+        if (
+          (hasReplyButton || hasLikeButton || hasRetweetButton) &&
+          buttons.length >= 3 &&
+          svgIcons.length >= 3
+        ) {
           return container
         }
       }
@@ -90,13 +109,21 @@ function findButtonMenuBar(carouselElement: Element): Element | null {
         const svgs = container.querySelectorAll('svg')
         if (buttons.length >= 4 && svgs.length >= 4) {
           const style = window.getComputedStyle(container)
-          const isHorizontal = style.display === 'flex' || style.display === 'inline-flex' || container.children.length >= 4
+          const isHorizontal =
+            style.display === 'flex' ||
+            style.display === 'inline-flex' ||
+            container.children.length >= 4
           if (isHorizontal) {
             let socialButtonCount = 0
             for (const button of buttons) {
               const ariaLabel = button.getAttribute('aria-label') || ''
               const testId = button.getAttribute('data-testid') || ''
-              if (ariaLabel.match(/reply|like|repost|share|view|bookmark|回复|点赞|转发|分享|查看|收藏/i) || testId.match(/reply|like|retweet|share/i)) {
+              if (
+                ariaLabel.match(
+                  /reply|like|repost|share|view|bookmark|回复|点赞|转发|分享|查看|收藏/i
+                ) ||
+                testId.match(/reply|like|retweet|share/i)
+              ) {
                 socialButtonCount++
               }
             }
@@ -116,7 +143,15 @@ function createMenuBarBtn(data: AddEmojiButtonData, menuBar: Element) {
   const wrapper = document.createElement('div')
   wrapper.className = 'css-175oi2r r-18u37iz r-1h0z5md r-13awgt0'
   const btn = createCarouselBtn(data)
-  btn.classList.add('css-175oi2r','r-1777fci','r-bt1l66','r-bztko3','r-lrvibr','r-1loqt21','r-1ny4l3l')
+  btn.classList.add(
+    'css-175oi2r',
+    'r-1777fci',
+    'r-bt1l66',
+    'r-bztko3',
+    'r-lrvibr',
+    'r-1loqt21',
+    'r-1ny4l3l'
+  )
   wrapper.appendChild(btn)
   menuBar.appendChild(wrapper)
   return btn
@@ -145,9 +180,11 @@ function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
       const left = Math.max(0, window.scrollX + r.right - btn.offsetWidth - 6)
       btn.style.top = top + 'px'
       btn.style.left = left + 'px'
-      const inView = r.bottom >= 0 && r.top <= window.innerHeight && r.right >= 0 && r.left <= window.innerWidth
+      const inView =
+        r.bottom >= 0 && r.top <= window.innerHeight && r.right >= 0 && r.left <= window.innerWidth
       btn.style.display = inView ? '' : 'none'
-    } catch {
+    } catch (e) {
+      /* ignore */
     }
     raf = requestAnimationFrame(update)
     carouselOverlayMap.set(target, { btn, raf })
@@ -162,17 +199,26 @@ function isInCarousel(el: Element): boolean {
     el.closest('[role="group"][aria-roledescription="carousel"]') ||
     el.closest('li[role="listitem"]') ||
     el.closest('[data-testid="swipe-to-dismiss"]') ||
-    el.closest('div[style*="position: relative"]')?.querySelector('[data-testid="swipe-to-dismiss"]') ||
+    el
+      .closest('div[style*="position: relative"]')
+      ?.querySelector('[data-testid="swipe-to-dismiss"]') ||
     el.closest('[role="dialog"]') ||
     el.closest('[aria-modal="true"]') ||
-    (el.closest('article[data-testid="tweet"]') && (el.closest('div[aria-label="Image"]') || el.matches('div[aria-label="Image"]')))
+    (el.closest('article[data-testid="tweet"]') &&
+      (el.closest('div[aria-label="Image"]') || el.matches('div[aria-label="Image"]')))
   )
 }
 
 function addCarouselButtonToEl(el: Element) {
   try {
     if (!isInCarousel(el)) return
-    if (el.querySelector('.x-emoji-add-btn-carousel') || el.querySelector('.x-emoji-add-btn') || el.closest('.x-emoji-add-btn-carousel') || el.closest('.x-emoji-add-btn')) return
+    if (
+      el.querySelector('.x-emoji-add-btn-carousel') ||
+      el.querySelector('.x-emoji-add-btn') ||
+      el.closest('.x-emoji-add-btn-carousel') ||
+      el.closest('.x-emoji-add-btn')
+    )
+      return
 
     let targetContainer: HTMLElement | null = null
     let url: string | null = null
@@ -212,7 +258,7 @@ function addCarouselButtonToEl(el: Element) {
     if (url.includes('profile_images')) return
     const name = extractNameFromUrl(url)
 
-  const handled = tryInjectTwitterMedia(url, targetContainer, createCarouselOverlayBtn)
+    const handled = tryInjectTwitterMedia(url, targetContainer, createCarouselOverlayBtn)
 
     if (!handled) {
       const menuBar = findButtonMenuBar(targetContainer)
@@ -238,7 +284,8 @@ function addCarouselButtonToEl(el: Element) {
               if (btn.parentElement) btn.parentElement.removeChild(btn)
               createCarouselOverlayBtn({ name, url }, parent)
             }
-          } catch {
+          } catch (e) {
+            /* ignore */
           }
         }
       }

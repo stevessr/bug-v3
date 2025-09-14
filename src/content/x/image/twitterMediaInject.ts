@@ -8,10 +8,15 @@ export function tryInjectTwitterMedia(
   try {
     const parsed = new URL(url)
     const host = parsed.hostname.toLowerCase()
-    const isTwitterMedia = host === 'pbs.twimg.com' && (parsed.pathname.startsWith('/media/') || parsed.pathname.includes('/media/'))
+    const isTwitterMedia =
+      host === 'pbs.twimg.com' &&
+      (parsed.pathname.startsWith('/media/') || parsed.pathname.includes('/media/'))
     if (!isTwitterMedia) return false
 
-    if (targetContainer.querySelector('.x-emoji-add-btn-carousel') || targetContainer.querySelector('.x-emoji-add-btn')) {
+    if (
+      targetContainer.querySelector('.x-emoji-add-btn-carousel') ||
+      targetContainer.querySelector('.x-emoji-add-btn')
+    ) {
       console.log('[TwitterMedia] button already exists, skipping injection')
       return true
     }

@@ -1,7 +1,8 @@
 import { newStorageHelpers } from '../../utils/newStorage'
 import { getChromeAPI } from '../utils/main.ts'
 
-const LINUX_DO_UPLOAD_URL = 'https://linux.do/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8'
+const LINUX_DO_UPLOAD_URL =
+  'https://linux.do/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8'
 
 async function computeSHA1OfArrayBuffer(buffer: ArrayBuffer) {
   if (typeof crypto === 'undefined' || !crypto.subtle) return null
@@ -18,7 +19,7 @@ export async function handleUploadAndAddEmoji(message: any, sendResponse: any) {
   // message.payload: { arrayData, filename, mimeType, name }
   try {
     const payload = message.payload || {}
-  const { arrayData, filename, mimeType, name, originUrl } = payload
+    const { arrayData, filename, mimeType, name, originUrl } = payload
 
     console.debug('[Background] handleUploadAndAddEmoji received payload', {
       filename,
@@ -62,7 +63,7 @@ export async function handleUploadAndAddEmoji(message: any, sendResponse: any) {
                 // send a message to the tab to request CSRF token
                 // The content script on linux.do should respond to type GET_CSRF_TOKEN
                 // If not available, this will throw and we will keep trying other tabs
-                // eslint-disable-next-line no-await-in-loop
+
                 const resp = await chromeAPI.tabs.sendMessage(t.id, { type: 'GET_CSRF_TOKEN' })
                 if (resp && resp.csrfToken) {
                   csrfToken = resp.csrfToken

@@ -1,6 +1,5 @@
 // Utilities for background scripts
 
-
 export const getChromeAPI = () => {
   try {
     return (globalThis as any).chrome || (self as any).chrome

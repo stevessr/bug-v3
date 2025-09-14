@@ -7,7 +7,6 @@ import type { EmojiGroup, Emoji } from '../../types/emoji'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../../utils/emojiPreviewUploader'
 
-
 defineEmits(['remove', 'edit'])
 
 // use store instance directly

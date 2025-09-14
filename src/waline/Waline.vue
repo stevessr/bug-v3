@@ -2,7 +2,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-
 import { useEmojiStore } from '../stores/emojiStore'
 
 const emojiStore = useEmojiStore()

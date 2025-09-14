@@ -1,5 +1,3 @@
-
-
 import { cachedState } from './state'
 
 function sendMessageToBackground(message: any): Promise<any> {
@@ -103,4 +101,3 @@ export async function loadDataFromStorage(): Promise<void> {
     }
   }
 }
-

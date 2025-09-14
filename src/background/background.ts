@@ -1,6 +1,5 @@
 import './utils/main.ts'
 
-
 import { setupOnInstalledListener } from './init'
 import {
   setupMessageListener,

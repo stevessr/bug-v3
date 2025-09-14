@@ -21,4 +21,3 @@ export function initDiscourse() {
     console.error('[DiscourseOneClick] init failed', e)
   }
 }
-

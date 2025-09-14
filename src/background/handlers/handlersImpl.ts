@@ -60,8 +60,6 @@ export function setupStorageChangeListener() {
   }
 }
 
-
-
 export function setupPeriodicCleanup() {
   setInterval(
     async () => {

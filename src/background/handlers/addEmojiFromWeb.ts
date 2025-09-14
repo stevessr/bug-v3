@@ -1,6 +1,6 @@
 import { newStorageHelpers } from '../../utils/newStorage'
-
 import { getChromeAPI } from '../utils/main.ts'
+
 import { downloadAndUploadDirect } from './downloadAndSend'
 
 export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {

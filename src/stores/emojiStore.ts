@@ -9,7 +9,6 @@ import { defaultSettings } from '@/types/emoji'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-
 export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- State ---
   const groups = ref<EmojiGroup[]>([])

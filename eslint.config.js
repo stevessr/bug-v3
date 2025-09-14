@@ -48,7 +48,6 @@ export default [
     rules: {
       // defensive: if ignore patterns are bypassed, silence all rules for this generated JSON
       'prettier/prettier': 'off',
-      'no-console': 'off',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': 'off'
     }
@@ -98,7 +97,6 @@ export default [
       'promise/no-promise-in-callback': 'warn',
 
       // 通用规则
-      'no-console': 'warn',
       'no-debugger': 'error',
       'no-alert': 'warn',
       'prefer-const': 'error',
@@ -164,7 +162,6 @@ export default [
       'promise/catch-or-return': 'error',
 
       // 通用规则
-      'no-console': 'warn',
       'no-debugger': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
@@ -202,7 +199,6 @@ export default [
       'promise/no-nesting': 'warn',
 
       // 通用规则
-      'no-console': 'warn',
       'no-debugger': 'error',
       'no-alert': 'warn',
       'prefer-const': 'error',
@@ -218,7 +214,6 @@ export default [
   {
     files: ['**/*.spec.ts', '**/*.test.ts', 'tests/**/*'],
     rules: {
-      'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'off'
     }
   },
@@ -229,7 +224,6 @@ export default [
   {
     files: ['*.config.js', '*.config.ts', 'scripts/**/*'],
     rules: {
-      'no-console': 'off',
       '@typescript-eslint/no-var-requires': 'off',
       // scripts often reference globals or build-time helpers
       'no-undef': 'off'

@@ -193,6 +193,24 @@ export default function useOptions() {
     resetEmojiDrag()
   }
 
+  const resetEmojiDrag = () => {
+    // clear drag state
+    try {
+      draggedEmoji.value = null
+      draggedEmojiGroupId.value = ''
+      draggedEmojiIndex.value = -1
+      // Attempt to clear any drag-related attributes/styles in the DOM if present
+      try {
+        const els = document.querySelectorAll('[data-dragging="true"]')
+        els.forEach(el => el.removeAttribute('data-dragging'))
+      } catch (_e) {
+        // ignore
+      }
+    } catch (_e) {
+      // ignore
+    }
+  }
+
   const removeEmojiFromGroup = (groupId: string, index: number) => {
     emojiStore.removeEmojiFromGroup(groupId, index)
     // IndexedDB removed: flushBuffer not needed

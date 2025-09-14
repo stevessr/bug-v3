@@ -2,7 +2,6 @@
  * Bilibili按钮组件创建和处理
  */
 
-
 import type { AddEmojiButtonData } from './bilibili-helper'
 import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
 // Import utility functions dynamically to avoid circular dependencies

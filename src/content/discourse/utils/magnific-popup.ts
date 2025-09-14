@@ -1,4 +1,5 @@
 import type { AddEmojiButtonData } from '../types/main'
+
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'
 

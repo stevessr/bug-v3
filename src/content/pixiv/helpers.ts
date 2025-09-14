@@ -1,5 +1,3 @@
-
-
 import type { AddEmojiButtonData } from './types'
 
 // Duplicate minimal helpers here to avoid circular imports
@@ -60,7 +58,12 @@ export async function tryGetImageViaCanvas(
   })
 }
 
-export async function sendEmojiToBackground(blob: Blob, emojiName: string, filename: string, originUrl?: string) {
+export async function sendEmojiToBackground(
+  blob: Blob,
+  emojiName: string,
+  filename: string,
+  originUrl?: string
+) {
   try {
     const chromeAPI = (window as any).chrome
 
@@ -115,7 +118,10 @@ export async function sendEmojiToBackground(blob: Blob, emojiName: string, filen
         message: '表情已成功添加到未分组'
       }
     } else {
-      console.error('[PixivAddEmoji] Background processing failed:', JSON.stringify(bgResp, null, 2))
+      console.error(
+        '[PixivAddEmoji] Background processing failed:',
+        JSON.stringify(bgResp, null, 2)
+      )
       return {
         success: false,
         error: '后台处理失败',
@@ -162,8 +168,8 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
 
       if (response.ok) {
         const blob = await response.blob()
-  console.log('[PixivAddEmoji] Direct fetch successful, sending to background')
-  return await sendEmojiToBackground(blob, baseName, filename, data.url)
+        console.log('[PixivAddEmoji] Direct fetch successful, sending to background')
+        return await sendEmojiToBackground(blob, baseName, filename, data.url)
       }
     } catch (e) {
       console.warn('[PixivAddEmoji] Direct fetch failed:', e)

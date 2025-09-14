@@ -3,8 +3,6 @@
  * 主要初始化逻辑
  */
 
-
-
 import { isBilibiliOpusPage } from './utils/bilibili-helper'
 import { scanAndInject, observeMutations } from './utils/bilibili-injection'
 import { injectBilibiliButtonStyles } from './utils/bilibili-css'
@@ -27,4 +25,3 @@ export function initBilibili() {
     console.error('[BiliOneClick] init failed', e)
   }
 }
-

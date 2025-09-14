@@ -1,4 +1,3 @@
-
 import { getDefaultEmojisAsync } from '../../data/default'
 import { cachedState } from '../../data/state'
 
@@ -11,4 +10,4 @@ export function ensureDefaultIfEmpty() {
   }
 }
 
-export { cachedState };
+export { cachedState }

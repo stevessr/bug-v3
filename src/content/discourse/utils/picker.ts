@@ -1,4 +1,3 @@
-
 import { createDesktopEmojiPicker } from './dekstop'
 import { createMobileEmojiPicker } from './mobile'
 
@@ -31,6 +30,3 @@ export function isImageUrl(value: string | null | undefined): boolean {
     return false
   }
 }
-
-
-

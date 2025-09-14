@@ -5,7 +5,6 @@ import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
 
-
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 type TenorGif = {

@@ -1,4 +1,5 @@
 import type { AddEmojiButtonData } from '../types/main'
+
 import { extractNameFromUrl } from './picture'
 
 declare const chrome: any

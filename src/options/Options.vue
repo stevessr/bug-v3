@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount } from 'vue'
 
-import GridColumnsSelector from './components/GridColumnsSelector.vue'
-import AboutSection from './components/AboutSection.vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
 
+import GridColumnsSelector from './components/GridColumnsSelector.vue'
+import AboutSection from './components/AboutSection.vue'
 import HeaderControls from './components/HeaderControls.vue'
 import GlobalSettings from './components/GlobalSettings.vue'
 import EmojiStats from './components/EmojiStats.vue'
@@ -164,7 +164,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
       name: payload.name,
       icon: payload.icon
     })
-    void flushBuffer(true).then(() => {})
+    // IndexedDB removed: no-op flushBuffer was removed — nothing to do here
     showSuccess('\u5206\u7ec4\u5df2\u66f4\u65b0')
   }
 }

@@ -1,4 +1,3 @@
-import { getChromeAPI } from './main.ts'
 import { handleAddEmojiFromWeb } from '../handlers/addEmojiFromWeb.ts'
 import { handleUploadAndAddEmoji } from '../handlers/uploadAndAddEmoji.ts'
 import {
@@ -11,6 +10,8 @@ import {
   setupContextMenu,
   setupPeriodicCleanup
 } from '../handlers/main.ts'
+
+import { getChromeAPI } from './main.ts'
 
 // Re-export setup functions so background entry can import them from ./handlers
 export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup }

@@ -327,7 +327,7 @@ const add = () => {
           emojiStore.addEmojiWithoutSave(groupId.value, emojiData)
           emits('added', { groupId: groupId.value, name: emojiData.name })
         })
-    // IndexedDB removed: flushBuffer not needed
+        // IndexedDB removed: flushBuffer not needed
       } finally {
         void emojiStore.endBatch()
       }
@@ -368,7 +368,7 @@ const importParsed = () => {
       emojiStore.addEmojiWithoutSave(groupId.value, emojiData)
       emits('added', { groupId: groupId.value, name: emojiData.name })
     })
-  // IndexedDB removed: flushBuffer not needed
+    // IndexedDB removed: flushBuffer not needed
   } finally {
     void emojiStore.endBatch()
   }

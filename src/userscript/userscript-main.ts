@@ -15,7 +15,6 @@ import {
   type UserscriptStorage
 } from './userscript-storage'
 
-
 import { uploader } from '@/content/utils'
 
 // Global state for userscript

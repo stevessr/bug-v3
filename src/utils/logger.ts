@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // Lightweight logger + indexedDBWrapper shim used during migration from buildFlags
 // This file exports a `logger` object that forwards to console and an
 // `indexedDBWrapper` that reads the build-time define `__ENABLE_INDEXEDDB__`.

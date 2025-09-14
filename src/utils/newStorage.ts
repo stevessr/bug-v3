@@ -1,6 +1,5 @@
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 
-
 import { formatPreview } from './formatUtils'
 import indexedDBHelpers from './indexedDB'
 
