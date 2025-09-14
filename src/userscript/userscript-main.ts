@@ -556,36 +556,20 @@ async function createEmojiPicker(): Promise<HTMLElement> {
 function openManagementInterface() {
   // Internal lightweight manager modal (replaces external manager redirect)
   const modal = document.createElement('div')
-  modal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
-    z-index: 1000000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  `
+  // Use Discourse modal classes so forum styles are used instead of custom inline styles
+  modal.className = 'modal d-modal'
+  modal.setAttribute('role', 'dialog')
+  modal.setAttribute('aria-modal', 'true')
 
   const panel = document.createElement('div')
-  panel.style.cssText = `
-    width: 90%;
-    max-width: 1000px;
-    height: 85%;
-    background: #fff;
-    border-radius: 8px;
-    display: flex;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  `
+  // Use a container class and avoid custom inline styles so Discourse CSS applies
+  panel.className = 'd-modal__container emoji-manager-panel'
 
   // Left: groups list
   const left = document.createElement('div')
-  left.style.cssText = 'width: 280px; border-right: 1px solid #eee; padding: 12px; overflow:auto;'
+  left.className = 'emoji-manager-left'
   const leftHeader = document.createElement('div')
-  leftHeader.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:8px;'
+  leftHeader.className = 'emoji-manager-left-header'
   const title = document.createElement('h3')
   title.textContent = '表情管理器'
   title.style.cssText = 'margin:0; flex:1;'
@@ -597,27 +581,27 @@ function openManagementInterface() {
   left.appendChild(leftHeader)
 
   const addGroupRow = document.createElement('div')
-  addGroupRow.style.cssText = 'display:flex; gap:6px; margin-bottom:8px;'
+  addGroupRow.className = 'emoji-manager-addgroup-row'
   const addGroupInput = document.createElement('input')
   addGroupInput.placeholder = '新分组 id'
-  addGroupInput.style.cssText = 'flex:1; padding:6px;'
+  addGroupInput.className = 'form-control'
   const addGroupBtn = document.createElement('button')
   addGroupBtn.textContent = '添加'
-  addGroupBtn.style.cssText = 'padding:6px 8px;'
+  addGroupBtn.className = 'btn'
   addGroupRow.appendChild(addGroupInput)
   addGroupRow.appendChild(addGroupBtn)
   left.appendChild(addGroupRow)
 
   const groupsList = document.createElement('div')
-  groupsList.style.cssText = 'display:flex; flex-direction:column; gap:6px;'
+  groupsList.className = 'emoji-manager-groups-list'
   left.appendChild(groupsList)
 
   // Right: group detail and controls
   const right = document.createElement('div')
-  right.style.cssText = 'flex:1; padding:12px; display:flex; flex-direction:column; overflow:auto;'
+  right.className = 'emoji-manager-right'
 
   const rightHeader = document.createElement('div')
-  rightHeader.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:8px;'
+  rightHeader.className = 'emoji-manager-right-header'
   const groupTitle = document.createElement('h4')
   groupTitle.textContent = ''
   groupTitle.style.cssText = 'margin:0; flex:1;'
@@ -629,20 +613,20 @@ function openManagementInterface() {
   right.appendChild(rightHeader)
 
   const emojisContainer = document.createElement('div')
-  emojisContainer.style.cssText = 'flex:1; overflow:auto; display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start;'
+  emojisContainer.className = 'emoji-manager-emojis'
   right.appendChild(emojisContainer)
 
   const addEmojiForm = document.createElement('div')
-  addEmojiForm.style.cssText = 'display:flex; gap:8px; margin-top:8px; align-items:center;'
+  addEmojiForm.className = 'emoji-manager-add-emoji-form'
   const emojiUrlInput = document.createElement('input')
   emojiUrlInput.placeholder = '表情图片 URL'
-  emojiUrlInput.style.cssText = 'flex:1; padding:6px;'
+  emojiUrlInput.className = 'form-control'
   const emojiNameInput = document.createElement('input')
   emojiNameInput.placeholder = '名称 (alias)'
-  emojiNameInput.style.cssText = 'width:160px; padding:6px;'
+  emojiNameInput.className = 'form-control'
   const addEmojiBtn = document.createElement('button')
   addEmojiBtn.textContent = '添加表情'
-  addEmojiBtn.style.cssText = 'padding:6px 8px;'
+  addEmojiBtn.className = 'btn'
   addEmojiForm.appendChild(emojiUrlInput)
   addEmojiForm.appendChild(emojiNameInput)
   addEmojiForm.appendChild(addEmojiBtn)
@@ -650,22 +634,27 @@ function openManagementInterface() {
 
   // Footer actions
   const footer = document.createElement('div')
-  footer.style.cssText = 'display:flex; gap:8px; padding:12px; border-top:1px solid #eee; justify-content:flex-end;'
+  footer.className = 'emoji-manager-footer'
   const exportBtn = document.createElement('button')
   exportBtn.textContent = '导出'
-  exportBtn.style.cssText = 'padding:8px 12px;'
+  exportBtn.className = 'btn'
   const importBtn = document.createElement('button')
   importBtn.textContent = '导入'
-  importBtn.style.cssText = 'padding:8px 12px;'
+  importBtn.className = 'btn'
+  const exitBtn = document.createElement('button')
+  exitBtn.textContent = '退出'
+  exitBtn.className = 'btn'
+  exitBtn.addEventListener('click', () => modal.remove())
   const saveBtn = document.createElement('button')
   saveBtn.textContent = '保存'
-  saveBtn.style.cssText = 'padding:8px 12px; background:#1890ff; color:#fff; border:none; border-radius:4px;'
+  saveBtn.className = 'btn btn-primary'
   const syncBtn = document.createElement('button')
   syncBtn.textContent = '同步管理器'
-  syncBtn.style.cssText = 'padding:8px 12px;'
+  syncBtn.className = 'btn'
   footer.appendChild(syncBtn)
   footer.appendChild(exportBtn)
   footer.appendChild(importBtn)
+  footer.appendChild(exitBtn)
   footer.appendChild(saveBtn)
 
   panel.appendChild(left)
