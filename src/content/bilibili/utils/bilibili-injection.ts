@@ -222,7 +222,7 @@ export function observeMutations() {
     let needsScan = false
     let needsPswpCheck = false
 
-    mutations.forEach(m => {
+    for (const m of mutations) {
       // 避免处理我们自己添加的按钮导致的变化
       if (m.type === 'childList') {
         const hasButtonChanges = Array.from(m.addedNodes).some(node => {
@@ -238,25 +238,23 @@ export function observeMutations() {
           return false
         })
 
-        if (hasButtonChanges) return // 忽略按钮添加导致的变化
+        if (hasButtonChanges) continue // 忽略按钮添加导致的变化
 
-        // 检查是否有相关的内容变化
-        const hasRelevantChanges = Array.from(m.addedNodes).some(node => {
-          if (node.nodeType === 1) {
-            const element = node as Element
-            return (
-              element.classList &&
-              (element.classList.contains('bili-album') ||
-                element.classList.contains('pswp__scroll-wrap') ||
-                element.querySelector('.bili-album') ||
-                element.querySelector('.pswp__scroll-wrap'))
-            )
+        // Only trigger if added nodes contain an <img> or a container that has one
+        const hasImg = Array.from(m.addedNodes).some(node => {
+          if (node.nodeType !== 1) return false
+          const el = node as Element
+          if (el.tagName === 'IMG') return true
+          try {
+            return !!el.querySelector && !!el.querySelector('img')
+          } catch (e) {
+            return false
           }
-          return false
         })
 
-        if (hasRelevantChanges) {
+        if (hasImg) {
           needsScan = true
+          // If any added node is a pswp container, schedule PhotoSwipe check
           if (
             Array.from(m.addedNodes).some(node => {
               if (node.nodeType === 1) {
@@ -270,7 +268,7 @@ export function observeMutations() {
           }
         }
       } else if (m.type === 'attributes') {
-        // 只处理PhotoSwipe相关的属性变化
+        // Keep PhotoSwipe attribute handling
         const target = m.target as Element
         if (
           target.classList &&
@@ -279,10 +277,20 @@ export function observeMutations() {
         ) {
           needsPswpCheck = true
         }
-      }
-    })
 
-    // 防抖处理常规扫描
+        // If attributes changed on an element that is or contains an <img>, trigger scan
+        try {
+          const tgt = m.target as Element
+          if (tgt.tagName === 'IMG' || (tgt.querySelector && tgt.querySelector('img'))) {
+            needsScan = true
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    }
+
+    // Debounced scan for general image additions/changes
     if (needsScan) {
       if (scanDebounceTimer) {
         clearTimeout(scanDebounceTimer)
@@ -293,7 +301,7 @@ export function observeMutations() {
       }, 300)
     }
 
-    // 立即处理PhotoSwipe变化（但有自己的防抖）
+    // Immediate PhotoSwipe handling
     if (needsPswpCheck) {
       addButtonToPhotoSwipeDebounced()
     }
