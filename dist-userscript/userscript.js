@@ -637,23 +637,230 @@
 		if (__managerStylesInjected) return;
 		__managerStylesInjected = true;
 		const css = `
-    .emoji-manager-wrapper { display:flex; flex-direction:column; height:100%; width:100%; overflow:hidden; }
-    /* Fullscreen modal: panel fills the viewport */
-    .emoji-manager-panel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display:grid; grid-template-columns: 300px 1fr; gap:12px; align-items:start; padding:12px; box-sizing:border-box; background: rgba(0,0,0,0.8); }
-    .emoji-manager-left { overflow:auto; padding-right:8px; box-sizing:border-box; background: #fff; border-right:1px solid #eee; }
-    .emoji-manager-left .emoji-manager-addgroup-row { display:flex; gap:8px; padding:8px; }
-    .emoji-manager-groups-list > div { padding:6px; border-radius:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
-    .emoji-manager-groups-list > div:focus { outline: none; box-shadow: inset 0 0 0 2px #e6f2ff; }
-    .emoji-manager-right { display:flex; flex-direction:column; }
-    .emoji-manager-right-header { display:flex; align-items:center; gap:8px; padding-bottom:6px; border-bottom:1px solid #eee; }
-    .emoji-manager-right-main { flex:1 1 auto; overflow:auto; display:flex; flex-direction:column; gap:8px; box-sizing:border-box; padding-left:8px; }
-    .emoji-manager-emojis { display:grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:8px; align-content:start; padding:6px; box-sizing:border-box; }
-    .emoji-manager-card { display:flex; flex-direction:column; gap:6px; align-items:center; padding:8px; background:#fff; border:1px solid #eee; border-radius:8px; }
-    .emoji-manager-card-img { width:96px; height:96px; object-fit:contain; border-radius:6px; background:#fafafa; }
-    .emoji-manager-card-name { font-size:12px; color:#333; text-align:center; width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-    .emoji-manager-card-actions { display:flex; gap:6px; }
-    .emoji-manager-footer { display:flex; gap:8px; justify-content:flex-end; padding:8px 12px; border-top:1px solid #eee; }
-    /* Note: responsive stacking disabled - always two columns */
+    /* Modal backdrop */
+    .emoji-manager-wrapper { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      bottom: 0; 
+      background: rgba(0,0,0,0.8); 
+      z-index: 999999; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+    }
+    
+    /* Main modal panel */
+    .emoji-manager-panel { 
+      background: white; 
+      border-radius: 8px; 
+      max-width: 90vw; 
+      max-height: 90vh; 
+      width: 1000px; 
+      height: 600px; 
+      display: grid; 
+      grid-template-columns: 300px 1fr; 
+      grid-template-rows: 1fr auto;
+      overflow: hidden; 
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3); 
+    }
+    
+    /* Left panel - groups list */
+    .emoji-manager-left { 
+      background: #f8f9fa; 
+      border-right: 1px solid #e9ecef; 
+      display: flex; 
+      flex-direction: column; 
+      overflow: hidden; 
+    }
+    
+    .emoji-manager-left-header { 
+      display: flex; 
+      align-items: center; 
+      padding: 16px; 
+      border-bottom: 1px solid #e9ecef; 
+      background: white; 
+    }
+    
+    .emoji-manager-addgroup-row { 
+      display: flex; 
+      gap: 8px; 
+      padding: 12px; 
+      border-bottom: 1px solid #e9ecef; 
+    }
+    
+    .emoji-manager-groups-list { 
+      flex: 1; 
+      overflow-y: auto; 
+      padding: 8px; 
+    }
+    
+    .emoji-manager-groups-list > div { 
+      padding: 12px; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      margin-bottom: 4px; 
+      transition: background-color 0.2s; 
+    }
+    
+    .emoji-manager-groups-list > div:hover { 
+      background: #e9ecef; 
+    }
+    
+    .emoji-manager-groups-list > div:focus { 
+      outline: none; 
+      box-shadow: inset 0 0 0 2px #007bff; 
+    }
+    
+    /* Right panel - emoji display and editing */
+    .emoji-manager-right { 
+      background: white; 
+      display: flex; 
+      flex-direction: column; 
+      overflow: hidden; 
+    }
+    
+    .emoji-manager-right-header { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      padding: 16px; 
+      border-bottom: 1px solid #e9ecef; 
+    }
+    
+    .emoji-manager-right-main { 
+      flex: 1; 
+      overflow-y: auto; 
+      padding: 16px; 
+    }
+    
+    .emoji-manager-emojis { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+      gap: 12px; 
+      margin-bottom: 16px; 
+    }
+    
+    .emoji-manager-card { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 8px; 
+      align-items: center; 
+      padding: 12px; 
+      background: #f8f9fa; 
+      border: 1px solid #e9ecef; 
+      border-radius: 8px; 
+      transition: transform 0.2s, box-shadow 0.2s; 
+    }
+    
+    .emoji-manager-card:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+    }
+    
+    .emoji-manager-card-img { 
+      width: 80px; 
+      height: 80px; 
+      object-fit: contain; 
+      border-radius: 6px; 
+      background: white; 
+    }
+    
+    .emoji-manager-card-name { 
+      font-size: 12px; 
+      color: #495057; 
+      text-align: center; 
+      width: 100%; 
+      overflow: hidden; 
+      white-space: nowrap; 
+      text-overflow: ellipsis; 
+      font-weight: 500; 
+    }
+    
+    .emoji-manager-card-actions { 
+      display: flex; 
+      gap: 6px; 
+    }
+    
+    /* Add emoji form */
+    .emoji-manager-add-emoji-form { 
+      padding: 16px; 
+      background: #f8f9fa; 
+      border-top: 1px solid #e9ecef; 
+      display: flex; 
+      gap: 8px; 
+      align-items: center; 
+    }
+    
+    /* Footer */
+    .emoji-manager-footer { 
+      grid-column: 1 / -1;
+      display: flex; 
+      gap: 8px; 
+      justify-content: space-between; 
+      padding: 16px; 
+      background: #f8f9fa; 
+      border-top: 1px solid #e9ecef; 
+    }
+    
+    /* Editor panel - popup modal */
+    .emoji-manager-editor-panel { 
+      position: fixed; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%); 
+      background: white; 
+      border: 1px solid #e9ecef; 
+      border-radius: 8px; 
+      padding: 24px; 
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3); 
+      z-index: 1000000; 
+      min-width: 400px; 
+    }
+    
+    .emoji-manager-editor-preview { 
+      width: 100px; 
+      height: 100px; 
+      object-fit: contain; 
+      border-radius: 8px; 
+      background: #f8f9fa; 
+      margin: 0 auto 16px; 
+      display: block; 
+    }
+    
+    /* Form styling */
+    .form-control { 
+      width: 100%; 
+      padding: 8px 12px; 
+      border: 1px solid #ced4da; 
+      border-radius: 4px; 
+      font-size: 14px; 
+      margin-bottom: 8px; 
+    }
+    
+    .btn { 
+      padding: 8px 16px; 
+      border: 1px solid transparent; 
+      border-radius: 4px; 
+      font-size: 14px; 
+      cursor: pointer; 
+      transition: all 0.2s; 
+    }
+    
+    .btn-primary { 
+      background-color: #007bff; 
+      color: white; 
+    }
+    
+    .btn-primary:hover { 
+      background-color: #0056b3; 
+    }
+    
+    .btn-sm { 
+      padding: 4px 8px; 
+      font-size: 12px; 
+    }
   `;
 		const style = document.createElement("style");
 		style.setAttribute("data-emoji-manager-styles", "1");
@@ -1125,20 +1332,20 @@
 	function openManagementInterface() {
 		injectManagerStyles();
 		const modal = document.createElement("div");
-		modal.className = "modal d-modal";
+		modal.className = "emoji-manager-wrapper";
 		modal.setAttribute("role", "dialog");
 		modal.setAttribute("aria-modal", "true");
 		const panel = document.createElement("div");
-		panel.className = "d-modal__container emoji-manager-panel";
+		panel.className = "emoji-manager-panel";
 		const left = document.createElement("div");
 		left.className = "emoji-manager-left";
 		const leftHeader = document.createElement("div");
 		leftHeader.className = "emoji-manager-left-header";
 		const title = document.createElement("h3");
 		title.textContent = "表情管理器";
-		title.style.cssText = "margin:0; flex:1;";
 		const closeBtn = document.createElement("button");
 		closeBtn.textContent = "×";
+		closeBtn.className = "btn";
 		closeBtn.style.cssText = "font-size:20px; background:none; border:none; cursor:pointer;";
 		leftHeader.appendChild(title);
 		leftHeader.appendChild(closeBtn);
@@ -1163,10 +1370,10 @@
 		rightHeader.className = "emoji-manager-right-header";
 		const groupTitle = document.createElement("h4");
 		groupTitle.textContent = "";
-		groupTitle.style.cssText = "margin:0; flex:1;";
 		const deleteGroupBtn = document.createElement("button");
 		deleteGroupBtn.textContent = "删除分组";
-		deleteGroupBtn.style.cssText = "padding:6px 8px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer;";
+		deleteGroupBtn.className = "btn";
+		deleteGroupBtn.style.cssText = "background:#ef4444; color:#fff;";
 		rightHeader.appendChild(groupTitle);
 		rightHeader.appendChild(deleteGroupBtn);
 		right.appendChild(rightHeader);
@@ -1175,30 +1382,6 @@
 		const emojisContainer = document.createElement("div");
 		emojisContainer.className = "emoji-manager-emojis";
 		managerRightMain.appendChild(emojisContainer);
-		right.appendChild(managerRightMain);
-		const editorPanel = document.createElement("div");
-		editorPanel.className = "emoji-manager-editor-panel";
-		editorPanel.style.display = "none";
-		const editorPreview = document.createElement("img");
-		editorPreview.className = "emoji-manager-editor-preview";
-		const editorNameInput = document.createElement("input");
-		editorNameInput.className = "form-control";
-		editorNameInput.placeholder = "名称 (alias)";
-		const editorUrlInput = document.createElement("input");
-		editorUrlInput.className = "form-control";
-		editorUrlInput.placeholder = "表情图片 URL";
-		const editorSaveBtn = document.createElement("button");
-		editorSaveBtn.textContent = "保存修改";
-		editorSaveBtn.className = "btn btn-primary";
-		const editorCancelBtn = document.createElement("button");
-		editorCancelBtn.textContent = "取消";
-		editorCancelBtn.className = "btn";
-		editorPanel.appendChild(editorPreview);
-		editorPanel.appendChild(editorNameInput);
-		editorPanel.appendChild(editorUrlInput);
-		editorPanel.appendChild(editorSaveBtn);
-		editorPanel.appendChild(editorCancelBtn);
-		right.appendChild(editorPanel);
 		const addEmojiForm = document.createElement("div");
 		addEmojiForm.className = "emoji-manager-add-emoji-form";
 		const emojiUrlInput = document.createElement("input");
@@ -1209,11 +1392,12 @@
 		emojiNameInput.className = "form-control";
 		const addEmojiBtn = document.createElement("button");
 		addEmojiBtn.textContent = "添加表情";
-		addEmojiBtn.className = "btn";
+		addEmojiBtn.className = "btn btn-primary";
 		addEmojiForm.appendChild(emojiUrlInput);
 		addEmojiForm.appendChild(emojiNameInput);
 		addEmojiForm.appendChild(addEmojiBtn);
-		right.appendChild(addEmojiForm);
+		managerRightMain.appendChild(addEmojiForm);
+		right.appendChild(managerRightMain);
 		const footer = document.createElement("div");
 		footer.className = "emoji-manager-footer";
 		const exportBtn = document.createElement("button");
@@ -1239,11 +1423,8 @@
 		footer.appendChild(saveBtn);
 		panel.appendChild(left);
 		panel.appendChild(right);
-		const wrapper = document.createElement("div");
-		wrapper.className = "emoji-manager-wrapper";
-		wrapper.appendChild(panel);
-		wrapper.appendChild(footer);
-		modal.appendChild(wrapper);
+		panel.appendChild(footer);
+		modal.appendChild(panel);
 		document.body.appendChild(modal);
 		let selectedGroupId = null;
 		function renderGroups() {
@@ -1271,42 +1452,83 @@
 				groupsList.appendChild(row);
 			});
 		}
-		let editingContext = null;
-		function showEditorFor(groupId, index) {
+		function createEditorPopup(groupId, index) {
 			const group = userscriptState.emojiGroups.find((g) => g.id === groupId);
 			if (!group) return;
 			const emo = group.emojis[index];
 			if (!emo) return;
-			editingContext = {
-				groupId,
-				index
-			};
+			const backdrop = document.createElement("div");
+			backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+			const editorPanel = document.createElement("div");
+			editorPanel.className = "emoji-manager-editor-panel";
+			const editorTitle = document.createElement("h3");
+			editorTitle.textContent = "编辑表情";
+			editorTitle.style.cssText = "margin: 0 0 16px 0; text-align: center;";
+			const editorPreview = document.createElement("img");
+			editorPreview.className = "emoji-manager-editor-preview";
 			editorPreview.src = emo.url;
+			const editorNameInput = document.createElement("input");
+			editorNameInput.className = "form-control";
+			editorNameInput.placeholder = "名称 (alias)";
 			editorNameInput.value = emo.name || "";
+			const editorUrlInput = document.createElement("input");
+			editorUrlInput.className = "form-control";
+			editorUrlInput.placeholder = "表情图片 URL";
 			editorUrlInput.value = emo.url || "";
-			editorPanel.style.display = "";
+			const buttonContainer = document.createElement("div");
+			buttonContainer.style.cssText = "display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;";
+			const editorSaveBtn = document.createElement("button");
+			editorSaveBtn.textContent = "保存修改";
+			editorSaveBtn.className = "btn btn-primary";
+			const editorCancelBtn = document.createElement("button");
+			editorCancelBtn.textContent = "取消";
+			editorCancelBtn.className = "btn";
+			buttonContainer.appendChild(editorCancelBtn);
+			buttonContainer.appendChild(editorSaveBtn);
+			editorPanel.appendChild(editorTitle);
+			editorPanel.appendChild(editorPreview);
+			editorPanel.appendChild(editorNameInput);
+			editorPanel.appendChild(editorUrlInput);
+			editorPanel.appendChild(buttonContainer);
+			backdrop.appendChild(editorPanel);
+			document.body.appendChild(backdrop);
+			editorUrlInput.addEventListener("input", () => {
+				editorPreview.src = editorUrlInput.value;
+			});
+			editorSaveBtn.addEventListener("click", () => {
+				const newName = (editorNameInput.value || "").trim();
+				const newUrl = (editorUrlInput.value || "").trim();
+				if (!newName || !newUrl) {
+					alert("名称和 URL 均不能为空");
+					return;
+				}
+				emo.name = newName;
+				emo.url = newUrl;
+				renderGroups();
+				renderSelectedGroup();
+				backdrop.remove();
+			});
+			editorCancelBtn.addEventListener("click", () => {
+				backdrop.remove();
+			});
+			backdrop.addEventListener("click", (e) => {
+				if (e.target === backdrop) backdrop.remove();
+			});
 		}
-		editorCancelBtn.addEventListener("click", () => {
-			editingContext = null;
-			editorPanel.style.display = "none";
-		});
-		editorSaveBtn.addEventListener("click", () => {
-			if (!editingContext) return;
-			const group = userscriptState.emojiGroups.find((g) => g.id === editingContext.groupId);
-			if (!group) return;
-			const emo = group.emojis[editingContext.index];
-			if (!emo) return;
-			const newName = (editorNameInput.value || "").trim();
-			const newUrl = (editorUrlInput.value || "").trim();
-			if (!newName || !newUrl) return alert("名称和 URL 均不能为空");
-			emo.name = newName;
-			emo.url = newUrl;
-			editorPreview.src = newUrl;
-			renderGroups();
-			renderSelectedGroup();
-			editingContext = null;
-			editorPanel.style.display = "none";
-		});
+		function showEditorFor(groupId, index) {
+			createEditorPopup(groupId, index);
+		}
 		function renderSelectedGroup() {
 			const group = userscriptState.emojiGroups.find((g) => g.id === selectedGroupId) || null;
 			groupTitle.textContent = group ? group.name || group.id : "";

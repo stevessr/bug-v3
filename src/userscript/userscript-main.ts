@@ -553,30 +553,28 @@ async function createEmojiPicker(): Promise<HTMLElement> {
 function openManagementInterface() {
   // ensure manager styles are injected
   injectManagerStyles()
-  // Internal lightweight manager modal (replaces external manager redirect)
+  
+  // Create modal wrapper
   const modal = document.createElement('div')
-  // Use Discourse modal classes so forum styles are used instead of custom inline styles
-  modal.className = 'modal d-modal'
+  modal.className = 'emoji-manager-wrapper'
   modal.setAttribute('role', 'dialog')
   modal.setAttribute('aria-modal', 'true')
 
+  // Create main panel
   const panel = document.createElement('div')
-  // Use a container class and avoid custom inline styles so Discourse CSS applies
-  panel.className = 'd-modal__container emoji-manager-panel'
-  // layout handled by injected CSS
-  // panel.style handled via .emoji-manager-panel
+  panel.className = 'emoji-manager-panel'
 
   // Left: groups list
   const left = document.createElement('div')
   left.className = 'emoji-manager-left'
-  // left column styles handled by injected CSS
+  
   const leftHeader = document.createElement('div')
   leftHeader.className = 'emoji-manager-left-header'
   const title = document.createElement('h3')
   title.textContent = '表情管理器'
-  title.style.cssText = 'margin:0; flex:1;'
   const closeBtn = document.createElement('button')
   closeBtn.textContent = '×'
+  closeBtn.className = 'btn'
   closeBtn.style.cssText = 'font-size:20px; background:none; border:none; cursor:pointer;'
   leftHeader.appendChild(title)
   leftHeader.appendChild(closeBtn)
@@ -606,50 +604,24 @@ function openManagementInterface() {
   rightHeader.className = 'emoji-manager-right-header'
   const groupTitle = document.createElement('h4')
   groupTitle.textContent = ''
-  groupTitle.style.cssText = 'margin:0; flex:1;'
   const deleteGroupBtn = document.createElement('button')
   deleteGroupBtn.textContent = '删除分组'
+  deleteGroupBtn.className = 'btn'
   deleteGroupBtn.style.cssText =
-    'padding:6px 8px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer;'
+    'background:#ef4444; color:#fff;'
   rightHeader.appendChild(groupTitle)
   rightHeader.appendChild(deleteGroupBtn)
   right.appendChild(rightHeader)
 
   const managerRightMain = document.createElement('div')
   managerRightMain.className = 'emoji-manager-right-main'
-  // right column styles handled by injected CSS
+  
   // emojis grid
   const emojisContainer = document.createElement('div')
   emojisContainer.className = 'emoji-manager-emojis'
-  // emojis grid styles handled by injected CSS
   managerRightMain.appendChild(emojisContainer)
-  right.appendChild(managerRightMain)
-
-  // Editor panel (inline, appears when editing an emoji)
-  const editorPanel = document.createElement('div')
-  editorPanel.className = 'emoji-manager-editor-panel'
-  editorPanel.style.display = 'none'
-  const editorPreview = document.createElement('img')
-  editorPreview.className = 'emoji-manager-editor-preview'
-  const editorNameInput = document.createElement('input')
-  editorNameInput.className = 'form-control'
-  editorNameInput.placeholder = '名称 (alias)'
-  const editorUrlInput = document.createElement('input')
-  editorUrlInput.className = 'form-control'
-  editorUrlInput.placeholder = '表情图片 URL'
-  const editorSaveBtn = document.createElement('button')
-  editorSaveBtn.textContent = '保存修改'
-  editorSaveBtn.className = 'btn btn-primary'
-  const editorCancelBtn = document.createElement('button')
-  editorCancelBtn.textContent = '取消'
-  editorCancelBtn.className = 'btn'
-  editorPanel.appendChild(editorPreview)
-  editorPanel.appendChild(editorNameInput)
-  editorPanel.appendChild(editorUrlInput)
-  editorPanel.appendChild(editorSaveBtn)
-  editorPanel.appendChild(editorCancelBtn)
-  right.appendChild(editorPanel)
-
+  
+  // Add emoji form
   const addEmojiForm = document.createElement('div')
   addEmojiForm.className = 'emoji-manager-add-emoji-form'
   const emojiUrlInput = document.createElement('input')
@@ -660,11 +632,13 @@ function openManagementInterface() {
   emojiNameInput.className = 'form-control'
   const addEmojiBtn = document.createElement('button')
   addEmojiBtn.textContent = '添加表情'
-  addEmojiBtn.className = 'btn'
+  addEmojiBtn.className = 'btn btn-primary'
   addEmojiForm.appendChild(emojiUrlInput)
   addEmojiForm.appendChild(emojiNameInput)
   addEmojiForm.appendChild(addEmojiBtn)
-  right.appendChild(addEmojiForm)
+  managerRightMain.appendChild(addEmojiForm)
+  
+  right.appendChild(managerRightMain)
 
   // Footer actions
   const footer = document.createElement('div')
@@ -693,11 +667,9 @@ function openManagementInterface() {
 
   panel.appendChild(left)
   panel.appendChild(right)
-  const wrapper = document.createElement('div')
-  wrapper.className = 'emoji-manager-wrapper'
-  wrapper.appendChild(panel)
-  wrapper.appendChild(footer)
-  modal.appendChild(wrapper)
+  
+  panel.appendChild(footer)
+  modal.appendChild(panel)
   document.body.appendChild(modal)
 
   // state
@@ -746,42 +718,108 @@ function openManagementInterface() {
   // Keep track of currently edited emoji
   let editingContext: { groupId: string; index: number } | null = null
 
-  function showEditorFor(groupId: string, index: number) {
+  function createEditorPopup(groupId: string, index: number) {
     const group = userscriptState.emojiGroups.find(g => g.id === groupId)
     if (!group) return
     const emo = group.emojis[index]
     if (!emo) return
-    editingContext = { groupId, index }
+
+    // Create popup backdrop
+    const backdrop = document.createElement('div')
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `
+
+    // Create editor panel
+    const editorPanel = document.createElement('div')
+    editorPanel.className = 'emoji-manager-editor-panel'
+    
+    const editorTitle = document.createElement('h3')
+    editorTitle.textContent = '编辑表情'
+    editorTitle.style.cssText = 'margin: 0 0 16px 0; text-align: center;'
+    
+    const editorPreview = document.createElement('img')
+    editorPreview.className = 'emoji-manager-editor-preview'
     editorPreview.src = emo.url
+    
+    const editorNameInput = document.createElement('input')
+    editorNameInput.className = 'form-control'
+    editorNameInput.placeholder = '名称 (alias)'
     editorNameInput.value = emo.name || ''
+    
+    const editorUrlInput = document.createElement('input')
+    editorUrlInput.className = 'form-control'
+    editorUrlInput.placeholder = '表情图片 URL'
     editorUrlInput.value = emo.url || ''
-    editorPanel.style.display = ''
+    
+    const buttonContainer = document.createElement('div')
+    buttonContainer.style.cssText = 'display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;'
+    
+    const editorSaveBtn = document.createElement('button')
+    editorSaveBtn.textContent = '保存修改'
+    editorSaveBtn.className = 'btn btn-primary'
+    
+    const editorCancelBtn = document.createElement('button')
+    editorCancelBtn.textContent = '取消'
+    editorCancelBtn.className = 'btn'
+    
+    buttonContainer.appendChild(editorCancelBtn)
+    buttonContainer.appendChild(editorSaveBtn)
+    
+    editorPanel.appendChild(editorTitle)
+    editorPanel.appendChild(editorPreview)
+    editorPanel.appendChild(editorNameInput)
+    editorPanel.appendChild(editorUrlInput)
+    editorPanel.appendChild(buttonContainer)
+    
+    backdrop.appendChild(editorPanel)
+    document.body.appendChild(backdrop)
+
+    // Update preview when URL changes
+    editorUrlInput.addEventListener('input', () => {
+      editorPreview.src = editorUrlInput.value
+    })
+
+    // Handle save
+    editorSaveBtn.addEventListener('click', () => {
+      const newName = (editorNameInput.value || '').trim()
+      const newUrl = (editorUrlInput.value || '').trim()
+      if (!newName || !newUrl) {
+        alert('名称和 URL 均不能为空')
+        return
+      }
+      emo.name = newName
+      emo.url = newUrl
+      renderGroups()
+      renderSelectedGroup()
+      backdrop.remove()
+    })
+
+    // Handle cancel
+    editorCancelBtn.addEventListener('click', () => {
+      backdrop.remove()
+    })
+
+    // Handle backdrop click
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) {
+        backdrop.remove()
+      }
+    })
   }
 
-  editorCancelBtn.addEventListener('click', () => {
-    editingContext = null
-    editorPanel.style.display = 'none'
-  })
-
-  editorSaveBtn.addEventListener('click', () => {
-    if (!editingContext) return
-    const group = userscriptState.emojiGroups.find(g => g.id === editingContext!.groupId)
-    if (!group) return
-    const emo = group.emojis[editingContext!.index]
-    if (!emo) return
-    const newName = (editorNameInput.value || '').trim()
-    const newUrl = (editorUrlInput.value || '').trim()
-    if (!newName || !newUrl) return alert('名称和 URL 均不能为空')
-    emo.name = newName
-    emo.url = newUrl
-    // Update preview
-    editorPreview.src = newUrl
-    renderGroups()
-    renderSelectedGroup()
-    // keep editor open or close
-    editingContext = null
-    editorPanel.style.display = 'none'
-  })
+  function showEditorFor(groupId: string, index: number) {
+    createEditorPopup(groupId, index)
+  }
 
   function renderSelectedGroup() {
     const group = userscriptState.emojiGroups.find(g => g.id === selectedGroupId) || null
