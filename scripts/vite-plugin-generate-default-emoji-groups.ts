@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-properties */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
 import { Plugin } from 'vite'
@@ -88,6 +88,17 @@ export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
 }
 `
           try {
+            // Backup existing loader if present
+            try {
+              const backupPath = loaderOutputPath + '.bak'
+              if (existsSync(loaderOutputPath) && !existsSync(backupPath)) {
+                writeFileSync(backupPath, readFileSync(loaderOutputPath, 'utf-8'), 'utf-8')
+                console.log(`🔖 Backed up existing loader to ${backupPath}`)
+              }
+            } catch (backupErr) {
+              console.warn('⚠️ failed to backup existing loader:', backupErr)
+            }
+
             writeFileSync(loaderOutputPath, loaderTsContent, 'utf-8')
             console.log('✅ generated static defaultEmojiGroups.loader.ts for embedded userscript')
           } catch (e) {
