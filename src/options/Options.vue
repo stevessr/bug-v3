@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount } from 'vue'
-
+import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
 
 import GridColumnsSelector from './components/GridColumnsSelector.vue'
@@ -197,7 +197,14 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <AConfigProvider
+    :theme="{
+      token: {
+        
+      },
+    }"
+  >
+    <div class="min-h-screen bg-gray-50">
     <!-- Header -->
     <header class="bg-white shadow-sm border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -377,4 +384,5 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
       @cancel="onExportModalCancel"
     />
   </div>
+  </AConfigProvider>
 </template>

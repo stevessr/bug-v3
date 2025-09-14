@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 import GroupTabs from './components/GroupTabs.vue'
 import EmojiGrid from './components/EmojiGrid.vue'
 import { usePopup } from './usePopup'
@@ -13,7 +14,14 @@ const setActiveHandler = (id: string) => {
 </script>
 
 <template>
-  <div class="popup-container bg-white">
+  <AConfigProvider
+    :theme="{
+      token: {
+        
+      },
+    }"
+  >
+    <div class="popup-container bg-white">
     <!-- Header with scale control -->
     <div class="p-3 border-b border-gray-200 bg-gray-50">
       <div class="flex items-center justify-between mb-2">
@@ -108,6 +116,7 @@ const setActiveHandler = (id: string) => {
       链接已复制到剪贴板
     </div>
   </div>
+  </AConfigProvider>
 </template>
 
 <style>

@@ -3,18 +3,12 @@ function applyTheme() {
   const root = document.documentElement
 
   function apply(theme: string) {
-    if (theme === 'dark') {
-      root.classList.add('dark')
-    } else if (theme === 'light') {
-      root.classList.remove('dark')
-    } else {
-      // system
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        root.classList.add('dark')
-      } else {
-        root.classList.remove('dark')
-      }
+    let finalTheme = theme
+    if (theme === 'system') {
+      finalTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     }
+
+    root.setAttribute('data-theme', finalTheme)
   }
 
   apply(theme)
@@ -22,11 +16,7 @@ function applyTheme() {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
     const currentTheme = localStorage.getItem('theme') || 'system'
     if (currentTheme === 'system') {
-      if (event.matches) {
-        root.classList.add('dark')
-      } else {
-        root.classList.remove('dark')
-      }
+      apply('system')
     }
   })
 }

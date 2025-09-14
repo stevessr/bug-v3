@@ -18,6 +18,36 @@ import {
 
 import { uploader } from '@/content/utils'
 
+// Inject manager CSS once
+let __managerStylesInjected = false
+function injectManagerStyles() {
+  if (__managerStylesInjected) return
+  __managerStylesInjected = true
+  const css = `
+    .emoji-manager-wrapper { display:flex; flex-direction:column; height:100%; width:100%; overflow:hidden; }
+    /* Fullscreen modal: panel fills the viewport */
+    .emoji-manager-panel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display:grid; grid-template-columns: 300px 1fr; gap:12px; align-items:start; padding:12px; box-sizing:border-box; background: rgba(0,0,0,0.8); }
+    .emoji-manager-left { overflow:auto; padding-right:8px; box-sizing:border-box; background: #fff; border-right:1px solid #eee; }
+    .emoji-manager-left .emoji-manager-addgroup-row { display:flex; gap:8px; padding:8px; }
+    .emoji-manager-groups-list > div { padding:6px; border-radius:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+    .emoji-manager-groups-list > div:focus { outline: none; box-shadow: inset 0 0 0 2px #e6f2ff; }
+  .emoji-manager-right { display:flex; flex-direction:column; }
+  .emoji-manager-right-header { display:flex; align-items:center; gap:8px; padding-bottom:6px; border-bottom:1px solid #eee; }
+  .emoji-manager-right-main { flex:1 1 auto; overflow:auto; display:flex; flex-direction:column; gap:8px; box-sizing:border-box; padding-left:8px; }
+    .emoji-manager-emojis { display:grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:8px; align-content:start; padding:6px; box-sizing:border-box; }
+  .emoji-manager-card { display:flex; flex-direction:column; gap:6px; align-items:center; padding:8px; background:#fff; border:1px solid #eee; border-radius:8px; }
+    .emoji-manager-card-img { width:96px; height:96px; object-fit:contain; border-radius:6px; background:#fafafa; }
+    .emoji-manager-card-name { font-size:12px; color:#333; text-align:center; width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .emoji-manager-card-actions { display:flex; gap:6px; }
+    .emoji-manager-footer { display:flex; gap:8px; justify-content:flex-end; padding:8px 12px; border-top:1px solid #eee; }
+    /* Note: responsive stacking disabled - always two columns */
+  `
+  const style = document.createElement('style')
+  style.setAttribute('data-emoji-manager-styles', '1')
+  style.textContent = css
+  document.head.appendChild(style)
+}
+
 // Global state for userscript
 const userscriptState: UserscriptStorage = {
   emojiGroups: [],
@@ -34,7 +64,10 @@ const userscriptState: UserscriptStorage = {
 // Initialize from localStorage
 async function initializeUserscriptData() {
   const data = await loadDataFromLocalStorageAsync().catch((err: any) => {
-    console.warn('[Userscript] loadDataFromLocalStorageAsync failed, falling back to sync loader', err)
+    console.warn(
+      '[Userscript] loadDataFromLocalStorageAsync failed, falling back to sync loader',
+      err
+    )
     return loadDataFromLocalStorage()
   })
   userscriptState.emojiGroups = data.emojiGroups || []
@@ -173,7 +206,11 @@ function findAllToolbars(): HTMLElement[] {
 function isMobileView(): boolean {
   try {
     // Mobile view is now controlled solely by the forceMobileMode setting in userscriptState
-    return !!(userscriptState && userscriptState.settings && userscriptState.settings.forceMobileMode)
+    return !!(
+      userscriptState &&
+      userscriptState.settings &&
+      userscriptState.settings.forceMobileMode
+    )
   } catch (e) {
     return false
   }
@@ -554,6 +591,8 @@ async function createEmojiPicker(): Promise<HTMLElement> {
 
 // Open management interface
 function openManagementInterface() {
+  // ensure manager styles are injected
+  injectManagerStyles()
   // Internal lightweight manager modal (replaces external manager redirect)
   const modal = document.createElement('div')
   // Use Discourse modal classes so forum styles are used instead of custom inline styles
@@ -564,10 +603,13 @@ function openManagementInterface() {
   const panel = document.createElement('div')
   // Use a container class and avoid custom inline styles so Discourse CSS applies
   panel.className = 'd-modal__container emoji-manager-panel'
+  // layout handled by injected CSS
+  // panel.style handled via .emoji-manager-panel
 
   // Left: groups list
   const left = document.createElement('div')
   left.className = 'emoji-manager-left'
+  // left column styles handled by injected CSS
   const leftHeader = document.createElement('div')
   leftHeader.className = 'emoji-manager-left-header'
   const title = document.createElement('h3')
@@ -607,14 +649,46 @@ function openManagementInterface() {
   groupTitle.style.cssText = 'margin:0; flex:1;'
   const deleteGroupBtn = document.createElement('button')
   deleteGroupBtn.textContent = '删除分组'
-  deleteGroupBtn.style.cssText = 'padding:6px 8px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer;'
+  deleteGroupBtn.style.cssText =
+    'padding:6px 8px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer;'
   rightHeader.appendChild(groupTitle)
   rightHeader.appendChild(deleteGroupBtn)
   right.appendChild(rightHeader)
 
+  const managerRightMain = document.createElement('div')
+  managerRightMain.className = 'emoji-manager-right-main'
+  // right column styles handled by injected CSS
+  // emojis grid
   const emojisContainer = document.createElement('div')
   emojisContainer.className = 'emoji-manager-emojis'
-  right.appendChild(emojisContainer)
+  // emojis grid styles handled by injected CSS
+  managerRightMain.appendChild(emojisContainer)
+  right.appendChild(managerRightMain)
+
+  // Editor panel (inline, appears when editing an emoji)
+  const editorPanel = document.createElement('div')
+  editorPanel.className = 'emoji-manager-editor-panel'
+  editorPanel.style.display = 'none'
+  const editorPreview = document.createElement('img')
+  editorPreview.className = 'emoji-manager-editor-preview'
+  const editorNameInput = document.createElement('input')
+  editorNameInput.className = 'form-control'
+  editorNameInput.placeholder = '名称 (alias)'
+  const editorUrlInput = document.createElement('input')
+  editorUrlInput.className = 'form-control'
+  editorUrlInput.placeholder = '表情图片 URL'
+  const editorSaveBtn = document.createElement('button')
+  editorSaveBtn.textContent = '保存修改'
+  editorSaveBtn.className = 'btn btn-primary'
+  const editorCancelBtn = document.createElement('button')
+  editorCancelBtn.textContent = '取消'
+  editorCancelBtn.className = 'btn'
+  editorPanel.appendChild(editorPreview)
+  editorPanel.appendChild(editorNameInput)
+  editorPanel.appendChild(editorUrlInput)
+  editorPanel.appendChild(editorSaveBtn)
+  editorPanel.appendChild(editorCancelBtn)
+  right.appendChild(editorPanel)
 
   const addEmojiForm = document.createElement('div')
   addEmojiForm.className = 'emoji-manager-add-emoji-form'
@@ -660,7 +734,7 @@ function openManagementInterface() {
   panel.appendChild(left)
   panel.appendChild(right)
   const wrapper = document.createElement('div')
-  wrapper.style.cssText = 'display:flex; flex-direction:column; height:100%; width:100%'
+  wrapper.className = 'emoji-manager-wrapper'
   wrapper.appendChild(panel)
   wrapper.appendChild(footer)
   modal.appendChild(wrapper)
@@ -671,30 +745,95 @@ function openManagementInterface() {
 
   function renderGroups() {
     groupsList.innerHTML = ''
+    // If no selection yet, default to first group (if any)
+    if (!selectedGroupId && userscriptState.emojiGroups.length > 0) {
+      selectedGroupId = userscriptState.emojiGroups[0].id
+    }
+
     userscriptState.emojiGroups.forEach(g => {
       const row = document.createElement('div')
-      row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:6px; border-radius:4px; cursor:pointer;'
+      row.style.cssText =
+        'display:flex; justify-content:space-between; align-items:center; padding:6px; border-radius:4px; cursor:pointer;'
       row.tabIndex = 0
-      row.textContent = `${g.id} (${(g.emojis || []).length})`
-      row.addEventListener('click', () => {
+      // show friendly name when available
+      row.textContent = `${g.name || g.id} (${(g.emojis || []).length})`
+      row.dataset.groupId = g.id
+
+      const selectGroup = () => {
         selectedGroupId = g.id
+        // rerender left list so highlight is consistent
+        renderGroups()
         renderSelectedGroup()
-        // highlight
-        Array.from(groupsList.children).forEach(c => (c as HTMLElement).style.background = '')
-        row.style.background = '#f0f8ff'
+      }
+
+      row.addEventListener('click', selectGroup)
+      row.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          selectGroup()
+        }
       })
+
+      // highlight currently selected
+      if (selectedGroupId === g.id) {
+        row.style.background = '#f0f8ff'
+      }
+
       groupsList.appendChild(row)
     })
   }
+
+  // Keep track of currently edited emoji
+  let editingContext: { groupId: string; index: number } | null = null
+
+  function showEditorFor(groupId: string, index: number) {
+    const group = userscriptState.emojiGroups.find(g => g.id === groupId)
+    if (!group) return
+    const emo = group.emojis[index]
+    if (!emo) return
+    editingContext = { groupId, index }
+    editorPreview.src = emo.url
+    editorNameInput.value = emo.name || ''
+    editorUrlInput.value = emo.url || ''
+    editorPanel.style.display = ''
+  }
+
+  editorCancelBtn.addEventListener('click', () => {
+    editingContext = null
+    editorPanel.style.display = 'none'
+  })
+
+  editorSaveBtn.addEventListener('click', () => {
+    if (!editingContext) return
+    const group = userscriptState.emojiGroups.find(g => g.id === editingContext!.groupId)
+    if (!group) return
+    const emo = group.emojis[editingContext!.index]
+    if (!emo) return
+    const newName = (editorNameInput.value || '').trim()
+    const newUrl = (editorUrlInput.value || '').trim()
+    if (!newName || !newUrl) return alert('名称和 URL 均不能为空')
+    emo.name = newName
+    emo.url = newUrl
+    // Update preview
+    editorPreview.src = newUrl
+    renderGroups()
+    renderSelectedGroup()
+    // keep editor open or close
+    editingContext = null
+    editorPanel.style.display = 'none'
+  })
 
   function renderSelectedGroup() {
     const group = userscriptState.emojiGroups.find(g => g.id === selectedGroupId) || null
     groupTitle.textContent = group ? group.name || group.id : ''
     emojisContainer.innerHTML = ''
     if (!group) return
-    ;(group.emojis || []).forEach((emo: any, idx: number) => {
+    const emojis = Array.isArray(group.emojis) ? group.emojis : []
+    emojis.forEach((emo: any, idx: number) => {
       const card = document.createElement('div')
       card.className = 'emoji-manager-card'
+      // card styles come from CSS
+      card.classList.add('emoji-manager-card')
 
       const img = document.createElement('img')
       img.src = emo.url
@@ -706,20 +845,13 @@ function openManagementInterface() {
       name.className = 'emoji-manager-card-name'
 
       const actions = document.createElement('div')
-      actions.className = 'emoji-manager-card-actions'
+  actions.className = 'emoji-manager-card-actions'
 
       const edit = document.createElement('button')
       edit.textContent = '编辑'
       edit.className = 'btn btn-sm'
       edit.addEventListener('click', () => {
-        const newName = prompt('表情名称', emo.name || '')
-        if (newName === null) return
-        const newUrl = prompt('表情图片 URL', emo.url || '')
-        if (newUrl === null) return
-        emo.name = newName.trim()
-        emo.url = newUrl.trim()
-        renderGroups()
-        renderSelectedGroup()
+        showEditorFor(group.id, idx)
       })
 
       const del = document.createElement('button')
@@ -748,7 +880,11 @@ function openManagementInterface() {
     if (userscriptState.emojiGroups.find(g => g.id === id)) return alert('分组已存在')
     userscriptState.emojiGroups.push({ id, name: id, emojis: [] })
     addGroupInput.value = ''
+    // select new group
+    const newIdx = userscriptState.emojiGroups.findIndex(g => g.id === id)
+    if (newIdx >= 0) selectedGroupId = userscriptState.emojiGroups[newIdx].id
     renderGroups()
+    renderSelectedGroup()
   })
 
   addEmojiBtn.addEventListener('click', () => {
@@ -772,7 +908,14 @@ function openManagementInterface() {
     if (idx >= 0) {
       if (!confirm('确认删除该分组？该操作不可撤销')) return
       userscriptState.emojiGroups.splice(idx, 1)
-      selectedGroupId = null
+      // choose next group if exists, otherwise previous, otherwise null
+      if (userscriptState.emojiGroups.length > 0) {
+        const next =
+          userscriptState.emojiGroups[Math.min(idx, userscriptState.emojiGroups.length - 1)]
+        selectedGroupId = next.id
+      } else {
+        selectedGroupId = null
+      }
       renderGroups()
       renderSelectedGroup()
     }
@@ -780,12 +923,15 @@ function openManagementInterface() {
 
   exportBtn.addEventListener('click', () => {
     const data = exportUserscriptData()
-    navigator.clipboard.writeText(data).then(() => alert('已复制到剪贴板')).catch(() => {
-      const ta = document.createElement('textarea')
-      ta.value = data
-      document.body.appendChild(ta)
-      ta.select()
-    })
+    navigator.clipboard
+      .writeText(data)
+      .then(() => alert('已复制到剪贴板'))
+      .catch(() => {
+        const ta = document.createElement('textarea')
+        ta.value = data
+        document.body.appendChild(ta)
+        ta.select()
+      })
   })
 
   importBtn.addEventListener('click', () => {
@@ -799,7 +945,8 @@ function openManagementInterface() {
     container.appendChild(ta)
     container.appendChild(ok)
     const importModal = document.createElement('div')
-    importModal.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000001;'
+    importModal.style.cssText =
+      'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000001;'
     const box = document.createElement('div')
     box.style.cssText = 'background:#fff;padding:12px;border-radius:6px;width:90%;max-width:700px;'
     box.appendChild(container)
@@ -851,7 +998,9 @@ function openManagementInterface() {
   })
 
   closeBtn.addEventListener('click', () => modal.remove())
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+  modal.addEventListener('click', e => {
+    if (e.target === modal) modal.remove()
+  })
 
   // initial render
   renderGroups()
@@ -1075,8 +1224,8 @@ function injectEmojiButton(toolbar: HTMLElement) {
 
     const buttonRect = button.getBoundingClientRect()
     // If mobile-style modal (full-screen) then keep default modal behavior.
-    const isModal = currentPicker.classList.contains('modal') ||
-      currentPicker.className.includes('d-modal')
+    const isModal =
+      currentPicker.classList.contains('modal') || currentPicker.className.includes('d-modal')
 
     if (isModal) {
       // Ensure modal fills or centers appropriately (modal CSS should handle layout)
@@ -1095,8 +1244,8 @@ function injectEmojiButton(toolbar: HTMLElement) {
       const vpHeight = window.innerHeight
 
       // temporary place below to measure
-      currentPicker.style.top = (buttonRect.bottom + margin) + 'px'
-      currentPicker.style.left = (buttonRect.left) + 'px'
+      currentPicker.style.top = buttonRect.bottom + margin + 'px'
+      currentPicker.style.left = buttonRect.left + 'px'
 
       // Measure after appended
       const pickerRect = currentPicker.getBoundingClientRect()
@@ -1429,7 +1578,4 @@ if (shouldInjectEmoji()) {
   console.log('[Emoji Extension Userscript] Skipping injection - incompatible platform')
 }
 
-// WebSocket / manager auto-connect removed in userscript builds: manager sync is manual via management UI
-
 export {}
-
