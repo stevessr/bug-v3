@@ -35,6 +35,7 @@ export interface AppSettings {
   enableXcomExtraSelectors?: boolean // 控制是否在X.com启用额外选择器
   // Optional API key fields for third-party services
   tenorApiKey?: string
+  theme?: 'system' | 'light' | 'dark'
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

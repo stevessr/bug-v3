@@ -251,6 +251,22 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableXcomExtraSelectors: value })
   }
 
+    const updateTheme = (theme: 'system' | 'light' | 'dark') => {
+    emojiStore.updateSettings({ theme })
+    localStorage.setItem('theme', theme)
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else if (theme === 'light') {
+      document.documentElement.classList.remove('dark')
+    } else {
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    }
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -770,6 +786,7 @@ export default function useOptions() {
     confirmGenericTitle,
     confirmGenericMessage,
     executeConfirmGenericAction,
-    cancelConfirmGenericAction
+    cancelConfirmGenericAction,
+    updateTheme
   } as const
 }

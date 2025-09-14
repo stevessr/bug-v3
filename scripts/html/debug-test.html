@@ -2,6 +2,37 @@
 <html>
   <head>
     <title>Debug Test</title>
+    <script>
+      const theme = localStorage.getItem('theme') || 'system';
+
+      function applyTheme(theme) {
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (theme === 'light') {
+          document.documentElement.classList.remove('dark');
+        } else {
+          // system
+          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        }
+      }
+
+      applyTheme(theme);
+
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+        const currentTheme = localStorage.getItem('theme') || 'system';
+        if (currentTheme === 'system') {
+          if (event.matches) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="debug-info">

@@ -251,6 +251,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
           @update:forceMobileMode="updateForceMobileMode"
           @update:enableLinuxDoInjection="updateEnableLinuxDoInjection"
           @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
+          @update:theme="updateTheme"
         >
           <template #grid-selector>
             <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />

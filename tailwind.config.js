@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'media',
+  darkMode: 'class',
   content: [
     './popup/**/*.{html,js,ts,vue}',
     './options/**/*.{html,js,ts,vue}',

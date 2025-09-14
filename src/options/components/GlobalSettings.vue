@@ -1,4 +1,4 @@
-<script setup lang="ts">
+'''<script setup lang="ts">
 import { ref, watch, isRef, type Ref } from 'vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
@@ -13,7 +13,8 @@ const emit = defineEmits([
   'update:outputFormat',
   'update:forceMobileMode',
   'update:enableLinuxDoInjection',
-  'update:enableXcomExtraSelectors'
+  'update:enableXcomExtraSelectors',
+  'update:theme'
 ])
 
 // support both ref(settings) and plain settings object
@@ -26,12 +27,29 @@ const getOutputFormat = () => {
   }
 }
 
+const getTheme = () => {
+  try {
+    if (isRef(settings)) return (settings.value && settings.value.theme) || 'system'
+    return (settings && (settings as AppSettings).theme) || 'system'
+  } catch {
+    return 'system'
+  }
+}
+
 // local reactive copy for outputFormat so the select will update when parent props change
 const localOutputFormat = ref<string>(getOutputFormat())
 watch(
   () => getOutputFormat(),
   val => {
     localOutputFormat.value = val || 'markdown'
+  }
+)
+
+const localTheme = ref<string>(getTheme())
+watch(
+  () => getTheme(),
+  val => {
+    localTheme.value = val || 'system'
   }
 )
 
@@ -57,8 +75,17 @@ const handleOutputFormatSelect = (key: string) => {
   emit('update:outputFormat', key)
 }
 
+const handleThemeSelect = (key: string) => {
+  localTheme.value = key
+  emit('update:theme', key)
+}
+
 const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
   handleOutputFormatSelect(String(info.key))
+}
+
+const handleThemeSelectInfo = (info: { key: string | number }) => {
+  handleThemeSelect(String(info.key))
 }
 
 // Use Ant Design slider's afterChange to update settings when drag finishes.
@@ -95,6 +122,26 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
       <h2 class="text-lg font-semibold text-gray-900">全局设置</h2>
     </div>
     <div class="p-6 space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium text-gray-900">主题</label>
+          <p class="text-sm text-gray-500">选择界面主题</p>
+        </div>
+        <a-dropdown>
+          <template #overlay>
+            <a-menu @click="handleThemeSelectInfo">
+              <a-menu-item key="system">跟随系统</a-menu-item>
+              <a-menu-item key="light">亮色模式</a-menu-item>
+              <a-menu-item key="dark">暗色模式</a-menu-item>
+            </a-menu>
+          </template>
+          <AButton>
+            {{ localTheme === 'system' ? '跟随系统' : localTheme === 'light' ? '亮色模式' : '暗色模式' }}
+            <DownOutlined />
+          </AButton>
+        </a-dropdown>
+      </div>
+
       <div class="flex items-center justify-between">
         <div>
           <label class="text-sm font-medium text-gray-900">默认图片缩放</label>

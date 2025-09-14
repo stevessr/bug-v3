@@ -1,4 +1,41 @@
 // Main userscript entry point - adapted from content script
+
+// START: Theme handling
+function applyTheme() {
+  const theme = localStorage.getItem('theme') || 'system';
+  const root = document.documentElement;
+
+  function apply(theme: string) {
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else if (theme === 'light') {
+      root.classList.remove('dark');
+    } else {
+      // system
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    }
+  }
+
+  apply(theme);
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+    const currentTheme = localStorage.getItem('theme') || 'system';
+    if (currentTheme === 'system') {
+      if (event.matches) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    }
+  });
+}
+applyTheme();
+// END: Theme handling
+
 import { isImageUrl } from '../utils/isImageUrl'
 
 // Compile-time flag injected by vite config: when true the build is the remote variant
@@ -15,35 +52,7 @@ import {
   type UserscriptStorage
 } from './userscript-storage'
 
-import { uploader } from '@/content/utils'
-
-// Global state for userscript
-const userscriptState: UserscriptStorage = {
-  emojiGroups: [],
-  settings: {
-    imageScale: 30,
-    gridColumns: 4,
-    outputFormat: 'markdown',
-    forceMobileMode: false,
-    defaultGroup: 'nachoneko',
-    showSearchBar: true
-  }
-}
-
-// Initialize from localStorage
-async function initializeUserscriptData() {
-  const data = await loadDataFromLocalStorageAsync().catch((err: any) => {
-    console.warn(
-      '[Userscript] loadDataFromLocalStorageAsync failed, falling back to sync loader',
-      err
-    )
-    return loadDataFromLocalStorage()
-  })
-  userscriptState.emojiGroups = data.emojiGroups
-  userscriptState.settings = data.settings
-}
-
-// Check if current page should have emoji injection (copied from content script)
+// Function to check if current page should have emoji injection
 function shouldInjectEmoji(): boolean {
   // Check for discourse meta tags
   const discourseMetaTags = document.querySelectorAll(
@@ -556,31 +565,7 @@ async function createEmojiPicker(): Promise<HTMLElement> {
 
 // Open management interface
 function openManagementInterface() {
-  // Check if we can access the manager in the same domain
-  try {
-    const managerUrl = window.location.origin + '/emoji-manager.html'
-
-    // Try to open in a new tab
-    const newWindow = window.open(
-      managerUrl,
-      'emojiManager',
-      'width=1200,height=800,scrollbars=yes,resizable=yes'
-    )
-
-    if (!newWindow) {
-      // Fallback: Show instructions modal
-      showManagementModal()
-    } else {
-      console.log('[Emoji Extension Userscript] Opened management interface')
-    }
-  } catch (error) {
-    console.error('[Emoji Extension Userscript] Failed to open management interface:', error)
-    showManagementModal()
-  }
-}
-
-// Show management modal with instructions and data operations
-function showManagementModal() {
+  // Internal lightweight manager modal (replaces external manager redirect)
   const modal = document.createElement('div')
   modal.style.cssText = `
     position: fixed;
@@ -588,202 +573,294 @@ function showManagementModal() {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    z-index: 999999;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000000;
     display: flex;
     align-items: center;
     justify-content: center;
   `
 
-  const content = document.createElement('div')
-  content.style.cssText = `
-    background: white;
+  const panel = document.createElement('div')
+  panel.style.cssText = `
+    width: 90%;
+    max-width: 1000px;
+    height: 85%;
+    background: #fff;
     border-radius: 8px;
-    padding: 24px;
-    max-width: 600px;
-    max-height: 80vh;
-    overflow-y: auto;
-    position: relative;
+    display: flex;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   `
 
-  content.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-      <h2 style="margin: 0; color: #333;">表情管理</h2>
-      <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <h3 style="color: #555;">快速操作</h3>
-      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-        <button id="exportBtn" style="padding: 8px 16px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer;">导出数据</button>
-        <button id="syncBtn" style="padding: 8px 16px; background: #52c41a; color: white; border: none; border-radius: 4px; cursor: pointer;">同步管理器数据</button>
-        <button id="importBtn" style="padding: 8px 16px; background: #722ed1; color: white; border: none; border-radius: 4px; cursor: pointer;">导入数据</button>
-      </div>
-    </div>
-    
-    <div style="background: #f5f5f5; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
-      <h3 style="color: #555; margin-top: 0;">完整管理界面</h3>
-      <p style="margin: 8px 0; color: #666;">
-        要使用完整的表情管理功能，请：<br>
-        1. 下载并保存管理界面文件<br>
-        2. 在浏览器中打开该文件<br>
-        3. 在管理界面中编辑表情后，点击"同步到用户脚本"
-      </p>
-      <button id="downloadManager" style="padding: 8px 16px; background: #fa8c16; color: white; border: none; border-radius: 4px; cursor: pointer;">下载管理界面</button>
-    </div>
-    
-    <div id="importSection" style="display: none; background: #f0f8ff; padding: 16px; border-radius: 4px;">
-      <h3 style="color: #555; margin-top: 0;">导入数据</h3>
-      <textarea id="importData" style="width: 100%; height: 150px; border: 1px solid #ddd; border-radius: 4px; padding: 8px; font-family: monospace; font-size: 12px;" placeholder="粘贴要导入的JSON数据..."></textarea>
-      <div style="margin-top: 8px;">
-        <button id="confirmImport" style="padding: 8px 16px; background: #52c41a; color: white; border: none; border-radius: 4px; cursor: pointer;">确认导入</button>
-        <button id="cancelImport" style="padding: 8px 16px; background: #d9d9d9; color: #666; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px;">取消</button>
-      </div>
-    </div>
-    
-    <div style="background: #fff2e8; padding: 12px; border-radius: 4px; border-left: 4px solid #fa8c16; font-size: 14px; color: #595959;">
-      <strong>提示：</strong>当前数据包含 ${userscriptState.emojiGroups.length} 个分组，共 ${userscriptState.emojiGroups.reduce((acc, g) => acc + (g.emojis?.length || 0), 0)} 个表情
-    </div>
-  `
+  // Left: groups list
+  const left = document.createElement('div')
+  left.style.cssText = 'width: 280px; border-right: 1px solid #eee; padding: 12px; overflow:auto;'
+  const leftHeader = document.createElement('div')
+  leftHeader.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:8px;'
+  const title = document.createElement('h3')
+  title.textContent = '表情管理器'
+  title.style.cssText = 'margin:0; flex:1;'
+  const closeBtn = document.createElement('button')
+  closeBtn.textContent = '×'
+  closeBtn.style.cssText = 'font-size:20px; background:none; border:none; cursor:pointer;'
+  leftHeader.appendChild(title)
+  leftHeader.appendChild(closeBtn)
+  left.appendChild(leftHeader)
 
-  modal.appendChild(content)
+  const addGroupRow = document.createElement('div')
+  addGroupRow.style.cssText = 'display:flex; gap:6px; margin-bottom:8px;'
+  const addGroupInput = document.createElement('input')
+  addGroupInput.placeholder = '新分组 id'
+  addGroupInput.style.cssText = 'flex:1; padding:6px;'
+  const addGroupBtn = document.createElement('button')
+  addGroupBtn.textContent = '添加'
+  addGroupBtn.style.cssText = 'padding:6px 8px;'
+  addGroupRow.appendChild(addGroupInput)
+  addGroupRow.appendChild(addGroupBtn)
+  left.appendChild(addGroupRow)
+
+  const groupsList = document.createElement('div')
+  groupsList.style.cssText = 'display:flex; flex-direction:column; gap:6px;'
+  left.appendChild(groupsList)
+
+  // Right: group detail and controls
+  const right = document.createElement('div')
+  right.style.cssText = 'flex:1; padding:12px; display:flex; flex-direction:column; overflow:auto;'
+
+  const rightHeader = document.createElement('div')
+  rightHeader.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:8px;'
+  const groupTitle = document.createElement('h4')
+  groupTitle.textContent = ''
+  groupTitle.style.cssText = 'margin:0; flex:1;'
+  const deleteGroupBtn = document.createElement('button')
+  deleteGroupBtn.textContent = '删除分组'
+  deleteGroupBtn.style.cssText = 'padding:6px 8px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer;'
+  rightHeader.appendChild(groupTitle)
+  rightHeader.appendChild(deleteGroupBtn)
+  right.appendChild(rightHeader)
+
+  const emojisContainer = document.createElement('div')
+  emojisContainer.style.cssText = 'flex:1; overflow:auto; display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start;'
+  right.appendChild(emojisContainer)
+
+  const addEmojiForm = document.createElement('div')
+  addEmojiForm.style.cssText = 'display:flex; gap:8px; margin-top:8px; align-items:center;'
+  const emojiUrlInput = document.createElement('input')
+  emojiUrlInput.placeholder = '表情图片 URL'
+  emojiUrlInput.style.cssText = 'flex:1; padding:6px;'
+  const emojiNameInput = document.createElement('input')
+  emojiNameInput.placeholder = '名称 (alias)'
+  emojiNameInput.style.cssText = 'width:160px; padding:6px;'
+  const addEmojiBtn = document.createElement('button')
+  addEmojiBtn.textContent = '添加表情'
+  addEmojiBtn.style.cssText = 'padding:6px 8px;'
+  addEmojiForm.appendChild(emojiUrlInput)
+  addEmojiForm.appendChild(emojiNameInput)
+  addEmojiForm.appendChild(addEmojiBtn)
+  right.appendChild(addEmojiForm)
+
+  // Footer actions
+  const footer = document.createElement('div')
+  footer.style.cssText = 'display:flex; gap:8px; padding:12px; border-top:1px solid #eee; justify-content:flex-end;'
+  const exportBtn = document.createElement('button')
+  exportBtn.textContent = '导出'
+  exportBtn.style.cssText = 'padding:8px 12px;'
+  const importBtn = document.createElement('button')
+  importBtn.textContent = '导入'
+  importBtn.style.cssText = 'padding:8px 12px;'
+  const saveBtn = document.createElement('button')
+  saveBtn.textContent = '保存'
+  saveBtn.style.cssText = 'padding:8px 12px; background:#1890ff; color:#fff; border:none; border-radius:4px;'
+  const syncBtn = document.createElement('button')
+  syncBtn.textContent = '同步管理器'
+  syncBtn.style.cssText = 'padding:8px 12px;'
+  footer.appendChild(syncBtn)
+  footer.appendChild(exportBtn)
+  footer.appendChild(importBtn)
+  footer.appendChild(saveBtn)
+
+  panel.appendChild(left)
+  panel.appendChild(right)
+  const wrapper = document.createElement('div')
+  wrapper.style.cssText = 'display:flex; flex-direction:column; height:100%; width:100%'
+  wrapper.appendChild(panel)
+  wrapper.appendChild(footer)
+  modal.appendChild(wrapper)
   document.body.appendChild(modal)
 
-  // 如果构建为 remote 变体，则在简易设置中显示远程默认配置 URL 输入
-  if (typeof __USERSCRIPT_REMOTE_DEFAULTS__ !== 'undefined' && __USERSCRIPT_REMOTE_DEFAULTS__) {
-    const remoteSection = document.createElement('div')
-    remoteSection.style.cssText = 'margin-bottom: 12px;'
-    remoteSection.innerHTML = `
-      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">远程默认配置 URL:</label>
-      <input id="remoteConfigUrl" type="url" placeholder="https://example.com/default-config.json" 
-             style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
-      <div style="font-size:12px;color:#888;margin-top:6px;">如果设置此 URL，用户脚本将在没有本地数据时从该 URL 拉取默认配置并保存到 localStorage。</div>
-    `
+  // state
+  let selectedGroupId: string | null = null
 
-    // Insert before button row
-    const buttonRow = content.querySelector(
-      'div[style*="display: flex; gap: 8px; justify-content: flex-end;"]'
-    ) as HTMLElement | null
-    if (buttonRow && buttonRow.parentElement) {
-      content.insertBefore(remoteSection, buttonRow)
-    } else {
-      content.appendChild(remoteSection)
-    }
-
-    // Populate input with existing value or default
-    const inputEl = remoteSection.querySelector('#remoteConfigUrl') as HTMLInputElement | null
-    const saved = localStorage.getItem('emoji_extension_remote_config_url')
-    if (inputEl) {
-      inputEl.value = saved || 'https://example.com/default-config.json'
-    }
+  function renderGroups() {
+    groupsList.innerHTML = ''
+    userscriptState.emojiGroups.forEach(g => {
+      const row = document.createElement('div')
+      row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:6px; border-radius:4px; cursor:pointer;'
+      row.tabIndex = 0
+      row.textContent = `${g.id} (${(g.emojis || []).length})`
+      row.addEventListener('click', () => {
+        selectedGroupId = g.id
+        renderSelectedGroup()
+        // highlight
+        Array.from(groupsList.children).forEach(c => (c as HTMLElement).style.background = '')
+        row.style.background = '#f0f8ff'
+      })
+      groupsList.appendChild(row)
+    })
   }
 
-  // 如果构建为 remote 变体，则在设置中显示远程默认配置 URL 输入
-  if (typeof __USERSCRIPT_REMOTE_DEFAULTS__ !== 'undefined' && __USERSCRIPT_REMOTE_DEFAULTS__) {
-    const remoteSection = document.createElement('div')
-    remoteSection.style.cssText = 'margin-bottom: 16px;'
-    remoteSection.innerHTML = `
-      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">远程默认配置 URL:</label>
-      <input id="remoteConfigUrl" type="url" placeholder="https://example.com/default-config.json" 
-             style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
-      <div style="font-size:12px;color:#888;margin-top:6px;">如果设置此 URL，用户脚本将在没有本地数据时从该 URL 拉取默认配置并保存到 localStorage。</div>
-    `
-
-    // Insert before the button row if exists, otherwise append
-    const buttonRow = content.querySelector(
-      'div[style*="display: flex; gap: 8px; justify-content: flex-end;"]'
-    ) as HTMLElement | null
-    if (buttonRow && buttonRow.parentElement) {
-      content.insertBefore(remoteSection, buttonRow)
-    } else {
-      content.appendChild(remoteSection)
-    }
-
-    // Populate input with existing value or default
-    const inputEl = remoteSection.querySelector('#remoteConfigUrl') as HTMLInputElement | null
-    const saved = localStorage.getItem('emoji_extension_remote_config_url')
-    if (inputEl) {
-      inputEl.value = saved || 'https://example.com/default-config.json'
-    }
+  function renderSelectedGroup() {
+    const group = userscriptState.emojiGroups.find(g => g.id === selectedGroupId) || null
+    groupTitle.textContent = group ? group.name || group.id : ''
+    emojisContainer.innerHTML = ''
+    if (!group) return
+    ;(group.emojis || []).forEach((emo: any, idx: number) => {
+      const card = document.createElement('div')
+      card.style.cssText = 'width:80px; display:flex; flex-direction:column; align-items:center; gap:4px;'
+      const img = document.createElement('img')
+      img.src = emo.url
+      img.alt = emo.name
+      img.style.cssText = 'width:48px; height:48px; object-fit:contain; border:1px solid #eee; border-radius:6px;'
+      const name = document.createElement('div')
+      name.textContent = emo.name
+      name.style.cssText = 'font-size:12px; text-align:center; overflow:hidden; text-overflow:ellipsis;'
+      const del = document.createElement('button')
+      del.textContent = '删除'
+      del.style.cssText = 'font-size:12px; padding:4px 6px;'
+      del.addEventListener('click', () => {
+        group.emojis.splice(idx, 1)
+        renderGroups()
+        renderSelectedGroup()
+      })
+      card.appendChild(img)
+      card.appendChild(name)
+      card.appendChild(del)
+      emojisContainer.appendChild(card)
+    })
   }
 
-  // Event listeners
-  content.querySelector('#closeModal')?.addEventListener('click', () => {
-    modal.remove()
+  // actions
+  addGroupBtn.addEventListener('click', () => {
+    const id = (addGroupInput.value || '').trim()
+    if (!id) return alert('请输入分组 id')
+    if (userscriptState.emojiGroups.find(g => g.id === id)) return alert('分组已存在')
+    userscriptState.emojiGroups.push({ id, name: id, emojis: [] })
+    addGroupInput.value = ''
+    renderGroups()
   })
 
-  content.querySelector('#exportBtn')?.addEventListener('click', () => {
+  addEmojiBtn.addEventListener('click', () => {
+    if (!selectedGroupId) return alert('请先选择分组')
+    const url = (emojiUrlInput.value || '').trim()
+    const name = (emojiNameInput.value || '').trim()
+    if (!url || !name) return alert('请输入 url 和 名称')
+    const group = userscriptState.emojiGroups.find(g => g.id === selectedGroupId)
+    if (!group) return
+    group.emojis = group.emojis || []
+    group.emojis.push({ url, name })
+    emojiUrlInput.value = ''
+    emojiNameInput.value = ''
+    renderGroups()
+    renderSelectedGroup()
+  })
+
+  deleteGroupBtn.addEventListener('click', () => {
+    if (!selectedGroupId) return alert('请先选择分组')
+    const idx = userscriptState.emojiGroups.findIndex(g => g.id === selectedGroupId)
+    if (idx >= 0) {
+      if (!confirm('确认删除该分组？该操作不可撤销')) return
+      userscriptState.emojiGroups.splice(idx, 1)
+      selectedGroupId = null
+      renderGroups()
+      renderSelectedGroup()
+    }
+  })
+
+  exportBtn.addEventListener('click', () => {
     const data = exportUserscriptData()
-    navigator.clipboard
-      .writeText(data)
-      .then(() => {
-        alert('数据已复制到剪贴板')
-      })
-      .catch(() => {
-        // Fallback: show in text area
-        const textarea = document.createElement('textarea')
-        textarea.value = data
-        textarea.style.cssText =
-          'width: 100%; height: 200px; margin: 8px 0; font-family: monospace; font-size: 12px;'
-        content.appendChild(textarea)
-        textarea.select()
-      })
+    navigator.clipboard.writeText(data).then(() => alert('已复制到剪贴板')).catch(() => {
+      const ta = document.createElement('textarea')
+      ta.value = data
+      document.body.appendChild(ta)
+      ta.select()
+    })
   })
 
-  content.querySelector('#syncBtn')?.addEventListener('click', () => {
-    const synced = syncFromManager()
-    if (synced) {
-      alert('数据同步成功！请刷新页面以查看更新。')
-      modal.remove()
-      // Reload userscript data
-      initializeUserscriptData()
-    } else {
-      alert('未找到管理器数据。请先在管理界面中操作，然后点击"同步到用户脚本"。')
-    }
-  })
-
-  content.querySelector('#importBtn')?.addEventListener('click', () => {
-    const importSection = content.querySelector('#importSection') as HTMLElement | null
-    if (importSection) {
-      importSection.style.display = importSection.style.display === 'none' ? 'block' : 'none'
-    }
-  })
-
-  content.querySelector('#confirmImport')?.addEventListener('click', () => {
-    const textarea = content.querySelector('#importData') as HTMLTextAreaElement
-    if (textarea && textarea.value.trim()) {
-      const success = importUserscriptData(textarea.value.trim())
-      if (success) {
-        alert('数据导入成功！请刷新页面以查看更新。')
-        modal.remove()
-        // Reload userscript data
-        initializeUserscriptData()
-      } else {
-        alert('数据导入失败，请检查格式是否正确。')
+  importBtn.addEventListener('click', () => {
+    const ta = document.createElement('textarea')
+    ta.placeholder = '粘贴 JSON 后点击确认'
+    ta.style.cssText = 'width:100%;height:200px;margin-top:8px;'
+    const ok = document.createElement('button')
+    ok.textContent = '确认导入'
+    ok.style.cssText = 'padding:6px 8px;margin-top:6px;'
+    const container = document.createElement('div')
+    container.appendChild(ta)
+    container.appendChild(ok)
+    const importModal = document.createElement('div')
+    importModal.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000001;'
+    const box = document.createElement('div')
+    box.style.cssText = 'background:#fff;padding:12px;border-radius:6px;width:90%;max-width:700px;'
+    box.appendChild(container)
+    importModal.appendChild(box)
+    document.body.appendChild(importModal)
+    ok.addEventListener('click', () => {
+      try {
+        const json = ta.value.trim()
+        if (!json) return
+        const okdata = importUserscriptData(json)
+        if (okdata) {
+          alert('导入成功，请保存以持久化')
+          initializeUserscriptData()
+          renderGroups()
+          renderSelectedGroup()
+        } else {
+          alert('导入失败：格式错误')
+        }
+      } catch (e) {
+        alert('导入异常：' + e)
       }
+      importModal.remove()
+    })
+  })
+
+  saveBtn.addEventListener('click', () => {
+    try {
+      saveDataToLocalStorage({ emojiGroups: userscriptState.emojiGroups })
+      alert('已保存')
+    } catch (e) {
+      alert('保存失败：' + e)
     }
   })
 
-  content.querySelector('#cancelImport')?.addEventListener('click', () => {
-    const importSection = content.querySelector('#importSection') as HTMLElement | null
-    if (importSection) {
-      importSection.style.display = 'none'
+  syncBtn.addEventListener('click', () => {
+    try {
+      const ok = syncFromManager()
+      if (ok) {
+        alert('同步成功，已导入管理器数据')
+        initializeUserscriptData()
+        renderGroups()
+        renderSelectedGroup()
+      } else {
+        alert('同步未成功，未检测到管理器数据')
+      }
+    } catch (e) {
+      alert('同步异常：' + e)
     }
   })
 
-  content.querySelector('#downloadManager')?.addEventListener('click', () => {
-    // We can't download the file directly in userscript, so show instructions
-    alert('请访问 GitHub 仓库下载 emoji-manager.html 文件，或者联系开发者获取完整管理界面。')
-  })
+  closeBtn.addEventListener('click', () => modal.remove())
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
 
-  // Close on outside click
-  modal.addEventListener('click', e => {
-    if (e.target === modal) {
-      modal.remove()
-    }
-  })
+  // initial render
+  renderGroups()
+  if (userscriptState.emojiGroups.length > 0) {
+    selectedGroupId = userscriptState.emojiGroups[0].id
+    // highlight first
+    const first = groupsList.firstChild as HTMLElement | null
+    if (first) first.style.background = '#f0f8ff'
+    renderSelectedGroup()
+  }
 }
-
 // Show settings modal
 function showSettingsModal() {
   const modal = document.createElement('div')
