@@ -211,7 +211,12 @@ function isInCarousel(el: Element): boolean {
 
 function addCarouselButtonToEl(el: Element) {
   try {
-    if (!isInCarousel(el)) return
+    // Allow standalone <img> pages hosted on pbs.twimg.com / *.twimg.com
+    // to be processed even if they don't match the usual carousel selectors.
+    const host = window.location.hostname.toLowerCase()
+    const isPbsHost =
+      host === 'pbs.twimg.com' || host.endsWith('.twimg.com') || host.includes('pbs.twimg')
+    if (!isInCarousel(el) && !(isPbsHost && el instanceof HTMLImageElement)) return
     if (
       el.querySelector('.x-emoji-add-btn-carousel') ||
       el.querySelector('.x-emoji-add-btn') ||
@@ -225,9 +230,19 @@ function addCarouselButtonToEl(el: Element) {
 
     if (el instanceof HTMLImageElement) {
       const imgEl = el as HTMLImageElement
-      if (imgEl.getAttribute('alt') !== '') {
-        return
-      }
+        // If the image has an alt text, normally we skip injecting because
+        // it's likely inline content (avatars, emojis, etc). However Twitter's
+        // standalone image pages and some embeds may set alt text while the
+        // image src still points to pbs.twimg.com media. In that case we
+        // should still attempt injection. Only skip early when the image does
+        // not appear to be twitter media.
+        const altText = imgEl.getAttribute('alt') || ''
+        const src = imgEl.src || imgEl.getAttribute('src') || ''
+        const lowerSrc = (src || '').toLowerCase()
+        const looksLikeTwitterMedia = lowerSrc.includes('pbs.twimg.com') || lowerSrc.includes('twimg.com')
+        if (altText !== '' && !looksLikeTwitterMedia) {
+          return
+        }
       let parent = imgEl.parentElement
       while (parent && parent !== document.body) {
         if (parent.querySelector('.x-emoji-add-btn-carousel')) return
@@ -247,8 +262,14 @@ function addCarouselButtonToEl(el: Element) {
       }
     } else {
       const containedImg = el.querySelector('img') as HTMLImageElement | null
-      if (containedImg && containedImg.getAttribute('alt') !== '') {
-        return
+      if (containedImg) {
+        const altText = containedImg.getAttribute('alt') || ''
+        const src = containedImg.src || containedImg.getAttribute('src') || ''
+        const lowerSrc = (src || '').toLowerCase()
+        const looksLikeTwitterMedia = lowerSrc.includes('pbs.twimg.com') || lowerSrc.includes('twimg.com')
+        if (altText !== '' && !looksLikeTwitterMedia) {
+          return
+        }
       }
       targetContainer = el as HTMLElement
       url = extractImageUrl(el)
@@ -335,4 +356,71 @@ export function scanAndInjectCarousel() {
   set.forEach(el => addCarouselButtonToEl(el))
 
   console.log(`[XCarousel] Processed ${set.size} carousel elements`)
+}
+
+let carouselObserver: MutationObserver | null = null
+let carouselDebounceTimer: number | null = null
+
+export function observeCarousel() {
+  if (carouselObserver) return carouselObserver
+
+  carouselObserver = new MutationObserver(ms => {
+    let needsScan = false
+
+    for (const m of ms) {
+      // Only react to additions of elements that are <img> or contain <img>
+      if (m.type === 'childList') {
+        for (const n of Array.from(m.addedNodes)) {
+          if (n.nodeType !== 1) continue
+          const el = n as Element
+          if (el.tagName === 'IMG' || el.querySelector && el.querySelector('img')) {
+            needsScan = true
+            break
+          }
+        }
+        if (needsScan) break
+      }
+
+      // React to attribute changes only when the target is an <img> or the
+      // attribute change occurs on an element that contains an <img> (e.g. style->background-image)
+      if (m.type === 'attributes') {
+        const tgt = m.target as Element
+        if (!tgt) continue
+        if (tgt.tagName === 'IMG') {
+          // attribute changes on <img> (e.g. src) are relevant
+          needsScan = true
+          break
+        }
+        try {
+          if (tgt.querySelector && tgt.querySelector('img')) {
+            needsScan = true
+            break
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    }
+
+    if (needsScan) {
+      if (carouselDebounceTimer) clearTimeout(carouselDebounceTimer)
+      carouselDebounceTimer = window.setTimeout(() => {
+        try {
+          scanAndInjectCarousel()
+        } catch (e) {
+          void e
+        }
+        carouselDebounceTimer = null
+      }, 250)
+    }
+  })
+
+  try {
+    carouselObserver.observe(document.body, { childList: true, subtree: true, attributes: true })
+  } catch (e) {
+    // ignore if document.body not ready
+    void e
+  }
+
+  return carouselObserver
 }

@@ -1,4 +1,4 @@
-import { scanAndInjectCarousel } from './image/carousel'
+import { scanAndInjectCarousel, observeCarousel } from './image/carousel'
 import { initVideoCopy } from './video/videoCopy'
 
 function isXPage(): boolean {
@@ -11,12 +11,7 @@ function isXPage(): boolean {
       // legacy twitter domains
       host === 'twitter.com' ||
       host.endsWith('.twitter.com') ||
-      host.includes('twitter.com') ||
-      // twimg / pbs domain used for images
-      host === 'pbs.twimg.com' ||
-      host.endsWith('.twimg.com') ||
-      host.includes('twimg.com') ||
-      host.includes('pbs.twimg')
+      host.includes('twitter.com')
     )
   } catch {
     return false
@@ -34,6 +29,8 @@ export function initX() {
     setTimeout(() => {
       // run initial scan
       scanAndInjectCarousel()
+      // start observing DOM changes for subsequent scans
+      observeCarousel()
     }, 200)
     // video copy lives in separate module
     initVideoCopy()

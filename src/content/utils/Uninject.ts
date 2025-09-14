@@ -1,6 +1,7 @@
 import { initPixiv } from '../pixiv/detector'
 import { initBilibili } from '../bilibili/bilibili'
 import { initX } from '../x/init'
+import { initPbs } from '../x/init-pbs'
 import { requestSettingFromBackground } from './requestSetting'
 
 // logger removed: replaced by direct console usage in migration
@@ -36,13 +37,12 @@ export async function initXIfEnabled(): Promise<void> {
     // avoid requesting the entire configuration object.
     const val = await requestSettingFromBackground('enableXcomExtraSelectors')
 
-    const enabled =
-      val === null || val === undefined
-        ? true
-        : !!val
+    const enabled = val === null || val === undefined || val === true
 
     if (val === null || val === undefined) {
-      console.log('[XOneClick] enableXcomExtraSelectors unavailable; defaulting to enabled for X injection')
+      console.log(
+        '[XOneClick] enableXcomExtraSelectors unavailable; defaulting to enabled for X injection'
+      )
     } else {
       console.log('[XOneClick] fetched enableXcomExtraSelectors from background:', val)
     }
@@ -51,6 +51,7 @@ export async function initXIfEnabled(): Promise<void> {
     if (enabled) {
       try {
         initX()
+        initPbs()
         console.log('[XOneClick] initX invoked')
       } catch (innerErr) {
         console.error('[XOneClick] initX threw an error during invocation', innerErr)
