@@ -1,2 +1,2 @@
-export { initPixiv } from './detector'
+export { initPixiv } from './detector/index'
 export type { AddEmojiButtonData } from './types'
