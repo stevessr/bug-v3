@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
 import type { EmojiGroup, Emoji } from '../../types/emoji'
@@ -281,22 +280,22 @@ const cancelCreateGroup = () => {
               class="flex items-center gap-2"
             >
               <span class="text-sm text-gray-600">已选择 {{ selectedEmojis.size }} 个</span>
-              <!-- 原生 select 已替换为 ADropdown（下方） -->
-              <ADropdown>
+              <!-- 原生 select 已替换为 a-dropdown（下方） -->
+              <a-dropdown>
                 <template #overlay>
-                  <AMenu @click="onTargetGroupSelect">
-                    <AMenu.Item key="">选择目标分组</AMenu.Item>
-                    <AMenu.Item v-for="group in availableGroups" :key="group.id" :value="group.id">
+                  <a-menu @click="onTargetGroupSelect">
+                    <a-menu-item key="">选择目标分组</a-menu-item>
+                    <a-menu-item v-for="group in availableGroups" :key="group.id" :value="group.id">
                       {{ group.name }}
-                    </AMenu.Item>
-                    <AMenu.Item key="__create_new__">+ 创建新分组</AMenu.Item>
-                  </AMenu>
+                    </a-menu-item>
+                    <a-menu-item key="__create_new__">+ 创建新分组</a-menu-item>
+                  </a-menu>
                 </template>
                 <AButton>
                   {{ targetGroupId || '选择目标分组' }}
                   <DownOutlined />
                 </AButton>
-              </ADropdown>
+              </a-dropdown>
               <button
                 @click="moveSelectedEmojis"
                 :disabled="!targetGroupId"

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
@@ -353,36 +352,36 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <!-- Advanced Options -->
           <div class="mt-4 flex gap-4 text-sm">
             <div class="flex items-center">
-              <ADropdown>
+              <a-dropdown>
                 <template #overlay>
-                  <AMenu @click="info => onSearchLimitSelect(info)">
-                    <AMenu.Item key="12">12 个结果</AMenu.Item>
-                    <AMenu.Item key="24">24 个结果</AMenu.Item>
-                    <AMenu.Item key="48">48 个结果</AMenu.Item>
-                  </AMenu>
+                  <a-menu @click="(info: { key: string | number }) => onSearchLimitSelect(info)">
+                    <a-menu-item key="12">12 个结果</a-menu-item>
+                    <a-menu-item key="24">24 个结果</a-menu-item>
+                    <a-menu-item key="48">48 个结果</a-menu-item>
+                  </a-menu>
                 </template>
                 <AButton>
                   {{ searchLimit }} 个结果
                   <DownOutlined />
                 </AButton>
-              </ADropdown>
+              </a-dropdown>
             </div>
 
             <div class="flex items-center">
-              <ADropdown>
+              <a-dropdown>
                 <template #overlay>
-                  <AMenu @click="info => onContentFilterSelect(info)">
-                    <AMenu.Item key="high">高安全级别</AMenu.Item>
-                    <AMenu.Item key="medium">中等安全级别</AMenu.Item>
-                    <AMenu.Item key="low">低安全级别</AMenu.Item>
-                    <AMenu.Item key="off">关闭过滤</AMenu.Item>
-                  </AMenu>
+                  <a-menu @click="(info: { key: string | number }) => onContentFilterSelect(info)">
+                    <a-menu-item key="high">高安全级别</a-menu-item>
+                    <a-menu-item key="medium">中等安全级别</a-menu-item>
+                    <a-menu-item key="low">低安全级别</a-menu-item>
+                    <a-menu-item key="off">关闭过滤</a-menu-item>
+                  </a-menu>
                 </template>
                 <AButton>
                   {{ contentFilter }}
                   <DownOutlined />
                 </AButton>
-              </ADropdown>
+              </a-dropdown>
             </div>
           </div>
         </div>

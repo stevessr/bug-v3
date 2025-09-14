@@ -1,8 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, watch, toRefs, reactive, computed } from 'vue'
-// UI imports first to satisfy import/order
-import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
@@ -399,19 +397,19 @@ const importParsed = () => {
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">输入模式</label>
           <div class="flex items-center gap-2">
-            <ADropdown>
+            <a-dropdown>
               <template #overlay>
-                <AMenu @click="onInputModeSelect">
-                  <AMenu.Item key="url">单个 URL</AMenu.Item>
-                  <AMenu.Item key="markdown">Markdown (批量)</AMenu.Item>
-                  <AMenu.Item key="html">HTML (批量)</AMenu.Item>
-                </AMenu>
+                <a-menu @click="onInputModeSelect">
+                  <a-menu-item key="url">单个 URL</a-menu-item>
+                  <a-menu-item key="markdown">Markdown (批量)</a-menu-item>
+                  <a-menu-item key="html">HTML (批量)</a-menu-item>
+                </a-menu>
               </template>
               <AButton>
                 {{ inputMode }}
                 <DownOutlined />
               </AButton>
-            </ADropdown>
+            </a-dropdown>
             <div class="text-xs text-gray-500">已解析: {{ parsedItems.length }} 个</div>
           </div>
         </div>
@@ -467,19 +465,19 @@ const importParsed = () => {
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">所属分组</label>
-          <ADropdown>
+          <a-dropdown>
             <template #overlay>
-              <AMenu @click="onGroupSelect">
-                <AMenu.Item v-for="g in groups" :key="g.id" :value="g.id" :title="g.id">
+              <a-menu @click="onGroupSelect">
+                <a-menu-item v-for="g in groups" :key="g.id" :value="g.id" :title="g.id">
                   {{ g.name }}
-                </AMenu.Item>
-              </AMenu>
+                </a-menu-item>
+              </a-menu>
             </template>
             <AButton>
               {{ selectedGroupLabel }}
               <DownOutlined />
             </AButton>
-          </ADropdown>
+          </a-dropdown>
         </div>
 
         <!-- 解析结果预览和URL变种选择 -->
@@ -513,23 +511,23 @@ const importParsed = () => {
                   <div class="text-sm font-medium text-gray-900 truncate">{{ item.name }}</div>
                   <div v-if="item.variants.length > 1" class="mt-2">
                     <label class="block text-xs text-gray-600 mb-1">选择URL变种:</label>
-                    <ADropdown>
+                    <a-dropdown>
                       <template #overlay>
-                        <AMenu @click="onVariantSelectForItem(index, $event)">
-                          <AMenu.Item
+                        <a-menu @click="onVariantSelectForItem(index, $event)">
+                          <a-menu-item
                             v-for="variant in item.variants"
                             :key="variant.url"
                             :value="variant.url"
                           >
                             {{ variant.label }}
-                          </AMenu.Item>
-                        </AMenu>
+                          </a-menu-item>
+                        </a-menu>
                       </template>
                       <AButton>
                         {{ item.selectedVariant || item.variants[0].url }}
                         <DownOutlined />
                       </AButton>
-                    </ADropdown>
+                    </a-dropdown>
                   </div>
                   <div v-else class="mt-1">
                     <span class="text-xs text-gray-500">

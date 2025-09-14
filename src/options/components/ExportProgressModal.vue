@@ -51,7 +51,7 @@ const visible = ref(false)
       <!-- Single preview image at the top -->
       <div>
         <div class="w-full max-h-64 flex items-center justify-center bg-gray-100 rounded overflow-hidden p-2">
-          <AImage
+          <a-image
             v-if="currentDisplayPreview"
             :src="currentDisplayPreview"
             :preview="{ visible: false }"

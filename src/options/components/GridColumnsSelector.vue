@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
 const props = defineProps<{
@@ -29,17 +28,17 @@ const onMenuClick = (key: string) => {
 </script>
 
 <template>
-  <ADropdown>
+  <a-dropdown>
     <template #overlay>
-      <AMenu @click="info => onMenuClick(String(info.key))">
-        <AMenu.Item v-for="col in options" :key="col" :value="col">{{ col }} 列</AMenu.Item>
-      </AMenu>
+      <a-menu @click="(info: { key: any; }) => onMenuClick(String(info.key))">
+        <a-menu-item v-for="col in options" :key="col" :value="col">{{ col }} 列</a-menu-item>
+      </a-menu>
     </template>
     <AButton>
       {{ modelValue }} 列
       <DownOutlined />
     </AButton>
-  </ADropdown>
+  </a-dropdown>
 </template>
 
 <style scoped>

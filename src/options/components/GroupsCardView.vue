@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, type PropType, ref } from 'vue'
-import { Card as ACard, Image as AImage } from 'ant-design-vue'
 
 import { normalizeImageUrl } from '../../utils/isImageUrl'
 import { useEmojiStore } from '../../stores/emojiStore'
@@ -343,7 +342,7 @@ const onTouchCancel = (_e: TouchEvent) => {
 
           <div class="flex items-center justify-center bg-gray-50">
             <div class="w-full flex items-center justify-center p-2">
-              <AImage
+              <a-image
                 v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))"
                 :src="normalizeImageUrl(group.icon)"
                 alt="icon"
@@ -353,9 +352,9 @@ const onTouchCancel = (_e: TouchEvent) => {
               <div v-else class="text-2xl">{{ group.icon }}</div>
             </div>
           </div>
-          <ACard.Meta :title="group.name">
+          <a-card-meta :title="group.name">
             <div class="text-sm text-gray-500">{{ group.emojis?.length || 0 }} 个表情</div>
-          </ACard.Meta>
+          </a-card-meta>
           <div class="mt-3 flex gap-2">
             <div v-if="group.id !== 'favorites'" class="relative">
               <GroupActionsDropdown

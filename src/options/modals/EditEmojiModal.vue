@@ -1,12 +1,5 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import {
-  Dropdown as ADropdown,
-  Menu as AMenu,
-  Button as AButton,
-  Card as ACard,
-  Image as AImage
-} from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
@@ -180,7 +173,7 @@ const handleSubmit = () => {
               class="flex-shrink-0 flex items-center justify-center"
               style="width: 180px; min-width: 120px; max-width: 50%; height: 320px"
             >
-              <AImage
+              <a-image
                 :preview="{ visible: false }"
                 :src="localEmoji.displayUrl || localEmoji.url"
                 class="object-contain w-full h-full"
@@ -190,7 +183,7 @@ const handleSubmit = () => {
               />
             </div>
             <div v-else class="w-full flex items-center justify-center">
-              <AImage
+              <a-image
                 :preview="{ visible: false }"
                 :src="localEmoji.displayUrl || localEmoji.url"
                 class="object-contain max-h-full max-w-full"
@@ -262,23 +255,23 @@ const handleSubmit = () => {
                   <label for="emoji-group" class="block text-sm font-medium text-gray-700">
                     选择分组
                   </label>
-                  <ADropdown>
+                  <a-dropdown>
                     <template #overlay>
-                      <AMenu @click="onEditGroupSelect">
-                        <AMenu.Item
+                      <a-menu @click="onEditGroupSelect">
+                        <a-menu-item
                           v-for="group in availableGroups"
                           :key="group.id"
                           :value="group.id"
                         >
                           {{ group.icon }} {{ group.name }}
-                        </AMenu.Item>
-                      </AMenu>
+                        </a-menu-item>
+                      </a-menu>
                     </template>
                     <AButton>
                       {{ editSelectedGroupLabel }}
                       <DownOutlined />
                     </AButton>
-                  </ADropdown>
+                  </a-dropdown>
                 </div>
 
                 <!-- Buttons -->
@@ -322,9 +315,9 @@ const handleSubmit = () => {
       </transition>
     </div>
     <div style="display: none">
-      <AImage.PreviewGroup :preview="{ visible, onVisibleChange: vis => (visible = vis) }">
-        <AImage :src="localEmoji.displayUrl || localEmoji.url" />
-      </AImage.PreviewGroup>
+      <a-image-preview-group :preview="{ visible, onVisibleChange: (vis: boolean) => (visible = vis) }">
+        <a-image :src="localEmoji.displayUrl || localEmoji.url" />
+      </a-image-preview-group>
     </div>
   </div>
 </template>

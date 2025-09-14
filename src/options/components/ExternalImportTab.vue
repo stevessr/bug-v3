@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Dropdown as ADropdown, Menu as AMenu, Button as AButton } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
@@ -218,24 +217,24 @@ const importFromMarkdown = async () => {
             <!-- Target group selection -->
             <div v-if="showTargetGroupSelector" class="flex items-center space-x-3">
               <label class="text-sm font-medium text-gray-700">目标分组:</label>
-              <ADropdown>
+              <a-dropdown>
                 <template #overlay>
-                  <AMenu @click="onSelectedTargetGroup">
-                    <AMenu.Item key="">自动创建分组</AMenu.Item>
-                    <AMenu.Item
+                  <a-menu @click="onSelectedTargetGroup">
+                    <a-menu-item key="">自动创建分组</a-menu-item>
+                    <a-menu-item
                       v-for="group in emojiStore.groups"
                       :key="group.id"
                       :value="group.id"
                     >
                       {{ group.name }}
-                    </AMenu.Item>
-                  </AMenu>
+                    </a-menu-item>
+                  </a-menu>
                 </template>
                 <AButton>
                   {{ selectedTargetGroup || '自动创建分组' }}
                   <DownOutlined />
                 </AButton>
-              </ADropdown>
+              </a-dropdown>
             </div>
           </div>
         </div>
@@ -268,24 +267,24 @@ const importFromMarkdown = async () => {
                 </svg>
                 导入文本中的表情
               </button>
-              <ADropdown>
+              <a-dropdown>
                 <template #overlay>
-                  <AMenu @click="onSelectedTargetGroupForMarkdown">
-                    <AMenu.Item key="">自动创建分组</AMenu.Item>
-                    <AMenu.Item
+                  <a-menu @click="onSelectedTargetGroupForMarkdown">
+                    <a-menu-item key="">自动创建分组</a-menu-item>
+                    <a-menu-item
                       v-for="group in emojiStore.groups"
                       :key="group.id"
                       :value="group.id"
                     >
                       {{ group.name }}
-                    </AMenu.Item>
-                  </AMenu>
+                    </a-menu-item>
+                  </a-menu>
                 </template>
                 <AButton>
                   {{ selectedTargetGroupForMarkdown || '自动创建分组' }}
                   <DownOutlined />
                 </AButton>
-              </ADropdown>
+              </a-dropdown>
             </div>
           </div>
         </div>

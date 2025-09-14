@@ -1,11 +1,5 @@
 <script setup lang="ts">
 import { ref, watch, isRef, type Ref } from 'vue'
-import {
-  Slider as ASlider,
-  Dropdown as ADropdown,
-  Menu as AMenu,
-  Button as AButton
-} from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
 import type { AppSettings } from '../../types/emoji'
@@ -151,18 +145,18 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
           <label class="text-sm font-medium text-gray-900">输出格式</label>
           <p class="text-sm text-gray-500">插入表情时使用的格式</p>
         </div>
-        <ADropdown>
+        <a-dropdown>
           <template #overlay>
-            <AMenu @click="handleOutputFormatSelectInfo">
-              <AMenu.Item key="markdown">Markdown 格式</AMenu.Item>
-              <AMenu.Item key="html">HTML 格式</AMenu.Item>
-            </AMenu>
+            <a-menu @click="handleOutputFormatSelectInfo">
+              <a-menu-item key="markdown">Markdown 格式</a-menu-item>
+              <a-menu-item key="html">HTML 格式</a-menu-item>
+            </a-menu>
           </template>
           <AButton>
             {{ localOutputFormat === 'markdown' ? 'Markdown 格式' : 'HTML 格式' }}
             <DownOutlined />
           </AButton>
-        </ADropdown>
+        </a-dropdown>
       </div>
 
       <div class="flex items-center justify-between">

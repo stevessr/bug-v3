@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Button as AButton, Input as AInput, Card as ACard } from 'ant-design-vue'
 
 import { importBilibiliToStore } from '../utils/importUtils'
 
