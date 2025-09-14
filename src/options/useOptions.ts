@@ -314,27 +314,154 @@ export default function useOptions() {
   // progress (0..100) for last export operation and current exporting group id
   const exportProgress = ref<number>(0)
   const exportProgressGroupId = ref<string | null>(null)
+  // modal for detailed export progress with current item preview
+  const showExportModal = ref(false)
+  const exportModalPercent = ref(0)
+  const exportModalCurrentName = ref<string | null>(null)
+  const exportModalCurrentPreview = ref<string | null>(null)
+  const exportModalCancelled = ref(false)
+  // arrays for carousel previews and names
+  const exportModalPreviews = ref<string[]>([])
+  const exportModalNames = ref<string[]>([])
+  // Abort controller for cancelling export
+  let exportAbortController: AbortController | null = null
 
   const exportGroupZip = async (group: EmojiGroup) => {
     if (!group) return
     try {
+      // create abort controller for this export
+      exportAbortController = new AbortController()
+      const signal = exportAbortController.signal
       exportProgressGroupId.value = group.id
       exportProgress.value = 0
-      await exportGroupZipUtil(group, (p: number) => {
-        exportProgress.value = Math.max(0, Math.min(100, Math.round(p)))
-      })
+      // reset modal state and arrays
+      exportModalCancelled.value = false
+      exportModalPercent.value = 0
+      exportModalCurrentName.value = null
+      exportModalCurrentPreview.value = null
+      exportModalPreviews.value = []
+      exportModalNames.value = []
+      showExportModal.value = true
+
+      await exportGroupZipUtil(
+        group,
+        (p: number) => {
+          exportProgress.value = Math.max(0, Math.min(100, Math.round(p)))
+          exportModalPercent.value = exportProgress.value
+        },
+        (info: { index: number; name: string; preview?: string | null }) => {
+          if (exportModalCancelled.value) return
+          // collect into arrays for carousel (preview may be null)
+          exportModalNames.value.push(info.name)
+          exportModalPreviews.value.push(info.preview || '')
+          // also keep current for quick display
+          exportModalCurrentName.value = info.name
+          exportModalCurrentPreview.value = info.preview || null
+        },
+        signal
+      )
       exportProgress.value = 100
+      exportModalPercent.value = 100
       showSuccess(`已打包并下载分组 "${group.name}"`)
     } catch (e) {
       void e
       exportProgress.value = 0
+      exportModalPercent.value = 0
+      // leave modal visible so user can see error; they'll close it
       showError('打包下载失败，已导出 JSON 作为回退')
     }
     // clear group id after short delay so UI can show 100 briefly
     setTimeout(() => {
       exportProgressGroupId.value = null
       exportProgress.value = 0
+      // hide modal after brief delay
+      setTimeout(() => {
+        // revoke any preview URLs created during export
+        try {
+          exportModalPreviews.value.forEach(u => {
+            try {
+              if (u) URL.revokeObjectURL(u)
+            } catch (_e) {
+              /* ignore */
+            }
+          })
+        } catch (_e) {
+          /* ignore */
+        }
+
+        showExportModal.value = false
+        exportModalCurrentName.value = null
+        exportModalCurrentPreview.value = null
+        exportModalPercent.value = 0
+        exportModalCancelled.value = false
+        exportModalPreviews.value = []
+        exportModalNames.value = []
+        // cleanup controller
+        if (exportAbortController) {
+          try {
+            exportAbortController = null
+          } catch (_e) {
+            /* ignore */
+          }
+        }
+      }, 600)
     }, 800)
+  }
+
+  // Cancel export in-progress: abort fetches, mark cancelled, revoke previews and hide modal
+  const cancelExport = () => {
+    exportModalCancelled.value = true
+    if (exportAbortController) {
+      try {
+        exportAbortController.abort()
+      } catch (_e) {
+        /* ignore */
+      }
+      exportAbortController = null
+    }
+    // revoke preview urls immediately
+    try {
+      exportModalPreviews.value.forEach(u => {
+        try {
+          if (u) URL.revokeObjectURL(u)
+        } catch (_e) {
+          /* ignore */
+        }
+      })
+    } catch (_e) {
+      /* ignore */
+    }
+    // reset UI state
+    exportModalCurrentName.value = null
+    exportModalCurrentPreview.value = null
+    exportModalPercent.value = 0
+    exportModalPreviews.value = []
+    exportModalNames.value = []
+    showExportModal.value = false
+  }
+
+  // Close modal without aborting (used when export completed)
+  const closeExportModal = () => {
+    // revoke preview urls and hide
+    try {
+      exportModalPreviews.value.forEach(u => {
+        try {
+          if (u) URL.revokeObjectURL(u)
+        } catch (_e) {
+          /* ignore */
+        }
+      })
+    } catch (_e) {
+      /* ignore */
+    }
+    exportModalCurrentName.value = null
+    exportModalCurrentPreview.value = null
+    exportModalPercent.value = 0
+    exportModalPreviews.value = []
+    exportModalNames.value = []
+    showExportModal.value = false
+    // ensure controller cleaned up
+    exportAbortController = null
   }
 
   const deleteEmoji = (emojiId: string) => {
@@ -606,6 +733,14 @@ export default function useOptions() {
     exportGroup,
     exportGroupZip,
     exportConfiguration,
+    exportModalPreviews,
+    exportModalNames,
+    // export modal state
+    showExportModal,
+    exportModalPercent,
+    exportModalCurrentName,
+    exportModalCurrentPreview,
+    exportModalCancelled,
     // group operations
     confirmDeleteGroup,
     openEditGroup,
@@ -618,6 +753,9 @@ export default function useOptions() {
     // export progress
     exportProgress,
     exportProgressGroupId,
+    // export modal controls
+    cancelExport,
+    closeExportModal,
     // sync / settings
     resetSettings,
     syncToChrome,

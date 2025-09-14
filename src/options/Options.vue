@@ -23,6 +23,7 @@ import EditEmojiModal from './modals/EditEmojiModal.vue'
 import EditGroupModal from './modals/EditGroupModal.vue'
 // composable
 import useOptions from './useOptions'
+import ExportProgressModal from './components/ExportProgressModal.vue'
 
 const options = useOptions()
 
@@ -85,6 +86,13 @@ const {
   handleEmojisImported,
   exportGroup,
   exportGroupZip,
+  showExportModal,
+  exportModalPercent,
+  exportModalCurrentName,
+  exportModalCurrentPreview,
+  exportModalPreviews,
+  exportModalNames,
+  exportModalCancelled,
   exportConfiguration,
   exportProgress,
   exportProgressGroupId,
@@ -105,6 +113,24 @@ const {
   editingEmojiIndex,
   handleEmojiEdit
 } = options
+
+const onExportModalClose = () => {
+  // delegate to composable to cleanup previews and hide modal
+  try {
+    if (typeof (options as any).closeExportModal === 'function') (options as any).closeExportModal()
+  } catch (_e) {
+    showExportModal.value = false
+  }
+}
+
+const onExportModalCancel = () => {
+  // delegate cancellation to composable which will abort and cleanup
+  try {
+    if (typeof (options as any).cancelExport === 'function') (options as any).cancelExport()
+  } catch (_e) {
+    exportModalCancelled.value = true
+  }
+}
 
 onMounted(() => {
   setConfirmHandler((title?: string, message?: string) => {
@@ -336,6 +362,18 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
       :message="confirmGenericMessage"
       @confirm="onModalConfirm"
       @cancel="onModalCancel"
+    />
+
+    <!-- Export progress modal (shows detailed per-emoji preview + progress) -->
+    <ExportProgressModal
+      v-model:show="showExportModal"
+      :percent="exportModalPercent"
+      :currentName="exportModalCurrentName || undefined"
+      :currentPreview="exportModalCurrentPreview || undefined"
+      :previews="exportModalPreviews"
+      :names="exportModalNames"
+      @close="onExportModalClose"
+      @cancel="onExportModalCancel"
     />
   </div>
 </template>

@@ -37,7 +37,12 @@ export function exportGroupFile(group: any) {
 }
 
 // Zip and download all emoji images in a group
-export async function exportGroupZip(group: any, onProgress?: (p: number) => void) {
+export async function exportGroupZip(
+  group: any,
+  onProgress?: (p: number) => void,
+  onItem?: (info: { index: number; name: string; preview?: string | null }) => void,
+  signal?: AbortSignal | null
+) {
   // We'll build a tar archive (simple UStar) and compress it with native CompressionStream (gzip).
   // Note: CompressionStream cannot create ZIP file containers. We produce a .tar.gz instead.
   const emojis = group.emojis || []
@@ -53,14 +58,17 @@ export async function exportGroupZip(group: any, onProgress?: (p: number) => voi
   const fetchAsBlob = async (url: string) => {
     if (!url) return null
     if (url.startsWith('data:')) {
-      const res = await fetch(url)
+      if (signal?.aborted) throw new Error('aborted')
+      const res = await fetch(url, { signal })
       return res.blob()
     }
     try {
-      const res = await fetch(url, { mode: 'cors' })
+      if (signal?.aborted) throw new Error('aborted')
+      const res = await fetch(url, { mode: 'cors', signal })
       if (!res.ok) return null
       return await res.blob()
     } catch (e) {
+      if ((e as any)?.name === 'AbortError') throw e
       return null
     }
   }
@@ -97,6 +105,9 @@ export async function exportGroupZip(group: any, onProgress?: (p: number) => voi
   }
 
   const parts: (Uint8Array | ArrayBuffer | string)[] = []
+  // keep track of preview object URLs created for each fetched blob so they can be revoked
+  // note: preview URLs are created and delivered to caller via onItem;
+  // caller is responsible for revoking them when appropriate
 
   for (let idx = 0; idx < emojis.length; idx++) {
     const e: any = emojis[idx]
@@ -125,8 +136,18 @@ export async function exportGroupZip(group: any, onProgress?: (p: number) => voi
       name = baseFinal + extWithDot
     }
 
+    if (signal?.aborted) throw new Error('aborted')
     const blob = await fetchAsBlob(url)
     if (!blob) continue
+    // create preview URL for UI (caller should revoke when done)
+    try {
+      const blobUrl = URL.createObjectURL(blob)
+      onItem?.({ index: idx, name: displayName, preview: blobUrl })
+    } catch {
+      // ignore preview creation errors
+      onItem?.({ index: idx, name: displayName, preview: null })
+    }
+
     const content = await blobToUint8(blob)
     const size = content.byteLength
 
@@ -188,6 +209,7 @@ export async function exportGroupZip(group: any, onProgress?: (p: number) => voi
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      // previews are caller-managed; nothing to revoke here
       return
     } catch (e) {
       // Fallthrough to fallback below
