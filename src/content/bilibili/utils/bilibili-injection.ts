@@ -4,10 +4,11 @@
 
 import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
 import {
-  addButtonToPhotoSwipeDebounced,
-  observePhotoSwipeContainer,
-  resetPhotoSwipeState
-} from './bilibili-preview'
+    addButtonToPhotoSwipeDebounced,
+    observePhotoSwipeContainer,
+    resetPhotoSwipeState
+  } from './bilibili-preview'
+import getSelectorsForCurrentUrl from './selectors-by-url'
 import {
   createFloatingButton,
   createControlButton,
@@ -177,15 +178,8 @@ export function scanAndInject() {
   if (pswpContainer) {
     addButtonToPhotoSwipeDebounced()
   }
-
   // picture containers
-  const selectors = [
-    '.bili-album__preview__picture__img',
-    '.bili-album__preview__picture',
-    '.bili-album__watch__track__item',
-    '.bili-album__watch__content img'
-    // Remove .pswp__img from here to avoid conflicts
-  ]
+  const selectors = getSelectorsForCurrentUrl()
   const set = new Set<Element>()
   selectors.forEach(sel => {
     document.querySelectorAll(sel).forEach(el => set.add(el))
@@ -205,6 +199,11 @@ export function scanAndInject() {
     addBatchParseButtonToAlbum(container)
   })
 }
+
+/**
+ * Return selector list based on current URL (prioritize opus selectors on opus/t pages)
+ */
+// getSelectorsForCurrentUrl is provided by ./selectors-by-url
 
 // 防抖定时器和状态管理
 let scanDebounceTimer: number | null = null

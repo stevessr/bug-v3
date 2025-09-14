@@ -15,8 +15,8 @@ export function isBilibiliOpusPage(): boolean {
     const host = window.location.hostname.toLowerCase()
     if (!host.includes('bilibili.com')) return false
     const path = window.location.pathname
-    // match /opus/<digits>
-    return /^\/opus\/\d+(?:\/.*)?$/.test(path)
+    // match /opus/<digits> anywhere in the path (covers /opus/... and variants)
+    return /\/opus\/\d+/.test(path)
   } catch (e) {
     void e
     return false

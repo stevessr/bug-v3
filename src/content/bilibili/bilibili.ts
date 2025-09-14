@@ -9,8 +9,11 @@ import { injectBilibiliButtonStyles } from './utils/bilibili-css'
 
 export function initBilibili() {
   try {
-    if (!isBilibiliOpusPage()) {
-      console.log('[BiliOneClick] skipping init: not a Bilibili opus page')
+    const host = window.location.hostname.toLowerCase()
+    // Also enable on t.bilibili.com (short link / mobile view) in addition to opus pages
+    const isTDomain = host === 't.bilibili.com' || host.endsWith('.t.bilibili.com')
+    if (!isTDomain && !isBilibiliOpusPage()) {
+      console.log('[BiliOneClick] skipping init: not a Bilibili opus page or t.bilibili domain')
       return
     }
 
