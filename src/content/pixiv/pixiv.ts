@@ -1,1 +1,0 @@
-export { initPixiv } from './index'

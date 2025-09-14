@@ -1,7 +1,5 @@
 import { defaultSettings } from '../../types/emoji'
 
-
-
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 export class ContentStorageAdapter {

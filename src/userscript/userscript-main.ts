@@ -16,7 +16,7 @@ import {
 } from './userscript-storage'
 
 
-import { uploader } from '@/content/utils/uploader'
+import { uploader } from '@/content/utils'
 
 // Global state for userscript
 const userscriptState: UserscriptStorage = {

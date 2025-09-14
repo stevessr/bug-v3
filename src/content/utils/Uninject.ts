@@ -1,4 +1,4 @@
-import { initPixiv } from '../pixiv/pixiv'
+import { initPixiv } from '../pixiv/detector'
 import { initBilibili } from '../bilibili/bilibili'
 import { initX } from '../x/init'
 

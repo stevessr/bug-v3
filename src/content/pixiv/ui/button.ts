@@ -4,6 +4,12 @@ import { performPixivAddEmojiFlow } from '../core/helpers'
 export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) {
   let running = false
 
+  try {
+    console.debug('[pixiv][button] setupButtonClickHandler initialized', { name: data.name, url: data.url })
+  } catch (_e) {
+    void _e
+  }
+
   const handle = async (origEvent: Event) => {
     try {
       origEvent.preventDefault()
@@ -11,7 +17,11 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
     } catch (_e) {
       void _e
     }
-    if (running) return
+    console.debug('[pixiv][button] click event', { running })
+    if (running) {
+      console.debug('[pixiv][button] click ignored because already running')
+      return
+    }
     running = true
 
     const prevPointerEvents = button.style.pointerEvents
@@ -34,8 +44,10 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
     `
     button.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'
 
+    console.debug('[pixiv][button] starting performPixivAddEmojiFlow', { data })
     try {
       const resp = await performPixivAddEmojiFlow(data)
+      console.debug('[pixiv][button] performPixivAddEmojiFlow response', resp)
 
       if (resp && resp.success) {
         button.innerHTML = `
@@ -56,21 +68,25 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
           `
           button.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)'
         }
+        console.log('[pixiv][button] add emoji success', { name: data.name, url: data.url, resp })
       } else {
         const errorMessage =
           typeof resp === 'object' && resp !== null
             ? (resp as any).error || (resp as any).message || '添加表情失败'
             : '添加表情失败'
+        console.warn('[pixiv][button] add emoji response indicated failure', { resp, errorMessage })
         throw new Error(String(errorMessage))
       }
 
       setTimeout(() => {
+        console.debug('[pixiv][button] restoring original button state (success path)')
         button.innerHTML = originalContent
         button.style.cssText = originalStyle
         button.style.pointerEvents = prevPointerEvents
         running = false
       }, 3000)
     } catch (error) {
+      console.error('[pixiv][button] add emoji failed', error)
       button.innerHTML = `
         <svg class="fa d-icon d-icon-times svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -82,6 +98,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
       button.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)'
 
       setTimeout(() => {
+        console.debug('[pixiv][button] restoring original button state (failure path)')
         button.innerHTML = originalContent
         button.style.cssText = originalStyle
         button.style.pointerEvents = prevPointerEvents
