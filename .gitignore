@@ -161,3 +161,4 @@ public/assets/defaultEmojiGroups.json
 # Content-only local fallback (should not be shared)
 src/content/data/default.local.ts
 .eslint-output.json
+*.crx

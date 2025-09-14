@@ -7,6 +7,8 @@ const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOpt
 
 const setActiveHandler = (id: string) => {
   emojiStore.activeGroupId = id
+  // Persist selected tab as defaultGroup so next time popup opens it remains selected
+  emojiStore.updateSettings({ defaultGroup: id })
 }
 </script>
 
