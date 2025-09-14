@@ -1,21 +1,121 @@
 {
   "version": "1.0",
-  "exportDate": "2025-09-09T13:48:42.360Z",
+  "exportDate": "2025-09-14T16:36:00.364Z",
   "settings": {
-    "imageScale": 30,
-    "defaultGroup": "nachoneko",
+    "imageScale": 15,
+    "defaultGroup": "group-1755833820210",
     "showSearchBar": true,
     "gridColumns": 4,
     "outputFormat": "markdown",
     "forceMobileMode": false,
-    "enableLinuxDoInjection": false,
+    "enableLinuxDoInjection": true,
     "enableXcomExtraSelectors": true,
-    "lastModified": 1757425692494,
+    "lastModified": 1757867753033,
     "tenorApiKey": "AIzaSyC-P6_qz3FzCoXGLk6tgitZo4jEJ5mLzD8"
   },
   "groups": [
     {
       "emojis": [
+        {
+          "addedAt": 1757865621813,
+          "groupId": "favorites",
+          "id": "fav-1757865621813-euuzyl",
+          "lastUsed": 1757865621813,
+          "name": "眼罩",
+          "packet": 34,
+          "url": "https://linux.do/uploads/default/optimized/4X/a/e/5/ae56ca1c5ee8ab2c47104c54077efcedbbdc474e_2_500x500.png",
+          "usageCount": 1
+        },
+        {
+          "addedAt": 1757862061429,
+          "groupId": "favorites",
+          "id": "fav-1757862061429-gegye6",
+          "lastUsed": 1757862061429,
+          "name": "干嘛",
+          "packet": 4,
+          "url": "https://linux.do/uploads/default/optimized/4X/5/5/2/552f13479e7bff2ce047d11ad821da4963c467f2_2_500x500.jpeg",
+          "usageCount": 1
+        },
+        {
+          "addedAt": 1757862058986,
+          "groupId": "favorites",
+          "id": "fav-1757862058986-kynpyl",
+          "lastUsed": 1757862058986,
+          "name": "盯着",
+          "packet": 15,
+          "url": "https://linux.do/uploads/default/optimized/4X/6/e/6/6e68786e64c4260746d02d2e308168b200185d7d_2_613x500.jpeg",
+          "usageCount": 1
+        },
+        {
+          "addedAt": 1757263138753,
+          "groupId": "favorites",
+          "id": "fav-1757263138753-bsbkzm",
+          "lastUsed": 1757861637499,
+          "name": "嘻嘻",
+          "packet": 8,
+          "url": "https://linux.do/uploads/default/optimized/4X/6/a/3/6a3619da1dbb63cc0420fbf1f6f2316b5503ab09_2_413x500.jpeg",
+          "usageCount": 1
+        },
+        {
+          "addedAt": 1757861632688,
+          "groupId": "favorites",
+          "id": "fav-1757861632688-yev1z5",
+          "lastUsed": 1757861632688,
+          "name": "疑问",
+          "packet": 3,
+          "url": "https://linux.do/uploads/default/optimized/4X/f/a/a/faa5afe1749312bc4a326feff0eca6fb39355300_2_518x499.jpeg",
+          "usageCount": 1
+        },
+        {
+          "addedAt": 1757300391386,
+          "groupId": "favorites",
+          "id": "fav-1757300391386-377dm2",
+          "lastUsed": 1757861507394,
+          "name": "AgADqhkAApEMSFY",
+          "packet": 1755913856756,
+          "url": "https://linux.do/uploads/default/original/4X/0/6/6/06658c82c9fc606bf0613ad16d7c954b842bda71.webp",
+          "usageCount": 4
+        },
+        {
+          "addedAt": 1757300404563,
+          "groupId": "favorites",
+          "id": "fav-1757300404563-zsjh0a",
+          "lastUsed": 1757861503721,
+          "name": "吃火腿肠",
+          "packet": 1755834134101,
+          "url": "https://linux.do/uploads/default/optimized/4X/9/b/4/9b4d9823ecb6d65cfa7266b2973155e34523132a_2_373x375.jpeg",
+          "usageCount": 1
+        },
+        {
+          "addedAt": 1757261231155,
+          "groupId": "favorites",
+          "id": "fav-1757261231155-lts8zh",
+          "lastUsed": 1757861496437,
+          "name": "吃东西",
+          "packet": 5,
+          "url": "https://linux.do/uploads/default/optimized/4X/0/d/1/0d125de02c201128bf6a3f78ff9450e48a3e27de_2_532x500.jpeg",
+          "usageCount": 2
+        },
+        {
+          "addedAt": 1757861495692,
+          "groupId": "favorites",
+          "id": "fav-1757861495692-lydg2q",
+          "lastUsed": 1757861495692,
+          "name": "哭泣",
+          "packet": 2,
+          "url": "https://linux.do/uploads/default/optimized/4X/5/d/9/5d932c05a642396335f632a370bd8d45463cf2e2_2_503x500.jpeg",
+          "usageCount": 1
+        },
+        {
+          "addedAt": 1757861495225,
+          "groupId": "favorites",
+          "id": "fav-1757861495225-18pmsx",
+          "lastUsed": 1757861495225,
+          "name": "瞌睡",
+          "packet": 1,
+          "url": "https://linux.do/uploads/default/optimized/4X/5/9/f/59ffbc2c53dd2a07dc30d4368bd5c9e01ca57d80_2_490x500.jpeg",
+          "usageCount": 1
+        },
         {
           "addedAt": 1757413824177,
           "groupId": "favorites",
@@ -118,26 +218,6 @@
           "usageCount": 1
         },
         {
-          "addedAt": 1757300404563,
-          "groupId": "favorites",
-          "id": "fav-1757300404563-zsjh0a",
-          "lastUsed": 1757300404563,
-          "name": "吃火腿肠",
-          "packet": 1755834134101,
-          "url": "https://linux.do/uploads/default/optimized/4X/9/b/4/9b4d9823ecb6d65cfa7266b2973155e34523132a_2_373x375.jpeg",
-          "usageCount": 1
-        },
-        {
-          "addedAt": 1757300391386,
-          "groupId": "favorites",
-          "id": "fav-1757300391386-377dm2",
-          "lastUsed": 1757300391386,
-          "name": "AgADqhkAApEMSFY",
-          "packet": 1755913856756,
-          "url": "https://linux.do/uploads/default/original/4X/0/6/6/06658c82c9fc606bf0613ad16d7c954b842bda71.webp",
-          "usageCount": 1
-        },
-        {
           "addedAt": 1757300347027,
           "groupId": "favorites",
           "id": "fav-1757300347027-eh6er2",
@@ -156,26 +236,6 @@
           "packet": 1756871014409,
           "url": "https://linux.do/uploads/default/original/4X/6/f/f/6ffc45c398774da1960f2accef80def4cb1ec3d0.webp",
           "usageCount": 1
-        },
-        {
-          "addedAt": 1757263138753,
-          "groupId": "favorites",
-          "id": "fav-1757263138753-bsbkzm",
-          "lastUsed": 1757263138753,
-          "name": "嘻嘻",
-          "packet": 8,
-          "url": "https://linux.do/uploads/default/optimized/4X/6/a/3/6a3619da1dbb63cc0420fbf1f6f2316b5503ab09_2_413x500.jpeg",
-          "usageCount": 1
-        },
-        {
-          "addedAt": 1757261231155,
-          "groupId": "favorites",
-          "id": "fav-1757261231155-lts8zh",
-          "lastUsed": 1757261231155,
-          "name": "吃东西",
-          "packet": 5,
-          "url": "https://linux.do/uploads/default/optimized/4X/0/d/1/0d125de02c201128bf6a3f78ff9450e48a3e27de_2_532x500.jpeg",
-          "usageCount": 2
         },
         {
           "addedAt": 1757261225873,
@@ -5908,62 +5968,6 @@
     {
       "emojis": [
         {
-          "addedAt": 1755879995366,
-          "groupId": "ungrouped",
-          "id": "emoji-1755879995366-q716c4",
-          "name": ":打call:",
-          "packet": 1755879995366,
-          "url": "https://linux.do/uploads/default/original/4X/8/0/d/80d2977b5dc4d52fedc8bd66864989b1fdf5e5b2.png"
-        },
-        {
-          "addedAt": 1757413182666,
-          "groupId": "ungrouped",
-          "id": "emoji-1757413182666-92e8lc",
-          "name": "G0QX_MfbcAA0KW-",
-          "packet": 1757413182666,
-          "url": "https://pbs.twimg.com/media/G0QX_MfbcAA0KW-?format=jpg&name=4096x4096"
-        },
-        {
-          "addedAt": 1757413285066,
-          "groupId": "ungrouped",
-          "id": "emoji-1757413285066-5xagxg",
-          "name": "G0PYNPbaAAA0cwT",
-          "packet": 1757413285066,
-          "url": "https://pbs.twimg.com/media/G0PYNPbaAAA0cwT?format=jpg&name=large"
-        },
-        {
-          "addedAt": 1757413316010,
-          "groupId": "ungrouped",
-          "id": "emoji-1757413316010-yakmii",
-          "name": "G0XVI7BbgAE0XSJ",
-          "packet": 1757413316010,
-          "url": "https://pbs.twimg.com/media/G0XVI7BbgAE0XSJ?format=jpg&name=large"
-        },
-        {
-          "addedAt": 1757417041018,
-          "groupId": "ungrouped",
-          "id": "emoji-1757417041018-rqo5gh",
-          "name": "130968299_p0",
-          "packet": 1757417041018,
-          "url": "https://linux.do/uploads/default/original/4X/8/d/1/8d1540af0f3f7fc080d5bcec2ca56fd2cea209a1.jpeg"
-        },
-        {
-          "addedAt": 1757417143817,
-          "groupId": "ungrouped",
-          "id": "emoji-1757417143817-6l4go7",
-          "name": "134896183_p0",
-          "packet": 1757417143817,
-          "url": "https://linux.do/uploads/default/original/4X/b/4/e/b4ee1e959e7947bd3d112bb14410d98db27fd977.jpeg"
-        }
-      ],
-      "icon": "📦",
-      "id": "ungrouped",
-      "name": "未分组",
-      "order": 15
-    },
-    {
-      "emojis": [
-        {
           "groupId": "group-1755913811947",
           "id": "emoji-1755913817919-u4sfe5",
           "name": "开心表情",
@@ -6079,7 +6083,7 @@
       "icon": "📁",
       "id": "group-1755913811947",
       "name": "始皇酱",
-      "order": 16
+      "order": 15
     },
     {
       "emojis": [
@@ -6164,7 +6168,7 @@
       "icon": "📁",
       "id": "group-1755865189273",
       "name": "星绘",
-      "order": 17
+      "order": 16
     },
     {
       "emojis": [
@@ -6466,7 +6470,7 @@
       "icon": "K",
       "id": "group-1756869834619",
       "name": "KJU",
-      "order": 18
+      "order": 17
     },
     {
       "emojis": [
@@ -6838,7 +6842,7 @@
       "icon": "H",
       "id": "group-1756869864620",
       "name": "husband",
-      "order": 19
+      "order": 18
     },
     {
       "emojis": [
@@ -8148,7 +8152,7 @@
       "icon": "📁",
       "id": "group-1756869887449",
       "name": "小C",
-      "order": 20
+      "order": 19
     },
     {
       "emojis": [
@@ -8268,7 +8272,7 @@
       "icon": "📁",
       "id": "group-1756869988533",
       "name": "科研喵",
-      "order": 21
+      "order": 20
     },
     {
       "emojis": [
@@ -8500,7 +8504,7 @@
       "icon": "📁",
       "id": "group-1756870014160",
       "name": "群友",
-      "order": 22
+      "order": 21
     },
     {
       "emojis": [
@@ -9138,7 +9142,7 @@
       "icon": "📁",
       "id": "group-1756870039233",
       "name": "爱丽丝",
-      "order": 23
+      "order": 22
     },
     {
       "emojis": [
@@ -9356,7 +9360,7 @@
       "icon": "📁",
       "id": "group-1756870069420",
       "name": "牛肉",
-      "order": 24
+      "order": 23
     },
     {
       "emojis": [
@@ -9553,7 +9557,7 @@
       "icon": "📁",
       "id": "group-1756870080244",
       "name": "从雨",
-      "order": 25
+      "order": 24
     },
     {
       "emojis": [
@@ -10765,7 +10769,7 @@
       "icon": "📁",
       "id": "group-1756870140297",
       "name": "古拉",
-      "order": 26
+      "order": 25
     },
     {
       "emojis": [
@@ -11193,7 +11197,7 @@
       "icon": "📁",
       "id": "group-1756871007943",
       "name": "kurmoe",
-      "order": 27
+      "order": 26
     },
     {
       "emojis": [
@@ -11206,38 +11210,6 @@
           "url": "https://linux.do/uploads/default/original/4X/b/8/9/b89f38407e5444b514d47064d856ee4db7279c96.jpeg"
         },
         {
-          "addedAt": 1757396107483,
-          "groupId": "group-1757396353003",
-          "id": "emoji-1757396107483-8zri4d",
-          "name": "G0ROdl7acAEnyr5",
-          "packet": 1757396107483,
-          "url": "https://linux.do/uploads/default/original/4X/0/4/c/04c8ecee410cbf7a8cfed3bf5ab37dd1766fd96c.jpeg"
-        },
-        {
-          "addedAt": 1757395959441,
-          "groupId": "group-1757396353003",
-          "id": "emoji-1757395959441-d7b9pj",
-          "name": "G0U5N-naEAAd2EO",
-          "packet": 1757395959441,
-          "url": "https://linux.do/uploads/default/original/4X/d/4/e/d4e1620a9797a553ae4973162bb1cc06df0c9985.jpeg"
-        },
-        {
-          "addedAt": 1757395531383,
-          "groupId": "group-1757396353003",
-          "id": "emoji-1757395531383-5jypyw",
-          "name": "G0TrAyiasAAFW6x",
-          "packet": 1757395531383,
-          "url": "https://linux.do/uploads/default/original/4X/6/4/3/6438d63d19583119aab2d3bf9c14eb4d4eabc897.jpeg"
-        },
-        {
-          "addedAt": 1757336958660,
-          "groupId": "group-1757396353003",
-          "id": "emoji-1757336958660-ghjd9u",
-          "name": "G0UeR3vaUAAbez2",
-          "packet": 1757336958660,
-          "url": "https://linux.do/uploads/default/original/4X/b/0/d/b0da32cb581e69fe01a2c1af778a923730c8972b.jpeg"
-        },
-        {
           "addedAt": 1757336763624,
           "displayUrl": "https://linux.do/uploads/default/original/4X/9/5/3/953b66d15e3286c524eb6d882329e47d1a89f89f.jpeg",
           "groupId": "group-1757396353003",
@@ -11245,11 +11217,67 @@
           "name": "G0QDKAhbAAAn3pA",
           "packet": 1757336763624,
           "url": "https://linux.do/uploads/default/original/4X/9/5/3/953b66d15e3286c524eb6d882329e47d1a89f89f.jpeg"
+        },
+        {
+          "addedAt": 1757854085277,
+          "groupId": "group-1757396353003",
+          "id": "emoji-1757854085277-fh056j",
+          "name": "G0yVLMRXsAASYh-",
+          "packet": 1757854085277,
+          "url": "https://linux.do/uploads/default/original/4X/0/b/8/0b8150a5348ad5d623b71cc920052dbf2af1e2c5.jpeg"
+        },
+        {
+          "addedAt": 1757417041018,
+          "groupId": "group-1757396353003",
+          "id": "emoji-1757417041018-rqo5gh",
+          "name": "130968299_p0",
+          "packet": 1757417041018,
+          "url": "https://linux.do/uploads/default/original/4X/8/d/1/8d1540af0f3f7fc080d5bcec2ca56fd2cea209a1.jpeg"
+        },
+        {
+          "addedAt": 1757413316010,
+          "groupId": "group-1757396353003",
+          "id": "emoji-1757413316010-yakmii",
+          "name": "G0XVI7BbgAE0XSJ",
+          "packet": 1757413316010,
+          "url": "https://linux.do/uploads/default/original/4X/5/0/e/50e0105e72226e4a02601844ddcb0da879813978.jpeg"
+        },
+        {
+          "addedAt": 1757413285066,
+          "groupId": "group-1757396353003",
+          "id": "emoji-1757413285066-5xagxg",
+          "name": "G0PYNPbaAAA0cwT",
+          "packet": 1757413285066,
+          "url": "https://linux.do/uploads/default/original/4X/1/9/3/193a21315e7d1a3f4f4c729e111caedb2b512696.jpeg"
+        },
+        {
+          "addedAt": 1757413182666,
+          "groupId": "group-1757396353003",
+          "id": "emoji-1757413182666-92e8lc",
+          "name": "G0QX_MfbcAA0KW-",
+          "packet": 1757413182666,
+          "url": "https://linux.do/uploads/default/original/4X/f/5/d/f5db8992e68380f9db4a99ba7f82fd6586d29150.jpeg"
         }
       ],
       "icon": "X",
       "id": "group-1757396353003",
       "name": "X",
+      "order": 27
+    },
+    {
+      "emojis": [
+        {
+          "addedAt": 1755879995366,
+          "groupId": "ungrouped",
+          "id": "emoji-1755879995366-q716c4",
+          "name": ":打call:",
+          "packet": 1755879995366,
+          "url": "https://linux.do/uploads/default/original/4X/8/0/d/80d2977b5dc4d52fedc8bd66864989b1fdf5e5b2.png"
+        }
+      ],
+      "icon": "📦",
+      "id": "ungrouped",
+      "name": "未分组",
       "order": 28
     }
   ]
