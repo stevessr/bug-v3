@@ -13,7 +13,7 @@ function applyTheme() {
 
   apply(theme)
 
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', _ => {
     const currentTheme = localStorage.getItem('theme') || 'system'
     if (currentTheme === 'system') {
       apply('system')
