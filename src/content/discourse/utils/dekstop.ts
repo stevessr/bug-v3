@@ -1,4 +1,6 @@
 import { ensureDefaultIfEmpty, cachedState } from './ensure'
+import { isImageUrl } from '../../utils/isimage'
+import { insertEmojiIntoEditor } from './editor'
 
 export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   ensureDefaultIfEmpty()
