@@ -44,25 +44,25 @@ const doImport = () => {
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
     @click="close"
   >
-    <div class="bg-white rounded-lg p-6 w-full max-w-lg" @click.stop>
-      <h3 class="text-lg font-semibold mb-4">导入配置</h3>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-lg" @click.stop>
+      <h3 class="text-lg font-semibold mb-4 dark:text-gray-100">导入配置</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">配置文件</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">配置文件</label>
           <input
             ref="fileInput"
             type="file"
             accept=".json"
             @change="handleFile"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">或粘贴JSON配置</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">或粘贴JSON配置</label>
           <textarea
             v-model="text"
             rows="6"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="粘贴JSON配置内容..."
           ></textarea>
         </div>
@@ -70,7 +70,7 @@ const doImport = () => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="close"
-          class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+          class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
         >
           取消
         </button>
