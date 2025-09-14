@@ -107,66 +107,10 @@ watch(
       <div class="config-item">
         <label for="imageCount">生成数量</label>
         <ADropdown>
-          <template #overlay>
-            <AMenu @click="info => onImageCountSelect(info)">
-              <AMenu.Item v-for="count in IMAGE_COUNTS" :key="count.value" :value="count.value">
-                {{ count.label }}
-              </AMenu.Item>
-            </AMenu>
-          </template>
-          <AButton>
-            {{ imageCountLabel }}
-            <DownOutlined />
-          </AButton>
-        </ADropdown>
-      </div>
-
-      <div class="config-item">
-        <label for="aspectRatio">宽高比</label>
-        <ADropdown>
-          <template #overlay>
-            <AMenu @click="info => onAspectRatioSelect(info)">
-              <AMenu.Item v-for="ratio in ASPECT_RATIOS" :key="ratio.value" :value="ratio.value">
-                {{ ratio.label }}
-              </AMenu.Item>
-            </AMenu>
-          </template>
-          <AButton>
-            {{ aspectRatioLabel }}
-            <DownOutlined />
-          </AButton>
-        </ADropdown>
-      </div>
-
-      <div class="config-item">
-        <label for="style">艺术风格</label>
-        <ADropdown>
-          <template #overlay>
-            <AMenu @click="info => onStyleSelect(info)">
-              <AMenu.Item
-                v-for="styleOption in ART_STYLES"
-                :key="styleOption.value"
-                :value="styleOption.value"
-              >
-                {{ styleOption.label }}
-              </AMenu.Item>
-            </AMenu>
-          </template>
-          <AButton>
-            {{ styleLabel }}
-            <DownOutlined />
-          </AButton>
-        </ADropdown>
-      </div>
-    </div>
-  </div>
+<template>
+  <!-- GenerationConfig removed -->
+  <div />
 </template>
-
-<style scoped>
-.generation-config {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
 }

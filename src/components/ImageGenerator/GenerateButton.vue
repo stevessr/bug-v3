@@ -27,17 +27,8 @@ const onClear = () => {
 
 <template>
   <div class="generate-section">
-    <button
-      @click="onGenerate"
-      :disabled="isGenerating || !canGenerate"
-      class="generate-btn"
-      :class="{ generating: isGenerating }"
-    >
-      <span v-if="isGenerating" class="loading-spinner"></span>
-      {{ isGenerating ? '生成中...' : '🎨 生成图片' }}
-    </button>
-
-    <button v-if="hasResults" @click="onClear" class="clear-btn">🗑️ 清空结果</button>
+  <button disabled>Generate (removed)</button>
+  <!-- GenerateButton removed -->
   </div>
 </template>
 

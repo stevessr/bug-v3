@@ -1,8 +1,9 @@
-export { default as ImageGeneratorMain } from './ImageGeneratorMain.vue'
-export { default as ApiConfig } from './ApiConfig.vue'
-export { default as GenerationMode } from './GenerationMode.vue'
-export { default as ImageUpload } from './ImageUpload.vue'
-export { default as PromptInput } from './PromptInput.vue'
-export { default as GenerationConfig } from './GenerationConfig.vue'
-export { default as GenerateButton } from './GenerateButton.vue'
-export { default as ResultDisplay } from './ResultDisplay.vue'
+// ImageGenerator components removed — provide harmless stubs for legacy imports
+export const ImageGeneratorMain: any = undefined
+export const ApiConfig: any = undefined
+export const GenerationMode: any = undefined
+export const ImageUpload: any = undefined
+export const PromptInput: any = undefined
+export const GenerationConfig: any = undefined
+export const GenerateButton: any = undefined
+export const ResultDisplay: any = undefined
