@@ -1,7 +1,6 @@
 import { fileURLToPath, URL } from 'url'
 
 import { defineConfig } from 'vite'
-import { generateDefaultEmojiGroupsPlugin } from './scripts/vite-plugin-generate-default-emoji-groups'
 
 export default defineConfig(({ mode }) => {
   // Build settings for userscript
@@ -66,6 +65,6 @@ export default defineConfig(({ mode }) => {
       outDir: process.env.BUILD_MINIFIED === 'true' ? 'dist-userscript-min' : 'dist-userscript',
       emptyOutDir: true
     },
-    plugins: [generateDefaultEmojiGroupsPlugin()]
+    plugins: []
   }
 })
