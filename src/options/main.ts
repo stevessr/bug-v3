@@ -3,15 +3,18 @@ import { createPinia } from 'pinia'
 
 import { useEmojiStore } from '../stores/emojiStore'
 
-import Options from './Options.vue'
 import '../styles/main.css'
-
 const pinia = createPinia()
-const app = createApp(Options)
 
-app.use(pinia)
-app.mount('#app')
+// Dynamically import the Options component to delay loading heavy code until options page is rendered
+void (async () => {
+	const module = await import('./Options.vue')
+	const Options = module.default
+	const app = createApp(Options)
+	app.use(pinia)
+	app.mount('#app')
 
-// Initialize store data
-const store = useEmojiStore(pinia)
-store.loadData()
+	// Initialize store data
+	const store = useEmojiStore(pinia)
+	store.loadData()
+})()

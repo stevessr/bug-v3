@@ -73,6 +73,13 @@ export default defineConfig(({ mode }) => {
       })
     ],
     build: {
+      // Enable generating sourcemaps when BUILD_SOURCEMAP is set to 'true'.
+      // We keep this off by default to avoid shipping .map files unintentionally.
+      sourcemap: process.env.BUILD_SOURCEMAP === 'true',
+      // Optionally emit a rollup manifest mapping chunks -> modules when
+      // BUILD_MANIFEST=true. Useful for offline analysis without relying on
+      // potentially incompatible source map consumers.
+      manifest: process.env.BUILD_MANIFEST === 'true',
       // Allow disabling minification for debug builds via BUILD_MINIFIED env var
       minify: process.env.BUILD_MINIFIED === 'false' ? false : 'terser',
       terserOptions:
