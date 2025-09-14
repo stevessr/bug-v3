@@ -4,37 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Waline 表情导入</title>
-  <script>
-    const theme = localStorage.getItem('theme') || 'system';
-
-    function applyTheme(theme) {
-      if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else if (theme === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        // system
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      }
-    }
-
-    applyTheme(theme);
-
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-      const currentTheme = localStorage.getItem('theme') || 'system';
-      if (currentTheme === 'system') {
-        if (event.matches) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      }
-    });
-  </script>
+  <script type="module" src="/src/utils/theme.ts"></script>
   <link rel="icon" type="image/png" href="/icon16.png">
   <script type="module" crossorigin src="/js/waline.js"></script>
   <link rel="modulepreload" crossorigin href="/js/main.js">

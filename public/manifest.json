@@ -28,9 +28,6 @@
       "type": "module"
     }
   ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' 'sha256-2P67NxhJUJBuEz4E/M0Eom3QiaZr+EffF+5eIlRvMjg='"
-  },
   "icons": {
     "48": "img/48.png",
     "64": "img/64.png",

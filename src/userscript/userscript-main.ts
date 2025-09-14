@@ -694,25 +694,49 @@ function openManagementInterface() {
     if (!group) return
     ;(group.emojis || []).forEach((emo: any, idx: number) => {
       const card = document.createElement('div')
-      card.style.cssText = 'width:80px; display:flex; flex-direction:column; align-items:center; gap:4px;'
+      card.className = 'emoji-manager-card'
+
       const img = document.createElement('img')
       img.src = emo.url
       img.alt = emo.name
-      img.style.cssText = 'width:48px; height:48px; object-fit:contain; border:1px solid #eee; border-radius:6px;'
+      img.className = 'emoji-manager-card-img'
+
       const name = document.createElement('div')
       name.textContent = emo.name
-      name.style.cssText = 'font-size:12px; text-align:center; overflow:hidden; text-overflow:ellipsis;'
+      name.className = 'emoji-manager-card-name'
+
+      const actions = document.createElement('div')
+      actions.className = 'emoji-manager-card-actions'
+
+      const edit = document.createElement('button')
+      edit.textContent = '编辑'
+      edit.className = 'btn btn-sm'
+      edit.addEventListener('click', () => {
+        const newName = prompt('表情名称', emo.name || '')
+        if (newName === null) return
+        const newUrl = prompt('表情图片 URL', emo.url || '')
+        if (newUrl === null) return
+        emo.name = newName.trim()
+        emo.url = newUrl.trim()
+        renderGroups()
+        renderSelectedGroup()
+      })
+
       const del = document.createElement('button')
       del.textContent = '删除'
-      del.style.cssText = 'font-size:12px; padding:4px 6px;'
+      del.className = 'btn btn-sm'
       del.addEventListener('click', () => {
         group.emojis.splice(idx, 1)
         renderGroups()
         renderSelectedGroup()
       })
+
+      actions.appendChild(edit)
+      actions.appendChild(del)
+
       card.appendChild(img)
       card.appendChild(name)
-      card.appendChild(del)
+      card.appendChild(actions)
       emojisContainer.appendChild(card)
     })
   }
