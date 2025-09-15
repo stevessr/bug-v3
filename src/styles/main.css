@@ -18,6 +18,28 @@
 
 /* Custom utility classes for extension */
 @layer components {
+  /* Global dark-mode text and input defaults for options/popup */
+  .options-root,
+  .popup-container,
+  body.dark .options-root,
+  body.dark .popup-container {
+    @apply dark:text-white;
+  }
+
+  /* Inputs, textareas and selects: in dark mode use dark background and white text */
+  .dark input,
+  .dark textarea,
+  .dark select,
+  .dark .ant-input {
+    @apply bg-black text-white border-gray-600;
+  }
+
+  /* Ensure input placeholders are light in dark mode */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: rgba(255,255,255,0.6);
+  }
+
   .emoji-picker-container {
     @apply fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-700;
   }

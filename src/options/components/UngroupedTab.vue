@@ -269,17 +269,19 @@ const cancelCreateGroup = () => {
 
 <template>
   <div class="space-y-8">
-    <div class="bg-white rounded-lg shadow-sm border">
+    <div class="bg-white rounded-lg shadow-sm border dark:border-gray-700 dark:bg-gray-800">
       <div class="px-6 py-4 border-b border-gray-200">
         <div class="flex justify-between items-center">
-          <h2 class="text-lg font-semibold text-gray-900">未分组表情</h2>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">未分组表情</h2>
           <div class="flex items-center gap-4">
             <!-- 批量操作控制 -->
             <div
               v-if="isMultiSelectMode && selectedEmojis.size > 0"
               class="flex items-center gap-2"
             >
-              <span class="text-sm text-gray-600">已选择 {{ selectedEmojis.size }} 个</span>
+              <span class="text-sm text-gray-600 dark:text-white">
+                已选择 {{ selectedEmojis.size }} 个
+              </span>
               <!-- 原生 select 已替换为 a-dropdown（下方） -->
               <a-dropdown>
                 <template #overlay>
@@ -318,7 +320,7 @@ const cancelCreateGroup = () => {
                 @change="onMultiSelectModeChange"
                 class="rounded"
               />
-              <span class="text-sm text-gray-700">多选模式</span>
+              <span class="text-sm text-gray-700 dark:text-white">多选模式</span>
             </label>
           </div>
         </div>
@@ -359,7 +361,7 @@ const cancelCreateGroup = () => {
             class="emoji-item relative"
           >
             <div
-              class="aspect-square bg-gray-50 rounded-lg overflow-hidden"
+              class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700"
               :class="{
                 'cursor-pointer': isMultiSelectMode,
                 'ring-2 ring-blue-500': isMultiSelectMode && selectedEmojis.has(idx)
@@ -375,7 +377,7 @@ const cancelCreateGroup = () => {
                 type="checkbox"
                 :checked="selectedEmojis.has(idx)"
                 @change="toggleEmojiSelection(idx)"
-                class="w-4 h-4 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500"
+                class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
               />
             </div>
 
@@ -385,23 +387,25 @@ const cancelCreateGroup = () => {
               <button
                 @click="$emit('edit', emoji, ungroup.id, idx)"
                 title="编辑"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded"
+                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
               >
                 编辑
               </button>
               <button
                 @click="$emit('remove', ungroup.id, idx)"
                 title="移除"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded"
+                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
               >
                 移除
               </button>
             </div>
 
-            <div class="text-xs text-center text-gray-600 mt-1 truncate">{{ emoji.name }}</div>
+            <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
+              {{ emoji.name }}
+            </div>
           </div>
         </div>
-        <div v-else class="text-sm text-gray-500">未分组表情为空。</div>
+        <div v-else class="text-sm text-gray-500 dark:text-white">未分组表情为空。</div>
       </div>
     </div>
 
@@ -411,24 +415,28 @@ const cancelCreateGroup = () => {
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
     >
       <div class="bg-white rounded-lg p-6 w-96">
-        <h3 class="text-lg font-semibold mb-4">创建新分组</h3>
+        <h3 class="text-lg font-semibold mb-4 dark:text-white">创建新分组</h3>
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">分组名称</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+              分组名称
+            </label>
             <input
               v-model="newGroupName"
               type="text"
-              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
               placeholder="输入分组名称"
               @keyup.enter="confirmCreateGroup"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">分组图标</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+              分组图标
+            </label>
             <input
               v-model="newGroupIcon"
               type="text"
-              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
               placeholder="输入图标 URL 或 emoji"
             />
           </div>

@@ -5,6 +5,8 @@ import { DownOutlined } from '@ant-design/icons-vue'
 
 import type { AppSettings } from '../../types/emoji'
 
+import ThemeColorPicker from './ThemeColorPicker.vue'
+
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 // allow flexible typing (either a reactive ref or a plain object)
 const settings = props.settings as AppSettings | Ref<AppSettings>
@@ -15,9 +17,28 @@ const emit = defineEmits([
   'update:forceMobileMode',
   'update:enableLinuxDoInjection',
   'update:enableXcomExtraSelectors',
-  'update:theme'
+  'update:theme',
+  'update:customPrimaryColor',
+  'update:customColorScheme'
 ])
 
+const getCustomPrimaryColor = () => {
+  try {
+    if (isRef(settings)) return (settings.value && settings.value.customPrimaryColor) || '#1890ff'
+    return (settings && (settings as AppSettings).customPrimaryColor) || '#1890ff'
+  } catch {
+    return '#1890ff'
+  }
+}
+
+const getCustomColorScheme = () => {
+  try {
+    if (isRef(settings)) return (settings.value && settings.value.customColorScheme) || 'default'
+    return (settings && (settings as AppSettings).customColorScheme) || 'default'
+  } catch {
+    return 'default'
+  }
+}
 // support both ref(settings) and plain settings object
 const getOutputFormat = () => {
   try {
@@ -51,6 +72,23 @@ watch(
   () => getTheme(),
   val => {
     localTheme.value = val || 'system'
+  }
+)
+
+// local reactive copies for custom theme colors
+const localCustomPrimaryColor = ref<string>(getCustomPrimaryColor())
+watch(
+  () => getCustomPrimaryColor(),
+  val => {
+    localCustomPrimaryColor.value = val || '#1890ff'
+  }
+)
+
+const localCustomColorScheme = ref<string>(getCustomColorScheme())
+watch(
+  () => getCustomColorScheme(),
+  val => {
+    localCustomColorScheme.value = val || 'default'
   }
 )
 
@@ -89,6 +127,17 @@ const handleThemeSelectInfo = (info: { key: string | number }) => {
   handleThemeSelect(String(info.key))
 }
 
+// Custom color handlers
+const handleCustomPrimaryColorUpdate = (color: string) => {
+  localCustomPrimaryColor.value = color
+  emit('update:customPrimaryColor', color)
+}
+
+const handleCustomColorSchemeUpdate = (scheme: string) => {
+  localCustomColorScheme.value = scheme
+  emit('update:customColorScheme', scheme)
+}
+
 // Use Ant Design slider's afterChange to update settings when drag finishes.
 const handleImageScaleChange = (value: number | number[]) => {
   const num = Array.isArray(value) ? value[0] : value
@@ -118,15 +167,15 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 </script>
 
 <template>
-  <div class="bg-white rounded-lg shadow-sm border">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-900">全局设置</h2>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-lg font-semibold dark:text-white">全局设置</h2>
     </div>
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900">主题</label>
-          <p class="text-sm text-gray-500">选择界面主题</p>
+          <label class="text-sm font-medium dark:text-white">主题</label>
+          <p class="text-sm dark:text-white">选择界面主题</p>
         </div>
         <a-dropdown>
           <template #overlay>
@@ -148,11 +197,27 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
           </AButton>
         </a-dropdown>
       </div>
+      <div class="flex flex-col space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <label class="text-sm font-medium dark:text-white">主题颜色</label>
+            <p class="text-sm dark:text-white">自定义界面主色调</p>
+          </div>
+          <div class="w-2/3">
+            <ThemeColorPicker
+              v-model="localCustomPrimaryColor"
+              :colorScheme="localCustomColorScheme"
+              @update:modelValue="handleCustomPrimaryColorUpdate"
+              @update:colorScheme="handleCustomColorSchemeUpdate"
+            />
+          </div>
+        </div>
+      </div>
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900">默认图片缩放</label>
-          <p class="text-sm text-gray-500">控制插入表情的默认尺寸</p>
+          <label class="text-sm font-medium dark:text-white">默认图片缩放</label>
+          <p class="text-sm dark:text-white">控制插入表情的默认尺寸</p>
         </div>
         <div class="flex items-center gap-3">
           <ASlider
@@ -164,22 +229,22 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
             class="w-32"
             @change="handleImageScaleChange"
           />
-          <span class="text-sm text-gray-600 w-12">{{ localImageScale }}%</span>
+          <span class="text-sm text-gray-600 dark:text-white w-12">{{ localImageScale }}%</span>
         </div>
       </div>
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900">网格列数</label>
-          <p class="text-sm text-gray-500">表情选择器中的列数</p>
+          <label class="text-sm font-medium dark:text-white">网格列数</label>
+          <p class="text-sm dark:text-white">表情选择器中的列数</p>
         </div>
         <slot name="grid-selector"></slot>
       </div>
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900">显示搜索栏</label>
-          <p class="text-sm text-gray-500">在表情选择器中显示搜索功能</p>
+          <label class="text-sm font-medium dark:text-white">显示搜索栏</label>
+          <p class="text-sm dark:text-white">在表情选择器中显示搜索功能</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input
@@ -189,15 +254,15 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
             class="sr-only peer"
           />
           <div
-            class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
+            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
           ></div>
         </label>
       </div>
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900">输出格式</label>
-          <p class="text-sm text-gray-500">插入表情时使用的格式</p>
+          <label class="text-sm font-medium dark:text-white">输出格式</label>
+          <p class="text-sm dark:text-white">插入表情时使用的格式</p>
         </div>
         <a-dropdown>
           <template #overlay>
@@ -215,8 +280,8 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900">强制移动模式</label>
-          <p class="text-sm text-gray-500">在桌面端强制使用移动端样式</p>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">强制移动模式</label>
+          <p class="text-sm text-gray-500 dark:text-white">在桌面端强制使用移动端样式</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input
@@ -226,15 +291,17 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
             class="sr-only peer"
           />
           <div
-            class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
+            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
           ></div>
         </label>
       </div>
 
       <div class="flex items-center justify-between" v-if="false">
         <div>
-          <label class="text-sm font-medium text-gray-900">启用Linux.do脚本注入</label>
-          <p class="text-sm text-gray-500">控制是否在linux.do注入表情功能脚本</p>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">
+            启用Linux.do脚本注入
+          </label>
+          <p class="text-sm text-gray-500 dark:text-white">控制是否在linux.do注入表情功能脚本</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input
@@ -244,15 +311,19 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
             class="sr-only peer"
           />
           <div
-            class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
+            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
           ></div>
         </label>
       </div>
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900">启用X.com额外选择器</label>
-          <p class="text-sm text-gray-500">在X.com(Twitter)启用额外的选择器控制</p>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">
+            启用X.com额外选择器
+          </label>
+          <p class="text-sm text-gray-500 dark:text-white">
+            在X.com(Twitter)启用额外的选择器控制
+          </p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input
@@ -262,7 +333,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
             class="sr-only peer"
           />
           <div
-            class="relative w-11 h-6 bg-gray-200 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 peer-checked:after:translate-x-[20px]"
+            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
           ></div>
         </label>
       </div>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue'
 import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
+
 import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
+import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
 
 import GridColumnsSelector from './components/GridColumnsSelector.vue'
 import AboutSection from './components/AboutSection.vue'
@@ -26,6 +28,28 @@ import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
 
 const options = useOptions()
+
+// 主题相关状态
+const currentThemeMode = ref<'light' | 'dark'>(getCurrentThemeMode())
+
+// 响应式的 Ant Design Vue 主题配置
+const antdThemeConfig = computed(() => {
+  const primaryColor = options.emojiStore.settings.customPrimaryColor || '#1890ff'
+  return generateAntdTheme(currentThemeMode.value, primaryColor)
+})
+
+// 监听主题变化事件
+const handleThemeChange = (event: CustomEvent) => {
+  currentThemeMode.value = event.detail.mode
+}
+
+// 监听自定义主色变化
+watch(
+  () => options.emojiStore.settings.customPrimaryColor,
+  () => {
+    // 主色变化时会自动通过 computed 更新主题
+  }
+)
 
 // pending resolver for requestConfirmation -> modal bridge
 
@@ -77,6 +101,9 @@ const {
   updateForceMobileMode,
   updateEnableLinuxDoInjection,
   updateEnableXcomExtraSelectors,
+  updateTheme,
+  updateCustomPrimaryColor,
+  updateCustomColorScheme,
   handleDragStart,
   handleDrop,
   handleEmojiDragStart,
@@ -143,12 +170,21 @@ onMounted(() => {
       showConfirmGenericModal.value = true
     })
   })
+
+  // 监听主题变化事件
+  window.addEventListener('theme-changed', handleThemeChange as EventListener)
+
+  // 初始化主题模式
+  currentThemeMode.value = getCurrentThemeMode()
 })
 
 onBeforeUnmount(() => {
   // clear any pending resolver and registered handler
   pendingConfirmResolver = null
   clearConfirmHandler()
+
+  // 移除主题变化监听器
+  window.removeEventListener('theme-changed', handleThemeChange as EventListener)
 })
 
 // modal-level handlers: resolve pending promise if present; otherwise delegate to composable actions
@@ -197,192 +233,190 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
 </script>
 
 <template>
-  <AConfigProvider
-    :theme="{
-      token: {
-        
-      },
-    }"
-  >
-    <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">表情管理</h1>
-            <p class="text-sm text-gray-600">管理表情包分组、自定义表情和扩展设置</p>
+  <AConfigProvider :theme="antdThemeConfig">
+    <div class="options-root min-h-screen bg-gray-50 dark:bg-gray-900">
+      <!-- Header -->
+      <header class="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center py-6">
+            <div>
+              <h1 class="text-2xl font-bold dark:text-white">表情管理</h1>
+              <p class="text-sm dark:bg-black dark:text-white">
+                管理表情包分组、自定义表情和扩展设置
+              </p>
+            </div>
+            <HeaderControls
+              @openImport="showImportModal = true"
+              @openImportEmojis="showImportEmojiModal = true"
+              @resetSettings="resetSettings"
+              @syncToChrome="syncToChrome"
+              @forceLocalToExtension="forceLocalToExtension"
+              @exportConfiguration="exportConfiguration"
+            />
           </div>
-          <HeaderControls
-            @openImport="showImportModal = true"
-            @openImportEmojis="showImportEmojiModal = true"
-            @resetSettings="resetSettings"
-            @syncToChrome="syncToChrome"
-            @forceLocalToExtension="forceLocalToExtension"
-            @exportConfiguration="exportConfiguration"
+        </div>
+      </header>
+
+      <!-- Navigation Tabs -->
+      <nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex space-x-8">
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              @click="activeTab = tab.id"
+              class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+              :class="[
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-white dark:hover:text-gray-300 dark:hover:border-gray-600'
+              ]"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Settings Tab -->
+        <div v-if="activeTab === 'settings'" class="space-y-8">
+          <GlobalSettings
+            :settings="emojiStore.settings"
+            @update:imageScale="updateImageScale"
+            @update:showSearchBar="updateShowSearchBar"
+            @update:outputFormat="updateOutputFormat"
+            @update:forceMobileMode="updateForceMobileMode"
+            @update:enableLinuxDoInjection="updateEnableLinuxDoInjection"
+            @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
+            @update:theme="updateTheme"
+            @update:customPrimaryColor="updateCustomPrimaryColor"
+            @update:customColorScheme="updateCustomColorScheme"
+          >
+            <template #grid-selector>
+              <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
+            </template>
+          </GlobalSettings>
+        </div>
+
+        <GroupsTab
+          :emojiStore="emojiStore"
+          :expandedGroups="expandedGroups"
+          :isImageUrl="isImageUrl"
+          v-model:activeTab="activeTab"
+          :exportProgress="exportProgress"
+          :exportProgressGroupId="exportProgressGroupId"
+          @openCreateGroup="showCreateGroupModal = true"
+          @groupDragStart="handleDragStart"
+          @groupDrop="handleDrop"
+          @toggleExpand="toggleGroupExpansion"
+          @openEditGroup="openEditGroup"
+          @exportGroup="exportGroup"
+          @exportGroupZip="exportGroupZip"
+          @confirmDeleteGroup="confirmDeleteGroup"
+          @openAddEmoji="openAddEmojiModal"
+          @emojiDragStart="handleEmojiDragStart"
+          @emojiDrop="handleEmojiDrop"
+          @removeEmoji="removeEmojiFromGroup"
+          @editEmoji="openEditEmoji"
+          @imageError="handleImageError"
+        />
+
+        <FavoritesTab
+          v-if="activeTab === 'favorites'"
+          :emojiStore="emojiStore"
+          @remove="removeEmojiFromGroup"
+          @edit="openEditEmoji"
+        />
+
+        <!-- Ungrouped Tab -->
+        <UngroupedTab
+          v-if="activeTab === 'ungrouped'"
+          :emojiStore="emojiStore"
+          @remove="removeEmojiFromGroup"
+          @edit="openEditEmoji"
+        />
+
+        <!-- External Import Tab -->
+        <ExternalImportTab v-if="activeTab === 'import'" />
+        <BilibiliImport v-if="activeTab === 'bilibili'" />
+
+        <!-- Statistics Tab -->
+        <div v-if="activeTab === 'stats'" class="space-y-8">
+          <EmojiStats
+            :groupCount="emojiStore.groups.length"
+            :totalEmojis="totalEmojis"
+            :favoritesCount="emojiStore.favorites.size"
           />
         </div>
-      </div>
-    </header>
 
-    <!-- Navigation Tabs -->
-    <nav class="bg-white border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex space-x-8">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            @click="activeTab = tab.id"
-            class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
-            :class="[
-              activeTab === tab.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            ]"
-          >
-            {{ tab.label }}
-          </button>
+        <!-- About Tab -->
+        <div v-if="activeTab === 'about'" class="space-y-8">
+          <AboutSection />
         </div>
-      </div>
-    </nav>
+      </main>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Settings Tab -->
-      <div v-if="activeTab === 'settings'" class="space-y-8">
-        <GlobalSettings
-          :settings="emojiStore.settings"
-          @update:imageScale="updateImageScale"
-          @update:showSearchBar="updateShowSearchBar"
-          @update:outputFormat="updateOutputFormat"
-          @update:forceMobileMode="updateForceMobileMode"
-          @update:enableLinuxDoInjection="updateEnableLinuxDoInjection"
-          @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
-          @update:theme="updateTheme"
-        >
-          <template #grid-selector>
-            <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
-          </template>
-        </GlobalSettings>
-      </div>
+      <!-- Create Group and Add Emoji modals extracted into components -->
+      <CreateGroupModal v-model:show="showCreateGroupModal" @created="onGroupCreated" />
 
-      <GroupsTab
-        :emojiStore="emojiStore"
-        :expandedGroups="expandedGroups"
+      <AddEmojiModal
+        v-model:show="showAddEmojiModal"
+        :groups="emojiStore.groups"
+        :defaultGroupId="selectedGroupForAdd"
+        @added="onEmojiAdded"
+      />
+
+      <EditGroupModal
+        v-model:show="showEditGroupModal"
+        :editingGroupId="editingGroupId"
+        :initialName="editGroupName"
+        :initialIcon="editGroupIcon"
         :isImageUrl="isImageUrl"
-        v-model:activeTab="activeTab"
-        :exportProgress="exportProgress"
-        :exportProgressGroupId="exportProgressGroupId"
-        @openCreateGroup="showCreateGroupModal = true"
-        @groupDragStart="handleDragStart"
-        @groupDrop="handleDrop"
-        @toggleExpand="toggleGroupExpansion"
-        @openEditGroup="openEditGroup"
-        @exportGroup="exportGroup"
-        @exportGroupZip="exportGroupZip"
-        @confirmDeleteGroup="confirmDeleteGroup"
-        @openAddEmoji="openAddEmojiModal"
-        @emojiDragStart="handleEmojiDragStart"
-        @emojiDrop="handleEmojiDrop"
-        @removeEmoji="removeEmojiFromGroup"
-        @editEmoji="openEditEmoji"
+        @save="handleSaveGroup"
         @imageError="handleImageError"
       />
 
-      <FavoritesTab
-        v-if="activeTab === 'favorites'"
-        :emojiStore="emojiStore"
-        @remove="removeEmojiFromGroup"
-        @edit="openEditEmoji"
+      <!-- Import modals (components) -->
+      <ImportConfigModal v-model="showImportModal" @imported="handleConfigImported" />
+
+      <ImportEmojisModal v-model="showImportEmojiModal" @imported="handleEmojisImported" />
+
+      <EditEmojiModal
+        v-model:show="showEditEmojiModal"
+        :emoji="editingEmoji || undefined"
+        :groupId="editingEmojiGroupId"
+        :index="editingEmojiIndex"
+        @save="handleEmojiEdit"
+        @imageError="handleImageError"
       />
 
-      <!-- Ungrouped Tab -->
-      <UngroupedTab
-        v-if="activeTab === 'ungrouped'"
-        :emojiStore="emojiStore"
-        @remove="removeEmojiFromGroup"
-        @edit="openEditEmoji"
+      <NotificationToasts
+        v-model:showSuccess="showSuccessToast"
+        :successMessage="successMessage"
+        v-model:showError="showErrorToast"
+        :errorMessage="errorMessage"
       />
 
-      <!-- External Import Tab -->
-      <ExternalImportTab v-if="activeTab === 'import'" />
-      <BilibiliImport v-if="activeTab === 'bilibili'" />
+      <ConfirmGenericModal
+        v-model:show="showConfirmGenericModal"
+        :title="confirmGenericTitle"
+        :message="confirmGenericMessage"
+        @confirm="onModalConfirm"
+        @cancel="onModalCancel"
+      />
 
-      <!-- Statistics Tab -->
-      <div v-if="activeTab === 'stats'" class="space-y-8">
-        <EmojiStats
-          :groupCount="emojiStore.groups.length"
-          :totalEmojis="totalEmojis"
-          :favoritesCount="emojiStore.favorites.size"
-        />
-      </div>
-
-      <!-- About Tab -->
-      <div v-if="activeTab === 'about'" class="space-y-8">
-        <AboutSection />
-      </div>
-    </main>
-
-    <!-- Create Group and Add Emoji modals extracted into components -->
-    <CreateGroupModal v-model:show="showCreateGroupModal" @created="onGroupCreated" />
-
-    <AddEmojiModal
-      v-model:show="showAddEmojiModal"
-      :groups="emojiStore.groups"
-      :defaultGroupId="selectedGroupForAdd"
-      @added="onEmojiAdded"
-    />
-
-    <EditGroupModal
-      v-model:show="showEditGroupModal"
-      :editingGroupId="editingGroupId"
-      :initialName="editGroupName"
-      :initialIcon="editGroupIcon"
-      :isImageUrl="isImageUrl"
-      @save="handleSaveGroup"
-      @imageError="handleImageError"
-    />
-
-    <!-- Import modals (components) -->
-    <ImportConfigModal v-model="showImportModal" @imported="handleConfigImported" />
-
-    <ImportEmojisModal v-model="showImportEmojiModal" @imported="handleEmojisImported" />
-
-    <EditEmojiModal
-      v-model:show="showEditEmojiModal"
-      :emoji="editingEmoji || undefined"
-      :groupId="editingEmojiGroupId"
-      :index="editingEmojiIndex"
-      @save="handleEmojiEdit"
-      @imageError="handleImageError"
-    />
-
-    <NotificationToasts
-      v-model:showSuccess="showSuccessToast"
-      :successMessage="successMessage"
-      v-model:showError="showErrorToast"
-      :errorMessage="errorMessage"
-    />
-
-    <ConfirmGenericModal
-      v-model:show="showConfirmGenericModal"
-      :title="confirmGenericTitle"
-      :message="confirmGenericMessage"
-      @confirm="onModalConfirm"
-      @cancel="onModalCancel"
-    />
-
-    <!-- Export progress modal (shows detailed per-emoji preview + progress) -->
-    <ExportProgressModal
-      v-model:show="showExportModal"
-      :percent="exportModalPercent"
-      :currentName="exportModalCurrentName || undefined"
-      :currentPreview="exportModalCurrentPreview || undefined"
-      :previews="exportModalPreviews"
-      :names="exportModalNames"
-      @close="onExportModalClose"
-      @cancel="onExportModalCancel"
-    />
-  </div>
+      <!-- Export progress modal (shows detailed per-emoji preview + progress) -->
+      <ExportProgressModal
+        v-model:show="showExportModal"
+        :percent="exportModalPercent"
+        :currentName="exportModalCurrentName || undefined"
+        :currentPreview="exportModalCurrentPreview || undefined"
+        :previews="exportModalPreviews"
+        :names="exportModalNames"
+        @close="onExportModalClose"
+        @cancel="onExportModalCancel"
+      />
+    </div>
   </AConfigProvider>
 </template>

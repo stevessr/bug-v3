@@ -18,7 +18,11 @@ const onConfirmDelete = () => emit('confirmDelete', props.group)
 <template>
   <div class="relative">
     <a-dropdown placement="bottomRight">
-      <a-button class="px-3 py-1 text-sm rounded border bg-white">更多操作</a-button>
+      <a-button
+        class="px-3 py-1 text-sm rounded border bg-white dark:border-gray-700 dark:bg-gray-800"
+      >
+        更多操作
+      </a-button>
       <template #overlay>
         <a-menu>
           <a-menu-item @click.prevent="onEdit">编辑</a-menu-item>

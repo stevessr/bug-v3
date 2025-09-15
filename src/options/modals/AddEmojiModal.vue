@@ -382,20 +382,27 @@ const importParsed = () => {
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
     @click="close"
   >
-    <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
-      <h3 class="text-lg font-semibold mb-4">添加表情</h3>
+    <div
+      class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border dark:border-gray-700"
+      @click.stop
+    >
+      <h3 class="text-lg font-semibold mb-4 dark:text-white">添加表情</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">表情名称</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+            表情名称
+          </label>
           <input
             v-model="name"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
             placeholder="输入表情名称"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">输入模式</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+            输入模式
+          </label>
           <div class="flex items-center gap-2">
             <a-dropdown>
               <template #overlay>
@@ -414,29 +421,33 @@ const importParsed = () => {
           </div>
         </div>
         <div v-if="inputMode === 'url'">
-          <label class="block text-sm font-medium text-gray-700 mb-1">输出链接 (必填)</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+            输出链接 (必填)
+          </label>
           <input
             v-model="url"
             type="url"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
             placeholder="插入到编辑器时使用的链接"
           />
-          <label class="block text-sm font-medium text-gray-700 mb-1 mt-3">显示链接 (可选)</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 mt-3 dark:text-white">
+            显示链接 (可选)
+          </label>
           <input
             v-model="displayUrl"
             type="url"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
             placeholder="表情选择器中显示的链接，留空则使用输出链接"
           />
         </div>
         <div v-else>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
             粘贴内容 (Markdown 或 HTML)
           </label>
           <textarea
             v-model="pasteText"
             rows="6"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
             :placeholder="
               inputMode === 'markdown'
                 ? '粘贴 Markdown 图片，如 ![name|512x512](url)...'
@@ -481,9 +492,12 @@ const importParsed = () => {
         </div>
 
         <!-- 解析结果预览和URL变种选择 -->
-        <div v-if="parsedItems.length > 0 && inputMode !== 'url'" class="bg-gray-50 rounded-lg p-4">
+        <div
+          v-if="parsedItems.length > 0 && inputMode !== 'url'"
+          class="bg-gray-50 dark:bg-black rounded-lg p-4"
+        >
           <div class="flex items-center justify-between mb-3">
-            <h4 class="text-sm font-medium text-gray-700">
+            <h4 class="text-sm font-medium text-gray-700 dark:text-white">
               解析结果 ({{ parsedItems.length }} 个)
             </h4>
             <button
@@ -498,7 +512,7 @@ const importParsed = () => {
             <div
               v-for="(item, index) in parsedItems"
               :key="index"
-              class="bg-white rounded border p-3"
+              class="bg-white dark:bg-gray-800 rounded border dark:border-gray-700 p-3"
             >
               <div class="flex items-start gap-3">
                 <img
@@ -510,7 +524,7 @@ const importParsed = () => {
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium text-gray-900 truncate">{{ item.name }}</div>
                   <div v-if="item.variants.length > 1" class="mt-2">
-                    <label class="block text-xs text-gray-600 mb-1">选择URL变种:</label>
+                    <label class="block text-xs text-gray-600 dark:text-white mb-1">选择URL变种:</label>
                     <a-dropdown>
                       <template #overlay>
                         <a-menu @click="onVariantSelectForItem(index, $event)">

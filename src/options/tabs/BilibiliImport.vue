@@ -385,10 +385,10 @@ const importSelectedFromIndex = async () => {
 
 <template>
   <div class="space-y-8">
-    <div class="bg-white shadow rounded-lg">
+    <div class="bg-white shadow rounded-lg border dark:border-gray-700 dark:bg-gray-800">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">Bilibili 表情导入</h3>
-        <p class="mt-1 text-sm text-gray-600">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Bilibili 表情导入</h3>
+        <p class="mt-1 text-sm text-gray-600 dark:text-white">
           上传 bilibili 风格的 JSON 响应（包含 data.packages），导入为表情分组
         </p>
       </div>
@@ -401,28 +401,37 @@ const importSelectedFromIndex = async () => {
           </div>
 
           <div class="flex items-center space-x-3">
-            <AInput v-model:value="indexUrl" placeholder="请输入索引 JSON 的 URL" />
+            <AInput
+              v-model:value="indexUrl"
+              placeholder="请输入索引 JSON 的 URL"
+              class="dark:bg-black dark:text-white"
+            />
             <AButton @click="() => loadIndexFromUrl()">加载索引</AButton>
           </div>
 
           <div class="flex items-center space-x-3">
-            <AInput v-model:value="query" placeholder="按包名或别名搜索" />
+            <AInput v-model:value="query" placeholder="按包名或别名搜索" class="dark:bg-black dark:text-white" />
             <AButton type="primary" @click="applySearch">搜索</AButton>
             <AButton type="default" @click="query = ''">清空</AButton>
             <AButton type="primary" @click="importSelectedFromIndex">导入选中包</AButton>
           </div>
 
           <!-- ID 拉取区 -->
-          <div class="mt-4 p-3 border rounded bg-gray-50">
+          <div class="mt-4 p-3 border rounded bg-gray-50 dark:bg-gray-700">
             <div class="flex items-center space-x-3">
-              <AInput v-model:value="fetchIdStart" placeholder="起始 ID（例如 10600）" />
+              <AInput
+                v-model:value="fetchIdStart"
+                placeholder="起始 ID(例如 10600)"
+                class="dark:bg-black dark:text-white"
+              />
               <AInput
                 v-model:value="consecutiveNullsToStop"
-                placeholder="连续空响应阈值（默认 50）"
+                placeholder="连续空响应阈值(默认 50)"
+                class="dark:bg-black dark:text-white"
               />
               <label class="flex items-center space-x-2">
                 <input type="checkbox" v-model="importToStoreOnFetch" />
-                <span class="text-sm">自动导入到 Store</span>
+                <span class="text-sm dark:text-white">自动导入到 Store</span>
               </label>
             </div>
             <div class="mt-3 flex items-center space-x-3">
@@ -434,7 +443,7 @@ const importSelectedFromIndex = async () => {
                 停止
               </AButton>
             </div>
-            <div class="mt-3 text-sm text-gray-700">
+            <div class="mt-3 text-sm text-gray-700 dark:text-white">
               <div>{{ fetchStatus }}</div>
               <div
                 v-if="fetchProgress && fetchProgress.length"
@@ -446,9 +455,9 @@ const importSelectedFromIndex = async () => {
           </div>
 
           <div class="mt-3">
-            <div v-if="packages.length === 0" class="text-sm text-gray-500">尚未加载任何索引包</div>
+            <div v-if="packages.length === 0" class="text-sm text-gray-500 dark:text-white">尚未加载任何索引包</div>
             <div v-else>
-              <div v-if="displayPackages.length === 0" class="text-sm text-gray-500">
+              <div v-if="displayPackages.length === 0" class="text-sm text-gray-500 dark:text-white">
                 请输入关键词并点击“搜索”以显示结果
               </div>
               <div v-else class="grid gap-2">
@@ -459,10 +468,11 @@ const importSelectedFromIndex = async () => {
                         type="checkbox"
                         :checked="selected[String(pkg.id)]"
                         @change="() => toggleSelect(String(pkg.id))"
+                        class="dark:bg-black dark:text-white"
                       />
                       <div>
-                        <div class="font-medium">{{ pkg.text || pkg.label || pkg.id }}</div>
-                        <div class="text-xs text-gray-500">
+                        <div class="font-medium dark:text-white">{{ pkg.text || pkg.label || pkg.id }}</div>
+                        <div class="text-xs text-gray-500 dark:text-white">
                           {{ (pkg.emote && pkg.emote.length) || 0 }} 个表情
                         </div>
                       </div>
@@ -486,13 +496,10 @@ const importSelectedFromIndex = async () => {
           class="p-3 rounded"
           :class="importResults.success ? 'bg-green-50' : 'bg-red-50'"
         >
-          <p
-            class="text-sm font-medium"
-            :class="importResults.success ? 'text-green-700' : 'text-red-700'"
-          >
+          <p class="text-sm font-medium" :class="[(importResults.success ? 'text-green-700' : 'text-red-700'), 'dark:text-white']">
             {{ importResults.message }}
           </p>
-          <p v-if="importResults.details" class="text-sm mt-1">{{ importResults.details }}</p>
+          <p v-if="importResults.details" class="text-sm mt-1 dark:text-white">{{ importResults.details }}</p>
         </div>
       </div>
     </div>
