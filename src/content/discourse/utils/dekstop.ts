@@ -185,6 +185,8 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   picker.appendChild(innerContent)
   // --- hover preview helpers (desktop picker) ---
   let _previewEl: HTMLDivElement | null = null
+  let _fadeTimeout: number | null = null
+  let _removeTimeout: number | null = null
 
   function ensurePreview() {
     if (_previewEl) return _previewEl
@@ -229,6 +231,10 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
 
     document.body.appendChild(el)
     _previewEl = el
+    // start fully opaque
+    _previewEl.style.opacity = '1'
+    // prepare transition (will be used when fade is triggered)
+    _previewEl.style.transition = 'opacity 2s linear'
     return el
   }
 
@@ -239,7 +245,41 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     if (img) img.src = emoji.displayUrl || emoji.url || ''
     if (label) label.textContent = emoji.name || ''
     movePreviewToEvent(ev)
+    // make sure visible and fully opaque
     el.style.display = ''
+    el.style.opacity = '1'
+
+    // clear any existing timers and schedule fade/remove for continuous display
+    try {
+      if (_fadeTimeout) {
+        window.clearTimeout(_fadeTimeout)
+        _fadeTimeout = null
+      }
+      if (_removeTimeout) {
+        window.clearTimeout(_removeTimeout)
+        _removeTimeout = null
+      }
+    } catch (_e) {
+      /* ignore */
+    }
+
+    // after 5s, start fading (this sets opacity to 0 over 2s because of transition)
+    _fadeTimeout = window.setTimeout(() => {
+      try {
+        if (_previewEl) _previewEl.style.opacity = '0'
+      } catch (_e) {
+        void _e
+      }
+    }, 5000) as unknown as number
+
+    // after 7s, ensure removal
+    _removeTimeout = window.setTimeout(() => {
+      try {
+        removePreview()
+      } catch (_e) {
+        void _e
+      }
+    }, 7000) as unknown as number
   }
 
   function movePreviewToEvent(ev: MouseEvent) {
@@ -261,6 +301,20 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   function removePreview() {
     if (!_previewEl) return
     try {
+      // clear timers
+      try {
+        if (_fadeTimeout) {
+          window.clearTimeout(_fadeTimeout)
+          _fadeTimeout = null
+        }
+        if (_removeTimeout) {
+          window.clearTimeout(_removeTimeout)
+          _removeTimeout = null
+        }
+      } catch (_e) {
+        /* ignore */
+      }
+
       if (_previewEl.parentElement) _previewEl.parentElement.removeChild(_previewEl)
     } finally {
       _previewEl = null
