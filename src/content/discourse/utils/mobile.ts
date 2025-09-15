@@ -1,5 +1,5 @@
 import { isImageUrl } from '../../utils/isimage'
-
+import { createEl } from './element-factory'
 import { ensureDefaultIfEmpty, cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
 
@@ -7,140 +7,178 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   ensureDefaultIfEmpty()
   const groupsToUse = cachedState.emojiGroups
 
-  const modal = document.createElement('div')
-  modal.className = 'modal d-modal fk-d-menu-modal emoji-picker-content'
-  modal.setAttribute('data-keyboard', 'false')
-  modal.setAttribute('aria-modal', 'true')
-  modal.setAttribute('role', 'dialog')
-  modal.setAttribute('data-identifier', 'emoji-picker')
-
-  const modalContainerDiv = document.createElement('div')
-  modalContainerDiv.className = 'd-modal__container'
-
-  const modalBody = document.createElement('div')
-  modalBody.className = 'd-modal__body'
-  modalBody.tabIndex = -1
-
-  const emojiPickerDiv = document.createElement('div')
-  emojiPickerDiv.className = 'emoji-picker'
-
-  const filterContainer = document.createElement('div')
-  filterContainer.className = 'emoji-picker__filter-container'
-
-  const filterInputContainer = document.createElement('div')
-  filterInputContainer.className = 'emoji-picker__filter filter-input-container'
-
-  const searchInput = document.createElement('input')
-  searchInput.className = 'filter-input'
-  searchInput.placeholder = '按表情符号名称和别名搜索…'
-  searchInput.type = 'text'
-  filterInputContainer.appendChild(searchInput)
-
-  const closeButton = document.createElement('button')
-  closeButton.className = 'btn no-text btn-icon btn-transparent emoji-picker__close-btn'
-  closeButton.type = 'button'
-  closeButton.innerHTML = `<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>`
-  closeButton.addEventListener('click', () => {
-    const modalContainer = modal.closest('.modal-container')
-    if (modalContainer) {
-      modalContainer.remove()
+  const modal = createEl('div', {
+    className: 'modal d-modal fk-d-menu-modal emoji-picker-content',
+    attrs: {
+      'data-keyboard': 'false',
+      'aria-modal': 'true',
+      role: 'dialog',
+      'data-controller': 'emoji-picker'
     }
   })
 
-  filterContainer.appendChild(filterInputContainer)
-  filterContainer.appendChild(closeButton)
+  const modalContainerDiv = createEl('div', {
+    className: 'd-modal__container'
+  })
 
-  const content = document.createElement('div')
-  content.className = 'emoji-picker__content'
+  const modalBody = createEl('div', {
+    className: 'd-modal__body',
+    attr: { tabIndex: '-1' }
+  })
 
-  const sectionsNav = document.createElement('div')
-  sectionsNav.className = 'emoji-picker__sections-nav'
+  const emojiPickerDiv = createEl('div', {
+    className: 'emoji-picker'
+  })
 
-  const scrollableContent = document.createElement('div')
-  scrollableContent.className = 'emoji-picker__scrollable-content'
+  const filterContainer = createEl('div', {
+    className: 'emoji-picker__filter-container'
+  })
 
-  const sections = document.createElement('div')
-  sections.className = 'emoji-picker__sections'
-  sections.setAttribute('role', 'button')
+  const filterInputContainer = createEl('div', {
+    className: 'emoji-picker__filter filter-input-container'
+  })
 
-  groupsToUse.forEach((group: any, index: number) => {
-    if (!group?.emojis?.length) return
-
-    const navButton = document.createElement('button')
-    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? 'active' : ''}`
-    navButton.setAttribute('tabindex', '-1')
-    navButton.setAttribute('data-section', group.id)
-    navButton.type = 'button'
-
-    const iconVal = group.icon || '📁'
-    if (isImageUrl(iconVal)) {
-      const img = document.createElement('img')
-      img.src = iconVal
-      img.alt = group.name || ''
-      img.className = 'emoji'
-      img.style.width = '18px'
-      img.style.height = '18px'
-      img.style.objectFit = 'contain'
-      navButton.appendChild(img)
-    } else {
-      navButton.textContent = String(iconVal)
+  const searchInput = createEl('input', {
+    className: 'filter-input',
+    props: {
+      placeholder: '按表情符号名称和别名搜索…',
+      type: 'text'
     }
-    navButton.title = group.name
-    navButton.addEventListener('click', () => {
-      sectionsNav
-        .querySelectorAll('.emoji-picker__section-btn')
-        .forEach(btn => btn.classList.remove('active'))
-      navButton.classList.add('active')
-      const target = sections.querySelector(`[data-section="${group.id}"]`)
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
-    sectionsNav.appendChild(navButton)
+  }) as HTMLInputElement
+  filterInputContainer.appendChild(searchInput)
 
-    const section = document.createElement('div')
-    section.className = 'emoji-picker__section'
-    section.setAttribute('data-section', group.id)
-    section.setAttribute('role', 'region')
-    section.setAttribute('aria-label', group.name)
-
-    const titleContainer = document.createElement('div')
-    titleContainer.className = 'emoji-picker__section-title-container'
-    const title = document.createElement('h2')
-    title.className = 'emoji-picker__section-title'
-    title.textContent = group.name
-    titleContainer.appendChild(title)
-
-    const sectionEmojis = document.createElement('div')
-    sectionEmojis.className = 'emoji-picker__section-emojis'
-
-    group.emojis.forEach((emoji: any) => {
-      if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return
-      const img = document.createElement('img')
-      img.width = 32
-      img.height = 32
-      img.className = 'emoji'
-      img.src = emoji.url
-      img.tabIndex = 0
-      img.dataset.emoji = emoji.name
-      img.alt = emoji.name
-      img.title = `:${emoji.name}:`
-      img.loading = 'lazy'
-      img.addEventListener('click', () => {
-        insertEmojiIntoEditor(emoji)
+  const closeButton = createEl('button', {
+    className: 'btn no-text btn-icon btn-transparent emoji-picker__close-btn',
+    props: { type: 'button' },
+    html: `<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>`,
+    on: {
+      click: () => {
         const modalContainer = modal.closest('.modal-container')
         if (modalContainer) {
           modalContainer.remove()
         }
-      })
-      img.addEventListener('keydown', (e: any) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          insertEmojiIntoEditor(emoji)
-          const modalContainer = modal.closest('.modal-container')
-          if (modalContainer) {
-            modalContainer.remove()
+      }
+    },
+    innerHTML: `<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>`
+  }) as HTMLButtonElement
+
+  filterContainer.appendChild(filterInputContainer)
+  filterContainer.appendChild(closeButton)
+
+  const content = createEl('div', {
+    className: 'emoji-picker__content'
+  })
+
+  const sectionsNav = createEl('div', {
+    className: 'emoji-picker__sections-nav'
+  })
+
+  const scrollableContent = createEl('div', {
+    className: 'emoji-picker__scrollable-content'
+  })
+
+  const sections = createEl('div', {
+    className: 'emoji-picker__sections',
+    attrs: { role: 'button' }
+  })
+
+  groupsToUse.forEach((group: any, index: number) => {
+    if (!group?.emojis?.length) return
+
+    const navButton = createEl('button', {
+      className: `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? 'active' : ''}`,
+      attrs: {
+        tabindex: '-1',
+        'data-section': group.id
+      },
+      props: {
+        type: 'button'
+      },
+      title: group.name,
+      on: {
+        click: () => {
+          sectionsNav
+            .querySelectorAll('.emoji-picker__section-btn')
+            .forEach(btn => btn.classList.remove('active'))
+          navButton.classList.add('active')
+          const target = sections.querySelector(`[data-section="${group.id}"]`)
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }
+    }) as HTMLButtonElement
+
+    const iconVal = group.icon || '📁'
+    if (isImageUrl(iconVal)) {
+      const img = createEl('img', {
+        src: iconVal,
+        alt: group.name || '',
+        className: 'emoji',
+        style: {
+          width: '18px',
+          height: '18px',
+          objectFit: 'contain'
+        }
+      }) as HTMLImageElement
+      navButton.appendChild(img)
+    } else {
+      navButton.textContent = String(iconVal)
+    }
+    sectionsNav.appendChild(navButton)
+
+    const section = createEl('div', {
+      className: 'emoji-picker__section',
+      attrs: {
+        'data-section': group.id,
+        role: 'region',
+        'aria-label': group.name
+      }
+    })
+
+    const titleContainer = createEl('div', {
+      className: 'emoji-picker__section-title-container'
+    })
+    const title = createEl('h2', {
+      className: 'emoji-picker__section-title',
+      attr: { textContent: group.name }
+    })
+    titleContainer.appendChild(title)
+
+    const sectionEmojis = createEl('div', {
+      className: 'emoji-picker__section-emojis'
+    })
+
+    group.emojis.forEach((emoji: any) => {
+      if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return
+      const img = createEl('img', {
+        src: emoji.url,
+        alt: emoji.name,
+        className: 'emoji',
+        width: '32px',
+        height: '32px',
+        tabIndex: 0,
+        dataset: { emoji: emoji.name },
+        title: `:${emoji.name}:`,
+        loading: 'lazy',
+        on: {
+          click: () => {
+            insertEmojiIntoEditor(emoji)
+            const modalContainer = modal.closest('.modal-container')
+            if (modalContainer) {
+              modalContainer.remove()
+            }
+          },
+          keydown: (e: KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              insertEmojiIntoEditor(emoji)
+              const modalContainer = modal.closest('.modal-container')
+              if (modalContainer) {
+                modalContainer.remove()
+              }
+            }
           }
         }
-      })
+      }) as HTMLImageElement
       sectionEmojis.appendChild(img)
     })
 

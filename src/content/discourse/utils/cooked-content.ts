@@ -1,5 +1,5 @@
 import type { AddEmojiButtonData } from '../types/main'
-
+import { createEl } from './element-factory'
 import { extractNameFromUrl } from './picture'
 
 declare const chrome: any
@@ -26,53 +26,65 @@ export function extractEmojiDataFromLightbox(lightboxWrapper: Element): AddEmoji
 }
 
 export function createBatchParseButton(cookedElement: Element): HTMLElement {
-  const button = document.createElement('button')
-  button.className = 'emoji-batch-parse-button'
-  button.style.cssText =
-    'display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:8px;padding:8px 12px;margin:10px 0;font-weight:600;'
-  button.innerHTML = '一键解析并添加所有图片'
-  button.title = '解析当前内容中的所有图片并添加到未分组表情'
-  button.addEventListener('click', async e => {
-    e.preventDefault()
-    e.stopPropagation()
-    const originalContent = button.innerHTML
-    const originalStyle = button.style.cssText
-    try {
-      button.innerHTML = '正在解析...'
-      button.style.background = 'linear-gradient(135deg,#6b7280,#4b5563)'
-      button.disabled = true
-      const lightboxWrappers = cookedElement.querySelectorAll('.lightbox-wrapper')
-      const allEmojiData: AddEmojiButtonData[] = []
-      lightboxWrappers.forEach(wrapper => {
-        const items = extractEmojiDataFromLightbox(wrapper)
-        allEmojiData.push(...items)
-      })
-      if (allEmojiData.length === 0) throw new Error('未找到可解析的图片')
-      let successCount = 0
-      for (const emojiData of allEmojiData) {
+  const button = createEl('button', {
+    className: 'emoji-batch-parse-button',
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      background: 'linear-gradient(135deg,#f59e0b,#d97706)',
+      color: '#fff',
+      borderRadius: '8px',
+      padding: '8px 12px',
+      margin: '10px 0',
+      fontWeight: '600'
+    },
+    innerHTML: '一键解析并添加所有图片',
+    title: '解析当前内容中的所有图片并添加到未分组表情',
+    on: {
+      click: async (e: Event) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const originalContent = button.innerHTML
+        const originalStyle = button.style.cssText
         try {
-          await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData })
-          successCount++
-        } catch (e) {
-          console.error('[DiscourseOneClick] 添加图片失败', emojiData.name, e)
+          button.innerHTML = '正在解析...'
+          button.style.background = 'linear-gradient(135deg,#6b7280,#4b5563)'
+          button.disabled = true
+          const lightboxWrappers = cookedElement.querySelectorAll('.lightbox-wrapper')
+          const allEmojiData: AddEmojiButtonData[] = []
+          lightboxWrappers.forEach(wrapper => {
+            const items = extractEmojiDataFromLightbox(wrapper)
+            allEmojiData.push(...items)
+          })
+          if (allEmojiData.length === 0) throw new Error('未找到可解析的图片')
+          let successCount = 0
+          for (const emojiData of allEmojiData) {
+            try {
+              await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData })
+              successCount++
+            } catch (e) {
+              console.error('[DiscourseOneClick] 添加图片失败', emojiData.name, e)
+            }
+          }
+          button.innerHTML = `已处理 ${successCount}/${allEmojiData.length} 张图片`
+          button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
+          setTimeout(() => {
+            button.innerHTML = originalContent
+            button.style.cssText = originalStyle
+            button.disabled = false
+          }, 3000)
+        } catch (error) {
+          console.error('[DiscourseOneClick] 批量解析失败:', error)
+          button.innerHTML = '解析失败'
+          button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
+          setTimeout(() => {
+            button.innerHTML = originalContent
+            button.style.cssText = originalStyle
+            button.disabled = false
+          }, 3000)
         }
       }
-      button.innerHTML = `已处理 ${successCount}/${allEmojiData.length} 张图片`
-      button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
-      setTimeout(() => {
-        button.innerHTML = originalContent
-        button.style.cssText = originalStyle
-        button.disabled = false
-      }, 3000)
-    } catch (error) {
-      console.error('[DiscourseOneClick] 批量解析失败:', error)
-      button.innerHTML = '解析失败'
-      button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
-      setTimeout(() => {
-        button.innerHTML = originalContent
-        button.style.cssText = originalStyle
-        button.disabled = false
-      }, 3000)
     }
   })
   return button

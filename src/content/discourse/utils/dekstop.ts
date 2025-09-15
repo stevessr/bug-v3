@@ -1,64 +1,79 @@
 import { isImageUrl } from '../../utils/isimage'
-
+import { createEl } from './element-factory'
 import { ensureDefaultIfEmpty, cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
+import { text } from 'stream/consumers'
 
 export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   ensureDefaultIfEmpty()
   const groupsToUse = cachedState.emojiGroups
 
-  const picker = document.createElement('div')
-  picker.className = 'fk-d-menu -animated -expanded'
-  picker.setAttribute('data-identifier', 'emoji-picker')
-  picker.setAttribute('role', 'dialog')
-  picker.style.cssText = 'max-width: 400px; visibility: visible; z-index: 999999;'
+  const picker = createEl('div', {
+    className: 'fk-d-menu -animated -expanded',
+    attrs: {
+      'data-identifier': 'emoji-picker',
+      role: 'dialog'
+    },
+    style: 'max-width: 400px; visibility: visible; z-index: 999999;'
+  })
 
-  const innerContent = document.createElement('div')
-  innerContent.className = 'fk-d-menu__inner-content'
-  const emojiPickerDiv = document.createElement('div')
-  emojiPickerDiv.className = 'emoji-picker'
+  const innerContent = createEl('div', {
+    className: 'fk-d-menu__inner-content'
+  })
+  const emojiPickerDiv = createEl('div', {
+    className: 'emoji-picker'
+  })
 
-  const filterContainer = document.createElement('div')
-  filterContainer.className = 'emoji-picker__filter-container'
-  const filterDiv = document.createElement('div')
-  filterDiv.className = 'emoji-picker__filter filter-input-container'
-  const searchInput = document.createElement('input')
-  searchInput.className = 'filter-input'
-  searchInput.placeholder = '按表情符号名称搜索…'
-  searchInput.type = 'text'
+  const filterContainer = createEl('div', {
+    className: 'emoji-picker__filter-container'
+  })
+  const filterDiv = createEl('div', {
+    className: 'emoji-picker__filter filter-input-container'
+  })
+  const searchInput = createEl('input', {
+    className: 'filter-input',
+    placeholder: '按表情符号名称搜索…',
+    type: 'text'
+  })
   filterDiv.appendChild(searchInput)
   filterContainer.appendChild(filterDiv)
 
-  const content = document.createElement('div')
-  content.className = 'emoji-picker__content'
-  const sectionsNav = document.createElement('div')
-  sectionsNav.className = 'emoji-picker__sections-nav'
-  const scrollableContent = document.createElement('div')
-  scrollableContent.className = 'emoji-picker__scrollable-content'
-  const sections = document.createElement('div')
-  sections.className = 'emoji-picker__sections'
+  const content = createEl('div', {
+    className: 'emoji-picker__content'
+  })
+  const sectionsNav = createEl('div', {
+    className: 'emoji-picker__sections-nav'
+  })
+  const scrollableContent = createEl('div', {
+    className: 'emoji-picker__scrollable-content'
+  })
+  const sections = createEl('div', {
+    className: 'emoji-picker__sections'
+  })
   sections.setAttribute('role', 'button')
 
   groupsToUse.forEach((group: any, index: number) => {
     if (!group?.emojis?.length) return
 
     const navButton = document.createElement('button')
-    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${
-      index === 0 ? 'active' : ''
-    }`
+    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? 'active' : ''
+      }`
     navButton.setAttribute('tabindex', '-1')
     navButton.setAttribute('data-section', group.id)
     navButton.type = 'button'
 
     const iconVal = group.icon || '📁'
     if (isImageUrl(iconVal)) {
-      const img = document.createElement('img')
-      img.src = iconVal
-      img.alt = group.name || ''
-      img.className = 'emoji-group-icon'
-      img.style.width = '18px'
-      img.style.height = '18px'
-      img.style.objectFit = 'contain'
+      const img = createEl('img', {
+        src: iconVal,
+        alt: group.name || '',
+        className: 'emoji-group-icon',
+        style: {
+          width: '18px',
+          height: '18px',
+          objectFit: 'contain'
+        }
+      }) as HTMLImageElement
       navButton.appendChild(img)
     } else {
       navButton.textContent = String(iconVal)
@@ -74,39 +89,51 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     })
     sectionsNav.appendChild(navButton)
 
-    const section = document.createElement('div')
-    section.className = 'emoji-picker__section'
-    section.setAttribute('data-section', group.id)
-    section.setAttribute('role', 'region')
-    section.setAttribute('aria-label', group.name)
+    const section = createEl('div', {
+      className: 'emoji-picker__section',
+      attrs: {
+        'data-section': group.id,
+        role: 'region',
+        'aria-label': group.name
+      }
+    })
 
-    const titleContainer = document.createElement('div')
-    titleContainer.className = 'emoji-picker__section-title-container'
-    const title = document.createElement('h2')
-    title.className = 'emoji-picker__section-title'
+    const titleContainer = createEl('div', {
+      className: 'emoji-picker__section-title-container'
+    })
+    const title = createEl('h2', {
+      className: 'emoji-picker__section-title'
+    })
     title.textContent = group.name
     titleContainer.appendChild(title)
 
-    const sectionEmojis = document.createElement('div')
-    sectionEmojis.className = 'emoji-picker__section-emojis'
+    const sectionEmojis = createEl('div', {
+      className: 'emoji-picker__section-emojis'
+    })
 
     let added = 0
     group.emojis.forEach((emoji: any) => {
       if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return
-      const img = document.createElement('img')
-      img.width = 32
-      img.height = 32
-      img.className = 'emoji'
-      img.src = emoji.url
-      img.setAttribute('tabindex', '0')
-      img.setAttribute('data-emoji', emoji.name)
-      img.alt = emoji.name
-      img.title = `:${emoji.name}:`
-      img.loading = 'lazy'
-      img.addEventListener('click', () => {
-        insertEmojiIntoEditor(emoji)
-        picker.remove()
-      })
+      const img = createEl('img', {
+        style: { cursor: 'pointer' },
+        width: '32',
+        height: '32',
+        className: 'emoji',
+        src: emoji.url,
+        alt: emoji.name,
+        title: `:${emoji.name}:`,
+        attrs: {
+          tabindex: '0',
+          'data-emoji': emoji.name,
+          loading: 'lazy'
+        },
+        on: {
+          click: () => {
+            insertEmojiIntoEditor(emoji)
+            picker.remove()
+          }
+        }
+      }) as HTMLImageElement
       img.addEventListener('keydown', (e: any) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -115,9 +142,12 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         }
       })
       // --- hover preview (desktop only) ---
-      // Only attach preview handlers if the global cached setting enables hover preview
       try {
-        const shouldPreview = !!(cachedState && cachedState.settings && cachedState.settings.enableHoverPreview)
+        const shouldPreview = !!(
+          cachedState &&
+          cachedState.settings &&
+          cachedState.settings.enableHoverPreview
+        )
         if (shouldPreview) {
           img.addEventListener('mouseenter', (ev: MouseEvent) => {
             try {
@@ -150,9 +180,12 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     })
 
     if (added === 0) {
-      const msg = document.createElement('div')
-      msg.textContent = `${group.name} 组暂无有效表情`
-      msg.style.cssText = 'padding: 20px; text-align: center; color: #999;'
+      const msg = createEl('div', {
+        className: 'emoji-picker__no-emojis-message',
+        attrs: { role: 'note', 'aria-live': 'polite' },
+        textContent: `${group.name} 组暂无有效表情`,
+        style: 'padding: 20px; text-align: center; color: #999;'
+      })
       sectionEmojis.appendChild(msg)
     }
 
@@ -166,7 +199,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     const allImages = sections.querySelectorAll('img')
     allImages.forEach((img: any) => {
       const emojiName = img.getAttribute('data-emoji')?.toLowerCase() || ''
-      ;(img as HTMLElement).style.display = q === '' || emojiName.includes(q) ? '' : 'none'
+        ; (img as HTMLElement).style.display = q === '' || emojiName.includes(q) ? '' : 'none'
     })
     sections.querySelectorAll('.emoji-picker__section').forEach(section => {
       const visibleEmojis = section.querySelectorAll('img:not([style*="none"])')
@@ -190,43 +223,51 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
 
   function ensurePreview() {
     if (_previewEl) return _previewEl
-    const el = document.createElement('div')
-    el.className = 'emoji-desktop-hover-preview'
-    // minimal, neutral styling (no colored accents)
-    el.style.position = 'fixed'
-    el.style.pointerEvents = 'none'
-    el.style.zIndex = '999999'
-    el.style.padding = '6px'
-    el.style.borderRadius = '6px'
-    // neutral styling: transparent background, inherit text color, light border — avoid colored accents
-    el.style.background = 'transparent'
-    el.style.color = 'inherit'
-    el.style.border = '1px solid rgba(0,0,0,0.08)'
-    el.style.display = 'flex'
-    el.style.flexDirection = 'column'
-    el.style.alignItems = 'center'
-    el.style.gap = '6px'
-    el.style.maxWidth = '360px'
-    el.style.maxHeight = '360px'
-    el.style.overflow = 'hidden'
+    const el = createEl('div', {
+      className: 'emoji-desktop-hover-preview',
+      style: {
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: '999999',
+        padding: '6px',
+        borderRadius: '6px',
+        // neutral styling: transparent background, inherit text color, light border — avoid colored accents
+        background: 'transparent',
+        color: 'inherit',
+        border: '1px solid rgba(0,0,0,0.08)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '6px',
+        maxWidth: '360px',
+        maxHeight: '360px',
+        overflow: 'hidden'
+      }
+    }) as HTMLDivElement
 
-    const img = document.createElement('img')
-    img.className = 'emoji-desktop-hover-preview-img'
-    img.style.maxWidth = '320px'
-    img.style.maxHeight = '320px'
-    img.style.display = 'block'
-    img.style.borderRadius = '4px'
-    img.style.objectFit = 'contain'
+    const img = createEl('img', {
+      className: 'emoji-desktop-hover-preview-img',
+      style: {
+        maxWidth: '320px',
+        maxHeight: '320px',
+        display: 'block',
+        borderRadius: '4px',
+        objectFit: 'contain'
+      },
+    }) as HTMLImageElement
     el.appendChild(img)
 
-    const label = document.createElement('div')
-    label.className = 'emoji-desktop-hover-preview-label'
-    label.style.fontSize = '12px'
-    label.style.lineHeight = '1'
-    label.style.maxWidth = '320px'
-    label.style.whiteSpace = 'nowrap'
-    label.style.textOverflow = 'ellipsis'
-    label.style.overflow = 'hidden'
+    const label = createEl('div', {
+      className: 'emoji-desktop-hover-preview-label',
+      style: {
+        fontSize: '12px',
+        lineHeight: '1',
+        maxWidth: '320px',
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden'
+      }
+    }) as HTMLDivElement
     el.appendChild(label)
 
     document.body.appendChild(el)
@@ -315,11 +356,11 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         /* ignore */
       }
 
-      if (_previewEl.parentElement) _previewEl.parentElement.removeChild(_previewEl)
+if (_previewEl.parentElement) _previewEl.parentElement.removeChild(_previewEl)
     } finally {
-      _previewEl = null
-    }
+  _previewEl = null
+}
   }
 
-  return picker
+return picker
 }
