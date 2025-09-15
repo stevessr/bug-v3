@@ -115,29 +115,36 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         }
       })
       // --- hover preview (desktop only) ---
-      // create a lightweight preview element on mouseenter, move it with mousemove and remove on mouseleave
-      img.addEventListener('mouseenter', (ev: MouseEvent) => {
-        try {
-          ensurePreview()
-          showPreviewAtEvent(ev, emoji)
-        } catch (err) {
-          void err
+      // Only attach preview handlers if the global cached setting enables hover preview
+      try {
+        const shouldPreview = !!(cachedState && cachedState.settings && cachedState.settings.enableHoverPreview)
+        if (shouldPreview) {
+          img.addEventListener('mouseenter', (ev: MouseEvent) => {
+            try {
+              ensurePreview()
+              showPreviewAtEvent(ev, emoji)
+            } catch (err) {
+              void err
+            }
+          })
+          img.addEventListener('mousemove', (ev: MouseEvent) => {
+            try {
+              movePreviewToEvent(ev)
+            } catch (err) {
+              void err
+            }
+          })
+          img.addEventListener('mouseleave', () => {
+            try {
+              removePreview()
+            } catch (err) {
+              void err
+            }
+          })
         }
-      })
-      img.addEventListener('mousemove', (ev: MouseEvent) => {
-        try {
-          movePreviewToEvent(ev)
-        } catch (err) {
-          void err
-        }
-      })
-      img.addEventListener('mouseleave', () => {
-        try {
-          removePreview()
-        } catch (err) {
-          void err
-        }
-      })
+      } catch (_e) {
+        // ignore errors reading cachedState
+      }
       sectionEmojis.appendChild(img)
       added++
     })
