@@ -21,7 +21,7 @@ const { groups, activeGroupId, setActive } = toRefs(props) as {
 </script>
 
 <template>
-  <div class="flex border-b border-gray-100 overflow-x-auto">
+  <div class="flex border-b border-gray-100 dark:border-gray-700 overflow-x-auto">
     <button
       v-for="group in groups"
       :key="group.id"
@@ -29,8 +29,8 @@ const { groups, activeGroupId, setActive } = toRefs(props) as {
       class="flex-shrink-0 px-3 py-2 mobile:px-4 mobile:py-3 text-xs mobile:text-sm font-medium border-b-2 transition-colors"
       :class="[
         activeGroupId === group.id
-          ? 'border-blue-500 text-blue-600 bg-blue-50'
-          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ? 'border-blue-500 text-blue-600 bg-blue-50 dark:border-blue-500 dark:text-white dark:bg-gray-700'
+          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-white dark:hover:text-white dark:hover:border-gray-600'
       ]"
     >
       <span class="mr-1">

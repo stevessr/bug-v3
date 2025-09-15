@@ -229,7 +229,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
             class="w-32"
             @change="handleImageScaleChange"
           />
-          <span class="text-sm text-gray-600 dark:text-gray-400 w-12">{{ localImageScale }}%</span>
+          <span class="text-sm text-gray-600 dark:text-white w-12">{{ localImageScale }}%</span>
         </div>
       </div>
 

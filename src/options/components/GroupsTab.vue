@@ -281,7 +281,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
   <div>
     <div v-if="activeTab === 'groups'" class="space-y-8">
       <div class="bg-white rounded-lg shadow-sm border dark:border-gray-700 dark:bg-gray-800">
-        <div class="px-6 py-4 border-b border-gray-200">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-3">
               <h2 class="text-lg font-semibold text-gray-900 dark:text-white">表情分组管理</h2>
@@ -324,8 +324,8 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
               :ref="el => el && addGroupTouchEvents(el as HTMLElement, group)"
             >
               <div class="flex items-center justify-between p-4" v-if="group.name != '未分组'">
-                <div class="flex items-center gap-3" data-group-move>
-                  <div v-if="group.id !== 'favorites'" class="cursor-move text-gray-400">⋮⋮</div>
+        <div class="flex items-center gap-3" data-group-move>
+          <div v-if="group.id !== 'favorites'" class="cursor-move text-gray-400 dark:text-gray-400">⋮⋮</div>
                   <div v-else class="w-6 text-yellow-500">⭐</div>
                   <div class="text-lg">
                     <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
@@ -350,7 +350,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                 <div class="flex items-center gap-2">
                   <button
                     @click="$emit('toggleExpand', group.id)"
-                    class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                    class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors dark:text-white dark:hover:bg-gray-700"
                   >
                     {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
                   </button>
@@ -376,7 +376,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
               </div>
 
               <!-- Expanded emoji display -->
-              <div v-if="expandedGroups.has(group.id)" class="px-4 pb-4 border-t border-gray-100">
+              <div v-if="expandedGroups.has(group.id)" class="px-4 pb-4 border-t border-gray-100 dark:border-gray-700">
                 <div class="mt-4">
                   <div
                     class="grid gap-3"
@@ -397,7 +397,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                       "
                     >
                       <div
-                        class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors"
+                        class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
                       >
                         <img
                           :src="emoji.url"
@@ -430,7 +430,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                   <div v-if="group.id !== 'favorites'" class="mt-4">
                     <button
                       @click="$emit('openAddEmoji', group.id)"
-                      class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full"
+                      class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full dark:border-gray-600 dark:text-white dark:hover:border-gray-500"
                     >
                       + 添加表情
                     </button>
@@ -438,7 +438,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                   <!-- For favorites group, show info instead -->
                   <div v-if="group.id === 'favorites'" class="mt-4">
                     <div
-                      class="px-3 py-2 text-sm text-gray-500 text-center border border-gray-200 rounded-lg bg-gray-50"
+                      class="px-3 py-2 text-sm text-gray-500 text-center border border-gray-200 rounded-lg bg-gray-50 dark:text-white dark:border-gray-700 dark:bg-gray-700"
                     >
                       使用表情会自动添加到常用分组
                     </div>

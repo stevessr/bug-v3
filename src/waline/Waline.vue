@@ -351,7 +351,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -365,7 +365,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 dark:text-white">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 dark:text-white dark:bg-gray-900">
       <!-- Import Methods -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- URL Import -->

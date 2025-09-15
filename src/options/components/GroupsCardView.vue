@@ -340,7 +340,7 @@ const onTouchCancel = (_e: TouchEvent) => {
             <div v-else class="text-yellow-500">⭐</div>
           </div>
 
-          <div class="flex items-center justify-center bg-gray-50">
+          <div class="flex items-center justify-center bg-gray-50 dark:bg-gray-700 h-20">
             <div class="w-full flex items-center justify-center p-2">
               <a-image
                 v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))"

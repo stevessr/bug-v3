@@ -383,7 +383,7 @@ const importParsed = () => {
     @click="close"
   >
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border dark:border-gray-700"
+    class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border dark:border-gray-700"
       @click.stop
     >
   <h3 class="text-lg font-semibold mb-4 dark:text-white">添加表情</h3>

@@ -279,7 +279,7 @@ const cancelCreateGroup = () => {
               v-if="isMultiSelectMode && selectedEmojis.size > 0"
               class="flex items-center gap-2"
             >
-              <span class="text-sm text-gray-600">已选择 {{ selectedEmojis.size }} 个</span>
+              <span class="text-sm text-gray-600 dark:text-white">已选择 {{ selectedEmojis.size }} 个</span>
               <!-- 原生 select 已替换为 a-dropdown（下方） -->
               <a-dropdown>
                 <template #overlay>
@@ -358,8 +358,8 @@ const cancelCreateGroup = () => {
             :key="`ung-${emoji.id || idx}`"
             class="emoji-item relative"
           >
-            <div
-              class="aspect-square bg-gray-50 rounded-lg overflow-hidden"
+              <div
+              class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700"
               :class="{
                 'cursor-pointer': isMultiSelectMode,
                 'ring-2 ring-blue-500': isMultiSelectMode && selectedEmojis.has(idx)

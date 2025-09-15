@@ -197,7 +197,7 @@ const handleSubmit = () => {
             <div class="flex-1 px-4 py-2">
               <a-card-meta :title="localEmoji.name || '编辑表情'">
                 <template #description>
-                  <div class="text-sm text-gray-500 truncate">{{ localEmoji.url }}</div>
+                  <div class="text-sm text-gray-500 dark:text-white truncate">{{ localEmoji.url }}</div>
                 </template>
               </a-card-meta>
 
@@ -230,7 +230,7 @@ const handleSubmit = () => {
                     placeholder="https://example.com/emoji.png"
                     required
                   />
-                  <p class="mt-1 text-xs text-gray-500">插入到编辑器时使用的链接</p>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-white">插入到编辑器时使用的链接</p>
                 </div>
 
                 <!-- Display URL field -->
@@ -245,7 +245,7 @@ const handleSubmit = () => {
                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="https://example.com/preview.png"
                   />
-                  <p class="mt-1 text-xs text-gray-500">
+                  <p class="mt-1 text-xs text-gray-500 dark:text-white">
                     表情选择器中显示的链接，留空则使用输出链接
                   </p>
                 </div>
@@ -267,10 +267,10 @@ const handleSubmit = () => {
                         </a-menu-item>
                       </a-menu>
                     </template>
-                    <AButton>
-                      {{ editSelectedGroupLabel }}
-                      <DownOutlined />
-                    </AButton>
+                      <AButton class="dark:text-white dark:bg-gray-800">
+                        {{ editSelectedGroupLabel }}
+                        <DownOutlined />
+                      </AButton>
                   </a-dropdown>
                 </div>
 
