@@ -145,7 +145,7 @@ watch(
           class="w-5 h-5 rounded-full mr-3 border border-gray-200 dark:border-gray-600"
           :style="{ backgroundColor: isCustomColor ? modelValue : '#cccccc' }"
         ></div>
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">自定义颜色</span>
+  <span class="text-sm font-medium text-gray-700 dark:text-white">自定义颜色</span>
       </div>
       <!-- 选中指示器 -->
       <div
@@ -193,7 +193,7 @@ watch(
               backgroundColor: isValidColor(customColorInput) ? customColorInput : '#f5f5f5'
             }"
           ></div>
-          <span class="text-xs text-gray-500 dark:text-gray-400">
+          <span class="text-xs text-gray-500 dark:text-white">
             {{ isValidColor(customColorInput) ? '颜色预览' : '无效颜色' }}
           </span>
         </div>

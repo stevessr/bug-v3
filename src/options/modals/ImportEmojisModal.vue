@@ -112,7 +112,7 @@ const fillExample = () => {
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
             目标分组（可选）
           </label>
           <input
@@ -125,7 +125,7 @@ const fillExample = () => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="close"
-          class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+          class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
         >
           取消
         </button>

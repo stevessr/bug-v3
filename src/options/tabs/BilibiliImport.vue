@@ -435,7 +435,7 @@ const importSelectedFromIndex = async () => {
                 停止
               </AButton>
             </div>
-            <div class="mt-3 text-sm text-gray-700">
+            <div class="mt-3 text-sm text-gray-700 dark:text-white">
               <div>{{ fetchStatus }}</div>
               <div
                 v-if="fetchProgress && fetchProgress.length"

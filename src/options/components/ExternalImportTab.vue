@@ -244,7 +244,7 @@ const importFromMarkdown = async () => {
         <!-- Import from Text Section -->
         <div class="border dark:border-gray-600 rounded-lg p-4">
           <h4 class="text-md font-medium text-gray-900 dark:text-white mb-3">从文本导入</h4>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <p class="text-sm text-gray-600 dark:text-white mb-4">
             从Markdown格式文本导入表情，支持 ![名称](URL) 格式
           </p>
           <div class="space-y-4">
