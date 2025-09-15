@@ -1,16 +1,19 @@
 {
   "version": "1.0",
-  "exportDate": "2025-09-14T16:36:00.364Z",
+  "exportDate": "2025-09-15T01:39:23.663Z",
   "settings": {
-    "imageScale": 15,
-    "defaultGroup": "group-1755833820210",
+    "imageScale": 100,
+    "defaultGroup": "group-1756870039233",
     "showSearchBar": true,
     "gridColumns": 4,
     "outputFormat": "markdown",
     "forceMobileMode": false,
     "enableLinuxDoInjection": true,
-    "enableXcomExtraSelectors": true,
-    "lastModified": 1757867753033,
+    "enableXcomExtraSelectors": false,
+    "customColorScheme": "default",
+    "customPrimaryColor": "#1890ff",
+    "lastModified": 1757900356668,
+    "theme": "system",
     "tenorApiKey": "AIzaSyC-P6_qz3FzCoXGLk6tgitZo4jEJ5mLzD8"
   },
   "groups": [
@@ -1872,13 +1875,6 @@
           "name": "AgAD4xQAAkWD8VQ",
           "packet": 1755913856756,
           "url": "https://linux.do/uploads/default/original/4X/a/8/3/a83e941bd97044e633ee14640ff7545174fdd72b.webp"
-        },
-        {
-          "groupId": "group-1755913842696",
-          "id": "emoji-1755913856756-gvd5ca",
-          "name": "AgADqhkAApEMSFY",
-          "packet": 1755913856756,
-          "url": "https://linux.do/uploads/default/original/4X/0/6/6/06658c82c9fc606bf0613ad16d7c954b842bda71.webp"
         },
         {
           "groupId": "group-1755913842696",
