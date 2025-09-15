@@ -206,6 +206,37 @@ function processUserscript() {
         userscriptContent = inlinedPrefix + '\n' + userscriptContent
       }
 
+    // Optionally compact the embedded defaultEmojiGroups array into a single line
+    const embedOneline = process.env.USERSCRIPT_EMBED_JSON_ONELINE === 'true' || (process.env.USERSCRIPT_VARIANT || '').includes('oneline')
+    if (embedOneline) {
+      try {
+        const varName = 'defaultEmojiGroups'
+        const assign = `${varName} = `
+        const start = userscriptContent.indexOf(assign)
+        const end = start === -1 ? -1 : userscriptContent.indexOf('];', start)
+        if (start !== -1 && end !== -1) {
+          const raw = userscriptContent.slice(start + assign.length, end + 2) // include closing ']'
+          let compact = null
+          try {
+            // Try to parse as JSON and re-stringify compactly
+            const parsed = JSON.parse(raw)
+            compact = JSON.stringify(parsed)
+          } catch (e) {
+            // Fallback: remove newlines and excessive indentation
+            compact = raw.replace(/[\r\n]+/g, '').replace(/\s{2,}/g, ' ').trim()
+          }
+
+          // Replace the original multi-line array with the compact one-line version
+          userscriptContent = userscriptContent.slice(0, start) + assign + compact + ';' + userscriptContent.slice(end + 2)
+          console.log('🔧 Compacted embedded defaultEmojiGroups to one line')
+        } else {
+          console.log('ℹ️ Could not locate defaultEmojiGroups assignment to compact')
+        }
+      } catch (err) {
+        console.warn('⚠️ Failed to compact defaultEmojiGroups:', err && err.message ? err.message : err)
+      }
+    }
+
     // Combine header + content + footer
     const header = getUserscriptHeader(isMinified)
     const footer = getUserscriptFooter()

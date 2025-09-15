@@ -91,33 +91,38 @@ export default defineConfig(({ mode }) => {
             mkdirSync(join(process.cwd(), 'src', 'types'), { recursive: true })
             mkdirSync(join(process.cwd(), 'public', 'assets'), { recursive: true })
 
-            // Write the embedded TypeScript module
-            const tsContent = `import { EmojiGroup } from "./emoji";
+              // Determine whether we should emit compact (single-line) JSON for embedded outputs.
+              const embedOneline = (process.env.USERSCRIPT_EMBED_JSON_ONELINE === 'true') || ((process.env.USERSCRIPT_VARIANT || '').includes('oneline'))
 
-// This file is auto-generated for embedded userscript builds from src/config/default.json
+              // Write the embedded TypeScript module
+              const groupsString = embedOneline ? JSON.stringify(data.groups) : JSON.stringify(data.groups, null, 2)
+              const tsContent = `import { EmojiGroup } from "./emoji";
 
-export const defaultEmojiGroups: EmojiGroup[] = ${JSON.stringify(data.groups, null, 2)};
-`
-            writeFileSync(outTs, tsContent, 'utf-8')
-            this.info(`✅ generated embedded ${outTs}`)
+  // This file is auto-generated for embedded userscript builds from src/config/default.json
 
-            // Write a static loader that returns the embedded defaults
-            const loaderContent = `import { defaultEmojiGroups } from "./defaultEmojiGroups";
-import type { DefaultEmojiData } from "./emoji";
+  export const defaultEmojiGroups: EmojiGroup[] = ${groupsString};
+  `
+              writeFileSync(outTs, tsContent, 'utf-8')
+              this.info(`\u2705 generated embedded ${outTs}`)
 
-export async function loadDefaultEmojiGroups(): Promise<any[]> {
-  return defaultEmojiGroups;
-}
+              // Write a static loader that returns the embedded defaults
+              const settingsString = embedOneline ? JSON.stringify(data.settings || {}) : JSON.stringify(data.settings || {}, null, 2)
+              const loaderContent = `import { defaultEmojiGroups } from "./defaultEmojiGroups";
+  import type { DefaultEmojiData } from "./emoji";
 
-export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
-  return {
-    groups: defaultEmojiGroups,
-    settings: ${JSON.stringify(data.settings || {}, null, 2)}
-  } as unknown as DefaultEmojiData;
-}
-`
-            writeFileSync(outLoader, loaderContent, 'utf-8')
-            this.info(`✅ generated embedded loader ${outLoader}`)
+  export async function loadDefaultEmojiGroups(): Promise<any[]> {
+    return defaultEmojiGroups;
+  }
+
+  export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
+    return {
+      groups: defaultEmojiGroups,
+      settings: ${settingsString}
+    } as unknown as DefaultEmojiData;
+  }
+  `
+              writeFileSync(outLoader, loaderContent, 'utf-8')
+              this.info(`\u2705 generated embedded loader ${outLoader}`)
 
             // Always write runtime JSON as well
             try {
