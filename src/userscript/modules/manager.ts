@@ -268,9 +268,9 @@ export function openManagementInterface() {
       const row = createEl('div', {
         style:
           'display:flex; justify-content:space-between; align-items:center; padding:6px; border-radius:4px; cursor:pointer;',
+        text: `${g.name || g.id} (${(g.emojis || []).length})`,
         attrs: {
           tabindex: '0',
-          textContent: `${g.name || g.id} (${(g.emojis || []).length})`,
           'data-group-id': g.id
         }
       }) as HTMLDivElement
