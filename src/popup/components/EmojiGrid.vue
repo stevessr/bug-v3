@@ -24,7 +24,7 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
 <template>
   <div v-if="isLoading" class="flex items-center justify-center py-8">
     <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-      <span class="ml-2 text-sm text-gray-600 dark:text-white">加载中...</span>
+    <span class="ml-2 text-sm text-gray-600 dark:text-white">加载中...</span>
   </div>
 
   <div v-else-if="emojis.length > 0" class="p-0 overflow-hidden">
@@ -36,7 +36,7 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
         v-for="emoji in emojis"
         :key="emoji.id"
         @click="$emit('select', emoji)"
-          class="relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2"
+        class="relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2"
         :title="emoji.name"
       >
         <div class="w-10 h-10 mobile:w-12 mobile:h-12 rounded overflow-hidden mx-auto">
@@ -79,11 +79,11 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
         d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-8v2m0 6v2"
       />
     </svg>
-      <p class="text-sm text-gray-600 dark:text-white">{{ emptyMessage }}</p>
+    <p class="text-sm text-gray-600 dark:text-white">{{ emptyMessage }}</p>
     <button
       v-if="showAddButton"
       @click="$emit('openOptions')"
-        class="mt-2 text-xs text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-white"
+      class="mt-2 text-xs text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-white"
     >
       去添加表情
     </button>

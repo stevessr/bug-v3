@@ -76,7 +76,9 @@ const favoritesGroup = computed(() => {
             </div>
           </div>
         </div>
-            <div v-else class="text-sm text-gray-500 dark:text-white">尚无常用表情，使用表情后会自动添加到常用。</div>
+        <div v-else class="text-sm text-gray-500 dark:text-white">
+          尚无常用表情，使用表情后会自动添加到常用。
+        </div>
       </div>
     </div>
   </div>

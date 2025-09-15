@@ -266,7 +266,9 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
         <div class="flex justify-between items-center py-6">
           <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Tenor GIF 搜索</h1>
-            <p class="text-sm text-gray-600 dark:text-gray-400">搜索并导入 Tenor GIF 表情到你的收藏</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              搜索并导入 Tenor GIF 表情到你的收藏
+            </p>
           </div>
         </div>
       </div>
@@ -275,7 +277,10 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 dark:text-white">
       <!-- API Key Setup -->
-      <div v-if="!tenorApiKey" class="bg-white rounded-lg shadow-sm border p-6 mb-8 dark:bg-gray-800">
+      <div
+        v-if="!tenorApiKey"
+        class="bg-white rounded-lg shadow-sm border p-6 mb-8 dark:bg-gray-800"
+      >
         <h2 class="text-lg font-semibold text-gray-900 mb-4 dark:text-gray-100">配置 Tenor API</h2>
         <p class="text-sm text-gray-600 mb-4 dark:text-gray-400">
           请先设置你的 Tenor API Key。你可以在
@@ -319,7 +324,9 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <div class="flex justify-between items-center">
             <div>
               <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">API Key 已配置</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Key: {{ tenorApiKey.substring(0, 8) }}...</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                Key: {{ tenorApiKey.substring(0, 8) }}...
+              </p>
             </div>
             <button
               @click="clearApiKey"

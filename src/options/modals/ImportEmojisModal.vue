@@ -77,7 +77,7 @@ const fillExample = () => {
     @click="close"
   >
     <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-lg" @click.stop>
-  <h3 class="text-lg font-semibold mb-4 dark:text-white">批量导入表情</h3>
+      <h3 class="text-lg font-semibold mb-4 dark:text-white">批量导入表情</h3>
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">

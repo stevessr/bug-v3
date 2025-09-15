@@ -3,10 +3,7 @@
 // Compile-time flag injected by vite config: when true the build is the remote variant
 declare const __USERSCRIPT_REMOTE_DEFAULTS__: boolean
 
-import {
-  loadDataFromLocalStorage,
-  loadDataFromLocalStorageAsync,
-} from './userscript-storage'
+import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync } from './userscript-storage'
 import { userscriptState } from './state'
 
 // Import modular components
@@ -93,7 +90,9 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
     const result = attemptInjection()
 
     if (result.injectedCount > 0 || result.totalToolbars > 0) {
-      console.log(`[Emoji Extension Userscript] Injection successful: ${result.injectedCount} buttons injected into ${result.totalToolbars} toolbars`)
+      console.log(
+        `[Emoji Extension Userscript] Injection successful: ${result.injectedCount} buttons injected into ${result.totalToolbars} toolbars`
+      )
       return // Success
     }
 

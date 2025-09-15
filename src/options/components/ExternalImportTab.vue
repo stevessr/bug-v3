@@ -150,14 +150,14 @@ const importFromMarkdown = async () => {
   <div class="space-y-8">
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-  <h3 class="text-lg font-medium text-gray-900 dark:text-white">外部表情导入</h3>
-    <p class="mt-1 text-sm text-gray-600 dark:text-white">从外部来源导入表情包或配置文件</p>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">外部表情导入</h3>
+        <p class="mt-1 text-sm text-gray-600 dark:text-white">从外部来源导入表情包或配置文件</p>
       </div>
       <div class="p-6 space-y-6">
         <!-- Import Configuration Section -->
         <div class="border dark:border-gray-600 rounded-lg p-4">
-        <h4 class="text-md font-medium text-gray-900 dark:text-white mb-3">导入配置文件</h4>
-      <p class="text-sm text-gray-600 dark:text-white mb-4">
+          <h4 class="text-md font-medium text-gray-900 dark:text-white mb-3">导入配置文件</h4>
+          <p class="text-sm text-gray-600 dark:text-white mb-4">
             导入之前导出的完整配置文件，包含所有分组、表情和设置
           </p>
           <div class="flex items-center space-x-3">

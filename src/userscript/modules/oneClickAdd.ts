@@ -1,5 +1,6 @@
 // One-click add functionality for image lightboxes
 import { addEmojiToUserscript } from '../userscript-storage'
+
 import { uploader } from '@/content/utils'
 
 // Extract emoji data from image

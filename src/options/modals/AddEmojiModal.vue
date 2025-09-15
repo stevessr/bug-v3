@@ -383,13 +383,15 @@ const importParsed = () => {
     @click="close"
   >
     <div
-    class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border dark:border-gray-700"
+      class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border dark:border-gray-700"
       @click.stop
     >
-  <h3 class="text-lg font-semibold mb-4 dark:text-white">添加表情</h3>
+      <h3 class="text-lg font-semibold mb-4 dark:text-white">添加表情</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">表情名称</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+            表情名称
+          </label>
           <input
             v-model="name"
             type="text"
@@ -398,7 +400,9 @@ const importParsed = () => {
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">输入模式</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+            输入模式
+          </label>
           <div class="flex items-center gap-2">
             <a-dropdown>
               <template #overlay>
@@ -417,14 +421,18 @@ const importParsed = () => {
           </div>
         </div>
         <div v-if="inputMode === 'url'">
-          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">输出链接 (必填)</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+            输出链接 (必填)
+          </label>
           <input
             v-model="url"
             type="url"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
             placeholder="插入到编辑器时使用的链接"
           />
-          <label class="block text-sm font-medium text-gray-700 mb-1 mt-3 dark:text-white">显示链接 (可选)</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 mt-3 dark:text-white">
+            显示链接 (可选)
+          </label>
           <input
             v-model="displayUrl"
             type="url"

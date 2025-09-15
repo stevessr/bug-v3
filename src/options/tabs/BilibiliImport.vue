@@ -401,7 +401,11 @@ const importSelectedFromIndex = async () => {
           </div>
 
           <div class="flex items-center space-x-3">
-              <AInput v-model:value="indexUrl" placeholder="请输入索引 JSON 的 URL" class="dark:bg-black dark:text-white" />
+            <AInput
+              v-model:value="indexUrl"
+              placeholder="请输入索引 JSON 的 URL"
+              class="dark:bg-black dark:text-white"
+            />
             <AButton @click="() => loadIndexFromUrl()">加载索引</AButton>
           </div>
 
@@ -415,12 +419,16 @@ const importSelectedFromIndex = async () => {
           <!-- ID 拉取区 -->
           <div class="mt-4 p-3 border rounded bg-gray-50 dark:bg-gray-700">
             <div class="flex items-center space-x-3">
-              <AInput v-model:value="fetchIdStart" placeholder="起始 ID(例如 10600)" class="dark:bg-black dark:text-white" />
-                <AInput
-                  v-model:value="consecutiveNullsToStop"
-                  placeholder="连续空响应阈值(默认 50)"
-                  class="dark:bg-black dark:text-white"
-                />
+              <AInput
+                v-model:value="fetchIdStart"
+                placeholder="起始 ID(例如 10600)"
+                class="dark:bg-black dark:text-white"
+              />
+              <AInput
+                v-model:value="consecutiveNullsToStop"
+                placeholder="连续空响应阈值(默认 50)"
+                class="dark:bg-black dark:text-white"
+              />
               <label class="flex items-center space-x-2">
                 <input type="checkbox" v-model="importToStoreOnFetch" />
                 <span class="text-sm">自动导入到 Store</span>
@@ -461,7 +469,7 @@ const importSelectedFromIndex = async () => {
                         :checked="selected[String(pkg.id)]"
                         @change="() => toggleSelect(String(pkg.id))"
                         class="dark:bg-black dark:text-white"
-                        />
+                      />
                       <div>
                         <div class="font-medium">{{ pkg.text || pkg.label || pkg.id }}</div>
                         <div class="text-xs text-gray-500">

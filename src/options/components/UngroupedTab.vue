@@ -279,7 +279,9 @@ const cancelCreateGroup = () => {
               v-if="isMultiSelectMode && selectedEmojis.size > 0"
               class="flex items-center gap-2"
             >
-              <span class="text-sm text-gray-600 dark:text-white">已选择 {{ selectedEmojis.size }} 个</span>
+              <span class="text-sm text-gray-600 dark:text-white">
+                已选择 {{ selectedEmojis.size }} 个
+              </span>
               <!-- 原生 select 已替换为 a-dropdown（下方） -->
               <a-dropdown>
                 <template #overlay>
@@ -358,7 +360,7 @@ const cancelCreateGroup = () => {
             :key="`ung-${emoji.id || idx}`"
             class="emoji-item relative"
           >
-              <div
+            <div
               class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700"
               :class="{
                 'cursor-pointer': isMultiSelectMode,
@@ -398,10 +400,12 @@ const cancelCreateGroup = () => {
               </button>
             </div>
 
-            <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">{{ emoji.name }}</div>
+            <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
+              {{ emoji.name }}
+            </div>
           </div>
         </div>
-  <div v-else class="text-sm text-gray-500 dark:text-white">未分组表情为空。</div>
+        <div v-else class="text-sm text-gray-500 dark:text-white">未分组表情为空。</div>
       </div>
     </div>
 
@@ -411,10 +415,12 @@ const cancelCreateGroup = () => {
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
     >
       <div class="bg-white rounded-lg p-6 w-96">
-  <h3 class="text-lg font-semibold mb-4 dark:text-white">创建新分组</h3>
+        <h3 class="text-lg font-semibold mb-4 dark:text-white">创建新分组</h3>
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">分组名称</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+              分组名称
+            </label>
             <input
               v-model="newGroupName"
               type="text"
@@ -424,7 +430,9 @@ const cancelCreateGroup = () => {
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">分组图标</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+              分组图标
+            </label>
             <input
               v-model="newGroupIcon"
               type="text"

@@ -353,19 +353,25 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+    <header
+      class="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700"
+    >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-6">
           <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Waline 表情导入</h1>
-            <p class="text-sm text-gray-600 dark:text-gray-400">从 GitHub 仓库批量导入 Waline 风格的表情包</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              从 GitHub 仓库批量导入 Waline 风格的表情包
+            </p>
           </div>
         </div>
       </div>
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 dark:text-white dark:bg-gray-900">
+    <main
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 dark:text-white dark:bg-gray-900"
+    >
       <!-- Import Methods -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- URL Import -->
@@ -374,7 +380,9 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <p class="text-sm text-gray-600 mb-4 dark:text-gray-400">
             输入 Waline 表情配置的 JSON URL 或 GitHub raw 文件链接
             <br />
-            <span class="text-xs text-gray-500 dark:text-gray-400">支持标准 Waline 格式和 Weibo 风格格式</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+              支持标准 Waline 格式和 Weibo 风格格式
+            </span>
           </p>
 
           <div class="space-y-4">

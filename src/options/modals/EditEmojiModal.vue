@@ -197,14 +197,19 @@ const handleSubmit = () => {
             <div class="flex-1 px-4 py-2">
               <a-card-meta :title="localEmoji.name || '编辑表情'">
                 <template #description>
-                  <div class="text-sm text-gray-500 dark:text-white truncate">{{ localEmoji.url }}</div>
+                  <div class="text-sm text-gray-500 dark:text-white truncate">
+                    {{ localEmoji.url }}
+                  </div>
                 </template>
               </a-card-meta>
 
               <form @submit.prevent="handleSubmit" class="mt-4 space-y-4">
                 <!-- Name field -->
                 <div>
-                  <label for="emoji-name" class="block text-sm font-medium text-gray-700 dark:text-white">
+                  <label
+                    for="emoji-name"
+                    class="block text-sm font-medium text-gray-700 dark:text-white"
+                  >
                     表情名称
                   </label>
                   <input
@@ -219,7 +224,10 @@ const handleSubmit = () => {
 
                 <!-- Output URL field -->
                 <div>
-                  <label for="emoji-url" class="block text-sm font-medium text-gray-700 dark:text-white">
+                  <label
+                    for="emoji-url"
+                    class="block text-sm font-medium text-gray-700 dark:text-white"
+                  >
                     输出链接 (必填)
                   </label>
                   <input
@@ -235,7 +243,10 @@ const handleSubmit = () => {
 
                 <!-- Display URL field -->
                 <div>
-                  <label for="emoji-display-url" class="block text-sm font-medium text-gray-700 dark:text-white">
+                  <label
+                    for="emoji-display-url"
+                    class="block text-sm font-medium text-gray-700 dark:text-white"
+                  >
                     显示链接 (可选)
                   </label>
                   <input
@@ -252,7 +263,10 @@ const handleSubmit = () => {
 
                 <!-- Group Selection -->
                 <div v-if="availableGroups.length > 0">
-                  <label for="emoji-group" class="block text-sm font-medium text-gray-700 dark:text-white">
+                  <label
+                    for="emoji-group"
+                    class="block text-sm font-medium text-gray-700 dark:text-white"
+                  >
                     选择分组
                   </label>
                   <a-dropdown>
@@ -267,10 +281,10 @@ const handleSubmit = () => {
                         </a-menu-item>
                       </a-menu>
                     </template>
-                      <AButton class="dark:text-white dark:bg-gray-800">
-                        {{ editSelectedGroupLabel }}
-                        <DownOutlined />
-                      </AButton>
+                    <AButton class="dark:text-white dark:bg-gray-800">
+                      {{ editSelectedGroupLabel }}
+                      <DownOutlined />
+                    </AButton>
                   </a-dropdown>
                 </div>
 

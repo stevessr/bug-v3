@@ -281,7 +281,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
   <div>
     <div v-if="activeTab === 'groups'" class="space-y-8">
       <div class="bg-white rounded-lg shadow-sm border dark:border-gray-700 dark:bg-gray-800">
-    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-3">
               <h2 class="text-lg font-semibold text-gray-900 dark:text-white">表情分组管理</h2>
@@ -324,8 +324,13 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
               :ref="el => el && addGroupTouchEvents(el as HTMLElement, group)"
             >
               <div class="flex items-center justify-between p-4" v-if="group.name != '未分组'">
-        <div class="flex items-center gap-3" data-group-move>
-          <div v-if="group.id !== 'favorites'" class="cursor-move text-gray-400 dark:text-gray-400">⋮⋮</div>
+                <div class="flex items-center gap-3" data-group-move>
+                  <div
+                    v-if="group.id !== 'favorites'"
+                    class="cursor-move text-gray-400 dark:text-gray-400"
+                  >
+                    ⋮⋮
+                  </div>
                   <div v-else class="w-6 text-yellow-500">⭐</div>
                   <div class="text-lg">
                     <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
@@ -344,7 +349,9 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     <h3 class="font-medium text-gray-900 dark:text-white">
                       {{ group.name }}
                     </h3>
-                    <p class="text-sm text-gray-500 dark:text-white">{{ group.emojis?.length || 0 }} 个表情</p>
+                    <p class="text-sm text-gray-500 dark:text-white">
+                      {{ group.emojis?.length || 0 }} 个表情
+                    </p>
                   </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -369,14 +376,20 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                   <div v-if="dedupeMessage[group.id]" class="ml-2 text-sm text-green-600">
                     {{ dedupeMessage[group.id] }}
                   </div>
-                  <div v-else-if="group.id === 'favorites'" class="text-sm text-gray-500 dark:text-white px-2">
+                  <div
+                    v-else-if="group.id === 'favorites'"
+                    class="text-sm text-gray-500 dark:text-white px-2"
+                  >
                     系统分组
                   </div>
                 </div>
               </div>
 
               <!-- Expanded emoji display -->
-              <div v-if="expandedGroups.has(group.id)" class="px-4 pb-4 border-t border-gray-100 dark:border-gray-700">
+              <div
+                v-if="expandedGroups.has(group.id)"
+                class="px-4 pb-4 border-t border-gray-100 dark:border-gray-700"
+              >
                 <div class="mt-4">
                   <div
                     class="grid gap-3"

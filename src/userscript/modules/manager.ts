@@ -9,7 +9,12 @@ import {
 } from '../userscript-storage'
 
 // Create popup editor for emoji editing
-function createEditorPopup(groupId: string, index: number, renderGroups: () => void, renderSelectedGroup: () => void) {
+function createEditorPopup(
+  groupId: string,
+  index: number,
+  renderGroups: () => void,
+  renderSelectedGroup: () => void
+) {
   const group = userscriptState.emojiGroups.find(g => g.id === groupId)
   if (!group) return
   const emo = group.emojis[index]
@@ -33,45 +38,46 @@ function createEditorPopup(groupId: string, index: number, renderGroups: () => v
   // Create editor panel
   const editorPanel = document.createElement('div')
   editorPanel.className = 'emoji-manager-editor-panel'
-  
+
   const editorTitle = document.createElement('h3')
   editorTitle.textContent = '编辑表情'
   editorTitle.style.cssText = 'margin: 0 0 16px 0; text-align: center;'
-  
+
   const editorPreview = document.createElement('img')
   editorPreview.className = 'emoji-manager-editor-preview'
   editorPreview.src = emo.url
-  
+
   const editorNameInput = document.createElement('input')
   editorNameInput.className = 'form-control'
   editorNameInput.placeholder = '名称 (alias)'
   editorNameInput.value = emo.name || ''
-  
+
   const editorUrlInput = document.createElement('input')
   editorUrlInput.className = 'form-control'
   editorUrlInput.placeholder = '表情图片 URL'
   editorUrlInput.value = emo.url || ''
-  
+
   const buttonContainer = document.createElement('div')
-  buttonContainer.style.cssText = 'display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;'
-  
+  buttonContainer.style.cssText =
+    'display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;'
+
   const editorSaveBtn = document.createElement('button')
   editorSaveBtn.textContent = '保存修改'
   editorSaveBtn.className = 'btn btn-primary'
-  
+
   const editorCancelBtn = document.createElement('button')
   editorCancelBtn.textContent = '取消'
   editorCancelBtn.className = 'btn'
-  
+
   buttonContainer.appendChild(editorCancelBtn)
   buttonContainer.appendChild(editorSaveBtn)
-  
+
   editorPanel.appendChild(editorTitle)
   editorPanel.appendChild(editorPreview)
   editorPanel.appendChild(editorNameInput)
   editorPanel.appendChild(editorUrlInput)
   editorPanel.appendChild(buttonContainer)
-  
+
   backdrop.appendChild(editorPanel)
   document.body.appendChild(backdrop)
 
@@ -101,7 +107,7 @@ function createEditorPopup(groupId: string, index: number, renderGroups: () => v
   })
 
   // Handle backdrop click
-  backdrop.addEventListener('click', (e) => {
+  backdrop.addEventListener('click', e => {
     if (e.target === backdrop) {
       backdrop.remove()
     }
@@ -112,7 +118,7 @@ function createEditorPopup(groupId: string, index: number, renderGroups: () => v
 export function openManagementInterface() {
   // ensure manager styles are injected
   injectManagerStyles()
-  
+
   // Create modal wrapper
   const modal = document.createElement('div')
   modal.className = 'emoji-manager-wrapper'
@@ -126,7 +132,7 @@ export function openManagementInterface() {
   // Left: groups list
   const left = document.createElement('div')
   left.className = 'emoji-manager-left'
-  
+
   const leftHeader = document.createElement('div')
   leftHeader.className = 'emoji-manager-left-header'
   const title = document.createElement('h3')
@@ -166,20 +172,19 @@ export function openManagementInterface() {
   const deleteGroupBtn = document.createElement('button')
   deleteGroupBtn.textContent = '删除分组'
   deleteGroupBtn.className = 'btn'
-  deleteGroupBtn.style.cssText =
-    'background:#ef4444; color:#fff;'
+  deleteGroupBtn.style.cssText = 'background:#ef4444; color:#fff;'
   rightHeader.appendChild(groupTitle)
   rightHeader.appendChild(deleteGroupBtn)
   right.appendChild(rightHeader)
 
   const managerRightMain = document.createElement('div')
   managerRightMain.className = 'emoji-manager-right-main'
-  
+
   // emojis grid
   const emojisContainer = document.createElement('div')
   emojisContainer.className = 'emoji-manager-emojis'
   managerRightMain.appendChild(emojisContainer)
-  
+
   // Add emoji form
   const addEmojiForm = document.createElement('div')
   addEmojiForm.className = 'emoji-manager-add-emoji-form'
@@ -196,7 +201,7 @@ export function openManagementInterface() {
   addEmojiForm.appendChild(emojiNameInput)
   addEmojiForm.appendChild(addEmojiBtn)
   managerRightMain.appendChild(addEmojiForm)
-  
+
   right.appendChild(managerRightMain)
 
   // Footer actions
@@ -226,7 +231,7 @@ export function openManagementInterface() {
 
   panel.appendChild(left)
   panel.appendChild(right)
-  
+
   panel.appendChild(footer)
   modal.appendChild(panel)
   document.body.appendChild(modal)

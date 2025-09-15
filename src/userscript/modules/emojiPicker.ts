@@ -1,6 +1,7 @@
 // Emoji picker creation and management module
-import { isImageUrl } from '@/utils/isImageUrl'
 import { userscriptState } from '../state'
+
+import { isImageUrl } from '@/utils/isImageUrl'
 
 // Mobile detection helper
 export function isMobileView(): boolean {
