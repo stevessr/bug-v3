@@ -11,11 +11,11 @@
       <div class="p-6 space-y-4">
         <div>
           <h3 class="font-medium text-gray-900 dark:text-white">表情包扩展</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400">版本 1.0.0</p>
+          <p class="text-sm text-gray-600 dark:text-white">版本 1.0.0</p>
         </div>
         <div>
           <h3 class="font-medium text-gray-900 dark:text-white">功能特色</h3>
-          <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1 mt-2">
+          <ul class="text-sm text-gray-600 dark:text-white space-y-1 mt-2">
             <li>• 支持多分组表情管理</li>
             <li>• 拖拽排序和重新组织</li>
             <li>• Chrome 同步支持</li>

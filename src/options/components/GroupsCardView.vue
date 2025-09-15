@@ -336,7 +336,7 @@ const onTouchCancel = (_e: TouchEvent) => {
         >
           <!-- drag handle used to show visual affordance; actual touch-drag start now bound to the whole card via data-group-move on ACard -->
           <div class="absolute top-2 left-2 z-10">
-            <div v-if="group.id !== 'favorites'" class="text-gray-400">⋮⋮</div>
+            <div v-if="group.id !== 'favorites'" class="text-gray-400 dark:text-white">⋮⋮</div>
             <div v-else class="text-yellow-500">⭐</div>
           </div>
 
@@ -353,7 +353,7 @@ const onTouchCancel = (_e: TouchEvent) => {
             </div>
           </div>
           <a-card-meta :title="group.name">
-            <div class="text-sm text-gray-500">{{ group.emojis?.length || 0 }} 个表情</div>
+            <div class="text-sm text-gray-500 dark:text-white">{{ group.emojis?.length || 0 }} 个表情</div>
           </a-card-meta>
           <div class="mt-3 flex gap-2">
             <div v-if="group.id !== 'favorites'" class="relative">
@@ -366,9 +366,9 @@ const onTouchCancel = (_e: TouchEvent) => {
                 @confirmDelete="g => $emit('confirmDeleteGroup', g)"
               />
             </div>
-            <div v-else class="text-sm text-gray-500">系统分组</div>
+            <div v-else class="text-sm text-gray-500 dark:text-white">系统分组</div>
           </div>
-          <div v-if="dedupeMessageCard[group.id]" class="mt-2 text-sm text-green-600">
+          <div v-if="dedupeMessageCard[group.id]" class="mt-2 text-sm text-green-600 dark:text-white">
             {{ dedupeMessageCard[group.id] }}
           </div>
         </ACard>

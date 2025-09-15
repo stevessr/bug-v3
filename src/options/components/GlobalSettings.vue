@@ -281,7 +281,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
       <div class="flex items-center justify-between">
         <div>
           <label class="text-sm font-medium text-gray-900 dark:text-white">强制移动模式</label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">在桌面端强制使用移动端样式</p>
+          <p class="text-sm text-gray-500 dark:text-white">在桌面端强制使用移动端样式</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input
@@ -301,7 +301,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
           <label class="text-sm font-medium text-gray-900 dark:text-white">
             启用Linux.do脚本注入
           </label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">控制是否在linux.do注入表情功能脚本</p>
+          <p class="text-sm text-gray-500 dark:text-white">控制是否在linux.do注入表情功能脚本</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input
@@ -321,7 +321,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
           <label class="text-sm font-medium text-gray-900 dark:text-white">
             启用X.com额外选择器
           </label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
+          <p class="text-sm text-gray-500 dark:text-white">
             在X.com(Twitter)启用额外的选择器控制
           </p>
         </div>

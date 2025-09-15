@@ -360,7 +360,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
         <div class="flex justify-between items-center py-6">
           <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Waline 表情导入</h1>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
+            <p class="text-sm text-gray-600 dark:text-white">
               从 GitHub 仓库批量导入 Waline 风格的表情包
             </p>
           </div>
@@ -377,12 +377,10 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
         <!-- URL Import -->
         <div class="bg-white rounded-lg shadow-sm border p-6 dark:bg-gray-800">
           <h2 class="text-lg font-semibold text-gray-900 mb-4 dark:text-white">从 URL 导入</h2>
-          <p class="text-sm text-gray-600 mb-4 dark:text-gray-400">
+          <p class="text-sm text-gray-600 mb-4 dark:text-white">
             输入 Waline 表情配置的 JSON URL 或 GitHub raw 文件链接
             <br />
-            <span class="text-xs text-gray-500 dark:text-gray-400">
-              支持标准 Waline 格式和 Weibo 风格格式
-            </span>
+            <span class="text-xs text-gray-500 dark:text-white">支持标准 Waline 格式和 Weibo 风格格式</span>
           </p>
 
           <div class="space-y-4">
@@ -425,10 +423,10 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
         <!-- JSON Text Import -->
         <div class="bg-white rounded-lg shadow-sm border p-6 dark:bg-gray-800">
           <h2 class="text-lg font-semibold text-gray-900 mb-4 dark:text-white">从 JSON 文本导入</h2>
-          <p class="text-sm text-gray-600 mb-4 dark:text-gray-400">
+          <p class="text-sm text-gray-600 mb-4 dark:text-white">
             直接粘贴 Waline 表情配置的 JSON 内容
             <br />
-            <span class="text-xs text-gray-500 dark:text-gray-400">
+            <span class="text-xs text-gray-500 dark:text-white">
               支持标准 Waline 格式和 Weibo 风格格式 (包含 name, prefix, type, items 的配置)
             </span>
           </p>

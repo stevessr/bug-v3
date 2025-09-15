@@ -388,7 +388,7 @@ const importSelectedFromIndex = async () => {
     <div class="bg-white shadow rounded-lg border dark:border-gray-700 dark:bg-gray-800">
       <div class="px-6 py-4 border-b border-gray-200">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">Bilibili 表情导入</h3>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <p class="mt-1 text-sm text-gray-600 dark:text-white">
           上传 bilibili 风格的 JSON 响应（包含 data.packages），导入为表情分组
         </p>
       </div>
@@ -410,7 +410,7 @@ const importSelectedFromIndex = async () => {
           </div>
 
           <div class="flex items-center space-x-3">
-            <AInput v-model:value="query" placeholder="按包名或别名搜索" />
+            <AInput v-model:value="query" placeholder="按包名或别名搜索" class="dark:bg-black dark:text-white" />
             <AButton type="primary" @click="applySearch">搜索</AButton>
             <AButton type="default" @click="query = ''">清空</AButton>
             <AButton type="primary" @click="importSelectedFromIndex">导入选中包</AButton>
@@ -431,7 +431,7 @@ const importSelectedFromIndex = async () => {
               />
               <label class="flex items-center space-x-2">
                 <input type="checkbox" v-model="importToStoreOnFetch" />
-                <span class="text-sm">自动导入到 Store</span>
+                <span class="text-sm dark:text-white">自动导入到 Store</span>
               </label>
             </div>
             <div class="mt-3 flex items-center space-x-3">
@@ -455,9 +455,9 @@ const importSelectedFromIndex = async () => {
           </div>
 
           <div class="mt-3">
-            <div v-if="packages.length === 0" class="text-sm text-gray-500">尚未加载任何索引包</div>
+            <div v-if="packages.length === 0" class="text-sm text-gray-500 dark:text-white">尚未加载任何索引包</div>
             <div v-else>
-              <div v-if="displayPackages.length === 0" class="text-sm text-gray-500">
+              <div v-if="displayPackages.length === 0" class="text-sm text-gray-500 dark:text-white">
                 请输入关键词并点击“搜索”以显示结果
               </div>
               <div v-else class="grid gap-2">
@@ -471,8 +471,8 @@ const importSelectedFromIndex = async () => {
                         class="dark:bg-black dark:text-white"
                       />
                       <div>
-                        <div class="font-medium">{{ pkg.text || pkg.label || pkg.id }}</div>
-                        <div class="text-xs text-gray-500">
+                        <div class="font-medium dark:text-white">{{ pkg.text || pkg.label || pkg.id }}</div>
+                        <div class="text-xs text-gray-500 dark:text-white">
                           {{ (pkg.emote && pkg.emote.length) || 0 }} 个表情
                         </div>
                       </div>
@@ -496,13 +496,10 @@ const importSelectedFromIndex = async () => {
           class="p-3 rounded"
           :class="importResults.success ? 'bg-green-50' : 'bg-red-50'"
         >
-          <p
-            class="text-sm font-medium"
-            :class="importResults.success ? 'text-green-700' : 'text-red-700'"
-          >
+          <p class="text-sm font-medium" :class="[(importResults.success ? 'text-green-700' : 'text-red-700'), 'dark:text-white']">
             {{ importResults.message }}
           </p>
-          <p v-if="importResults.details" class="text-sm mt-1">{{ importResults.details }}</p>
+          <p v-if="importResults.details" class="text-sm mt-1 dark:text-white">{{ importResults.details }}</p>
         </div>
       </div>
     </div>

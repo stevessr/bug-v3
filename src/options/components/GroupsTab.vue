@@ -287,14 +287,14 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
               <h2 class="text-lg font-semibold text-gray-900 dark:text-white">表情分组管理</h2>
               <div class="ml-4 inline-flex rounded-md bg-gray-50 p-1 dark:bg-gray-700">
                 <button
-                  class="px-3 py-1 text-sm rounded dark:bg-gray-800"
+                  class="px-3 py-1 text-sm rounded dark:bg-gray-800 dark:text-white"
                   @click="setTab('groups')"
                   :class="{ 'bg-white shadow': (activeTab as any) === 'groups' }"
                 >
                   列表
                 </button>
                 <button
-                  class="px-3 py-1 text-sm rounded"
+                  class="px-3 py-1 text-sm rounded dark:text-white"
                   @click="setTab('groups-card')"
                   :class="{ 'bg-white shadow': (activeTab as any) === 'groups-card' }"
                 >
@@ -324,10 +324,10 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
               :ref="el => el && addGroupTouchEvents(el as HTMLElement, group)"
             >
               <div class="flex items-center justify-between p-4" v-if="group.name != '未分组'">
-                <div class="flex items-center gap-3" data-group-move>
+                  <div class="flex items-center gap-3" data-group-move>
                   <div
                     v-if="group.id !== 'favorites'"
-                    class="cursor-move text-gray-400 dark:text-gray-400"
+                    class="cursor-move text-gray-400 dark:text-white"
                   >
                     ⋮⋮
                   </div>
@@ -373,7 +373,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                       @confirmDelete="onDelete"
                     />
                   </div>
-                  <div v-if="dedupeMessage[group.id]" class="ml-2 text-sm text-green-600">
+                  <div v-if="dedupeMessage[group.id]" class="ml-2 text-sm text-green-600 dark:text-white">
                     {{ dedupeMessage[group.id] }}
                   </div>
                   <div
