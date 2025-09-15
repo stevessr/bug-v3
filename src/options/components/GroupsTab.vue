@@ -405,7 +405,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                           class="w-full h-full object-cover"
                         />
                       </div>
-                      <div class="text-xs text-center text-gray-600 mt-1 truncate">
+                      <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
                         {{ emoji.name }}
                       </div>
                       <!-- Edit button in bottom right corner -->

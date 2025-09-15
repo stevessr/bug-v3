@@ -17,7 +17,7 @@ const favoritesGroup = computed(() => {
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex justify-between items-center">
-          <h2 class="text-lg font-semibold text-gray-900">常用表情</h2>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">常用表情</h2>
         </div>
       </div>
 
@@ -71,12 +71,12 @@ const favoritesGroup = computed(() => {
                 移除
               </button>
             </div>
-            <div class="text-xs text-center text-gray-600 mt-1 truncate">
+            <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
               {{ emoji.name }}
             </div>
           </div>
         </div>
-        <div v-else class="text-sm text-gray-500">尚无常用表情，使用表情后会自动添加到常用。</div>
+        <div v-else class="text-sm text-gray-500 dark:text-white">尚无常用表情，使用表情后会自动添加到常用。</div>
       </div>
     </div>
   </div>

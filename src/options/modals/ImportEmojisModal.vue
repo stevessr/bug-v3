@@ -80,7 +80,7 @@ const fillExample = () => {
   <h3 class="text-lg font-semibold mb-4 dark:text-white">批量导入表情</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
             表情文件
           </label>
           <input
@@ -92,7 +92,7 @@ const fillExample = () => {
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
             或粘贴表情JSON
           </label>
           <textarea
@@ -101,7 +101,7 @@ const fillExample = () => {
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="粘贴表情JSON内容..."
           ></textarea>
-          <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          <div class="mt-2 text-xs text-gray-500 dark:text-white">
             示例：
             <button
               class="ml-2 text-blue-600 dark:text-blue-400 hover:underline"

@@ -398,7 +398,7 @@ const cancelCreateGroup = () => {
               </button>
             </div>
 
-            <div class="text-xs text-center text-gray-600 mt-1 truncate">{{ emoji.name }}</div>
+            <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">{{ emoji.name }}</div>
           </div>
         </div>
         <div v-else class="text-sm text-gray-500">未分组表情为空。</div>

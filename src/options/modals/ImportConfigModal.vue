@@ -48,7 +48,7 @@ const doImport = () => {
   <h3 class="text-lg font-semibold mb-4 dark:text-white">导入配置</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
             配置文件
           </label>
           <input
@@ -60,7 +60,7 @@ const doImport = () => {
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
             或粘贴JSON配置
           </label>
           <textarea
@@ -74,7 +74,7 @@ const doImport = () => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="close"
-          class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+          class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
         >
           取消
         </button>

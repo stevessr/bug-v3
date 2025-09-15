@@ -99,19 +99,19 @@ watch(
         class="relative cursor-pointer group"
         @click="selectedColorType = color.name"
       >
-        <div
-          class="flex items-center p-3 border-2 rounded-lg transition-all duration-200"
-          :class="[
-            selectedColorType === color.name
-              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-              : 'border-gray-200 hover:border-gray-300 dark:border-gray-600 dark:hover:border-gray-500'
-          ]"
-        >
+          <div
+            class="flex items-center p-3 border-2 rounded-lg transition-all duration-200"
+            :class="[
+              selectedColorType === color.name
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-200 hover:border-gray-300 dark:border-gray-600 dark:hover:border-gray-500'
+            ]"
+          >
           <div
             class="w-5 h-5 rounded-full mr-3 border border-gray-200 dark:border-gray-600"
             :style="{ backgroundColor: color.value }"
           ></div>
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span class="text-sm font-medium text-gray-700 dark:text-white">
             {{ color.label }}
           </span>
         </div>

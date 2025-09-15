@@ -27,11 +27,11 @@ const confirm = () => emit('confirm')
     >
       <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md" @click.stop>
   <h3 class="text-lg font-semibold mb-4 dark:text-white">{{ title || '确认' }}</h3>
-  <p class="text-gray-600 dark:text-gray-300 mb-6">{{ message || '确定要继续此操作吗？' }}</p>
+  <p class="text-gray-600 dark:text-white mb-6">{{ message || '确定要继续此操作吗？' }}</p>
         <div class="flex justify-end gap-3">
           <button
             @click="close"
-            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
           >
             取消
           </button>

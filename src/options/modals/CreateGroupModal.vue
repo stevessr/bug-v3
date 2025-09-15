@@ -59,7 +59,7 @@ const create = () => {
   <h3 class="text-lg font-semibold mb-4 dark:text-white">新建分组</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
             分组名称
           </label>
           <input
@@ -70,7 +70,7 @@ const create = () => {
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
             分组图标 / 图片链接
           </label>
           <input
@@ -89,7 +89,7 @@ const create = () => {
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
             分组颜色
           </label>
           <div class="flex gap-2">
@@ -111,7 +111,7 @@ const create = () => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="close"
-          class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+          class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
         >
           取消
         </button>
