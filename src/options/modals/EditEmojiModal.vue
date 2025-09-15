@@ -204,14 +204,14 @@ const handleSubmit = () => {
               <form @submit.prevent="handleSubmit" class="mt-4 space-y-4">
                 <!-- Name field -->
                 <div>
-                  <label for="emoji-name" class="block text-sm font-medium text-gray-700">
+                  <label for="emoji-name" class="block text-sm font-medium text-gray-700 dark:text-white">
                     表情名称
                   </label>
                   <input
                     id="emoji-name"
                     v-model="localEmoji.name"
                     type="text"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="输入表情名称"
                     required
                   />
@@ -219,14 +219,14 @@ const handleSubmit = () => {
 
                 <!-- Output URL field -->
                 <div>
-                  <label for="emoji-url" class="block text-sm font-medium text-gray-700">
+                  <label for="emoji-url" class="block text-sm font-medium text-gray-700 dark:text-white">
                     输出链接 (必填)
                   </label>
                   <input
                     id="emoji-url"
                     v-model="localEmoji.url"
                     type="url"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="https://example.com/emoji.png"
                     required
                   />
@@ -235,14 +235,14 @@ const handleSubmit = () => {
 
                 <!-- Display URL field -->
                 <div>
-                  <label for="emoji-display-url" class="block text-sm font-medium text-gray-700">
+                  <label for="emoji-display-url" class="block text-sm font-medium text-gray-700 dark:text-white">
                     显示链接 (可选)
                   </label>
                   <input
                     id="emoji-display-url"
                     v-model="localEmoji.displayUrl"
                     type="url"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="https://example.com/preview.png"
                   />
                   <p class="mt-1 text-xs text-gray-500">
@@ -252,7 +252,7 @@ const handleSubmit = () => {
 
                 <!-- Group Selection -->
                 <div v-if="availableGroups.length > 0">
-                  <label for="emoji-group" class="block text-sm font-medium text-gray-700">
+                  <label for="emoji-group" class="block text-sm font-medium text-gray-700 dark:text-white">
                     选择分组
                   </label>
                   <a-dropdown>
@@ -302,7 +302,7 @@ const handleSubmit = () => {
                     <button
                       type="button"
                       @click="closeModal"
-                      class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm"
+                      class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                     >
                       取消
                     </button>

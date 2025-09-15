@@ -40,23 +40,23 @@ const save = () => {
     @click="$emit('update:show', false)"
   >
     <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md" @click.stop>
-      <h3 class="text-lg font-semibold mb-4">编辑分组</h3>
+  <h3 class="text-lg font-semibold mb-4 dark:text-white">编辑分组</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">分组名称</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">分组名称</label>
           <input
             v-model="localName"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">分组图标/图片链接</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">分组图标/图片链接</label>
           <input
             v-model="localIcon"
             type="text"
             placeholder="例如：😀 或 https://..."
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
           />
           <div
             v-if="isImageUrl && isImageUrl(normalizeImageUrl(localIcon))"

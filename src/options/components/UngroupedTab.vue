@@ -375,7 +375,7 @@ const cancelCreateGroup = () => {
                 type="checkbox"
                 :checked="selectedEmojis.has(idx)"
                 @change="toggleEmojiSelection(idx)"
-                class="w-4 h-4 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500"
+                class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
               />
             </div>
 
@@ -385,7 +385,7 @@ const cancelCreateGroup = () => {
               <button
                 @click="$emit('edit', emoji, ungroup.id, idx)"
                 title="编辑"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded"
+                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
               >
                 编辑
               </button>
