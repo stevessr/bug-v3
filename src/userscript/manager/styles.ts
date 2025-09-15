@@ -1,9 +1,12 @@
-import { creatEl } from '../utils/createEl.js'
+import { createEl } from '../utils/createEl'
 let __managerStylesInjected = false
 export function injectManagerStyles() {
   if (__managerStylesInjected) return
   __managerStylesInjected = true
-  const css = `
+  document.head.appendChild(
+    createEl('style', {
+      attrs: { 'data-emoji-manager-styles': '1' },
+      text: `
     /* Modal backdrop */
     .emoji-manager-wrapper { 
       position: fixed; 
@@ -244,7 +247,6 @@ export function injectManagerStyles() {
       font-size: 12px; 
     }
   `
-  document.head.appendChild(
-    creatEl('style', { setAttribute: { 'data-emoji-manager-styles': '1' }, text: css })
+    })
   )
 }
