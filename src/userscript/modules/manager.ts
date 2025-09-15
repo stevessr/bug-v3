@@ -142,9 +142,10 @@ export function openManagementInterface() {
   injectManagerStyles()
 
   // Create modal wrapper
-  const modal = createEl('div', { className: 'emoji-manager-wrapper' }) as HTMLDivElement
-  modal.setAttribute('role', 'dialog')
-  modal.setAttribute('aria-modal', 'true')
+  const modal = createEl('div', {
+    className: 'emoji-manager-wrapper',
+    attrs: { role: 'dialog', 'aria-modal': 'true' }
+  }) as HTMLDivElement
 
   // Create main panel
   const panel = createEl('div', { className: 'emoji-manager-panel' }) as HTMLDivElement
@@ -266,12 +267,13 @@ export function openManagementInterface() {
     userscriptState.emojiGroups.forEach(g => {
       const row = createEl('div', {
         style:
-          'display:flex; justify-content:space-between; align-items:center; padding:6px; border-radius:4px; cursor:pointer;'
+          'display:flex; justify-content:space-between; align-items:center; padding:6px; border-radius:4px; cursor:pointer;',
+        attrs: {
+          tabindex: '0',
+          textContent: `${g.name || g.id} (${(g.emojis || []).length})`,
+          'data-group-id': g.id
+        }
       }) as HTMLDivElement
-      row.tabIndex = 0
-      // show friendly name when available
-      row.textContent = `${g.name || g.id} (${(g.emojis || []).length})`
-      row.dataset.groupId = g.id
 
       const selectGroup = () => {
         selectedGroupId = g.id
@@ -310,11 +312,11 @@ export function openManagementInterface() {
     emojis.forEach((emo: any, idx: number) => {
       const card = createEl('div', { className: 'emoji-manager-card' }) as HTMLDivElement
 
-      const img = createEl('img') as HTMLImageElement
-      img.src = emo.url
-      img.alt = emo.name
-      img.className = 'emoji-manager-card-img'
-      // apply width/height if provided
+      const img = createEl('img', {
+        src: emo.url,
+        alt: emo.name,
+        className: 'emoji-manager-card-img'
+      }) as HTMLImageElement
       if (emo.width) img.style.width = typeof emo.width === 'number' ? emo.width + 'px' : emo.width
       if (emo.height)
         img.style.height = typeof emo.height === 'number' ? emo.height + 'px' : emo.height
@@ -462,8 +464,7 @@ export function openManagementInterface() {
       .writeText(data)
       .then(() => alert('已复制到剪贴板'))
       .catch(() => {
-        const ta = createEl('textarea') as HTMLTextAreaElement
-        ta.value = data
+        const ta = createEl('textarea', { value: data }) as HTMLTextAreaElement
         document.body.appendChild(ta)
         ta.select()
       })

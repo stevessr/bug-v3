@@ -32,15 +32,13 @@ export function injectEmojiButton(toolbar: HTMLElement) {
 
   const isChatComposer = toolbar.classList.contains('chat-composer__inner-container')
 
-  const button = createEl('button') as HTMLButtonElement
-  button.classList.add(
-    'btn',
-    'no-text',
-    'btn-icon',
-    'toolbar__button',
-    'nacho-emoji-picker-button',
-    'emoji-extension-button'
-  )
+  const button = createEl('button', {
+    className:
+      'btn no-text btn-icon toolbar__button nacho-emoji-picker-button emoji-extension-button',
+    title: '表情包',
+    type: 'button',
+    innerHTML: '🐈‍⬛'
+  }) as HTMLButtonElement
 
   if (isChatComposer) {
     button.classList.add(
@@ -54,10 +52,6 @@ export function injectEmojiButton(toolbar: HTMLElement) {
     button.setAttribute('data-identifier', 'emoji-picker')
     button.setAttribute('data-trigger', '')
   }
-
-  button.title = '表情包'
-  button.type = 'button'
-  button.innerHTML = '🐈‍⬛'
 
   button.addEventListener('click', async e => {
     e.stopPropagation()
