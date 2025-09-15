@@ -6,13 +6,22 @@ type LooseGroup = Record<string, unknown>
 const props = defineProps<{ group: LooseGroup }>()
 
 // use untyped emits to avoid tight coupling with parent Group types
-const emit = defineEmits(['edit', 'export', 'exportZip', 'dedupe', 'confirmDelete'])
+// use a single emit for batch size updates (length/width)
+const emit = defineEmits([
+  'edit',
+  'export',
+  'exportZip',
+  'dedupe',
+  'confirmDelete',
+  'batchUpdateSize',
+])
 
 const onEdit = () => emit('edit', props.group)
 const onExport = () => emit('export', props.group)
 const onExportZip = () => emit('exportZip', props.group)
 const onDedupe = () => emit('dedupe', props.group)
 const onConfirmDelete = () => emit('confirmDelete', props.group)
+const onBatchUpdateSize = () => emit('batchUpdateSize', props.group)
 </script>
 
 <template>
@@ -27,6 +36,7 @@ const onConfirmDelete = () => emit('confirmDelete', props.group)
         <a-menu>
           <a-menu-item @click.prevent="onEdit">编辑</a-menu-item>
           <a-menu-item @click.prevent="onExport">导出</a-menu-item>
+          <a-menu-item @click.prevent="onBatchUpdateSize">批量更新尺寸</a-menu-item>
           <a-popconfirm
             placement="top"
             title="确认要打包下载此分组吗？"

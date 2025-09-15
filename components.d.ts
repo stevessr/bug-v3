@@ -16,6 +16,7 @@ declare module 'vue' {
     AInput: typeof import('ant-design-vue/es')['Input']
     AMenu: typeof import('ant-design-vue/es')['Menu']
     AMenuItem: typeof import('ant-design-vue/es')['MenuItem']
+    AModal: typeof import('ant-design-vue/es')['Modal']
     APopconfirm: typeof import('ant-design-vue/es')['Popconfirm']
     AProgress: typeof import('ant-design-vue/es')['Progress']
     ASlider: typeof import('ant-design-vue/es')['Slider']

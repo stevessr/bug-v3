@@ -13,7 +13,7 @@ function getUserscriptHeader(minified = false) {
   const minSuffix = minified ? ' (Minified)' : ''
 
   return `// ==UserScript==
-// @name         表情扩展 (Emoji Extension)${minSuffix}
+// @name         Linux do 表情扩展 (Emoji Extension)${minSuffix}
 // @namespace    https://github.com/stevessr/bug-v3
 // @version      ${version}
 // @description  为论坛网站添加表情选择器功能 (Add emoji picker functionality to forum websites)

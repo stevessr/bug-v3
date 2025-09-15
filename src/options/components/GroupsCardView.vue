@@ -30,7 +30,8 @@ const emit = defineEmits([
   'exportGroup',
   'exportGroupZip',
   'imageError',
-  'confirmDeleteGroup'
+  'confirmDeleteGroup',
+  'batchUpdateSize'
 ])
 
 const emojiStore = useEmojiStore()
@@ -364,6 +365,7 @@ const onTouchCancel = (_e: TouchEvent) => {
                 @exportZip="onExportZipCard"
                 @dedupe="onDedupeCard"
                 @confirmDelete="g => $emit('confirmDeleteGroup', g)"
+                @batchUpdateSize="g => $emit('batchUpdateSize', g)"
               />
             </div>
             <div v-else class="text-sm text-gray-500 dark:text-white">系统分组</div>

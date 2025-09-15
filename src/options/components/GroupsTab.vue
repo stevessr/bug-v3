@@ -157,6 +157,96 @@ const onDelete = (group: any) => {
   emit('confirmDeleteGroup', group)
 }
 
+// --- Batch update size modal state & handlers ---
+const batchModalVisible = ref(false)
+const batchTargetGroup = ref<any | null>(null)
+const batchWidth = ref<number | null>(null)
+const batchHeight = ref<number | null>(null)
+const currentImagePreview = ref<string | null>(null)
+const batchProgress = ref({ current: 0, total: 0 })
+const batchRunning = ref(false)
+
+const openBatchModal = (group: any) => {
+  closeMenu()
+  batchTargetGroup.value = group
+  batchWidth.value = null
+  batchHeight.value = null
+  batchProgress.value = { current: 0, total: 0 }
+  batchRunning.value = false
+  batchModalVisible.value = true
+  // start processing automatically
+  void runBatchUpdateSize()
+}
+
+const closeBatchModal = () => {
+  batchModalVisible.value = false
+  batchTargetGroup.value = null
+}
+
+const loadImageSize = (url: string) =>
+  new Promise<{ w: number; h: number } | null>(resolve => {
+    try {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
+      img.onerror = () => resolve(null)
+      img.src = url
+      // in case cached and complete
+      if (img.complete && img.naturalWidth) {
+        resolve({ w: img.naturalWidth, h: img.naturalHeight })
+      }
+    } catch {
+      resolve(null)
+    }
+  })
+
+const runBatchUpdateSize = async () => {
+  if (!batchTargetGroup.value) return
+  const group = batchTargetGroup.value
+  const emojis = Array.isArray(group.emojis) ? group.emojis.slice() : []
+  const total = emojis.length
+  batchProgress.value = { current: 0, total }
+  batchRunning.value = true
+
+  try {
+    // Use store batching helpers to avoid frequent save operations
+    emojiStore.beginBatch()
+    for (let i = 0; i < emojis.length; i++) {
+      const e = emojis[i]
+      const url = e?.url || ''
+      currentImagePreview.value = url || null
+
+      // attempt to load actual image size from URL
+      const size = url ? await loadImageSize(url) : null
+      const updates: any = {}
+      if (size) {
+        updates.width = size.w
+        updates.height = size.h
+      }
+
+      try {
+        emojiStore.updateEmojiInGroup(group.id, i, updates)
+      } catch (err) {
+        void err
+      }
+
+      batchProgress.value.current = i + 1
+      // yield to UI
+      await new Promise(r => setTimeout(r, 0))
+    }
+  } finally {
+    try {
+      await emojiStore.endBatch()
+    } catch {
+      // ignore
+    }
+    batchRunning.value = false
+    // clear preview and close modal after brief pause to show 100%
+    currentImagePreview.value = null
+    setTimeout(() => closeBatchModal(), 400)
+  }
+}
+
 onMounted(() => {
   // Initialize touch handlers
   groupTouchHandler.value = new TouchDragHandler({
@@ -324,7 +414,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
               :ref="el => el && addGroupTouchEvents(el as HTMLElement, group)"
             >
               <div class="flex items-center justify-between p-4" v-if="group.name != '未分组'">
-                  <div class="flex items-center gap-3" data-group-move>
+                <div class="flex items-center gap-3" data-group-move>
                   <div
                     v-if="group.id !== 'favorites'"
                     class="cursor-move text-gray-400 dark:text-white"
@@ -371,9 +461,13 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                       @exportZip="onExportZip"
                       @dedupe="onDedupe"
                       @confirmDelete="onDelete"
+                      @batchUpdateSize="openBatchModal"
                     />
                   </div>
-                  <div v-if="dedupeMessage[group.id]" class="ml-2 text-sm text-green-600 dark:text-white">
+                  <div
+                    v-if="dedupeMessage[group.id]"
+                    class="ml-2 text-sm text-green-600 dark:text-white"
+                  >
                     {{ dedupeMessage[group.id] }}
                   </div>
                   <div
@@ -461,6 +555,29 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
             </div>
           </div>
         </div>
+        <!-- Batch update size modal (自动从 URL 解析尺寸并显示当前图片预览) -->
+        <a-modal v-model:visible="batchModalVisible" title="批量更新尺寸" :footer="null">
+          <div class="space-y-4">
+            <div class="flex items-center gap-4">
+              <div class="w-24 h-24 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                <img v-if="currentImagePreview" :src="currentImagePreview" alt="预览" class="w-full h-full object-contain" />
+                <div v-else class="text-sm text-gray-500">无图片</div>
+              </div>
+              <div>
+                <div class="text-sm text-gray-700 dark:text-white">正在处理：{{ batchProgress.current }} / {{ batchProgress.total }}</div>
+                <div class="text-xs text-gray-500 dark:text-white mt-1">自动从图片 URL 解析尺寸并写回</div>
+              </div>
+            </div>
+
+            <div>
+              <a-progress :percent="batchProgress.total ? Math.round((batchProgress.current / batchProgress.total) * 100) : 0" />
+            </div>
+
+            <div class="flex justify-end gap-2">
+              <a-button @click="closeBatchModal" :disabled="batchRunning">关闭</a-button>
+            </div>
+          </div>
+        </a-modal>
       </div>
     </div>
 
