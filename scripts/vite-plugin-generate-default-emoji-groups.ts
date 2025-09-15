@@ -29,14 +29,17 @@ export function generateDefaultEmojiGroupsPlugin(): Plugin {
           throw new Error('default.json 中缺少有效的 groups 数组')
         }
 
+        // Determine whether to emit compact (single-line) JSON for embedded userscript builds.
+        const embedOneline = (process.env.USERSCRIPT_EMBED_JSON_ONELINE === 'true') || ((process.env.USERSCRIPT_VARIANT || '').includes('oneline'))
+
         // Always write a runtime JSON into public/assets for loader consumption
         try {
-          writeFileSync(
-            jsonOutputPath,
-            JSON.stringify({ groups: configData.groups }, null, 2),
-            'utf-8'
-          )
-          console.log(`✅ wrote runtime defaultEmojiGroups JSON to ${jsonOutputPath}`)
+          const jsonString = embedOneline
+            ? JSON.stringify({ groups: configData.groups })
+            : JSON.stringify({ groups: configData.groups }, null, 2)
+
+          writeFileSync(jsonOutputPath, jsonString, 'utf-8')
+          console.log(`✅ wrote runtime defaultEmojiGroups JSON to ${jsonOutputPath} (oneline=${embedOneline})`)
         } catch (e) {
           console.warn('⚠️ failed to write runtime defaultEmojiGroups JSON:', e)
         }
@@ -54,12 +57,13 @@ export const defaultEmojiGroups: EmojiGroup[] = [];
           console.log('ℹ️ USERSCRIPT_VARIANT=remote -> generated empty defaultEmojiGroups.ts')
         } else {
           // 生成 TypeScript 文件内容 (embedded)
+          const groupsString = embedOneline ? JSON.stringify(configData.groups) : JSON.stringify(configData.groups, null, 2)
           const tsContent = `import { EmojiGroup } from "./emoji";
 
 // 这个文件是在构建时从 src/config/default.json 自动生成的
 // 请不要手动修改此文件，而是修改 src/config/default.json
 
-export const defaultEmojiGroups: EmojiGroup[] = ${JSON.stringify(configData.groups, null, 2)};
+export const defaultEmojiGroups: EmojiGroup[] = ${groupsString};
 `
 
           writeFileSync(outputPath, tsContent, 'utf-8')
@@ -73,6 +77,8 @@ export const defaultEmojiGroups: EmojiGroup[] = ${JSON.stringify(configData.grou
             'types',
             'defaultEmojiGroups.loader.ts'
           )
+          const settingsString = embedOneline ? JSON.stringify(configData.settings || {}) : JSON.stringify(configData.settings || {}, null, 2)
+
           const loaderTsContent = `import { defaultEmojiGroups } from "./defaultEmojiGroups";
 import type { DefaultEmojiData } from "./emoji";
 
@@ -83,7 +89,7 @@ export async function loadDefaultEmojiGroups(): Promise<any[]> {
 export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
   return {
     groups: defaultEmojiGroups,
-    settings: ${JSON.stringify(configData.settings || {}, null, 2)}
+    settings: ${settingsString}
   } as unknown as DefaultEmojiData;
 }
 `
