@@ -22,34 +22,60 @@ export function showSettingsModal() {
 
   const content = createEl('div', {
     style: `
-      background: white;
+      background: var(--emoji-modal-bg, white);
+      color: var(--emoji-modal-text, #333);
       border-radius: 8px;
     padding: 24px;
     max-width: 500px;
     max-height: 80vh;
     overflow-y: auto;
     position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   `,
     innerHTML: `
+    <style>
+      :root {
+        --emoji-modal-bg: white;
+        --emoji-modal-text: #333;
+        --emoji-modal-border: #ddd;
+        --emoji-modal-input-bg: white;
+        --emoji-modal-label: #555;
+        --emoji-modal-button-bg: #f5f5f5;
+        --emoji-modal-primary-bg: #1890ff;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --emoji-modal-bg: #2d2d2d;
+          --emoji-modal-text: #e6e6e6;
+          --emoji-modal-border: #444;
+          --emoji-modal-input-bg: #3a3a3a;
+          --emoji-modal-label: #ccc;
+          --emoji-modal-button-bg: #444;
+          --emoji-modal-primary-bg: #1677ff;
+        }
+      }
+    </style>
+    
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-      <h2 style="margin: 0; color: #333;">设置</h2>
+      <h2 style="margin: 0; color: var(--emoji-modal-text);">设置</h2>
       <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
     </div>
     
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">图片缩放比例: <span id="scaleValue">${userscriptState.settings.imageScale}%</span></label>
+      <label style="display: block; margin-bottom: 8px; color: var(--emoji-modal-label); font-weight: 500;">图片缩放比例: <span id="scaleValue">${userscriptState.settings.imageScale}%</span></label>
       <input type="range" id="scaleSlider" min="5" max="150" step="5" value="${userscriptState.settings.imageScale}" 
              style="width: 100%; margin-bottom: 8px;">
     </div>
     
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">输出格式:</label>
+      <label style="display: block; margin-bottom: 8px; color: var(--emoji-modal-label); font-weight: 500;">输出格式:</label>
       <div style="display: flex; gap: 16px;">
-        <label style="display: flex; align-items: center; color: #666;">
+        <label style="display: flex; align-items: center; color: var(--emoji-modal-text);">
           <input type="radio" name="outputFormat" value="markdown" ${userscriptState.settings.outputFormat === 'markdown' ? 'checked' : ''} style="margin-right: 4px;">
           Markdown
         </label>
-        <label style="display: flex; align-items: center; color: #666;">
+        <label style="display: flex; align-items: center; color: var(--emoji-modal-text);">
           <input type="radio" name="outputFormat" value="html" ${userscriptState.settings.outputFormat === 'html' ? 'checked' : ''} style="margin-right: 4px;">
           HTML
         </label>
@@ -57,22 +83,29 @@ export function showSettingsModal() {
     </div>
     
     <div style="margin-bottom: 16px;">
-      <label style="display: flex; align-items: center; color: #555; font-weight: 500;">
+      <label style="display: flex; align-items: center; color: var(--emoji-modal-label); font-weight: 500;">
         <input type="checkbox" id="showSearchBar" ${userscriptState.settings.showSearchBar ? 'checked' : ''} style="margin-right: 8px;">
         显示搜索栏
       </label>
     </div>
     
     <div style="margin-bottom: 16px;">
-      <label style="display: flex; align-items: center; color: #555; font-weight: 500;">
+      <label style="display: flex; align-items: center; color: var(--emoji-modal-label); font-weight: 500;">
+        <input type="checkbox" id="enableFloatingPreview" ${userscriptState.settings.enableFloatingPreview ? 'checked' : ''} style="margin-right: 8px;">
+        启用悬浮预览功能
+      </label>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <label style="display: flex; align-items: center; color: var(--emoji-modal-label); font-weight: 500;">
         <input type="checkbox" id="forceMobileMode" ${userscriptState.settings.forceMobileMode ? 'checked' : ''} style="margin-right: 8px;">
         强制移动模式 (在不兼容检测时也注入移动版布局)
       </label>
     </div>
     
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button id="resetSettings" style="padding: 8px 16px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">重置</button>
-      <button id="saveSettings" style="padding: 8px 16px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer;">保存</button>
+      <button id="resetSettings" style="padding: 8px 16px; background: var(--emoji-modal-button-bg); color: var(--emoji-modal-text); border: 1px solid var(--emoji-modal-border); border-radius: 4px; cursor: pointer;">重置</button>
+      <button id="saveSettings" style="padding: 8px 16px; background: var(--emoji-modal-primary-bg); color: white; border: none; border-radius: 4px; cursor: pointer;">保存</button>
     </div>
   `
   })
@@ -103,7 +136,8 @@ export function showSettingsModal() {
         outputFormat: 'markdown',
         forceMobileMode: false,
         defaultGroup: 'nachoneko',
-        showSearchBar: true
+        showSearchBar: true,
+        enableFloatingPreview: true
       }
       modal.remove()
     }
@@ -123,6 +157,11 @@ export function showSettingsModal() {
     const showSearchBar = content.querySelector('#showSearchBar') as HTMLInputElement
     if (showSearchBar) {
       userscriptState.settings.showSearchBar = showSearchBar.checked
+    }
+
+    const enableFloatingPreview = content.querySelector('#enableFloatingPreview') as HTMLInputElement
+    if (enableFloatingPreview) {
+      userscriptState.settings.enableFloatingPreview = enableFloatingPreview.checked
     }
 
     const forceMobileEl = content.querySelector('#forceMobileMode') as HTMLInputElement | null

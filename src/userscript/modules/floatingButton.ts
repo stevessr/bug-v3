@@ -7,7 +7,7 @@ import { attemptInjection } from './toolbar'
 let floatingButton: HTMLElement | null = null
 let isButtonVisible = false
 
-// Styles for floating button
+// Styles for floating button with dark theme adaptation
 const FLOATING_BUTTON_STYLES = `
 .emoji-extension-floating-button {
   position: fixed !important;
@@ -54,6 +54,17 @@ const FLOATING_BUTTON_STYLES = `
     width: 48px !important;
     height: 48px !important;
     font-size: 20px !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .emoji-extension-floating-button {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  .emoji-extension-floating-button:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
   }
 }
 `

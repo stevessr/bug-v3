@@ -8,6 +8,7 @@ export const userscriptState: UserscriptStorage = {
     outputFormat: 'markdown',
     forceMobileMode: false,
     defaultGroup: 'nachoneko',
-    showSearchBar: true
+    showSearchBar: true,
+    enableFloatingPreview: true
   }
 }

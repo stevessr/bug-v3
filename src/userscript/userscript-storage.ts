@@ -10,6 +10,7 @@ export interface UserscriptStorage {
     forceMobileMode: boolean
     defaultGroup: string
     showSearchBar: boolean
+    enableFloatingPreview: boolean
   }
 }
 
@@ -46,7 +47,8 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
       outputFormat: 'markdown' as const,
       forceMobileMode: false,
       defaultGroup: 'nachoneko',
-      showSearchBar: true
+      showSearchBar: true,
+      enableFloatingPreview: true
     }
 
     if (settingsData) {
@@ -83,7 +85,8 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
         outputFormat: 'markdown',
         forceMobileMode: false,
         defaultGroup: 'nachoneko',
-        showSearchBar: true
+        showSearchBar: true,
+        enableFloatingPreview: true
       }
     }
   }
@@ -168,7 +171,8 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
         outputFormat: 'markdown',
         forceMobileMode: false,
         defaultGroup: 'nachoneko',
-        showSearchBar: true
+        showSearchBar: true,
+        enableFloatingPreview: true
       }
     }
   }
