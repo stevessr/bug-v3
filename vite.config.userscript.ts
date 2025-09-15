@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
   const enableIndexedDB = false // Userscripts don't use IndexedDB
 
   const variant = process.env.USERSCRIPT_VARIANT || 'default'
+  const platform = process.env.USERSCRIPT_PLATFORM || 'original' // pc, mobile, original
 
   return {
     // resolve alias so imports using @/xxx map to src/xxx
@@ -25,7 +26,8 @@ export default defineConfig(({ mode }) => {
       // Compilation flags for userscript
       __ENABLE_LOGGING__: enableLogging,
       __ENABLE_INDEXEDDB__: enableIndexedDB,
-      __USERSCRIPT_REMOTE_DEFAULTS__: variant === 'remote'
+      __USERSCRIPT_REMOTE_DEFAULTS__: variant === 'remote',
+      __USERSCRIPT_PLATFORM__: JSON.stringify(platform)
     },
     build: {
       minify: process.env.BUILD_MINIFIED === 'true' ? 'terser' : false,

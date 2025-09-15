@@ -59,7 +59,7 @@ const FLOATING_BUTTON_STYLES = `
 }
 `
 
-// Create and inject styles
+// Create and inject styles with platform-specific sizing
 function injectStyles() {
   if (document.getElementById('emoji-extension-floating-button-styles')) {
     return // Already injected
@@ -70,7 +70,7 @@ function injectStyles() {
 
   const style = createEl('style', {
     id: 'emoji-extension-floating-button-styles',
-    textContent: FLOATING_BUTTON_STYLES
+    textContent: getFloatingButtonStyles()
   })
 
   document.head.appendChild(style)

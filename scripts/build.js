@@ -61,6 +61,8 @@ const args = process.argv.slice(2)
 // 2) node scripts/build.js remote                    （新：首个参数作为变体，默认构建为 userscript）
 let buildType = 'dev'
 let variant = 'default'
+let platform = process.env.USERSCRIPT_PLATFORM || 'original' // pc, mobile, original
+
 if (args.length === 0) {
   buildType = 'dev'
 } else if (args.length === 1) {
@@ -96,6 +98,9 @@ if (buildType.startsWith('build:userscript') && process.env.USERSCRIPT_VARIANT =
   process.env.USERSCRIPT_VARIANT = variant
 }
 
+// Set platform variant for userscript builds
+process.env.USERSCRIPT_PLATFORM = platform
+
 // Note: build-time generation of defaultEmojiGroups.ts has been removed.
 
 // Also, ensure a runtime JSON is available in public/assets for the loader
@@ -125,6 +130,8 @@ console.log(`📋 配置:`)
 Object.entries(config).forEach(([key, value]) => {
   console.log(`   ${key}: ${value}`)
 })
+console.log(`   USERSCRIPT_VARIANT: ${process.env.USERSCRIPT_VARIANT}`)
+console.log(`   USERSCRIPT_PLATFORM: ${process.env.USERSCRIPT_PLATFORM}`)
 console.log('')
 if (variant && variant !== 'default') {
   console.log(`🔀 构建变体: ${variant}`)

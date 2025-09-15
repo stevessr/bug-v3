@@ -10,5 +10,6 @@ export const userscriptState: UserscriptStorage = {
     defaultGroup: 'nachoneko',
     showSearchBar: true,
     enableFloatingPreview: true
-  }
+  },
+  emojiUsageStats: {}
 }

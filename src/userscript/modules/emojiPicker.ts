@@ -1,15 +1,18 @@
 // Emoji picker creation and management module
 import { userscriptState } from '../state'
+import { trackEmojiUsage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
+import { getPlatformUIConfig, getEffectivePlatform } from '../utils/platformDetection'
 
 import { injectEmojiPickerStyles } from './emojiPickerStyles'
 
 import { isImageUrl } from '@/utils/isImageUrl'
 
-// Mobile detection helper
+// Mobile detection helper - now uses platform detection
 export function isMobileView(): boolean {
   try {
-    return !!(
+    const platform = getEffectivePlatform()
+    return platform === 'mobile' || !!(
       userscriptState &&
       userscriptState.settings &&
       userscriptState.settings.forceMobileMode
@@ -22,6 +25,11 @@ export function isMobileView(): boolean {
 // Insert emoji into editor
 export function insertEmojiIntoEditor(emoji: any) {
   console.log('[Emoji Extension Userscript] Inserting emoji:', emoji)
+
+  // Track emoji usage
+  if (emoji.name && emoji.url) {
+    trackEmojiUsage(emoji.name, emoji.url)
+  }
 
   const textarea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
   const proseMirror = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null

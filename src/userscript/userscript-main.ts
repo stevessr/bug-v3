@@ -2,12 +2,14 @@
 
 // Compile-time flag injected by vite config: when true the build is the remote variant
 declare const __USERSCRIPT_REMOTE_DEFAULTS__: boolean
+declare const __USERSCRIPT_PLATFORM__: string
 
 import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync } from './userscript-storage'
 import { userscriptState } from './state'
 import { initOneClickAdd } from './modules/oneClickAdd'
 import { attemptInjection, startPeriodicInjection } from './modules/toolbar'
 import { showFloatingButton, checkAndShowFloatingButton } from './modules/floatingButton'
+import { logPlatformInfo } from './utils/platformDetection'
 
 // userscriptState is imported from ./state and initialized there
 
@@ -69,6 +71,9 @@ function shouldInjectEmoji(): boolean {
 // Main initialization function
 async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 1000) {
   console.log('[Emoji Extension Userscript] Initializing...')
+  
+  // Log platform information
+  logPlatformInfo()
 
   // Initialize data and features
   await initializeUserscriptData()

@@ -12,10 +12,12 @@ export interface UserscriptStorage {
     showSearchBar: boolean
     enableFloatingPreview: boolean
   }
+  emojiUsageStats?: { [key: string]: { count: number; lastUsed: number } }
 }
 
 const STORAGE_KEY = 'emoji_extension_userscript_data'
 const SETTINGS_KEY = 'emoji_extension_userscript_settings'
+const USAGE_STATS_KEY = 'emoji_extension_userscript_usage_stats'
 
 export function loadDataFromLocalStorage(): UserscriptStorage {
   try {
@@ -292,5 +294,78 @@ export function syncFromManager(): boolean {
   } catch (error) {
     console.error('[Userscript] Failed to sync from manager:', error)
     return false
+  }
+}
+
+// Emoji usage tracking functions
+export function trackEmojiUsage(emojiName: string, emojiUrl: string): void {
+  try {
+    const key = `${emojiName}|${emojiUrl}`
+    const statsData = localStorage.getItem(USAGE_STATS_KEY)
+    let stats: { [key: string]: { count: number; lastUsed: number } } = {}
+    
+    if (statsData) {
+      try {
+        stats = JSON.parse(statsData)
+      } catch (e) {
+        console.warn('[Userscript] Failed to parse usage stats:', e)
+      }
+    }
+    
+    if (!stats[key]) {
+      stats[key] = { count: 0, lastUsed: 0 }
+    }
+    
+    stats[key].count++
+    stats[key].lastUsed = Date.now()
+    
+    localStorage.setItem(USAGE_STATS_KEY, JSON.stringify(stats))
+  } catch (error) {
+    console.error('[Userscript] Failed to track emoji usage:', error)
+  }
+}
+
+export function getPopularEmojis(limit: number = 20): Array<{ name: string; url: string; count: number; lastUsed: number }> {
+  try {
+    const statsData = localStorage.getItem(USAGE_STATS_KEY)
+    if (!statsData) return []
+    
+    const stats = JSON.parse(statsData)
+    const popularEmojis = Object.entries(stats)
+      .map(([key, data]: [string, any]) => {
+        const [name, url] = key.split('|')
+        return {
+          name,
+          url,
+          count: data.count,
+          lastUsed: data.lastUsed
+        }
+      })
+      .sort((a, b) => b.count - a.count) // Sort by usage count descending
+      .slice(0, limit)
+    
+    return popularEmojis
+  } catch (error) {
+    console.error('[Userscript] Failed to get popular emojis:', error)
+    return []
+  }
+}
+
+export function clearEmojiUsageStats(): void {
+  try {
+    localStorage.removeItem(USAGE_STATS_KEY)
+    console.log('[Userscript] Cleared emoji usage statistics')
+  } catch (error) {
+    console.error('[Userscript] Failed to clear usage stats:', error)
+  }
+}
+
+export function getEmojiUsageStats(): { [key: string]: { count: number; lastUsed: number } } {
+  try {
+    const statsData = localStorage.getItem(USAGE_STATS_KEY)
+    return statsData ? JSON.parse(statsData) : {}
+  } catch (error) {
+    console.error('[Userscript] Failed to get usage stats:', error)
+    return {}
   }
 }

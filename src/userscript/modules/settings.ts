@@ -3,6 +3,8 @@ import { userscriptState } from '../state'
 import { saveDataToLocalStorage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
+import { showGroupEditorModal } from './groupEditor'
+import { showPopularEmojisModal } from './popularEmojis'
 
 // Show settings modal
 export function showSettingsModal() {
@@ -81,6 +83,30 @@ export function showSettingsModal() {
         <input type="checkbox" id="forceMobileMode" ${userscriptState.settings.forceMobileMode ? 'checked' : ''} style="margin-right: 8px;">
         强制移动模式 (在不兼容检测时也注入移动版布局)
       </label>
+    </div>
+    
+    <div style="margin-bottom: 16px; padding: 12px; background: var(--emoji-modal-button-bg); border-radius: 6px; border: 1px solid var(--emoji-modal-border);">
+      <div style="font-weight: 500; color: var(--emoji-modal-label); margin-bottom: 8px;">高级功能</div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button id="openGroupEditor" style="
+          padding: 6px 12px; 
+          background: var(--emoji-modal-primary-bg); 
+          color: white; 
+          border: none; 
+          border-radius: 4px; 
+          cursor: pointer;
+          font-size: 12px;
+        ">编辑分组</button>
+        <button id="openPopularEmojis" style="
+          padding: 6px 12px; 
+          background: var(--emoji-modal-primary-bg); 
+          color: white; 
+          border: none; 
+          border-radius: 4px; 
+          cursor: pointer;
+          font-size: 12px;
+        ">常用表情</button>
+      </div>
     </div>
     
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
@@ -163,6 +189,17 @@ export function showSettingsModal() {
     alert('设置已保存')
 
     modal.remove()
+  })
+
+  // Advanced feature buttons
+  content.querySelector('#openGroupEditor')?.addEventListener('click', () => {
+    modal.remove()
+    showGroupEditorModal()
+  })
+
+  content.querySelector('#openPopularEmojis')?.addEventListener('click', () => {
+    modal.remove()
+    showPopularEmojisModal()
   })
 
   // Close on outside click

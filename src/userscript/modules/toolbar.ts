@@ -1,14 +1,16 @@
 // Toolbar injection and button management module
 import { createEl } from '../utils/createEl'
+import { getPlatformToolbarSelectors } from '../utils/platformDetection'
 
 import { createEmojiPicker } from './emojiPicker'
+import { showPopularEmojisModal } from './popularEmojis'
 
-// Find toolbars where we can inject buttons
-const toolbarSelectors = ['.d-editor-button-bar[role="toolbar"]', '.chat-composer__inner-container']
-
+// Find toolbars where we can inject buttons using platform-specific selectors
 export function findAllToolbars(): HTMLElement[] {
   const toolbars: HTMLElement[] = []
-  for (const selector of toolbarSelectors) {
+  const selectors = getPlatformToolbarSelectors()
+  
+  for (const selector of selectors) {
     const elements = document.querySelectorAll(selector)
     toolbars.push(...(Array.from(elements) as HTMLElement[]))
   }
@@ -33,12 +35,22 @@ export function injectEmojiButton(toolbar: HTMLElement) {
 
   const isChatComposer = toolbar.classList.contains('chat-composer__inner-container')
 
+  // Create main emoji picker button
   const button = createEl('button', {
     className:
       'btn no-text btn-icon toolbar__button nacho-emoji-picker-button emoji-extension-button',
     title: '表情包',
     type: 'button',
     innerHTML: '🐈‍⬛'
+  }) as HTMLButtonElement
+
+  // Create popular emojis button
+  const popularButton = createEl('button', {
+    className:
+      'btn no-text btn-icon toolbar__button nacho-emoji-popular-button emoji-extension-button',
+    title: '常用表情',
+    type: 'button',
+    innerHTML: '⭐'
   }) as HTMLButtonElement
 
   if (isChatComposer) {
@@ -52,8 +64,20 @@ export function injectEmojiButton(toolbar: HTMLElement) {
     button.setAttribute('aria-expanded', 'false')
     button.setAttribute('data-identifier', 'emoji-picker')
     button.setAttribute('data-trigger', '')
+
+    popularButton.classList.add(
+      'fk-d-menu__trigger',
+      'popular-emoji-trigger',
+      'chat-composer-button',
+      'btn-transparent',
+      '-popular'
+    )
+    popularButton.setAttribute('aria-expanded', 'false')
+    popularButton.setAttribute('data-identifier', 'popular-emoji')
+    popularButton.setAttribute('data-trigger', '')
   }
 
+  // Main emoji picker button click handler
   button.addEventListener('click', async e => {
     e.stopPropagation()
 
@@ -124,6 +148,13 @@ export function injectEmojiButton(toolbar: HTMLElement) {
     }, 100)
   })
 
+  // Popular emojis button click handler
+  popularButton.addEventListener('click', e => {
+    e.stopPropagation()
+    closeCurrentPicker() // Close emoji picker if open
+    showPopularEmojisModal()
+  })
+
   try {
     // Try to insert in the right place
     if (isChatComposer) {
@@ -132,11 +163,14 @@ export function injectEmojiButton(toolbar: HTMLElement) {
       )
       if (existingEmojiTrigger) {
         toolbar.insertBefore(button, existingEmojiTrigger)
+        toolbar.insertBefore(popularButton, existingEmojiTrigger)
       } else {
         toolbar.appendChild(button)
+        toolbar.appendChild(popularButton)
       }
     } else {
       toolbar.appendChild(button)
+      toolbar.appendChild(popularButton)
     }
   } catch (error) {
     console.error('[Emoji Extension Userscript] Failed to inject button:', error)
