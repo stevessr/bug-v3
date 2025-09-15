@@ -382,7 +382,10 @@ const importParsed = () => {
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
     @click="close"
   >
-    <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+    <div
+      class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border dark:border-gray-700"
+      @click.stop
+    >
       <h3 class="text-lg font-semibold mb-4">添加表情</h3>
       <div class="space-y-4">
         <div>
@@ -481,7 +484,10 @@ const importParsed = () => {
         </div>
 
         <!-- 解析结果预览和URL变种选择 -->
-        <div v-if="parsedItems.length > 0 && inputMode !== 'url'" class="bg-gray-50 rounded-lg p-4">
+        <div
+          v-if="parsedItems.length > 0 && inputMode !== 'url'"
+          class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4"
+        >
           <div class="flex items-center justify-between mb-3">
             <h4 class="text-sm font-medium text-gray-700">
               解析结果 ({{ parsedItems.length }} 个)
@@ -498,7 +504,7 @@ const importParsed = () => {
             <div
               v-for="(item, index) in parsedItems"
               :key="index"
-              class="bg-white rounded border p-3"
+              class="bg-white dark:bg-gray-800 rounded border dark:border-gray-700 p-3"
             >
               <div class="flex items-start gap-3">
                 <img

@@ -188,7 +188,9 @@ const importFromMarkdown = async () => {
         <!-- Import Emojis Section -->
         <div class="border dark:border-gray-600 rounded-lg p-4">
           <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">导入表情包</h4>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">导入单个表情包文件或包含多个表情的JSON文件</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            导入单个表情包文件或包含多个表情的JSON文件
+          </p>
           <div class="space-y-4">
             <div class="flex items-center space-x-3">
               <button

@@ -254,7 +254,7 @@ export default function useOptions() {
   const updateTheme = (theme: 'system' | 'light' | 'dark') => {
     emojiStore.updateSettings({ theme })
     localStorage.setItem('theme', theme)
-    
+
     // 应用主题类名
     if (theme === 'dark') {
       document.documentElement.classList.add('dark')
@@ -267,33 +267,40 @@ export default function useOptions() {
         document.documentElement.classList.remove('dark')
       }
     }
-    
+
     // 设置 data-theme 属性
-    const finalTheme = theme === 'system' 
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : theme
+    const finalTheme =
+      theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : theme
     document.documentElement.setAttribute('data-theme', finalTheme)
-    
+
     // 触发主题变化事件，通知 Ant Design Vue 主题更新
-    window.dispatchEvent(new CustomEvent('theme-changed', { 
-      detail: { 
-        mode: finalTheme, 
-        theme: theme 
-      } 
-    }))
+    window.dispatchEvent(
+      new CustomEvent('theme-changed', {
+        detail: {
+          mode: finalTheme,
+          theme: theme
+        }
+      })
+    )
   }
 
   const updateCustomPrimaryColor = (color: string) => {
     emojiStore.updateSettings({ customPrimaryColor: color })
-    
+
     // 触发主题变化事件以更新 Ant Design Vue 主题
     const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-    window.dispatchEvent(new CustomEvent('theme-changed', { 
-      detail: { 
-        mode: currentMode, 
-        theme: localStorage.getItem('theme') || 'system' 
-      } 
-    }))
+    window.dispatchEvent(
+      new CustomEvent('theme-changed', {
+        detail: {
+          mode: currentMode,
+          theme: localStorage.getItem('theme') || 'system'
+        }
+      })
+    )
   }
 
   const updateCustomColorScheme = (scheme: string) => {

@@ -12,7 +12,7 @@ function applyTheme() {
 
     // 设置 data-theme 属性供 Tailwind CSS 使用
     root.setAttribute('data-theme', finalTheme)
-    
+
     // 设置 class 属性供 Tailwind CSS dark: 前缀使用
     if (finalTheme === 'dark') {
       root.classList.add('dark')
@@ -21,12 +21,14 @@ function applyTheme() {
     }
 
     // 触发自定义事件，通知 Ant Design Vue 主题变更
-    window.dispatchEvent(new CustomEvent('theme-changed', { 
-      detail: { 
-        mode: finalTheme, 
-        theme: theme 
-      } 
-    }))
+    window.dispatchEvent(
+      new CustomEvent('theme-changed', {
+        detail: {
+          mode: finalTheme,
+          theme: theme
+        }
+      })
+    )
   }
 
   apply(theme)

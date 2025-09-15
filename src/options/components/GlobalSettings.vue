@@ -2,9 +2,10 @@
 <script setup lang="ts">
 import { ref, watch, isRef, type Ref } from 'vue'
 import { DownOutlined } from '@ant-design/icons-vue'
-import ThemeColorPicker from './ThemeColorPicker.vue'
 
 import type { AppSettings } from '../../types/emoji'
+
+import ThemeColorPicker from './ThemeColorPicker.vue'
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 // allow flexible typing (either a reactive ref or a plain object)
@@ -298,7 +299,9 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between" v-if="false">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">启用Linux.do脚本注入</label>
+          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">
+            启用Linux.do脚本注入
+          </label>
           <p class="text-sm text-gray-500 dark:text-gray-400">控制是否在linux.do注入表情功能脚本</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
@@ -316,8 +319,12 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">启用X.com额外选择器</label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">在X.com(Twitter)启用额外的选择器控制</p>
+          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">
+            启用X.com额外选择器
+          </label>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            在X.com(Twitter)启用额外的选择器控制
+          </p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input

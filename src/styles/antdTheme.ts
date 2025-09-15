@@ -37,8 +37,8 @@ export function generateAntdTheme(
         colorTextTertiary: 'rgba(255, 255, 255, 0.45)',
         colorTextQuaternary: 'rgba(255, 255, 255, 0.25)',
         colorBgTextHover: 'rgba(255, 255, 255, 0.03)',
-        colorBgTextActive: 'rgba(255, 255, 255, 0.05)',
-      },
+        colorBgTextActive: 'rgba(255, 255, 255, 0.05)'
+      }
     }
   }
 
@@ -62,19 +62,19 @@ export function generateAntdTheme(
       colorTextTertiary: 'rgba(0, 0, 0, 0.45)',
       colorTextQuaternary: 'rgba(0, 0, 0, 0.25)',
       colorBgTextHover: 'rgba(0, 0, 0, 0.06)',
-      colorBgTextActive: 'rgba(0, 0, 0, 0.15)',
-    },
+      colorBgTextActive: 'rgba(0, 0, 0, 0.15)'
+    }
   }
 }
 
 // 获取当前主题模式
 export function getCurrentThemeMode(): 'light' | 'dark' {
   const theme = localStorage.getItem('theme') || 'system'
-  
+
   if (theme === 'system') {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   }
-  
+
   return theme as 'light' | 'dark'
 }
 

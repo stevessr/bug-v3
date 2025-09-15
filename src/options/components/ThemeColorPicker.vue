@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+
 import { colorSchemes } from '../../styles/antdTheme'
 
 interface Props {
@@ -78,11 +79,14 @@ function isValidColor(color: string): boolean {
 }
 
 // 监听外部颜色变化
-watch(() => props.modelValue, (newValue) => {
-  if (showCustomPicker.value) {
-    customColorInput.value = newValue
+watch(
+  () => props.modelValue,
+  newValue => {
+    if (showCustomPicker.value) {
+      customColorInput.value = newValue
+    }
   }
-})
+)
 </script>
 
 <template>
@@ -117,17 +121,18 @@ watch(() => props.modelValue, (newValue) => {
           class="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center"
         >
           <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            <path
+              fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd"
+            />
           </svg>
         </div>
       </div>
     </div>
 
     <!-- 自定义颜色选项 -->
-    <div
-      class="relative cursor-pointer group"
-      @click="selectedColorType = 'custom'"
-    >
+    <div class="relative cursor-pointer group" @click="selectedColorType = 'custom'">
       <div
         class="flex items-center p-3 border-2 rounded-lg transition-all duration-200"
         :class="[
@@ -140,9 +145,7 @@ watch(() => props.modelValue, (newValue) => {
           class="w-5 h-5 rounded-full mr-3 border border-gray-200 dark:border-gray-600"
           :style="{ backgroundColor: isCustomColor ? modelValue : '#cccccc' }"
         ></div>
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-          自定义颜色
-        </span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">自定义颜色</span>
       </div>
       <!-- 选中指示器 -->
       <div
@@ -150,13 +153,20 @@ watch(() => props.modelValue, (newValue) => {
         class="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center"
       >
         <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+          <path
+            fill-rule="evenodd"
+            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+            clip-rule="evenodd"
+          />
         </svg>
       </div>
     </div>
 
     <!-- 自定义颜色选择器 -->
-    <div v-if="showCustomPicker" class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800">
+    <div
+      v-if="showCustomPicker"
+      class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800"
+    >
       <div class="space-y-3">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
           输入颜色值 (支持 hex、rgb、颜色名称)
@@ -179,7 +189,9 @@ watch(() => props.modelValue, (newValue) => {
         <div class="flex items-center gap-2">
           <div
             class="w-6 h-6 rounded border border-gray-300 dark:border-gray-600"
-            :style="{ backgroundColor: isValidColor(customColorInput) ? customColorInput : '#f5f5f5' }"
+            :style="{
+              backgroundColor: isValidColor(customColorInput) ? customColorInput : '#f5f5f5'
+            }"
           ></div>
           <span class="text-xs text-gray-500 dark:text-gray-400">
             {{ isValidColor(customColorInput) ? '颜色预览' : '无效颜色' }}

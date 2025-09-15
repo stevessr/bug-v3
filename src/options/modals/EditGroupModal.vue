@@ -39,7 +39,7 @@ const save = () => {
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
     @click="$emit('update:show', false)"
   >
-    <div class="bg-white rounded-lg p-6 w-full max-w-md" @click.stop>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md" @click.stop>
       <h3 class="text-lg font-semibold mb-4">编辑分组</h3>
       <div class="space-y-4">
         <div>

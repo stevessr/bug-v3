@@ -59,7 +59,9 @@ const create = () => {
       <h3 class="text-lg font-semibold mb-4 dark:text-gray-100">新建分组</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">分组名称</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            分组名称
+          </label>
           <input
             v-model="name"
             type="text"
@@ -68,7 +70,9 @@ const create = () => {
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">分组图标 / 图片链接</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            分组图标 / 图片链接
+          </label>
           <input
             v-model="icon"
             type="text"
@@ -85,13 +89,19 @@ const create = () => {
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">分组颜色</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            分组颜色
+          </label>
           <div class="flex gap-2">
             <div
               v-for="color in colorOptions"
               :key="color"
               class="w-8 h-8 rounded cursor-pointer border-2"
-              :class="[selectedColor === color ? 'border-gray-900 dark:border-gray-100' : 'border-gray-300 dark:border-gray-600']"
+              :class="[
+                selectedColor === color
+                  ? 'border-gray-900 dark:border-gray-100'
+                  : 'border-gray-300 dark:border-gray-600'
+              ]"
               :style="{ backgroundColor: color }"
               @click="selectColor(color)"
             ></div>

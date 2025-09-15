@@ -48,7 +48,9 @@ const doImport = () => {
       <h3 class="text-lg font-semibold mb-4 dark:text-gray-100">导入配置</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">配置文件</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            配置文件
+          </label>
           <input
             ref="fileInput"
             type="file"
@@ -58,7 +60,9 @@ const doImport = () => {
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">或粘贴JSON配置</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            或粘贴JSON配置
+          </label>
           <textarea
             v-model="text"
             rows="6"

@@ -47,11 +47,13 @@ const visible = ref(false)
 <template>
   <div v-if="show" class="fixed inset-0 flex items-center justify-center z-50">
     <div class="bg-black/40 absolute inset-0" @click="onCancel"></div>
-    <div class="bg-white rounded shadow-lg p-4 w-96 z-10">
+    <div
+      class="bg-white dark:bg-gray-800 rounded shadow-lg p-4 w-96 z-10 border dark:border-gray-700"
+    >
       <!-- Single preview image at the top -->
       <div>
         <div
-          class="w-full max-h-64 flex items-center justify-center bg-gray-100 rounded overflow-hidden p-2"
+          class="w-full max-h-64 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded overflow-hidden p-2"
         >
           <a-image
             v-if="currentDisplayPreview"

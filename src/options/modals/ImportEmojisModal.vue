@@ -80,7 +80,9 @@ const fillExample = () => {
       <h3 class="text-lg font-semibold mb-4 dark:text-gray-100">批量导入表情</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">表情文件</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            表情文件
+          </label>
           <input
             ref="fileInput"
             type="file"
@@ -90,7 +92,9 @@ const fillExample = () => {
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">或粘贴表情JSON</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            或粘贴表情JSON
+          </label>
           <textarea
             v-model="text"
             rows="6"
@@ -99,13 +103,18 @@ const fillExample = () => {
           ></textarea>
           <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
             示例：
-            <button class="ml-2 text-blue-600 dark:text-blue-400 hover:underline" @click="fillExample">
+            <button
+              class="ml-2 text-blue-600 dark:text-blue-400 hover:underline"
+              @click="fillExample"
+            >
               填充示例
             </button>
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">目标分组（可选）</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            目标分组（可选）
+          </label>
           <input
             v-model="targetGroupId"
             placeholder="留空按 JSON 中分组创建"
