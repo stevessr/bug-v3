@@ -1,5 +1,6 @@
 // Floating button module for manual injection
 import { createEl } from '../utils/createEl'
+import { injectGlobalThemeStyles } from '../utils/themeSupport'
 
 import { attemptInjection } from './toolbar'
 
@@ -7,7 +8,7 @@ import { attemptInjection } from './toolbar'
 let floatingButton: HTMLElement | null = null
 let isButtonVisible = false
 
-// Styles for floating button with dark theme adaptation
+// Styles for floating button with centralized theme support
 const FLOATING_BUTTON_STYLES = `
 .emoji-extension-floating-button {
   position: fixed !important;
@@ -16,9 +17,9 @@ const FLOATING_BUTTON_STYLES = `
   width: 56px !important;
   height: 56px !important;
   border-radius: 50% !important;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, var(--emoji-button-gradient-start) 0%, var(--emoji-button-gradient-end) 100%) !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 4px 12px var(--emoji-button-shadow) !important;
   cursor: pointer !important;
   z-index: 999999 !important;
   font-size: 24px !important;
@@ -34,7 +35,7 @@ const FLOATING_BUTTON_STYLES = `
 .emoji-extension-floating-button:hover {
   transform: scale(1.1) !important;
   opacity: 1 !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 6px 16px var(--emoji-button-hover-shadow) !important;
 }
 
 .emoji-extension-floating-button:active {
@@ -56,17 +57,6 @@ const FLOATING_BUTTON_STYLES = `
     font-size: 20px !important;
   }
 }
-
-@media (prefers-color-scheme: dark) {
-  .emoji-extension-floating-button {
-    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-  }
-  
-  .emoji-extension-floating-button:hover {
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
-  }
-}
 `
 
 // Create and inject styles
@@ -74,6 +64,9 @@ function injectStyles() {
   if (document.getElementById('emoji-extension-floating-button-styles')) {
     return // Already injected
   }
+
+  // Inject global theme variables first
+  injectGlobalThemeStyles()
 
   const style = createEl('style', {
     id: 'emoji-extension-floating-button-styles',

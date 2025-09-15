@@ -2,9 +2,13 @@
 import { userscriptState } from '../state'
 import { saveDataToLocalStorage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
+import { injectGlobalThemeStyles } from '../utils/themeSupport'
 
 // Show settings modal
 export function showSettingsModal() {
+  // Ensure theme styles are injected
+  injectGlobalThemeStyles()
+  
   const modal = createEl('div', {
     style: `
     position: fixed;
@@ -22,8 +26,8 @@ export function showSettingsModal() {
 
   const content = createEl('div', {
     style: `
-      background: var(--emoji-modal-bg, white);
-      color: var(--emoji-modal-text, #333);
+      background: var(--emoji-modal-bg);
+      color: var(--emoji-modal-text);
       border-radius: 8px;
     padding: 24px;
     max-width: 500px;
@@ -33,30 +37,6 @@ export function showSettingsModal() {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   `,
     innerHTML: `
-    <style>
-      :root {
-        --emoji-modal-bg: white;
-        --emoji-modal-text: #333;
-        --emoji-modal-border: #ddd;
-        --emoji-modal-input-bg: white;
-        --emoji-modal-label: #555;
-        --emoji-modal-button-bg: #f5f5f5;
-        --emoji-modal-primary-bg: #1890ff;
-      }
-      
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --emoji-modal-bg: #2d2d2d;
-          --emoji-modal-text: #e6e6e6;
-          --emoji-modal-border: #444;
-          --emoji-modal-input-bg: #3a3a3a;
-          --emoji-modal-label: #ccc;
-          --emoji-modal-button-bg: #444;
-          --emoji-modal-primary-bg: #1677ff;
-        }
-      }
-    </style>
-    
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="margin: 0; color: var(--emoji-modal-text);">设置</h2>
       <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
