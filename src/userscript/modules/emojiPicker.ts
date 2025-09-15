@@ -2,8 +2,9 @@
 import { userscriptState } from '../state'
 import { createEl } from '../utils/createEl'
 
-import { isImageUrl } from '@/utils/isImageUrl'
 import { injectEmojiPickerStyles } from './emojiPickerStyles'
+
+import { isImageUrl } from '@/utils/isImageUrl'
 
 // Mobile detection helper
 export function isMobileView(): boolean {
@@ -573,7 +574,8 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
       const visibleEmojis = section.querySelectorAll('img:not([style*="none"])')
       const titleContainer = section.querySelector('.emoji-picker__section-title-container')
       if (titleContainer)
-        (titleContainer as HTMLHeadingElement).style.display = visibleEmojis.length > 0 ? '' : 'none'
+        (titleContainer as HTMLHeadingElement).style.display =
+          visibleEmojis.length > 0 ? '' : 'none'
     })
   })
 

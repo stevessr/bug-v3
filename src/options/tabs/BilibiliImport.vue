@@ -410,7 +410,11 @@ const importSelectedFromIndex = async () => {
           </div>
 
           <div class="flex items-center space-x-3">
-            <AInput v-model:value="query" placeholder="按包名或别名搜索" class="dark:bg-black dark:text-white" />
+            <AInput
+              v-model:value="query"
+              placeholder="按包名或别名搜索"
+              class="dark:bg-black dark:text-white"
+            />
             <AButton type="primary" @click="applySearch">搜索</AButton>
             <AButton type="default" @click="query = ''">清空</AButton>
             <AButton type="primary" @click="importSelectedFromIndex">导入选中包</AButton>
@@ -455,9 +459,14 @@ const importSelectedFromIndex = async () => {
           </div>
 
           <div class="mt-3">
-            <div v-if="packages.length === 0" class="text-sm text-gray-500 dark:text-white">尚未加载任何索引包</div>
+            <div v-if="packages.length === 0" class="text-sm text-gray-500 dark:text-white">
+              尚未加载任何索引包
+            </div>
             <div v-else>
-              <div v-if="displayPackages.length === 0" class="text-sm text-gray-500 dark:text-white">
+              <div
+                v-if="displayPackages.length === 0"
+                class="text-sm text-gray-500 dark:text-white"
+              >
                 请输入关键词并点击“搜索”以显示结果
               </div>
               <div v-else class="grid gap-2">
@@ -471,7 +480,9 @@ const importSelectedFromIndex = async () => {
                         class="dark:bg-black dark:text-white"
                       />
                       <div>
-                        <div class="font-medium dark:text-white">{{ pkg.text || pkg.label || pkg.id }}</div>
+                        <div class="font-medium dark:text-white">
+                          {{ pkg.text || pkg.label || pkg.id }}
+                        </div>
                         <div class="text-xs text-gray-500 dark:text-white">
                           {{ (pkg.emote && pkg.emote.length) || 0 }} 个表情
                         </div>
@@ -496,10 +507,15 @@ const importSelectedFromIndex = async () => {
           class="p-3 rounded"
           :class="importResults.success ? 'bg-green-50' : 'bg-red-50'"
         >
-          <p class="text-sm font-medium" :class="[(importResults.success ? 'text-green-700' : 'text-red-700'), 'dark:text-white']">
+          <p
+            class="text-sm font-medium dark:text-white"
+            :class="[importResults.success ? 'text-green-700' : 'text-red-700']"
+          >
             {{ importResults.message }}
           </p>
-          <p v-if="importResults.details" class="text-sm mt-1 dark:text-white">{{ importResults.details }}</p>
+          <p v-if="importResults.details" class="text-sm mt-1 dark:text-white">
+            {{ importResults.details }}
+          </p>
         </div>
       </div>
     </div>

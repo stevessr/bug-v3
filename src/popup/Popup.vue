@@ -22,7 +22,7 @@ const setActiveHandler = (id: string) => {
   >
     <div class="popup-container bg-white dark:bg-gray-900">
       <!-- Header with scale control -->
-  <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-sm font-semibold text-gray-900 dark:text-white">表情管理</h2>
           <button

@@ -1,4 +1,5 @@
 import { isImageUrl } from '../../utils/isimage'
+
 import { createEl } from './element-factory'
 import { ensureDefaultIfEmpty, cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
@@ -55,8 +56,9 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     if (!group?.emojis?.length) return
 
     const navButton = document.createElement('button')
-    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? 'active' : ''
-      }`
+    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${
+      index === 0 ? 'active' : ''
+    }`
     navButton.setAttribute('tabindex', '-1')
     navButton.setAttribute('data-section', group.id)
     navButton.type = 'button'
@@ -198,7 +200,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     const allImages = sections.querySelectorAll('img')
     allImages.forEach((img: any) => {
       const emojiName = img.getAttribute('data-emoji')?.toLowerCase() || ''
-        ; (img as HTMLElement).style.display = q === '' || emojiName.includes(q) ? '' : 'none'
+      ;(img as HTMLElement).style.display = q === '' || emojiName.includes(q) ? '' : 'none'
     })
     sections.querySelectorAll('.emoji-picker__section').forEach(section => {
       const visibleEmojis = section.querySelectorAll('img:not([style*="none"])')
@@ -252,7 +254,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         display: 'block',
         borderRadius: '4px',
         objectFit: 'contain'
-      },
+      }
     }) as HTMLImageElement
     el.appendChild(img)
 
@@ -355,11 +357,11 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         /* ignore */
       }
 
-if (_previewEl.parentElement) _previewEl.parentElement.removeChild(_previewEl)
+      if (_previewEl.parentElement) _previewEl.parentElement.removeChild(_previewEl)
     } finally {
-  _previewEl = null
-}
+      _previewEl = null
+    }
   }
 
-return picker
+  return picker
 }

@@ -1,6 +1,7 @@
 // Toolbar injection and button management module
-import { createEmojiPicker } from './emojiPicker'
 import { createEl } from '../utils/createEl'
+
+import { createEmojiPicker } from './emojiPicker'
 
 // Find toolbars where we can inject buttons
 const toolbarSelectors = ['.d-editor-button-bar[role="toolbar"]', '.chat-composer__inner-container']

@@ -3,6 +3,7 @@ import { loadDataFromStorage } from '../data/storage'
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'
 import { initOneClickAdd } from './oneClickAdd'
+import { showFloatingButton, checkAndShowFloatingButton } from './floatingButton'
 
 // Function to check and re-inject buttons if needed
 function checkAndReinjectButtons() {
@@ -166,6 +167,9 @@ export async function initializeEmojiFeature(
       console.error(
         '[Emoji Extension] Failed to find toolbar after multiple attempts. Button injection failed. 我感觉你是人机'
       )
+      // Show floating button as fallback when injection fails
+      console.log('[Emoji Extension] Showing floating button as fallback')
+      showFloatingButton()
     }
   }
 
@@ -219,6 +223,11 @@ export async function initializeEmojiFeature(
       }
     })
   }, 30000)
+
+  // Check if floating button should be shown periodically
+  setInterval(() => {
+    checkAndShowFloatingButton()
+  }, 5000)
 
   setInterval(() => {
     console.log('[Emoji Extension] Periodic data reload (module)')

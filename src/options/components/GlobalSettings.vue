@@ -346,9 +346,7 @@ const handleHoverPreviewChange = (e: Event) => {
           <label class="text-sm font-medium text-gray-900 dark:text-white">
             启用X.com额外选择器
           </label>
-          <p class="text-sm text-gray-500 dark:text-white">
-            在X.com(Twitter)启用额外的选择器控制
-          </p>
+          <p class="text-sm text-gray-500 dark:text-white">在X.com(Twitter)启用额外的选择器控制</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input

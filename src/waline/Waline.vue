@@ -380,7 +380,9 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <p class="text-sm text-gray-600 mb-4 dark:text-white">
             输入 Waline 表情配置的 JSON URL 或 GitHub raw 文件链接
             <br />
-            <span class="text-xs text-gray-500 dark:text-white">支持标准 Waline 格式和 Weibo 风格格式</span>
+            <span class="text-xs text-gray-500 dark:text-white">
+              支持标准 Waline 格式和 Weibo 风格格式
+            </span>
           </p>
 
           <div class="space-y-4">
