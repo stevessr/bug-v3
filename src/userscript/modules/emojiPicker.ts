@@ -3,6 +3,7 @@ import { userscriptState } from '../state'
 import { createEl } from '../utils/createEl'
 
 import { isImageUrl } from '@/utils/isImageUrl'
+import { injectEmojiPickerStyles } from './emojiPickerStyles'
 
 // Mobile detection helper
 export function isMobileView(): boolean {
@@ -88,6 +89,29 @@ export function insertEmojiIntoEditor(emoji: any) {
       }
     }
   }
+}
+
+// Module-level hover preview singleton used by both mobile and desktop pickers
+let _hoverPreviewEl: HTMLDivElement | null = null
+function ensureHoverPreview() {
+  if (_hoverPreviewEl && document.body.contains(_hoverPreviewEl)) return _hoverPreviewEl
+  _hoverPreviewEl = createEl('div', {
+    className: 'emoji-picker-hover-preview',
+    style:
+      'position:fixed;pointer-events:none;display:none;z-index:1000002;max-width:300px;max-height:300px;overflow:hidden;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.25);background:#fff;padding:6px;'
+  }) as HTMLDivElement
+  const img = createEl('img', {
+    className: 'emoji-picker-hover-img',
+    style: 'display:block;max-width:100%;max-height:220px;object-fit:contain;'
+  }) as HTMLImageElement
+  const label = createEl('div', {
+    className: 'emoji-picker-hover-label',
+    style: 'font-size:12px;color:#333;margin-top:6px;text-align:center;'
+  }) as HTMLDivElement
+  _hoverPreviewEl.appendChild(img)
+  _hoverPreviewEl.appendChild(label)
+  document.body.appendChild(_hoverPreviewEl)
+  return _hoverPreviewEl
 }
 
 // Create mobile-style emoji picker modal
@@ -180,6 +204,29 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
     attrs: { role: 'button' }
   }) as HTMLDivElement
 
+  // Hover preview singleton for large image + name
+  let hoverPreviewEl: HTMLDivElement | null = null
+  function ensureHoverPreview() {
+    if (hoverPreviewEl && document.body.contains(hoverPreviewEl)) return hoverPreviewEl
+    hoverPreviewEl = createEl('div', {
+      className: 'emoji-picker-hover-preview',
+      style:
+        'position:fixed;pointer-events:none;display:none;z-index:1000002;max-width:300px;max-height:300px;overflow:hidden;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.25);background:#fff;padding:6px;'
+    }) as HTMLDivElement
+    const img = createEl('img', {
+      className: 'emoji-picker-hover-img',
+      style: 'display:block;max-width:100%;max-height:220px;object-fit:contain;'
+    }) as HTMLImageElement
+    const label = createEl('div', {
+      className: 'emoji-picker-hover-label',
+      style: 'font-size:12px;color:#333;margin-top:6px;text-align:center;'
+    }) as HTMLDivElement
+    hoverPreviewEl.appendChild(img)
+    hoverPreviewEl.appendChild(label)
+    document.body.appendChild(hoverPreviewEl)
+    return hoverPreviewEl
+  }
+
   groups.forEach((group: any, index: number) => {
     if (!group?.emojis?.length) return
 
@@ -239,6 +286,36 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
         style: 'width: 32px; height: 32px; object-fit: contain;',
         attrs: { 'data-emoji': emoji.name, tabindex: '0', loading: 'lazy' }
       }) as HTMLImageElement
+      // hover preview bindings
+      ;(function bindHover(imgEl: HTMLImageElement, emo: any) {
+        const preview = ensureHoverPreview()
+        const previewImg = preview.querySelector('img') as HTMLImageElement
+        const previewLabel = preview.querySelector('.emoji-picker-hover-label') as HTMLDivElement
+        function onEnter(e: MouseEvent) {
+          previewImg.src = emo.url
+          previewLabel.textContent = emo.name || ''
+          preview.style.display = 'block'
+          move(e)
+        }
+        function move(e: MouseEvent) {
+          const pad = 12
+          const vw = window.innerWidth
+          const vh = window.innerHeight
+          const rect = preview.getBoundingClientRect()
+          let left = e.clientX + pad
+          let top = e.clientY + pad
+          if (left + rect.width > vw) left = e.clientX - rect.width - pad
+          if (top + rect.height > vh) top = e.clientY - rect.height - pad
+          preview.style.left = left + 'px'
+          preview.style.top = top + 'px'
+        }
+        function onLeave() {
+          preview.style.display = 'none'
+        }
+        imgEl.addEventListener('mouseenter', onEnter)
+        imgEl.addEventListener('mousemove', move)
+        imgEl.addEventListener('mouseleave', onLeave)
+      })(img, emoji)
       img.addEventListener('click', () => {
         insertEmojiIntoEditor(emoji)
         const modalContainer = modal.closest('.modal-container')
@@ -427,6 +504,36 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
           loading: 'lazy'
         }
       }) as HTMLImageElement
+      // hover preview bindings (desktop picker)
+      ;(function bindHover(imgEl: HTMLImageElement, emo: any) {
+        const preview = ensureHoverPreview()
+        const previewImg = preview.querySelector('img') as HTMLImageElement
+        const previewLabel = preview.querySelector('.emoji-picker-hover-label') as HTMLDivElement
+        function onEnter(e: MouseEvent) {
+          previewImg.src = emo.url
+          previewLabel.textContent = emo.name || ''
+          preview.style.display = 'block'
+          move(e)
+        }
+        function move(e: MouseEvent) {
+          const pad = 12
+          const vw = window.innerWidth
+          const vh = window.innerHeight
+          const rect = preview.getBoundingClientRect()
+          let left = e.clientX + pad
+          let top = e.clientY + pad
+          if (left + rect.width > vw) left = e.clientX - rect.width - pad
+          if (top + rect.height > vh) top = e.clientY - rect.height - pad
+          preview.style.left = left + 'px'
+          preview.style.top = top + 'px'
+        }
+        function onLeave() {
+          preview.style.display = 'none'
+        }
+        imgEl.addEventListener('mouseenter', onEnter)
+        imgEl.addEventListener('mousemove', move)
+        imgEl.addEventListener('mouseleave', onLeave)
+      })(img, emoji)
       img.addEventListener('click', () => {
         insertEmojiIntoEditor(emoji)
         picker.remove()
@@ -485,6 +592,13 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
 export async function createEmojiPicker(): Promise<HTMLElement> {
   const groups = userscriptState.emojiGroups
   const mobile = isMobileView()
+
+  // ensure styles for hover preview are injected
+  try {
+    injectEmojiPickerStyles()
+  } catch (e) {
+    console.warn('injectEmojiPickerStyles failed', e)
+  }
 
   if (mobile) {
     return createMobileEmojiPicker(groups)
