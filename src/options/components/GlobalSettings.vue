@@ -169,13 +169,13 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
     <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-  <h2 class="text-lg font-semibold text-gray-900 dark:text-white">全局设置</h2>
+    <h2 class="text-lg font-semibold dark:text-white">全局设置</h2>
     </div>
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">主题</label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">选择界面主题</p>
+         <label class="text-sm font-medium dark:text-white">主题</label>
+         <p class="text-sm dark:text-white">选择界面主题</p>
         </div>
         <a-dropdown>
           <template #overlay>
@@ -197,12 +197,11 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
           </AButton>
         </a-dropdown>
       </div>
-
       <div class="flex flex-col space-y-4">
         <div class="flex items-start justify-between">
           <div>
-            <label class="text-sm font-medium text-gray-900 dark:text-white">主题颜色</label>
-            <p class="text-sm text-gray-500 dark:text-gray-400">自定义界面主色调</p>
+            <label class="text-sm font-medium dark:text-white">主题颜色</label>
+            <p class="text-sm dark:text-white">自定义界面主色调</p>
           </div>
           <div class="w-2/3">
             <ThemeColorPicker
@@ -217,8 +216,8 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">默认图片缩放</label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">控制插入表情的默认尺寸</p>
+         <label class="text-sm font-medium dark:text-white">默认图片缩放</label>
+         <p class="text-sm dark:text-white">控制插入表情的默认尺寸</p>
         </div>
         <div class="flex items-center gap-3">
           <ASlider
@@ -236,16 +235,16 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">网格列数</label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">表情选择器中的列数</p>
+         <label class="text-sm font-medium dark:text-white">网格列数</label>
+         <p class="text-sm dark:text-white">表情选择器中的列数</p>
         </div>
         <slot name="grid-selector"></slot>
       </div>
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">显示搜索栏</label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">在表情选择器中显示搜索功能</p>
+         <label class="text-sm font-medium dark:text-white">显示搜索栏</label>
+         <p class="text-sm dark:text-white">在表情选择器中显示搜索功能</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input
@@ -262,8 +261,8 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">输出格式</label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">插入表情时使用的格式</p>
+         <label class="text-sm font-medium dark:text-white">输出格式</label>
+         <p class="text-sm dark:text-white">插入表情时使用的格式</p>
         </div>
         <a-dropdown>
           <template #overlay>

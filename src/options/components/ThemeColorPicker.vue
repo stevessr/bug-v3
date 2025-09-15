@@ -102,10 +102,10 @@ watch(
           <div
             class="flex items-center p-3 border-2 rounded-lg transition-all duration-200"
             :class="[
-              selectedColorType === color.name
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                : 'border-gray-200 hover:border-gray-300 dark:border-gray-600 dark:hover:border-gray-500'
-            ]"
+                selectedColorType === color.name
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  : 'border-gray-200 hover:border-gray-300 dark:border-gray-600 dark:hover:border-gray-500'
+              ]"
           >
           <div
             class="w-5 h-5 rounded-full mr-3 border border-gray-200 dark:border-gray-600"
@@ -164,11 +164,11 @@ watch(
 
     <!-- 自定义颜色选择器 -->
     <div
-      v-if="showCustomPicker"
-      class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800"
-    >
+    v-if="showCustomPicker"
+    class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800"
+  >
       <div class="space-y-3">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label class="block text-sm font-medium text-gray-700 dark:text-white">
           输入颜色值 (支持 hex、rgb、颜色名称)
         </label>
         <div class="flex gap-2">

@@ -280,14 +280,14 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
 <template>
   <div>
     <div v-if="activeTab === 'groups'" class="space-y-8">
-      <div class="bg-white rounded-lg shadow-sm border">
+      <div class="bg-white rounded-lg shadow-sm border dark:border-gray-700 dark:bg-gray-800">
         <div class="px-6 py-4 border-b border-gray-200">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-3">
-              <h2 class="text-lg font-semibold text-gray-900">表情分组管理</h2>
-              <div class="ml-4 inline-flex rounded-md bg-gray-50 p-1">
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">表情分组管理</h2>
+              <div class="ml-4 inline-flex rounded-md bg-gray-50 p-1 dark:bg-gray-700">
                 <button
-                  class="px-3 py-1 text-sm rounded"
+                  class="px-3 py-1 text-sm rounded dark:bg-gray-800"
                   @click="setTab('groups')"
                   :class="{ 'bg-white shadow': (activeTab as any) === 'groups' }"
                 >
@@ -341,10 +341,10 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     </template>
                   </div>
                   <div>
-                    <h3 class="font-medium text-gray-900">
+                    <h3 class="font-medium text-gray-900 dark:text-white">
                       {{ group.name }}
                     </h3>
-                    <p class="text-sm text-gray-500">{{ group.emojis?.length || 0 }} 个表情</p>
+                    <p class="text-sm text-gray-500 dark:text-white">{{ group.emojis?.length || 0 }} 个表情</p>
                   </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -369,7 +369,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                   <div v-if="dedupeMessage[group.id]" class="ml-2 text-sm text-green-600">
                     {{ dedupeMessage[group.id] }}
                   </div>
-                  <div v-else-if="group.id === 'favorites'" class="text-sm text-gray-500 px-2">
+                  <div v-else-if="group.id === 'favorites'" class="text-sm text-gray-500 dark:text-white px-2">
                     系统分组
                   </div>
                 </div>

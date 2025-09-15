@@ -385,10 +385,10 @@ const importSelectedFromIndex = async () => {
 
 <template>
   <div class="space-y-8">
-    <div class="bg-white shadow rounded-lg">
+    <div class="bg-white shadow rounded-lg border dark:border-gray-700 dark:bg-gray-800">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">Bilibili 表情导入</h3>
-        <p class="mt-1 text-sm text-gray-600">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Bilibili 表情导入</h3>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
           上传 bilibili 风格的 JSON 响应（包含 data.packages），导入为表情分组
         </p>
       </div>
@@ -413,7 +413,7 @@ const importSelectedFromIndex = async () => {
           </div>
 
           <!-- ID 拉取区 -->
-          <div class="mt-4 p-3 border rounded bg-gray-50">
+          <div class="mt-4 p-3 border rounded bg-gray-50 dark:bg-gray-700">
             <div class="flex items-center space-x-3">
               <AInput v-model:value="fetchIdStart" placeholder="起始 ID(例如 10600)" class="dark:bg-black dark:text-white" />
                 <AInput
