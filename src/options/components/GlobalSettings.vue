@@ -169,12 +169,12 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
     <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">全局设置</h2>
+  <h2 class="text-lg font-semibold text-gray-900 dark:text-white">全局设置</h2>
     </div>
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">主题</label>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">主题</label>
           <p class="text-sm text-gray-500 dark:text-gray-400">选择界面主题</p>
         </div>
         <a-dropdown>
@@ -201,7 +201,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
       <div class="flex flex-col space-y-4">
         <div class="flex items-start justify-between">
           <div>
-            <label class="text-sm font-medium text-gray-900 dark:text-gray-100">主题颜色</label>
+            <label class="text-sm font-medium text-gray-900 dark:text-white">主题颜色</label>
             <p class="text-sm text-gray-500 dark:text-gray-400">自定义界面主色调</p>
           </div>
           <div class="w-2/3">
@@ -217,7 +217,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">默认图片缩放</label>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">默认图片缩放</label>
           <p class="text-sm text-gray-500 dark:text-gray-400">控制插入表情的默认尺寸</p>
         </div>
         <div class="flex items-center gap-3">
@@ -236,7 +236,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">网格列数</label>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">网格列数</label>
           <p class="text-sm text-gray-500 dark:text-gray-400">表情选择器中的列数</p>
         </div>
         <slot name="grid-selector"></slot>
@@ -244,7 +244,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">显示搜索栏</label>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">显示搜索栏</label>
           <p class="text-sm text-gray-500 dark:text-gray-400">在表情选择器中显示搜索功能</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
@@ -262,7 +262,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">输出格式</label>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">输出格式</label>
           <p class="text-sm text-gray-500 dark:text-gray-400">插入表情时使用的格式</p>
         </div>
         <a-dropdown>
@@ -281,7 +281,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">强制移动模式</label>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">强制移动模式</label>
           <p class="text-sm text-gray-500 dark:text-gray-400">在桌面端强制使用移动端样式</p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
@@ -299,7 +299,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between" v-if="false">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <label class="text-sm font-medium text-gray-900 dark:text-white">
             启用Linux.do脚本注入
           </label>
           <p class="text-sm text-gray-500 dark:text-gray-400">控制是否在linux.do注入表情功能脚本</p>
@@ -319,7 +319,7 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
 
       <div class="flex items-center justify-between">
         <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <label class="text-sm font-medium text-gray-900 dark:text-white">
             启用X.com额外选择器
           </label>
           <p class="text-sm text-gray-500 dark:text-gray-400">

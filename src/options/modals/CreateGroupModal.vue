@@ -56,7 +56,7 @@ const create = () => {
     @click="close"
   >
     <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md" @click.stop>
-      <h3 class="text-lg font-semibold mb-4 dark:text-gray-100">新建分组</h3>
+  <h3 class="text-lg font-semibold mb-4 dark:text-white">新建分组</h3>
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -65,7 +65,7 @@ const create = () => {
           <input
             v-model="name"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="输入分组名称"
           />
         </div>
@@ -76,7 +76,7 @@ const create = () => {
           <input
             v-model="icon"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="例如：😀 或 https://..."
           />
           <div v-if="isImageUrl && isImageUrl(normalizeImageUrl(icon))" class="mt-2 text-center">

@@ -56,10 +56,10 @@ const setActiveHandler = (id: string) => {
             min="5"
             max="150"
             step="5"
-            class="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
             @input="updateScale"
           />
-          <span class="w-10 text-right text-gray-600">{{ localScale }}%</span>
+          <span class="w-10 text-right text-gray-600 dark:text-white">{{ localScale }}%</span>
         </div>
       </div>
 
@@ -70,7 +70,7 @@ const setActiveHandler = (id: string) => {
             v-model="emojiStore.searchQuery"
             type="text"
             placeholder="搜索表情..."
-            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
           />
           <svg
             class="absolute right-2 top-1.5 w-4 h-4 text-gray-400"
