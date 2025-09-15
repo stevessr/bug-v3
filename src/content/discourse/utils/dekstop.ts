@@ -114,6 +114,30 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
           picker.remove()
         }
       })
+      // --- hover preview (desktop only) ---
+      // create a lightweight preview element on mouseenter, move it with mousemove and remove on mouseleave
+      img.addEventListener('mouseenter', (ev: MouseEvent) => {
+        try {
+          ensurePreview()
+          showPreviewAtEvent(ev, emoji)
+        } catch (err) {
+          void err
+        }
+      })
+      img.addEventListener('mousemove', (ev: MouseEvent) => {
+        try {
+          movePreviewToEvent(ev)
+        } catch (err) {
+          void err
+        }
+      })
+      img.addEventListener('mouseleave', () => {
+        try {
+          removePreview()
+        } catch (err) {
+          void err
+        }
+      })
       sectionEmojis.appendChild(img)
       added++
     })
@@ -152,6 +176,89 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   emojiPickerDiv.appendChild(content)
   innerContent.appendChild(emojiPickerDiv)
   picker.appendChild(innerContent)
+  // --- hover preview helpers (desktop picker) ---
+  let _previewEl: HTMLDivElement | null = null
+
+  function ensurePreview() {
+    if (_previewEl) return _previewEl
+    const el = document.createElement('div')
+    el.className = 'emoji-desktop-hover-preview'
+    // minimal, neutral styling (no colored accents)
+    el.style.position = 'fixed'
+    el.style.pointerEvents = 'none'
+    el.style.zIndex = '999999'
+    el.style.padding = '6px'
+    el.style.borderRadius = '6px'
+    // neutral styling: transparent background, inherit text color, light border — avoid colored accents
+    el.style.background = 'transparent'
+    el.style.color = 'inherit'
+    el.style.border = '1px solid rgba(0,0,0,0.08)'
+    el.style.display = 'flex'
+    el.style.flexDirection = 'column'
+    el.style.alignItems = 'center'
+    el.style.gap = '6px'
+    el.style.maxWidth = '360px'
+    el.style.maxHeight = '360px'
+    el.style.overflow = 'hidden'
+
+    const img = document.createElement('img')
+    img.className = 'emoji-desktop-hover-preview-img'
+    img.style.maxWidth = '320px'
+    img.style.maxHeight = '320px'
+    img.style.display = 'block'
+    img.style.borderRadius = '4px'
+    img.style.objectFit = 'contain'
+    el.appendChild(img)
+
+    const label = document.createElement('div')
+    label.className = 'emoji-desktop-hover-preview-label'
+    label.style.fontSize = '12px'
+    label.style.lineHeight = '1'
+    label.style.maxWidth = '320px'
+    label.style.whiteSpace = 'nowrap'
+    label.style.textOverflow = 'ellipsis'
+    label.style.overflow = 'hidden'
+    el.appendChild(label)
+
+    document.body.appendChild(el)
+    _previewEl = el
+    return el
+  }
+
+  function showPreviewAtEvent(ev: MouseEvent, emoji: any) {
+    const el = ensurePreview()
+    const img = el.querySelector('img') as HTMLImageElement
+    const label = el.querySelector('.emoji-desktop-hover-preview-label') as HTMLDivElement
+    if (img) img.src = emoji.displayUrl || emoji.url || ''
+    if (label) label.textContent = emoji.name || ''
+    movePreviewToEvent(ev)
+    el.style.display = ''
+  }
+
+  function movePreviewToEvent(ev: MouseEvent) {
+    if (!_previewEl) return
+    const margin = 12
+    const width = _previewEl.offsetWidth
+    const height = _previewEl.offsetHeight
+    let x = ev.clientX + margin
+    let y = ev.clientY + margin
+    // avoid going off right/bottom edge
+    const winW = window.innerWidth
+    const winH = window.innerHeight
+    if (x + width + margin > winW) x = Math.max(margin, ev.clientX - width - margin)
+    if (y + height + margin > winH) y = Math.max(margin, ev.clientY - height - margin)
+    _previewEl.style.left = `${x}px`
+    _previewEl.style.top = `${y}px`
+  }
+
+  function removePreview() {
+    if (!_previewEl) return
+    try {
+      if (_previewEl.parentElement) _previewEl.parentElement.removeChild(_previewEl)
+    } finally {
+      _previewEl = null
+    }
+  }
 
   return picker
 }
