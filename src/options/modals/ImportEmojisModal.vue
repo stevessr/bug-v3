@@ -77,7 +77,7 @@ const fillExample = () => {
     @click="close"
   >
     <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-lg" @click.stop>
-      <h3 class="text-lg font-semibold mb-4 dark:text-gray-100">批量导入表情</h3>
+  <h3 class="text-lg font-semibold mb-4 dark:text-white">批量导入表情</h3>
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -88,7 +88,7 @@ const fillExample = () => {
             type="file"
             accept=".json"
             @change="handleFile"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -98,7 +98,7 @@ const fillExample = () => {
           <textarea
             v-model="text"
             rows="6"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="粘贴表情JSON内容..."
           ></textarea>
           <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -118,7 +118,7 @@ const fillExample = () => {
           <input
             v-model="targetGroupId"
             placeholder="留空按 JSON 中分组创建"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
           />
         </div>
       </div>

@@ -24,7 +24,7 @@ const setActiveHandler = (id: string) => {
       <!-- Header with scale control -->
       <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold text-gray-900">表情管理</h2>
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-white">表情管理</h2>
           <button
             @click="openOptions"
             class="p-1 text-gray-500 hover:text-gray-700 rounded"
@@ -49,7 +49,7 @@ const setActiveHandler = (id: string) => {
 
         <!-- Scale Control -->
         <div class="flex items-center gap-2 text-xs">
-          <span class="text-gray-600">缩放:</span>
+          <span class="text-gray-600 dark:text-white">缩放:</span>
           <input
             v-model.number="localScale"
             type="range"
