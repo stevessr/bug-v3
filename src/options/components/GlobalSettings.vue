@@ -19,7 +19,8 @@ const emit = defineEmits([
   'update:enableXcomExtraSelectors',
   'update:theme',
   'update:customPrimaryColor',
-  'update:customColorScheme'
+  'update:customColorScheme',
+  'update:enableHoverPreview'
 ])
 
 const getCustomPrimaryColor = () => {
@@ -164,6 +165,12 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
   const target = e.target as HTMLInputElement
   emit('update:enableXcomExtraSelectors', target.checked)
 }
+
+const handleHoverPreviewChange = (e: Event) => {
+  const target = e.target as HTMLInputElement | null
+  if (!target) return
+  emit('update:enableHoverPreview', target.checked)
+}
 </script>
 
 <template>
@@ -251,6 +258,24 @@ const handleXcomExtraSelectorsChange = (e: Event) => {
             type="checkbox"
             :checked="settings.showSearchBar"
             @change="handleShowSearchBarChange"
+            class="sr-only peer"
+          />
+          <div
+            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
+          ></div>
+        </label>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium dark:text-white">悬浮预览</label>
+          <p class="text-sm dark:text-white">在表情选择器中启用鼠标悬浮显示大图预览</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            :checked="settings.enableHoverPreview"
+            @change="handleHoverPreviewChange"
             class="sr-only peer"
           />
           <div

@@ -34,7 +34,7 @@ function applyTheme() {
   apply(theme)
 
   // 监听系统主题变化
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     const currentTheme = localStorage.getItem('theme') || 'system'
     if (currentTheme === 'system') {
       apply('system')

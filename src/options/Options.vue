@@ -100,6 +100,7 @@ const {
   updateOutputFormat,
   updateForceMobileMode,
   updateEnableLinuxDoInjection,
+  updateEnableHoverPreview,
   updateEnableXcomExtraSelectors,
   updateTheme,
   updateCustomPrimaryColor,
@@ -290,6 +291,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
             @update:forceMobileMode="updateForceMobileMode"
             @update:enableLinuxDoInjection="updateEnableLinuxDoInjection"
             @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
+            @update:enableHoverPreview="updateEnableHoverPreview"
             @update:theme="updateTheme"
             @update:customPrimaryColor="updateCustomPrimaryColor"
             @update:customColorScheme="updateCustomColorScheme"

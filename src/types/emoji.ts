@@ -30,6 +30,7 @@ export interface AppSettings {
   outputFormat: 'markdown' | 'html' // 输出格式选择
   forceMobileMode?: boolean // 强制移动模式
   lastModified?: number // timestamp for sync comparison
+  enableHoverPreview?: boolean // 控制在弹出式选择器中鼠标悬浮是否显示大图预览
   // New settings for linux.do injection and X.com selectors
   enableLinuxDoInjection?: boolean // 控制是否在linux.do注入脚本
   enableXcomExtraSelectors?: boolean // 控制是否在X.com启用额外选择器
@@ -120,6 +121,7 @@ const defaultSettings: AppSettings = {
   gridColumns: 4,
   outputFormat: 'markdown', // 默认使用markdown格式
   forceMobileMode: false, // 默认不强制移动模式
+  enableHoverPreview: true, // 默认启用悬浮预览
   enableLinuxDoInjection: true, // 默认启用linux.do注入
   enableXcomExtraSelectors: false, // 默认不启用X.com额外选择器
   customColorScheme: 'default', // 默认配色方案

@@ -2,7 +2,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
-import type { EmojiGroup, Emoji } from '../types/emoji'
+import type { EmojiGroup, Emoji, AppSettings } from '../types/emoji'
 import { isImageUrl } from '../utils/isImageUrl'
 
 import {
@@ -247,6 +247,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableLinuxDoInjection: value })
   }
 
+  const updateEnableHoverPreview = (value: boolean) => {
+    emojiStore.updateSettings({ enableHoverPreview: value })
+  }
+
   const updateEnableXcomExtraSelectors = (value: boolean) => {
     emojiStore.updateSettings({ enableXcomExtraSelectors: value })
   }
@@ -303,7 +307,7 @@ export default function useOptions() {
     )
   }
 
-  const updateCustomColorScheme = (scheme: string) => {
+  const updateCustomColorScheme = (scheme: AppSettings['customColorScheme']) => {
     emojiStore.updateSettings({ customColorScheme: scheme })
   }
 
@@ -779,6 +783,7 @@ export default function useOptions() {
     updateTheme,
     updateCustomPrimaryColor,
     updateCustomColorScheme,
+    updateEnableHoverPreview,
     // drag/drop
     handleDragStart,
     handleDrop,

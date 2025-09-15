@@ -261,6 +261,42 @@ const handleSubmit = () => {
                   </p>
                 </div>
 
+                <!-- Width and Height fields -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      for="emoji-width"
+                      class="block text-sm font-medium text-gray-700 dark:text-white"
+                    >
+                      宽度 (px)
+                    </label>
+                    <input
+                      id="emoji-width"
+                      v-model.number="localEmoji.width"
+                      type="number"
+                      min="1"
+                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
+                      placeholder="可选，像素"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="emoji-height"
+                      class="block text-sm font-medium text-gray-700 dark:text-white"
+                    >
+                      高度 (px)
+                    </label>
+                    <input
+                      id="emoji-height"
+                      v-model.number="localEmoji.height"
+                      type="number"
+                      min="1"
+                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
+                      placeholder="可选，像素"
+                    />
+                  </div>
+                </div>
+
                 <!-- Group Selection -->
                 <div v-if="availableGroups.length > 0">
                   <label
