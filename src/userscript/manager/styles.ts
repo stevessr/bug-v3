@@ -1,3 +1,4 @@
+import { creatEl } from '../utils/createEl.js'
 let __managerStylesInjected = false
 export function injectManagerStyles() {
   if (__managerStylesInjected) return
@@ -194,6 +195,21 @@ export function injectManagerStyles() {
       margin: 0 auto 16px; 
       display: block; 
     }
+
+    /* Hover preview (moved from inline styles) */
+    .emoji-manager-hover-preview {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000002;
+      display: none;
+      max-width: 300px;
+      max-height: 300px;
+      border: 1px solid rgba(0,0,0,0.1);
+      background: #fff;
+      padding: 4px;
+      border-radius: 6px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    }
     
     /* Form styling */
     .form-control { 
@@ -228,8 +244,7 @@ export function injectManagerStyles() {
       font-size: 12px; 
     }
   `
-  const style = document.createElement('style')
-  style.setAttribute('data-emoji-manager-styles', '1')
-  style.textContent = css
-  document.head.appendChild(style)
+  document.head.appendChild(
+    creatEl('style', { setAttribute: { 'data-emoji-manager-styles': '1' }, text: css })
+  )
 }

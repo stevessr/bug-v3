@@ -1,5 +1,6 @@
 // One-click add functionality for image lightboxes
 import { addEmojiToUserscript } from '../userscript-storage'
+import { createEl } from '../utils/createEl'
 
 import { uploader } from '@/content/utils'
 
@@ -46,9 +47,9 @@ function extractNameFromUrl(url: string): string {
 
 // Create add button
 function createAddButton(emojiData: { name: string; url: string }) {
-  const link = document.createElement('a')
-  link.className = 'image-source-link emoji-add-link'
-  link.style.cssText = `
+  const link = createEl('a', {
+    className: 'image-source-link emoji-add-link',
+    style: `
     color: #ffffff;
     text-decoration: none;
     cursor: pointer;
@@ -65,6 +66,7 @@ function createAddButton(emojiData: { name: string; url: string }) {
     transition: all 0.2s ease;
     font-weight: 600;
   `
+  }) as HTMLAnchorElement
 
   link.addEventListener('mouseenter', () => {
     if (!link.innerHTML.includes('已添加') && !link.innerHTML.includes('失败')) {

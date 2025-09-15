@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         表情扩展 (Emoji Extension)
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.0.0
+// @version      1.0.1
 // @description  为论坛网站添加表情选择器功能 (Add emoji picker functionality to forum websites)
 // @author       stevessr
 // @match        https://linux.do/*

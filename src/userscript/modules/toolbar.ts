@@ -1,5 +1,6 @@
 // Toolbar injection and button management module
 import { createEmojiPicker } from './emojiPicker'
+import { createEl } from '../utils/createEl'
 
 // Find toolbars where we can inject buttons
 const toolbarSelectors = ['.d-editor-button-bar[role="toolbar"]', '.chat-composer__inner-container']
@@ -31,7 +32,7 @@ export function injectEmojiButton(toolbar: HTMLElement) {
 
   const isChatComposer = toolbar.classList.contains('chat-composer__inner-container')
 
-  const button = document.createElement('button')
+  const button = createEl('button') as HTMLButtonElement
   button.classList.add(
     'btn',
     'no-text',

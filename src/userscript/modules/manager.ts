@@ -1,5 +1,6 @@
 // Emoji management interface module
 import { injectManagerStyles } from '../manager/styles'
+import { createEl } from '../utils/createEl'
 import { userscriptState } from '../state'
 import {
   saveDataToLocalStorage,
@@ -21,8 +22,8 @@ function createEditorPopup(
   if (!emo) return
 
   // Create popup backdrop
-  const backdrop = document.createElement('div')
-  backdrop.style.cssText = `
+  const backdrop = createEl('div', {
+    style: `
     position: fixed;
     top: 0;
     left: 0;
@@ -34,46 +35,61 @@ function createEditorPopup(
     align-items: center;
     justify-content: center;
   `
+  }) as HTMLDivElement
 
   // Create editor panel
-  const editorPanel = document.createElement('div')
-  editorPanel.className = 'emoji-manager-editor-panel'
+  const editorPanel = createEl('div', { className: 'emoji-manager-editor-panel' }) as HTMLDivElement
 
-  const editorTitle = document.createElement('h3')
-  editorTitle.textContent = '编辑表情'
-  editorTitle.style.cssText = 'margin: 0 0 16px 0; text-align: center;'
+  const editorTitle = createEl('h3', {
+    text: '编辑表情',
+    className: 'emoji-manager-editor-title',
+    style: 'margin: 0 0 16px 0; text-align: center;'
+  })
 
-  const editorPreview = document.createElement('img')
-  editorPreview.className = 'emoji-manager-editor-preview'
+  const editorPreview = createEl('img', {
+    className: 'emoji-manager-editor-preview'
+  }) as HTMLImageElement
   editorPreview.src = emo.url
 
-  const editorNameInput = document.createElement('input')
-  editorNameInput.className = 'form-control'
-  editorNameInput.placeholder = '名称 (alias)'
-  editorNameInput.value = emo.name || ''
+  // width/height inputs for editor (use createEl factory)
+  const editorWidthInput = createEl('input', {
+    className: 'form-control',
+    placeholder: '宽度 (px) 可选',
+    value: emo.width ? String(emo.width) : ''
+  }) as HTMLInputElement
 
-  const editorUrlInput = document.createElement('input')
-  editorUrlInput.className = 'form-control'
-  editorUrlInput.placeholder = '表情图片 URL'
-  editorUrlInput.value = emo.url || ''
+  const editorHeightInput = createEl('input', {
+    className: 'form-control',
+    placeholder: '高度 (px) 可选',
+    value: emo.height ? String(emo.height) : ''
+  }) as HTMLInputElement
 
-  const buttonContainer = document.createElement('div')
-  buttonContainer.style.cssText =
-    'display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;'
+  const editorNameInput = createEl('input', {
+    className: 'form-control',
+    placeholder: '名称 (alias)',
+    value: emo.name || ''
+  }) as HTMLInputElement
 
-  const editorSaveBtn = document.createElement('button')
-  editorSaveBtn.textContent = '保存修改'
-  editorSaveBtn.className = 'btn btn-primary'
+  const editorUrlInput = createEl('input', {
+    className: 'form-control',
+    placeholder: '表情图片 URL',
+    value: emo.url || ''
+  }) as HTMLInputElement
 
-  const editorCancelBtn = document.createElement('button')
-  editorCancelBtn.textContent = '取消'
-  editorCancelBtn.className = 'btn'
+  const buttonContainer = createEl('div', {
+    style: 'display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;'
+  }) as HTMLDivElement
+
+  const editorSaveBtn = createEl('button', { text: '保存修改', className: 'btn btn-primary' })
+  const editorCancelBtn = createEl('button', { text: '取消', className: 'btn' })
 
   buttonContainer.appendChild(editorCancelBtn)
   buttonContainer.appendChild(editorSaveBtn)
 
   editorPanel.appendChild(editorTitle)
   editorPanel.appendChild(editorPreview)
+  editorPanel.appendChild(editorWidthInput)
+  editorPanel.appendChild(editorHeightInput)
   editorPanel.appendChild(editorNameInput)
   editorPanel.appendChild(editorUrlInput)
   editorPanel.appendChild(buttonContainer)
@@ -90,12 +106,18 @@ function createEditorPopup(
   editorSaveBtn.addEventListener('click', () => {
     const newName = (editorNameInput.value || '').trim()
     const newUrl = (editorUrlInput.value || '').trim()
+    const newWidth = parseInt((editorWidthInput.value || '').trim(), 10)
+    const newHeight = parseInt((editorHeightInput.value || '').trim(), 10)
     if (!newName || !newUrl) {
       alert('名称和 URL 均不能为空')
       return
     }
     emo.name = newName
     emo.url = newUrl
+    if (!isNaN(newWidth) && newWidth > 0) emo.width = newWidth
+    else delete emo.width
+    if (!isNaN(newHeight) && newHeight > 0) emo.height = newHeight
+    else delete emo.height
     renderGroups()
     renderSelectedGroup()
     backdrop.remove()
@@ -120,109 +142,104 @@ export function openManagementInterface() {
   injectManagerStyles()
 
   // Create modal wrapper
-  const modal = document.createElement('div')
-  modal.className = 'emoji-manager-wrapper'
+  const modal = createEl('div', { className: 'emoji-manager-wrapper' }) as HTMLDivElement
   modal.setAttribute('role', 'dialog')
   modal.setAttribute('aria-modal', 'true')
 
   // Create main panel
-  const panel = document.createElement('div')
-  panel.className = 'emoji-manager-panel'
+  const panel = createEl('div', { className: 'emoji-manager-panel' }) as HTMLDivElement
 
   // Left: groups list
-  const left = document.createElement('div')
-  left.className = 'emoji-manager-left'
+  const left = createEl('div', { className: 'emoji-manager-left' }) as HTMLDivElement
 
-  const leftHeader = document.createElement('div')
-  leftHeader.className = 'emoji-manager-left-header'
-  const title = document.createElement('h3')
-  title.textContent = '表情管理器'
-  const closeBtn = document.createElement('button')
-  closeBtn.textContent = '×'
-  closeBtn.className = 'btn'
-  closeBtn.style.cssText = 'font-size:20px; background:none; border:none; cursor:pointer;'
+  const leftHeader = createEl('div', { className: 'emoji-manager-left-header' }) as HTMLDivElement
+  const title = createEl('h3', { text: '表情管理器' })
+  const closeBtn = createEl('button', {
+    text: '×',
+    className: 'btn',
+    style: 'font-size:20px; background:none; border:none; cursor:pointer;'
+  }) as HTMLButtonElement
   leftHeader.appendChild(title)
   leftHeader.appendChild(closeBtn)
   left.appendChild(leftHeader)
 
-  const addGroupRow = document.createElement('div')
-  addGroupRow.className = 'emoji-manager-addgroup-row'
-  const addGroupInput = document.createElement('input')
-  addGroupInput.placeholder = '新分组 id'
-  addGroupInput.className = 'form-control'
-  const addGroupBtn = document.createElement('button')
-  addGroupBtn.textContent = '添加'
-  addGroupBtn.className = 'btn'
+  const addGroupRow = createEl('div', { className: 'emoji-manager-addgroup-row' }) as HTMLDivElement
+  const addGroupInput = createEl('input', {
+    placeholder: '新分组 id',
+    className: 'form-control'
+  }) as HTMLInputElement
+  const addGroupBtn = createEl('button', { text: '添加', className: 'btn' }) as HTMLButtonElement
   addGroupRow.appendChild(addGroupInput)
   addGroupRow.appendChild(addGroupBtn)
   left.appendChild(addGroupRow)
 
-  const groupsList = document.createElement('div')
-  groupsList.className = 'emoji-manager-groups-list'
+  const groupsList = createEl('div', { className: 'emoji-manager-groups-list' }) as HTMLDivElement
   left.appendChild(groupsList)
 
   // Right: group detail and controls
-  const right = document.createElement('div')
-  right.className = 'emoji-manager-right'
+  const right = createEl('div', { className: 'emoji-manager-right' }) as HTMLDivElement
 
-  const rightHeader = document.createElement('div')
-  rightHeader.className = 'emoji-manager-right-header'
-  const groupTitle = document.createElement('h4')
+  const rightHeader = createEl('div', { className: 'emoji-manager-right-header' }) as HTMLDivElement
+  const groupTitle = createEl('h4') as HTMLHeadingElement
   groupTitle.textContent = ''
-  const deleteGroupBtn = document.createElement('button')
-  deleteGroupBtn.textContent = '删除分组'
-  deleteGroupBtn.className = 'btn'
-  deleteGroupBtn.style.cssText = 'background:#ef4444; color:#fff;'
+  const deleteGroupBtn = createEl('button', {
+    text: '删除分组',
+    className: 'btn',
+    style: 'background:#ef4444; color:#fff;'
+  }) as HTMLButtonElement
   rightHeader.appendChild(groupTitle)
   rightHeader.appendChild(deleteGroupBtn)
   right.appendChild(rightHeader)
 
-  const managerRightMain = document.createElement('div')
-  managerRightMain.className = 'emoji-manager-right-main'
+  const managerRightMain = createEl('div', {
+    className: 'emoji-manager-right-main'
+  }) as HTMLDivElement
 
   // emojis grid
-  const emojisContainer = document.createElement('div')
-  emojisContainer.className = 'emoji-manager-emojis'
+  const emojisContainer = createEl('div', { className: 'emoji-manager-emojis' }) as HTMLDivElement
   managerRightMain.appendChild(emojisContainer)
 
   // Add emoji form
-  const addEmojiForm = document.createElement('div')
-  addEmojiForm.className = 'emoji-manager-add-emoji-form'
-  const emojiUrlInput = document.createElement('input')
-  emojiUrlInput.placeholder = '表情图片 URL'
-  emojiUrlInput.className = 'form-control'
-  const emojiNameInput = document.createElement('input')
-  emojiNameInput.placeholder = '名称 (alias)'
-  emojiNameInput.className = 'form-control'
-  const addEmojiBtn = document.createElement('button')
-  addEmojiBtn.textContent = '添加表情'
-  addEmojiBtn.className = 'btn btn-primary'
+  const addEmojiForm = createEl('div', {
+    className: 'emoji-manager-add-emoji-form'
+  }) as HTMLDivElement
+  const emojiUrlInput = createEl('input', {
+    placeholder: '表情图片 URL',
+    className: 'form-control'
+  }) as HTMLInputElement
+  const emojiNameInput = createEl('input', {
+    placeholder: '名称 (alias)',
+    className: 'form-control'
+  }) as HTMLInputElement
+  const emojiWidthInput = createEl('input', {
+    placeholder: '宽度 (px) 可选',
+    className: 'form-control'
+  }) as HTMLInputElement
+  const emojiHeightInput = createEl('input', {
+    placeholder: '高度 (px) 可选',
+    className: 'form-control'
+  }) as HTMLInputElement
+  const addEmojiBtn = createEl('button', { text: '添加表情', className: 'btn btn-primary' })
   addEmojiForm.appendChild(emojiUrlInput)
   addEmojiForm.appendChild(emojiNameInput)
+  addEmojiForm.appendChild(emojiWidthInput)
+  addEmojiForm.appendChild(emojiHeightInput)
   addEmojiForm.appendChild(addEmojiBtn)
   managerRightMain.appendChild(addEmojiForm)
 
   right.appendChild(managerRightMain)
 
   // Footer actions
-  const footer = document.createElement('div')
-  footer.className = 'emoji-manager-footer'
-  const exportBtn = document.createElement('button')
-  exportBtn.textContent = '导出'
-  exportBtn.className = 'btn'
-  const importBtn = document.createElement('button')
-  importBtn.textContent = '导入'
-  importBtn.className = 'btn'
-  const exitBtn = document.createElement('button')
-  exitBtn.textContent = '退出'
-  exitBtn.className = 'btn'
+  const footer = createEl('div', { className: 'emoji-manager-footer' }) as HTMLDivElement
+  const exportBtn = createEl('button', { text: '导出', className: 'btn' }) as HTMLButtonElement
+  const importBtn = createEl('button', { text: '导入', className: 'btn' }) as HTMLButtonElement
+  const exitBtn = createEl('button', { text: '退出', className: 'btn' }) as HTMLButtonElement
   exitBtn.addEventListener('click', () => modal.remove())
-  const saveBtn = document.createElement('button')
-  saveBtn.textContent = '保存'
-  saveBtn.className = 'btn btn-primary'
-  const syncBtn = document.createElement('button')
-  syncBtn.textContent = '同步管理器'
-  syncBtn.className = 'btn'
+  const saveBtn = createEl('button', {
+    text: '保存',
+    className: 'btn btn-primary'
+  }) as HTMLButtonElement
+  const syncBtn = createEl('button', { text: '同步管理器', className: 'btn' }) as HTMLButtonElement
   footer.appendChild(syncBtn)
   footer.appendChild(exportBtn)
   footer.appendChild(importBtn)
@@ -247,9 +264,10 @@ export function openManagementInterface() {
     }
 
     userscriptState.emojiGroups.forEach(g => {
-      const row = document.createElement('div')
-      row.style.cssText =
-        'display:flex; justify-content:space-between; align-items:center; padding:6px; border-radius:4px; cursor:pointer;'
+      const row = createEl('div', {
+        style:
+          'display:flex; justify-content:space-between; align-items:center; padding:6px; border-radius:4px; cursor:pointer;'
+      }) as HTMLDivElement
       row.tabIndex = 0
       // show friendly name when available
       row.textContent = `${g.name || g.id} (${(g.emojis || []).length})`
@@ -290,31 +308,33 @@ export function openManagementInterface() {
     if (!group) return
     const emojis = Array.isArray(group.emojis) ? group.emojis : []
     emojis.forEach((emo: any, idx: number) => {
-      const card = document.createElement('div')
-      card.className = 'emoji-manager-card'
+      const card = createEl('div', { className: 'emoji-manager-card' }) as HTMLDivElement
 
-      const img = document.createElement('img')
+      const img = createEl('img') as HTMLImageElement
       img.src = emo.url
       img.alt = emo.name
       img.className = 'emoji-manager-card-img'
+      // apply width/height if provided
+      if (emo.width) img.style.width = typeof emo.width === 'number' ? emo.width + 'px' : emo.width
+      if (emo.height)
+        img.style.height = typeof emo.height === 'number' ? emo.height + 'px' : emo.height
 
-      const name = document.createElement('div')
-      name.textContent = emo.name
-      name.className = 'emoji-manager-card-name'
+      const name = createEl('div', {
+        text: emo.name,
+        className: 'emoji-manager-card-name'
+      }) as HTMLDivElement
 
-      const actions = document.createElement('div')
-      actions.className = 'emoji-manager-card-actions'
+      const actions = createEl('div', { className: 'emoji-manager-card-actions' }) as HTMLDivElement
 
-      const edit = document.createElement('button')
-      edit.textContent = '编辑'
-      edit.className = 'btn btn-sm'
+      const edit = createEl('button', {
+        text: '编辑',
+        className: 'btn btn-sm'
+      }) as HTMLButtonElement
       edit.addEventListener('click', () => {
         showEditorFor(group.id, idx)
       })
 
-      const del = document.createElement('button')
-      del.textContent = '删除'
-      del.className = 'btn btn-sm'
+      const del = createEl('button', { text: '删除', className: 'btn btn-sm' }) as HTMLButtonElement
       del.addEventListener('click', () => {
         group.emojis.splice(idx, 1)
         renderGroups()
@@ -328,7 +348,55 @@ export function openManagementInterface() {
       card.appendChild(name)
       card.appendChild(actions)
       emojisContainer.appendChild(card)
+
+      // bind hover preview events
+      bindHoverPreview(img, emo)
     })
+  }
+
+  // Hover preview singleton
+  let hoverPreviewEl: HTMLImageElement | null = null
+  function ensureHoverPreview() {
+    if (hoverPreviewEl && document.body.contains(hoverPreviewEl)) return hoverPreviewEl
+    hoverPreviewEl = createEl('img', {
+      className: 'emoji-manager-hover-preview'
+    }) as HTMLImageElement
+    document.body.appendChild(hoverPreviewEl)
+    return hoverPreviewEl
+  }
+
+  function bindHoverPreview(targetImg: HTMLImageElement, emo: any) {
+    const preview = ensureHoverPreview()
+    function onEnter(e: MouseEvent) {
+      preview.src = emo.url
+      // use specified size for preview if set, otherwise natural size constrained by CSS
+      if (emo.width)
+        preview.style.width = typeof emo.width === 'number' ? emo.width + 'px' : emo.width
+      else preview.style.width = ''
+      if (emo.height)
+        preview.style.height = typeof emo.height === 'number' ? emo.height + 'px' : emo.height
+      else preview.style.height = ''
+      preview.style.display = 'block'
+      movePreview(e)
+    }
+    function movePreview(e: MouseEvent) {
+      const pad = 12
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const rect = preview.getBoundingClientRect()
+      let left = e.clientX + pad
+      let top = e.clientY + pad
+      if (left + rect.width > vw) left = e.clientX - rect.width - pad
+      if (top + rect.height > vh) top = e.clientY - rect.height - pad
+      preview.style.left = left + 'px'
+      preview.style.top = top + 'px'
+    }
+    function onLeave() {
+      if (preview) preview.style.display = 'none'
+    }
+    targetImg.addEventListener('mouseenter', onEnter)
+    targetImg.addEventListener('mousemove', movePreview)
+    targetImg.addEventListener('mouseleave', onLeave)
   }
 
   // actions
@@ -349,13 +417,22 @@ export function openManagementInterface() {
     if (!selectedGroupId) return alert('请先选择分组')
     const url = (emojiUrlInput.value || '').trim()
     const name = (emojiNameInput.value || '').trim()
+    const widthVal = (emojiWidthInput.value || '').trim()
+    const heightVal = (emojiHeightInput.value || '').trim()
+    const width: number = widthVal ? parseInt(widthVal, 10) : NaN
+    const height: number = heightVal ? parseInt(heightVal, 10) : NaN
     if (!url || !name) return alert('请输入 url 和 名称')
     const group = userscriptState.emojiGroups.find(g => g.id === selectedGroupId)
     if (!group) return
     group.emojis = group.emojis || []
-    group.emojis.push({ url, name })
+    const newEmo: any = { url, name }
+    if (!isNaN(width) && width > 0) newEmo.width = width
+    if (!isNaN(height) && height > 0) newEmo.height = height
+    group.emojis.push(newEmo)
     emojiUrlInput.value = ''
     emojiNameInput.value = ''
+    emojiWidthInput.value = ''
+    emojiHeightInput.value = ''
     renderGroups()
     renderSelectedGroup()
   })
@@ -385,7 +462,7 @@ export function openManagementInterface() {
       .writeText(data)
       .then(() => alert('已复制到剪贴板'))
       .catch(() => {
-        const ta = document.createElement('textarea')
+        const ta = createEl('textarea') as HTMLTextAreaElement
         ta.value = data
         document.body.appendChild(ta)
         ta.select()
@@ -393,20 +470,24 @@ export function openManagementInterface() {
   })
 
   importBtn.addEventListener('click', () => {
-    const ta = document.createElement('textarea')
-    ta.placeholder = '粘贴 JSON 后点击确认'
-    ta.style.cssText = 'width:100%;height:200px;margin-top:8px;'
-    const ok = document.createElement('button')
-    ok.textContent = '确认导入'
-    ok.style.cssText = 'padding:6px 8px;margin-top:6px;'
-    const container = document.createElement('div')
+    const ta = createEl('textarea', {
+      placeholder: '粘贴 JSON 后点击确认',
+      style: 'width:100%;height:200px;margin-top:8px;'
+    }) as HTMLTextAreaElement
+    const ok = createEl('button', {
+      text: '确认导入',
+      style: 'padding:6px 8px;margin-top:6px;'
+    }) as HTMLButtonElement
+    const container = createEl('div') as HTMLDivElement
     container.appendChild(ta)
     container.appendChild(ok)
-    const importModal = document.createElement('div')
-    importModal.style.cssText =
-      'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000001;'
-    const box = document.createElement('div')
-    box.style.cssText = 'background:#fff;padding:12px;border-radius:6px;width:90%;max-width:700px;'
+    const importModal = createEl('div', {
+      style:
+        'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000001;'
+    }) as HTMLDivElement
+    const box = createEl('div', {
+      style: 'background:#fff;padding:12px;border-radius:6px;width:90%;max-width:700px;'
+    }) as HTMLDivElement
     box.appendChild(container)
     importModal.appendChild(box)
     document.body.appendChild(importModal)

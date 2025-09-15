@@ -1,11 +1,12 @@
 // Settings modal module
 import { userscriptState } from '../state'
 import { saveDataToLocalStorage } from '../userscript-storage'
+import { createEl } from '../utils/createEl'
 
 // Show settings modal
 export function showSettingsModal() {
-  const modal = document.createElement('div')
-  modal.style.cssText = `
+  const modal = createEl('div', {
+    style: `
     position: fixed;
     top: 0;
     left: 0;
@@ -17,19 +18,19 @@ export function showSettingsModal() {
     align-items: center;
     justify-content: center;
   `
+  })
 
-  const content = document.createElement('div')
-  content.style.cssText = `
-    background: white;
-    border-radius: 8px;
+  const content = createEl('div', {
+    style: `
+      background: white;
+      border-radius: 8px;
     padding: 24px;
     max-width: 500px;
     max-height: 80vh;
     overflow-y: auto;
     position: relative;
-  `
-
-  content.innerHTML = `
+  `,
+    innerHTML: `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="margin: 0; color: #333;">设置</h2>
       <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
@@ -74,6 +75,7 @@ export function showSettingsModal() {
       <button id="saveSettings" style="padding: 8px 16px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer;">保存</button>
     </div>
   `
+  })
 
   modal.appendChild(content)
   document.body.appendChild(modal)

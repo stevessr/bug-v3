@@ -152,10 +152,19 @@
       const results = document.getElementById('results')
       const testStatus = document.getElementById('testStatus')
 
+      // Minimal createEl helper for this test page (mirrors project utility subset)
+      function createEl(tag, opts) {
+        const el = document.createElement(tag)
+        if (opts) {
+          if (opts.className) el.className = opts.className
+          if (opts.text) el.textContent = opts.text
+          if (opts.innerHTML) el.innerHTML = opts.innerHTML
+        }
+        return el
+      }
+
       function addResult(message, type = 'info') {
-        const div = document.createElement('div')
-        div.className = `status ${type}`
-        div.innerHTML = message
+        const div = createEl('div', { className: `status ${type}`, innerHTML: message })
         results.appendChild(div)
       }
 
