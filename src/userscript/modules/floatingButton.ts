@@ -69,8 +69,10 @@ function injectStyles() {
   injectGlobalThemeStyles()
 
   const style = createEl('style', {
-    id: 'emoji-extension-floating-button-styles',
-    textContent: getFloatingButtonStyles()
+    attrs: {
+      id: 'emoji-extension-floating-button-styles'
+    },
+    text: FLOATING_BUTTON_STYLES
   })
 
   document.head.appendChild(style)
@@ -97,7 +99,7 @@ function createFloatingButton(): HTMLElement {
       // Attempt manual injection
       const result = attemptInjection()
 
-      if (result.injectedCount > 0 || result.totalToolbars > 0) {
+      if (result.injectedCount > 0) {
         // Success feedback
         button.innerHTML = '✅'
         button.style.background = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)'

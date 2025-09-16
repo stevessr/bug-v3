@@ -2,7 +2,7 @@
 import { userscriptState } from '../state'
 import { trackEmojiUsage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
-import { getPlatformUIConfig, getEffectivePlatform } from '../utils/platformDetection'
+import { getEffectivePlatform } from '../utils/platformDetection'
 
 import { injectEmojiPickerStyles } from './emojiPickerStyles'
 

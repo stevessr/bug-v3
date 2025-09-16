@@ -249,7 +249,7 @@ function showTemporaryMessage(message: string) {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       animation: fadeInOut 2s ease-in-out;
     `,
-    textContent: message
+    text: message
   })
   
   // Add CSS animation
