@@ -169,6 +169,13 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     })
   )
 
+  list.appendChild(
+    createListItem('过盾', '🛡', () => {
+      menu.remove()
+      window.location.href = 'https://pwsh.edu.deal/'
+    })
+  )
+
   list.appendChild(uploadLi)
   list.appendChild(generateLi)
   inner.appendChild(list)

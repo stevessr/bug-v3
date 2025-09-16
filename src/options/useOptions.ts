@@ -23,7 +23,6 @@ export default function useOptions() {
     { id: 'settings', label: '设置' },
     { id: 'favorites', label: '常用' },
     { id: 'groups', label: '分组管理' },
-    { id: 'groups-card', label: '分组（卡片）' },
     { id: 'ungrouped', label: '未分组' },
     { id: 'import', label: '外部导入' },
     { id: 'bilibili', label: 'Bilibili 导入' },
