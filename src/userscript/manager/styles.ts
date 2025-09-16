@@ -132,6 +132,12 @@ export function injectManagerStyles() {
     .emoji-manager-card-img { 
       width: 80px; 
       height: 80px; 
+      /* Prevent extremely large images from breaking the layout by limiting their
+         rendered size relative to the card. Use both absolute and percentage-based
+         constraints so user-provided pixel sizes (from edit form) still work but
+         will not overflow the card or modal. */
+      max-width: 90%;
+      max-height: 60vh; /* allow tall images but cap at viewport height */
       object-fit: contain; 
       border-radius: 6px; 
       background: white; 
@@ -192,6 +198,10 @@ export function injectManagerStyles() {
     .emoji-manager-editor-preview { 
       width: 100px; 
       height: 100px; 
+      /* editor preview should be bounded to avoid huge remote images
+         while still allowing percentage-based scaling */
+      max-width: 100%;
+      max-height: 40vh;
       object-fit: contain; 
       border-radius: 8px; 
       background: #f8f9fa; 
@@ -205,8 +215,12 @@ export function injectManagerStyles() {
       pointer-events: none;
       z-index: 1000002;
       display: none;
-      max-width: 300px;
-      max-height: 300px;
+      /* For hover previews allow a generous but bounded size relative to viewport
+         to avoid covering entire UI or pushing content off-screen. */
+      max-width: 30vw;
+      max-height: 40vh;
+      width: auto;
+      height: auto;
       border: 1px solid rgba(0,0,0,0.1);
       background: #fff;
       padding: 4px;
