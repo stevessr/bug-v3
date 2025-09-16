@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { DownOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 
 import type { EmojiGroup, Emoji } from '../../types/emoji'
 import { useEmojiStore } from '../../stores/emojiStore'
@@ -15,6 +15,35 @@ const emojiStore = useEmojiStore()
 const isMultiSelectMode = ref(false)
 const selectedEmojis = ref(new Set<number>())
 const targetGroupId = ref('')
+
+// 全选状态
+const totalCount = computed(() => ungroup.value?.emojis?.length || 0)
+const checkedCount = computed(() => selectedEmojis.value.size)
+const checkAll = computed<boolean>({
+  get: () => totalCount.value > 0 && checkedCount.value === totalCount.value,
+  set: (val: boolean) => {
+    if (!ungroup.value) return
+    if (val) {
+      selectedEmojis.value = new Set(ungroup.value.emojis.map((_, i) => i))
+    } else {
+      clearSelection()
+    }
+  }
+})
+
+const indeterminate = computed(
+  () => checkedCount.value > 0 && checkedCount.value < totalCount.value
+)
+
+const onCheckAllChange = (e: any) => {
+  const checked = !!(e && e.target && e.target.checked)
+  if (!ungroup.value) return
+  if (checked) {
+    selectedEmojis.value = new Set(ungroup.value.emojis.map((_, i) => i))
+  } else {
+    clearSelection()
+  }
+}
 
 // Upload functionality
 const uploadingEmojiIds = ref(new Set<number>())
@@ -275,10 +304,16 @@ const cancelCreateGroup = () => {
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white">未分组表情</h2>
           <div class="flex items-center gap-4">
             <!-- 批量操作控制 -->
-            <div
-              v-if="isMultiSelectMode && selectedEmojis.size > 0"
-              class="flex items-center gap-2"
-            >
+            <div v-if="isMultiSelectMode" class="flex items-center gap-2">
+              <!-- 全选复选框 -->
+              <a-checkbox
+                v-model:checked="checkAll"
+                :indeterminate="indeterminate"
+                @change="onCheckAllChange"
+                class="text-sm"
+              >
+                全选
+              </a-checkbox>
               <span class="text-sm text-gray-600 dark:text-white">
                 已选择 {{ selectedEmojis.size }} 个
               </span>
@@ -293,58 +328,52 @@ const cancelCreateGroup = () => {
                     <a-menu-item key="__create_new__">+ 创建新分组</a-menu-item>
                   </a-menu>
                 </template>
-                <AButton>
+                <a-button>
                   {{ targetGroupId || '选择目标分组' }}
                   <DownOutlined />
-                </AButton>
+                </a-button>
               </a-dropdown>
-              <button
+              <a-button
                 @click="moveSelectedEmojis"
                 :disabled="!targetGroupId"
                 class="text-sm px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 移动
-              </button>
-              <button
+              </a-button>
+              <a-button
                 @click="clearSelection"
                 class="text-sm px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
               >
                 清空选择
-              </button>
+              </a-button>
             </div>
             <!-- 多选模式开关 -->
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                v-model="isMultiSelectMode"
-                @change="onMultiSelectModeChange"
-                class="rounded"
-              />
+            <a-checkbox v-model:checked="isMultiSelectMode" @change="onMultiSelectModeChange">
               <span class="text-sm text-gray-700 dark:text-white">多选模式</span>
-            </label>
+            </a-checkbox>
           </div>
         </div>
       </div>
       <div class="px-6 py-3 border-b border-gray-100 flex items-center justify-end gap-2">
         <!-- Upload all button when not on linux.do -->
-        <button
+        <a-button
           v-if="shouldShowUploadButton && ungroup && ungroup.emojis?.length > 0"
           @click="uploadAllEmojis"
           class="text-sm px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2"
           title="上传所有未分组表情到 linux.do"
         >
           📤 上传全部
-        </button>
+        </a-button>
 
         <!-- Upload selected button when in multi-select mode -->
-        <button
+        <a-button
           v-if="shouldShowUploadButton && isMultiSelectMode && selectedEmojis.size > 0"
           @click="uploadSelectedEmojis"
           class="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
           title="上传选中的表情到 linux.do"
         >
           📤 上传选中 ({{ selectedEmojis.size }})
-        </button>
+        </a-button>
       </div>
 
       <div class="p-6">
@@ -373,31 +402,34 @@ const cancelCreateGroup = () => {
 
             <!-- 多选模式下的选择框 -->
             <div v-if="isMultiSelectMode" class="absolute bottom-1 right-1">
-              <input
-                type="checkbox"
+              <a-checkbox
                 :checked="selectedEmojis.has(idx)"
                 @change="toggleEmojiSelection(idx)"
-                class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
+                class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 rounded focus:ring-blue-500"
               />
             </div>
 
             <!-- 非多选模式下的编辑/删除/上传按钮 -->
             <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
               <!-- Upload button when not on linux.do -->
-              <button
+              <a-button
                 @click="$emit('edit', emoji, ungroup.id, idx)"
                 title="编辑"
                 class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
               >
                 编辑
-              </button>
-              <button
-                @click="$emit('remove', ungroup.id, idx)"
-                title="移除"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
-              >
-                移除
-              </button>
+              </a-button>
+              <a-popconfirm title="确认移除此表情？" @confirm="$emit('remove', ungroup.id, idx)">
+                <template #icon>
+                  <QuestionCircleOutlined style="color: red" />
+                </template>
+                <a-button
+                  title="移除"
+                  class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
+                >
+                  移除
+                </a-button>
+              </a-popconfirm>
             </div>
 
             <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 const emit = defineEmits([
   'openCreateGroup',
   'groupDragStart',
@@ -523,13 +524,17 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                       >
                         ✎
                       </button>
-                      <!-- Remove button in top right corner -->
-                      <button
-                        @click="$emit('removeEmoji', group.id, index)"
-                        class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ×
-                      </button>
+                      <!-- Remove button in top right corner (with confirmation) -->
+                      <a-popconfirm title="确认移除此表情？" @confirm="$emit('removeEmoji', group.id, index)">
+                        <template #icon>
+                          <QuestionCircleOutlined style="color: red" />
+                        </template>
+                        <a-button
+                          class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </a-button>
+                      </a-popconfirm>
                     </div>
                   </div>
 

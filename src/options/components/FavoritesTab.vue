@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 
@@ -63,13 +64,17 @@ const favoritesGroup = computed(() => {
               >
                 编辑
               </button>
-              <button
-                @click="$emit('remove', 'favorites', idx)"
-                title="移除"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-gray-700 rounded hover:bg-opacity-100"
-              >
-                移除
-              </button>
+              <a-popconfirm title="确认移除此表情？" @confirm="$emit('remove', 'favorites', idx)">
+                <template #icon>
+                  <QuestionCircleOutlined style="color: red" />
+                </template>
+                <a-button
+                  title="移除"
+                  class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-gray-700 rounded hover:bg-opacity-100"
+                >
+                  移除
+                </a-button>
+              </a-popconfirm>
             </div>
             <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
               {{ emoji.name }}
