@@ -148,6 +148,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     menu.remove()
     await showImageUploadDialog()
   })
+  list.appendChild(uploadLi)
 
   const generateLi = createListItem('AI 生成图片', '🎨', () => {
     menu.remove()
@@ -157,27 +158,25 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
       window.location.href = 'https://gemini-image.smnet.studio/'
     }
   })
-
-  list.appendChild(
-    createListItem('学习xv6', '🖥︎', () => {
-      menu.remove()
-      try {
-        window.open('https://pwsh.edu.deal/', '_blank')
-      } catch (e) {
-        window.location.href = 'https://pwsh.edu.deal/'
-      }
-    })
-  )
-
-  list.appendChild(
-    createListItem('过盾', '🛡', () => {
-      menu.remove()
-      window.location.href = 'https://pwsh.edu.deal/'
-    })
-  )
-
-  list.appendChild(uploadLi)
   list.appendChild(generateLi)
+
+  const learnxv6 = createListItem('学习xv6', '🖥︎', () => {
+    menu.remove()
+    try {
+      window.open('https://pwsh.edu.deal/', '_blank')
+    } catch (e) {
+      window.location.href = 'https://pwsh.edu.deal/'
+    }
+  })
+
+  list.appendChild(learnxv6)
+
+  const passwall = createListItem('过盾', '🛡', () => {
+    menu.remove()
+    window.location.href = 'https://linux.do/challenge'
+  })
+  list.appendChild(passwall)
+
   inner.appendChild(list)
   menu.appendChild(inner)
 
