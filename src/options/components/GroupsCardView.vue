@@ -4,8 +4,6 @@ import { computed, type PropType, ref } from 'vue'
 import { normalizeImageUrl } from '../../utils/isImageUrl'
 import { useEmojiStore } from '../../stores/emojiStore'
 
-import GroupActionsDropdown from './GroupActionsDropdown.vue'
-
 type Group = {
   id: string
   name: string
@@ -358,20 +356,6 @@ const onTouchCancel = (_e: TouchEvent) => {
               {{ group.emojis?.length || 0 }} 个表情
             </div>
           </a-card-meta>
-          <div class="mt-3 flex gap-2">
-            <div v-if="group.id !== 'favorites'" class="relative">
-              <GroupActionsDropdown
-                :group="group"
-                @edit="onEditCard"
-                @export="onExportCard"
-                @exportZip="onExportZipCard"
-                @dedupe="onDedupeCard"
-                @confirmDelete="g => $emit('confirmDeleteGroup', g)"
-                @batchUpdateSize="g => $emit('batchUpdateSize', g)"
-              />
-            </div>
-            <div v-else class="text-sm text-gray-500 dark:text-white">系统分组</div>
-          </div>
           <div
             v-if="dedupeMessageCard[group.id]"
             class="mt-2 text-sm text-green-600 dark:text-white"

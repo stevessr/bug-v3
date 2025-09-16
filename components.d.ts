@@ -22,8 +22,7 @@ declare module 'vue' {
     AModal: typeof import('ant-design-vue/es')['Modal']
     APopconfirm: typeof import('ant-design-vue/es')['Popconfirm']
     AProgress: typeof import('ant-design-vue/es')['Progress']
-    ARadioGroup: typeof import('ant-design-vue/es')['RadioGroup']
+    ASegmented: typeof import('ant-design-vue/es')['Segmented']
     ASlider: typeof import('ant-design-vue/es')['Slider']
-    ASpace: typeof import('ant-design-vue/es')['Space']
   }
 }

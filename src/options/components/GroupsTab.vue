@@ -20,10 +20,14 @@ const emit = defineEmits([
   'update:activeTab'
 ])
 // props: only expandedGroups / isImageUrl / activeTab are expected from parent
-import { computed, ref, onMounted, onUnmounted, type PropType } from 'vue'
+import { computed, ref, reactive, onMounted, onUnmounted, type PropType } from 'vue'
 
 // internal view mode for groups tab: 'list' or 'card'
 const viewMode = ref<'list' | 'card'>('list')
+const viewOptions = reactive([
+  { label: '列表', value: 'list' },
+  { label: '卡片', value: 'card' }
+])
 
 
 
@@ -93,7 +97,7 @@ const onGroupDropLocal = (group: any, e: DragEvent) => {
       if (emojiData) {
         // drop an emoji onto the group (append to end)
         try {
-          const parsed = JSON.parse(emojiData)
+          JSON.parse(emojiData) // validate JSON format
           // emit same shape as emojiDrop used elsewhere: (targetGroupId, targetIndex, event)
           const targetIndex = Array.isArray(group.emojis) ? group.emojis.length : 0
           emit('emojiDrop', group.id, targetIndex, e)
@@ -429,21 +433,8 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-3">
               <h2 class="text-lg font-semibold text-gray-900 dark:text-white">表情分组管理</h2>
-              <div class="ml-4 inline-flex rounded-md bg-gray-50 p-1 dark:bg-gray-700">
-                <button
-                  class="px-3 py-1 text-sm rounded dark:bg-gray-800 dark:text-white"
-                  @click="() => (viewMode = 'list')"
-                  :class="{ 'bg-white shadow': viewMode === 'list' }"
-                >
-                  列表
-                </button>
-                <button
-                  class="px-3 py-1 text-sm rounded dark:text-white"
-                  @click="() => (viewMode = 'card')"
-                  :class="{ 'bg-white shadow': viewMode === 'card' }"
-                >
-                  卡片
-                </button>
+              <div class="ml-4">
+                <a-segmented v-model:value="viewMode" :options="viewOptions" />
               </div>
             </div>
             <button
