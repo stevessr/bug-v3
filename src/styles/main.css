@@ -37,7 +37,7 @@
   /* Ensure input placeholders are light in dark mode */
   .dark input::placeholder,
   .dark textarea::placeholder {
-    color: rgba(255,255,255,0.6);
+    color: rgba(255, 255, 255, 0.6);
   }
 
   .emoji-picker-container {
@@ -76,5 +76,48 @@
 
   .scale-control {
     @apply flex items-center gap-2 p-2 bg-gray-50 rounded dark:bg-gray-700;
+  }
+
+  /* Limit Ant Design Vue dropdown overlay height to 30vh and enable scrolling */
+  .ant-dropdown {
+    /* Ensure the root dropdown wrapper doesn't constrain overlay positioning */
+  }
+
+  /* The actual overlay panel used by Ant Design Vue */
+  .ant-dropdown .ant-dropdown-menu,
+  .ant-dropdown .ant-dropdown-menu-root,
+  .ant-dropdown .ant-dropdown-overlay,
+  .ant-dropdown .ant-dropdown-content {
+    max-height: 30vh !important;
+    overflow: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
+  }
+
+  .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar,
+  .ant-dropdown .ant-dropdown-overlay::-webkit-scrollbar,
+  .ant-dropdown .ant-dropdown-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-track,
+  .ant-dropdown .ant-dropdown-overlay::-webkit-scrollbar-track,
+  .ant-dropdown .ant-dropdown-content::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-color);
+    border-radius: 4px;
+  }
+
+  .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-thumb,
+  .ant-dropdown .ant-dropdown-overlay::-webkit-scrollbar-thumb,
+  .ant-dropdown .ant-dropdown-content::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-color);
+    border-radius: 4px;
+  }
+
+  .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-thumb:hover,
+  .ant-dropdown .ant-dropdown-overlay::-webkit-scrollbar-thumb:hover,
+  .ant-dropdown .ant-dropdown-content::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover-color);
   }
 }

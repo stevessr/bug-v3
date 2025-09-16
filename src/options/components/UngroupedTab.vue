@@ -317,7 +317,6 @@ const cancelCreateGroup = () => {
               <span class="text-sm text-gray-600 dark:text-white">
                 已选择 {{ selectedEmojis.size }} 个
               </span>
-              <!-- 原生 select 已替换为 a-dropdown（下方） -->
               <a-dropdown>
                 <template #overlay>
                   <a-menu @click="onTargetGroupSelect">
