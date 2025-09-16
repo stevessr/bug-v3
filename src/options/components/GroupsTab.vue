@@ -69,6 +69,59 @@ const closeMenu = () => {
   openMenu.value = null
 }
 
+// Local drag handlers to annotate dataTransfer so drops can distinguish
+// between group reordering drags and emoji drags. This makes it possible
+// to drop an emoji onto a group's empty area to append it.
+const onGroupDragStartLocal = (group: any, e: DragEvent) => {
+  // annotate dataTransfer for group drag
+  if (e && e.dataTransfer) {
+    try {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('application/x-group', String(group.id))
+    } catch {
+      // ignore
+    }
+  }
+  emit('groupDragStart', group, e)
+}
+
+const onGroupDropLocal = (group: any, e: DragEvent) => {
+  e.preventDefault()
+  try {
+    if (e.dataTransfer) {
+      const emojiData = e.dataTransfer.getData('application/x-emoji')
+      if (emojiData) {
+        // drop an emoji onto the group (append to end)
+        try {
+          const parsed = JSON.parse(emojiData)
+          // emit same shape as emojiDrop used elsewhere: (targetGroupId, targetIndex, event)
+          const targetIndex = Array.isArray(group.emojis) ? group.emojis.length : 0
+          emit('emojiDrop', group.id, targetIndex, e)
+          return
+        } catch {
+          // ignore parse error and fallback
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  // otherwise treat as a group reorder drop
+  emit('groupDrop', group, e)
+}
+
+const onEmojiDragStartLocal = (emoji: any, groupId: string, index: number, e: DragEvent) => {
+  if (e && e.dataTransfer) {
+    try {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('application/x-emoji', JSON.stringify({ groupId, index }))
+    } catch {
+      // ignore
+    }
+  }
+  emit('emojiDragStart', emoji, groupId, index, e)
+}
+
 const onEdit = (group: any) => {
   closeMenu()
   emit('openEditGroup', group)
@@ -410,9 +463,9 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                 :key="group.id"
                 class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
                 :draggable="group.id !== 'favorites'"
-                @dragstart="$emit('groupDragStart', group, $event)"
+                @dragstart="(e) => onGroupDragStartLocal(group, e)"
                 @dragover.prevent
-                @drop="$emit('groupDrop', group, $event)"
+                @drop="(e) => onGroupDropLocal(group, e)"
                 :ref="el => el && addGroupTouchEvents(el as HTMLElement, group)"
               >
                 <div class="flex items-center justify-between p-4" v-if="group.name != '未分组'">
@@ -498,7 +551,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                         :key="`${group.id}-${index}`"
                         class="emoji-item relative group cursor-move"
                         :draggable="true"
-                        @dragstart="$emit('emojiDragStart', emoji, group.id, index, $event)"
+                        @dragstart="(e) => onEmojiDragStartLocal(emoji, group.id, index, e)"
                         @dragover.prevent
                         @drop="$emit('emojiDrop', group.id, index, $event)"
                         :ref="
