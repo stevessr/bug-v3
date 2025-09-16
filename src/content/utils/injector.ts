@@ -158,6 +158,17 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     }
   })
 
+  list.appendChild(
+    createListItem('学习xv6', '🖥︎', () => {
+      menu.remove()
+      try {
+        window.open('https://pwsh.edu.deal/', '_blank')
+      } catch (e) {
+        window.location.href = 'https://pwsh.edu.deal/'
+      }
+    })
+  )
+
   list.appendChild(uploadLi)
   list.appendChild(generateLi)
   inner.appendChild(list)

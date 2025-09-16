@@ -7,7 +7,6 @@ import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
 
 import GridColumnsSelector from './components/GridColumnsSelector.vue'
 import AboutSection from './components/AboutSection.vue'
-import HeaderControls from './components/HeaderControls.vue'
 import GlobalSettings from './components/GlobalSettings.vue'
 import EmojiStats from './components/EmojiStats.vue'
 import ImportConfigModal from './modals/ImportConfigModal.vue'
@@ -26,6 +25,7 @@ import EditGroupModal from './modals/EditGroupModal.vue'
 // composable
 import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
+import opensource from '@/options/modals/opensource.vue'
 
 const options = useOptions()
 
@@ -246,7 +246,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
                 管理表情包分组、自定义表情和扩展设置
               </p>
             </div>
-            <HeaderControls
+            <opensource
               @openImport="showImportModal = true"
               @openImportEmojis="showImportEmojiModal = true"
               @resetSettings="resetSettings"

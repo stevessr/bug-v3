@@ -11,6 +11,8 @@ declare module 'vue' {
     ACard: typeof import('ant-design-vue/es')['Card']
     ACardMeta: typeof import('ant-design-vue/es')['CardMeta']
     ADropdown: typeof import('ant-design-vue/es')['Dropdown']
+    AFloatButton: typeof import('ant-design-vue/es')['FloatButton']
+    AFloatButtonGroup: typeof import('ant-design-vue/es')['FloatButtonGroup']
     AImage: typeof import('ant-design-vue/es')['Image']
     AImagePreviewGroup: typeof import('ant-design-vue/es')['ImagePreviewGroup']
     AInput: typeof import('ant-design-vue/es')['Input']
