@@ -91,7 +91,11 @@ if (!config) {
 Object.assign(process.env, config)
 // 把可选的构建变体注入环境变量，供 vite 配置读取
 // For userscript builds, default to 'embedded' unless caller explicitly set a variant.
-if (buildType.startsWith('build:userscript') && process.env.USERSCRIPT_VARIANT === undefined && args.length <= 1) {
+if (
+  buildType.startsWith('build:userscript') &&
+  process.env.USERSCRIPT_VARIANT === undefined &&
+  args.length <= 1
+) {
   // If user didn't pass an explicit variant, embed defaults into the userscript bundle.
   process.env.USERSCRIPT_VARIANT = 'embedded'
 } else {
@@ -137,17 +141,18 @@ if (variant && variant !== 'default') {
   console.log(`🔀 构建变体: ${variant}`)
 }
 
-// 执行 vite build
+// 执行 vite（开发或构建）
 const isUserscript = buildType.startsWith('build:userscript')
-const viteCommand =
+// 构建时传递给 `vite` 的参数数组。dev 模式不传额外参数（等价于 `pnpm exec vite`）。
+const viteArgs =
   buildType === 'dev'
-    ? 'vite'
-    : `vite build${isUserscript ? ' --config vite.config.userscript.ts' : ''}`
+    ? []
+    : ['build', ...(isUserscript ? ['--config', 'vite.config.userscript.ts'] : [])]
 // Variant flag functionality removed - development variant no longer supported
 const publicDir = path.resolve(process.cwd(), 'public')
 const distDir = path.resolve(process.cwd(), 'dist')
 
-const child = spawn('npx', viteCommand.split(' '), {
+const child = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
   stdio: 'inherit',
   env: process.env,
   shell: false
