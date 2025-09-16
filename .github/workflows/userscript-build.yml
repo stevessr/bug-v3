@@ -1,0 +1,219 @@
+name: Build and Release Userscript
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/userscript/**'
+      - 'src/types/**'
+      - 'src/utils/**'
+      - 'package.json'
+      - 'vite.config.userscript.ts'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/userscript/**'
+      - 'src/types/**'
+      - 'src/utils/**'
+      - 'package.json'
+      - 'vite.config.userscript.ts'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Type of userscript release'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - minified
+          - remote
+          - oneline
+      version_suffix:
+        description: 'Version suffix (optional, e.g., -beta.1)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-userscript:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack and ensure pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10 --activate || npm install -g pnpm@10
+
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate version info
+        id: version
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%d%H%M)
+          BASE_VERSION="1.0.0"
+          SUFFIX="${{ github.event.inputs.version_suffix }}"
+          
+          if [ -n "$SUFFIX" ]; then
+            VERSION="${BASE_VERSION}${SUFFIX}.${TIMESTAMP}"
+          else
+            VERSION="${BASE_VERSION}.${TIMESTAMP}"
+          fi
+          
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_OUTPUT
+
+      - name: Update version in package.json
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          jq --arg version "$VERSION" '.version = $version' package.json > tmp.json && mv tmp.json package.json
+
+      - name: Build standard userscript
+        if: github.event.inputs.release_type == 'standard' || github.event.inputs.release_type == ''
+        run: pnpm run build:userscript
+
+      - name: Build minified userscript
+        if: github.event.inputs.release_type == 'minified'
+        run: pnpm run build:userscript:min
+
+      - name: Build remote userscript
+        if: github.event.inputs.release_type == 'remote'
+        run: pnpm run build:userscript:remote
+
+      - name: Build oneline userscript
+        if: github.event.inputs.release_type == 'oneline'
+        run: pnpm run build:userscript:oneline
+
+      - name: Prepare userscript artifacts
+        run: |
+          mkdir -p userscript-release
+          
+          # Copy the main userscript file
+          if [ -f "dist/emoji-extension.user.js" ]; then
+            cp dist/emoji-extension.user.js userscript-release/
+            
+            # Create versioned copy
+            VERSION="${{ steps.version.outputs.VERSION }}"
+            cp dist/emoji-extension.user.js "userscript-release/emoji-extension-v${VERSION}.user.js"
+          fi
+          
+          # Copy any other userscript variants if they exist
+          if [ -d "dist" ]; then
+            find dist -name "*.user.js" -exec cp {} userscript-release/ \;
+          fi
+          
+          # Create info file
+          cat > userscript-release/BUILD_INFO.txt << EOF
+          Build Information
+          =================
+          Version: ${{ steps.version.outputs.VERSION }}
+          Build Type: ${{ github.event.inputs.release_type || 'standard' }}
+          Timestamp: ${{ steps.version.outputs.TIMESTAMP }}
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref_name }}
+          
+          Files included:
+          $(ls -la userscript-release/*.user.js)
+          EOF
+
+      - name: Upload userscript artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: userscript-build-${{ steps.version.outputs.TIMESTAMP }}
+          path: userscript-release/
+          retention-days: 30
+
+      - name: Create userscript release (on workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: userscript-v${{ steps.version.outputs.VERSION }}
+          files: userscript-release/*
+          name: Userscript Release v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Emoji Extension Userscript v${{ steps.version.outputs.VERSION }}
+
+            ### Build Information
+            - **Build Type**: ${{ github.event.inputs.release_type || 'standard' }}
+            - **Build Time**: ${{ steps.version.outputs.TIMESTAMP }}
+            - **Commit**: ${{ github.sha }}
+
+            ### Features in this Release
+            ✨ **Smart Floating Button**: Automatic manual injection when auto-injection fails  
+            🎨 **Dark Theme Support**: Adaptive UI for light/dark system themes  
+            ⚙️ **Enhanced Settings**: New floating preview toggle with 5-second auto fade-out  
+            🔧 **pnpm Migration**: All builds now use pnpm for better performance  
+
+            ### Installation
+            1. Download the `.user.js` file for your preferred variant
+            2. Install in your userscript manager (Tampermonkey, Greasemonkey, etc.)
+            3. Visit compatible sites to start using emoji features
+
+            ### Variants Available
+            - **Standard**: Full-featured build with all capabilities
+            - **Minified**: Compressed version for better loading speed
+            - **Remote**: Loads emoji data from remote sources
+            - **Oneline**: Single-line embedded version
+
+            ### Compatibility
+            - ✅ Tampermonkey (recommended)
+            - ✅ Greasemonkey
+            - ✅ Violentmonkey
+            - ✅ AdGuard (userscripts)
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to GreasyFork (if configured)
+        if: github.event_name == 'workflow_dispatch' && vars.GREASYFORK_WEBHOOK_URL != ''
+        run: |
+          # This is a placeholder for GreasyFork upload
+          # You would need to implement the actual upload mechanism
+          # based on GreasyFork's API or webhook system
+          echo "GreasyFork upload would happen here"
+          echo "Webhook URL: ${{ vars.GREASYFORK_WEBHOOK_URL }}"
+          
+          # Example webhook call (adjust based on actual GreasyFork API)
+          # curl -X POST "${{ vars.GREASYFORK_WEBHOOK_URL }}" \
+          #   -H "Content-Type: application/json" \
+          #   -d '{
+          #     "script_id": "${{ vars.GREASYFORK_SCRIPT_ID }}",
+          #     "version": "${{ steps.version.outputs.VERSION }}",
+          #     "code": "'"$(cat userscript-release/emoji-extension.user.js | base64 -w 0)"'"
+          #   }'
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Userscript Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type**: ${{ github.event.inputs.release_type || 'standard' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files**: $(ls userscript-release/*.user.js | wc -l) userscript files" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files Built" >> $GITHUB_STEP_SUMMARY
+          for file in userscript-release/*.user.js; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              size=$(du -h "$file" | cut -f1)
+              echo "- **$filename** ($size)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done

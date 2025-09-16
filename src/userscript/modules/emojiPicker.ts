@@ -1,14 +1,18 @@
 // Emoji picker creation and management module
 import { userscriptState } from '../state'
+import { trackEmojiUsage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
+import { getPlatformUIConfig, getEffectivePlatform } from '../utils/platformDetection'
 
-import { isImageUrl } from '@/utils/isImageUrl'
 import { injectEmojiPickerStyles } from './emojiPickerStyles'
 
-// Mobile detection helper
+import { isImageUrl } from '@/utils/isImageUrl'
+
+// Mobile detection helper - now uses platform detection
 export function isMobileView(): boolean {
   try {
-    return !!(
+    const platform = getEffectivePlatform()
+    return platform === 'mobile' || !!(
       userscriptState &&
       userscriptState.settings &&
       userscriptState.settings.forceMobileMode
@@ -21,6 +25,11 @@ export function isMobileView(): boolean {
 // Insert emoji into editor
 export function insertEmojiIntoEditor(emoji: any) {
   console.log('[Emoji Extension Userscript] Inserting emoji:', emoji)
+
+  // Track emoji usage
+  if (emoji.name && emoji.url) {
+    trackEmojiUsage(emoji.name, emoji.url)
+  }
 
   const textarea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
   const proseMirror = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
@@ -288,13 +297,37 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
       }) as HTMLImageElement
       // hover preview bindings
       ;(function bindHover(imgEl: HTMLImageElement, emo: any) {
+        // Only create preview if setting is enabled
+        if (!userscriptState.settings?.enableFloatingPreview) return
+        
         const preview = ensureHoverPreview()
         const previewImg = preview.querySelector('img') as HTMLImageElement
         const previewLabel = preview.querySelector('.emoji-picker-hover-label') as HTMLDivElement
+        let fadeTimer: number | null = null
+        
         function onEnter(e: MouseEvent) {
           previewImg.src = emo.url
           previewLabel.textContent = emo.name || ''
           preview.style.display = 'block'
+          preview.style.opacity = '1'
+          preview.style.transition = 'opacity 0.12s ease, transform 0.12s ease'
+          
+          // Clear any existing fade timer
+          if (fadeTimer) {
+            clearTimeout(fadeTimer)
+            fadeTimer = null
+          }
+          
+          // Start 5-second fade timer
+          fadeTimer = window.setTimeout(() => {
+            preview.style.opacity = '0'
+            setTimeout(() => {
+              if (preview.style.opacity === '0') {
+                preview.style.display = 'none'
+              }
+            }, 300)
+          }, 5000)
+          
           move(e)
         }
         function move(e: MouseEvent) {
@@ -310,6 +343,11 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
           preview.style.top = top + 'px'
         }
         function onLeave() {
+          // Clear fade timer and hide immediately on mouse leave
+          if (fadeTimer) {
+            clearTimeout(fadeTimer)
+            fadeTimer = null
+          }
           preview.style.display = 'none'
         }
         imgEl.addEventListener('mouseenter', onEnter)
@@ -506,13 +544,37 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
       }) as HTMLImageElement
       // hover preview bindings (desktop picker)
       ;(function bindHover(imgEl: HTMLImageElement, emo: any) {
+        // Only create preview if setting is enabled
+        if (!userscriptState.settings?.enableFloatingPreview) return
+        
         const preview = ensureHoverPreview()
         const previewImg = preview.querySelector('img') as HTMLImageElement
         const previewLabel = preview.querySelector('.emoji-picker-hover-label') as HTMLDivElement
+        let fadeTimer: number | null = null
+        
         function onEnter(e: MouseEvent) {
           previewImg.src = emo.url
           previewLabel.textContent = emo.name || ''
           preview.style.display = 'block'
+          preview.style.opacity = '1'
+          preview.style.transition = 'opacity 0.12s ease, transform 0.12s ease'
+          
+          // Clear any existing fade timer
+          if (fadeTimer) {
+            clearTimeout(fadeTimer)
+            fadeTimer = null
+          }
+          
+          // Start 5-second fade timer
+          fadeTimer = window.setTimeout(() => {
+            preview.style.opacity = '0'
+            setTimeout(() => {
+              if (preview.style.opacity === '0') {
+                preview.style.display = 'none'
+              }
+            }, 300)
+          }, 5000)
+          
           move(e)
         }
         function move(e: MouseEvent) {
@@ -528,6 +590,11 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
           preview.style.top = top + 'px'
         }
         function onLeave() {
+          // Clear fade timer and hide immediately on mouse leave
+          if (fadeTimer) {
+            clearTimeout(fadeTimer)
+            fadeTimer = null
+          }
           preview.style.display = 'none'
         }
         imgEl.addEventListener('mouseenter', onEnter)
@@ -573,7 +640,8 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
       const visibleEmojis = section.querySelectorAll('img:not([style*="none"])')
       const titleContainer = section.querySelector('.emoji-picker__section-title-container')
       if (titleContainer)
-        (titleContainer as HTMLHeadingElement).style.display = visibleEmojis.length > 0 ? '' : 'none'
+        (titleContainer as HTMLHeadingElement).style.display =
+          visibleEmojis.length > 0 ? '' : 'none'
     })
   })
 

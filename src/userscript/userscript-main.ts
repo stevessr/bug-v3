@@ -2,13 +2,14 @@
 
 // Compile-time flag injected by vite config: when true the build is the remote variant
 declare const __USERSCRIPT_REMOTE_DEFAULTS__: boolean
+declare const __USERSCRIPT_PLATFORM__: string
 
 import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync } from './userscript-storage'
 import { userscriptState } from './state'
-
-// Import modular components
 import { initOneClickAdd } from './modules/oneClickAdd'
 import { attemptInjection, startPeriodicInjection } from './modules/toolbar'
+import { showFloatingButton, checkAndShowFloatingButton } from './modules/floatingButton'
+import { logPlatformInfo } from './utils/platformDetection'
 
 // userscriptState is imported from ./state and initialized there
 
@@ -70,6 +71,9 @@ function shouldInjectEmoji(): boolean {
 // Main initialization function
 async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 1000) {
   console.log('[Emoji Extension Userscript] Initializing...')
+  
+  // Log platform information
+  logPlatformInfo()
 
   // Initialize data and features
   await initializeUserscriptData()
@@ -103,6 +107,9 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
       setTimeout(attemptToolbarInjection, delay)
     } else {
       console.error('[Emoji Extension Userscript] Failed to find toolbar after multiple attempts.')
+      // Show floating button as fallback when injection fails
+      console.log('[Emoji Extension Userscript] Showing floating button as fallback')
+      showFloatingButton()
     }
   }
 
@@ -114,6 +121,11 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
 
   // Start periodic checks for new toolbars
   startPeriodicInjection()
+
+  // Check if floating button should be shown periodically
+  setInterval(() => {
+    checkAndShowFloatingButton()
+  }, 5000)
 }
 
 // Entry point

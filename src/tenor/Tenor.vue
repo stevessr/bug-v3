@@ -266,9 +266,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
         <div class="flex justify-between items-center py-6">
           <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Tenor GIF 搜索</h1>
-            <p class="text-sm text-gray-600 dark:text-white">
-              搜索并导入 Tenor GIF 表情到你的收藏
-            </p>
+            <p class="text-sm text-gray-600 dark:text-white">搜索并导入 Tenor GIF 表情到你的收藏</p>
           </div>
         </div>
       </div>

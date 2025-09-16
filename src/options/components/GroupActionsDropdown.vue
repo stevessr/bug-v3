@@ -13,7 +13,7 @@ const emit = defineEmits([
   'exportZip',
   'dedupe',
   'confirmDelete',
-  'batchUpdateSize',
+  'batchUpdateSize'
 ])
 
 const onEdit = () => emit('edit', props.group)

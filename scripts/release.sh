@@ -76,13 +76,13 @@ jq --arg version "$VERSION" '.version = $version' public/manifest.json > tmp.jso
 # Install dependencies if needed
 if [ ! -d "node_modules" ]; then
     print_status "Installing dependencies..."
-    npm ci
+    pnpm install
 fi
 
 # Run tests if they exist
-if npm run | grep -q "test"; then
+if pnpm run | grep -q "test"; then
     print_status "Running tests..."
-    npm run test || {
+    pnpm run test || {
         print_error "Tests failed. Aborting release."
         exit 1
     }
@@ -90,7 +90,7 @@ fi
 
 # Build the extension
 print_status "Building extension..."
-npm run build
+pnpm run build
 
 # Create release directory
 RELEASE_DIR="releases/v$VERSION"

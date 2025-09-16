@@ -524,7 +524,9 @@ const importParsed = () => {
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium text-gray-900 truncate">{{ item.name }}</div>
                   <div v-if="item.variants.length > 1" class="mt-2">
-                    <label class="block text-xs text-gray-600 dark:text-white mb-1">选择URL变种:</label>
+                    <label class="block text-xs text-gray-600 dark:text-white mb-1">
+                      选择URL变种:
+                    </label>
                     <a-dropdown>
                       <template #overlay>
                         <a-menu @click="onVariantSelectForItem(index, $event)">

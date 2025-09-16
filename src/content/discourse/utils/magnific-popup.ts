@@ -1,4 +1,5 @@
 import type { AddEmojiButtonData } from '../types/main'
+
 import { createEl } from './element-factory'
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'
@@ -28,11 +29,11 @@ export function extractEmojiDataFromMfp(
 }
 
 export function createMfpEmojiButton(data: AddEmojiButtonData): HTMLElement {
-  const button = createEl('a',{
+  const button = createEl('a', {
     className: 'emoji-add-link',
     style: `color:#fff;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:6px;padding:4px 8px;margin:0 2px;display:inline-flex;align-items:center;font-weight:600;`,
     title: '添加到未分组表情',
-    innerHTML: '添加表情',
+    innerHTML: '添加表情'
   })
   setupButtonClickHandler(button, data)
   return button

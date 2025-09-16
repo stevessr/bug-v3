@@ -1,0 +1,405 @@
+name: Manual Release - Extension and Userscripts
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.2.3)'
+        required: true
+        type: string
+      release_type:
+        description: 'Type of release'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      include_extension:
+        description: 'Include extension build (CRX and ZIP)'
+        required: true
+        default: true
+        type: boolean
+      include_userscripts:
+        description: 'Include all userscript variants'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build-extension:
+    if: ${{ inputs.include_extension }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack and ensure pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10 --activate || npm install -g pnpm@10
+
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Set version
+        id: version
+        run: |
+          VERSION="${{ inputs.version }}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Update package.json and manifest.json
+          jq --arg version "$VERSION" '.version = $version' package.json > tmp.json && mv tmp.json package.json
+          jq --arg version "$VERSION" '.version = $version' public/manifest.json > tmp.json && mv tmp.json public/manifest.json
+
+      - name: Build extension
+        run: pnpm build
+
+      - name: Create CRX package
+        run: pnpm pack:crx
+
+      - name: Create distribution ZIP
+        run: |
+          mkdir -p release-artifacts
+          cd dist
+          zip -r ../release-artifacts/emoji-extension-v${{ inputs.version }}.zip .
+          cd ..
+
+      - name: Copy CRX if exists
+        run: |
+          if [ -f "emoji-extension.crx" ]; then
+            cp emoji-extension.crx release-artifacts/emoji-extension-v${{ inputs.version }}.crx
+          fi
+
+      - name: Upload extension artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-release-v${{ inputs.version }}
+          path: release-artifacts/
+          retention-days: 30
+
+  build-userscripts:
+    if: ${{ inputs.include_userscripts }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Create exactly 12 variants as requested:
+        # (embedded&oneline, remote) × (compressed, uncompressed) × (pc, mobile, original) = 2×2×3 = 12
+        include:
+          # Embedded variants (includes both embedded and oneline in same build)
+          - variant: 'embedded' 
+            platform: 'pc'
+            compression: 'compressed'
+          - variant: 'embedded'
+            platform: 'pc' 
+            compression: 'uncompressed'
+          - variant: 'embedded'
+            platform: 'mobile'
+            compression: 'compressed'
+          - variant: 'embedded'
+            platform: 'mobile'
+            compression: 'uncompressed'
+          - variant: 'embedded'
+            platform: 'original'
+            compression: 'compressed'
+          - variant: 'embedded'
+            platform: 'original'
+            compression: 'uncompressed'
+          # Remote variants
+          - variant: 'remote'
+            platform: 'pc'
+            compression: 'compressed'
+          - variant: 'remote'
+            platform: 'pc'
+            compression: 'uncompressed'
+          - variant: 'remote'
+            platform: 'mobile'
+            compression: 'compressed'
+          - variant: 'remote'
+            platform: 'mobile'
+            compression: 'uncompressed'
+          - variant: 'remote'
+            platform: 'original'
+            compression: 'compressed'
+          - variant: 'remote'
+            platform: 'original'
+            compression: 'uncompressed'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack and ensure pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10 --activate || npm install -g pnpm@10
+
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Set version
+        run: |
+          VERSION="${{ inputs.version }}"
+          jq --arg version "$VERSION" '.version = $version' package.json > tmp.json && mv tmp.json package.json
+
+      - name: Build userscript variants
+        env:
+          USERSCRIPT_PLATFORM: ${{ matrix.platform }}
+          BUILD_MINIFIED: ${{ matrix.compression == 'compressed' && 'true' || 'false' }}
+        run: |
+          mkdir -p userscript-artifacts
+          
+          if [ "${{ matrix.variant }}" = "embedded" ]; then
+            echo "Building embedded variants for platform: ${{ matrix.platform }}, compression: ${{ matrix.compression }}"
+            
+            # Build standard embedded variant
+            if [ "${{ matrix.compression }}" = "compressed" ]; then
+              case "${{ matrix.platform }}" in
+                "pc") pnpm run build:userscript:pc:min ;;
+                "mobile") pnpm run build:userscript:mobile:min ;;
+                "original") pnpm run build:userscript:min ;;
+              esac
+            else
+              case "${{ matrix.platform }}" in
+                "pc") pnpm run build:userscript:pc ;;
+                "mobile") pnpm run build:userscript:mobile ;;
+                "original") pnpm run build:userscript ;;
+              esac
+            fi
+            
+            # Copy standard embedded file
+            EMBEDDED_NAME="emoji-extension"
+            if [ "${{ matrix.platform }}" != "original" ]; then
+              EMBEDDED_NAME="${EMBEDDED_NAME}-${{ matrix.platform }}"
+            fi
+            EMBEDDED_NAME="${EMBEDDED_NAME}-embedded"
+            if [ "${{ matrix.compression }}" = "compressed" ]; then
+              EMBEDDED_NAME="${EMBEDDED_NAME}-min"
+            fi
+            EMBEDDED_NAME="${EMBEDDED_NAME}-v${{ inputs.version }}.user.js"
+            
+            if [ -f "dist/emoji-extension.user.js" ]; then
+              cp "dist/emoji-extension.user.js" "userscript-artifacts/${EMBEDDED_NAME}"
+            fi
+            
+            # Build oneline variant
+            if [ "${{ matrix.compression }}" = "compressed" ]; then
+              case "${{ matrix.platform }}" in
+                "pc") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:pc:min ;;
+                "mobile") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:mobile:min ;;
+                "original") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:min ;;
+              esac
+            else
+              case "${{ matrix.platform }}" in
+                "pc") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:pc ;;
+                "mobile") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:mobile ;;
+                "original") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript ;;
+              esac
+            fi
+            
+            # Copy oneline file
+            ONELINE_NAME="emoji-extension"
+            if [ "${{ matrix.platform }}" != "original" ]; then
+              ONELINE_NAME="${ONELINE_NAME}-${{ matrix.platform }}"
+            fi
+            ONELINE_NAME="${ONELINE_NAME}-oneline"
+            if [ "${{ matrix.compression }}" = "compressed" ]; then
+              ONELINE_NAME="${ONELINE_NAME}-min"
+            fi
+            ONELINE_NAME="${ONELINE_NAME}-v${{ inputs.version }}.user.js"
+            
+            if [ -f "dist/emoji-extension.user.js" ]; then
+              cp "dist/emoji-extension.user.js" "userscript-artifacts/${ONELINE_NAME}"
+            fi
+            
+          else
+            echo "Building remote variant for platform: ${{ matrix.platform }}, compression: ${{ matrix.compression }}"
+            
+            # Build remote variant
+            if [ "${{ matrix.compression }}" = "compressed" ]; then
+              case "${{ matrix.platform }}" in
+                "pc") BUILD_MINIFIED=true pnpm run build:userscript:pc:remote ;;
+                "mobile") BUILD_MINIFIED=true pnpm run build:userscript:mobile:remote ;;
+                "original") BUILD_MINIFIED=true pnpm run build:userscript:remote ;;
+              esac
+            else
+              case "${{ matrix.platform }}" in
+                "pc") pnpm run build:userscript:pc:remote ;;
+                "mobile") pnpm run build:userscript:mobile:remote ;;
+                "original") pnpm run build:userscript:remote ;;
+              esac
+            fi
+            
+            # Copy remote file
+            REMOTE_NAME="emoji-extension"
+            if [ "${{ matrix.platform }}" != "original" ]; then
+              REMOTE_NAME="${REMOTE_NAME}-${{ matrix.platform }}"
+            fi
+            REMOTE_NAME="${REMOTE_NAME}-remote"
+            if [ "${{ matrix.compression }}" = "compressed" ]; then
+              REMOTE_NAME="${REMOTE_NAME}-min"
+            fi
+            REMOTE_NAME="${REMOTE_NAME}-v${{ inputs.version }}.user.js"
+            
+            if [ -f "dist/emoji-extension.user.js" ]; then
+              cp "dist/emoji-extension.user.js" "userscript-artifacts/${REMOTE_NAME}"
+            fi
+          fi
+
+      - name: Upload userscript artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: userscript-${{ matrix.variant }}-${{ matrix.platform }}-${{ matrix.compression }}-v${{ inputs.version }}
+          path: userscript-artifacts/
+          retention-days: 30
+
+  create-release:
+    needs: [build-extension, build-userscripts]
+    if: always() && (needs.build-extension.result == 'success' || needs.build-userscripts.result == 'success')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-final
+          
+          # Copy extension files if they exist
+          if [ -d "all-artifacts/extension-release-v${{ inputs.version }}" ]; then
+            cp all-artifacts/extension-release-v${{ inputs.version }}/* release-final/ 2>/dev/null || true
+          fi
+          
+          # Copy all userscript files
+          find all-artifacts -name "*.user.js" -exec cp {} release-final/ \; 2>/dev/null || true
+          
+          # Create combined info file
+          cat > release-final/RELEASE_INFO.txt << EOF
+          Release Information
+          ===================
+          Version: ${{ inputs.version }}
+          Release Type: ${{ inputs.release_type }}
+          Build Time: $(date -u)
+          Commit: ${{ github.sha }}
+          
+          Extension Files:
+          $(ls -la release-final/*.zip 2>/dev/null || echo "No extension ZIP files")
+          $(ls -la release-final/*.crx 2>/dev/null || echo "No extension CRX files")
+          
+          Userscript Files:
+          $(ls -la release-final/*.user.js 2>/dev/null || echo "No userscript files")
+          
+          Total Files: $(ls -1 release-final | wc -l)
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ inputs.version }}
+          files: release-final/*
+          name: Release v${{ inputs.version }}
+          body: |
+            ## Emoji Extension v${{ inputs.version }}
+
+            ### What's New in this Release
+            - 🎯 **Manual Release Build**: Hand-crafted release with both extension and userscript variants
+            - 📦 **Extension Package**: Ready-to-install CRX and ZIP files for Chrome/Edge
+            - 🔧 **Multiple Userscript Variants**: 18 different combinations for every use case
+
+            ### Extension Installation
+            1. **Chrome/Edge**: Download the `.crx` file and drag it to your extensions page
+            2. **Developer Mode**: Download the `.zip` file, extract, and load unpacked
+
+            ### Userscript Variants Available
+            **Platform Variants:**
+            - 🖥️ **PC**: Optimized for desktop with full-width layouts and hover interactions
+            - 📱 **Mobile**: Optimized for mobile devices with touch-friendly UI and compact layouts
+            - 🌐 **Original**: Universal compatibility for all devices with adaptive detection
+
+            **Build Types:**
+            - 📝 **Embedded**: All emoji data included in the script (includes both standard and oneline versions)
+            - 🌐 **Remote**: Loads emoji data from remote sources for smaller file sizes
+
+            **Compression:**
+            - 🗜️ **Compressed**: Minified and optimized for smaller size and faster loading
+            - 📖 **Uncompressed**: Full source with readable code for development and debugging
+
+            **Total Variants: 12 Combinations**
+            - 6 Embedded variants: (PC, Mobile, Original) × (Compressed, Uncompressed)
+            - 6 Remote variants: (PC, Mobile, Original) × (Compressed, Uncompressed)
+            - Each embedded build includes both standard and oneline versions
+
+            ### New Features
+            - ✨ **Popular Emoji Display**: Shows frequently used emojis with usage count
+            - 🎨 **Enhanced Group Editor**: Edit group names and icons directly
+            - 🔄 **One-Click Clear**: Reset usage statistics easily
+            - 🎯 **Platform-Specific Optimization**: UI and injection tailored for PC/Mobile
+
+            ### Installation Guide
+            1. Choose your preferred userscript variant based on your needs
+            2. Install in your userscript manager (Tampermonkey recommended)
+            3. Visit compatible sites to start using enhanced emoji features
+
+            ### Compatibility
+            - ✅ Tampermonkey (all browsers)
+            - ✅ Greasemonkey (Firefox)
+            - ✅ Violentmonkey (all browsers)
+            - ✅ AdGuard Userscripts
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Manual Release Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type**: ${{ inputs.release_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Extension**: ${{ inputs.include_extension && '✅ Included' || '❌ Skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Userscripts**: ${{ inputs.include_userscripts && '✅ Included' || '❌ Skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files Created" >> $GITHUB_STEP_SUMMARY
+          for file in release-final/*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              size=$(du -h "$file" | cut -f1)
+              echo "- **$filename** ($size)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done

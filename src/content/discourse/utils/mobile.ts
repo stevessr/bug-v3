@@ -1,4 +1,5 @@
 import { isImageUrl } from '../../utils/isimage'
+
 import { createEl } from './element-factory'
 import { ensureDefaultIfEmpty, cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'

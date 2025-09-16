@@ -1,4 +1,5 @@
 import type { AddEmojiButtonData } from '../types/main'
+
 import { createEl } from './element-factory'
 import { extractNameFromUrl } from './picture'
 

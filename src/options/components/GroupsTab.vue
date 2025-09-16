@@ -559,18 +559,35 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
         <a-modal v-model:visible="batchModalVisible" title="批量更新尺寸" :footer="null">
           <div class="space-y-4">
             <div class="flex items-center gap-4">
-              <div class="w-24 h-24 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
-                <img v-if="currentImagePreview" :src="currentImagePreview" alt="预览" class="w-full h-full object-contain" />
+              <div
+                class="w-24 h-24 bg-gray-100 rounded overflow-hidden flex items-center justify-center"
+              >
+                <img
+                  v-if="currentImagePreview"
+                  :src="currentImagePreview"
+                  alt="预览"
+                  class="w-full h-full object-contain"
+                />
                 <div v-else class="text-sm text-gray-500">无图片</div>
               </div>
               <div>
-                <div class="text-sm text-gray-700 dark:text-white">正在处理：{{ batchProgress.current }} / {{ batchProgress.total }}</div>
-                <div class="text-xs text-gray-500 dark:text-white mt-1">自动从图片 URL 解析尺寸并写回</div>
+                <div class="text-sm text-gray-700 dark:text-white">
+                  正在处理：{{ batchProgress.current }} / {{ batchProgress.total }}
+                </div>
+                <div class="text-xs text-gray-500 dark:text-white mt-1">
+                  自动从图片 URL 解析尺寸并写回
+                </div>
               </div>
             </div>
 
             <div>
-              <a-progress :percent="batchProgress.total ? Math.round((batchProgress.current / batchProgress.total) * 100) : 0" />
+              <a-progress
+                :percent="
+                  batchProgress.total
+                    ? Math.round((batchProgress.current / batchProgress.total) * 100)
+                    : 0
+                "
+              />
             </div>
 
             <div class="flex justify-end gap-2">
