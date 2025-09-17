@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2025-09-17T01:46:20.138Z",
+  "exportDate": "2025-09-17T16:37:00.909Z",
   "settings": {
     "imageScale": 20,
     "defaultGroup": "group-1755833820210",
@@ -13,7 +13,7 @@
     "enableXcomExtraSelectors": true,
     "customColorScheme": "default",
     "customPrimaryColor": "#1890ff",
-    "lastModified": 1758073464585,
+    "lastModified": 1758126994817,
     "theme": "system",
     "tenorApiKey": "AIzaSyC-P6_qz3FzCoXGLk6tgitZo4jEJ5mLzD8"
   },
@@ -5099,7 +5099,7 @@
           "id": "emoji-1755833840541-602sug",
           "name": "抬头",
           "packet": 1755833840541,
-          "url": "https://linux.do/uploads/default/optimized/4X/4/b/8/4b8c6f47342841f2bffbeb0c5622964385893019_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/4/b/8/4b8c6f47342841f2bffbeb0c5622964385893019.jpeg",
           "width": 373
         },
         {
@@ -5108,7 +5108,7 @@
           "id": "emoji-1755833861070-h02obc",
           "name": "墨镜",
           "packet": 1755833861070,
-          "url": "https://linux.do/uploads/default/optimized/4X/c/e/5/ce5640ff686039a9b75cdf09ff9f6a84692e788b_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/c/e/5/ce5640ff686039a9b75cdf09ff9f6a84692e788b.jpeg",
           "width": 373
         },
         {
@@ -5117,7 +5117,7 @@
           "id": "emoji-1755833873998-6o9oaz",
           "name": "智慧",
           "packet": 1755833873998,
-          "url": "https://linux.do/uploads/default/optimized/4X/3/4/f/34fdc9cb2faf18e437081627ccf4277d893ccf97_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/3/4/f/34fdc9cb2faf18e437081627ccf4277d893ccf97.jpeg",
           "width": 373
         },
         {
@@ -5126,7 +5126,7 @@
           "id": "emoji-1755833883382-wqpzpy",
           "name": "咧嘴笑",
           "packet": 1755833883382,
-          "url": "https://linux.do/uploads/default/optimized/4X/3/f/9/3f945e7b233792c622f480b3a11b878b67e619fc_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/3/f/9/3f945e7b233792c622f480b3a11b878b67e619fc.jpeg",
           "width": 373
         },
         {
@@ -5135,7 +5135,7 @@
           "id": "emoji-1755833908678-xd3h3z",
           "name": "鸡蛋",
           "packet": 1755833908678,
-          "url": "https://linux.do/uploads/default/optimized/4X/a/9/6/a961f0e73edbcb16115765fe236fedc3769a16f0_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/a/9/6/a961f0e73edbcb16115765fe236fedc3769a16f0.jpeg",
           "width": 373
         },
         {
@@ -5144,7 +5144,7 @@
           "id": "emoji-1755833915270-awmqkr",
           "name": "哈哈",
           "packet": 1755833915270,
-          "url": "https://linux.do/uploads/default/optimized/4X/5/7/6/576e30a914776e5b6e666b5744bf241a35689399_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/5/7/6/576e30a914776e5b6e666b5744bf241a35689399.jpeg",
           "width": 373
         },
         {
@@ -5153,7 +5153,7 @@
           "id": "emoji-1755833938017-lfwbjr",
           "name": "鹿",
           "packet": 1755833938017,
-          "url": "https://linux.do/uploads/default/optimized/4X/a/8/7/a87e6a13b9e2d5f7601f36ff599f92a5e81de8f0_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/a/8/7/a87e6a13b9e2d5f7601f36ff599f92a5e81de8f0.jpeg",
           "width": 373
         },
         {
@@ -5162,7 +5162,7 @@
           "id": "emoji-1755833944963-ltsqvv",
           "name": "咸鱼",
           "packet": 1755833944963,
-          "url": "https://linux.do/uploads/default/optimized/4X/a/8/7/a87e6a13b9e2d5f7601f36ff599f92a5e81de8f0_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/a/8/7/a87e6a13b9e2d5f7601f36ff599f92a5e81de8f0.jpeg",
           "width": 373
         },
         {
@@ -5171,7 +5171,7 @@
           "id": "emoji-1755833952433-8qjdm8",
           "name": "wow",
           "packet": 1755833952433,
-          "url": "https://linux.do/uploads/default/optimized/4X/b/7/6/b76157c579caa28fcc857f8b133d57ce3951fc85_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/b/7/6/b76157c579caa28fcc857f8b133d57ce3951fc85.jpeg",
           "width": 373
         },
         {
@@ -5180,7 +5180,7 @@
           "id": "emoji-1755833970773-ffdcra",
           "name": "我很可爱，请给我钱",
           "packet": 1755833970773,
-          "url": "https://linux.do/uploads/default/optimized/4X/2/2/a/22a2ae7496da32d6e4c65d7061b41831c525a40e_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/2/2/a/22a2ae7496da32d6e4c65d7061b41831c525a40e.jpeg",
           "width": 373
         },
         {
@@ -5189,7 +5189,7 @@
           "id": "emoji-1755833980016-4coup6",
           "name": "爱你哦",
           "packet": 1755833980016,
-          "url": "https://linux.do/uploads/default/optimized/4X/d/7/1/d71f634b5fb38b64765bc043be309008ffc0899b_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/d/7/1/d71f634b5fb38b64765bc043be309008ffc0899b.jpeg",
           "width": 373
         },
         {
@@ -5216,7 +5216,7 @@
           "id": "emoji-1755834293795-052fmt",
           "name": "wow",
           "packet": 1755834293795,
-          "url": "https://linux.do/uploads/default/optimized/4X/2/c/4/2c422520c9090c3d1beae276e91a7e145a915bf6_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/2/c/4/2c422520c9090c3d1beae276e91a7e145a915bf6.jpeg",
           "width": 373
         },
         {
@@ -5225,7 +5225,7 @@
           "id": "emoji-1755834272886-q5ff0f",
           "name": "墨镜",
           "packet": 1755834272886,
-          "url": "https://linux.do/uploads/default/optimized/4X/e/f/0/ef0bc8f4d4097c135280df64a09284265620a0b4_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/e/f/0/ef0bc8f4d4097c135280df64a09284265620a0b4.jpeg",
           "width": 373
         },
         {
@@ -5243,7 +5243,7 @@
           "id": "emoji-1755834341270-kmw7ya",
           "name": "zako杂鱼",
           "packet": 1755834341270,
-          "url": "https://linux.do/uploads/default/optimized/4X/b/7/f/b7fa0ac6e1fed36a241afc217e8315b5c69b9156_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/b/7/f/b7fa0ac6e1fed36a241afc217e8315b5c69b9156.jpeg",
           "width": 373
         },
         {
@@ -5252,7 +5252,7 @@
           "id": "emoji-1755834286993-lrx7at",
           "name": "超人内裤",
           "packet": 1755834286993,
-          "url": "https://linux.do/uploads/default/optimized/4X/9/8/7/987439cd20fd441acdd6115ebf5a228a39b7a86c_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/9/8/7/987439cd20fd441acdd6115ebf5a228a39b7a86c.jpeg",
           "width": 373
         },
         {
@@ -5261,7 +5261,7 @@
           "id": "emoji-1755834324373-381j3c",
           "name": "奶头",
           "packet": 1755834324373,
-          "url": "https://linux.do/uploads/default/optimized/4X/e/c/d/ecd7ae73a1adad92c9de953ecab909a496091d17_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/e/c/d/ecd7ae73a1adad92c9de953ecab909a496091d17.jpeg",
           "width": 373
         },
         {
@@ -5270,7 +5270,7 @@
           "id": "emoji-1755834333421-p0z0cx",
           "name": "咸鱼",
           "packet": 1755834333421,
-          "url": "https://linux.do/uploads/default/optimized/4X/6/1/b/61bdb53c0adb5923cabb6962e03b68a0a0513e44_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/6/1/b/61bdb53c0adb5923cabb6962e03b68a0a0513e44.jpeg",
           "width": 373
         },
         {
@@ -5279,7 +5279,7 @@
           "id": "emoji-1755834878673-naz8v5",
           "name": "鹿",
           "packet": 1755834878673,
-          "url": "https://linux.do/uploads/default/optimized/4X/5/0/4/504fc5845a5566e673f067894212b019db0e0446_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/5/0/4/504fc5845a5566e673f067894212b019db0e0446.jpeg",
           "width": 373
         },
         {
@@ -5288,7 +5288,7 @@
           "id": "emoji-1755834886503-jmlolv",
           "name": "抬头",
           "packet": 1755834886503,
-          "url": "https://linux.do/uploads/default/optimized/4X/6/c/2/6c2157aca5c3ab792ccf51e6eb968a68445b1a81_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/6/c/2/6c2157aca5c3ab792ccf51e6eb968a68445b1a81.jpeg",
           "width": 373
         },
         {
@@ -5297,7 +5297,7 @@
           "id": "emoji-1755834895413-zir7rb",
           "name": "墨镜",
           "packet": 1755834895413,
-          "url": "https://linux.do/uploads/default/optimized/4X/d/c/4/dc404944b19084a0de2c97885dd2bf188df9ae03_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/d/c/4/dc404944b19084a0de2c97885dd2bf188df9ae03.jpeg",
           "width": 373
         },
         {
@@ -5306,7 +5306,7 @@
           "id": "emoji-1755834934472-j25f6u",
           "name": "西瓜",
           "packet": 1755834934472,
-          "url": "https://linux.do/uploads/default/optimized/4X/f/b/a/fbac34d655b0a3da4f0f2a33c6c6d2b61afe12ad_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/f/b/a/fbac34d655b0a3da4f0f2a33c6c6d2b61afe12ad.jpeg",
           "width": 373
         },
         {
@@ -5315,7 +5315,7 @@
           "id": "emoji-1755834919582-5rtr8n",
           "name": "杂鱼",
           "packet": 1755834919582,
-          "url": "https://linux.do/uploads/default/optimized/4X/d/f/9/df977c19e9355dff560f4d7fd944cf5012598b64_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/d/f/9/df977c19e9355dff560f4d7fd944cf5012598b64.jpeg",
           "width": 373
         },
         {
@@ -5324,7 +5324,7 @@
           "id": "emoji-1755834902380-om7o66",
           "name": "wow",
           "packet": 1755834902380,
-          "url": "https://linux.do/uploads/default/optimized/4X/b/0/3/b03f331e9bf1b87054de5a33080e32c47eb85afe_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/b/0/3/b03f331e9bf1b87054de5a33080e32c47eb85afe.jpeg",
           "width": 373
         },
         {
@@ -5333,7 +5333,7 @@
           "id": "emoji-1755834912732-rj0zix",
           "name": "智慧",
           "packet": 1755834912732,
-          "url": "https://linux.do/uploads/default/optimized/4X/1/1/c/11c0f19cab31bb090e82cd9eb838071ab116d066_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/1/1/c/11c0f19cab31bb090e82cd9eb838071ab116d066.jpeg",
           "width": 373
         },
         {
@@ -5342,7 +5342,7 @@
           "id": "emoji-1755834946292-dscyer",
           "name": "Δ",
           "packet": 1755834946292,
-          "url": "https://linux.do/uploads/default/optimized/4X/f/9/1/f9194f86b5c1a0e8fd605b12decae7a79320a952_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/f/9/1/f9194f86b5c1a0e8fd605b12decae7a79320a952.jpeg",
           "width": 373
         },
         {
@@ -5351,7 +5351,7 @@
           "id": "emoji-1755834927919-ot8ixu",
           "name": "99+",
           "packet": 1755834927919,
-          "url": "https://linux.do/uploads/default/optimized/4X/e/6/1/e61b159e9c202793f78fdccb361a89baeec46ec8_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/e/6/1/e61b159e9c202793f78fdccb361a89baeec46ec8.jpeg",
           "width": 373
         },
         {
@@ -5360,7 +5360,7 @@
           "id": "emoji-1755834022976-0vl4go",
           "name": "仰头",
           "packet": 1755834022976,
-          "url": "https://linux.do/uploads/default/optimized/4X/1/4/8/1483da1f61dc539eafe6febfb3083de07df7f85b_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/1/4/8/1483da1f61dc539eafe6febfb3083de07df7f85b.jpeg",
           "width": 373
         },
         {
@@ -5369,7 +5369,7 @@
           "id": "emoji-1755834030951-u0zvom",
           "name": "墨镜",
           "packet": 1755834030951,
-          "url": "https://linux.do/uploads/default/optimized/4X/0/8/f/08f10a7ca577e2a9737e2c5bc0e360aa9068debe_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/0/8/f/08f10a7ca577e2a9737e2c5bc0e360aa9068debe.jpeg",
           "width": 373
         },
         {
@@ -5378,7 +5378,7 @@
           "id": "emoji-1755834084932-5e96e4",
           "name": "zako杂鱼",
           "packet": 1755834084932,
-          "url": "https://linux.do/uploads/default/optimized/4X/c/2/a/c2a8d3a73a9bf321e1bb56c4c511644969a59390_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/c/2/a/c2a8d3a73a9bf321e1bb56c4c511644969a59390.jpeg",
           "width": 373
         },
         {
@@ -5396,7 +5396,7 @@
           "id": "emoji-1755834094112-hyhowq",
           "name": "咸鱼",
           "packet": 1755834094112,
-          "url": "https://linux.do/uploads/default/optimized/4X/8/5/a/85a9fd410e3cf188cd2a6b2dba1fe7b779dfb500_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/8/5/a/85a9fd410e3cf188cd2a6b2dba1fe7b779dfb500.jpeg",
           "width": 373
         },
         {
@@ -5405,7 +5405,7 @@
           "id": "emoji-1755834134101-tvqryf",
           "name": "吃火腿肠",
           "packet": 1755834134101,
-          "url": "https://linux.do/uploads/default/optimized/4X/9/b/4/9b4d9823ecb6d65cfa7266b2973155e34523132a_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/9/b/4/9b4d9823ecb6d65cfa7266b2973155e34523132a.jpeg",
           "width": 373
         },
         {
@@ -5414,7 +5414,7 @@
           "id": "emoji-1755834103909-z27sxz",
           "name": "99+",
           "packet": 1755834103909,
-          "url": "https://linux.do/uploads/default/optimized/4X/a/f/2/af2af629668b512704c7e72b05ecb509143d5247_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/a/f/2/af2af629668b512704c7e72b05ecb509143d5247.jpeg",
           "width": 373
         },
         {
@@ -5423,7 +5423,7 @@
           "id": "emoji-1755834118164-mxdgav",
           "name": "99+",
           "packet": 1755834118164,
-          "url": "https://linux.do/uploads/default/optimized/4X/4/c/8/4c8bac67c76157f2811b930188e84b0acbf83311_2_373x375.jpeg",
+          "url": "https://linux.do/uploads/default/original/4X/4/c/8/4c8bac67c76157f2811b930188e84b0acbf83311.jpeg",
           "width": 373
         },
         {
@@ -14123,7 +14123,7 @@
         },
         {
           "addedAt": 1757417041018,
-          "displayUrl": "https://linux.do/uploads/default/optimized/4X/7/6/9/769aa5e1d5b3438d15b28962feec64ddeb659135_2_364x500.jpeg",
+          "displayUrl": "https://linux.do/uploads/default/original/4X/7/6/9/769aa5e1d5b3438d15b28962feec64ddeb659135.jpeg",
           "groupId": "group-1757396353003",
           "height": 1508,
           "id": "emoji-1757945660289-wx274z",
