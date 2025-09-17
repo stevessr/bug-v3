@@ -2,6 +2,7 @@
 
 import { initializeEmojiFeature } from './utils/init'
 import { Uninject } from './utils/Uninject'
+import { postTimings } from './utils/timingsBinder'
 
 console.log('[Emoji Extension] Content script loaded (entry)')
 
@@ -94,4 +95,17 @@ if (window.location.hostname.includes('linux.do')) {
     }
     return false // 对于其他消息类型，不处理
   })
+}
+
+// Expose postTimings helper to page context for testing and manual triggers.
+// We attach it to window only on linux.do pages to avoid polluting other sites.
+try {
+  if (window.location.hostname.includes('linux.do')) {
+    // Directly bind the statically imported postTimings
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    window.postTimings = postTimings
+  }
+} catch (e) {
+  console.warn('[Emoji Extension] failed to expose postTimings to window', e)
 }

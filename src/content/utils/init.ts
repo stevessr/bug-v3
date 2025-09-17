@@ -4,6 +4,7 @@ import { loadDataFromStorage } from '../data/storage'
 import { findAllToolbars, injectButton } from './injector'
 import { initOneClickAdd } from './oneClickAdd'
 import { showFloatingButton, checkAndShowFloatingButton } from './floatingButton'
+import { startReadTracker } from './readTracker'
 
 // Function to check and re-inject buttons if needed
 function checkAndReinjectButtons() {
@@ -177,6 +178,13 @@ export async function initializeEmojiFeature(
     document.addEventListener('DOMContentLoaded', attemptInjection)
   } else {
     attemptInjection()
+  }
+
+  // Start read time tracker (simplified)
+  try {
+    startReadTracker()
+  } catch (e) {
+    console.warn('[Emoji Extension] Failed to start read tracker', e)
   }
 
   // storage change listener (using chrome.storage.onChanged if available)

@@ -1,5 +1,7 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
+import { notify } from './notify'
+import { autoReadAll } from './autoReadReplies'
 
 // logger removed: replaced by direct console usage in migration
 import { showImageUploadDialog } from './uploader'
@@ -149,6 +151,19 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     await showImageUploadDialog()
   })
   list.appendChild(uploadLi)
+
+  // (已移除) 旧的“自动请求绑定”菜单项已删除，使用“自动阅读所有回复”替代
+
+  const autoReadLi = createListItem('自动阅读所有回复', '📖', async () => {
+    menu.remove()
+    try {
+      // trigger auto read; autoReadAll will notify progress
+      await autoReadAll()
+    } catch (e) {
+      notify('自动阅读失败: ' + (e && (e as any).message ? (e as any).message : String(e)), 'error')
+    }
+  })
+  list.appendChild(autoReadLi)
 
   const generateLi = createListItem('AI 生成图片', '🎨', () => {
     menu.remove()
