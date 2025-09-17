@@ -42,24 +42,23 @@ const ICON_MAP: Record<string, string> = {
 
 function insertIntoEditor(text: string) {
   const active = document.activeElement as HTMLElement | null
-  const isTextInput = (el: Element | null) =>
-    !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'text'))
+  const isTextarea = (el: Element | null) => !!el && el.tagName === 'TEXTAREA'
 
-  if (isTextInput(active)) {
-    const input = active as HTMLTextAreaElement | HTMLInputElement
-    const start = (input as HTMLTextAreaElement).selectionStart ?? 0
-    const end = (input as HTMLTextAreaElement).selectionEnd ?? start
-    const value = input.value
-    input.value = value.slice(0, start) + text + value.slice(end)
+  if (isTextarea(active)) {
+    const textarea = active as HTMLTextAreaElement
+    const start = textarea.selectionStart ?? 0
+    const end = textarea.selectionEnd ?? start
+    const value = textarea.value
+    textarea.value = value.slice(0, start) + text + value.slice(end)
     const pos = start + text.length
-    if ('setSelectionRange' in input) {
+    if ('setSelectionRange' in textarea) {
       try {
-        ;(input as HTMLTextAreaElement).setSelectionRange(pos, pos)
+        textarea.setSelectionRange(pos, pos)
       } catch (e) {
         // ignore
       }
     }
-    input.dispatchEvent(new Event('input', { bubbles: true }))
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
     return
   }
 
@@ -78,10 +77,7 @@ function insertIntoEditor(text: string) {
     return
   }
 
-  const fallback = document.querySelector('textarea, input[type="text"]') as
-    | HTMLTextAreaElement
-    | HTMLInputElement
-    | null
+  const fallback = document.querySelector('textarea') as HTMLTextAreaElement | null
   if (fallback) {
     fallback.focus()
     const start = (fallback as HTMLTextAreaElement).selectionStart ?? fallback.value.length

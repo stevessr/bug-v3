@@ -128,31 +128,25 @@ function insertIntoEditor(text: string) {
   // Prefer the focused element if it's a text input or contenteditable
   const active = document.activeElement as HTMLElement | null
 
-  const isTextInput = (el: Element | null) =>
-    !!el &&
-    (el.tagName === 'TEXTAREA' ||
-      (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'text'))
+    const isTextarea = (el: Element | null) => !!el && el.tagName === 'TEXTAREA'
 
-  if (isTextInput(active)) {
-    const input = active as HTMLTextAreaElement | HTMLInputElement
-    const start = (input as HTMLTextAreaElement).selectionStart ?? 0
-    const end = (input as HTMLTextAreaElement).selectionEnd ?? start
-    const value = input.value
-    input.value = value.slice(0, start) + text + value.slice(end)
-    const pos = start + text.length
-    if ('setSelectionRange' in input) {
-      try {
-        ;(input as HTMLTextAreaElement).setSelectionRange(pos, pos)
-      } catch (e) {
-        // ignore
+    if (isTextarea(active)) {
+      const textarea = active as HTMLTextAreaElement
+      const start = textarea.selectionStart ?? 0
+      const end = textarea.selectionEnd ?? start
+      const value = textarea.value
+      textarea.value = value.slice(0, start) + text + value.slice(end)
+      const pos = start + text.length
+      if ('setSelectionRange' in textarea) {
+        try {
+          textarea.setSelectionRange(pos, pos)
+        } catch (e) {
+          // ignore
+        }
       }
-    } else if ('selectionStart' in input) {
-      ;(input as any).selectionStart = pos
-      ;(input as any).selectionEnd = pos
+      textarea.dispatchEvent(new Event('input', { bubbles: true }))
+      return
     }
-    input.dispatchEvent(new Event('input', { bubbles: true }))
-    return
-  }
 
   if (active && active.isContentEditable) {
     const sel = window.getSelection()
@@ -171,11 +165,10 @@ function insertIntoEditor(text: string) {
 
   // Try specific editor selectors used by site/picker
   const selectors = [
-    '.d-editor-textarea-wrapper textarea',
-    '.d-editor-textarea textarea',
-    '.d-editor-textarea',
-    'textarea',
-    'input[type="text"]'
+     '.d-editor-textarea-wrapper textarea',
+     '.d-editor-textarea textarea',
+     '.d-editor-textarea textarea',
+     'textarea'
   ]
 
   for (const sel of selectors) {
