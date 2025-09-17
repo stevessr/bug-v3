@@ -34,48 +34,9 @@ const emit = defineEmits([
 
 const emojiStore = useEmojiStore()
 const columns = computed(() => emojiStore.settings?.gridColumns || 3)
-const openMenuCard = ref<string | null>(null)
 const dedupeMessageCard = ref<Record<string, string>>({})
 
-const showDedupeMessageCard = (groupId: string, msg: string, ms = 2000) => {
-  dedupeMessageCard.value = { ...dedupeMessageCard.value, [groupId]: msg }
-  setTimeout(() => {
-    const copy = { ...dedupeMessageCard.value }
-    delete copy[groupId]
-    dedupeMessageCard.value = copy
-  }, ms)
-}
-
 // ...existing code...
-
-const onEditCard = (group: Group) => {
-  openMenuCard.value = null
-  emit('openEditGroup', group)
-}
-
-const onExportCard = (group: Group) => {
-  openMenuCard.value = null
-  emit('exportGroup', group)
-}
-
-const onExportZipCard = (group: Group) => {
-  openMenuCard.value = null
-  emit('exportGroupZip', group)
-}
-
-const onDedupeCard = (group: Group) => {
-  openMenuCard.value = null
-  try {
-    const removed = emojiStore.dedupeGroup(group.id)
-    if (removed > 0) {
-      showDedupeMessageCard(group.id, `已去重 ${removed} 个表情`)
-    } else {
-      showDedupeMessageCard(group.id, `未发现重复`)
-    }
-  } catch {
-    // ignore
-  }
-}
 
 // Touch drag state & helpers
 const touchState = ref<{

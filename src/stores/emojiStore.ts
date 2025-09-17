@@ -303,7 +303,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   }
 
   const deleteGroup = (groupId: string) => {
-    if (groupId === 'favorites' || groupId === 'nachoneko') {
+    if (groupId === 'favorites') {
       console.warn('Cannot delete system groups')
       return
     }
