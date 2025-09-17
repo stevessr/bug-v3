@@ -11,6 +11,12 @@ import {
   setupPeriodicCleanup,
   handleGetEmojiSetting
 } from '../handlers/main.ts'
+import {
+  handleGetAutonomousScript,
+  handlePlatformDetected,
+  handleAutonomousScriptLoaded,
+  handleAutonomousScriptReady
+} from '../handlers/autonomousScripts.ts'
 
 import { getChromeAPI } from './main.ts'
 
@@ -53,6 +59,46 @@ export function setupMessageListener() {
           case 'REQUEST_LINUX_DO_AUTH':
             handleLinuxDoAuthRequest(sendResponse)
             return true
+
+          case 'GET_AUTONOMOUS_SCRIPT':
+            // message.platform expected
+            if (message.platform) {
+              handleGetAutonomousScript(message.platform, sendResponse)
+              return true
+            } else {
+              sendResponse({ success: false, error: 'Missing platform for GET_AUTONOMOUS_SCRIPT' })
+              return false
+            }
+
+          case 'PLATFORM_DETECTED':
+            // message.platform and message.url expected
+            if (message.platform && message.url) {
+              handlePlatformDetected(message.platform, message.url, sendResponse)
+              return true
+            } else {
+              sendResponse({ success: false, error: 'Missing platform or url for PLATFORM_DETECTED' })
+              return false
+            }
+
+          case 'AUTONOMOUS_SCRIPT_LOADED':
+            // message.platform and message.url expected
+            if (message.platform && message.url) {
+              handleAutonomousScriptLoaded(message.platform, message.url, sendResponse)
+              return true
+            } else {
+              sendResponse({ success: false, error: 'Missing platform or url for AUTONOMOUS_SCRIPT_LOADED' })
+              return false
+            }
+
+          case 'AUTONOMOUS_SCRIPT_READY':
+            // message.platform and message.url expected
+            if (message.platform && message.url) {
+              handleAutonomousScriptReady(message.platform, message.url, sendResponse)
+              return true
+            } else {
+              sendResponse({ success: false, error: 'Missing platform or url for AUTONOMOUS_SCRIPT_READY' })
+              return false
+            }
 
           default:
             console.log('Unknown message type:', message.type)

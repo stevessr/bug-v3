@@ -120,6 +120,10 @@ build
 # Vite build output
 dist
 dist-ssr
+dist-userscript
+dist-userscript-min
+# Autonomous scripts build output (auto-generated, should not be committed)
+dist/autonomous
 *.js.map
 *.css.map
 
