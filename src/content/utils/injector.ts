@@ -101,6 +101,192 @@ async function injectMobilePicker() {
   currentPicker = modalContainer as HTMLElement
 }
 
+// Quick inserts available globally (store as plain keys without [!])
+const QUICK_INSERTS: string[] = [
+  'info',
+  'tip',
+  'faq',
+  'question',
+  'note',
+  'abstract',
+  'todo',
+  'success',
+  'question',
+  'warning',
+  'failure',
+  'danger',
+  'bug',
+  'example',
+  'quote'
+]
+
+/**
+ * Insert text into the active editor used by the emoji picker / site.
+ * Tries several selectors used by the site to find the textarea/contenteditable.
+ */
+function insertIntoEditor(text: string) {
+  // Prefer the focused element if it's a text input or contenteditable
+  const active = document.activeElement as HTMLElement | null
+
+  const isTextInput = (el: Element | null) =>
+    !!el &&
+    (el.tagName === 'TEXTAREA' ||
+      (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'text'))
+
+  if (isTextInput(active)) {
+    const input = active as HTMLTextAreaElement | HTMLInputElement
+    const start = (input as HTMLTextAreaElement).selectionStart ?? 0
+    const end = (input as HTMLTextAreaElement).selectionEnd ?? start
+    const value = input.value
+    input.value = value.slice(0, start) + text + value.slice(end)
+    const pos = start + text.length
+    if ('setSelectionRange' in input) {
+      try {
+        ;(input as HTMLTextAreaElement).setSelectionRange(pos, pos)
+      } catch (e) {
+        // ignore
+      }
+    } else if ('selectionStart' in input) {
+      ;(input as any).selectionStart = pos
+      ;(input as any).selectionEnd = pos
+    }
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    return
+  }
+
+  if (active && active.isContentEditable) {
+    const sel = window.getSelection()
+    if (!sel) return
+    const range = sel.getRangeAt(0)
+    range.deleteContents()
+    const node = document.createTextNode(text)
+    range.insertNode(node)
+    range.setStartAfter(node)
+    range.setEndAfter(node)
+    sel.removeAllRanges()
+    sel.addRange(range)
+    active.dispatchEvent(new Event('input', { bubbles: true }))
+    return
+  }
+
+  // Try specific editor selectors used by site/picker
+  const selectors = [
+    '.d-editor-textarea-wrapper textarea',
+    '.d-editor-textarea textarea',
+    '.d-editor-textarea',
+    'textarea',
+    'input[type="text"]'
+  ]
+
+  for (const sel of selectors) {
+    const el = document.querySelector(sel) as
+      | HTMLTextAreaElement
+      | HTMLInputElement
+      | HTMLElement
+      | null
+    if (!el) continue
+    if ((el as HTMLElement).isContentEditable) {
+      const editable = el as HTMLElement
+      const range = document.createRange()
+      range.selectNodeContents(editable)
+      range.collapse(false)
+      const textNode = document.createTextNode(text)
+      range.insertNode(textNode)
+      const seln = window.getSelection()
+      if (seln) {
+        seln.removeAllRanges()
+        const newRange = document.createRange()
+        newRange.setStartAfter(textNode)
+        newRange.setEndAfter(textNode)
+        seln.addRange(newRange)
+      }
+      editable.dispatchEvent(new Event('input', { bubbles: true }))
+      return
+    }
+
+    // treat as textarea/input
+    const input = el as HTMLTextAreaElement | HTMLInputElement
+    input.focus()
+    const start = (input as HTMLTextAreaElement).selectionStart ?? input.value.length
+    const end = (input as HTMLTextAreaElement).selectionEnd ?? start
+    const value = input.value
+    input.value = value.slice(0, start) + text + value.slice(end)
+    const pos = start + text.length
+    if ('setSelectionRange' in input) {
+      try {
+        ;(input as HTMLTextAreaElement).setSelectionRange(pos, pos)
+      } catch (e) {
+        // ignore
+      }
+    }
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    return
+  }
+}
+
+function createQuickInsertMenu(): HTMLElement {
+  const menu = document.createElement('div')
+  menu.className =
+    'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
+  const inner = document.createElement('div')
+  inner.className = 'fk-d-menu__inner-content'
+  const list = document.createElement('ul')
+  list.className = 'dropdown-menu'
+
+  const ICON_MAP: Record<string, string> = {
+    info: 'ℹ️',
+    tip: '💡',
+    faq: '❓',
+    question: '🤔',
+    note: '📝',
+    abstract: '📋',
+    todo: '☑️',
+    success: '🎉',
+    warning: '⚠️',
+    failure: '❌',
+    danger: '☠️',
+    bug: '🐛',
+    example: '🔎',
+    quote: '💬'
+  }
+
+  QUICK_INSERTS.forEach(item => {
+    const li = document.createElement('li')
+    li.className = 'dropdown-menu__item'
+    const btn = document.createElement('button')
+    btn.className = 'btn btn-icon-text'
+    btn.type = 'button'
+    // item is a plain key like 'info' — build display label and title
+    const displayLabel = item.length > 0 ? item.charAt(0).toUpperCase() + item.slice(1).toLowerCase() : item
+    btn.title = displayLabel
+    btn.addEventListener('click', () => {
+      // remove menu and insert into editor
+      if (menu.parentElement) menu.parentElement.removeChild(menu)
+      // Insert wrapped form: [!key]
+      insertIntoEditor(`>[!${item}]`)
+    })
+
+    const emojiSpan = document.createElement('span')
+  emojiSpan.textContent = ICON_MAP[item] || '✳️'
+
+    const labelWrap = document.createElement('span')
+    labelWrap.className = 'd-button-label'
+  const labelText = document.createElement('span')
+  labelText.className = 'd-button-label__text'
+  labelText.textContent = displayLabel
+
+    labelWrap.appendChild(labelText)
+    btn.appendChild(emojiSpan)
+    btn.appendChild(labelWrap)
+    li.appendChild(btn)
+    list.appendChild(li)
+  })
+
+  inner.appendChild(list)
+  menu.appendChild(inner)
+  return menu
+}
+
 function createUploadMenu(isMobile: boolean = false): HTMLElement {
   // Build a popout-style menu matching referense/popout.html structure
   // If isMobile is true, return a modal-style container compatible with mobile popout
@@ -187,10 +373,104 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   list.appendChild(learnxv6)
 
   const passwall = createListItem('过盾', '🛡', () => {
-    menu.remove()
-    window.location.href = 'https://linux.do/challenge'
+    // If a modal iframe already exists, don't create another
+    const existing = document.querySelector(
+      '.emoji-extension-passwall-iframe'
+    ) as HTMLElement | null
+    if (existing) return
+
+    // Build modal container for iframe
+    const modal = document.createElement('div')
+    modal.className = 'emoji-extension-passwall-iframe modal-container'
+    modal.style.position = 'fixed'
+    modal.style.top = '0'
+    modal.style.left = '0'
+    modal.style.width = '100%'
+    modal.style.height = '100%'
+    modal.style.display = 'flex'
+    modal.style.alignItems = 'center'
+    modal.style.justifyContent = 'center'
+    modal.style.zIndex = '100000'
+
+    const backdrop = document.createElement('div')
+    backdrop.style.position = 'absolute'
+    backdrop.style.top = '0'
+    backdrop.style.left = '0'
+    backdrop.style.width = '100%'
+    backdrop.style.height = '100%'
+    backdrop.style.background = 'rgba(0,0,0,0.5)'
+
+    const frameWrap = document.createElement('div')
+    frameWrap.style.position = 'relative'
+    frameWrap.style.width = '80%'
+    frameWrap.style.maxWidth = '900px'
+    frameWrap.style.height = '80%'
+    frameWrap.style.maxHeight = '700px'
+    frameWrap.style.background = '#fff'
+    frameWrap.style.borderRadius = '8px'
+    frameWrap.style.overflow = 'hidden'
+    frameWrap.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)'
+
+    const closeBtn = document.createElement('button')
+    closeBtn.type = 'button'
+    closeBtn.textContent = '关闭'
+    closeBtn.style.position = 'absolute'
+    closeBtn.style.top = '8px'
+    closeBtn.style.right = '8px'
+    closeBtn.style.zIndex = '1001'
+    closeBtn.className = 'btn btn-sm'
+
+    const iframe = document.createElement('iframe')
+    iframe.src = 'https://linux.do/challenge'
+    iframe.style.width = '100%'
+    iframe.style.height = '100%'
+    iframe.style.border = '0'
+    iframe.setAttribute('sandbox', 'allow-scripts allow-forms allow-same-origin allow-popups')
+
+    // Close helper
+    const closeModal = () => {
+      if (modal.parentElement) modal.parentElement.removeChild(modal)
+    }
+
+    closeBtn.addEventListener('click', () => {
+      closeModal()
+    })
+
+    // Listen for navigation and close when domain is linux.do
+    iframe.addEventListener('load', () => {
+      let href: string | null = null
+      try {
+        href =
+          (iframe.contentWindow &&
+            iframe.contentWindow.location &&
+            iframe.contentWindow.location.href) ||
+          null
+      } catch (e) {
+        // Cross-origin access will throw; fallback to using src or keep open
+        href = iframe.src || null
+      }
+
+      if (href) {
+        try {
+          const url = new URL(href)
+          if (url.hostname.endsWith('linux.do')) {
+            // Automatically close when navigated to linux.do domain
+            closeModal()
+          }
+        } catch (e) {
+          // ignore malformed URLs
+        }
+      }
+    })
+
+    frameWrap.appendChild(closeBtn)
+    frameWrap.appendChild(iframe)
+    modal.appendChild(backdrop)
+    modal.appendChild(frameWrap)
+    document.body.appendChild(modal)
   })
   list.appendChild(passwall)
+  // end of upload menu
 
   inner.appendChild(list)
   menu.appendChild(inner)
@@ -403,6 +683,62 @@ export function injectButton(toolbar: Element) {
     }, 100)
   })
 
+  // Create quick-insert button
+  const quickInsertButton = document.createElement('button')
+  quickInsertButton.classList.add(
+    'btn',
+    'no-text',
+    'btn-icon',
+    'toolbar__button',
+    'quick-insert-button'
+  )
+  if (isChatComposer) {
+    quickInsertButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
+    quickInsertButton.setAttribute('aria-expanded', 'false')
+    quickInsertButton.setAttribute('data-trigger', '')
+  }
+  quickInsertButton.title = '快捷输入'
+  quickInsertButton.type = 'button'
+  quickInsertButton.innerHTML = `⎘`
+
+  quickInsertButton.addEventListener('click', event => {
+    event.stopPropagation()
+    // toggle menu
+    const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
+    const isMobile = forceMobile || toolbar.classList.contains('chat-composer__inner-container')
+    const menu = createQuickInsertMenu()
+
+    if (isMobile) {
+      const modalPortal = document.querySelector('.modal-container') as HTMLElement | null
+      if (!modalPortal) {
+        document.body.appendChild(menu)
+      } else {
+        modalPortal.appendChild(menu)
+      }
+    } else {
+      let portal = document.querySelector('#d-menu-portals') as HTMLElement | null
+      if (!portal) {
+        portal = document.createElement('div')
+        portal.id = 'd-menu-portals'
+        document.body.appendChild(portal)
+      }
+      portal.appendChild(menu)
+      const rect = quickInsertButton.getBoundingClientRect()
+      menu.style.position = 'fixed'
+      menu.style.zIndex = '10000'
+      menu.style.top = `${rect.bottom + 5}px`
+      menu.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - 150, window.innerWidth - 300))}px`
+    }
+
+    const removeMenu = (e: Event) => {
+      if (!menu.contains(e.target as Node)) {
+        if (menu.parentElement) menu.parentElement.removeChild(menu)
+        document.removeEventListener('click', removeMenu)
+      }
+    }
+    setTimeout(() => document.addEventListener('click', removeMenu), 100)
+  })
+
   try {
     // Insert buttons at appropriate positions
     if (isChatComposer) {
@@ -412,14 +748,17 @@ export function injectButton(toolbar: Element) {
       )
       if (emojiPickerBtn) {
         toolbar.insertBefore(uploadButton, emojiPickerBtn)
+        toolbar.insertBefore(quickInsertButton, emojiPickerBtn)
         toolbar.insertBefore(emojiButton, emojiPickerBtn)
       } else {
         toolbar.appendChild(uploadButton)
+        toolbar.appendChild(quickInsertButton)
         toolbar.appendChild(emojiButton)
       }
     } else {
       // For standard toolbar, append at the end
       toolbar.appendChild(uploadButton)
+      toolbar.appendChild(quickInsertButton)
       toolbar.appendChild(emojiButton)
     }
   } catch (e) {
