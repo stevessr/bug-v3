@@ -5,8 +5,9 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 const autonomousDir = path.resolve(rootDir, 'src', 'autonomous-scripts');
 const outputDir = path.resolve(rootDir, 'dist', 'autonomous');
@@ -25,9 +26,10 @@ async function compileTypeScript(inputFile, outputFile) {
   return new Promise((resolve) => {
     const tscPath = path.resolve(rootDir, 'node_modules', '.bin', 'tsc');
     
-    const child = spawn('node', [tscPath, inputFile, '--outFile', outputFile, '--target', 'ES2020', '--lib', 'ES2020,DOM'], {
+    const child = spawn(tscPath, [inputFile, '--outFile', outputFile, '--target', 'ES2020', '--lib', 'ES2020,DOM,DOM.Iterable'], {
       stdio: 'inherit',
-      cwd: rootDir
+      cwd: rootDir,
+      shell: true
     });
 
     child.on('exit', (code) => {
