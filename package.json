@@ -23,7 +23,6 @@
     "build:userscript:pc:remote": "USERSCRIPT_PLATFORM=pc node scripts/build.js build:userscript remote",
     "build:userscript:mobile:remote": "USERSCRIPT_PLATFORM=mobile node scripts/build.js build:userscript remote",
     "build:debug": "node scripts/build.js build:debug",
-    "build:autonomous": "node scripts/build-autonomous.js",
     "serve": "vite preview",
     "test": "playwright test",
     "test:debug": "playwright test --debug",

@@ -1,11 +1,9 @@
 // Autonomous Discourse Platform Script
 // Self-contained script for Discourse forums, includes all necessary functions inline
+// This script will be injected by chrome.scripting.executeScript
 
-;(function () {
-  'use strict'
-
-  // ==== Platform Detection ====
-  function isDiscoursePage(): boolean {
+// ==== Platform Detection ====
+function isDiscoursePage(): boolean {
     try {
       // Check for discourse meta tag as primary indicator
       const discourseMetaTags = document.querySelectorAll(
@@ -436,12 +434,11 @@
   }
 
   // ==== Entry Point ====
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDiscourseScript)
-  } else {
-    initDiscourseScript()
-  }
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDiscourseScript)
+} else {
+  initDiscourseScript()
+}
 
-  // Request backend injection
-  requestBackendInjection()
-})()
+// Request backend injection
+requestBackendInjection()

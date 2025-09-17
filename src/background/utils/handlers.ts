@@ -15,7 +15,8 @@ import {
   handleGetAutonomousScript,
   handlePlatformDetected,
   handleAutonomousScriptLoaded,
-  handleAutonomousScriptReady
+  handleAutonomousScriptReady,
+  handleInjectPlatformScript
 } from '../handlers/autonomousScripts.ts'
 
 import { getChromeAPI } from './main.ts'
@@ -105,6 +106,19 @@ export function setupMessageListener() {
               sendResponse({
                 success: false,
                 error: 'Missing platform or url for AUTONOMOUS_SCRIPT_READY'
+              })
+              return false
+            }
+
+          case 'INJECT_PLATFORM_SCRIPT':
+            // message.platform and message.url expected
+            if (message.platform && message.url) {
+              handleInjectPlatformScript(message.platform, message.url, _sender, sendResponse)
+              return true
+            } else {
+              sendResponse({
+                success: false,
+                error: 'Missing platform or url for INJECT_PLATFORM_SCRIPT'
               })
               return false
             }

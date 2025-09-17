@@ -1,11 +1,9 @@
 // Autonomous Reddit Platform Script
 // Self-contained script for Reddit, includes all necessary functions inline
+// This script will be injected by chrome.scripting.executeScript
 
-;(function () {
-  'use strict'
-
-  // ==== Platform Detection ====
-  function isRedditPage(): boolean {
+// ==== Platform Detection ====
+function isRedditPage(): boolean {
     try {
       const host = window.location.hostname.toLowerCase()
       if (host.includes('reddit.com') || host.includes('redd.it')) {
@@ -412,6 +410,5 @@
     initRedditScript()
   }
 
-  // Request backend injection
-  requestBackendInjection()
-})()
+// Request backend injection
+requestBackendInjection()

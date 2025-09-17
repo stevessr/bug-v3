@@ -1,11 +1,9 @@
 // Autonomous Pixiv Platform Script
 // Self-contained script for Pixiv, includes all necessary functions inline
+// This script will be injected by chrome.scripting.executeScript
 
-;(function () {
-  'use strict'
-
-  // ==== Platform Detection ====
-  function isPixivPage(): boolean {
+// ==== Platform Detection ====
+function isPixivPage(): boolean {
     try {
       const hostname = window.location.hostname.toLowerCase()
 
@@ -522,6 +520,5 @@
     initPixivScript()
   }
 
-  // Request backend injection
-  requestBackendInjection()
-})()
+// Request backend injection
+requestBackendInjection()

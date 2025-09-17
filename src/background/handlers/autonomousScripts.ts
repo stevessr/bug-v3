@@ -267,3 +267,80 @@ export function getAutonomousScriptCacheStatus(): { size: number; keys: string[]
     keys: Array.from(autonomousScriptCache.keys())
   }
 }
+
+// Handle intelligent platform script injection using chrome.scripting.executeScript
+export async function handleInjectPlatformScript(
+  platform: string,
+  url: string,
+  sender: any,
+  sendResponse: (response: any) => void
+): Promise<void> {
+  try {
+    console.log(`[AutonomousHandler] Injecting platform script: ${platform} on ${url}`)
+    
+    // Map platform to script file name
+    const scriptFiles: { [key: string]: string } = {
+      'discourse': 'content-discourse.js',
+      'x': 'content-x.js',
+      'pixiv': 'content-pixiv.js',
+      'reddit': 'content-reddit.js'
+    }
+    
+    const scriptFile = scriptFiles[platform]
+    if (!scriptFile) {
+      sendResponse({
+        success: false,
+        error: `Unsupported platform: ${platform}`,
+        platform: platform
+      })
+      return
+    }
+    
+    // Get the tab ID from the sender
+    const tabId = sender?.tab?.id
+    if (!tabId) {
+      sendResponse({
+        success: false,
+        error: 'Cannot determine tab ID for injection',
+        platform: platform
+      })
+      return
+    }
+    
+    try {
+      // Use chrome.scripting.executeScript to inject the platform-specific script
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: [`js/${scriptFile}`],
+        world: 'ISOLATED', // Run in isolated world with access to Chrome APIs
+        injectImmediately: false // Wait for document to be ready
+      })
+      
+      console.log(`[AutonomousHandler] Successfully injected ${scriptFile} into tab ${tabId}`)
+      
+      sendResponse({
+        success: true,
+        message: `Platform script ${scriptFile} injected successfully`,
+        platform: platform,
+        tabId: tabId,
+        results: results.length,
+        timestamp: Date.now()
+      })
+    } catch (injectionError) {
+      console.error(`[AutonomousHandler] Failed to inject ${scriptFile}:`, injectionError)
+      sendResponse({
+        success: false,
+        error: `Script injection failed: ${injectionError.message}`,
+        platform: platform,
+        tabId: tabId
+      })
+    }
+  } catch (e) {
+    console.error(`[AutonomousHandler] Failed to handle platform script injection:`, e)
+    sendResponse({
+      success: false,
+      error: `Injection handler failed: ${e.message}`,
+      platform: platform
+    })
+  }
+}

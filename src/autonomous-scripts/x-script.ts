@@ -1,11 +1,9 @@
 // Autonomous X (Twitter) Platform Script
 // Self-contained script for X/Twitter, includes all necessary functions inline
+// This script will be injected by chrome.scripting.executeScript
 
-;(function () {
-  'use strict'
-
-  // ==== Platform Detection ====
-  function isXPage(): boolean {
+// ==== Platform Detection ====
+function isXPage(): boolean {
     try {
       const host = window.location.hostname.toLowerCase()
       return (
@@ -489,6 +487,5 @@
     initXScript()
   }
 
-  // Request backend injection
-  requestBackendInjection()
-})()
+// Request backend injection
+requestBackendInjection()

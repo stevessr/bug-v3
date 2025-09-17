@@ -1,10 +1,10 @@
-// New Autonomous Content Script Entry Point
-// This replaces the old content.ts to use autonomous platform scripts
+// Smart Content Script with Intelligent Platform Injection
+// This script detects the platform and requests the background to inject the appropriate script
 
 import { initializeEmojiFeature } from './utils/init'
 import { postTimings } from './utils/timingsBinder'
 
-console.log('[Emoji Extension] Autonomous content script loaded')
+console.log('[Emoji Extension] Smart content script loaded')
 
 // ==== Platform Detection ====
 function detectPlatform(): 'discourse' | 'x' | 'pixiv' | 'reddit' | 'emoji' | 'unknown' {
@@ -48,11 +48,7 @@ function detectPlatform(): 'discourse' | 'x' | 'pixiv' | 'reddit' | 'emoji' | 'u
     const generatorMeta = document.querySelector('meta[name="generator"]')
     if (generatorMeta) {
       const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
-      if (
-        content.includes('discourse') ||
-        content.includes('flarum') ||
-        content.includes('phpbb')
-      ) {
+      if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
         return 'discourse'
       }
     }
@@ -74,7 +70,7 @@ function detectPlatform(): 'discourse' | 'x' | 'pixiv' | 'reddit' | 'emoji' | 'u
     // Check for any forum/discussion platform that should get emoji features
     const allowedDomains = ['linux.do', 'meta.discourse.org']
     if (allowedDomains.some(domain => hostname.includes(domain))) {
-      return 'emoji' // Should get emoji picker but not autonomous scripts
+      return 'emoji' // Should get emoji picker but not platform-specific injection
     }
 
     return 'unknown'
@@ -86,9 +82,9 @@ function detectPlatform(): 'discourse' | 'x' | 'pixiv' | 'reddit' | 'emoji' | 'u
 
 // ==== Chrome Extension Communication ====
 function sendToBackground(message: any): Promise<any> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     try {
-      const chromeAPI = (window as any).chrome
+      const chromeAPI = chrome
       if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
         chromeAPI.runtime.sendMessage(message, (response: any) => {
           resolve(response || { success: false, error: 'No response' })
@@ -104,98 +100,69 @@ function sendToBackground(message: any): Promise<any> {
   })
 }
 
-// ==== Autonomous Script Loading ====
-async function loadAutonomousScript(platform: string): Promise<boolean> {
+// ==== Request Platform Script Injection ====
+async function requestPlatformInjection(platform: string): Promise<boolean> {
   try {
-    console.log(`[Emoji Extension] Loading autonomous script for platform: ${platform}`)
-
-    // Request the script content from background
+    console.log(`[Emoji Extension] Requesting injection for platform: ${platform}`)
+    
     const response = await sendToBackground({
-      type: 'GET_AUTONOMOUS_SCRIPT',
-      platform: platform
-    })
-
-    if (!response.success || !response.scriptContent) {
-      console.warn(
-        `[Emoji Extension] Failed to get autonomous script for ${platform}:`,
-        response.error
-      )
-      return false
-    }
-
-    // Inject the script
-    const scriptId = `autonomous-script-${platform}`
-
-    // Check if script is already injected
-    if (document.getElementById(scriptId)) {
-      console.log(`[Emoji Extension] Autonomous script ${scriptId} already injected`)
-      return true
-    }
-
-    const script = document.createElement('script')
-    script.id = scriptId
-    script.type = 'text/javascript'
-    script.textContent = response.scriptContent
-
-    // Inject into document head
-    const target = document.head || document.documentElement
-    target.appendChild(script)
-
-    console.log(`[Emoji Extension] Successfully injected autonomous script for ${platform}`)
-
-    // Notify background that we've loaded an autonomous script
-    sendToBackground({
-      type: 'AUTONOMOUS_SCRIPT_LOADED',
+      type: 'INJECT_PLATFORM_SCRIPT',
       platform: platform,
       url: window.location.href,
-      timestamp: Date.now()
+      tabId: undefined // Background will determine the current tab
     })
-
-    return true
+    
+    if (response.success) {
+      console.log(`[Emoji Extension] Platform script injection requested successfully for ${platform}`)
+      return true
+    } else {
+      console.warn(`[Emoji Extension] Failed to request injection for ${platform}:`, response.error)
+      return false
+    }
   } catch (e) {
-    console.error(`[Emoji Extension] Failed to load autonomous script for ${platform}:`, e)
+    console.error(`[Emoji Extension] Failed to request platform injection for ${platform}:`, e)
     return false
   }
 }
 
 // ==== Main Initialization Logic ====
-async function initializeContent() {
+async function initializeSmartContent() {
   try {
-    console.log('[Emoji Extension] Initializing content script...')
-
+    console.log('[Emoji Extension] Initializing smart content script...')
+    
     // Detect the current platform
     const platform = detectPlatform()
     console.log(`[Emoji Extension] Detected platform: ${platform}`)
-
+    
     // Handle different platform types
     switch (platform) {
       case 'discourse':
       case 'x':
       case 'pixiv':
       case 'reddit':
-        // Load autonomous script for this platform
-        console.log(`[Emoji Extension] Loading autonomous script for ${platform}`)
-        const success = await loadAutonomousScript(platform)
-
+        // Request background to inject the platform-specific script
+        console.log(`[Emoji Extension] Requesting platform script injection for ${platform}`)
+        const success = await requestPlatformInjection(platform)
+        
         if (success) {
-          console.log(`[Emoji Extension] Autonomous script loaded successfully for ${platform}`)
+          console.log(`[Emoji Extension] Platform script injection requested successfully for ${platform}`)
         } else {
-          console.error(`[Emoji Extension] Failed to load autonomous script for ${platform}`)
+          console.error(`[Emoji Extension] Failed to request platform script injection for ${platform}`)
         }
         break
-
+        
       case 'emoji':
-        // Only load emoji picker features, no autonomous scripts
+        // Only load emoji picker features, no platform-specific injection
         console.log('[Emoji Extension] Initializing emoji features only')
         initializeEmojiFeature()
         break
-
+        
       case 'unknown':
       default:
         console.log('[Emoji Extension] Unknown platform, no features will be loaded')
         break
     }
-
+    
     // Notify background about platform detection
     sendToBackground({
       type: 'PLATFORM_DETECTED',
@@ -203,8 +170,9 @@ async function initializeContent() {
       url: window.location.href,
       timestamp: Date.now()
     })
+    
   } catch (e) {
-    console.error('[Emoji Extension] Content script initialization failed', e)
+    console.error('[Emoji Extension] Smart content script initialization failed', e)
   }
 }
 
@@ -253,6 +221,7 @@ if (window.location.hostname.includes('linux.do')) {
 // Keep the existing postTimings exposure for compatibility
 try {
   if (window.location.hostname.includes('linux.do')) {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     window.postTimings = postTimings
   }
@@ -262,7 +231,7 @@ try {
 
 // ==== Entry Point ====
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeContent)
+  document.addEventListener('DOMContentLoaded', initializeSmartContent)
 } else {
-  initializeContent()
+  initializeSmartContent()
 }
