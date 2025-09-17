@@ -1,5 +1,6 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
+
 import { notify } from './notify'
 import { autoReadAll } from './autoReadReplies'
 

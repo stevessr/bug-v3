@@ -3,6 +3,7 @@ import { userscriptState } from '../state'
 import { saveDataToLocalStorage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
+
 import { showGroupEditorModal } from './groupEditor'
 import { showPopularEmojisModal } from './popularEmojis'
 
@@ -10,7 +11,7 @@ import { showPopularEmojisModal } from './popularEmojis'
 export function showSettingsModal() {
   // Ensure theme styles are injected
   injectGlobalThemeStyles()
-  
+
   const modal = createEl('div', {
     style: `
     position: fixed;
@@ -165,7 +166,9 @@ export function showSettingsModal() {
       userscriptState.settings.showSearchBar = showSearchBar.checked
     }
 
-    const enableFloatingPreview = content.querySelector('#enableFloatingPreview') as HTMLInputElement
+    const enableFloatingPreview = content.querySelector(
+      '#enableFloatingPreview'
+    ) as HTMLInputElement
     if (enableFloatingPreview) {
       userscriptState.settings.enableFloatingPreview = enableFloatingPreview.checked
     }

@@ -303,7 +303,7 @@ export function trackEmojiUsage(emojiName: string, emojiUrl: string): void {
     const key = `${emojiName}|${emojiUrl}`
     const statsData = localStorage.getItem(USAGE_STATS_KEY)
     let stats: { [key: string]: { count: number; lastUsed: number } } = {}
-    
+
     if (statsData) {
       try {
         stats = JSON.parse(statsData)
@@ -311,25 +311,27 @@ export function trackEmojiUsage(emojiName: string, emojiUrl: string): void {
         console.warn('[Userscript] Failed to parse usage stats:', e)
       }
     }
-    
+
     if (!stats[key]) {
       stats[key] = { count: 0, lastUsed: 0 }
     }
-    
+
     stats[key].count++
     stats[key].lastUsed = Date.now()
-    
+
     localStorage.setItem(USAGE_STATS_KEY, JSON.stringify(stats))
   } catch (error) {
     console.error('[Userscript] Failed to track emoji usage:', error)
   }
 }
 
-export function getPopularEmojis(limit: number = 20): Array<{ name: string; url: string; count: number; lastUsed: number }> {
+export function getPopularEmojis(
+  limit: number = 20
+): Array<{ name: string; url: string; count: number; lastUsed: number }> {
   try {
     const statsData = localStorage.getItem(USAGE_STATS_KEY)
     if (!statsData) return []
-    
+
     const stats = JSON.parse(statsData)
     const popularEmojis = Object.entries(stats)
       .map(([key, data]: [string, any]) => {
@@ -343,7 +345,7 @@ export function getPopularEmojis(limit: number = 20): Array<{ name: string; url:
       })
       .sort((a, b) => b.count - a.count) // Sort by usage count descending
       .slice(0, limit)
-    
+
     return popularEmojis
   } catch (error) {
     console.error('[Userscript] Failed to get popular emojis:', error)

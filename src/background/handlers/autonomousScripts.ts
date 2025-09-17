@@ -1,44 +1,103 @@
 // Autonomous Script Handler
 // Handles requests for autonomous platform scripts
 
-import fs from 'fs'
-import path from 'path'
-
 // Store for autonomous script content
 const autonomousScriptCache = new Map<string, string>()
 
 // Available autonomous scripts
 const AVAILABLE_SCRIPTS = {
-  'discourse': 'discourse-script.js',
-  'x': 'x-script.js', 
-  'pixiv': 'pixiv-script.js',
-  'reddit': 'reddit-script.js',
-  'loader': 'loader.js'
+  discourse: 'discourse-script.js',
+  x: 'x-script.js',
+  pixiv: 'pixiv-script.js',
+  reddit: 'reddit-script.js',
+  loader: 'loader.js'
 }
 
-// Load script content from file system (for development/extension builds)
-function loadScriptFromFile(scriptName: string): string | null {
+// Load script content from bundled resources (for extension builds)
+function loadScriptFromBundle(scriptName: string): string | null {
   try {
-    // In a real extension, these would be bundled or loaded from the extension directory
-    const scriptPath = path.resolve(__dirname, '..', '..', 'dist', 'autonomous', scriptName)
-    
-    if (fs.existsSync(scriptPath)) {
-      return fs.readFileSync(scriptPath, 'utf8')
-    } else {
-      console.warn(`[AutonomousHandler] Script file not found: ${scriptPath}`)
-      return null
-    }
+    // In a Chrome extension, we would load from chrome.runtime.getURL()
+    // For now, return null to indicate scripts should be embedded or served differently
+    return null
   } catch (e) {
-    console.error(`[AutonomousHandler] Failed to load script ${scriptName}:`, e)
+    console.error(`[AutonomousHandler] Failed to load script ${scriptName} from bundle:`, e)
     return null
   }
 }
 
 // Get embedded script content (for userscript builds)
 function getEmbeddedScript(platform: string): string | null {
-  // In userscript builds, the autonomous scripts would be embedded here
-  // For now, return null to indicate scripts should be loaded from files
-  return null
+  // For testing purposes, return a simple fallback script
+  const fallbackScripts = {
+    discourse: `
+      (function() {
+        'use strict';
+        console.log('[Autonomous Discourse Script] Loaded and running');
+        
+        function isDiscoursePage() {
+          const hostname = window.location.hostname.toLowerCase();
+          return hostname.includes('linux.do') || 
+                 hostname.includes('discourse.org') ||
+                 document.querySelector('meta[name*="discourse"]') !== null;
+        }
+        
+        if (isDiscoursePage()) {
+          console.log('[Autonomous Discourse Script] Discourse page detected, initializing...');
+          // Add minimal functionality here for testing
+        }
+      })();
+    `,
+    x: `
+      (function() {
+        'use strict';
+        console.log('[Autonomous X Script] Loaded and running');
+        
+        function isXPage() {
+          const hostname = window.location.hostname.toLowerCase();
+          return hostname.includes('x.com') || hostname.includes('twitter.com');
+        }
+        
+        if (isXPage()) {
+          console.log('[Autonomous X Script] X/Twitter page detected, initializing...');
+          // Add minimal functionality here for testing
+        }
+      })();
+    `,
+    pixiv: `
+      (function() {
+        'use strict';
+        console.log('[Autonomous Pixiv Script] Loaded and running');
+        
+        function isPixivPage() {
+          const hostname = window.location.hostname.toLowerCase();
+          return hostname.includes('pixiv.net') || hostname.includes('pximg.net');
+        }
+        
+        if (isPixivPage()) {
+          console.log('[Autonomous Pixiv Script] Pixiv page detected, initializing...');
+          // Add minimal functionality here for testing
+        }
+      })();
+    `,
+    reddit: `
+      (function() {
+        'use strict';
+        console.log('[Autonomous Reddit Script] Loaded and running');
+        
+        function isRedditPage() {
+          const hostname = window.location.hostname.toLowerCase();
+          return hostname.includes('reddit.com') || hostname.includes('redd.it');
+        }
+        
+        if (isRedditPage()) {
+          console.log('[Autonomous Reddit Script] Reddit page detected, initializing...');
+          // Add minimal functionality here for testing
+        }
+      })();
+    `
+  }
+
+  return fallbackScripts[platform as keyof typeof fallbackScripts] || null
 }
 
 // Get autonomous script content for a platform
@@ -49,22 +108,22 @@ function getAutonomousScript(platform: string): string | null {
     if (autonomousScriptCache.has(cacheKey)) {
       return autonomousScriptCache.get(cacheKey)!
     }
-    
+
     // Check if platform is supported
     const scriptFileName = AVAILABLE_SCRIPTS[platform as keyof typeof AVAILABLE_SCRIPTS]
     if (!scriptFileName) {
       console.warn(`[AutonomousHandler] Unsupported platform: ${platform}`)
       return null
     }
-    
+
     // Try embedded first (for userscript builds)
     let scriptContent = getEmbeddedScript(platform)
-    
-    // Fall back to file system (for extension builds)
+
+    // Fall back to bundle loading (for extension builds)
     if (!scriptContent) {
-      scriptContent = loadScriptFromFile(scriptFileName)
+      scriptContent = loadScriptFromBundle(scriptFileName)
     }
-    
+
     if (scriptContent) {
       // Cache the script content
       autonomousScriptCache.set(cacheKey, scriptContent)
@@ -72,7 +131,7 @@ function getAutonomousScript(platform: string): string | null {
     } else {
       console.warn(`[AutonomousHandler] Failed to load script for platform: ${platform}`)
     }
-    
+
     return scriptContent
   } catch (e) {
     console.error(`[AutonomousHandler] Error getting autonomous script for ${platform}:`, e)
@@ -81,12 +140,15 @@ function getAutonomousScript(platform: string): string | null {
 }
 
 // Handle GET_AUTONOMOUS_SCRIPT request
-export function handleGetAutonomousScript(platform: string, sendResponse: (response: any) => void): void {
+export function handleGetAutonomousScript(
+  platform: string,
+  sendResponse: (response: any) => void
+): void {
   try {
     console.log(`[AutonomousHandler] Request for autonomous script: ${platform}`)
-    
+
     const scriptContent = getAutonomousScript(platform)
-    
+
     if (scriptContent) {
       sendResponse({
         success: true,
@@ -112,13 +174,17 @@ export function handleGetAutonomousScript(platform: string, sendResponse: (respo
 }
 
 // Handle platform detection notifications
-export function handlePlatformDetected(platform: string, url: string, sendResponse: (response: any) => void): void {
+export function handlePlatformDetected(
+  platform: string,
+  url: string,
+  sendResponse: (response: any) => void
+): void {
   try {
     console.log(`[AutonomousHandler] Platform detected: ${platform} on ${url}`)
-    
+
     // Log platform detection for analytics/debugging
     // In a real implementation, you might want to store this data
-    
+
     sendResponse({
       success: true,
       message: 'Platform detection acknowledged',
@@ -135,13 +201,17 @@ export function handlePlatformDetected(platform: string, url: string, sendRespon
 }
 
 // Handle autonomous script loaded notifications
-export function handleAutonomousScriptLoaded(platform: string, url: string, sendResponse: (response: any) => void): void {
+export function handleAutonomousScriptLoaded(
+  platform: string,
+  url: string,
+  sendResponse: (response: any) => void
+): void {
   try {
     console.log(`[AutonomousHandler] Autonomous script loaded: ${platform} on ${url}`)
-    
+
     // Log successful script loading
     // In a real implementation, you might want to store this data for debugging
-    
+
     sendResponse({
       success: true,
       message: 'Script loading acknowledged',
@@ -157,14 +227,18 @@ export function handleAutonomousScriptLoaded(platform: string, url: string, send
   }
 }
 
-// Handle autonomous script ready notifications  
-export function handleAutonomousScriptReady(platform: string, url: string, sendResponse: (response: any) => void): void {
+// Handle autonomous script ready notifications
+export function handleAutonomousScriptReady(
+  platform: string,
+  url: string,
+  sendResponse: (response: any) => void
+): void {
   try {
     console.log(`[AutonomousHandler] Autonomous script ready: ${platform} on ${url}`)
-    
+
     // Log script ready status
     // This indicates the autonomous script has initialized and is functional
-    
+
     sendResponse({
       success: true,
       message: 'Script ready acknowledged',

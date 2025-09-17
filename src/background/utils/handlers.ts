@@ -76,7 +76,10 @@ export function setupMessageListener() {
               handlePlatformDetected(message.platform, message.url, sendResponse)
               return true
             } else {
-              sendResponse({ success: false, error: 'Missing platform or url for PLATFORM_DETECTED' })
+              sendResponse({
+                success: false,
+                error: 'Missing platform or url for PLATFORM_DETECTED'
+              })
               return false
             }
 
@@ -86,7 +89,10 @@ export function setupMessageListener() {
               handleAutonomousScriptLoaded(message.platform, message.url, sendResponse)
               return true
             } else {
-              sendResponse({ success: false, error: 'Missing platform or url for AUTONOMOUS_SCRIPT_LOADED' })
+              sendResponse({
+                success: false,
+                error: 'Missing platform or url for AUTONOMOUS_SCRIPT_LOADED'
+              })
               return false
             }
 
@@ -96,7 +102,10 @@ export function setupMessageListener() {
               handleAutonomousScriptReady(message.platform, message.url, sendResponse)
               return true
             } else {
-              sendResponse({ success: false, error: 'Missing platform or url for AUTONOMOUS_SCRIPT_READY' })
+              sendResponse({
+                success: false,
+                error: 'Missing platform or url for AUTONOMOUS_SCRIPT_READY'
+              })
               return false
             }
 
