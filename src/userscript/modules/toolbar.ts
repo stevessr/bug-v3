@@ -5,6 +5,141 @@ import { getPlatformToolbarSelectors } from '../utils/platformDetection'
 import { createEmojiPicker } from './emojiPicker'
 import { showPopularEmojisModal } from './popularEmojis'
 
+// Quick inserts for userscript variant
+const QUICK_INSERTS: string[] = [
+  'info',
+  'tip',
+  'faq',
+  'question',
+  'note',
+  'abstract',
+  'todo',
+  'success',
+  'warning',
+  'failure',
+  'danger',
+  'bug',
+  'example',
+  'quote'
+]
+
+const ICON_MAP: Record<string, string> = {
+  info: 'ℹ️',
+  tip: '💡',
+  faq: '❓',
+  question: '🤔',
+  note: '📝',
+  abstract: '📋',
+  todo: '☑️',
+  success: '🎉',
+  warning: '⚠️',
+  failure: '❌',
+  danger: '☠️',
+  bug: '🐛',
+  example: '🔎',
+  quote: '💬'
+}
+
+function insertIntoEditor(text: string) {
+  const active = document.activeElement as HTMLElement | null
+  const isTextInput = (el: Element | null) =>
+    !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'text'))
+
+  if (isTextInput(active)) {
+    const input = active as HTMLTextAreaElement | HTMLInputElement
+    const start = (input as HTMLTextAreaElement).selectionStart ?? 0
+    const end = (input as HTMLTextAreaElement).selectionEnd ?? start
+    const value = input.value
+    input.value = value.slice(0, start) + text + value.slice(end)
+    const pos = start + text.length
+    if ('setSelectionRange' in input) {
+      try {
+        ;(input as HTMLTextAreaElement).setSelectionRange(pos, pos)
+      } catch (e) {
+        // ignore
+      }
+    }
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    return
+  }
+
+  if (active && active.isContentEditable) {
+    const sel = window.getSelection()
+    if (!sel) return
+    const range = sel.getRangeAt(0)
+    range.deleteContents()
+    const node = document.createTextNode(text)
+    range.insertNode(node)
+    range.setStartAfter(node)
+    range.setEndAfter(node)
+    sel.removeAllRanges()
+    sel.addRange(range)
+    active.dispatchEvent(new Event('input', { bubbles: true }))
+    return
+  }
+
+  const fallback = document.querySelector('textarea, input[type="text"]') as
+    | HTMLTextAreaElement
+    | HTMLInputElement
+    | null
+  if (fallback) {
+    fallback.focus()
+    const start = (fallback as HTMLTextAreaElement).selectionStart ?? fallback.value.length
+    const end = (fallback as HTMLTextAreaElement).selectionEnd ?? start
+    const value = fallback.value
+    fallback.value = value.slice(0, start) + text + value.slice(end)
+    const pos = start + text.length
+    if ('setSelectionRange' in fallback) {
+      try {
+        ;(fallback as HTMLTextAreaElement).setSelectionRange(pos, pos)
+      } catch (e) {
+        // ignore
+      }
+    }
+    fallback.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+}
+
+function createQuickInsertMenu(): HTMLElement {
+  const menu = document.createElement('div')
+  menu.className = 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
+  const inner = document.createElement('div')
+  inner.className = 'fk-d-menu__inner-content'
+  const list = document.createElement('ul')
+  list.className = 'dropdown-menu'
+
+  QUICK_INSERTS.forEach(key => {
+    const li = document.createElement('li')
+    li.className = 'dropdown-menu__item'
+    const btn = document.createElement('button')
+    btn.className = 'btn btn-icon-text'
+    btn.type = 'button'
+    const displayLabel = key.charAt(0).toUpperCase() + key.slice(1)
+    btn.title = displayLabel
+    btn.addEventListener('click', () => {
+      if (menu.parentElement) menu.parentElement.removeChild(menu)
+      insertIntoEditor(`>[!${key}]`)
+    })
+
+    const emojiSpan = document.createElement('span')
+    emojiSpan.textContent = ICON_MAP[key] || '✳️'
+    const labelWrap = document.createElement('span')
+    labelWrap.className = 'd-button-label'
+    const labelText = document.createElement('span')
+    labelText.className = 'd-button-label__text'
+    labelText.textContent = displayLabel
+    labelWrap.appendChild(labelText)
+    btn.appendChild(emojiSpan)
+    btn.appendChild(labelWrap)
+    li.appendChild(btn)
+    list.appendChild(li)
+  })
+
+  inner.appendChild(list)
+  menu.appendChild(inner)
+  return menu
+}
+
 // Find toolbars where we can inject buttons using platform-specific selectors
 export function findAllToolbars(): HTMLElement[] {
   const toolbars: HTMLElement[] = []
@@ -155,6 +290,40 @@ export function injectEmojiButton(toolbar: HTMLElement) {
     showPopularEmojisModal()
   })
 
+  // Create quick-insert button
+  const quickInsertButton = createEl('button', {
+    className: 'btn no-text btn-icon toolbar__button quick-insert-button',
+    title: '快捷输入',
+    type: 'button',
+    innerHTML: '⎘'
+  }) as HTMLButtonElement
+
+  if (isChatComposer) {
+    quickInsertButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
+    quickInsertButton.setAttribute('aria-expanded', 'false')
+    quickInsertButton.setAttribute('data-trigger', '')
+  }
+
+  quickInsertButton.addEventListener('click', e => {
+    e.stopPropagation()
+    const menu = createQuickInsertMenu()
+    const portal = document.querySelector('#d-menu-portals') || document.body
+    ;(portal as HTMLElement).appendChild(menu)
+    const rect = quickInsertButton.getBoundingClientRect()
+    menu.style.position = 'fixed'
+    menu.style.zIndex = '10000'
+    menu.style.top = `${rect.bottom + 5}px`
+    menu.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - 150, window.innerWidth - 300))}px`
+
+    const removeMenu = (ev: Event) => {
+      if (!menu.contains(ev.target as Node)) {
+        if (menu.parentElement) menu.parentElement.removeChild(menu)
+        document.removeEventListener('click', removeMenu)
+      }
+    }
+    setTimeout(() => document.addEventListener('click', removeMenu), 100)
+  })
+
   try {
     // Try to insert in the right place
     if (isChatComposer) {
@@ -163,13 +332,16 @@ export function injectEmojiButton(toolbar: HTMLElement) {
       )
       if (existingEmojiTrigger) {
         toolbar.insertBefore(button, existingEmojiTrigger)
+        toolbar.insertBefore(quickInsertButton, existingEmojiTrigger)
         toolbar.insertBefore(popularButton, existingEmojiTrigger)
       } else {
         toolbar.appendChild(button)
+        toolbar.appendChild(quickInsertButton)
         toolbar.appendChild(popularButton)
       }
     } else {
       toolbar.appendChild(button)
+      toolbar.appendChild(quickInsertButton)
       toolbar.appendChild(popularButton)
     }
   } catch (error) {
