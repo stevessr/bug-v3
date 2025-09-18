@@ -120,6 +120,8 @@ build
 # Vite build output
 dist
 dist-ssr
+dist-userscript
+dist-userscript-min
 *.js.map
 *.css.map
 

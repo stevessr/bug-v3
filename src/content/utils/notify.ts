@@ -1,5 +1,9 @@
 // Lightweight toast notification utility for content scripts
-export function notify(message: string, type: 'info' | 'success' | 'error' = 'info', timeout = 4000) {
+export function notify(
+  message: string,
+  type: 'info' | 'success' | 'error' = 'info',
+  timeout = 4000
+) {
   try {
     let container = document.getElementById('emoji-ext-toast-container') as HTMLElement | null
     if (!container) {

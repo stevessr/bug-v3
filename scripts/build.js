@@ -152,7 +152,7 @@ const viteArgs =
 const publicDir = path.resolve(process.cwd(), 'public')
 const distDir = path.resolve(process.cwd(), 'dist')
 
-const child = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
+const child = spawn('npx', ['vite', ...viteArgs], {
   stdio: 'inherit',
   env: process.env,
   shell: false

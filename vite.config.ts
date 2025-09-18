@@ -121,8 +121,13 @@ export default defineConfig(({ mode }) => {
           // reference the emitted /js/*.js bundles.
           tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
           waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
-          content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
-          background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
+          content: fileURLToPath(new URL('src/content/content-smart.ts', import.meta.url)),
+          background: fileURLToPath(new URL('src/background/background.ts', import.meta.url)),
+          // Platform-specific injection scripts
+          'content-discourse': fileURLToPath(new URL('src/autonomous-scripts/discourse-script.ts', import.meta.url)),
+          'content-x': fileURLToPath(new URL('src/autonomous-scripts/x-script.ts', import.meta.url)),
+          'content-pixiv': fileURLToPath(new URL('src/autonomous-scripts/pixiv-script.ts', import.meta.url)),
+          'content-reddit': fileURLToPath(new URL('src/autonomous-scripts/reddit-script.ts', import.meta.url))
         },
         output: {
           entryFileNames: chunkInfo => {

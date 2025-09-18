@@ -101,7 +101,7 @@ async function autoReadAll(topicId?: number) {
 }
 
 // expose to window for manual triggering
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+
 // @ts-ignore
 window.autoReadAllReplies = autoReadAll
 

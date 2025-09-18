@@ -71,7 +71,7 @@ function shouldInjectEmoji(): boolean {
 // Main initialization function
 async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 1000) {
   console.log('[Emoji Extension Userscript] Initializing...')
-  
+
   // Log platform information
   logPlatformInfo()
 

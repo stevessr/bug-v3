@@ -25,6 +25,7 @@ import EditGroupModal from './modals/EditGroupModal.vue'
 // composable
 import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
+
 import opensource from '@/options/modals/opensource.vue'
 
 const options = useOptions()

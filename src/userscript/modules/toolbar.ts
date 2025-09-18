@@ -140,7 +140,7 @@ function createQuickInsertMenu(): HTMLElement {
 export function findAllToolbars(): HTMLElement[] {
   const toolbars: HTMLElement[] = []
   const selectors = getPlatformToolbarSelectors()
-  
+
   for (const selector of selectors) {
     const elements = document.querySelectorAll(selector)
     toolbars.push(...(Array.from(elements) as HTMLElement[]))

@@ -17,21 +17,23 @@ export function detectRuntimePlatform(): PlatformType {
   try {
     // Check screen size
     const isMobileSize = window.innerWidth <= 768
-    
+
     // Check user agent
     const userAgent = navigator.userAgent.toLowerCase()
-    const isMobileUserAgent = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
-    
+    const isMobileUserAgent = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+      userAgent
+    )
+
     // Check touch capability
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-    
+
     // Combine indicators
     if (isMobileSize && (isMobileUserAgent || isTouchDevice)) {
       return 'mobile'
     } else if (!isMobileSize && !isMobileUserAgent) {
       return 'pc'
     }
-    
+
     return 'original' // Fallback for ambiguous cases
   } catch {
     return 'original'
@@ -41,11 +43,11 @@ export function detectRuntimePlatform(): PlatformType {
 // Get effective platform (build-time override or runtime detection)
 export function getEffectivePlatform(): PlatformType {
   const buildPlatform = getBuildPlatform()
-  
+
   if (buildPlatform === 'original') {
     return detectRuntimePlatform()
   }
-  
+
   return buildPlatform
 }
 
@@ -68,7 +70,7 @@ export interface PlatformUIConfig {
 
 export function getPlatformUIConfig(): PlatformUIConfig {
   const platform = getEffectivePlatform()
-  
+
   switch (platform) {
     case 'mobile':
       return {
@@ -80,7 +82,7 @@ export function getPlatformUIConfig(): PlatformUIConfig {
         showSearchBar: true,
         floatingButtonSize: 48
       }
-    
+
     case 'pc':
       return {
         emojiPickerMaxHeight: '400px',
@@ -91,7 +93,7 @@ export function getPlatformUIConfig(): PlatformUIConfig {
         showSearchBar: true,
         floatingButtonSize: 40
       }
-    
+
     default: // original
       return {
         emojiPickerMaxHeight: '350px',
@@ -108,9 +110,9 @@ export function getPlatformUIConfig(): PlatformUIConfig {
 // Platform-specific injection selectors
 export function getPlatformToolbarSelectors(): string[] {
   const platform = getEffectivePlatform()
-  
+
   const baseSelectors = ['.d-editor-button-bar[role="toolbar"]', '.chat-composer__inner-container']
-  
+
   switch (platform) {
     case 'mobile':
       return [
@@ -120,7 +122,7 @@ export function getPlatformToolbarSelectors(): string[] {
         '[data-mobile-toolbar]',
         '.discourse-mobile .d-editor-button-bar'
       ]
-    
+
     case 'pc':
       return [
         ...baseSelectors,
@@ -129,7 +131,7 @@ export function getPlatformToolbarSelectors(): string[] {
         '[data-desktop-toolbar]',
         '.discourse-desktop .d-editor-button-bar'
       ]
-    
+
     default:
       return baseSelectors
   }
@@ -141,12 +143,17 @@ export function logPlatformInfo(): void {
   const runtimePlatform = detectRuntimePlatform()
   const effectivePlatform = getEffectivePlatform()
   const config = getPlatformUIConfig()
-  
+
   console.log('[Platform] Build target:', buildPlatform)
   console.log('[Platform] Runtime detected:', runtimePlatform)
   console.log('[Platform] Effective platform:', effectivePlatform)
   console.log('[Platform] UI config:', config)
   console.log('[Platform] Screen size:', `${window.innerWidth}x${window.innerHeight}`)
-  console.log('[Platform] User agent mobile:', /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent.toLowerCase()))
+  console.log(
+    '[Platform] User agent mobile:',
+    /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+      navigator.userAgent.toLowerCase()
+    )
+  )
   console.log('[Platform] Touch device:', 'ontouchstart' in window || navigator.maxTouchPoints > 0)
 }

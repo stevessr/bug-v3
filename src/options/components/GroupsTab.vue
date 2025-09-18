@@ -29,8 +29,6 @@ const viewOptions = reactive([
   { label: '卡片', value: 'card' }
 ])
 
-
-
 const { expandedGroups, activeTab, isImageUrl } = defineProps({
   expandedGroups: { type: Object as PropType<Set<string>>, required: true },
   isImageUrl: { type: Function },
@@ -454,9 +452,9 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                 :key="group.id"
                 class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
                 :draggable="group.id !== 'favorites'"
-                @dragstart="(e) => onGroupDragStartLocal(group, e)"
+                @dragstart="e => onGroupDragStartLocal(group, e)"
                 @dragover.prevent
-                @drop="(e) => onGroupDropLocal(group, e)"
+                @drop="e => onGroupDropLocal(group, e)"
                 :ref="el => el && addGroupTouchEvents(el as HTMLElement, group)"
               >
                 <div class="flex items-center justify-between p-4" v-if="group.name != '未分组'">
@@ -542,7 +540,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                         :key="`${group.id}-${index}`"
                         class="emoji-item relative group cursor-move"
                         :draggable="true"
-                        @dragstart="(e) => onEmojiDragStartLocal(emoji, group.id, index, e)"
+                        @dragstart="e => onEmojiDragStartLocal(emoji, group.id, index, e)"
                         @dragover.prevent
                         @drop="$emit('emojiDrop', group.id, index, $event)"
                         :ref="
@@ -558,7 +556,9 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                             class="w-full h-full object-cover"
                           />
                         </div>
-                        <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
+                        <div
+                          class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white"
+                        >
                           {{ emoji.name }}
                         </div>
                         <!-- Edit button in bottom right corner -->
@@ -570,7 +570,10 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                           ✎
                         </button>
                         <!-- Remove button in top right corner (with confirmation) -->
-                        <a-popconfirm title="确认移除此表情？" @confirm="$emit('removeEmoji', group.id, index)">
+                        <a-popconfirm
+                          title="确认移除此表情？"
+                          @confirm="$emit('removeEmoji', group.id, index)"
+                        >
                           <template #icon>
                             <QuestionCircleOutlined style="color: red" />
                           </template>
@@ -665,7 +668,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
     </div>
 
     <!-- Card view for groups (moved to separate component) -->
-  <div v-else-if="activeTab === 'groups'">
+    <div v-else-if="activeTab === 'groups'">
       <GroupsCardView
         :displayGroups="displayGroups"
         :isImageUrl="isImageUrl"

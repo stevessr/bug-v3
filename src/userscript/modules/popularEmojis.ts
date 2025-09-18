@@ -7,7 +7,7 @@ import { injectGlobalThemeStyles } from '../utils/themeSupport'
 export function showPopularEmojisModal() {
   // Ensure theme styles are injected
   injectGlobalThemeStyles()
-  
+
   const modal = createEl('div', {
     style: `
       position: fixed;
@@ -38,7 +38,7 @@ export function showPopularEmojisModal() {
   })
 
   const popularEmojis = getPopularEmojis(50) // Get top 50 popular emojis
-  
+
   content.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="margin: 0; color: var(--emoji-modal-text);">常用表情 (${popularEmojis.length})</h2>
@@ -65,9 +65,12 @@ export function showPopularEmojisModal() {
       max-height: 400px;
       overflow-y: auto;
     ">
-      ${popularEmojis.length === 0 ? 
-        '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--emoji-modal-text); opacity: 0.7;">还没有使用过表情<br><small>开始使用表情后，这里会显示常用的表情</small></div>' :
-        popularEmojis.map(emoji => `
+      ${
+        popularEmojis.length === 0
+          ? '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--emoji-modal-text); opacity: 0.7;">还没有使用过表情<br><small>开始使用表情后，这里会显示常用的表情</small></div>'
+          : popularEmojis
+              .map(
+                emoji => `
           <div class="popular-emoji-item" data-name="${emoji.name}" data-url="${emoji.url}" style="
             display: flex;
             flex-direction: column;
@@ -101,15 +104,21 @@ export function showPopularEmojisModal() {
               text-align: center;
             ">使用${emoji.count}次</div>
           </div>
-        `).join('')
+        `
+              )
+              .join('')
       }
     </div>
     
-    ${popularEmojis.length > 0 ? `
+    ${
+      popularEmojis.length > 0
+        ? `
       <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--emoji-modal-border); font-size: 12px; color: var(--emoji-modal-text); opacity: 0.6; text-align: center;">
         统计数据保存在本地，清空统计将重置所有使用记录
       </div>
-    ` : ''}
+    `
+        : ''
+    }
   `
 
   modal.appendChild(content)
@@ -137,10 +146,10 @@ export function showPopularEmojisModal() {
       clearEmojiUsageStats()
       modal.remove()
       style.remove()
-      
+
       // Show success message
       showTemporaryMessage('表情使用统计已清空')
-      
+
       // Reopen the modal to show updated state
       setTimeout(() => showPopularEmojisModal(), 300)
     }
@@ -152,18 +161,18 @@ export function showPopularEmojisModal() {
     item.addEventListener('click', () => {
       const name = item.getAttribute('data-name')
       const url = item.getAttribute('data-url')
-      
+
       if (name && url) {
         // Track usage
         trackEmojiUsage(name, url)
-        
+
         // Use the emoji (same logic as in emoji picker)
         useEmojiFromPopular(name, url)
-        
+
         // Close modal
         modal.remove()
         style.remove()
-        
+
         // Show feedback
         showTemporaryMessage(`已使用表情: ${name}`)
       }
@@ -182,40 +191,45 @@ export function showPopularEmojisModal() {
 function useEmojiFromPopular(name: string, url: string) {
   // Find the active text area or input
   const activeElement = document.activeElement as HTMLElement
-  
-  if (activeElement && (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
+
+  if (
+    activeElement &&
+    (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')
+  ) {
     const textArea = activeElement as HTMLTextAreaElement | HTMLInputElement
     const format = userscriptState.settings.outputFormat
-    
+
     let emojiText = ''
     if (format === 'markdown') {
       emojiText = `![${name}](${url})`
     } else {
       emojiText = `<img src="${url}" alt="${name}" style="width: ${userscriptState.settings.imageScale}px; height: ${userscriptState.settings.imageScale}px;">`
     }
-    
+
     // Insert at cursor position
     const start = textArea.selectionStart || 0
     const end = textArea.selectionEnd || 0
     const currentValue = textArea.value
-    
+
     textArea.value = currentValue.slice(0, start) + emojiText + currentValue.slice(end)
-    
+
     // Move cursor to end of inserted text
     const newPosition = start + emojiText.length
     textArea.setSelectionRange(newPosition, newPosition)
-    
+
     // Trigger input event to notify frameworks
     textArea.dispatchEvent(new Event('input', { bubbles: true }))
     textArea.focus()
   } else {
     // Try to find the most recently focused text area
-    const textAreas = document.querySelectorAll('textarea, input[type="text"], [contenteditable="true"]')
+    const textAreas = document.querySelectorAll(
+      'textarea, input[type="text"], [contenteditable="true"]'
+    )
     const lastTextArea = Array.from(textAreas).pop() as HTMLElement
-    
+
     if (lastTextArea) {
       lastTextArea.focus()
-      
+
       if (lastTextArea.tagName === 'TEXTAREA' || lastTextArea.tagName === 'INPUT') {
         const format = userscriptState.settings.outputFormat
         let emojiText = ''
@@ -224,7 +238,7 @@ function useEmojiFromPopular(name: string, url: string) {
         } else {
           emojiText = `<img src="${url}" alt="${name}" style="width: ${userscriptState.settings.imageScale}px; height: ${userscriptState.settings.imageScale}px;">`
         }
-        
+
         const textarea = lastTextArea as HTMLTextAreaElement | HTMLInputElement
         textarea.value += emojiText
         textarea.dispatchEvent(new Event('input', { bubbles: true }))
@@ -251,7 +265,7 @@ function showTemporaryMessage(message: string) {
     `,
     text: message
   })
-  
+
   // Add CSS animation
   if (!document.querySelector('#tempMessageStyles')) {
     const style = document.createElement('style')
@@ -264,9 +278,9 @@ function showTemporaryMessage(message: string) {
     `
     document.head.appendChild(style)
   }
-  
+
   document.body.appendChild(messageEl)
-  
+
   setTimeout(() => {
     messageEl.remove()
   }, 2000)
