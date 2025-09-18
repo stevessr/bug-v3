@@ -28,22 +28,79 @@ const ICONS: Record<
   {
     icon: string
     color: string
+    svg: string
   }
 > = {
-  info: { icon: 'ℹ️', color: 'blue' },
-  tip: { icon: '💡', color: 'cyan' },
-  faq: { icon: '❓', color: 'purple' },
-  question: { icon: '🤔', color: 'indigo' },
-  note: { icon: '📝', color: 'gray' },
-  abstract: { icon: '📋', color: 'darkgray' },
-  todo: { icon: '☑️', color: 'orange' },
-  success: { icon: '🎉', color: 'green' },
-  warning: { icon: '⚠️', color: 'yellow' },
-  failure: { icon: '❌', color: 'red' },
-  danger: { icon: '☠️', color: 'darkred' },
-  bug: { icon: '🐛', color: 'crimson' },
-  example: { icon: '🔎', color: 'teal' },
-  quote: { icon: '💬', color: 'slategray' }
+  info: {
+    icon: 'ℹ️',
+    color: 'rgba(2, 122, 255, 0.1)',
+    svg: '<svg class="fa d-icon d-icon-far-lightbulb svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-lightbulb"></use></svg>'
+  },
+  tip: {
+    icon: '💡',
+    color: 'rgba(0, 191, 188, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-fire-flame-curved svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#fire-flame-curved"></use></svg>'
+  },
+  faq: {
+    icon: '❓',
+    color: 'rgba(236, 117, 0, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-far-circle-question svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-question"></use></svg>'
+  },
+  question: {
+    icon: '🤔',
+    color: 'rgba(236, 117, 0, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-far-circle-question svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-question"></use></svg>'
+  },
+  note: {
+    icon: '📝',
+    color: 'rgba(8, 109, 221, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-far-pen-to-square svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-pen-to-square"></use></svg>'
+  },
+  abstract: {
+    icon: '📋',
+    color: 'rgba(0, 191, 188, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-far-clipboard svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-clipboard"></use></svg>'
+  },
+  todo: {
+    icon: '☑️',
+    color: 'rgba(2, 122, 255, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-far-circle-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-check"></use></svg>'
+  },
+  success: {
+    icon: '🎉',
+    color: 'rgba(68, 207, 110, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#check"></use></svg>'
+  },
+  warning: {
+    icon: '⚠️',
+    color: 'rgba(236, 117, 0, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-triangle-exclamation svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#triangle-exclamation"></use></svg>'
+  },
+  failure: {
+    icon: '❌',
+    color: 'rgba(233, 49, 71, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>'
+  },
+  danger: {
+    icon: '☠️',
+    color: 'rgba(233, 49, 71, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-bolt svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#bolt"></use></svg>'
+  },
+  bug: {
+    icon: '🐛',
+    color: 'rgba(233, 49, 71, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-bug svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#bug"></use></svg>'
+  },
+  example: {
+    icon: '🔎',
+    color: 'rgba(120, 82, 238, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-list svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#list"></use></svg>'
+  },
+  quote: {
+    icon: '💬',
+    color: 'rgba(158, 158, 158, 0.1);',
+    svg: '<svg class="fa d-icon d-icon-quote-left svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#quote-left"></use></svg>'
+  }
 }
 
 function insertIntoEditor(text: string) {
@@ -120,11 +177,11 @@ function createQuickInsertMenu(): HTMLElement {
       className: 'btn btn-icon-text',
       type: 'button',
       title: key.charAt(0).toUpperCase() + key.slice(1),
-      style: 'color: ' + (ICONS[key]?.color || 'auto')
+      style: 'background: ' + (ICONS[key]?.color || 'auto')
     }) as HTMLButtonElement
     btn.addEventListener('click', () => {
       if (menu.parentElement) menu.parentElement.removeChild(menu)
-      insertIntoEditor(`>[!${key}]`)
+      insertIntoEditor(`>[!${key}]\n`)
     })
 
     const emojiSpan = createEl('span', {
@@ -140,7 +197,19 @@ function createQuickInsertMenu(): HTMLElement {
       className: 'd-button-label__text',
       text: key.charAt(0).toUpperCase() + key.slice(1)
     }) as HTMLSpanElement
+
+    // Instead of appending raw SVG into the text node, create a separate span
+    // for the svg so it appears to the right of the label text.
     labelWrap.appendChild(labelText)
+    const svgHtml = ICONS[key]?.svg || ''
+    if (svgHtml) {
+      const svgSpan = createEl('span', {
+        className: 'd-button-label__svg',
+        innerHTML: svgHtml,
+        style: 'margin-left: 6px; display: inline-flex; align-items: center;'
+      }) as HTMLSpanElement
+      labelWrap.appendChild(svgSpan)
+    }
     btn.appendChild(emojiSpan)
     btn.appendChild(labelWrap)
     li.appendChild(btn)
