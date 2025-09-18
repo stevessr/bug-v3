@@ -1,5 +1,6 @@
 import { postTimings } from './timingsBinder'
 import { notify } from './notify'
+import { randomInt } from 'crypto'
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -37,7 +38,7 @@ async function fetchPostsForTopic(topicId: number) {
   return { posts, totalCount }
 }
 
-async function autoReadAll(topicId?: number) {
+async function autoReadAll(topicId?: number, startFrom = 1) {
   try {
     let tid = topicId || 0
     if (!tid) {
@@ -64,20 +65,24 @@ async function autoReadAll(topicId?: number) {
       return
     }
 
-    // Build an ordered list of post_numbers based on totalCount (1..totalCount)
+    // Build an ordered list of post_numbers based on totalCount (startFrom..totalCount)
     const total = totalCount || posts.length
     const postNumbers: number[] = []
-    for (let n = 1; n <= total; n++) postNumbers.push(n)
+    if (startFrom > total) {
+      notify(`起始帖子号 ${startFrom} 超过总帖子数 ${total}，已跳过`, 'info')
+      return
+    }
+    for (let n = startFrom; n <= total; n++) postNumbers.push(n)
 
     // Process in batches of 7
-    const BATCH_SIZE = 7
+    const BATCH_SIZE = 10
     for (let i = 0; i < postNumbers.length; i += BATCH_SIZE) {
       const batch = postNumbers.slice(i, i + BATCH_SIZE)
 
       // Build timings: map post_number to a small read time (e.g., 1000ms)
       const timings: Record<number, number> = {}
       for (const pn of batch) {
-        timings[pn] = 1000
+        timings[pn] = Math.random() * 10000
       }
 
       // send
@@ -108,18 +113,22 @@ async function autoReadAllv2(topicId?: number) {
     if (m1 && m1[1]) tid = Number(m1[1])
     else if (m2 && m2[1]) tid = Number(m2[1])
     else {
-      const el = document.querySelectorAll('[data-topic-id]')
-      if (el && el.length > 0) {
-        // process topics one-by-one instead of in parallel
-        for (const node of Array.from(el) as HTMLElement[]) {
-          const attr = node.getAttribute('data-topic-id')
-          const id = attr ? Number(attr) : 0
-          if (id) {
-            await autoReadAll(id)
-            // short pause between topics to avoid hammering the server
-            await sleep(200)
-          }
-        }
+      // only consider anchor links of the form /t/topic/{id}/1
+      const anchors = Array.from(document.querySelectorAll('a[href]')) as HTMLAnchorElement[]
+      const seen = new Set<number>()
+      for (const a of anchors) {
+        const href = a.getAttribute('href') || ''
+        // match /t/topic/{id} or /t/topic/{id}/{read}
+        const m = href.match(/^\/t\/topic\/(\d+)(?:\/(\d+))?$/)
+        if (!m) continue
+        const id = Number(m[1])
+        const readPart = m[2] ? Number(m[2]) : undefined
+        const start = readPart && !Number.isNaN(readPart) ? readPart : 2
+        if (!id || seen.has(id)) continue
+        seen.add(id)
+        await autoReadAll(id, start)
+        // short pause between topics to avoid hammering the server
+        await sleep(200)
       }
     }
   }
