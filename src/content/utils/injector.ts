@@ -325,12 +325,11 @@ function createQuickInsertMenu(): HTMLElement {
 
     const emojiSpan = document.createElement('span')
     emojiSpan.textContent = ICONS[item]?.icon || '✳️'
-    const color = ICONS[item]?.color
     emojiSpan.style.marginRight = '6px'
     const labelWrap = document.createElement('span')
     labelWrap.className = 'd-button-label'
     const labelText = document.createElement('span')
-    if (color) btn.style.background = color
+    btn.style.cssText += 'background:'+ICONS[item]?.color
     labelText.className = 'd-button-label__text'
     labelText.textContent = displayLabel
 
