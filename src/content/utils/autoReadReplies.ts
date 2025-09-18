@@ -100,9 +100,34 @@ async function autoReadAll(topicId?: number) {
   }
 }
 
+async function autoReadAllv2(topicId?: number) {
+  let tid = topicId || 0
+  if (!tid) {
+    const m1 = window.location.pathname.match(/t\/topic\/(\d+)/)
+    const m2 = window.location.pathname.match(/t\/(\d+)/)
+    if (m1 && m1[1]) tid = Number(m1[1])
+    else if (m2 && m2[1]) tid = Number(m2[1])
+    else {
+      const el = document.querySelectorAll('[data-topic-id]')
+      if (el && el.length > 0) {
+        // process topics one-by-one instead of in parallel
+        for (const node of Array.from(el) as HTMLElement[]) {
+          const attr = node.getAttribute('data-topic-id')
+          const id = attr ? Number(attr) : 0
+          if (id) {
+            await autoReadAll(id)
+            // short pause between topics to avoid hammering the server
+            await sleep(200)
+          }
+        }
+      }
+    }
+  }
+}
+
 // expose to window for manual triggering
 
 // @ts-ignore
 window.autoReadAllReplies = autoReadAll
 
-export { autoReadAll }
+export { autoReadAll, autoReadAllv2 }

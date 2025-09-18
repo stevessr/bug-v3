@@ -1,9 +1,8 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
 
+import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
 import { notify } from './notify'
-import { autoReadAll } from './autoReadReplies'
-
 // logger removed: replaced by direct console usage in migration
 import { showImageUploadDialog } from './uploader'
 
@@ -329,7 +328,7 @@ function createQuickInsertMenu(): HTMLElement {
     const labelWrap = document.createElement('span')
     labelWrap.className = 'd-button-label'
     const labelText = document.createElement('span')
-    btn.style.cssText += 'background:'+ICONS[item]?.color
+    btn.style.cssText += 'background:' + ICONS[item]?.color
     labelText.className = 'd-button-label__text'
     labelText.textContent = displayLabel
 
@@ -420,6 +419,16 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     }
   })
   list.appendChild(autoReadLi)
+  const autoReadLi2 = createListItem('全自动自动阅读所有帖子', '📖', async () => {
+    menu.remove()
+    try {
+      // trigger auto read; autoReadAll will notify progress
+      await autoReadAllv2()
+    } catch (e) {
+      notify('自动阅读失败: ' + (e && (e as any).message ? (e as any).message : String(e)), 'error')
+    }
+  })
+  list.appendChild(autoReadLi2)
 
   const generateLi = createListItem('AI 生成图片', '🎨', () => {
     menu.remove()

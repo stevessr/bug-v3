@@ -59,12 +59,52 @@ export async function postTimings(
   }
   if (csrf) headers['x-csrf-token'] = csrf
 
-  const resp = await fetch(url, {
-    method: 'POST',
-    body: params.toString(),
-    credentials: 'same-origin',
-    headers
-  })
+  const MAX_RETRIES = 5
+  const BASE_DELAY = 500 // ms
 
-  return resp
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      body: params.toString(),
+      credentials: 'same-origin',
+      headers
+    })
+
+    if (resp.status !== 429) {
+      return resp
+    }
+
+    // status === 429 -> handle retry
+    if (attempt === MAX_RETRIES) {
+      // exhausted retries, return last response for caller to inspect
+      return resp
+    }
+
+    // Respect Retry-After header if present (in seconds or http-date)
+    const retryAfter = resp.headers.get('Retry-After')
+    let waitMs = 0
+    if (retryAfter) {
+      const asInt = parseInt(retryAfter, 10)
+      if (!Number.isNaN(asInt)) {
+        waitMs = asInt * 1000
+      } else {
+        const date = Date.parse(retryAfter)
+        if (!Number.isNaN(date)) {
+          waitMs = Math.max(0, date - Date.now())
+        }
+      }
+    }
+
+    if (!waitMs) {
+      // exponential backoff with jitter
+      const exp = Math.pow(2, attempt)
+      waitMs = BASE_DELAY * exp + Math.floor(Math.random() * BASE_DELAY)
+    }
+
+    // wait before retrying
+    await new Promise(resolve => setTimeout(resolve, waitMs))
+  }
+
+  // unreachable but satisfy return type
+  throw new Error('postTimings: unexpected execution path')
 }
