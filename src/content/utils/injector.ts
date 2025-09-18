@@ -266,15 +266,14 @@ function createQuickInsertMenu(): HTMLElement {
       insertIntoEditor(`>[!${item}]`)
     })
 
-  const emojiSpan = document.createElement('span')
-  emojiSpan.textContent = ICONS[item]?.icon || '✳️'
-  const color = ICONS[item]?.color
-  if (color) emojiSpan.style.color = color
-  emojiSpan.style.marginRight = '6px'
-
+    const emojiSpan = document.createElement('span')
+    emojiSpan.textContent = ICONS[item]?.icon || '✳️'
+    const color = ICONS[item]?.color
+    emojiSpan.style.marginRight = '6px'
     const labelWrap = document.createElement('span')
     labelWrap.className = 'd-button-label'
     const labelText = document.createElement('span')
+    if (color) labelText.style.color = color
     labelText.className = 'd-button-label__text'
     labelText.textContent = displayLabel
 

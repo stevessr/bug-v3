@@ -108,7 +108,7 @@ function createFloatingButton(): HTMLElement {
 
         setTimeout(() => {
           button.innerHTML = '🐈‍⬛'
-          button.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          button.style.background = 'transparent'
           button.style.transform = 'scale(1)'
         }, 1500)
 
@@ -122,7 +122,7 @@ function createFloatingButton(): HTMLElement {
 
         setTimeout(() => {
           button.innerHTML = '🐈‍⬛'
-          button.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          button.style.background = 'transparent'
           button.style.transform = 'scale(1)'
         }, 1500)
 
