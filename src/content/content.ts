@@ -102,7 +102,7 @@ if (window.location.hostname.includes('linux.do')) {
 try {
   if (window.location.hostname.includes('linux.do')) {
     // Directly bind the statically imported postTimings
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+
     // @ts-ignore
     window.postTimings = postTimings
   }

@@ -4,10 +4,10 @@ import { injectGlobalThemeStyles } from '../utils/themeSupport'
 export function injectEmojiPickerStyles(): void {
   if (typeof document === 'undefined') return
   if (document.getElementById('emoji-picker-styles')) return
-  
+
   // Inject global theme variables first
   injectGlobalThemeStyles()
-  
+
   const css = `
 .emoji-picker-hover-preview{
   position:fixed;

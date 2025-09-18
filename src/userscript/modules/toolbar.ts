@@ -98,7 +98,8 @@ function insertIntoEditor(text: string) {
 
 function createQuickInsertMenu(): HTMLElement {
   const menu = document.createElement('div')
-  menu.className = 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
+  menu.className =
+    'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
   const inner = document.createElement('div')
   inner.className = 'fk-d-menu__inner-content'
   const list = document.createElement('ul')
@@ -140,7 +141,7 @@ function createQuickInsertMenu(): HTMLElement {
 export function findAllToolbars(): HTMLElement[] {
   const toolbars: HTMLElement[] = []
   const selectors = getPlatformToolbarSelectors()
-  
+
   for (const selector of selectors) {
     const elements = document.querySelectorAll(selector)
     toolbars.push(...(Array.from(elements) as HTMLElement[]))

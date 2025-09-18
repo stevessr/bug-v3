@@ -1,5 +1,6 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
+
 import { notify } from './notify'
 import { autoReadAll } from './autoReadReplies'
 
@@ -128,25 +129,25 @@ function insertIntoEditor(text: string) {
   // Prefer the focused element if it's a text input or contenteditable
   const active = document.activeElement as HTMLElement | null
 
-    const isTextarea = (el: Element | null) => !!el && el.tagName === 'TEXTAREA'
+  const isTextarea = (el: Element | null) => !!el && el.tagName === 'TEXTAREA'
 
-    if (isTextarea(active)) {
-      const textarea = active as HTMLTextAreaElement
-      const start = textarea.selectionStart ?? 0
-      const end = textarea.selectionEnd ?? start
-      const value = textarea.value
-      textarea.value = value.slice(0, start) + text + value.slice(end)
-      const pos = start + text.length
-      if ('setSelectionRange' in textarea) {
-        try {
-          textarea.setSelectionRange(pos, pos)
-        } catch (e) {
-          // ignore
-        }
+  if (isTextarea(active)) {
+    const textarea = active as HTMLTextAreaElement
+    const start = textarea.selectionStart ?? 0
+    const end = textarea.selectionEnd ?? start
+    const value = textarea.value
+    textarea.value = value.slice(0, start) + text + value.slice(end)
+    const pos = start + text.length
+    if ('setSelectionRange' in textarea) {
+      try {
+        textarea.setSelectionRange(pos, pos)
+      } catch (e) {
+        // ignore
       }
-      textarea.dispatchEvent(new Event('input', { bubbles: true }))
-      return
     }
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    return
+  }
 
   if (active && active.isContentEditable) {
     const sel = window.getSelection()
@@ -165,10 +166,10 @@ function insertIntoEditor(text: string) {
 
   // Try specific editor selectors used by site/picker
   const selectors = [
-     '.d-editor-textarea-wrapper textarea',
-     '.d-editor-textarea textarea',
-     '.d-editor-textarea textarea',
-     'textarea'
+    '.d-editor-textarea-wrapper textarea',
+    '.d-editor-textarea textarea',
+    '.d-editor-textarea textarea',
+    'textarea'
   ]
 
   for (const sel of selectors) {
@@ -250,7 +251,8 @@ function createQuickInsertMenu(): HTMLElement {
     btn.className = 'btn btn-icon-text'
     btn.type = 'button'
     // item is a plain key like 'info' — build display label and title
-    const displayLabel = item.length > 0 ? item.charAt(0).toUpperCase() + item.slice(1).toLowerCase() : item
+    const displayLabel =
+      item.length > 0 ? item.charAt(0).toUpperCase() + item.slice(1).toLowerCase() : item
     btn.title = displayLabel
     btn.addEventListener('click', () => {
       // remove menu and insert into editor
@@ -260,13 +262,13 @@ function createQuickInsertMenu(): HTMLElement {
     })
 
     const emojiSpan = document.createElement('span')
-  emojiSpan.textContent = ICON_MAP[item] || '✳️'
+    emojiSpan.textContent = ICON_MAP[item] || '✳️'
 
     const labelWrap = document.createElement('span')
     labelWrap.className = 'd-button-label'
-  const labelText = document.createElement('span')
-  labelText.className = 'd-button-label__text'
-  labelText.textContent = displayLabel
+    const labelText = document.createElement('span')
+    labelText.className = 'd-button-label__text'
+    labelText.textContent = displayLabel
 
     labelWrap.appendChild(labelText)
     btn.appendChild(emojiSpan)

@@ -7,7 +7,7 @@ import { injectGlobalThemeStyles } from '../utils/themeSupport'
 export function showGroupEditorModal() {
   // Ensure theme styles are injected
   injectGlobalThemeStyles()
-  
+
   const modal = createEl('div', {
     style: `
       position: fixed;
@@ -54,7 +54,9 @@ export function showGroupEditorModal() {
     </div>
     
     <div id="groupsList" style="display: flex; flex-direction: column; gap: 12px;">
-      ${userscriptState.emojiGroups.map((group, index) => `
+      ${userscriptState.emojiGroups
+        .map(
+          (group, index) => `
         <div class="group-item" data-group-id="${group.id}" data-index="${index}" style="
           display: flex;
           align-items: center;
@@ -130,7 +132,9 @@ export function showGroupEditorModal() {
             " ${index === userscriptState.emojiGroups.length - 1 ? 'disabled' : ''}>↓</button>
           </div>
         </div>
-      `).join('')}
+      `
+        )
+        .join('')}
     </div>
     
     <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--emoji-modal-border); display: flex; gap: 8px; justify-content: flex-end;">
@@ -180,11 +184,11 @@ export function showGroupEditorModal() {
 
   // Group name editing
   content.querySelectorAll('.group-name-editor').forEach(input => {
-    input.addEventListener('change', (e) => {
+    input.addEventListener('change', e => {
       const target = e.target as HTMLInputElement
       const groupId = target.getAttribute('data-group-id')
       const newName = target.value.trim()
-      
+
       if (groupId && newName) {
         const group = userscriptState.emojiGroups.find(g => g.id === groupId)
         if (group) {
@@ -197,10 +201,10 @@ export function showGroupEditorModal() {
 
   // Group icon editing
   content.querySelectorAll('.group-icon-editor').forEach(iconEl => {
-    iconEl.addEventListener('click', (e) => {
+    iconEl.addEventListener('click', e => {
       const target = e.target as HTMLElement
       const groupId = target.getAttribute('data-group-id')
-      
+
       if (groupId) {
         const newIcon = prompt('请输入新的图标字符 (emoji 或单个字符):', target.textContent || '📁')
         if (newIcon && newIcon.trim()) {
@@ -217,13 +221,13 @@ export function showGroupEditorModal() {
 
   // Move up/down buttons
   content.querySelectorAll('.move-up').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', e => {
       const index = parseInt((e.target as HTMLElement).getAttribute('data-index') || '0')
       if (index > 0) {
         const temp = userscriptState.emojiGroups[index]
         userscriptState.emojiGroups[index] = userscriptState.emojiGroups[index - 1]
         userscriptState.emojiGroups[index - 1] = temp
-        
+
         modal.remove()
         style.remove()
         showTemporaryMessage('分组顺序已调整')
@@ -233,13 +237,13 @@ export function showGroupEditorModal() {
   })
 
   content.querySelectorAll('.move-down').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', e => {
       const index = parseInt((e.target as HTMLElement).getAttribute('data-index') || '0')
       if (index < userscriptState.emojiGroups.length - 1) {
         const temp = userscriptState.emojiGroups[index]
         userscriptState.emojiGroups[index] = userscriptState.emojiGroups[index + 1]
         userscriptState.emojiGroups[index + 1] = temp
-        
+
         modal.remove()
         style.remove()
         showTemporaryMessage('分组顺序已调整')
@@ -260,7 +264,7 @@ export function showGroupEditorModal() {
         order: userscriptState.emojiGroups.length,
         emojis: []
       }
-      
+
       userscriptState.emojiGroups.push(newGroup)
       modal.remove()
       style.remove()
@@ -294,7 +298,7 @@ function showTemporaryMessage(message: string) {
     `,
     text: message
   })
-  
+
   // Add CSS animation if not already present
   if (!document.querySelector('#tempMessageStyles')) {
     const style = document.createElement('style')
@@ -307,9 +311,9 @@ function showTemporaryMessage(message: string) {
     `
     document.head.appendChild(style)
   }
-  
+
   document.body.appendChild(messageEl)
-  
+
   setTimeout(() => {
     messageEl.remove()
   }, 2000)
