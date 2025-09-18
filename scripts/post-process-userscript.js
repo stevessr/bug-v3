@@ -23,6 +23,7 @@ function getUserscriptHeader(minified = false, variant = 'default') {
 // @match        https://meta.discourse.org/*
 // @match        https://*.discourse.org/*
 // @match        http://localhost:5173/*
+// @exclude      https://linux.do/a/*
 // @grant        none
 // @license      MIT
 // @homepageURL  https://github.com/stevessr/bug-v3

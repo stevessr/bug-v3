@@ -15,7 +15,6 @@ export function showGroupEditorModal() {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.8);
       z-index: 999999;
       display: flex;
       align-items: center;
@@ -25,7 +24,6 @@ export function showGroupEditorModal() {
 
   const content = createEl('div', {
     style: `
-      background: var(--emoji-modal-bg);
       color: var(--emoji-modal-text);
       border-radius: 8px;
       padding: 24px;
@@ -39,7 +37,7 @@ export function showGroupEditorModal() {
 
   content.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2 style="margin: 0; color: var(--emoji-modal-text);">表情分组编辑器</h2>
+      <h2 style="margin: 0; color: var(--emoji-modal-text);backdrop-filter: blur(10px);">表情分组编辑器</h2>
       <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
     </div>
     
@@ -56,7 +54,8 @@ export function showGroupEditorModal() {
     <div id="groupsList" style="display: flex; flex-direction: column; gap: 12px;">
       ${userscriptState.emojiGroups
         .map(
-          (group, index) => `
+          (group, index) =>
+            `
         <div class="group-item" data-group-id="${group.id}" data-index="${index}" style="
           display: flex;
           align-items: center;
@@ -73,8 +72,18 @@ export function showGroupEditorModal() {
             opacity: 0.5;
             font-size: 16px;
             user-select: none;
-          " title="拖拽调整顺序">⋮⋮</div>
-          
+          " title="拖拽调整顺序">⋮⋮</div>` +
+            (group.icon?.startsWith('https://')
+              ? `<img class="group-icon-editor" src="${group.icon}" alt="图标" style="
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border: 1px dashed var(--emoji-modal-border);
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+          " data-group-id="${group.id}" title="点击编辑图标">`
+              : `
           <div class="group-icon-editor" style="
             min-width: 40px;
             height: 40px;
@@ -89,9 +98,8 @@ export function showGroupEditorModal() {
             user-select: none;
           " data-group-id="${group.id}" title="点击编辑图标">
             ${group.icon || '📁'}
-          </div>
-          
-          <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+          </div>`) +
+            `<div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
             <input class="group-name-editor" 
                    type="text" 
                    value="${group.name || 'Unnamed Group'}" 

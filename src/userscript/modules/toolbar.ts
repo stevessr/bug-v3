@@ -23,21 +23,27 @@ const QUICK_INSERTS: string[] = [
   'quote'
 ]
 
-const ICON_MAP: Record<string, string> = {
-  info: 'ℹ️',
-  tip: '💡',
-  faq: '❓',
-  question: '🤔',
-  note: '📝',
-  abstract: '📋',
-  todo: '☑️',
-  success: '🎉',
-  warning: '⚠️',
-  failure: '❌',
-  danger: '☠️',
-  bug: '🐛',
-  example: '🔎',
-  quote: '💬'
+const ICONS: Record<
+  string,
+  {
+    icon: string
+    color: string
+  }
+> = {
+  info: { icon: 'ℹ️', color: 'blue' },
+  tip: { icon: '💡', color: 'cyan' },
+  faq: { icon: '❓', color: 'purple' },
+  question: { icon: '🤔', color: 'indigo' },
+  note: { icon: '📝', color: 'gray' },
+  abstract: { icon: '📋', color: 'darkgray' },
+  todo: { icon: '☑️', color: 'orange' },
+  success: { icon: '🎉', color: 'green' },
+  warning: { icon: '⚠️', color: 'yellow' },
+  failure: { icon: '❌', color: 'red' },
+  danger: { icon: '☠️', color: 'darkred' },
+  bug: { icon: '🐛', color: 'crimson' },
+  example: { icon: '🔎', color: 'teal' },
+  quote: { icon: '💬', color: 'slategray' }
 }
 
 function insertIntoEditor(text: string) {
@@ -97,34 +103,43 @@ function insertIntoEditor(text: string) {
 }
 
 function createQuickInsertMenu(): HTMLElement {
-  const menu = document.createElement('div')
-  menu.className =
-    'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
-  const inner = document.createElement('div')
-  inner.className = 'fk-d-menu__inner-content'
-  const list = document.createElement('ul')
-  list.className = 'dropdown-menu'
+  const menu = createEl('div', {
+    className:
+      'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
+  }) as HTMLDivElement
+  const inner = createEl('div', {
+    className: 'fk-d-menu__inner-content'
+  }) as HTMLDivElement
+  const list = createEl('ul', {
+    className: 'dropdown-menu'
+  }) as HTMLUListElement
 
   QUICK_INSERTS.forEach(key => {
-    const li = document.createElement('li')
-    li.className = 'dropdown-menu__item'
-    const btn = document.createElement('button')
-    btn.className = 'btn btn-icon-text'
-    btn.type = 'button'
-    const displayLabel = key.charAt(0).toUpperCase() + key.slice(1)
-    btn.title = displayLabel
+    const li = createEl('li', { className: 'dropdown-menu__item' }) as HTMLLIElement
+    const btn = createEl('button', {
+      className: 'btn btn-icon-text',
+      type: 'button',
+      title: key.charAt(0).toUpperCase() + key.slice(1)
+    }) as HTMLButtonElement
     btn.addEventListener('click', () => {
       if (menu.parentElement) menu.parentElement.removeChild(menu)
       insertIntoEditor(`>[!${key}]`)
     })
 
-    const emojiSpan = document.createElement('span')
-    emojiSpan.textContent = ICON_MAP[key] || '✳️'
-    const labelWrap = document.createElement('span')
-    labelWrap.className = 'd-button-label'
-    const labelText = document.createElement('span')
-    labelText.className = 'd-button-label__text'
-    labelText.textContent = displayLabel
+    const emojiSpan = createEl('span', {
+      className: 'd-button-emoji',
+      text: ICONS[key]?.icon || '✳️',
+      style: 'margin-right: 6px;'
+    }) as HTMLSpanElement
+    // Add small spacing between emoji and label
+    const labelWrap = createEl('span', {
+      className: 'd-button-label'
+    }) as HTMLSpanElement
+    const labelText = createEl('span', {
+      className: 'd-button-label__text',
+      text: key.charAt(0).toUpperCase() + key.slice(1),
+      style: 'color: ' + (ICONS[key]?.color || 'auto')
+    }) as HTMLSpanElement
     labelWrap.appendChild(labelText)
     btn.appendChild(emojiSpan)
     btn.appendChild(labelWrap)

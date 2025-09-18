@@ -14,7 +14,6 @@ export function injectManagerStyles() {
       left: 0; 
       right: 0; 
       bottom: 0; 
-      background: rgba(0,0,0,0.8); 
       z-index: 999999; 
       display: flex; 
       align-items: center; 
@@ -23,12 +22,9 @@ export function injectManagerStyles() {
     
     /* Main modal panel */
     .emoji-manager-panel { 
-      background: white; 
       border-radius: 8px; 
-      max-width: 90vw; 
-      max-height: 90vh; 
-      width: 1000px; 
-      height: 600px; 
+      width: 90%; 
+      height: 95%; 
       display: grid; 
       grid-template-columns: 300px 1fr; 
       grid-template-rows: 1fr auto;
@@ -38,7 +34,7 @@ export function injectManagerStyles() {
     
     /* Left panel - groups list */
     .emoji-manager-left { 
-      background: #f8f9fa; 
+      background: var(--primary-very-low) 
       border-right: 1px solid #e9ecef; 
       display: flex; 
       flex-direction: column; 
@@ -50,7 +46,7 @@ export function injectManagerStyles() {
       align-items: center; 
       padding: 16px; 
       border-bottom: 1px solid #e9ecef; 
-      background: white; 
+      background: var(--primary-low); 
     }
     
     .emoji-manager-addgroup-row { 
@@ -61,6 +57,7 @@ export function injectManagerStyles() {
     }
     
     .emoji-manager-groups-list { 
+      background: var(--primary-very-low);
       flex: 1; 
       overflow-y: auto; 
       padding: 8px; 
@@ -75,17 +72,18 @@ export function injectManagerStyles() {
     }
     
     .emoji-manager-groups-list > div:hover { 
-      background: #e9ecef; 
+      background: var(--primary); 
     }
     
     .emoji-manager-groups-list > div:focus { 
       outline: none; 
       box-shadow: inset 0 0 0 2px #007bff; 
+      background: var(--primary); 
     }
     
     /* Right panel - emoji display and editing */
     .emoji-manager-right { 
-      background: white; 
+      background: var(--primary-low); 
       display: flex; 
       flex-direction: column; 
       overflow: hidden; 
@@ -107,7 +105,7 @@ export function injectManagerStyles() {
     
     .emoji-manager-emojis { 
       display: grid; 
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+      grid-template-columns: repeat(auto-fill, minmax(25%, 1fr)); 
       gap: 12px; 
       margin-bottom: 16px; 
     }
@@ -118,7 +116,7 @@ export function injectManagerStyles() {
       gap: 8px; 
       align-items: center; 
       padding: 12px; 
-      background: #f8f9fa; 
+      background: var(--primary-medium); 
       border: 1px solid #e9ecef; 
       border-radius: 8px; 
       transition: transform 0.2s, box-shadow 0.2s; 
@@ -130,14 +128,8 @@ export function injectManagerStyles() {
     }
     
     .emoji-manager-card-img { 
-      width: 80px; 
-      height: 80px; 
-      /* Prevent extremely large images from breaking the layout by limiting their
-         rendered size relative to the card. Use both absolute and percentage-based
-         constraints so user-provided pixel sizes (from edit form) still work but
-         will not overflow the card or modal. */
       max-width: 90%;
-      max-height: 60vh; /* allow tall images but cap at viewport height */
+      max-height: 100%; /* allow tall images but cap at viewport height */
       object-fit: contain; 
       border-radius: 6px; 
       background: white; 
@@ -145,7 +137,7 @@ export function injectManagerStyles() {
     
     .emoji-manager-card-name { 
       font-size: 12px; 
-      color: #495057; 
+      color: var(--primary); 
       text-align: center; 
       width: 100%; 
       overflow: hidden; 
@@ -162,7 +154,7 @@ export function injectManagerStyles() {
     /* Add emoji form */
     .emoji-manager-add-emoji-form { 
       padding: 16px; 
-      background: #f8f9fa; 
+      background: var(--primary-very-low) 
       border-top: 1px solid #e9ecef; 
       display: flex; 
       gap: 8px; 
@@ -176,7 +168,7 @@ export function injectManagerStyles() {
       gap: 8px; 
       justify-content: space-between; 
       padding: 16px; 
-      background: #f8f9fa; 
+      background: var(--primary-very-low) 
       border-top: 1px solid #e9ecef; 
     }
     
@@ -186,7 +178,7 @@ export function injectManagerStyles() {
       top: 50%; 
       left: 50%; 
       transform: translate(-50%, -50%); 
-      background: white; 
+      background: var( --primary-medium ); 
       border: 1px solid #e9ecef; 
       border-radius: 8px; 
       padding: 24px; 
@@ -204,7 +196,7 @@ export function injectManagerStyles() {
       max-height: 40vh;
       object-fit: contain; 
       border-radius: 8px; 
-      background: #f8f9fa; 
+      background: var(--primary-very-low) 
       margin: 0 auto 16px; 
       display: block; 
     }
@@ -215,14 +207,11 @@ export function injectManagerStyles() {
       pointer-events: none;
       z-index: 1000002;
       display: none;
-      /* For hover previews allow a generous but bounded size relative to viewport
-         to avoid covering entire UI or pushing content off-screen. */
-      max-width: 30vw;
-      max-height: 40vh;
-      width: auto;
-      height: auto;
+      max-width: 60%;
+      max-height: 60%;
       border: 1px solid rgba(0,0,0,0.1);
-      background: #fff;
+      object-fit: contain;
+      background: var(--primary);
       padding: 4px;
       border-radius: 6px;
       box-shadow: 0 6px 18px rgba(0,0,0,0.12);
@@ -248,12 +237,12 @@ export function injectManagerStyles() {
     }
     
     .btn-primary { 
-      background-color: #007bff; 
+      background-color: var(--primary);
       color: white; 
     }
     
     .btn-primary:hover { 
-      background-color: #0056b3; 
+      background-color: var(--primary-high);
     }
     
     .btn-sm { 

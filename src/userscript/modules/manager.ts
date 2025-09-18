@@ -317,10 +317,6 @@ export function openManagementInterface() {
         alt: emo.name,
         className: 'emoji-manager-card-img'
       }) as HTMLImageElement
-      if (emo.width) img.style.width = typeof emo.width === 'number' ? emo.width + 'px' : emo.width
-      if (emo.height)
-        img.style.height = typeof emo.height === 'number' ? emo.height + 'px' : emo.height
-
       const name = createEl('div', {
         text: emo.name,
         className: 'emoji-manager-card-name'
@@ -487,7 +483,7 @@ export function openManagementInterface() {
         'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000001;'
     }) as HTMLDivElement
     const box = createEl('div', {
-      style: 'background:#fff;padding:12px;border-radius:6px;width:90%;max-width:700px;'
+      style: 'background:var(--primary-200);padding:12px;border-radius:6px;width:90%;max-width:700px;'
     }) as HTMLDivElement
     box.appendChild(container)
     importModal.appendChild(box)

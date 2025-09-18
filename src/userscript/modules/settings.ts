@@ -19,7 +19,6 @@ export function showSettingsModal() {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
     z-index: 999999;
     display: flex;
     align-items: center;
@@ -29,7 +28,7 @@ export function showSettingsModal() {
 
   const content = createEl('div', {
     style: `
-      background: var(--emoji-modal-bg);
+      backdrop-filter: blur(10px);
       color: var(--emoji-modal-text);
       border-radius: 8px;
     padding: 24px;

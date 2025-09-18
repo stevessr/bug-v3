@@ -106,7 +106,7 @@ function ensureHoverPreview() {
   _hoverPreviewEl = createEl('div', {
     className: 'emoji-picker-hover-preview',
     style:
-      'position:fixed;pointer-events:none;display:none;z-index:1000002;max-width:300px;max-height:300px;overflow:hidden;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.25);background:#fff;padding:6px;'
+      'position:fixed;pointer-events:none;display:none;z-index:1000002;max-width:300px;max-height:300px;overflow:hidden;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.25);background:transparent;padding:6px;'
   }) as HTMLDivElement
   const img = createEl('img', {
     className: 'emoji-picker-hover-img',
@@ -114,7 +114,7 @@ function ensureHoverPreview() {
   }) as HTMLImageElement
   const label = createEl('div', {
     className: 'emoji-picker-hover-label',
-    style: 'font-size:12px;color:#333;margin-top:6px;text-align:center;'
+    style: 'font-size:12px;color:var(--primary);margin-top:6px;text-align:center;'
   }) as HTMLDivElement
   _hoverPreviewEl.appendChild(img)
   _hoverPreviewEl.appendChild(label)
@@ -219,7 +219,7 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
     hoverPreviewEl = createEl('div', {
       className: 'emoji-picker-hover-preview',
       style:
-        'position:fixed;pointer-events:none;display:none;z-index:1000002;max-width:300px;max-height:300px;overflow:hidden;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.25);background:#fff;padding:6px;'
+        'position:fixed;pointer-events:none;display:none;z-index:1000002;max-width:300px;max-height:300px;overflow:hidden;border-radius:6px;background:#fff;padding:6px;'
     }) as HTMLDivElement
     const img = createEl('img', {
       className: 'emoji-picker-hover-img',
@@ -227,7 +227,7 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
     }) as HTMLImageElement
     const label = createEl('div', {
       className: 'emoji-picker-hover-label',
-      style: 'font-size:12px;color:#333;margin-top:6px;text-align:center;'
+      style: 'font-size:12px;color:var(--primary);margin-top:6px;text-align:center;'
     }) as HTMLDivElement
     hoverPreviewEl.appendChild(img)
     hoverPreviewEl.appendChild(label)

@@ -112,7 +112,6 @@ const QUICK_INSERTS: string[] = [
   'abstract',
   'todo',
   'success',
-  'question',
   'warning',
   'failure',
   'danger',
@@ -227,21 +226,27 @@ function createQuickInsertMenu(): HTMLElement {
   const list = document.createElement('ul')
   list.className = 'dropdown-menu'
 
-  const ICON_MAP: Record<string, string> = {
-    info: 'ℹ️',
-    tip: '💡',
-    faq: '❓',
-    question: '🤔',
-    note: '📝',
-    abstract: '📋',
-    todo: '☑️',
-    success: '🎉',
-    warning: '⚠️',
-    failure: '❌',
-    danger: '☠️',
-    bug: '🐛',
-    example: '🔎',
-    quote: '💬'
+  const ICONS: Record<
+    string,
+    {
+      icon: string
+      color: string
+    }
+  > = {
+    info: { icon: 'ℹ️', color: 'blue' },
+    tip: { icon: '💡', color: 'cyan' },
+    faq: { icon: '❓', color: 'purple' },
+    question: { icon: '🤔', color: 'indigo' },
+    note: { icon: '📝', color: 'gray' },
+    abstract: { icon: '📋', color: 'darkgray' },
+    todo: { icon: '☑️', color: 'orange' },
+    success: { icon: '🎉', color: 'green' },
+    warning: { icon: '⚠️', color: 'yellow' },
+    failure: { icon: '❌', color: 'red' },
+    danger: { icon: '☠️', color: 'darkred' },
+    bug: { icon: '🐛', color: 'crimson' },
+    example: { icon: '🔎', color: 'teal' },
+    quote: { icon: '💬', color: 'slategray' }
   }
 
   QUICK_INSERTS.forEach(item => {
@@ -261,8 +266,11 @@ function createQuickInsertMenu(): HTMLElement {
       insertIntoEditor(`>[!${item}]`)
     })
 
-    const emojiSpan = document.createElement('span')
-    emojiSpan.textContent = ICON_MAP[item] || '✳️'
+  const emojiSpan = document.createElement('span')
+  emojiSpan.textContent = ICONS[item]?.icon || '✳️'
+  const color = ICONS[item]?.color
+  if (color) emojiSpan.style.color = color
+  emojiSpan.style.marginRight = '6px'
 
     const labelWrap = document.createElement('span')
     labelWrap.className = 'd-button-label'
