@@ -119,7 +119,8 @@ function createQuickInsertMenu(): HTMLElement {
     const btn = createEl('button', {
       className: 'btn btn-icon-text',
       type: 'button',
-      title: key.charAt(0).toUpperCase() + key.slice(1)
+      title: key.charAt(0).toUpperCase() + key.slice(1),
+      style: 'color: ' + (ICONS[key]?.color || 'auto')
     }) as HTMLButtonElement
     btn.addEventListener('click', () => {
       if (menu.parentElement) menu.parentElement.removeChild(menu)
@@ -137,8 +138,7 @@ function createQuickInsertMenu(): HTMLElement {
     }) as HTMLSpanElement
     const labelText = createEl('span', {
       className: 'd-button-label__text',
-      text: key.charAt(0).toUpperCase() + key.slice(1),
-      style: 'color: ' + (ICONS[key]?.color || 'auto')
+      text: key.charAt(0).toUpperCase() + key.slice(1)
     }) as HTMLSpanElement
     labelWrap.appendChild(labelText)
     btn.appendChild(emojiSpan)

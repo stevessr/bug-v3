@@ -273,7 +273,7 @@ function createQuickInsertMenu(): HTMLElement {
     const labelWrap = document.createElement('span')
     labelWrap.className = 'd-button-label'
     const labelText = document.createElement('span')
-    if (color) labelText.style.color = color
+    if (color) btn.style.background = color
     labelText.className = 'd-button-label__text'
     labelText.textContent = displayLabel
 
