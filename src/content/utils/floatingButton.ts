@@ -14,7 +14,7 @@ const FLOATING_BUTTON_STYLES = `
   width: 56px !important;
   height: 56px !important;
   border-radius: 50% !important;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: transparent;
   border: none !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   cursor: pointer !important;
