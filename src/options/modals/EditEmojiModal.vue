@@ -89,9 +89,14 @@ const onEditGroupSelect = (info: { key: string | number }) => {
   selectedGroupId.value = String(info.key)
 }
 
-const editSelectedGroupLabel = computed(() => {
+const editSelectedGroupIcon = computed(() => {
   const g = availableGroups.value.find(x => x.id === selectedGroupId.value)
-  return g ? `${g.icon ? g.icon + ' ' : ''}${g.name}` : '选择分组'
+  return g ? g.icon : ''
+})
+
+const editSelectedGroupName = computed(() => {
+  const g = availableGroups.value.find(x => x.id === selectedGroupId.value)
+  return g ? g.name : '选择分组'
 })
 
 watch(
@@ -313,12 +318,26 @@ const handleSubmit = () => {
                           :key="group.id"
                           :value="group.id"
                         >
-                          {{ group.icon }} {{ group.name }}
+                          <a-image
+                            v-if="group.icon.startsWith('https://')"
+                            :src="group.icon"
+                            class="inline-block mr-1"
+                            style="max-width: 10px"
+                          />
+                          <span v-else class="inline-block mr-1">{{ group.icon }}</span>
+                          {{ group.name }}
                         </a-menu-item>
                       </a-menu>
                     </template>
                     <AButton class="dark:text-white dark:bg-gray-800">
-                      {{ editSelectedGroupLabel }}
+                      <a-image
+                        v-if="editSelectedGroupIcon.startsWith('https://')"
+                        :src="editSelectedGroupIcon"
+                        class="inline-block mr-1"
+                        style="max-width: 10px"
+                      />
+                      <span v-else class="inline-block mr-1">{{ editSelectedGroupIcon }}</span>
+                      {{ editSelectedGroupName }}
                       <DownOutlined />
                     </AButton>
                   </a-dropdown>

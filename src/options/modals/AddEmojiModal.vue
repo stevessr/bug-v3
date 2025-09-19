@@ -200,9 +200,15 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
         }
 
         if (variants.length > 0) {
+          // 优先选择 GIF（动画）变种，如果存在的话
+          const gifIndex = variants.findIndex(v => /(^data:image\/gif)|\.gif(\?|$)/i.test(v.url))
+          if (gifIndex > 0) {
+            const [gif] = variants.splice(gifIndex, 1)
+            variants.unshift(gif)
+          }
           const item = reactive({
             name: nameVal,
-            url: variants[0].url, // 默认选择第一个（通常是原始URL）
+            url: variants[0].url, // 默认选择第一个（优先为 GIF）
             variants,
             selectedVariant: variants[0].url
           })
@@ -234,11 +240,17 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
         if (href) variants.push({ label: '默认', url: href })
 
         if (href) {
+          // 如果 href 指向 GIF，则优先
+          const gifIndex = variants.findIndex(v => /(^data:image\/gif)|\.gif(\?|$)/i.test(v.url))
+          if (gifIndex > 0) {
+            const [gif] = variants.splice(gifIndex, 1)
+            variants.unshift(gif)
+          }
           const item = reactive({
             name: nameVal,
             url: href,
             variants,
-            selectedVariant: href
+            selectedVariant: variants[0].url
           })
           items.push(item)
         }
@@ -258,11 +270,17 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
       if (src) variants.push({ label: '默认', url: src })
 
       if (src) {
+        // 如果 src 是 GIF 或 data:image/gif，则确保它在首位
+        const gifIndex = variants.findIndex(v => /(^data:image\/gif)|\.gif(\?|$)/i.test(v.url))
+        if (gifIndex > 0) {
+          const [gif] = variants.splice(gifIndex, 1)
+          variants.unshift(gif)
+        }
         const item = reactive({
           name: nameVal,
           url: src,
           variants,
-          selectedVariant: src
+          selectedVariant: variants[0].url
         })
         items.push(item)
       }

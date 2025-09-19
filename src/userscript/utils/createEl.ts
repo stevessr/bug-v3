@@ -14,7 +14,7 @@ export function createEl<K extends keyof HTMLElementTagNameMap>(
     dataset?: Record<string, string>
     innerHTML?: string
     title?: string
-    alt?: string,
+    alt?: string
     id?: string
   }
 ) {

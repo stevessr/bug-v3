@@ -1,11 +1,11 @@
 // 导入各个功能模块
+import { requestSettingFromBackground } from '../utils/requestSetting'
+
 import { scanForMagnificPopup, observeMagnificPopup } from './utils/magnific-popup'
 import { scanForCookedContent, observeCookedContent } from './utils/cooked-content'
 import { isDiscoursePage } from './utils/page-detection'
 import { setupDiscourseUploadHandler } from './utils/upload-handler'
 import { initCalloutSuggestions } from './callout-suggestions'
-
-import { requestSettingFromBackground } from '../utils/requestSetting'
 
 export async function initDiscourse() {
   try {

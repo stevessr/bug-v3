@@ -372,7 +372,9 @@ const handleCalloutSuggestionsChange = (e: Event) => {
           <label class="text-sm font-medium text-gray-900 dark:text-white">
             启用Callout自动补全
           </label>
-          <p class="text-sm text-gray-500 dark:text-white">在编辑器中输入 [! 时显示 Callout 语法提示</p>
+          <p class="text-sm text-gray-500 dark:text-white">
+            在编辑器中输入 [! 时显示 Callout 语法提示
+          </p>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input
