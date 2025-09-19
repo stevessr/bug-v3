@@ -269,6 +269,14 @@ export function injectEmojiButton(toolbar: HTMLElement) {
     innerHTML: '⭐'
   }) as HTMLButtonElement
 
+  // Create auto-read button (userscript variant)
+  const autoReadButton = createEl('button', {
+    className: 'btn no-text btn-icon toolbar__button emoji-extension-auto-read',
+    title: '像插件一样自动阅读话题 (Auto-read topics)',
+    type: 'button',
+    innerHTML: '📖'
+  }) as HTMLButtonElement
+
   if (isChatComposer) {
     button.classList.add(
       'fk-d-menu__trigger',
@@ -292,6 +300,24 @@ export function injectEmojiButton(toolbar: HTMLElement) {
     popularButton.setAttribute('data-identifier', 'popular-emoji')
     popularButton.setAttribute('data-trigger', '')
   }
+
+  // Auto-read button click handler (userscript-specific)
+  autoReadButton.addEventListener('click', async e => {
+    e.stopPropagation()
+    try {
+      // Prefer userscript wrapper then page-level binding
+      // @ts-ignore
+      const caller = (window as any).callAutoReadRepliesV2 || (window as any).autoReadAllRepliesV2
+      if (caller && typeof caller === 'function') {
+        await caller()
+        console.log('[Userscript] autoRead triggered via toolbar button')
+      } else {
+        console.warn('[Userscript] autoRead function not available on this page')
+      }
+    } catch (err) {
+      console.error('[Userscript] autoRead failed', err)
+    }
+  })
 
   // Main emoji picker button click handler
   button.addEventListener('click', async e => {
@@ -370,6 +396,15 @@ export function injectEmojiButton(toolbar: HTMLElement) {
     closeCurrentPicker() // Close emoji picker if open
     showPopularEmojisModal()
   })
+
+  // Insert auto-read button next to popular button
+  if (isChatComposer) {
+    // keep consistent ordering for chat composer
+    popularButton.after(autoReadButton)
+  } else {
+    // for regular toolbars, append autoReadButton near the emoji button
+    button.after(autoReadButton)
+  }
 
   // Create quick-insert button
   const quickInsertButton = createEl('button', {

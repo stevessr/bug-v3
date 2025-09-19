@@ -8,7 +8,11 @@ import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync } from './users
 import { userscriptState } from './state'
 import { initOneClickAdd } from './modules/oneClickAdd'
 import { attemptInjection, startPeriodicInjection } from './modules/toolbar'
-import { showFloatingButton, checkAndShowFloatingButton } from './modules/floatingButton'
+import {
+  showFloatingButton,
+  checkAndShowFloatingButton,
+  showAutoReadInMenu
+} from './modules/floatingButton'
 import { logPlatformInfo } from './utils/platformDetection'
 
 // userscriptState is imported from ./state and initialized there
@@ -85,6 +89,44 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
   } catch (e) {
     console.warn('[Userscript] initPixiv failed', e)
   }
+
+  // Inject auto-read button into user menu (userscript-managed)
+  try {
+    void showAutoReadInMenu()
+  } catch (e) {
+    console.warn('[Userscript] showAutoReadInMenu failed', e)
+  }
+
+  // expose a simple wrapper so other userscripts/pages can trigger autoReadAllRepliesV2
+  function exposeAutoReadWrapper() {
+    try {
+      // if content script or page already exposes autoReadAllRepliesV2, use it
+      // @ts-ignore
+      const existing = (window as any).autoReadAllRepliesV2
+      if (existing && typeof existing === 'function') {
+        // @ts-ignore
+        ;(window as any).callAutoReadRepliesV2 = (topicId?: number) => {
+          try {
+            return existing(topicId)
+          } catch (e) {
+            console.warn('[Userscript] callAutoReadRepliesV2 invocation failed', e)
+          }
+        }
+        console.log('[Userscript] callAutoReadRepliesV2 is exposed')
+        return
+      }
+
+      // otherwise, set a no-op that logs a message
+      // @ts-ignore
+      ;(window as any).callAutoReadRepliesV2 = (topicId?: number) => {
+        console.warn('[Userscript] autoReadAllRepliesV2 not available on this page yet')
+      }
+    } catch (e) {
+      console.warn('[Userscript] exposeAutoReadWrapper failed', e)
+    }
+  }
+
+  exposeAutoReadWrapper()
 
   let attempts = 0
 

@@ -3,6 +3,7 @@
 import { initializeEmojiFeature } from './utils/init'
 import { Uninject } from './utils/Uninject'
 import { postTimings } from './utils/timingsBinder'
+import { autoReadAllv2 } from './utils/autoReadReplies'
 
 console.log('[Emoji Extension] Content script loaded (entry)')
 
@@ -105,6 +106,9 @@ try {
 
     // @ts-ignore
     window.postTimings = postTimings
+    // expose autoReadAllv2 for userscripts / page scripts
+    // @ts-ignore
+    window.autoReadAllRepliesV2 = autoReadAllv2
   }
 } catch (e) {
   console.warn('[Emoji Extension] failed to expose postTimings to window', e)
