@@ -77,6 +77,13 @@ export function showSettingsModal() {
         启用悬浮预览功能
       </label>
     </div>
+
+    <div style="margin-bottom: 16px;">
+      <label style="display: flex; align-items: center; color: var(--emoji-modal-label); font-weight: 500;">
+        <input type="checkbox" id="enableCalloutSuggestions" ${userscriptState.settings.enableCalloutSuggestions ? 'checked' : ''} style="margin-right: 8px;">
+        在 textarea 中启用 Callout Suggestion（输入 [ 即可触发）
+      </label>
+    </div>
     
     <div style="margin-bottom: 16px;">
       <label style="display: flex; align-items: center; color: var(--emoji-modal-label); font-weight: 500;">
@@ -143,7 +150,8 @@ export function showSettingsModal() {
         forceMobileMode: false,
         defaultGroup: 'nachoneko',
         showSearchBar: true,
-        enableFloatingPreview: true
+        enableFloatingPreview: true,
+        enableCalloutSuggestions: true
       }
       modal.remove()
     }
@@ -170,6 +178,13 @@ export function showSettingsModal() {
     ) as HTMLInputElement
     if (enableFloatingPreview) {
       userscriptState.settings.enableFloatingPreview = enableFloatingPreview.checked
+    }
+
+    const enableCalloutEl = content.querySelector(
+      '#enableCalloutSuggestions'
+    ) as HTMLInputElement | null
+    if (enableCalloutEl) {
+      userscriptState.settings.enableCalloutSuggestions = !!enableCalloutEl.checked
     }
 
     const forceMobileEl = content.querySelector('#forceMobileMode') as HTMLInputElement | null

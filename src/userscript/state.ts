@@ -9,7 +9,9 @@ export const userscriptState: UserscriptStorage = {
     forceMobileMode: false,
     defaultGroup: 'nachoneko',
     showSearchBar: true,
-    enableFloatingPreview: true
+    enableFloatingPreview: true,
+    // 是否在 textarea 中启用 callout suggestions（当输入 '[' 时触发）
+    enableCalloutSuggestions: true
   },
   emojiUsageStats: {}
 }

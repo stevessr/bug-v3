@@ -11,6 +11,7 @@ export interface UserscriptStorage {
     defaultGroup: string
     showSearchBar: boolean
     enableFloatingPreview: boolean
+    enableCalloutSuggestions: boolean // 是否在 textarea 中启用 callout suggestions（当输入 '[' 时触发）
   }
   emojiUsageStats?: { [key: string]: { count: number; lastUsed: number } }
 }
@@ -50,7 +51,8 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
       forceMobileMode: false,
       defaultGroup: 'nachoneko',
       showSearchBar: true,
-      enableFloatingPreview: true
+      enableFloatingPreview: true,
+      enableCalloutSuggestions: true
     }
 
     if (settingsData) {
@@ -88,7 +90,8 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
         forceMobileMode: false,
         defaultGroup: 'nachoneko',
         showSearchBar: true,
-        enableFloatingPreview: true
+        enableFloatingPreview: true,
+        enableCalloutSuggestions: true
       }
     }
   }
@@ -174,7 +177,8 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
         forceMobileMode: false,
         defaultGroup: 'nachoneko',
         showSearchBar: true,
-        enableFloatingPreview: true
+        enableFloatingPreview: true,
+        enableCalloutSuggestions: true
       }
     }
   }

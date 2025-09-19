@@ -483,7 +483,8 @@ export function openManagementInterface() {
         'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000001;'
     }) as HTMLDivElement
     const box = createEl('div', {
-      style: 'background:var(--primary-200);padding:12px;border-radius:6px;width:90%;max-width:700px;'
+      style:
+        'background:var(--primary-200);padding:12px;border-radius:6px;width:90%;max-width:700px;'
     }) as HTMLDivElement
     box.appendChild(container)
     importModal.appendChild(box)

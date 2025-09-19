@@ -7,6 +7,7 @@ declare const __USERSCRIPT_PLATFORM__: string
 import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync } from './userscript-storage'
 import { userscriptState } from './state'
 import { initOneClickAdd } from './modules/oneClickAdd'
+import { initCalloutSuggestionsUserscript } from './modules/calloutSuggestions'
 import { attemptInjection, startPeriodicInjection } from './modules/toolbar'
 import {
   showFloatingButton,
@@ -82,6 +83,15 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
   // Initialize data and features
   await initializeUserscriptData()
   initOneClickAdd()
+  // userscript: optionally initialize callout suggestions if enabled in settings
+  try {
+    if (userscriptState.settings?.enableCalloutSuggestions) {
+      initCalloutSuggestionsUserscript()
+      console.log('[Userscript] Callout suggestions enabled')
+    }
+  } catch (e) {
+    console.warn('[Userscript] initCalloutSuggestionsUserscript failed', e)
+  }
 
   // Pixiv specific injection (use content/pixiv implementation)
   try {
