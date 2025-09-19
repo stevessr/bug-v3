@@ -1,6 +1,5 @@
 import { postTimings } from './timingsBinder'
 import { notify } from './notify'
-import { randomInt } from 'crypto'
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
