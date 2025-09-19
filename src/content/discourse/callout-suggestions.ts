@@ -189,9 +189,15 @@ function applyCompletion(textarea: HTMLTextAreaElement, selectedKeyword: string)
   const text = textarea.value
   const selectionStart = textarea.selectionStart || 0
   const textBeforeCursor = text.substring(0, selectionStart)
-  const triggerIndex = textBeforeCursor.lastIndexOf('[!')
+  // 支持英文或全角触发符的定位，优先匹配英文 '[!'，否则尝试全角 '［！'
+  let triggerIndex = textBeforeCursor.lastIndexOf('[!')
+  let open = '[!'
+  if (triggerIndex === -1) {
+    triggerIndex = textBeforeCursor.lastIndexOf('［！')
+    open = '［！'
+  }
   if (triggerIndex === -1) return
-  const newText = `[!${selectedKeyword}] `
+  const newText = `${open}${selectedKeyword}] `
   const textAfter = text.substring(selectionStart)
   textarea.value = textBeforeCursor.substring(0, triggerIndex) + newText + textAfter
   const newCursorPos = triggerIndex + newText.length
@@ -287,7 +293,8 @@ function handleInput(event: Event) {
   const text = textarea.value
   const selectionStart = textarea.selectionStart || 0
   const textBeforeCursor = text.substring(0, selectionStart)
-  const match = textBeforeCursor.match(/\[!([a-z]*)$/i)
+  // 支持英文或全角触发符：'[' 或 '［'，'!' 或 '！'
+  const match = textBeforeCursor.match(/(?:\[|［])[!！]([a-z]*)$/i)
   if (match) {
     const keyword = match[1].toLowerCase()
     const filtered = calloutKeywords.filter(k => k.startsWith(keyword))
