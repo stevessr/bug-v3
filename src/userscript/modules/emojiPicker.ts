@@ -355,23 +355,15 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
       })(img, emoji)
       img.addEventListener('click', () => {
         insertEmojiIntoEditor(emoji)
-        const modalContainer = modal.closest('.modal-container')
-        if (modalContainer) {
-          modalContainer.remove()
-        } else {
-          modal.remove()
-        }
+        // Only remove the modal element itself; keep surrounding `.modal-container`
+        if (modal.parentElement) modal.parentElement.removeChild(modal)
       })
       img.addEventListener('keydown', (e: any) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           insertEmojiIntoEditor(emoji)
-          const modalContainer = modal.closest('.modal-container')
-          if (modalContainer) {
-            modalContainer.remove()
-          } else {
-            modal.remove()
-          }
+          // Only remove the modal element itself; keep surrounding `.modal-container`
+          if (modal.parentElement) modal.parentElement.removeChild(modal)
         }
       })
       sectionEmojis.appendChild(img)

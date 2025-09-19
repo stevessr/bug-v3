@@ -52,10 +52,7 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
     in: `<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>`,
     on: {
       click: () => {
-        const modalContainer = modal.closest('.modal-container')
-        if (modalContainer) {
-          modalContainer.remove()
-        }
+        modal.remove()
       }
     }
   }) as HTMLButtonElement
@@ -161,19 +158,13 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
         on: {
           click: () => {
             insertEmojiIntoEditor(emoji)
-            const modalContainer = modal.closest('.modal-container')
-            if (modalContainer) {
-              modalContainer.remove()
-            }
+            modal.remove()
           },
           keydown: (e: KeyboardEvent) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
               insertEmojiIntoEditor(emoji)
-              const modalContainer = modal.closest('.modal-container')
-              if (modalContainer) {
-                modalContainer.remove()
-              }
+              modal.remove()
             }
           }
         }

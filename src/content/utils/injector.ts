@@ -89,14 +89,17 @@ async function injectMobilePicker() {
 
   const backdrop = createE('div', { class: 'd-modal__backdrop' })
   backdrop.addEventListener('click', () => {
-    modalContainer.remove()
+    // Only remove the picker and the backdrop, keep the surrounding `.modal-container`
+    if (picker.parentElement) picker.parentElement.removeChild(picker)
+    if (backdrop.parentElement) backdrop.parentElement.removeChild(backdrop)
     currentPicker = null
   })
 
   modalContainer.appendChild(picker)
   modalContainer.appendChild(backdrop)
 
-  currentPicker = modalContainer as HTMLElement
+  // Track the picker element itself so toggling will unmount only the picker
+  currentPicker = picker as HTMLElement
 }
 
 // Quick inserts available globally (store as plain keys without [!])
@@ -215,8 +218,11 @@ function insertIntoEditor(text: string) {
 }
 
 function createQuickInsertMenu(): HTMLElement {
+  const forceMobileMode = (cachedState.settings as any)?.forceMobileMode || false
+
   const menu = createE('div', {
-    class: 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
+    class: 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded',
+    style: 'z-index:1300;'
   })
   const inner = createE('div', { class: 'fk-d-menu__inner-content' })
   const list = createE('ul', { class: 'dropdown-menu' })
@@ -346,6 +352,36 @@ function createQuickInsertMenu(): HTMLElement {
 
   inner.appendChild(list)
   menu.appendChild(inner)
+
+  if (forceMobileMode) {
+    // Wrap the menu inside a modal-like structure so it displays centered
+    const modal = createE('div', {
+      class:
+        'modal d-modal fk-d-menu-modal toolbar-menu__options-content toolbar-popup-menu-options',
+      attrs: {
+        'data-keyboard': 'false',
+        'aria-modal': 'true',
+        role: 'dialog'
+      }
+    })
+
+    const modalContainerInner = createE('div', { class: 'd-modal__container' })
+    const modalBody = createE('div', { class: 'd-modal__body' })
+    ;(modalBody as HTMLElement).tabIndex = -1
+
+    const grip = createE('div', { class: 'fk-d-menu-modal__grip' })
+    grip.setAttribute('aria-hidden', 'true')
+
+    modalBody.appendChild(grip)
+    // move the dropdown into the modal body
+    modalBody.appendChild(inner.querySelector('.dropdown-menu') as Node)
+
+    modalContainerInner.appendChild(modalBody)
+    modal.appendChild(modalContainerInner)
+
+    return modal
+  }
+
   return menu
 }
 
@@ -554,8 +590,8 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
 
     const backdrop = createE('div', { class: 'd-modal__backdrop' })
     backdrop.addEventListener('click', () => {
-      // remove modal container when backdrop clicked
-      if (modalContainer.parentElement) modalContainer.parentElement.removeChild(modalContainer)
+      // Clear modal contents when backdrop clicked but keep the surrounding `.modal-container`
+      modalContainer.innerHTML = ''
     })
 
     modalContainer.appendChild(modal)
@@ -702,7 +738,18 @@ export function injectButton(toolbar: Element) {
             : (document.querySelector('.modal-container') as HTMLElement | null)
 
         if (modalContainer && !modalContainer.contains(e.target as Node)) {
-          if (modalContainer.parentElement) modalContainer.parentElement.removeChild(modalContainer)
+          // Clear children inside the modal container rather than removing the container element
+          try {
+            modalContainer.innerHTML = ''
+          } catch (err) {
+            try {
+              if (modalContainer.parentElement) {
+                modalContainer.parentElement.removeChild(modalContainer)
+              }
+            } catch (err2) {
+              // ignore
+            }
+          }
           document.removeEventListener('click', removeMenu)
         }
       } else {
@@ -739,12 +786,26 @@ export function injectButton(toolbar: Element) {
     const menu = createQuickInsertMenu()
 
     if (isMobile) {
-      const modalPortal = document.querySelector('.modal-container') as HTMLElement | null
+      // Inject into a shared modal container like the emoji picker does
+      let modalPortal = document.querySelector('.modal-container') as HTMLElement | null
       if (!modalPortal) {
-        document.body.appendChild(menu)
-      } else {
-        modalPortal.appendChild(menu)
+        modalPortal = createE('div', { class: 'modal-container' }) as HTMLElement
+        document.body.appendChild(modalPortal)
       }
+
+      // Clear any previous content and mount our menu + backdrop
+      modalPortal.innerHTML = ''
+      const backdrop = createE('div', { class: 'd-modal__backdrop' })
+      backdrop.addEventListener('click', () => {
+        // Clear modal contents but keep the container element
+        if (modalPortal) modalPortal.innerHTML = ''
+        currentPicker = null
+      })
+      modalPortal.appendChild(menu)
+      modalPortal.appendChild(backdrop)
+
+      // Track the menu element itself so toggling will unmount only the menu
+      currentPicker = menu as HTMLElement
     } else {
       let portal = document.querySelector('#d-menu-portals') as HTMLElement | null
       if (!portal) {
@@ -760,12 +821,37 @@ export function injectButton(toolbar: Element) {
     }
 
     const removeMenu = (e: Event) => {
-      if (!menu.contains(e.target as Node)) {
-        if (menu.parentElement) menu.parentElement.removeChild(menu)
-        document.removeEventListener('click', removeMenu)
+      if (isMobile) {
+        const modalContainer =
+          menu.classList && (menu as HTMLElement).classList.contains('modal-container')
+            ? (menu as HTMLElement)
+            : (document.querySelector('.modal-container') as HTMLElement | null)
+
+        if (modalContainer && !modalContainer.contains(e.target as Node)) {
+          try {
+            modalContainer.innerHTML = ''
+          } catch (err) {
+            try {
+              if (modalContainer.parentElement) {
+                modalContainer.parentElement.removeChild(modalContainer)
+              }
+            } catch (err2) {
+              // ignore
+            }
+          }
+          document.removeEventListener('click', removeMenu)
+        }
+      } else {
+        if (!menu.contains(e.target as Node)) {
+          if (menu.parentElement) menu.parentElement.removeChild(menu)
+          document.removeEventListener('click', removeMenu)
+        }
       }
     }
-    setTimeout(() => document.addEventListener('click', removeMenu), 100)
+
+    setTimeout(() => {
+      document.addEventListener('click', removeMenu)
+    }, 100)
   })
 
   try {
