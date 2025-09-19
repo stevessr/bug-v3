@@ -1,5 +1,6 @@
 // Independent uploader for ungrouped emoji previews to linux.do
 // This is a copy of the front-end upload functionality to maintain code independence
+import { createEl } from '../content/utils/createEl'
 
 interface EmojiUploadResponse {
   id: number
@@ -196,8 +197,8 @@ class EmojiPreviewUploader {
   }
 
   private createProgressDialog(): HTMLElement {
-    const dialog = document.createElement('div')
-    dialog.style.cssText = `
+    const dialog = createEl('div', {
+      style: `
       position: fixed;
       top: 20px;
       right: 20px;
@@ -211,9 +212,10 @@ class EmojiPreviewUploader {
       border: 1px solid #e5e7eb;
       overflow: hidden;
     `
+    }) as HTMLElement
 
-    const header = document.createElement('div')
-    header.style.cssText = `
+    const header = createEl('div', {
+      style: `
       padding: 16px 20px;
       background: #f9fafb;
       border-bottom: 1px solid #e5e7eb;
@@ -223,12 +225,13 @@ class EmojiPreviewUploader {
       display: flex;
       justify-content: space-between;
       align-items: center;
-    `
-    header.textContent = '表情预览上传队列'
+    `,
+      text: '表情预览上传队列'
+    }) as HTMLElement
 
-    const closeButton = document.createElement('button')
-    closeButton.innerHTML = '✕'
-    closeButton.style.cssText = `
+    const closeButton = createEl('button', {
+      in: '✕',
+      style: `
       background: none;
       border: none;
       font-size: 16px;
@@ -238,19 +241,21 @@ class EmojiPreviewUploader {
       border-radius: 4px;
       transition: background-color 0.2s;
     `
+    }) as HTMLButtonElement
     closeButton.addEventListener('click', () => {
       this.hideProgressDialog()
     })
 
     header.appendChild(closeButton)
 
-    const content = document.createElement('div')
-    content.className = 'emoji-upload-queue-content'
-    content.style.cssText = `
-      max-height: 320px;
-      overflow-y: auto;
-      padding: 12px;
-    `
+    const content = createEl('div', {
+      class: 'emoji-upload-queue-content',
+      style: `
+        max-height: 320px;
+        overflow-y: auto;
+        padding: 12px;
+      `
+    })
 
     dialog.appendChild(header)
     dialog.appendChild(content)
@@ -265,21 +270,22 @@ class EmojiPreviewUploader {
     content.innerHTML = ''
 
     if (allItems.length === 0) {
-      const emptyState = document.createElement('div')
-      emptyState.style.cssText = `
+      const emptyState = createEl('div', {
+        style: `
         text-align: center;
         color: #6b7280;
         font-size: 14px;
         padding: 20px;
-      `
-      emptyState.textContent = '暂无表情上传任务'
+      `,
+        text: '暂无表情上传任务'
+      })
       content.appendChild(emptyState)
       return
     }
 
     allItems.forEach(item => {
-      const itemEl = document.createElement('div')
-      itemEl.style.cssText = `
+      const itemEl = createEl('div', {
+        style: `
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -289,47 +295,52 @@ class EmojiPreviewUploader {
         border-radius: 6px;
         border-left: 4px solid ${this.getStatusColor(item.status)};
       `
+      })
 
-      const leftSide = document.createElement('div')
-      leftSide.style.cssText = `
+      const leftSide = createEl('div', {
+        style: `
         flex: 1;
         min-width: 0;
       `
+      })
 
-      const fileName = document.createElement('div')
-      fileName.style.cssText = `
+      const fileName = createEl('div', {
+        style: `
         font-size: 13px;
         font-weight: 500;
         color: #374151;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-      `
-      fileName.textContent = item.emojiName || item.file.name
+      `,
+        text: item.emojiName || item.file.name
+      })
 
-      const status = document.createElement('div')
-      status.style.cssText = `
+      const status = createEl('div', {
+        style: `
         font-size: 12px;
         color: #6b7280;
         margin-top: 2px;
-      `
-      status.textContent = this.getStatusText(item)
+      `,
+        text: this.getStatusText(item)
+      })
 
       leftSide.appendChild(fileName)
       leftSide.appendChild(status)
 
-      const rightSide = document.createElement('div')
-      rightSide.style.cssText = `
+      const rightSide = createEl('div', {
+        style: `
         display: flex;
         align-items: center;
         gap: 8px;
       `
+      })
 
       // Add retry button for failed items
       if (item.status === 'failed' && item.retryCount < this.maxRetries) {
-        const retryButton = document.createElement('button')
-        retryButton.innerHTML = '🔄'
-        retryButton.style.cssText = `
+        const retryButton = createEl('button', {
+          in: '🔄',
+          style: `
           background: none;
           border: none;
           cursor: pointer;
@@ -337,8 +348,9 @@ class EmojiPreviewUploader {
           padding: 4px;
           border-radius: 4px;
           transition: background-color 0.2s;
-        `
-        retryButton.title = '重试上传'
+        `,
+          ti: '重试上传'
+        })
         retryButton.addEventListener('click', () => {
           this.retryFailedItem(item.id)
         })
@@ -351,12 +363,10 @@ class EmojiPreviewUploader {
         rightSide.appendChild(retryButton)
       }
 
-      const statusIcon = document.createElement('div')
-      statusIcon.style.cssText = `
-        font-size: 16px;
-      `
-      statusIcon.textContent = this.getStatusIcon(item.status)
-
+      const statusIcon = createEl('div', {
+        style: 'font-size: 16px;',
+        text: this.getStatusIcon(item.status)
+      })
       rightSide.appendChild(statusIcon)
 
       itemEl.appendChild(leftSide)

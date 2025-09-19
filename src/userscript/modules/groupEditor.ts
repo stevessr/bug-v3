@@ -155,8 +155,8 @@ export function showGroupEditorModal() {
   document.body.appendChild(modal)
 
   // Add hover effects
-  const style = document.createElement('style')
-  style.textContent = `
+  const style = createEl('style', {
+    text: `
     .group-item:hover {
       border-color: var(--emoji-modal-primary-bg) !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -174,6 +174,7 @@ export function showGroupEditorModal() {
       cursor: not-allowed !important;
     }
   `
+  })
   document.head.appendChild(style)
 
   // Event listeners
@@ -309,15 +310,17 @@ function showTemporaryMessage(message: string) {
 
   // Add CSS animation if not already present
   if (!document.querySelector('#tempMessageStyles')) {
-    const style = document.createElement('style')
-    style.id = 'tempMessageStyles'
-    style.textContent = `
+    document.head.appendChild(
+      createEl('style', {
+        id: 'tempMessageStyles',
+        text: `
       @keyframes fadeInOut {
         0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
         20%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
       }
     `
-    document.head.appendChild(style)
+      })
+    )
   }
 
   document.body.appendChild(messageEl)

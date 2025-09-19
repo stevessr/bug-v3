@@ -1,3 +1,4 @@
+import { createEl } from './createEl'
 // Centralized theme support utilities for userscript
 let themeStylesInjected = false
 
@@ -5,9 +6,10 @@ export function injectGlobalThemeStyles(): void {
   if (themeStylesInjected || typeof document === 'undefined') return
   themeStylesInjected = true
 
-  const style = document.createElement('style')
-  style.id = 'emoji-extension-theme-globals'
-  style.textContent = `
+  document.head.appendChild(
+    createEl('style', {
+      id: 'emoji-extension-theme-globals',
+      text: `
     /* Global CSS variables for emoji extension theme support */
     :root {
       /* Light theme (default) */
@@ -51,7 +53,8 @@ export function injectGlobalThemeStyles(): void {
       }
     }
   `
-  document.head.appendChild(style)
+    })
+  )
 }
 
 export function getThemeAwareStyle(property: string): string {

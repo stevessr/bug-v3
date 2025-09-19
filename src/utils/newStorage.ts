@@ -1,7 +1,6 @@
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 
 import { formatPreview } from './formatUtils'
-import indexedDBHelpers from './indexedDB'
 
 import { defaultSettings } from '@/types/emoji'
 import { loadDefaultEmojiGroups, loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
@@ -250,93 +249,11 @@ class ExtensionStorageLayer {
   }
 }
 
-class IndexedDBLayer {
-  async get(key: string): Promise<any> {
-    try {
-      const isAvailable = await indexedDBHelpers.isAvailable()
-      if (!isAvailable) return null
-
-      if (key === STORAGE_KEYS.SETTINGS) {
-        return await indexedDBHelpers.getSettings()
-      } else if (key === STORAGE_KEYS.FAVORITES) {
-        return await indexedDBHelpers.getFavorites()
-      } else if (key === STORAGE_KEYS.GROUP_INDEX) {
-        const groups = await indexedDBHelpers.getAllGroups()
-        return groups?.map((group, index) => ({ id: group.id, order: index })) || null
-      } else if (key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
-        const groupId = key.replace(STORAGE_KEYS.GROUP_PREFIX, '')
-        const groups = await indexedDBHelpers.getAllGroups()
-        return groups?.find(g => g.id === groupId) || null
-      }
-      return null
-    } catch (error) {
-      logStorage('IDB_GET', key, undefined, error)
-      return null
-    }
-  }
-
-  async set(key: string, value: any): Promise<void> {
-    try {
-      const isAvailable = await indexedDBHelpers.isAvailable()
-      if (!isAvailable) return
-
-      // Ensure the value is serializable for IndexedDB
-      const cleanValue = ensureSerializable(value)
-
-      if (key === STORAGE_KEYS.SETTINGS) {
-        await indexedDBHelpers.setSettings(cleanValue)
-      } else if (key === STORAGE_KEYS.FAVORITES) {
-        await indexedDBHelpers.setFavorites(cleanValue)
-      } else if (key === STORAGE_KEYS.GROUP_INDEX) {
-        // For group index, we need to handle this specially
-        logStorage('IDB_SET', key, cleanValue)
-      } else if (key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
-        // For individual groups, we need to update the entire groups collection
-        const groups = (await indexedDBHelpers.getAllGroups()) || []
-        const groupId = key.replace(STORAGE_KEYS.GROUP_PREFIX, '')
-        const existingIndex = groups.findIndex(g => g.id === groupId)
-
-        if (existingIndex !== -1) {
-          groups[existingIndex] = cleanValue
-        } else {
-          groups.push(cleanValue)
-        }
-
-        await indexedDBHelpers.setAllGroups(groups)
-      }
-
-      logStorage('IDB_SET', key, cleanValue)
-    } catch (error) {
-      logStorage('IDB_SET', key, undefined, error)
-      throw error
-    }
-  }
-
-  async remove(key: string): Promise<void> {
-    try {
-      const isAvailable = await indexedDBHelpers.isAvailable()
-      if (!isAvailable) return
-
-      if (key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
-        const groups = (await indexedDBHelpers.getAllGroups()) || []
-        const groupId = key.replace(STORAGE_KEYS.GROUP_PREFIX, '')
-        const filteredGroups = groups.filter(g => g.id !== groupId)
-        await indexedDBHelpers.setAllGroups(filteredGroups)
-      }
-
-      logStorage('IDB_REMOVE', key)
-    } catch (error) {
-      logStorage('IDB_REMOVE', key, undefined, error)
-    }
-  }
-}
-
 // --- New Storage Manager ---
 class NewStorageManager {
   private localStorage = new LocalStorageLayer()
   private sessionStorage = new SessionStorageLayer()
   private extensionStorage = new ExtensionStorageLayer()
-  private indexedDBStorage = new IndexedDBLayer()
 
   private writeTimers = new Map<string, NodeJS.Timeout>()
 
@@ -362,13 +279,6 @@ class NewStorageManager {
     value = await this.extensionStorage.get(key)
     if (value !== null && value !== undefined) {
       logStorage('MULTI_GET_SUCCESS', key, { source: 'extensionStorage', value })
-      return value
-    }
-
-    // Try IndexedDB as fallback
-    value = await this.indexedDBStorage.get(key)
-    if (value !== null && value !== undefined) {
-      logStorage('MULTI_GET_SUCCESS', key, { source: 'indexedDB', value })
       return value
     }
 
@@ -415,14 +325,6 @@ class NewStorageManager {
         }
       }, 500)
 
-      setTimeout(async () => {
-        try {
-          await this.indexedDBStorage.set(key, finalValue)
-        } catch (error) {
-          logStorage('MULTI_SET_INDEXED_FAILED', key, undefined, error)
-        }
-      }, 1000)
-
       logStorage('MULTI_SET_SUCCESS', key, finalValue)
     } catch (error) {
       logStorage('MULTI_SET_FAILED', key, undefined, error)
@@ -444,8 +346,7 @@ class NewStorageManager {
     await Promise.allSettled([
       this.localStorage.remove(key),
       this.sessionStorage.remove(key),
-      this.extensionStorage.remove(key),
-      this.indexedDBStorage.remove(key)
+      this.extensionStorage.remove(key)
     ])
   }
 
@@ -454,8 +355,7 @@ class NewStorageManager {
     const values = await Promise.allSettled([
       this.localStorage.get(key),
       this.sessionStorage.get(key),
-      this.extensionStorage.get(key),
-      this.indexedDBStorage.get(key)
+      this.extensionStorage.get(key)
     ])
 
     let newestValue = null

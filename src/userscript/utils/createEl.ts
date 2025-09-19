@@ -14,7 +14,8 @@ export function createEl<K extends keyof HTMLElementTagNameMap>(
     dataset?: Record<string, string>
     innerHTML?: string
     title?: string
-    alt?: string
+    alt?: string,
+    id?: string
   }
 ) {
   const el = document.createElement(tag)
@@ -37,6 +38,7 @@ export function createEl<K extends keyof HTMLElementTagNameMap>(
     if (opts.innerHTML) el.innerHTML = opts.innerHTML
     if (opts.title) el.title = opts.title
     if (opts.alt && 'alt' in el) (el as any).alt = opts.alt
+    if (opts.id) el.id = opts.id
   }
   return el
 }

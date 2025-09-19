@@ -1,4 +1,4 @@
-// logger removed: replaced by direct console usage in migration
+import { createEl } from './createEl'
 
 // Function to parse image filenames from markdown text
 function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
@@ -253,8 +253,8 @@ class ImageUploader {
   }
 
   private createProgressDialog(): HTMLElement {
-    const dialog = document.createElement('div')
-    dialog.style.cssText = `
+    const dialog = createEl('div', {
+      style: `
       position: fixed;
       top: 20px;
       right: 20px;
@@ -268,9 +268,10 @@ class ImageUploader {
       border: 1px solid #e5e7eb;
       overflow: hidden;
     `
+    })
 
-    const header = document.createElement('div')
-    header.style.cssText = `
+    const header = createEl('div', {
+      style: `
       padding: 16px 20px;
       background: #f9fafb;
       border-bottom: 1px solid #e5e7eb;
@@ -280,12 +281,13 @@ class ImageUploader {
       display: flex;
       justify-content: space-between;
       align-items: center;
-    `
-    header.textContent = '图片上传队列'
+    `,
+      text: '图片上传队列'
+    })
 
-    const closeButton = document.createElement('button')
-    closeButton.innerHTML = '✕'
-    closeButton.style.cssText = `
+    const closeButton = createEl('button', {
+      text: '✕',
+      style: `
       background: none;
       border: none;
       font-size: 16px;
@@ -295,6 +297,8 @@ class ImageUploader {
       border-radius: 4px;
       transition: background-color 0.2s;
     `
+    })
+
     closeButton.addEventListener('click', () => {
       this.hideProgressDialog()
     })
@@ -307,13 +311,14 @@ class ImageUploader {
 
     header.appendChild(closeButton)
 
-    const content = document.createElement('div')
-    content.className = 'upload-queue-content'
-    content.style.cssText = `
-      max-height: 320px;
-      overflow-y: auto;
-      padding: 12px;
-    `
+    const content = createEl('div', {
+      class: 'upload-queue-content',
+      style: `
+        max-height: 320px;
+        overflow-y: auto;
+        padding: 12px;
+      `
+    })
 
     dialog.appendChild(header)
     dialog.appendChild(content)
@@ -328,21 +333,22 @@ class ImageUploader {
     content.innerHTML = ''
 
     if (allItems.length === 0) {
-      const emptyState = document.createElement('div')
-      emptyState.style.cssText = `
+      const emptyState = createEl('div', {
+        style: `
         text-align: center;
         color: #6b7280;
         font-size: 14px;
         padding: 20px;
-      `
-      emptyState.textContent = '暂无上传任务'
+      `,
+        text: '暂无上传任务'
+      })
       content.appendChild(emptyState)
       return
     }
 
     allItems.forEach(item => {
-      const itemEl = document.createElement('div')
-      itemEl.style.cssText = `
+      const itemEl = createEl('div', {
+        style: `
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -352,56 +358,62 @@ class ImageUploader {
         border-radius: 6px;
         border-left: 4px solid ${this.getStatusColor(item.status)};
       `
+      })
 
-      const leftSide = document.createElement('div')
-      leftSide.style.cssText = `
+      const leftSide = createEl('div', {
+        style: `
         flex: 1;
         min-width: 0;
       `
+      })
 
-      const fileName = document.createElement('div')
-      fileName.style.cssText = `
+      const fileName = createEl('div', {
+        style: `
         font-size: 13px;
         font-weight: 500;
         color: #374151;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-      `
-      fileName.textContent = item.file.name
+      `,
+        text: item.file.name
+      })
 
-      const status = document.createElement('div')
-      status.style.cssText = `
+      const status = createEl('div', {
+        style: `
         font-size: 12px;
         color: #6b7280;
         margin-top: 2px;
       `
+      })
       status.textContent = this.getStatusText(item)
 
       leftSide.appendChild(fileName)
       leftSide.appendChild(status)
 
-      const rightSide = document.createElement('div')
-      rightSide.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      `
+      const rightSide = createEl('div', {
+        style: `
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        `
+      })
 
       // Add retry button for failed items
       if (item.status === 'failed' && item.retryCount < this.maxRetries) {
-        const retryButton = document.createElement('button')
-        retryButton.innerHTML = '🔄'
-        retryButton.style.cssText = `
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 14px;
-          padding: 4px;
-          border-radius: 4px;
-          transition: background-color 0.2s;
-        `
-        retryButton.title = '重试上传'
+        const retryButton = createEl('button', {
+          text: '🔄',
+          style: `
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+          `,
+          ti: '重试上传'
+        })
         retryButton.addEventListener('click', () => {
           this.retryFailedItem(item.id)
         })
@@ -414,11 +426,10 @@ class ImageUploader {
         rightSide.appendChild(retryButton)
       }
 
-      const statusIcon = document.createElement('div')
-      statusIcon.style.cssText = `
-        font-size: 16px;
-      `
-      statusIcon.textContent = this.getStatusIcon(item.status)
+      const statusIcon = createEl('div', {
+        style: 'font-size: 16px;',
+        text: this.getStatusIcon(item.status)
+      })
 
       rightSide.appendChild(statusIcon)
 
@@ -586,9 +597,9 @@ interface DragDropElements {
 }
 
 function createDragDropUploadPanel(): DragDropElements {
-  const panel = document.createElement('div')
-  panel.className = 'drag-drop-upload-panel'
-  panel.style.cssText = `
+  const panel = createEl('div', {
+    class: 'drag-drop-upload-panel',
+    style: `
     position: fixed;
     top: 50%;
     left: 50%;
@@ -601,9 +612,10 @@ function createDragDropUploadPanel(): DragDropElements {
     z-index: 10000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   `
+  })
 
-  const overlay = document.createElement('div')
-  overlay.style.cssText = `
+  const overlay = createEl('div', {
+    style: `
     position: fixed;
     top: 0;
     left: 0;
@@ -612,27 +624,30 @@ function createDragDropUploadPanel(): DragDropElements {
     background: rgba(0, 0, 0, 0.5);
     z-index: 9999;
   `
+  })
 
-  const header = document.createElement('div')
-  header.style.cssText = `
-    padding: 20px 24px 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  `
+  const header = createEl('div', {
+    style: `
+      padding: 20px 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    `
+  })
 
-  const title = document.createElement('h3')
-  title.textContent = '上传图片'
-  title.style.cssText = `
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #111827;
-  `
+  const title = createEl('h2', {
+    text: '上传图片',
+    style: `
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+    `
+  })
 
-  const closeButton = document.createElement('button')
-  closeButton.innerHTML = '✕'
-  closeButton.style.cssText = `
+  const closeButton = createEl('button', {
+    in: '✕',
+    style: `
     background: none;
     border: none;
     font-size: 20px;
@@ -642,6 +657,7 @@ function createDragDropUploadPanel(): DragDropElements {
     border-radius: 4px;
     transition: background-color 0.2s;
   `
+  })
   closeButton.addEventListener('mouseenter', () => {
     closeButton.style.backgroundColor = '#f3f4f6'
   })
@@ -652,23 +668,26 @@ function createDragDropUploadPanel(): DragDropElements {
   header.appendChild(title)
   header.appendChild(closeButton)
 
-  const content = document.createElement('div')
-  content.style.cssText = `
-    padding: 24px;
-  `
+  const content = createEl('div', {
+    class: 'upload-panel-content',
+    style: `
+      padding: 24px;
+    `
+  })
 
   // Create tabs
-  const tabContainer = document.createElement('div')
-  tabContainer.style.cssText = `
-    display: flex;
-    border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 20px;
-  `
+  const tabContainer = createEl('div', {
+    style: `
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 20px;
+    `
+  })
 
-  const regularTab = document.createElement('button')
-  regularTab.textContent = '常规上传'
-  regularTab.style.cssText = `
-    flex: 1;
+  const regularTab = createEl('button', {
+    text: '常规上传',
+    style: `
+      flex: 1;
     padding: 10px 20px;
     background: none;
     border: none;
@@ -678,11 +697,12 @@ function createDragDropUploadPanel(): DragDropElements {
     cursor: pointer;
     transition: all 0.2s;
   `
+  })
 
-  const diffTab = document.createElement('button')
-  diffTab.textContent = '差分上传'
-  diffTab.style.cssText = `
-    flex: 1;
+  const diffTab = createEl('button', {
+    text: '差分上传',
+    style: `
+      flex: 1;
     padding: 10px 20px;
     background: none;
     border: none;
@@ -692,21 +712,23 @@ function createDragDropUploadPanel(): DragDropElements {
     cursor: pointer;
     transition: all 0.2s;
   `
+  })
 
   tabContainer.appendChild(regularTab)
   tabContainer.appendChild(diffTab)
 
   // Regular upload panel
-  const regularPanel = document.createElement('div')
-  regularPanel.className = 'regular-upload-panel'
-  regularPanel.style.cssText = `
+  const regularPanel = createEl('div', {
+    class: 'regular-upload-panel',
+    style: `
     display: block;
   `
+  }) as HTMLElement
 
-  const dropZone = document.createElement('div')
-  dropZone.className = 'drop-zone'
-  dropZone.style.cssText = `
-    border: 2px dashed #d1d5db;
+  const dropZone = createEl('div', {
+    class: 'drop-zone',
+    style: `
+      border: 2px dashed #d1d5db;
     border-radius: 8px;
     padding: 40px 20px;
     text-align: center;
@@ -714,16 +736,18 @@ function createDragDropUploadPanel(): DragDropElements {
     transition: all 0.2s;
     cursor: pointer;
   `
+  })
 
-  const dropIcon = document.createElement('div')
-  dropIcon.innerHTML = '📁'
-  dropIcon.style.cssText = `
-    font-size: 48px;
-    margin-bottom: 16px;
-  `
+  const dropIcon = createEl('div', {
+    in: '📁',
+    style: `
+      font-size: 48px;
+      margin-bottom: 16px;
+    `
+  })
 
-  const dropText = document.createElement('div')
-  dropText.innerHTML = `
+  const dropText = createEl('div', {
+    in: `
     <div style="font-size: 16px; font-weight: 500; color: #374151; margin-bottom: 8px;">
       拖拽图片到此处，或点击选择文件
     </div>
@@ -731,45 +755,51 @@ function createDragDropUploadPanel(): DragDropElements {
       支持 JPG、PNG、GIF 等格式，最大 10MB
     </div>
   `
+  })
 
   dropZone.appendChild(dropIcon)
   dropZone.appendChild(dropText)
 
-  const fileInput = document.createElement('input')
-  fileInput.type = 'file'
-  fileInput.accept = 'image/*'
-  fileInput.multiple = true
-  fileInput.style.display = 'none'
+  const fileInput = createEl('input', {
+    type: 'file',
+    accept: 'image/*',
+    multiple: true,
+    style: `
+      display: none;
+    `
+  })
 
   regularPanel.appendChild(dropZone)
   regularPanel.appendChild(fileInput)
 
   // Diff upload panel
-  const diffPanel = document.createElement('div')
-  diffPanel.className = 'diff-upload-panel'
-  diffPanel.style.cssText = `
+  const diffPanel = createEl('div', {
+    class: 'diff-upload-panel',
+    style: `
     display: none;
   `
+  }) as HTMLElement
 
-  const markdownTextarea = document.createElement('textarea')
-  markdownTextarea.placeholder = '请粘贴包含图片的markdown文本...'
-  markdownTextarea.style.cssText = `
-    width: 100%;
-    height: 120px;
-    padding: 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 14px;
-    resize: vertical;
-    margin-bottom: 12px;
-    box-sizing: border-box;
-  `
+  const markdownTextarea = createEl('textarea', {
+    ph: '请粘贴包含图片的markdown文本...',
+    style: `
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 14px;
+      resize: vertical;
+      margin-bottom: 12px;
+      box-sizing: border-box;
+    `
+  })
 
-  const diffDropZone = document.createElement('div')
-  diffDropZone.className = 'diff-drop-zone'
-  diffDropZone.style.cssText = `
-    border: 2px dashed #d1d5db;
+  const diffDropZone = createEl('div', {
+    class: 'diff-drop-zone',
+    style: `
+      border: 2px dashed #d1d5db;
     border-radius: 8px;
     padding: 30px 20px;
     text-align: center;
@@ -778,16 +808,18 @@ function createDragDropUploadPanel(): DragDropElements {
     cursor: pointer;
     margin-bottom: 12px;
   `
+  }) as HTMLElement
 
-  const diffDropIcon = document.createElement('div')
-  diffDropIcon.innerHTML = '📋'
-  diffDropIcon.style.cssText = `
-    font-size: 36px;
-    margin-bottom: 12px;
-  `
+  const diffDropIcon = createEl('div', {
+    in: '📋',
+    style: `
+      font-size: 36px;
+      margin-bottom: 12px;
+    `
+  })
 
-  const diffDropText = document.createElement('div')
-  diffDropText.innerHTML = `
+  const diffDropText = createEl('div', {
+    in: `
     <div style="font-size: 16px; font-weight: 500; color: #374151; margin-bottom: 8px;">
       选择图片进行差分上传
     </div>
@@ -795,15 +827,19 @@ function createDragDropUploadPanel(): DragDropElements {
       只会上传不在上方markdown文本中的图片
     </div>
   `
+  })
 
   diffDropZone.appendChild(diffDropIcon)
   diffDropZone.appendChild(diffDropText)
 
-  const diffFileInput = document.createElement('input')
-  diffFileInput.type = 'file'
-  diffFileInput.accept = 'image/*'
-  diffFileInput.multiple = true
-  diffFileInput.style.display = 'none'
+  const diffFileInput = createEl('input', {
+    type: 'file',
+    accept: 'image/*',
+    multiple: true,
+    style: `
+      display: none;
+    `
+  })
 
   diffPanel.appendChild(markdownTextarea)
   diffPanel.appendChild(diffDropZone)

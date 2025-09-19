@@ -1,3 +1,4 @@
+import { createEl } from './createEl'
 // Lightweight toast notification utility for content scripts
 export function notify(
   message: string,
@@ -7,27 +8,35 @@ export function notify(
   try {
     let container = document.getElementById('emoji-ext-toast-container') as HTMLElement | null
     if (!container) {
-      container = document.createElement('div')
-      container.id = 'emoji-ext-toast-container'
-      container.style.position = 'fixed'
-      container.style.right = '12px'
-      container.style.bottom = '12px'
-      container.style.zIndex = '2147483647'
-      container.style.display = 'flex'
-      container.style.flexDirection = 'column'
-      container.style.gap = '8px'
+      container = createEl('div', {
+        id: 'emoji-ext-toast-container',
+        style: `
+          position: fixed;
+          right: 12px;
+          bottom: 12px;
+          z-index: 2147483647;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        `
+      }) as HTMLElement
       document.body.appendChild(container)
     }
 
-    const el = document.createElement('div')
-    el.textContent = message
-    el.style.padding = '8px 12px'
-    el.style.borderRadius = '6px'
-    el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)'
-    el.style.color = '#ffffff'
-    el.style.fontSize = '13px'
-    el.style.maxWidth = '320px'
-    el.style.wordBreak = 'break-word'
+    const el = createEl('div', {
+      text: message,
+      style: `
+        padding: 8px 12px;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        color: #ffffff;
+        font-size: 13px;
+        max-width: 320px;
+        word-break: break-word;
+        opacity: 0;
+        transform: translateY(20px);
+      `
+    }) as HTMLElement
 
     if (type === 'success') el.style.background = '#16a34a'
     else if (type === 'error') el.style.background = '#dc2626'
