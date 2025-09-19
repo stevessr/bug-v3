@@ -34,6 +34,7 @@ export interface AppSettings {
   // New settings for linux.do injection and X.com selectors
   enableLinuxDoInjection?: boolean // 控制是否在linux.do注入脚本
   enableXcomExtraSelectors?: boolean // 控制是否在X.com启用额外选择器
+  enableCalloutSuggestions?: boolean // 在编辑器中启用 callout suggestions（'[' 触发）
   // Optional API key fields for third-party services
   tenorApiKey?: string
   theme?: 'system' | 'light' | 'dark'
@@ -124,6 +125,7 @@ const defaultSettings: AppSettings = {
   enableHoverPreview: true, // 默认启用悬浮预览
   enableLinuxDoInjection: true, // 默认启用linux.do注入
   enableXcomExtraSelectors: false, // 默认不启用X.com额外选择器
+  enableCalloutSuggestions: true, // 默认启用 callout suggestions
   customColorScheme: 'default', // 默认配色方案
   customPrimaryColor: '#1890ff' // 默认主色（Ant Design 蓝色）
 }
