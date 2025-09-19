@@ -57,6 +57,39 @@ export default defineConfig(({ mode }) => {
               code = code.replace(/export\s*\{[\s\S]*?\};?\s*$/m, '')
               // Ensure file ends cleanly (keep existing IIFE if present)
               chunk.code = code
+
+              // Additionally: inline any other emitted chunks that are content-related
+              // (for example `js/content2.js`) into the main `js/content.js` file.
+              // This avoids leaving a small facade that imports a separate chunk,
+              // which can cause runtime ESM import issues in content scripts.
+              try {
+                for (const [otherName, otherChunk] of Object.entries(bundle)) {
+                  if (otherName === fileName) continue
+                  if (typeof otherName !== 'string') continue
+                  // target only other JS chunks that start with the content prefix
+                  if (!otherName.startsWith('js/content')) continue
+                  // Ensure this is a chunk with code
+                  // @ts-ignore
+                  if (!otherChunk || otherChunk.type !== 'chunk' || !otherChunk.code) continue
+
+                  // Prepend the other chunk's code into the main content chunk.
+                  // If the main chunk only contained an import to this other chunk
+                  // (common facade behavior), replacing with the other's code yields
+                  // a single self-contained file.
+                  // Remove imports that reference this other chunk (e.g. import "./content2.js";
+                  // or import x from './content2.js') — handle variants without spaces too.
+                  const otherBase = (otherName.split('/').pop && otherName.split('/').pop()) || otherName
+                  const importRegex = new RegExp(`import\\s*(?:['"]\\.\\/${otherBase}['"]|(?:.+?\\s+from\\s+['"]\\.\\/${otherBase}['"]))\\;?\\s*`, 'g')
+                  // @ts-ignore
+                  chunk.code = String(otherChunk.code) + '\n' + String(chunk.code).replace(importRegex, '')
+
+                  // Remove the separate chunk from the bundle so it isn't emitted.
+                  delete bundle[otherName]
+                }
+              } catch (e) {
+                // don't let inlining failures break the build
+                console.warn('[strip-content-exports] failed to inline secondary content chunks', e)
+              }
             }
           }
         }
@@ -130,6 +163,8 @@ export default defineConfig(({ mode }) => {
           },
           chunkFileNames: 'js/[name].js',
           assetFileNames: 'assets/[name].[ext]',
+          // Inline dynamic imports into the same output file where possible
+          inlineDynamicImports: true,
           // Disable manualChunks splitting to avoid creating a shared "background.js"
           // chunk that other entrypoints (like content) would import from. Keeping
           // modules inlined per-entry ensures content scripts do not contain
@@ -177,12 +212,27 @@ export default defineConfig(({ mode }) => {
               return false
             }
 
-            // Previously we had complex heuristics here to split shared
-            // modules, but that produced a separate background chunk which
-            // content.js then imported via ESM. For extension content
-            // scripts we must avoid producing top-level imports between
-            // extension files. Returning undefined disables manual chunking
-            // and lets Rollup inline modules per-entry.
+            // Previously we returned undefined to let Rollup decide, but that
+            // still resulted in small shared chunks (e.g. createEl.js) that
+            // ended up as separate files imported by the content script.
+            // For the content bundle we want modules that are part of
+            // `src/content` (or reachable only from the content entry) to
+            // be emitted inside the `content` chunk to avoid creating a
+            // standalone chunk that the content script would import at
+            // runtime (some hosts disallow top-level ESM imports in content
+            // scripts). Return the explicit chunk name 'content' in those
+            // cases; otherwise leave chunking to Rollup.
+            try {
+              const nid = normalize(id)
+              if (!nid) return undefined
+              // If the module itself lives under src/content, group into content
+              if (nid.includes('/src/content/')) return 'content'
+              // If the module is reachable (transitively) from the content entry,
+              // also group it into the content chunk so it is inlined there.
+              if (isImportedByContent(id)) return 'content'
+            } catch (e) {
+              // ignore and fall through to default behavior
+            }
             return undefined
           }
         },
