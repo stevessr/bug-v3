@@ -12,12 +12,21 @@ A modern emoji extension built with Vue 3, Vite, and TypeScript featuring a prog
 - 🔧 **Comprehensive Logging**: Detailed debugging and error tracking with compile-time toggles
 - ☁️ **Cloud Sync**: Chrome sync storage support for configuration backup
 - ⚡ **Build Optimization**: Compile-time flags for logging and IndexedDB to reduce bundle size
+- 🦊 **Firefox Compatible**: Full Firefox extension support with cross-browser API compatibility
+
+## Browser Support
+
+This extension supports both **Chrome** and **Firefox** with dedicated build configurations:
+
+- **Chrome**: Uses Manifest v3 with service workers
+- **Firefox**: Uses Manifest v3 with Firefox-specific optimizations
+- **Cross-Browser**: Unified API layer for consistent behavior
 
 ## Build Configurations
 
 This project supports compile-time flags to optimize builds for different environments:
 
-### Available Build Commands
+### Chrome Extension
 
 ```bash
 # Development build (all features enabled)
@@ -28,6 +37,20 @@ npm run build
 
 # Production build without logging (smaller bundle size)
 npm run build:prod
+```
+
+### Firefox Extension
+
+```bash
+# Firefox development build
+npm run build:firefox
+
+# Firefox production build
+npm run build:firefox:prod
+
+# Package Firefox extension for distribution
+npm run package:firefox
+```
 
 # Build without IndexedDB support (for restricted environments)
 npm run build:no-indexeddb

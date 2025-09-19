@@ -120,30 +120,14 @@ build
 # Vite build output
 dist
 dist-ssr
+dist-firefox
 *.js.map
 *.css.map
-
-# Optic changelog files
-.optic
-
-# Vitest coverage directory
-coverage/
-.vitest-coverage
-
-# Microsoft VSCode data
-.vscode
-
-# JetBrains IDEs
-.idea
-
-# Eslint/Prettier/Stylelint etc.
-.eslintcache
-.prettierignore
-.stylelintcache
 
 # Release artifacts
 releases/
 *.zip
+*.xpi
 
 # Test files
 test-*.html
