@@ -3,7 +3,7 @@ import { cachedState } from '../data/state'
 
 import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
 import { notify } from './notify'
-import { createEl } from './createEl'
+import { createE } from './createEl'
 import { showImageUploadDialog } from './uploader'
 
 // Different toolbar selectors for different contexts
@@ -81,13 +81,13 @@ async function injectMobilePicker() {
 
   let modalContainer = document.querySelector('.modal-container')
   if (!modalContainer) {
-    modalContainer = createEl('div', { class: 'modal-container' })
+    modalContainer = createE('div', { class: 'modal-container' })
     document.body.appendChild(modalContainer)
   }
 
   modalContainer.innerHTML = '' // Clear any previous content
 
-  const backdrop = createEl('div', { class: 'd-modal__backdrop' })
+  const backdrop = createE('div', { class: 'd-modal__backdrop' })
   backdrop.addEventListener('click', () => {
     modalContainer.remove()
     currentPicker = null
@@ -215,11 +215,11 @@ function insertIntoEditor(text: string) {
 }
 
 function createQuickInsertMenu(): HTMLElement {
-  const menu = createEl('div', {
+  const menu = createE('div', {
     class: 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
   })
-  const inner = createEl('div', { class: 'fk-d-menu__inner-content' })
-  const list = createEl('ul', { class: 'dropdown-menu' })
+  const inner = createE('div', { class: 'fk-d-menu__inner-content' })
+  const list = createE('ul', { class: 'dropdown-menu' })
 
   const ICONS: Record<
     string,
@@ -305,8 +305,8 @@ function createQuickInsertMenu(): HTMLElement {
     const displayLabel =
       item.length > 0 ? item.charAt(0).toUpperCase() + item.slice(1).toLowerCase() : item
 
-    const li = createEl('li', { class: 'dropdown-menu__item' })
-    const btn = createEl('button', {
+    const li = createE('li', { class: 'dropdown-menu__item' })
+    const btn = createE('button', {
       class: 'btn btn-icon-text',
       type: 'button',
       ti: displayLabel
@@ -318,10 +318,10 @@ function createQuickInsertMenu(): HTMLElement {
       insertIntoEditor(`>[!${item}]+\n`)
     })
 
-    const emojiSpan = createEl('span', { text: ICONS[item]?.icon || '✳️' })
+    const emojiSpan = createE('span', { text: ICONS[item]?.icon || '✳️' })
     emojiSpan.style.marginRight = '6px'
-    const labelWrap = createEl('span', { class: 'd-button-label' })
-    const labelText = createEl('span', { class: 'd-button-label__text', text: displayLabel })
+    const labelWrap = createE('span', { class: 'd-button-label' })
+    const labelText = createE('span', { class: 'd-button-label__text', text: displayLabel })
     if (ICONS[item]?.color) {
       btn.style.cssText += 'background:' + ICONS[item]?.color
     }
@@ -331,7 +331,7 @@ function createQuickInsertMenu(): HTMLElement {
     labelWrap.appendChild(labelText)
     const svgHtml = ICONS[item]?.svg || ''
     if (svgHtml) {
-      const svgSpan = createEl('span', {
+      const svgSpan = createE('span', {
         class: 'd-button-label__svg',
         in: svgHtml,
         style: 'margin-left:6px;display:inline-flex;align-items:center'
@@ -352,29 +352,29 @@ function createQuickInsertMenu(): HTMLElement {
 function createUploadMenu(isMobile: boolean = false): HTMLElement {
   // Build a popout-style menu matching referense/popout.html structure
   // If isMobile is true, return a modal-style container compatible with mobile popout
-  const menu = createEl('div', {
+  const menu = createE('div', {
     class: 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded',
     attrs: { 'data-identifier': 'toolbar-menu__options', role: 'dialog' }
   })
 
-  const inner = createEl('div', { class: 'fk-d-menu__inner-content' })
+  const inner = createE('div', { class: 'fk-d-menu__inner-content' })
 
-  const list = createEl('ul', { class: 'dropdown-menu' })
+  const list = createE('ul', { class: 'dropdown-menu' })
 
   function createListItem(titleText: string, emoji: string, onClick: () => void) {
-    const li = createEl('li', { class: 'dropdown-menu__item' })
+    const li = createE('li', { class: 'dropdown-menu__item' })
 
-    const btn = createEl('button', {
+    const btn = createE('button', {
       class: 'btn btn-icon-text',
       type: 'button',
       ti: titleText
     }) as HTMLButtonElement
     btn.addEventListener('click', onClick)
 
-    const emojiSpan = createEl('span', { text: emoji })
+    const emojiSpan = createE('span', { text: emoji })
 
-    const labelWrap = createEl('span', { class: 'd-button-label' })
-    const labelText = createEl('span', { class: 'd-button-label__text', text: titleText })
+    const labelWrap = createE('span', { class: 'd-button-label' })
+    const labelText = createE('span', { class: 'd-button-label__text', text: titleText })
 
     labelWrap.appendChild(labelText)
     btn.appendChild(emojiSpan)
@@ -444,29 +444,29 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     if (existing) return
 
     // Build modal container for iframe
-    const modal = createEl('div', {
+    const modal = createE('div', {
       class: 'emoji-extension-passwall-iframe modal-container',
       style:
         'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:100000'
     })
 
-    const backdrop = createEl('div', {
+    const backdrop = createE('div', {
       style: 'position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5)'
     })
 
-    const frameWrap = createEl('div', {
+    const frameWrap = createE('div', {
       style:
         'position:relative;width:80%;max-width:900px;height:80%;max-height:700px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3)'
     })
 
-    const closeBtn = createEl('button', {
+    const closeBtn = createE('button', {
       class: 'btn btn-sm',
       type: 'button',
       text: '关闭',
       style: 'position:absolute;top:8px;right:8px;z-index:1001'
     }) as HTMLButtonElement
 
-    const iframe = createEl('iframe', {
+    const iframe = createE('iframe', {
       src: 'https://linux.do/challenge',
       style: 'width:100%;height:100%;border:0',
       attrs: { sandbox: 'allow-scripts allow-forms allow-same-origin allow-popups' }
@@ -522,9 +522,9 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
 
   if (isMobile) {
     // Build modal wrapper like referense/popoutmobile.html
-    const modalContainer = createEl('div', { class: 'modal-container' })
+    const modalContainer = createE('div', { class: 'modal-container' })
 
-    const modal = createEl('div', {
+    const modal = createE('div', {
       class:
         'modal d-modal fk-d-menu-modal toolbar-menu__options-content toolbar-popup-menu-options',
       attrs: {
@@ -536,12 +536,12 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
       }
     })
 
-    const modalContainerInner = createEl('div', { class: 'd-modal__container' })
+    const modalContainerInner = createE('div', { class: 'd-modal__container' })
 
-    const modalBody = createEl('div', { class: 'd-modal__body' })
+    const modalBody = createE('div', { class: 'd-modal__body' })
     modalBody.tabIndex = -1
 
-    const grip = createEl('div', { class: 'fk-d-menu-modal__grip' })
+    const grip = createE('div', { class: 'fk-d-menu-modal__grip' })
     grip.setAttribute('aria-hidden', 'true')
 
     // move our existing menu (which contains inner -> ul.dropdown-menu) into modalBody
@@ -552,7 +552,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     modalContainerInner.appendChild(modalBody)
     modal.appendChild(modalContainerInner)
 
-    const backdrop = createEl('div', { class: 'd-modal__backdrop' })
+    const backdrop = createE('div', { class: 'd-modal__backdrop' })
     backdrop.addEventListener('click', () => {
       // remove modal container when backdrop clicked
       if (modalContainer.parentElement) modalContainer.parentElement.removeChild(modalContainer)
@@ -579,7 +579,7 @@ export function injectButton(toolbar: Element) {
   const isChatComposer = toolbar.classList.contains('chat-composer__inner-container')
 
   // Create emoji button
-  const emojiButton = createEl('button', {
+  const emojiButton = createE('button', {
     class: 'btn no-text btn-icon toolbar__button nacho-emoji-picker-button emoji-extension-button',
     ti: '表情包',
     type: 'button',
@@ -620,7 +620,7 @@ export function injectButton(toolbar: Element) {
   })
 
   // Create image upload button
-  const uploadButton = createEl('button', {
+  const uploadButton = createE('button', {
     class: 'btn no-text btn-icon toolbar__button image-upload-button',
     ti: '上传图片',
     type: 'button',
@@ -654,7 +654,7 @@ export function injectButton(toolbar: Element) {
       // Ensure portal container exists
       let portal = document.querySelector('#d-menu-portals') as HTMLElement | null
       if (!portal) {
-        portal = createEl('div', { id: 'd-menu-portals' }) as HTMLDivElement
+        portal = createE('div', { id: 'd-menu-portals' }) as HTMLDivElement
         document.body.appendChild(portal)
       }
 
@@ -719,7 +719,7 @@ export function injectButton(toolbar: Element) {
   })
 
   // Create quick-insert button
-  const quickInsertButton = createEl('button', {
+  const quickInsertButton = createE('button', {
     class: 'btn no-text btn-icon toolbar__button quick-insert-button',
     ti: '快捷输入',
     type: 'button',
@@ -748,7 +748,7 @@ export function injectButton(toolbar: Element) {
     } else {
       let portal = document.querySelector('#d-menu-portals') as HTMLElement | null
       if (!portal) {
-        portal = createEl('div', { id: 'd-menu-portals' }) as HTMLDivElement
+        portal = createE('div', { id: 'd-menu-portals' }) as HTMLDivElement
         document.body.appendChild(portal)
       }
       portal.appendChild(menu)

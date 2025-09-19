@@ -1,6 +1,6 @@
 import type { AddEmojiButtonData } from '../types/main'
+import { createE } from '../../utils/createEl'
 
-import { createEl } from './element-factory'
 import { extractNameFromUrl } from './picture'
 
 declare const chrome: any
@@ -27,21 +27,21 @@ export function extractEmojiDataFromLightbox(lightboxWrapper: Element): AddEmoji
 }
 
 export function createBatchParseButton(cookedElement: Element): HTMLElement {
-  const button = createEl('button', {
-    className: 'emoji-batch-parse-button',
-    style: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '6px',
-      background: 'linear-gradient(135deg,#f59e0b,#d97706)',
-      color: '#fff',
-      borderRadius: '8px',
-      padding: '8px 12px',
-      margin: '10px 0',
-      fontWeight: '600'
-    },
-    innerHTML: '一键解析并添加所有图片',
-    title: '解析当前内容中的所有图片并添加到未分组表情',
+  const button = createE('button', {
+    class: 'emoji-batch-parse-button',
+    style: `
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg,#f59e0b,#d97706);
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-weight: 600;
+    `,
+    in: '一键解析并添加所有图片',
+    ti: '解析当前内容中的所有图片并添加到未分组表情',
     on: {
       click: async (e: Event) => {
         e.preventDefault()

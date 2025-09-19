@@ -1,6 +1,6 @@
 import { isImageUrl } from '../../utils/isimage'
+import { createE } from '../../utils/createEl'
 
-import { createEl } from './element-factory'
 import { ensureDefaultIfEmpty, cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
 
@@ -8,8 +8,8 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   ensureDefaultIfEmpty()
   const groupsToUse = cachedState.emojiGroups
 
-  const picker = createEl('div', {
-    className: 'fk-d-menu -animated -expanded',
+  const picker = createE('div', {
+    class: 'fk-d-menu -animated -expanded',
     attrs: {
       'data-identifier': 'emoji-picker',
       role: 'dialog'
@@ -17,38 +17,38 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     style: 'max-width: 400px; visibility: visible; z-index: 999999;'
   })
 
-  const innerContent = createEl('div', {
-    className: 'fk-d-menu__inner-content'
+  const innerContent = createE('div', {
+    class: 'fk-d-menu__inner-content'
   })
-  const emojiPickerDiv = createEl('div', {
-    className: 'emoji-picker'
+  const emojiPickerDiv = createE('div', {
+    class: 'emoji-picker'
   })
 
-  const filterContainer = createEl('div', {
-    className: 'emoji-picker__filter-container'
+  const filterContainer = createE('div', {
+    class: 'emoji-picker__filter-container'
   })
-  const filterDiv = createEl('div', {
-    className: 'emoji-picker__filter filter-input-container'
+  const filterDiv = createE('div', {
+    class: 'emoji-picker__filter filter-input-container'
   })
-  const searchInput = createEl('input', {
-    className: 'filter-input',
-    placeholder: '按表情符号名称搜索…',
+  const searchInput = createE('input', {
+    class: 'filter-input',
+    ph: '按表情符号名称搜索…',
     type: 'text'
   })
   filterDiv.appendChild(searchInput)
   filterContainer.appendChild(filterDiv)
 
-  const content = createEl('div', {
-    className: 'emoji-picker__content'
+  const content = createE('div', {
+    class: 'emoji-picker__content'
   })
-  const sectionsNav = createEl('div', {
-    className: 'emoji-picker__sections-nav'
+  const sectionsNav = createE('div', {
+    class: 'emoji-picker__sections-nav'
   })
-  const scrollableContent = createEl('div', {
-    className: 'emoji-picker__scrollable-content'
+  const scrollableContent = createE('div', {
+    class: 'emoji-picker__scrollable-content'
   })
-  const sections = createEl('div', {
-    className: 'emoji-picker__sections'
+  const sections = createE('div', {
+    class: 'emoji-picker__sections'
   })
   sections.setAttribute('role', 'button')
 
@@ -65,15 +65,15 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
 
     const iconVal = group.icon || '📁'
     if (isImageUrl(iconVal)) {
-      const img = createEl('img', {
+      const img = createE('img', {
         src: iconVal,
         alt: group.name || '',
-        className: 'emoji-group-icon',
-        style: {
-          width: '18px',
-          height: '18px',
-          objectFit: 'contain'
-        }
+        class: 'emoji-group-icon',
+        style: `
+          width: 18px;
+          height: 18px;
+          object-fit: contain;
+        `
       }) as HTMLImageElement
       navButton.appendChild(img)
     } else {
@@ -90,8 +90,8 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     })
     sectionsNav.appendChild(navButton)
 
-    const section = createEl('div', {
-      className: 'emoji-picker__section',
+    const section = createE('div', {
+      class: 'emoji-picker__section',
       attrs: {
         'data-section': group.id,
         role: 'region',
@@ -99,30 +99,32 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
       }
     })
 
-    const titleContainer = createEl('div', {
-      className: 'emoji-picker__section-title-container'
+    const titleContainer = createE('div', {
+      class: 'emoji-picker__section-title-container'
     })
-    const title = createEl('h2', {
-      className: 'emoji-picker__section-title'
+    const title = createE('h2', {
+      class: 'emoji-picker__section-title'
     })
     title.textContent = group.name
     titleContainer.appendChild(title)
 
-    const sectionEmojis = createEl('div', {
-      className: 'emoji-picker__section-emojis'
+    const sectionEmojis = createE('div', {
+      class: 'emoji-picker__section-emojis'
     })
 
     let added = 0
     group.emojis.forEach((emoji: any) => {
       if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return
-      const img = createEl('img', {
-        style: { cursor: 'pointer' },
-        width: '32',
-        height: '32',
-        className: 'emoji',
+      const img = createE('img', {
+        style: `
+        cursor: pointer;
+         width: 32px; 
+         height: 32px;
+          object-fit: contain;`,
+        class: 'emoji',
         src: emoji.url,
         alt: emoji.name,
-        title: `:${emoji.name}:`,
+        ti: `:${emoji.name}:`,
         attrs: {
           tabindex: '0',
           'data-emoji': emoji.name,
@@ -181,10 +183,10 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     })
 
     if (added === 0) {
-      const msg = createEl('div', {
-        className: 'emoji-picker__no-emojis-message',
+      const msg = createE('div', {
+        class: 'emoji-picker__no-emojis-message',
         attrs: { role: 'note', 'aria-live': 'polite' },
-        textContent: `${group.name} 组暂无有效表情`,
+        text: `${group.name} 组暂无有效表情`,
         style: 'padding: 20px; text-align: center; color: #999;'
       })
       sectionEmojis.appendChild(msg)
@@ -224,50 +226,49 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
 
   function ensurePreview() {
     if (_previewEl) return _previewEl
-    const el = createEl('div', {
-      className: 'emoji-desktop-hover-preview',
-      style: {
-        position: 'fixed',
-        pointerEvents: 'none',
-        zIndex: '999999',
-        padding: '6px',
-        borderRadius: '6px',
-        // neutral styling: transparent background, inherit text color, light border — avoid colored accents
-        background: 'transparent',
-        color: 'inherit',
-        border: '1px solid rgba(0,0,0,0.08)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '6px',
-        maxWidth: '360px',
-        maxHeight: '360px',
-        overflow: 'hidden'
-      }
+    const el = createE('div', {
+      class: 'emoji-desktop-hover-preview',
+      style: `
+        position: fixed;
+        pointer-events: none;
+        z-index: 999999;
+        padding: 6px;
+        border-radius: 6px;
+        background: transparent;
+        color: inherit;
+        border: 1px solid rgba(0,0,0,0.08);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        max-width: 360px;
+        max-height: 360px;
+        overflow: hidden;
+      `
     }) as HTMLDivElement
 
-    const img = createEl('img', {
-      className: 'emoji-desktop-hover-preview-img',
-      style: {
-        maxWidth: '320px',
-        maxHeight: '320px',
-        display: 'block',
-        borderRadius: '4px',
-        objectFit: 'contain'
-      }
+    const img = createE('img', {
+      class: 'emoji-desktop-hover-preview-img',
+      style: `
+        max-width: 320px;
+        max-height: 320px;
+        display: block;
+        border-radius: 4px;
+        object-fit: contain;
+      `
     }) as HTMLImageElement
     el.appendChild(img)
 
-    const label = createEl('div', {
-      className: 'emoji-desktop-hover-preview-label',
-      style: {
-        fontSize: '12px',
-        lineHeight: '1',
-        maxWidth: '320px',
-        whiteSpace: 'nowrap',
-        textOverflow: 'ellipsis',
-        overflow: 'hidden'
-      }
+    const label = createE('div', {
+      class: 'emoji-desktop-hover-preview-label',
+      style: `
+        font-size: 12px;
+        line-height: 1;
+        max-width: 320px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      `
     }) as HTMLDivElement
     el.appendChild(label)
 
