@@ -319,7 +319,7 @@ function createQuickInsertMenu(): HTMLElement {
       // remove menu and insert into editor
       if (menu.parentElement) menu.parentElement.removeChild(menu)
       // Insert wrapped form: [!key]
-      insertIntoEditor(`>[!${item}]\n`)
+      insertIntoEditor(`>[!${item}]+\n`)
     })
 
     const emojiSpan = document.createElement('span')

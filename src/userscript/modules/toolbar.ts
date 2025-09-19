@@ -181,7 +181,7 @@ function createQuickInsertMenu(): HTMLElement {
     }) as HTMLButtonElement
     btn.addEventListener('click', () => {
       if (menu.parentElement) menu.parentElement.removeChild(menu)
-      insertIntoEditor(`>[!${key}]\n`)
+      insertIntoEditor(`>[!${key}]+\n`)
     })
 
     const emojiSpan = createEl('span', {
