@@ -189,12 +189,12 @@ function applyCompletion(textarea: HTMLTextAreaElement, selectedKeyword: string)
   const text = textarea.value
   const selectionStart = textarea.selectionStart || 0
   const textBeforeCursor = text.substring(0, selectionStart)
-  // 支持英文或全角触发符的定位（仅用于查找），但插入时统一使用半角 '[!'
-  let triggerIndex = textBeforeCursor.lastIndexOf('[!')
-  if (triggerIndex === -1) triggerIndex = textBeforeCursor.lastIndexOf('［！')
-  if (triggerIndex === -1) triggerIndex = textBeforeCursor.lastIndexOf('【！')
+  // 查找最近的左括号触发符（半角或全角），插入时统一使用半角 '[!'
+  let triggerIndex = textBeforeCursor.lastIndexOf('[')
+  if (triggerIndex === -1) triggerIndex = textBeforeCursor.lastIndexOf('［')
+  if (triggerIndex === -1) triggerIndex = textBeforeCursor.lastIndexOf('【')
   if (triggerIndex === -1) return
-  const newText = `[!${selectedKeyword}] `
+  const newText = `[!${selectedKeyword}]`
   const textAfter = text.substring(selectionStart)
   textarea.value = textBeforeCursor.substring(0, triggerIndex) + newText + textAfter
   const newCursorPos = triggerIndex + newText.length
@@ -290,8 +290,8 @@ function handleInput(event: Event) {
   const text = textarea.value
   const selectionStart = textarea.selectionStart || 0
   const textBeforeCursor = text.substring(0, selectionStart)
-  // 支持半角/全角触发符：半角 '['、全角 '［' 或 '【'，以及 '!' 或 '！'
-  const match = textBeforeCursor.match(/(?:\[|［|【])[!！]([a-z]*)$/i)
+  // 支持半角/全角触发符：当输入左括号（半角 '['、全角 '［' 或 '【'）即可触发，'!' 可选
+  const match = textBeforeCursor.match(/(?:\[|［|【])(?:!|！)?([a-z]*)$/i)
   if (match) {
     const keyword = match[1].toLowerCase()
     const filtered = calloutKeywords.filter(k => k.startsWith(keyword))
