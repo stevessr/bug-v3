@@ -51,14 +51,7 @@ export default defineConfig(({ mode }) => {
                   .includes('/src/content/'))
 
             if (looksLikeContent) {
-              // @ts-ignore
-              let code = chunk.code
-              // Remove a trailing export block like: export { logger as l };
-              code = code.replace(/export\s*\{[\s\S]*?\};?\s*$/m, '')
-              // Ensure file ends cleanly (keep existing IIFE if present)
-              chunk.code = code
-
-              // Additionally: inline any other emitted chunks that are content-related
+              // First: inline any other emitted chunks that are content-related
               // (for example `js/content2.js`) into the main `js/content.js` file.
               // This avoids leaving a small facade that imports a separate chunk,
               // which can cause runtime ESM import issues in content scripts.
@@ -73,11 +66,6 @@ export default defineConfig(({ mode }) => {
                   if (!otherChunk || otherChunk.type !== 'chunk' || !otherChunk.code) continue
 
                   // Prepend the other chunk's code into the main content chunk.
-                  // If the main chunk only contained an import to this other chunk
-                  // (common facade behavior), replacing with the other's code yields
-                  // a single self-contained file.
-                  // Remove imports that reference this other chunk (e.g. import "./content2.js";
-                  // or import x from './content2.js') — handle variants without spaces too.
                   const otherBase = (otherName.split('/').pop && otherName.split('/').pop()) || otherName
                   const importRegex = new RegExp(`import\\s*(?:['"]\\.\\/${otherBase}['"]|(?:.+?\\s+from\\s+['"]\\.\\/${otherBase}['"]))\\;?\\s*`, 'g')
                   // @ts-ignore
@@ -89,6 +77,25 @@ export default defineConfig(({ mode }) => {
               } catch (e) {
                 // don't let inlining failures break the build
                 console.warn('[strip-content-exports] failed to inline secondary content chunks', e)
+              }
+
+              // After inlining, strip any trailing export block (Rollup may leave a small
+              // export shim like `export { e as t }` at the end of the chunk). Remove it
+              // and wrap the whole chunk in an IIFE to ensure the final file is a plain
+              // script that won't contain top-level ESM syntax.
+              try {
+                // @ts-ignore
+                let code = String(chunk.code || '')
+                code = code.replace(/export\s*\{[\s\S]*?\};?\s*$/m, '')
+                // If not already wrapped as an IIFE, wrap to avoid leaking exports
+                const alreadyIIFE = /^\s*\(function\s*\(|^\s*\(\(function\s*\(/.test(code)
+                if (!alreadyIIFE) {
+                  code = `(function(){\n${code}\n})();`
+                }
+                // @ts-ignore
+                chunk.code = code
+              } catch (e) {
+                console.warn('[strip-content-exports] failed to finalize content chunk', e)
               }
             }
           }
