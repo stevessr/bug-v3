@@ -149,7 +149,7 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
         src: emoji.url,
         alt: emoji.name,
         class: 'emoji',
-        style:`
+        style: `
           width: 32px,
           height: 32px,
           object-fit: contain;

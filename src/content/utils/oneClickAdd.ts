@@ -11,6 +11,15 @@ const cssAnimation = `
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+  .fk-d-menu-modal.emoji-picker-content .emoji-picker {
+  {
+    height: auto;
+    width: auto;
+  }
+  .emoji-picker .emoji {
+    width: 20%;
+    height: 20%;
+}
 `
 
 export function injectCSSAnimation() {
