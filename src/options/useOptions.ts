@@ -254,6 +254,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableXcomExtraSelectors: value })
   }
 
+  const updateEnableCalloutSuggestions = (value: boolean) => {
+    emojiStore.updateSettings({ enableCalloutSuggestions: value })
+  }
+
   const updateTheme = (theme: 'system' | 'light' | 'dark') => {
     emojiStore.updateSettings({ theme })
     localStorage.setItem('theme', theme)
@@ -779,6 +783,7 @@ export default function useOptions() {
     updateForceMobileMode,
     updateEnableLinuxDoInjection,
     updateEnableXcomExtraSelectors,
+    updateEnableCalloutSuggestions,
     updateTheme,
     updateCustomPrimaryColor,
     updateCustomColorScheme,
