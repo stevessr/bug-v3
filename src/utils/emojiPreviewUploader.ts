@@ -1,6 +1,6 @@
 // Independent uploader for ungrouped emoji previews to linux.do
 // This is a copy of the front-end upload functionality to maintain code independence
-import { createE } from '../content/utils/createEl'
+import { createElement } from './creteEle'
 
 interface EmojiUploadResponse {
   id: number
@@ -197,7 +197,7 @@ class EmojiPreviewUploader {
   }
 
   private createProgressDialog(): HTMLElement {
-    const dialog = createE('div', {
+    const dialog = createElement('div', {
       style: `
       position: fixed;
       top: 20px;
@@ -214,7 +214,7 @@ class EmojiPreviewUploader {
     `
     }) as HTMLElement
 
-    const header = createE('div', {
+    const header = createElement('div', {
       style: `
       padding: 16px 20px;
       background: #f9fafb;
@@ -229,7 +229,7 @@ class EmojiPreviewUploader {
       text: '表情预览上传队列'
     }) as HTMLElement
 
-    const closeButton = createE('button', {
+    const closeButton = createElement('button', {
       in: '✕',
       style: `
       background: none;
@@ -248,7 +248,7 @@ class EmojiPreviewUploader {
 
     header.appendChild(closeButton)
 
-    const content = createE('div', {
+    const content = createElement('div', {
       class: 'emoji-upload-queue-content',
       style: `
         max-height: 320px;
@@ -270,7 +270,7 @@ class EmojiPreviewUploader {
     content.innerHTML = ''
 
     if (allItems.length === 0) {
-      const emptyState = createE('div', {
+      const emptyState = createElement('div', {
         style: `
         text-align: center;
         color: #6b7280;
@@ -284,7 +284,7 @@ class EmojiPreviewUploader {
     }
 
     allItems.forEach(item => {
-      const itemEl = createE('div', {
+      const itemEl = createElement('div', {
         style: `
         display: flex;
         align-items: center;
@@ -297,14 +297,14 @@ class EmojiPreviewUploader {
       `
       })
 
-      const leftSide = createE('div', {
+      const leftSide = createElement('div', {
         style: `
         flex: 1;
         min-width: 0;
       `
       })
 
-      const fileName = createE('div', {
+      const fileName = createElement('div', {
         style: `
         font-size: 13px;
         font-weight: 500;
@@ -316,7 +316,7 @@ class EmojiPreviewUploader {
         text: item.emojiName || item.file.name
       })
 
-      const status = createE('div', {
+      const status = createElement('div', {
         style: `
         font-size: 12px;
         color: #6b7280;
@@ -328,7 +328,7 @@ class EmojiPreviewUploader {
       leftSide.appendChild(fileName)
       leftSide.appendChild(status)
 
-      const rightSide = createE('div', {
+      const rightSide = createElement('div', {
         style: `
         display: flex;
         align-items: center;
@@ -338,7 +338,7 @@ class EmojiPreviewUploader {
 
       // Add retry button for failed items
       if (item.status === 'failed' && item.retryCount < this.maxRetries) {
-        const retryButton = createE('button', {
+        const retryButton = createElement('button', {
           in: '🔄',
           style: `
           background: none;
@@ -363,7 +363,7 @@ class EmojiPreviewUploader {
         rightSide.appendChild(retryButton)
       }
 
-      const statusIcon = createE('div', {
+      const statusIcon = createElement('div', {
         style: 'font-size: 16px;',
         text: this.getStatusIcon(item.status)
       })
