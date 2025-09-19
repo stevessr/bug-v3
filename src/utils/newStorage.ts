@@ -28,19 +28,11 @@ export enum StorageLevel {
   INDEXED_DB = 4 // Lowest priority/fallback
 }
 
-// --- Chrome API Helper ---
+// --- Browser API Helper ---
+import { getBrowserAPI } from './browserAPI'
+
 function getChromeAPI() {
-  if (typeof chrome !== 'undefined' && chrome.storage) {
-    return chrome
-  }
-  // Fallback for environments where `chrome` is not immediately available
-  if (typeof window !== 'undefined' && (window as any).chrome) {
-    return (window as any).chrome
-  }
-  if (typeof globalThis !== 'undefined' && (globalThis as any).chrome) {
-    return (globalThis as any).chrome
-  }
-  return null
+  return getBrowserAPI()
 }
 
 // --- Logging Helper ---
@@ -171,81 +163,56 @@ class SessionStorageLayer {
 
 class ExtensionStorageLayer {
   async get(key: string): Promise<any> {
-    const chromeAPI = getChromeAPI()
-    if (!chromeAPI?.storage?.local) {
-      logStorage('EXT_GET', key, { available: false, reason: 'Chrome Storage API not available' })
+    const browserAPI = getChromeAPI()
+    if (!browserAPI?.storage?.local) {
+      logStorage('EXT_GET', key, { available: false, reason: 'Browser Storage API not available' })
       return null
     }
 
-    return new Promise(resolve => {
-      try {
-        chromeAPI.storage.local.get({ [key]: null }, (result: any) => {
-          if (chromeAPI.runtime.lastError) {
-            logStorage('EXT_GET', key, undefined, chromeAPI.runtime.lastError)
-            resolve(null)
-          } else {
-            const value = result[key]
-            logStorage('EXT_GET', key, value)
-            resolve(value)
-          }
-        })
-      } catch (error) {
-        logStorage('EXT_GET', key, undefined, error)
-        resolve(null)
-      }
-    })
+    try {
+      const result = await browserAPI.storage.local.get({ [key]: null })
+      const value = result[key]
+      logStorage('EXT_GET', key, value)
+      return value
+    } catch (error) {
+      logStorage('EXT_GET', key, undefined, error)
+      return null
+    }
   }
 
   async set(key: string, value: any): Promise<void> {
-    const chromeAPI = getChromeAPI()
-    if (!chromeAPI?.storage?.local) {
-      logStorage('EXT_SET', key, { available: false, reason: 'Chrome Storage API not available' })
+    const browserAPI = getChromeAPI()
+    if (!browserAPI?.storage?.local) {
+      logStorage('EXT_SET', key, { available: false, reason: 'Browser Storage API not available' })
       return
     }
 
-    return new Promise((resolve, reject) => {
-      try {
-        chromeAPI.storage.local.set({ [key]: value }, () => {
-          if (chromeAPI.runtime.lastError) {
-            logStorage('EXT_SET', key, undefined, chromeAPI.runtime.lastError)
-            reject(chromeAPI.runtime.lastError)
-          } else {
-            logStorage('EXT_SET', key, value)
-            resolve()
-          }
-        })
-      } catch (error) {
-        logStorage('EXT_SET', key, undefined, error)
-        reject(error)
-      }
-    })
+    try {
+      await browserAPI.storage.local.set({ [key]: value })
+      logStorage('EXT_SET', key, value)
+    } catch (error) {
+      logStorage('EXT_SET', key, undefined, error)
+      throw error
+    }
   }
 
   async remove(key: string): Promise<void> {
-    const chromeAPI = getChromeAPI()
-    if (!chromeAPI?.storage?.local) {
+    const browserAPI = getChromeAPI()
+    if (!browserAPI?.storage?.local) {
       logStorage('EXT_REMOVE', key, {
         available: false,
-        reason: 'Chrome Storage API not available'
+        reason: 'Browser Storage API not available'
       })
       return
     }
 
-    return new Promise(resolve => {
-      try {
-        chromeAPI.storage.local.remove([key], () => {
-          if (chromeAPI.runtime.lastError) {
-            logStorage('EXT_REMOVE', key, undefined, chromeAPI.runtime.lastError)
-          } else {
-            logStorage('EXT_REMOVE', key)
-          }
-          resolve()
-        })
-      } catch (error) {
-        logStorage('EXT_REMOVE', key, undefined, error)
-        resolve()
-      }
-    })
+    try {
+      await browserAPI.storage.local.remove(key)
+      logStorage('EXT_REMOVE', key)
+    } catch (error) {
+      logStorage('EXT_REMOVE', key, undefined, error)
+      throw error
+    }
   }
 }
 

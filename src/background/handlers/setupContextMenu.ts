@@ -1,10 +1,11 @@
 import { getChromeAPI } from '../utils/main.ts'
 
 export function setupContextMenu() {
-  const chromeAPI = getChromeAPI()
-  if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onInstalled && chromeAPI.contextMenus) {
-    chromeAPI.runtime.onInstalled.addListener(() => {
-      chrome.storage.local.get('appSettings', result => {
+  const browserAPI = getChromeAPI()
+  if (browserAPI && browserAPI.runtime && browserAPI.runtime.onInstalled && browserAPI.contextMenus) {
+    browserAPI.runtime.onInstalled.addListener(async () => {
+      try {
+        const result = await browserAPI.storage.local.get('appSettings')
         // 解析新的存储格式来获取 forceMobileMode
         let forceMobileMode = false
         if (result.appSettings) {
@@ -17,13 +18,13 @@ export function setupContextMenu() {
           }
         }
 
-        if (chromeAPI.contextMenus && chromeAPI.contextMenus.create) {
-          chromeAPI.contextMenus.create({
+        if (browserAPI.contextMenus && browserAPI.contextMenus.create) {
+          browserAPI.contextMenus.create({
             id: 'open-emoji-options',
             title: '表情管理',
             contexts: ['page']
           })
-          chromeAPI.contextMenus.create({
+          browserAPI.contextMenus.create({
             id: 'force-mobile-mode',
             title: '强制使用移动模式',
             type: 'checkbox',
@@ -31,22 +32,25 @@ export function setupContextMenu() {
             contexts: ['page']
           })
         }
-      })
+      } catch (error) {
+        console.error('Error setting up context menu:', error)
+      }
     })
 
-    if (chromeAPI.contextMenus.onClicked) {
-      chromeAPI.contextMenus.onClicked.addListener((info: any, _tab: any) => {
+    if (browserAPI.contextMenus.onClicked) {
+      browserAPI.contextMenus.onClicked.addListener(async (info: any, _tab: any) => {
         if (
           info.menuItemId === 'open-emoji-options' &&
-          chromeAPI.runtime &&
-          chromeAPI.runtime.openOptionsPage
+          browserAPI.runtime &&
+          browserAPI.runtime.openOptionsPage
         ) {
-          chromeAPI.runtime.openOptionsPage()
+          browserAPI.runtime.openOptionsPage()
         } else if (info.menuItemId === 'force-mobile-mode') {
           const newCheckedState = info.checked
 
-          // 获取当前设置并更新 forceMobileMode
-          chrome.storage.local.get('appSettings', result => {
+          try {
+            // 获取当前设置并更新 forceMobileMode
+            const result = await browserAPI.storage.local.get('appSettings')
             let currentSettings = {}
             if (result.appSettings) {
               if (result.appSettings.data && typeof result.appSettings.data === 'object') {
@@ -69,8 +73,10 @@ export function setupContextMenu() {
               timestamp: timestamp
             }
 
-            chrome.storage.local.set({ appSettings: appSettingsData })
-          })
+            await browserAPI.storage.local.set({ appSettings: appSettingsData })
+          } catch (error) {
+            console.error('Error updating force mobile mode setting:', error)
+          }
         }
       })
     }

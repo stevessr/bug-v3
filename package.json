@@ -10,6 +10,8 @@
     "build:prod": "node scripts/build.js build:prod",
     "build:no-indexeddb": "node scripts/build.js build:no-indexeddb",
     "build:minimal": "node scripts/build.js build:minimal",
+    "build:firefox": "ENABLE_LOGGING=true ENABLE_INDEXEDDB=true NODE_ENV=production npx vite build --config vite.config.firefox.ts",
+    "build:firefox:prod": "ENABLE_LOGGING=false ENABLE_INDEXEDDB=true NODE_ENV=production npx vite build --config vite.config.firefox.ts",
     "build:userscript": "node scripts/build.js build:userscript",
     "build:userscript:oneline": "USERSCRIPT_EMBED_JSON_ONELINE=true node scripts/build.js build:userscript",
     "build:userscript:remote": "node scripts/build.js build:userscript remote",

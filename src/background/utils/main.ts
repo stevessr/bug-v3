@@ -1,10 +1,5 @@
 // Utilities for background scripts
+import { getBrowserAPI } from '../../utils/browserAPI'
 
-export const getChromeAPI = () => {
-  try {
-    return (globalThis as any).chrome || (self as any).chrome
-  } catch (e) {
-    console.error('Chrome API not available:', e)
-    return null
-  }
-}
+// Legacy compatibility export
+export const getChromeAPI = getBrowserAPI
