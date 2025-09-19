@@ -39,7 +39,10 @@ export function initOneClickAdd() {
   injectCSSAnimation()
 
   try {
-    initDiscourse()
+    // initDiscourse is now async, but we don't need to wait for it
+    initDiscourse().catch(e => {
+      console.error('[OneClickAdd] initDiscourse failed', e)
+    })
   } catch (e) {
     console.error('[OneClickAdd] initDiscourse failed', e)
   }

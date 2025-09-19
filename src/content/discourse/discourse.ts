@@ -5,7 +5,9 @@ import { isDiscoursePage } from './utils/page-detection'
 import { setupDiscourseUploadHandler } from './utils/upload-handler'
 import { initCalloutSuggestions } from './callout-suggestions'
 
-export function initDiscourse() {
+import { requestSettingFromBackground } from '../utils/requestSetting'
+
+export async function initDiscourse() {
   try {
     if (!isDiscoursePage()) {
       console.log('[DiscourseOneClick] skipping init: not a Discourse page')
@@ -17,8 +19,27 @@ export function initDiscourse() {
     observeMagnificPopup()
     observeCookedContent()
     setupDiscourseUploadHandler()
+
     // 集成 callout suggestions（在 textarea 输入 `[!` 时展示候选）
-    initCalloutSuggestions()
+    // 检查是否启用了 callout suggestions
+    try {
+      const enableCalloutSuggestions = await requestSettingFromBackground(
+        'enableCalloutSuggestions'
+      )
+      // 默认启用，只有明确设置为 false 时才禁用
+      if (enableCalloutSuggestions !== false) {
+        initCalloutSuggestions()
+      } else {
+        console.log('[DiscourseOneClick] callout suggestions disabled by user setting')
+      }
+    } catch (e) {
+      console.warn(
+        '[DiscourseOneClick] failed to get enableCalloutSuggestions setting, defaulting to enabled',
+        e
+      )
+      initCalloutSuggestions()
+    }
+
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages
   } catch (e) {
     console.error('[DiscourseOneClick] init failed', e)
