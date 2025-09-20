@@ -6,7 +6,8 @@ import {
   saveDataToLocalStorage,
   exportUserscriptData,
   importUserscriptData,
-  syncFromManager
+  syncFromManager,
+  loadDataFromLocalStorage
 } from '../userscript-storage'
 
 // Create popup editor for emoji editing
@@ -471,11 +472,19 @@ export function openManagementInterface() {
       placeholder: '粘贴 JSON 后点击确认',
       style: 'width:100%;height:200px;margin-top:8px;'
     }) as HTMLTextAreaElement
+    // file input for importing from a local file
+    const fileInput = createEl('input', {
+      type: 'file',
+      attrs: { accept: '.json,application/json' },
+      style: 'display:block;margin-bottom:8px;'
+    }) as HTMLInputElement
+
     const ok = createEl('button', {
       text: '确认导入',
       style: 'padding:6px 8px;margin-top:6px;'
     }) as HTMLButtonElement
     const container = createEl('div') as HTMLDivElement
+    container.appendChild(fileInput)
     container.appendChild(ta)
     container.appendChild(ok)
     const importModal = createEl('div', {
@@ -489,14 +498,37 @@ export function openManagementInterface() {
     box.appendChild(container)
     importModal.appendChild(box)
     document.body.appendChild(importModal)
+    // when a file is selected, read it and put content into textarea
+    fileInput.addEventListener('change', (ev: Event) => {
+      const input = ev.target as HTMLInputElement
+      if (!input.files || input.files.length === 0) return
+      const file = input.files[0]
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const text = String(reader.result || '')
+          ta.value = text
+        } catch (e) {
+          alert('读取文件失败：' + e)
+        }
+      }
+      reader.onerror = () => {
+        alert('读取文件失败')
+      }
+      reader.readAsText(file)
+    })
+
     ok.addEventListener('click', () => {
       try {
         const json = ta.value.trim()
         if (!json) return
         const okdata = importUserscriptData(json)
         if (okdata) {
-          alert('导入成功，请保存以持久化')
-          loadDataFromLocalStorage()
+          // reload in-memory state from storage so UI updates immediately
+          const data = loadDataFromLocalStorage()
+          userscriptState.emojiGroups = data.emojiGroups || []
+          userscriptState.settings = data.settings || userscriptState.settings
+          alert('导入成功，已加载配置（请保存以持久化）')
           renderGroups()
           renderSelectedGroup()
         } else {
@@ -522,8 +554,11 @@ export function openManagementInterface() {
     try {
       const ok = syncFromManager()
       if (ok) {
+        // reload in-memory state from storage so UI updates immediately
+        const data = loadDataFromLocalStorage()
+        userscriptState.emojiGroups = data.emojiGroups || []
+        userscriptState.settings = data.settings || userscriptState.settings
         alert('同步成功，已导入管理器数据')
-        loadDataFromLocalStorage()
         renderGroups()
         renderSelectedGroup()
       } else {
@@ -550,9 +585,4 @@ export function openManagementInterface() {
   }
 }
 
-// Helper function to reload data (import)
-function loadDataFromLocalStorage() {
-  // This should be imported but for now we'll just reference the state
-  // In a real implementation, this would trigger a reload from storage
-  console.log('Data reload requested')
-}
+// No-op helper removed: we now call the storage loader directly and update userscriptState
