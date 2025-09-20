@@ -25,8 +25,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       // 编译期标志定义
-      __ENABLE_LOGGING__: enableLogging,
-      __ENABLE_INDEXEDDB__: enableIndexedDB
+      __ENABLE_LOGGING__: enableLogging
     },
     plugins: [
       // default emoji groups are now loaded at runtime from public assets
@@ -71,8 +70,9 @@ export default defineConfig(({ mode }) => {
         input: {
           popup: fileURLToPath(new URL('popup.html', import.meta.url)),
           options: fileURLToPath(new URL('options.html', import.meta.url)),
-          tenor: fileURLToPath(new URL('src/tenor/main.ts', import.meta.url)),
-          waline: fileURLToPath(new URL('src/waline/main.ts', import.meta.url)),
+          // tenor and waline are no longer separate JS entry points; they are used
+          // as components inside the Options page instead. Keep static HTML files
+          // in the output via the emit-static-html plugin above.
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
         },

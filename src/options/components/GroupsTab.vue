@@ -625,7 +625,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
           </div>
         </div>
         <!-- Batch update size modal (自动从 URL 解析尺寸并显示当前图片预览) -->
-        <a-modal v-model:visible="batchModalVisible" title="批量更新尺寸" :footer="null">
+        <a-modal v-model:open="batchModalVisible" title="批量更新尺寸" :footer="null">
           <div class="space-y-4">
             <div class="flex items-center gap-4">
               <div

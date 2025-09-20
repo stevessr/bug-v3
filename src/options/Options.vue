@@ -39,6 +39,8 @@ const antdThemeConfig = computed(() => {
   return generateAntdTheme(currentThemeMode.value, primaryColor)
 })
 
+
+
 // 监听主题变化事件
 const handleThemeChange = (event: CustomEvent) => {
   currentThemeMode.value = event.detail.mode
@@ -143,6 +145,56 @@ const {
   editingEmojiIndex,
   handleEmojiEdit
 } = options
+
+// --- Antd menu: placed after options destructuring so we can reference activeTab/tabs ---
+// Antd menu state for top navigation
+const menuSelectedKeys = ref<string[]>([(typeof activeTab === 'string' ? activeTab : (activeTab && (activeTab as any).value)) || 'settings'])
+
+// Build menu items from tabs so labels stay in sync
+const menuItems = computed(() => {
+  return tabs.map((tab: any) => {
+    return {
+      key: tab.id,
+      label: tab.label,
+      title: tab.label
+    }
+  })
+})
+
+// keep menuSelectedKeys and activeTab in sync
+watch(
+  () => (typeof activeTab === 'string' ? activeTab : (activeTab as any).value),
+  (val: any) => {
+    try {
+      const key = typeof val === 'string' ? val : val?.value
+      if (key) menuSelectedKeys.value = [key]
+    } catch (_e) {}
+  },
+  { immediate: true }
+)
+
+watch(menuSelectedKeys, v => {
+  if (v && v[0]) {
+    try {
+      if (typeof activeTab === 'object' && 'value' in activeTab) {
+        ;(activeTab as any).value = v[0]
+      }
+      // else: activeTab is expected to be a ref from composable; do nothing otherwise
+    } catch (_e) {}
+  }
+})
+
+const handleMenuSelect = (info: any) => {
+  const key = info && info.key ? String(info.key) : ''
+  if (key) {
+    try {
+      if (typeof activeTab === 'object' && 'value' in activeTab) {
+        ;(activeTab as any).value = key
+      }
+      // else: activeTab is expected to be a ref from composable; do nothing otherwise
+    } catch (_e) {}
+  }
+}
 
 const onExportModalClose = () => {
   // delegate to composable to cleanup previews and hide modal
@@ -263,21 +315,13 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
       <!-- Navigation Tabs -->
       <nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex space-x-8">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              class="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
-              :class="[
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-white dark:hover:text-gray-300 dark:hover:border-gray-600'
-              ]"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
+          <a-menu
+            v-model:selectedKeys="menuSelectedKeys"
+            mode="horizontal"
+            :items="menuItems"
+            class="bg-transparent"
+            @select="handleMenuSelect"
+          />
         </div>
       </nav>
 

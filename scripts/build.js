@@ -8,47 +8,35 @@ import path from 'path'
 const configs = {
   dev: {
     ENABLE_LOGGING: 'true',
-    ENABLE_INDEXEDDB: 'true',
     NODE_ENV: 'development'
   },
 
   build: {
     ENABLE_LOGGING: 'true',
-    ENABLE_INDEXEDDB: 'true',
     NODE_ENV: 'production'
   },
 
   'build:prod': {
     ENABLE_LOGGING: 'false',
-    ENABLE_INDEXEDDB: 'true',
-    NODE_ENV: 'production'
-  },
-  'build:no-indexeddb': {
-    ENABLE_LOGGING: 'true',
-    ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production'
   },
   'build:minimal': {
     ENABLE_LOGGING: 'false',
-    ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production'
   },
   'build:userscript': {
     ENABLE_LOGGING: 'true',
-    ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production',
     BUILD_MINIFIED: 'false'
   },
   'build:userscript:min': {
     ENABLE_LOGGING: 'true',
-    ENABLE_INDEXEDDB: 'false',
     NODE_ENV: 'production',
     BUILD_MINIFIED: 'true'
   },
   // 新增：仅编译、不混淆（调试用）
   'build:debug': {
     ENABLE_LOGGING: 'true',
-    ENABLE_INDEXEDDB: 'true',
     NODE_ENV: 'production',
     BUILD_MINIFIED: 'false'
   }
