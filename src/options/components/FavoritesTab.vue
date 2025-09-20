@@ -33,7 +33,7 @@ const favoritesGroup = computed(() => {
           <div
             v-for="(emoji, idx) in favoritesGroup.emojis"
             :key="`fav-${emoji.id || idx}`"
-            class="emoji-item relative"
+            class="emoji-item relative group"
           >
             <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
               <img
@@ -56,25 +56,28 @@ const favoritesGroup = computed(() => {
             >
               ⭐
             </div>
-            <div class="absolute top-1 right-1 flex gap-1">
-              <a-button
-                @click="$emit('edit', emoji, 'favorites', idx)"
-                title="编辑"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-gray-700 rounded hover:bg-opacity-100"
-              >
-                编辑
-              </a-button>
-              <a-popconfirm title="确认移除此表情？" @confirm="$emit('remove', 'favorites', idx)">
-                <template #icon>
-                  <QuestionCircleOutlined style="color: red" />
-                </template>
+            <!-- Actions: hidden by default, shown on hover below the image -->
+            <div class="mt-2 flex justify-center items-center">
+              <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex gap-2">
                 <a-button
-                  title="移除"
-                  class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-gray-700 rounded hover:bg-opacity-100"
+                  @click="$emit('edit', emoji, 'favorites', idx)"
+                  title="编辑"
+                  class="text-xs px-2 py-0.5 bg-white bg-opacity-90 dark:bg-gray-700 rounded hover:bg-opacity-100"
                 >
-                  移除
+                  编辑
                 </a-button>
-              </a-popconfirm>
+                <a-popconfirm title="确认移除此表情？" @confirm="$emit('remove', 'favorites', idx)">
+                  <template #icon>
+                    <QuestionCircleOutlined style="color: red" />
+                  </template>
+                  <a-button
+                    title="移除"
+                    class="text-xs px-2 py-0.5 bg-white bg-opacity-90 dark:bg-gray-700 rounded hover:bg-opacity-100"
+                  >
+                    移除
+                  </a-button>
+                </a-popconfirm>
+              </div>
             </div>
             <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
               {{ emoji.name }}

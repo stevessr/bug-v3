@@ -28,16 +28,18 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
   </div>
 
   <div v-else-if="emojis.length > 0" class="p-0 overflow-y-auto">
+    <!-- Use CSS multi-column layout (masonry-like) so vertical gaps between
+         items are consistent while items flow top-to-bottom within columns. -->
     <div
-      class="grid emoji-grid overflow-y-auto"
-      :style="`grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); min-height: 300px;`"
+      class="emoji-grid overflow-y-auto"
+      :style="`column-count: ${gridColumns}; column-gap: 12px; min-height: 300px;`"
     >
       <a-button
         v-for="emoji in emojis"
         :key="emoji.id"
         @click="$emit('select', emoji)"
-        style="height: max-content"
-        class="relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2"
+        style="display: inline-block; width: 100%; margin: 0 0 12px; break-inside: avoid; height: auto;"
+        class="emoji-item relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2"
         :title="emoji.name"
       >
         <a-image
