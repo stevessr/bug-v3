@@ -124,9 +124,61 @@ function createManualButton(): HTMLElement {
   return button
 }
 
-// Create auto-read menu button (to inject into user menu)
-// Create auto-read menu <li> item to insert into the "其他服务" dropdown
-function createAutoReadMenuItem(): HTMLElement {
+// invokeAutoRead: shared logic to call page-level auto-read function
+async function invokeAutoRead(showNotify = false) {
+  try {
+    // Prefer page-level wrapper
+    // @ts-ignore
+    const fn = (window as any).callAutoReadRepliesV2 || (window as any).autoReadAllRepliesV2
+    if (fn && typeof fn === 'function') {
+      // call without arguments to let v2 discover anchors
+      await fn()
+    } else {
+      console.warn('[Emoji Extension] autoRead function not available on window')
+      if (showNotify) userscriptNotify('自动阅读功能当前不可用', 'error')
+    }
+  } catch (err) {
+    console.error('[Emoji Extension] auto-read menu invocation failed', err)
+    if (showNotify)
+      userscriptNotify(
+        '自动阅读调用失败: ' + (err && (err as any).message ? (err as any).message : String(err)),
+        'error'
+      )
+  }
+}
+
+// Create auto-read menu item. Variant controls output shape:
+// 'dropdown' -> <li><a class="submenu-link">...</a></li>
+// 'sidebar'  -> <li class="...sidebar-section-link-wrapper"><button ...>...</button></li>
+function createAutoReadMenuItem(variant: 'dropdown' | 'sidebar' = 'dropdown'): HTMLElement {
+  if (variant === 'dropdown') {
+    const li = createEl('li', {
+      className: 'submenu-item emoji-extension-auto-read'
+    }) as HTMLElement
+
+    const a = createEl('a', {
+      className: 'submenu-link',
+      attrs: {
+        href: '#',
+        title: '像插件一样自动阅读话题 (Auto-read topics)'
+      },
+      innerHTML: `
+      <svg class="fa d-icon d-icon-book svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#book"></use></svg>
+      自动阅读
+    `
+    }) as HTMLAnchorElement
+
+    a.addEventListener('click', async (e: Event) => {
+      e.preventDefault()
+      e.stopPropagation()
+      await invokeAutoRead(true)
+    })
+
+    li.appendChild(a)
+    return li
+  }
+
+  // sidebar variant
   const li = createEl('li', {
     // include both submenu-item and sidebar wrapper classes so the element
     // inherits styles in both dropdown and sidebar contexts
@@ -161,25 +213,7 @@ function createAutoReadMenuItem(): HTMLElement {
   btn.addEventListener('click', async (e: Event) => {
     e.preventDefault()
     e.stopPropagation()
-
-    try {
-      // Prefer page-level wrapper
-      // @ts-ignore
-      const fn = (window as any).callAutoReadRepliesV2 || (window as any).autoReadAllRepliesV2
-      if (fn && typeof fn === 'function') {
-        // call without arguments to let v2 discover anchors
-        await fn()
-      } else {
-        console.warn('[Emoji Extension] autoRead function not available on window')
-        userscriptNotify('自动阅读功能当前不可用', 'error')
-      }
-    } catch (err) {
-      console.error('[Emoji Extension] auto-read menu invocation failed', err)
-      userscriptNotify(
-        '自动阅读调用失败: ' + (err && (err as any).message ? (err as any).message : String(err)),
-        'error'
-      )
-    }
+    await invokeAutoRead(true)
   })
 
   li.appendChild(btn)
@@ -196,28 +230,67 @@ function userscriptNotify(
     let container = document.getElementById('emoji-ext-userscript-toast') as HTMLElement | null
     if (!container) {
       container = createEl('div', {
-        attrs: { id: 'emoji-ext-userscript-toast' },
+        attrs: { id: 'emoji-ext-userscript-toast', 'aria-live': 'polite' },
+        // use minimal cssText; we'll also set important properties directly to be safer
         style: `position: fixed; right: 12px; bottom: 12px; z-index: 2147483646; display:flex; flex-direction:column; gap:8px;`
       }) as HTMLElement
-      document.body.appendChild(container)
+
+      // Try to append to body; if not available, append to documentElement
+      try {
+        if (document.body) document.body.appendChild(container)
+        else document.documentElement.appendChild(container)
+      } catch (e) {
+        // last resort
+        document.documentElement.appendChild(container)
+      }
+
+      // Ensure container is visible and can receive pointer events
+      container.style.position = 'fixed'
+      container.style.right = '12px'
+      container.style.bottom = '12px'
+      container.style.zIndex = String(2147483646)
+      container.style.display = 'flex'
+      container.style.flexDirection = 'column'
+      container.style.gap = '8px'
+      container.style.pointerEvents = 'auto'
     }
 
     const el = createEl('div', {
       text: message,
-      style: `padding:8px 12px; border-radius:6px; color:#fff; font-size:13px; max-width:320px; word-break:break-word; opacity:1;`
+      style: `padding:8px 12px; border-radius:6px; color:#fff; font-size:13px; max-width:320px; word-break:break-word; opacity:0; transform: translateY(8px); transition: all 220ms ease;`
     }) as HTMLElement
 
     if (type === 'success') el.style.background = '#16a34a'
     else if (type === 'error') el.style.background = '#dc2626'
     else el.style.background = '#0369a1'
 
+    // make sure it's visible
     container.appendChild(el)
+    // force a paint then show (for transition)
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    el.offsetHeight
+    el.style.opacity = '1'
+    el.style.transform = 'translateY(0)'
+
     const id = setTimeout(() => {
-      el.remove()
+      try {
+        el.style.opacity = '0'
+        el.style.transform = 'translateY(8px)'
+        setTimeout(() => el.remove(), 250)
+      } catch (_e) {}
       clearTimeout(id)
     }, timeout)
+
+    // debug log so we can see in console whether notify was attempted
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[UserscriptNotify] shown:', message, 'type=', type)
+    } catch (_e) {}
+
     return () => {
-      el.remove()
+      try {
+        el.remove()
+      } catch (_e) {}
       clearTimeout(id)
     }
   } catch (_e) {
@@ -245,12 +318,10 @@ export function showFloatingButton() {
   console.log('[Emoji Extension Userscript] Floating manual injection button shown (bottom-right)')
 }
 
-async function injectIntoUserMenu(el: HTMLElement) {
+async function injectIntoUserMenu() {
   const SELECTOR_SIDEBAR = '#sidebar-section-content-community'
   const SELECTOR_OTHER_ANCHOR = 'a.menu-item[title="其他服务"], a.menu-item.vdm[title="其他服务"]'
   const SELECTOR_OTHER_DROPDOWN = '.d-header-dropdown .d-dropdown-menu'
-  const SELECTOR_TOP = '.menu-tabs-container .top-tabs'
-  const SELECTOR_CONTAINER = '.menu-tabs-container'
 
   for (;;) {
     // 0) Try to inject into the "其他服务" dropdown if present
@@ -258,6 +329,7 @@ async function injectIntoUserMenu(el: HTMLElement) {
     if (otherAnchor) {
       const dropdown = otherAnchor.querySelector(SELECTOR_OTHER_DROPDOWN) as HTMLElement | null
       if (dropdown) {
+        const el = createAutoReadMenuItem('dropdown')
         // If the element to insert is a <li>, append directly; otherwise wrap in li
         if (el.tagName.toLowerCase() === 'li') {
           dropdown.appendChild(el)
@@ -275,6 +347,7 @@ async function injectIntoUserMenu(el: HTMLElement) {
     // 1) Priority: try the sidebar ul with id sidebar-section-content-community
     const sidebar = document.querySelector(SELECTOR_SIDEBAR) as HTMLElement | null
     if (sidebar) {
+      const el = createAutoReadMenuItem('sidebar')
       // If the element to insert is a <li>, append directly; otherwise wrap in li
       if (el.tagName.toLowerCase() === 'li') {
         sidebar.appendChild(el)
@@ -290,24 +363,6 @@ async function injectIntoUserMenu(el: HTMLElement) {
       return
     }
 
-    // 2) Fallback: try top-tabs
-    const top = document.querySelector(SELECTOR_TOP) as HTMLElement | null
-    if (top) {
-      top.appendChild(el)
-      isButtonVisible = true
-      console.log('[Emoji Extension Userscript] Floating button injected into top-tabs')
-      return
-    }
-
-    // 3) Fallback: try container
-    const container = document.querySelector(SELECTOR_CONTAINER) as HTMLElement | null
-    if (container) {
-      container.appendChild(el)
-      isButtonVisible = true
-      console.log('[Emoji Extension Userscript] Floating button injected into menu-tabs-container')
-      return
-    }
-
     // wait 500ms then retry
     await new Promise(resolve => setTimeout(resolve, 500))
   }
@@ -316,10 +371,8 @@ async function injectIntoUserMenu(el: HTMLElement) {
 // Show auto-read button inside user menu (polls every 500ms until inserted)
 export async function showAutoReadInMenu() {
   injectStyles()
-  // Prefer inserting a menu-style item into the "其他服务" dropdown
-  const menuItem = createAutoReadMenuItem()
   try {
-    await injectIntoUserMenu(menuItem)
+    await injectIntoUserMenu()
     return
   } catch (e) {
     console.warn('[Emoji Extension Userscript] injecting menu item failed', e)
