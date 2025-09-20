@@ -76,6 +76,7 @@ const { groups, activeGroupId, setActive } = toRefs(props) as {
 .group-tabs-scroll {
   scrollbar-width: thin;
   scrollbar-color: #3b82f6 #f3f4f6;
+  min-height: fit-content;
 }
 :global(.dark) .group-tabs-scroll {
   scrollbar-color: #9ca3af #1f2937;

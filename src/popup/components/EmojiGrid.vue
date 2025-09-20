@@ -27,10 +27,10 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
     <span class="ml-2 text-sm text-gray-600 dark:text-white">加载中...</span>
   </div>
 
-  <div v-else-if="emojis.length > 0" class="p-0 overflow-hidden">
+  <div v-else-if="emojis.length > 0" class="p-0 overflow-y-auto">
     <div
       class="grid emoji-grid overflow-y-auto"
-      :style="`grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); max-height: 300px;`"
+      :style="`grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); min-height: 300px;`"
     >
       <a-button
         v-for="emoji in emojis"
@@ -40,11 +40,12 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
         class="relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2"
         :title="emoji.name"
       >
-        <img
+        <a-image
           :src="emoji.displayUrl || emoji.url"
           :alt="emoji.name"
           class="w-full h-full object-cover"
           loading="lazy"
+          :preview=false
         />
         <!-- Activity indicator for favorites -->
         <div

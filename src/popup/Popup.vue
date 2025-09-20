@@ -95,17 +95,19 @@ const setActiveHandler = (id: string) => {
         :setActive="setActiveHandler"
       />
 
-      <!-- Emoji Grid -->
-      <EmojiGrid
-        :emojis="emojiStore.filteredEmojis"
-        :isLoading="emojiStore.isLoading"
-        :favorites="emojiStore.favorites"
-        :gridColumns="emojiStore.settings.gridColumns"
-        :emptyMessage="emojiStore.searchQuery ? '没有找到匹配的表情' : '该分组还没有表情'"
-        :showAddButton="!emojiStore.searchQuery"
-        @select="selectEmoji"
-        @openOptions="openOptions"
-      />
+      <!-- Emoji Grid: 放在可伸缩的容器中以填充剩余高度 -->
+      <div class="popup-body">
+        <EmojiGrid
+          :emojis="emojiStore.filteredEmojis"
+          :isLoading="emojiStore.isLoading"
+          :favorites="emojiStore.favorites"
+          :gridColumns="emojiStore.settings.gridColumns"
+          :emptyMessage="emojiStore.searchQuery ? '没有找到匹配的表情' : '该分组还没有表情'"
+          :showAddButton="!emojiStore.searchQuery"
+          @select="selectEmoji"
+          @openOptions="openOptions"
+        />
+      </div>
 
       <!-- Copy Success Toast -->
       <div
@@ -122,30 +124,61 @@ const setActiveHandler = (id: string) => {
 /* Import TailwindCSS in popup */
 @import '../styles/main.css';
 
-/* Popup container base styles */
+/* Ensure page and app root fill the viewport so child 100% heights work */
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+/* Popup container base styles
+   - Use 100% width/height so the popup fills available space when larger than min sizes
+   - Keep reasonable min-width/min-height to prevent extremely small windows
+   - Allow scrolling if content overflows
+*/
 .popup-container {
   display: flex;
   flex-direction: column;
-  width: 320px;
-  min-width: 320px;
-  max-width: 320px;
-  height: 500px;
-  min-height: 400px;
-  max-height: 600px;
+  width: 100%;
+  /* use percentage height when parent provides it; fallback to viewport */
+  height: 100%;
+  min-height: 100vh;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 200px;
+  min-height: 200px;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+/* popup-body fills remaining space below header/tabs and enables internal scrolling */
+.popup-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto; /* allow grow and shrink */
+  min-height: 0; /* allow proper flex child scrolling */
   overflow: hidden;
 }
 
-/* Desktop styles - stable dimensions with minimum size enforcement */
+.popup-body > * {
+  /* child (EmojiGrid) should scroll internally */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Desktop: ensure reasonable minimums but still fill available area */
 @media (min-width: 768px) {
   .popup-container {
-    width: auto;
+    width: 100%;
+    height: 100%;
     min-width: 400px;
-    height: auto;
     min-height: 500px;
   }
 }
 
-/* Mobile-specific styles - minimum size with full screen fallback */
+/* Mobile: full-screen fallback, no forced large min-width on html/body */
 @media (max-width: 767px) {
   html,
   body {
@@ -160,8 +193,8 @@ const setActiveHandler = (id: string) => {
 
   .popup-container {
     width: 100%;
-    min-width: 200px;
     height: 100%;
+    min-width: 200px;
     min-height: 200px;
   }
 }
