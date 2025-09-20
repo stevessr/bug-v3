@@ -33,7 +33,6 @@ export function notify(
         font-size: 13px;
         max-width: 320px;
         word-break: break-word;
-        opacity: 0;
         transform: translateY(20px);
       `
     }) as HTMLElement
