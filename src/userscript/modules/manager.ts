@@ -2,6 +2,7 @@
 import { injectManagerStyles } from '../manager/styles'
 import { createEl } from '../utils/createEl'
 import { userscriptState } from '../state'
+import { ensureHoverPreview } from '../utils/hoverPreview'
 import {
   saveDataToLocalStorage,
   exportUserscriptData,
@@ -353,28 +354,22 @@ export function openManagementInterface() {
     })
   }
 
-  // Hover preview singleton
-  let hoverPreviewEl: HTMLImageElement | null = null
-  function ensureHoverPreview() {
-    if (hoverPreviewEl && document.body.contains(hoverPreviewEl)) return hoverPreviewEl
-    hoverPreviewEl = createEl('img', {
-      className: 'emoji-manager-hover-preview'
-    }) as HTMLImageElement
-    document.body.appendChild(hoverPreviewEl)
-    return hoverPreviewEl
-  }
 
   function bindHoverPreview(targetImg: HTMLImageElement, emo: any) {
     const preview = ensureHoverPreview()
+    const previewImg = preview.querySelector('img') as HTMLImageElement
+    const previewLabel = preview.querySelector('.emoji-picker-hover-label') as HTMLDivElement | null
+
     function onEnter(e: MouseEvent) {
-      preview.src = emo.url
+      if (previewImg) previewImg.src = emo.url
       // use specified size for preview if set, otherwise natural size constrained by CSS
-      if (emo.width)
-        preview.style.width = typeof emo.width === 'number' ? emo.width + 'px' : emo.width
-      else preview.style.width = ''
-      if (emo.height)
-        preview.style.height = typeof emo.height === 'number' ? emo.height + 'px' : emo.height
-      else preview.style.height = ''
+      if (previewImg) {
+        if (emo.width) previewImg.style.width = typeof emo.width === 'number' ? emo.width + 'px' : emo.width
+        else previewImg.style.width = ''
+        if (emo.height) previewImg.style.height = typeof emo.height === 'number' ? emo.height + 'px' : emo.height
+        else previewImg.style.height = ''
+      }
+      if (previewLabel) previewLabel.textContent = emo.name || ''
       preview.style.display = 'block'
       movePreview(e)
     }
@@ -391,7 +386,7 @@ export function openManagementInterface() {
       preview.style.top = top + 'px'
     }
     function onLeave() {
-      if (preview) preview.style.display = 'none'
+      preview.style.display = 'none'
     }
     targetImg.addEventListener('mouseenter', onEnter)
     targetImg.addEventListener('mousemove', movePreview)

@@ -3,6 +3,7 @@ import { userscriptState } from '../state'
 import { trackEmojiUsage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
 import { getEffectivePlatform } from '../utils/platformDetection'
+import { ensureHoverPreview } from '../utils/hoverPreview'
 
 import { injectEmojiPickerStyles } from './emojiPickerStyles'
 
@@ -99,28 +100,7 @@ export function insertEmojiIntoEditor(emoji: any) {
   }
 }
 
-// Module-level hover preview singleton used by both mobile and desktop pickers
-let _hoverPreviewEl: HTMLDivElement | null = null
-function ensureHoverPreview() {
-  if (_hoverPreviewEl && document.body.contains(_hoverPreviewEl)) return _hoverPreviewEl
-  _hoverPreviewEl = createEl('div', {
-    className: 'emoji-picker-hover-preview',
-    style:
-      'position:fixed;pointer-events:none;display:none;z-index:1000002;max-width:300px;max-height:300px;overflow:hidden;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.25);background:transparent;padding:6px;'
-  }) as HTMLDivElement
-  const img = createEl('img', {
-    className: 'emoji-picker-hover-img',
-    style: 'display:block;max-width:100%;max-height:220px;object-fit:contain;'
-  }) as HTMLImageElement
-  const label = createEl('div', {
-    className: 'emoji-picker-hover-label',
-    style: 'font-size:12px;color:var(--primary);margin-top:6px;text-align:center;'
-  }) as HTMLDivElement
-  _hoverPreviewEl.appendChild(img)
-  _hoverPreviewEl.appendChild(label)
-  document.body.appendChild(_hoverPreviewEl)
-  return _hoverPreviewEl
-}
+// use shared ensureHoverPreview from utils/hoverPreview.ts
 
 // Create mobile-style emoji picker modal
 function createMobileEmojiPicker(groups: any[]): HTMLElement {
@@ -212,28 +192,7 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
     attrs: { role: 'button' }
   }) as HTMLDivElement
 
-  // Hover preview singleton for large image + name
-  let hoverPreviewEl: HTMLDivElement | null = null
-  function ensureHoverPreview() {
-    if (hoverPreviewEl && document.body.contains(hoverPreviewEl)) return hoverPreviewEl
-    hoverPreviewEl = createEl('div', {
-      className: 'emoji-picker-hover-preview',
-      style:
-        'position:fixed;pointer-events:none;display:none;z-index:1000002;max-width:300px;max-height:300px;overflow:hidden;border-radius:6px;background:#fff;padding:6px;'
-    }) as HTMLDivElement
-    const img = createEl('img', {
-      className: 'emoji-picker-hover-img',
-      style: 'display:block;max-width:100%;max-height:220px;object-fit:contain;'
-    }) as HTMLImageElement
-    const label = createEl('div', {
-      className: 'emoji-picker-hover-label',
-      style: 'font-size:12px;color:var(--primary);margin-top:6px;text-align:center;'
-    }) as HTMLDivElement
-    hoverPreviewEl.appendChild(img)
-    hoverPreviewEl.appendChild(label)
-    document.body.appendChild(hoverPreviewEl)
-    return hoverPreviewEl
-  }
+  // Use module-level ensureHoverPreview() to provide a singleton hover preview element
 
   groups.forEach((group: any, index: number) => {
     if (!group?.emojis?.length) return

@@ -3,6 +3,7 @@ import { userscriptState } from '../state'
 import { getPopularEmojis, clearEmojiUsageStats, trackEmojiUsage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
+import { showTemporaryMessage } from '../utils/tempMessage'
 
 export function showPopularEmojisModal() {
   // Ensure theme styles are injected
@@ -246,41 +247,4 @@ function useEmojiFromPopular(name: string, url: string) {
   }
 }
 
-function showTemporaryMessage(message: string) {
-  const messageEl = createEl('div', {
-    style: `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--emoji-modal-primary-bg);
-      color: white;
-      padding: 12px 24px;
-      border-radius: 6px;
-      z-index: 9999999;
-      font-size: 14px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      animation: fadeInOut 2s ease-in-out;
-    `,
-    text: message
-  })
 
-  // Add CSS animation
-  if (!document.querySelector('#tempMessageStyles')) {
-    const style = document.createElement('style')
-    style.id = 'tempMessageStyles'
-    style.textContent = `
-      @keyframes fadeInOut {
-        0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-        20%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-      }
-    `
-    document.head.appendChild(style)
-  }
-
-  document.body.appendChild(messageEl)
-
-  setTimeout(() => {
-    messageEl.remove()
-  }, 2000)
-}
