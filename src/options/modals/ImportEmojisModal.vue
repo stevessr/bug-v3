@@ -103,12 +103,12 @@ const fillExample = () => {
           ></textarea>
           <div class="mt-2 text-xs text-gray-500 dark:text-white">
             示例：
-            <button
+            <a-button
               class="ml-2 text-blue-600 dark:text-blue-400 hover:underline"
               @click="fillExample"
             >
               填充示例
-            </button>
+            </a-button>
           </div>
         </div>
         <div>
@@ -123,18 +123,18 @@ const fillExample = () => {
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-6">
-        <button
+        <a-button
           @click="close"
           class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
         >
           取消
-        </button>
-        <button
+        </a-button>
+        <a-button
           @click="doImport"
           class="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
         >
           导入
-        </button>
+        </a-button>
       </div>
     </div>
   </div>

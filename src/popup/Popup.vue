@@ -25,7 +25,7 @@ const setActiveHandler = (id: string) => {
       <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-sm font-semibold text-gray-900 dark:text-white">表情管理</h2>
-          <button
+          <a-button
             @click="openOptions"
             class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white"
             title="设置"
@@ -44,7 +44,7 @@ const setActiveHandler = (id: string) => {
                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
               ></path>
             </svg>
-          </button>
+          </a-button>
         </div>
 
         <!-- Scale Control -->

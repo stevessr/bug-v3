@@ -32,7 +32,7 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
       class="grid emoji-grid overflow-y-auto"
       :style="`grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); max-height: 300px;`"
     >
-      <button
+      <a-button
         v-for="emoji in emojis"
         :key="emoji.id"
         @click="$emit('select', emoji)"
@@ -66,7 +66,7 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
             />
           </svg>
         </div>
-      </button>
+      </a-button>
     </div>
   </div>
 
@@ -80,12 +80,12 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
       />
     </svg>
     <p class="text-sm text-gray-600 dark:text-white">{{ emptyMessage }}</p>
-    <button
+    <a-button
       v-if="showAddButton"
       @click="$emit('openOptions')"
       class="mt-2 text-xs text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-white"
     >
       去添加表情
-    </button>
+    </a-button>
   </div>
 </template>

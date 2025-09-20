@@ -57,13 +57,13 @@ const favoritesGroup = computed(() => {
               ⭐
             </div>
             <div class="absolute top-1 right-1 flex gap-1">
-              <button
+              <a-button
                 @click="$emit('edit', emoji, 'favorites', idx)"
                 title="编辑"
                 class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-gray-700 rounded hover:bg-opacity-100"
               >
                 编辑
-              </button>
+              </a-button>
               <a-popconfirm title="确认移除此表情？" @confirm="$emit('remove', 'favorites', idx)">
                 <template #icon>
                   <QuestionCircleOutlined style="color: red" />

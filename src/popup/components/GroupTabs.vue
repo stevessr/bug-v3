@@ -22,7 +22,7 @@ const { groups, activeGroupId, setActive } = toRefs(props) as {
 
 <template>
   <div class="group-tabs-scroll flex border-b border-gray-100 dark:border-gray-700 overflow-x-auto">
-    <button
+    <a-button
       v-for="group in groups"
       :key="group.id"
       @click="setActive(group.id)"
@@ -46,7 +46,7 @@ const { groups, activeGroupId, setActive } = toRefs(props) as {
         </template>
       </span>
       {{ group.name }}
-    </button>
+    </a-button>
   </div>
 </template>
 

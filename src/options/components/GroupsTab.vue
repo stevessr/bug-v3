@@ -435,12 +435,12 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                 <a-segmented v-model:value="viewMode" :options="viewOptions" />
               </div>
             </div>
-            <button
+            <a-button
               @click="$emit('openCreateGroup')"
               class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               新建分组
-            </button>
+            </a-button>
           </div>
         </div>
 
@@ -489,12 +489,12 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                     </div>
                   </div>
                   <div class="flex items-center gap-2">
-                    <button
+                    <a-button
                       @click="$emit('toggleExpand', group.id)"
                       class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors dark:text-white dark:hover:bg-gray-700"
                     >
                       {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
-                    </button>
+                    </a-button>
 
                     <!-- Unified action menu (use AntD dropdown) -->
                     <div class="relative" v-if="group.id !== 'favorites'">
@@ -562,13 +562,13 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                           {{ emoji.name }}
                         </div>
                         <!-- Edit button in bottom right corner -->
-                        <button
+                        <a-button
                           @click="$emit('editEmoji', emoji, group.id, index)"
                           class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                           title="编辑表情"
                         >
                           ✎
-                        </button>
+                        </a-button>
                         <!-- Remove button in top right corner (with confirmation) -->
                         <a-popconfirm
                           title="确认移除此表情？"
@@ -588,12 +588,12 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
 
                     <!-- Add emoji button (hidden for favorites group) -->
                     <div v-if="group.id !== 'favorites'" class="mt-4">
-                      <button
+                      <a-button
                         @click="$emit('openAddEmoji', group.id)"
                         class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full dark:border-gray-600 dark:text-white dark:hover:border-gray-500"
                       >
                         + 添加表情
-                      </button>
+                      </a-button>
                     </div>
                     <!-- For favorites group, show info instead -->
                     <div v-if="group.id === 'favorites'" class="mt-4">

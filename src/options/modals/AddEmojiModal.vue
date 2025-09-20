@@ -475,20 +475,20 @@ const importParsed = () => {
           <div class="flex items-center justify-between mt-2">
             <div class="text-xs text-gray-500">预览会解析出: {{ parsedItems.length }} 个</div>
             <div class="flex gap-2">
-              <button
+              <a-button
                 @click="previewParse"
                 type="button"
                 class="px-3 py-1 text-xs bg-gray-100 rounded"
               >
                 预览
-              </button>
-              <button
+              </a-button>
+              <a-button
                 @click="importParsed"
                 type="button"
                 class="px-3 py-1 text-xs bg-blue-600 text-white rounded"
               >
                 导入解析项
-              </button>
+              </a-button>
             </div>
           </div>
         </div>
@@ -518,13 +518,13 @@ const importParsed = () => {
             <h4 class="text-sm font-medium text-gray-700 dark:text-white">
               解析结果 ({{ parsedItems.length }} 个)
             </h4>
-            <button
+            <a-button
               @click="parsedItems = []"
               type="button"
               class="text-xs text-gray-500 hover:text-gray-700"
             >
               清空
-            </button>
+            </a-button>
           </div>
           <div class="max-h-64 overflow-y-auto space-y-3">
             <div
@@ -587,18 +587,18 @@ const importParsed = () => {
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-6">
-        <button
+        <a-button
           @click="close"
           class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
         >
           取消
-        </button>
-        <button
+        </a-button>
+        <a-button
           @click="add"
           class="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
         >
           添加
-        </button>
+        </a-button>
       </div>
     </div>
   </div>

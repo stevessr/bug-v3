@@ -305,13 +305,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               placeholder="输入你的 Tenor API Key"
             />
           </div>
-          <button
+          <a-button
             @click="saveApiKey"
             :disabled="!inputApiKey.trim()"
             class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             保存 API Key
-          </button>
+          </a-button>
         </div>
       </div>
 
@@ -326,12 +326,12 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                 Key: {{ tenorApiKey.substring(0, 8) }}...
               </p>
             </div>
-            <button
+            <a-button
               @click="clearApiKey"
               class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
             >
               重新配置
-            </button>
+            </a-button>
           </div>
         </div>
 
@@ -345,13 +345,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               placeholder="搜索 GIF..."
               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             />
-            <button
+            <a-button
               @click="searchGifs"
               :disabled="isSearching || !searchQuery.trim()"
               class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               {{ isSearching ? '搜索中...' : '搜索' }}
-            </button>
+            </a-button>
           </div>
 
           <!-- Advanced Options -->
@@ -365,10 +365,10 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                     <a-menu-item key="48">48 个结果</a-menu-item>
                   </a-menu>
                 </template>
-                <a-button>
+                <a-a-button>
                   {{ searchLimit }} 个结果
                   <DownOutlined />
-                </a-button>
+                </a-a-button>
               </a-dropdown>
             </div>
 
@@ -382,10 +382,10 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                     <a-menu-item key="off">关闭过滤</a-menu-item>
                   </a-menu>
                 </template>
-                <a-button>
+                <a-a-button>
                   {{ contentFilter }}
                   <DownOutlined />
-                </a-button>
+                </a-a-button>
               </a-dropdown>
             </div>
           </div>
@@ -397,12 +397,12 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             <h3 class="text-lg font-semibold text-gray-900">搜索结果</h3>
             <div v-if="selectedGifs.size > 0" class="flex gap-2">
               <span class="text-sm text-gray-600">已选择 {{ selectedGifs.size }} 个</span>
-              <button
+              <a-button
                 @click="importSelected"
                 class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
               >
                 导入选中
-              </button>
+              </a-button>
             </div>
           </div>
 
@@ -447,13 +447,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 
           <!-- Load More -->
           <div v-if="hasMore" class="mt-6 text-center">
-            <button
+            <a-button
               @click="loadMore"
               :disabled="isLoadingMore"
               class="px-6 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
             >
               {{ isLoadingMore ? '加载中...' : '加载更多' }}
-            </button>
+            </a-button>
           </div>
         </div>
 
@@ -507,19 +507,19 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             </div>
 
             <div class="mt-6 flex gap-3">
-              <button
+              <a-button
                 @click="confirmImport"
                 :disabled="!selectedGroupId || isImporting"
                 class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
                 {{ isImporting ? '导入中...' : `导入 ${selectedGifs.size} 个 GIF` }}
-              </button>
-              <button
+              </a-button>
+              <a-button
                 @click="showGroupModal = false"
                 class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
               >
                 取消
-              </button>
+              </a-button>
             </div>
           </div>
         </div>
@@ -560,13 +560,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             </p>
           </div>
           <div class="ml-auto pl-3">
-            <button
+            <a-button
               @click="message.text = ''"
               class="inline-flex text-gray-400 hover:text-gray-600"
             >
               <span class="sr-only">关闭</span>
               ✕
-            </button>
+            </a-button>
           </div>
         </div>
       </div>

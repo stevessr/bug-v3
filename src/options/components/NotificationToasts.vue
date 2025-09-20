@@ -22,7 +22,7 @@ const closeError = () => emit('update:showError', false)
       >
         <div class="flex items-center gap-3">
           <div class="flex-1">{{ successMessage }}</div>
-          <button @click="closeSuccess" class="text-white/90">✕</button>
+          <a-button @click="closeSuccess" class="text-white/90">✕</a-button>
         </div>
       </div>
     </transition>
@@ -35,7 +35,7 @@ const closeError = () => emit('update:showError', false)
       >
         <div class="flex items-center gap-3">
           <div class="flex-1">{{ errorMessage }}</div>
-          <button @click="closeError" class="text-white/90">✕</button>
+          <a-button @click="closeError" class="text-white/90">✕</a-button>
         </div>
       </div>
     </transition>

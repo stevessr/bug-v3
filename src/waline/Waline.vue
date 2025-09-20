@@ -412,13 +412,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               />
             </div>
 
-            <button
+            <a-button
               @click="importFromUrl"
               :disabled="!urlInput.trim() || isImportingUrl"
               class="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               {{ isImportingUrl ? '导入中...' : '从 URL 导入' }}
-            </button>
+            </a-button>
           </div>
         </div>
 
@@ -461,13 +461,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               />
             </div>
 
-            <button
+            <a-button
               @click="importFromJson"
               :disabled="!jsonInput.trim() || isImportingJson"
               class="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               {{ isImportingJson ? '导入中...' : '从 JSON 导入' }}
-            </button>
+            </a-button>
           </div>
         </div>
       </div>
@@ -491,13 +491,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               </div>
             </div>
 
-            <button
+            <a-button
               @click="importFromSource(source)"
               :disabled="isImportingSource === source.name"
               class="w-full mt-2 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
             >
               {{ isImportingSource === source.name ? '导入中...' : '快速导入' }}
-            </button>
+            </a-button>
           </div>
         </div>
       </div>
@@ -534,23 +534,23 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               </div>
             </div>
 
-            <button
+            <a-button
               v-if="result.success"
               @click="viewGroup(result.groupId)"
               class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
             >
               查看分组
-            </button>
+            </a-button>
           </div>
         </div>
 
         <div class="mt-4 flex justify-end">
-          <button
+          <a-button
             @click="clearResults"
             class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
           >
             清除结果
-          </button>
+          </a-button>
         </div>
       </div>
     </main>
@@ -589,13 +589,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             </p>
           </div>
           <div class="ml-auto pl-3">
-            <button
+            <a-button
               @click="message.text = ''"
               class="inline-flex text-gray-400 hover:text-gray-600"
             >
               <span class="sr-only">关闭</span>
               ✕
-            </button>
+            </a-button>
           </div>
         </div>
       </div>

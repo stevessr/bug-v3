@@ -178,13 +178,13 @@ watch(
             placeholder="#1890ff 或 rgb(24, 144, 255)"
             class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
-          <button
+          <a-button
             @click="saveCustomColor"
             :disabled="!isValidColor(customColorInput)"
             class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             确定
-          </button>
+          </a-button>
         </div>
         <div class="flex items-center gap-2">
           <div
