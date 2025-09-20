@@ -140,10 +140,8 @@ const setActiveHandler = (id: string) => {
   .popup-container {
     width: auto;
     min-width: 400px;
-    max-width: 400px;
     height: auto;
     min-height: 500px;
-    max-height: 600px;
   }
 }
 
@@ -163,10 +161,8 @@ const setActiveHandler = (id: string) => {
   .popup-container {
     width: 100%;
     min-width: 200px;
-    max-width: 100%;
     height: 100%;
     min-height: 200px;
-    max-height: 100%;
   }
 }
 

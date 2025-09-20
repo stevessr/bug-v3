@@ -36,17 +36,16 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
         v-for="emoji in emojis"
         :key="emoji.id"
         @click="$emit('select', emoji)"
+        style="height: max-content"
         class="relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2"
         :title="emoji.name"
       >
-        <div class="w-10 h-10 mobile:w-12 mobile:h-12 rounded overflow-hidden mx-auto">
-          <img
-            :src="emoji.displayUrl || emoji.url"
-            :alt="emoji.name"
-            class="w-full h-full object-cover"
-            loading="lazy"
-          />
-        </div>
+        <img
+          :src="emoji.displayUrl || emoji.url"
+          :alt="emoji.name"
+          class="w-full h-full object-cover"
+          loading="lazy"
+        />
         <!-- Activity indicator for favorites -->
         <div
           v-if="favorites.has(emoji.id) && emoji.usageCount"

@@ -5,6 +5,7 @@ import { DownOutlined } from '@ant-design/icons-vue'
 import { useEmojiStore } from '../../stores/emojiStore'
 
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
+import { newStorageHelpers } from '@/utils/newStorage'
 
 type TenorGif = {
   id: string
@@ -54,16 +55,16 @@ const availableGroups = computed(() => {
   return emojiStore.groups.filter(g => g.id !== 'favorites')
 })
 
-// Load API key from storage
+// Load API key from settings via existing storage helpers
 onMounted(async () => {
   await emojiStore.loadData()
 
   try {
-    const result = await chrome.storage.local.get(['tenorApiKey'])
-    if (result.tenorApiKey) {
-      tenorApiKey.value = result.tenorApiKey
+    const settings = await newStorageHelpers.getSettings()
+    if (settings && settings.tenorApiKey) {
+      tenorApiKey.value = settings.tenorApiKey
     } else {
-      // 运行时从打包的默认配置 JSON 获取回退值（不会把 default.json 静态打包进此模块）
+      // fallback to packaged defaults
       try {
         const packaged = await loadPackagedDefaults()
         if (packaged?.settings?.tenorApiKey) tenorApiKey.value = packaged.settings.tenorApiKey
@@ -72,8 +73,7 @@ onMounted(async () => {
       }
     }
   } catch (error) {
-    console.error('Failed to load Tenor API key:', error)
-    // still try runtime packaged defaults
+    console.error('Failed to load Tenor API key via newStorageHelpers:', error)
     try {
       const packaged = await loadPackagedDefaults()
       if (packaged?.settings?.tenorApiKey) tenorApiKey.value = packaged.settings.tenorApiKey
@@ -88,26 +88,30 @@ const saveApiKey = async () => {
   if (!inputApiKey.value.trim()) return
 
   try {
-    await chrome.storage.local.set({ tenorApiKey: inputApiKey.value.trim() })
+    const settings = await newStorageHelpers.getSettings()
+    const updated = { ...settings, tenorApiKey: inputApiKey.value.trim() }
+    await newStorageHelpers.setSettings(updated)
     tenorApiKey.value = inputApiKey.value.trim()
     inputApiKey.value = ''
     showMessage('API Key 已保存', 'success')
   } catch (error) {
-    console.error('Failed to save API key:', error)
+    console.error('Failed to save API key via newStorageHelpers:', error)
     showMessage('API Key 保存失败', 'error')
   }
 }
 
 const clearApiKey = async () => {
   try {
-    await chrome.storage.local.remove(['tenorApiKey'])
+    const settings = await newStorageHelpers.getSettings()
+    const updated = { ...settings, tenorApiKey: '' }
+    await newStorageHelpers.setSettings(updated)
     tenorApiKey.value = ''
     searchResults.value = []
     selectedGifs.value.clear()
     hasSearched.value = false
     showMessage('API Key 已清除', 'success')
   } catch (error) {
-    console.error('Failed to clear API key:', error)
+    console.error('Failed to clear API key via newStorageHelpers:', error)
     showMessage('API Key 清除失败', 'error')
   }
 }
