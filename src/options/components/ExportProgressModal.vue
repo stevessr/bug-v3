@@ -76,10 +76,10 @@ const visible = ref(false)
       </div>
 
       <div class="mt-4 flex justify-end gap-2">
-        <button class="px-3 py-1 rounded text-sm border" @click="onCancel">取消</button>
-        <button class="px-3 py-1 rounded text-sm bg-blue-600 text-white" @click="onClose">
+        <a-button class="px-3 py-1 rounded text-sm border" @click="onCancel">取消</a-button>
+        <a-button class="px-3 py-1 rounded text-sm bg-blue-600 text-white" @click="onClose">
           完成
-        </button>
+        </a-button>
       </div>
     </div>
   </div>

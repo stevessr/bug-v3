@@ -395,7 +395,7 @@ const importSelectedFromIndex = async () => {
       <div class="p-6 space-y-4">
         <div class="space-y-4">
           <div class="flex items-center space-x-3">
-            <AButton type="primary" @click="openFile">选择 Bilibili JSON 文件</AButton>
+            <a-button type="primary" @click="openFile">选择 Bilibili JSON 文件</a-button>
             <input ref="fileInput" type="file" accept=".json" class="hidden" @change="handleFile" />
             <span v-if="isImporting" class="text-sm text-blue-600">{{ importStatus }}</span>
           </div>
@@ -406,7 +406,7 @@ const importSelectedFromIndex = async () => {
               placeholder="请输入索引 JSON 的 URL"
               class="dark:bg-black dark:text-white"
             />
-            <AButton @click="() => loadIndexFromUrl()">加载索引</AButton>
+            <a-button @click="() => loadIndexFromUrl()">加载索引</a-button>
           </div>
 
           <div class="flex items-center space-x-3">
@@ -415,9 +415,9 @@ const importSelectedFromIndex = async () => {
               placeholder="按包名或别名搜索"
               class="dark:bg-black dark:text-white"
             />
-            <AButton type="primary" @click="applySearch">搜索</AButton>
-            <AButton type="default" @click="query = ''">清空</AButton>
-            <AButton type="primary" @click="importSelectedFromIndex">导入选中包</AButton>
+            <a-button type="primary" @click="applySearch">搜索</a-button>
+            <a-button type="default" @click="query = ''">清空</a-button>
+            <a-button type="primary" @click="importSelectedFromIndex">导入选中包</a-button>
           </div>
 
           <!-- ID 拉取区 -->
@@ -439,13 +439,13 @@ const importSelectedFromIndex = async () => {
               </label>
             </div>
             <div class="mt-3 flex items-center space-x-3">
-              <AButton type="primary" @click="fetchSingleId">单次获取</AButton>
-              <AButton type="primary" @click="fetchByIdLoop" :disabled="isFetchingById">
+              <a-button type="primary" @click="fetchSingleId">单次获取</a-button>
+              <a-button type="primary" @click="fetchByIdLoop" :disabled="isFetchingById">
                 开始连续拉取
-              </AButton>
-              <AButton type="default" @click="stopFetchingById" :disabled="!isFetchingById">
+              </a-button>
+              <a-button type="default" @click="stopFetchingById" :disabled="!isFetchingById">
                 停止
-              </AButton>
+              </a-button>
             </div>
             <div class="mt-3 text-sm text-gray-700 dark:text-white">
               <div>{{ fetchStatus }}</div>

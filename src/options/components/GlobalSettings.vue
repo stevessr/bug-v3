@@ -198,7 +198,7 @@ const handleCalloutSuggestionsChange = (e: Event) => {
               <a-menu-item key="dark">暗色模式</a-menu-item>
             </a-menu>
           </template>
-          <AButton>
+          <a-button>
             {{
               localTheme === 'system'
                 ? '跟随系统'
@@ -207,7 +207,7 @@ const handleCalloutSuggestionsChange = (e: Event) => {
                   : '暗色模式'
             }}
             <DownOutlined />
-          </AButton>
+          </a-button>
         </a-dropdown>
       </div>
       <div class="flex flex-col space-y-4">
@@ -302,10 +302,10 @@ const handleCalloutSuggestionsChange = (e: Event) => {
               <a-menu-item key="html">HTML 格式</a-menu-item>
             </a-menu>
           </template>
-          <AButton>
+          <a-button>
             {{ localOutputFormat === 'markdown' ? 'Markdown 格式' : 'HTML 格式' }}
             <DownOutlined />
-          </AButton>
+          </a-button>
         </a-dropdown>
       </div>
 

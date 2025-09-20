@@ -161,7 +161,7 @@ const importFromMarkdown = async () => {
             导入之前导出的完整配置文件，包含所有分组、表情和设置
           </p>
           <div class="flex items-center space-x-3">
-            <button
+            <a-button
               @click="openImportConfig"
               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
@@ -174,7 +174,7 @@ const importFromMarkdown = async () => {
                 />
               </svg>
               选择配置文件
-            </button>
+            </a-button>
             <input
               ref="configFileInput"
               type="file"
@@ -193,7 +193,7 @@ const importFromMarkdown = async () => {
           </p>
           <div class="space-y-4">
             <div class="flex items-center space-x-3">
-              <button
+              <a-button
                 @click="openImportEmojis"
                 class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
@@ -206,7 +206,7 @@ const importFromMarkdown = async () => {
                   />
                 </svg>
                 选择表情文件
-              </button>
+              </a-button>
               <input
                 ref="emojiFileInput"
                 type="file"
@@ -232,10 +232,10 @@ const importFromMarkdown = async () => {
                     </a-menu-item>
                   </a-menu>
                 </template>
-                <AButton>
+                <a-button>
                   {{ selectedTargetGroup || '自动创建分组' }}
                   <DownOutlined />
-                </AButton>
+                </a-button>
               </a-dropdown>
             </div>
           </div>
@@ -254,7 +254,7 @@ const importFromMarkdown = async () => {
               class="w-full h-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             ></textarea>
             <div class="flex items-center space-x-3">
-              <button
+              <a-button
                 @click="importFromMarkdown"
                 :disabled="!markdownText.trim()"
                 class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -268,7 +268,7 @@ const importFromMarkdown = async () => {
                   />
                 </svg>
                 导入文本中的表情
-              </button>
+              </a-button>
               <a-dropdown>
                 <template #overlay>
                   <a-menu @click="onSelectedTargetGroupForMarkdown">
@@ -282,10 +282,10 @@ const importFromMarkdown = async () => {
                     </a-menu-item>
                   </a-menu>
                 </template>
-                <AButton>
+                <a-button>
                   {{ selectedTargetGroupForMarkdown || '自动创建分组' }}
                   <DownOutlined />
-                </AButton>
+                </a-button>
               </a-dropdown>
             </div>
           </div>

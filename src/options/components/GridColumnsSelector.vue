@@ -34,10 +34,10 @@ const onMenuClick = (key: string) => {
         <a-menu-item v-for="col in options" :key="col" :value="col">{{ col }} 列</a-menu-item>
       </a-menu>
     </template>
-    <AButton>
+    <a-button>
       {{ modelValue }} 列
       <DownOutlined />
-    </AButton>
+    </a-button>
   </a-dropdown>
 </template>
 

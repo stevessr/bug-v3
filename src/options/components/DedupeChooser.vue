@@ -37,12 +37,12 @@ const confirmUrl = () => {
       <h3 class="font-medium mb-2 dark:text-white">去重方式</h3>
       <p class="text-sm text-gray-600 dark:text-white mb-4">请请选择按名称还是按 URL 去重</p>
       <div class="flex gap-2 justify-end">
-        <button
+        <a-button
           class="px-3 py-1 border dark:border-gray-600 rounded dark:text-white dark:hover:bg-gray-700"
           @click.prevent="close"
         >
           取消
-        </button>
+        </a-button>
 
         <a-popconfirm
           placement="top"
@@ -51,7 +51,7 @@ const confirmUrl = () => {
           cancel-text="取消"
           @confirm="confirmName"
         >
-          <button class="px-3 py-1 bg-blue-600 text-white rounded">按名称</button>
+          <a-button class="px-3 py-1 bg-blue-600 text-white rounded">按名称</a-button>
         </a-popconfirm>
 
         <a-popconfirm
@@ -61,7 +61,7 @@ const confirmUrl = () => {
           cancel-text="取消"
           @confirm="confirmUrl"
         >
-          <button class="px-3 py-1 bg-green-600 text-white rounded">按 URL</button>
+          <a-button class="px-3 py-1 bg-green-600 text-white rounded">按 URL</a-button>
         </a-popconfirm>
       </div>
     </div>

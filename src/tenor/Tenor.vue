@@ -365,10 +365,10 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                     <a-menu-item key="48">48 个结果</a-menu-item>
                   </a-menu>
                 </template>
-                <AButton>
+                <a-button>
                   {{ searchLimit }} 个结果
                   <DownOutlined />
-                </AButton>
+                </a-button>
               </a-dropdown>
             </div>
 
@@ -382,10 +382,10 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                     <a-menu-item key="off">关闭过滤</a-menu-item>
                   </a-menu>
                 </template>
-                <AButton>
+                <a-button>
                   {{ contentFilter }}
                   <DownOutlined />
-                </AButton>
+                </a-button>
               </a-dropdown>
             </div>
           </div>

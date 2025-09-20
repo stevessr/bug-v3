@@ -329,7 +329,7 @@ const handleSubmit = () => {
                         </a-menu-item>
                       </a-menu>
                     </template>
-                    <AButton class="dark:text-white dark:bg-gray-800">
+                    <a-button class="dark:text-white dark:bg-gray-800">
                       <a-image
                         v-if="editSelectedGroupIcon.startsWith('https://')"
                         :src="editSelectedGroupIcon"
@@ -339,7 +339,7 @@ const handleSubmit = () => {
                       <span v-else class="inline-block mr-1">{{ editSelectedGroupIcon }}</span>
                       {{ editSelectedGroupName }}
                       <DownOutlined />
-                    </AButton>
+                    </a-button>
                   </a-dropdown>
                 </div>
 

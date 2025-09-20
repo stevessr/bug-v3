@@ -430,10 +430,10 @@ const importParsed = () => {
                   <a-menu-item key="html">HTML (批量)</a-menu-item>
                 </a-menu>
               </template>
-              <AButton>
+              <a-button>
                 {{ inputMode }}
                 <DownOutlined />
-              </AButton>
+              </a-button>
             </a-dropdown>
             <div class="text-xs text-gray-500">已解析: {{ parsedItems.length }} 个</div>
           </div>
@@ -502,10 +502,10 @@ const importParsed = () => {
                 </a-menu-item>
               </a-menu>
             </template>
-            <AButton>
+            <a-button>
               {{ selectedGroupLabel }}
               <DownOutlined />
-            </AButton>
+            </a-button>
           </a-dropdown>
         </div>
 
@@ -557,10 +557,10 @@ const importParsed = () => {
                           </a-menu-item>
                         </a-menu>
                       </template>
-                      <AButton>
+                      <a-button>
                         {{ item.selectedVariant || item.variants[0].url }}
                         <DownOutlined />
-                      </AButton>
+                      </a-button>
                     </a-dropdown>
                   </div>
                   <div v-else class="mt-1">
