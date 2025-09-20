@@ -24,23 +24,19 @@ export function showPopularEmojisModal() {
     `
   })
 
+  const popularEmojis = getPopularEmojis(50) // Get top 50 popular emojis
+
   const content = createEl('div', {
     style: `
       background: var(--emoji-modal-bg);
       color: var(--emoji-modal-text);
       border-radius: 8px;
       padding: 24px;
-      max-width: 600px;
       max-height: 80vh;
       overflow-y: auto;
       position: relative;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    `
-  })
-
-  const popularEmojis = getPopularEmojis(50) // Get top 50 popular emojis
-
-  content.innerHTML = `
+    `,
+    innerHTML: `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="margin: 0; color: var(--emoji-modal-text);">常用表情 (${popularEmojis.length})</h2>
       <div style="display: flex; gap: 8px; align-items: center;">
@@ -50,11 +46,11 @@ export function showPopularEmojisModal() {
     </div>
     
     <div style="margin-bottom: 16px; padding: 12px; background: var(--emoji-modal-button-bg); border-radius: 6px; border: 1px solid var(--emoji-modal-border);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 500; color: var(--emoji-modal-label);">表情按使用次数排序</span>
-        <span style="font-size: 12px; color: var(--emoji-modal-text); opacity: 0.7;">点击表情直接使用</span>
+        <span style="font-size: 12px; color: var(--emoji-modal-text);">点击表情直接使用</span>
       </div>
-      <div style="font-size: 12px; color: var(--emoji-modal-text); opacity: 0.6;">
+      <div style="font-size: 12px; color: var(--emoji-modal-text);">
         总使用次数: ${popularEmojis.reduce((sum, emoji) => sum + emoji.count, 0)}
       </div>
     </div>
@@ -68,7 +64,7 @@ export function showPopularEmojisModal() {
     ">
       ${
         popularEmojis.length === 0
-          ? '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--emoji-modal-text); opacity: 0.7;">还没有使用过表情<br><small>开始使用表情后，这里会显示常用的表情</small></div>'
+          ? '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--emoji-modal-text);">还没有使用过表情<br><small>开始使用表情后，这里会显示常用的表情</small></div>'
           : popularEmojis
               .map(
                 emoji => `
@@ -121,6 +117,7 @@ export function showPopularEmojisModal() {
         : ''
     }
   `
+  })
 
   modal.appendChild(content)
   document.body.appendChild(modal)

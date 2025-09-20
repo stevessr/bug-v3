@@ -27,25 +27,22 @@ export function showGroupEditorModal() {
   const content = createEl('div', {
     style: `
       color: var(--emoji-modal-text);
-      border-radius: 8px;
       padding: 24px;
-      max-width: 700px;
-      max-height: 80vh;
+      max-width: 80%;
       overflow-y: auto;
       position: relative;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     `
   })
 
   content.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0; color: var(--emoji-modal-text);backdrop-filter: blur(10px);">表情分组编辑器</h2>
-      <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+      <button id="closeModal" style="border:none;font-size: 24px; cursor: pointer;">×</button>
     </div>
     
-    <div style="margin-bottom: 20px; padding: 16px; background: var(--emoji-modal-button-bg); border-radius: 6px; border: 1px solid var(--emoji-modal-border);">
-      <div style="font-weight: 500; color: var(--emoji-modal-label); margin-bottom: 8px;">编辑说明</div>
-      <div style="font-size: 14px; color: var(--emoji-modal-text); opacity: 0.8; line-height: 1.4;">
+    <div style="margin-bottom: 20px; padding: 16px; background: var(--emoji-modal-button-bg);">
+      <div>编辑说明</div>
+      <div>
         • 点击分组名称或图标进行编辑<br>
         • 图标支持 emoji 字符或单个字符<br>
         • 修改会立即保存到本地存储<br>
@@ -64,9 +61,6 @@ export function showGroupEditorModal() {
           gap: 12px;
           padding: 16px;
           background: var(--emoji-modal-button-bg);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 6px;
-          transition: all 0.2s;
         ">
           <div class="drag-handle" style="
             cursor: grab;
@@ -77,25 +71,14 @@ export function showGroupEditorModal() {
           " title="拖拽调整顺序">⋮⋮</div>` +
             (group.icon?.startsWith('https://')
               ? `<img class="group-icon-editor" src="${group.icon}" alt="图标" style="
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
-            border: 1px dashed var(--emoji-modal-border);
-            border-radius: 4px;
-            cursor: pointer;
-            user-select: none;
+            max-width: 100px;
           " data-group-id="${group.id}" title="点击编辑图标">`
               : `
           <div class="group-icon-editor" style="
-            min-width: 40px;
-            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: var(--emoji-modal-bg);
-            border: 1px dashed var(--emoji-modal-border);
-            border-radius: 4px;
-            cursor: pointer;
             font-size: 18px;
             user-select: none;
           " data-group-id="${group.id}" title="点击编辑图标">
@@ -116,7 +99,7 @@ export function showGroupEditorModal() {
                      font-weight: 500;
                    " 
                    placeholder="分组名称">
-            <div style="font-size: 12px; color: var(--emoji-modal-text); opacity: 0.6;">
+            <div style="font-size: 12px; color: var(--emoji-modal-text);">
               ID: ${group.id} | 表情数: ${group.emojis ? group.emojis.length : 0}
             </div>
           </div>
@@ -284,5 +267,3 @@ export function showGroupEditorModal() {
     showTemporaryMessage('所有更改已保存到本地存储')
   })
 }
-
-

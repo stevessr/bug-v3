@@ -43,15 +43,12 @@ export function injectManagerStyles() {
       display: flex; 
       align-items: center; 
       padding: 16px; 
-      border-bottom: 1px solid #e9ecef; 
       background: var(--primary-low); 
     }
     
     .emoji-manager-addgroup-row { 
       display: flex; 
-      gap: 8px; 
       padding: 12px; 
-      border-bottom: 1px solid #e9ecef; 
     }
     
     .emoji-manager-groups-list { 
@@ -62,9 +59,6 @@ export function injectManagerStyles() {
     }
     
     .emoji-manager-groups-list > div { 
-      padding: 12px; 
-      border-radius: 6px; 
-      cursor: pointer; 
       margin-bottom: 4px; 
       transition: background-color 0.2s; 
     }
@@ -92,32 +86,25 @@ export function injectManagerStyles() {
       align-items: center; 
       justify-content: space-between; 
       padding: 16px; 
-      border-bottom: 1px solid #e9ecef; 
     }
     
     .emoji-manager-right-main { 
       flex: 1; 
       overflow-y: auto; 
-      padding: 16px; 
     }
     
     .emoji-manager-emojis { 
       display: grid; 
       grid-template-columns: repeat(auto-fill, minmax(25%, 1fr)); 
       gap: 12px; 
-      margin-bottom: 16px; 
     }
     
     .emoji-manager-card { 
       display: flex; 
       flex-direction: column; 
-      gap: 8px; 
       align-items: center; 
       padding: 12px; 
       background: var(--primary-medium); 
-      border: 1px solid #e9ecef; 
-      border-radius: 8px; 
-      transition: transform 0.2s, box-shadow 0.2s; 
     }
     
     .emoji-manager-card:hover { 
@@ -163,11 +150,9 @@ export function injectManagerStyles() {
     .emoji-manager-footer { 
       grid-column: 1 / -1;
       display: flex; 
-      gap: 8px; 
       justify-content: space-between; 
       padding: 16px; 
-      background: var(--primary-very-low) 
-      border-top: 1px solid #e9ecef; 
+      background: var(--primary-very-low); 
     }
     
     /* Editor panel - popup modal */
@@ -177,26 +162,13 @@ export function injectManagerStyles() {
       left: 50%; 
       transform: translate(-50%, -50%); 
       background: var( --primary-medium ); 
-      border: 1px solid #e9ecef; 
-      border-radius: 8px; 
-      padding: 24px; 
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3); 
+      padding: 2%; 
       z-index: 1000000; 
-      min-width: 400px; 
     }
     
     .emoji-manager-editor-preview { 
-      width: 100px; 
-      height: 100px; 
-      /* editor preview should be bounded to avoid huge remote images
-         while still allowing percentage-based scaling */
       max-width: 100%;
       max-height: 40vh;
-      object-fit: contain; 
-      border-radius: 8px; 
-      background: var(--primary-very-low) 
-      margin: 0 auto 16px; 
-      display: block; 
     }
 
     /* Hover preview (moved from inline styles) */
@@ -218,11 +190,7 @@ export function injectManagerStyles() {
     /* Form styling */
     .form-control { 
       width: 100%; 
-      padding: 8px 12px; 
-      border: 1px solid #ced4da; 
-      border-radius: 4px; 
-      font-size: 14px; 
-      margin-bottom: 8px; 
+      display: flex;
     }
     
     .btn { 

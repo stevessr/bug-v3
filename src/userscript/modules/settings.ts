@@ -28,15 +28,10 @@ export function showSettingsModal() {
 
   const content = createEl('div', {
     style: `
-      backdrop-filter: blur(10px);
-      color: var(--emoji-modal-text);
-      border-radius: 8px;
+    backdrop-filter: blur(10px);
     padding: 24px;
-    max-width: 500px;
-    max-height: 80vh;
     overflow-y: auto;
     position: relative;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   `,
     innerHTML: `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -100,8 +95,6 @@ export function showSettingsModal() {
           background: var(--emoji-modal-primary-bg); 
           color: white; 
           border: none; 
-          border-radius: 4px; 
-          cursor: pointer;
           font-size: 12px;
         ">编辑分组</button>
         <button id="openPopularEmojis" style="
@@ -109,8 +102,6 @@ export function showSettingsModal() {
           background: var(--emoji-modal-primary-bg); 
           color: white; 
           border: none; 
-          border-radius: 4px; 
-          cursor: pointer;
           font-size: 12px;
         ">常用表情</button>
       </div>
