@@ -126,9 +126,23 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
         return
       }
 
-      // otherwise, set a no-op that logs a message
+      // otherwise, set a dynamic wrapper that will try to call the page/content
+      // exposed autoRead function at the time of invocation. This ensures that
+      // if the content script or page exposes the function after userscript
+      // initialization, calling the wrapper will still trigger auto-read and
+      // its notifications.
       // @ts-ignore
       ;(window as any).callAutoReadRepliesV2 = (topicId?: number) => {
+        try {
+          // Prefer the up-to-date reference on window at call time
+          // @ts-ignore
+          const fn = (window as any).autoReadAllRepliesV2
+          if (fn && typeof fn === 'function') {
+            return fn(topicId)
+          }
+        } catch (e) {
+          console.warn('[Userscript] callAutoReadRepliesV2 invocation failed', e)
+        }
         console.warn('[Userscript] autoReadAllRepliesV2 not available on this page yet')
       }
     } catch (e) {

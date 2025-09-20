@@ -125,64 +125,40 @@ function createManualButton(): HTMLElement {
 }
 
 // Create auto-read menu button (to inject into user menu)
-function createAutoReadButton(): HTMLElement {
-  const btn = createEl('button', {
-    className: 'emoji-extension-floating-button secondary',
-    title: '像插件一样自动阅读话题 (Auto-read topics)',
-    innerHTML: '📖'
-  }) as HTMLButtonElement
-
-  btn.addEventListener('click', async e => {
-    e.stopPropagation()
-    e.preventDefault()
-
-    btn.style.transform = 'scale(0.9)'
-    btn.innerHTML = '⏳'
-
-    try {
-      // Prefer page-level wrapper
-      // @ts-ignore
-      const fn = (window as any).callAutoReadRepliesV2 || (window as any).autoReadAllRepliesV2
-      if (fn && typeof fn === 'function') {
-        await fn()
-        btn.innerHTML = '✅'
-      } else {
-        btn.innerHTML = '❌'
-        console.warn('[Emoji Extension] autoRead function not available on window')
-      }
-    } catch (err) {
-      console.error('[Emoji Extension] auto-read failed', err)
-      btn.innerHTML = '⚠️'
-    }
-
-    setTimeout(() => {
-      btn.innerHTML = '📖'
-      btn.style.transform = 'scale(1)'
-    }, 1500)
-  })
-
-  return btn
-}
-
 // Create auto-read menu <li> item to insert into the "其他服务" dropdown
 function createAutoReadMenuItem(): HTMLElement {
   const li = createEl('li', {
-    className: 'submenu-item emoji-extension-auto-read'
+    // include both submenu-item and sidebar wrapper classes so the element
+    // inherits styles in both dropdown and sidebar contexts
+    className: 'submenu-item emoji-extension-auto-read sidebar-section-link-wrapper',
+    // ensure the default list marker is hidden when inserted into a plain UL
+    style: 'list-style: none; padding-left: 0;'
   }) as HTMLElement
 
-  const a = createEl('a', {
-    className: 'submenu-link',
+  // Create a sidebar-style button when injecting into sidebar lists
+  const btn = createEl('button', {
+    className:
+      'fk-d-menu__trigger sidebar-more-section-trigger sidebar-section-link sidebar-more-section-links-details-summary sidebar-row --link-button sidebar-section-link sidebar-row',
     attrs: {
-      href: '#',
-      title: '像插件一样自动阅读话题 (Auto-read topics)'
+      type: 'button',
+      title: '像插件一样自动阅读话题 (Auto-read topics)',
+      'aria-expanded': 'false',
+      'data-identifier': 'emoji-ext-auto-read',
+      'data-trigger': ''
     },
     innerHTML: `
-      <svg class="fa d-icon d-icon-book svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#book"></use></svg>
-      自动阅读
+      <span class="sidebar-section-link-prefix icon">
+        <svg class="fa d-icon d-icon-book svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#book"></use></svg>
+      </span>
+      <span class="sidebar-section-link-content-text">自动阅读</span>
+    `,
+    style: `
+    background: transparent; 
+    border: none;
     `
-  }) as HTMLAnchorElement
+  }) as HTMLButtonElement
 
-  a.addEventListener('click', async (e: Event) => {
+  btn.addEventListener('click', async (e: Event) => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -195,14 +171,59 @@ function createAutoReadMenuItem(): HTMLElement {
         await fn()
       } else {
         console.warn('[Emoji Extension] autoRead function not available on window')
+        userscriptNotify('自动阅读功能当前不可用', 'error')
       }
     } catch (err) {
       console.error('[Emoji Extension] auto-read menu invocation failed', err)
+      userscriptNotify(
+        '自动阅读调用失败: ' + (err && (err as any).message ? (err as any).message : String(err)),
+        'error'
+      )
     }
   })
 
-  li.appendChild(a)
+  li.appendChild(btn)
   return li
+}
+
+// Lightweight userscript-side notification (fallback when page notify is not present)
+function userscriptNotify(
+  message: string,
+  type: 'info' | 'success' | 'error' = 'info',
+  timeout = 4000
+) {
+  try {
+    let container = document.getElementById('emoji-ext-userscript-toast') as HTMLElement | null
+    if (!container) {
+      container = createEl('div', {
+        attrs: { id: 'emoji-ext-userscript-toast' },
+        style: `position: fixed; right: 12px; bottom: 12px; z-index: 2147483646; display:flex; flex-direction:column; gap:8px;`
+      }) as HTMLElement
+      document.body.appendChild(container)
+    }
+
+    const el = createEl('div', {
+      text: message,
+      style: `padding:8px 12px; border-radius:6px; color:#fff; font-size:13px; max-width:320px; word-break:break-word; opacity:1;`
+    }) as HTMLElement
+
+    if (type === 'success') el.style.background = '#16a34a'
+    else if (type === 'error') el.style.background = '#dc2626'
+    else el.style.background = '#0369a1'
+
+    container.appendChild(el)
+    const id = setTimeout(() => {
+      el.remove()
+      clearTimeout(id)
+    }, timeout)
+    return () => {
+      el.remove()
+      clearTimeout(id)
+    }
+  } catch (_e) {
+    // ignore
+    return () => {}
+  }
 }
 
 // Show floating button
@@ -225,13 +246,14 @@ export function showFloatingButton() {
 }
 
 async function injectIntoUserMenu(el: HTMLElement) {
+  const SELECTOR_SIDEBAR = '#sidebar-section-content-community'
   const SELECTOR_OTHER_ANCHOR = 'a.menu-item[title="其他服务"], a.menu-item.vdm[title="其他服务"]'
   const SELECTOR_OTHER_DROPDOWN = '.d-header-dropdown .d-dropdown-menu'
   const SELECTOR_TOP = '.menu-tabs-container .top-tabs'
   const SELECTOR_CONTAINER = '.menu-tabs-container'
 
   for (;;) {
-    // 1) Try to inject into the "其他服务" dropdown if present
+    // 0) Try to inject into the "其他服务" dropdown if present
     const otherAnchor = document.querySelector(SELECTOR_OTHER_ANCHOR) as HTMLElement | null
     if (otherAnchor) {
       const dropdown = otherAnchor.querySelector(SELECTOR_OTHER_DROPDOWN) as HTMLElement | null
@@ -248,6 +270,24 @@ async function injectIntoUserMenu(el: HTMLElement) {
         console.log('[Emoji Extension Userscript] Auto-read injected into 其他服务 dropdown')
         return
       }
+    }
+
+    // 1) Priority: try the sidebar ul with id sidebar-section-content-community
+    const sidebar = document.querySelector(SELECTOR_SIDEBAR) as HTMLElement | null
+    if (sidebar) {
+      // If the element to insert is a <li>, append directly; otherwise wrap in li
+      if (el.tagName.toLowerCase() === 'li') {
+        sidebar.appendChild(el)
+      } else {
+        const wrapper = createEl('li', { className: 'sidebar-section-link-wrapper' }) as HTMLElement
+        wrapper.appendChild(el)
+        sidebar.appendChild(wrapper)
+      }
+      isButtonVisible = true
+      console.log(
+        '[Emoji Extension Userscript] Auto-read injected into sidebar #sidebar-section-content-community'
+      )
+      return
     }
 
     // 2) Fallback: try top-tabs
@@ -282,19 +322,7 @@ export async function showAutoReadInMenu() {
     await injectIntoUserMenu(menuItem)
     return
   } catch (e) {
-    console.warn(
-      '[Emoji Extension Userscript] injecting menu item failed, falling back to button',
-      e
-    )
-  }
-
-  // Fallback: insert the floating button into the page so it's still accessible
-  const btn = createAutoReadButton()
-  try {
-    await injectIntoUserMenu(btn)
-  } catch (e) {
-    document.body.appendChild(btn)
-    console.log('[Emoji Extension Userscript] Auto-read button appended to body as fallback')
+    console.warn('[Emoji Extension Userscript] injecting menu item failed', e)
   }
 }
 
