@@ -27,6 +27,8 @@ import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
 
 import opensource from '@/options/modals/opensource.vue'
+import Tenor from './tenor/Tenor.vue'
+import Waline from './waline/Waline.vue'
 
 const options = useOptions()
 
@@ -390,6 +392,16 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         <!-- External Import Tab -->
         <ExternalImportTab v-if="activeTab === 'import'" />
         <BilibiliImport v-if="activeTab === 'bilibili'" />
+
+        <!-- Tenor Tab -->
+        <div v-if="activeTab === 'tenor'">
+          <Tenor />
+        </div>
+
+        <!-- Waline Tab -->
+        <div v-if="activeTab === 'waline'">
+          <Waline />
+        </div>
 
         <!-- Statistics Tab -->
         <div v-if="activeTab === 'stats'" class="space-y-8">

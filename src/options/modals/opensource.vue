@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   GithubOutlined,
-  GifOutlined,
   CloudUploadOutlined,
   SwapOutlined,
   ExportOutlined,
@@ -10,7 +9,7 @@ import {
   ClearOutlined
 } from '@ant-design/icons-vue'
 
-defineEmits([
+const emit = defineEmits([
   'openImport',
   'openImportEmojis',
   'resetSettings',
@@ -27,21 +26,6 @@ const handleClick = () => {
   }
 }
 
-const gotoTensor = () => {
-  try {
-    window.open('/tenor.html', '_blank')
-  } catch (e) {
-    window.location.href = '/tenor.html'
-  }
-}
-
-const gotoWaline = () => {
-  try {
-    window.open('/waline.html', '_blank')
-  } catch (e) {
-    window.location.href = '/waline.html'
-  }
-}
 </script>
 
 <template>
@@ -50,16 +34,6 @@ const gotoWaline = () => {
       <a-float-button type="default" tooltip="开源地址" @click="handleClick">
         <template #icon>
           <GithubOutlined />
-        </template>
-      </a-float-button>
-      <a-float-button @click="gotoTensor" tooltip="Tenor GIF 导入" type="default">
-        <template #icon>
-          <GifOutlined />
-        </template>
-      </a-float-button>
-      <a-float-button @click="gotoWaline" tooltip="Waline 导入" type="default">
-        <template #icon>
-          <span class="text-lg">📦</span>
         </template>
       </a-float-button>
       <a-float-button tooltip="导入配置" type="default" @click="$emit('openImport')">
