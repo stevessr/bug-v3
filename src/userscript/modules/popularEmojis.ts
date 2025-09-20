@@ -4,7 +4,7 @@ import { getPopularEmojis, clearEmojiUsageStats, trackEmojiUsage } from '../user
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { showTemporaryMessage } from '../utils/tempMessage'
-import { ensureStyleInjected, removeInjectedStyle } from '../utils/injectStyles'
+import { ensureStyleInjected } from '../utils/injectStyles'
 
 export function showPopularEmojisModal() {
   // Ensure theme styles are injected
@@ -139,14 +139,12 @@ export function showPopularEmojisModal() {
   // Event listeners
   content.querySelector('#closeModal')?.addEventListener('click', () => {
     modal.remove()
-    removeInjectedStyle('popular-emojis-styles')
   })
 
   content.querySelector('#clearStats')?.addEventListener('click', () => {
     if (confirm('确定要清空所有表情使用统计吗？此操作不可撤销。')) {
       clearEmojiUsageStats()
       modal.remove()
-      removeInjectedStyle('popular-emojis-styles')
 
       // Show success message
       showTemporaryMessage('表情使用统计已清空')
@@ -172,8 +170,6 @@ export function showPopularEmojisModal() {
 
         // Close modal
         modal.remove()
-        removeInjectedStyle('popular-emojis-styles')
-
         // Show feedback
         showTemporaryMessage(`已使用表情: ${name}`)
       }
@@ -184,7 +180,6 @@ export function showPopularEmojisModal() {
   modal.addEventListener('click', e => {
     if (e.target === modal) {
       modal.remove()
-      removeInjectedStyle('popular-emojis-styles')
     }
   })
 }

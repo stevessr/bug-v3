@@ -6,8 +6,3 @@ export function ensureStyleInjected(id: string, css: string): void {
   style.textContent = css
   document.head ? document.head.appendChild(style) : document.documentElement.appendChild(style)
 }
-
-export function removeInjectedStyle(id: string): void {
-  const el = document.getElementById(id)
-  if (el && el.parentNode) el.parentNode.removeChild(el)
-}

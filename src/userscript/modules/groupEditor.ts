@@ -4,7 +4,7 @@ import { saveDataToLocalStorage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { showTemporaryMessage } from '../utils/tempMessage'
-import { ensureStyleInjected, removeInjectedStyle } from '../utils/injectStyles'
+import { ensureStyleInjected } from '../utils/injectStyles'
 
 export function showGroupEditorModal() {
   // Ensure theme styles are injected
@@ -181,14 +181,12 @@ export function showGroupEditorModal() {
   // Event listeners
   content.querySelector('#closeModal')?.addEventListener('click', () => {
     modal.remove()
-    removeInjectedStyle('group-editor-styles')
   })
 
   // Close on outside click
   modal.addEventListener('click', e => {
     if (e.target === modal) {
       modal.remove()
-      removeInjectedStyle('group-editor-styles')
     }
   })
 
@@ -239,7 +237,6 @@ export function showGroupEditorModal() {
         userscriptState.emojiGroups[index - 1] = temp
 
         modal.remove()
-        removeInjectedStyle('group-editor-styles')
         showTemporaryMessage('分组顺序已调整')
         setTimeout(() => showGroupEditorModal(), 300)
       }
@@ -255,7 +252,6 @@ export function showGroupEditorModal() {
         userscriptState.emojiGroups[index + 1] = temp
 
         modal.remove()
-        removeInjectedStyle('group-editor-styles')
         showTemporaryMessage('分组顺序已调整')
         setTimeout(() => showGroupEditorModal(), 300)
       }
@@ -277,7 +273,6 @@ export function showGroupEditorModal() {
 
       userscriptState.emojiGroups.push(newGroup)
       modal.remove()
-      removeInjectedStyle('group-editor-styles')
       showTemporaryMessage(`新分组 "${groupName.trim()}" 已创建`)
       setTimeout(() => showGroupEditorModal(), 300)
     }
