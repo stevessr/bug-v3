@@ -1,5 +1,6 @@
 // Styles for emoji picker hover preview and theme-adaptive rules
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
+import { ensureStyleInjected } from '../utils/injectStyles'
 
 export function injectEmojiPickerStyles(): void {
   if (typeof document === 'undefined') return
@@ -40,8 +41,5 @@ export function injectEmojiPickerStyles(): void {
   font-weight: 500;
 }
 `
-  const style = document.createElement('style')
-  style.id = 'emoji-picker-styles'
-  style.textContent = css
-  document.head.appendChild(style)
+  ensureStyleInjected('emoji-picker-styles', css)
 }

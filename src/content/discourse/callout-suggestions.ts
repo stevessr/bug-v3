@@ -1,6 +1,8 @@
 // 移植自 docs/referense/2mix.js — 将用户脚本逻辑封装为一个可初始化的模块
 // 功能：在 textarea 输入 `[!` 时显示候选 Callout（英文），支持键盘和点击完成
 
+import { ensureStyleInjected } from '../../userscript/utils/injectStyles'
+
 const calloutKeywords = [
   'note',
   'abstract',
@@ -132,10 +134,7 @@ function createSuggestionBox() {
 
 function injectStyles() {
   const id = 'callout-suggestion-styles'
-  if (document.getElementById(id)) return
-  const style = document.createElement('style')
-  style.id = id
-  style.textContent = `
+  const css = `
     #callout-suggestion-box-en {
       position: absolute;
       background-color: var(--secondary);
@@ -144,7 +143,7 @@ function injectStyles() {
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       z-index: 9999;
       padding: 5px;
-      display: none; /* 默认隐藏 */
+      display: none;
       font-size: 14px;
       max-height: 200px;
       overflow-y: auto;
@@ -159,17 +158,16 @@ function injectStyles() {
       align-items: center;
     }
     .suggestion-item-en:hover, .suggestion-item-en.active {
-      background-color: var(--primary-low) !important; /* 使用 !important 确保覆盖行内样式 */
+      background-color: var(--primary-low) !important;
     }
     .suggestion-item-en svg {
       width: 1em;
       height: 1em;
       margin-right: 8px;
-      /* 默认颜色被内联样式覆盖 */
       color: var(--primary-medium);
     }
   `
-  document.head.appendChild(style)
+  ensureStyleInjected(id, css)
 }
 
 function hideSuggestionBox() {
@@ -189,14 +187,22 @@ function applyCompletion(textarea: HTMLTextAreaElement, selectedKeyword: string)
   const text = textarea.value
   const selectionStart = textarea.selectionStart || 0
   const textBeforeCursor = text.substring(0, selectionStart)
-  // 查找最近的左括号触发符（半角或全角），插入时统一使用半角 '[!'
-  let triggerIndex = textBeforeCursor.lastIndexOf('[')
-  if (triggerIndex === -1) triggerIndex = textBeforeCursor.lastIndexOf('［')
-  if (triggerIndex === -1) triggerIndex = textBeforeCursor.lastIndexOf('【')
+
+  // 压缩搜索：查找最近的半角或全角左括号触发符
+  const triggerIndex = Math.max(
+    textBeforeCursor.lastIndexOf('['),
+    textBeforeCursor.lastIndexOf('［'),
+    textBeforeCursor.lastIndexOf('【')
+  )
+
+  // 如果没有找到任何触发符，则直接返回
   if (triggerIndex === -1) return
+
   const newText = `[!${selectedKeyword}]`
   const textAfter = text.substring(selectionStart)
+
   textarea.value = textBeforeCursor.substring(0, triggerIndex) + newText + textAfter
+
   const newCursorPos = triggerIndex + newText.length
   textarea.selectionStart = textarea.selectionEnd = newCursorPos
   textarea.dispatchEvent(new Event('input', { bubbles: true }))

@@ -249,15 +249,7 @@ async function injectIntoUserMenu() {
     if (otherAnchor) {
       const dropdown = otherAnchor.querySelector(SELECTOR_OTHER_DROPDOWN) as HTMLElement | null
       if (dropdown) {
-        const el = createAutoReadMenuItem('dropdown')
-        // If the element to insert is a <li>, append directly; otherwise wrap in li
-        if (el.tagName.toLowerCase() === 'li') {
-          dropdown.appendChild(el)
-        } else {
-          const wrapper = createEl('li', { className: 'submenu-item' }) as HTMLElement
-          wrapper.appendChild(el)
-          dropdown.appendChild(wrapper)
-        }
+        dropdown.appendChild(createAutoReadMenuItem('dropdown'))
         isButtonVisible = true
         console.log('[Emoji Extension Userscript] Auto-read injected into 其他服务 dropdown')
         return
@@ -267,15 +259,7 @@ async function injectIntoUserMenu() {
     // 1) Priority: try the sidebar ul with id sidebar-section-content-community
     const sidebar = document.querySelector(SELECTOR_SIDEBAR) as HTMLElement | null
     if (sidebar) {
-      const el = createAutoReadMenuItem('sidebar')
-      // If the element to insert is a <li>, append directly; otherwise wrap in li
-      if (el.tagName.toLowerCase() === 'li') {
-        sidebar.appendChild(el)
-      } else {
-        const wrapper = createEl('li', { className: 'sidebar-section-link-wrapper' }) as HTMLElement
-        wrapper.appendChild(el)
-        sidebar.appendChild(wrapper)
-      }
+      sidebar.appendChild(createAutoReadMenuItem('sidebar'))
       isButtonVisible = true
       console.log(
         '[Emoji Extension Userscript] Auto-read injected into sidebar #sidebar-section-content-community'

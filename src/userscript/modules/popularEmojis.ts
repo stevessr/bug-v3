@@ -4,6 +4,7 @@ import { getPopularEmojis, clearEmojiUsageStats, trackEmojiUsage } from '../user
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { showTemporaryMessage } from '../utils/tempMessage'
+import { ensureStyleInjected, removeInjectedStyle } from '../utils/injectStyles'
 
 export function showPopularEmojisModal() {
   // Ensure theme styles are injected
@@ -125,27 +126,27 @@ export function showPopularEmojisModal() {
   document.body.appendChild(modal)
 
   // Add hover effects for emoji items
-  const style = document.createElement('style')
-  style.textContent = `
+  const id = 'popular-emojis-styles'
+  const css = `
     .popular-emoji-item:hover {
       transform: translateY(-2px);
       border-color: var(--emoji-modal-primary-bg) !important;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
   `
-  document.head.appendChild(style)
+  ensureStyleInjected(id, css)
 
   // Event listeners
   content.querySelector('#closeModal')?.addEventListener('click', () => {
     modal.remove()
-    style.remove()
+    removeInjectedStyle('popular-emojis-styles')
   })
 
   content.querySelector('#clearStats')?.addEventListener('click', () => {
     if (confirm('确定要清空所有表情使用统计吗？此操作不可撤销。')) {
       clearEmojiUsageStats()
       modal.remove()
-      style.remove()
+      removeInjectedStyle('popular-emojis-styles')
 
       // Show success message
       showTemporaryMessage('表情使用统计已清空')
@@ -171,7 +172,7 @@ export function showPopularEmojisModal() {
 
         // Close modal
         modal.remove()
-        style.remove()
+        removeInjectedStyle('popular-emojis-styles')
 
         // Show feedback
         showTemporaryMessage(`已使用表情: ${name}`)
@@ -183,7 +184,7 @@ export function showPopularEmojisModal() {
   modal.addEventListener('click', e => {
     if (e.target === modal) {
       modal.remove()
-      style.remove()
+      removeInjectedStyle('popular-emojis-styles')
     }
   })
 }
@@ -246,5 +247,3 @@ function useEmojiFromPopular(name: string, url: string) {
     }
   }
 }
-
-

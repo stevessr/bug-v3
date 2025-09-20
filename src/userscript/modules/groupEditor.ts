@@ -4,6 +4,7 @@ import { saveDataToLocalStorage } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { showTemporaryMessage } from '../utils/tempMessage'
+import { ensureStyleInjected, removeInjectedStyle } from '../utils/injectStyles'
 
 export function showGroupEditorModal() {
   // Ensure theme styles are injected
@@ -156,8 +157,8 @@ export function showGroupEditorModal() {
   document.body.appendChild(modal)
 
   // Add hover effects
-  const style = createEl('style', {
-    text: `
+  const id = 'group-editor-styles'
+  const css = `
     .group-item:hover {
       border-color: var(--emoji-modal-primary-bg) !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -175,20 +176,19 @@ export function showGroupEditorModal() {
       cursor: not-allowed !important;
     }
   `
-  })
-  document.head.appendChild(style)
+  ensureStyleInjected(id, css)
 
   // Event listeners
   content.querySelector('#closeModal')?.addEventListener('click', () => {
     modal.remove()
-    style.remove()
+    removeInjectedStyle('group-editor-styles')
   })
 
   // Close on outside click
   modal.addEventListener('click', e => {
     if (e.target === modal) {
       modal.remove()
-      style.remove()
+      removeInjectedStyle('group-editor-styles')
     }
   })
 
@@ -239,7 +239,7 @@ export function showGroupEditorModal() {
         userscriptState.emojiGroups[index - 1] = temp
 
         modal.remove()
-        style.remove()
+        removeInjectedStyle('group-editor-styles')
         showTemporaryMessage('分组顺序已调整')
         setTimeout(() => showGroupEditorModal(), 300)
       }
@@ -255,7 +255,7 @@ export function showGroupEditorModal() {
         userscriptState.emojiGroups[index + 1] = temp
 
         modal.remove()
-        style.remove()
+        removeInjectedStyle('group-editor-styles')
         showTemporaryMessage('分组顺序已调整')
         setTimeout(() => showGroupEditorModal(), 300)
       }
@@ -277,7 +277,7 @@ export function showGroupEditorModal() {
 
       userscriptState.emojiGroups.push(newGroup)
       modal.remove()
-      style.remove()
+      removeInjectedStyle('group-editor-styles')
       showTemporaryMessage(`新分组 "${groupName.trim()}" 已创建`)
       setTimeout(() => showGroupEditorModal(), 300)
     }
