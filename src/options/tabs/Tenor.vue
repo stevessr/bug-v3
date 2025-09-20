@@ -308,7 +308,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <a-button
             @click="saveApiKey"
             :disabled="!inputApiKey.trim()"
-            class="px-4 py-2 text-sm bg蓝-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            class="px-4 py-2 text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             保存 API Key
           </a-button>
@@ -365,10 +365,10 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                     <a-menu-item key="48">48 个结果</a-menu-item>
                   </a-menu>
                 </template>
-                <a-a-button>
+                <a-button>
                   {{ searchLimit }} 个结果
                   <DownOutlined />
-                </a-a-button>
+                </a-button>
               </a-dropdown>
             </div>
 
@@ -382,10 +382,10 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                     <a-menu-item key="off">关闭过滤</a-menu-item>
                   </a-menu>
                 </template>
-                <a-a-button>
+                <a-button>
                   {{ contentFilter }}
                   <DownOutlined />
-                </a-a-button>
+                </a-button>
               </a-dropdown>
             </div>
           </div>

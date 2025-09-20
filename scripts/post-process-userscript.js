@@ -326,47 +326,48 @@ async function main() {
         } else {
           const runtimeLoader = `import type { DefaultEmojiData, EmojiGroup } from './emoji'
 
-// Runtime loader: fetch runtime JSON from /assets/defaultEmojiGroups.json
-// Returns empty defaults if fetch fails.
+    // Runtime loader: fetch runtime JSON from /assets/defaultEmojiGroups.json
+    // Returns empty defaults if fetch fails.
 
-async function fetchPackagedJSON(): Promise<DefaultEmojiData | null> {
-  try {
-    if (typeof fetch === 'undefined') return null
-    const res = await fetch('/assets/defaultEmojiGroups.json', { cache: 'no-cache' })
-    if (!res.ok) return null
-    const data = await res.json()
-    return data as DefaultEmojiData
-  } catch (err) {
-    return null
-  }
-}
-
-export async function loadDefaultEmojiGroups(): Promise<EmojiGroup[]> {
-  const packaged = await fetchPackagedJSON()
-  if (packaged && Array.isArray(packaged.groups)) return packaged.groups
-  return []
-}
-
-export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
-  const packaged = await fetchPackagedJSON()
-  if (packaged) return packaged
-  return {
-    groups: await loadDefaultEmojiGroups(),
-    settings: {
-      imageScale: 30,
-      defaultGroup: 'nachoneko',
-      showSearchBar: true,
-      gridColumns: 4,
-      outputFormat: 'markdown',
-      forceMobileMode: false,
-      enableLinuxDoInjection: false,
-      enableXcomExtraSelectors: true,
-      lastModified: Date.now(),
-      tenorApiKey: 'AIzaSyC-P6_qz3FzCoXGLk6tgitZo4jEJ5mLzD8'
+    async function fetchPackagedJSON(): Promise<DefaultEmojiData | null> {
+      try {
+        if (typeof fetch === 'undefined') return null
+        const res = await fetch('/assets/defaultEmojiGroups.json', { cache: 'no-cache' })
+        if (!res.ok) return null
+        const data = await res.json()
+        return data as DefaultEmojiData
+      } catch (err) {
+        return null
+      }
     }
-  } as unknown as DefaultEmojiData
-}
-`
+
+    export async function loadDefaultEmojiGroups(): Promise<EmojiGroup[]> {
+      const packaged = await fetchPackagedJSON()
+      if (packaged && Array.isArray(packaged.groups)) return packaged.groups
+      return []
+    }
+
+    export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
+      const packaged = await fetchPackagedJSON()
+      if (packaged) return packaged
+      return {
+        groups: await loadDefaultEmojiGroups(),
+        settings: {
+          imageScale: 30,
+          defaultGroup: 'nachoneko',
+          showSearchBar: true,
+          gridColumns: 4,
+          outputFormat: 'markdown',
+          forceMobileMode: false,
+          enableLinuxDoInjection: false,
+          enableXcomExtraSelectors: true,
+          lastModified: Date.now(),
+          // NOTE: Tenor API key intentionally left empty for repository; set at runtime by consumers.
+          tenorApiKey: ''
+        }
+      } as unknown as DefaultEmojiData
+    }
+    `
           fs.writeFileSync(loaderPath, runtimeLoader, 'utf8')
           console.log(`🔁 Wrote runtime loader template to ${loaderPath}`)
         }
@@ -439,7 +440,8 @@ export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
       enableLinuxDoInjection: false,
       enableXcomExtraSelectors: true,
       lastModified: Date.now(),
-      tenorApiKey: 'AIzaSyC-P6_qz3FzCoXGLk6tgitZo4jEJ5mLzD8'
+      // NOTE: Tenor API key intentionally left empty for repository; set at runtime by consumers.
+      tenorApiKey: ''
     }
   } as unknown as DefaultEmojiData
 }
