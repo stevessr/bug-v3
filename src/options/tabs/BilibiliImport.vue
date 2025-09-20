@@ -434,7 +434,7 @@ const importSelectedFromIndex = async () => {
                 class="dark:bg-black dark:text-white"
               />
               <label class="flex items-center space-x-2">
-                <input type="checkbox" v-model="importToStoreOnFetch" />
+                <a-switch v-model:checked="importToStoreOnFetch" />
                 <span class="text-sm dark:text-white">自动导入到 Store</span>
               </label>
             </div>
@@ -473,11 +473,9 @@ const importSelectedFromIndex = async () => {
                 <ACard v-for="pkg in displayPackages" :key="pkg.id" class="p-2">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
+                      <a-switch
                         :checked="selected[String(pkg.id)]"
                         @change="() => toggleSelect(String(pkg.id))"
-                        class="dark:bg-black dark:text-white"
                       />
                       <div>
                         <div class="font-medium dark:text-white">

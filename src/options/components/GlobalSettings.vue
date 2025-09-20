@@ -147,36 +147,104 @@ const handleImageScaleChange = (value: number | number[]) => {
   setTimeout(() => emit('update:imageScale', num), 0)
 }
 
-const handleShowSearchBarChange = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  emit('update:showSearchBar', target.checked)
-}
+// checkbox handlers removed — template now emits directly via a-switch @change handlers
 
-const handleForceMobileModeChange = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  emit('update:forceMobileMode', target.checked)
-}
+// per-setting refs with synchronization to props.settings
+const showSearchBarRef = ref<boolean>(
+  isRef(settings)
+    ? ((settings.value as any).showSearchBar ?? false)
+    : ((settings as AppSettings).showSearchBar ?? false)
+)
+watch(
+  () =>
+    isRef(settings)
+      ? (settings.value as any).showSearchBar
+      : (settings as AppSettings).showSearchBar,
+  v => {
+    showSearchBarRef.value = v ?? false
+  }
+)
+watch(showSearchBarRef, v => emit('update:showSearchBar', v))
 
-const handleLinuxDoInjectionChange = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  emit('update:enableLinuxDoInjection', target.checked)
-}
+const enableHoverPreviewRef = ref<boolean>(
+  isRef(settings)
+    ? ((settings.value as any).enableHoverPreview ?? false)
+    : ((settings as AppSettings).enableHoverPreview ?? false)
+)
+watch(
+  () =>
+    isRef(settings)
+      ? (settings.value as any).enableHoverPreview
+      : (settings as AppSettings).enableHoverPreview,
+  v => {
+    enableHoverPreviewRef.value = v ?? false
+  }
+)
+watch(enableHoverPreviewRef, v => emit('update:enableHoverPreview', v))
 
-const handleXcomExtraSelectorsChange = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  emit('update:enableXcomExtraSelectors', target.checked)
-}
+const forceMobileModeRef = ref<boolean>(
+  isRef(settings)
+    ? ((settings.value as any).forceMobileMode ?? false)
+    : ((settings as AppSettings).forceMobileMode ?? false)
+)
+watch(
+  () =>
+    isRef(settings)
+      ? (settings.value as any).forceMobileMode
+      : (settings as AppSettings).forceMobileMode,
+  v => {
+    forceMobileModeRef.value = v ?? false
+  }
+)
+watch(forceMobileModeRef, v => emit('update:forceMobileMode', v))
 
-const handleHoverPreviewChange = (e: Event) => {
-  const target = e.target as HTMLInputElement | null
-  if (!target) return
-  emit('update:enableHoverPreview', target.checked)
-}
+const enableLinuxDoInjectionRef = ref<boolean>(
+  isRef(settings)
+    ? ((settings.value as any).enableLinuxDoInjection ?? false)
+    : ((settings as AppSettings).enableLinuxDoInjection ?? false)
+)
+watch(
+  () =>
+    isRef(settings)
+      ? (settings.value as any).enableLinuxDoInjection
+      : (settings as AppSettings).enableLinuxDoInjection,
+  v => {
+    enableLinuxDoInjectionRef.value = v ?? false
+  }
+)
+watch(enableLinuxDoInjectionRef, v => emit('update:enableLinuxDoInjection', v))
 
-const handleCalloutSuggestionsChange = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  emit('update:enableCalloutSuggestions', target.checked)
-}
+const enableXcomExtraSelectorsRef = ref<boolean>(
+  isRef(settings)
+    ? ((settings.value as any).enableXcomExtraSelectors ?? false)
+    : ((settings as AppSettings).enableXcomExtraSelectors ?? false)
+)
+watch(
+  () =>
+    isRef(settings)
+      ? (settings.value as any).enableXcomExtraSelectors
+      : (settings as AppSettings).enableXcomExtraSelectors,
+  v => {
+    enableXcomExtraSelectorsRef.value = v ?? false
+  }
+)
+watch(enableXcomExtraSelectorsRef, v => emit('update:enableXcomExtraSelectors', v))
+
+const enableCalloutSuggestionsRef = ref<boolean>(
+  isRef(settings)
+    ? ((settings.value as any).enableCalloutSuggestions ?? false)
+    : ((settings as AppSettings).enableCalloutSuggestions ?? false)
+)
+watch(
+  () =>
+    isRef(settings)
+      ? (settings.value as any).enableCalloutSuggestions
+      : (settings as AppSettings).enableCalloutSuggestions,
+  v => {
+    enableCalloutSuggestionsRef.value = v ?? false
+  }
+)
+watch(enableCalloutSuggestionsRef, v => emit('update:enableCalloutSuggestions', v))
 </script>
 
 <template>
@@ -259,17 +327,7 @@ const handleCalloutSuggestionsChange = (e: Event) => {
           <label class="text-sm font-medium dark:text-white">显示搜索栏</label>
           <p class="text-sm dark:text-white">在表情选择器中显示搜索功能</p>
         </div>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            :checked="settings.showSearchBar"
-            @change="handleShowSearchBarChange"
-            class="sr-only peer"
-          />
-          <div
-            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
-          ></div>
-        </label>
+        <a-switch v-model:checked="showSearchBarRef" />
       </div>
 
       <div class="flex items-center justify-between">
@@ -277,17 +335,7 @@ const handleCalloutSuggestionsChange = (e: Event) => {
           <label class="text-sm font-medium dark:text-white">悬浮预览</label>
           <p class="text-sm dark:text-white">在表情选择器中启用鼠标悬浮显示大图预览</p>
         </div>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            :checked="settings.enableHoverPreview"
-            @change="handleHoverPreviewChange"
-            class="sr-only peer"
-          />
-          <div
-            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
-          ></div>
-        </label>
+        <a-switch v-model:checked="enableHoverPreviewRef" />
       </div>
 
       <div class="flex items-center justify-between">
@@ -314,17 +362,7 @@ const handleCalloutSuggestionsChange = (e: Event) => {
           <label class="text-sm font-medium text-gray-900 dark:text-white">强制移动模式</label>
           <p class="text-sm text-gray-500 dark:text-white">在桌面端强制使用移动端样式</p>
         </div>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            :checked="settings.forceMobileMode"
-            @change="handleForceMobileModeChange"
-            class="sr-only peer"
-          />
-          <div
-            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
-          ></div>
-        </label>
+        <a-switch v-model:checked="forceMobileModeRef" />
       </div>
 
       <div class="flex items-center justify-between" v-if="false">
@@ -334,17 +372,7 @@ const handleCalloutSuggestionsChange = (e: Event) => {
           </label>
           <p class="text-sm text-gray-500 dark:text-white">控制是否在linux.do注入表情功能脚本</p>
         </div>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            :checked="settings.enableLinuxDoInjection"
-            @change="handleLinuxDoInjectionChange"
-            class="sr-only peer"
-          />
-          <div
-            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
-          ></div>
-        </label>
+        <a-switch v-model:checked="enableLinuxDoInjectionRef" />
       </div>
 
       <div class="flex items-center justify-between">
@@ -354,17 +382,7 @@ const handleCalloutSuggestionsChange = (e: Event) => {
           </label>
           <p class="text-sm text-gray-500 dark:text-white">在X.com(Twitter)启用额外的选择器控制</p>
         </div>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            :checked="settings.enableXcomExtraSelectors"
-            @change="handleXcomExtraSelectorsChange"
-            class="sr-only peer"
-          />
-          <div
-            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
-          ></div>
-        </label>
+        <a-switch v-model:checked="enableXcomExtraSelectorsRef" />
       </div>
 
       <div class="flex items-center justify-between">
@@ -376,17 +394,7 @@ const handleCalloutSuggestionsChange = (e: Event) => {
             在编辑器中输入 [! 时显示 Callout 语法提示
           </p>
         </div>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            :checked="settings.enableCalloutSuggestions"
-            @change="handleCalloutSuggestionsChange"
-            class="sr-only peer"
-          />
-          <div
-            class="relative w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all after:border after:border-gray-300 dark:after:border-gray-600 peer-checked:after:translate-x-[20px]"
-          ></div>
-        </label>
+        <a-switch v-model:checked="enableCalloutSuggestionsRef" />
       </div>
     </div>
   </div>

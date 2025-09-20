@@ -24,5 +24,6 @@ declare module 'vue' {
     AProgress: typeof import('ant-design-vue/es')['Progress']
     ASegmented: typeof import('ant-design-vue/es')['Segmented']
     ASlider: typeof import('ant-design-vue/es')['Slider']
+    ASwitch: typeof import('ant-design-vue/es')['Switch']
   }
 }
