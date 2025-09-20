@@ -51,7 +51,8 @@ export async function postTimings(
   params.append('topic_time', String(maxTime))
   params.append('topic_id', String(topicId))
 
-  const url = 'https://linux.do/topics/timings'
+  const host = window.location.hostname
+  const url = `https://${host}/topics/timings`
 
   const headers: Record<string, string> = {
     'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',

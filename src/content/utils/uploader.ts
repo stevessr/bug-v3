@@ -514,7 +514,11 @@ class ImageUploader {
     }
 
     const response = await fetch(
-      `https://linux.do/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8`,
+      window.location.origin +
+        `/uploads.json?client_id=` +
+        (window.location.host === 'linux.do'
+          ? 'f06cb5577ba9410d94b9faf94e48c2d8'
+          : 'b9cdb79908284b25925d62befbff3921'),
       {
         method: 'POST',
         headers,
