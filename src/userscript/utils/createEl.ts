@@ -1,3 +1,4 @@
+// createEl helper: safely create elements with a small opts shape
 export function createEl<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   opts?: {

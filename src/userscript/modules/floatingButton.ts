@@ -130,12 +130,18 @@ async function invokeAutoRead(showNotify = false) {
     // Prefer page-level wrapper
     // @ts-ignore
     const fn = (window as any).callAutoReadRepliesV2 || (window as any).autoReadAllRepliesV2
+    console.log('[Emoji Extension] invokeAutoRead: found fn=', !!fn, ' typeof=', typeof fn, ' showNotify=', showNotify)
     if (fn && typeof fn === 'function') {
       // call without arguments to let v2 discover anchors
-      await fn()
+      const res = await fn()
+      console.log('[Emoji Extension] invokeAutoRead: fn returned', res)
+      // if caller requested a visible notify on success, show one
+      if (showNotify) userscriptNotify('自动阅读已触发', 'success')
     } else {
       console.warn('[Emoji Extension] autoRead function not available on window')
-      if (showNotify) userscriptNotify('自动阅读功能当前不可用', 'error')
+      // always log and attempt to notify so we can verify userscriptNotify path
+      console.log('[Emoji Extension] invokeAutoRead: attempting userscriptNotify fallback')
+      userscriptNotify('自动阅读功能当前不可用', 'error')
     }
   } catch (err) {
     console.error('[Emoji Extension] auto-read menu invocation failed', err)
@@ -232,7 +238,15 @@ function userscriptNotify(
       container = createEl('div', {
         attrs: { id: 'emoji-ext-userscript-toast', 'aria-live': 'polite' },
         // use minimal cssText; we'll also set important properties directly to be safer
-        style: `position: fixed; right: 12px; bottom: 12px; z-index: 2147483646; display:flex; flex-direction:column; gap:8px;`
+        style: `
+        position: fixed;
+        right: 12px; 
+        bottom: 12px; 
+        z-index: 2147483646; 
+        display:flex; 
+        flex-direction:column; 
+        gap:8px;
+        `
       }) as HTMLElement
 
       // Try to append to body; if not available, append to documentElement
@@ -249,6 +263,10 @@ function userscriptNotify(
       container.style.right = '12px'
       container.style.bottom = '12px'
       container.style.zIndex = String(2147483646)
+      // ensure z-index cannot be easily overridden by page styles
+      try {
+        container.style.setProperty('z-index', String(2147483646), 'important')
+      } catch (_e) {}
       container.style.display = 'flex'
       container.style.flexDirection = 'column'
       container.style.gap = '8px'
@@ -260,9 +278,9 @@ function userscriptNotify(
       style: `padding:8px 12px; border-radius:6px; color:#fff; font-size:13px; max-width:320px; word-break:break-word; opacity:0; transform: translateY(8px); transition: all 220ms ease;`
     }) as HTMLElement
 
-    if (type === 'success') el.style.background = '#16a34a'
-    else if (type === 'error') el.style.background = '#dc2626'
-    else el.style.background = '#0369a1'
+    if (type === 'success') el.style.setProperty('background', '#16a34a', 'important')
+    else if (type === 'error') el.style.setProperty('background', '#dc2626', 'important')
+    else el.style.setProperty('background', '#0369a1', 'important')
 
     // make sure it's visible
     container.appendChild(el)
