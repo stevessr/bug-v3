@@ -29,7 +29,6 @@ const FLOATING_BUTTON_STYLES = `
   border: none !important;
   box-shadow: 0 4px 12px var(--emoji-button-shadow) !important;
   cursor: pointer !important;
-  font-size: 24px !important;
   color: white !important;
   display: flex !important;
   align-items: center !important;
@@ -63,22 +62,12 @@ const FLOATING_BUTTON_STYLES = `
 `
 
 // Create and inject styles with platform-specific sizing
-function injectStyles() {
-  if (document.getElementById('emoji-extension-floating-button-styles')) {
-    return // Already injected
-  }
+import { ensureStyleInjected } from '../utils/injectStyles'
 
+function injectStyles() {
   // Inject global theme variables first
   injectGlobalThemeStyles()
-
-  const style = createEl('style', {
-    attrs: {
-      id: 'emoji-extension-floating-button-styles'
-    },
-    text: FLOATING_BUTTON_STYLES
-  })
-
-  document.head.appendChild(style)
+  ensureStyleInjected('emoji-extension-floating-button-styles', FLOATING_BUTTON_STYLES)
 }
 
 // Create manual floating button (bottom-right)

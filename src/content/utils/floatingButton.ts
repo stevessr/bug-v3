@@ -56,17 +56,11 @@ const FLOATING_BUTTON_STYLES = `
 }
 `
 
+import { ensureStyleInjected } from '../../userscript/utils/injectStyles'
+
 // Create and inject styles
 function injectStyles() {
-  if (document.getElementById('emoji-extension-floating-button-styles')) {
-    return // Already injected
-  }
-
-  const style = document.createElement('style')
-  style.id = 'emoji-extension-floating-button-styles'
-  style.textContent = FLOATING_BUTTON_STYLES
-
-  document.head.appendChild(style)
+  ensureStyleInjected('emoji-extension-floating-button-styles', FLOATING_BUTTON_STYLES)
 }
 
 // Create floating button element
@@ -135,7 +129,7 @@ function createFloatingButton(): HTMLElement {
 
       setTimeout(() => {
         button.innerHTML = '🐈‍⬛'
-        button.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        button.style.background = 'transparent'
         button.style.transform = 'scale(1)'
       }, 1500)
 

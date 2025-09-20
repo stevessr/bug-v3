@@ -1,6 +1,6 @@
 // Callout suggestions for userscript: trigger on '[' and insert `[!keyword]`
 // 移植自 src/content/discourse/callout-suggestions.ts，做了少量模块化调整
-
+export const da = document.addEventListener
 const calloutKeywords = [
   'note',
   'abstract',
@@ -130,12 +130,11 @@ function createSuggestionBox() {
   injectStyles()
 }
 
+import { ensureStyleInjected } from '../utils/injectStyles'
+
 function injectStyles() {
   const id = 'userscript-callout-suggestion-styles'
-  if (document.getElementById(id)) return
-  const style = document.createElement('style')
-  style.id = id
-  style.textContent = `
+  const css = `
   #userscript-callout-suggestion-box {
     position: absolute;
     background-color: var(--secondary);
@@ -154,7 +153,6 @@ function injectStyles() {
     cursor: pointer;
     color: var(--primary-high);
     border-radius: 4px;
-    font-family: monospace;
     display: flex;
     align-items: center;
   }
@@ -162,7 +160,7 @@ function injectStyles() {
     background-color: var(--primary-low) !important;
   }
   `
-  document.head.appendChild(style)
+  ensureStyleInjected(id, css)
 }
 
 function hideSuggestionBox() {
@@ -329,9 +327,9 @@ function handleKeydown(event: KeyboardEvent) {
 export function initCalloutSuggestionsUserscript() {
   try {
     createSuggestionBox()
-    document.addEventListener('input', handleInput, true)
-    document.addEventListener('keydown', handleKeydown, true)
-    document.addEventListener('click', e => {
+    da('input', handleInput, true)
+    da('keydown', handleKeydown, true)
+    da('click', e => {
       if (
         (e.target as Element)?.tagName !== 'TEXTAREA' &&
         !suggestionBox?.contains(e.target as Node)
