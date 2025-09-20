@@ -36,7 +36,7 @@ const { expandedGroups, activeTab, isImageUrl } = defineProps({
 })
 
 import { useEmojiStore } from '../../stores/emojiStore'
-import { TouchDragHandler } from '../../utils/touchDragDrop'
+import { TouchDragHandler } from '@/options/utils/touchDragDrop'
 import { normalizeImageUrl } from '../../utils/isImageUrl'
 
 import GroupsCardView from './GroupsCardView.vue'

@@ -4,7 +4,7 @@ import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/emoji'
-import { emojiPreviewUploader } from '../../utils/emojiPreviewUploader'
+import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 
 const props = defineProps<{
   show: boolean

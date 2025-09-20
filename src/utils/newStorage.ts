@@ -1,6 +1,6 @@
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 
-import { formatPreview } from './formatUtils'
+import { formatPreview } from '@/options/utils/formatUtils'
 
 import { defaultSettings } from '@/types/emoji'
 import { loadDefaultEmojiGroups, loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'

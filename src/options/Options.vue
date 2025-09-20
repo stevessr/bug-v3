@@ -2,7 +2,7 @@
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue'
 import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 
-import { setConfirmHandler, clearConfirmHandler } from '../utils/confirmService'
+import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
 import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
 
 import GridColumnsSelector from './components/GridColumnsSelector.vue'
@@ -27,8 +27,8 @@ import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
 
 import opensource from '@/options/modals/opensource.vue'
-import Tenor from './tenor/Tenor.vue'
-import Waline from './waline/Waline.vue'
+import Tenor from '@/options/tabs/Tenor.vue'
+import Waline from '@/options/tabs/Waline.vue'
 
 const options = useOptions()
 
@@ -40,8 +40,6 @@ const antdThemeConfig = computed(() => {
   const primaryColor = options.emojiStore.settings.customPrimaryColor || '#1890ff'
   return generateAntdTheme(currentThemeMode.value, primaryColor)
 })
-
-
 
 // 监听主题变化事件
 const handleThemeChange = (event: CustomEvent) => {
@@ -150,7 +148,9 @@ const {
 
 // --- Antd menu: placed after options destructuring so we can reference activeTab/tabs ---
 // Antd menu state for top navigation
-const menuSelectedKeys = ref<string[]>([(typeof activeTab === 'string' ? activeTab : (activeTab && (activeTab as any).value)) || 'settings'])
+const menuSelectedKeys = ref<string[]>([
+  (typeof activeTab === 'string' ? activeTab : activeTab && (activeTab as any).value) || 'settings'
+])
 
 // Build menu items from tabs so labels stay in sync
 const menuItems = computed(() => {
