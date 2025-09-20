@@ -209,45 +209,75 @@ function applyCompletion(textarea: HTMLTextAreaElement, selectedKeyword: string)
 }
 
 function getCursorXY(textarea: HTMLTextAreaElement) {
+  // Create (or reuse) a hidden mirror div that exactly overlaps the textarea
+  // and copy essential computed styles so that measuring the span gives an
+  // accurate caret position in page coordinates. This approach handles
+  // scrolling, transforms, zoom, and different box-sizing modes.
   const mirrorId = 'textarea-mirror-div-en'
   let mirror = document.getElementById(mirrorId) as HTMLDivElement | null
+  const rect = textarea.getBoundingClientRect()
   if (!mirror) {
     mirror = document.createElement('div')
     mirror.id = mirrorId
     document.body.appendChild(mirror)
   }
+
   const style = window.getComputedStyle(textarea)
   const props = [
-    'border',
     'boxSizing',
     'fontFamily',
     'fontSize',
     'fontWeight',
-    'height',
     'letterSpacing',
     'lineHeight',
-    'outline',
+    'textTransform',
+    'textAlign',
+    'direction',
+    'paddingTop',
+    'paddingRight',
     'paddingBottom',
     'paddingLeft',
-    'paddingRight',
-    'paddingTop',
-    'textAlign',
-    'textIndent',
-    'whiteSpace'
+    'borderTopWidth',
+    'borderRightWidth',
+    'borderBottomWidth',
+    'borderLeftWidth'
   ] as const
+  // apply styles to mirror
+  const ms = (mirror.style as any)
   props.forEach(p => {
-    ;(mirror as any).style[p] = style.getPropertyValue(p)
+    ms[p] = style.getPropertyValue(p)
   })
-  mirror.style.position = 'absolute'
-  mirror.style.left = '-9999px'
-  mirror.style.top = '-9999px'
-  mirror.style.width = style.width
+  // make mirror overlap the textarea so getBoundingClientRect on children
+  // returns absolute coordinates consistent with the visible textarea
+  ms.position = 'absolute'
+  ms.left = `${rect.left + window.scrollX}px`
+  ms.top = `${rect.top + window.scrollY}px`
+  ms.width = `${rect.width}px`
+  ms.height = `${rect.height}px`
+  ms.overflow = 'hidden'
+  ms.visibility = 'hidden'
+  ms.whiteSpace = 'pre-wrap'
+  ms.wordWrap = 'break-word'
+  ms.boxSizing = style.getPropertyValue('box-sizing') || 'border-box'
+
+  // place text up to cursor, then a span to measure position
   const textUpToCursor = textarea.value.substring(0, textarea.selectionEnd)
+  // Use textContent so characters are rendered as in the textarea. newlines
+  // are preserved by pre-wrap.
   mirror.textContent = textUpToCursor
   const span = document.createElement('span')
-  span.textContent = '.'
+  // zero-width character ensures span has a position without visible glyphs
+  span.textContent = '\u200b'
   mirror.appendChild(span)
-  return { x: span.offsetLeft - textarea.scrollLeft, y: span.offsetTop - textarea.scrollTop }
+
+  const spanRect = span.getBoundingClientRect()
+  // return page coordinates (account for page scroll). Caller should use
+  // these to position the suggestion box in the page coordinate space.
+  return {
+    x: spanRect.left + window.scrollX,
+    y: spanRect.top + window.scrollY,
+    bottom: spanRect.bottom + window.scrollY
+  }
 }
 
 function updateSuggestionBox(textarea: HTMLTextAreaElement, matches: string[]) {
@@ -280,10 +310,25 @@ function updateSuggestionBox(textarea: HTMLTextAreaElement, matches: string[]) {
     })
   })
 
-  const rect = textarea.getBoundingClientRect()
   const cursorPos = getCursorXY(textarea)
-  suggestionBox.style.left = `${rect.left + window.scrollX + cursorPos.x}px`
-  suggestionBox.style.top = `${rect.top + window.scrollY + cursorPos.y + 20}px`
+  // cursorPos now contains page coordinates. Position the suggestion box
+  // relative to those coordinates. Prefer showing below the caret; if there
+  // isn't enough space, flip above the caret.
+  const margin = 6
+  const boxRect = suggestionBox.getBoundingClientRect()
+  const viewportHeight = window.innerHeight
+  const spaceBelow = viewportHeight - (cursorPos.bottom - window.scrollY)
+
+  // Default left aligned to cursor; if RTL textarea, developers can adjust
+  const left = cursorPos.x
+  let top = cursorPos.y + margin
+  if (spaceBelow < boxRect.height + margin) {
+    // flip above caret
+    top = cursorPos.y - boxRect.height - margin
+  }
+
+  suggestionBox.style.left = `${left}px`
+  suggestionBox.style.top = `${top}px`
   suggestionBox.style.display = 'block'
   activeSuggestionIndex = 0
   updateActiveSuggestion()
