@@ -166,3 +166,4 @@ dist-userscript
 docs/*.png
 dist-firefox
 
+scripts/.profile-*
