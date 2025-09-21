@@ -34,6 +34,19 @@ export async function handleGetEmojiData(message: any, _sendResponse: (_resp: an
           const allowed = new Set(entry.enabledGroups.map((k: any) => String(k)))
           finalGroups = groups.filter(g => g && allowed.has(String(g.id)))
           console.log('[Background] finalGroups count after filter:', finalGroups.length)
+          // Ensure favorites group is always included in returned groups
+          const hasFavorites = finalGroups.some((g: any) => String(g.id) === 'favorites')
+          if (!hasFavorites) {
+            const favFromAll = groups.find((g: any) => String(g.id) === 'favorites')
+            if (favFromAll) {
+              console.log('[Background] adding existing favorites group to finalGroups')
+              finalGroups.unshift(favFromAll)
+            } else {
+              console.log('[Background] favorites group not present in all groups - creating minimal favorites group')
+              const minimalFav = { id: 'favorites', name: 'Favorites', icon: '⭐', order: -1, emojis: [] }
+              finalGroups.unshift(minimalFav)
+            }
+          }
         } else {
           console.log('[Background] No enabledGroups config for', src, ', returning all groups')
         }
