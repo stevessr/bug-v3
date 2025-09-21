@@ -13,7 +13,9 @@ export const STORAGE_KEYS = {
   SETTINGS: 'appSettings',
   FAVORITES: 'favorites',
   GROUP_INDEX: 'emojiGroupIndex', // For group order and metadata
-  GROUP_PREFIX: 'emojiGroup_' // For individual group storage
+  GROUP_PREFIX: 'emojiGroup_', // For individual group storage
+  // Discourse domain configuration: stores array of { domain: string, enabledGroups: string[] }
+  DISCOURSE_DOMAINS: 'discourseDomains'
 } as const
 
 export const SYNC_STORAGE_KEYS = {
@@ -474,6 +476,56 @@ export const newStorageHelpers = {
 
   async setFavorites(favorites: string[]): Promise<void> {
     await storageManager.set(STORAGE_KEYS.FAVORITES, favorites)
+  },
+
+  // Discourse domains management
+  // Each entry: { domain: string, enabledGroups: string[] }
+  async getDiscourseDomains(): Promise<Array<{ domain: string; enabledGroups: string[] }>> {
+    const domains = await storageManager.getWithConflictResolution(STORAGE_KEYS.DISCOURSE_DOMAINS)
+    return Array.isArray(domains) ? domains : []
+  },
+
+  async getDiscourseDomain(domain: string): Promise<{ domain: string; enabledGroups: string[] } | null> {
+    const domains = await this.getDiscourseDomains()
+    const found = domains.find(d => d.domain === domain)
+    return found || null
+  },
+
+  async setDiscourseDomains(domains: Array<{ domain: string; enabledGroups: string[] }>): Promise<void> {
+    await storageManager.set(STORAGE_KEYS.DISCOURSE_DOMAINS, domains)
+  },
+
+  async setDiscourseDomain(domain: string, enabledGroups: string[]): Promise<void> {
+    const domains = await this.getDiscourseDomains()
+    const idx = domains.findIndex(d => d.domain === domain)
+    const entry = { domain, enabledGroups }
+    if (idx >= 0) domains[idx] = entry
+    else domains.push(entry)
+    await this.setDiscourseDomains(domains)
+  },
+
+  async removeDiscourseDomain(domain: string): Promise<void> {
+    const domains = await this.getDiscourseDomains()
+    const filtered = domains.filter(d => d.domain !== domain)
+    await this.setDiscourseDomains(filtered)
+  },
+
+  /**
+   * Ensure a domain entry exists. If missing, create with all current group ids enabled.
+   * Returns the domain entry.
+   */
+  async ensureDiscourseDomainExists(domain: string): Promise<{ domain: string; enabledGroups: string[] }> {
+    const existing = await this.getDiscourseDomain(domain)
+    if (existing) return existing
+
+    // Default: enable all existing groups
+    const groups = await this.getAllEmojiGroups()
+    const ids = groups.map(g => g.id)
+    const entry = { domain, enabledGroups: ids }
+    const domains = await this.getDiscourseDomains()
+    domains.push(entry)
+    await this.setDiscourseDomains(domains)
+    return entry
   },
 
   // Sync operations

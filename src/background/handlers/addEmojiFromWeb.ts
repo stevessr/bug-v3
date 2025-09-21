@@ -7,6 +7,15 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
   // reference the callback to avoid unused-var lint in some configurations
   void sendResponse
   try {
+    // If caller provided a sourceDomain (e.g. discourse hostname), ensure it's registered
+    try {
+      if (emojiData && typeof emojiData.sourceDomain === 'string' && emojiData.sourceDomain.length > 0) {
+        await newStorageHelpers.ensureDiscourseDomainExists(emojiData.sourceDomain)
+      }
+    } catch (e) {
+      // Non-fatal: log and continue
+      console.warn('[Background] ensureDiscourseDomainExists failed', e)
+    }
     // 获取所有表情组
     const groups = await newStorageHelpers.getAllEmojiGroups()
 

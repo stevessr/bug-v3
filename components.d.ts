@@ -25,5 +25,6 @@ declare module 'vue' {
     ASegmented: typeof import('ant-design-vue/es')['Segmented']
     ASlider: typeof import('ant-design-vue/es')['Slider']
     ASwitch: typeof import('ant-design-vue/es')['Switch']
+    ATransfer: typeof import('ant-design-vue/es')['Transfer']
   }
 }
