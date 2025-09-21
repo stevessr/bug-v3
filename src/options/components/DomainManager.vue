@@ -6,10 +6,10 @@ import { newStorageHelpers } from '@/utils/newStorage'
 const emojiStore = useEmojiStore()
 
 interface MockData {
-  key: string;
-  title: string;
-  description: string;
-  disabled: boolean;
+  key: string
+  title: string
+  description: string
+  disabled: boolean
 }
 
 const domainList = ref<Array<{ domain: string; enabledGroups: string[] }>>([])

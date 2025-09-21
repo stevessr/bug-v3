@@ -29,7 +29,8 @@ export function setupMessageListener() {
       if (message.type) {
         switch (message.type) {
           case 'GET_EMOJI_DATA':
-            handleGetEmojiData(sendResponse)
+            // pass full message so handler can use message.sourceDomain for per-domain filtering
+            handleGetEmojiData(message, sendResponse)
             return true
 
           case 'GET_EMOJI_SETTING':

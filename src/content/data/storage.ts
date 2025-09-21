@@ -23,7 +23,11 @@ function sendMessageToBackground(message: any): Promise<any> {
 export async function loadDataFromStorage(): Promise<void> {
   try {
     console.log('[Emoji Extension] Requesting emoji data from background')
-    const resp = await sendMessageToBackground({ type: 'GET_EMOJI_DATA' })
+    // include the current page's hostname so background can filter groups per-domain
+    const resp = await sendMessageToBackground({
+      type: 'GET_EMOJI_DATA',
+      sourceDomain: window.location?.hostname || null
+    })
 
     if (resp && resp.success && resp.data) {
       const groups = resp.data.groups || []

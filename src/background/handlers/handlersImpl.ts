@@ -1,22 +1,54 @@
 import { newStorageHelpers } from '../../utils/newStorage'
 import { getChromeAPI } from '../utils/main.ts'
 
-export async function handleGetEmojiData(_sendResponse: (_resp: any) => void) {
+export async function handleGetEmojiData(message: any, _sendResponse: (_resp: any) => void) {
   // mark callback as referenced
   void _sendResponse
 
   try {
     // Use newStorageHelpers which understands the migrated storage layout
-    const groups = await newStorageHelpers.getAllEmojiGroups()
-    const settings = await newStorageHelpers.getSettings()
-    const favorites = await newStorageHelpers.getFavorites()
+    const groups = (await newStorageHelpers.getAllEmojiGroups()) || []
+    const settings = (await newStorageHelpers.getSettings()) || {}
+    const favorites = (await newStorageHelpers.getFavorites()) || []
+
+    let finalGroups = groups
+
+    try {
+      const src = message && message.sourceDomain ? String(message.sourceDomain).trim() : ''
+      console.log('[Background] handleGetEmojiData received sourceDomain:', src)
+      if (src) {
+        // lookup domain config; if missing, create default entry that enables all current groups
+        let entry = await newStorageHelpers.getDiscourseDomain(src)
+        console.log('[Background] existing discourse entry for', src, 'is', entry)
+        if (!entry) {
+          try {
+            entry = await newStorageHelpers.ensureDiscourseDomainExists(src)
+            console.log('[Background] Created default discourse domain entry for', src, '->', entry)
+          } catch (e) {
+            console.warn('[Background] ensureDiscourseDomainExists failed for', src, e)
+          }
+        }
+
+        if (entry && Array.isArray(entry.enabledGroups)) {
+          console.log('[Background] Filtering groups using enabledGroups for', src, entry.enabledGroups.length)
+          const allowed = new Set(entry.enabledGroups.map((k: any) => String(k)))
+          finalGroups = groups.filter(g => g && allowed.has(String(g.id)))
+          console.log('[Background] finalGroups count after filter:', finalGroups.length)
+        } else {
+          console.log('[Background] No enabledGroups config for', src, ', returning all groups')
+        }
+      }
+    } catch (e) {
+      // if domain filtering fails, log and fall back to full groups
+      console.warn('[Background] domain-based group filtering failed', e)
+    }
 
     _sendResponse({
       success: true,
       data: {
-        groups: groups || [],
-        settings: settings || {},
-        favorites: favorites || []
+        groups: finalGroups,
+        settings,
+        favorites
       }
     })
   } catch (error: any) {
