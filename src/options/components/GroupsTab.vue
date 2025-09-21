@@ -43,7 +43,7 @@ import { normalizeImageUrl } from '../../utils/isImageUrl'
 import GroupsCardView from './GroupsCardView.vue'
 import GroupActionsDropdown from './GroupActionsDropdown.vue'
 import DedupeChooser from './DedupeChooser.vue'
-import { newStorageHelpers } from '@/utils/newStorage'
+import DomainManager from './DomainManager.vue'
 
 // computed list that excludes the favorites group so it doesn't appear in group management
 const emojiStore = useEmojiStore()
@@ -424,78 +424,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
   emojiTouchHandler.value?.addTouchEvents(element, true)
 }
 
-// --- Discourse domains management state & helpers ---
-const domainList = ref<Array<{ domain: string; enabledGroups: string[] }>>([])
-const domainModalVisible = ref(false)
-const editingDomain = ref<string | null>(null)
-const transferTargetKeys = ref<string[]>([])
-const transferDataSource = ref<any[]>([])
-const newDomainInput = ref<string>('')
-
-async function addCustomDomain() {
-  let val = (newDomainInput.value || '').trim()
-  if (!val) return
-  try {
-    // normalize: if a full URL was provided, extract hostname
-    try {
-      const u = new URL(val)
-      val = u.hostname
-    } catch {
-      // not a full URL, strip protocol if present and remove path
-      val = val.replace(/^https?:\/\//i, '').replace(/\/.*$/, '')
-    }
-
-    if (!val) return
-    // Prevent duplicates
-    const existing = (await newStorageHelpers.getDiscourseDomains()).find(d => d.domain === val)
-    if (existing) {
-      // already present - just reload and clear input
-      newDomainInput.value = ''
-      await loadDomains()
-      return
-    }
-
-    // ensure and then reload
-    await newStorageHelpers.ensureDiscourseDomainExists(val)
-    newDomainInput.value = ''
-    await loadDomains()
-  } catch (e) {
-    console.warn('failed to add custom domain', e)
-  }
-}
-
-async function loadDomains() {
-  try {
-    const ds = await newStorageHelpers.getDiscourseDomains()
-    domainList.value = ds
-  } catch (e) {
-    console.warn('failed to load discourse domains', e)
-  }
-}
-
-async function openDomainManager(domain: string) {
-  editingDomain.value = domain
-  domainModalVisible.value = true
-  const groups = (emojiStore.sortedGroups || []).filter((g: any) => g.id !== 'favorites')
-  transferDataSource.value = groups.map((g: any) => ({
-    key: g.id,
-    title: g.name,
-    description: `${g.emojis?.length || 0} 表情`
-  }))
-  const entry = domainList.value.find(d => d.domain === domain)
-  transferTargetKeys.value = entry ? entry.enabledGroups.slice() : groups.map((g: any) => g.id)
-}
-
-async function saveDomainSettings() {
-  if (!editingDomain.value) return
-  await newStorageHelpers.setDiscourseDomain(editingDomain.value, transferTargetKeys.value)
-  await loadDomains()
-  domainModalVisible.value = false
-  editingDomain.value = null
-}
-
-// initialize domains
-void loadDomains()
+// Domain management moved to `DomainManager.vue`
 </script>
 
 <template>
@@ -699,60 +628,9 @@ void loadDomains()
             />
           </div>
         </div>
-        <!-- Discourse domains management (as a sub-view) -->
-        <div
-          v-if="viewMode === 'domains'"
-          class="p-6 border-t border-gray-100 dark:border-gray-700"
-        >
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-md font-medium text-gray-900 dark:text-white">域名管理</h3>
-              <p class="text-sm text-gray-500 dark:text-white">
-                为每个 Discourse 域名选择启用的表情分组
-              </p>
-            </div>
-            <div>
-              <a-button @click="() => loadDomains()">刷新</a-button>
-            </div>
-          </div>
-
-          <div class="mb-4 flex gap-2">
-            <a-input
-              v-model:value="newDomainInput"
-              placeholder="输入域名，例如: meta.discourse.org"
-            />
-            <a-button type="primary" @click="addCustomDomain">添加域名</a-button>
-          </div>
-
-          <div class="space-y-2">
-            <div v-if="domainList.length === 0" class="text-sm text-gray-500">暂无域名数据</div>
-            <div
-              v-for="d in domainList"
-              :key="d.domain"
-              class="flex items-center justify-between p-3 bg-gray-50 rounded"
-            >
-              <div class="truncate">
-                <div class="font-medium text-gray-900 dark:text-white">{{ d.domain }}</div>
-                <div class="text-xs text-gray-500 dark:text-white">
-                  启用分组：{{ d.enabledGroups.length }}
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <a-button size="small" @click.prevent="openDomainManager(d.domain)">管理</a-button>
-                <a-popconfirm
-                  title="确认删除该域名？"
-                  @confirm="
-                    async () => {
-                      await newStorageHelpers.removeDiscourseDomain(d.domain)
-                      await loadDomains()
-                    }
-                  "
-                >
-                  <a-button size="small" danger>删除</a-button>
-                </a-popconfirm>
-              </div>
-            </div>
-          </div>
+        <!-- Discourse domains management moved to DomainManager component -->
+        <div v-if="viewMode === 'domains'" class="p-6 border-t border-gray-100 dark:border-gray-700">
+          <DomainManager />
         </div>
         <!-- Batch update size modal (自动从 URL 解析尺寸并显示当前图片预览) -->
         <a-modal v-model:open="batchModalVisible" title="批量更新尺寸" :footer="null">
@@ -821,31 +699,7 @@ void loadDomains()
       @confirm="(groupId, mode) => performDedupeChoice(groupId, mode)"
     />
 
-    <!-- Discourse domain manager modal -->
-    <a-modal v-model:open="domainModalVisible" title="域名分组管理" :footer="null">
-      <div>
-        <a-transfer
-          v-model:target-keys="transferTargetKeys"
-          :data-source="transferDataSource"
-          :show-search="true"
-          :list-style="{ width: '45%', height: '320px' }"
-        />
-
-        <div class="flex justify-end gap-2 mt-4">
-          <a-button
-            @click="
-              () => {
-                domainModalVisible = false
-                editingDomain = null
-              }
-            "
-          >
-            取消
-          </a-button>
-          <a-button type="primary" @click="saveDomainSettings">保存</a-button>
-        </div>
-      </div>
-    </a-modal>
+    <!-- Domain manager handled by DomainManager.vue -->
   </div>
 </template>
 
