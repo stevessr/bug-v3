@@ -39,7 +39,7 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
         :key="emoji.id"
         @click="$emit('select', emoji)"
         style="display: inline-block; width: 100%; margin: 0 0 12px; break-inside: avoid; height: auto;"
-        class="emoji-item relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2"
+        class="emoji-item relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2 bg-transparent"
         :title="emoji.name"
       >
         <a-image

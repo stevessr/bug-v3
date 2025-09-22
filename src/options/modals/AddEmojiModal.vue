@@ -153,24 +153,24 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
 
         const variants: Array<{ label: string; url: string }> = []
 
-        // 添加原始URL（最高质量）
+        // 添加原始 URL（最高质量）
         if (originalUrl) {
           variants.push({ label: '原始 (最高质量)', url: originalUrl })
         }
 
-        // 添加下载URL
+        // 添加下载 URL
         if (downloadUrl && downloadUrl !== originalUrl) {
           variants.push({ label: '下载链接', url: downloadUrl })
         }
 
-        // 解析srcset中的变种
+        // 解析 srcset 中的变种
         if (srcset) {
           const srcsetParts = srcset.split(',').map(s => s.trim())
           srcsetParts.forEach(part => {
             const [url, descriptor] = part.split(' ')
             if (url && descriptor) {
               const scale = descriptor.replace('x', '')
-              // 尝试从URL中提取尺寸信息
+              // 尝试从 URL 中提取尺寸信息
               const sizeMatch = url.match(/_(\d+)x(\d+)\./)
               const sizeInfo = sizeMatch ? ` (${sizeMatch[1]}×${sizeMatch[2]})` : ''
               variants.push({
@@ -185,7 +185,7 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
           })
         }
 
-        // 添加当前显示的图片URL
+        // 添加当前显示的图片 URL
         if (imgSrc && !variants.some(v => v.url === imgSrc)) {
           const sizeMatch = imgSrc.match(/_(\d+)x(\d+)\./)
           const sizeInfo = sizeMatch ? ` (${sizeMatch[1]}×${sizeMatch[2]})` : ''
@@ -299,7 +299,7 @@ const previewParse = () => {
     newItems = parseHTMLImages(pasteText.value)
   }
 
-  // 保持现有项目的selectedVariant值，如果名称和URL匹配的话
+  // 保持现有项目的 selectedVariant 值，如果名称和 URL 匹配的话
   const existingItems = parsedItems.value
 
   // 清空数组但保持响应性
@@ -435,7 +435,7 @@ const importParsed = () => {
                 <DownOutlined />
               </a-button>
             </a-dropdown>
-            <div class="text-xs text-gray-500">已解析: {{ parsedItems.length }} 个</div>
+            <div class="text-xs text-gray-500">已解析：{{ parsedItems.length }} 个</div>
           </div>
         </div>
         <div v-if="inputMode === 'url'">
@@ -473,12 +473,12 @@ const importParsed = () => {
             "
           ></textarea>
           <div class="flex items-center justify-between mt-2">
-            <div class="text-xs text-gray-500">预览会解析出: {{ parsedItems.length }} 个</div>
+            <div class="text-xs text-gray-500">预览会解析出：{{ parsedItems.length }} 个</div>
             <div class="flex gap-2">
               <a-button
                 @click="previewParse"
                 type="button"
-                class="px-3 py-1 text-xs bg-gray-100 rounded"
+                class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
               >
                 预览
               </a-button>
@@ -509,7 +509,7 @@ const importParsed = () => {
           </a-dropdown>
         </div>
 
-        <!-- 解析结果预览和URL变种选择 -->
+        <!-- 解析结果预览和 URL 变种选择 -->
         <div
           v-if="parsedItems.length > 0 && inputMode !== 'url'"
           class="bg-gray-50 dark:bg-black rounded-lg p-4"
@@ -543,7 +543,7 @@ const importParsed = () => {
                   <div class="text-sm font-medium text-gray-900 truncate">{{ item.name }}</div>
                   <div v-if="item.variants.length > 1" class="mt-2">
                     <label class="block text-xs text-gray-600 dark:text-white mb-1">
-                      选择URL变种:
+                      选择 URL 变种：
                     </label>
                     <a-dropdown>
                       <template #overlay>

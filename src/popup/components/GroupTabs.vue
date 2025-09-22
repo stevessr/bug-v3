@@ -30,7 +30,7 @@ const { groups, activeGroupId, setActive } = toRefs(props) as {
       :class="[
         activeGroupId === group.id
           ? 'border-blue-500 text-blue-600 bg-blue-50 dark:border-blue-500 dark:text-white dark:bg-gray-700'
-          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-white dark:hover:text-white dark:hover:border-gray-600'
+          : 'border-transparent bg-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-white dark:hover:text-white dark:hover:border-gray-600'
       ]"
     >
       <span class="mr-1">

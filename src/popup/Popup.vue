@@ -27,7 +27,7 @@ const setActiveHandler = (id: string) => {
           <h2 class="text-sm font-semibold text-gray-900 dark:text-white">表情管理</h2>
           <a-button
             @click="openOptions"
-            class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white"
+            class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             title="设置"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,7 +49,7 @@ const setActiveHandler = (id: string) => {
 
         <!-- Scale Control -->
         <div class="flex items-center gap-2 text-xs">
-          <span class="text-gray-600 dark:text-white">缩放:</span>
+          <span class="text-gray-600 dark:text-white">缩放：</span>
           <input
             v-model.number="localScale"
             type="range"
