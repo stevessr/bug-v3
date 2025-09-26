@@ -2,7 +2,7 @@
 // @name         Markdown Callout English Autocomplete with Icons & Colors
 // @namespace    http://tampermonkey.net/
 // @version      2.4
-// @description  在输入 [! 后，根据英文关键词提供带图标和背景色的悬浮候选项并支持Tab/Enter键自动填充为Obsidian风格的Callout。
+// @description  在输入 [! 后，根据英文关键词提供带图标和背景色的悬浮候选项并支持 Tab/Enter 键自动填充为 Obsidian 风格的 Callout。
 // @match        https://linux.do/*
 // @grant        GM_addStyle
 // @author       Gemini
@@ -11,7 +11,7 @@
 ;(function () {
   'use strict'
 
-  // 1. 定义标准的英文Callout关键词列表
+  // 1. 定义标准的英文 Callout 关键词列表
   const calloutKeywords = [
     'note',
     'abstract',
@@ -131,7 +131,7 @@
     svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor"><path d="M490.3 40.4C512.2 62.27 512.2 97.73 490.3 119.6L460.3 149.7 362.3 51.72 392.4 21.66C414.3-.2135 449.7-.2135 471.6 21.66L490.3 40.4zM172.4 241.7L339.7 74.34 437.7 172.3 270.3 339.6C264.2 345.8 256.7 350.4 248.4 352.1L159.6 372.9C152.1 374.7 144.3 373.1 138.6 367.4C132.9 361.7 131.3 353.9 133.1 346.4L153.9 257.6C155.6 249.3 160.2 241.8 166.4 235.7L172.4 241.7zM96 64C42.98 64 0 106.1 0 160V416C0 469 42.98 512 96 512H352C405 512 448 469 448 416V320H400V416C400 442.5 378.5 464 352 464H96C69.54 464 48 442.5 48 416V160C48 133.5 69.54 112 96 112H192V64H96z"/></svg>'
   }
 
-  // 2. 创建并管理提示框UI
+  // 2. 创建并管理提示框 UI
   let suggestionBox = null
   let activeSuggestionIndex = 0
 
@@ -185,18 +185,18 @@
       return
     }
 
-    // 生成候选项HTML
+    // 生成候选项 HTML
     suggestionBox.innerHTML = matches
       .map((keyword, index) => {
         const iconData = ICONS[keyword] || DEFAULT_ICON
         const backgroundColor = iconData.color || 'transparent' // 获取背景颜色
 
-        // 将rgba背景色转换为不透明的rgb颜色用于SVG图标
+        // 将 rgba 背景色转换为不透明的 rgb 颜色用于 SVG 图标
         const iconColor = iconData.color
           ? iconData.color.replace('rgba', 'rgb').replace(/, [0-9.]+\)/, ')')
           : 'var(--primary-medium)'
 
-        // 将颜色作为内联样式添加到SVG标签
+        // 将颜色作为内联样式添加到 SVG 标签
         const coloredSvg = iconData.svg.replace('<svg', `<svg style="color: ${iconColor};"`)
 
         return `
@@ -214,7 +214,7 @@
     // 重新绑定点击事件
     suggestionBox.querySelectorAll('.suggestion-item-en').forEach(item => {
       item.addEventListener('mousedown', e => {
-        e.preventDefault() // 防止textarea失焦
+        e.preventDefault() // 防止 textarea 失焦
         applyCompletion(textarea, item.dataset.key)
         hideSuggestionBox()
       })
@@ -267,7 +267,7 @@
     const newCursorPos = triggerIndex + newText.length
     textarea.selectionStart = textarea.selectionEnd = newCursorPos
 
-    // 触发input事件，确保页面能监听到变化
+    // 触发 input 事件，确保页面能监听到变化
     textarea.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
@@ -281,7 +281,7 @@
     const textBeforeCursor = text.substring(0, selectionStart)
 
     // 匹配触发格式： "[!english"
-    const match = textBeforeCursor.match(/\[!([a-z]*)$/i) // 使用i标志进行不区分大小写匹配
+    const match = textBeforeCursor.match(/\[!([a-z]*)$/i) // 使用 i 标志进行不区分大小写匹配
 
     if (match) {
       const keyword = match[1].toLowerCase() // 统一转为小写进行匹配
@@ -334,7 +334,7 @@
     }
   }
 
-  // 7. 辅助函数：获取光标在textarea中的像素位置（简化版）
+  // 7. 辅助函数：获取光标在 textarea 中的像素位置（简化版）
   function getCursorXY(textarea) {
     const mirrorDivId = 'textarea-mirror-div-en'
     let mirrorDiv = document.getElementById(mirrorDivId)
