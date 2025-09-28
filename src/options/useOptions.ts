@@ -357,8 +357,15 @@ export default function useOptions() {
 
         showSuccess('表情已移动到新分组并更新')
       } else {
-        // 只是更新表情信息，不移动分组
-        emojiStore.updateEmojiInGroup(payload.groupId, payload.index, payload.emoji)
+        const updatedProperties: Partial<Emoji> = {
+          name: payload.emoji.name,
+          url: payload.emoji.url,
+          displayUrl: payload.emoji.displayUrl,
+          width: payload.emoji.width,
+          height: payload.emoji.height,
+          groupId: payload.emoji.groupId
+        }
+        emojiStore.updateEmojiInGroup(payload.groupId, payload.index, updatedProperties)
         showSuccess('表情已更新')
       }
 

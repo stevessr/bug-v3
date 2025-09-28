@@ -2,6 +2,19 @@
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { EmojiGroup } from '../../types/emoji'
 
+function generateEmojiName(emoji: any): string {
+  const name = emoji.name || emoji.alt || '未命名'
+  if (name.toLowerCase() === 'image') {
+    // Generate a random UUID
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = (Math.random() * 16) | 0
+      const v = c == 'x' ? r : (r & 0x3) | 0x8
+      return v.toString(16)
+    })
+  }
+  return name
+}
+
 export async function importConfigurationToStore(config: any) {
   const store = useEmojiStore()
   // simple validation
@@ -81,7 +94,7 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
           packet: Number.isInteger(emoji.packet)
             ? emoji.packet
             : Date.now() + Math.floor(Math.random() * 1000),
-          name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
+          name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
         }
@@ -112,7 +125,7 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
           packet: Number.isInteger(emoji.packet)
             ? emoji.packet
             : Date.now() + Math.floor(Math.random() * 1000),
-          name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
+          name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
         }
@@ -141,7 +154,7 @@ async function addItemsToStore(
           packet: Number.isInteger(emoji.packet)
             ? emoji.packet
             : Date.now() + Math.floor(Math.random() * 1000),
-          name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
+          name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
         }
@@ -171,7 +184,7 @@ async function addItemsToStore(
           packet: Number.isInteger(emoji.packet)
             ? emoji.packet
             : Date.now() + Math.floor(Math.random() * 1000),
-          name: emoji.name || emoji.alt || '\u672a\u547d\u540d',
+          name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
         }

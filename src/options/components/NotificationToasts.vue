@@ -20,7 +20,9 @@ const closeError = () => emit('update:showError', false)
         class="toast success fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50"
         role="status"
       >
-        <div class="flex items-center gap-3">
+        <div
+          class="flex items-center gap-3 bg-green-500/10 dark:bg-green-500/20 rounded-lg px-3 py-2"
+        >
           <div class="flex-1">{{ successMessage }}</div>
           <a-button @click="closeSuccess" class="text-white/90">✕</a-button>
         </div>

@@ -224,6 +224,7 @@ const handleSubmit = () => {
                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="输入表情名称"
                     required
+                    @keydown.enter.prevent="handleSubmit"
                   />
                 </div>
 
@@ -242,6 +243,7 @@ const handleSubmit = () => {
                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="https://example.com/emoji.png"
                     required
+                    @keydown.enter.prevent="handleSubmit"
                   />
                   <p class="mt-1 text-xs text-gray-500 dark:text-white">插入到编辑器时使用的链接</p>
                 </div>
@@ -260,6 +262,7 @@ const handleSubmit = () => {
                     type="url"
                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="https://example.com/preview.png"
+                    @keydown.enter.prevent="handleSubmit"
                   />
                   <p class="mt-1 text-xs text-gray-500 dark:text-white">
                     表情选择器中显示的链接，留空则使用输出链接
@@ -282,6 +285,7 @@ const handleSubmit = () => {
                       min="1"
                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                       placeholder="可选，像素"
+                      @keydown.enter.prevent="handleSubmit"
                     />
                   </div>
                   <div>
@@ -298,6 +302,7 @@ const handleSubmit = () => {
                       min="1"
                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                       placeholder="可选，像素"
+                      @keydown.enter.prevent="handleSubmit"
                     />
                   </div>
                 </div>
@@ -363,7 +368,8 @@ const handleSubmit = () => {
                   <!-- Save and Cancel buttons -->
                   <div class="grid grid-cols-2 gap-3">
                     <a-button
-                      type="submit"
+                      type="button"
+                      @click="handleSubmit"
                       class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
                     >
                       保存
