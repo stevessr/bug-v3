@@ -316,6 +316,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ customColorScheme: scheme })
   }
 
+  const updateCustomCss = (css: string) => {
+    emojiStore.updateSettings({ customCss: css })
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -789,6 +793,7 @@ export default function useOptions() {
     updateTheme,
     updateCustomPrimaryColor,
     updateCustomColorScheme,
+    updateCustomCss,
     updateEnableHoverPreview,
     // drag/drop
     handleDragStart,

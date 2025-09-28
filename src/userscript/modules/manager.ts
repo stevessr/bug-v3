@@ -354,7 +354,6 @@ export function openManagementInterface() {
     })
   }
 
-
   function bindHoverPreview(targetImg: HTMLImageElement, emo: any) {
     const preview = ensureHoverPreview()
     const previewImg = preview.querySelector('img') as HTMLImageElement
@@ -364,9 +363,11 @@ export function openManagementInterface() {
       if (previewImg) previewImg.src = emo.url
       // use specified size for preview if set, otherwise natural size constrained by CSS
       if (previewImg) {
-        if (emo.width) previewImg.style.width = typeof emo.width === 'number' ? emo.width + 'px' : emo.width
+        if (emo.width)
+          previewImg.style.width = typeof emo.width === 'number' ? emo.width + 'px' : emo.width
         else previewImg.style.width = ''
-        if (emo.height) previewImg.style.height = typeof emo.height === 'number' ? emo.height + 'px' : emo.height
+        if (emo.height)
+          previewImg.style.height = typeof emo.height === 'number' ? emo.height + 'px' : emo.height
         else previewImg.style.height = ''
       }
       if (previewLabel) previewLabel.textContent = emo.name || ''

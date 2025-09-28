@@ -9,7 +9,11 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
   try {
     // If caller provided a sourceDomain (e.g. discourse hostname), ensure it's registered
     try {
-      if (emojiData && typeof emojiData.sourceDomain === 'string' && emojiData.sourceDomain.length > 0) {
+      if (
+        emojiData &&
+        typeof emojiData.sourceDomain === 'string' &&
+        emojiData.sourceDomain.length > 0
+      ) {
         await newStorageHelpers.ensureDiscourseDomainExists(emojiData.sourceDomain)
       }
     } catch (e) {

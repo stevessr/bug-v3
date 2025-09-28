@@ -25,7 +25,6 @@ const handleClick = () => {
     window.location.href = 'https://github.com/stevessr/bug-v3/'
   }
 }
-
 </script>
 
 <template>

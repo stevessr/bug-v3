@@ -62,7 +62,10 @@ export function createBatchParseButton(cookedElement: Element): HTMLElement {
           let successCount = 0
           for (const emojiData of allEmojiData) {
             try {
-              await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: { ...emojiData, sourceDomain: window.location.hostname } })
+              await chrome.runtime.sendMessage({
+                action: 'addEmojiFromWeb',
+                emojiData: { ...emojiData, sourceDomain: window.location.hostname }
+              })
               successCount++
             } catch (e) {
               console.error('[DiscourseOneClick] 添加图片失败', emojiData.name, e)

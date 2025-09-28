@@ -2,7 +2,6 @@
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue'
 import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 
-import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
 import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
 
 import GridColumnsSelector from './components/GridColumnsSelector.vue'
@@ -26,6 +25,7 @@ import EditGroupModal from './modals/EditGroupModal.vue'
 import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
 
+import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
 import opensource from '@/options/modals/opensource.vue'
 import Tenor from '@/options/tabs/Tenor.vue'
 import Waline from '@/options/tabs/Waline.vue'
@@ -109,6 +109,7 @@ const {
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
+  updateCustomCss,
   handleDragStart,
   handleDrop,
   handleEmojiDragStart,
@@ -344,6 +345,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
             @update:theme="updateTheme"
             @update:customPrimaryColor="updateCustomPrimaryColor"
             @update:customColorScheme="updateCustomColorScheme"
+            @update:customCss="updateCustomCss"
           >
             <template #grid-selector>
               <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />

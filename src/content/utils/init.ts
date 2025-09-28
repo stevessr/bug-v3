@@ -5,6 +5,7 @@ import { findAllToolbars, injectButton } from './injector'
 import { initOneClickAdd } from './oneClickAdd'
 import { showFloatingButton, checkAndShowFloatingButton } from './floatingButton'
 import { startReadTracker } from './readTracker'
+import { applyCustomCssFromCache } from './injectCustomCss'
 
 // Function to check and re-inject buttons if needed
 function checkAndReinjectButtons() {
@@ -112,6 +113,11 @@ export async function initializeEmojiFeature(
 ) {
   console.log('[Emoji Extension] Initializing (module)...')
   await loadDataFromStorage()
+  try {
+    applyCustomCssFromCache()
+  } catch (_e) {
+    void _e
+  }
 
   // 初始化一键添加表情功能
   initOneClickAdd()
@@ -198,6 +204,14 @@ export async function initializeEmojiFeature(
         if (hasRelevant) {
           console.log('[Emoji Extension] Storage change detected (module), reloading data')
           loadDataFromStorage()
+          // re-apply custom css after storage changes
+          setTimeout(() => {
+            try {
+              applyCustomCssFromCache()
+            } catch (_e) {
+              void _e
+            }
+          }, 50)
         }
       }
     })
@@ -213,6 +227,12 @@ export async function initializeEmojiFeature(
         if (message.type === 'SETTINGS_UPDATED') {
           console.log('[Emoji Extension] Settings updated from background, reloading data')
           loadDataFromStorage()
+          // re-apply custom css after settings updated
+          try {
+            applyCustomCssFromCache()
+          } catch (_e) {
+            void _e
+          }
         }
       }
     )

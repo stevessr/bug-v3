@@ -38,7 +38,13 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
         v-for="emoji in emojis"
         :key="emoji.id"
         @click="$emit('select', emoji)"
-        style="display: inline-block; width: 100%; margin: 0 0 12px; break-inside: avoid; height: auto;"
+        style="
+          display: inline-block;
+          width: 100%;
+          margin: 0 0 12px;
+          break-inside: avoid;
+          height: auto;
+        "
         class="emoji-item relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2 bg-transparent"
         :title="emoji.name"
       >
@@ -47,7 +53,7 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton }
           :alt="emoji.name"
           class="w-full h-full object-cover"
           loading="lazy"
-          :preview=false
+          :preview="false"
         />
         <!-- Activity indicator for favorites -->
         <div

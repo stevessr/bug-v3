@@ -1,7 +1,6 @@
 import type { EmojiGroup, AppSettings } from '../types/emoji'
 
 import { formatPreview } from '@/options/utils/formatUtils'
-
 import { defaultSettings } from '@/types/emoji'
 import { loadDefaultEmojiGroups, loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
@@ -485,13 +484,17 @@ export const newStorageHelpers = {
     return Array.isArray(domains) ? domains : []
   },
 
-  async getDiscourseDomain(domain: string): Promise<{ domain: string; enabledGroups: string[] } | null> {
+  async getDiscourseDomain(
+    domain: string
+  ): Promise<{ domain: string; enabledGroups: string[] } | null> {
     const domains = await this.getDiscourseDomains()
     const found = domains.find(d => d.domain === domain)
     return found || null
   },
 
-  async setDiscourseDomains(domains: Array<{ domain: string; enabledGroups: string[] }>): Promise<void> {
+  async setDiscourseDomains(
+    domains: Array<{ domain: string; enabledGroups: string[] }>
+  ): Promise<void> {
     await storageManager.set(STORAGE_KEYS.DISCOURSE_DOMAINS, domains)
   },
 
@@ -514,7 +517,9 @@ export const newStorageHelpers = {
    * Ensure a domain entry exists. If missing, create with all current group ids enabled.
    * Returns the domain entry.
    */
-  async ensureDiscourseDomainExists(domain: string): Promise<{ domain: string; enabledGroups: string[] }> {
+  async ensureDiscourseDomainExists(
+    domain: string
+  ): Promise<{ domain: string; enabledGroups: string[] }> {
     const existing = await this.getDiscourseDomain(domain)
     if (existing) return existing
 

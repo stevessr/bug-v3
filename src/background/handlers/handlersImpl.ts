@@ -30,7 +30,11 @@ export async function handleGetEmojiData(message: any, _sendResponse: (_resp: an
         }
 
         if (entry && Array.isArray(entry.enabledGroups)) {
-          console.log('[Background] Filtering groups using enabledGroups for', src, entry.enabledGroups.length)
+          console.log(
+            '[Background] Filtering groups using enabledGroups for',
+            src,
+            entry.enabledGroups.length
+          )
           const allowed = new Set(entry.enabledGroups.map((k: any) => String(k)))
           finalGroups = groups.filter(g => g && allowed.has(String(g.id)))
           console.log('[Background] finalGroups count after filter:', finalGroups.length)
@@ -42,8 +46,16 @@ export async function handleGetEmojiData(message: any, _sendResponse: (_resp: an
               console.log('[Background] adding existing favorites group to finalGroups')
               finalGroups.unshift(favFromAll)
             } else {
-              console.log('[Background] favorites group not present in all groups - creating minimal favorites group')
-              const minimalFav = { id: 'favorites', name: 'Favorites', icon: '⭐', order: -1, emojis: [] }
+              console.log(
+                '[Background] favorites group not present in all groups - creating minimal favorites group'
+              )
+              const minimalFav = {
+                id: 'favorites',
+                name: 'Favorites',
+                icon: '⭐',
+                order: -1,
+                emojis: []
+              }
               finalGroups.unshift(minimalFav)
             }
           }

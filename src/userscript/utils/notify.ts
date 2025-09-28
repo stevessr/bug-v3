@@ -52,7 +52,7 @@ export function userscriptNotify(
 
     container.appendChild(el)
     // force a paint then show (for transition)
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+
     el.offsetHeight
     el.style.opacity = '1'
     el.style.transform = 'translateY(0)'

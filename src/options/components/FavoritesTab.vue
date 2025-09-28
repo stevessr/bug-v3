@@ -58,7 +58,9 @@ const favoritesGroup = computed(() => {
             </div>
             <!-- Actions: hidden by default, shown on hover below the image -->
             <div class="mt-2 flex justify-center items-center">
-              <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex gap-2">
+              <div
+                class="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex gap-2"
+              >
                 <a-button
                   @click="$emit('edit', emoji, 'favorites', idx)"
                   title="编辑"

@@ -21,7 +21,8 @@ const emit = defineEmits([
   'update:theme',
   'update:customPrimaryColor',
   'update:customColorScheme',
-  'update:enableHoverPreview'
+  'update:enableHoverPreview',
+  'update:customCss'
 ])
 
 const getCustomPrimaryColor = () => {
@@ -245,6 +246,42 @@ watch(
   }
 )
 watch(enableCalloutSuggestionsRef, v => emit('update:enableCalloutSuggestions', v))
+
+// Custom CSS editor state
+const showCustomCssEditor = ref(false)
+const _initialCustomCss = (() => {
+  try {
+    if (isRef(settings)) return (settings.value && settings.value.customCss) || ''
+    return (settings && (settings as AppSettings).customCss) || ''
+  } catch {
+    return ''
+  }
+})()
+const localCustomCss = ref<string>(_initialCustomCss)
+
+watch(
+  () => (isRef(settings) ? (settings.value as any).customCss : (settings as AppSettings).customCss),
+  v => {
+    localCustomCss.value = v || ''
+  }
+)
+
+const openCustomCssEditor = () => {
+  showCustomCssEditor.value = true
+}
+
+const saveCustomCss = () => {
+  emit('update:customCss', localCustomCss.value || '')
+  showCustomCssEditor.value = false
+}
+
+const cancelCustomCss = () => {
+  // revert local copy
+  localCustomCss.value = isRef(settings)
+    ? (settings.value as any).customCss || ''
+    : (settings as AppSettings).customCss || ''
+  showCustomCssEditor.value = false
+}
 </script>
 
 <template>
@@ -395,6 +432,34 @@ watch(enableCalloutSuggestionsRef, v => emit('update:enableCalloutSuggestions', 
           </p>
         </div>
         <a-switch v-model:checked="enableCalloutSuggestionsRef" />
+      </div>
+      <!-- Custom CSS management -->
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">自定义 CSS</label>
+          <p class="text-sm text-gray-500 dark:text-white">
+            向页面注入自定义 CSS（仅在支持的平台注入）
+          </p>
+        </div>
+        <div>
+          <a-button @click="openCustomCssEditor">管理自定义 CSS</a-button>
+        </div>
+      </div>
+
+      <!-- Custom CSS editor modal (simple) -->
+      <div v-if="showCustomCssEditor" class="fixed inset-0 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-3/4 max-w-3xl p-4">
+          <h3 class="text-lg font-semibold dark:text-white mb-2">编辑自定义 CSS</h3>
+          <textarea
+            v-model="localCustomCss"
+            rows="10"
+            class="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
+          ></textarea>
+          <div class="mt-3 flex justify-end gap-2">
+            <a-button @click="cancelCustomCss">取消</a-button>
+            <a-button type="primary" @click="saveCustomCss">保存并注入</a-button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

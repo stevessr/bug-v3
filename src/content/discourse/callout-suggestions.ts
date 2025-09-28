@@ -243,7 +243,7 @@ function getCursorXY(textarea: HTMLTextAreaElement) {
     'borderLeftWidth'
   ] as const
   // apply styles to mirror
-  const ms = (mirror.style as any)
+  const ms = mirror.style as any
   props.forEach(p => {
     ms[p] = style.getPropertyValue(p)
   })

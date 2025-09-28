@@ -37,13 +37,14 @@ const { expandedGroups, activeTab, isImageUrl } = defineProps({
 })
 
 import { useEmojiStore } from '../../stores/emojiStore'
-import { TouchDragHandler } from '@/options/utils/touchDragDrop'
 import { normalizeImageUrl } from '../../utils/isImageUrl'
 
 import GroupsCardView from './GroupsCardView.vue'
 import GroupActionsDropdown from './GroupActionsDropdown.vue'
 import DedupeChooser from './DedupeChooser.vue'
 import DomainManager from './DomainManager.vue'
+
+import { TouchDragHandler } from '@/options/utils/touchDragDrop'
 
 // computed list that excludes the favorites group so it doesn't appear in group management
 const emojiStore = useEmojiStore()
@@ -629,7 +630,10 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
           </div>
         </div>
         <!-- Discourse domains management moved to DomainManager component -->
-        <div v-if="viewMode === 'domains'" class="p-6 border-t border-gray-100 dark:border-gray-700">
+        <div
+          v-if="viewMode === 'domains'"
+          class="p-6 border-t border-gray-100 dark:border-gray-700"
+        >
           <DomainManager />
         </div>
         <!-- Batch update size modal (自动从 URL 解析尺寸并显示当前图片预览) -->

@@ -120,7 +120,14 @@ async function invokeAutoRead(showNotify = false) {
     // Prefer page-level wrapper
     // @ts-ignore
     const fn = (window as any).callAutoReadRepliesV2 || (window as any).autoReadAllRepliesV2
-    console.log('[Emoji Extension] invokeAutoRead: found fn=', !!fn, ' typeof=', typeof fn, ' showNotify=', showNotify)
+    console.log(
+      '[Emoji Extension] invokeAutoRead: found fn=',
+      !!fn,
+      ' typeof=',
+      typeof fn,
+      ' showNotify=',
+      showNotify
+    )
     if (fn && typeof fn === 'function') {
       // call without arguments to let v2 discover anchors
       const res = await fn()

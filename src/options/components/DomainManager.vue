@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, h, toRaw, computed } from 'vue'
+
 import { useEmojiStore } from '../../stores/emojiStore'
+
 import { newStorageHelpers } from '@/utils/newStorage'
 
 const emojiStore = useEmojiStore()
