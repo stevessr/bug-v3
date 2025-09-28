@@ -6,6 +6,7 @@ import { injectGlobalThemeStyles } from '../utils/themeSupport'
 
 import { showGroupEditorModal } from './groupEditor'
 import { showPopularEmojisModal } from './popularEmojis'
+import { showImportExportModal } from './importExport'
 
 // Show settings modal
 export function showSettingsModal() {
@@ -104,6 +105,13 @@ export function showSettingsModal() {
           border: none; 
           font-size: 12px;
         ">常用表情</button>
+        <button id="openImportExport" style="
+          padding: 6px 12px; 
+          background: var(--emoji-modal-primary-bg); 
+          color: white; 
+          border: none; 
+          font-size: 12px;
+        ">导入导出</button>
       </div>
     </div>
     
@@ -208,6 +216,11 @@ export function showSettingsModal() {
   content.querySelector('#openPopularEmojis')?.addEventListener('click', () => {
     modal.remove()
     showPopularEmojisModal()
+  })
+
+  content.querySelector('#openImportExport')?.addEventListener('click', () => {
+    modal.remove()
+    showImportExportModal()
   })
 
   // Close on outside click

@@ -5,11 +5,10 @@ import { userscriptState } from '../state'
 import { ensureHoverPreview } from '../utils/hoverPreview'
 import {
   saveDataToLocalStorage,
-  exportUserscriptData,
-  importUserscriptData,
   syncFromManager,
   loadDataFromLocalStorage
 } from '../userscript-storage'
+import { showImportExportModal } from './importExport'
 
 // Create popup editor for emoji editing
 function createEditorPopup(
@@ -234,8 +233,8 @@ export function openManagementInterface() {
 
   // Footer actions
   const footer = createEl('div', { className: 'emoji-manager-footer' }) as HTMLDivElement
-  const exportBtn = createEl('button', { text: '导出', className: 'btn' }) as HTMLButtonElement
-  const importBtn = createEl('button', { text: '导入', className: 'btn' }) as HTMLButtonElement
+  const exportBtn = createEl('button', { text: '分组导出', className: 'btn' }) as HTMLButtonElement
+  const importBtn = createEl('button', { text: '分组导入', className: 'btn' }) as HTMLButtonElement
   const exitBtn = createEl('button', { text: '退出', className: 'btn' }) as HTMLButtonElement
   exitBtn.addEventListener('click', () => modal.remove())
   const saveBtn = createEl('button', {
@@ -452,89 +451,13 @@ export function openManagementInterface() {
   })
 
   exportBtn.addEventListener('click', () => {
-    const data = exportUserscriptData()
-    navigator.clipboard
-      .writeText(data)
-      .then(() => alert('已复制到剪贴板'))
-      .catch(() => {
-        const ta = createEl('textarea', { value: data }) as HTMLTextAreaElement
-        document.body.appendChild(ta)
-        ta.select()
-      })
+    // 调用新的分组导入导出模态窗口，传递当前选中的分组 ID
+    showImportExportModal(selectedGroupId || undefined)
   })
 
   importBtn.addEventListener('click', () => {
-    const ta = createEl('textarea', {
-      placeholder: '粘贴 JSON 后点击确认',
-      style: 'width:100%;height:200px;margin-top:8px;'
-    }) as HTMLTextAreaElement
-    // file input for importing from a local file
-    const fileInput = createEl('input', {
-      type: 'file',
-      attrs: { accept: '.json,application/json' },
-      style: 'display:block;margin-bottom:8px;'
-    }) as HTMLInputElement
-
-    const ok = createEl('button', {
-      text: '确认导入',
-      style: 'padding:6px 8px;margin-top:6px;'
-    }) as HTMLButtonElement
-    const container = createEl('div') as HTMLDivElement
-    container.appendChild(fileInput)
-    container.appendChild(ta)
-    container.appendChild(ok)
-    const importModal = createEl('div', {
-      style:
-        'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000001;'
-    }) as HTMLDivElement
-    const box = createEl('div', {
-      style:
-        'background:var(--primary-200);padding:12px;border-radius:6px;width:90%;max-width:700px;'
-    }) as HTMLDivElement
-    box.appendChild(container)
-    importModal.appendChild(box)
-    document.body.appendChild(importModal)
-    // when a file is selected, read it and put content into textarea
-    fileInput.addEventListener('change', (ev: Event) => {
-      const input = ev.target as HTMLInputElement
-      if (!input.files || input.files.length === 0) return
-      const file = input.files[0]
-      const reader = new FileReader()
-      reader.onload = () => {
-        try {
-          const text = String(reader.result || '')
-          ta.value = text
-        } catch (e) {
-          alert('读取文件失败：' + e)
-        }
-      }
-      reader.onerror = () => {
-        alert('读取文件失败')
-      }
-      reader.readAsText(file)
-    })
-
-    ok.addEventListener('click', () => {
-      try {
-        const json = ta.value.trim()
-        if (!json) return
-        const okdata = importUserscriptData(json)
-        if (okdata) {
-          // reload in-memory state from storage so UI updates immediately
-          const data = loadDataFromLocalStorage()
-          userscriptState.emojiGroups = data.emojiGroups || []
-          userscriptState.settings = data.settings || userscriptState.settings
-          alert('导入成功，已加载配置（请保存以持久化）')
-          renderGroups()
-          renderSelectedGroup()
-        } else {
-          alert('导入失败：格式错误')
-        }
-      } catch (e) {
-        alert('导入异常：' + e)
-      }
-      importModal.remove()
-    })
+    // 调用新的分组导入导出模态窗口，传递当前选中的分组 ID
+    showImportExportModal(selectedGroupId || undefined)
   })
 
   saveBtn.addEventListener('click', () => {

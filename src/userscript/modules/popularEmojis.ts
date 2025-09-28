@@ -28,7 +28,7 @@ export function showPopularEmojisModal() {
 
   const content = createEl('div', {
     style: `
-      background: var(--emoji-modal-bg);
+      background: var(--secondary);
       color: var(--emoji-modal-text);
       border-radius: 8px;
       padding: 24px;

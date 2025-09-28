@@ -176,10 +176,13 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
     attrs: { tabindex: '-1', style: 'border-right: 1px solid #ddd;' },
     type: 'button'
   }) as HTMLButtonElement
-  settingsButton.addEventListener('click', () => {
-    import('./settings').then(({ showSettingsModal }) => {
+  settingsButton.addEventListener('click', async () => {
+    try {
+      const { showSettingsModal } = await import('./settings')
       showSettingsModal()
-    })
+    } catch (e) {
+      console.error('[Userscript] Failed to load settings module:', e)
+    }
   })
   sectionsNav.appendChild(settingsButton)
 
@@ -407,10 +410,13 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
     innerHTML: '🔧',
     title: '设置'
   }) as HTMLButtonElement
-  settingsButton.addEventListener('click', () => {
-    import('./settings').then(({ showSettingsModal }) => {
+  settingsButton.addEventListener('click', async () => {
+    try {
+      const { showSettingsModal } = await import('./settings')
       showSettingsModal()
-    })
+    } catch (e) {
+      console.error('[Userscript] Failed to load settings module:', e)
+    }
   })
   sectionsNav.appendChild(settingsButton)
 

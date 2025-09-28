@@ -5,6 +5,7 @@ import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { showTemporaryMessage } from '../utils/tempMessage'
 import { ensureStyleInjected } from '../utils/injectStyles'
+import { showImportExportModal } from './importExport'
 
 export function showGroupEditorModal() {
   // Ensure theme styles are injected
@@ -78,7 +79,7 @@ export function showGroupEditorModal() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--emoji-modal-bg);
+            background: var(--secondary);
             font-size: 18px;
             user-select: none;
           " data-group-id="${group.id}" title="点击编辑图标">
@@ -90,7 +91,7 @@ export function showGroupEditorModal() {
                    value="${group.name || 'Unnamed Group'}" 
                    data-group-id="${group.id}"
                    style="
-                     background: var(--emoji-modal-bg);
+                     background: var(--secondary);
                      color: var(--emoji-modal-text);
                      border: 1px solid var(--emoji-modal-border);
                      border-radius: 4px;
@@ -100,7 +101,7 @@ export function showGroupEditorModal() {
                    " 
                    placeholder="分组名称">
             <div style="font-size: 12px; color: var(--emoji-modal-text);">
-              ID: ${group.id} | 表情数: ${group.emojis ? group.emojis.length : 0}
+              ID: ${group.id} | 表情数：${group.emojis ? group.emojis.length : 0}
             </div>
           </div>
           
@@ -130,9 +131,12 @@ export function showGroupEditorModal() {
         .join('')}
     </div>
     
-    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--emoji-modal-border); display: flex; gap: 8px; justify-content: flex-end;">
-      <button id="addNewGroup" style="padding: 8px 16px; background: var(--emoji-modal-primary-bg); color: white; border: none; border-radius: 4px; cursor: pointer;">新建分组</button>
-      <button id="saveAllChanges" style="padding: 8px 16px; background: var(--emoji-modal-primary-bg); color: white; border: none; border-radius: 4px; cursor: pointer;">保存所有更改</button>
+    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--emoji-modal-border); display: flex; gap: 8px; justify-content: space-between;">
+      <button id="openImportExport" style="padding: 8px 16px; background: var(--emoji-modal-button-bg); color: var(--emoji-modal-text); border: 1px solid var(--emoji-modal-border); border-radius: 4px; cursor: pointer;">分组导入/导出</button>
+      <div style="display: flex; gap: 8px;">
+        <button id="addNewGroup" style="padding: 8px 16px; background: var(--emoji-modal-primary-bg); color: white; border: none; border-radius: 4px; cursor: pointer;">新建分组</button>
+        <button id="saveAllChanges" style="padding: 8px 16px; background: var(--emoji-modal-primary-bg); color: white; border: none; border-radius: 4px; cursor: pointer;">保存所有更改</button>
+      </div>
     </div>
   `
 
@@ -265,5 +269,11 @@ export function showGroupEditorModal() {
   content.querySelector('#saveAllChanges')?.addEventListener('click', () => {
     saveDataToLocalStorage({ emojiGroups: userscriptState.emojiGroups })
     showTemporaryMessage('所有更改已保存到本地存储')
+  })
+
+  // Open import/export modal
+  content.querySelector('#openImportExport')?.addEventListener('click', () => {
+    modal.remove()
+    showImportExportModal()
   })
 }
