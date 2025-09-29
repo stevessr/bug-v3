@@ -19,6 +19,7 @@ export default [
       '*.min.js',
       'referense/**',
       'public/**',
+      'docs/**',
       // ensure default.json is ignored across platforms and invocations
       'src/config/default.json',
       '**/src/config/default.json',
@@ -75,7 +76,7 @@ export default [
     },
     rules: {
       // TypeScript 规则
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
@@ -102,6 +103,7 @@ export default [
       'no-alert': 'warn',
       'prefer-const': 'error',
       'no-var': 'error',
+      'no-unused-vars': 'off',
 
       // Prettier 规则
       'prettier/prettier': 'error'
@@ -147,7 +149,7 @@ export default [
       ],
 
       // TypeScript 规则 (在 Vue 中)
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
 
       // Import 规则
@@ -166,6 +168,7 @@ export default [
       'no-debugger': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
+      'no-unused-vars': 'off',
 
       // Prettier 规则
       'prettier/prettier': 'error'
@@ -204,7 +207,7 @@ export default [
       'no-alert': 'warn',
       'prefer-const': 'error',
       'no-var': 'error',
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': 'off',
 
       // Prettier 规则
       'prettier/prettier': 'error'

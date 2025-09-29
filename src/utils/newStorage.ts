@@ -22,13 +22,12 @@ export const SYNC_STORAGE_KEYS = {
 } as const
 
 // Storage priority levels as requested
-/* eslint-disable no-unused-vars */
+
 enum StorageType {
   Local = 'local',
   Sync = 'sync'
 }
 void StorageType // Used in interface types
-/* eslint-enable no-unused-vars */
 
 // --- Chrome API Helper ---
 function getChromeAPI() {

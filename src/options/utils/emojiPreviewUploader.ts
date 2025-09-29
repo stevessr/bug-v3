@@ -118,14 +118,14 @@ class EmojiPreviewUploader {
         this.moveToQueue(item, 'success')
         item.resolve(result)
       } catch (_error: any) {
-        item.error = error
+        item.error = _error
 
-        if (this.shouldRetry(error, item)) {
+        if (this.shouldRetry(_error, item)) {
           item.retryCount++
 
-          if (error.error_type === 'rate_limit' && error.extras?.wait_seconds) {
+          if (_error.error_type === 'rate_limit' && _error.extras?.wait_seconds) {
             // Wait for rate limit before retry
-            await this.sleep(error.extras.wait_seconds * 1000)
+            await this.sleep(_error.extras.wait_seconds * 1000)
           } else {
             // Wait before retry
             await this.sleep(Math.pow(2, item.retryCount) * 1000)
@@ -134,7 +134,7 @@ class EmojiPreviewUploader {
           this.moveToQueue(item, 'waiting')
         } else {
           this.moveToQueue(item, 'failed')
-          item.reject(error)
+          item.reject(_error)
         }
       }
     }
@@ -148,7 +148,7 @@ class EmojiPreviewUploader {
     }
 
     // Only retry 429 (rate limit) errors automatically
-    return error.error_type === 'rate_limit'
+    return _error.error_type === 'rate_limit'
   }
 
   // Method to manually retry failed items
@@ -479,13 +479,13 @@ class EmojiPreviewUploader {
     return new Promise((resolve, reject) => {
       if (typeof chrome !== 'undefined' && chrome.runtime) {
         chrome.runtime.sendMessage({ type: 'REQUEST_LINUX_DO_AUTH' }, (_response: any) => {
-          if (response?.success) {
+          if (_response?.success) {
             resolve({
-              csrfToken: response.csrfToken || '',
-              cookies: response.cookies || ''
+              csrfToken: _response.csrfToken || '',
+              cookies: _response.cookies || ''
             })
           } else {
-            reject(new Error(response?.error || 'Failed to get authentication info'))
+            reject(new Error(_response?.error || 'Failed to get authentication info'))
           }
         })
       } else {
