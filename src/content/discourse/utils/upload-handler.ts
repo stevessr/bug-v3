@@ -3,7 +3,7 @@
  */
 export function setupDiscourseUploadHandler() {
   if ((window as any).chrome?.runtime?.onMessage) {
-    ;(window as any).chrome.runtime.onMessage.addListener(async (message: any, _sender: any) => {
+    ;(window as any).chrome.runtime.onMessage.addListener(async (message: any) => {
       if (message && message.action === 'uploadBlobToDiscourse') {
         try {
           const filename = message.filename || 'image.jpg'

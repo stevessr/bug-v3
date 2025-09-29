@@ -15,8 +15,6 @@ import {
   createBatchParseButton
 } from './bilibili-buttons'
 
-declare const chrome: any
-
 /**
  * 获取当前显示的图片 - 改进URL解析
  */
@@ -246,7 +244,7 @@ export function observeMutations() {
           if (el.tagName === 'IMG') return true
           try {
             return !!el.querySelector && !!el.querySelector('img')
-          } catch (e) {
+          } catch {
             return false
           }
         })
@@ -283,7 +281,7 @@ export function observeMutations() {
           if (tgt.tagName === 'IMG' || (tgt.querySelector && tgt.querySelector('img'))) {
             needsScan = true
           }
-        } catch (e) {
+        } catch {
           /* ignore */
         }
       }

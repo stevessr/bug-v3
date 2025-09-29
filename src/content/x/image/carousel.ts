@@ -8,8 +8,6 @@ import {
 
 import { tryInjectTwitterMedia } from './twitterMediaInject'
 
-declare const chrome: any
-
 const carouselOverlayMap = new WeakMap<Element, { btn: HTMLElement; raf?: number }>()
 
 function createCarouselBtn(data: AddEmojiButtonData) {
@@ -183,7 +181,7 @@ function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
       const inView =
         r.bottom >= 0 && r.top <= window.innerHeight && r.right >= 0 && r.left <= window.innerWidth
       btn.style.display = inView ? '' : 'none'
-    } catch (e) {
+    } catch {
       /* ignore */
     }
     raf = requestAnimationFrame(update)
@@ -307,14 +305,14 @@ function addCarouselButtonToEl(el: Element) {
               if (btn.parentElement) btn.parentElement.removeChild(btn)
               createCarouselOverlayBtn({ name, url }, parent)
             }
-          } catch (e) {
+          } catch {
             /* ignore */
           }
         }
       }
     }
-  } catch (e) {
-    void e
+  } catch {
+    /* ignore */
   }
 }
 

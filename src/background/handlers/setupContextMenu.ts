@@ -35,7 +35,7 @@ export function setupContextMenu() {
     })
 
     if (chromeAPI.contextMenus.onClicked) {
-      chromeAPI.contextMenus.onClicked.addListener((info: any, _tab: any) => {
+      chromeAPI.contextMenus.onClicked.addListener((info: any) => {
         if (
           info.menuItemId === 'open-emoji-options' &&
           chromeAPI.runtime &&

@@ -10,7 +10,7 @@ async function computeSHA1OfArrayBuffer(buffer: ArrayBuffer) {
     const hash = await crypto.subtle.digest('SHA-1', buffer)
     const arr = Array.from(new Uint8Array(hash))
     return arr.map(b => b.toString(16).padStart(2, '0')).join('')
-  } catch (e) {
+  } catch {
     return null
   }
 }
@@ -69,7 +69,7 @@ export async function handleUploadAndAddEmoji(message: any, sendResponse: any) {
                   csrfToken = resp.csrfToken
                   break
                 }
-              } catch (_e) {
+              } catch {
                 // ignore and continue
                 continue
               }

@@ -71,7 +71,7 @@ function isRedditImageContainer(el: Element | null): boolean {
     }
 
     return false
-  } catch (_e) {
+  } catch {
     return false
   }
 }
@@ -95,7 +95,7 @@ function extractEmojiDataFromReddit(container: Element): AddEmojiButtonData | nu
     if (!name || name.length < 2) name = 'reddit-emoji'
 
     return { name, url: src }
-  } catch (_e) {
+  } catch {
     return null
   }
 }

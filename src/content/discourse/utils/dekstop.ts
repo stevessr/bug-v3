@@ -175,7 +175,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
             }
           })
         }
-      } catch (_e) {
+      } catch {
         // ignore errors reading cachedState
       }
       sectionEmojis.appendChild(img)
@@ -302,7 +302,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         window.clearTimeout(_removeTimeout)
         _removeTimeout = null
       }
-    } catch (_e) {
+    } catch {
       /* ignore */
     }
 
@@ -354,7 +354,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
           window.clearTimeout(_removeTimeout)
           _removeTimeout = null
         }
-      } catch (_e) {
+      } catch {
         /* ignore */
       }
 

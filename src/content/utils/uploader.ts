@@ -86,8 +86,8 @@ interface UploadError {
 interface UploadQueueItem {
   id: string
   file: File
-  resolve: (value: UploadResponse) => void
-  reject: (error: any) => void
+  resolve: (val: UploadResponse) => void
+  reject: (err: any) => void
   retryCount: number
   status: 'waiting' | 'uploading' | 'failed' | 'success'
   error?: any

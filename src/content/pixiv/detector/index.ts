@@ -9,7 +9,7 @@ function isPixivViewer(element: Element): boolean {
       return !!element.querySelector('img[src*="i.pximg.net"]')
     }
     return false
-  } catch (_e) {
+  } catch {
     return false
   }
 }
@@ -45,7 +45,7 @@ function addEmojiButtonToPixiv(pixivContainer: Element) {
     const parentEl = pixivContainer as HTMLElement
     const computed = window.getComputedStyle(parentEl)
     if (computed.position === 'static' || !computed.position) parentEl.style.position = 'relative'
-  } catch (_e) {
+  } catch {
     // ignore
   }
 

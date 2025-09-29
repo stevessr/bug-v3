@@ -1,5 +1,3 @@
-declare const chrome: any
-
 function isXPage(): boolean {
   try {
     const host = window.location.hostname.toLowerCase()
@@ -23,7 +21,7 @@ function getVideoUrl(video: HTMLVideoElement): string | null {
     if (source && source.src) return source.src
     if (video.currentSrc) return video.currentSrc
     if ((video as HTMLVideoElement).src) return (video as HTMLVideoElement).src
-  } catch (e) {
+  } catch {
     /* ignore */
   }
   return null
@@ -45,7 +43,7 @@ async function downloadBlob(url: string): Promise<void> {
   } catch (error) {
     try {
       console.error('[XVideoCopy] 下载失败', error)
-    } catch (e) {
+    } catch {
       /* ignore */
     }
     try {
@@ -53,7 +51,7 @@ async function downloadBlob(url: string): Promise<void> {
         '下载失败: ' +
           (error && (error as Error).message ? (error as Error).message : String(error))
       )
-    } catch (e) {
+    } catch {
       /* ignore */
     }
     throw error
@@ -73,11 +71,11 @@ function safeAlert(message: string) {
           payload: { message }
         })
         return
-      } catch (e) {
+      } catch {
         /* ignore */
       }
     }
-  } catch (e) {
+  } catch {
     /* ignore */
   }
 }
@@ -157,11 +155,11 @@ function addButtonToVideo(video: HTMLVideoElement) {
     container.appendChild(btn)
     try {
       addInlineButtonsToAncestors(video, url)
-    } catch (e) {
+    } catch {
       /* ignore */
     }
-  } catch (e) {
-    void e
+  } catch {
+    /* ignore */
   }
 }
 

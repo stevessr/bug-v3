@@ -33,12 +33,12 @@ export function setupOpenInNewTabHandler(button: HTMLElement, data: AddEmojiButt
             const derivedName =
               (closestImg.alt || closestImg.getAttribute('title') || '').trim() || data.name
             if (derivedName && derivedName.length > 0) data.name = derivedName
-          } catch (_e) {
+          } catch {
             // ignore
           }
         }
       }
-    } catch (_e) {
+    } catch {
       // ignore DOM read errors
     }
 

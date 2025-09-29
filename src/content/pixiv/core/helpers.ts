@@ -46,7 +46,7 @@ export async function tryGetImageViaCanvas(
               resolve({ success: false, error: 'no-blob' })
             }
           })
-        } catch (e) {
+        } catch {
           try {
             const dataUrl = canvas.toDataURL()
             fetch(dataUrl)

@@ -2,7 +2,7 @@ import { getChromeAPI } from '../utils/main.ts'
 
 export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => void) {
   // Handler for requesting linux.do cookies and CSRF token from the options page
-  void _sendResponse
+  // _sendResponse 用于响应消息
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.tabs || !chromeAPI.cookies) {
     _sendResponse({ success: false, error: 'Chrome API not available' })
@@ -38,7 +38,7 @@ export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => vo
                   csrfToken = response.csrfToken
                   break
                 }
-              } catch (e) {
+              } catch {
                 // 继续尝试下一个标签页
                 continue
               }
@@ -51,8 +51,8 @@ export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => vo
       } else {
         console.warn('No linux.do tabs found')
       }
-    } catch (e) {
-      console.warn('Failed to get CSRF token from linux.do tab:', e)
+    } catch {
+      console.warn('Failed to get CSRF token from linux.do tab')
     }
 
     _sendResponse({
@@ -60,11 +60,11 @@ export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => vo
       csrfToken: csrfToken,
       cookies: cookieString
     })
-  } catch (error: any) {
-    console.error('Failed to get linux.do auth info:', error)
+  } catch {
+    console.error('Failed to get linux.do auth info')
     _sendResponse({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Unknown error'
     })
   }
 }

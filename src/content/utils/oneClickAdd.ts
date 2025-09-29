@@ -3,7 +3,6 @@ import { initDiscourse } from '../discourse/discourse'
 // logger removed: replaced with direct console usage
 
 // oneClickAdd.ts - 仅保留一键添加核心逻辑，平台注入移至各自模块
-declare const chrome: any
 
 // 添加CSS动画（仅用于批量按钮的加载动画）
 const cssAnimation = `

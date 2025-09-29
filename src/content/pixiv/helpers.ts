@@ -38,7 +38,7 @@ export async function tryGetImageViaCanvas(
             if (b) resolve({ success: true, blob: b })
             else resolve({ success: false, error: 'no-blob' })
           })
-        } catch (e) {
+        } catch {
           try {
             const dataUrl = canvas.toDataURL()
             fetch(dataUrl)
@@ -103,7 +103,7 @@ export async function sendEmojiToBackground(
           },
           (r: any) => resolve(r)
         )
-      } catch (e) {
+      } catch {
         resolve({ success: false, error: 'Failed to send message to background' })
       }
     })

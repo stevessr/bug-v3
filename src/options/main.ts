@@ -1,11 +1,10 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
+import '../styles/main.ts'
 import { useEmojiStore } from '../stores/emojiStore'
 
 import router from './router'
-
-import '../styles/main.ts'
 import Options from './Options.vue'
 
 const pinia = createPinia()

@@ -16,7 +16,7 @@ export async function initializeDefaultData() {
       try {
         const runtime = await loadDefaultEmojiGroups()
         await chromeAPI.storage.local.set({ emojiGroups: runtime && runtime.length ? runtime : [] })
-      } catch (e) {
+      } catch {
         await chromeAPI.storage.local.set({ emojiGroups: [] })
       }
       console.log('Default emoji groups initialized')

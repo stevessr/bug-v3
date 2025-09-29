@@ -3,7 +3,7 @@ import { AddEmojiButtonData } from '../utils'
 export function tryInjectTwitterMedia(
   url: string,
   targetContainer: Element,
-  createOverlayFn: (data: AddEmojiButtonData, target: Element) => HTMLElement | void
+  createOverlayFn: (_data: AddEmojiButtonData, _target: Element) => HTMLElement | void
 ): boolean {
   try {
     const parsed = new URL(url)
@@ -32,12 +32,12 @@ export function tryInjectTwitterMedia(
       createOverlayFn({ name, url }, target)
       console.log('[TwitterMedia] injected floating overlay for media:', url)
       return true
-    } catch (e) {
-      console.log('[TwitterMedia] overlay injection failed', e)
+    } catch (error) {
+      console.log('[TwitterMedia] overlay injection failed', error)
       return false
     }
-  } catch (e) {
-    console.log('[TwitterMedia] error processing URL:', url, e)
+  } catch (error) {
+    console.log('[TwitterMedia] error processing URL:', url, error)
     return false
   }
 }

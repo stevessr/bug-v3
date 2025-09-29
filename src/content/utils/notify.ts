@@ -52,12 +52,12 @@ export function notify(
       el.remove()
       clearTimeout(id)
     }
-  } catch (e) {
+  } catch {
     // Fallback to alert if DOM manipulation fails
     try {
       // eslint-disable-next-line no-alert
       alert(message)
-    } catch (_e) {
+    } catch {
       // ignore
     }
     return () => {}

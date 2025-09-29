@@ -22,7 +22,7 @@ export function createE<K extends keyof HTMLElementTagNameMap>(
     tabIndex?: number | string
     ld?: string // shortened 'loading' to 'ld'
     on?: Partial<{
-      [K in keyof GlobalEventHandlersEventMap]: (e: GlobalEventHandlersEventMap[K]) => any
+      [K in keyof GlobalEventHandlersEventMap]: (ev: GlobalEventHandlersEventMap[K]) => any
     }> &
       Record<string, any>
   }

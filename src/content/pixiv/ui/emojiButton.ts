@@ -52,12 +52,12 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
             const derivedName =
               (closestImg.alt || closestImg.getAttribute('title') || '').trim() || data.name
             if (derivedName && derivedName.length > 0) data.name = derivedName
-          } catch (_e) {
+          } catch {
             // ignore
           }
         }
       }
-    } catch (_e) {
+    } catch {
       // ignore DOM read errors
     }
 

@@ -191,7 +191,7 @@ export class ContentStorageAdapter {
         console.log('[Content Storage] Settings loaded from packaged defaults:', result)
         return result
       }
-    } catch (e) {
+    } catch {
       // ignore loader errors
     }
 

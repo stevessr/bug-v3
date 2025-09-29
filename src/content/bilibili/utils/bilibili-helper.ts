@@ -152,7 +152,7 @@ export function extractImageUrlFromPicture(container: Element): string | null {
         const normalized = normalizeBiliUrl(rawUrl)
         if (normalized) return normalized
       }
-    } catch (e) {
+    } catch {
       // 忽略单个方法的错误，继续尝试下一个
       continue
     }
