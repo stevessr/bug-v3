@@ -68,7 +68,7 @@ onMounted(async () => {
       try {
         const packaged = await loadPackagedDefaults()
         if (packaged?.settings?.tenorApiKey) tenorApiKey.value = packaged.settings.tenorApiKey
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -77,7 +77,7 @@ onMounted(async () => {
     try {
       const packaged = await loadPackagedDefaults()
       if (packaged?.settings?.tenorApiKey) tenorApiKey.value = packaged.settings.tenorApiKey
-    } catch (e) {
+    } catch {
       // ignore
     }
   }

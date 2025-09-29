@@ -166,7 +166,7 @@ const onExportModalClose = () => {
   // delegate to composable to cleanup previews and hide modal
   try {
     if (typeof (options as any).closeExportModal === 'function') (options as any).closeExportModal()
-  } catch (_e) {
+  } catch {
     showExportModal.value = false
   }
 }
@@ -175,7 +175,7 @@ const onExportModalCancel = () => {
   // delegate cancellation to composable which will abort and cleanup
   try {
     if (typeof (options as any).cancelExport === 'function') (options as any).cancelExport()
-  } catch (_e) {
+  } catch {
     exportModalCancelled.value = true
   }
 }

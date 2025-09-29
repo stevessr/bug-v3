@@ -187,7 +187,7 @@ const computeDedupePreview = (groupId: string | null) => {
 
     previewDedupeByNameCount.value = removedByName
     previewDedupeByUrlCount.value = removedByUrl
-  } catch (e) {
+  } catch {
     // ignore
   }
 }
@@ -282,7 +282,7 @@ const runBatchUpdateSize = async () => {
 
       try {
         emojiStore.updateEmojiInGroup(group.id, i, updates)
-      } catch (err) {
+      } catch {
         void err
       }
 

@@ -25,8 +25,8 @@ async function loadDomains() {
   try {
     const ds = await newStorageHelpers.getDiscourseDomains()
     domainList.value = ds
-  } catch (e) {
-    console.warn('failed to load discourse domains', e)
+  } catch (error) {
+    console.warn('failed to load discourse domains', error)
   }
 }
 
@@ -50,8 +50,8 @@ async function addCustomDomain() {
     await newStorageHelpers.ensureDiscourseDomainExists(val)
     newDomainInput.value = ''
     await loadDomains()
-  } catch (e) {
-    console.warn('failed to add custom domain', e)
+  } catch (error) {
+    console.warn('failed to add custom domain', error)
   }
 }
 
@@ -88,7 +88,7 @@ async function openDomainManager(domain: string) {
     // filter and dedupe
     const filtered = Array.from(new Set(initialKeys.filter(k => available.has(k))))
     transferTargetKeys.value = filtered
-  } catch (err) {
+  } catch {
     console.error('[DomainManager] openDomainManager error', err)
     // fallback to empty safe state
     transferDataSource.value = []

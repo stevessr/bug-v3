@@ -21,7 +21,7 @@ const emit = defineEmits([
 const handleClick = () => {
   try {
     window.open('https://github.com/stevessr/bug-v3/', '_blank')
-  } catch (e) {
+  } catch {
     window.location.href = 'https://github.com/stevessr/bug-v3/'
   }
 }

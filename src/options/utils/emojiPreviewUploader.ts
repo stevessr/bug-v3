@@ -32,8 +32,8 @@ interface EmojiUploadError {
 interface EmojiUploadQueueItem {
   id: string
   file: File
-  resolve: (value: EmojiUploadResponse) => void
-  reject: (error: any) => void
+  resolve: (_value: EmojiUploadResponse) => void
+  reject: (_error: any) => void
   retryCount: number
   status: 'waiting' | 'uploading' | 'failed' | 'success'
   error?: any
@@ -530,7 +530,7 @@ class EmojiPreviewUploader {
         const hashBuffer = await crypto.subtle.digest('SHA-1', data)
         const hashArray = Array.from(new Uint8Array(hashBuffer))
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-      } catch (e) {
+      } catch {
         console.warn('[Emoji Preview Uploader] Could not calculate SHA1, using fallback')
       }
     }

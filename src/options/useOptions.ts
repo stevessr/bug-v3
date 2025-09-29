@@ -86,7 +86,7 @@ export default function useOptions() {
       const count = Array.isArray(p) ? p.length : p.emojis?.length || 0
       showSuccess(`成功导入 ${count} 个表情`)
       /* eslint-enable @typescript-eslint/no-explicit-any */
-    } catch (err) {
+    } catch {
       void err
       // swallow; show generic message
       showError('表情导入失败')
@@ -423,7 +423,7 @@ export default function useOptions() {
       exportProgress.value = 100
       exportModalPercent.value = 100
       showSuccess(`已打包并下载分组 "${group.name}"`)
-    } catch (e) {
+    } catch {
       void e
       exportProgress.value = 0
       exportModalPercent.value = 0
@@ -632,13 +632,13 @@ export default function useOptions() {
               resolve()
             }
           })
-        } catch (e) {
+        } catch {
           reject(e)
         }
       })
 
       showSuccess('已将本地存储强制同步到扩展存储')
-    } catch (e) {
+    } catch {
       void e
       showError('强制同步失败，请查看控制台')
     }
@@ -691,14 +691,14 @@ export default function useOptions() {
       const pingInterval = setInterval(() => {
         try {
           void newStorageHelpers.getAllEmojiGroups()
-        } catch (e) {
+        } catch {
           void e
         }
         if (Date.now() - pingStart > 4000) {
           clearInterval(pingInterval)
         }
       }, 500)
-    } catch (e) {
+    } catch {
       void e
       // ignore in environments without window or storage
     }
@@ -719,20 +719,20 @@ export default function useOptions() {
 
       try {
         emitInjectedSuccess()
-      } catch (e) {
+      } catch {
         void e
       }
       try {
         setTimeout(emitInjectedSuccess, 1000)
-      } catch (e) {
+      } catch {
         void e
       }
       try {
         setTimeout(emitInjectedSuccess, 3500)
-      } catch (e) {
+      } catch {
         void e
       }
-    } catch (e) {
+    } catch {
       void e
       // ignore in environments without window or storage
     }

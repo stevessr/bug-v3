@@ -39,8 +39,8 @@ export function exportGroupFile(group: any) {
 // Zip and download all emoji images in a group
 export async function exportGroupZip(
   group: any,
-  onProgress?: (p: number) => void,
-  onItem?: (info: { index: number; name: string; preview?: string | null }) => void,
+  onProgress?: (_p: number) => void,
+  onItem?: (_info: { index: number; name: string; preview?: string | null }) => void,
   signal?: AbortSignal | null
 ) {
   // We'll build a tar archive (simple UStar) and compress it with native CompressionStream (gzip).
@@ -67,7 +67,7 @@ export async function exportGroupZip(
       const res = await fetch(url, { mode: 'cors', signal })
       if (!res.ok) return null
       return await res.blob()
-    } catch (e) {
+    } catch {
       if ((e as any)?.name === 'AbortError') throw e
       return null
     }
@@ -211,7 +211,7 @@ export async function exportGroupZip(
       URL.revokeObjectURL(url)
       // previews are caller-managed; nothing to revoke here
       return
-    } catch (e) {
+    } catch {
       // Fallthrough to fallback below
     }
   }

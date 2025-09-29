@@ -65,7 +65,7 @@ async function fetchIdOnce(idNum: number) {
   if (!res.ok) throw new Error(`请求失败: ${res.status}`)
   try {
     return await res.json()
-  } catch (err) {
+  } catch {
     throw new Error('JSON 解析失败')
   }
 }
@@ -118,7 +118,7 @@ async function fetchByIdLoop() {
           consecutiveNulls++
           fetchProgress.value.push({ id: idCursor, msg: '无有效 packages（空响应）' })
         }
-      } catch (err) {
+      } catch {
         consecutiveNulls++
         fetchProgress.value.push({
           id: idCursor,
@@ -170,7 +170,7 @@ const fetchSingleId = async () => {
     } else {
       fetchStatus.value = `ID ${start} 无有效 packages`
     }
-  } catch (err) {
+  } catch {
     fetchStatus.value = `ID ${start} 请求失败: ${err instanceof Error ? err.message : String(err)}`
   }
 }
@@ -246,7 +246,7 @@ function safeParseJson(text: string): unknown {
   // try direct parse
   try {
     return JSON.parse(t)
-  } catch (e) {
+  } catch {
     // try to extract first JSON object or array
     const firstObj = t.indexOf('{')
     const lastObj = t.lastIndexOf('}')
@@ -256,7 +256,7 @@ function safeParseJson(text: string): unknown {
       const sub = t.slice(firstObj, lastObj + 1)
       try {
         return JSON.parse(sub)
-      } catch (err) {
+      } catch {
         // fallthrough
       }
     }
@@ -264,7 +264,7 @@ function safeParseJson(text: string): unknown {
       const sub = t.slice(firstArr, lastArr + 1)
       try {
         return JSON.parse(sub)
-      } catch (err) {
+      } catch {
         // fallthrough
       }
     }
@@ -297,7 +297,7 @@ const loadIndexFromUrl = async (url?: string) => {
     }
     packages.value = normalized
     importResults.value = { success: true, message: `加载到 ${packages.value.length} 个包` }
-  } catch (e) {
+  } catch {
     importResults.value = {
       success: false,
       message: '加载索引失败',
@@ -345,7 +345,7 @@ const handleFile = async (e: Event) => {
     if (!normalized || !Array.isArray(normalized)) throw new Error('无效的索引格式')
     packages.value = normalized
     importResults.value = { success: true, message: `加载到 ${packages.value.length} 个包` }
-  } catch (err) {
+  } catch {
     importResults.value = {
       success: false,
       message: '导入失败',
@@ -371,7 +371,7 @@ const importSelectedFromIndex = async () => {
       success: true,
       message: `已导入 ${pkgs.length} 个包`
     }
-  } catch (e) {
+  } catch {
     importResults.value = {
       success: false,
       message: '导入失败',

@@ -20,21 +20,21 @@ export class TouchDragHandler {
     dragPreview: null
   }
 
-  private onDragStart?: (element: HTMLElement) => void
-  private onDragMove?: (element: HTMLElement, x: number, y: number) => void
-  private onDragEnd?: (element: HTMLElement, dropTarget: HTMLElement | null) => void
+  private onDragStart?: (_element: HTMLElement) => void
+  private onDragMove?: (_element: HTMLElement, _x: number, _y: number) => void
+  private onDragEnd?: (_element: HTMLElement, _dropTarget: HTMLElement | null) => void
   // Optional callback to decide whether a touchstart should begin a drag
-  private shouldStartDrag?: (e: TouchEvent, element: HTMLElement) => boolean
+  private shouldStartDrag?: (_e: TouchEvent, _element: HTMLElement) => boolean
   // bound handlers so we can remove listeners added to document
   private boundTouchMove: ((e: TouchEvent) => void) | null = null
   private boundTouchEnd: ((e: TouchEvent) => void) | null = null
   private boundTouchCancel: ((e: TouchEvent) => void) | null = null
 
   constructor(options: {
-    onDragStart?: (element: HTMLElement) => void
-    onDragMove?: (element: HTMLElement, x: number, y: number) => void
-    onDragEnd?: (element: HTMLElement, dropTarget: HTMLElement | null) => void
-    shouldStartDrag?: (e: TouchEvent, element: HTMLElement) => boolean
+    onDragStart?: (_element: HTMLElement) => void
+    onDragMove?: (_element: HTMLElement, _x: number, _y: number) => void
+    onDragEnd?: (_element: HTMLElement, _dropTarget: HTMLElement | null) => void
+    shouldStartDrag?: (_e: TouchEvent, _element: HTMLElement) => boolean
   }) {
     this.onDragStart = options.onDragStart
     this.onDragMove = options.onDragMove
@@ -167,7 +167,7 @@ export class TouchDragHandler {
       previews.forEach(p => {
         if (p.parentElement) p.parentElement.removeChild(p)
       })
-    } catch (err) {
+    } catch {
       // ignore DOM errors
     }
     this.state.dragPreview = null

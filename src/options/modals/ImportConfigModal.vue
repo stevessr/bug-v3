@@ -32,7 +32,7 @@ const doImport = () => {
     emit('imported', parsed)
     text.value = ''
     close()
-  } catch (err) {
+  } catch {
     emit('imported', null)
   }
 }
