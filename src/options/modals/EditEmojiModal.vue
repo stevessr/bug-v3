@@ -49,6 +49,8 @@ const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
       const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
       if (resp && resp.url && emoji.id) {
         emojiStore.updateEmoji(emoji.id, { url: resp.url })
+        // 同步更新 UI 显示的 URL
+        localEmoji.value.url = resp.url
       }
     } finally {
       // Show upload progress dialog regardless
@@ -56,23 +58,22 @@ const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error('表情上传失败:', error)
-    alert(`表情 "${emoji.name}" 上传失败: ${error.message || '未知错误'}`)
+    console.error('表情上传失败：', error)
+    alert(`表情 "${emoji.name}" 上传失败：${error.message || '未知错误'}`)
   } finally {
     uploadingEmojiIds.value.delete(emoji.id)
   }
 }
 
-// 图片宽高比与布局
-const imageRatio = ref(1) // 宽/高
-const isVertical = ref(false)
+// 图片加载状态
+const imageLoadError = ref(false)
 
-function handleImageLoad(e: Event) {
-  const img = e.target as HTMLImageElement
-  if (img && img.naturalWidth && img.naturalHeight) {
-    imageRatio.value = img.naturalWidth / img.naturalHeight
-    isVertical.value = imageRatio.value < 1
-  }
+function handleImageLoad() {
+  imageLoadError.value = false
+}
+
+function handleImageError() {
+  imageLoadError.value = true
 }
 
 // 图片预览可见性（用于 a-image preview group）
@@ -105,6 +106,7 @@ watch(
     if (newEmoji) {
       localEmoji.value = { ...newEmoji }
       selectedGroupId.value = newEmoji.groupId || props.groupId || ''
+      imageLoadError.value = false // 重置图片错误状态
     }
   },
   { immediate: true }
@@ -118,6 +120,14 @@ watch(
     }
   },
   { immediate: true }
+)
+
+// 监听 URL 变化，重置图片错误状态
+watch(
+  () => [localEmoji.value.url, localEmoji.value.displayUrl],
+  () => {
+    imageLoadError.value = false
+  }
 )
 
 const closeModal = () => {
@@ -170,45 +180,60 @@ const handleSubmit = () => {
 
     <div class="flex items-center justify-center min-h-screen p-4">
       <transition name="card-pop" appear>
-        <ACard hoverable style="max-width: 80vw; width: 640px">
-          <div :class="isVertical ? 'flex flex-row' : 'flex flex-col'">
-            <!-- 图片区 -->
+        <ACard hoverable style="max-width: 90vw; width: 800px">
+          <div class="flex flex-row gap-6">
+            <!-- 左侧图片预览区 -->
             <div
-              v-if="isVertical"
               class="flex-shrink-0 flex items-center justify-center"
-              style="width: 180px; min-width: 120px; max-width: 50%; height: 320px"
+              style="width: 300px; min-width: 250px; max-width: 40%; min-height: 400px;"
             >
+              <!-- 有 URL 且未出错时显示图片 -->
               <a-image
+                v-if="(localEmoji.displayUrl || localEmoji.url) && !imageLoadError"
                 :preview="{ visible: false }"
                 :src="localEmoji.displayUrl || localEmoji.url"
-                class="object-contain w-full h-full"
+                class="object-contain w-full h-full max-h-96 rounded-lg border cursor-pointer"
+                style="min-height: 200px;"
                 @load="handleImageLoad"
                 @click="visible = true"
-                @error="$emit('imageError', $event)"
+                @error="handleImageError"
               />
-            </div>
-            <div v-else class="w-full flex items-center justify-center">
-              <a-image
-                :preview="{ visible: false }"
-                :src="localEmoji.displayUrl || localEmoji.url"
-                class="object-contain max-h-full max-w-full"
-                @load="handleImageLoad"
-                @click="visible = true"
-                @error="$emit('imageError', $event)"
-              />
+              
+              <!-- URL 为空时的占位符 -->
+              <div
+                v-else-if="!localEmoji.displayUrl && !localEmoji.url"
+                class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48"
+              >
+                <div class="text-center text-gray-500 dark:text-gray-400">
+                  <div class="text-4xl mb-2">🖼️</div>
+                  <div class="text-sm">请输入图片链接</div>
+                </div>
+              </div>
+              
+              <!-- 图片加载失败时的占位符 -->
+              <div
+                v-else-if="imageLoadError"
+                class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48"
+              >
+                <div class="text-center text-gray-500 dark:text-gray-400">
+                  <div class="text-4xl mb-2">📷</div>
+                  <div class="text-sm">图片加载失败</div>
+                </div>
+              </div>
             </div>
 
-            <!-- 内容区 -->
-            <div class="flex-1 px-4 py-2">
-              <a-card-meta :title="localEmoji.name || '编辑表情'">
-                <template #description>
-                  <div class="text-sm text-gray-500 dark:text-white truncate">
-                    {{ localEmoji.url }}
-                  </div>
-                </template>
-              </a-card-meta>
+            <!-- 右侧编辑区 -->
+            <div class="flex-1 min-w-0">
+              <div class="mb-4">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  {{ localEmoji.name || '编辑表情' }}
+                </h2>
+                <div class="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  {{ localEmoji.url || '请填写表情链接' }}
+                </div>
+              </div>
 
-              <form @submit.prevent="handleSubmit" class="mt-4 space-y-4">
+              <form @submit.prevent="handleSubmit" class="space-y-4">
                 <!-- Name field -->
                 <div>
                   <label
@@ -361,7 +386,7 @@ const handleSubmit = () => {
                     >
                       <span v-if="uploadingEmojiIds.has(localEmoji.id || '')" class="mr-2">⏳</span>
                       <span v-else class="mr-2">📤</span>
-                      上传到linux.do
+                      上传到 linux.do
                     </a-button>
                   </div>
 
