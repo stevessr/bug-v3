@@ -47,7 +47,7 @@ const popularSources = [
   {
     name: 'Bilibili',
     icon: '📺',
-    description: 'B站小电视表情',
+    description: 'B 站小电视表情',
     url: 'https://raw.githubusercontent.com/walinejs/emojis/main/bilibili/info.json'
   },
   {
@@ -214,7 +214,7 @@ const importFromUrl = async () => {
       error: errorMessage
     })
 
-    showMessage(`导入失败: ${errorMessage}`, 'error')
+    showMessage(`导入失败：${errorMessage}`, 'error')
   } finally {
     isImportingUrl.value = false
   }
@@ -270,7 +270,7 @@ const importFromJson = async () => {
       error: errorMessage
     })
 
-    showMessage(`JSON 格式错误: ${errorMessage}`, 'error')
+    showMessage(`JSON 格式错误：${errorMessage}`, 'error')
   } finally {
     isImportingJson.value = false
   }
@@ -325,7 +325,7 @@ const importFromSource = async (source: any) => {
       error: errorMessage
     })
 
-    showMessage(`导入 ${source.name} 失败: ${errorMessage}`, 'error')
+    showMessage(`导入 ${source.name} 失败：${errorMessage}`, 'error')
   } finally {
     isImportingSource.value = ''
   }
@@ -351,32 +351,12 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <!-- Header -->
-    <header
-      class="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700"
-    >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Waline 表情导入</h1>
-            <p class="text-sm text-gray-600 dark:text-white">
-              从 GitHub 仓库批量导入 Waline 风格的表情包
-            </p>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <main
-      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 dark:text-white dark:bg-gray-900"
-    >
+  <div class="space-y-6 dark:text-white dark:bg-gray-900">
       <!-- Import Methods -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- URL Import -->
         <div class="bg-white rounded-lg shadow-sm border p-6 dark:bg-gray-800">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4 dark:text-white">从 URL 导入</h2>
+
           <p class="text-sm text-gray-600 mb-4 dark:text-white">
             输入 Waline 表情配置的 JSON URL 或 GitHub raw 文件链接
             <br />
@@ -424,7 +404,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 
         <!-- JSON Text Import -->
         <div class="bg-white rounded-lg shadow-sm border p-6 dark:bg-gray-800">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4 dark:text-white">从 JSON 文本导入</h2>
+
           <p class="text-sm text-gray-600 mb-4 dark:text-white">
             直接粘贴 Waline 表情配置的 JSON 内容
             <br />
@@ -474,7 +454,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 
       <!-- Common Waline Emoji Sources -->
       <div class="mt-8 bg-white rounded-lg shadow-sm border p-6 dark:bg-gray-800">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">常用 Waline 表情源</h2>
+
         <p class="text-sm text-gray-600 mb-6">点击下方链接快速导入常用的 Waline 表情包</p>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -504,7 +484,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 
       <!-- Import Results -->
       <div v-if="importResults.length > 0" class="mt-8 bg-white rounded-lg shadow-sm border p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">导入结果</h2>
+
 
         <div class="space-y-3">
           <div
@@ -553,7 +533,6 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           </a-button>
         </div>
       </div>
-    </main>
 
     <!-- Success/Error Messages -->
     <div

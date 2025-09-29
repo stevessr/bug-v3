@@ -1,24 +1,16 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed, watch, provide } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 
 import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
 
-import GridColumnsSelector from './components/GridColumnsSelector.vue'
-import AboutSection from './components/AboutSection.vue'
-import GlobalSettings from './components/GlobalSettings.vue'
-import EmojiStats from './components/EmojiStats.vue'
 import ImportConfigModal from './modals/ImportConfigModal.vue'
 import ImportEmojisModal from './modals/ImportEmojisModal.vue'
 import CreateGroupModal from './modals/CreateGroupModal.vue'
 import AddEmojiModal from './modals/AddEmojiModal.vue'
 import ConfirmGenericModal from './modals/ConfirmGenericModal.vue'
 import NotificationToasts from './components/NotificationToasts.vue'
-import GroupsTab from './components/GroupsTab.vue'
-import FavoritesTab from './components/FavoritesTab.vue'
-import UngroupedTab from './components/UngroupedTab.vue'
-import ExternalImportTab from './components/ExternalImportTab.vue'
-import BilibiliImport from './tabs/BilibiliImport.vue'
 import EditEmojiModal from './modals/EditEmojiModal.vue'
 import EditGroupModal from './modals/EditGroupModal.vue'
 // composable
@@ -27,10 +19,13 @@ import ExportProgressModal from './components/ExportProgressModal.vue'
 
 import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
 import opensource from '@/options/modals/opensource.vue'
-import Tenor from '@/options/tabs/Tenor.vue'
-import Waline from '@/options/tabs/Waline.vue'
 
+const router = useRouter()
+const route = useRoute()
 const options = useOptions()
+
+// 提供 options 给子组件使用
+provide('options', options)
 
 // 主题相关状态
 const currentThemeMode = ref<'light' | 'dark'>(getCurrentThemeMode())
@@ -73,13 +68,6 @@ void Object.keys(_modalComponents)
 // re-export bindings for template access
 const {
   emojiStore,
-  isImageUrl,
-  activeTab,
-  tabs,
-  totalEmojis,
-  expandedGroups,
-  toggleGroupExpansion,
-  selectedGroupForAdd,
   showCreateGroupModal,
   showAddEmojiModal,
   showEditGroupModal,
@@ -97,28 +85,6 @@ const {
   editingGroupId,
   editGroupName,
   editGroupIcon,
-  localGridColumns,
-  updateImageScale,
-  updateShowSearchBar,
-  updateOutputFormat,
-  updateForceMobileMode,
-  updateEnableLinuxDoInjection,
-  updateEnableHoverPreview,
-  updateEnableXcomExtraSelectors,
-  updateEnableCalloutSuggestions,
-  updateTheme,
-  updateCustomPrimaryColor,
-  updateCustomColorScheme,
-  updateCustomCss,
-  handleDragStart,
-  handleDrop,
-  handleEmojiDragStart,
-  handleEmojiDrop,
-  removeEmojiFromGroup,
-  handleConfigImported,
-  handleEmojisImported,
-  exportGroup,
-  exportGroupZip,
   showExportModal,
   exportModalPercent,
   exportModalCurrentName,
@@ -127,75 +93,72 @@ const {
   exportModalNames,
   exportModalCancelled,
   exportConfiguration,
-  exportProgress,
-  exportProgressGroupId,
-  confirmDeleteGroup,
-  openEditGroup,
-  openAddEmojiModal,
+  handleConfigImported,
+  handleEmojisImported,
   onGroupCreated,
   onEmojiAdded,
   resetSettings,
   syncToChrome,
   forceLocalToExtension,
-  showSuccess,
   handleImageError,
-  openEditEmoji,
   showEditEmojiModal,
   editingEmoji,
   editingEmojiGroupId,
   editingEmojiIndex,
-  handleEmojiEdit
+  handleEmojiEdit,
+  selectedGroupForAdd
 } = options
 
-// --- Antd menu: placed after options destructuring so we can reference activeTab/tabs ---
-// Antd menu state for top navigation
-const menuSelectedKeys = ref<string[]>([
-  (typeof activeTab === 'string' ? activeTab : activeTab && (activeTab as any).value) || 'settings'
-])
-
-// Build menu items from tabs so labels stay in sync
+// 基于路由的菜单项
 const menuItems = computed(() => {
-  return tabs.map((tab: any) => {
-    return {
-      key: tab.id,
-      label: tab.label,
-      title: tab.label
-    }
-  })
+  const routes = [
+    { key: 'settings', label: '设置', route: '/settings' },
+    { key: 'favorites', label: '常用', route: '/favorites' },
+    { key: 'groups', label: '分组管理', route: '/groups' },
+    { key: 'ungrouped', label: '未分组', route: '/ungrouped' },
+    { key: 'import', label: '外部导入', route: '/import' },
+    { key: 'bilibili', label: 'Bilibili 导入', route: '/bilibili' },
+    { key: 'tenor', label: 'Tenor GIF', route: '/tenor' },
+    { key: 'waline', label: 'Waline 导入', route: '/waline' },
+    { key: 'stats', label: '统计', route: '/stats' },
+    { key: 'about', label: '关于', route: '/about' }
+  ]
+  
+  return routes.map(item => ({
+    key: item.key,
+    label: item.label,
+    title: item.label
+  }))
 })
 
-// keep menuSelectedKeys and activeTab in sync
-watch(
-  () => (typeof activeTab === 'string' ? activeTab : (activeTab as any).value),
-  (val: any) => {
-    try {
-      const key = typeof val === 'string' ? val : val?.value
-      if (key) menuSelectedKeys.value = [key]
-    } catch (_e) {}
-  },
-  { immediate: true }
-)
-
-watch(menuSelectedKeys, v => {
-  if (v && v[0]) {
-    try {
-      if (typeof activeTab === 'object' && 'value' in activeTab) {
-        ;(activeTab as any).value = v[0]
-      }
-      // else: activeTab is expected to be a ref from composable; do nothing otherwise
-    } catch (_e) {}
-  }
+// 当前选中的菜单键
+const menuSelectedKeys = computed(() => {
+  const currentRouteName = route.name as string
+  return currentRouteName ? [currentRouteName] : ['groups']
 })
 
+// 菜单选择处理
 const handleMenuSelect = (info: any) => {
   const key = info && info.key ? String(info.key) : ''
   if (key) {
-    try {
-      if (typeof activeTab === 'object' && 'value' in activeTab) {
-        ;(activeTab as any).value = key
-      }
-      // else: activeTab is expected to be a ref from composable; do nothing otherwise
-    } catch (_e) {}
+    // 根据菜单键导航到对应路由
+    const routeMap: Record<string, string> = {
+      settings: '/settings',
+      favorites: '/favorites',
+      groups: '/groups',
+      ungrouped: '/ungrouped',
+      import: '/import',
+      bilibili: '/bilibili',
+      tenor: '/tenor',
+      waline: '/waline',
+      stats: '/stats',
+      about: '/about'
+    }
+    
+    const targetRoute = routeMap[key]
+    if (targetRoute && route.path !== targetRoute) {
+      router.push(targetRoute)
+    }
   }
 }
 
@@ -285,7 +248,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
       icon: payload.icon
     })
     // IndexedDB removed: no-op flushBuffer was removed — nothing to do here
-    showSuccess('\u5206\u7ec4\u5df2\u66f4\u65b0')
+    options.showSuccess('分组已更新')
   }
 }
 </script>
@@ -330,94 +293,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
 
       <!-- Main Content -->
       <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Settings Tab -->
-        <div v-if="activeTab === 'settings'" class="space-y-8">
-          <GlobalSettings
-            :settings="emojiStore.settings"
-            @update:imageScale="updateImageScale"
-            @update:showSearchBar="updateShowSearchBar"
-            @update:outputFormat="updateOutputFormat"
-            @update:forceMobileMode="updateForceMobileMode"
-            @update:enableLinuxDoInjection="updateEnableLinuxDoInjection"
-            @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
-            @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
-            @update:enableHoverPreview="updateEnableHoverPreview"
-            @update:theme="updateTheme"
-            @update:customPrimaryColor="updateCustomPrimaryColor"
-            @update:customColorScheme="updateCustomColorScheme"
-            @update:customCss="updateCustomCss"
-          >
-            <template #grid-selector>
-              <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
-            </template>
-          </GlobalSettings>
-        </div>
-
-        <GroupsTab
-          :emojiStore="emojiStore"
-          :expandedGroups="expandedGroups"
-          :isImageUrl="isImageUrl"
-          v-model:activeTab="activeTab"
-          :exportProgress="exportProgress"
-          :exportProgressGroupId="exportProgressGroupId"
-          @openCreateGroup="showCreateGroupModal = true"
-          @groupDragStart="handleDragStart"
-          @groupDrop="handleDrop"
-          @toggleExpand="toggleGroupExpansion"
-          @openEditGroup="openEditGroup"
-          @exportGroup="exportGroup"
-          @exportGroupZip="exportGroupZip"
-          @confirmDeleteGroup="confirmDeleteGroup"
-          @openAddEmoji="openAddEmojiModal"
-          @emojiDragStart="handleEmojiDragStart"
-          @emojiDrop="handleEmojiDrop"
-          @removeEmoji="removeEmojiFromGroup"
-          @editEmoji="openEditEmoji"
-          @imageError="handleImageError"
-        />
-
-        <FavoritesTab
-          v-if="activeTab === 'favorites'"
-          :emojiStore="emojiStore"
-          @remove="removeEmojiFromGroup"
-          @edit="openEditEmoji"
-        />
-
-        <!-- Ungrouped Tab -->
-        <UngroupedTab
-          v-if="activeTab === 'ungrouped'"
-          :emojiStore="emojiStore"
-          @remove="removeEmojiFromGroup"
-          @edit="openEditEmoji"
-        />
-
-        <!-- External Import Tab -->
-        <ExternalImportTab v-if="activeTab === 'import'" />
-        <BilibiliImport v-if="activeTab === 'bilibili'" />
-
-        <!-- Tenor Tab -->
-        <div v-if="activeTab === 'tenor'">
-          <Tenor />
-        </div>
-
-        <!-- Waline Tab -->
-        <div v-if="activeTab === 'waline'">
-          <Waline />
-        </div>
-
-        <!-- Statistics Tab -->
-        <div v-if="activeTab === 'stats'" class="space-y-8">
-          <EmojiStats
-            :groupCount="emojiStore.groups.length"
-            :totalEmojis="totalEmojis"
-            :favoritesCount="emojiStore.favorites.size"
-          />
-        </div>
-
-        <!-- About Tab -->
-        <div v-if="activeTab === 'about'" class="space-y-8">
-          <AboutSection />
-        </div>
+        <router-view />
       </main>
 
       <!-- Create Group and Add Emoji modals extracted into components -->
@@ -435,7 +311,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         :editingGroupId="editingGroupId"
         :initialName="editGroupName"
         :initialIcon="editGroupIcon"
-        :isImageUrl="isImageUrl"
+        :isImageUrl="options.isImageUrl"
         @save="handleSaveGroup"
         @imageError="handleImageError"
       />

@@ -15,9 +15,7 @@ const emit = defineEmits([
   'emojiDrop',
   'removeEmoji',
   'imageError',
-  'editEmoji',
-  'changeTab',
-  'update:activeTab'
+  'editEmoji'
 ])
 // props: only expandedGroups / isImageUrl / activeTab are expected from parent
 import { computed, ref, reactive, onMounted, onUnmounted, type PropType } from 'vue'
@@ -30,10 +28,9 @@ const viewOptions = reactive([
   { label: '域名', value: 'domains' }
 ])
 
-const { expandedGroups, activeTab, isImageUrl } = defineProps({
+const { expandedGroups, isImageUrl } = defineProps({
   expandedGroups: { type: Object as PropType<Set<string>>, required: true },
-  isImageUrl: { type: Function },
-  activeTab: { type: String }
+  isImageUrl: { type: Function }
 })
 
 import { useEmojiStore } from '../../stores/emojiStore'
@@ -430,7 +427,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
 
 <template>
   <div>
-    <div v-if="activeTab === 'groups'" class="space-y-8">
+    <div class="space-y-8">
       <div class="bg-white rounded-lg shadow-sm border dark:border-gray-700 dark:bg-gray-800">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div class="flex justify-between items-center">
@@ -680,7 +677,7 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
     </div>
 
     <!-- Card view for groups (moved to separate component) -->
-    <div v-else-if="activeTab === 'groups'">
+    <div v-if="viewMode === 'card'">
       <GroupsCardView
         :displayGroups="displayGroups"
         :isImageUrl="isImageUrl"

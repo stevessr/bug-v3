@@ -263,27 +263,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b dark:bg-gray-800">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Tenor GIF 搜索</h1>
-            <p class="text-sm text-gray-600 dark:text-white">搜索并导入 Tenor GIF 表情到你的收藏</p>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 dark:text-white">
+  <div class="space-y-6 dark:text-white">
       <!-- API Key Setup -->
       <div
         v-if="!tenorApiKey"
         class="bg-white rounded-lg shadow-sm border p-6 mb-8 dark:bg-gray-800"
       >
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 dark:text-white">配置 Tenor API</h2>
+
         <p class="text-sm text-gray-600 mb-4 dark:text-white">
           请先设置你的 Tenor API Key。你可以在
           <a
@@ -469,7 +455,6 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <p class="text-gray-500">未找到相关 GIF，请尝试其他关键词</p>
         </div>
       </div>
-    </main>
 
     <!-- Group Selection Modal -->
     <div

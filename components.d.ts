@@ -26,5 +26,7 @@ declare module 'vue' {
     ASlider: typeof import('ant-design-vue/es')['Slider']
     ASwitch: typeof import('ant-design-vue/es')['Switch']
     ATransfer: typeof import('ant-design-vue/es')['Transfer']
+    RouterLink: typeof import('vue-router')['RouterLink']
+    RouterView: typeof import('vue-router')['RouterView']
   }
 }
