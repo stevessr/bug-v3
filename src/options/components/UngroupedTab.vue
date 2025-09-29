@@ -6,7 +6,7 @@ import type { EmojiGroup, Emoji } from '../../types/emoji'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 
-defineEmits(['remove', 'edit'])
+defineEmits(['remove', 'edit', 'add-emoji'])
 
 // use store instance directly
 const emojiStore = useEmojiStore()
@@ -272,7 +272,7 @@ const confirmCreateGroup = async () => {
     // 创建新分组
     const newGroup = emojiStore.createGroup(newGroupName.value.trim(), newGroupIcon.value || '📁')
 
-    // 设置目标分组ID并关闭对话框
+    // 设置目标分组 ID 并关闭对话框
     targetGroupId.value = newGroup.id
     showCreateGroupDialog.value = false
 
@@ -335,7 +335,7 @@ const cancelCreateGroup = () => {
               <a-button
                 @click="moveSelectedEmojis"
                 :disabled="!targetGroupId"
-                class="text-sm px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                class="text-sm px-3 py-1 bg-blue-500 dark:bg-blue-600 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 移动
               </a-button>
@@ -353,26 +353,40 @@ const cancelCreateGroup = () => {
           </div>
         </div>
       </div>
-      <div class="px-6 py-3 border-b border-gray-100 flex items-center justify-end gap-2">
-        <!-- Upload all button when not on linux.do -->
-        <a-button
-          v-if="shouldShowUploadButton && ungroup && ungroup.emojis?.length > 0"
-          @click="uploadAllEmojis"
-          class="text-sm px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2"
-          title="上传所有未分组表情到 linux.do"
-        >
-          📤 上传全部
-        </a-button>
+      <div class="px-6 py-3 border-b border-gray-100 flex items-center justify-between">
+        <!-- 左侧：添加表情按钮 -->
+        <div class="flex items-center gap-2">
+          <a-button
+            @click="$emit('add-emoji', 'ungrouped')"
+            class="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
+            title="添加表情到未分组"
+          >
+            ➕ 添加表情
+          </a-button>
+        </div>
 
-        <!-- Upload selected button when in multi-select mode -->
-        <a-button
-          v-if="shouldShowUploadButton && isMultiSelectMode && selectedEmojis.size > 0"
-          @click="uploadSelectedEmojis"
-          class="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
-          title="上传选中的表情到 linux.do"
-        >
-          📤 上传选中 ({{ selectedEmojis.size }})
-        </a-button>
+        <!-- 右侧：上传按钮 -->
+        <div class="flex items-center gap-2">
+          <!-- Upload all button when not on linux.do -->
+          <a-button
+            v-if="shouldShowUploadButton && ungroup && ungroup.emojis?.length > 0"
+            @click="uploadAllEmojis"
+            class="text-sm px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2"
+            title="上传所有未分组表情到 linux.do"
+          >
+            📤 上传全部
+          </a-button>
+
+          <!-- Upload selected button when in multi-select mode -->
+          <a-button
+            v-if="shouldShowUploadButton && isMultiSelectMode && selectedEmojis.size > 0"
+            @click="uploadSelectedEmojis"
+            class="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
+            title="上传选中的表情到 linux.do"
+          >
+            📤 上传选中 ({{ selectedEmojis.size }})
+          </a-button>
+        </div>
       </div>
 
       <div class="p-6">

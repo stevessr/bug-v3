@@ -292,7 +292,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
         <a-button
           @click="saveApiKey"
           :disabled="!inputApiKey.trim()"
-          class="px-4 py-2 text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          class="px-4 py-2 text-sm bg-blue-600 dark:bg-blue-700 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
           保存 API Key
         </a-button>

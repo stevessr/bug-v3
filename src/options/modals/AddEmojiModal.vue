@@ -17,11 +17,6 @@ const onVariantSelectForItem = (index: number, info: { key: string | number }) =
   if (item) setItemSelectedVariant(item, info)
 }
 
-const onParsedImageError = (e: Event) => {
-  const target = e.target as HTMLImageElement
-  target.style.display = 'none'
-}
-
 const name = ref('')
 const url = ref('')
 const displayUrl = ref('')
@@ -59,12 +54,22 @@ watch(show, v => {
   if (v) {
     name.value = ''
     url.value = ''
+    displayUrl.value = ''
     groupId.value = (defaultGroupId?.value as string) || (groups.value && groups.value[0]?.id) || ''
     pasteText.value = ''
     parsedItems.value = []
     inputMode.value = 'url'
+    imageLoadError.value = false // 重置图片错误状态
   }
 })
+
+// 监听 URL 变化，重置图片错误状态
+watch(
+  () => [url.value, displayUrl.value],
+  () => {
+    imageLoadError.value = false
+  }
+)
 
 const emojiStore = useEmojiStore()
 
@@ -79,12 +84,26 @@ const onGroupSelect = (info: any) => {
 }
 
 const selectedGroupLabel = computed(() => {
+  if (!groupId.value || groupId.value === 'ungrouped') {
+    return '📝 未分组表情'
+  }
   const list = (groups.value as any[]) || []
   const g = list.find((x: { id?: string }) => x.id === groupId.value) as any
   return g ? `${g.icon ? g.icon + ' ' : ''}${g.name}` : '选择分组'
 })
 
-const handleImageError = (event: Event) => {
+// 图片加载状态
+const imageLoadError = ref(false)
+
+function handleImageLoad() {
+  imageLoadError.value = false
+}
+
+function handleImageError() {
+  imageLoadError.value = true
+}
+
+const handleParsedImageError = (event: Event) => {
   const target = event.target as HTMLImageElement
   target.src = ''
 }
@@ -331,39 +350,21 @@ const close = () => {
 const add = () => {
   // If non-url mode, use already parsed items
   if (inputMode.value !== 'url') {
-    if (parsedItems.value.length > 0) {
-      if (!groupId.value) return
-      emojiStore.beginBatch()
-      try {
-        parsedItems.value.forEach(it => {
-          // debug log removed
-          const selectedUrl = it.selectedVariant || it.url
-          // debug log removed
-          const emojiData = { packet: Date.now(), name: it.name, url: selectedUrl }
-          emojiStore.addEmojiWithoutSave(groupId.value, emojiData)
-          emits('added', { groupId: groupId.value, name: emojiData.name })
-        })
-        // IndexedDB removed: flushBuffer not needed
-      } finally {
-        void emojiStore.endBatch()
-      }
-      emits('update:show', false)
-      pasteText.value = ''
-      parsedItems.value = []
-      return
-    }
+    return importParsed()
   }
 
-  if (!name.value.trim() || !url.value.trim() || !groupId.value) return
+  if (!name.value.trim() || !url.value.trim()) return
+  // 允许未分组表情（groupId 为空或 'ungrouped'）
+  const targetGroupId = groupId.value || 'ungrouped'
   const emojiData = {
     packet: Date.now(),
     name: name.value.trim(),
     url: url.value.trim(),
     ...(displayUrl.value.trim() && { displayUrl: displayUrl.value.trim() })
   }
-  emojiStore.addEmoji(groupId.value, emojiData)
+  emojiStore.addEmoji(targetGroupId, emojiData)
   // IndexedDB removed: flushBuffer not needed
-  emits('added', { groupId: groupId.value, name: emojiData.name })
+  emits('added', { groupId: targetGroupId, name: emojiData.name })
   emits('update:show', false)
   name.value = ''
   url.value = ''
@@ -373,7 +374,8 @@ const add = () => {
 
 const importParsed = () => {
   if (parsedItems.value.length === 0) return
-  if (!groupId.value) return
+  // 允许未分组表情（groupId 为空或 'ungrouped'）
+  const targetGroupId = groupId.value || 'ungrouped'
   emojiStore.beginBatch()
   try {
     parsedItems.value.forEach(it => {
@@ -381,8 +383,8 @@ const importParsed = () => {
       const selectedUrl = it.selectedVariant || it.url
       // debug log removed
       const emojiData = { packet: Date.now(), name: it.name, url: selectedUrl }
-      emojiStore.addEmojiWithoutSave(groupId.value, emojiData)
-      emits('added', { groupId: groupId.value, name: emojiData.name })
+      emojiStore.addEmojiWithoutSave(targetGroupId, emojiData)
+      emits('added', { groupId: targetGroupId, name: emojiData.name })
     })
     // IndexedDB removed: flushBuffer not needed
   } finally {
@@ -397,209 +399,318 @@ const importParsed = () => {
 <template>
   <div
     v-if="show"
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    @click="close"
+    class="fixed inset-0 z-50 overflow-y-auto"
+    aria-labelledby="modal-title"
+    role="dialog"
+    aria-modal="true"
   >
-    <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border dark:border-gray-700"
-      @click.stop
-    >
-      <h3 class="text-lg font-semibold mb-4 dark:text-white">添加表情</h3>
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-            表情名称
-          </label>
-          <input
-            v-model="name"
-            type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-            placeholder="输入表情名称"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-            输入模式
-          </label>
-          <div class="flex items-center gap-2">
-            <a-dropdown>
-              <template #overlay>
-                <a-menu @click="onInputModeSelect">
-                  <a-menu-item key="url">单个 URL</a-menu-item>
-                  <a-menu-item key="markdown">Markdown (批量)</a-menu-item>
-                  <a-menu-item key="html">HTML (批量)</a-menu-item>
-                </a-menu>
-              </template>
-              <a-button>
-                {{ inputMode }}
-                <DownOutlined />
-              </a-button>
-            </a-dropdown>
-            <div class="text-xs text-gray-500">已解析：{{ parsedItems.length }} 个</div>
-          </div>
-        </div>
-        <div v-if="inputMode === 'url'">
-          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-            输出链接 (必填)
-          </label>
-          <input
-            v-model="url"
-            type="url"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-            placeholder="插入到编辑器时使用的链接"
-          />
-          <label class="block text-sm font-medium text-gray-700 mb-1 mt-3 dark:text-white">
-            显示链接 (可选)
-          </label>
-          <input
-            v-model="displayUrl"
-            type="url"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-            placeholder="表情选择器中显示的链接，留空则使用输出链接"
-          />
-        </div>
-        <div v-else>
-          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-            粘贴内容 (Markdown 或 HTML)
-          </label>
-          <textarea
-            v-model="pasteText"
-            rows="6"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-            :placeholder="
-              inputMode === 'markdown'
-                ? '粘贴 Markdown 图片，如 ![name|512x512](url)...'
-                : '粘贴 HTML 片段 (例如 discourse lightbox 的 HTML)'
-            "
-          ></textarea>
-          <div class="flex items-center justify-between mt-2">
-            <div class="text-xs text-gray-500">预览会解析出：{{ parsedItems.length }} 个</div>
-            <div class="flex gap-2">
-              <a-button
-                @click="previewParse"
-                type="button"
-                class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
-              >
-                预览
-              </a-button>
-              <a-button
-                @click="importParsed"
-                type="button"
-                class="px-3 py-1 text-xs bg-blue-600 text-white rounded"
-              >
-                导入解析项
-              </a-button>
-            </div>
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">所属分组</label>
-          <a-dropdown>
-            <template #overlay>
-              <a-menu @click="onGroupSelect">
-                <a-menu-item v-for="g in groups" :key="g.id" :value="g.id" :title="g.id">
-                  {{ g.name }}
-                </a-menu-item>
-              </a-menu>
-            </template>
-            <a-button>
-              {{ selectedGroupLabel }}
-              <DownOutlined />
-            </a-button>
-          </a-dropdown>
-        </div>
+    <transition name="overlay-fade">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="close"></div>
+    </transition>
 
-        <!-- 解析结果预览和 URL 变种选择 -->
-        <div
-          v-if="parsedItems.length > 0 && inputMode !== 'url'"
-          class="bg-gray-50 dark:bg-black rounded-lg p-4"
-        >
-          <div class="flex items-center justify-between mb-3">
-            <h4 class="text-sm font-medium text-gray-700 dark:text-white">
-              解析结果 ({{ parsedItems.length }} 个)
-            </h4>
-            <a-button
-              @click="parsedItems = []"
-              type="button"
-              class="text-xs text-gray-500 hover:text-gray-700"
-            >
-              清空
-            </a-button>
-          </div>
-          <div class="max-h-64 overflow-y-auto space-y-3">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <transition name="card-pop" appear>
+        <ACard hoverable style="max-width: 90vw; width: 900px" @click.stop>
+          <div class="flex flex-row gap-6">
+            <!-- 左侧图片预览区 -->
             <div
-              v-for="(item, index) in parsedItems"
-              :key="index"
-              class="bg-white dark:bg-gray-800 rounded border dark:border-gray-700 p-3"
+              v-if="inputMode === 'url'"
+              class="flex-shrink-0 flex items-center justify-center"
+              style="width: 300px; min-width: 250px; max-width: 40%; min-height: 400px"
             >
-              <div class="flex items-start gap-3">
-                <img
-                  :src="item.selectedVariant || item.url"
-                  :alt="item.name"
-                  class="w-12 h-12 object-cover rounded border flex-shrink-0"
-                  @error="onParsedImageError"
-                />
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-gray-900 truncate">{{ item.name }}</div>
-                  <div v-if="item.variants.length > 1" class="mt-2">
-                    <label class="block text-xs text-gray-600 dark:text-white mb-1">
-                      选择 URL 变种：
-                    </label>
-                    <a-dropdown>
-                      <template #overlay>
-                        <a-menu @click="onVariantSelectForItem(index, $event)">
-                          <a-menu-item
-                            v-for="variant in item.variants"
-                            :key="variant.url"
-                            :value="variant.url"
-                          >
-                            {{ variant.label }}
-                          </a-menu-item>
-                        </a-menu>
-                      </template>
-                      <a-button>
-                        {{ item.selectedVariant || item.variants[0].url }}
-                        <DownOutlined />
-                      </a-button>
-                    </a-dropdown>
-                  </div>
-                  <div v-else class="mt-1">
-                    <span class="text-xs text-gray-500">
-                      {{ item.variants[0]?.label || '默认' }}
-                    </span>
-                  </div>
-                  <div class="mt-1 text-xs text-gray-500 break-all">
-                    {{ item.selectedVariant || item.url }}
-                  </div>
+              <!-- 有 URL 且未出错时显示图片 -->
+              <a-image
+                v-if="(displayUrl || url) && !imageLoadError"
+                :src="displayUrl || url"
+                class="object-contain w-full h-full max-h-96 rounded-lg border"
+                style="min-height: 200px"
+                @load="handleImageLoad"
+                @error="handleImageError"
+              />
+
+              <!-- URL 为空时的占位符 -->
+              <div
+                v-else-if="!displayUrl && !url"
+                class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48"
+              >
+                <div class="text-center text-gray-500 dark:text-gray-400">
+                  <div class="text-4xl mb-2">🖼️</div>
+                  <div class="text-sm">请输入图片链接</div>
+                </div>
+              </div>
+
+              <!-- 图片加载失败时的占位符 -->
+              <div
+                v-else-if="imageLoadError"
+                class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48"
+              >
+                <div class="text-center text-gray-500 dark:text-gray-400">
+                  <div class="text-4xl mb-2">📷</div>
+                  <div class="text-sm">图片加载失败</div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div v-if="url" class="text-center">
-          <img
-            :src="displayUrl || url"
-            alt="预览"
-            class="w-16 h-16 object-contain mx-auto border border-gray-200 rounded"
-            @error="handleImageError"
-          />
-        </div>
-      </div>
-      <div class="flex justify-end gap-3 mt-6">
-        <a-button
-          @click="close"
-          class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
-        >
-          取消
-        </a-button>
-        <a-button
-          @click="add"
-          class="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-        >
-          添加
-        </a-button>
-      </div>
+            <!-- 右侧编辑区 -->
+            <div class="flex-1 min-w-0">
+              <div class="mb-4">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">添加表情</h2>
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                  {{
+                    inputMode === 'url'
+                      ? '单个表情模式'
+                      : `批量模式 (已解析：${parsedItems.length} 个)`
+                  }}
+                </div>
+              </div>
+              <form @submit.prevent="add" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+                    表情名称
+                  </label>
+                  <input
+                    v-model="name"
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+                    placeholder="输入表情名称"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+                    输入模式
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <a-dropdown>
+                      <template #overlay>
+                        <a-menu @click="onInputModeSelect">
+                          <a-menu-item key="url">单个 URL</a-menu-item>
+                          <a-menu-item key="markdown">Markdown (批量)</a-menu-item>
+                          <a-menu-item key="html">HTML (批量)</a-menu-item>
+                        </a-menu>
+                      </template>
+                      <a-button>
+                        {{ inputMode }}
+                        <DownOutlined />
+                      </a-button>
+                    </a-dropdown>
+                    <div class="text-xs text-gray-500">已解析：{{ parsedItems.length }} 个</div>
+                  </div>
+                </div>
+                <div v-if="inputMode === 'url'">
+                  <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+                    输出链接 (必填)
+                  </label>
+                  <input
+                    v-model="url"
+                    type="url"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+                    placeholder="插入到编辑器时使用的链接"
+                  />
+                  <label class="block text-sm font-medium text-gray-700 mb-1 mt-3 dark:text-white">
+                    显示链接 (可选)
+                  </label>
+                  <input
+                    v-model="displayUrl"
+                    type="url"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+                    placeholder="表情选择器中显示的链接，留空则使用输出链接"
+                  />
+                </div>
+                <div v-else>
+                  <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+                    粘贴内容 (Markdown 或 HTML)
+                  </label>
+                  <textarea
+                    v-model="pasteText"
+                    rows="6"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+                    :placeholder="
+                      inputMode === 'markdown'
+                        ? '粘贴 Markdown 图片，如 ![name|512x512](url)...'
+                        : '粘贴 HTML 片段 (例如 discourse lightbox 的 HTML)'
+                    "
+                  ></textarea>
+                  <div class="flex items-center justify-between mt-2">
+                    <div class="text-xs text-gray-500">
+                      预览会解析出：{{ parsedItems.length }} 个
+                    </div>
+                    <div class="flex gap-2">
+                      <a-button
+                        @click="previewParse"
+                        type="button"
+                        class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
+                      >
+                        预览
+                      </a-button>
+                      <a-button
+                        @click="importParsed"
+                        type="button"
+                        class="px-3 py-1 text-xs bg-blue-600 text-white rounded"
+                      >
+                        导入解析项
+                      </a-button>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+                    所属分组
+                  </label>
+                  <a-dropdown>
+                    <template #overlay>
+                      <a-menu @click="onGroupSelect">
+                        <a-menu-item key="ungrouped" value="ungrouped">📝 未分组表情</a-menu-item>
+                        <a-menu-divider />
+                        <a-menu-item v-for="g in groups" :key="g.id" :value="g.id" :title="g.id">
+                          <a-image
+                            v-if="g.icon && g.icon.startsWith('https://')"
+                            :src="g.icon"
+                            class="inline-block mr-1"
+                            style="max-width: 10px"
+                          />
+                          <span v-else class="inline-block mr-1">{{ g.icon }}</span>
+                          {{ g.name }}
+                        </a-menu-item>
+                      </a-menu>
+                    </template>
+                    <a-button class="dark:text-white dark:bg-gray-800">
+                      {{ selectedGroupLabel }}
+                      <DownOutlined />
+                    </a-button>
+                  </a-dropdown>
+                </div>
+
+                <!-- 解析结果预览和 URL 变种选择 -->
+                <div
+                  v-if="parsedItems.length > 0 && inputMode !== 'url'"
+                  class="bg-gray-50 dark:bg-black rounded-lg p-4"
+                >
+                  <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-white">
+                      解析结果 ({{ parsedItems.length }} 个)
+                    </h4>
+                    <a-button
+                      @click="parsedItems = []"
+                      type="button"
+                      class="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      清空
+                    </a-button>
+                  </div>
+                  <div class="max-h-64 overflow-y-auto space-y-3">
+                    <div
+                      v-for="(item, index) in parsedItems"
+                      :key="index"
+                      class="bg-white dark:bg-gray-800 rounded border dark:border-gray-700 p-3"
+                    >
+                      <div class="flex items-start gap-3">
+                        <img
+                          :src="item.selectedVariant || item.url"
+                          :alt="item.name"
+                          class="w-12 h-12 object-cover rounded border flex-shrink-0"
+                          @error="handleParsedImageError"
+                        />
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-gray-900 truncate">
+                            {{ item.name }}
+                          </div>
+                          <div v-if="item.variants.length > 1" class="mt-2">
+                            <label class="block text-xs text-gray-600 dark:text-white mb-1">
+                              选择 URL 变种：
+                            </label>
+                            <a-dropdown>
+                              <template #overlay>
+                                <a-menu @click="onVariantSelectForItem(index, $event)">
+                                  <a-menu-item
+                                    v-for="variant in item.variants"
+                                    :key="variant.url"
+                                    :value="variant.url"
+                                  >
+                                    {{ variant.label }}
+                                  </a-menu-item>
+                                </a-menu>
+                              </template>
+                              <a-button>
+                                {{ item.selectedVariant || item.variants[0].url }}
+                                <DownOutlined />
+                              </a-button>
+                            </a-dropdown>
+                          </div>
+                          <div v-else class="mt-1">
+                            <span class="text-xs text-gray-500">
+                              {{ item.variants[0]?.label || '默认' }}
+                            </span>
+                          </div>
+                          <div class="mt-1 text-xs text-gray-500 break-all">
+                            {{ item.selectedVariant || item.url }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 按钮区域 -->
+                <div class="mt-6 space-y-3">
+                  <!-- Save and Cancel buttons -->
+                  <div class="grid grid-cols-2 gap-3">
+                    <a-button
+                      type="button"
+                      @click="add"
+                      class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                    >
+                      {{ inputMode === 'url' ? '添加' : '导入解析项' }}
+                    </a-button>
+                    <a-button
+                      type="button"
+                      @click="close"
+                      class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
+                    >
+                      取消
+                    </a-button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </ACard>
+      </transition>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* overlay fade */
+.overlay-fade-enter-from,
+.overlay-fade-leave-to {
+  opacity: 0;
+}
+.overlay-fade-enter-active,
+.overlay-fade-leave-active {
+  transition: opacity 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* card pop: fade + slight translate + scale */
+.card-pop-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+}
+.card-pop-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.card-pop-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.card-pop-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}
+.card-pop-enter-active,
+.card-pop-leave-active {
+  transition:
+    opacity 220ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>

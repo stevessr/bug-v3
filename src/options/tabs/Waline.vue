@@ -394,7 +394,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <a-button
             @click="importFromUrl"
             :disabled="!urlInput.trim() || isImportingUrl"
-            class="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            class="w-full px-4 py-2 text-sm bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             {{ isImportingUrl ? '导入中...' : '从 URL 导入' }}
           </a-button>
@@ -442,7 +442,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <a-button
             @click="importFromJson"
             :disabled="!jsonInput.trim() || isImportingJson"
-            class="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            class="w-full px-4 py-2 text-sm bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             {{ isImportingJson ? '导入中...' : '从 JSON 导入' }}
           </a-button>
