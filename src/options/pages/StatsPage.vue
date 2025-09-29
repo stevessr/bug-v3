@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { inject } from 'vue'
-import type { OptionsInject } from '../types'
 
+import type { OptionsInject } from '../types'
 import EmojiStats from '../components/EmojiStats.vue'
 
 const options = inject<OptionsInject>('options')!
 
-const {
-  emojiStore,
-  totalEmojis
-} = options
+const { emojiStore, totalEmojis } = options
 </script>
 
 <template>

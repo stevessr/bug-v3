@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import { useEmojiStore } from '../stores/emojiStore'
+
 import router from './router'
 
 import '../styles/main.ts'

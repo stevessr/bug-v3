@@ -264,197 +264,191 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
 
 <template>
   <div class="space-y-6 dark:text-white">
-      <!-- API Key Setup -->
-      <div
-        v-if="!tenorApiKey"
-        class="bg-white rounded-lg shadow-sm border p-6 mb-8 dark:bg-gray-800"
-      >
+    <!-- API Key Setup -->
+    <div v-if="!tenorApiKey" class="bg-white rounded-lg shadow-sm border p-6 mb-8 dark:bg-gray-800">
+      <p class="text-sm text-gray-600 mb-4 dark:text-white">
+        请先设置你的 Tenor API Key。你可以在
+        <a
+          href="https://developers.google.com/tenor/guides/quickstart"
+          target="_blank"
+          class="text-blue-600 hover:text-blue-800 underline"
+        >
+          Tenor 开发者中心
+        </a>
+        申请免费的 API Key。
+      </p>
 
-        <p class="text-sm text-gray-600 mb-4 dark:text-white">
-          请先设置你的 Tenor API Key。你可以在
-          <a
-            href="https://developers.google.com/tenor/guides/quickstart"
-            target="_blank"
-            class="text-blue-600 hover:text-blue-800 underline"
-          >
-            Tenor 开发者中心
-          </a>
-          申请免费的 API Key。
-        </p>
+      <div class="space-y-4">
+        <div>
+          <label for="api-key" class="block text-sm font-medium text-gray-700">Tenor API Key</label>
+          <input
+            id="api-key"
+            v-model="inputApiKey"
+            type="text"
+            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            placeholder="输入你的 Tenor API Key"
+          />
+        </div>
+        <a-button
+          @click="saveApiKey"
+          :disabled="!inputApiKey.trim()"
+          class="px-4 py-2 text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        >
+          保存 API Key
+        </a-button>
+      </div>
+    </div>
 
-        <div class="space-y-4">
+    <!-- Search Interface -->
+    <div v-else class="space-y-6">
+      <!-- API Key Management -->
+      <div class="bg-white rounded-lg shadow-sm border p-4 dark:bg-gray-800">
+        <div class="flex justify-between items-center">
           <div>
-            <label for="api-key" class="block text-sm font-medium text-gray-700">
-              Tenor API Key
-            </label>
-            <input
-              id="api-key"
-              v-model="inputApiKey"
-              type="text"
-              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              placeholder="输入你的 Tenor API Key"
-            />
+            <h3 class="text-sm font-medium text-gray-900 dark:text-white">API Key 已配置</h3>
+            <p class="text-xs text-gray-500 dark:text-white">
+              Key: {{ tenorApiKey.substring(0, 8) }}...
+            </p>
           </div>
           <a-button
-            @click="saveApiKey"
-            :disabled="!inputApiKey.trim()"
-            class="px-4 py-2 text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            @click="clearApiKey"
+            class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
           >
-            保存 API Key
+            重新配置
           </a-button>
         </div>
       </div>
 
-      <!-- Search Interface -->
-      <div v-else class="space-y-6">
-        <!-- API Key Management -->
-        <div class="bg-white rounded-lg shadow-sm border p-4 dark:bg-gray-800">
-          <div class="flex justify-between items-center">
-            <div>
-              <h3 class="text-sm font-medium text-gray-900 dark:text-white">API Key 已配置</h3>
-              <p class="text-xs text-gray-500 dark:text-white">
-                Key: {{ tenorApiKey.substring(0, 8) }}...
-              </p>
-            </div>
-            <a-button
-              @click="clearApiKey"
-              class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
-            >
-              重新配置
-            </a-button>
-          </div>
+      <!-- Search Bar -->
+      <div class="bg-white rounded-lg shadow-sm border p-6 dark:bg-gray-800">
+        <div class="flex gap-4">
+          <input
+            v-model="searchQuery"
+            @keyup.enter="searchGifs"
+            type="text"
+            placeholder="搜索 GIF..."
+            class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          />
+          <a-button
+            @click="searchGifs"
+            :disabled="isSearching || !searchQuery.trim()"
+            class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {{ isSearching ? '搜索中...' : '搜索' }}
+          </a-button>
         </div>
 
-        <!-- Search Bar -->
-        <div class="bg-white rounded-lg shadow-sm border p-6 dark:bg-gray-800">
-          <div class="flex gap-4">
-            <input
-              v-model="searchQuery"
-              @keyup.enter="searchGifs"
-              type="text"
-              placeholder="搜索 GIF..."
-              class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-            <a-button
-              @click="searchGifs"
-              :disabled="isSearching || !searchQuery.trim()"
-              class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            >
-              {{ isSearching ? '搜索中...' : '搜索' }}
-            </a-button>
-          </div>
-
-          <!-- Advanced Options -->
-          <div class="mt-4 flex gap-4 text-sm text-gray-700 dark:text-white">
-            <div class="flex items-center gap-2 dark:text-white">
-              <a-dropdown>
-                <template #overlay>
-                  <a-menu @click="(info: { key: string | number }) => onSearchLimitSelect(info)">
-                    <a-menu-item key="12">12 个结果</a-menu-item>
-                    <a-menu-item key="24">24 个结果</a-menu-item>
-                    <a-menu-item key="48">48 个结果</a-menu-item>
-                  </a-menu>
-                </template>
-                <a-button>
-                  {{ searchLimit }} 个结果
-                  <DownOutlined />
-                </a-button>
-              </a-dropdown>
-            </div>
-
-            <div class="flex items-center">
-              <a-dropdown>
-                <template #overlay>
-                  <a-menu @click="(info: { key: string | number }) => onContentFilterSelect(info)">
-                    <a-menu-item key="high">高安全级别</a-menu-item>
-                    <a-menu-item key="medium">中等安全级别</a-menu-item>
-                    <a-menu-item key="low">低安全级别</a-menu-item>
-                    <a-menu-item key="off">关闭过滤</a-menu-item>
-                  </a-menu>
-                </template>
-                <a-button>
-                  {{ contentFilter }}
-                  <DownOutlined />
-                </a-button>
-              </a-dropdown>
-            </div>
-          </div>
-        </div>
-
-        <!-- Search Results -->
-        <div v-if="searchResults.length > 0" class="bg-white rounded-lg shadow-sm border p-6">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">搜索结果</h3>
-            <div v-if="selectedGifs.size > 0" class="flex gap-2">
-              <span class="text-sm text-gray-600">已选择 {{ selectedGifs.size }} 个</span>
-              <a-button
-                @click="importSelected"
-                class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-              >
-                导入选中
+        <!-- Advanced Options -->
+        <div class="mt-4 flex gap-4 text-sm text-gray-700 dark:text-white">
+          <div class="flex items-center gap-2 dark:text-white">
+            <a-dropdown>
+              <template #overlay>
+                <a-menu @click="(info: { key: string | number }) => onSearchLimitSelect(info)">
+                  <a-menu-item key="12">12 个结果</a-menu-item>
+                  <a-menu-item key="24">24 个结果</a-menu-item>
+                  <a-menu-item key="48">48 个结果</a-menu-item>
+                </a-menu>
+              </template>
+              <a-button>
+                {{ searchLimit }} 个结果
+                <DownOutlined />
               </a-button>
-            </div>
+            </a-dropdown>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <div
-              v-for="gif in searchResults"
-              :key="gif.id"
-              class="relative group cursor-pointer"
-              @click="toggleSelection(gif)"
-            >
-              <div
-                class="aspect-square bg-gray-100 rounded-lg overflow-hidden"
-                :class="{
-                  'ring-2 ring-blue-500': selectedGifs.has(gif.id),
-                  'ring-1 ring-gray-200': !selectedGifs.has(gif.id)
-                }"
-              >
-                <img
-                  :src="gif.media_formats?.tinygif?.url || gif.media_formats?.gif?.url || ''"
-                  :alt="gif.content_description"
-                  class="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </div>
-
-              <!-- Selection indicator -->
-              <div
-                v-if="selectedGifs.has(gif.id)"
-                class="absolute top-2 right-2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs"
-              >
-                ✓
-              </div>
-
-              <!-- GIF info -->
-              <div class="mt-2">
-                <p class="text-xs text-gray-600 truncate" :title="gif.content_description">
-                  {{ gif.content_description || 'Untitled' }}
-                </p>
-              </div>
-            </div>
+          <div class="flex items-center">
+            <a-dropdown>
+              <template #overlay>
+                <a-menu @click="(info: { key: string | number }) => onContentFilterSelect(info)">
+                  <a-menu-item key="high">高安全级别</a-menu-item>
+                  <a-menu-item key="medium">中等安全级别</a-menu-item>
+                  <a-menu-item key="low">低安全级别</a-menu-item>
+                  <a-menu-item key="off">关闭过滤</a-menu-item>
+                </a-menu>
+              </template>
+              <a-button>
+                {{ contentFilter }}
+                <DownOutlined />
+              </a-button>
+            </a-dropdown>
           </div>
-
-          <!-- Load More -->
-          <div v-if="hasMore" class="mt-6 text-center">
-            <a-button
-              @click="loadMore"
-              :disabled="isLoadingMore"
-              class="px-6 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
-            >
-              {{ isLoadingMore ? '加载中...' : '加载更多' }}
-            </a-button>
-          </div>
-        </div>
-
-        <!-- No Results -->
-        <div
-          v-else-if="hasSearched && !isSearching"
-          class="bg-white rounded-lg shadow-sm border p-6 text-center"
-        >
-          <p class="text-gray-500">未找到相关 GIF，请尝试其他关键词</p>
         </div>
       </div>
+
+      <!-- Search Results -->
+      <div v-if="searchResults.length > 0" class="bg-white rounded-lg shadow-sm border p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">搜索结果</h3>
+          <div v-if="selectedGifs.size > 0" class="flex gap-2">
+            <span class="text-sm text-gray-600">已选择 {{ selectedGifs.size }} 个</span>
+            <a-button
+              @click="importSelected"
+              class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+            >
+              导入选中
+            </a-button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div
+            v-for="gif in searchResults"
+            :key="gif.id"
+            class="relative group cursor-pointer"
+            @click="toggleSelection(gif)"
+          >
+            <div
+              class="aspect-square bg-gray-100 rounded-lg overflow-hidden"
+              :class="{
+                'ring-2 ring-blue-500': selectedGifs.has(gif.id),
+                'ring-1 ring-gray-200': !selectedGifs.has(gif.id)
+              }"
+            >
+              <img
+                :src="gif.media_formats?.tinygif?.url || gif.media_formats?.gif?.url || ''"
+                :alt="gif.content_description"
+                class="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+
+            <!-- Selection indicator -->
+            <div
+              v-if="selectedGifs.has(gif.id)"
+              class="absolute top-2 right-2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs"
+            >
+              ✓
+            </div>
+
+            <!-- GIF info -->
+            <div class="mt-2">
+              <p class="text-xs text-gray-600 truncate" :title="gif.content_description">
+                {{ gif.content_description || 'Untitled' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Load More -->
+        <div v-if="hasMore" class="mt-6 text-center">
+          <a-button
+            @click="loadMore"
+            :disabled="isLoadingMore"
+            class="px-6 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+          >
+            {{ isLoadingMore ? '加载中...' : '加载更多' }}
+          </a-button>
+        </div>
+      </div>
+
+      <!-- No Results -->
+      <div
+        v-else-if="hasSearched && !isSearching"
+        class="bg-white rounded-lg shadow-sm border p-6 text-center"
+      >
+        <p class="text-gray-500">未找到相关 GIF，请尝试其他关键词</p>
+      </div>
+    </div>
 
     <!-- Group Selection Modal -->
     <div

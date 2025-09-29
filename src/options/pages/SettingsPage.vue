@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject } from 'vue'
-import type { OptionsInject } from '../types'
 
+import type { OptionsInject } from '../types'
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import GlobalSettings from '../components/GlobalSettings.vue'
 

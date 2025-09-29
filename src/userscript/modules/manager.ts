@@ -8,6 +8,7 @@ import {
   syncFromManager,
   loadDataFromLocalStorage
 } from '../userscript-storage'
+
 import { showImportExportModal } from './importExport'
 
 // Create popup editor for emoji editing

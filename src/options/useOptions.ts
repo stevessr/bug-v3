@@ -16,22 +16,6 @@ import {
 export default function useOptions() {
   const emojiStore = useEmojiStore()
 
-  // Tab navigation
-  // Default to 'groups' so the groups management UI is visible by default
-  const activeTab = ref('groups')
-  const tabs = [
-    { id: 'settings', label: '设置' },
-    { id: 'favorites', label: '常用' },
-    { id: 'groups', label: '分组管理' },
-    { id: 'ungrouped', label: '未分组' },
-    { id: 'import', label: '外部导入' },
-    { id: 'bilibili', label: 'Bilibili 导入' },
-    { id: 'tenor', label: 'Tenor GIF' },
-    { id: 'waline', label: 'Waline 导入' },
-    { id: 'stats', label: '统计' },
-    { id: 'about', label: '关于' }
-  ]
-
   // Drag and drop state
   const draggedGroup = ref<EmojiGroup | null>(null)
   const draggedEmoji = ref<Emoji | null>(null)
@@ -585,7 +569,7 @@ export default function useOptions() {
     try {
       const success = await emojiStore.forceSync()
       if (success) {
-        showSuccess('数据已上传到Chrome同步存储')
+        showSuccess('数据已上传到 Chrome 同步存储')
       } else {
         showError('同步失败，请检查网络连接')
       }
@@ -758,9 +742,6 @@ export default function useOptions() {
     // store + utils
     emojiStore,
     isImageUrl,
-    // tabs
-    activeTab,
-    tabs,
     // computed
     filteredEmojis,
     totalEmojis,

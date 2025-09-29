@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject } from 'vue'
-import type { OptionsInject } from '../types'
 
+import type { OptionsInject } from '../types'
 import GroupsTab from '../components/GroupsTab.vue'
 
 const options = inject<OptionsInject>('options')!

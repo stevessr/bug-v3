@@ -123,7 +123,7 @@ const menuItems = computed(() => {
     { key: 'stats', label: '统计', route: '/stats' },
     { key: 'about', label: '关于', route: '/about' }
   ]
-  
+
   return routes.map(item => ({
     key: item.key,
     label: item.label,
@@ -154,7 +154,7 @@ const handleMenuSelect = (info: any) => {
       stats: '/stats',
       about: '/about'
     }
-    
+
     const targetRoute = routeMap[key]
     if (targetRoute && route.path !== targetRoute) {
       router.push(targetRoute)

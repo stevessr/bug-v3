@@ -27,6 +27,7 @@ export default [
       'playwright-report/**',
       'test-results/**',
       'scripts/**',
+      'src/userscript/**',
   // buildFlags shims removed - no longer ignored
       'server/**',
       '*.config.*s',
@@ -268,14 +269,6 @@ export default [
     }
   },
 
-  // Temporarily disable unused-variable checks project-wide (per user request)
-  {
-    files: ['**/*'],
-    rules: {
-      'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': 'off'
-    }
-  },
 
   // Prettier 配置（必须放在最后）
   prettierConfig
