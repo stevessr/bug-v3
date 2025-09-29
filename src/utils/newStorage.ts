@@ -533,7 +533,7 @@ export const newStorageHelpers = {
     return entry
   },
 
-  // Sync operations
+  // Sync operations with chunked storage
   async backupToSync(
     groups: EmojiGroup[],
     settings: AppSettings,
@@ -542,32 +542,133 @@ export const newStorageHelpers = {
     const chromeAPI = getChromeAPI()
     if (!chromeAPI?.storage?.sync) {
       logStorage('SYNC_BACKUP', 'failed', undefined, 'Chrome Sync Storage API not available')
-      return
+      throw new Error('Chrome Sync Storage API not available')
     }
 
-    const backupData = {
-      groups,
-      settings,
-      favorites,
-      timestamp: Date.now(),
-      version: '3.0'
-    }
+    const CHUNK_SIZE = 6000 // 6KB per chunk, leaving buffer for metadata
+    const timestamp = Date.now()
+    const version = '3.0'
 
-    return new Promise((resolve, reject) => {
-      try {
-        chromeAPI.storage.sync.set({ [SYNC_STORAGE_KEYS.BACKUP]: backupData }, () => {
+    try {
+      // 清理旧的分块数据
+      await this.clearSyncBackupChunks()
+
+      // 分块存储数据
+      const chunks: { [key: string]: any } = {}
+
+      // Helper function to split data into chunks
+      const createChunks = (data: any[], prefix: string) => {
+        const dataStr = JSON.stringify(data)
+        const totalSize = new Blob([dataStr]).size
+        
+        if (totalSize <= CHUNK_SIZE) {
+          // Single chunk
+          chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}`] = data
+          return { chunkCount: 1, totalItems: data.length }
+        } else {
+          // Multiple chunks needed
+          const estimatedChunks = Math.ceil(totalSize / CHUNK_SIZE)
+          const itemsPerChunk = Math.ceil(data.length / estimatedChunks)
+          let actualChunks = 0
+          
+          for (let i = 0; i < data.length; i += itemsPerChunk) {
+            const chunkData = data.slice(i, i + itemsPerChunk)
+            const chunkStr = JSON.stringify(chunkData)
+            const chunkSize = new Blob([chunkStr]).size
+            
+            if (chunkSize <= CHUNK_SIZE) {
+              chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${actualChunks}`] = chunkData
+              actualChunks++
+            } else {
+              // If still too large, split further
+              const smallerChunks = Math.ceil(chunkData.length / 2)
+              for (let j = 0; j < chunkData.length; j += smallerChunks) {
+                chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${actualChunks}`] = chunkData.slice(j, j + smallerChunks)
+                actualChunks++
+              }
+            }
+          }
+          
+          return { chunkCount: actualChunks, totalItems: data.length }
+        }
+      }
+
+      // 处理分组数据
+      let groupsMeta = null
+      if (groups.length > 0) {
+        groupsMeta = createChunks(groups, 'groups')
+      }
+
+      // 处理收藏数据
+      let favoritesMeta = null
+      if (favorites.length > 0) {
+        favoritesMeta = createChunks(favorites, 'favorites')
+      }
+
+      // 存储元数据（包含分块信息）
+      chunks[`${SYNC_STORAGE_KEYS.BACKUP}_meta`] = {
+        timestamp,
+        version,
+        groups: groupsMeta,
+        favorites: favoritesMeta,
+        settings
+      }
+
+      // 批量存储所有分块
+      return new Promise((resolve, reject) => {
+        chromeAPI.storage.sync.set(chunks, () => {
           if (chromeAPI.runtime.lastError) {
-            logStorage('SYNC_BACKUP', 'failed', undefined, chromeAPI.runtime.lastError)
-            reject(chromeAPI.runtime.lastError)
+            const error = chromeAPI.runtime.lastError
+            logStorage('SYNC_BACKUP', 'failed', undefined, error)
+            reject(new Error(`Chrome sync failed: ${error.message || 'Unknown error'}`))
           } else {
-            logStorage('SYNC_BACKUP', 'success', backupData)
+            const chunkCount = Object.keys(chunks).length
+            logStorage('SYNC_BACKUP', 'success', { 
+              chunks: chunkCount, 
+              timestamp,
+              groupChunks: groupsMeta?.chunkCount || 0,
+              favoriteChunks: favoritesMeta?.chunkCount || 0
+            })
             resolve()
           }
         })
-      } catch (error) {
-        logStorage('SYNC_BACKUP', 'failed', undefined, error)
-        reject(error)
-      }
+      })
+    } catch (error) {
+      logStorage('SYNC_BACKUP', 'failed', undefined, error)
+      throw error
+    }
+  },
+
+  // Helper method to clear old backup chunks
+  async clearSyncBackupChunks(): Promise<void> {
+    const chromeAPI = getChromeAPI()
+    if (!chromeAPI?.storage?.sync) return
+
+    return new Promise((resolve) => {
+      chromeAPI.storage.sync.get(null, (allData: any) => {
+        if (chromeAPI.runtime.lastError) {
+          logStorage('SYNC_CLEANUP', 'failed', undefined, chromeAPI.runtime.lastError)
+          resolve()
+          return
+        }
+
+        const keysToRemove = Object.keys(allData || {}).filter(key => 
+          key.startsWith(SYNC_STORAGE_KEYS.BACKUP)
+        )
+        
+        if (keysToRemove.length > 0) {
+          chromeAPI.storage.sync.remove(keysToRemove, () => {
+            if (chromeAPI.runtime.lastError) {
+              logStorage('SYNC_CLEANUP', 'failed', undefined, chromeAPI.runtime.lastError)
+            } else {
+              logStorage('SYNC_CLEANUP', 'success', { removedKeys: keysToRemove.length })
+            }
+            resolve()
+          })
+        } else {
+          resolve()
+        }
+      })
     })
   },
 
@@ -585,35 +686,135 @@ export const newStorageHelpers = {
 
     return new Promise(resolve => {
       try {
-        chromeAPI.storage.sync.get({ [SYNC_STORAGE_KEYS.BACKUP]: null }, async (result: any) => {
+        // 首先尝试获取新格式的分块数据元信息
+        chromeAPI.storage.sync.get(`${SYNC_STORAGE_KEYS.BACKUP}_meta`, async (metaResult: any) => {
           if (chromeAPI.runtime.lastError) {
             logStorage('SYNC_RESTORE', 'failed', undefined, chromeAPI.runtime.lastError)
             resolve(null)
-          } else {
-            const backup = result[SYNC_STORAGE_KEYS.BACKUP]
-            if (backup && backup.groups) {
-              logStorage('SYNC_RESTORE', 'found backup', backup)
+            return
+          }
 
-              // Restore data using the new storage system
-              await this.setAllEmojiGroups(backup.groups)
-              await this.setSettings(backup.settings || defaultSettings)
-              await this.setFavorites(backup.favorites || [])
+          const meta = metaResult[`${SYNC_STORAGE_KEYS.BACKUP}_meta`]
+          if (!meta) {
+            // 尝试旧格式的单块存储
+            chromeAPI.storage.sync.get({ [SYNC_STORAGE_KEYS.BACKUP]: null }, async (oldResult: any) => {
+              if (chromeAPI.runtime.lastError) {
+                logStorage('SYNC_RESTORE', 'failed', undefined, chromeAPI.runtime.lastError)
+                resolve(null)
+                return
+              }
 
-              resolve({
-                groups: backup.groups,
-                settings: backup.settings || defaultSettings,
-                favorites: backup.favorites || [],
-                timestamp: backup.timestamp || 0
-              })
-            } else {
-              logStorage('SYNC_RESTORE', 'no backup found')
-              resolve(null)
+              const backup = oldResult[SYNC_STORAGE_KEYS.BACKUP]
+              if (backup && backup.groups) {
+                logStorage('SYNC_RESTORE', 'found legacy backup', { timestamp: backup.timestamp })
+                
+                // Restore data using the new storage system
+                await this.setAllEmojiGroups(backup.groups)
+                await this.setSettings(backup.settings || defaultSettings)
+                await this.setFavorites(backup.favorites || [])
+
+                resolve({
+                  groups: backup.groups,
+                  settings: backup.settings || defaultSettings,
+                  favorites: backup.favorites || [],
+                  timestamp: backup.timestamp || 0
+                })
+              } else {
+                logStorage('SYNC_RESTORE', 'no backup found')
+                resolve(null)
+              }
+            })
+            return
+          }
+
+          // 新格式分块数据恢复
+          logStorage('SYNC_RESTORE', 'found chunked backup meta', { 
+            timestamp: meta.timestamp,
+            hasGroups: !!meta.groups,
+            hasFavorites: !!meta.favorites
+          })
+
+          try {
+            // 恢复分块数据
+            const restoredData: any = {
+              timestamp: meta.timestamp,
+              settings: meta.settings || defaultSettings
             }
+
+            // 恢复分组数据
+            if (meta.groups) {
+              restoredData.groups = await this.restoreChunkedData('groups', meta.groups)
+            } else {
+              restoredData.groups = []
+            }
+
+            // 恢复收藏数据
+            if (meta.favorites) {
+              restoredData.favorites = await this.restoreChunkedData('favorites', meta.favorites)
+            } else {
+              restoredData.favorites = []
+            }
+
+            // 恢复数据到存储系统
+            await this.setAllEmojiGroups(restoredData.groups)
+            await this.setSettings(restoredData.settings)
+            await this.setFavorites(restoredData.favorites)
+
+            logStorage('SYNC_RESTORE', 'restored chunked data', {
+              groupCount: restoredData.groups?.length || 0,
+              favoriteCount: restoredData.favorites?.length || 0
+            })
+
+            resolve(restoredData)
+          } catch (error) {
+            logStorage('SYNC_RESTORE', 'failed to restore chunks', undefined, error)
+            resolve(null)
           }
         })
       } catch (error) {
         logStorage('SYNC_RESTORE', 'failed', undefined, error)
         resolve(null)
+      }
+    })
+  },
+
+  // Helper method to restore chunked data
+  async restoreChunkedData(prefix: string, meta: { chunkCount: number; totalItems: number }): Promise<any[]> {
+    const chromeAPI = getChromeAPI()
+    if (!chromeAPI?.storage?.sync) {
+      throw new Error('Chrome Sync Storage API not available')
+    }
+
+    return new Promise((resolve, reject) => {
+      if (meta.chunkCount === 1) {
+        // Single chunk
+        chromeAPI.storage.sync.get(`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}`, (result: any) => {
+          if (chromeAPI.runtime.lastError) {
+            reject(chromeAPI.runtime.lastError)
+          } else {
+            const data = result[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}`] || []
+            resolve(data)
+          }
+        })
+      } else {
+        // Multiple chunks
+        const chunkKeys = []
+        for (let i = 0; i < meta.chunkCount; i++) {
+          chunkKeys.push(`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${i}`)
+        }
+
+        chromeAPI.storage.sync.get(chunkKeys, (result: any) => {
+          if (chromeAPI.runtime.lastError) {
+            reject(chromeAPI.runtime.lastError)
+          } else {
+            const combinedData: any[] = []
+            for (let i = 0; i < meta.chunkCount; i++) {
+              const chunkData = result[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${i}`] || []
+              combinedData.push(...chunkData)
+            }
+            resolve(combinedData)
+          }
+        })
       }
     })
   },
