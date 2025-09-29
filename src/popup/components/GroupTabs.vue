@@ -7,7 +7,7 @@ import { isImageUrl, normalizeImageUrl } from '../../utils/isImageUrl'
 const props = defineProps<{
   groups: EmojiGroup[]
   activeGroupId: string | null
-  setActive: (id: string) => void
+  setActive: (_id: string) => void
 }>()
 
 // Preserve reactivity for primitive props (like activeGroupId) by using toRefs

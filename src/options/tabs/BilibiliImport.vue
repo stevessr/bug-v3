@@ -62,7 +62,7 @@ const importToStoreOnFetch = ref(false)
 async function fetchIdOnce(idNum: number) {
   const url = `https://api.bilibili.com/x/emote/package?ids=${idNum}&business=reply`
   const res = await fetch(url)
-  if (!res.ok) throw new Error(`请求失败: ${res.status}`)
+  if (!res.ok) throw new Error(`请求失败：${res.status}`)
   try {
     return await res.json()
   } catch {
@@ -106,7 +106,7 @@ async function fetchByIdLoop() {
               } catch (impErr) {
                 fetchProgress.value.push({
                   id: idCursor,
-                  msg: `导入失败: ${impErr instanceof Error ? impErr.message : String(impErr)}`
+                  msg: `导入失败：${impErr instanceof Error ? impErr.message : String(impErr)}`
                 })
               }
             }
@@ -118,11 +118,11 @@ async function fetchByIdLoop() {
           consecutiveNulls++
           fetchProgress.value.push({ id: idCursor, msg: '无有效 packages（空响应）' })
         }
-      } catch {
+      } catch (err) {
         consecutiveNulls++
         fetchProgress.value.push({
           id: idCursor,
-          msg: `请求/解析失败: ${err instanceof Error ? err.message : String(err)}`
+          msg: `请求/解析失败：${err instanceof Error ? err.message : String(err)}`
         })
         // 小幅退避
         await new Promise(r => setTimeout(r, 300))
@@ -170,8 +170,8 @@ const fetchSingleId = async () => {
     } else {
       fetchStatus.value = `ID ${start} 无有效 packages`
     }
-  } catch {
-    fetchStatus.value = `ID ${start} 请求失败: ${err instanceof Error ? err.message : String(err)}`
+  } catch (err) {
+    fetchStatus.value = `ID ${start} 请求失败：${err instanceof Error ? err.message : String(err)}`
   }
 }
 function normalizeBilibiliIndex(json: unknown): BiliPackage[] | null {
@@ -283,12 +283,12 @@ const loadIndexFromUrl = async (url?: string) => {
   importResults.value = null
   try {
     const res = await fetch(u)
-    if (!res.ok) throw new Error(`请求失败: ${res.status}`)
+    if (!res.ok) throw new Error(`请求失败：${res.status}`)
     let json: unknown
     const txt = await res.text()
     try {
       json = JSON.parse(txt)
-    } catch (parseErr) {
+    } catch {
       json = safeParseJson(txt)
     }
     const normalized = normalizeBilibiliIndex(json)
@@ -297,7 +297,7 @@ const loadIndexFromUrl = async (url?: string) => {
     }
     packages.value = normalized
     importResults.value = { success: true, message: `加载到 ${packages.value.length} 个包` }
-  } catch {
+  } catch (e) {
     importResults.value = {
       success: false,
       message: '加载索引失败',
@@ -322,7 +322,7 @@ const handleFile = async (e: Event) => {
     let data: unknown
     try {
       data = JSON.parse(text)
-    } catch (parseErr) {
+    } catch {
       data = safeParseJson(text)
     }
     // If this is a full bilibili API response (has data.packages), import directly
@@ -345,7 +345,7 @@ const handleFile = async (e: Event) => {
     if (!normalized || !Array.isArray(normalized)) throw new Error('无效的索引格式')
     packages.value = normalized
     importResults.value = { success: true, message: `加载到 ${packages.value.length} 个包` }
-  } catch {
+  } catch (err) {
     importResults.value = {
       success: false,
       message: '导入失败',
@@ -371,7 +371,7 @@ const importSelectedFromIndex = async () => {
       success: true,
       message: `已导入 ${pkgs.length} 个包`
     }
-  } catch {
+  } catch (e) {
     importResults.value = {
       success: false,
       message: '导入失败',

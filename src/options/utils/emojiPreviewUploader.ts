@@ -117,7 +117,7 @@ class EmojiPreviewUploader {
         item.result = result
         this.moveToQueue(item, 'success')
         item.resolve(result)
-      } catch (error: any) {
+      } catch (_error: any) {
         item.error = error
 
         if (this.shouldRetry(error, item)) {
@@ -142,7 +142,7 @@ class EmojiPreviewUploader {
     this.isProcessing = false
   }
 
-  private shouldRetry(error: any, item: EmojiUploadQueueItem): boolean {
+  private shouldRetry(_error: any, item: EmojiUploadQueueItem): boolean {
     if (item.retryCount >= this.maxRetries) {
       return false
     }
@@ -478,7 +478,7 @@ class EmojiPreviewUploader {
     // Request auth info from background script
     return new Promise((resolve, reject) => {
       if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage({ type: 'REQUEST_LINUX_DO_AUTH' }, (response: any) => {
+        chrome.runtime.sendMessage({ type: 'REQUEST_LINUX_DO_AUTH' }, (_response: any) => {
           if (response?.success) {
             resolve({
               csrfToken: response.csrfToken || '',

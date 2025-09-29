@@ -88,7 +88,7 @@ async function openDomainManager(domain: string) {
     // filter and dedupe
     const filtered = Array.from(new Set(initialKeys.filter(k => available.has(k))))
     transferTargetKeys.value = filtered
-  } catch {
+  } catch (err) {
     console.error('[DomainManager] openDomainManager error', err)
     // fallback to empty safe state
     transferDataSource.value = []
@@ -190,7 +190,7 @@ void loadDomains()
         <a-transfer
           v-model:target-keys="transferTargetKeys"
           :data-source="plainDataSource"
-          :show-search="true"
+          show-search
           :filterOption="safeFilter"
           :list-style="{ width: '45%', height: '320px' }"
           :render="renderTransferItem"

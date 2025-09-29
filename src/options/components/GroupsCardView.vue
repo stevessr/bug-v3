@@ -29,8 +29,9 @@ const emit = defineEmits([
   'exportGroupZip',
   'imageError',
   'confirmDeleteGroup',
-  'batchUpdateSize'
+  'select'
 ])
+void emit // Used in template
 
 const emojiStore = useEmojiStore()
 const columns = computed(() => emojiStore.settings?.gridColumns || 3)

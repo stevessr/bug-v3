@@ -9,9 +9,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits<{
-  (e: 'update:visible', v: string | null): void
-  (e: 'confirm', groupId: string | null, mode: 'name' | 'url'): void
+  (_e: 'update:visible', _v: string | null): void
+  (_e: 'confirm', _groupId: string | null, _mode: 'name' | 'url'): void
 }>()
+void emit // Used in template
 
 const close = () => emit('update:visible', null)
 

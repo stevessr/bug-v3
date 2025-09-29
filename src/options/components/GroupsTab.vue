@@ -282,7 +282,7 @@ const runBatchUpdateSize = async () => {
 
       try {
         emojiStore.updateEmojiInGroup(group.id, i, updates)
-      } catch {
+      } catch (err) {
         void err
       }
 

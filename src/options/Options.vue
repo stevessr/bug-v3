@@ -193,7 +193,7 @@ onMounted(() => {
   })
 
   // 监听主题变化事件
-  window.addEventListener('theme-changed', handleThemeChange as EventListener)
+  window.addEventListener('theme-changed', handleThemeChange as (event: Event) => void)
 
   // 初始化主题模式
   currentThemeMode.value = getCurrentThemeMode()
@@ -205,7 +205,7 @@ onBeforeUnmount(() => {
   clearConfirmHandler()
 
   // 移除主题变化监听器
-  window.removeEventListener('theme-changed', handleThemeChange as EventListener)
+  window.removeEventListener('theme-changed', handleThemeChange as (event: Event) => void)
 })
 
 // modal-level handlers: resolve pending promise if present; otherwise delegate to composable actions

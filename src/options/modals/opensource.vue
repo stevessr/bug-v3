@@ -17,6 +17,7 @@ const emit = defineEmits([
   'forceLocalToExtension',
   'exportConfiguration'
 ])
+void emit // Used in template
 
 const handleClick = () => {
   try {

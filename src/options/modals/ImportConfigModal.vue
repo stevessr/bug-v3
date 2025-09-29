@@ -5,9 +5,10 @@ import { ref, defineEmits, defineProps } from 'vue'
 const props = defineProps<{ modelValue: boolean }>()
 void props.modelValue
 const emit = defineEmits<{
-  (e: 'update:modelValue', v: boolean): void
-  (e: 'imported', config: any): void
+  (_e: 'update:modelValue', _v: boolean): void
+  (_e: 'imported', _config: any): void
 }>()
+void emit // Used in template
 
 const text = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -61,7 +62,7 @@ const doImport = () => {
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
-            或粘贴JSON配置
+            或粘贴 JSON 配置
           </label>
           <textarea
             v-model="text"

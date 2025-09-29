@@ -175,15 +175,15 @@ class ImageUploader {
         // Insert into editor
         const markdown = `![${result.original_filename}](${result.url})`
         insertIntoEditor(markdown)
-      } catch (error: any) {
-        item.error = error
+      } catch (_error: any) {
+        item.error = _error
 
-        if (this.shouldRetry(error, item)) {
+        if (this.shouldRetry(_error, item)) {
           item.retryCount++
 
-          if (error.error_type === 'rate_limit' && error.extras?.wait_seconds) {
+          if (_error.error_type === 'rate_limit' && _error.extras?.wait_seconds) {
             // Wait for rate limit before retry
-            await this.sleep(error.extras.wait_seconds * 1000)
+            setTimeout(() => this.processQueue(), _error.extras.wait_seconds * 1000)
           } else {
             // Wait before retry
             await this.sleep(Math.pow(2, item.retryCount) * 1000)
@@ -192,7 +192,7 @@ class ImageUploader {
           this.moveToQueue(item, 'waiting')
         } else {
           this.moveToQueue(item, 'failed')
-          item.reject(error)
+          item.reject(_error)
         }
       }
     }
@@ -200,13 +200,13 @@ class ImageUploader {
     this.isProcessing = false
   }
 
-  private shouldRetry(error: any, item: UploadQueueItem): boolean {
+  private shouldRetry(_error: any, item: UploadQueueItem): boolean {
     if (item.retryCount >= this.maxRetries) {
       return false
     }
 
     // Only retry 429 (rate limit) errors automatically
-    return error.error_type === 'rate_limit'
+    return _error.error_type === 'rate_limit'
   }
 
   // Method to manually retry failed items
@@ -928,9 +928,9 @@ export async function showImageUploadDialog(): Promise<void> {
           try {
             const result = await uploader.uploadImage(file)
             return result
-          } catch (error: any) {
-            console.error('[Image Uploader] Upload failed:', error)
-            throw error
+          } catch (_error: any) {
+            console.error('[Image Uploader] Upload failed:', _error)
+            throw _error
           }
         })
 
@@ -983,9 +983,9 @@ export async function showImageUploadDialog(): Promise<void> {
           try {
             const result = await uploader.uploadImage(file)
             return result
-          } catch (error: any) {
-            console.error('[Image Uploader] Diff upload failed:', error)
-            throw error
+          } catch (_error: any) {
+            console.error('[Image Uploader] Diff upload failed:', _error)
+            throw _error
           }
         })
 

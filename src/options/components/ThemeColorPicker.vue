@@ -9,8 +9,8 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: string): void
-  (e: 'update:colorScheme', value: string): void
+  (_e: 'update:modelValue', _value: string): void
+  (_e: 'update:colorScheme', _value: string): void
 }
 
 const props = defineProps<Props>()

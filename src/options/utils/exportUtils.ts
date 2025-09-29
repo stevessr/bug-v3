@@ -67,7 +67,7 @@ export async function exportGroupZip(
       const res = await fetch(url, { mode: 'cors', signal })
       if (!res.ok) return null
       return await res.blob()
-    } catch {
+    } catch (e) {
       if ((e as any)?.name === 'AbortError') throw e
       return null
     }

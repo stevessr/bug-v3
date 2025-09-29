@@ -10,8 +10,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: number): void
+  (_e: 'update:modelValue', _value: number): void
 }>()
+void emit // Used in template
 
 const options = computed(() => {
   const min = Number(props.min ?? 2)

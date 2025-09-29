@@ -1,5 +1,8 @@
 import { getChromeAPI } from '../utils/main.ts'
-export async function handleSyncSettings(settings: any, _sendResponse: (_resp: any) => void) {
+export const handleSyncSettings = async (
+  settings: any,
+  _sendResponse: (_response: any) => void
+) => {
   // mark callback as referenced
   void _sendResponse
   // no additional args expected here

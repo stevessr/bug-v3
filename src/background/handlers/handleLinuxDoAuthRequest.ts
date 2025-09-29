@@ -1,6 +1,6 @@
 import { getChromeAPI } from '../utils/main.ts'
 
-export async function handleLinuxDoAuthRequest(_sendResponse: (_resp: any) => void) {
+export async function handleLinuxDoAuthRequest(_sendResponse: (resp: any) => void) {
   // Handler for requesting linux.do cookies and CSRF token from the options page
   // _sendResponse 用于响应消息
   const chromeAPI = getChromeAPI()
