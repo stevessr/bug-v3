@@ -1,4 +1,6 @@
 // Floating button module for manual injection (content script version)
+import { ensureStyleInjected } from '../../userscript/utils/injectStyles'
+
 import { findAllToolbars, injectButton } from './injector'
 
 // State management for floating button
@@ -55,8 +57,6 @@ const FLOATING_BUTTON_STYLES = `
   }
 }
 `
-
-import { ensureStyleInjected } from '../../userscript/utils/injectStyles'
 
 // Create and inject styles
 function injectStyles() {

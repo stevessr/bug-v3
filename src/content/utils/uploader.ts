@@ -86,8 +86,10 @@ interface UploadError {
 interface UploadQueueItem {
   id: string
   file: File
-  resolve: (val: UploadResponse) => void
-  reject: (err: any) => void
+
+  resolve: (value: UploadResponse) => void
+
+  reject: (error: any) => void
   retryCount: number
   status: 'waiting' | 'uploading' | 'failed' | 'success'
   error?: any
@@ -571,7 +573,7 @@ class ImageUploader {
         const hashBuffer = await crypto.subtle.digest('SHA-1', data)
         const hashArray = Array.from(new Uint8Array(hashBuffer))
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-      } catch (e) {
+      } catch {
         console.warn('[Image Uploader] Could not calculate SHA1, using fallback')
       }
     }
@@ -785,7 +787,7 @@ function createDragDropUploadPanel(): DragDropElements {
   }) as HTMLElement
 
   const markdownTextarea = createE('textarea', {
-    ph: '请粘贴包含图片的markdown文本...',
+    ph: '请粘贴包含图片的 markdown 文本...',
     style: `
       width: 100%;
       height: 120px;
@@ -828,7 +830,7 @@ function createDragDropUploadPanel(): DragDropElements {
       选择图片进行差分上传
     </div>
     <div style="font-size: 14px; color: #6b7280;">
-      只会上传不在上方markdown文本中的图片
+      只会上传不在上方 markdown 文本中的图片
     </div>
   `
   })
@@ -955,7 +957,7 @@ export async function showImageUploadDialog(): Promise<void> {
       if (filesToUpload.length === 0) {
         // Allow alert here to inform users when no files need uploading
         // eslint-disable-next-line no-alert
-        alert('所有选择的图片都已在markdown文本中存在，无需上传。')
+        alert('所有选择的图片都已在 markdown 文本中存在，无需上传。')
         return
       }
 

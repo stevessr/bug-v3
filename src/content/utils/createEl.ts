@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 export function createE<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   opts?: {
@@ -21,6 +22,7 @@ export function createE<K extends keyof HTMLElementTagNameMap>(
     role?: string
     tabIndex?: number | string
     ld?: string // shortened 'loading' to 'ld'
+
     on?: Partial<{
       [K in keyof GlobalEventHandlersEventMap]: (ev: GlobalEventHandlersEventMap[K]) => any
     }> &
@@ -57,7 +59,8 @@ export function createE<K extends keyof HTMLElementTagNameMap>(
       for (const [evt, handler] of Object.entries(opts.on)) {
         // handler may be typed as a specific event handler (e.g. (e: KeyboardEvent) => void)
         // but addEventListener expects EventListenerOrEventListenerObject. Cast to satisfy runtime.
-        el.addEventListener(evt, handler as EventListenerOrEventListenerObject)
+
+        el.addEventListener(evt, handler as any)
       }
     }
   }

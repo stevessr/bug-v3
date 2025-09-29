@@ -22,12 +22,14 @@ export const SYNC_STORAGE_KEYS = {
 } as const
 
 // Storage priority levels as requested
-export enum StorageLevel {
-  LOCAL_STORAGE = 1, // Highest priority
-  SESSION_STORAGE = 2,
-  EXTENSION_STORAGE = 3,
-  INDEXED_DB = 4 // Lowest priority/fallback
+/* eslint-disable no-unused-vars, @typescript-eslint/no-unused-vars */
+enum StorageType {
+  LOCAL_STORAGE = 'localStorage',
+  SESSION_STORAGE = 'sessionStorage',
+  EXTENSION_STORAGE = 'extensionStorage',
+  INDEXED_DB = 'indexedDB'
 }
+/* eslint-enable no-unused-vars, @typescript-eslint/no-unused-vars */
 
 // --- Chrome API Helper ---
 function getChromeAPI() {
@@ -362,7 +364,7 @@ class NewStorageManager {
     let newestValue = null
     let newestTimestamp = 0
 
-    values.forEach((result, _index) => {
+    values.forEach(result => {
       if (result.status === 'fulfilled' && result.value) {
         const timestamp = result.value.timestamp || 0
         if (timestamp > newestTimestamp) {
@@ -417,7 +419,7 @@ export const newStorageHelpers = {
       try {
         const runtime = await loadDefaultEmojiGroups()
         if (runtime && runtime.length) return runtime
-      } catch (e) {
+      } catch {
         // ignore loader errors and fallback to empty list
       }
       return []
@@ -455,7 +457,7 @@ export const newStorageHelpers = {
       if (packaged && packaged.settings && Object.keys(packaged.settings).length > 0) {
         return { ...defaultSettings, ...packaged.settings }
       }
-    } catch (e) {
+    } catch {
       // ignore loader errors
     }
 
@@ -629,7 +631,7 @@ export const newStorageHelpers = {
         await this.setAllEmojiGroups(
           packaged && packaged.groups && packaged.groups.length ? packaged.groups : []
         )
-      } catch (e) {
+      } catch {
         await this.setAllEmojiGroups([])
       }
       await this.setSettings(defaultSettings)

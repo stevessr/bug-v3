@@ -113,7 +113,7 @@ const onDragOver = (group: Group, e: DragEvent) => {
   dropTargetId.value = group.id
 }
 
-const onDragLeave = (_group: Group, _e: DragEvent) => {
+const onDragLeave = () => {
   dropTargetId.value = null
 }
 
@@ -125,7 +125,7 @@ const onDrop = (group: Group, e: DragEvent) => {
   draggingId.value = null
 }
 
-const onDragEnd = (_e: DragEvent) => {
+const onDragEnd = () => {
   draggingId.value = null
   dropTargetId.value = null
 }
@@ -244,7 +244,7 @@ const onTouchEnd = (group: Group, e: TouchEvent) => {
     // remove ghost and call drag end logic
     removeDragGhost()
     try {
-      onDragEnd(wrappedEndEvent as unknown as DragEvent)
+      onDragEnd()
     } catch {
       // ignore
     }
@@ -252,7 +252,7 @@ const onTouchEnd = (group: Group, e: TouchEvent) => {
   touchState.value = { active: false, groupId: null, startX: 0, startY: 0, dragging: false }
 }
 
-const onTouchCancel = (_e: TouchEvent) => {
+const onTouchCancel = () => {
   touchState.value = { active: false, groupId: null, startX: 0, startY: 0, dragging: false }
   draggingId.value = null
   dropTargetId.value = null
@@ -277,7 +277,7 @@ const onTouchCancel = (_e: TouchEvent) => {
         @touchstart.prevent="onTouchStart(group, $event)"
         @touchmove="onTouchMove(group, $event)"
         @touchend="onTouchEnd(group, $event)"
-        @touchcancel="onTouchCancel($event)"
+        @touchcancel="onTouchCancel()"
       >
         <ACard
           hoverable
@@ -291,7 +291,7 @@ const onTouchCancel = (_e: TouchEvent) => {
           :data-group-move="group.id !== 'favorites' ? '' : null"
           @dragstart="onDragStart(group, $event)"
           @dragover.prevent="onDragOver(group, $event)"
-          @dragleave="onDragLeave(group, $event)"
+          @dragleave="onDragLeave()"
           @drop="onDrop(group, $event)"
         >
           <!-- drag handle used to show visual affordance; actual touch-drag start now bound to the whole card via data-group-move on ACard -->

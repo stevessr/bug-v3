@@ -127,7 +127,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           const packaged = await loadPackagedDefaults()
           groups.value =
             packaged && packaged.groups && packaged.groups.length > 0 ? packaged.groups : []
-        } catch (e) {
+        } catch {
           groups.value = []
         }
       }
@@ -148,15 +148,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
             }
           }
         }
-      } catch (e) {
+      } catch {
         // ignore normalization errors - not critical
-        void e
       }
       // Merge with packaged defaults where available
       try {
         const packaged = await loadPackagedDefaults()
         settings.value = { ...defaultSettings, ...(packaged?.settings || {}), ...settingsData }
-      } catch (e) {
+      } catch {
         settings.value = { ...defaultSettings, ...settingsData }
       }
       favorites.value = new Set(favoritesData || [])
@@ -191,13 +190,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         const packaged = await loadPackagedDefaults()
         groups.value =
           packaged && packaged.groups && packaged.groups.length > 0 ? packaged.groups : []
-      } catch (e) {
+      } catch {
         groups.value = []
       }
       try {
         const packaged = await loadPackagedDefaults()
         settings.value = { ...defaultSettings, ...(packaged?.settings || {}) }
-      } catch (e) {
+      } catch {
         settings.value = { ...defaultSettings }
       }
       favorites.value = new Set()
@@ -634,7 +633,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
         chromeAPI.runtime.sendMessage({ type: 'SYNC_SETTINGS', settings: settings.value })
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -761,7 +760,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           const newVal = changes[k] && changes[k].newValue
           const ts = newVal && typeof newVal === 'object' ? newVal.timestamp || 0 : 0
           if (ts > maxIncomingTs) maxIncomingTs = ts
-        } catch (e) {
+        } catch {
           // ignore parsing errors
         }
       }
@@ -808,7 +807,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
                 if (!newGroup) {
                   try {
                     newGroup = await newStorageHelpers.getEmojiGroup(groupId)
-                  } catch (e) {
+                  } catch {
                     newGroup = null
                   }
                 }
@@ -834,7 +833,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
                           e.displayUrl = normalizeImageUrl(e.displayUrl) || e.displayUrl
                       }
                     }
-                  } catch (e) {
+                  } catch {
                     // ignore normalization errors
                   }
 
@@ -893,7 +892,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
                     groups.value = reordered.map((g, idx) => ({ ...g, order: idx }))
                     console.log('[EmojiStore] Reordered groups from external group index')
                   }
-                } catch (e) {
+                } catch {
                   // ignore
                 }
               }
@@ -901,8 +900,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
               console.error('[EmojiStore] Error processing external key', k, innerErr)
             }
           }
-        } catch (e) {
-          console.error('[EmojiStore] Failed to process storage change', e)
+        } catch (error) {
+          console.error('[EmojiStore] Failed to process storage change', error)
         } finally {
           setTimeout(() => {
             isUpdatingFromStorage = false

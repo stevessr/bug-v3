@@ -140,7 +140,7 @@ function insertIntoEditor(text: string) {
     if ('setSelectionRange' in textarea) {
       try {
         textarea.setSelectionRange(pos, pos)
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -208,7 +208,7 @@ function insertIntoEditor(text: string) {
     if ('setSelectionRange' in input) {
       try {
         ;(input as HTMLTextAreaElement).setSelectionRange(pos, pos)
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -435,8 +435,12 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     try {
       // trigger auto read; autoReadAll will notify progress
       await autoReadAll()
-    } catch (e) {
-      notify('自动阅读失败: ' + (e && (e as any).message ? (e as any).message : String(e)), 'error')
+    } catch (error) {
+      notify(
+        '自动阅读失败: ' +
+          (error && (error as any).message ? (error as any).message : String(error)),
+        'error'
+      )
     }
   })
   list.appendChild(autoReadLi)
@@ -445,8 +449,12 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     try {
       // trigger auto read; autoReadAll will notify progress
       await autoReadAllv2()
-    } catch (e) {
-      notify('自动阅读失败: ' + (e && (e as any).message ? (e as any).message : String(e)), 'error')
+    } catch (error) {
+      notify(
+        '自动阅读失败: ' +
+          (error && (error as any).message ? (error as any).message : String(error)),
+        'error'
+      )
     }
   })
   list.appendChild(autoReadLi2)
@@ -455,7 +463,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     menu.remove()
     try {
       window.open('https://gemini-image.smnet.studio/', '_blank')
-    } catch (e) {
+    } catch {
       window.location.href = 'https://gemini-image.smnet.studio/'
     }
   })
@@ -465,7 +473,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     menu.remove()
     try {
       window.open('https://pwsh.edu.deal/', '_blank')
-    } catch (e) {
+    } catch {
       window.location.href = 'https://pwsh.edu.deal/'
     }
   })
@@ -526,7 +534,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
             iframe.contentWindow.location &&
             iframe.contentWindow.location.href) ||
           null
-      } catch (e) {
+      } catch {
         // Cross-origin access will throw; fallback to using src or keep open
         href = iframe.src || null
       }
@@ -538,7 +546,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
             // Automatically close when navigated to linux.do domain
             closeModal()
           }
-        } catch (e) {
+        } catch {
           // ignore malformed URLs
         }
       }
@@ -741,12 +749,12 @@ export function injectButton(toolbar: Element) {
           // Clear children inside the modal container rather than removing the container element
           try {
             modalContainer.innerHTML = ''
-          } catch (err) {
+          } catch {
             try {
               if (modalContainer.parentElement) {
                 modalContainer.parentElement.removeChild(modalContainer)
               }
-            } catch (err2) {
+            } catch {
               // ignore
             }
           }
@@ -830,12 +838,12 @@ export function injectButton(toolbar: Element) {
         if (modalContainer && !modalContainer.contains(e.target as Node)) {
           try {
             modalContainer.innerHTML = ''
-          } catch (err) {
+          } catch {
             try {
               if (modalContainer.parentElement) {
                 modalContainer.parentElement.removeChild(modalContainer)
               }
-            } catch (err2) {
+            } catch {
               // ignore
             }
           }
@@ -876,7 +884,7 @@ export function injectButton(toolbar: Element) {
       toolbar.appendChild(quickInsertButton)
       toolbar.appendChild(emojiButton)
     }
-  } catch (e) {
-    console.error('[Emoji Extension] Failed to inject buttons (module):', e)
+  } catch (error) {
+    console.error('[Emoji Extension] Failed to inject buttons (module):', error)
   }
 }

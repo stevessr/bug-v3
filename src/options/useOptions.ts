@@ -188,10 +188,10 @@ export default function useOptions() {
       try {
         const els = document.querySelectorAll('[data-dragging="true"]')
         els.forEach(el => el.removeAttribute('data-dragging'))
-      } catch (_e) {
+      } catch {
         // ignore
       }
-    } catch (_e) {
+    } catch {
       // ignore
     }
   }
@@ -441,11 +441,11 @@ export default function useOptions() {
           exportModalPreviews.value.forEach(u => {
             try {
               if (u) URL.revokeObjectURL(u)
-            } catch (_e) {
+            } catch {
               /* ignore */
             }
           })
-        } catch (_e) {
+        } catch {
           /* ignore */
         }
 
@@ -460,7 +460,7 @@ export default function useOptions() {
         if (exportAbortController) {
           try {
             exportAbortController = null
-          } catch (_e) {
+          } catch {
             /* ignore */
           }
         }
@@ -474,7 +474,7 @@ export default function useOptions() {
     if (exportAbortController) {
       try {
         exportAbortController.abort()
-      } catch (_e) {
+      } catch {
         /* ignore */
       }
       exportAbortController = null
@@ -484,11 +484,11 @@ export default function useOptions() {
       exportModalPreviews.value.forEach(u => {
         try {
           if (u) URL.revokeObjectURL(u)
-        } catch (_e) {
+        } catch {
           /* ignore */
         }
       })
-    } catch (_e) {
+    } catch {
       /* ignore */
     }
     // reset UI state
@@ -507,11 +507,11 @@ export default function useOptions() {
       exportModalPreviews.value.forEach(u => {
         try {
           if (u) URL.revokeObjectURL(u)
-        } catch (_e) {
+        } catch {
           /* ignore */
         }
       })
-    } catch (_e) {
+    } catch {
       /* ignore */
     }
     exportModalCurrentName.value = null

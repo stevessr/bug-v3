@@ -3,7 +3,8 @@ import { AddEmojiButtonData } from '../utils'
 export function tryInjectTwitterMedia(
   url: string,
   targetContainer: Element,
-  createOverlayFn: (_data: AddEmojiButtonData, _target: Element) => HTMLElement | void
+  // eslint-disable-next-line no-unused-vars
+  createOverlayFn: (data: AddEmojiButtonData, target: Element) => HTMLElement | void
 ): boolean {
   try {
     const parsed = new URL(url)

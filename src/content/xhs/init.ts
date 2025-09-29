@@ -5,8 +5,6 @@ import {
   AddEmojiButtonData
 } from '../x/utils'
 
-declare const chrome: any
-
 function isXhsPage(): boolean {
   try {
     const host = window.location.hostname.toLowerCase()
@@ -112,7 +110,7 @@ export function observeXhs() {
               needs = true
               break
             }
-          } catch (e) {
+          } catch {
             /* ignore */
           }
         }

@@ -396,7 +396,7 @@ export function observeCarousel() {
             needsScan = true
             break
           }
-        } catch (e) {
+        } catch {
           /* ignore */
         }
       }
@@ -417,9 +417,8 @@ export function observeCarousel() {
 
   try {
     carouselObserver.observe(document.body, { childList: true, subtree: true, attributes: true })
-  } catch (e) {
+  } catch {
     // ignore if document.body not ready
-    void e
   }
 
   return carouselObserver
