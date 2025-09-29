@@ -1,6 +1,5 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 const emit = defineEmits([
   'openCreateGroup',
   'groupDragStart',
@@ -15,10 +14,15 @@ const emit = defineEmits([
   'emojiDrop',
   'removeEmoji',
   'imageError',
-  'editEmoji'
+  'editEmoji',
+  'batchUpdateSizeStreaming',
+  'exportGroupStreaming'
 ])
 // props: only expandedGroups / isImageUrl / activeTab are expected from parent
-import { computed, ref, reactive, onMounted, onUnmounted, type PropType } from 'vue'
+import { computed, ref, reactive, onMounted, onUnmounted, inject, type PropType } from 'vue'
+
+// 注入流式处理方法
+const streamingHandlers = inject('streamingHandlers') as any
 
 // internal view mode for groups tab: 'list' or 'card'
 const viewMode = ref<'list' | 'card' | 'domains'>('list')
@@ -40,6 +44,7 @@ import GroupsCardView from './GroupsCardView.vue'
 import GroupActionsDropdown from './GroupActionsDropdown.vue'
 import DedupeChooser from './DedupeChooser.vue'
 import DomainManager from './DomainManager.vue'
+import VirtualGroupEmojis from './VirtualGroupEmojis.vue'
 
 import { TouchDragHandler } from '@/options/utils/touchDragDrop'
 
@@ -216,22 +221,20 @@ const onDelete = (group: any) => {
 // --- Batch update size modal state & handlers ---
 const batchModalVisible = ref(false)
 const batchTargetGroup = ref<any | null>(null)
-const batchWidth = ref<number | null>(null)
-const batchHeight = ref<number | null>(null)
+
 const currentImagePreview = ref<string | null>(null)
 const batchProgress = ref({ current: 0, total: 0 })
 const batchRunning = ref(false)
 
 const openBatchModal = (group: any) => {
   closeMenu()
-  batchTargetGroup.value = group
-  batchWidth.value = null
-  batchHeight.value = null
-  batchProgress.value = { current: 0, total: 0 }
-  batchRunning.value = false
-  batchModalVisible.value = true
-  // start processing automatically
-  void runBatchUpdateSize()
+  // 直接调用流式处理方法
+  if (streamingHandlers?.batchUpdateSizeStreaming) {
+    streamingHandlers.batchUpdateSizeStreaming(group)
+  } else {
+    // 回退到 emit 事件
+    emit('batchUpdateSizeStreaming', group)
+  }
 }
 
 const closeBatchModal = () => {
@@ -239,69 +242,9 @@ const closeBatchModal = () => {
   batchTargetGroup.value = null
 }
 
-const loadImageSize = (url: string) =>
-  new Promise<{ w: number; h: number } | null>(resolve => {
-    try {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
-      img.onerror = () => resolve(null)
-      img.src = url
-      // in case cached and complete
-      if (img.complete && img.naturalWidth) {
-        resolve({ w: img.naturalWidth, h: img.naturalHeight })
-      }
-    } catch {
-      resolve(null)
-    }
-  })
 
-const runBatchUpdateSize = async () => {
-  if (!batchTargetGroup.value) return
-  const group = batchTargetGroup.value
-  const emojis = Array.isArray(group.emojis) ? group.emojis.slice() : []
-  const total = emojis.length
-  batchProgress.value = { current: 0, total }
-  batchRunning.value = true
 
-  try {
-    // Use store batching helpers to avoid frequent save operations
-    emojiStore.beginBatch()
-    for (let i = 0; i < emojis.length; i++) {
-      const e = emojis[i]
-      const url = e?.url || ''
-      currentImagePreview.value = url || null
 
-      // attempt to load actual image size from URL
-      const size = url ? await loadImageSize(url) : null
-      const updates: any = {}
-      if (size) {
-        updates.width = size.w
-        updates.height = size.h
-      }
-
-      try {
-        emojiStore.updateEmojiInGroup(group.id, i, updates)
-      } catch (err) {
-        void err
-      }
-
-      batchProgress.value.current = i + 1
-      // yield to UI
-      await new Promise(r => setTimeout(r, 0))
-    }
-  } finally {
-    try {
-      await emojiStore.endBatch()
-    } catch {
-      // ignore
-    }
-    batchRunning.value = false
-    // clear preview and close modal after brief pause to show 100%
-    currentImagePreview.value = null
-    setTimeout(() => closeBatchModal(), 400)
-  }
-}
 
 onMounted(() => {
   // Initialize touch handlers
@@ -403,24 +346,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
   }
 }
 
-// Function to add touch events to emoji elements
-const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, index: number) => {
-  ;(element as any).__emojiData = { emoji, groupId, index }
-  // Prevent touchstart on emoji from bubbling up and starting a group drag
-  const stopTouch = (e: TouchEvent) => {
-    e.stopPropagation()
-  }
-  element.addEventListener('touchstart', stopTouch, { passive: false })
-  // store reference so it can be removed later if needed
-  ;(element as any).__stopEmojiTouch = stopTouch
-  // mark as a valid drop target and attach touch handler
-  try {
-    element.setAttribute('data-drop-target', 'emoji')
-  } catch {
-    // ignore
-  }
-  emojiTouchHandler.value?.addTouchEvents(element, true)
-}
+
 
 // Domain management moved to `DomainManager.vue`
 </script>
@@ -525,86 +451,47 @@ const addEmojiTouchEvents = (element: HTMLElement, emoji: any, groupId: string, 
                   </div>
                 </div>
 
-                <!-- Expanded emoji display -->
+                <!-- Expanded emoji display with virtual scrolling -->
                 <div
                   v-if="expandedGroups.has(group.id)"
                   class="px-4 pb-4 border-t border-gray-100 dark:border-gray-700"
                 >
                   <div class="mt-4">
-                    <div
-                      class="grid gap-3"
-                      :style="{
-                        gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
-                      }"
+                    <!-- 使用虚拟滚动组件显示单个分组的表情 -->
+                    <VirtualGroupEmojis
+                      :groups="[group]"
+                      :expanded-groups="new Set([group.id])"
+                      :grid-columns="emojiStore.settings.gridColumns"
+                      :virtualization-threshold="50"
+                      :container-height="400"
+                      :item-height="120"
+                      :overscan="3"
+                      :show-performance-stats="false"
+                      @edit-emoji="(emoji, groupId, index) => $emit('editEmoji', emoji, groupId, index)"
+                      @remove-emoji="(groupId, index) => $emit('removeEmoji', groupId, index)"
+                      @emoji-drag-start="(emoji, groupId, index, event) => onEmojiDragStartLocal(emoji, groupId, index, event)"
+                      @emoji-drop="(groupId, index, event) => $emit('emojiDrop', groupId, index, event)"
                     >
-                      <div
-                        v-for="(emoji, index) in group.emojis"
-                        :key="`${group.id}-${index}`"
-                        class="emoji-item relative group cursor-move"
-                        :draggable="true"
-                        @dragstart="e => onEmojiDragStartLocal(emoji, group.id, index, e)"
-                        @dragover.prevent
-                        @drop="$emit('emojiDrop', group.id, index, $event)"
-                        :ref="
-                          el => el && addEmojiTouchEvents(el as HTMLElement, emoji, group.id, index)
-                        "
-                      >
-                        <div
-                          class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
-                        >
-                          <img
-                            :src="emoji.url"
-                            :alt="emoji.name"
-                            class="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div
-                          class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white"
-                        >
-                          {{ emoji.name }}
-                        </div>
-                        <!-- Edit button in bottom right corner -->
-                        <a-button
-                          @click="$emit('editEmoji', emoji, group.id, index)"
-                          class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                          title="编辑表情"
-                        >
-                          ✎
-                        </a-button>
-                        <!-- Remove button in top right corner (with confirmation) -->
-                        <a-popconfirm
-                          title="确认移除此表情？"
-                          @confirm="$emit('removeEmoji', group.id, index)"
-                        >
-                          <template #icon>
-                            <QuestionCircleOutlined style="color: red" />
-                          </template>
+                      <template #header>
+                        <!-- Add emoji button (hidden for favorites group) -->
+                        <div v-if="group.id !== 'favorites'" class="mb-4">
                           <a-button
-                            class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            @click="$emit('openAddEmoji', group.id)"
+                            class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full dark:border-gray-600 dark:text-white dark:hover:border-gray-500"
                           >
-                            ×
+                            + 添加表情
                           </a-button>
-                        </a-popconfirm>
-                      </div>
-                    </div>
-
-                    <!-- Add emoji button (hidden for favorites group) -->
-                    <div v-if="group.id !== 'favorites'" class="mt-4">
-                      <a-button
-                        @click="$emit('openAddEmoji', group.id)"
-                        class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full dark:border-gray-600 dark:text-white dark:hover:border-gray-500"
-                      >
-                        + 添加表情
-                      </a-button>
-                    </div>
-                    <!-- For favorites group, show info instead -->
-                    <div v-if="group.id === 'favorites'" class="mt-4">
-                      <div
-                        class="px-3 py-2 text-sm text-gray-500 text-center border border-gray-200 rounded-lg bg-gray-50 dark:text-white dark:border-gray-700 dark:bg-gray-700"
-                      >
-                        使用表情会自动添加到常用分组
-                      </div>
-                    </div>
+                        </div>
+                        <!-- For favorites group, show info instead -->
+                        <div v-if="group.id === 'favorites'" class="mb-4">
+                          <div
+                            class="px-3 py-2 text-sm text-gray-500 text-center border border-gray-200 rounded-lg bg-gray-50 dark:text-white dark:border-gray-700 dark:bg-gray-700"
+                          >
+                            使用表情会自动添加到常用分组
+                          </div>
+                        </div>
+                      </template>
+                    </VirtualGroupEmojis>
                   </div>
                 </div>
               </div>

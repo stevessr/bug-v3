@@ -12,9 +12,13 @@ import {
   exportGroupFile,
   exportGroupZip as exportGroupZipUtil
 } from './utils'
+import OptionsStreamingIntegration from './utils/optionsStreamingIntegration'
 
 export default function useOptions() {
   const emojiStore = useEmojiStore()
+
+  // 流式处理集成
+  const streamingIntegration = new OptionsStreamingIntegration()
 
   // Drag and drop state
   const draggedGroup = ref<EmojiGroup | null>(null)
@@ -468,6 +472,134 @@ export default function useOptions() {
     }, 800)
   }
 
+  // 流式批量更新表情尺寸
+  const runBatchUpdateSizeStreaming = async (group: EmojiGroup) => {
+    if (!group || !Array.isArray(group.emojis) || group.emojis.length === 0) {
+      showError('分组中没有表情需要处理')
+      return
+    }
+
+    try {
+      exportModalCancelled.value = false
+      exportModalPercent.value = 0
+      exportModalCurrentName.value = null
+      exportModalCurrentPreview.value = null
+      exportModalPreviews.value = []
+      exportModalNames.value = []
+      showExportModal.value = true
+
+      // 创建 abort controller
+      exportAbortController = new AbortController()
+
+      // 使用防抖进度更新避免回弹
+      let lastProgressUpdate = 0
+      const progressUpdateInterval = 100 // 最小 100ms 更新间隔
+
+      await streamingIntegration.batchUpdateEmojiSizes(
+        group,
+        progress => {
+          if (exportModalCancelled.value) return
+
+          const now = Date.now()
+          const newPercent = Math.round((progress.current / progress.total) * 100)
+
+          // 防止进度回退和频繁更新
+          if (
+            newPercent >= exportModalPercent.value &&
+            (now - lastProgressUpdate >= progressUpdateInterval || newPercent === 100)
+          ) {
+            exportModalPercent.value = newPercent
+            lastProgressUpdate = now
+          }
+
+          // 更新其他信息
+          if (progress.name !== exportModalCurrentName.value) {
+            exportModalCurrentName.value = progress.name || null
+          }
+          if (progress.preview !== exportModalCurrentPreview.value) {
+            exportModalCurrentPreview.value = progress.preview || null
+          }
+
+          // 防止重复添加相同项目
+          if (progress.name && !exportModalNames.value.includes(progress.name)) {
+            exportModalNames.value.push(progress.name)
+          }
+          if (progress.preview && !exportModalPreviews.value.includes(progress.preview)) {
+            exportModalPreviews.value.push(progress.preview)
+          }
+        },
+        exportAbortController.signal
+      )
+
+      exportModalPercent.value = 100
+      showSuccess(`成功更新 ${group.emojis.length} 个表情的尺寸信息`)
+
+      // 短暂显示完成状态后关闭
+      setTimeout(() => {
+        showExportModal.value = false
+      }, 1000)
+    } catch (error: any) {
+      exportModalPercent.value = 0
+      if (error?.message === 'aborted') {
+        showError('批量更新已取消')
+      } else {
+        console.error('Streaming batch update failed:', error)
+        showError('批量更新失败，请重试')
+      }
+    } finally {
+      exportAbortController = null
+    }
+  }
+
+  // 流式导出 - 使用新的流式处理
+  const exportGroupStreamingMethod = async (group: EmojiGroup) => {
+    if (!group || !Array.isArray(group.emojis) || group.emojis.length === 0) {
+      showError('分组中没有表情可导出')
+      return
+    }
+
+    try {
+      exportModalCancelled.value = false
+      exportModalPercent.value = 0
+      exportModalCurrentName.value = null
+      exportModalCurrentPreview.value = null
+      exportModalPreviews.value = []
+      exportModalNames.value = []
+      showExportModal.value = true
+
+      exportAbortController = new AbortController()
+
+      await streamingIntegration.exportGroupStreaming(
+        group,
+        progress => {
+          if (exportModalCancelled.value) return
+
+          exportModalPercent.value = Math.round((progress.current / progress.total) * 100)
+          exportModalCurrentName.value = progress.phase
+        },
+        exportAbortController.signal
+      )
+
+      exportModalPercent.value = 100
+      showSuccess(`成功导出分组 "${group.name}"`)
+    } catch (error: any) {
+      exportModalPercent.value = 0
+      if (error?.message?.includes('cancelled') || error?.message === 'aborted') {
+        showError('导出已取消')
+      } else {
+        console.error('Streaming export failed:', error)
+        showError('导出失败，已导出 JSON 作为回退')
+        // 回退到 JSON 导出
+        exportGroupFile(group)
+      }
+    } finally {
+      exportAbortController = null
+      setTimeout(() => {
+        showExportModal.value = false
+      }, 500)
+    }
+  }
+
   // Cancel export in-progress: abort fetches, mark cancelled, revoke previews and hide modal
   const cancelExport = () => {
     exportModalCancelled.value = true
@@ -819,6 +951,9 @@ export default function useOptions() {
     // export modal controls
     cancelExport,
     closeExportModal,
+    // streaming methods
+    runBatchUpdateSizeStreaming,
+    exportGroupStreamingMethod,
     // sync / settings
     resetSettings,
     syncToChrome,

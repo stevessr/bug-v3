@@ -27,6 +27,21 @@ const options = useOptions()
 // 提供 options 给子组件使用
 provide('options', options)
 
+// 流式处理事件处理器
+const handleBatchUpdateSizeStreaming = (group: any) => {
+  options.runBatchUpdateSizeStreaming(group)
+}
+
+const handleExportGroupStreaming = (group: any) => {
+  options.exportGroupStreamingMethod(group)
+}
+
+// 提供流式处理方法
+provide('streamingHandlers', {
+  batchUpdateSizeStreaming: handleBatchUpdateSizeStreaming,
+  exportGroupStreaming: handleExportGroupStreaming
+})
+
 // 主题相关状态
 const currentThemeMode = ref<'light' | 'dark'>(getCurrentThemeMode())
 
