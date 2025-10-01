@@ -35,27 +35,22 @@ const favoritesGroup = computed(() => {
             :key="`fav-${emoji.id || idx}`"
             class="emoji-item relative group"
           >
-            <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
-              <img
-                :src="emoji.displayUrl || emoji.url"
-                :alt="emoji.name"
-                class="w-full h-full object-cover"
-              />
-            </div>
-            <!-- Activity badge -->
-            <div
-              v-if="emoji.usageCount && emoji.usageCount > 0"
-              class="absolute top-1 left-1 bg-blue-500 text-white text-xs rounded-full px-1.5 py-0.5 font-semibold min-w-[20px] text-center"
+            <a-badge
+              :count="emoji.usageCount && emoji.usageCount > 0 ? emoji.usageCount : 0"
+              :overflow-count="99"
+              :show-zero="false"
             >
-              {{ emoji.usageCount > 99 ? '99+' : emoji.usageCount }}
-            </div>
-            <div
-              v-else
-              class="absolute top-1 left-1 bg-yellow-500 text-white text-xs rounded-full px-1 py-0.5"
-              title="收藏的表情"
-            >
-              ⭐
-            </div>
+              <template v-if="!emoji.usageCount || emoji.usageCount === 0" #count>
+                <span class="favorite-star">⭐</span>
+              </template>
+              <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+                <img
+                  :src="emoji.displayUrl || emoji.url"
+                  :alt="emoji.name"
+                  class="w-full h-full object-cover"
+                />
+              </div>
+            </a-badge>
             <!-- Actions: hidden by default, shown on hover below the image -->
             <div class="mt-2 flex justify-center items-center">
               <div
@@ -97,5 +92,17 @@ const favoritesGroup = computed(() => {
 <style scoped>
 .emoji-item {
   width: 80px;
+}
+
+.favorite-star {
+  font-size: 12px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.4);
 }
 </style>
