@@ -31,8 +31,8 @@ async function initializeUserscriptData() {
   userscriptState.settings = data.settings || userscriptState.settings
 }
 
-// Function to check if current page should have emoji injection
-function shouldInjectEmoji(): boolean {
+// Function to check if current page is a Discourse site
+function isDiscoursePage(): boolean {
   // Check for discourse meta tags
   const discourseMetaTags = document.querySelectorAll(
     'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
@@ -42,34 +42,26 @@ function shouldInjectEmoji(): boolean {
     return true
   }
 
-  // Check for common forum/discussion platforms
+  // Check for Discourse generator meta tag
   const generatorMeta = document.querySelector('meta[name="generator"]')
   if (generatorMeta) {
     const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
-    if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
-      console.log('[Emoji Extension Userscript] Forum platform detected via generator meta')
+    if (content.includes('discourse')) {
+      console.log('[Emoji Extension Userscript] Discourse detected via generator meta')
       return true
     }
   }
 
-  // Check current domain - allow linux.do and other known sites
-  const hostname = window.location.hostname.toLowerCase()
-  const allowedDomains = ['linux.do', 'meta.discourse.org', 'pixiv.net']
-  if (allowedDomains.some(domain => hostname.includes(domain))) {
-    console.log('[Emoji Extension Userscript] Allowed domain detected:', hostname)
-    return true
-  }
-
-  // Check for editor elements that suggest a discussion platform
-  const editors = document.querySelectorAll(
-    'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
+  // Check for Discourse-specific DOM elements
+  const discourseElements = document.querySelectorAll(
+    '#main-outlet, .ember-application, textarea.d-editor-input, .ProseMirror.d-editor-input'
   )
-  if (editors.length > 0) {
-    console.log('[Emoji Extension Userscript] Discussion editor detected')
+  if (discourseElements.length > 0) {
+    console.log('[Emoji Extension Userscript] Discourse elements detected')
     return true
   }
 
-  console.log('[Emoji Extension Userscript] No compatible platform detected')
+  console.log('[Emoji Extension Userscript] Not a Discourse site')
   return false
 }
 
@@ -83,21 +75,17 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
   // Initialize data and features
   await initializeUserscriptData()
   initOneClickAdd()
-  // userscript: optionally initialize callout suggestions if enabled in settings
+  // Initialize callout suggestions (enabled by default for Discourse)
   try {
-    if (userscriptState.settings?.enableCalloutSuggestions) {
+    // 默认启用，只有明确设置为 false 时才禁用
+    if (userscriptState.settings?.enableCalloutSuggestions !== false) {
       initCalloutSuggestionsUserscript()
       console.log('[Userscript] Callout suggestions enabled')
+    } else {
+      console.log('[Userscript] Callout suggestions disabled by user setting')
     }
   } catch (e) {
     console.warn('[Userscript] initCalloutSuggestionsUserscript failed', e)
-  }
-
-  // Pixiv specific injection (use content/pixiv implementation)
-  try {
-    //initPixiv()
-  } catch (e) {
-    console.warn('[Userscript] initPixiv failed', e)
   }
 
   // Inject auto-read button into user menu (userscript-managed)
@@ -194,12 +182,12 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
   }, 5000)
 }
 
-// Entry point
-if (shouldInjectEmoji()) {
-  console.log('[Emoji Extension Userscript] Initializing emoji feature')
+// Entry point - only run on Discourse sites
+if (isDiscoursePage()) {
+  console.log('[Emoji Extension Userscript] Discourse detected, initializing emoji feature')
   initializeEmojiFeature()
 } else {
-  console.log('[Emoji Extension Userscript] Skipping injection - incompatible platform')
+  console.log('[Emoji Extension Userscript] Not a Discourse site, skipping injection')
 }
 
 export {}

@@ -107,29 +107,32 @@ export function getPlatformUIConfig(): PlatformUIConfig {
   }
 }
 
-// Platform-specific injection selectors
+// Platform-specific Discourse toolbar selectors
 export function getPlatformToolbarSelectors(): string[] {
   const platform = getEffectivePlatform()
 
-  const baseSelectors = ['.d-editor-button-bar[role="toolbar"]', '.chat-composer__inner-container']
+  // Discourse-specific base selectors
+  const baseSelectors = [
+    '.d-editor-button-bar[role="toolbar"]',
+    '.chat-composer__inner-container',
+    '.d-editor-button-bar'
+  ]
 
   switch (platform) {
     case 'mobile':
       return [
         ...baseSelectors,
-        '.mobile-composer-toolbar',
-        '.chat-composer-mobile',
-        '[data-mobile-toolbar]',
-        '.discourse-mobile .d-editor-button-bar'
+        '.mobile-composer .d-editor-button-bar',
+        '.discourse-mobile .d-editor-button-bar',
+        '[data-mobile-toolbar]'
       ]
 
     case 'pc':
       return [
         ...baseSelectors,
-        '.desktop-composer-toolbar',
-        '.chat-composer-desktop',
-        '[data-desktop-toolbar]',
-        '.discourse-desktop .d-editor-button-bar'
+        '.desktop-composer .d-editor-button-bar',
+        '.discourse-desktop .d-editor-button-bar',
+        '[data-desktop-toolbar]'
       ]
 
     default:

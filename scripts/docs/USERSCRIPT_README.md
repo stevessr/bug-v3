@@ -61,9 +61,13 @@ npm run build:userscript:min
 
 ### 支持的网站
 
+**仅支持 Discourse 论坛：**
+
 - linux.do
 - meta.discourse.org
-- 所有 Discourse 论坛 (\*.discourse.org)
+- 所有基于 Discourse 的论坛网站
+
+> **注意**：用户脚本版本专门为 Discourse 论坛优化，不支持其他平台（如 Reddit、Twitter、Pixiv 等）。如需多平台支持，请使用浏览器扩展版本。
 
 ### 🎯 核心功能
 
