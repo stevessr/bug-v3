@@ -1,6 +1,7 @@
 import { createE } from './createEl'
 import { notify } from './notify'
 import { customAlert, customConfirm } from './dialog'
+import { showCustomImagePicker, showCustomFolderPicker } from './customFilePicker'
 
 // Function to parse image filenames from markdown text
 function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
@@ -106,7 +107,6 @@ class ImageUploader {
   private successQueue: UploadQueueItem[] = []
   private isProcessing = false
   private maxRetries = 2 // Second failure stops retry
-  private progressDialog: HTMLElement | null = null
 
   async uploadImage(file: File): Promise<UploadResponse> {
     return new Promise((resolve, reject) => {
@@ -121,7 +121,6 @@ class ImageUploader {
       }
 
       this.waitingQueue.push(item)
-      this.updateProgressDialog()
       this.processQueue()
     })
   }
@@ -152,8 +151,6 @@ class ImageUploader {
         this.successQueue.push(item)
         break
     }
-
-    this.updateProgressDialog()
   }
 
   private async processQueue() {
@@ -236,333 +233,8 @@ class ImageUploader {
     }
   }
 
-  showProgressDialog() {
-    if (this.progressDialog) {
-      return // Already showing
-    }
-
-    this.progressDialog = this.createProgressDialog()
-    document.body.appendChild(this.progressDialog)
-  }
-
-  hideProgressDialog() {
-    if (this.progressDialog) {
-      this.progressDialog.remove()
-      this.progressDialog = null
-    }
-  }
-
-  private updateProgressDialog() {
-    if (!this.progressDialog) {
-      return
-    }
-
-    const allItems = [
-      ...this.waitingQueue,
-      ...this.uploadingQueue,
-      ...this.failedQueue,
-      ...this.successQueue
-    ]
-
-    this.renderQueueItems(this.progressDialog, allItems)
-  }
-
   private async sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
-  }
-
-  private createProgressDialog(): HTMLElement {
-    const dialog = createE('div', {
-      style: `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      width: 350px;
-      max-height: 400px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-      z-index: 10000;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      border: 1px solid #e5e7eb;
-      overflow: hidden;
-    `
-    })
-
-    const header = createE('div', {
-      style: `
-      padding: 16px 20px;
-      background: var(--secondary);
-      border-bottom: 1px solid #e5e7eb;
-      font-weight: 600;
-      font-size: 14px;
-      color: #374151;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: move;
-      user-select: none;
-    `,
-      text: '图片上传队列'
-    })
-
-    const closeButton = createE('button', {
-      text: '✕',
-      style: `
-      background: none;
-      border: none;
-      font-size: 16px;
-      cursor: pointer;
-      color: #6b7280;
-      padding: 4px;
-      border-radius: 4px;
-      transition: background-color 0.2s;
-    `
-    })
-
-    closeButton.addEventListener('click', () => {
-      this.hideProgressDialog()
-    })
-    closeButton.addEventListener('mouseenter', () => {
-      closeButton.style.backgroundColor = '#e5e7eb'
-    })
-    closeButton.addEventListener('mouseleave', () => {
-      closeButton.style.backgroundColor = 'transparent'
-    })
-
-    header.appendChild(closeButton)
-
-    const content = createE('div', {
-      class: 'upload-queue-content',
-      style: `
-        max-height: 320px;
-        overflow-y: auto;
-        padding: 12px;
-        background: var(--d-button-default-bg-color);
-      `
-    })
-
-    dialog.appendChild(header)
-    dialog.appendChild(content)
-
-    // Add dragging functionality
-    let isDragging = false
-    let currentX = 0
-    let currentY = 0
-    let initialX = 0
-    let initialY = 0
-
-    const dragStart = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).closest('button')) return // Don't drag when clicking buttons
-      
-      isDragging = true
-      // Get current position from style or default position
-      const currentTop = parseInt(dialog.style.top) || 20
-      const currentRight = parseInt(dialog.style.right) || 20
-      
-      initialX = e.clientX
-      initialY = e.clientY
-      currentX = window.innerWidth - currentRight - dialog.offsetWidth
-      currentY = currentTop
-      
-      header.style.cursor = 'grabbing'
-    }
-
-    const drag = (e: MouseEvent) => {
-      if (!isDragging) return
-      
-      e.preventDefault()
-      
-      const deltaX = e.clientX - initialX
-      const deltaY = e.clientY - initialY
-      
-      currentX += deltaX
-      currentY += deltaY
-      
-      initialX = e.clientX
-      initialY = e.clientY
-      
-      // Clamp to viewport
-      currentX = Math.max(0, Math.min(currentX, window.innerWidth - dialog.offsetWidth))
-      currentY = Math.max(0, Math.min(currentY, window.innerHeight - dialog.offsetHeight))
-      
-      dialog.style.top = `${currentY}px`
-      dialog.style.left = `${currentX}px`
-      dialog.style.right = 'auto'
-    }
-
-    const dragEnd = () => {
-      isDragging = false
-      header.style.cursor = 'move'
-    }
-
-    header.addEventListener('mousedown', dragStart)
-    document.addEventListener('mousemove', drag)
-    document.addEventListener('mouseup', dragEnd)
-
-    return dialog
-  }
-
-  private renderQueueItems(dialog: HTMLElement, allItems: UploadQueueItem[]) {
-    const content = dialog.querySelector('.upload-queue-content')
-    if (!content) return
-
-    content.innerHTML = ''
-
-    if (allItems.length === 0) {
-      const emptyState = createE('div', {
-        style: `
-        text-align: center;
-        color: #6b7280;
-        font-size: 14px;
-        padding: 20px;
-      `,
-        text: '暂无上传任务'
-      })
-      content.appendChild(emptyState)
-      return
-    }
-
-    allItems.forEach(item => {
-      const itemEl = createE('div', {
-        style: `
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 8px 12px;
-        margin-bottom: 8px;
-        background: var(--primary-very-low);
-        border-radius: 6px;
-        border-left: 4px solid ${this.getStatusColor(item.status)};
-      `
-      })
-
-      const leftSide = createE('div', {
-        style: `
-        flex: 1;
-        min-width: 0;
-      `
-      })
-
-      const fileName = createE('div', {
-        style: `
-        font-size: 13px;
-        font-weight: 500;
-        color: #374151;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      `,
-        text: item.file.name
-      })
-
-      const status = createE('div', {
-        style: `
-        font-size: 12px;
-        color: #6b7280;
-        margin-top: 2px;
-      `
-      })
-      status.textContent = this.getStatusText(item)
-
-      leftSide.appendChild(fileName)
-      leftSide.appendChild(status)
-
-      const rightSide = createE('div', {
-        style: `
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        `
-      })
-
-      // Add retry button for failed items
-      if (item.status === 'failed' && item.retryCount < this.maxRetries) {
-        const retryButton = createE('button', {
-          text: '🔄',
-          style: `
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            padding: 4px;
-            border-radius: 4px;
-            transition: background-color 0.2s;
-          `,
-          ti: '重试上传'
-        })
-        retryButton.addEventListener('click', () => {
-          this.retryFailedItem(item.id)
-        })
-        retryButton.addEventListener('mouseenter', () => {
-          retryButton.style.backgroundColor = '#e5e7eb'
-        })
-        retryButton.addEventListener('mouseleave', () => {
-          retryButton.style.backgroundColor = 'transparent'
-        })
-        rightSide.appendChild(retryButton)
-      }
-
-      const statusIcon = createE('div', {
-        style: 'font-size: 16px;',
-        text: this.getStatusIcon(item.status)
-      })
-
-      rightSide.appendChild(statusIcon)
-
-      itemEl.appendChild(leftSide)
-      itemEl.appendChild(rightSide)
-
-      content.appendChild(itemEl)
-    })
-  }
-
-  private getStatusColor(status: string): string {
-    switch (status) {
-      case 'waiting':
-        return '#f59e0b'
-      case 'uploading':
-        return '#3b82f6'
-      case 'success':
-        return '#10b981'
-      case 'failed':
-        return '#ef4444'
-      default:
-        return '#6b7280'
-    }
-  }
-
-  private getStatusText(item: UploadQueueItem): string {
-    switch (item.status) {
-      case 'waiting':
-        return '等待上传'
-      case 'uploading':
-        return '正在上传...'
-      case 'success':
-        return '上传成功'
-      case 'failed':
-        if (item.error?.error_type === 'rate_limit') {
-          return `上传失败 - 请求过于频繁 (重试 ${item.retryCount}/${this.maxRetries})`
-        }
-        return `上传失败 (重试 ${item.retryCount}/${this.maxRetries})`
-      default:
-        return '未知状态'
-    }
-  }
-
-  private getStatusIcon(status: string): string {
-    switch (status) {
-      case 'waiting':
-        return '⏳'
-      case 'uploading':
-        return '📤'
-      case 'success':
-        return '✅'
-      case 'failed':
-        return '❌'
-      default:
-        return '❓'
-    }
   }
 
   private async performUpload(file: File): Promise<UploadResponse> {
@@ -1115,9 +787,7 @@ export async function showImageUploadDialog(): Promise<void> {
       // Don't cleanup - keep the window open
       // cleanup()
 
-      // Show upload progress
-      uploader.showProgressDialog()
-
+      // Upload progress now shown in file picker dialog
       try {
         const promises = Array.from(files).map(async file => {
           try {
@@ -1170,9 +840,7 @@ export async function showImageUploadDialog(): Promise<void> {
       // Don't cleanup - keep the window open
       // cleanup()
 
-      // Show upload progress
-      uploader.showProgressDialog()
-
+      // Upload progress now shown in file picker dialog
       try {
         const promises = filesToUpload.map(async file => {
           try {
@@ -1201,8 +869,27 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     })
 
-    dropZone.addEventListener('click', () => {
-      fileInput.click()
+    dropZone.addEventListener('click', async () => {
+      // Use custom file picker with integrated upload
+      await showCustomImagePicker(true, async (files, updateStatus) => {
+        // Upload each file with status updates
+        for (const file of files) {
+          try {
+            updateStatus(file, { status: 'uploading', progress: 0 })
+            
+            // Upload using the uploader's method
+            const result = await uploader.uploadImage(file)
+            
+            updateStatus(file, { status: 'success', url: result.url })
+          } catch (error: any) {
+            console.error(`Failed to upload ${file.name}:`, error)
+            updateStatus(file, { 
+              status: 'failed', 
+              error: error.message || '上传失败' 
+            })
+          }
+        }
+      })
     })
 
     dropZone.addEventListener('dragover', (e: DragEvent) => {
@@ -1243,8 +930,37 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     })
 
-    diffDropZone.addEventListener('click', () => {
-      diffFileInput.click()
+    diffDropZone.addEventListener('click', async () => {
+      // Get markdown text for diff check
+      const markdownText = markdownTextarea.value.trim()
+      
+      // Use custom file picker with integrated upload and diff check
+      await showCustomImagePicker(true, async (files, updateStatus) => {
+        // Extract existing filenames from markdown
+        const existingFilenames = markdownText
+          .match(/!\[.*?\]\((.*?)\)/g)
+          ?.map(match => {
+            const url = match.match(/!\[.*?\]\((.*?)\)/)?.[1] || ''
+            return url.split('/').pop() || ''
+          }) || []
+
+        // Filter and upload
+        for (const file of files) {
+          if (existingFilenames.includes(file.name)) {
+            updateStatus(file, { status: 'failed', error: '已存在' })
+            continue
+          }
+
+          try {
+            updateStatus(file, { status: 'uploading', progress: 0 })
+            const result = await uploader.uploadImage(file)
+            updateStatus(file, { status: 'success', url: result.url })
+          } catch (error: any) {
+            console.error(`Failed to upload ${file.name}:`, error)
+            updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
+          }
+        }
+      })
     })
 
     diffDropZone.addEventListener('dragover', (e: DragEvent) => {
@@ -1285,8 +1001,21 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     })
 
-    folderDropZone.addEventListener('click', () => {
-      folderInput.click()
+    folderDropZone.addEventListener('click', async () => {
+      // Use custom folder picker with integrated upload
+      await showCustomFolderPicker(async (files, updateStatus) => {
+        // Upload each file with status updates
+        for (const file of files) {
+          try {
+            updateStatus(file, { status: 'uploading', progress: 0 })
+            const result = await uploader.uploadImage(file)
+            updateStatus(file, { status: 'success', url: result.url })
+          } catch (error: any) {
+            console.error(`Failed to upload ${file.name}:`, error)
+            updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
+          }
+        }
+      })
     })
 
     folderDropZone.addEventListener('dragover', (e: DragEvent) => {

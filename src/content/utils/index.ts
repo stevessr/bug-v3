@@ -7,3 +7,8 @@ export { isImageUrl, normalizeImageUrl } from './isimage'
 export { injectCSSAnimation, initOneClickAdd } from './oneClickAdd'
 export { showImageUploadDialog, uploader } from './uploader'
 export { customAlert, customConfirm, customPrompt } from './dialog'
+export {
+  showCustomFilePicker,
+  showCustomImagePicker,
+  showCustomFolderPicker
+} from './customFilePicker'
