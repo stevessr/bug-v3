@@ -1,4 +1,5 @@
 import { createE } from './createEl'
+import { notify } from './notify'
 
 // Function to parse image filenames from markdown text
 function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
@@ -182,14 +183,29 @@ class ImageUploader {
           item.retryCount++
 
           if (_error.error_type === 'rate_limit' && _error.extras?.wait_seconds) {
+            const waitSeconds = _error.extras.wait_seconds
+            notify(`遇到限流，将等待 ${waitSeconds} 秒后重试...`, 'error')
+            
+            // Countdown notifications every second
+            let remainingSeconds = waitSeconds
+            const countdownInterval = setInterval(() => {
+              remainingSeconds--
+              if (remainingSeconds > 0) {
+                notify(`正在等待限流解除，剩余 ${remainingSeconds} 秒...`, 'info')
+              } else {
+                clearInterval(countdownInterval)
+                notify('限流等待结束，继续上传...', 'success')
+              }
+            }, 1000)
+            
             // Wait for rate limit before retry
-            setTimeout(() => this.processQueue(), _error.extras.wait_seconds * 1000)
+            await this.sleep(waitSeconds * 1000)
+            this.moveToQueue(item, 'waiting')
           } else {
             // Wait before retry
             await this.sleep(Math.pow(2, item.retryCount) * 1000)
+            this.moveToQueue(item, 'waiting')
           }
-
-          this.moveToQueue(item, 'waiting')
         } else {
           this.moveToQueue(item, 'failed')
           item.reject(_error)
@@ -283,6 +299,8 @@ class ImageUploader {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: move;
+      user-select: none;
     `,
       text: '图片上传队列'
     })
@@ -319,11 +337,67 @@ class ImageUploader {
         max-height: 320px;
         overflow-y: auto;
         padding: 12px;
+        background: var(--d-button-default-bg-color);
       `
     })
 
     dialog.appendChild(header)
     dialog.appendChild(content)
+
+    // Add dragging functionality
+    let isDragging = false
+    let currentX = 0
+    let currentY = 0
+    let initialX = 0
+    let initialY = 0
+
+    const dragStart = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('button')) return // Don't drag when clicking buttons
+      
+      isDragging = true
+      // Get current position from style or default position
+      const currentTop = parseInt(dialog.style.top) || 20
+      const currentRight = parseInt(dialog.style.right) || 20
+      
+      initialX = e.clientX
+      initialY = e.clientY
+      currentX = window.innerWidth - currentRight - dialog.offsetWidth
+      currentY = currentTop
+      
+      header.style.cursor = 'grabbing'
+    }
+
+    const drag = (e: MouseEvent) => {
+      if (!isDragging) return
+      
+      e.preventDefault()
+      
+      const deltaX = e.clientX - initialX
+      const deltaY = e.clientY - initialY
+      
+      currentX += deltaX
+      currentY += deltaY
+      
+      initialX = e.clientX
+      initialY = e.clientY
+      
+      // Clamp to viewport
+      currentX = Math.max(0, Math.min(currentX, window.innerWidth - dialog.offsetWidth))
+      currentY = Math.max(0, Math.min(currentY, window.innerHeight - dialog.offsetHeight))
+      
+      dialog.style.top = `${currentY}px`
+      dialog.style.left = `${currentX}px`
+      dialog.style.right = 'auto'
+    }
+
+    const dragEnd = () => {
+      isDragging = false
+      header.style.cursor = 'move'
+    }
+
+    header.addEventListener('mousedown', dragStart)
+    document.addEventListener('mousemove', drag)
+    document.addEventListener('mouseup', dragEnd)
 
     return dialog
   }
@@ -356,7 +430,7 @@ class ImageUploader {
         justify-content: space-between;
         padding: 8px 12px;
         margin-bottom: 8px;
-        background: #f9fafb;
+        background: var(--primary-very-low);
         border-radius: 6px;
         border-left: 4px solid ${this.getStatusColor(item.status)};
       `
