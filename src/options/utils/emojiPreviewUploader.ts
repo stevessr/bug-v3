@@ -1,6 +1,6 @@
 // Independent uploader for ungrouped emoji previews to linux.do
 // This is a copy of the front-end upload functionality to maintain code independence
-import { createElement } from './creteEle'
+import { createElement } from './createElement'
 
 interface EmojiUploadResponse {
   id: number

@@ -1,5 +1,5 @@
 // Touch drag and drop utility for mobile devices
-export interface TouchDragState {
+interface TouchDragState {
   isDragging: boolean
   dragElement: HTMLElement | null
   startX: number
