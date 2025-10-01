@@ -1,6 +1,7 @@
 // Callout suggestions for userscript: trigger on '[' and insert `[!keyword]`
 // 移植自 src/content/discourse/callout-suggestions.ts，做了少量模块化调整
-export const da = document.addEventListener
+// Internal shorthand for document.addEventListener
+const da = document.addEventListener
 const calloutKeywords = [
   'note',
   'abstract',

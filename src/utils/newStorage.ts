@@ -21,14 +21,6 @@ export const SYNC_STORAGE_KEYS = {
   BACKUP: 'emojiExtensionBackup'
 } as const
 
-// Storage priority levels as requested
-
-enum StorageType {
-  Local = 'local',
-  Sync = 'sync'
-}
-void StorageType // Used in interface types
-
 // --- Chrome API Helper ---
 function getChromeAPI() {
   if (typeof chrome !== 'undefined' && chrome.storage) {
