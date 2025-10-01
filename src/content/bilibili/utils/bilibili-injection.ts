@@ -1,5 +1,5 @@
 /**
- * Bilibili DOM注入和操作相关功能
+ * Bilibili DOM 注入和操作相关功能
  */
 
 import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
@@ -16,9 +16,9 @@ import {
 } from './bilibili-buttons'
 
 /**
- * 获取当前显示的图片 - 改进URL解析
+ * 获取当前显示的图片 - 改进 URL 解析
  */
-export function getCurrentDisplayedImage(): Element | null {
+function getCurrentDisplayedImage(): Element | null {
   // 扩展选择器列表以覆盖更多场景
   const selectors = [
     // 主要图片查看器内容
@@ -52,7 +52,7 @@ export function getCurrentDisplayedImage(): Element | null {
     for (const element of elements) {
       const url = extractImageUrlFromPicture(element)
       if (url) {
-        // 验证URL是否为有效的图片URL
+        // 验证 URL 是否为有效的图片 URL
         if (isValidImageUrl(url)) {
           return element
         }
@@ -64,12 +64,12 @@ export function getCurrentDisplayedImage(): Element | null {
 }
 
 /**
- * 验证是否为有效的图片URL
+ * 验证是否为有效的图片 URL
  */
 function isValidImageUrl(url: string): boolean {
   try {
     const urlObj = new URL(url)
-    // 检查是否为B站的图片域名
+    // 检查是否为 B 站的图片域名
     const validDomains = ['i0.hdslb.com', 'i1.hdslb.com', 'i2.hdslb.com', 'hdslb.com']
     const isValidDomain = validDomains.some(domain => urlObj.hostname.includes(domain))
 
@@ -88,7 +88,7 @@ function isValidImageUrl(url: string): boolean {
 /**
  * 向控制区域添加按钮
  */
-export function addButtonToControlSection(controlSection: Element) {
+function addButtonToControlSection(controlSection: Element) {
   try {
     // Check if button already exists
     if (controlSection.querySelector('.add-emoji')) return
@@ -113,7 +113,7 @@ export function addButtonToControlSection(controlSection: Element) {
 /**
  * 向图片添加浮动按钮
  */
-export function addButtonToPicture(pictureEl: Element) {
+function addButtonToPicture(pictureEl: Element) {
   try {
     // avoid double-inserting
     if (
@@ -156,7 +156,7 @@ export function addButtonToPicture(pictureEl: Element) {
 /**
  * 添加批量解析按钮到相册容器
  */
-export function addBatchParseButtonToAlbum(container: Element) {
+function addBatchParseButtonToAlbum(container: Element) {
   if ((container as Element).querySelector('.bili-emoji-batch-parse')) return
 
   const btn = createBatchParseButton(container)
@@ -208,10 +208,10 @@ let scanDebounceTimer: number | null = null
 let pswpObserverInstance: MutationObserver | null = null
 
 /**
- * 观察DOM变化并重新注入按钮
+ * 观察 DOM 变化并重新注入按钮
  */
 export function observeMutations() {
-  // 重置PhotoSwipe状态
+  // 重置 PhotoSwipe 状态
   resetPhotoSwipeState()
 
   // General mutation observer with strict filtering
@@ -311,7 +311,7 @@ export function observeMutations() {
     attributeFilter: ['aria-hidden', 'class']
   })
 
-  // 设置PhotoSwipe专用观察器，但避免重复设置
+  // 设置 PhotoSwipe 专用观察器，但避免重复设置
   const setupPhotoSwipeObserver = () => {
     if (pswpObserverInstance) {
       pswpObserverInstance.disconnect()
@@ -321,11 +321,11 @@ export function observeMutations() {
     pswpObserverInstance = observePhotoSwipeContainer(addButtonToPhotoSwipeDebounced)
 
     if (!pswpObserverInstance) {
-      // 如果PhotoSwipe容器还不存在，稍后再试
+      // 如果 PhotoSwipe 容器还不存在，稍后再试
       setTimeout(setupPhotoSwipeObserver, 2000)
     }
   }
 
-  // 延迟设置PhotoSwipe观察器
+  // 延迟设置 PhotoSwipe 观察器
   setTimeout(setupPhotoSwipeObserver, 1000)
 }

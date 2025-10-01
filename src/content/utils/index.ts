@@ -2,7 +2,7 @@
 export { ContentStorageAdapter } from './ContentStorageAdapter'
 export { Uninject } from './Uninject'
 export { initializeEmojiFeature } from './init'
-export { findToolbar, findAllToolbars, injectButton } from './injector'
+export { findAllToolbars, injectButton } from './injector'
 export { isImageUrl, normalizeImageUrl } from './isimage'
 export { initOneClickAdd } from './oneClickAdd'
 export { showImageUploadDialog, uploader } from './uploader'

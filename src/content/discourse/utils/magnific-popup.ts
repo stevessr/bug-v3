@@ -4,7 +4,7 @@ import { createE } from '../../utils/createEl'
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'
 
-export function isMagnificPopup(element: Element): boolean {
+function isMagnificPopup(element: Element): boolean {
   return (
     element.classList &&
     element.classList.contains('mfp-wrap') &&
@@ -13,7 +13,7 @@ export function isMagnificPopup(element: Element): boolean {
   )
 }
 
-export function extractEmojiDataFromMfp(
+function extractEmojiDataFromMfp(
   imgElement: HTMLImageElement,
   titleContainer: Element
 ): AddEmojiButtonData | null {
@@ -28,7 +28,7 @@ export function extractEmojiDataFromMfp(
   return { name, url: src }
 }
 
-export function createMfpEmojiButton(data: AddEmojiButtonData): HTMLElement {
+function createMfpEmojiButton(data: AddEmojiButtonData): HTMLElement {
   const button = createE('a', {
     class: 'emoji-add-link',
     style: `color:#fff;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:6px;padding:4px 8px;margin:0 2px;display:inline-flex;align-items:center;font-weight:600;`,
@@ -39,7 +39,7 @@ export function createMfpEmojiButton(data: AddEmojiButtonData): HTMLElement {
   return button
 }
 
-export function addEmojiButtonToMfp(mfpContainer: Element) {
+function addEmojiButtonToMfp(mfpContainer: Element) {
   if (mfpContainer.querySelector('.emoji-add-link')) return
   const imgElement = mfpContainer.querySelector('.mfp-img') as HTMLImageElement
   const titleContainer = mfpContainer.querySelector('.mfp-title')

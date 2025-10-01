@@ -138,7 +138,7 @@ function observePixivViewer() {
   observer.observe(document.body, { childList: true, subtree: true })
 }
 
-export function isPixivPage(): boolean {
+function isPixivPage(): boolean {
   try {
     const hostname = window.location.hostname.toLowerCase()
 

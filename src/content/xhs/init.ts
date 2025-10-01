@@ -92,7 +92,7 @@ export function scanAndInjectXhs() {
 let obs: MutationObserver | null = null
 let debounceTimer: number | null = null
 
-export function observeXhs() {
+function observeXhs() {
   if (obs) return obs
   obs = new MutationObserver(ms => {
     let needs = false

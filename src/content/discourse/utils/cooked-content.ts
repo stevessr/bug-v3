@@ -5,11 +5,11 @@ import { extractNameFromUrl } from './picture'
 
 declare const chrome: any
 
-export function isCookedContent(element: Element): boolean {
+function isCookedContent(element: Element): boolean {
   return element.classList.contains('cooked') && element.querySelector('.lightbox-wrapper') !== null
 }
 
-export function extractEmojiDataFromLightbox(lightboxWrapper: Element): AddEmojiButtonData[] {
+function extractEmojiDataFromLightbox(lightboxWrapper: Element): AddEmojiButtonData[] {
   const results: AddEmojiButtonData[] = []
   const anchor = lightboxWrapper.querySelector('a.lightbox') as HTMLAnchorElement | null
   const img = lightboxWrapper.querySelector('img') as HTMLImageElement | null
@@ -26,7 +26,7 @@ export function extractEmojiDataFromLightbox(lightboxWrapper: Element): AddEmoji
   return results
 }
 
-export function createBatchParseButton(cookedElement: Element): HTMLElement {
+function createBatchParseButton(cookedElement: Element): HTMLElement {
   const button = createE('button', {
     class: 'emoji-batch-parse-button',
     style: `
@@ -94,7 +94,7 @@ export function createBatchParseButton(cookedElement: Element): HTMLElement {
   return button
 }
 
-export function addBatchParseButtonToCooked(cookedElement: Element) {
+function addBatchParseButtonToCooked(cookedElement: Element) {
   if (cookedElement.querySelector('.emoji-batch-parse-button')) return
   const lightboxWrappers = cookedElement.querySelectorAll('.lightbox-wrapper')
   if (lightboxWrappers.length === 0) return

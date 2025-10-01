@@ -11,7 +11,7 @@ let photoSwipeDebounceTimer: number | null = null
 let lastProcessedImageUrl = ''
 
 /**
- * 重置PhotoSwipe处理状态
+ * 重置 PhotoSwipe 处理状态
  */
 export function resetPhotoSwipeState(): void {
   isProcessingPhotoSwipe = false
@@ -23,16 +23,16 @@ export function resetPhotoSwipeState(): void {
 }
 
 /**
- * 检查PhotoSwipe预览器是否存在
+ * 检查 PhotoSwipe 预览器是否存在
  */
-export function isPhotoSwipeActive(): boolean {
+function isPhotoSwipeActive(): boolean {
   return !!document.querySelector('.pswp__scroll-wrap')
 }
 
 /**
- * 获取当前活动的PhotoSwipe图片项
+ * 获取当前活动的 PhotoSwipe 图片项
  */
-export function getCurrentPhotoSwipeItem(): Element | null {
+function getCurrentPhotoSwipeItem(): Element | null {
   const pswpContainer = document.querySelector('.pswp__scroll-wrap')
   if (!pswpContainer) return null
 
@@ -40,9 +40,9 @@ export function getCurrentPhotoSwipeItem(): Element | null {
 }
 
 /**
- * 获取当前活动PhotoSwipe项中的图片元素
+ * 获取当前活动 PhotoSwipe 项中的图片元素
  */
-export function getCurrentPhotoSwipeImage(): HTMLImageElement | null {
+function getCurrentPhotoSwipeImage(): HTMLImageElement | null {
   const activeItem = getCurrentPhotoSwipeItem()
   if (!activeItem) return null
 
@@ -50,9 +50,9 @@ export function getCurrentPhotoSwipeImage(): HTMLImageElement | null {
 }
 
 /**
- * 检查PhotoSwipe按钮是否已存在
+ * 检查 PhotoSwipe 按钮是否已存在
  */
-export function hasPhotoSwipeButton(): boolean {
+function hasPhotoSwipeButton(): boolean {
   // Check in top bar
   const topBar = document.querySelector('.pswp__top-bar')
   if (topBar && topBar.querySelector('.bili-emoji-add-btn')) return true
@@ -65,9 +65,9 @@ export function hasPhotoSwipeButton(): boolean {
 }
 
 /**
- * 向PhotoSwipe顶部栏添加按钮，定位在关闭按钮旁边
+ * 向 PhotoSwipe 顶部栏添加按钮，定位在关闭按钮旁边
  */
-export function addButtonToPhotoSwipeTopBar(name: string, url: string): boolean {
+function addButtonToPhotoSwipeTopBar(name: string, url: string): boolean {
   const topBar = document.querySelector('.pswp__top-bar')
   if (!topBar || topBar.querySelector('.bili-emoji-add-btn')) return false
 
@@ -84,9 +84,9 @@ export function addButtonToPhotoSwipeTopBar(name: string, url: string): boolean 
 }
 
 /**
- * 向PhotoSwipe缩放区域添加浮动按钮
+ * 向 PhotoSwipe 缩放区域添加浮动按钮
  */
-export function addFloatingButtonToPhotoSwipe(name: string, url: string): boolean {
+function addFloatingButtonToPhotoSwipe(name: string, url: string): boolean {
   const activeItem = getCurrentPhotoSwipeItem()
   if (!activeItem) return false
 
@@ -101,9 +101,9 @@ export function addFloatingButtonToPhotoSwipe(name: string, url: string): boolea
 }
 
 /**
- * 向PhotoSwipe预览器添加表情按钮
+ * 向 PhotoSwipe 预览器添加表情按钮
  */
-export function addButtonToPhotoSwipe(): boolean {
+function addButtonToPhotoSwipe(): boolean {
   try {
     // 防止重复处理
     if (isProcessingPhotoSwipe) return false
@@ -151,7 +151,7 @@ export function addButtonToPhotoSwipe(): boolean {
 }
 
 /**
- * 带防抖的PhotoSwipe按钮添加函数
+ * 带防抖的 PhotoSwipe 按钮添加函数
  */
 export function addButtonToPhotoSwipeDebounced(): void {
   // 清除之前的定时器
@@ -167,9 +167,9 @@ export function addButtonToPhotoSwipeDebounced(): void {
 }
 
 /**
- * 创建PhotoSwipe特定的DOM观察器
+ * 创建 PhotoSwipe 特定的 DOM 观察器
  */
-export function createPhotoSwipeObserver(callback: () => void): MutationObserver {
+function createPhotoSwipeObserver(callback: () => void): MutationObserver {
   let observerDebounceTimer: number | null = null
 
   return new MutationObserver(() => {
@@ -186,7 +186,7 @@ export function createPhotoSwipeObserver(callback: () => void): MutationObserver
 }
 
 /**
- * 监听PhotoSwipe容器的变化
+ * 监听 PhotoSwipe 容器的变化
  */
 export function observePhotoSwipeContainer(callback: () => void): MutationObserver | null {
   const pswpContainer = document.querySelector('.pswp__scroll-wrap')
@@ -197,39 +197,8 @@ export function observePhotoSwipeContainer(callback: () => void): MutationObserv
     childList: true,
     subtree: false, // 不要监听所有子树变化，减少触发频率
     attributes: true,
-    attributeFilter: ['aria-hidden'] // 只监听aria-hidden变化
+    attributeFilter: ['aria-hidden'] // 只监听 aria-hidden 变化
   })
 
   return observer
-}
-
-/**
- * 检查DOM变化是否与PhotoSwipe相关
- */
-export function isPhotoSwipeRelatedMutation(mutation: MutationRecord): boolean {
-  if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-    return Array.from(mutation.addedNodes).some(node => {
-      if (node.nodeType === 1) {
-        const element = node as Element
-        return (
-          element.classList &&
-          (element.classList.contains('pswp__scroll-wrap') ||
-            element.closest('.pswp__scroll-wrap') ||
-            element.querySelector('.pswp__scroll-wrap'))
-        )
-      }
-      return false
-    })
-  }
-
-  if (mutation.type === 'attributes') {
-    const target = mutation.target as Element
-    return (
-      target.classList &&
-      target.classList.contains('pswp__item') &&
-      mutation.attributeName === 'aria-hidden'
-    )
-  }
-
-  return false
 }
