@@ -21,17 +21,4 @@ export function applyCustomCssFromCache() {
   }
 }
 
-export function applyCustomCss(css: string | null | undefined) {
-  try {
-    if (css && typeof css === 'string' && css.trim().length > 0) {
-      ensureStyleInjected(STYLE_ID, css)
-      console.log('[Emoji Extension] Applied custom CSS (manual)')
-    } else {
-      const el = document.getElementById(STYLE_ID)
-      if (el && el.parentNode) el.parentNode.removeChild(el)
-      console.log('[Emoji Extension] Removed custom CSS (manual)')
-    }
-  } catch (e) {
-    console.warn('[Emoji Extension] Failed to apply custom CSS (manual)', e)
-  }
-}
+

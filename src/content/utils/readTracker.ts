@@ -108,7 +108,3 @@ export function startReadTracker() {
 
   console.log('[readTracker] started')
 }
-
-export function stopReadTracker() {
-  // no-op for now; tracker uses setInterval without handle storing for simplicity
-}

@@ -171,17 +171,8 @@ export function hideFloatingButton() {
   }
 }
 
-// Toggle floating button visibility
-export function toggleFloatingButton() {
-  if (isButtonVisible) {
-    hideFloatingButton()
-  } else {
-    showFloatingButton()
-  }
-}
-
 // Auto-show floating button when no toolbars are found after multiple attempts
-export function autoShowFloatingButton() {
+function autoShowFloatingButton() {
   // Only show if not already visible and if injection seems to be failing
   if (!isButtonVisible) {
     console.log('[Emoji Extension] Auto-showing floating button due to injection difficulties')
