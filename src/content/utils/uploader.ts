@@ -275,7 +275,7 @@ class ImageUploader {
     const header = createE('div', {
       style: `
       padding: 16px 20px;
-      background: #f9fafb;
+      background: var(--secondary);
       border-bottom: 1px solid #e5e7eb;
       font-weight: 600;
       font-size: 14px;
@@ -593,13 +593,15 @@ const uploader = new ImageUploader()
 
 interface DragDropElements {
   panel: HTMLElement
-  overlay: HTMLElement
+  overlay: any
   dropZone: HTMLElement
   fileInput: HTMLInputElement
-  closeButton: HTMLButtonElement
+  closeButton: HTMLElement
   diffDropZone: HTMLElement
   diffFileInput: HTMLInputElement
   markdownTextarea: HTMLTextAreaElement
+  folderDropZone: HTMLElement
+  folderInput: HTMLInputElement
 }
 
 function createDragDropUploadPanel(): DragDropElements {
@@ -612,7 +614,7 @@ function createDragDropUploadPanel(): DragDropElements {
     transform: translate(-50%, -50%);
     width: 500px;
     max-width: 90vw;
-    background: white;
+    background: var(--primary-very-low);
     border-radius: 12px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     z-index: 10000;
@@ -620,17 +622,7 @@ function createDragDropUploadPanel(): DragDropElements {
   `
   })
 
-  const overlay = createE('div', {
-    style: `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 9999;
-  `
-  })
+  // No overlay - removed for draggable floating window
 
   const header = createE('div', {
     style: `
@@ -638,6 +630,8 @@ function createDragDropUploadPanel(): DragDropElements {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: move;
+      user-select: none;
     `
   })
 
@@ -720,8 +714,59 @@ function createDragDropUploadPanel(): DragDropElements {
   `
   })
 
+  const folderTab = createE('button', {
+    text: '文件夹上传',
+    style: `
+      flex: 1;
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #6b7280;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  `
+  })
+
   tabContainer.appendChild(regularTab)
   tabContainer.appendChild(diffTab)
+  tabContainer.appendChild(folderTab)
+
+  // Add dragging functionality
+  let isDragging = false
+  let currentX = 0
+  let currentY = 0
+  let initialX = 0
+  let initialY = 0
+
+  const dragStart = (e: MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return // Don't drag when clicking buttons
+
+    isDragging = true
+    initialX = e.clientX - currentX
+    initialY = e.clientY - currentY
+    header.style.cursor = 'grabbing'
+  }
+
+  const drag = (e: MouseEvent) => {
+    if (!isDragging) return
+
+    e.preventDefault()
+    currentX = e.clientX - initialX
+    currentY = e.clientY - initialY
+
+    panel.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`
+  }
+
+  const dragEnd = () => {
+    isDragging = false
+    header.style.cursor = 'move'
+  }
+
+  header.addEventListener('mousedown', dragStart)
+  document.addEventListener('mousemove', drag)
+  document.addEventListener('mouseup', dragEnd)
 
   // Regular upload panel
   const regularPanel = createE('div', {
@@ -738,7 +783,7 @@ function createDragDropUploadPanel(): DragDropElements {
     border-radius: 8px;
     padding: 40px 20px;
     text-align: center;
-    background: #f9fafb;
+    background: var(--primary-low);
     transition: all 0.2s;
     cursor: pointer;
   `
@@ -778,6 +823,60 @@ function createDragDropUploadPanel(): DragDropElements {
   regularPanel.appendChild(dropZone)
   regularPanel.appendChild(fileInput)
 
+  // Folder upload panel
+  const folderPanel = createE('div', {
+    class: 'folder-upload-panel',
+    style: `
+    display: none;
+  `
+  }) as HTMLElement
+
+  const folderDropZone = createE('div', {
+    class: 'folder-drop-zone',
+    style: `
+      border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--primary-low);
+    transition: all 0.2s;
+    cursor: pointer;
+  `
+  })
+
+  const folderIcon = createE('div', {
+    in: '📂',
+    style: `
+      font-size: 48px;
+      margin-bottom: 16px;
+    `
+  })
+
+  const folderText = createE('div', {
+    in: `
+    <div style="font-size: 16px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+      拖拽文件夹到此处，或点击选择文件夹
+    </div>
+    <div style="font-size: 14px; color: #6b7280;">
+      将上传文件夹内所有图片文件
+    </div>
+  `
+  })
+
+  folderDropZone.appendChild(folderIcon)
+  folderDropZone.appendChild(folderText)
+
+  const folderInput = createE('input', {
+    type: 'file',
+    attrs: { webkitdirectory: '', directory: '', multiple: '' },
+    style: `
+      display: none;
+    `
+  }) as HTMLInputElement
+
+  folderPanel.appendChild(folderDropZone)
+  folderPanel.appendChild(folderInput)
+
   // Diff upload panel
   const diffPanel = createE('div', {
     class: 'diff-upload-panel',
@@ -805,11 +904,11 @@ function createDragDropUploadPanel(): DragDropElements {
   const diffDropZone = createE('div', {
     class: 'diff-drop-zone',
     style: `
-      border: 2px dashed #d1d5db;
+    border: 2px dashed #d1d5db;
     border-radius: 8px;
     padding: 30px 20px;
     text-align: center;
-    background: #f9fafb;
+    background: var(--primary-low);
     transition: all 0.2s;
     cursor: pointer;
     margin-bottom: 12px;
@@ -853,43 +952,60 @@ function createDragDropUploadPanel(): DragDropElements {
 
   content.appendChild(tabContainer)
   content.appendChild(regularPanel)
+  content.appendChild(folderPanel)
   content.appendChild(diffPanel)
 
   panel.appendChild(header)
   panel.appendChild(content)
 
   // Tab switching logic
-  const switchToTab = (
-    activeTab: HTMLElement,
-    inactiveTab: HTMLElement,
-    activePanel: HTMLElement,
-    inactivePanel: HTMLElement
-  ) => {
-    activeTab.style.borderBottomColor = '#3b82f6'
-    activeTab.style.color = '#3b82f6'
-    inactiveTab.style.borderBottomColor = 'transparent'
-    inactiveTab.style.color = '#6b7280'
-    activePanel.style.display = 'block'
-    inactivePanel.style.display = 'none'
-  }
-
   regularTab.addEventListener('click', () => {
-    switchToTab(regularTab, diffTab, regularPanel, diffPanel)
+    regularTab.style.borderBottomColor = '#3b82f6'
+    regularTab.style.color = '#3b82f6'
+    diffTab.style.borderBottomColor = 'transparent'
+    diffTab.style.color = '#6b7280'
+    folderTab.style.borderBottomColor = 'transparent'
+    folderTab.style.color = '#6b7280'
+    regularPanel.style.display = 'block'
+    diffPanel.style.display = 'none'
+    folderPanel.style.display = 'none'
   })
 
   diffTab.addEventListener('click', () => {
-    switchToTab(diffTab, regularTab, diffPanel, regularPanel)
+    diffTab.style.borderBottomColor = '#3b82f6'
+    diffTab.style.color = '#3b82f6'
+    regularTab.style.borderBottomColor = 'transparent'
+    regularTab.style.color = '#6b7280'
+    folderTab.style.borderBottomColor = 'transparent'
+    folderTab.style.color = '#6b7280'
+    diffPanel.style.display = 'block'
+    regularPanel.style.display = 'none'
+    folderPanel.style.display = 'none'
+  })
+
+  folderTab.addEventListener('click', () => {
+    folderTab.style.borderBottomColor = '#3b82f6'
+    folderTab.style.color = '#3b82f6'
+    regularTab.style.borderBottomColor = 'transparent'
+    regularTab.style.color = '#6b7280'
+    diffTab.style.borderBottomColor = 'transparent'
+    diffTab.style.color = '#6b7280'
+    folderPanel.style.display = 'block'
+    regularPanel.style.display = 'none'
+    diffPanel.style.display = 'none'
   })
 
   return {
     panel,
-    overlay,
+    overlay: null as any, // No overlay for draggable window
     dropZone,
     fileInput,
     closeButton,
     diffDropZone,
     diffFileInput,
-    markdownTextarea
+    markdownTextarea,
+    folderDropZone,
+    folderInput
   }
 }
 
@@ -897,28 +1013,32 @@ export async function showImageUploadDialog(): Promise<void> {
   return new Promise(resolve => {
     const {
       panel,
-      overlay,
       dropZone,
       fileInput,
       closeButton,
       diffDropZone,
       diffFileInput,
-      markdownTextarea
+      markdownTextarea,
+      folderDropZone,
+      folderInput
     } = createDragDropUploadPanel()
 
     let isDragOver = false
     let isDiffDragOver = false
+    let isFolderDragOver = false
 
     const cleanup = () => {
-      document.body.removeChild(overlay)
-      document.body.removeChild(panel)
+      if (panel.parentElement) {
+        document.body.removeChild(panel)
+      }
       resolve()
     }
 
     const handleFiles = async (files: FileList) => {
       if (!files || files.length === 0) return
 
-      cleanup()
+      // Don't cleanup - keep the window open
+      // cleanup()
 
       // Show upload progress
       uploader.showProgressDialog()
@@ -936,9 +1056,10 @@ export async function showImageUploadDialog(): Promise<void> {
 
         await Promise.allSettled(promises)
       } finally {
-        setTimeout(() => {
-          uploader.hideProgressDialog()
-        }, 3000)
+        // Keep progress dialog open - don't auto-hide
+        // setTimeout(() => {
+        //   uploader.hideProgressDialog()
+        // }, 3000)
       }
     }
 
@@ -973,7 +1094,8 @@ export async function showImageUploadDialog(): Promise<void> {
         }
       }
 
-      cleanup()
+      // Don't cleanup - keep the window open
+      // cleanup()
 
       // Show upload progress
       uploader.showProgressDialog()
@@ -991,9 +1113,10 @@ export async function showImageUploadDialog(): Promise<void> {
 
         await Promise.allSettled(promises)
       } finally {
-        setTimeout(() => {
-          uploader.hideProgressDialog()
-        }, 3000)
+        // Keep progress dialog open - don't auto-hide
+        // setTimeout(() => {
+        //   uploader.hideProgressDialog()
+        // }, 3000)
       }
     }
 
@@ -1081,9 +1204,95 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     })
 
+    // Folder upload handlers
+    folderInput.addEventListener('change', async (event: Event) => {
+      const files = (event.target as HTMLInputElement).files
+      if (files) {
+        await handleFiles(files)
+      }
+    })
+
+    folderDropZone.addEventListener('click', () => {
+      folderInput.click()
+    })
+
+    folderDropZone.addEventListener('dragover', (e: DragEvent) => {
+      e.preventDefault()
+      if (!isFolderDragOver) {
+        isFolderDragOver = true
+        folderDropZone.style.borderColor = '#3b82f6'
+        folderDropZone.style.backgroundColor = '#eff6ff'
+      }
+    })
+
+    folderDropZone.addEventListener('dragleave', (e: DragEvent) => {
+      e.preventDefault()
+      if (!folderDropZone.contains(e.relatedTarget as Node)) {
+        isFolderDragOver = false
+        folderDropZone.style.borderColor = '#d1d5db'
+        folderDropZone.style.backgroundColor = '#f9fafb'
+      }
+    })
+
+    folderDropZone.addEventListener('drop', async (e: DragEvent) => {
+      e.preventDefault()
+      isFolderDragOver = false
+      folderDropZone.style.borderColor = '#d1d5db'
+      folderDropZone.style.backgroundColor = '#f9fafb'
+
+      const items = e.dataTransfer?.items
+      if (items) {
+        const files: File[] = []
+        // Process all dropped items
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]
+          if (item.kind === 'file') {
+            const entry = item.webkitGetAsEntry()
+            if (entry) {
+              await collectFiles(entry, files)
+            }
+          }
+        }
+        if (files.length > 0) {
+          // Convert to FileList-like object
+          const fileList = {
+            length: files.length,
+            item: (index: number) => files[index],
+            [Symbol.iterator]: function* () {
+              for (const file of files) {
+                yield file
+              }
+            }
+          }
+          await handleFiles(fileList as any)
+        }
+      }
+    })
+
+    // Helper function to recursively collect files from folder
+    async function collectFiles(entry: any, files: File[]): Promise<void> {
+      if (entry.isFile) {
+        const file = await new Promise<File>(resolve => {
+          entry.file((f: File) => resolve(f))
+        })
+        // Only collect image files
+        if (file.type.startsWith('image/')) {
+          files.push(file)
+        }
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader()
+        const entries = await new Promise<any[]>(resolve => {
+          reader.readEntries((entries: any[]) => resolve(entries))
+        })
+        for (const subEntry of entries) {
+          await collectFiles(subEntry, files)
+        }
+      }
+    }
+
     // Close handlers
     closeButton.addEventListener('click', cleanup)
-    overlay.addEventListener('click', cleanup)
+    // No overlay to click
 
     // Prevent default drag behaviors on document
     const preventDefaults = (e: Event) => {
@@ -1105,11 +1314,11 @@ export async function showImageUploadDialog(): Promise<void> {
     }
 
     closeButton.removeEventListener('click', cleanup)
-    overlay.removeEventListener('click', cleanup)
+    // No overlay to remove listeners from
     closeButton.addEventListener('click', enhancedCleanup)
-    overlay.addEventListener('click', enhancedCleanup)
+    // No overlay to add listeners to
 
-    document.body.appendChild(overlay)
+    // No overlay to append
     document.body.appendChild(panel)
   })
 }
