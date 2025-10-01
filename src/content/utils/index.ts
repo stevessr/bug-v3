@@ -4,7 +4,7 @@ export { Uninject } from './Uninject'
 export { initializeEmojiFeature } from './init'
 export { findToolbar, findAllToolbars, injectButton } from './injector'
 export { isImageUrl, normalizeImageUrl } from './isimage'
-export { injectCSSAnimation, initOneClickAdd } from './oneClickAdd'
+export { initOneClickAdd } from './oneClickAdd'
 export { showImageUploadDialog, uploader } from './uploader'
 export { customAlert, customConfirm, customPrompt } from './dialog'
 export {

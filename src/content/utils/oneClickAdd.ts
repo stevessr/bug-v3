@@ -4,7 +4,7 @@ import { initDiscourse } from '../discourse/discourse'
 
 // oneClickAdd.ts - 仅保留一键添加核心逻辑，平台注入移至各自模块
 
-// 添加CSS动画（仅用于批量按钮的加载动画）
+// 添加 CSS 动画（仅用于批量按钮的加载动画）
 const cssAnimation = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -21,7 +21,7 @@ const cssAnimation = `
 }
 `
 
-export function injectCSSAnimation() {
+function injectCSSAnimation() {
   if (!document.getElementById('oneclick-add-styles')) {
     const style = document.createElement('style')
     style.id = 'oneclick-add-styles'
@@ -31,7 +31,7 @@ export function injectCSSAnimation() {
 }
 
 /**
- * 初始化一键添加模块（注入CSS并启动平台注入器）
+ * 初始化一键添加模块（注入 CSS 并启动平台注入器）
  */
 export function initOneClickAdd() {
   console.log('[OneClickAdd] 初始化一键添加表情核心')

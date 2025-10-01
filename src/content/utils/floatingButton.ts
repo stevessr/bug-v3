@@ -155,7 +155,7 @@ export function showFloatingButton() {
 }
 
 // Hide floating button
-export function hideFloatingButton() {
+function hideFloatingButton() {
   if (floatingButton) {
     floatingButton.classList.add('hidden')
 
