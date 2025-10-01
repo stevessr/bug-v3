@@ -1,5 +1,6 @@
 import { createE } from './createEl'
 import { notify } from './notify'
+import { customAlert, customConfirm } from './dialog'
 
 // Function to parse image filenames from markdown text
 function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
@@ -1150,17 +1151,15 @@ export async function showImageUploadDialog(): Promise<void> {
       })
 
       if (filesToUpload.length === 0) {
-        // Allow alert here to inform users when no files need uploading
-        // eslint-disable-next-line no-alert
-        alert('所有选择的图片都已在 markdown 文本中存在，无需上传。')
+        // Use custom alert instead of native alert
+        await customAlert('所有选择的图片都已在 markdown 文本中存在，无需上传。')
         return
       }
 
       if (filesToUpload.length < files.length) {
         const skippedCount = files.length - filesToUpload.length
-        // Use native confirm to avoid external dependency
-        // eslint-disable-next-line no-alert
-        const proceed = confirm(
+        // Use custom confirm instead of native confirm
+        const proceed = await customConfirm(
           `发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`
         )
         if (!proceed) {

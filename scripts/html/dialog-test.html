@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自定义对话框测试</title>
+    <style>
+        :root {
+            --primary: #333;
+            --primary-very-low: #ffffff;
+            --primary-low: #f3f4f6;
+            --primary-low-mid: #d1d5db;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f9fafb;
+        }
+
+        h1 {
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .description {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            min-height: 60px;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .result-content {
+            color: #4b5563;
+            font-family: 'Courier New', monospace;
+            background: #f9fafb;
+            padding: 8px;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .section h2 {
+            color: #1f2937;
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+
+        .section p {
+            color: #6b7280;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 自定义对话框测试页面</h1>
+    <p class="description">测试自定义 alert、confirm 和 prompt 对话框功能</p>
+
+    <div class="section">
+        <h2>📢 Alert 对话框</h2>
+        <p>显示一个信息提示框，只有一个"确定"按钮。</p>
+        <div class="button-group">
+            <button onclick="testAlert1()">简单提示</button>
+            <button onclick="testAlert2()">长文本提示</button>
+            <button onclick="testAlert3()">成功消息</button>
+        </div>
+        <div class="result" id="alertResult">
+            <div class="result-title">结果：</div>
+            <div class="result-content">点击上方按钮测试</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>❓ Confirm 对话框</h2>
+        <p>显示一个确认对话框，包含"取消"和"确定"按钮。</p>
+        <div class="button-group">
+            <button onclick="testConfirm1()">简单确认</button>
+            <button onclick="testConfirm2()">删除确认</button>
+            <button onclick="testConfirm3()">上传确认</button>
+        </div>
+        <div class="result" id="confirmResult">
+            <div class="result-title">结果：</div>
+            <div class="result-content">点击上方按钮测试</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>✏️ Prompt 对话框</h2>
+        <p>显示一个输入对话框，让用户输入文本。</p>
+        <div class="button-group">
+            <button onclick="testPrompt1()">输入名字</button>
+            <button onclick="testPrompt2()">输入网址 (带默认值)</button>
+            <button onclick="testPrompt3()">输入邮箱</button>
+        </div>
+        <div class="result" id="promptResult">
+            <div class="result-title">结果：</div>
+            <div class="result-content">点击上方按钮测试</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🔄 连续对话框</h2>
+        <p>测试连续弹出多个对话框。</p>
+        <div class="button-group">
+            <button onclick="testSequential()">连续测试</button>
+            <button onclick="testWorkflow()">工作流程模拟</button>
+        </div>
+        <div class="result" id="sequentialResult">
+            <div class="result-title">结果：</div>
+            <div class="result-content">点击上方按钮测试</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // 注意：这个测试页面需要在构建后的环境中运行
+        // 或者需要将 dialog.ts 编译后才能使用
+        
+        // 模拟的对话框函数（实际应该从构建后的代码导入）
+        import { customAlert, customConfirm, customPrompt } from './dialog.js'
+
+        // Alert 测试
+        window.testAlert1 = async () => {
+            await customAlert('这是一个简单的提示消息！')
+            document.getElementById('alertResult').querySelector('.result-content').textContent = '用户点击了确定'
+        }
+
+        window.testAlert2 = async () => {
+            await customAlert('这是一个很长很长的提示消息，用来测试自动换行功能。当消息内容超过对话框宽度时，应该能够正确地换行显示，而不会超出对话框边界。')
+            document.getElementById('alertResult').querySelector('.result-content').textContent = '用户点击了确定'
+        }
+
+        window.testAlert3 = async () => {
+            await customAlert('✅ 操作成功！您的更改已保存。')
+            document.getElementById('alertResult').querySelector('.result-content').textContent = '用户点击了确定'
+        }
+
+        // Confirm 测试
+        window.testConfirm1 = async () => {
+            const result = await customConfirm('您确定要继续吗？')
+            document.getElementById('confirmResult').querySelector('.result-content').textContent = `用户选择了：${result ? '确定' : '取消'}`
+        }
+
+        window.testConfirm2 = async () => {
+            const result = await customConfirm('⚠️ 确定要删除这个项目吗？此操作无法撤销。')
+            document.getElementById('confirmResult').querySelector('.result-content').textContent = `用户选择了：${result ? '确定删除' : '取消删除'}`
+        }
+
+        window.testConfirm3 = async () => {
+            const result = await customConfirm('发现 5 个图片已存在于 markdown 文本中，将被跳过。是否继续上传剩余 10 个图片？')
+            document.getElementById('confirmResult').querySelector('.result-content').textContent = `用户选择了：${result ? '继续上传' : '取消上传'}`
+        }
+
+        // Prompt 测试
+        window.testPrompt1 = async () => {
+            const result = await customPrompt('请输入您的名字：')
+            document.getElementById('promptResult').querySelector('.result-content').textContent = 
+                result !== null ? `用户输入了: "${result}"` : '用户取消了输入'
+        }
+
+        window.testPrompt2 = async () => {
+            const result = await customPrompt('请输入网址：', 'https://example.com')
+            document.getElementById('promptResult').querySelector('.result-content').textContent = 
+                result !== null ? `用户输入了: "${result}"` : '用户取消了输入'
+        }
+
+        window.testPrompt3 = async () => {
+            const result = await customPrompt('请输入您的电子邮箱：', 'user@example.com')
+            document.getElementById('promptResult').querySelector('.result-content').textContent = 
+                result !== null ? `用户输入了: "${result}"` : '用户取消了输入'
+        }
+
+        // 连续测试
+        window.testSequential = async () => {
+            const resultEl = document.getElementById('sequentialResult').querySelector('.result-content')
+            resultEl.textContent = '开始测试...'
+            
+            await customAlert('这是第一个对话框')
+            resultEl.textContent = '第一个对话框已确认...'
+            
+            const confirmed = await customConfirm('这是第二个对话框，继续吗？')
+            if (confirmed) {
+                resultEl.textContent = '第二个对话框已确认...'
+                const input = await customPrompt('这是第三个对话框，输入点什么：')
+                resultEl.textContent = `测试完成！用户输入了："${input}"`
+            } else {
+                resultEl.textContent = '测试被取消'
+            }
+        }
+
+        window.testWorkflow = async () => {
+            const resultEl = document.getElementById('sequentialResult').querySelector('.result-content')
+            resultEl.textContent = '开始工作流程...'
+            
+            // 步骤 1: 获取用户名
+            const username = await customPrompt('请输入用户名：', 'admin')
+            if (!username) {
+                resultEl.textContent = '工作流程已取消'
+                return
+            }
+            
+            // 步骤 2: 确认操作
+            const confirmed = await customConfirm(`确认要以 "${username}" 身份执行操作吗？`)
+            if (!confirmed) {
+                resultEl.textContent = '工作流程已取消'
+                return
+            }
+            
+            // 步骤 3: 完成提示
+            await customAlert(`✅ 操作成功！欢迎您，${username}！`)
+            resultEl.textContent = `工作流程完成！用户：${username}`
+        }
+    </script>
+</body>
+</html>
