@@ -19,7 +19,7 @@ async function fetchPostsForTopic(topicId: number) {
     posts = data.post_stream.posts
     // prefer posts_count from first post if present
     if (posts.length > 0 && typeof posts[0].posts_count === 'number') {
-      totalCount = posts[0].posts_count
+      totalCount = posts[0].posts_count + 1 // 有个偏移，因为第一帖不算
     }
   }
 
@@ -90,7 +90,7 @@ async function autoReadAll(topicId?: number, startFrom = 1) {
         await postTimings(tid, timings)
         notify(`已标记 ${Object.keys(timings).length} 个帖子为已读（发送）`, 'success')
       } catch (e: any) {
-        notify('发送阅读标记失败: ' + (e && e.message ? e.message : String(e)), 'error')
+        notify('发送阅读标记失败：' + (e && e.message ? e.message : String(e)), 'error')
       }
 
       // random delay between 500ms and 1500ms
@@ -100,7 +100,7 @@ async function autoReadAll(topicId?: number, startFrom = 1) {
 
     notify('自动阅读完成', 'success')
   } catch (e: any) {
-    notify('自动阅读异常: ' + (e && e.message ? e.message : String(e)), 'error')
+    notify('自动阅读异常：' + (e && e.message ? e.message : String(e)), 'error')
   }
 }
 

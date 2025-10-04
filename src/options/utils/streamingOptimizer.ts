@@ -108,7 +108,7 @@ export class StreamingOptimizer {
         }
       },
 
-      cancel(reason) {
+      cancel(_reason) {
         // Controller will be removed when start() completes
       }
     })
