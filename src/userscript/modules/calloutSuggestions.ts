@@ -193,7 +193,7 @@ function applyCompletion(textarea: HTMLTextAreaElement, selectedKeyword: string)
   textarea.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
-function getCursorXY(textarea: HTMLTextAreaElement) {
+function getCursorXY(textarea: HTMLTextAreaElement, position?: number) {
   // Use the more robust mirror approach from the content version to get
   // page-coordinates for the caret. This handles scrolling, transforms and
   // zoom correctly.
@@ -243,7 +243,8 @@ function getCursorXY(textarea: HTMLTextAreaElement) {
   ms.wordWrap = 'break-word'
   ms.boxSizing = style.getPropertyValue('box-sizing') || 'border-box'
 
-  const textUpToCursor = textarea.value.substring(0, textarea.selectionEnd)
+  const cursorPosition = position !== undefined ? position : textarea.selectionEnd
+  const textUpToCursor = textarea.value.substring(0, cursorPosition)
   mirror.textContent = textUpToCursor
   const span = document.createElement('span')
   span.textContent = '\u200b'
@@ -265,7 +266,7 @@ function getCursorXY(textarea: HTMLTextAreaElement) {
   }
 }
 
-function updateSuggestionBox(textarea: HTMLTextAreaElement, matches: string[]) {
+function updateSuggestionBox(textarea: HTMLTextAreaElement, matches: string[], triggerIndex: number) {
   if (!suggestionBox || matches.length === 0) {
     hideSuggestionBox()
     return
@@ -295,7 +296,7 @@ function updateSuggestionBox(textarea: HTMLTextAreaElement, matches: string[]) {
     })
   })
 
-  const cursorPos = getCursorXY(textarea)
+  const cursorPos = getCursorXY(textarea, triggerIndex)
   // cursorPos contains page coordinates. Position the suggestion box relative
   // to those coordinates and flip above if there's no space below.
   const margin = 6
@@ -353,7 +354,9 @@ function handleInput(event: Event) {
   if (match) {
     const keyword = match[1].toLowerCase()
     const filtered = calloutKeywords.filter(k => k.startsWith(keyword))
-    if (filtered.length > 0) updateSuggestionBox(textarea, filtered)
+    // 计算触发字符 '[' 的位置
+    const triggerIndex = selectionStart - match[0].length
+    if (filtered.length > 0) updateSuggestionBox(textarea, filtered, triggerIndex)
     else hideSuggestionBox()
   } else {
     hideSuggestionBox()
