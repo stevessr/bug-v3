@@ -811,13 +811,31 @@ export async function showImageUploadDialog(): Promise<void> {
     const handleDiffFiles = async (files: FileList) => {
       if (!files || files.length === 0) return
 
-      const markdownText = markdownTextarea.value
+      const markdownText = markdownTextarea.value.trim()
+      
+      if (!markdownText) {
+        await customAlert('请先在上方文本框中粘贴包含图片的 markdown 文本')
+        return
+      }
+
+      // Extract existing filenames from markdown using the same logic as parseImageFilenamesFromMarkdown
       const existingFilenames = parseImageFilenamesFromMarkdown(markdownText)
+      
+      // Also extract filenames from URLs as a fallback
+      const urlFilenames = markdownText
+        .match(/!\[.*?\]\((.*?)\)/g)
+        ?.map(match => {
+          const url = match.match(/!\[.*?\]\((.*?)\)/)?.[1] || ''
+          return url.split('/').pop()?.split('?')[0] || '' // Remove query params
+        })
+        .filter(Boolean) || []
+      
+      // Combine both lists for comprehensive checking
+      const allExistingFilenames = new Set([...existingFilenames, ...urlFilenames])
 
       // Filter files that are not in the existing list
       const filesToUpload = Array.from(files).filter(file => {
-        const filename = file.name
-        return !existingFilenames.includes(filename)
+        return !allExistingFilenames.has(file.name)
       })
 
       if (filesToUpload.length === 0) {
@@ -830,7 +848,7 @@ export async function showImageUploadDialog(): Promise<void> {
         const skippedCount = files.length - filesToUpload.length
         // Use custom confirm instead of native confirm
         const proceed = await customConfirm(
-          `发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`
+          `发现 ${skippedCount} 个图片已存在于 markdown 文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`
         )
         if (!proceed) {
           return
@@ -853,6 +871,12 @@ export async function showImageUploadDialog(): Promise<void> {
         })
 
         await Promise.allSettled(promises)
+        
+        // Show summary notification
+        notify(
+          `差分上传完成：已跳过 ${files.length - filesToUpload.length} 个重复文件，上传 ${filesToUpload.length} 个新文件`,
+          'success'
+        )
       } finally {
         // Keep progress dialog open - don't auto-hide
         // setTimeout(() => {
@@ -934,20 +958,39 @@ export async function showImageUploadDialog(): Promise<void> {
       // Get markdown text for diff check
       const markdownText = markdownTextarea.value.trim()
       
+      if (!markdownText) {
+        await customAlert('请先在上方文本框中粘贴包含图片的 markdown 文本')
+        return
+      }
+      
       // Use custom file picker with integrated upload and diff check
       await showCustomImagePicker(true, async (files, updateStatus) => {
-        // Extract existing filenames from markdown
-        const existingFilenames = markdownText
+        // Extract existing filenames from markdown using the same logic as parseImageFilenamesFromMarkdown
+        // This extracts the alt text (filename) from ![filename](url) format
+        const existingFilenames = parseImageFilenamesFromMarkdown(markdownText)
+        
+        // Also extract filenames from URLs as a fallback
+        const urlFilenames = markdownText
           .match(/!\[.*?\]\((.*?)\)/g)
           ?.map(match => {
             const url = match.match(/!\[.*?\]\((.*?)\)/)?.[1] || ''
-            return url.split('/').pop() || ''
-          }) || []
-
+            return url.split('/').pop()?.split('?')[0] || '' // Remove query params
+          })
+          .filter(Boolean) || []
+        
+        // Combine both lists for comprehensive checking
+        const allExistingFilenames = new Set([...existingFilenames, ...urlFilenames])
+        
+        // Count filtered files
+        let skippedCount = 0
+        let uploadCount = 0
+        
         // Filter and upload
         for (const file of files) {
-          if (existingFilenames.includes(file.name)) {
-            updateStatus(file, { status: 'failed', error: '已存在' })
+          // Check if filename exists in either alt text or URL
+          if (allExistingFilenames.has(file.name)) {
+            updateStatus(file, { status: 'failed', error: '已存在于 markdown 中' })
+            skippedCount++
             continue
           }
 
@@ -955,10 +998,19 @@ export async function showImageUploadDialog(): Promise<void> {
             updateStatus(file, { status: 'uploading', progress: 0 })
             const result = await uploader.uploadImage(file)
             updateStatus(file, { status: 'success', url: result.url })
+            uploadCount++
           } catch (error: any) {
             console.error(`Failed to upload ${file.name}:`, error)
             updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
           }
+        }
+        
+        // Show summary notification
+        if (skippedCount > 0) {
+          notify(
+            `差分上传完成：已跳过 ${skippedCount} 个重复文件，上传 ${uploadCount} 个新文件`,
+            uploadCount > 0 ? 'success' : 'info'
+          )
         }
       })
     })

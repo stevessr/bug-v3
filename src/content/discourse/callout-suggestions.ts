@@ -183,104 +183,178 @@ function updateActiveSuggestion() {
   })
 }
 
-function applyCompletion(textarea: HTMLTextAreaElement, selectedKeyword: string) {
-  const text = textarea.value
-  const selectionStart = textarea.selectionStart || 0
-  const textBeforeCursor = text.substring(0, selectionStart)
+function applyCompletion(
+  element: HTMLTextAreaElement | HTMLElement,
+  selectedKeyword: string
+) {
+  if (element instanceof HTMLTextAreaElement) {
+    // Handle textarea
+    const text = element.value
+    const selectionStart = element.selectionStart || 0
+    const textBeforeCursor = text.substring(0, selectionStart)
 
-  // 压缩搜索：查找最近的半角或全角左括号触发符
-  const triggerIndex = Math.max(
-    textBeforeCursor.lastIndexOf('['),
-    textBeforeCursor.lastIndexOf('［'),
-    textBeforeCursor.lastIndexOf('【')
-  )
+    // 压缩搜索：查找最近的半角或全角左括号触发符
+    const triggerIndex = Math.max(
+      textBeforeCursor.lastIndexOf('['),
+      textBeforeCursor.lastIndexOf('［'),
+      textBeforeCursor.lastIndexOf('【')
+    )
 
-  // 如果没有找到任何触发符，则直接返回
-  if (triggerIndex === -1) return
+    // 如果没有找到任何触发符，则直接返回
+    if (triggerIndex === -1) return
 
-  const newText = `[!${selectedKeyword}]`
-  const textAfter = text.substring(selectionStart)
+    const newText = `[!${selectedKeyword}]`
+    const textAfter = text.substring(selectionStart)
 
-  textarea.value = textBeforeCursor.substring(0, triggerIndex) + newText + textAfter
+    element.value = textBeforeCursor.substring(0, triggerIndex) + newText + textAfter
 
-  const newCursorPos = triggerIndex + newText.length
-  textarea.selectionStart = textarea.selectionEnd = newCursorPos
-  textarea.dispatchEvent(new Event('input', { bubbles: true }))
-}
+    const newCursorPos = triggerIndex + newText.length
+    element.selectionStart = element.selectionEnd = newCursorPos
+    element.dispatchEvent(new Event('input', { bubbles: true }))
+  } else if (element.classList.contains('ProseMirror')) {
+    // Handle ProseMirror
+    const newText = `[!${selectedKeyword}]`
+    try {
+      // Get current selection
+      const selection = window.getSelection()
+      if (!selection || selection.rangeCount === 0) return
 
-function getCursorXY(textarea: HTMLTextAreaElement) {
-  // Create (or reuse) a hidden mirror div that exactly overlaps the textarea
-  // and copy essential computed styles so that measuring the span gives an
-  // accurate caret position in page coordinates. This approach handles
-  // scrolling, transforms, zoom, and different box-sizing modes.
-  const mirrorId = 'textarea-mirror-div-en'
-  let mirror = document.getElementById(mirrorId) as HTMLDivElement | null
-  const rect = textarea.getBoundingClientRect()
-  if (!mirror) {
-    mirror = document.createElement('div')
-    mirror.id = mirrorId
-    document.body.appendChild(mirror)
-  }
+      const range = selection.getRangeAt(0)
+      const textBeforeCursor = range.startContainer.textContent?.substring(0, range.startOffset) || ''
 
-  const style = window.getComputedStyle(textarea)
-  const props = [
-    'boxSizing',
-    'fontFamily',
-    'fontSize',
-    'fontWeight',
-    'letterSpacing',
-    'lineHeight',
-    'textTransform',
-    'textAlign',
-    'direction',
-    'paddingTop',
-    'paddingRight',
-    'paddingBottom',
-    'paddingLeft',
-    'borderTopWidth',
-    'borderRightWidth',
-    'borderBottomWidth',
-    'borderLeftWidth'
-  ] as const
-  // apply styles to mirror
-  const ms = mirror.style as any
-  props.forEach(p => {
-    ms[p] = style.getPropertyValue(p)
-  })
-  // make mirror overlap the textarea so getBoundingClientRect on children
-  // returns absolute coordinates consistent with the visible textarea
-  ms.position = 'absolute'
-  ms.left = `${rect.left + window.scrollX}px`
-  ms.top = `${rect.top + window.scrollY}px`
-  ms.width = `${rect.width}px`
-  ms.height = `${rect.height}px`
-  ms.overflow = 'hidden'
-  ms.visibility = 'hidden'
-  ms.whiteSpace = 'pre-wrap'
-  ms.wordWrap = 'break-word'
-  ms.boxSizing = style.getPropertyValue('box-sizing') || 'border-box'
+      // 压缩搜索：查找最近的半角或全角左括号触发符
+      const triggerIndex = Math.max(
+        textBeforeCursor.lastIndexOf('['),
+        textBeforeCursor.lastIndexOf('［'),
+        textBeforeCursor.lastIndexOf('【')
+      )
 
-  // place text up to cursor, then a span to measure position
-  const textUpToCursor = textarea.value.substring(0, textarea.selectionEnd)
-  // Use textContent so characters are rendered as in the textarea. newlines
-  // are preserved by pre-wrap.
-  mirror.textContent = textUpToCursor
-  const span = document.createElement('span')
-  // zero-width character ensures span has a position without visible glyphs
-  span.textContent = '\u200b'
-  mirror.appendChild(span)
+      if (triggerIndex === -1) return
 
-  const spanRect = span.getBoundingClientRect()
-  // return page coordinates (account for page scroll). Caller should use
-  // these to position the suggestion box in the page coordinate space.
-  return {
-    x: spanRect.left + window.scrollX,
-    y: spanRect.top + window.scrollY,
-    bottom: spanRect.bottom + window.scrollY
+      // Delete from trigger to cursor
+      const deleteRange = document.createRange()
+      deleteRange.setStart(range.startContainer, triggerIndex)
+      deleteRange.setEnd(range.startContainer, range.startOffset)
+      deleteRange.deleteContents()
+
+      // Insert new text
+      const textNode = document.createTextNode(newText)
+      deleteRange.insertNode(textNode)
+
+      // Move cursor to end
+      const newRange = document.createRange()
+      newRange.setStartAfter(textNode)
+      newRange.collapse(true)
+      selection.removeAllRanges()
+      selection.addRange(newRange)
+
+      // Trigger input event
+      element.dispatchEvent(new Event('input', { bubbles: true }))
+    } catch (e) {
+      console.error('ProseMirror completion failed', e)
+    }
   }
 }
 
-function updateSuggestionBox(textarea: HTMLTextAreaElement, matches: string[]) {
+function getCursorXY(element: HTMLTextAreaElement | HTMLElement) {
+  if (element instanceof HTMLTextAreaElement) {
+    // Handle textarea
+    // Create (or reuse) a hidden mirror div that exactly overlaps the textarea
+    // and copy essential computed styles so that measuring the span gives an
+    // accurate caret position in page coordinates. This approach handles
+    // scrolling, transforms, zoom, and different box-sizing modes.
+    const mirrorId = 'textarea-mirror-div-en'
+    let mirror = document.getElementById(mirrorId) as HTMLDivElement | null
+    const rect = element.getBoundingClientRect()
+    if (!mirror) {
+      mirror = document.createElement('div')
+      mirror.id = mirrorId
+      document.body.appendChild(mirror)
+    }
+
+    const style = window.getComputedStyle(element)
+    const props = [
+      'boxSizing',
+      'fontFamily',
+      'fontSize',
+      'fontWeight',
+      'letterSpacing',
+      'lineHeight',
+      'textTransform',
+      'textAlign',
+      'direction',
+      'paddingTop',
+      'paddingRight',
+      'paddingBottom',
+      'paddingLeft',
+      'borderTopWidth',
+      'borderRightWidth',
+      'borderBottomWidth',
+      'borderLeftWidth'
+    ] as const
+    // apply styles to mirror
+    const ms = mirror.style as any
+    props.forEach(p => {
+      ms[p] = style.getPropertyValue(p)
+    })
+    // make mirror overlap the textarea so getBoundingClientRect on children
+    // returns absolute coordinates consistent with the visible textarea
+    ms.position = 'absolute'
+    ms.left = `${rect.left + window.scrollX}px`
+    ms.top = `${rect.top + window.scrollY}px`
+    ms.width = `${rect.width}px`
+    ms.height = `${rect.height}px`
+    ms.overflow = 'hidden'
+    ms.visibility = 'hidden'
+    ms.whiteSpace = 'pre-wrap'
+    ms.wordWrap = 'break-word'
+    ms.boxSizing = style.getPropertyValue('box-sizing') || 'border-box'
+
+    // place text up to cursor, then a span to measure position
+    const textUpToCursor = element.value.substring(0, element.selectionEnd)
+    // Use textContent so characters are rendered as in the textarea. newlines
+    // are preserved by pre-wrap.
+    mirror.textContent = textUpToCursor
+    const span = document.createElement('span')
+    // zero-width character ensures span has a position without visible glyphs
+    span.textContent = '\u200b'
+    mirror.appendChild(span)
+
+    const spanRect = span.getBoundingClientRect()
+    // return page coordinates (account for page scroll). Caller should use
+    // these to position the suggestion box in the page coordinate space.
+    return {
+      x: spanRect.left + window.scrollX,
+      y: spanRect.top + window.scrollY,
+      bottom: spanRect.bottom + window.scrollY
+    }
+  } else {
+    // Handle ProseMirror
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) {
+      const rect = element.getBoundingClientRect()
+      return {
+        x: rect.left + window.scrollX,
+        y: rect.top + window.scrollY,
+        bottom: rect.bottom + window.scrollY
+      }
+    }
+
+    const range = selection.getRangeAt(0)
+    const rect = range.getBoundingClientRect()
+
+    return {
+      x: rect.left + window.scrollX,
+      y: rect.top + window.scrollY,
+      bottom: rect.bottom + window.scrollY
+    }
+  }
+}
+
+function updateSuggestionBox(
+  element: HTMLTextAreaElement | HTMLElement,
+  matches: string[]
+) {
   if (!suggestionBox || matches.length === 0) {
     hideSuggestionBox()
     return
@@ -305,12 +379,12 @@ function updateSuggestionBox(textarea: HTMLTextAreaElement, matches: string[]) {
       e.preventDefault()
       const idx = (item as HTMLElement).dataset.key
       if (!idx) return
-      applyCompletion(textarea, idx)
+      applyCompletion(element, idx)
       hideSuggestionBox()
     })
   })
 
-  const cursorPos = getCursorXY(textarea)
+  const cursorPos = getCursorXY(element)
   // cursorPos now contains page coordinates. Position the suggestion box
   // relative to those coordinates. Prefer showing below the caret; if there
   // isn't enough space, flip above the caret.
@@ -336,20 +410,43 @@ function updateSuggestionBox(textarea: HTMLTextAreaElement, matches: string[]) {
 
 function handleInput(event: Event) {
   const target = event.target as Element
-  if (!target || !(target instanceof HTMLTextAreaElement)) return
-  const textarea = target as HTMLTextAreaElement
-  const text = textarea.value
-  const selectionStart = textarea.selectionStart || 0
-  const textBeforeCursor = text.substring(0, selectionStart)
-  // 支持半角/全角触发符：当输入左括号（半角 '['、全角 '［' 或 '【'）即可触发，'!' 可选
-  const match = textBeforeCursor.match(/(?:\[|［|【])(?:!|！)?([a-z]*)$/i)
-  if (match) {
-    const keyword = match[1].toLowerCase()
-    const filtered = calloutKeywords.filter(k => k.startsWith(keyword))
-    if (filtered.length > 0) updateSuggestionBox(textarea, filtered)
-    else hideSuggestionBox()
-  } else {
-    hideSuggestionBox()
+  if (!target) return
+
+  // Support both textarea and ProseMirror
+  if (target instanceof HTMLTextAreaElement) {
+    const textarea = target as HTMLTextAreaElement
+    const text = textarea.value
+    const selectionStart = textarea.selectionStart || 0
+    const textBeforeCursor = text.substring(0, selectionStart)
+    // 支持半角/全角触发符：当输入左括号（半角 '['、全角 '［' 或 '【'）即可触发，'!' 可选
+    const match = textBeforeCursor.match(/(?:\[|［|【])(?:!|！)?([a-z]*)$/i)
+    if (match) {
+      const keyword = match[1].toLowerCase()
+      const filtered = calloutKeywords.filter(k => k.startsWith(keyword))
+      if (filtered.length > 0) updateSuggestionBox(textarea, filtered)
+      else hideSuggestionBox()
+    } else {
+      hideSuggestionBox()
+    }
+  } else if (target.classList?.contains('ProseMirror')) {
+    // Handle ProseMirror editor
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) {
+      hideSuggestionBox()
+      return
+    }
+
+    const range = selection.getRangeAt(0)
+    const textBeforeCursor = range.startContainer.textContent?.substring(0, range.startOffset) || ''
+    const match = textBeforeCursor.match(/(?:\[|［|【])(?:!|！)?([a-z]*)$/i)
+    if (match) {
+      const keyword = match[1].toLowerCase()
+      const filtered = calloutKeywords.filter(k => k.startsWith(keyword))
+      if (filtered.length > 0) updateSuggestionBox(target as HTMLElement, filtered)
+      else hideSuggestionBox()
+    } else {
+      hideSuggestionBox()
+    }
   }
 }
 
@@ -375,7 +472,13 @@ function handleKeydown(event: KeyboardEvent) {
       const selectedKey = items[activeSuggestionIndex]?.dataset.key
       if (selectedKey) {
         const focused = document.activeElement as Element
-        if (focused && focused instanceof HTMLTextAreaElement) applyCompletion(focused, selectedKey)
+        if (focused) {
+          if (focused instanceof HTMLTextAreaElement) {
+            applyCompletion(focused, selectedKey)
+          } else if (focused.classList?.contains('ProseMirror')) {
+            applyCompletion(focused as HTMLElement, selectedKey)
+          }
+        }
       }
       hideSuggestionBox()
       break
