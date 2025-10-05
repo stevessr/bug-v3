@@ -963,56 +963,56 @@ export async function showImageUploadDialog(): Promise<void> {
         return
       }
       
-      // Use custom file picker with integrated upload and diff check
-      await showCustomImagePicker(true, async (files, updateStatus) => {
-        // Extract existing filenames from markdown using the same logic as parseImageFilenamesFromMarkdown
-        // This extracts the alt text (filename) from ![filename](url) format
-        const existingFilenames = parseImageFilenamesFromMarkdown(markdownText)
-        
-        // Also extract filenames from URLs as a fallback
-        const urlFilenames = markdownText
-          .match(/!\[.*?\]\((.*?)\)/g)
-          ?.map(match => {
-            const url = match.match(/!\[.*?\]\((.*?)\)/)?.[1] || ''
-            return url.split('/').pop()?.split('?')[0] || '' // Remove query params
-          })
-          .filter(Boolean) || []
-        
-        // Combine both lists for comprehensive checking
-        const allExistingFilenames = new Set([...existingFilenames, ...urlFilenames])
-        
-        // Count filtered files
-        let skippedCount = 0
-        let uploadCount = 0
-        
-        // Filter and upload
-        for (const file of files) {
-          // Check if filename exists in either alt text or URL
+      // Extract existing filenames from markdown
+      const existingFilenames = parseImageFilenamesFromMarkdown(markdownText)
+      
+      // Also extract filenames from URLs as a fallback
+      const urlFilenames = markdownText
+        .match(/!\[.*?\]\((.*?)\)/g)
+        ?.map(match => {
+          const url = match.match(/!\[.*?\]\((.*?)\)/)?.[1] || ''
+          return url.split('/').pop()?.split('?')[0] || '' // Remove query params
+        })
+        .filter(Boolean) || []
+      
+      // Combine both lists for comprehensive checking
+      const allExistingFilenames = new Set([...existingFilenames, ...urlFilenames])
+      
+      // Use custom file picker with file filter
+      await showCustomImagePicker(
+        true,
+        async (files, updateStatus) => {
+          // Upload filtered files
+          let uploadCount = 0
+          
+          for (const file of files) {
+            try {
+              updateStatus(file, { status: 'uploading', progress: 0 })
+              const result = await uploader.uploadImage(file)
+              updateStatus(file, { status: 'success', url: result.url })
+              uploadCount++
+            } catch (error: any) {
+              console.error(`Failed to upload ${file.name}:`, error)
+              updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
+            }
+          }
+          
+          // Show summary notification if any files were uploaded
+          if (uploadCount > 0) {
+            notify(`差分上传完成：成功上传 ${uploadCount} 个文件`, 'success')
+          }
+        },
+        // File filter function
+        (file: File) => {
           if (allExistingFilenames.has(file.name)) {
-            updateStatus(file, { status: 'failed', error: '已存在于 markdown 中' })
-            skippedCount++
-            continue
+            return {
+              shouldKeep: false,
+              skipReason: '已存在于 markdown 中'
+            }
           }
-
-          try {
-            updateStatus(file, { status: 'uploading', progress: 0 })
-            const result = await uploader.uploadImage(file)
-            updateStatus(file, { status: 'success', url: result.url })
-            uploadCount++
-          } catch (error: any) {
-            console.error(`Failed to upload ${file.name}:`, error)
-            updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
-          }
+          return { shouldKeep: true }
         }
-        
-        // Show summary notification
-        if (skippedCount > 0) {
-          notify(
-            `差分上传完成：已跳过 ${skippedCount} 个重复文件，上传 ${uploadCount} 个新文件`,
-            uploadCount > 0 ? 'success' : 'info'
-          )
-        }
-      })
+      )
     })
 
     diffDropZone.addEventListener('dragover', (e: DragEvent) => {

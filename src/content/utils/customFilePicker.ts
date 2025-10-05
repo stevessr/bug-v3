@@ -12,6 +12,9 @@ interface CustomFilePickerOptions {
   directory?: boolean
   title?: string
   onUpload?: (files: File[], updateStatus: FileStatusUpdater) => Promise<void>
+  // File filter function: return true to keep file, false to skip
+  // Returns object with shouldKeep boolean and optional skip reason
+  fileFilter?: (file: File) => { shouldKeep: boolean; skipReason?: string }
 }
 
 interface CustomFilePickerResult {
@@ -42,10 +45,14 @@ export async function showCustomFilePicker(
   options: CustomFilePickerOptions = {}
 ): Promise<CustomFilePickerResult> {
   return new Promise(resolve => {
-    const { multiple = false, accept = 'image/*', directory = false, title = '选择文件', onUpload } = options
+    const { multiple = false, accept = 'image/*', directory = false, title = '选择文件', onUpload, fileFilter } = options
 
     // Selected files storage
     let selectedFiles: File[] = []
+    
+    // Track filtered files for statistics
+    let filteredCount = 0
+    let filteredReasons: Map<string, number> = new Map()
     
     // Upload status tracking
     const fileStatusMap = new Map<string, FileUploadStatus>()
@@ -682,15 +689,68 @@ export async function showCustomFilePicker(
       if (imageFiles.length > 0) {
         e.preventDefault()
         
-        if (multiple) {
-          // Add to existing selection
-          selectedFiles.push(...imageFiles)
-        } else {
-          // Replace selection
-          selectedFiles = imageFiles
+        let filesToAdd = imageFiles
+        let localFilteredCount = 0
+        
+        // Apply file filter if provided
+        if (fileFilter) {
+          const filtered: File[] = []
+          
+          filesToAdd.forEach(file => {
+            const result = fileFilter(file)
+            if (result.shouldKeep) {
+              filtered.push(file)
+            } else {
+              localFilteredCount++
+              const reason = result.skipReason || '不符合条件'
+              filteredReasons.set(reason, (filteredReasons.get(reason) || 0) + 1)
+            }
+          })
+          
+          filesToAdd = filtered
+          filteredCount += localFilteredCount
+          
+          // Show filter notification
+          if (localFilteredCount > 0) {
+            const reasons = Array.from(filteredReasons.entries())
+              .map(([reason, count]) => `${count} 个${reason}`)
+              .join('，')
+            const message = `已过滤 ${localFilteredCount} 个文件（${reasons}）`
+            
+            const notification = createE('div', {
+              text: message,
+              style: `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: #3b82f6;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                z-index: 10001;
+                font-size: 14px;
+              `
+            })
+            document.body.appendChild(notification)
+            setTimeout(() => {
+              notification.style.opacity = '0'
+              notification.style.transition = 'opacity 0.3s'
+              setTimeout(() => notification.remove(), 300)
+            }, 3000)
+          }
         }
         
-        updatePreview()
+        if (filesToAdd.length > 0) {
+          if (multiple) {
+            // Add to existing selection
+            selectedFiles.push(...filesToAdd)
+          } else {
+            // Replace selection
+            selectedFiles = filesToAdd
+          }
+          updatePreview()
+        }
       }
     }
 
@@ -712,14 +772,94 @@ export async function showCustomFilePicker(
     nativeInput.addEventListener('change', (e: Event) => {
       const files = (e.target as HTMLInputElement).files
       if (files && files.length > 0) {
-        if (multiple) {
-          // Add to existing selection
-          selectedFiles.push(...Array.from(files))
-        } else {
-          // Replace selection
-          selectedFiles = Array.from(files)
+        let filesToAdd = Array.from(files)
+        let localFilteredCount = 0
+        
+        // Apply file filter if provided
+        if (fileFilter) {
+          const filtered: File[] = []
+          
+          filesToAdd.forEach(file => {
+            const result = fileFilter(file)
+            if (result.shouldKeep) {
+              filtered.push(file)
+            } else {
+              localFilteredCount++
+              const reason = result.skipReason || '不符合条件'
+              filteredReasons.set(reason, (filteredReasons.get(reason) || 0) + 1)
+            }
+          })
+          
+          filesToAdd = filtered
+          filteredCount += localFilteredCount
+          
+          // Show filter notification
+          if (localFilteredCount > 0) {
+            const reasons = Array.from(filteredReasons.entries())
+              .map(([reason, count]) => `${count} 个${reason}`)
+              .join('，')
+            const message = `已过滤 ${localFilteredCount} 个文件（${reasons}）`
+            
+            // Create a temporary notification
+            const notification = createE('div', {
+              text: message,
+              style: `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: #3b82f6;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                z-index: 10001;
+                font-size: 14px;
+                animation: slideInRight 0.3s ease-out;
+              `
+            })
+            document.body.appendChild(notification)
+            setTimeout(() => {
+              notification.style.opacity = '0'
+              notification.style.transition = 'opacity 0.3s'
+              setTimeout(() => notification.remove(), 300)
+            }, 3000)
+          }
         }
-        updatePreview()
+        
+        if (filesToAdd.length > 0) {
+          if (multiple) {
+            // Add to existing selection
+            selectedFiles.push(...filesToAdd)
+          } else {
+            // Replace selection
+            selectedFiles = filesToAdd
+          }
+          updatePreview()
+        } else if (localFilteredCount > 0) {
+          // All files were filtered, show message
+          const allFilteredMsg = createE('div', {
+            text: '所有选择的文件都已被过滤',
+            style: `
+              position: fixed;
+              bottom: 20px;
+              right: 20px;
+              background: #f59e0b;
+              color: white;
+              padding: 12px 20px;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+              z-index: 10001;
+              font-size: 14px;
+            `
+          })
+          document.body.appendChild(allFilteredMsg)
+          setTimeout(() => {
+            allFilteredMsg.style.opacity = '0'
+            allFilteredMsg.style.transition = 'opacity 0.3s'
+            setTimeout(() => allFilteredMsg.remove(), 300)
+          }, 3000)
+        }
+        
         // Reset input so the same file can be selected again
         nativeInput.value = ''
       }
@@ -890,14 +1030,16 @@ export async function showCustomFilePicker(
  */
 export async function showCustomImagePicker(
   multiple: boolean = true,
-  onUpload?: (files: File[], updateStatus: FileStatusUpdater) => Promise<void>
+  onUpload?: (files: File[], updateStatus: FileStatusUpdater) => Promise<void>,
+  fileFilter?: (file: File) => { shouldKeep: boolean; skipReason?: string }
 ): Promise<File[]> {
   const result = await showCustomFilePicker({
     multiple,
     accept: 'image/*',
     directory: false,
     title: multiple ? '选择图片文件' : '选择图片',
-    onUpload
+    onUpload,
+    fileFilter
   })
 
   return result.cancelled ? [] : result.files
