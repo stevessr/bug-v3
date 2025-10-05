@@ -531,6 +531,9 @@ export default function useOptions() {
         exportAbortController.signal
       )
 
+      // 保存更新后的尺寸数据
+      await emojiStore.saveData()
+
       exportModalPercent.value = 100
       showSuccess(`成功更新 ${group.emojis.length} 个表情的尺寸信息`)
 

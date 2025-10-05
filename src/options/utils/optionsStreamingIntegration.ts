@@ -97,8 +97,16 @@ export class OptionsStreamingIntegration {
       reader.releaseLock()
     }
 
-    // 返回收集的结果并更新到 store 中
-    // 返回类型为 void，不需要返回值
+    // 将收集的结果更新到 group.emojis 中
+    for (const result of results) {
+      if (result && result.index >= 0 && result.index < emojis.length) {
+        const emoji = emojis[result.index]
+        if (result.width !== undefined && result.height !== undefined) {
+          emoji.width = result.width
+          emoji.height = result.height
+        }
+      }
+    }
   }
 
   /**
