@@ -72,10 +72,8 @@ export function usePopup() {
   }
 
   const openOptions = () => {
-    const chromeApi = (window as any).chrome
-    if (chromeApi && chromeApi.runtime) {
-      chromeApi.runtime.openOptionsPage()
-    }
+    // 在同一页面中，通过添加 hash 导航到 options 页面
+    window.location.href = 'index.html?mode=options#/groups'
   }
 
   return {

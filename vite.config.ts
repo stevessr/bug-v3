@@ -45,8 +45,7 @@ export default defineConfig(({ mode }) => {
             },
       rollupOptions: {
         input: {
-          popup: fileURLToPath(new URL('popup.html', import.meta.url)),
-          options: fileURLToPath(new URL('options.html', import.meta.url)),
+          index: fileURLToPath(new URL('index.html', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
         },

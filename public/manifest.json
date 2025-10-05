@@ -6,7 +6,7 @@
   "permissions": ["storage", "activeTab", "scripting", "downloads", "cookies"],
   "host_permissions": ["<all_urls>"],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "index.html?mode=popup",
     "default_icon": {
       "48": "img/48.png",
       "64": "img/64.png",
@@ -16,7 +16,7 @@
       "1200": "img/1200.jpg"
     }
   },
-  "options_page": "options.html",
+  "options_page": "index.html?mode=options",
   "background": {
     "service_worker": "js/background.js",
     "type": "module"
