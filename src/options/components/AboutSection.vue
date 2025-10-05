@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 
 // 从 package.json 读取版本信息
-const version = '1.1.6'
+const version = '1.1.7'
 const extensionName = 'Emoji Extension'
 
 // 功能统计
