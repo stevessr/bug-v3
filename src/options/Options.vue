@@ -131,7 +131,6 @@ const menuItems = computed(() => {
     { key: 'favorites', label: '常用', route: '/favorites' },
     { key: 'groups', label: '分组管理', route: '/groups' },
     { key: 'ungrouped', label: '未分组', route: '/ungrouped' },
-    { key: 'import', label: '外部导入', route: '/import' },
     { key: 'bilibili', label: 'Bilibili 导入', route: '/bilibili' },
     { key: 'tenor', label: 'Tenor GIF', route: '/tenor' },
     { key: 'waline', label: 'Waline 导入', route: '/waline' },
@@ -282,8 +281,6 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
               </p>
             </div>
             <opensource
-              @openImport="showImportModal = true"
-              @openImportEmojis="showImportEmojiModal = true"
               @resetSettings="resetSettings"
               @syncToChrome="syncToChrome"
               @forceLocalToExtension="forceLocalToExtension"

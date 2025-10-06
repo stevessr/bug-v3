@@ -410,49 +410,10 @@ const importParsed = () => {
 
     <div class="flex items-center justify-center min-h-screen p-4">
       <transition name="card-pop" appear>
-        <ACard hoverable style="max-width: 90vw; width: 900px" @click.stop>
-          <div class="flex flex-row gap-6">
-            <!-- 左侧图片预览区 -->
-            <div
-              v-if="inputMode === 'url'"
-              class="flex-shrink-0 flex items-center justify-center"
-              style="width: 300px; min-width: 250px; max-width: 40%; min-height: 400px"
-            >
-              <!-- 有 URL 且未出错时显示图片 -->
-              <a-image
-                v-if="(displayUrl || url) && !imageLoadError"
-                :src="displayUrl || url"
-                class="object-contain w-full h-full max-h-96 rounded-lg border"
-                style="min-height: 200px"
-                @load="handleImageLoad"
-                @error="handleImageError"
-              />
-
-              <!-- URL 为空时的占位符 -->
-              <div
-                v-else-if="!displayUrl && !url"
-                class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48"
-              >
-                <div class="text-center text-gray-500 dark:text-gray-400">
-                  <div class="text-4xl mb-2">🖼️</div>
-                  <div class="text-sm">请输入图片链接</div>
-                </div>
-              </div>
-
-              <!-- 图片加载失败时的占位符 -->
-              <div
-                v-else-if="imageLoadError"
-                class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48"
-              >
-                <div class="text-center text-gray-500 dark:text-gray-400">
-                  <div class="text-4xl mb-2">📷</div>
-                  <div class="text-sm">图片加载失败</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 右侧编辑区 -->
-            <div class="flex-1 min-w-0">
+        <ACard hoverable style="max-width: 90vw; width: 900px; max-height: 90vh; overflow-y: auto" @click.stop>
+          <div class="flex flex-col gap-6">
+            <!-- 上方编辑区 -->
+            <div class="w-full">
               <div class="mb-4">
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">添加表情</h2>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
@@ -580,76 +541,6 @@ const importParsed = () => {
                   </a-dropdown>
                 </div>
 
-                <!-- 解析结果预览和 URL 变种选择 -->
-                <div
-                  v-if="parsedItems.length > 0 && inputMode !== 'url'"
-                  class="bg-gray-50 dark:bg-black rounded-lg p-4"
-                >
-                  <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-sm font-medium text-gray-700 dark:text-white">
-                      解析结果 ({{ parsedItems.length }} 个)
-                    </h4>
-                    <a-button
-                      @click="parsedItems = []"
-                      type="button"
-                      class="text-xs text-gray-500 hover:text-gray-700"
-                    >
-                      清空
-                    </a-button>
-                  </div>
-                  <div class="max-h-64 overflow-y-auto space-y-3">
-                    <div
-                      v-for="(item, index) in parsedItems"
-                      :key="index"
-                      class="bg-white dark:bg-gray-800 rounded border dark:border-gray-700 p-3"
-                    >
-                      <div class="flex items-start gap-3">
-                        <img
-                          :src="item.selectedVariant || item.url"
-                          :alt="item.name"
-                          class="w-12 h-12 object-cover rounded border flex-shrink-0"
-                          @error="handleParsedImageError"
-                        />
-                        <div class="flex-1 min-w-0">
-                          <div class="text-sm font-medium text-gray-900 truncate">
-                            {{ item.name }}
-                          </div>
-                          <div v-if="item.variants.length > 1" class="mt-2">
-                            <label class="block text-xs text-gray-600 dark:text-white mb-1">
-                              选择 URL 变种：
-                            </label>
-                            <a-dropdown>
-                              <template #overlay>
-                                <a-menu @click="onVariantSelectForItem(index, $event)">
-                                  <a-menu-item
-                                    v-for="variant in item.variants"
-                                    :key="variant.url"
-                                    :value="variant.url"
-                                  >
-                                    {{ variant.label }}
-                                  </a-menu-item>
-                                </a-menu>
-                              </template>
-                              <a-button>
-                                {{ item.selectedVariant || item.variants[0].url }}
-                                <DownOutlined />
-                              </a-button>
-                            </a-dropdown>
-                          </div>
-                          <div v-else class="mt-1">
-                            <span class="text-xs text-gray-500">
-                              {{ item.variants[0]?.label || '默认' }}
-                            </span>
-                          </div>
-                          <div class="mt-1 text-xs text-gray-500 break-all">
-                            {{ item.selectedVariant || item.url }}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 <!-- 按钮区域 -->
                 <div class="mt-6 space-y-3">
                   <!-- Save and Cancel buttons -->
@@ -671,6 +562,120 @@ const importParsed = () => {
                   </div>
                 </div>
               </form>
+            </div>
+
+            <!-- 下方预览区 -->
+            <div class="w-full">
+              <!-- 单图预览 (URL 模式) -->
+              <div
+                v-if="inputMode === 'url'"
+                class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+              >
+                <h4 class="text-sm font-medium text-gray-700 dark:text-white mb-3">图片预览</h4>
+                <div class="flex items-center justify-center min-h-48">
+                  <!-- 有 URL 且未出错时显示图片 -->
+                  <a-image
+                    v-if="(displayUrl || url) && !imageLoadError"
+                    :src="displayUrl || url"
+                    class="object-contain w-full h-full max-h-96 rounded-lg border"
+                    style="max-width: 500px"
+                    @load="handleImageLoad"
+                    @error="handleImageError"
+                  />
+
+                  <!-- URL 为空时的占位符 -->
+                  <div
+                    v-else-if="!displayUrl && !url"
+                    class="flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48 w-full"
+                  >
+                    <div class="text-center text-gray-500 dark:text-gray-400">
+                      <div class="text-4xl mb-2">🖼️</div>
+                      <div class="text-sm">请输入图片链接</div>
+                    </div>
+                  </div>
+
+                  <!-- 图片加载失败时的占位符 -->
+                  <div
+                    v-else-if="imageLoadError"
+                    class="flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48 w-full"
+                  >
+                    <div class="text-center text-gray-500 dark:text-gray-400">
+                      <div class="text-4xl mb-2">📷</div>
+                      <div class="text-sm">图片加载失败</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 批量解析结果预览和 URL 变种选择 -->
+              <div
+                v-if="parsedItems.length > 0 && inputMode !== 'url'"
+                class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+              >
+                <div class="flex items-center justify-between mb-3">
+                  <h4 class="text-sm font-medium text-gray-700 dark:text-white">
+                    解析结果 ({{ parsedItems.length }} 个)
+                  </h4>
+                  <a-button
+                    @click="parsedItems = []"
+                    type="button"
+                    class="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    清空
+                  </a-button>
+                </div>
+                <div class="max-h-96 overflow-y-auto space-y-3">
+                  <div
+                    v-for="(item, index) in parsedItems"
+                    :key="index"
+                    class="bg-white dark:bg-gray-900 rounded border dark:border-gray-700 p-3"
+                  >
+                    <div class="flex items-start gap-3">
+                      <img
+                        :src="item.selectedVariant || item.url"
+                        :alt="item.name"
+                        class="w-16 h-16 object-cover rounded border flex-shrink-0"
+                        @error="handleParsedImageError"
+                      />
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {{ item.name }}
+                        </div>
+                        <div v-if="item.variants.length > 1" class="mt-2">
+                          <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            选择 URL 变种：
+                          </label>
+                          <a-dropdown>
+                            <template #overlay>
+                              <a-menu @click="onVariantSelectForItem(index, $event)">
+                                <a-menu-item
+                                  v-for="variant in item.variants"
+                                  :key="variant.url"
+                                  :value="variant.url"
+                                >
+                                  {{ variant.label }}
+                                </a-menu-item>
+                              </a-menu>
+                            </template>
+                            <a-button class="text-xs">
+                              {{ item.variants.find(v => v.url === item.selectedVariant)?.label || '默认' }}
+                              <DownOutlined />
+                            </a-button>
+                          </a-dropdown>
+                        </div>
+                        <div v-else class="mt-1">
+                          <span class="text-xs text-gray-500">
+                            {{ item.variants[0]?.label || '默认' }}
+                          </span>
+                        </div>
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400 break-all">
+                          {{ item.selectedVariant || item.url }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </ACard>

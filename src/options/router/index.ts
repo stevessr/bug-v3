@@ -6,7 +6,6 @@ import SettingsPage from '../pages/SettingsPage.vue'
 import FavoritesPage from '../pages/FavoritesPage.vue'
 import GroupsPage from '../pages/GroupsPage.vue'
 import UngroupedPage from '../pages/UngroupedPage.vue'
-import ImportPage from '../pages/ImportPage.vue'
 import BilibiliPage from '../pages/BilibiliPage.vue'
 import TenorPage from '../pages/TenorPage.vue'
 import WalinePage from '../pages/WalinePage.vue'
@@ -48,14 +47,6 @@ const routes: RouteRecordRaw[] = [
     component: UngroupedPage,
     meta: {
       title: '未分组'
-    }
-  },
-  {
-    path: '/import',
-    name: 'import',
-    component: ImportPage,
-    meta: {
-      title: '外部导入'
     }
   },
   {

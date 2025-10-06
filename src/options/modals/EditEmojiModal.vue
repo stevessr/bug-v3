@@ -180,50 +180,10 @@ const handleSubmit = () => {
 
     <div class="flex items-center justify-center min-h-screen p-4">
       <transition name="card-pop" appear>
-        <ACard hoverable style="max-width: 90vw; width: 800px">
-          <div class="flex flex-row gap-6">
-            <!-- 左侧图片预览区 -->
-            <div
-              class="flex-shrink-0 flex items-center justify-center"
-              style="width: 300px; min-width: 250px; max-width: 40%; min-height: 400px;"
-            >
-              <!-- 有 URL 且未出错时显示图片 -->
-              <a-image
-                v-if="(localEmoji.displayUrl || localEmoji.url) && !imageLoadError"
-                :preview="{ visible: false }"
-                :src="localEmoji.displayUrl || localEmoji.url"
-                class="object-contain w-full h-full max-h-96 rounded-lg border cursor-pointer"
-                style="min-height: 200px;"
-                @load="handleImageLoad"
-                @click="visible = true"
-                @error="handleImageError"
-              />
-              
-              <!-- URL 为空时的占位符 -->
-              <div
-                v-else-if="!localEmoji.displayUrl && !localEmoji.url"
-                class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48"
-              >
-                <div class="text-center text-gray-500 dark:text-gray-400">
-                  <div class="text-4xl mb-2">🖼️</div>
-                  <div class="text-sm">请输入图片链接</div>
-                </div>
-              </div>
-              
-              <!-- 图片加载失败时的占位符 -->
-              <div
-                v-else-if="imageLoadError"
-                class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48"
-              >
-                <div class="text-center text-gray-500 dark:text-gray-400">
-                  <div class="text-4xl mb-2">📷</div>
-                  <div class="text-sm">图片加载失败</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 右侧编辑区 -->
-            <div class="flex-1 min-w-0">
+        <ACard hoverable style="max-width: 90vw; width: 800px; max-height: 90vh; overflow-y: auto">
+          <div class="flex flex-col gap-6">
+            <!-- 上方编辑区 -->
+            <div class="w-full">
               <div class="mb-4">
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   {{ localEmoji.name || '编辑表情' }}
@@ -409,6 +369,48 @@ const handleSubmit = () => {
                   </div>
                 </div>
               </form>
+            </div>
+
+            <!-- 下方预览区 -->
+            <div class="w-full">
+              <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <h4 class="text-sm font-medium text-gray-700 dark:text-white mb-3">图片预览</h4>
+                <div class="flex items-center justify-center min-h-48">
+                  <!-- 有 URL 且未出错时显示图片 -->
+                  <a-image
+                    v-if="(localEmoji.displayUrl || localEmoji.url) && !imageLoadError"
+                    :preview="{ visible: false }"
+                    :src="localEmoji.displayUrl || localEmoji.url"
+                    class="object-contain w-full h-full max-h-96 rounded-lg border cursor-pointer"
+                    style="max-width: 500px"
+                    @load="handleImageLoad"
+                    @click="visible = true"
+                    @error="handleImageError"
+                  />
+                  
+                  <!-- URL 为空时的占位符 -->
+                  <div
+                    v-else-if="!localEmoji.displayUrl && !localEmoji.url"
+                    class="flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48 w-full"
+                  >
+                    <div class="text-center text-gray-500 dark:text-gray-400">
+                      <div class="text-4xl mb-2">🖼️</div>
+                      <div class="text-sm">请输入图片链接</div>
+                    </div>
+                  </div>
+                  
+                  <!-- 图片加载失败时的占位符 -->
+                  <div
+                    v-else-if="imageLoadError"
+                    class="flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48 w-full"
+                  >
+                    <div class="text-center text-gray-500 dark:text-gray-400">
+                      <div class="text-4xl mb-2">📷</div>
+                      <div class="text-sm">图片加载失败</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </ACard>
