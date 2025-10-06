@@ -4,6 +4,7 @@ import { initializeEmojiFeature } from './utils/init'
 import { Uninject } from './utils/Uninject'
 import { postTimings } from './utils/timingsBinder'
 import { autoReadAllv2 } from './utils/autoReadReplies'
+import { initAntiRateLimit } from './utils/antiRateLimit'
 
 console.log('[Emoji Extension] Content script loaded (entry)')
 
@@ -112,4 +113,14 @@ try {
   }
 } catch (e) {
   console.warn('[Emoji Extension] failed to expose postTimings to window', e)
+}
+
+// Initialize 429 error interceptor for linux.do
+// This will automatically trigger Cloudflare challenge when rate limit is hit
+if (window.location.hostname.includes('linux.do')) {
+  try {
+    initAntiRateLimit()
+  } catch (error) {
+    console.error('[Emoji Extension] Failed to initialize anti-rate-limit:', error)
+  }
 }
