@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import router from '@/options/router'
 
 // 使用静态导入，扩展不需要代码分割
 import Popup from './popup/Popup.vue'
@@ -9,44 +10,62 @@ import Options from './options/Options.vue'
 const isPopupMode = ref(false)
 
 onMounted(() => {
-  // 通过 URL 参数判断模式
+  // 通过 URL 查询参数判断模式（新格式：?type={options|popup}&tabs={route 或分组名}）
   const params = new URLSearchParams(window.location.search)
-  const mode = params.get('mode')
-  const hash = window.location.hash
-  const hasRouteHash = hash && hash.length > 1 && hash !== '#/'
-
-  console.log('[App.vue] 检测模式', { 
-    mode, 
-    hasRouteHash, 
-    hash, 
+  const type = params.get('type')
+  const tabs = params.get('tabs')
+  const originalPath = window.location.pathname
+  const originalSearch = window.location.search
+  console.log('[App.vue] 检测模式', {
+    type,
+    tabs,
     url: window.location.href,
     search: window.location.search
   })
 
   // 重构后的优先级逻辑：
-  // 1. 有路由 hash -> 强制 Options 模式（因为 Popup 不支持路由）
+  // 1. 有 tabs 参数 -> 强制 Options 模式（Popup 不支持路由）
   // 2. 明确指定 mode=options -> Options 模式
-  // 3. 明确指定 mode=popup -> Popup 模式
+  // 3. 明确指定 type=popup -> Popup 模式
   // 4. 默认 -> Popup 模式
-  
-  if (hasRouteHash) {
-    // 最高优先级：有路由 hash，必须使用 Options 模式
-    console.log('[App.vue] 检测到路由 hash，强制使用 Options 模式（Popup 不支持路由）')
+  if (tabs && tabs.length > 0) {
+    // 最高优先级：有路由 hash 或 tabs 参数，必须使用 Options 模式
+    console.log('[App.vue] 检测到路由 hash 或 tabs 参数，强制使用 Options 模式（Popup 不支持路由）')
     isPopupMode.value = false
-    
-    // 如果 URL 中有 mode=popup 参数但又有路由，说明 URL 不一致，清理参数
-    if (mode === 'popup') {
-      console.warn('[App.vue] 警告：URL 包含 mode=popup 但有路由 hash，已自动切换到 Options 模式')
-      // 清理 URL，移除不一致的 mode=popup 参数
-      const newUrl = window.location.pathname + window.location.hash
+
+    // 如果有 tabs 参数，尝试导航到对应的路由（使用 hash 导航以兼容现有 router）
+    // 支持传入路由名（如 groups）或分组名称，优先将其作为路由路径使用
+    const target = tabs.startsWith('/') ? tabs : `/${tabs}`
+    // 使用 router 进行导航（history 模式）
+    // 使用 replace 保持导航的一致性（不在历史中新增一项）
+    router
+      .replace({ path: target })
+      .then(() => {
+        // router.replace 会修改地址栏的 path（例如 /groups），但我们希望地址栏保持原始的 index.html?type=...&tabs=...
+        // 因此用 history.replaceState 恢复为原始的 path + search
+        const restoreUrl = originalPath + (originalSearch || '')
+        window.history.replaceState({}, '', restoreUrl)
+      })
+      .catch((e) => {
+        console.warn('[App.vue] router navigation failed:', e)
+      })
+
+    // 如果 URL 中有 type=popup 参数但又有路由或 tabs，说明 URL 不一致，清理该参数
+    if (type === 'popup') {
+      console.warn('[App.vue] 警告：URL 包含 type=popup 但有 tabs，已自动切换到 Options 模式')
+      // 清理 URL，移除不一致的 type=popup 参数，但保留查询参数（例如 tabs）
+      const search = window.location.search || ''
+      const keptParams = new URLSearchParams(search)
+      keptParams.delete('type')
+      const newUrl = window.location.pathname + (keptParams.toString() ? `?${keptParams.toString()}` : '')
       window.history.replaceState({}, '', newUrl)
       console.log('[App.vue] 已清理 URL 为：', newUrl)
     }
-  } else if (mode === 'options') {
+  } else if (type === 'options') {
     // 优先级 2: URL 明确指定 options 模式
     console.log('[App.vue] URL 明确指定 options 模式')
     isPopupMode.value = false
-  } else if (mode === 'popup') {
+  } else if (type === 'popup') {
     // 优先级 3: URL 明确指定 popup 模式
     console.log('[App.vue] URL 明确指定 popup 模式')
     isPopupMode.value = true

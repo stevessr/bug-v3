@@ -15,7 +15,8 @@ const setActiveHandler = (id: string) => {
 
 // 在新窗口打开设置页面
 const openOptionsInNewWindow = () => {
-  const url = chrome.runtime.getURL('index.html?mode=options')
+  // Open options in new window using query params: ?type=options&tabs=groups
+  const url = chrome.runtime.getURL('index.html?type=options&tabs=groups')
   chrome.tabs.create({ url })
 }
 </script>

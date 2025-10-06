@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
 // 页面组件
@@ -13,10 +13,6 @@ import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
 
 const routes: RouteRecordRaw[] = [
-  {
-    path: '/',
-    redirect: '/groups'
-  },
   {
     path: '/settings',
     name: 'settings',
@@ -92,7 +88,8 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  // Use HTML5 history mode (no hash)
+  history: createWebHistory(),
   routes
 })
 

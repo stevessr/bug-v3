@@ -14,6 +14,59 @@ export function usePopup() {
     localScale.value = emojiStore.settings.imageScale
   })
 
+  // After loading data, sync selection with URL or settings
+  onMounted(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const tabParam = params.get('tab') || params.get('tabs')
+
+      if (tabParam) {
+        // try find group by name or id
+        const found = emojiStore.groups.find(g => g.id === tabParam || g.name === decodeURIComponent(tabParam))
+        if (found && found.id) {
+          emojiStore.activeGroupId = found.id
+        }
+      } else {
+        // no tab param, if settings has defaultGroup then reflect it into URL
+        const defaultGroupId = emojiStore.settings.defaultGroup
+        const defaultGroup = emojiStore.groups.find(g => g.id === defaultGroupId)
+        if (defaultGroup && defaultGroup.name) {
+          const qs = `?type=popup&tab=${encodeURIComponent(defaultGroup.name)}`
+          window.history.replaceState({}, '', window.location.pathname + qs)
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  })
+
+  // When active group changes, persist to settings and update URL
+  watch(
+    () => emojiStore.activeGroupId,
+    (newId) => {
+      try {
+        if (!newId) return
+        const g = emojiStore.groups.find(x => x.id === newId)
+        if (g) {
+          // Persist selection
+          emojiStore.updateSettings({ defaultGroup: newId })
+          const qs = `?type=popup&tab=${encodeURIComponent(g.name)}`
+          window.history.replaceState({}, '', window.location.pathname + qs)
+        }
+
+        // Lazy load new group and unload others
+        try {
+          void (emojiStore.ensureGroupLoaded ? emojiStore.ensureGroupLoaded(newId) : Promise.resolve())
+        } catch {}
+        try {
+          if (emojiStore.unloadAllExcept) emojiStore.unloadAllExcept(newId)
+        } catch {}
+      } catch (e) {
+        // ignore
+      }
+    }
+  )
+
   watch(
     () => emojiStore.settings.imageScale,
     newScale => {
@@ -72,8 +125,8 @@ export function usePopup() {
   }
 
   const openOptions = () => {
-    // 在同一页面中，通过添加 hash 导航到 options 页面
-    window.location.href = 'index.html?mode=options#/groups'
+    // Use new query format to open options page: index.html?type=options&tabs=groups
+    window.location.href = 'index.html?type=options&tabs=groups'
   }
 
   return {

@@ -147,6 +147,15 @@ const menuItems = computed(() => {
 
 // 当前选中的菜单键
 const menuSelectedKeys = computed(() => {
+  // 优先使用 URL 查询参数中的 tabs（保持地址为 index.html?type=...&tabs=...）
+  const queryTabs = (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
+  const keys = menuItems.value.map(i => i.key)
+  if (queryTabs) {
+    // 如果 tabs 对应于菜单键，直接使用；否则将视为分组名称，选中 groups 菜单
+    if (keys.includes(queryTabs)) return [queryTabs]
+    return ['groups']
+  }
+
   const currentRouteName = route.name as string
   return currentRouteName ? [currentRouteName] : ['groups']
 })
@@ -154,25 +163,39 @@ const menuSelectedKeys = computed(() => {
 // 菜单选择处理
 const handleMenuSelect = (info: any) => {
   const key = info && info.key ? String(info.key) : ''
-  if (key) {
-    // 根据菜单键导航到对应路由
-    const routeMap: Record<string, string> = {
-      settings: '/settings',
-      favorites: '/favorites',
-      groups: '/groups',
-      ungrouped: '/ungrouped',
-      import: '/import',
-      bilibili: '/bilibili',
-      tenor: '/tenor',
-      waline: '/waline',
-      stats: '/stats',
-      about: '/about'
-    }
+  if (!key) return
 
-    const targetRoute = routeMap[key]
-    if (targetRoute && route.path !== targetRoute) {
-      router.push(targetRoute)
-    }
+  // 根据菜单键导航到对应路由，但保持地址栏为 index.html?type=...&tabs=...（通过 history.replaceState）
+  const routeMap: Record<string, string> = {
+    settings: '/settings',
+    favorites: '/favorites',
+    groups: '/groups',
+    ungrouped: '/ungrouped',
+    import: '/import',
+    bilibili: '/bilibili',
+    tenor: '/tenor',
+    waline: '/waline',
+    stats: '/stats',
+    about: '/about'
+  }
+
+  const targetRoute = routeMap[key]
+  const originalPath = window.location.pathname
+  const newSearchParams = new URLSearchParams(window.location.search)
+  newSearchParams.set('type', 'options')
+  newSearchParams.set('tabs', key)
+  const newSearch = newSearchParams.toString() ? `?${newSearchParams.toString()}` : ''
+
+  // First update visible URL to include the tabs param (so external links reflect selection)
+  window.history.replaceState({}, '', originalPath + newSearch)
+
+  if (targetRoute && route.path !== targetRoute) {
+    // Navigate internally with router, then restore visible URL (router will change path)
+    router.push(targetRoute).then(() => {
+      window.history.replaceState({}, '', originalPath + newSearch)
+    }).catch(() => {
+      // ignore navigation failures
+    })
   }
 }
 
@@ -211,6 +234,44 @@ onMounted(() => {
 
   // 初始化主题模式
   currentThemeMode.value = getCurrentThemeMode()
+  // 处理通过 query tabs 指定的初始页面或分组
+  const queryTabs = (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
+  const keys = menuItems.value.map(i => i.key)
+  const originalPath = window.location.pathname
+  const originalSearch = window.location.search
+  if (queryTabs) {
+    if (keys.includes(queryTabs)) {
+      // 如果是菜单键，导航内部路由然后恢复可见 URL
+      const routeMap: Record<string, string> = {
+        settings: '/settings',
+        favorites: '/favorites',
+        groups: '/groups',
+        ungrouped: '/ungrouped',
+        import: '/import',
+        bilibili: '/bilibili',
+        tenor: '/tenor',
+        waline: '/waline',
+        stats: '/stats',
+        about: '/about'
+      }
+      const targetRoute = routeMap[queryTabs]
+      if (targetRoute) {
+        router.replace(targetRoute).then(() => {
+          // restore visible URL to original (keep query)
+          window.history.replaceState({}, '', originalPath + (originalSearch || ''))
+        }).catch(() => {})
+      }
+    } else {
+      // 视为分组名称，尝试查找并选中该分组
+      const g = emojiStore.groups.find((x: any) => x.name === queryTabs || x.id === queryTabs)
+      if (g && g.id) {
+        emojiStore.activeGroupId = g.id
+        try {
+          emojiStore.updateSettings({ defaultGroup: g.id })
+        } catch {}
+      }
+    }
+  }
 })
 
 onBeforeUnmount(() => {
