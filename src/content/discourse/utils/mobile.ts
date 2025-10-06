@@ -69,7 +69,8 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   })
 
   const scrollableContent = createE('div', {
-    class: 'emoji-picker__scrollable-content'
+    class: 'emoji-picker__scrollable-content',
+    style: 'max-height: 60vh; overflow-y: auto; overflow-x: hidden;'
   })
 
   const sections = createE('div', {

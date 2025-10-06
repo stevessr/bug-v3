@@ -45,7 +45,8 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     class: 'emoji-picker__sections-nav'
   })
   const scrollableContent = createE('div', {
-    class: 'emoji-picker__scrollable-content'
+    class: 'emoji-picker__scrollable-content',
+    style: 'max-height: 400px; overflow-y: auto; overflow-x: hidden;'
   })
   const sections = createE('div', {
     class: 'emoji-picker__sections'
