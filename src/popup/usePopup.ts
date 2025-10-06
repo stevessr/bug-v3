@@ -53,14 +53,7 @@ export function usePopup() {
           const qs = `?type=popup&tab=${encodeURIComponent(g.name)}`
           window.history.replaceState({}, '', window.location.pathname + qs)
         }
-
-        // Lazy load new group and unload others
-        try {
-          void (emojiStore.ensureGroupLoaded ? emojiStore.ensureGroupLoaded(newId) : Promise.resolve())
-        } catch {}
-        try {
-          if (emojiStore.unloadAllExcept) emojiStore.unloadAllExcept(newId)
-        } catch {}
+            // No lazy-loading: all groups keep their emojis in memory and persist normally
       } catch (e) {
         // ignore
       }

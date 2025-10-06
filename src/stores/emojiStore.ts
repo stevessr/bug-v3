@@ -24,6 +24,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     () => groups.value.find(g => g.id === activeGroupId.value) || groups.value[0]
   )
 
+  // helper to check if a group's emojis are currently loaded in memory
+  // All groups keep their emojis loaded in memory; no lazy-load support
+
   const filteredEmojis = computed(() => {
     if (!activeGroup.value) return []
 
@@ -181,6 +184,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       activeGroupId.value = settings.value.defaultGroup || 'nachoneko'
 
+      // After initial load, keep all groups' emojis loaded in memory
+
       console.log('[EmojiStore] LoadData completed successfully')
     } catch (error) {
       const e: any = error
@@ -204,6 +209,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       isLoading.value = false
     }
   }
+  // No lazy-load helpers; all groups remain fully loaded
 
   const saveData = async () => {
     if (isLoading.value || isSaving.value || batchDepth > 0) {
@@ -957,5 +963,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     endBatch,
     // one-click add from web
     addEmojiFromWeb
+    ,
+    // (lazy-load removed)
   }
 })

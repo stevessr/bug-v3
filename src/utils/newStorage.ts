@@ -395,7 +395,29 @@ export const newStorageHelpers = {
   },
 
   async setEmojiGroup(groupId: string, group: EmojiGroup): Promise<void> {
-    await storageManager.set(STORAGE_KEYS.GROUP_PREFIX + groupId, group)
+    try {
+      // If group.emojis is empty, the in-memory group may have been lazy-unloaded.
+      // Avoid overwriting stored emojis with an empty array. Try to preserve stored emojis.
+      let toStore = group
+      if (Array.isArray(group.emojis) && group.emojis.length === 0) {
+        try {
+          const stored = await this.getEmojiGroup(groupId)
+          if (stored && Array.isArray(stored.emojis) && stored.emojis.length > 0) {
+            toStore = { ...group, emojis: stored.emojis }
+          }
+        } catch {
+          // fallback to storing as-is
+        }
+      }
+
+      // Sanitize runtime-only fields before persisting
+      // No runtime-only fields to strip: store the group as-is (ensure serializable)
+      const clean = ensureSerializable(toStore)
+      await storageManager.set(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
+    } catch (e) {
+      logStorage('IDB_SET', `${STORAGE_KEYS.GROUP_PREFIX}${groupId}`, undefined, e)
+      throw e
+    }
   },
 
   async removeEmojiGroup(groupId: string): Promise<void> {
@@ -433,7 +455,28 @@ export const newStorageHelpers = {
     await this.setEmojiGroupIndex(index)
 
     // Update individual groups
-    await Promise.all(groups.map(group => this.setEmojiGroup(group.id, group)))
+    // If a group appears to be unloaded (empty emojis) we should not overwrite stored
+    // emojis with an empty array. Instead, attempt to read the stored group and merge.
+    await Promise.all(
+      groups.map(async (group) => {
+        try {
+          const shouldPreserve = Array.isArray(group.emojis) && group.emojis.length === 0
+          if (shouldPreserve) {
+            // attempt to read stored group
+            const stored = await this.getEmojiGroup(group.id)
+            if (stored && Array.isArray(stored.emojis) && stored.emojis.length > 0) {
+              // merge metadata but preserve stored emojis
+              const merged = { ...group, emojis: stored.emojis }
+              await this.setEmojiGroup(group.id, merged)
+              return
+            }
+          }
+          await this.setEmojiGroup(group.id, group)
+        } catch (e) {
+          logStorage('SET_GROUP_FAILED', `${STORAGE_KEYS.GROUP_PREFIX}${group.id}`, undefined, e)
+        }
+      })
+    )
   },
 
   // Settings management
