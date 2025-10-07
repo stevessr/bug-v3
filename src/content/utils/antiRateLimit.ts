@@ -38,7 +38,7 @@ function triggerCloudflareChallenge() {
   console.log('[Anti-RateLimit] 检测到 429 错误，准备触发过盾...')
 
   try {
-    // 方案1: 显示提示并刷新页面（最简单有效）
+    // 方案 1: 显示提示并刷新页面（最简单有效）
     const shouldRefresh = confirm(
       '检测到访问频率限制 (429)，是否刷新页面以触发 Cloudflare 验证？'
     )
@@ -51,7 +51,7 @@ function triggerCloudflareChallenge() {
       isHandling429 = false
     }
   } catch (error) {
-    console.error('[Anti-RateLimit] 触发过盾失败:', error)
+    console.error('[Anti-RateLimit] 触发过盾失败：', error)
     isHandling429 = false
   }
 }
@@ -60,25 +60,9 @@ function triggerCloudflareChallenge() {
  * 拦截 fetch API
  */
 function interceptFetch() {
-  const originalFetch = window.fetch
-
-  window.fetch = async function (...args: Parameters<typeof fetch>) {
-    try {
-      const response = await originalFetch(...args)
-      
-      // 检查是否为 429 错误
-      if (response.status === 429) {
-        console.warn('[Anti-RateLimit] Fetch 请求返回 429:', args[0])
-        triggerCloudflareChallenge()
-      }
-
-      return response
-    } catch (error) {
-      throw error
-    }
-  }
-
-  console.log('[Anti-RateLimit] Fetch API 拦截已启用')
+  // Fetch interception has been disabled to avoid global fetch replacement.
+  // If you need to re-enable, implement a safe wrapper that does not overwrite window.fetch globally.
+  console.log('[Anti-RateLimit] Fetch API 拦截已被禁用（不再替换 window.fetch）')
 }
 
 /**
@@ -157,4 +141,10 @@ if (window.location.hostname.includes('linux.do')) {
   } catch (e) {
     console.warn('[Anti-RateLimit] 无法暴露到 window 对象', e)
   }
+}
+
+// 导出一个处理来自后台的 429 通知的函数，供 content script 消息处理调用
+export function handleBackground429(url?: string) {
+  console.log('[Anti-RateLimit] handleBackground429 called for', url)
+  triggerCloudflareChallenge()
 }

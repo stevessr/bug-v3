@@ -5,6 +5,7 @@ import { Uninject } from './utils/Uninject'
 import { postTimings } from './utils/timingsBinder'
 import { autoReadAllv2 } from './utils/autoReadReplies'
 import { initAntiRateLimit } from './utils/antiRateLimit'
+import { handleBackground429 } from './utils/antiRateLimit'
 
 console.log('[Emoji Extension] Content script loaded (entry)')
 
@@ -120,6 +121,17 @@ try {
 if (window.location.hostname.includes('linux.do')) {
   try {
     initAntiRateLimit()
+    // Listen for background notifications about network 429 responses
+    chrome.runtime.onMessage.addListener((message, _sender) => {
+      if (message && message.type === 'ANTI_RATE_LIMIT_429') {
+        try {
+          handleBackground429(message.url)
+        } catch (e) {
+          console.warn('[Emoji Extension] failed to handle background 429 message', e)
+        }
+      }
+      return false
+    })
   } catch (error) {
     console.error('[Emoji Extension] Failed to initialize anti-rate-limit:', error)
   }
