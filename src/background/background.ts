@@ -1,5 +1,4 @@
 import './utils/main.ts'
-import './antiRateLimitWebRequest'
 
 import { setupOnInstalledListener } from './init'
 import {

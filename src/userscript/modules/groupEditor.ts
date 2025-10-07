@@ -29,10 +29,15 @@ export function showGroupEditorModal() {
   const content = createEl('div', {
     style: `
       color: var(--emoji-modal-text);
-      padding: 24px;
-      max-width: 80%;
-      overflow-y: auto;
+      padding: 20px;
+      width: min(900px, 95%);
+      max-width: 95%;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
       position: relative;
+      box-sizing: border-box;
+      border-radius: 10px;
+      background: var(--emoji-modal-bg, #fff);
     `
   })
 
@@ -162,6 +167,45 @@ export function showGroupEditorModal() {
     .move-up:disabled, .move-down:disabled {
       opacity: 0.3;
       cursor: not-allowed !important;
+    }
+    /* responsive fixes to avoid modal/content overflow on small screens */
+    .group-item {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .group-item .group-icon-editor {
+      flex: 0 0 auto;
+      width: 56px;
+      height: 56px;
+      min-width: 56px;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .group-item .group-icon-editor img {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+    .group-item > div[style*="flex: 1"] {
+      min-width: 160px;
+    }
+    @media (max-width: 480px) {
+      /* on very small screens, make modal full height and align to top */
+      div[style*="position: fixed;"] {
+        align-items: flex-start !important;
+      }
+      /* content area adjustments */
+      div[style*="width: min(900px, 95%)"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+      }
     }
   `
   ensureStyleInjected(id, css)

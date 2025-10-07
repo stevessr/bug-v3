@@ -10,8 +10,7 @@
     "storage",
     "activeTab",
     "scripting",
-    "downloads",
-    "webRequest"
+    "downloads"
   ],
   "optional_permissions": [
     "cookies"
