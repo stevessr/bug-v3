@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, inject } from 'vue'
+import { ref, computed, watch, nextTick, inject } from 'vue'
 import VirtualEmojiGrid from './VirtualEmojiGrid.vue'
 import type { Emoji, EmojiGroup } from '../../types/emoji'
 
@@ -66,7 +66,15 @@ const options = inject('options') as any
 
 // Refs
 const virtualGridRef = ref<InstanceType<typeof VirtualEmojiGrid>>()
-const localGridColumns = ref(props.gridColumns)
+
+// Use global store setting for columns when available to keep in sync with Settings page
+const localGridColumns = computed(() => {
+  try {
+    return options?.emojiStore?.settings?.gridColumns ?? props.gridColumns
+  } catch {
+    return props.gridColumns
+  }
+})
 
 // 计算展开的表情
 const expandedEmojis = computed(() => {
@@ -135,9 +143,7 @@ const scrollToEmoji = (groupId: string, emojiIndex: number) => {
 }
 
 // 不再将本地列数写回全局设置；使用 props.gridColumns 作为唯一来源
-watch(() => props.gridColumns, (v) => {
-  localGridColumns.value = v
-})
+// props.gridColumns changes are implicitly respected via computed above
 
 // 响应式调整
 const updateLayout = () => {
@@ -159,13 +165,6 @@ const debouncedUpdate = () => {
 // 监听展开状态变化
 watch(() => props.expandedGroups.size, debouncedUpdate)
 watch(() => props.gridColumns, debouncedUpdate)
-
-onMounted(() => {
-  // 初始化网格列数
-  if (options?.emojiStore?.settings?.gridColumns) {
-    localGridColumns.value = options.emojiStore.settings.gridColumns
-  }
-})
 
 // 暴露方法给父组件
 defineExpose({

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-// 从 package.json 读取版本信息
-const version = '1.1.7'
-const extensionName = 'Emoji Extension'
+// 从 package.json 读取版本信息（相对路径从当前文件到项目根）
+import pkg from '../../../package.json'
+const version = pkg?.version || 'dev'
+const extensionName = pkg?.name || 'Emoji Extension'
 
 // 功能统计
 const stats = ref([
@@ -37,6 +38,38 @@ const features = ref([
   {
     title: '📤 云端存储',
     desc: '支持上传到 linux.do，永久保存表情链接'
+  }
+])
+
+// 更新日志（最近若干版本）
+const changelog = ref([
+  {
+    version: version,
+    date: '2025-10-07',
+    notes: [
+      '新增左右布局模态框设计',
+      '优化图片预览和错误处理',
+      '支持未分组表情管理',
+      '改进上传到 linux.do 功能',
+      '增强 UI 响应性和用户体验'
+    ]
+  },
+  {
+    version: '1.1.7',
+    date: '2025-08-12',
+    notes: [
+      '修复用户配置保存问题',
+      '改进外部站点兼容性',
+      '性能优化：虚拟滚动改进'
+    ]
+  },
+  {
+    version: '1.1.6',
+    date: '2025-06-01',
+    notes: [
+      '修复若干 UI 边缘 case',
+      '改进导出/导入流程'
+    ]
   }
 ])
 
@@ -162,21 +195,14 @@ const supportedSites = ref([
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">📝 更新日志</h3>
       </div>
       <div class="p-6 space-y-4">
-        <div class="border-l-4 border-blue-500 pl-4">
+        <div v-for="entry in changelog" :key="entry.version" class="border-l-4 border-blue-500 pl-4">
           <div class="flex items-center gap-2 mb-1">
-            <span class="font-medium text-gray-900 dark:text-white">v{{ version }}</span>
-            <span
-              class="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded"
-            >
-              当前版本
-            </span>
+            <span class="font-medium text-gray-900 dark:text-white">v{{ entry.version }}</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400">{{ entry.date }}</span>
+            <span v-if="entry.version === version" class="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded">当前版本</span>
           </div>
           <ul class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-            <li>• 新增左右布局模态框设计</li>
-            <li>• 优化图片预览和错误处理</li>
-            <li>• 支持未分组表情管理</li>
-            <li>• 改进上传到 linux.do 功能</li>
-            <li>• 增强 UI 响应性和用户体验</li>
+            <li v-for="note in entry.notes" :key="note">• {{ note }}</li>
           </ul>
         </div>
       </div>

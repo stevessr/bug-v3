@@ -563,21 +563,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
       </div>
     </div>
 
-    <!-- Card view for groups (moved to separate component) -->
-    <div v-if="viewMode === 'card'">
-      <GroupsCardView
-        :displayGroups="displayGroups"
-        :isImageUrl="isImageUrl"
-        :expandedGroups="expandedGroups"
-        :touchRefFn="addGroupTouchEvents"
-        @groupDragStart="(...args) => $emit('groupDragStart', ...args)"
-        @groupDrop="(...args) => $emit('groupDrop', ...args)"
-        @toggleExpand="$emit('toggleExpand', $event)"
-        @openEditGroup="$emit('openEditGroup', $event)"
-        @exportGroup="$emit('exportGroup', $event)"
-        @imageError="$emit('imageError', $event)"
-      />
-    </div>
+    
     <!-- Dedupe chooser component -->
     <DedupeChooser
       :visible="chooseDedupeFor"

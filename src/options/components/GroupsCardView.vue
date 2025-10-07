@@ -307,7 +307,7 @@ const onTouchCancel = () => {
                 v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))"
                 :src="normalizeImageUrl(group.icon)"
                 alt="icon"
-                class="max-w-full object-contain"
+                class="group-card-image max-w-full object-contain"
                 @error="$emit('imageError', $event)"
               />
               <div v-else class="text-2xl">{{ group.icon }}</div>
@@ -355,5 +355,17 @@ const onTouchCancel = () => {
 
 .card-target {
   border: 2px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Limit group card icon size so cards remain compact */
+.group-card .group-card-image,
+.group-card .group-card-image img {
+  max-width: 4rem; /* 64px */
+  max-height: 4rem;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
 }
 </style>
