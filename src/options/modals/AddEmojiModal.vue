@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, watch, toRefs, reactive, computed } from 'vue'
-import { DownOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 
@@ -17,12 +17,18 @@ const onVariantSelectForItem = (index: number, info: { key: string | number }) =
   if (item) setItemSelectedVariant(item, info)
 }
 
+const removeParsedItem = (index: number) => {
+  parsedItems.value.splice(index, 1)
+}
+
 const name = ref('')
 const url = ref('')
 const displayUrl = ref('')
 const inputMode = ref<'url' | 'markdown' | 'html'>('url')
 const pasteText = ref('')
 const parsedItems = ref<ImageVariant[]>([])
+const autoPreview = ref(false)
+let previewTimer: number | null = null
 // initialize groupId from reactive props
 const groupId = ref(
   (defaultGroupId?.value as string) || (groups?.value && groups.value[0]?.id) || ''
@@ -71,13 +77,23 @@ watch(
   }
 )
 
+// 自动预览防抖：当 autoPreview 开启并且 pasteText 变化时，延迟执行 previewParse
+watch(
+  () => pasteText.value,
+  () => {
+    if (!autoPreview.value) return
+    if (previewTimer) window.clearTimeout(previewTimer)
+    // use window.setTimeout to get numeric id
+    previewTimer = window.setTimeout(() => {
+      previewParse()
+      previewTimer = null
+    }, 400)
+  }
+)
+
 const emojiStore = useEmojiStore()
 
 // Antd dropdown already imported above
-
-const onInputModeSelect = (info: any) => {
-  inputMode.value = String(info.key) as 'url' | 'markdown' | 'html'
-}
 
 const onGroupSelect = (info: any) => {
   groupId.value = String(info.key)
@@ -140,6 +156,7 @@ interface ImageVariant {
   url: string
   variants: Array<{ label: string; url: string }>
   selectedVariant: string
+  displayUrl?: string
 }
 
 const parseHTMLImages = (text: string): ImageVariant[] => {
@@ -225,11 +242,15 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
             const [gif] = variants.splice(gifIndex, 1)
             variants.unshift(gif)
           }
+          // url 应为原始链接（anchor href），displayUrl 用于缩略图展示（imgSrc）
+          const original = originalUrl || variants[0].url
+          const displaySrc = imgSrc || variants[0].url
           const item = reactive({
             name: nameVal,
-            url: variants[0].url, // 默认选择第一个（优先为 GIF）
+            url: original, // 保持 url 为原始资源链接
             variants,
-            selectedVariant: variants[0].url
+            selectedVariant: variants[0].url,
+            displayUrl: displaySrc
           })
           items.push(item)
         }
@@ -265,11 +286,14 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
             const [gif] = variants.splice(gifIndex, 1)
             variants.unshift(gif)
           }
+          // url 使用 href（原始链接），displayUrl 优先使用内嵌 img 的 src（页面上显示的图片）
+          const displaySrc = (img && img.src) || href
           const item = reactive({
             name: nameVal,
             url: href,
             variants,
-            selectedVariant: variants[0].url
+            selectedVariant: variants[0].url,
+            displayUrl: displaySrc
           })
           items.push(item)
         }
@@ -296,11 +320,12 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
           variants.unshift(gif)
         }
         const item = reactive({
-          name: nameVal,
-          url: src,
-          variants,
-          selectedVariant: variants[0].url
-        })
+            name: nameVal,
+            url: src,
+            variants,
+            selectedVariant: variants[0].url,
+            displayUrl: src
+          })
         items.push(item)
       }
     })
@@ -340,7 +365,21 @@ const previewParse = () => {
 }
 
 const setItemSelectedVariant = (item: ImageVariant, info: { key: string | number }) => {
-  item.selectedVariant = String(info.key)
+  const val = String(info.key)
+  item.selectedVariant = val
+  // 根据全局设置决定是否同步所选变体到 displayUrl
+  const shouldSync = !!(emojiStore.settings && (emojiStore.settings as any).syncVariantToDisplayUrl)
+  if (shouldSync) {
+    // always set displayUrl when enabled (if it's a valid http(s) URL)
+    if (/^https?:\/\//i.test(val)) {
+      item.displayUrl = val
+    }
+  } else {
+    // conservative behavior: only populate displayUrl if it's currently empty
+    if ((!item.displayUrl || item.displayUrl === '') && /^https?:\/\//i.test(val)) {
+      item.displayUrl = val
+    }
+  }
 }
 
 const close = () => {
@@ -379,10 +418,18 @@ const importParsed = () => {
   emojiStore.beginBatch()
   try {
     parsedItems.value.forEach(it => {
-      // debug log removed
-      const selectedUrl = it.selectedVariant || it.url
-      // debug log removed
-      const emojiData = { packet: Date.now(), name: it.name, url: selectedUrl }
+      // Always use original URL for emoji.url
+      const originalUrl = it.url
+      // For display, prefer the selectedVariant (what user chose), then parsed displayUrl
+      const displayForEmoji = (it.selectedVariant && it.selectedVariant !== originalUrl) ? it.selectedVariant : (it.displayUrl || undefined)
+
+      const emojiData: any = {
+        packet: Date.now(),
+        name: it.name,
+        url: originalUrl
+      }
+      if (displayForEmoji) emojiData.displayUrl = displayForEmoji
+
       emojiStore.addEmojiWithoutSave(targetGroupId, emojiData)
       emits('added', { groupId: targetGroupId, name: emojiData.name })
     })
@@ -410,7 +457,11 @@ const importParsed = () => {
 
     <div class="flex items-center justify-center min-h-screen p-4">
       <transition name="card-pop" appear>
-        <ACard hoverable style="max-width: 90vw; width: 900px; max-height: 90vh; overflow-y: auto" @click.stop>
+        <ACard
+          hoverable
+          style="max-width: 90vw; width: 900px; max-height: 90vh; overflow-y: auto"
+          @click.stop
+        >
           <div class="flex flex-col gap-6">
             <!-- 上方编辑区 -->
             <div class="w-full">
@@ -427,6 +478,22 @@ const importParsed = () => {
               <form @submit.prevent="add" class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+                    输入模式
+                  </label>
+                  <div>
+                    <a-tabs v-model:activeKey="inputMode" type="card">
+                      <a-tab-pane key="url" tab="单个 URL" />
+                      <a-tab-pane key="markdown" tab="Markdown (批量)" />
+                      <a-tab-pane key="html" tab="HTML (批量)" />
+                    </a-tabs>
+                    <div class="text-xs text-gray-500 mt-1">
+                      已解析：{{ parsedItems.length }} 个
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="inputMode === 'url'">
+                  <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
                     表情名称
                   </label>
                   <input
@@ -435,27 +502,6 @@ const importParsed = () => {
                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="输入表情名称"
                   />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-                    输入模式
-                  </label>
-                  <div class="flex items-center gap-2">
-                    <a-dropdown>
-                      <template #overlay>
-                        <a-menu @click="onInputModeSelect">
-                          <a-menu-item key="url">单个 URL</a-menu-item>
-                          <a-menu-item key="markdown">Markdown (批量)</a-menu-item>
-                          <a-menu-item key="html">HTML (批量)</a-menu-item>
-                        </a-menu>
-                      </template>
-                      <a-button>
-                        {{ inputMode }}
-                        <DownOutlined />
-                      </a-button>
-                    </a-dropdown>
-                    <div class="text-xs text-gray-500">已解析：{{ parsedItems.length }} 个</div>
-                  </div>
                 </div>
                 <div v-if="inputMode === 'url'">
                   <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
@@ -481,35 +527,54 @@ const importParsed = () => {
                   <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
                     粘贴内容 (Markdown 或 HTML)
                   </label>
-                  <textarea
-                    v-model="pasteText"
-                    rows="6"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-                    :placeholder="
-                      inputMode === 'markdown'
-                        ? '粘贴 Markdown 图片，如 ![name|512x512](url)...'
-                        : '粘贴 HTML 片段 (例如 discourse lightbox 的 HTML)'
-                    "
-                  ></textarea>
-                  <div class="flex items-center justify-between mt-2">
-                    <div class="text-xs text-gray-500">
-                      预览会解析出：{{ parsedItems.length }} 个
-                    </div>
-                    <div class="flex gap-2">
-                      <a-button
-                        @click="previewParse"
-                        type="button"
-                        class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
-                      >
-                        预览
-                      </a-button>
-                      <a-button
-                        @click="importParsed"
-                        type="button"
-                        class="px-3 py-1 text-xs bg-blue-600 text-white rounded"
-                      >
-                        导入解析项
-                      </a-button>
+                  <div class="space-y-2">
+                    <textarea
+                      v-model="pasteText"
+                      rows="6"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+                      :placeholder="
+                        inputMode === 'markdown'
+                          ? '粘贴 Markdown 图片，如 ![name|512x512](url)...'
+                          : '粘贴 HTML 片段 (例如 discourse lightbox 的 HTML)'
+                      "
+                    ></textarea>
+
+                    <div class="flex items-center justify-between mt-2">
+                      <div class="flex items-center gap-3">
+                        <label class="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                          <input type="checkbox" v-model="autoPreview" class="mr-1" />
+                          自动预览
+                        </label>
+                        <div class="text-xs text-gray-500">
+                          预览会解析出：{{ parsedItems.length }} 个
+                        </div>
+                      </div>
+                      <div class="flex gap-2">
+                        <a-button
+                          @click="
+                            pasteText = '',
+                            parsedItems = []
+                          "
+                          type="button"
+                          class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
+                        >
+                          清空内容
+                        </a-button>
+                        <a-button
+                          @click="previewParse"
+                          type="button"
+                          class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
+                        >
+                          预览
+                        </a-button>
+                        <a-button
+                          @click="importParsed"
+                          type="button"
+                          class="px-3 py-1 text-xs bg-blue-600 text-white rounded"
+                        >
+                          导入解析项
+                        </a-button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -624,27 +689,37 @@ const importParsed = () => {
                     清空
                   </a-button>
                 </div>
-                <div class="max-h-96 overflow-y-auto space-y-3">
-                  <div
-                    v-for="(item, index) in parsedItems"
-                    :key="index"
-                    class="bg-white dark:bg-gray-900 rounded border dark:border-gray-700 p-3"
-                  >
-                    <div class="flex items-start gap-3">
-                      <img
-                        :src="item.selectedVariant || item.url"
-                        :alt="item.name"
-                        class="w-16 h-16 object-cover rounded border flex-shrink-0"
-                        @error="handleParsedImageError"
-                      />
-                      <div class="flex-1 min-w-0">
-                        <div class="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {{ item.name }}
-                        </div>
-                        <div v-if="item.variants.length > 1" class="mt-2">
-                          <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                            选择 URL 变种：
-                          </label>
+                <div class="max-h-96 overflow-y-auto">
+                  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <ACard
+                      v-for="(item, index) in parsedItems"
+                      :key="index"
+                      hoverable
+                      class="p-2 bg-white dark:bg-gray-900 rounded border dark:border-gray-700 flex flex-col items-stretch"
+                    >
+                      <!-- Image on top -->
+                      <div class="flex items-center justify-center pb-2">
+                        <a-image
+                          :src="item.displayUrl || item.url"
+                          :alt="item.name"
+                          class="w-full h-32 object-contain rounded border"
+                          @error="handleParsedImageError"
+                          preview
+                        />
+                      </div>
+
+                      <!-- Name (multi-line) -->
+                      <div class="mt-2">
+                        <textarea
+                          v-model="item.name"
+                          rows="2"
+                          class="w-full px-2 py-1 border border-gray-200 dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-900 dark:text-white resize-none break-words whitespace-normal"
+                        ></textarea>
+                      </div>
+
+                      <!-- Variant select -->
+                      <div class="mt-2">
+                        <div v-if="item.variants.length > 1">
                           <a-dropdown>
                             <template #overlay>
                               <a-menu @click="onVariantSelectForItem(index, $event)">
@@ -657,22 +732,29 @@ const importParsed = () => {
                                 </a-menu-item>
                               </a-menu>
                             </template>
-                            <a-button class="text-xs">
-                              {{ item.variants.find(v => v.url === item.selectedVariant)?.label || '默认' }}
+                            <a-button class="text-xs w-full flex items-center justify-between">
+                              <span>
+                                {{ item.variants.find(v => v.url === item.selectedVariant)?.label || '默认' }}
+                              </span>
                               <DownOutlined />
                             </a-button>
                           </a-dropdown>
                         </div>
-                        <div v-else class="mt-1">
-                          <span class="text-xs text-gray-500">
-                            {{ item.variants[0]?.label || '默认' }}
-                          </span>
+                        <div v-else class="text-xs text-gray-500 mt-1">
+                          {{ item.variants[0]?.label || '默认' }}
                         </div>
                         <div class="mt-1 text-xs text-gray-500 dark:text-gray-400 break-all">
                           {{ item.selectedVariant || item.url }}
                         </div>
                       </div>
-                    </div>
+
+                      <!-- Delete button at bottom right -->
+                      <div class="mt-3 flex justify-end">
+                        <a-button type="text" class="text-red-500" @click="removeParsedItem(index)">
+                          <DeleteOutlined />
+                        </a-button>
+                      </div>
+                    </ACard>
                   </div>
                 </div>
               </div>

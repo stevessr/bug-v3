@@ -1,4 +1,3 @@
-'''
 <script setup lang="ts">
 import { ref, watch, isRef, type Ref } from 'vue'
 import { DownOutlined } from '@ant-design/icons-vue'
@@ -22,6 +21,7 @@ const emit = defineEmits([
   'update:customPrimaryColor',
   'update:customColorScheme',
   'update:enableHoverPreview',
+  'update:syncVariantToDisplayUrl',
   'update:customCss'
 ])
 
@@ -182,6 +182,19 @@ watch(
   }
 )
 watch(enableHoverPreviewRef, v => emit('update:enableHoverPreview', v))
+
+const syncVariantToDisplayUrlRef = ref<boolean>(
+  isRef(settings)
+    ? ((settings.value as any).syncVariantToDisplayUrl ?? true)
+    : ((settings as AppSettings).syncVariantToDisplayUrl ?? true)
+)
+watch(
+  () => (isRef(settings) ? (settings.value as any).syncVariantToDisplayUrl : (settings as AppSettings).syncVariantToDisplayUrl),
+  v => {
+    syncVariantToDisplayUrlRef.value = v ?? true
+  }
+)
+watch(syncVariantToDisplayUrlRef, v => emit('update:syncVariantToDisplayUrl', v))
 
 const forceMobileModeRef = ref<boolean>(
   isRef(settings)
@@ -377,6 +390,14 @@ const cancelCustomCss = () => {
 
       <div class="flex items-center justify-between">
         <div>
+          <label class="text-sm font-medium dark:text-white">导入时同步变体到显示图</label>
+          <p class="text-sm dark:text-white">当选择导入变体时，是否将该变体 URL 同步为项的 displayUrl（用于缩略图显示）</p>
+        </div>
+        <a-switch v-model:checked="syncVariantToDisplayUrlRef" />
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
           <label class="text-sm font-medium dark:text-white">输出格式</label>
           <p class="text-sm dark:text-white">插入表情时使用的格式</p>
         </div>
@@ -405,9 +426,9 @@ const cancelCustomCss = () => {
       <div class="flex items-center justify-between" v-if="false">
         <div>
           <label class="text-sm font-medium text-gray-900 dark:text-white">
-            启用Linux.do脚本注入
+            启用 Linux.do 脚本注入
           </label>
-          <p class="text-sm text-gray-500 dark:text-white">控制是否在linux.do注入表情功能脚本</p>
+          <p class="text-sm text-gray-500 dark:text-white">控制是否在 linux.do 注入表情功能脚本</p>
         </div>
         <a-switch v-model:checked="enableLinuxDoInjectionRef" />
       </div>
@@ -415,9 +436,9 @@ const cancelCustomCss = () => {
       <div class="flex items-center justify-between">
         <div>
           <label class="text-sm font-medium text-gray-900 dark:text-white">
-            启用X.com额外选择器
+            启用 X.com 额外选择器
           </label>
-          <p class="text-sm text-gray-500 dark:text-white">在X.com(Twitter)启用额外的选择器控制</p>
+          <p class="text-sm text-gray-500 dark:text-white">在 X.com(Twitter) 启用额外的选择器控制</p>
         </div>
         <a-switch v-model:checked="enableXcomExtraSelectorsRef" />
       </div>
@@ -425,7 +446,7 @@ const cancelCustomCss = () => {
       <div class="flex items-center justify-between">
         <div>
           <label class="text-sm font-medium text-gray-900 dark:text-white">
-            启用Callout自动补全
+            启用 Callout 自动补全
           </label>
           <p class="text-sm text-gray-500 dark:text-white">
             在编辑器中输入 [! 时显示 Callout 语法提示

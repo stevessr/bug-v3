@@ -89,11 +89,11 @@ function interceptXHR() {
   const originalSend = XMLHttpRequest.prototype.send
 
   XMLHttpRequest.prototype.open = function (
-    method: string,
+    _method: string,
     url: string | URL,
-    async?: boolean,
-    username?: string | null,
-    password?: string | null
+    _async?: boolean,
+    _username?: string | null,
+    _password?: string | null
   ) {
     // 保存 URL 用于日志
     // @ts-ignore
@@ -101,7 +101,7 @@ function interceptXHR() {
     return originalOpen.apply(this, arguments as any)
   }
 
-  XMLHttpRequest.prototype.send = function (body?: Document | XMLHttpRequestBodyInit | null) {
+  XMLHttpRequest.prototype.send = function (_body?: Document | XMLHttpRequestBodyInit | null) {
     // 添加状态变化监听
     this.addEventListener('readystatechange', function () {
       if (this.readyState === 4 && this.status === 429) {

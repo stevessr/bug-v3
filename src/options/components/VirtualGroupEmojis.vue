@@ -8,33 +8,12 @@
     <div class="flex items-center justify-between mb-4">
       <div class="text-sm text-gray-600 dark:text-gray-300">
         共 {{ totalEmojis }} 个表情
-        <span v-if="isVirtualized" class="ml-2 text-blue-600 dark:text-blue-400">
-          (虚拟滚动已启用)
-        </span>
       </div>
-      <div class="flex items-center gap-2">
-        <label class="text-xs text-gray-500">网格列数：</label>
-        <a-input-number
-          v-model:value="localGridColumns"
-          :min="2"
-          :max="8"
-          size="small"
-          class="w-16"
-        />
-        <a-button
-          v-if="isVirtualized && visibleItemsCount < totalEmojis"
-          @click="scrollToTop"
-          size="small"
-          type="text"
-        >
-          回到顶部
-        </a-button>
-      </div>
+      <div></div>
     </div>
 
-    <!-- 虚拟滚动网格 (当表情数量超过阈值时使用) -->
+    <!-- 始终使用虚拟滚动网格 -->
     <VirtualEmojiGrid
-      v-if="isVirtualized"
       ref="virtualGridRef"
       :emojis="formattedEmojis"
       :grid-columns="localGridColumns"
@@ -47,81 +26,12 @@
       @emoji-drop="handleEmojiDrop"
     />
 
-    <!-- 传统网格 (表情数量较少时使用) -->
-    <div
-      v-else
-      class="traditional-grid"
-      :style="{ maxHeight: `${containerHeight}px`, overflowY: 'auto' }"
-    >
-      <div
-        class="grid gap-3"
-        :style="{
-          gridTemplateColumns: `repeat(${localGridColumns}, minmax(0, 1fr))`
-        }"
-      >
-        <div
-          v-for="item in flatEmojis"
-          :key="item.key"
-          class="emoji-item relative group cursor-move"
-          :draggable="true"
-          @dragstart="e => handleEmojiDragStart(item.emoji, item.groupId, item.index, e)"
-          @dragover.prevent
-          @drop="e => handleEmojiDrop(item.groupId, item.index, e)"
-        >
-          <div
-            class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
-          >
-            <img
-              :src="item.emoji.url"
-              :alt="item.emoji.name"
-              class="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </div>
-          <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
-            {{ item.emoji.name }}
-          </div>
-          <!-- Edit button -->
-          <a-button
-            @click="handleEditEmoji(item.emoji, item.groupId, item.index)"
-            class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-            title="编辑表情"
-          >
-            ✎
-          </a-button>
-          <!-- Remove button -->
-          <a-popconfirm
-            title="确认移除此表情？"
-            @confirm="handleRemoveEmoji(item.groupId, item.index)"
-          >
-            <template #icon>
-              <QuestionCircleOutlined style="color: red" />
-            </template>
-            <a-button
-              class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              ×
-            </a-button>
-          </a-popconfirm>
-        </div>
-      </div>
-    </div>
-
-    <!-- 性能指标显示 (开发模式) -->
-    <div v-if="showPerformanceStats" class="mt-4 p-2 bg-gray-100 rounded text-xs dark:bg-gray-700">
-      <div class="grid grid-cols-2 gap-2 text-gray-600 dark:text-gray-300">
-        <div>总表情数：{{ totalEmojis }}</div>
-        <div>可见表情数：{{ visibleItemsCount }}</div>
-        <div>虚拟化：{{ isVirtualized ? '是' : '否' }}</div>
-        <div>内存节省：{{ memorySavingPercentage }}%</div>
-      </div>
-    </div>
+    
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, inject } from 'vue'
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 import VirtualEmojiGrid from './VirtualEmojiGrid.vue'
 import type { Emoji, EmojiGroup } from '../../types/emoji'
 
@@ -133,7 +43,6 @@ interface Props {
   containerHeight?: number
   itemHeight?: number
   overscan?: number
-  showPerformanceStats?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -142,7 +51,7 @@ const props = withDefaults(defineProps<Props>(), {
   containerHeight: 500,
   itemHeight: 120,
   overscan: 3,
-  showPerformanceStats: false
+  
 })
 
 const emit = defineEmits<{
@@ -174,31 +83,7 @@ const formattedEmojis = computed(() => {
   }))
 })
 
-// 扁平化表情列表 (用于传统网格)
-const flatEmojis = computed(() => {
-  const items: Array<{
-    key: string
-    emoji: Emoji
-    groupId: string
-    index: number
-    globalIndex: number
-  }> = []
-  
-  let globalIndex = 0
-  expandedEmojis.value.forEach(group => {
-    (group.emojis || []).forEach((emoji, index) => {
-      items.push({
-        key: `${group.id}-${index}`,
-        emoji,
-        groupId: group.id,
-        index,
-        globalIndex: globalIndex++
-      })
-    })
-  })
-  
-  return items
-})
+// flatEmojis removed — we always use virtualized grid
 
 // 计算总表情数
 const totalEmojis = computed(() => {
@@ -207,31 +92,7 @@ const totalEmojis = computed(() => {
   )
 })
 
-// 判断是否启用虚拟滚动
-const isVirtualized = computed(() => {
-  return totalEmojis.value > props.virtualizationThreshold
-})
-
-// 可见表情数量 (用于性能统计)
-const visibleItemsCount = computed(() => {
-  if (!isVirtualized.value) return totalEmojis.value
-  
-  // 从虚拟滚动组件获取可见项数量
-  if (virtualGridRef.value?.visibleRange) {
-    const { startIndex, endIndex } = virtualGridRef.value.visibleRange
-    return Math.max(0, endIndex - startIndex + 1)
-  }
-  
-  return 0
-})
-
-// 内存节省百分比
-const memorySavingPercentage = computed(() => {
-  if (!isVirtualized.value || totalEmojis.value === 0) return 0
-  
-  const savedItems = totalEmojis.value - visibleItemsCount.value
-  return Math.round((savedItems / totalEmojis.value) * 100)
-})
+// (性能统计已移除)
 
 // 事件处理
 const handleEditEmoji = (emoji: Emoji, groupId: string, index: number) => {
@@ -273,11 +134,9 @@ const scrollToEmoji = (groupId: string, emojiIndex: number) => {
   }
 }
 
-// 监听网格列数变化
-watch(localGridColumns, (newValue) => {
-  if (options?.updateSettings) {
-    options.updateSettings({ gridColumns: newValue })
-  }
+// 不再将本地列数写回全局设置；使用 props.gridColumns 作为唯一来源
+watch(() => props.gridColumns, (v) => {
+  localGridColumns.value = v
 })
 
 // 响应式调整
@@ -299,7 +158,7 @@ const debouncedUpdate = () => {
 
 // 监听展开状态变化
 watch(() => props.expandedGroups.size, debouncedUpdate)
-watch(localGridColumns, debouncedUpdate)
+watch(() => props.gridColumns, debouncedUpdate)
 
 onMounted(() => {
   // 初始化网格列数
@@ -312,9 +171,7 @@ onMounted(() => {
 defineExpose({
   scrollToTop,
   scrollToEmoji,
-  totalEmojis: totalEmojis.value,
-  visibleItemsCount: visibleItemsCount.value,
-  isVirtualized: isVirtualized.value
+  totalEmojis: totalEmojis.value
 })
 </script>
 

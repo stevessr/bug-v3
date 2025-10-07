@@ -43,6 +43,10 @@ export interface AppSettings {
   customColorScheme?: 'default' | 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'custom'
   // Custom CSS injected into pages (managed in Options)
   customCss?: string
+  // When true, selecting a variant in the import dialog will always set the
+  // parsed item's displayUrl to the selected variant URL. When false, the
+  // displayUrl will only be populated if it was previously empty.
+  syncVariantToDisplayUrl?: boolean
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -130,7 +134,10 @@ const defaultSettings: AppSettings = {
   enableCalloutSuggestions: true, // 默认启用 callout suggestions
   customColorScheme: 'default', // 默认配色方案
   customPrimaryColor: '#1890ff', // 默认主色（Ant Design 蓝色）
-  customCss: ''
+  customCss: '',
+  // Default: keep legacy conservative behavior for backward compatibility
+  // (set to true if you prefer selected variant to always override displayUrl)
+  syncVariantToDisplayUrl: true
 }
 export { defaultSettings }
 

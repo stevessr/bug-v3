@@ -248,6 +248,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableCalloutSuggestions: value })
   }
 
+  const updateSyncVariantToDisplayUrl = (value: boolean) => {
+    emojiStore.updateSettings({ syncVariantToDisplayUrl: value })
+  }
+
   const updateTheme = (theme: 'system' | 'light' | 'dark') => {
     emojiStore.updateSettings({ theme })
     localStorage.setItem('theme', theme)
@@ -917,6 +921,7 @@ export default function useOptions() {
     updateCustomPrimaryColor,
     updateCustomColorScheme,
     updateCustomCss,
+    updateSyncVariantToDisplayUrl,
     updateEnableHoverPreview,
     // drag/drop
     handleDragStart,

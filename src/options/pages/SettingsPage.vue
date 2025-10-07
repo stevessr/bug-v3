@@ -18,6 +18,7 @@ const {
   updateEnableXcomExtraSelectors,
   updateEnableCalloutSuggestions,
   updateEnableHoverPreview,
+  updateSyncVariantToDisplayUrl,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -37,6 +38,7 @@ const {
       @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
       @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
       @update:enableHoverPreview="updateEnableHoverPreview"
+      @update:syncVariantToDisplayUrl="updateSyncVariantToDisplayUrl"
       @update:theme="updateTheme"
       @update:customPrimaryColor="updateCustomPrimaryColor"
       @update:customColorScheme="updateCustomColorScheme"
