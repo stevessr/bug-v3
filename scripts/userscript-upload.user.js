@@ -479,7 +479,7 @@
     regularPanel.appendChild(fileInput)
 
     const diffPanel = createE('div', { class: 'diff-upload-panel', style: `display:none;` })
-    const markdownTextarea = createE('textarea', { ph: '请粘贴包含图片的markdown文本...', style: `width:100%; height:120px; padding:12px; border:1px solid #d1d5db; border-radius:6px; font-family:monospace; font-size:14px; resize:vertical; margin-bottom:12px; box-sizing:border-box;` })
+    const markdownTextarea = createE('textarea', { ph: '请粘贴包含图片的 markdown 文本...', style: `width:100%; height:120px; padding:12px; border:1px solid #d1d5db; border-radius:6px; font-family:monospace; font-size:14px; resize:vertical; margin-bottom:12px; box-sizing:border-box;` })
     const diffDropZone = createE('div', { class: 'diff-drop-zone', style: `border:2px dashed #d1d5db; border-radius:8px; padding:30px 20px; text-align:center; background:#f9fafb; transition:all .2s; cursor:pointer; margin-bottom:12px;` })
     const diffFileInput = createE('input', { type: 'file', accept: 'image/*', multiple: true, style: `display:none;` })
     diffPanel.appendChild(markdownTextarea)
@@ -560,7 +560,7 @@
           }
 
           const filesToUpload = expanded.filter(file => !existingFilenames.includes(file.name))
-        if (filesToUpload.length === 0) { alert('所有选择的图片都已在markdown文本中存在，无需上传。'); return }
+        if (filesToUpload.length === 0) { alert('所有选择的图片都已在 markdown 文本中存在，无需上传。'); return }
         if (filesToUpload.length < files.length) {
           const skippedCount = files.length - filesToUpload.length
           const proceed = confirm(`发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`)

@@ -13,6 +13,8 @@
     "build:userscript:oneline": "USERSCRIPT_EMBED_JSON_ONELINE=true node scripts/build.js build:userscript",
     "build:userscript:remote": "node scripts/build.js build:userscript remote",
     "build:userscript:min": "node scripts/build.js build:userscript:min",
+    "build:userscript:tampermonkey": "node scripts/build.js build:userscript tampermonkey",
+    "build:userscript:tampermonkey:min": "node scripts/build.js build:userscript:min tampermonkey",
     "build:userscript:pc": "USERSCRIPT_PLATFORM=pc node scripts/build.js build:userscript",
     "build:userscript:mobile": "USERSCRIPT_PLATFORM=mobile node scripts/build.js build:userscript",
     "build:userscript:pc:min": "USERSCRIPT_PLATFORM=pc node scripts/build.js build:userscript:min",
@@ -40,6 +42,7 @@
     "eslint": "^9.36.0",
     "ignore": "^7.0.5",
     "pinia": "^2.3.1",
+    "typeit": "^8.1.0",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1"
   },
@@ -87,6 +90,13 @@
   "pnpm": {
     "overrides": {
       "vite": "npm:rolldown-vite@latest"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "core-js",
+      "electron",
+      "esbuild",
+      "typeit",
+      "vue-demi"
+    ]
   }
 }

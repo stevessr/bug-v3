@@ -12,6 +12,13 @@ function getUserscriptHeader(minified = false, variant = 'default') {
   const version = getPackageVersion()
   const minSuffix = minified ? ' (Minified)' : ''
   const liteSuffix = variant === 'remote' ? ' lite' : ''
+  // If the build variant requests Tampermonkey-specific behavior, add
+  // Tampermonkey grants. Otherwise default to no grants for broader
+  // userscript manager compatibility.
+  const grants =
+    variant && String(variant).toLowerCase().includes('tampermonkey')
+      ? `// @grant        GM_registerMenuCommand\n// @grant        GM_openInTab\n// @grant        GM_getValue\n// @grant        GM_setValue`
+      : '// @grant        none'
 
   return `// ==UserScript==
 // @name         Discourse 表情扩展 (Emoji Extension for Discourse)${liteSuffix}${minSuffix}
@@ -25,7 +32,7 @@ function getUserscriptHeader(minified = false, variant = 'default') {
 // @match        http://localhost:5173/*
 // @exclude      https://linux.do/a/*
 // @match        https://idcflare.com/*
-// @grant        none
+${grants}
 // @license      MIT
 // @homepageURL  https://github.com/stevessr/bug-v3
 // @supportURL   https://github.com/stevessr/bug-v3/issues
@@ -43,6 +50,101 @@ function getUserscriptHeader(minified = false, variant = 'default') {
 function getUserscriptFooter() {
   return `
 })();`
+}
+
+function getTampermonkeyRuntimeSnippet() {
+  // This runtime snippet will register a Tampermonkey menu command that
+  // attempts several strategies to open the emoji manager / settings:
+  // 1. Call an exposed global function if the userscript exposes one.
+  // 2. Dispatch a CustomEvent which the main script can listen for.
+  // 3. Use GM_openInTab to open a manager URL (best-effort). Fallback to
+  //    opening '/emoji-manager.html' in a new tab.
+  return `/* eslint-disable no-undef, no-unused-vars */
+// Tampermonkey runtime helpers (auto-injected)
+(function () {
+  function openEmojiManager() {
+    try {
+      // 1) Call an exposed helper if available
+      if (typeof window.__emoji_extension_openManager === 'function') {
+        return window.__emoji_extension_openManager()
+      }
+
+      // 2) Dispatch an event that the main script may listen for
+      try { window.dispatchEvent(new CustomEvent('emoji-extension-open-manager')) } catch (e) { /* ignore */ }
+
+      // 3) Try to open a packaged manager via GM_openInTab (Tampermonkey)
+      if (typeof GM_openInTab === 'function') {
+        var managerUrl = (typeof USERSCRIPT_MANAGER_URL !== 'undefined' && USERSCRIPT_MANAGER_URL) || 'https://raw.githubusercontent.com/stevessr/bug-v3/main/emoji-manager.html'
+        try { GM_openInTab(managerUrl, { active: true, insert: true }); return } catch (err) { /* not fatal */ }
+      }
+
+      // 4) Fallback to opening a relative path (works if manager is served)
+      try { window.open('/emoji-manager.html', '_blank') } catch (e) { /* ignore */ }
+    } catch (err) {
+      console.warn('emoji-extension: failed to open manager', err)
+    }
+  }
+
+  // Register Tampermonkey menu command where available
+  try {
+    if (typeof GM_registerMenuCommand === 'function') {
+      GM_registerMenuCommand('Open Emoji Settings', openEmojiManager)
+    } else if (typeof GM === 'object' && typeof GM.registerMenuCommand === 'function') {
+      GM.registerMenuCommand('Open Emoji Settings', openEmojiManager)
+    }
+  } catch (e) { /* Non-fatal */ }
+
+  // Expose helper for other scripts to call directly
+  try { window.__emoji_extension_openManager = openEmojiManager } catch (e) { /* ignore */ }
+
+  // Inject an unobtrusive floating button into the page for quick access.
+  try {
+    function createFloatingButton() {
+      try {
+        if (!document || !document.body) return
+        if (document.getElementById('emoji-extension-open-settings-btn')) return
+
+        var btn = document.createElement('button')
+        btn.id = 'emoji-extension-open-settings-btn'
+        btn.type = 'button'
+        btn.title = 'Open Emoji Settings'
+        btn.innerText = 'Emoji ⚙'
+        Object.assign(btn.style, {
+          position: 'fixed',
+          right: '12px',
+          bottom: '12px',
+          zIndex: 2147483647,
+          padding: '8px 10px',
+          borderRadius: '8px',
+          border: 'none',
+          background: '#1f2937',
+          color: '#fff',
+          fontSize: '13px',
+          boxShadow: '0 6px 18px rgba(0,0,0,0.2)',
+          cursor: 'pointer'
+        })
+
+        btn.addEventListener('click', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          try { openEmojiManager() } catch (err) { console.warn('failed to open emoji manager', err) }
+        }, { passive: true })
+
+        document.body.appendChild(btn)
+      } catch (err) { /* ignore */ }
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      createFloatingButton()
+    } else {
+      window.addEventListener('DOMContentLoaded', createFloatingButton, { once: true })
+      window.addEventListener('load', createFloatingButton, { once: true })
+    }
+  } catch (err) { /* ignore */ }
+
+}());
+
+/* eslint-enable */
+`
 }
 
 function runESLint(filePath) {
@@ -255,10 +357,19 @@ function processUserscript() {
       }
     }
 
-    // Combine header + content + footer
+    // Combine header + optional runtime helpers + content + footer
     const header = getUserscriptHeader(isMinified, normalizedVariant)
     const footer = getUserscriptFooter()
-    const finalContent = header + userscriptContent + footer
+
+    // If this is a Tampermonkey targeted variant, inject the runtime helper
+    // that registers a menu command and exposes a global open helper.
+    let runtimeHelpers = ''
+    if (String(normalizedVariant).toLowerCase().includes('tampermonkey')) {
+      runtimeHelpers = getTampermonkeyRuntimeSnippet()
+      console.log('🔌 Injecting Tampermonkey runtime helpers')
+    }
+
+    const finalContent = header + runtimeHelpers + userscriptContent + footer
 
     // Write the final userscript
     fs.writeFileSync(outputFile, finalContent, 'utf8')

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import TypeIt from 'typeit'
 
 // 从 package.json 读取版本信息（相对路径从当前文件到项目根）
 import pkg from '../../../package.json'
@@ -85,6 +86,90 @@ const supportedSites = ref([
   'Discourse 论坛',
   '以及更多网站...'
 ])
+// 使用 TypeIt 实现打字机效果
+const fullText = '一个功能强大的浏览器扩展，让您能够在任何网站上轻松插入和管理自定义表情。支持多平台同步，智能分组管理，让表情使用更加便捷高效。'
+const typeEl = ref<HTMLElement | null>(null)
+let typeItInstance: any = null
+
+onMounted(() => {
+  if (typeEl.value) {
+    typeItInstance = new TypeIt(typeEl.value, {
+      lifeLike: true,
+      speed: 30,
+      cursor: true,
+      waitUntilVisible: true,
+      breakLines: false
+    })
+      .type(fullText)
+      .go()
+  }
+})
+
+onBeforeUnmount(() => {
+  if (typeItInstance && typeof typeItInstance.destroy === 'function') {
+    typeItInstance.destroy()
+    typeItInstance = null
+  }
+  // 清理 changelog 的 TypeIt 实例
+  changelogTypeIts.value.forEach(inst => {
+    if (inst && typeof inst.destroy === 'function') {
+      inst.destroy()
+    }
+  })
+  changelogTypeIts.value = []
+  // 清理排队的定时器
+  if (changelogTimers && changelogTimers.length) {
+    changelogTimers.forEach(t => clearTimeout(t))
+    changelogTimers = []
+  }
+})
+
+// changelog entries typing
+const changelogEls = ref<Array<HTMLElement | null>>([])
+
+function setChangelogEl(el: any, idx: number) {
+  // 模板 ref 回调可能传入 Element 或组件实例，使用 any 并断言为 HTMLElement 或 null
+  changelogEls.value[idx] = (el as HTMLElement) || null
+}
+
+const changelogTypeIts = ref<Array<any>>([])
+let changelogTimers: Array<ReturnType<typeof setTimeout>> = []
+
+// 从旧到新排序的日志，用于渲染和顺序打字
+const sortedChangelog = computed(() => {
+  return [...changelog.value].slice().reverse()
+})
+
+onMounted(() => {
+  // 顺序初始化每条 changelog 的 TypeIt（串行启动，基于字符数计算延迟）
+  const baseDelay = 600 // 等待主描述先开始
+  const charSpeed = 20 // ms per char (和 TypeIt 配置保持一致)
+  let acc = baseDelay
+
+  sortedChangelog.value.forEach((entry, i) => {
+    const notesText = entry.notes.join('  •  ')
+    const estDuration = Math.max(200, notesText.length * charSpeed)
+
+    const t = setTimeout(() => {
+      const targetEl = changelogEls.value[i]
+      if (targetEl) {
+        const inst = new TypeIt(targetEl, {
+          lifeLike: true,
+          speed: charSpeed,
+          cursor: true,
+          waitUntilVisible: true,
+          breakLines: false
+        })
+          .type(notesText)
+          .go()
+        changelogTypeIts.value[i] = inst
+      }
+    }, acc)
+
+    changelogTimers.push(t)
+    acc += estDuration + 200 // 每条之间加点间隔
+  })
+})
 </script>
 
 <template>
@@ -100,12 +185,11 @@ const supportedSites = ref([
           </div>
         </div>
       </div>
-      <div class="p-6">
-        <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
-          一个功能强大的浏览器扩展，让您能够在任何网站上轻松插入和管理自定义表情。
-          支持多平台同步，智能分组管理，让表情使用更加便捷高效。
-        </p>
-      </div>
+          <div class="p-6">
+            <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
+              <span aria-live="polite" ref="typeEl"></span>
+            </p>
+          </div>
     </div>
 
     <!-- 功能统计 -->
@@ -195,15 +279,16 @@ const supportedSites = ref([
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">📝 更新日志</h3>
       </div>
       <div class="p-6 space-y-4">
-        <div v-for="entry in changelog" :key="entry.version" class="border-l-4 border-blue-500 pl-4">
+  <div v-for="(entry, idx) in sortedChangelog" :key="entry.version" class="border-l-4 border-blue-500 pl-4">
           <div class="flex items-center gap-2 mb-1">
             <span class="font-medium text-gray-900 dark:text-white">v{{ entry.version }}</span>
             <span class="text-xs text-gray-500 dark:text-gray-400">{{ entry.date }}</span>
             <span v-if="entry.version === version" class="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded">当前版本</span>
           </div>
-          <ul class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-            <li v-for="note in entry.notes" :key="note">• {{ note }}</li>
-          </ul>
+          <div class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+            <!-- TypeIt will render the notes text into this span -->
+            <span class="block" :ref="el => setChangelogEl(el, idx)"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -212,4 +297,19 @@ const supportedSites = ref([
 
 <style scoped>
 /* 保持样式由父级 Tailwind 提供，如需覆写可在此添加 */
+.cursor {
+  display: inline-block;
+  width: 1px;
+  margin-left: 6px;
+  background-color: currentColor;
+  vertical-align: bottom;
+  animation: blink 1s steps(1) infinite;
+  height: 1em;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
 </style>
