@@ -58,9 +58,24 @@ async function injectDesktopPicker(button: HTMLElement) {
       pickerElement.style.left = editorRect.left + editorRect.width / 2 - 200 + 'px'
     } else {
       const pickerRect = pickerElement.getBoundingClientRect()
+      // Preferred: centered above the button
       pickerElement.style.top = buttonRect.top - pickerRect.height - 5 + 'px'
-      pickerElement.style.left =
-        buttonRect.left + buttonRect.width / 2 - pickerRect.width / 2 + 'px'
+      let left = buttonRect.left + buttonRect.width / 2 - pickerRect.width / 2
+
+      // If the picker would overflow the left edge, prefer opening to the right of the button
+      const VIEWPORT_MARGIN = 8
+      if (left < VIEWPORT_MARGIN) {
+        // Try positioning picker to the right of the button
+        left = buttonRect.right + VIEWPORT_MARGIN
+      }
+
+      // Clamp to viewport to ensure visibility on both sides
+      const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - pickerRect.width - VIEWPORT_MARGIN)
+      left = Math.min(Math.max(left, VIEWPORT_MARGIN), maxLeft)
+
+      pickerElement.style.left = left + 'px'
+
+      // If the picker would be off the top edge, place it below the button
       if (pickerElement.getBoundingClientRect().top < 0) {
         pickerElement.style.top = buttonRect.bottom + 5 + 'px'
       }
