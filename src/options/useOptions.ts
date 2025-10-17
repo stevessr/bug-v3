@@ -248,6 +248,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableCalloutSuggestions: value })
   }
 
+  const updateEnableBatchParseImages = (value: boolean) => {
+    emojiStore.updateSettings({ enableBatchParseImages: value })
+  }
+
   const updateSyncVariantToDisplayUrl = (value: boolean) => {
     emojiStore.updateSettings({ syncVariantToDisplayUrl: value })
   }
@@ -917,6 +921,7 @@ export default function useOptions() {
     updateEnableLinuxDoInjection,
     updateEnableXcomExtraSelectors,
     updateEnableCalloutSuggestions,
+    updateEnableBatchParseImages,
     updateTheme,
     updateCustomPrimaryColor,
     updateCustomColorScheme,

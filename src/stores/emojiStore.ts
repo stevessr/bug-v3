@@ -656,17 +656,75 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   }
 
   const importConfiguration = (config: any) => {
-    if (config.groups) {
-      groups.value = config.groups
+    try {
+      beginBatch()
+
+      if (Array.isArray(config?.groups)) {
+        const existingGroups = new Map(groups.value.map(g => [g.id, g]))
+        const mergedGroups: EmojiGroup[] = []
+
+        for (const incoming of config.groups as EmojiGroup[]) {
+          if (!incoming || typeof incoming !== 'object') continue
+          const targetId = incoming.id || `group-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+          const current = existingGroups.get(targetId)
+
+          if (current) {
+            const existingEmojiIds = new Set(current.emojis.map(e => e.id || e.url))
+            const mergedEmojis = [...current.emojis]
+
+            for (const incomingEmoji of incoming.emojis || []) {
+              if (!incomingEmoji || typeof incomingEmoji !== 'object') continue
+              const dedupeKey = incomingEmoji.id || incomingEmoji.url
+              if (!dedupeKey || existingEmojiIds.has(dedupeKey)) continue
+              existingEmojiIds.add(dedupeKey)
+              mergedEmojis.push({
+                ...incomingEmoji,
+                groupId: targetId,
+                id:
+                  incomingEmoji.id ||
+                  `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+              })
+            }
+
+            mergedGroups.push({ ...current, ...incoming, id: targetId, emojis: mergedEmojis })
+            existingGroups.delete(targetId)
+          } else {
+            mergedGroups.push({
+              ...incoming,
+              id: targetId,
+              emojis: (incoming.emojis || []).map(emoji => ({
+                ...emoji,
+                groupId: targetId,
+                id: emoji.id || `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+              }))
+            })
+          }
+        }
+
+        // Append any remaining existing groups not touched by import
+        mergedGroups.push(...existingGroups.values())
+
+        groups.value = mergedGroups
+      }
+
+      if (config?.settings && typeof config.settings === 'object') {
+        settings.value = { ...settings.value, ...config.settings }
+      }
+
+      if (Array.isArray(config?.favorites)) {
+        const mergedFavorites = new Set([...favorites.value, ...config.favorites])
+        favorites.value = mergedFavorites
+      }
+
+      console.log('[EmojiStore] importConfiguration merged', {
+        importedGroups: config.groups?.length || 0
+      })
+    } finally {
+      endBatch().catch(() => {
+        /* ignore */
+      })
+      maybeSave()
     }
-    if (config.settings) {
-      settings.value = { ...defaultSettings, ...config.settings }
-    }
-    if (config.favorites) {
-      favorites.value = new Set(config.favorites)
-    }
-    console.log('[EmojiStore] importConfiguration', { groups: config.groups?.length })
-    maybeSave()
   }
 
   const resetToDefaults = async () => {
@@ -712,6 +770,34 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     },
     { deep: true }
   )
+
+  const applyUngroupedAddition = (payload: { emoji: Emoji; group?: EmojiGroup }) => {
+    if (!payload || !payload.emoji) return
+
+    const targetGroupId = payload.emoji.groupId || 'ungrouped'
+    let targetGroup = groups.value.find(g => g.id === targetGroupId)
+
+    if (!targetGroup) {
+      targetGroup = {
+        id: targetGroupId,
+        name: payload.group?.name || '未分组',
+        icon: payload.group?.icon || '📦',
+        order: payload.group?.order ?? groups.value.length,
+        emojis: []
+      }
+      groups.value.push(targetGroup)
+    }
+
+    const exists = targetGroup.emojis.some(e => e.id === payload.emoji.id || e.url === payload.emoji.url)
+    if (!exists) {
+      targetGroup.emojis.push(payload.emoji)
+      // maintain consistency of favorites if necessary
+      if (payload.emoji.groupId === 'favorites') {
+        favorites.value.add(payload.emoji.id)
+      }
+      maybeSave()
+    }
+  }
 
   // Listen for changes from other extension contexts (e.g., options page)
   let isUpdatingFromStorage = false
@@ -916,6 +1002,20 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         }
       }, EXTERNAL_CHANGE_DEBOUNCE_MS)
     })
+  }
+
+  try {
+    const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
+    if (chromeAPI?.runtime?.onMessage) {
+      chromeAPI.runtime.onMessage.addListener((message: any) => {
+        if (!message || typeof message !== 'object') return
+        if (message.type === 'EMOJI_EXTENSION_UNGROUPED_ADDED') {
+          applyUngroupedAddition(message.payload || {})
+        }
+      })
+    }
+  } catch (runtimeListenerError) {
+    console.warn('[EmojiStore] Failed to register runtime listener', runtimeListenerError)
   }
 
   return {

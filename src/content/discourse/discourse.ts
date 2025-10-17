@@ -15,10 +15,23 @@ export async function initDiscourse() {
     }
 
     setTimeout(scanForMagnificPopup, 200)
-    setTimeout(scanForCookedContent, 300)
     observeMagnificPopup()
-    observeCookedContent()
     setupDiscourseUploadHandler()
+
+    let enableBatchParseImages = true
+    try {
+      const setting = await requestSettingFromBackground('enableBatchParseImages')
+      if (typeof setting === 'boolean') enableBatchParseImages = setting
+    } catch (e) {
+      console.warn('[DiscourseOneClick] failed to get enableBatchParseImages setting', e)
+    }
+
+    if (enableBatchParseImages) {
+      setTimeout(scanForCookedContent, 300)
+      observeCookedContent()
+    } else {
+      console.log('[DiscourseOneClick] batch parse button disabled via settings')
+    }
 
     // 集成 callout suggestions（在 textarea 输入 `[!` 时展示候选）
     // 检查是否启用了 callout suggestions

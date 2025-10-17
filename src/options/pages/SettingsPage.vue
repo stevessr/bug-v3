@@ -17,6 +17,7 @@ const {
   updateEnableLinuxDoInjection,
   updateEnableXcomExtraSelectors,
   updateEnableCalloutSuggestions,
+  updateEnableBatchParseImages,
   updateEnableHoverPreview,
   updateSyncVariantToDisplayUrl,
   updateTheme,
@@ -37,6 +38,7 @@ const {
       @update:enableLinuxDoInjection="updateEnableLinuxDoInjection"
       @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
       @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
+      @update:enableBatchParseImages="updateEnableBatchParseImages"
       @update:enableHoverPreview="updateEnableHoverPreview"
       @update:syncVariantToDisplayUrl="updateSyncVariantToDisplayUrl"
       @update:theme="updateTheme"

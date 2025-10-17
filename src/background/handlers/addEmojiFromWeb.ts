@@ -37,7 +37,7 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
       groups.push(ungroupedGroup)
     }
 
-    // 检查是否已存在相同URL的表情
+    // 检查是否已存在相同 URL 的表情
     const existingEmoji = ungroupedGroup.emojis.find((e: any) => e.url === emojiData.url)
     if (existingEmoji) {
       sendResponse({ success: false, error: '此表情已存在于未分组中' })
@@ -96,10 +96,30 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
     // 保存到存储
     await newStorageHelpers.setAllEmojiGroups(groups)
 
-    console.log('[Background] 成功添加表情到未分组:', newEmoji.name)
+    try {
+      const chromeAPI = getChromeAPI()
+      if (chromeAPI?.runtime?.sendMessage) {
+        chromeAPI.runtime.sendMessage({
+          type: 'EMOJI_EXTENSION_UNGROUPED_ADDED',
+          payload: {
+            emoji: newEmoji,
+            group: {
+              id: ungroupedGroup.id,
+              name: ungroupedGroup.name,
+              icon: ungroupedGroup.icon,
+              order: ungroupedGroup.order
+            }
+          }
+        })
+      }
+    } catch (broadcastError) {
+      console.warn('[Background] Failed to broadcast ungrouped emoji addition', broadcastError)
+    }
+
+    console.log('[Background] 成功添加表情到未分组：', newEmoji.name)
     sendResponse({ success: true, message: '表情已添加到未分组' })
   } catch (error) {
-    console.error('[Background] 添加表情失败:', error)
+    console.error('[Background] 添加表情失败：', error)
     sendResponse({ success: false, error: error instanceof Error ? error.message : '添加失败' })
   }
 }

@@ -157,6 +157,26 @@ export async function handleUploadAndAddEmoji(message: any, sendResponse: any) {
     ungroupedGroup.emojis.push(newEmoji)
     await newStorageHelpers.setAllEmojiGroups(groups)
 
+    try {
+      const chromeAPI = getChromeAPI()
+      if (chromeAPI?.runtime?.sendMessage) {
+        chromeAPI.runtime.sendMessage({
+          type: 'EMOJI_EXTENSION_UNGROUPED_ADDED',
+          payload: {
+            emoji: newEmoji,
+            group: {
+              id: ungroupedGroup.id,
+              name: ungroupedGroup.name,
+              icon: ungroupedGroup.icon,
+              order: ungroupedGroup.order
+            }
+          }
+        })
+      }
+    } catch (broadcastError) {
+      console.warn('[Background] Failed to broadcast upload addition', broadcastError)
+    }
+
     console.log('[Background] handleUploadAndAddEmoji added emoji to ungrouped', newEmoji.name)
     sendResponse({ success: true, url: finalUrl, added: true })
   } catch (error) {

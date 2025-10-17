@@ -35,6 +35,7 @@ export interface AppSettings {
   enableLinuxDoInjection?: boolean // 控制是否在 linux.do 注入脚本
   enableXcomExtraSelectors?: boolean // 控制是否在 X.com 启用额外选择器
   enableCalloutSuggestions?: boolean // 在编辑器中启用 callout suggestions（'[' 触发）
+  enableBatchParseImages?: boolean // 控制是否显示“一键解析并添加所有图片”按钮
   // Optional API key fields for third-party services
   tenorApiKey?: string
   theme?: 'system' | 'light' | 'dark'
@@ -132,6 +133,7 @@ const defaultSettings: AppSettings = {
   enableLinuxDoInjection: true, // 默认启用 linux.do 注入
   enableXcomExtraSelectors: false, // 默认不启用 X.com 额外选择器
   enableCalloutSuggestions: true, // 默认启用 callout suggestions
+  enableBatchParseImages: true, // 默认启用一键解析图片按钮
   customColorScheme: 'default', // 默认配色方案
   customPrimaryColor: '#1890ff', // 默认主色（Ant Design 蓝色）
   customCss: '',

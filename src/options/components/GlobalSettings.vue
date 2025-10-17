@@ -17,6 +17,7 @@ const emit = defineEmits([
   'update:enableLinuxDoInjection',
   'update:enableXcomExtraSelectors',
   'update:enableCalloutSuggestions',
+  'update:enableBatchParseImages',
   'update:theme',
   'update:customPrimaryColor',
   'update:customColorScheme',
@@ -260,6 +261,22 @@ watch(
 )
 watch(enableCalloutSuggestionsRef, v => emit('update:enableCalloutSuggestions', v))
 
+const enableBatchParseImagesRef = ref<boolean>(
+  isRef(settings)
+    ? ((settings.value as any).enableBatchParseImages ?? true)
+    : ((settings as AppSettings).enableBatchParseImages ?? true)
+)
+watch(
+  () =>
+    isRef(settings)
+      ? (settings.value as any).enableBatchParseImages
+      : (settings as AppSettings).enableBatchParseImages,
+  v => {
+    enableBatchParseImagesRef.value = v ?? true
+  }
+)
+watch(enableBatchParseImagesRef, v => emit('update:enableBatchParseImages', v))
+
 // Custom CSS editor state
 const showCustomCssEditor = ref(false)
 const _initialCustomCss = (() => {
@@ -453,6 +470,16 @@ const cancelCustomCss = () => {
           </p>
         </div>
         <a-switch v-model:checked="enableCalloutSuggestionsRef" />
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium text-gray-900 dark:text-white">
+            启用一键解析全部图片
+          </label>
+          <p class="text-sm text-gray-500 dark:text-white">控制前端是否注入“一键解析并添加所有图片”按钮</p>
+        </div>
+        <a-switch v-model:checked="enableBatchParseImagesRef" />
       </div>
       <!-- Custom CSS management -->
       <div class="flex items-center justify-between">

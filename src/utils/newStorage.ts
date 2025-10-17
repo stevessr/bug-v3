@@ -396,23 +396,28 @@ export const newStorageHelpers = {
 
   async setEmojiGroup(groupId: string, group: EmojiGroup): Promise<void> {
     try {
-      // If group.emojis is empty, the in-memory group may have been lazy-unloaded.
-      // Avoid overwriting stored emojis with an empty array. Try to preserve stored emojis.
-      let toStore = group
-      if (Array.isArray(group.emojis) && group.emojis.length === 0) {
-        try {
-          const stored = await this.getEmojiGroup(groupId)
-          if (stored && Array.isArray(stored.emojis) && stored.emojis.length > 0) {
-            toStore = { ...group, emojis: stored.emojis }
-          }
-        } catch {
-          // fallback to storing as-is
-        }
+      const stored = await this.getEmojiGroup(groupId)
+
+      let emojisToPersist = group.emojis
+      if (
+        Array.isArray(group.emojis) &&
+        group.emojis.length === 0 &&
+        stored &&
+        Array.isArray(stored.emojis) &&
+        stored.emojis.length > 0
+      ) {
+        emojisToPersist = stored.emojis
+      } else if (!Array.isArray(group.emojis) && stored) {
+        emojisToPersist = stored.emojis
       }
 
-      // Sanitize runtime-only fields before persisting
-      // No runtime-only fields to strip: store the group as-is (ensure serializable)
-      const clean = ensureSerializable(toStore)
+      const merged = {
+        ...(stored || {}),
+        ...group,
+        ...(Array.isArray(emojisToPersist) ? { emojis: emojisToPersist } : {})
+      }
+
+      const clean = ensureSerializable(merged)
       await storageManager.set(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
     } catch (e) {
       logStorage('IDB_SET', `${STORAGE_KEYS.GROUP_PREFIX}${groupId}`, undefined, e)
@@ -421,6 +426,12 @@ export const newStorageHelpers = {
   },
 
   async removeEmojiGroup(groupId: string): Promise<void> {
+    const index = await this.getEmojiGroupIndex()
+    const filtered = index.filter(entry => entry.id !== groupId)
+    if (filtered.length !== index.length) {
+      const reindexed = filtered.map((entry, order) => ({ id: entry.id, order }))
+      await this.setEmojiGroupIndex(reindexed)
+    }
     await storageManager.remove(STORAGE_KEYS.GROUP_PREFIX + groupId)
   },
 
@@ -452,25 +463,26 @@ export const newStorageHelpers = {
   async setAllEmojiGroups(groups: EmojiGroup[]): Promise<void> {
     // Update index
     const index = groups.map((group, order) => ({ id: group.id, order }))
+    const existingIndex = await this.getEmojiGroupIndex()
+    const existingIds = new Set(existingIndex.map(entry => entry.id))
+    const incomingIds = new Set(groups.map(group => group.id))
+
+    const removedIds: string[] = []
+    existingIds.forEach(id => {
+      if (!incomingIds.has(id)) removedIds.push(id)
+    })
+
+    if (removedIds.length) {
+      await Promise.allSettled(
+        removedIds.map(id => storageManager.remove(STORAGE_KEYS.GROUP_PREFIX + id))
+      )
+    }
+
     await this.setEmojiGroupIndex(index)
 
-    // Update individual groups
-    // If a group appears to be unloaded (empty emojis) we should not overwrite stored
-    // emojis with an empty array. Instead, attempt to read the stored group and merge.
     await Promise.all(
-      groups.map(async (group) => {
+      groups.map(async group => {
         try {
-          const shouldPreserve = Array.isArray(group.emojis) && group.emojis.length === 0
-          if (shouldPreserve) {
-            // attempt to read stored group
-            const stored = await this.getEmojiGroup(group.id)
-            if (stored && Array.isArray(stored.emojis) && stored.emojis.length > 0) {
-              // merge metadata but preserve stored emojis
-              const merged = { ...group, emojis: stored.emojis }
-              await this.setEmojiGroup(group.id, merged)
-              return
-            }
-          }
           await this.setEmojiGroup(group.id, group)
         } catch (e) {
           logStorage('SET_GROUP_FAILED', `${STORAGE_KEYS.GROUP_PREFIX}${group.id}`, undefined, e)
@@ -498,7 +510,9 @@ export const newStorageHelpers = {
   },
 
   async setSettings(settings: AppSettings): Promise<void> {
-    const updatedSettings = { ...settings, lastModified: Date.now() }
+    const stored = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
+    const mergedSettings = { ...(stored || {}), ...settings }
+    const updatedSettings = { ...defaultSettings, ...mergedSettings, lastModified: Date.now() }
     await storageManager.set(STORAGE_KEYS.SETTINGS, updatedSettings)
   },
 
@@ -509,7 +523,21 @@ export const newStorageHelpers = {
   },
 
   async setFavorites(favorites: string[]): Promise<void> {
-    await storageManager.set(STORAGE_KEYS.FAVORITES, favorites)
+    const stored = (await storageManager.getWithConflictResolution(STORAGE_KEYS.FAVORITES)) || []
+    const existingSet = new Set(stored as string[])
+    const incomingSet = new Set(favorites)
+
+    // Add new favorites
+    incomingSet.forEach(id => existingSet.add(id))
+
+    // Remove favorites explicitly excluded in payload
+    Array.from(existingSet).forEach(id => {
+      if (!incomingSet.has(id) && (stored as string[]).includes(id)) {
+        existingSet.delete(id)
+      }
+    })
+
+    await storageManager.set(STORAGE_KEYS.FAVORITES, Array.from(existingSet))
   },
 
   // Discourse domains management
