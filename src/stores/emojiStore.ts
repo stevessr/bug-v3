@@ -595,6 +595,19 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     maybeSave()
   }
 
+  const clearAllFavorites = () => {
+    const favoritesGroup = groups.value.find(g => g.id === 'favorites')
+    if (!favoritesGroup) {
+      console.warn('[EmojiStore] Favorites group not found')
+      return
+    }
+    
+    // Clear all emojis from favorites group
+    favoritesGroup.emojis = []
+    console.log('[EmojiStore] clearAllFavorites - cleared all favorite emojis')
+    maybeSave()
+  }
+
   const findEmojiById = (emojiId: string): Emoji | undefined => {
     for (const group of groups.value) {
       const emoji = group.emojis.find(e => e.id === emojiId)
@@ -1052,6 +1065,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     updateEmojiInGroup,
     addToFavorites,
     toggleFavorite,
+    clearAllFavorites,
     findEmojiById,
     updateSettings,
     exportConfiguration,

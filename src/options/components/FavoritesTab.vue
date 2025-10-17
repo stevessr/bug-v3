@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 
@@ -11,6 +12,11 @@ const emojiStore = useEmojiStore()
 const favoritesGroup = computed(() => {
   return emojiStore.sortedGroups.find(g => g.id === 'favorites')
 })
+
+const handleClearAllFavorites = () => {
+  emojiStore.clearAllFavorites()
+  message.success('已清空所有常用表情')
+}
 </script>
 
 <template>
@@ -19,6 +25,23 @@ const favoritesGroup = computed(() => {
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex justify-between items-center">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white">常用表情</h2>
+          <a-popconfirm
+            v-if="favoritesGroup && favoritesGroup.emojis?.length"
+            title="确认清空所有常用表情吗？此操作不可撤销。"
+            ok-text="确认"
+            cancel-text="取消"
+            @confirm="handleClearAllFavorites"
+          >
+            <template #icon>
+              <QuestionCircleOutlined style="color: red" />
+            </template>
+            <a-button danger size="small">
+              <template #icon>
+                <DeleteOutlined />
+              </template>
+              清空常用
+            </a-button>
+          </a-popconfirm>
         </div>
       </div>
 
