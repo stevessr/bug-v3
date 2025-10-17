@@ -435,7 +435,9 @@ export function scanAndInjectCarousel() {
 
   filtered.forEach(el => addCarouselButtonToEl(el))
 
-  console.log(`[XCarousel] Processed ${filtered.size} carousel elements (${set.size} total matched)`)
+  console.log(
+    `[XCarousel] Processed ${filtered.size} carousel elements (${set.size} total matched)`
+  )
 }
 
 function tryInjectTwitterMedia(

@@ -78,7 +78,6 @@ export default function useOptions() {
       return
     }
     try {
-      /* eslint-disable @typescript-eslint/no-explicit-any */
       const p = payload as any
       if (typeof p === 'object' && p !== null && 'items' in p && Array.isArray(p.items)) {
         await importEmojisToStore(p.items, p.targetGroupId)
@@ -89,7 +88,6 @@ export default function useOptions() {
       await importEmojisToStore(p)
       const count = Array.isArray(p) ? p.length : p.emojis?.length || 0
       showSuccess(`成功导入 ${count} 个表情`)
-      /* eslint-enable @typescript-eslint/no-explicit-any */
     } catch (err) {
       void err
       // swallow; show generic message
@@ -730,7 +728,6 @@ export default function useOptions() {
         return
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
       if (!chromeAPI || !chromeAPI.storage || !chromeAPI.storage.local) {
         showError('扩展存储 API 不可用')

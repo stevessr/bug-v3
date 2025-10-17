@@ -68,7 +68,7 @@ watch(
 
 // resolver saved when requestConfirmation() is called; resolved by modal handlers
 // resolver saved when requestConfirmation() is called; resolved by modal handlers
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 let pendingConfirmResolver: any = null
 
 // expose used components to template for linter

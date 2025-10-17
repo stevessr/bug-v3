@@ -75,7 +75,7 @@ onMounted(async () => {
 })
 
 // Methods
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const parseWalineConfig = (data: any): Array<{ name: string; url: string }> => {
   const emojis: Array<{ name: string; url: string }> = []
 
@@ -276,7 +276,6 @@ const importFromJson = async () => {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const importFromSource = async (source: any) => {
   isImportingSource.value = source.name
   const resultId = Date.now().toString()

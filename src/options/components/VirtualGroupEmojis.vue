@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
   virtualizationThreshold: 100, // 超过 100 个表情启用虚拟滚动
   containerHeight: 500,
   itemHeight: 120,
-  overscan: 3
+  overscan: 10 // 增加缓冲区减少快速滚动时的空白
 })
 
 const emit = defineEmits<{

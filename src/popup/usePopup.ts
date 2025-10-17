@@ -1,6 +1,5 @@
 import { ref, onMounted, watch } from 'vue'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEmojiStore } from '../stores/emojiStore'
 import type { Emoji } from '../types/emoji'
 

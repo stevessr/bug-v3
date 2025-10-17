@@ -50,7 +50,6 @@ export interface AppSettings {
   syncVariantToDisplayUrl?: boolean
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface DefaultEmojiData {
   groups: EmojiGroup[]
   settings: AppSettings

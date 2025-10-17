@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, watch, toRefs, reactive, computed } from 'vue'
 import { DownOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 

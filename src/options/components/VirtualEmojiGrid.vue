@@ -109,20 +109,15 @@ const offsetY = computed(() => {
   const startRow = visibleRange.value.startRow
   const offset = startRow * rowHeight.value
 
-  // 确保偏移量不会超出总高度
-  return Math.min(offset, Math.max(0, totalHeight.value - props.containerHeight))
+  // 移除边界钳制，让浏览器自然处理滚动边界
+  return offset
 })
 
-// 滚动处理 - 使用同步更新避免回弹
+// 滚动处理 - 直接同步更新
 const isScrolling = ref(false)
 const handleScroll = (event: Event) => {
   const target = event.target as HTMLElement
-  const newScrollTop = target.scrollTop
-
-  // 防止重复更新相同位置
-  if (Math.abs(scrollTop.value - newScrollTop) < 1) return
-
-  scrollTop.value = newScrollTop
+  scrollTop.value = target.scrollTop
   isScrolling.value = true
 
   // 标记滚动结束

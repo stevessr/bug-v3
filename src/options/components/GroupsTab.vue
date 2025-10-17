@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable @typescript-eslint/no-explicit-any */
 const emit = defineEmits([
   'openCreateGroup',
   'groupDragStart',
@@ -459,7 +458,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                       :virtualization-threshold="50"
                       :container-height="400"
                       :item-height="120"
-                      :overscan="3"
+                      :overscan="10"
                       :show-performance-stats="false"
                       @edit-emoji="
                         (emoji, groupId, index) => $emit('editEmoji', emoji, groupId, index)
