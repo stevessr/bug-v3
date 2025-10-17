@@ -12,6 +12,7 @@ import {
   handleGetEmojiSetting
 } from '../handlers/main.ts'
 import { handleCalloutInjectionRequest } from '../handlers/calloutInjection.ts'
+import { handlePlatformInjectionRequest } from '../handlers/platformInjection.ts'
 
 import { getChromeAPI } from './main.ts'
 
@@ -27,6 +28,14 @@ export function setupMessageListener() {
       // 首先检查 message.type
       if (message.type) {
         switch (message.type) {
+          case 'INJECT_DISCOURSE_FEATURES':
+            handlePlatformInjectionRequest(sender, 'discourse-features').then(result => {
+              sendResponse(result)
+            }).catch(error => {
+              sendResponse({ success: false, error: String(error) })
+            })
+            return true
+
           case 'INJECT_CALLOUT_SUGGESTIONS':
             // Handle callout injection request from content script
             handleCalloutInjectionRequest(sender).then(result => {
@@ -34,7 +43,47 @@ export function setupMessageListener() {
             }).catch(error => {
               sendResponse({ success: false, error: String(error) })
             })
-            return true // Keep message channel open for async response
+            return true
+
+          case 'INJECT_X_FEATURES':
+            handlePlatformInjectionRequest(sender, 'x-features').then(result => {
+              sendResponse(result)
+            }).catch(error => {
+              sendResponse({ success: false, error: String(error) })
+            })
+            return true
+
+          case 'INJECT_PIXIV_FEATURES':
+            handlePlatformInjectionRequest(sender, 'pixiv-features').then(result => {
+              sendResponse(result)
+            }).catch(error => {
+              sendResponse({ success: false, error: String(error) })
+            })
+            return true
+
+          case 'INJECT_BILIBILI_FEATURES':
+            handlePlatformInjectionRequest(sender, 'bilibili-features').then(result => {
+              sendResponse(result)
+            }).catch(error => {
+              sendResponse({ success: false, error: String(error) })
+            })
+            return true
+
+          case 'INJECT_REDDIT_FEATURES':
+            handlePlatformInjectionRequest(sender, 'reddit-features').then(result => {
+              sendResponse(result)
+            }).catch(error => {
+              sendResponse({ success: false, error: String(error) })
+            })
+            return true
+
+          case 'INJECT_XHS_FEATURES':
+            handlePlatformInjectionRequest(sender, 'xhs-features').then(result => {
+              sendResponse(result)
+            }).catch(error => {
+              sendResponse({ success: false, error: String(error) })
+            })
+            return true
 
           case 'GET_EMOJI_DATA':
             // pass full message so handler can use message.sourceDomain for per-domain filtering

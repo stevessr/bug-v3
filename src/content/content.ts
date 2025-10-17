@@ -1,50 +1,94 @@
 // Entry point: 初始化模块并启动功能
 
-import { initializeEmojiFeature } from './utils/init'
-import { Uninject } from './utils/Uninject'
 import { postTimings } from './utils/timingsBinder'
 import { autoReadAllv2 } from './utils/autoReadReplies'
 import { requestSettingFromBackground } from './utils/requestSetting'
 // antiRateLimit removed — content script no longer listens for network-level 429 notifications
 
+// Note: ALL platform-specific features have been moved to standalone scripts
+// Platform detection logic below requests background to inject appropriate scripts
+// No direct initialization happens in content.ts anymore
+
 console.log('[Emoji Extension] Content script loaded (entry)')
 
-// Request background to inject Callout Suggestions if enabled
-async function requestCalloutSuggestionsInjection() {
+// Request background to inject platform-specific scripts
+async function requestPlatformScriptInjection(scriptType: string, settingKey?: string) {
   try {
-    const enableCalloutSuggestions = await requestSettingFromBackground(
-      'enableCalloutSuggestions'
-    )
-
-    if (enableCalloutSuggestions === true) {
-      console.log('[Content] Callout Suggestions enabled, requesting injection')
-
-      // Send message to background to inject the script
-      chrome.runtime.sendMessage(
-        {
-          type: 'INJECT_CALLOUT_SUGGESTIONS',
-          tabId: chrome.devtools ? undefined : 'current' // 'current' means current tab
-        },
-        response => {
-          if (chrome.runtime.lastError) {
-            console.warn(
-              '[Content] Failed to request callout injection:',
-              chrome.runtime.lastError
-            )
-            return
-          }
-          if (response?.success) {
-            console.log('[Content] Callout Suggestions injection requested successfully')
-          } else {
-            console.warn('[Content] Callout Suggestions injection request failed:', response?.error)
-          }
-        }
-      )
-    } else {
-      console.log('[Content] Callout Suggestions disabled in settings')
+    // If there's a setting key, check if it's enabled
+    if (settingKey) {
+      const isEnabled = await requestSettingFromBackground(settingKey)
+      if (isEnabled !== true) {
+        console.log(`[Content] ${scriptType} disabled in settings`)
+        return
+      }
     }
+
+    console.log(`[Content] Requesting ${scriptType} injection`)
+
+    // Send message to background to inject the script
+    chrome.runtime.sendMessage(
+      {
+        type: `INJECT_${scriptType.toUpperCase().replace(/-/g, '_')}`,
+        tabId: 'current'
+      },
+      response => {
+        if (chrome.runtime.lastError) {
+          console.warn(`[Content] Failed to request ${scriptType} injection:`, chrome.runtime.lastError)
+          return
+        }
+        if (response?.success) {
+          console.log(`[Content] ${scriptType} injection requested successfully`)
+        } else {
+          console.warn(`[Content] ${scriptType} injection request failed:`, response?.error)
+        }
+      }
+    )
   } catch (error) {
-    console.warn('[Content] Failed to check callout suggestions setting:', error)
+    console.warn(`[Content] Failed to request ${scriptType} injection:`, error)
+  }
+}
+
+// Detect platform and request appropriate script injection
+async function detectAndInjectPlatformScripts() {
+  const hostname = window.location.hostname.toLowerCase()
+  const pathname = window.location.pathname.toLowerCase()
+
+  // X/Twitter detection
+  if (hostname.includes('x.com') || hostname.includes('twitter.com')) {
+    const enableXcom = await requestSettingFromBackground('enableXcomExtraSelectors')
+    if (enableXcom === true) {
+      await requestPlatformScriptInjection('x-features')
+    }
+  }
+
+  // Pixiv detection
+  if (hostname.includes('pixiv.net') || hostname.includes('pximg.net')) {
+    await requestPlatformScriptInjection('pixiv-features')
+  }
+
+  // Bilibili detection
+  if (
+    hostname.includes('bilibili.com') &&
+    (pathname.includes('/opus/') || hostname.startsWith('t.'))
+  ) {
+    await requestPlatformScriptInjection('bilibili-features')
+  }
+
+  // Reddit detection
+  if (hostname.includes('reddit.com') || hostname.includes('redd.it')) {
+    await requestPlatformScriptInjection('reddit-features')
+  }
+
+  // Discourse and similar forum platforms
+  if (shouldInjectEmoji()) {
+    await requestPlatformScriptInjection('discourse-features')
+    // Also inject Callout Suggestions if enabled
+    await requestPlatformScriptInjection('callout-suggestions', 'enableCalloutSuggestions')
+  }
+
+  // XHS (小红书) detection
+  if (hostname.includes('xiaohongshu') || hostname.includes('xhs')) {
+    await requestPlatformScriptInjection('xhs-features')
   }
 }
 
@@ -90,20 +134,11 @@ function shouldInjectEmoji(): boolean {
   return false
 }
 
-// Only inject if compatible platform is detected
-if (shouldInjectEmoji()) {
-  console.log('[Emoji Extension] Initializing emoji feature')
-  initializeEmojiFeature()
-
-  // Request Callout Suggestions injection after emoji feature is initialized
-  // Give it a small delay to ensure page is ready
-  setTimeout(() => {
-    requestCalloutSuggestionsInjection()
-  }, 500)
-} else {
-  Uninject()
-  console.log('[Emoji Extension] Skipping injection - incompatible platform')
-}
+// Detect platform and inject appropriate standalone scripts
+// Give it a small delay to ensure page is ready
+setTimeout(() => {
+  detectAndInjectPlatformScripts()
+}, 500)
 
 // Add message listener for linux.do CSRF token requests
 if (window.location.hostname.includes('linux.do')) {

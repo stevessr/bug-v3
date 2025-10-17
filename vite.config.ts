@@ -50,6 +50,24 @@ export default defineConfig(({ mode }) => {
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url)),
           'callout-suggestions': fileURLToPath(
             new URL('src/content/standalone/callout-suggestions/index.ts', import.meta.url)
+          ),
+          'x-features': fileURLToPath(
+            new URL('src/content/standalone/x/index.ts', import.meta.url)
+          ),
+          'pixiv-features': fileURLToPath(
+            new URL('src/content/standalone/pixiv/index.ts', import.meta.url)
+          ),
+          'bilibili-features': fileURLToPath(
+            new URL('src/content/standalone/bilibili/index.ts', import.meta.url)
+          ),
+          'reddit-features': fileURLToPath(
+            new URL('src/content/standalone/reddit/index.ts', import.meta.url)
+          ),
+          'discourse-features': fileURLToPath(
+            new URL('src/content/standalone/discourse/index.ts', import.meta.url)
+          ),
+          'xhs-features': fileURLToPath(
+            new URL('src/content/standalone/xhs/index.ts', import.meta.url)
           )
         },
         output: {
