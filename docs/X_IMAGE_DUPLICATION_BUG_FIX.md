@@ -4,6 +4,10 @@
 
 Images from x.com (Twitter) were being repeatedly injected with duplicate buttons in a stable pattern. Specifically, **exactly 2 buttons** would consistently appear for each image, creating a poor user experience.
 
+### Update: Second Instance of Duplication
+
+After the initial fix, a second duplication issue was discovered affecting regular tweet photos with `data-testid="tweetPhoto"`. The same pattern of exactly 2 buttons appearing at the same position was observed.
+
 ## Root Cause Analysis
 
 The bug had **two main causes**:
@@ -40,9 +44,67 @@ The mutation observer in `observeCarousel()` was triggering unnecessary rescans 
 
 ## The Fix
 
-### Change 1: Filter Out Nested Elements in scanAndInjectCarousel (PRIMARY FIX)
+### Change 1: Add Missing Selectors for Tweet Photos (ADDITIONAL FIX)
 
-**Location**: Lines 396-416 in `src/content/x/image/carousel.ts`
+**Location**: Lines 363-383 in `src/content/x/image/carousel.ts`
+
+**Problem**: The selector list for `article[data-testid="tweet"]` was incomplete. It only had:
+- `'article[data-testid="tweet"] div[aria-label="Image"]'`
+
+But was missing selectors for:
+- `div[data-testid="tweetPhoto"]` (the actual photo container)
+- `div[style*="background-image"]` (background image divs)
+- `img` (image tags)
+
+This inconsistency meant that tweet photos weren't being properly matched and filtered.
+
+**After**:
+```typescript
+const selectors = [
+  // ... other selectors ...
+  'article[data-testid="tweet"] div[aria-label="Image"]',
+  'article[data-testid="tweet"] div[data-testid="tweetPhoto"]',  // NEW
+  'article[data-testid="tweet"] div[style*="background-image"]',  // NEW
+  'article[data-testid="tweet"] img'  // NEW
+]
+```
+
+**Explanation**: Added the missing selectors to ensure tweet photos are properly detected and can be filtered by the ancestor-checking logic. This brings `article[data-testid="tweet"]` in line with all other container types which have three selectors each.
+
+### Change 2: Update isInCarousel to Support tweetPhoto
+
+**Location**: Lines 218-234 in `src/content/x/image/carousel.ts`
+
+**Before**:
+```typescript
+function isInCarousel(el: Element): boolean {
+  return !!(
+    // ... other checks ...
+    (el.closest('article[data-testid="tweet"]') &&
+      (el.closest('div[aria-label="Image"]') || el.matches('div[aria-label="Image"]')))
+  )
+}
+```
+
+**After**:
+```typescript
+function isInCarousel(el: Element): boolean {
+  return !!(
+    // ... other checks ...
+    (el.closest('article[data-testid="tweet"]') &&
+      (el.closest('div[aria-label="Image"]') ||
+        el.matches('div[aria-label="Image"]') ||
+        el.closest('div[data-testid="tweetPhoto"]') ||  // NEW
+        el.matches('div[data-testid="tweetPhoto"]')))   // NEW
+  )
+}
+```
+
+**Explanation**: Updated the `isInCarousel` function to recognize `div[data-testid="tweetPhoto"]` as a valid carousel container, ensuring these elements are processed correctly.
+
+### Change 3: Filter Out Nested Elements in scanAndInjectCarousel (PRIMARY FIX)
+
+**Location**: Lines 402-438 in `src/content/x/image/carousel.ts`
 
 **Before**:
 ```typescript
@@ -61,12 +123,15 @@ selectors.forEach(s => document.querySelectorAll(s).forEach(el => set.add(el)))
 // Filter out elements whose ancestors are also in the set to prevent duplicate processing
 // For example, if both a container div and its child img are in the set, only process the container
 const filtered = new Set<Element>()
+const skipped: Element[] = []
+
 set.forEach(el => {
   let hasAncestorInSet = false
   let parent = el.parentElement
   while (parent && parent !== document.body) {
     if (set.has(parent)) {
       hasAncestorInSet = true
+      skipped.push(el)
       break
     }
     parent = parent.parentElement
@@ -75,6 +140,19 @@ set.forEach(el => {
     filtered.add(el)
   }
 })
+
+// Log detailed information for debugging
+if (skipped.length > 0) {
+  console.log(
+    `[XCarousel] Filtered out ${skipped.length} nested elements:`,
+    skipped.map(el => ({
+      tag: el.tagName,
+      class: el.className,
+      testid: el.getAttribute('data-testid'),
+      ariaLabel: el.getAttribute('aria-label')
+    }))
+  )
+}
 
 filtered.forEach(el => addCarouselButtonToEl(el))
 console.log(`[XCarousel] Processed ${filtered.size} carousel elements (${set.size} total matched)`)
@@ -86,11 +164,20 @@ console.log(`[XCarousel] Processed ${filtered.size} carousel elements (${set.siz
   <img src="...">         <!-- This will be filtered out -->
 </div>
 ```
-Only the container div is processed, not both the container and the img. This prevents the double injection.
+Or for tweet photos:
+```html
+<div data-testid="tweetPhoto">  <!-- This will be processed -->
+  <div style="background-image: url(...)"></div>
+  <img src="...">                <!-- This will be filtered out -->
+</div>
+```
+Only the outermost container is processed, not both the container and its children. This prevents the double injection.
 
-### Change 2: Skip All Attribute Changes on Injected Elements
+**Enhanced Debugging**: Added detailed logging to track which elements are being filtered out, including their tag name, class, data-testid, and aria-label. This helps diagnose any future duplication issues.
 
-**Location**: Lines 481-484 in `src/content/x/image/carousel.ts`
+### Change 4: Skip All Attribute Changes on Injected Elements
+
+**Location**: Lines 503-506 in `src/content/x/image/carousel.ts`
 
 **Before**:
 ```typescript
@@ -134,9 +221,9 @@ if (m.type === 'attributes') {
 
 **Explanation**: Added a check using the `isInjected()` helper function to skip ANY attribute change on elements that have already been processed. This prevents the observer from triggering rescans when Twitter/X.com updates styles, positions, or other attributes on already-processed image containers. This is a **secondary fix** that improves performance and prevents potential edge cases.
 
-### Change 3: Skip Button Additions in childList Mutations
+### Change 5: Skip Button Additions in childList Mutations
 
-**Location**: Lines 456-463 in `src/content/x/image/carousel.ts`
+**Location**: Lines 478-485 in `src/content/x/image/carousel.ts`
 
 **Before**:
 ```typescript
@@ -180,17 +267,24 @@ if (m.type === 'childList') {
 
 ## How the Fix Works
 
-1. **Eliminates Duplicate Processing (PRIMARY)**: By filtering out nested elements before processing, we ensure each logical image is only processed once, even if multiple selectors match different parts of the same image structure.
+1. **Complete Selector Coverage (NEW)**: By adding missing selectors for `article[data-testid="tweet"]`, we ensure tweet photos are properly detected and can be filtered like other image types.
 
-2. **Prevents Redundant Scans (SECONDARY)**: By checking `isInjected(tgt)` for all attribute changes, we ensure that once an element is processed and marked as injected, subsequent attribute changes won't trigger another scan.
+2. **Proper Carousel Detection (NEW)**: By updating `isInCarousel` to recognize `div[data-testid="tweetPhoto"]`, we ensure tweet photos are treated as valid carousel containers.
 
-3. **Avoids Self-Triggering (SECONDARY)**: By filtering out our own button additions in the childList mutations, we prevent the observer from reacting to changes we make ourselves.
+3. **Eliminates Duplicate Processing (PRIMARY)**: By filtering out nested elements before processing, we ensure each logical image is only processed once, even if multiple selectors match different parts of the same image structure.
 
-4. **Maintains Functionality**: The fix still allows:
+4. **Enhanced Debugging (NEW)**: Detailed logging shows which elements are being filtered out, making it easier to diagnose future issues.
+
+5. **Prevents Redundant Scans (SECONDARY)**: By checking `isInjected(tgt)` for all attribute changes, we ensure that once an element is processed and marked as injected, subsequent attribute changes won't trigger another scan.
+
+6. **Avoids Self-Triggering (SECONDARY)**: By filtering out our own button additions in the childList mutations, we prevent the observer from reacting to changes we make ourselves.
+
+7. **Maintains Functionality**: The fix still allows:
    - New images to be detected and processed
    - Legitimate DOM changes (new carousels, new tweets) to trigger scans
    - Initial injection to work correctly
    - All existing selectors to continue working
+   - Tweet photos with `data-testid="tweetPhoto"` to be properly handled
 
 ## Testing Recommendations
 
@@ -223,6 +317,8 @@ To verify the fix works correctly:
 4. **Console Log Verification**:
    - Look for: `[XCarousel] Processed 5 carousel elements (10 total matched)`
    - This indicates the filtering is working (10 elements matched, but only 5 unique images processed)
+   - Look for: `[XCarousel] Filtered out X nested elements: [...]`
+   - This shows which elements were skipped (should include IMG tags and nested divs)
 
 ## Related Files
 
@@ -244,26 +340,42 @@ To prevent similar issues in the future:
 6. **Test with mutation observer debugging** to understand what triggers rescans
 7. **Log both matched and processed counts** to detect filtering issues
 
-## Key Insight
+## Key Insights
+
+### Primary Issue: Selector Overlap
 
 The bug was caused by **selector overlap**, not just mutation observer issues. The selectors were designed to be comprehensive and catch images in various structures, but this meant they would often match both:
-- The container element (e.g., `div[aria-label="Image"]`)
+- The container element (e.g., `div[aria-label="Image"]`, `div[data-testid="tweetPhoto"]`)
 - The image element inside it (e.g., `img`)
 
 This is a common pattern in web scraping/injection code and requires careful filtering to avoid duplicate processing.
 
+### Secondary Issue: Incomplete Selector Coverage
+
+The second instance of the bug revealed that `article[data-testid="tweet"]` had incomplete selector coverage. While other container types had three selectors each (div[aria-label], div[style*="background-image"], img), tweet articles only had one. This inconsistency meant:
+1. Tweet photos weren't being properly matched by all relevant selectors
+2. The filtering logic couldn't work correctly because not all elements were in the set
+3. Adding the missing selectors allowed the existing filtering logic to work as intended
+
 ## Commit Message
 
 ```
-fix: prevent duplicate x.com image button injection
+fix: prevent duplicate x.com image button injection (including tweetPhoto)
 
 Fixed a bug where x.com images were being injected with exactly 2
 duplicate emoji buttons. The root cause was overlapping CSS selectors
-matching both container elements and their child img tags.
+matching both container elements and their child img tags, plus
+incomplete selector coverage for tweet photos.
 
-Primary fix:
+Primary fixes:
+- Added missing selectors for article[data-testid="tweet"] images
+  * div[data-testid="tweetPhoto"]
+  * div[style*="background-image"]
+  * img
+- Updated isInCarousel to recognize tweetPhoto containers
 - Filter out nested elements before processing in scanAndInjectCarousel
 - Only process the outermost matched element in a hierarchy
+- Added detailed debug logging for filtered elements
 
 Secondary fixes:
 - Skip all attribute changes on elements marked as injected

@@ -226,7 +226,10 @@ function isInCarousel(el: Element): boolean {
     el.closest('[role="dialog"]') ||
     el.closest('[aria-modal="true"]') ||
     (el.closest('article[data-testid="tweet"]') &&
-      (el.closest('div[aria-label="Image"]') || el.matches('div[aria-label="Image"]')))
+      (el.closest('div[aria-label="Image"]') ||
+        el.matches('div[aria-label="Image"]') ||
+        el.closest('div[data-testid="tweetPhoto"]') ||
+        el.matches('div[data-testid="tweetPhoto"]')))
   )
 }
 
@@ -373,7 +376,10 @@ export function scanAndInjectCarousel() {
     '[aria-modal="true"] div[aria-label="Image"]',
     '[aria-modal="true"] div[style*="background-image"]',
     '[aria-modal="true"] img',
-    'article[data-testid="tweet"] div[aria-label="Image"]'
+    'article[data-testid="tweet"] div[aria-label="Image"]',
+    'article[data-testid="tweet"] div[data-testid="tweetPhoto"]',
+    'article[data-testid="tweet"] div[style*="background-image"]',
+    'article[data-testid="tweet"] img'
   ]
 
   const set = new Set<Element>()
@@ -396,12 +402,15 @@ export function scanAndInjectCarousel() {
   // Filter out elements whose ancestors are also in the set to prevent duplicate processing
   // For example, if both a container div and its child img are in the set, only process the container
   const filtered = new Set<Element>()
+  const skipped: Element[] = []
+
   set.forEach(el => {
     let hasAncestorInSet = false
     let parent = el.parentElement
     while (parent && parent !== document.body) {
       if (set.has(parent)) {
         hasAncestorInSet = true
+        skipped.push(el)
         break
       }
       parent = parent.parentElement
@@ -410,6 +419,19 @@ export function scanAndInjectCarousel() {
       filtered.add(el)
     }
   })
+
+  // Log detailed information for debugging
+  if (skipped.length > 0) {
+    console.log(
+      `[XCarousel] Filtered out ${skipped.length} nested elements:`,
+      skipped.map(el => ({
+        tag: el.tagName,
+        class: el.className,
+        testid: el.getAttribute('data-testid'),
+        ariaLabel: el.getAttribute('aria-label')
+      }))
+    )
+  }
 
   filtered.forEach(el => addCarouselButtonToEl(el))
 
