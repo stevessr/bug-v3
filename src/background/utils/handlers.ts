@@ -11,6 +11,7 @@ import {
   setupPeriodicCleanup,
   handleGetEmojiSetting
 } from '../handlers/main.ts'
+import { handleCalloutInjectionRequest } from '../handlers/calloutInjection.ts'
 
 import { getChromeAPI } from './main.ts'
 
@@ -20,14 +21,21 @@ export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup }
 export function setupMessageListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onMessage) {
-    chromeAPI.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
+    chromeAPI.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
       console.log('Background received message:', message)
-      // mark unused sender as intentionally unused
-      void _sender
 
       // 首先检查 message.type
       if (message.type) {
         switch (message.type) {
+          case 'INJECT_CALLOUT_SUGGESTIONS':
+            // Handle callout injection request from content script
+            handleCalloutInjectionRequest(sender).then(result => {
+              sendResponse(result)
+            }).catch(error => {
+              sendResponse({ success: false, error: String(error) })
+            })
+            return true // Keep message channel open for async response
+
           case 'GET_EMOJI_DATA':
             // pass full message so handler can use message.sourceDomain for per-domain filtering
             handleGetEmojiData(message, sendResponse)

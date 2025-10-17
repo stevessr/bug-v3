@@ -2,7 +2,7 @@
 // This script is injected into pages when enableCalloutSuggestions is enabled
 // It provides auto-completion for Obsidian-style callout syntax when typing [!
 
-import { initCalloutSuggestions } from '../content/discourse/callout-suggestions'
+import { initCalloutSuggestions } from './core'
 
 // 自执行：页面加载时立即初始化
 ;(function () {

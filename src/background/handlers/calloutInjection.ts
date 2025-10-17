@@ -9,18 +9,18 @@ const injectedTabs = new Set<number>()
 /**
  * Inject callout-suggestions script into a specific tab
  */
-export async function injectCalloutScript(tabId: number) {
+export async function injectCalloutScript(tabId: number): Promise<{ success: boolean; error?: string }> {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI?.scripting) {
     console.warn('[CalloutInjection] chrome.scripting API not available')
-    return
+    return { success: false, error: 'chrome.scripting API not available' }
   }
 
   try {
     // Check if already injected
     if (injectedTabs.has(tabId)) {
       console.log(`[CalloutInjection] Script already injected in tab ${tabId}`)
-      return
+      return { success: true } // Already injected is considered success
     }
 
     // Inject the standalone script
@@ -31,8 +31,11 @@ export async function injectCalloutScript(tabId: number) {
 
     injectedTabs.add(tabId)
     console.log(`[CalloutInjection] Successfully injected callout script into tab ${tabId}`)
+    return { success: true }
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
     console.error(`[CalloutInjection] Failed to inject script into tab ${tabId}:`, error)
+    return { success: false, error: errorMsg }
   }
 }
 
@@ -62,38 +65,19 @@ export async function removeCalloutScript(tabId: number) {
 }
 
 /**
- * Check if callout suggestions are enabled in settings
+ * Handle injection request from content script
  */
-async function isCalloutEnabled(): Promise<boolean> {
-  const chromeAPI = getChromeAPI()
-  if (!chromeAPI?.storage) {
-    return false
+export async function handleCalloutInjectionRequest(
+  sender: chrome.runtime.MessageSender
+): Promise<{ success: boolean; error?: string }> {
+  const tabId = sender.tab?.id
+  if (!tabId) {
+    console.warn('[CalloutInjection] No tab ID in sender')
+    return { success: false, error: 'No tab ID available' }
   }
 
-  try {
-    const result = await chromeAPI.storage.local.get('appSettings')
-    const settings = result.appSettings || {}
-    // Default to false if not set
-    return settings.enableCalloutSuggestions === true
-  } catch (error) {
-    console.error('[CalloutInjection] Failed to read settings:', error)
-    return false
-  }
-}
-
-/**
- * Handle tab activation - inject script if enabled
- */
-export async function handleTabActivation(tabId: number, url?: string) {
-  // Skip special pages
-  if (!url || url.startsWith('chrome://') || url.startsWith('edge://')) {
-    return
-  }
-
-  const enabled = await isCalloutEnabled()
-  if (enabled) {
-    await injectCalloutScript(tabId)
-  }
+  console.log(`[CalloutInjection] Received injection request from tab ${tabId}`)
+  return await injectCalloutScript(tabId)
 }
 
 /**
@@ -133,23 +117,13 @@ export async function handleCalloutSettingChange(enabled: boolean) {
 
 /**
  * Setup listeners for callout injection
+ * Note: Tab injection is now handled by content script requests,
+ * this only sets up storage change listeners for when user toggles the setting
  */
 export function setupCalloutInjection() {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI) {
     return
-  }
-
-  // Listen for tab updates (page navigation)
-  if (chromeAPI.tabs?.onUpdated) {
-    chromeAPI.tabs.onUpdated.addListener(
-      async (tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => {
-        // Only inject when the page is fully loaded
-        if (changeInfo.status === 'complete' && tab.url) {
-          await handleTabActivation(tabId, tab.url)
-        }
-      }
-    )
   }
 
   // Listen for storage changes to react to setting changes

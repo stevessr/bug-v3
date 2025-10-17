@@ -32,10 +32,6 @@ export async function initDiscourse() {
       console.log('[DiscourseOneClick] batch parse button disabled via settings')
     }
 
-    // Callout suggestions 现在通过独立脚本由后台注入
-    // 不再在这里直接调用 initCalloutSuggestions()
-
-    // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages
   } catch (e) {
     console.error('[DiscourseOneClick] init failed', e)
   }

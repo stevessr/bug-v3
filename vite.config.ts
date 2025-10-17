@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => {
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url)),
           'callout-suggestions': fileURLToPath(
-            new URL('src/standalone/callout-suggestions.ts', import.meta.url)
+            new URL('src/content/standalone/callout-suggestions/index.ts', import.meta.url)
           )
         },
         output: {

@@ -6,50 +6,105 @@ Callout 自动补全功能现在已改造为独立的自治脚本，由后台根
 
 ## 架构设计
 
-### 1. 独立脚本
-- **文件**: `src/standalone/callout-suggestions.ts`
+### 1. 独立脚本模块
+- **目录**: `src/content/standalone/callout-suggestions/`
+- **入口文件**: `index.ts` - 独立脚本入口点
+- **核心文件**: `core.ts` - Callout 功能核心逻辑
 - **编译输出**: `dist/js/callout-suggestions.js` (~11KB)
 - **功能**: 提供 Obsidian 风格的 Callout 语法自动补全（输入 `[!` 时触发）
 - **特点**: 完全自包含，已内联所有依赖函数（包括样式注入）
 
-### 2. 后台注入逻辑
+### 2. Content Script 智能请求
+- **文件**: `src/content/content.ts`
+- **功能**:
+  - 检测页面平台类型（Discourse、Flarum 等）
+  - 读取用户设置 `enableCalloutSuggestions`
+  - 向 Background 发送注入请求
+
+### 3. 后台注入逻辑
 - **文件**: `src/background/handlers/calloutInjection.ts`
 - **功能**:
+  - 处理 Content Script 的注入请求 (`INJECT_CALLOUT_SUGGESTIONS`)
   - 监听用户设置变化
-  - 监听标签页更新
-  - 根据 `enableCalloutSuggestions` 设置动态注入/移除脚本
+  - 根据设置动态注入/移除脚本到所有标签页
 
-### 3. 设置管理
+### 4. 设置管理
 - **设置项**: `enableCalloutSuggestions` (boolean)
 - **默认值**: `false`
 - **位置**: 全局设置 > Callout 自动补全
 
 ## 工作流程
 
-### 启用流程
-1. 用户在设置页面开启 "启用 Callout 自动补全"
-2. 后台检测到设置变化
-3. 后台遍历所有打开的标签页
-4. 向每个符合条件的标签页注入 `callout-suggestions.js`
-5. 脚本在页面中初始化，开始监听用户输入
+### 页面加载时的智能注入（按需加载）
 
-### 禁用流程
+```
+用户访问页面
+    ↓
+Content Script 加载
+    ↓
+检测页面平台 ──→ 不支持的平台 ──→ 跳过
+    ↓ 支持的平台
+读取设置 enableCalloutSuggestions
+    ↓
+设置为 true? ──→ false ──→ 跳过
+    ↓ true
+发送消息: INJECT_CALLOUT_SUGGESTIONS
+    ↓
+Background 收到请求
+    ↓
+注入 callout-suggestions.js
+    ↓
+脚本初始化
+    ↓
+监听用户输入 [!
+```
+
+**详细步骤**:
+1. 用户访问页面，Content script 加载
+2. Content script 检测页面是否为支持的平台（Discourse 等）
+3. 如果平台支持，Content script 请求后台读取 `enableCalloutSuggestions` 设置
+4. 如果设置为 `true`，Content script 向 Background 发送 `INJECT_CALLOUT_SUGGESTIONS` 消息
+5. Background 收到请求后，向当前标签页注入 `callout-suggestions.js`
+6. 脚本在页面中初始化，开始监听用户输入
+
+### 用户启用功能
+1. 用户在设置页面开启 "启用 Callout 自动补全"
+2. Background 检测到设置变化
+3. Background 遍历所有打开的标签页，向每个标签页注入脚本
+
+### 用户禁用功能
 1. 用户在设置页面关闭 "启用 Callout 自动补全"
-2. 后台检测到设置变化
-3. 后台向所有已注入的标签页发送 `DISABLE_CALLOUT_SUGGESTIONS` 消息
+2. Background 检测到设置变化
+3. Background 向所有已注入的标签页发送 `DISABLE_CALLOUT_SUGGESTIONS` 消息
 4. 脚本收到消息后隐藏建议框并标记为未初始化
 
-### 新标签页流程
-1. 用户打开新标签页或导航到新页面
-2. 后台监听到 `tabs.onUpdated` 事件
-3. 检查当前 `enableCalloutSuggestions` 设置
-4. 如果启用，自动注入脚本到新页面
-
 ## 技术细节
+
+### 消息通信
+
+#### Content → Background
+```typescript
+// 请求注入 Callout Suggestions
+chrome.runtime.sendMessage({
+  type: 'INJECT_CALLOUT_SUGGESTIONS',
+  tabId: 'current'
+}, response => {
+  // response: { success: boolean, error?: string }
+})
+```
+
+#### Background → Content (已注入的脚本)
+```typescript
+// 禁用 Callout Suggestions
+chrome.tabs.sendMessage(tabId, {
+  type: 'DISABLE_CALLOUT_SUGGESTIONS'
+})
+```
 
 ### 防重复注入
 - 使用 `window.__CALLOUT_SUGGESTIONS_INITIALIZED__` 标记防止重复初始化
 - 后台维护 `injectedTabs` Set 跟踪已注入的标签页
+- Content script 在请求注入前检查是否已启用设置
 
 ### 特殊页面过滤
 - 自动跳过 `chrome://` 和 `edge://` 等特殊页面
@@ -97,20 +152,23 @@ input: {
 
 ## 文件清单
 
-### 新增文件
-- `src/standalone/callout-suggestions.ts` - 独立脚本入口
-- `src/background/handlers/calloutInjection.ts` - 注入逻辑处理器
+### 新增目录和文件
+- `src/content/standalone/callout-suggestions/` - Callout 功能模块目录
+  - `index.ts` - 独立脚本入口点
+  - `core.ts` - 核心功能逻辑（已内联 `ensureStyleInjected`）
+- `src/background/handlers/calloutInjection.ts` - 后台注入逻辑处理器
 - `docs/CALLOUT_SUGGESTIONS_INJECTION.md` - 本文档
 
 ### 修改文件
-- `vite.config.ts` - 添加新入口
+- `vite.config.ts` - 更新编译入口路径
 - `src/background/background.ts` - 注册注入监听器
-- `src/content/discourse/discourse.ts` - 移除直接调用
 
-### 核心功能文件
-- `src/content/discourse/callout-suggestions.ts` - 核心功能逻辑
-  - 已内联 `ensureStyleInjected` 函数，移除外部依赖
-  - 被独立脚本引用
+### 移除文件
+- `src/content/discourse/callout-suggestions.ts` - 已移至新目录
+- `src/standalone/callout-suggestions.ts` - 已移至新目录
+
+### 相关文件
+- `src/content/discourse/discourse.ts` - 已移除直接调用 callout 功能
 - `src/options/components/GlobalSettings.vue` - 设置界面（已使用 SettingSwitch 组件）
 
 ## 调试说明

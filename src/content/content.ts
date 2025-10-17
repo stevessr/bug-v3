@@ -4,9 +4,49 @@ import { initializeEmojiFeature } from './utils/init'
 import { Uninject } from './utils/Uninject'
 import { postTimings } from './utils/timingsBinder'
 import { autoReadAllv2 } from './utils/autoReadReplies'
+import { requestSettingFromBackground } from './utils/requestSetting'
 // antiRateLimit removed — content script no longer listens for network-level 429 notifications
 
 console.log('[Emoji Extension] Content script loaded (entry)')
+
+// Request background to inject Callout Suggestions if enabled
+async function requestCalloutSuggestionsInjection() {
+  try {
+    const enableCalloutSuggestions = await requestSettingFromBackground(
+      'enableCalloutSuggestions'
+    )
+
+    if (enableCalloutSuggestions === true) {
+      console.log('[Content] Callout Suggestions enabled, requesting injection')
+
+      // Send message to background to inject the script
+      chrome.runtime.sendMessage(
+        {
+          type: 'INJECT_CALLOUT_SUGGESTIONS',
+          tabId: chrome.devtools ? undefined : 'current' // 'current' means current tab
+        },
+        response => {
+          if (chrome.runtime.lastError) {
+            console.warn(
+              '[Content] Failed to request callout injection:',
+              chrome.runtime.lastError
+            )
+            return
+          }
+          if (response?.success) {
+            console.log('[Content] Callout Suggestions injection requested successfully')
+          } else {
+            console.warn('[Content] Callout Suggestions injection request failed:', response?.error)
+          }
+        }
+      )
+    } else {
+      console.log('[Content] Callout Suggestions disabled in settings')
+    }
+  } catch (error) {
+    console.warn('[Content] Failed to check callout suggestions setting:', error)
+  }
+}
 
 // Function to check if current page should have emoji injection
 function shouldInjectEmoji(): boolean {
@@ -54,6 +94,12 @@ function shouldInjectEmoji(): boolean {
 if (shouldInjectEmoji()) {
   console.log('[Emoji Extension] Initializing emoji feature')
   initializeEmojiFeature()
+
+  // Request Callout Suggestions injection after emoji feature is initialized
+  // Give it a small delay to ensure page is ready
+  setTimeout(() => {
+    requestCalloutSuggestionsInjection()
+  }, 500)
 } else {
   Uninject()
   console.log('[Emoji Extension] Skipping injection - incompatible platform')
