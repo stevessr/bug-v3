@@ -7,6 +7,7 @@ import {
   setupContextMenu,
   setupPeriodicCleanup
 } from './utils/handlers'
+import { setupCalloutInjection, setupTabCleanup } from './handlers/calloutInjection'
 
 console.log('Emoji Extension Background script loaded.')
 
@@ -16,3 +17,7 @@ setupMessageListener()
 setupStorageChangeListener()
 setupContextMenu()
 setupPeriodicCleanup()
+
+// Setup callout suggestions injection
+setupCalloutInjection()
+setupTabCleanup()

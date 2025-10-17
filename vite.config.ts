@@ -47,7 +47,10 @@ export default defineConfig(({ mode }) => {
         input: {
           index: fileURLToPath(new URL('index.html', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
-          background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
+          background: fileURLToPath(new URL('src/background/background.ts', import.meta.url)),
+          'callout-suggestions': fileURLToPath(
+            new URL('src/standalone/callout-suggestions.ts', import.meta.url)
+          )
         },
         output: {
           entryFileNames: chunkInfo => {
