@@ -3,17 +3,32 @@ import {
   extractImageUrl,
   extractNameFromUrl,
   setupButtonClick,
-  AddEmojiButtonData
+  AddEmojiButtonData,
+  isXMediaHost
 } from '../utils'
 
-import { tryInjectTwitterMedia } from './twitterMediaInject'
-
 const carouselOverlayMap = new WeakMap<Element, { btn: HTMLElement; raf?: number }>()
+const processedElements = new WeakSet<Element>()
 
 function markInjected(...elements: (Element | null | undefined)[]) {
   for (const el of elements) {
-    if (el) el.classList.add('injected')
+    if (!el) continue
+    if (!processedElements.has(el)) {
+      processedElements.add(el)
+    }
+    el.classList.add('injected')
   }
+}
+
+function isInjected(el: Element | null | undefined): boolean {
+  if (!el) return false
+  return processedElements.has(el) || el.classList.contains('injected')
+}
+
+function clearInjected(el: Element | null | undefined) {
+  if (!el) return
+  el.classList.remove('injected')
+  processedElements.delete(el)
 }
 
 function createCarouselBtn(data: AddEmojiButtonData) {
@@ -178,7 +193,7 @@ function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
         cancelAnimationFrame(raf)
         if (btn.parentElement) btn.parentElement.removeChild(btn)
         carouselOverlayMap.delete(target)
-        target.classList.remove('injected')
+        clearInjected(target)
         return
       }
       const r = (target as Element).getBoundingClientRect()
@@ -217,59 +232,50 @@ function isInCarousel(el: Element): boolean {
 
 function addCarouselButtonToEl(el: Element) {
   try {
-    // Allow standalone <img> pages hosted on pbs.twimg.com / *.twimg.com
-    // to be processed even if they don't match the usual carousel selectors.
-    const host = window.location.hostname.toLowerCase()
-    const isPbsHost =
-      host === 'pbs.twimg.com' || host.endsWith('.twimg.com') || host.includes('pbs.twimg')
+    const isPbsHost = isXMediaHost()
+    if (!isInCarousel(el) && !(isPbsHost && el instanceof HTMLImageElement)) return
     if (
-      (!isInCarousel(el) && !(isPbsHost && el instanceof HTMLImageElement)) ||
-      el.classList.contains('injected')
-    )
-      return
-    if (
+      isInjected(el) ||
       el.querySelector('.x-emoji-add-btn-carousel') ||
       el.querySelector('.x-emoji-add-btn') ||
       el.closest('.x-emoji-add-btn-carousel') ||
       el.closest('.x-emoji-add-btn')
-    )
+    ) {
+      markInjected(el)
       return
+    }
 
     let targetContainer: HTMLElement | null = null
     let url: string | null = null
 
+    const finalizeTarget = (container: HTMLElement | null, resolvedUrl: string | null) => {
+      targetContainer = container
+      url = resolvedUrl
+    }
+
     if (el instanceof HTMLImageElement) {
-      const imgEl = el as HTMLImageElement
-      // If the image has an alt text, normally we skip injecting because
-      // it's likely inline content (avatars, emojis, etc). However Twitter's
-      // standalone image pages and some embeds may set alt text while the
-      // image src still points to pbs.twimg.com media. In that case we
-      // should still attempt injection. Only skip early when the image does
-      // not appear to be twitter media.
+      const imgEl = el
       const altText = imgEl.getAttribute('alt') || ''
       const src = imgEl.src || imgEl.getAttribute('src') || ''
       const lowerSrc = (src || '').toLowerCase()
       const looksLikeTwitterMedia =
         lowerSrc.includes('pbs.twimg.com') || lowerSrc.includes('twimg.com')
-      if (altText !== '' && !looksLikeTwitterMedia) {
-        return
-      }
+      if (altText && !looksLikeTwitterMedia) return
+
       let parent = imgEl.parentElement
       while (parent && parent !== document.body) {
-        if (parent.querySelector('.x-emoji-add-btn-carousel')) return
+        if (parent.querySelector('.x-emoji-add-btn-carousel') || isInjected(parent)) return
         const style = window.getComputedStyle(parent)
-        const hasBackgroundImage = style.backgroundImage && style.backgroundImage !== 'none'
-        const hasPositioning = style.position !== 'static'
-        if (hasBackgroundImage || hasPositioning) {
-          targetContainer = parent
-          url = extractImageUrl(parent) || normalizeUrl(imgEl.src)
+        const backgroundImage = style.backgroundImage && style.backgroundImage !== 'none'
+        const positioned = style.position !== 'static'
+        if (backgroundImage || positioned) {
+          finalizeTarget(parent, extractImageUrl(parent) || normalizeUrl(imgEl.src))
           break
         }
         parent = parent.parentElement
       }
       if (!targetContainer && imgEl.parentElement) {
-        targetContainer = imgEl.parentElement as HTMLElement
-        url = normalizeUrl(imgEl.src)
+        finalizeTarget(imgEl.parentElement as HTMLElement, normalizeUrl(imgEl.src))
       }
     } else {
       const containedImg = el.querySelector('img') as HTMLImageElement | null
@@ -279,17 +285,19 @@ function addCarouselButtonToEl(el: Element) {
         const lowerSrc = (src || '').toLowerCase()
         const looksLikeTwitterMedia =
           lowerSrc.includes('pbs.twimg.com') || lowerSrc.includes('twimg.com')
-        if (altText !== '' && !looksLikeTwitterMedia) {
-          return
-        }
+        if (altText && !looksLikeTwitterMedia) return
       }
-      targetContainer = el as HTMLElement
-      url = extractImageUrl(el)
+      finalizeTarget(el as HTMLElement, extractImageUrl(el))
     }
 
     if (!targetContainer || !url) return
     if (url.includes('profile_images')) return
-    if (targetContainer.classList.contains('injected')) return
+
+    if (isInjected(targetContainer)) {
+      markInjected(el, targetContainer)
+      return
+    }
+
     const name = extractNameFromUrl(url)
 
     try {
@@ -303,40 +311,48 @@ function addCarouselButtonToEl(el: Element) {
 
     const handled = tryInjectTwitterMedia(url, targetContainer, createCarouselOverlayBtn)
 
-    if (!handled) {
-      const menuBar = findButtonMenuBar(targetContainer)
-      if (menuBar && !menuBar.querySelector('.x-emoji-add-btn-carousel')) {
-        createMenuBarBtn({ name, url }, menuBar)
-        markInjected(targetContainer, menuBar)
-        console.log('[XCarousel] Added button to menu bar')
-      } else {
-        const parent = targetContainer
-        const computed = window.getComputedStyle(parent)
-        const shouldUseOverlay = /hidden|auto|scroll/.test(computed.overflow || '') || true
-        if (computed.position === 'static' || !computed.position) parent.style.position = 'relative'
-        if (shouldUseOverlay) {
-          createCarouselOverlayBtn({ name, url }, parent)
-        } else {
-          const btn = createCarouselBtn({ name, url })
-          parent.appendChild(btn)
-          markInjected(parent)
-          try {
-            const r = btn.getBoundingClientRect()
-            const cx = Math.round(r.left + r.width / 2)
-            const cy = Math.round(r.top + r.height / 2)
-            const topEl = document.elementFromPoint(cx, cy)
-            if (topEl !== btn && !btn.contains(topEl)) {
-              if (btn.parentElement) btn.parentElement.removeChild(btn)
-              createCarouselOverlayBtn({ name, url }, parent)
-            }
-          } catch {
-            /* ignore */
-          }
-        }
-      }
+    if (handled) {
+      markInjected(el, targetContainer)
+      return
     }
-  } catch {
-    /* ignore */
+
+    const menuBar = findButtonMenuBar(targetContainer)
+    if (menuBar && !menuBar.querySelector('.x-emoji-add-btn-carousel')) {
+      createMenuBarBtn({ name, url }, menuBar)
+      markInjected(el, targetContainer, menuBar)
+      console.log('[XCarousel] Added button to menu bar')
+      return
+    }
+
+    const parent = targetContainer
+    const computed = window.getComputedStyle(parent)
+    const shouldUseOverlay = /hidden|auto|scroll/.test(computed.overflow || '') || true
+    if (computed.position === 'static' || !computed.position) parent.style.position = 'relative'
+
+    if (shouldUseOverlay) {
+      createCarouselOverlayBtn({ name, url }, parent)
+      markInjected(el, parent)
+      return
+    }
+
+    const btn = createCarouselBtn({ name, url })
+    parent.appendChild(btn)
+    markInjected(el, parent)
+
+    try {
+      const r = btn.getBoundingClientRect()
+      const cx = Math.round(r.left + r.width / 2)
+      const cy = Math.round(r.top + r.height / 2)
+      const topEl = document.elementFromPoint(cx, cy)
+      if (topEl !== btn && !btn.contains(topEl)) {
+        if (btn.parentElement) btn.parentElement.removeChild(btn)
+        createCarouselOverlayBtn({ name, url }, parent)
+      }
+    } catch {
+      /* ignore */
+    }
+  } catch (err) {
+    console.log('[XCarousel] Failed to inject button:', err)
   }
 }
 
@@ -367,8 +383,7 @@ export function scanAndInjectCarousel() {
   // a minimal wrapper). Add any images whose src points to pbs.twimg.com so they
   // are picked up by the existing injection logic.
   try {
-    const host = window.location.hostname.toLowerCase()
-    if (host === 'pbs.twimg.com' || host.endsWith('.twimg.com') || host.includes('pbs.twimg')) {
+    if (isXMediaHost()) {
       document.querySelectorAll('img').forEach(img => {
         const src = (img as HTMLImageElement).src || img.getAttribute('src') || ''
         if (src && src.includes('pbs.twimg.com')) set.add(img)
@@ -380,6 +395,47 @@ export function scanAndInjectCarousel() {
   set.forEach(el => addCarouselButtonToEl(el))
 
   console.log(`[XCarousel] Processed ${set.size} carousel elements`)
+}
+
+function tryInjectTwitterMedia(
+  url: string,
+  targetContainer: Element,
+  createOverlayFn: (data: AddEmojiButtonData, target: Element) => HTMLElement | void
+): boolean {
+  try {
+    const parsed = new URL(url)
+    const host = parsed.hostname.toLowerCase()
+    const isTwitterMedia = host === 'pbs.twimg.com' && parsed.pathname.includes('/media/')
+    const pathname = parsed.pathname.toLowerCase()
+    const formatParam = (parsed.searchParams.get('format') || '').toLowerCase()
+    if (pathname.endsWith('.svg') || formatParam === 'svg') return false
+    if (!isTwitterMedia) return false
+
+    if (targetContainer.querySelector('.x-emoji-add-btn-carousel')) return true
+    if (targetContainer.classList.contains('injected')) return true
+
+    let imgEl: HTMLImageElement | null = null
+    if (targetContainer instanceof HTMLImageElement) imgEl = targetContainer
+    else imgEl = targetContainer.querySelector('img') as HTMLImageElement | null
+
+    const target = (imgEl as Element) || targetContainer
+    if (target.classList.contains('injected')) return true
+    const name = parsed.pathname.split('/').pop()?.split('?')[0] || '表情'
+
+    try {
+      createOverlayFn({ name, url }, target)
+      targetContainer.classList.add('injected')
+      target.classList.add('injected')
+      console.log('[TwitterMedia] injected floating overlay for media:', url)
+      return true
+    } catch (error) {
+      console.log('[TwitterMedia] overlay injection failed', error)
+      return false
+    }
+  } catch (error) {
+    console.log('[TwitterMedia] error processing URL:', url, error)
+    return false
+  }
 }
 
 let carouselObserver: MutationObserver | null = null

@@ -1,7 +1,6 @@
 import { initPixiv } from '../pixiv/detector'
 import { initBilibili } from '../bilibili/bilibili'
 import { initX } from '../x/init'
-import { initPbs } from '../x/init-pbs'
 import { initXhs } from '../xhs/init'
 import { initReddit } from '../reddit/reddit'
 
@@ -66,7 +65,6 @@ export async function initXIfEnabled(): Promise<void> {
     if (enabled) {
       try {
         initX()
-        initPbs()
         console.log('[XOneClick] initX invoked')
       } catch (innerErr) {
         console.error('[XOneClick] initX threw an error during invocation', innerErr)

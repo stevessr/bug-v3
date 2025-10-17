@@ -3,6 +3,33 @@ export interface AddEmojiButtonData {
   url: string
 }
 
+export function isXMainHost(): boolean {
+  try {
+    const host = window.location.hostname.toLowerCase()
+    return host === 'x.com' || host.endsWith('.x.com') || host.includes('twitter.com')
+  } catch {
+    return false
+  }
+}
+
+export function isXMediaHost(): boolean {
+  try {
+    const host = window.location.hostname.toLowerCase()
+    return (
+      host === 'pbs.twimg.com' ||
+      host.endsWith('.twimg.com') ||
+      host.includes('twimg.com') ||
+      host.includes('pbs.twimg')
+    )
+  } catch {
+    return false
+  }
+}
+
+export function isXHost(): boolean {
+  return isXMainHost() || isXMediaHost()
+}
+
 export function normalizeUrl(raw: string): string | null {
   if (!raw) return null
   raw = raw.trim()
