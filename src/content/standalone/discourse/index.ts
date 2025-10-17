@@ -5,8 +5,11 @@
 import { initializeEmojiFeature } from '../../utils/init'
 import { initDiscourse } from '../../discourse/discourse'
 
+console.log('[DiscourseFeatures] Script loaded!')
+
 // 自执行：页面加载时立即初始化
 ;(function () {
+  console.log('[DiscourseFeatures] IIFE started')
   try {
     // 检查是否已经初始化过（避免重复注入）
     if ((window as any).__DISCOURSE_FEATURES_INITIALIZED__) {
@@ -15,6 +18,8 @@ import { initDiscourse } from '../../discourse/discourse'
     }
 
     console.log('[DiscourseFeatures] Initializing standalone Discourse script')
+    console.log('[DiscourseFeatures] chrome available:', typeof chrome !== 'undefined')
+    console.log('[DiscourseFeatures] chrome.runtime available:', typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined')
 
     // 初始化表情选择器功能
     initializeEmojiFeature()

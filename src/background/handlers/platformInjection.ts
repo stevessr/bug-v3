@@ -8,13 +8,15 @@ interface PlatformConfig {
   scriptFile: string
   trackerKey: string
   disableMessageType: string
+  world?: 'ISOLATED' | 'MAIN' // Injection world (default: ISOLATED for extension API access)
 }
 
 const PLATFORMS: Record<string, PlatformConfig> = {
   'discourse-features': {
     scriptFile: 'js/discourse-features.js',
     trackerKey: 'DISCOURSE_FEATURES',
-    disableMessageType: 'DISABLE_DISCOURSE_FEATURES'
+    disableMessageType: 'DISABLE_DISCOURSE_FEATURES',
+    world: 'ISOLATED' // Needs chrome.runtime API
   },
   'x-features': {
     scriptFile: 'js/x-features.js',
@@ -39,7 +41,8 @@ const PLATFORMS: Record<string, PlatformConfig> = {
   'callout-suggestions': {
     scriptFile: 'js/callout-suggestions.js',
     trackerKey: 'CALLOUT_SUGGESTIONS',
-    disableMessageType: 'DISABLE_CALLOUT_SUGGESTIONS'
+    disableMessageType: 'DISABLE_CALLOUT_SUGGESTIONS',
+    world: 'ISOLATED' // Needs chrome.runtime API
   },
   'xhs-features': {
     scriptFile: 'js/xhs-features.js',
@@ -80,9 +83,11 @@ export async function injectPlatformScript(
     }
 
     // Inject the standalone script
+    // Use configured world (MAIN for ES modules, ISOLATED for extension API access)
     await chromeAPI.scripting.executeScript({
       target: { tabId },
-      files: [config.scriptFile]
+      files: [config.scriptFile],
+      world: config.world || 'MAIN' // Default to MAIN for ES module support
     })
 
     // Track injection

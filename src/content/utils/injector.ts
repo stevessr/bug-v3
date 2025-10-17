@@ -1,10 +1,15 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
 
-import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
 import { notify } from './notify'
 import { createE } from './createEl'
 import { showImageUploadDialog } from './uploader'
+
+// Declare window functions that are exposed by discourse-features
+declare const window: Window & {
+  autoReadAllReplies?: () => Promise<void>
+  autoReadAllRepliesV2?: () => Promise<void>
+}
 
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [
@@ -451,8 +456,12 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   const autoReadLi = createListItem('自动阅读所有回复', '📖', async () => {
     menu.remove()
     try {
-      // trigger auto read; autoReadAll will notify progress
-      await autoReadAll()
+      // Call function from window (exposed by discourse-features)
+      if (window.autoReadAllReplies) {
+        await window.autoReadAllReplies()
+      } else {
+        notify('自动阅读功能未加载', 'error')
+      }
     } catch (error) {
       notify(
         '自动阅读失败：' +
@@ -465,8 +474,12 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   const autoReadLi2 = createListItem('全自动自动阅读所有帖子', '📖', async () => {
     menu.remove()
     try {
-      // trigger auto read; autoReadAll will notify progress
-      await autoReadAllv2()
+      // Call function from window (exposed by discourse-features)
+      if (window.autoReadAllRepliesV2) {
+        await window.autoReadAllRepliesV2()
+      } else {
+        notify('自动阅读功能未加载', 'error')
+      }
     } catch (error) {
       notify(
         '自动阅读失败：' +

@@ -1,9 +1,67 @@
-import {
-  extractImageUrl,
-  extractNameFromUrl,
-  setupButtonClick,
-  AddEmojiButtonData
-} from '../x/utils'
+// Inlined utility functions for XHS (no dependency on x/utils)
+
+interface AddEmojiButtonData {
+  name: string
+  url: string
+}
+
+// Extract image URL from element (XHS-specific version)
+function extractImageUrl(el: Element): string | null {
+  const style = (el as HTMLElement).style && (el as HTMLElement).style.backgroundImage
+  if (style && style !== 'none') {
+    const urlMatch = style.match(/url\((?:\s*['"]?)(.*?)(?:['"]?\s*)\)/)
+    if (urlMatch) return urlMatch[1]
+  }
+
+  const img = el.querySelector('img') as HTMLImageElement | null
+  if (img) {
+    const src = img.getAttribute('src') || img.getAttribute('data-src') || img.src || ''
+    if (src) return src
+  }
+
+  const elSrc = (el as HTMLImageElement).src
+  if (elSrc) return elSrc
+
+  return null
+}
+
+// Extract filename from URL
+function extractNameFromUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    const filename = u.pathname.split('/').pop() || ''
+    return decodeURIComponent(filename.replace(/\.[^/.]+$/, '')) || '表情'
+  } catch {
+    return '表情'
+  }
+}
+
+// Setup button click handler to add emoji
+function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) {
+  button.addEventListener('click', async e => {
+    e.preventDefault()
+    e.stopPropagation()
+    const orig = button.innerHTML
+    const origStyle = button.style.cssText
+    try {
+      await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
+      button.innerHTML = '已添加'
+      button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
+      setTimeout(() => {
+        button.innerHTML = orig
+        button.style.cssText = origStyle
+      }, 1500)
+    } catch (err) {
+      console.error('[XhsUtils] 添加失败', err)
+      button.innerHTML = '失败'
+      button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
+      setTimeout(() => {
+        button.innerHTML = orig
+        button.style.cssText = origStyle
+      }, 1500)
+    }
+  })
+}
 
 function isXhsPage(): boolean {
   try {

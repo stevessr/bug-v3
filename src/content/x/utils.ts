@@ -1,3 +1,5 @@
+// X/Twitter utility functions - inlined implementation
+
 export interface AddEmojiButtonData {
   name: string
   url: string

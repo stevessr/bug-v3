@@ -71,15 +71,13 @@ export default defineConfig(({ mode }) => {
           )
         },
         output: {
-          entryFileNames: chunkInfo => {
-            return 'js/[name].js'
-          },
+          entryFileNames: 'js/[name].js',
           chunkFileNames: 'js/[name].js',
           assetFileNames: 'assets/[name].[ext]',
-          inlineDynamicImports: true,
-          manualChunks: (id, { getModuleInfo }) => {
-            return undefined
-          }
+          format: 'es', // Use ES format first, will handle in manifest
+          // Note: We want IIFE but Rolldown doesn't support it with multiple entries
+          // The generated ES modules will be wrapped in IIFE by the browser when injected
+          manualChunks: undefined // Try to avoid chunking
         },
         external: id => {
           return false // Don't externalize anything

@@ -1,8 +1,5 @@
 // Entry point: 初始化模块并启动功能
 
-import { postTimings } from './utils/timingsBinder'
-import { autoReadAllv2 } from './utils/autoReadReplies'
-import { requestSettingFromBackground } from './utils/requestSetting'
 // antiRateLimit removed — content script no longer listens for network-level 429 notifications
 
 // Note: ALL platform-specific features have been moved to standalone scripts
@@ -10,6 +7,78 @@ import { requestSettingFromBackground } from './utils/requestSetting'
 // No direct initialization happens in content.ts anymore
 
 console.log('[Emoji Extension] Content script loaded (entry)')
+
+// ==================== Inlined: postTimings from timingsBinder ====================
+async function postTimings(topicId: number, timings: Record<number, number>): Promise<any> {
+  const csrfToken = await new Promise<string>((resolve) => {
+    chrome.runtime.sendMessage({ type: 'GET_CSRF_TOKEN' }, (response: any) => {
+      resolve(response?.csrfToken || '')
+    })
+  })
+
+  if (!csrfToken) {
+    throw new Error('CSRF token not available')
+  }
+
+  const payload = {
+    timings: Object.entries(timings).map(([post_number, time]) => ({
+      post_number: Number(post_number),
+      time: Math.round(time)
+    })),
+    topic_id: topicId,
+    topic_time: Math.round(Object.values(timings).reduce((a, b) => a + b, 0))
+  }
+
+  const resp = await fetch('/topics/timings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken
+    },
+    body: JSON.stringify(payload),
+    credentials: 'same-origin'
+  })
+
+  if (!resp.ok) {
+    throw new Error(`Post timings failed: ${resp.status}`)
+  }
+
+  return await resp.json()
+}
+
+// Expose postTimings for Discourse features
+;(window as any).postTimings = postTimings
+
+console.log('[EmojiExtension] postTimings mounted to window')
+
+// Helper to request a single setting from the background (by key).
+// Inlined to avoid separate bundle
+function requestSettingFromBackground(key: string): Promise<any> {
+  return new Promise(resolve => {
+    try {
+      const chromeAPI = (window as any).chrome
+      if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
+        chromeAPI.runtime.sendMessage({ type: 'GET_EMOJI_SETTING', key }, (resp: any) => {
+          if (
+            resp &&
+            resp.success &&
+            resp.data &&
+            Object.prototype.hasOwnProperty.call(resp.data, 'value')
+          ) {
+            resolve(resp.data.value)
+          } else {
+            resolve(null)
+          }
+        })
+      } else {
+        resolve(null)
+      }
+    } catch (e) {
+      void e
+      resolve(null)
+    }
+  })
+}
 
 // Request background to inject platform-specific scripts
 async function requestPlatformScriptInjection(scriptType: string, settingKey?: string) {
@@ -180,21 +249,8 @@ if (window.location.hostname.includes('linux.do')) {
   })
 }
 
-// Expose postTimings helper to page context for testing and manual triggers.
-// We attach it to window only on linux.do pages to avoid polluting other sites.
-try {
-  if (window.location.hostname.includes('linux.do')) {
-    // Directly bind the statically imported postTimings
-
-    // @ts-ignore
-    window.postTimings = postTimings
-    // expose autoReadAllv2 for userscripts / page scripts
-    // @ts-ignore
-    window.autoReadAllRepliesV2 = autoReadAllv2
-  }
-} catch (e) {
-  console.warn('[Emoji Extension] failed to expose postTimings to window', e)
-}
+// Note: postTimings已在前面暴露到 window
+// Note: autoReadAllRepliesV2 is now exposed by discourse-features script
 
 // Initialize 429 error interceptor for linux.do
 // This will automatically trigger Cloudflare challenge when rate limit is hit

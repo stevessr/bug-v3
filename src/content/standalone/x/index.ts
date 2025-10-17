@@ -14,9 +14,9 @@ import { initX } from '../../x/init'
     }
 
     console.log('[XFeatures] Initializing standalone X/Twitter script')
+    
+    // Initialize immediately (utils are now inlined in x/utils.ts)
     initX()
-
-    // 标记已初始化
     ;(window as any).__X_FEATURES_INITIALIZED__ = true
 
     // 监听来自后台的禁用消息
