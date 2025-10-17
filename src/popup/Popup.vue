@@ -2,7 +2,7 @@
 import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 
 import GroupTabs from './components/GroupTabs.vue'
-import EmojiGrid from './components/EmojiGrid.vue'
+import LazyEmojiGrid from './components/LazyEmojiGrid.vue'
 import { usePopup } from './usePopup'
 
 const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions } = usePopup()
@@ -118,18 +118,41 @@ const openOptionsInNewWindow = () => {
         :setActive="setActiveHandler"
       />
 
-      <!-- Emoji Grid: 放在可伸缩的容器中以填充剩余高度 -->
+      <!-- Lazy Emoji Grids: 为每个分组创建独立网格，使用 v-show 切换 -->
       <div class="popup-body">
-        <EmojiGrid
-          :emojis="emojiStore.filteredEmojis"
-          :isLoading="emojiStore.isLoading"
-          :favorites="emojiStore.favorites"
-          :gridColumns="emojiStore.settings.gridColumns"
-          :emptyMessage="emojiStore.searchQuery ? '没有找到匹配的表情' : '该分组还没有表情'"
-          :showAddButton="!emojiStore.searchQuery"
-          @select="selectEmoji"
-          @openOptions="openOptions"
-        />
+        <!-- 搜索模式：使用过滤后的表情 -->
+        <template v-if="emojiStore.searchQuery">
+          <LazyEmojiGrid
+            :emojis="emojiStore.filteredEmojis"
+            :isLoading="emojiStore.isLoading"
+            :favorites="emojiStore.favorites"
+            :gridColumns="emojiStore.settings.gridColumns"
+            :emptyMessage="'没有找到匹配的表情'"
+            :showAddButton="false"
+            groupId="search"
+            :isActive="true"
+            @select="selectEmoji"
+            @openOptions="openOptions"
+          />
+        </template>
+
+        <!-- 正常模式：为每个分组创建独立网格 -->
+        <template v-else>
+          <LazyEmojiGrid
+            v-for="group in emojiStore.sortedGroups"
+            :key="group.id"
+            :emojis="group.emojis || []"
+            :isLoading="emojiStore.isLoading"
+            :favorites="emojiStore.favorites"
+            :gridColumns="emojiStore.settings.gridColumns"
+            :emptyMessage="'该分组还没有表情'"
+            :showAddButton="true"
+            :groupId="group.id"
+            :isActive="emojiStore.activeGroupId === group.id"
+            @select="selectEmoji"
+            @openOptions="openOptions"
+          />
+        </template>
       </div>
 
       <!-- Copy Success Toast -->

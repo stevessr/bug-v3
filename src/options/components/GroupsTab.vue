@@ -43,7 +43,7 @@ import GroupsCardView from './GroupsCardView.vue'
 import GroupActionsDropdown from './GroupActionsDropdown.vue'
 import DedupeChooser from './DedupeChooser.vue'
 import DomainManager from './DomainManager.vue'
-import VirtualGroupEmojis from './VirtualGroupEmojis.vue'
+import EmojiGrid from './EmojiGrid.vue'
 
 import { TouchDragHandler } from '@/options/utils/touchDragDrop'
 
@@ -444,22 +444,35 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                   </div>
                 </div>
 
-                <!-- Expanded emoji display with virtual scrolling -->
+                <!-- Expanded emoji display with lazy loading -->
                 <div
                   v-if="expandedGroups.has(group.id)"
                   class="px-4 pb-4 border-t border-gray-100 dark:border-gray-700"
                 >
                   <div class="mt-4">
-                    <!-- 使用虚拟滚动组件显示单个分组的表情 -->
-                    <VirtualGroupEmojis
-                      :groups="[group]"
-                      :expanded-groups="new Set([group.id])"
+                    <!-- Add emoji button (hidden for favorites group) -->
+                    <div v-if="group.id !== 'favorites'" class="mb-4">
+                      <a-button
+                        @click="$emit('openAddEmoji', group.id)"
+                        class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full dark:border-gray-600 dark:text-white dark:hover:border-gray-500"
+                      >
+                        + 添加表情
+                      </a-button>
+                    </div>
+                    <!-- For favorites group, show info instead -->
+                    <div v-if="group.id === 'favorites'" class="mb-4">
+                      <div
+                        class="px-3 py-2 text-sm text-gray-500 text-center border border-gray-200 rounded-lg bg-gray-50 dark:text-white dark:border-gray-700 dark:bg-gray-700"
+                      >
+                        使用表情会自动添加到常用分组
+                      </div>
+                    </div>
+
+                    <!-- 懒加载表情网格 - 仅展开时渲染 -->
+                    <EmojiGrid
+                      :emojis="group.emojis || []"
+                      :group-id="group.id"
                       :grid-columns="emojiStore.settings.gridColumns"
-                      :virtualization-threshold="50"
-                      :container-height="400"
-                      :item-height="120"
-                      :overscan="10"
-                      :show-performance-stats="false"
                       @edit-emoji="
                         (emoji, groupId, index) => $emit('editEmoji', emoji, groupId, index)
                       "
@@ -471,27 +484,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                       @emoji-drop="
                         (groupId, index, event) => $emit('emojiDrop', groupId, index, event)
                       "
-                    >
-                      <template #header>
-                        <!-- Add emoji button (hidden for favorites group) -->
-                        <div v-if="group.id !== 'favorites'" class="mb-4">
-                          <a-button
-                            @click="$emit('openAddEmoji', group.id)"
-                            class="px-3 py-2 text-sm border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors w-full dark:border-gray-600 dark:text-white dark:hover:border-gray-500"
-                          >
-                            + 添加表情
-                          </a-button>
-                        </div>
-                        <!-- For favorites group, show info instead -->
-                        <div v-if="group.id === 'favorites'" class="mb-4">
-                          <div
-                            class="px-3 py-2 text-sm text-gray-500 text-center border border-gray-200 rounded-lg bg-gray-50 dark:text-white dark:border-gray-700 dark:bg-gray-700"
-                          >
-                            使用表情会自动添加到常用分组
-                          </div>
-                        </div>
-                      </template>
-                    </VirtualGroupEmojis>
+                    />
                   </div>
                 </div>
               </div>
