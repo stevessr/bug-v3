@@ -295,6 +295,12 @@ function addCarouselButtonToEl(el: Element) {
 
     if (!targetContainer || !url) return
     if (url.includes('profile_images')) return
+    
+    // Filter out commerce product images
+    if (url.includes('commerce_product_img')) {
+      console.log('[XCarousel] Skipping commerce product image:', url)
+      return
+    }
 
     if (isInjected(targetContainer)) {
       markInjected(el, targetContainer)
@@ -448,8 +454,15 @@ function tryInjectTwitterMedia(
   try {
     const parsed = new URL(url)
     const host = parsed.hostname.toLowerCase()
-    const isTwitterMedia = host === 'pbs.twimg.com' && parsed.pathname.includes('/media/')
     const pathname = parsed.pathname.toLowerCase()
+    
+    // Filter out commerce product images
+    if (pathname.includes('commerce_product_img')) {
+      console.log('[TwitterMedia] Skipping commerce product image:', url)
+      return false
+    }
+    
+    const isTwitterMedia = host === 'pbs.twimg.com' && parsed.pathname.includes('/media/')
     const formatParam = (parsed.searchParams.get('format') || '').toLowerCase()
     if (pathname.endsWith('.svg') || formatParam === 'svg') return false
     if (!isTwitterMedia) return false
