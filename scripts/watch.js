@@ -30,35 +30,60 @@ try {
 let buildProcess = null
 let pendingRun = false
 let debounceTimer = null
-const DEBOUNCE_MS = 200
+const DEBOUNCE_MS = 500 // 增加防抖时间以减少重复构建
+
+// 需要监视的文件扩展名白名单
+const WATCHED_EXTENSIONS = new Set([
+  '.ts',
+  '.tsx',
+  '.vue',
+  '.js',
+  '.jsx',
+  '.json',
+  '.css',
+  '.less',
+  '.scss',
+  '.sass',
+  '.html'
+])
+
+function shouldWatchFile(filename) {
+  const ext = path.extname(filename).toLowerCase()
+  return WATCHED_EXTENSIONS.has(ext)
+}
 
 function startBuild() {
   if (buildProcess) {
-    // 如果当前有构建在运行，标记为在结束后需要再跑一次
-    pendingRun = true
+    // 如果当前有构建在运行，标记为在结束后需要再跑一次（但不重复标记）
+    if (!pendingRun) {
+      pendingRun = true
+      console.log('⏳ 检测到新变动，将在当前构建完成后执行')
+    }
     return
   }
 
-  console.log('🔁 触发构建: node scripts/build.js build')
+  console.log('🔁 触发构建：node scripts/build.js build:debug')
   buildProcess = spawn(process.execPath, [path.join(__dirname, 'build.js'), 'build:debug'], {
     stdio: 'inherit',
     shell: false,
     env: process.env,
-    cwd: projectRoot // 确保子进程工作目录是项目根目录
+    cwd: projectRoot
   })
 
   buildProcess.on('exit', code => {
     buildProcess = null
-    console.log(`构建结束，退出码: ${code}`)
+    console.log(`✅ 构建结束，退出码：${code}`)
     if (pendingRun) {
       pendingRun = false
       // 小延迟以合并紧接的文件改动
-      setTimeout(startBuild, 50)
+      console.log('🔄 执行待处理的构建...')
+      setTimeout(startBuild, 100)
     }
   })
 }
 
-console.log(`👀 正在监视: ${srcDir}（递归）`)
+console.log(`👀 正在监视：${srcDir}（递归）`)
+console.log(`📝 监视的文件类型：${Array.from(WATCHED_EXTENSIONS).join(', ')}`)
 
 try {
   const watcher = watch(srcDir, { recursive: true }, (eventType, filename) => {
@@ -69,15 +94,31 @@ try {
 
     // 检查文件是否应该被忽略
     if (ig.ignores(relativePath)) {
-      // console.log(`🙈 忽略: ${relativePath}`); // 如果需要调试，可以取消此行注释
       return
     }
 
-    // 忽略临时/隐藏文件的噪声 (虽然 .gitignore 通常会包含这些)
-    if (filename.startsWith('.') || filename.endsWith('~')) return
+    // 忽略临时/隐藏文件的噪声
+    if (filename.startsWith('.') || filename.endsWith('~') || filename.endsWith('.swp')) {
+      return
+    }
 
-    if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => startBuild(), DEBOUNCE_MS)
+    // 只监视特定文件类型
+    if (!shouldWatchFile(filename)) {
+      return
+    }
+
+    console.log(`📄 检测到文件变动：${relativePath}`)
+
+    // 清除之前的防抖计时器
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+    }
+
+    // 设置新的防抖计时器
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null
+      startBuild()
+    }, DEBOUNCE_MS)
   })
 
   process.on('SIGINT', () => {
@@ -89,7 +130,7 @@ try {
     process.exit(0)
   })
 } catch (err) {
-  console.error('无法启动文件监视器:', err)
+  console.error('无法启动文件监视器：', err)
   console.error('你可以考虑安装 chokidar 并改用更可靠的实现。')
   process.exit(1)
 }

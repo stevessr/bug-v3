@@ -392,9 +392,28 @@ export function scanAndInjectCarousel() {
   } catch {
     // ignore
   }
-  set.forEach(el => addCarouselButtonToEl(el))
 
-  console.log(`[XCarousel] Processed ${set.size} carousel elements`)
+  // Filter out elements whose ancestors are also in the set to prevent duplicate processing
+  // For example, if both a container div and its child img are in the set, only process the container
+  const filtered = new Set<Element>()
+  set.forEach(el => {
+    let hasAncestorInSet = false
+    let parent = el.parentElement
+    while (parent && parent !== document.body) {
+      if (set.has(parent)) {
+        hasAncestorInSet = true
+        break
+      }
+      parent = parent.parentElement
+    }
+    if (!hasAncestorInSet) {
+      filtered.add(el)
+    }
+  })
+
+  filtered.forEach(el => addCarouselButtonToEl(el))
+
+  console.log(`[XCarousel] Processed ${filtered.size} carousel elements (${set.size} total matched)`)
 }
 
 function tryInjectTwitterMedia(
@@ -453,6 +472,14 @@ export function observeCarousel() {
         for (const n of Array.from(m.addedNodes)) {
           if (n.nodeType !== 1) continue
           const el = n as Element
+          // Skip if this is our own injected button being added
+          if (
+            el.classList &&
+            (el.classList.contains('x-emoji-add-btn-carousel') ||
+              el.classList.contains('x-emoji-add-btn'))
+          ) {
+            continue
+          }
           if (el.tagName === 'IMG' || (el.querySelector && el.querySelector('img'))) {
             needsScan = true
             break
@@ -466,6 +493,14 @@ export function observeCarousel() {
       if (m.type === 'attributes') {
         const tgt = m.target as Element
         if (!tgt) continue
+        // Skip if this is just adding the 'injected' class to prevent double injection
+        if (m.attributeName === 'class' && tgt.classList.contains('injected')) {
+          continue
+        }
+        // Skip attribute changes on already-injected elements to prevent re-injection
+        if (isInjected(tgt)) {
+          continue
+        }
         if (tgt.tagName === 'IMG') {
           // attribute changes on <img> (e.g. src) are relevant
           needsScan = true
