@@ -11,6 +11,7 @@ import {
   FileTextOutlined,
   DownOutlined
 } from '@ant-design/icons-vue'
+
 import { useEmojiStore } from '../../stores/emojiStore'
 import { importConfigurationToStore, importEmojisToStore } from '../utils/importUtils'
 
@@ -78,7 +79,7 @@ const handleConfigFileSelect = async (event: Event) => {
       message: '配置导入成功',
       details: `已导入 ${config.groups?.length || 0} 个分组`
     }
-    
+
     // Auto-hide after 3 seconds
     setTimeout(() => {
       importResults.value = null
@@ -130,7 +131,7 @@ const handleEmojiFileSelect = async (event: Event) => {
       message: '表情导入成功',
       details: `已导入 ${count} 个表情`
     }
-    
+
     // Auto-hide after 3 seconds
     setTimeout(() => {
       importResults.value = null
@@ -184,7 +185,7 @@ const importFromMarkdown = async () => {
     }
 
     markdownText.value = ''
-    
+
     // Auto-close and hide after 2 seconds
     setTimeout(() => {
       importResults.value = null

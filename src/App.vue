@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import router from '@/options/router'
 
 // 使用静态导入，扩展不需要代码分割
 import Popup from './popup/Popup.vue'
 import Options from './options/Options.vue'
+
+import router from '@/options/router'
 
 // 检测当前是 popup 模式还是 options 模式
 const isPopupMode = ref(false)
@@ -46,7 +47,7 @@ onMounted(() => {
         const restoreUrl = originalPath + (originalSearch || '')
         window.history.replaceState({}, '', restoreUrl)
       })
-      .catch((e) => {
+      .catch(e => {
         console.warn('[App.vue] router navigation failed:', e)
       })
 
@@ -57,7 +58,8 @@ onMounted(() => {
       const search = window.location.search || ''
       const keptParams = new URLSearchParams(search)
       keptParams.delete('type')
-      const newUrl = window.location.pathname + (keptParams.toString() ? `?${keptParams.toString()}` : '')
+      const newUrl =
+        window.location.pathname + (keptParams.toString() ? `?${keptParams.toString()}` : '')
       window.history.replaceState({}, '', newUrl)
       console.log('[App.vue] 已清理 URL 为：', newUrl)
     }
@@ -76,7 +78,7 @@ onMounted(() => {
   }
 
   console.log('[App.vue] 最终模式：', isPopupMode.value ? 'Popup' : 'Options')
-  
+
   // 根据模式为 body 添加对应的 class，以应用不同的样式
   if (isPopupMode.value) {
     document.body.classList.add('popup-mode')

@@ -10,10 +10,10 @@ const { emojiStore, removeEmojiFromGroup, openEditEmoji, openAddEmojiModal } = o
 </script>
 
 <template>
-  <UngroupedTab 
-    :emojiStore="emojiStore" 
-    @remove="removeEmojiFromGroup" 
-    @edit="openEditEmoji" 
+  <UngroupedTab
+    :emojiStore="emojiStore"
+    @remove="removeEmojiFromGroup"
+    @edit="openEditEmoji"
     @add-emoji="openAddEmojiModal"
   />
 </template>

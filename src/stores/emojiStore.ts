@@ -665,7 +665,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
         for (const incoming of config.groups as EmojiGroup[]) {
           if (!incoming || typeof incoming !== 'object') continue
-          const targetId = incoming.id || `group-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+          const targetId =
+            incoming.id || `group-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
           const current = existingGroups.get(targetId)
 
           if (current) {
@@ -788,7 +789,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       groups.value.push(targetGroup)
     }
 
-    const exists = targetGroup.emojis.some(e => e.id === payload.emoji.id || e.url === payload.emoji.url)
+    const exists = targetGroup.emojis.some(
+      e => e.id === payload.emoji.id || e.url === payload.emoji.url
+    )
     if (!exists) {
       targetGroup.emojis.push(payload.emoji)
       // maintain consistency of favorites if necessary
@@ -1063,7 +1066,6 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     endBatch,
     // one-click add from web
     addEmojiFromWeb
-    ,
     // (lazy-load removed)
   }
 })

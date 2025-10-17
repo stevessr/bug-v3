@@ -20,5 +20,3 @@ export function applyCustomCssFromCache() {
     console.warn('[Emoji Extension] Failed to apply custom CSS', e)
   }
 }
-
-

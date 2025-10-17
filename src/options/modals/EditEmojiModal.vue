@@ -373,7 +373,9 @@ const handleSubmit = () => {
 
             <!-- 下方预览区 -->
             <div class="w-full">
-              <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div
+                class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+              >
                 <h4 class="text-sm font-medium text-gray-700 dark:text-white mb-3">图片预览</h4>
                 <div class="flex items-center justify-center min-h-48">
                   <!-- 有 URL 且未出错时显示图片 -->
@@ -387,7 +389,7 @@ const handleSubmit = () => {
                     @click="visible = true"
                     @error="handleImageError"
                   />
-                  
+
                   <!-- URL 为空时的占位符 -->
                   <div
                     v-else-if="!localEmoji.displayUrl && !localEmoji.url"
@@ -398,7 +400,7 @@ const handleSubmit = () => {
                       <div class="text-sm">请输入图片链接</div>
                     </div>
                   </div>
-                  
+
                   <!-- 图片加载失败时的占位符 -->
                   <div
                     v-else-if="imageLoadError"

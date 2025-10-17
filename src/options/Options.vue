@@ -148,7 +148,8 @@ const menuItems = computed(() => {
 // 当前选中的菜单键
 const menuSelectedKeys = computed(() => {
   // 优先使用 URL 查询参数中的 tabs（保持地址为 index.html?type=...&tabs=...）
-  const queryTabs = (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
+  const queryTabs =
+    (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
   const keys = menuItems.value.map(i => i.key)
   if (queryTabs) {
     // 如果 tabs 对应于菜单键，直接使用；否则将视为分组名称，选中 groups 菜单
@@ -191,11 +192,14 @@ const handleMenuSelect = (info: any) => {
 
   if (targetRoute && route.path !== targetRoute) {
     // Navigate internally with router, then restore visible URL (router will change path)
-    router.push(targetRoute).then(() => {
-      window.history.replaceState({}, '', originalPath + newSearch)
-    }).catch(() => {
-      // ignore navigation failures
-    })
+    router
+      .push(targetRoute)
+      .then(() => {
+        window.history.replaceState({}, '', originalPath + newSearch)
+      })
+      .catch(() => {
+        // ignore navigation failures
+      })
   }
 }
 
@@ -235,7 +239,8 @@ onMounted(() => {
   // 初始化主题模式
   currentThemeMode.value = getCurrentThemeMode()
   // 处理通过 query tabs 指定的初始页面或分组
-  const queryTabs = (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
+  const queryTabs =
+    (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
   const keys = menuItems.value.map(i => i.key)
   const originalPath = window.location.pathname
   const originalSearch = window.location.search
@@ -256,10 +261,13 @@ onMounted(() => {
       }
       const targetRoute = routeMap[queryTabs]
       if (targetRoute) {
-        router.replace(targetRoute).then(() => {
-          // restore visible URL to original (keep query)
-          window.history.replaceState({}, '', originalPath + (originalSearch || ''))
-        }).catch(() => {})
+        router
+          .replace(targetRoute)
+          .then(() => {
+            // restore visible URL to original (keep query)
+            window.history.replaceState({}, '', originalPath + (originalSearch || ''))
+          })
+          .catch(() => {})
       }
     } else {
       // 视为分组名称，尝试查找并选中该分组

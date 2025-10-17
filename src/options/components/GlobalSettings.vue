@@ -190,7 +190,10 @@ const syncVariantToDisplayUrlRef = ref<boolean>(
     : ((settings as AppSettings).syncVariantToDisplayUrl ?? true)
 )
 watch(
-  () => (isRef(settings) ? (settings.value as any).syncVariantToDisplayUrl : (settings as AppSettings).syncVariantToDisplayUrl),
+  () =>
+    isRef(settings)
+      ? (settings.value as any).syncVariantToDisplayUrl
+      : (settings as AppSettings).syncVariantToDisplayUrl,
   v => {
     syncVariantToDisplayUrlRef.value = v ?? true
   }
@@ -408,7 +411,9 @@ const cancelCustomCss = () => {
       <div class="flex items-center justify-between">
         <div>
           <label class="text-sm font-medium dark:text-white">导入时同步变体到显示图</label>
-          <p class="text-sm dark:text-white">当选择导入变体时，是否将该变体 URL 同步为项的 displayUrl（用于缩略图显示）</p>
+          <p class="text-sm dark:text-white">
+            当选择导入变体时，是否将该变体 URL 同步为项的 displayUrl（用于缩略图显示）
+          </p>
         </div>
         <a-switch v-model:checked="syncVariantToDisplayUrlRef" />
       </div>
@@ -455,7 +460,9 @@ const cancelCustomCss = () => {
           <label class="text-sm font-medium text-gray-900 dark:text-white">
             启用 X.com 额外选择器
           </label>
-          <p class="text-sm text-gray-500 dark:text-white">在 X.com(Twitter) 启用额外的选择器控制</p>
+          <p class="text-sm text-gray-500 dark:text-white">
+            在 X.com(Twitter) 启用额外的选择器控制
+          </p>
         </div>
         <a-switch v-model:checked="enableXcomExtraSelectorsRef" />
       </div>
@@ -477,7 +484,9 @@ const cancelCustomCss = () => {
           <label class="text-sm font-medium text-gray-900 dark:text-white">
             启用一键解析全部图片
           </label>
-          <p class="text-sm text-gray-500 dark:text-white">控制前端是否注入“一键解析并添加所有图片”按钮</p>
+          <p class="text-sm text-gray-500 dark:text-white">
+            控制前端是否注入“一键解析并添加所有图片”按钮
+          </p>
         </div>
         <a-switch v-model:checked="enableBatchParseImagesRef" />
       </div>

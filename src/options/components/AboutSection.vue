@@ -58,19 +58,12 @@ const changelog = ref([
   {
     version: '1.1.7',
     date: '2025-08-12',
-    notes: [
-      '修复用户配置保存问题',
-      '改进外部站点兼容性',
-      '性能优化：虚拟滚动改进'
-    ]
+    notes: ['修复用户配置保存问题', '改进外部站点兼容性', '性能优化：虚拟滚动改进']
   },
   {
     version: '1.1.6',
     date: '2025-06-01',
-    notes: [
-      '修复若干 UI 边缘 case',
-      '改进导出/导入流程'
-    ]
+    notes: ['修复若干 UI 边缘 case', '改进导出/导入流程']
   }
 ])
 
@@ -87,7 +80,8 @@ const supportedSites = ref([
   '以及更多网站...'
 ])
 // 使用 TypeIt 实现打字机效果
-const fullText = '一个功能强大的浏览器扩展，让您能够在任何网站上轻松插入和管理自定义表情。支持多平台同步，智能分组管理，让表情使用更加便捷高效。'
+const fullText =
+  '一个功能强大的浏览器扩展，让您能够在任何网站上轻松插入和管理自定义表情。支持多平台同步，智能分组管理，让表情使用更加便捷高效。'
 const typeEl = ref<HTMLElement | null>(null)
 let typeItInstance: any = null
 
@@ -185,11 +179,11 @@ onMounted(() => {
           </div>
         </div>
       </div>
-          <div class="p-6">
-            <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
-              <span aria-live="polite" ref="typeEl"></span>
-            </p>
-          </div>
+      <div class="p-6">
+        <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
+          <span aria-live="polite" ref="typeEl"></span>
+        </p>
+      </div>
     </div>
 
     <!-- 功能统计 -->
@@ -279,11 +273,20 @@ onMounted(() => {
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">📝 更新日志</h3>
       </div>
       <div class="p-6 space-y-4">
-  <div v-for="(entry, idx) in sortedChangelog" :key="entry.version" class="border-l-4 border-blue-500 pl-4">
+        <div
+          v-for="(entry, idx) in sortedChangelog"
+          :key="entry.version"
+          class="border-l-4 border-blue-500 pl-4"
+        >
           <div class="flex items-center gap-2 mb-1">
             <span class="font-medium text-gray-900 dark:text-white">v{{ entry.version }}</span>
             <span class="text-xs text-gray-500 dark:text-gray-400">{{ entry.date }}</span>
-            <span v-if="entry.version === version" class="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded">当前版本</span>
+            <span
+              v-if="entry.version === version"
+              class="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded"
+            >
+              当前版本
+            </span>
           </div>
           <div class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
             <!-- TypeIt will render the notes text into this span -->
@@ -308,8 +311,14 @@ onMounted(() => {
 }
 
 @keyframes blink {
-  0% { opacity: 1; }
-  50% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 </style>

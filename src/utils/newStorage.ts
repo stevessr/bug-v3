@@ -623,7 +623,7 @@ export const newStorageHelpers = {
       const createChunks = (data: any[], prefix: string) => {
         const dataStr = JSON.stringify(data)
         const totalSize = new Blob([dataStr]).size
-        
+
         if (totalSize <= CHUNK_SIZE) {
           // Single chunk
           chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}`] = data
@@ -633,12 +633,12 @@ export const newStorageHelpers = {
           const estimatedChunks = Math.ceil(totalSize / CHUNK_SIZE)
           const itemsPerChunk = Math.ceil(data.length / estimatedChunks)
           let actualChunks = 0
-          
+
           for (let i = 0; i < data.length; i += itemsPerChunk) {
             const chunkData = data.slice(i, i + itemsPerChunk)
             const chunkStr = JSON.stringify(chunkData)
             const chunkSize = new Blob([chunkStr]).size
-            
+
             if (chunkSize <= CHUNK_SIZE) {
               chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${actualChunks}`] = chunkData
               actualChunks++
@@ -646,12 +646,15 @@ export const newStorageHelpers = {
               // If still too large, split further
               const smallerChunks = Math.ceil(chunkData.length / 2)
               for (let j = 0; j < chunkData.length; j += smallerChunks) {
-                chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${actualChunks}`] = chunkData.slice(j, j + smallerChunks)
+                chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${actualChunks}`] = chunkData.slice(
+                  j,
+                  j + smallerChunks
+                )
                 actualChunks++
               }
             }
           }
-          
+
           return { chunkCount: actualChunks, totalItems: data.length }
         }
       }
@@ -686,8 +689,8 @@ export const newStorageHelpers = {
             reject(new Error(`Chrome sync failed: ${error.message || 'Unknown error'}`))
           } else {
             const chunkCount = Object.keys(chunks).length
-            logStorage('SYNC_BACKUP', 'success', { 
-              chunks: chunkCount, 
+            logStorage('SYNC_BACKUP', 'success', {
+              chunks: chunkCount,
               timestamp,
               groupChunks: groupsMeta?.chunkCount || 0,
               favoriteChunks: favoritesMeta?.chunkCount || 0
@@ -707,7 +710,7 @@ export const newStorageHelpers = {
     const chromeAPI = getChromeAPI()
     if (!chromeAPI?.storage?.sync) return
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       chromeAPI.storage.sync.get(null, (allData: any) => {
         if (chromeAPI.runtime.lastError) {
           logStorage('SYNC_CLEANUP', 'failed', undefined, chromeAPI.runtime.lastError)
@@ -715,10 +718,10 @@ export const newStorageHelpers = {
           return
         }
 
-        const keysToRemove = Object.keys(allData || {}).filter(key => 
+        const keysToRemove = Object.keys(allData || {}).filter(key =>
           key.startsWith(SYNC_STORAGE_KEYS.BACKUP)
         )
-        
+
         if (keysToRemove.length > 0) {
           chromeAPI.storage.sync.remove(keysToRemove, () => {
             if (chromeAPI.runtime.lastError) {
@@ -760,38 +763,41 @@ export const newStorageHelpers = {
           const meta = metaResult[`${SYNC_STORAGE_KEYS.BACKUP}_meta`]
           if (!meta) {
             // 尝试旧格式的单块存储
-            chromeAPI.storage.sync.get({ [SYNC_STORAGE_KEYS.BACKUP]: null }, async (oldResult: any) => {
-              if (chromeAPI.runtime.lastError) {
-                logStorage('SYNC_RESTORE', 'failed', undefined, chromeAPI.runtime.lastError)
-                resolve(null)
-                return
-              }
+            chromeAPI.storage.sync.get(
+              { [SYNC_STORAGE_KEYS.BACKUP]: null },
+              async (oldResult: any) => {
+                if (chromeAPI.runtime.lastError) {
+                  logStorage('SYNC_RESTORE', 'failed', undefined, chromeAPI.runtime.lastError)
+                  resolve(null)
+                  return
+                }
 
-              const backup = oldResult[SYNC_STORAGE_KEYS.BACKUP]
-              if (backup && backup.groups) {
-                logStorage('SYNC_RESTORE', 'found legacy backup', { timestamp: backup.timestamp })
-                
-                // Restore data using the new storage system
-                await this.setAllEmojiGroups(backup.groups)
-                await this.setSettings(backup.settings || defaultSettings)
-                await this.setFavorites(backup.favorites || [])
+                const backup = oldResult[SYNC_STORAGE_KEYS.BACKUP]
+                if (backup && backup.groups) {
+                  logStorage('SYNC_RESTORE', 'found legacy backup', { timestamp: backup.timestamp })
 
-                resolve({
-                  groups: backup.groups,
-                  settings: backup.settings || defaultSettings,
-                  favorites: backup.favorites || [],
-                  timestamp: backup.timestamp || 0
-                })
-              } else {
-                logStorage('SYNC_RESTORE', 'no backup found')
-                resolve(null)
+                  // Restore data using the new storage system
+                  await this.setAllEmojiGroups(backup.groups)
+                  await this.setSettings(backup.settings || defaultSettings)
+                  await this.setFavorites(backup.favorites || [])
+
+                  resolve({
+                    groups: backup.groups,
+                    settings: backup.settings || defaultSettings,
+                    favorites: backup.favorites || [],
+                    timestamp: backup.timestamp || 0
+                  })
+                } else {
+                  logStorage('SYNC_RESTORE', 'no backup found')
+                  resolve(null)
+                }
               }
-            })
+            )
             return
           }
 
           // 新格式分块数据恢复
-          logStorage('SYNC_RESTORE', 'found chunked backup meta', { 
+          logStorage('SYNC_RESTORE', 'found chunked backup meta', {
             timestamp: meta.timestamp,
             hasGroups: !!meta.groups,
             hasFavorites: !!meta.favorites
@@ -842,7 +848,10 @@ export const newStorageHelpers = {
   },
 
   // Helper method to restore chunked data
-  async restoreChunkedData(prefix: string, meta: { chunkCount: number; totalItems: number }): Promise<any[]> {
+  async restoreChunkedData(
+    prefix: string,
+    meta: { chunkCount: number; totalItems: number }
+  ): Promise<any[]> {
     const chromeAPI = getChromeAPI()
     if (!chromeAPI?.storage?.sync) {
       throw new Error('Chrome Sync Storage API not available')

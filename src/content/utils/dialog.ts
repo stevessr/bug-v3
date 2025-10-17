@@ -84,7 +84,7 @@ export function customAlert(message: string): Promise<void> {
     }
 
     button.addEventListener('click', cleanup)
-    backdrop.addEventListener('click', (e) => {
+    backdrop.addEventListener('click', e => {
       if (e.target === backdrop) {
         cleanup()
       }
@@ -246,7 +246,7 @@ export function customConfirm(message: string): Promise<boolean> {
 
     cancelButton.addEventListener('click', () => cleanup(false))
     confirmButton.addEventListener('click', () => cleanup(true))
-    backdrop.addEventListener('click', (e) => {
+    backdrop.addEventListener('click', e => {
       if (e.target === backdrop) {
         cleanup(false)
       }
@@ -434,7 +434,7 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
 
     cancelButton.addEventListener('click', () => cleanup(null))
     confirmButton.addEventListener('click', () => cleanup(input.value))
-    backdrop.addEventListener('click', (e) => {
+    backdrop.addEventListener('click', e => {
       if (e.target === backdrop) {
         cleanup(null)
       }

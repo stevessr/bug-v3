@@ -4,7 +4,6 @@ import { createPinia } from 'pinia'
 import './styles/main.ts'
 import { useEmojiStore } from './stores/emojiStore'
 import router from './options/router'
-
 import App from './App.vue'
 
 const pinia = createPinia()

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+
 import { colorSchemes, isValidColor } from '../../styles/antdTheme'
 
 const props = defineProps<{
@@ -36,7 +37,12 @@ const customColorInput = ref(props.modelValue || '')
 // popover refs & positioning
 const customTileRef = ref<HTMLElement | null>(null)
 const popoverRef = ref<HTMLElement | null>(null)
-const popoverStyle = ref<Record<string, string>>({ position: 'fixed', top: '0px', left: '0px', visibility: 'hidden' })
+const popoverStyle = ref<Record<string, string>>({
+  position: 'fixed',
+  top: '0px',
+  left: '0px',
+  visibility: 'hidden'
+})
 // native color input ref — used to programmatically open system color picker
 const colorInputRef = ref<HTMLInputElement | null>(null)
 
@@ -195,7 +201,11 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- custom -->
-    <div ref="customTileRef" class="relative cursor-pointer group" @click.stop.prevent="openCustomPicker">
+    <div
+      ref="customTileRef"
+      class="relative cursor-pointer group"
+      @click.stop.prevent="openCustomPicker"
+    >
       <div
         class="flex items-center p-3 border-2 rounded-lg transition-all duration-200"
         :class="[
@@ -225,10 +235,18 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- popover -->
-    <div v-if="showCustomPicker" ref="popoverRef" :style="popoverStyle" class="shadow-lg rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600" @pointerdown.stop>
-      <div class="p-4" style="width:100%;">
+    <div
+      v-if="showCustomPicker"
+      ref="popoverRef"
+      :style="popoverStyle"
+      class="shadow-lg rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600"
+      @pointerdown.stop
+    >
+      <div class="p-4" style="width: 100%">
         <div class="space-y-3">
-          <label class="block text-sm font-medium text-gray-700 dark:text-white">输入颜色值 (支持 hex、rgb、颜色名称)</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-white">
+            输入颜色值 (支持 hex、rgb、颜色名称)
+          </label>
           <div class="flex gap-2">
             <input
               v-model="customColorInput"
@@ -236,19 +254,44 @@ onBeforeUnmount(() => {
               placeholder="#1890ff 或 rgb(24, 144, 255)"
               class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <a-button @click="saveCustomColor" :disabled="!isValidColor(customColorInput)" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors">确定</a-button>
+            <a-button
+              @click="saveCustomColor"
+              :disabled="!isValidColor(customColorInput)"
+              class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              确定
+            </a-button>
           </div>
           <div class="mt-3 flex items-center gap-3">
-            <input ref="colorInputRef" type="color" class="w-10 h-10 p-0 border rounded" :value="customColorInput" @input="onColorInput" @click.stop />
+            <input
+              ref="colorInputRef"
+              type="color"
+              class="w-10 h-10 p-0 border rounded"
+              :value="customColorInput"
+              @input="onColorInput"
+              @click.stop
+            />
             <!-- palette removed: only native color input is shown -->
           </div>
           <div class="flex items-center gap-2">
-            <div class="w-6 h-6 rounded border border-gray-300 dark:border-gray-600" :style="{ backgroundColor: isValidColor(customColorInput) ? customColorInput : '#f5f5f5' }"></div>
-            <span class="text-xs text-gray-500 dark:text-white">{{ isValidColor(customColorInput) ? '颜色预览' : '无效颜色' }}</span>
+            <div
+              class="w-6 h-6 rounded border border-gray-300 dark:border-gray-600"
+              :style="{
+                backgroundColor: isValidColor(customColorInput) ? customColorInput : '#f5f5f5'
+              }"
+            ></div>
+            <span class="text-xs text-gray-500 dark:text-white">
+              {{ isValidColor(customColorInput) ? '颜色预览' : '无效颜色' }}
+            </span>
           </div>
         </div>
         <div class="mt-3 flex items-center justify-end gap-2">
-          <button @click.prevent="closeCustomPicker" class="text-sm text-gray-500 hover:text-gray-700 dark:text-white">取消</button>
+          <button
+            @click.prevent="closeCustomPicker"
+            class="text-sm text-gray-500 hover:text-gray-700 dark:text-white"
+          >
+            取消
+          </button>
         </div>
       </div>
     </div>

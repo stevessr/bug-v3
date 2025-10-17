@@ -5,7 +5,7 @@ console.log('[Background] antiRateLimitWebRequest module loaded')
 try {
   if (chrome && chrome.webRequest && chrome.webRequest.onCompleted) {
     chrome.webRequest.onCompleted.addListener(
-      (details) => {
+      details => {
         try {
           const status = (details && (details as any).statusCode) || 0
           const url = details.url || ''

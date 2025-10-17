@@ -183,7 +183,7 @@ class ImageUploader {
           if (_error.error_type === 'rate_limit' && _error.extras?.wait_seconds) {
             const waitSeconds = _error.extras.wait_seconds
             notify(`遇到限流，将等待 ${waitSeconds} 秒后重试...`, 'error')
-            
+
             // Countdown notifications every second
             let remainingSeconds = waitSeconds
             const countdownInterval = setInterval(() => {
@@ -195,7 +195,7 @@ class ImageUploader {
                 notify('限流等待结束，继续上传...', 'success')
               }
             }, 1000)
-            
+
             // Wait for rate limit before retry
             await this.sleep(waitSeconds * 1000)
             this.moveToQueue(item, 'waiting')
@@ -812,7 +812,7 @@ export async function showImageUploadDialog(): Promise<void> {
       if (!files || files.length === 0) return
 
       const markdownText = markdownTextarea.value.trim()
-      
+
       if (!markdownText) {
         await customAlert('请先在上方文本框中粘贴包含图片的 markdown 文本')
         return
@@ -820,16 +820,17 @@ export async function showImageUploadDialog(): Promise<void> {
 
       // Extract existing filenames from markdown using the same logic as parseImageFilenamesFromMarkdown
       const existingFilenames = parseImageFilenamesFromMarkdown(markdownText)
-      
+
       // Also extract filenames from URLs as a fallback
-      const urlFilenames = markdownText
-        .match(/!\[.*?\]\((.*?)\)/g)
-        ?.map(match => {
-          const url = match.match(/!\[.*?\]\((.*?)\)/)?.[1] || ''
-          return url.split('/').pop()?.split('?')[0] || '' // Remove query params
-        })
-        .filter(Boolean) || []
-      
+      const urlFilenames =
+        markdownText
+          .match(/!\[.*?\]\((.*?)\)/g)
+          ?.map(match => {
+            const url = match.match(/!\[.*?\]\((.*?)\)/)?.[1] || ''
+            return url.split('/').pop()?.split('?')[0] || '' // Remove query params
+          })
+          .filter(Boolean) || []
+
       // Combine both lists for comprehensive checking
       const allExistingFilenames = new Set([...existingFilenames, ...urlFilenames])
 
@@ -871,7 +872,7 @@ export async function showImageUploadDialog(): Promise<void> {
         })
 
         await Promise.allSettled(promises)
-        
+
         // Show summary notification
         notify(
           `差分上传完成：已跳过 ${files.length - filesToUpload.length} 个重复文件，上传 ${filesToUpload.length} 个新文件`,
@@ -900,16 +901,16 @@ export async function showImageUploadDialog(): Promise<void> {
         for (const file of files) {
           try {
             updateStatus(file, { status: 'uploading', progress: 0 })
-            
+
             // Upload using the uploader's method
             const result = await uploader.uploadImage(file)
-            
+
             updateStatus(file, { status: 'success', url: result.url })
           } catch (error: any) {
             console.error(`Failed to upload ${file.name}:`, error)
-            updateStatus(file, { 
-              status: 'failed', 
-              error: error.message || '上传失败' 
+            updateStatus(file, {
+              status: 'failed',
+              error: error.message || '上传失败'
             })
           }
         }
@@ -957,34 +958,35 @@ export async function showImageUploadDialog(): Promise<void> {
     diffDropZone.addEventListener('click', async () => {
       // Get markdown text for diff check
       const markdownText = markdownTextarea.value.trim()
-      
+
       if (!markdownText) {
         await customAlert('请先在上方文本框中粘贴包含图片的 markdown 文本')
         return
       }
-      
+
       // Extract existing filenames from markdown
       const existingFilenames = parseImageFilenamesFromMarkdown(markdownText)
-      
+
       // Also extract filenames from URLs as a fallback
-      const urlFilenames = markdownText
-        .match(/!\[.*?\]\((.*?)\)/g)
-        ?.map(match => {
-          const url = match.match(/!\[.*?\]\((.*?)\)/)?.[1] || ''
-          return url.split('/').pop()?.split('?')[0] || '' // Remove query params
-        })
-        .filter(Boolean) || []
-      
+      const urlFilenames =
+        markdownText
+          .match(/!\[.*?\]\((.*?)\)/g)
+          ?.map(match => {
+            const url = match.match(/!\[.*?\]\((.*?)\)/)?.[1] || ''
+            return url.split('/').pop()?.split('?')[0] || '' // Remove query params
+          })
+          .filter(Boolean) || []
+
       // Combine both lists for comprehensive checking
       const allExistingFilenames = new Set([...existingFilenames, ...urlFilenames])
-      
+
       // Use custom file picker with file filter
       await showCustomImagePicker(
         true,
         async (files, updateStatus) => {
           // Upload filtered files
           let uploadCount = 0
-          
+
           for (const file of files) {
             try {
               updateStatus(file, { status: 'uploading', progress: 0 })
@@ -996,7 +998,7 @@ export async function showImageUploadDialog(): Promise<void> {
               updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
             }
           }
-          
+
           // Show summary notification if any files were uploaded
           if (uploadCount > 0) {
             notify(`差分上传完成：成功上传 ${uploadCount} 个文件`, 'success')

@@ -222,7 +222,11 @@ function addCarouselButtonToEl(el: Element) {
     const host = window.location.hostname.toLowerCase()
     const isPbsHost =
       host === 'pbs.twimg.com' || host.endsWith('.twimg.com') || host.includes('pbs.twimg')
-    if ((!isInCarousel(el) && !(isPbsHost && el instanceof HTMLImageElement)) || el.classList.contains('injected')) return
+    if (
+      (!isInCarousel(el) && !(isPbsHost && el instanceof HTMLImageElement)) ||
+      el.classList.contains('injected')
+    )
+      return
     if (
       el.querySelector('.x-emoji-add-btn-carousel') ||
       el.querySelector('.x-emoji-add-btn') ||

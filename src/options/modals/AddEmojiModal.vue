@@ -320,12 +320,12 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
           variants.unshift(gif)
         }
         const item = reactive({
-            name: nameVal,
-            url: src,
-            variants,
-            selectedVariant: variants[0].url,
-            displayUrl: src
-          })
+          name: nameVal,
+          url: src,
+          variants,
+          selectedVariant: variants[0].url,
+          displayUrl: src
+        })
         items.push(item)
       }
     })
@@ -421,7 +421,10 @@ const importParsed = () => {
       // Always use original URL for emoji.url
       const originalUrl = it.url
       // For display, prefer the selectedVariant (what user chose), then parsed displayUrl
-      const displayForEmoji = (it.selectedVariant && it.selectedVariant !== originalUrl) ? it.selectedVariant : (it.displayUrl || undefined)
+      const displayForEmoji =
+        it.selectedVariant && it.selectedVariant !== originalUrl
+          ? it.selectedVariant
+          : it.displayUrl || undefined
 
       const emojiData: any = {
         packet: Date.now(),
@@ -551,10 +554,7 @@ const importParsed = () => {
                       </div>
                       <div class="flex gap-2">
                         <a-button
-                          @click="
-                            pasteText = '',
-                            parsedItems = []
-                          "
+                          @click="((pasteText = ''), (parsedItems = []))"
                           type="button"
                           class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
                         >
@@ -734,7 +734,10 @@ const importParsed = () => {
                             </template>
                             <a-button class="text-xs w-full flex items-center justify-between">
                               <span>
-                                {{ item.variants.find(v => v.url === item.selectedVariant)?.label || '默认' }}
+                                {{
+                                  item.variants.find(v => v.url === item.selectedVariant)?.label ||
+                                  '默认'
+                                }}
                               </span>
                               <DownOutlined />
                             </a-button>

@@ -70,7 +70,10 @@ async function injectDesktopPicker(button: HTMLElement) {
       }
 
       // Clamp to viewport to ensure visibility on both sides
-      const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - pickerRect.width - VIEWPORT_MARGIN)
+      const maxLeft = Math.max(
+        VIEWPORT_MARGIN,
+        window.innerWidth - pickerRect.width - VIEWPORT_MARGIN
+      )
       left = Math.min(Math.max(left, VIEWPORT_MARGIN), maxLeft)
 
       pickerElement.style.left = left + 'px'
@@ -596,7 +599,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
 
     const dragStart = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest('button')) return // Don't drag when clicking close button
-      
+
       isDragging = true
       initialX = e.clientX - currentX
       initialY = e.clientY - currentY
@@ -605,7 +608,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
 
     const drag = (e: MouseEvent) => {
       if (!isDragging) return
-      
+
       e.preventDefault()
       currentX = e.clientX - initialX
       currentY = e.clientY - initialY

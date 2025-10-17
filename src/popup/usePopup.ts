@@ -22,7 +22,9 @@ export function usePopup() {
 
       if (tabParam) {
         // try find group by name or id
-        const found = emojiStore.groups.find(g => g.id === tabParam || g.name === decodeURIComponent(tabParam))
+        const found = emojiStore.groups.find(
+          g => g.id === tabParam || g.name === decodeURIComponent(tabParam)
+        )
         if (found && found.id) {
           emojiStore.activeGroupId = found.id
         }
@@ -43,7 +45,7 @@ export function usePopup() {
   // When active group changes, persist to settings and update URL
   watch(
     () => emojiStore.activeGroupId,
-    (newId) => {
+    newId => {
       try {
         if (!newId) return
         const g = emojiStore.groups.find(x => x.id === newId)
@@ -53,7 +55,7 @@ export function usePopup() {
           const qs = `?type=popup&tab=${encodeURIComponent(g.name)}`
           window.history.replaceState({}, '', window.location.pathname + qs)
         }
-            // No lazy-loading: all groups keep their emojis in memory and persist normally
+        // No lazy-loading: all groups keep their emojis in memory and persist normally
       } catch (e) {
         // ignore
       }

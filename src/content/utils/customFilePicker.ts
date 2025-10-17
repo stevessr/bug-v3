@@ -33,7 +33,7 @@ interface FileUploadStatus {
 
 // Status updater callback type
 export type FileStatusUpdater = (
-  file: File, 
+  file: File,
   update: Partial<Omit<FileUploadStatus, 'file'>>
 ) => void
 
@@ -45,15 +45,22 @@ export async function showCustomFilePicker(
   options: CustomFilePickerOptions = {}
 ): Promise<CustomFilePickerResult> {
   return new Promise(resolve => {
-    const { multiple = false, accept = 'image/*', directory = false, title = '选择文件', onUpload, fileFilter } = options
+    const {
+      multiple = false,
+      accept = 'image/*',
+      directory = false,
+      title = '选择文件',
+      onUpload,
+      fileFilter
+    } = options
 
     // Selected files storage
     let selectedFiles: File[] = []
-    
+
     // Track filtered files for statistics
     let filteredCount = 0
-    let filteredReasons: Map<string, number> = new Map()
-    
+    const filteredReasons: Map<string, number> = new Map()
+
     // Upload status tracking
     const fileStatusMap = new Map<string, FileUploadStatus>()
     let isUploading = false
@@ -384,7 +391,7 @@ export async function showCustomFilePicker(
 
     const dragStart = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest('button')) return // Don't drag when clicking buttons
-      
+
       isDragging = true
       initialX = e.clientX - currentX
       initialY = e.clientY - currentY
@@ -393,7 +400,7 @@ export async function showCustomFilePicker(
 
     const drag = (e: MouseEvent) => {
       if (!isDragging) return
-      
+
       e.preventDefault()
       currentX = e.clientX - initialX
       currentY = e.clientY - initialY
@@ -638,13 +645,13 @@ export async function showCustomFilePicker(
     const cleanup = (result: CustomFilePickerResult) => {
       dialog.style.opacity = '0'
       dialog.style.transform = 'scale(0.95)'
-      
+
       // Clean up all event listeners
       document.removeEventListener('mousemove', drag)
       document.removeEventListener('mouseup', dragEnd)
       document.removeEventListener('keydown', handleEscape)
       document.removeEventListener('paste', handlePaste)
-      
+
       setTimeout(() => {
         if (dialog.parentElement) {
           dialog.parentElement.removeChild(dialog)
@@ -662,7 +669,7 @@ export async function showCustomFilePicker(
       if (!items) return
 
       const imageFiles: File[] = []
-      
+
       // Extract image files from clipboard
       for (let i = 0; i < items.length; i++) {
         const item = items[i]
@@ -672,13 +679,11 @@ export async function showCustomFilePicker(
             // Generate a meaningful filename with timestamp
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
             const extension = file.type.split('/')[1] || 'png'
-            const renamedFile = new File(
-              [file],
-              `pasted-image-${timestamp}.${extension}`,
-              { type: file.type }
-            )
+            const renamedFile = new File([file], `pasted-image-${timestamp}.${extension}`, {
+              type: file.type
+            })
             imageFiles.push(renamedFile)
-            
+
             // If not multiple mode, only take the first image
             if (!multiple) break
           }
@@ -688,14 +693,14 @@ export async function showCustomFilePicker(
       // If we found image files, add them to selection
       if (imageFiles.length > 0) {
         e.preventDefault()
-        
+
         let filesToAdd = imageFiles
         let localFilteredCount = 0
-        
+
         // Apply file filter if provided
         if (fileFilter) {
           const filtered: File[] = []
-          
+
           filesToAdd.forEach(file => {
             const result = fileFilter(file)
             if (result.shouldKeep) {
@@ -706,17 +711,17 @@ export async function showCustomFilePicker(
               filteredReasons.set(reason, (filteredReasons.get(reason) || 0) + 1)
             }
           })
-          
+
           filesToAdd = filtered
           filteredCount += localFilteredCount
-          
+
           // Show filter notification
           if (localFilteredCount > 0) {
             const reasons = Array.from(filteredReasons.entries())
               .map(([reason, count]) => `${count} 个${reason}`)
               .join('，')
             const message = `已过滤 ${localFilteredCount} 个文件（${reasons}）`
-            
+
             const notification = createE('div', {
               text: message,
               style: `
@@ -740,7 +745,7 @@ export async function showCustomFilePicker(
             }, 3000)
           }
         }
-        
+
         if (filesToAdd.length > 0) {
           if (multiple) {
             // Add to existing selection
@@ -774,11 +779,11 @@ export async function showCustomFilePicker(
       if (files && files.length > 0) {
         let filesToAdd = Array.from(files)
         let localFilteredCount = 0
-        
+
         // Apply file filter if provided
         if (fileFilter) {
           const filtered: File[] = []
-          
+
           filesToAdd.forEach(file => {
             const result = fileFilter(file)
             if (result.shouldKeep) {
@@ -789,17 +794,17 @@ export async function showCustomFilePicker(
               filteredReasons.set(reason, (filteredReasons.get(reason) || 0) + 1)
             }
           })
-          
+
           filesToAdd = filtered
           filteredCount += localFilteredCount
-          
+
           // Show filter notification
           if (localFilteredCount > 0) {
             const reasons = Array.from(filteredReasons.entries())
               .map(([reason, count]) => `${count} 个${reason}`)
               .join('，')
             const message = `已过滤 ${localFilteredCount} 个文件（${reasons}）`
-            
+
             // Create a temporary notification
             const notification = createE('div', {
               text: message,
@@ -825,7 +830,7 @@ export async function showCustomFilePicker(
             }, 3000)
           }
         }
-        
+
         if (filesToAdd.length > 0) {
           if (multiple) {
             // Add to existing selection
@@ -859,7 +864,7 @@ export async function showCustomFilePicker(
             setTimeout(() => allFilteredMsg.remove(), 300)
           }, 3000)
         }
-        
+
         // Reset input so the same file can be selected again
         nativeInput.value = ''
       }
@@ -930,9 +935,7 @@ export async function showCustomFilePicker(
       // Create status updater
       const updateFileStatus: FileStatusUpdater = (file, update) => {
         // Find file by content match
-        const index = selectedFiles.findIndex(f => 
-          f.name === file.name && f.size === file.size
-        )
+        const index = selectedFiles.findIndex(f => f.name === file.name && f.size === file.size)
         if (index !== -1) {
           const fileId = `${file.name}-${file.size}-${index}`
           const currentStatus = fileStatusMap.get(fileId)
@@ -973,11 +976,10 @@ export async function showCustomFilePicker(
             cancelled: false
           })
         }, 2000)
-
       } catch (error) {
         console.error('Upload error:', error)
         isUploading = false
-        
+
         // Update UI to error state
         confirmButton.textContent = '重试'
         confirmButton.disabled = false

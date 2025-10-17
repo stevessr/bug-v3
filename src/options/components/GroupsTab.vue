@@ -242,10 +242,6 @@ const closeBatchModal = () => {
   batchTargetGroup.value = null
 }
 
-
-
-
-
 onMounted(() => {
   // Initialize touch handlers
   groupTouchHandler.value = new TouchDragHandler({
@@ -345,8 +341,6 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
     groupTouchHandler.value?.addTouchEvents(element, true)
   }
 }
-
-
 
 // Domain management moved to `DomainManager.vue`
 </script>
@@ -467,10 +461,17 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                       :item-height="120"
                       :overscan="3"
                       :show-performance-stats="false"
-                      @edit-emoji="(emoji, groupId, index) => $emit('editEmoji', emoji, groupId, index)"
+                      @edit-emoji="
+                        (emoji, groupId, index) => $emit('editEmoji', emoji, groupId, index)
+                      "
                       @remove-emoji="(groupId, index) => $emit('removeEmoji', groupId, index)"
-                      @emoji-drag-start="(emoji, groupId, index, event) => onEmojiDragStartLocal(emoji, groupId, index, event)"
-                      @emoji-drop="(groupId, index, event) => $emit('emojiDrop', groupId, index, event)"
+                      @emoji-drag-start="
+                        (emoji, groupId, index, event) =>
+                          onEmojiDragStartLocal(emoji, groupId, index, event)
+                      "
+                      @emoji-drop="
+                        (groupId, index, event) => $emit('emojiDrop', groupId, index, event)
+                      "
                     >
                       <template #header>
                         <!-- Add emoji button (hidden for favorites group) -->
@@ -563,7 +564,6 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
       </div>
     </div>
 
-    
     <!-- Dedupe chooser component -->
     <DedupeChooser
       :visible="chooseDedupeFor"

@@ -8,4 +8,3 @@ export function initAntiRateLimit() {
 export function manualTriggerChallenge() {
   console.log('[Anti-RateLimit] manualTriggerChallenge called but network interception is removed')
 }
-

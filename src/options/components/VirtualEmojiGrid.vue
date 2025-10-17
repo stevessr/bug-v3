@@ -1,92 +1,7 @@
-<template>
-  <div class="virtual-emoji-grid" ref="containerRef">
-    <!-- 虚拟滚动容器 -->
-    <div
-      class="virtual-scroll-container"
-      :style="{
-        height: `${containerHeight}px`,
-        overflowY: 'auto',
-        position: 'relative'
-      }"
-      @scroll="handleScroll"
-    >
-      <!-- 总高度占位符 -->
-      <div class="virtual-spacer" :style="{ height: `${totalHeight}px`, position: 'relative' }">
-        <!-- 可见项容器 -->
-        <div
-          class="virtual-items"
-          :style="{
-            position: 'absolute',
-            top: `${offsetY}px`,
-            left: 0,
-            right: 0
-          }"
-        >
-          <div
-            class="grid gap-3"
-            :style="{
-              gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`
-            }"
-          >
-            <div
-              v-for="item in visibleItems"
-              :key="item.key"
-              class="emoji-item relative group cursor-move"
-              :draggable="true"
-              @dragstart="e => handleEmojiDragStart(item.emoji, item.groupId, item.index, e)"
-              @dragover.prevent
-              @drop="e => handleEmojiDrop(item.groupId, item.index, e)"
-              :ref="
-                el =>
-                  el && addEmojiTouchEvents(el as HTMLElement, item.emoji, item.groupId, item.index)
-              "
-            >
-              <div
-                class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
-              >
-                <img
-                  :src="item.emoji.url"
-                  :alt="item.emoji.name"
-                  class="w-full h-full object-cover"
-                  :loading="item.isVisible ? 'eager' : 'lazy'"
-                />
-              </div>
-              <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
-                {{ item.emoji.name }}
-              </div>
-              <!-- Edit button -->
-              <a-button
-                @click="$emit('editEmoji', item.emoji, item.groupId, item.index)"
-                class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                title="编辑表情"
-              >
-                ✎
-              </a-button>
-              <!-- Remove button -->
-              <a-popconfirm
-                title="确认移除此表情？"
-                @confirm="$emit('removeEmoji', item.groupId, item.index)"
-              >
-                <template #icon>
-                  <QuestionCircleOutlined style="color: red" />
-                </template>
-                <a-button
-                  class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  ×
-                </a-button>
-              </a-popconfirm>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+
 import type { Emoji } from '../../types/emoji'
 
 interface VirtualEmojiItem {
@@ -303,6 +218,92 @@ defineExpose({
   visibleRange
 })
 </script>
+
+<template>
+  <div class="virtual-emoji-grid" ref="containerRef">
+    <!-- 虚拟滚动容器 -->
+    <div
+      class="virtual-scroll-container"
+      :style="{
+        height: `${containerHeight}px`,
+        overflowY: 'auto',
+        position: 'relative'
+      }"
+      @scroll="handleScroll"
+    >
+      <!-- 总高度占位符 -->
+      <div class="virtual-spacer" :style="{ height: `${totalHeight}px`, position: 'relative' }">
+        <!-- 可见项容器 -->
+        <div
+          class="virtual-items"
+          :style="{
+            position: 'absolute',
+            top: `${offsetY}px`,
+            left: 0,
+            right: 0
+          }"
+        >
+          <div
+            class="grid gap-3"
+            :style="{
+              gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`
+            }"
+          >
+            <div
+              v-for="item in visibleItems"
+              :key="item.key"
+              class="emoji-item relative group cursor-move"
+              :draggable="true"
+              @dragstart="e => handleEmojiDragStart(item.emoji, item.groupId, item.index, e)"
+              @dragover.prevent
+              @drop="e => handleEmojiDrop(item.groupId, item.index, e)"
+              :ref="
+                el =>
+                  el && addEmojiTouchEvents(el as HTMLElement, item.emoji, item.groupId, item.index)
+              "
+            >
+              <div
+                class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
+              >
+                <img
+                  :src="item.emoji.url"
+                  :alt="item.emoji.name"
+                  class="w-full h-full object-cover"
+                  :loading="item.isVisible ? 'eager' : 'lazy'"
+                />
+              </div>
+              <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
+                {{ item.emoji.name }}
+              </div>
+              <!-- Edit button -->
+              <a-button
+                @click="$emit('editEmoji', item.emoji, item.groupId, item.index)"
+                class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                title="编辑表情"
+              >
+                ✎
+              </a-button>
+              <!-- Remove button -->
+              <a-popconfirm
+                title="确认移除此表情？"
+                @confirm="$emit('removeEmoji', item.groupId, item.index)"
+              >
+                <template #icon>
+                  <QuestionCircleOutlined style="color: red" />
+                </template>
+                <a-button
+                  class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </a-button>
+              </a-popconfirm>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .virtual-emoji-grid {

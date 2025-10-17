@@ -1,39 +1,9 @@
-<template>
-  <div class="virtual-group-emojis">
-    <div class="group-header mb-4">
-      <slot name="header" />
-    </div>
-    
-    <!-- 表情计数和设置 -->
-    <div class="flex items-center justify-between mb-4">
-      <div class="text-sm text-gray-600 dark:text-gray-300">
-        共 {{ totalEmojis }} 个表情
-      </div>
-      <div></div>
-    </div>
-
-    <!-- 始终使用虚拟滚动网格 -->
-    <VirtualEmojiGrid
-      ref="virtualGridRef"
-      :emojis="formattedEmojis"
-      :grid-columns="localGridColumns"
-      :container-height="containerHeight"
-      :item-height="itemHeight"
-      :overscan="overscan"
-      @edit-emoji="handleEditEmoji"
-      @remove-emoji="handleRemoveEmoji"
-      @emoji-drag-start="handleEmojiDragStart"
-      @emoji-drop="handleEmojiDrop"
-    />
-
-    
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, inject } from 'vue'
-import VirtualEmojiGrid from './VirtualEmojiGrid.vue'
+
 import type { Emoji, EmojiGroup } from '../../types/emoji'
+
+import VirtualEmojiGrid from './VirtualEmojiGrid.vue'
 
 interface Props {
   groups: EmojiGroup[]
@@ -50,8 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
   virtualizationThreshold: 100, // 超过 100 个表情启用虚拟滚动
   containerHeight: 500,
   itemHeight: 120,
-  overscan: 3,
-  
+  overscan: 3
 })
 
 const emit = defineEmits<{
@@ -78,8 +47,8 @@ const localGridColumns = computed(() => {
 
 // 计算展开的表情
 const expandedEmojis = computed(() => {
-  return props.groups.filter(group => 
-    props.expandedGroups.has(group.id) && group.emojis && group.emojis.length > 0
+  return props.groups.filter(
+    group => props.expandedGroups.has(group.id) && group.emojis && group.emojis.length > 0
   )
 })
 
@@ -95,9 +64,7 @@ const formattedEmojis = computed(() => {
 
 // 计算总表情数
 const totalEmojis = computed(() => {
-  return expandedEmojis.value.reduce((total, group) => 
-    total + (group.emojis?.length || 0), 0
-  )
+  return expandedEmojis.value.reduce((total, group) => total + (group.emojis?.length || 0), 0)
 })
 
 // (性能统计已移除)
@@ -128,7 +95,7 @@ const scrollToTop = () => {
 
 const scrollToEmoji = (groupId: string, emojiIndex: number) => {
   let globalIndex = 0
-  
+
   for (const group of expandedEmojis.value) {
     if (group.id === groupId) {
       globalIndex += emojiIndex
@@ -136,7 +103,7 @@ const scrollToEmoji = (groupId: string, emojiIndex: number) => {
     }
     globalIndex += group.emojis?.length || 0
   }
-  
+
   if (virtualGridRef.value) {
     virtualGridRef.value.scrollToItem(globalIndex)
   }
@@ -173,6 +140,34 @@ defineExpose({
   totalEmojis: totalEmojis.value
 })
 </script>
+
+<template>
+  <div class="virtual-group-emojis">
+    <div class="group-header mb-4">
+      <slot name="header" />
+    </div>
+
+    <!-- 表情计数和设置 -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-sm text-gray-600 dark:text-gray-300">共 {{ totalEmojis }} 个表情</div>
+      <div></div>
+    </div>
+
+    <!-- 始终使用虚拟滚动网格 -->
+    <VirtualEmojiGrid
+      ref="virtualGridRef"
+      :emojis="formattedEmojis"
+      :grid-columns="localGridColumns"
+      :container-height="containerHeight"
+      :item-height="itemHeight"
+      :overscan="overscan"
+      @edit-emoji="handleEditEmoji"
+      @remove-emoji="handleRemoveEmoji"
+      @emoji-drag-start="handleEmojiDragStart"
+      @emoji-drop="handleEmojiDrop"
+    />
+  </div>
+</template>
 
 <style scoped>
 .virtual-group-emojis {
@@ -213,15 +208,19 @@ defineExpose({
   transition: opacity 0.3s ease;
 }
 
-.emoji-item img[loading="lazy"] {
+.emoji-item img[loading='lazy'] {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: loading 1.5s infinite;
 }
 
 @keyframes loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* 响应式布局 */
@@ -232,7 +231,7 @@ defineExpose({
 }
 
 /* 暗色主题适配 */
-.dark .emoji-item img[loading="lazy"] {
+.dark .emoji-item img[loading='lazy'] {
   background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
   background-size: 200% 100%;
 }
