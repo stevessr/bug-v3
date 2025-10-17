@@ -5,6 +5,7 @@ import { DownOutlined } from '@ant-design/icons-vue'
 import type { AppSettings } from '../../types/emoji'
 
 import ThemeColorPicker from './ThemeColorPicker.vue'
+import SettingSwitch from './SettingSwitch.vue'
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 // allow flexible typing (either a reactive ref or a plain object)
@@ -149,136 +150,20 @@ const handleImageScaleChange = (value: number | number[]) => {
   setTimeout(() => emit('update:imageScale', num), 0)
 }
 
-// checkbox handlers removed — template now emits directly via a-switch @change handlers
-
-// per-setting refs with synchronization to props.settings
-const showSearchBarRef = ref<boolean>(
-  isRef(settings)
-    ? ((settings.value as any).showSearchBar ?? false)
-    : ((settings as AppSettings).showSearchBar ?? false)
-)
-watch(
-  () =>
-    isRef(settings)
-      ? (settings.value as any).showSearchBar
-      : (settings as AppSettings).showSearchBar,
-  v => {
-    showSearchBarRef.value = v ?? false
+// Helper function to get setting value
+const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
+  try {
+    if (isRef(settings)) return (settings.value && settings.value[key]) ?? defaultValue
+    return (settings && (settings as AppSettings)[key]) ?? defaultValue
+  } catch {
+    return defaultValue
   }
-)
-watch(showSearchBarRef, v => emit('update:showSearchBar', v))
+}
 
-const enableHoverPreviewRef = ref<boolean>(
-  isRef(settings)
-    ? ((settings.value as any).enableHoverPreview ?? false)
-    : ((settings as AppSettings).enableHoverPreview ?? false)
-)
-watch(
-  () =>
-    isRef(settings)
-      ? (settings.value as any).enableHoverPreview
-      : (settings as AppSettings).enableHoverPreview,
-  v => {
-    enableHoverPreviewRef.value = v ?? false
-  }
-)
-watch(enableHoverPreviewRef, v => emit('update:enableHoverPreview', v))
-
-const syncVariantToDisplayUrlRef = ref<boolean>(
-  isRef(settings)
-    ? ((settings.value as any).syncVariantToDisplayUrl ?? true)
-    : ((settings as AppSettings).syncVariantToDisplayUrl ?? true)
-)
-watch(
-  () =>
-    isRef(settings)
-      ? (settings.value as any).syncVariantToDisplayUrl
-      : (settings as AppSettings).syncVariantToDisplayUrl,
-  v => {
-    syncVariantToDisplayUrlRef.value = v ?? true
-  }
-)
-watch(syncVariantToDisplayUrlRef, v => emit('update:syncVariantToDisplayUrl', v))
-
-const forceMobileModeRef = ref<boolean>(
-  isRef(settings)
-    ? ((settings.value as any).forceMobileMode ?? false)
-    : ((settings as AppSettings).forceMobileMode ?? false)
-)
-watch(
-  () =>
-    isRef(settings)
-      ? (settings.value as any).forceMobileMode
-      : (settings as AppSettings).forceMobileMode,
-  v => {
-    forceMobileModeRef.value = v ?? false
-  }
-)
-watch(forceMobileModeRef, v => emit('update:forceMobileMode', v))
-
-const enableLinuxDoInjectionRef = ref<boolean>(
-  isRef(settings)
-    ? ((settings.value as any).enableLinuxDoInjection ?? false)
-    : ((settings as AppSettings).enableLinuxDoInjection ?? false)
-)
-watch(
-  () =>
-    isRef(settings)
-      ? (settings.value as any).enableLinuxDoInjection
-      : (settings as AppSettings).enableLinuxDoInjection,
-  v => {
-    enableLinuxDoInjectionRef.value = v ?? false
-  }
-)
-watch(enableLinuxDoInjectionRef, v => emit('update:enableLinuxDoInjection', v))
-
-const enableXcomExtraSelectorsRef = ref<boolean>(
-  isRef(settings)
-    ? ((settings.value as any).enableXcomExtraSelectors ?? false)
-    : ((settings as AppSettings).enableXcomExtraSelectors ?? false)
-)
-watch(
-  () =>
-    isRef(settings)
-      ? (settings.value as any).enableXcomExtraSelectors
-      : (settings as AppSettings).enableXcomExtraSelectors,
-  v => {
-    enableXcomExtraSelectorsRef.value = v ?? false
-  }
-)
-watch(enableXcomExtraSelectorsRef, v => emit('update:enableXcomExtraSelectors', v))
-
-const enableCalloutSuggestionsRef = ref<boolean>(
-  isRef(settings)
-    ? ((settings.value as any).enableCalloutSuggestions ?? false)
-    : ((settings as AppSettings).enableCalloutSuggestions ?? false)
-)
-watch(
-  () =>
-    isRef(settings)
-      ? (settings.value as any).enableCalloutSuggestions
-      : (settings as AppSettings).enableCalloutSuggestions,
-  v => {
-    enableCalloutSuggestionsRef.value = v ?? false
-  }
-)
-watch(enableCalloutSuggestionsRef, v => emit('update:enableCalloutSuggestions', v))
-
-const enableBatchParseImagesRef = ref<boolean>(
-  isRef(settings)
-    ? ((settings.value as any).enableBatchParseImages ?? true)
-    : ((settings as AppSettings).enableBatchParseImages ?? true)
-)
-watch(
-  () =>
-    isRef(settings)
-      ? (settings.value as any).enableBatchParseImages
-      : (settings as AppSettings).enableBatchParseImages,
-  v => {
-    enableBatchParseImagesRef.value = v ?? true
-  }
-)
-watch(enableBatchParseImagesRef, v => emit('update:enableBatchParseImages', v))
+// Helper function to handle setting updates
+const handleSettingUpdate = (key: string, value: any) => {
+  emit(`update:${key}` as any, value)
+}
 
 // Custom CSS editor state
 const showCustomCssEditor = ref(false)
@@ -392,31 +277,26 @@ const cancelCustomCss = () => {
         <slot name="grid-selector"></slot>
       </div>
 
-      <div class="flex items-center justify-between">
-        <div>
-          <label class="text-sm font-medium dark:text-white">显示搜索栏</label>
-          <p class="text-sm dark:text-white">在表情选择器中显示搜索功能</p>
-        </div>
-        <a-switch v-model:checked="showSearchBarRef" />
-      </div>
+      <SettingSwitch
+        :model-value="getSetting('showSearchBar', false)"
+        @update:model-value="handleSettingUpdate('showSearchBar', $event)"
+        label="显示搜索栏"
+        description="在表情选择器中显示搜索功能"
+      />
 
-      <div class="flex items-center justify-between">
-        <div>
-          <label class="text-sm font-medium dark:text-white">悬浮预览</label>
-          <p class="text-sm dark:text-white">在表情选择器中启用鼠标悬浮显示大图预览</p>
-        </div>
-        <a-switch v-model:checked="enableHoverPreviewRef" />
-      </div>
+      <SettingSwitch
+        :model-value="getSetting('enableHoverPreview', false)"
+        @update:model-value="handleSettingUpdate('enableHoverPreview', $event)"
+        label="悬浮预览"
+        description="在表情选择器中启用鼠标悬浮显示大图预览"
+      />
 
-      <div class="flex items-center justify-between">
-        <div>
-          <label class="text-sm font-medium dark:text-white">导入时同步变体到显示图</label>
-          <p class="text-sm dark:text-white">
-            当选择导入变体时，是否将该变体 URL 同步为项的 displayUrl（用于缩略图显示）
-          </p>
-        </div>
-        <a-switch v-model:checked="syncVariantToDisplayUrlRef" />
-      </div>
+      <SettingSwitch
+        :model-value="getSetting('syncVariantToDisplayUrl', true)"
+        @update:model-value="handleSettingUpdate('syncVariantToDisplayUrl', $event)"
+        label="导入时同步变体到显示图"
+        description="当选择导入变体时，是否将该变体 URL 同步为项的 displayUrl（用于缩略图显示）"
+      />
 
       <div class="flex items-center justify-between">
         <div>
@@ -437,60 +317,42 @@ const cancelCustomCss = () => {
         </a-dropdown>
       </div>
 
-      <div class="flex items-center justify-between">
-        <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">强制移动模式</label>
-          <p class="text-sm text-gray-500 dark:text-white">在桌面端强制使用移动端样式</p>
-        </div>
-        <a-switch v-model:checked="forceMobileModeRef" />
-      </div>
+      <SettingSwitch
+        :model-value="getSetting('forceMobileMode', false)"
+        @update:model-value="handleSettingUpdate('forceMobileMode', $event)"
+        label="强制移动模式"
+        description="在桌面端强制使用移动端样式"
+      />
 
-      <div class="flex items-center justify-between" v-if="false">
-        <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">
-            启用 Linux.do 脚本注入
-          </label>
-          <p class="text-sm text-gray-500 dark:text-white">控制是否在 linux.do 注入表情功能脚本</p>
-        </div>
-        <a-switch v-model:checked="enableLinuxDoInjectionRef" />
-      </div>
+      <SettingSwitch
+        :model-value="getSetting('enableLinuxDoInjection', false)"
+        @update:model-value="handleSettingUpdate('enableLinuxDoInjection', $event)"
+        label="启用 Linux.do 脚本注入"
+        description="控制是否在 linux.do 注入表情功能脚本"
+        :visible="false"
+      />
 
-      <div class="flex items-center justify-between">
-        <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">
-            启用 X.com 额外选择器
-          </label>
-          <p class="text-sm text-gray-500 dark:text-white">
-            在 X.com(Twitter) 启用额外的选择器控制
-          </p>
-        </div>
-        <a-switch v-model:checked="enableXcomExtraSelectorsRef" />
-      </div>
+      <SettingSwitch
+        :model-value="getSetting('enableXcomExtraSelectors', false)"
+        @update:model-value="handleSettingUpdate('enableXcomExtraSelectors', $event)"
+        label="启用 X.com 额外选择器"
+        description="在 X.com(Twitter) 启用额外的选择器控制"
+      />
 
-      <div class="flex items-center justify-between">
-        <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">
-            启用 Callout 自动补全
-          </label>
-          <p class="text-sm text-gray-500 dark:text-white">
-            在编辑器中输入 [! 时显示 Callout 语法提示
-          </p>
-        </div>
-        <a-switch v-model:checked="enableCalloutSuggestionsRef" />
-      </div>
+      <SettingSwitch
+        :model-value="getSetting('enableCalloutSuggestions', false)"
+        @update:model-value="handleSettingUpdate('enableCalloutSuggestions', $event)"
+        label="启用 Callout 自动补全"
+        description="在编辑器中输入 [! 时显示 Callout 语法提示"
+      />
 
-      <div class="flex items-center justify-between">
-        <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">
-            启用一键解析全部图片
-          </label>
-          <p class="text-sm text-gray-500 dark:text-white">
-            控制前端是否注入“一键解析并添加所有图片”按钮
-          </p>
-        </div>
-        <a-switch v-model:checked="enableBatchParseImagesRef" />
-      </div>
-      <!-- Custom CSS management -->
+      <SettingSwitch
+        :model-value="getSetting('enableBatchParseImages', true)"
+        @update:model-value="handleSettingUpdate('enableBatchParseImages', $event)"
+        label="启用一键解析全部图片"
+        description="控制前端是否注入'一键解析并添加所有图片'按钮"
+      />
+
       <div class="flex items-center justify-between">
         <div>
           <label class="text-sm font-medium text-gray-900 dark:text-white">自定义 CSS</label>
