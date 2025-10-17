@@ -1,29 +1,21 @@
 import type { AddEmojiButtonData } from '../types'
 import { extractNameFromUrl } from '../core/helpers'
 import { createPixivEmojiButton } from '../ui/button'
+import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
 
-function isPixivViewer(element: Element): boolean {
-  try {
-    if (!element) return false
-    if (element.getAttribute && element.getAttribute('role') === 'presentation') {
-      return !!element.querySelector('img[src*="i.pximg.net"]')
-    }
-    return false
-  } catch {
-    return false
-  }
-}
+// isPixivViewer: no longer used for scanning outer containers; we now work per-image.
 
 function extractEmojiDataFromPixiv(container: Element): AddEmojiButtonData | null {
-  const img = container.querySelector('img[src*="i.pximg.net"]') as HTMLImageElement | null
+  const img = container.querySelector('img[src*="i.pximg.net"], img[src*="pximg.net"]') as HTMLImageElement | null
   if (!img) return null
 
-  let src = ''
-  const anchor = img.closest('a') as HTMLAnchorElement | null
-  if (anchor && anchor.href) {
-    src = anchor.href
-  } else if (img.src) {
-    src = img.src
+  // 优先容器推断
+  let src = findPixivOriginalInContainer(container) || ''
+  if (!src) {
+    const anchor = img.closest('a') as HTMLAnchorElement | null
+    if (anchor?.href) src = anchor.href
+    else if (img.src) src = img.src
+    src = toPixivOriginalUrl(src)
   }
 
   if (!src || !src.startsWith('http')) return null
@@ -37,7 +29,13 @@ function extractEmojiDataFromPixiv(container: Element): AddEmojiButtonData | nul
 
 function addEmojiButtonToPixiv(pixivContainer: Element) {
   if (!pixivContainer) return
-  if (pixivContainer.querySelector('.emoji-add-link-pixiv')) return
+  // 避免重复注入：两类按钮任取其一即视为已存在，或已打标
+  if (
+    (pixivContainer as HTMLElement).dataset.oneclickPixivInjected === '1' ||
+    pixivContainer.querySelector('.emoji-add-link-pixiv') ||
+    pixivContainer.querySelector('.pixiv-open-in-newtab')
+  )
+    return
   const emojiData = extractEmojiDataFromPixiv(pixivContainer)
   if (!emojiData) return
   const addButton = createPixivEmojiButton(emojiData)
@@ -45,6 +43,8 @@ function addEmojiButtonToPixiv(pixivContainer: Element) {
     const parentEl = pixivContainer as HTMLElement
     const computed = window.getComputedStyle(parentEl)
     if (computed.position === 'static' || !computed.position) parentEl.style.position = 'relative'
+    // 标记已注入，避免后续 MutationObserver 重复注入
+    parentEl.dataset.oneclickPixivInjected = '1'
   } catch {
     // ignore
   }
@@ -53,9 +53,11 @@ function addEmojiButtonToPixiv(pixivContainer: Element) {
 }
 
 function scanForPixivViewer() {
-  const candidates = document.querySelectorAll('[role="presentation"]')
-  candidates.forEach(c => {
-    if (isPixivViewer(c)) addEmojiButtonToPixiv(c)
+  // 以图片为单位扫描，给每张图片注入到其最近的 [role=presentation] 容器
+  const imgs = document.querySelectorAll('img[src*="i.pximg.net"], img[src*="pximg.net"]')
+  imgs.forEach(img => {
+    const container = img.closest('div[role="presentation"]') as Element | null
+    if (container) addEmojiButtonToPixiv(container)
   })
 }
 
@@ -68,12 +70,18 @@ function scanForImagePage() {
   const images = document.querySelectorAll('img')
 
   for (const img of images) {
-    if (img.parentElement?.querySelector('.emoji-add-link-pixiv')) {
+    const parent = img.closest('div[role="presentation"]') as HTMLElement | null
+    if (!parent) continue
+    if (
+      parent.dataset.oneclickPixivInjected === '1' ||
+      parent.querySelector('.emoji-add-link-pixiv') ||
+      parent.querySelector('.pixiv-open-in-newtab')
+    ) {
       continue
     }
 
     if (img.src && (img.src.includes('i.pximg.net') || img.src.includes('pximg.net'))) {
-      const imageUrl = img.src
+      const imageUrl = toPixivOriginalUrl(img.src)
       const imageName = extractNameFromUrl(imageUrl)
 
       const emojiData: AddEmojiButtonData = {
@@ -83,13 +91,14 @@ function scanForImagePage() {
 
       const button = createPixivEmojiButton(emojiData)
 
-      const imgContainer = img.parentElement || document.body
+      const imgContainer = parent || document.body
       const computedStyle = window.getComputedStyle(imgContainer)
       if (computedStyle.position === 'static') {
         ;(imgContainer as HTMLElement).style.position = 'relative'
       }
 
       imgContainer.appendChild(button)
+      ;(imgContainer as HTMLElement).dataset.oneclickPixivInjected = '1'
 
       break
     }

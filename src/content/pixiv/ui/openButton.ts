@@ -1,4 +1,5 @@
 import type { AddEmojiButtonData } from '../types'
+import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
 
 export function setupOpenInNewTabHandler(button: HTMLElement, data: AddEmojiButtonData) {
   let running = false
@@ -18,7 +19,12 @@ export function setupOpenInNewTabHandler(button: HTMLElement, data: AddEmojiButt
       const closestImg = button
         .closest('article, div, figure, [role="presentation"]')
         ?.querySelector('img[src*="i.pximg.net"], img[src*="pximg.net"]') as HTMLImageElement | null
-      if (closestImg) {
+      // Try container-first resolution (prefer a[href*='/img-original/'])
+      const container = button.closest('article, div, figure, [role="presentation"]')
+      const resolved = findPixivOriginalInContainer(container)
+      if (resolved && resolved.startsWith('http')) {
+        data = { ...data, url: resolved }
+      } else if (closestImg) {
         const urlFromData = (
           closestImg.getAttribute('data-src') ||
           closestImg.getAttribute('data-original') ||
@@ -27,9 +33,10 @@ export function setupOpenInNewTabHandler(button: HTMLElement, data: AddEmojiButt
         const srcset = closestImg.getAttribute('srcset') || ''
         const srcCandidate =
           urlFromData || closestImg.src || (srcset.split(',')[0] || '').split(' ')[0]
-        if (srcCandidate && srcCandidate.startsWith('http')) {
+        const original = toPixivOriginalUrl(srcCandidate)
+        if (original && original.startsWith('http')) {
           try {
-            data = { ...data, url: srcCandidate }
+            data = { ...data, url: original }
             const derivedName =
               (closestImg.alt || closestImg.getAttribute('title') || '').trim() || data.name
             if (derivedName && derivedName.length > 0) data.name = derivedName

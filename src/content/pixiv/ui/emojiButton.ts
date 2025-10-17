@@ -1,5 +1,6 @@
 import type { AddEmojiButtonData } from '../types'
 import { performPixivAddEmojiFlow } from '../core/helpers'
+import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
 
 /*
   添加表情按钮实现（独立文件）
@@ -33,27 +34,33 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
 
     // Re-read related image URL and name from DOM at click time to avoid stale data
     try {
-      const closestImg = button
-        .closest('article, div, figure, [role="presentation"]')
-        ?.querySelector('img[src*="i.pximg.net"], img[src*="pximg.net"]') as HTMLImageElement | null
-      if (closestImg) {
-        // Prefer data-src/data-original or current src, also handle srcset
-        const urlFromData = (
-          closestImg.getAttribute('data-src') ||
-          closestImg.getAttribute('data-original') ||
-          ''
-        ).trim()
-        const srcset = closestImg.getAttribute('srcset') || ''
-        const srcCandidate =
-          urlFromData || closestImg.src || (srcset.split(',')[0] || '').split(' ')[0]
-        if (srcCandidate && srcCandidate.startsWith('http')) {
-          try {
-            data = { ...data, url: srcCandidate }
-            const derivedName =
-              (closestImg.alt || closestImg.getAttribute('title') || '').trim() || data.name
-            if (derivedName && derivedName.length > 0) data.name = derivedName
-          } catch {
-            // ignore
+      const container = button.closest('article, div, figure, [role="presentation"]')
+      const resolved = findPixivOriginalInContainer(container)
+      if (resolved && resolved.startsWith('http')) {
+        data = { ...data, url: resolved }
+      } else {
+        const closestImg = container?.querySelector(
+          'img[src*="i.pximg.net"], img[src*="pximg.net"]'
+        ) as HTMLImageElement | null
+        if (closestImg) {
+          const urlFromData = (
+            closestImg.getAttribute('data-src') ||
+            closestImg.getAttribute('data-original') ||
+            ''
+          ).trim()
+          const srcset = closestImg.getAttribute('srcset') || ''
+          const srcCandidate =
+            urlFromData || closestImg.src || (srcset.split(',')[0] || '').split(' ')[0]
+          const original = toPixivOriginalUrl(srcCandidate)
+          if (original && original.startsWith('http')) {
+            try {
+              data = { ...data, url: original }
+              const derivedName =
+                (closestImg.alt || closestImg.getAttribute('title') || '').trim() || data.name
+              if (derivedName && derivedName.length > 0) data.name = derivedName
+            } catch {
+              // ignore
+            }
           }
         }
       }
