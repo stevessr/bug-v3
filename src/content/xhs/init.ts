@@ -48,6 +48,17 @@ function addButtonToXhsImage(img: HTMLImageElement) {
   try {
     const parent = img.parentElement || (img as Element)
     if (!parent) return
+    
+    // Skip duplicate swiper slides (Swiper creates duplicate slides for infinite loop)
+    let element: Element | null = parent
+    while (element && element !== document.body) {
+      if (element.classList && element.classList.contains('swiper-slide-duplicate')) {
+        console.log('[XHSOneClick] Skipping duplicate swiper slide')
+        return
+      }
+      element = element.parentElement
+    }
+    
     // avoid double-inserting
     if (
       (parent as Element).querySelector &&
@@ -75,17 +86,39 @@ function addButtonToXhsImage(img: HTMLImageElement) {
 }
 
 export function scanAndInjectXhs() {
-  const selectors = ['img.note-slider-img', '.img-container img', '.swiper-slide img']
+  const selectors = [
+    'img.note-slider-img',
+    '.img-container img'
+  ]
   const set = new Set<HTMLImageElement>()
+  
   selectors.forEach(sel => {
-    document.querySelectorAll(sel).forEach(el => {
-      if (el instanceof HTMLImageElement) set.add(el)
-      else {
-        const img = (el as Element).querySelector('img') as HTMLImageElement | null
-        if (img) set.add(img)
+    try {
+      document.querySelectorAll(sel).forEach(el => {
+        if (el instanceof HTMLImageElement) {
+          set.add(el)
+        } else {
+          const img = (el as Element).querySelector('img') as HTMLImageElement | null
+          if (img) set.add(img)
+        }
+      })
+    } catch (e) {
+      console.warn(`[XHSOneClick] selector ${sel} failed:`, e)
+    }
+  })
+  
+  console.log(`[XHSOneClick] scanAndInjectXhs found ${set.size} images`)
+  
+  // 如果没有找到图片，尝试查找所有图片
+  if (set.size === 0) {
+    console.log('[XHSOneClick] No images found with specific selectors, trying all images')
+    document.querySelectorAll('img').forEach(img => {
+      if (img instanceof HTMLImageElement && img.src) {
+        console.log('[XHSOneClick] Found image:', img.src, 'class:', img.className)
       }
     })
-  })
+  }
+  
   set.forEach(img => addButtonToXhsImage(img))
 }
 
@@ -93,7 +126,11 @@ let obs: MutationObserver | null = null
 let debounceTimer: number | null = null
 
 function observeXhs() {
-  if (obs) return obs
+  if (obs) {
+    console.log('[XHSOneClick] observeXhs already running')
+    return obs
+  }
+  console.log('[XHSOneClick] observeXhs starting')
   obs = new MutationObserver(ms => {
     let needs = false
     for (const m of ms) {
@@ -101,13 +138,18 @@ function observeXhs() {
         for (const n of Array.from(m.addedNodes)) {
           if (n.nodeType !== 1) continue
           const el = n as Element
-          if (el.tagName === 'IMG' && el.classList.contains('note-slider-img')) {
+          
+          // 检查是否是图片或包含图片
+          if (el.tagName === 'IMG') {
             needs = true
+            console.log('[XHSOneClick] observeXhs detected IMG element')
             break
           }
+          
           try {
-            if (el.querySelector && el.querySelector('img.note-slider-img')) {
+            if (el.querySelector && el.querySelector('img')) {
               needs = true
+              console.log('[XHSOneClick] observeXhs detected element with img')
               break
             }
           } catch {
@@ -116,15 +158,15 @@ function observeXhs() {
         }
       } else if (m.type === 'attributes') {
         const tgt = m.target as Element
-        if (
-          tgt.tagName === 'IMG' &&
-          (tgt as HTMLImageElement).classList.contains('note-slider-img')
-        )
+        if (tgt.tagName === 'IMG') {
           needs = true
+          console.log('[XHSOneClick] observeXhs detected attribute change on IMG')
+        }
       }
       if (needs) break
     }
     if (needs) {
+      console.log('[XHSOneClick] observeXhs triggering scan')
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = window.setTimeout(() => {
         scanAndInjectXhs()
@@ -134,8 +176,9 @@ function observeXhs() {
   })
   try {
     obs.observe(document.body, { childList: true, subtree: true, attributes: true })
+    console.log('[XHSOneClick] observeXhs observer attached to body')
   } catch (e) {
-    void e
+    console.error('[XHSOneClick] observeXhs failed to attach observer', e)
   }
   return obs
 }
