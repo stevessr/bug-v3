@@ -60,7 +60,7 @@
     "1200": "img/1200.jpg"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://cdn.jsdelivr.net"
   },
   "web_accessible_resources": [
     {

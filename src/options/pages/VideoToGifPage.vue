@@ -103,18 +103,34 @@ async function ensureLoaded() {
   if (ready.value) return
   loading.value = true
   loadingMessage.value = '加载转码引擎（首次较慢）…'
-  // Load ffmpeg core from CDN to reduce extension size
+  // CDN 镜像自动回退，彻底解决 blob: 动态导入失败
   const coreVersion = '0.12.10'
-  const cdnBase = `https://unpkg.com/@ffmpeg/core@${coreVersion}/dist/umd/`
+  const cdnBases = [
+    `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${coreVersion}/dist/esm`,
+    `https://unpkg.com/@ffmpeg/core@${coreVersion}/dist/esm`,
+    `https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/${coreVersion}/dist/esm`
+  ]
   ffmpeg.on('log', ({ message }: LogEvent) => appendLog(message))
   ffmpeg.on('progress', ({ progress: p }: ProgressEvent) => {
-    // p is 0..1
     progress.value = Math.round((p || 0) * 100)
   })
-  await ffmpeg.load({
-    coreURL: `${cdnBase}ffmpeg-core.js`,
-    wasmURL: `${cdnBase}ffmpeg-core.wasm`
-  })
+  // 直接用 CDN 原始 URL，不再转 blob
+  let coreURL = ''
+  let wasmURL = ''
+  for (const base of cdnBases) {
+    try {
+      // 简单 HEAD 检查，优先用 jsdelivr
+      const coreResp = await fetch(`${base}/ffmpeg-core.js`, { method: 'HEAD' })
+      const wasmResp = await fetch(`${base}/ffmpeg-core.wasm`, { method: 'HEAD' })
+      if (coreResp.ok && wasmResp.ok) {
+        coreURL = `${base}/ffmpeg-core.js`
+        wasmURL = `${base}/ffmpeg-core.wasm`
+        break
+      }
+    } catch {}
+  }
+  if (!coreURL || !wasmURL) throw new Error('所有 CDN 均不可用，请检查网络！')
+  await ffmpeg.load({ coreURL, wasmURL })
   ready.value = true
   loading.value = false
   loadingMessage.value = ''
