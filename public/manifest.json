@@ -59,6 +59,9 @@
     "1000": "img/1000.png",
     "1200": "img/1200.jpg"
   },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
   "web_accessible_resources": [
     {
       "resources": [
