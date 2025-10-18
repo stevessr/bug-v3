@@ -134,6 +134,7 @@ const menuItems = computed(() => {
     { key: 'bilibili', label: 'Bilibili 导入', route: '/bilibili' },
     { key: 'tenor', label: 'Tenor GIF', route: '/tenor' },
     { key: 'waline', label: 'Waline 导入', route: '/waline' },
+    { key: 'video2gif', label: '视频转 GIF', route: '/video2gif' },
     { key: 'stats', label: '统计', route: '/stats' },
     { key: 'about', label: '关于', route: '/about' }
   ]
@@ -176,6 +177,7 @@ const handleMenuSelect = (info: any) => {
     bilibili: '/bilibili',
     tenor: '/tenor',
     waline: '/waline',
+    video2gif: '/video2gif',
     stats: '/stats',
     about: '/about'
   }
@@ -256,6 +258,7 @@ onMounted(() => {
         bilibili: '/bilibili',
         tenor: '/tenor',
         waline: '/waline',
+        video2gif: '/video2gif',
         stats: '/stats',
         about: '/about'
       }

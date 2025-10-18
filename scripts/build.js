@@ -45,8 +45,8 @@ const configs = {
 // 解析命令行参数
 const args = process.argv.slice(2)
 // 兼容两种用法：
-// 1) node scripts/build.js build:userscript remote  （旧）
-// 2) node scripts/build.js remote                    （新：首个参数作为变体，默认构建为 userscript）
+// 1) node scripts/build.js build:userscript remote（旧）
+// 2) node scripts/build.js remote（新：首个参数作为变体，默认构建为 userscript）
 let buildType = 'dev'
 let variant = 'default'
 let platform = process.env.USERSCRIPT_PLATFORM || 'original' // pc, mobile, original
@@ -70,8 +70,8 @@ if (args.length === 0) {
 
 const config = configs[buildType]
 if (!config) {
-  console.error(`未知的构建类型: ${buildType}`)
-  console.error(`可用的构建类型: ${Object.keys(configs).join(', ')}`)
+  console.error(`未知的构建类型：${buildType}`)
+  console.error(`可用的构建类型：${Object.keys(configs).join(', ')}`)
   process.exit(1)
 }
 
@@ -116,6 +116,36 @@ try {
   // ignore
 }
 
+// Ensure ffmpeg core assets are available in public for runtime loading in extension options
+try {
+  const coreBase = path.resolve(process.cwd(), 'node_modules', '@ffmpeg', 'core', 'dist')
+  const coreDstDir = path.resolve(process.cwd(), 'public', 'assets', 'ffmpeg')
+  const candidates = [
+    path.join(coreBase, 'esm'),
+    path.join(coreBase, 'umd'),
+    coreBase
+  ]
+  const srcDir = candidates.find(d => fs.existsSync(d))
+  if (!srcDir) {
+    console.warn('⚠️ @ffmpeg/core not found, skipping ffmpeg asset copy')
+  } else {
+    fs.mkdirSync(coreDstDir, { recursive: true })
+    const toCopy = ['ffmpeg-core.js', 'ffmpeg-core.wasm']
+    let copied = 0
+    for (const f of toCopy) {
+      const src = path.join(srcDir, f)
+      const dst = path.join(coreDstDir, f)
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dst)
+        copied++
+      }
+    }
+    console.log(`ℹ️ Copied @ffmpeg/core assets (${copied} files) from ${srcDir} to ${coreDstDir}`)
+  }
+} catch (e) {
+  console.warn('⚠️ Failed to copy @ffmpeg/core assets:', e)
+}
+
 // 打印配置信息
 console.log(`🚀 开始构建 (${buildType})`)
 console.log(`📋 配置:`)
@@ -126,7 +156,7 @@ console.log(`   USERSCRIPT_VARIANT: ${process.env.USERSCRIPT_VARIANT}`)
 console.log(`   USERSCRIPT_PLATFORM: ${process.env.USERSCRIPT_PLATFORM}`)
 console.log('')
 if (variant && variant !== 'default') {
-  console.log(`🔀 构建变体: ${variant}`)
+  console.log(`🔀 构建变体：${variant}`)
 }
 
 // 执行 vite（开发或构建）

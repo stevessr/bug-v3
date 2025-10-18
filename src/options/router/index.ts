@@ -11,6 +11,7 @@ import TenorPage from '../pages/TenorPage.vue'
 import WalinePage from '../pages/WalinePage.vue'
 import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
+import VideoToGifPage from '../pages/VideoToGifPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -75,6 +76,14 @@ const routes: RouteRecordRaw[] = [
     component: StatsPage,
     meta: {
       title: '统计'
+    }
+  },
+  {
+    path: '/video2gif',
+    name: 'video2gif',
+    component: VideoToGifPage,
+    meta: {
+      title: '视频转 GIF'
     }
   },
   {

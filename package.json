@@ -38,6 +38,8 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "ant-design-vue": "^4.2.6",
     "eslint": "^9.37.0",
     "ignore": "^7.0.5",
@@ -49,6 +51,7 @@
   "devDependencies": {
     "@ant-design/icons-vue": "^7.0.1",
     "@eslint/js": "^9.37.0",
+    "@ffmpeg/core": "^0.12.10",
     "@playwright/test": "^1.56.0",
     "@tailwindcss/typography": "^0.5.19",
     "@types/chrome": "^0.1.24",
