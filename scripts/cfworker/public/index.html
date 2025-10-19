@@ -148,6 +148,35 @@
       color: #888;
       margin-top: 5px;
     }
+    .preset-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    .btn-preset {
+      background: #f0f0f0;
+      color: #333;
+      border: 1px solid #ddd;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-preset:hover:not(:disabled) {
+      background: #e0e0e0;
+      border-color: #999;
+    }
+    .btn-preset.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+    .btn-preset:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -166,12 +195,24 @@
       <div class="input-group">
         <label>视频 URL</label>
         <input type="url" id="urlInput" placeholder="https://example.com/video.mp4">
+        <button class="btn-preset" id="analyzeBtn" onclick="analyzeVideoFromUrl()" style="margin-top: 8px;" disabled>🔍 分析视频</button>
       </div>
     </div>
 
     <!-- 参数设置 -->
     <div class="section">
       <div class="section-title">2. 转换参数（可选）</div>
+      
+      <!-- 预设按钮 -->
+      <div class="preset-buttons">
+        <button class="btn-preset" id="originalBtn" onclick="useOriginalParams()" disabled>📹 使用原视频参数</button>
+        <button class="btn-preset" onclick="applyPreset('high')">🎯 高质量 (15fps/720p)</button>
+        <button class="btn-preset" onclick="applyPreset('medium')">⚡ 平衡 (10fps/480p)</button>
+        <button class="btn-preset" onclick="applyPreset('low')">💾 低体积 (8fps/360p)</button>
+        <button class="btn-preset" onclick="applyPreset('emoji')">😄 表情包 (12fps/320p)</button>
+        <button class="btn-preset" onclick="applyPreset('short')">⏱️ 3 秒片段</button>
+      </div>
+      
       <div class="params-grid">
         <div class="input-group">
           <label>帧率 (FPS)</label>
@@ -213,11 +254,160 @@
     <div class="log" id="log"></div>
   </div>
 
-  <script>
+  <script type="module">
+    import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js';
+    import { fetchFile } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js';
+
+    const ffmpeg = new FFmpeg();
+    let loaded = false;
+    let videoMetadata = null;
+
     function log(msg) {
       const logEl = document.getElementById('log');
       logEl.textContent += new Date().toLocaleTimeString() + ' - ' + msg + '\n';
       logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // 获取视频元数据
+    async function getVideoMetadata(source) {
+      return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        
+        video.onloadedmetadata = () => {
+          const metadata = {
+            width: video.videoWidth,
+            height: video.videoHeight,
+            duration: video.duration,
+            fps: 25 // 默认值，无法从 video 元素直接获取准确帧率
+          };
+          URL.revokeObjectURL(video.src);
+          resolve(metadata);
+        };
+        
+        video.onerror = () => {
+          URL.revokeObjectURL(video.src);
+          reject(new Error('无法读取视频信息'));
+        };
+        
+        if (source instanceof File) {
+          video.src = URL.createObjectURL(source);
+        } else {
+          video.src = source;
+          video.crossOrigin = 'anonymous';
+        }
+      });
+    }
+
+    // 监听文件选择，自动获取元数据
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        try {
+          log('正在读取视频信息...');
+          videoMetadata = await getVideoMetadata(file);
+          document.getElementById('originalBtn').disabled = false;
+          log(`视频信息：${videoMetadata.width}x${videoMetadata.height}, ${videoMetadata.duration.toFixed(1)}秒`);
+        } catch (err) {
+          log('读取视频信息失败：' + err.message);
+          videoMetadata = null;
+          document.getElementById('originalBtn').disabled = true;
+        }
+      }
+    });
+
+    // 监听 URL 输入
+    document.getElementById('urlInput').addEventListener('input', (e) => {
+      const url = e.target.value.trim();
+      const analyzeBtn = document.getElementById('analyzeBtn');
+      analyzeBtn.disabled = !url;
+      
+      // 清空之前的元数据
+      if (!url) {
+        videoMetadata = null;
+        document.getElementById('originalBtn').disabled = true;
+      }
+    });
+
+    // 从 URL 分析视频
+    window.analyzeVideoFromUrl = async function() {
+      const urlInput = document.getElementById('urlInput');
+      const url = urlInput.value.trim();
+      
+      if (!url) {
+        log('请输入视频 URL');
+        return;
+      }
+
+      try {
+        log('正在分析视频...');
+        videoMetadata = await getVideoMetadata(url);
+        document.getElementById('originalBtn').disabled = false;
+        log(`视频信息：${videoMetadata.width}x${videoMetadata.height}, ${videoMetadata.duration.toFixed(1)}秒`);
+      } catch (err) {
+        log('分析视频失败：' + err.message + '（可能存在跨域限制）');
+        videoMetadata = null;
+        document.getElementById('originalBtn').disabled = true;
+      }
+    };
+
+    // 使用原视频参数
+    window.useOriginalParams = function() {
+      if (!videoMetadata) {
+        log('未找到视频信息');
+        return;
+      }
+
+      document.getElementById('fps').value = videoMetadata.fps;
+      document.getElementById('width').value = videoMetadata.width;
+      document.getElementById('height').value = videoMetadata.height;
+      document.getElementById('startTime').value = '';
+      document.getElementById('duration').value = '';
+
+      // 视觉反馈
+      document.querySelectorAll('.btn-preset').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      log(`已应用原视频参数：${videoMetadata.width}x${videoMetadata.height} @ ${videoMetadata.fps}fps`);
+    };
+
+    // 预设配置
+    const presets = {
+      high: { fps: 15, width: 720, height: -1, startTime: '', duration: '', name: '高质量' },
+      medium: { fps: 10, width: 480, height: -1, startTime: '', duration: '', name: '平衡' },
+      low: { fps: 8, width: 360, height: -1, startTime: '', duration: '', name: '低体积' },
+      emoji: { fps: 12, width: 320, height: 320, startTime: '', duration: '', name: '表情包' },
+      short: { fps: 10, width: 480, height: -1, startTime: 0, duration: 3, name: '3 秒片段' }
+    };
+
+    // 应用预设
+    window.applyPreset = function(presetName) {
+      const preset = presets[presetName];
+      if (!preset) return;
+
+      document.getElementById('fps').value = preset.fps;
+      document.getElementById('width').value = preset.width;
+      document.getElementById('height').value = preset.height;
+      document.getElementById('startTime').value = preset.startTime;
+      document.getElementById('duration').value = preset.duration;
+
+      // 视觉反馈
+      document.querySelectorAll('.btn-preset').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      log(`已应用预设：${preset.name}`);
+    };
+
+    async function loadFFmpeg() {
+      if (loaded) return;
+      log('正在加载 FFmpeg（首次较慢）...');
+      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
+      await ffmpeg.load({
+        coreURL: `${baseURL}/ffmpeg-core.js`,
+        wasmURL: `${baseURL}/ffmpeg-core.wasm`
+      });
+      loaded = true;
+      log('FFmpeg 加载完成');
     }
 
     async function convert() {
@@ -245,33 +435,53 @@
       log('开始转换...');
 
       try {
-        // 构造表单
-        const formData = new FormData();
-        if (file) formData.append('file', file);
-        if (url) formData.append('url', url);
-        formData.append('fps', document.getElementById('fps').value);
-        formData.append('width', document.getElementById('width').value);
-        formData.append('height', document.getElementById('height').value);
-        const startTime = document.getElementById('startTime').value;
-        const duration = document.getElementById('duration').value;
-        if (startTime) formData.append('startTime', startTime);
-        if (duration) formData.append('duration', duration);
+        // 加载 FFmpeg
+        await loadFFmpeg();
 
-        log('上传中...');
-        statusEl.innerHTML = '<div class="loading">⏳ 转码中，请稍候...</div>';
-
-        // 调用 API
-        const resp = await fetch('/api/video2gif', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!resp.ok) {
-          throw new Error('转码失败：' + resp.status);
+        // 获取输入数据
+        let inputData;
+        if (file) {
+          inputData = await fetchFile(file);
+          log('文件已读取');
+        } else {
+          log('下载中...');
+          inputData = await fetchFile(url);
+          log('下载完成');
         }
 
+        // 写入文件
+        await ffmpeg.writeFile('input.mp4', inputData);
+        log('开始转码...');
+
+        // 构造参数
+        const args = [];
+        const startTime = document.getElementById('startTime').value;
+        if (startTime) args.push('-ss', startTime);
+        args.push('-i', 'input.mp4');
+        const duration = document.getElementById('duration').value;
+        if (duration) args.push('-t', duration);
+
+        const vf = [];
+        const fpsVal = document.getElementById('fps').value;
+        if (fpsVal) vf.push(`fps=${fpsVal}`);
+        const widthVal = document.getElementById('width').value;
+        if (widthVal) {
+          const heightVal = document.getElementById('height').value || -1;
+          vf.push(`scale=${widthVal}:${heightVal}:flags=lanczos`);
+        }
+        if (vf.length) args.push('-vf', vf.join(','));
+        args.push('-loop', '0', '-f', 'gif', 'output.gif');
+
+        log(`执行：ffmpeg ${args.join(' ')}`);
+        statusEl.innerHTML = '<div class="loading">⏳ 转码中，请稍候...</div>';
+
+        // 执行转码
+        await ffmpeg.exec(args);
         log('转码完成！');
-        const blob = await resp.blob();
+
+        // 读取输出
+        const data = await ffmpeg.readFile('output.gif');
+        const blob = new Blob([data.buffer], { type: 'image/gif' });
         const gifUrl = URL.createObjectURL(blob);
 
         // 显示结果
@@ -310,8 +520,13 @@
       log('已重置');
     }
 
+    // 暴露到全局
+    window.convert = convert;
+    window.reset = reset;
+
     // 初始化日志
     log('页面加载完成');
+    log('本应用完全在浏览器中运行，无需后端服务');
   </script>
 </body>
 </html>
