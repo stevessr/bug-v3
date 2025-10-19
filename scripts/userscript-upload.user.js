@@ -45,15 +45,30 @@
 
   // Helper: insert into common editors (textarea or ProseMirror)
   function insertIntoEditor(text) {
+    // Priority 1: Chat composer (highest priority)
+    const chatComposer = document.querySelector('textarea#channel-composer.chat-composer__input')
+    // Priority 2: Standard editor textarea
     const textArea = document.querySelector('textarea.d-editor-input')
+    // Priority 3: Rich text editor
     const richEle = document.querySelector('.ProseMirror.d-editor-input')
 
-    if (!textArea && !richEle) {
+    if (!chatComposer && !textArea && !richEle) {
       console.error('找不到输入框')
       return
     }
 
-    if (textArea) {
+    if (chatComposer) {
+      const start = chatComposer.selectionStart
+      const end = chatComposer.selectionEnd
+      const value = chatComposer.value
+
+      chatComposer.value = value.substring(0, start) + text + value.substring(end)
+      chatComposer.setSelectionRange(start + text.length, start + text.length)
+      chatComposer.focus()
+
+      const event = new Event('input', { bubbles: true })
+      chatComposer.dispatchEvent(event)
+    } else if (textArea) {
       const start = textArea.selectionStart
       const end = textArea.selectionEnd
       const value = textArea.value

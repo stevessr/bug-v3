@@ -104,6 +104,28 @@ const ICONS: Record<
 }
 
 function insertIntoEditor(text: string) {
+  // Priority 1: Chat composer (highest priority)
+  const chatComposer = document.querySelector('textarea#channel-composer.chat-composer__input') as HTMLTextAreaElement | null
+  
+  // Check if chat composer is the active element or exists
+  if (chatComposer) {
+    const start = chatComposer.selectionStart ?? 0
+    const end = chatComposer.selectionEnd ?? start
+    const value = chatComposer.value
+    chatComposer.value = value.slice(0, start) + text + value.slice(end)
+    const pos = start + text.length
+    if ('setSelectionRange' in chatComposer) {
+      try {
+        chatComposer.setSelectionRange(pos, pos)
+      } catch (e) {
+        // ignore
+      }
+    }
+    chatComposer.dispatchEvent(new Event('input', { bubbles: true }))
+    return
+  }
+
+  // Priority 2: Active textarea element
   const active = document.activeElement as HTMLElement | null
   const isTextarea = (el: Element | null) => !!el && el.tagName === 'TEXTAREA'
 
