@@ -79,7 +79,7 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
             button.disabled = false
           }, 3000)
         } catch (error) {
-          console.error('[DiscourseOneClick] 批量解析失败:', error)
+          console.error('[DiscourseOneClick] 批量解析失败：', error)
           button.innerHTML = '解析失败'
           button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
           setTimeout(() => {

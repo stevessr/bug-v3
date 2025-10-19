@@ -490,9 +490,14 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   const autoList = (text: string, icon: string, url: string) =>
     list.appendChild(makeitem(text, icon, url))
 
-  autoList('AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/')
-  autoList('学习 xv6', '🖥︎', 'https://pwsh.edu.deal/')
-  autoList('视频转 gif', '📹', 'https://1f284bee.ffmpeg-1i6.pages.dev/')
+  const autoItems = [
+    ['AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/'],
+    ['学习 xv6', '🖥︎', 'https://pwsh.edu.deal/'],
+    ['视频转 gif', '📹', 'https://video2gif-pages.pages.dev/'],
+    ['connect','🔗', 'https://connect.linux.do/'],
+    ['idcalre','📅', 'https://idcflare.com/']
+  ]
+  autoItems.forEach(([text, icon, url]) => autoList(text, icon, url))
   
 
   const passwall = createListItem('过盾', '🛡', () => {

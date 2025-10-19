@@ -7,19 +7,19 @@
 从 DOM 结构可以看到，同一张图片有 3 个 slide：
 
 ```html
-<!-- 第1个：复制的 slide -->
+<!-- 第 1 个：复制的 slide -->
 <div class="swiper-slide swiper-slide-duplicate ...">
   <img src="...">
   <button class="xhs-emoji-add-btn">添加到未分组表情</button>
 </div>
 
-<!-- 第2个：真实显示的 slide -->
+<!-- 第 2 个：真实显示的 slide -->
 <div class="swiper-slide swiper-slide-visible swiper-slide-active ...">
   <img src="...">
   <button class="xhs-emoji-add-btn">添加到未分组表情</button>
 </div>
 
-<!-- 第3个：复制的 slide -->
+<!-- 第 3 个：复制的 slide -->
 <div class="swiper-slide swiper-slide-duplicate ...">
   <img src="...">
   <button class="xhs-emoji-add-btn">添加到未分组表情</button>
