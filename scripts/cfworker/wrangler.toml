@@ -1,0 +1,6 @@
+name = "video2gif-worker"
+main = "video2gif.js"
+compatibility_date = "2024-01-01"
+usage_model = "bundled"
+workers_dev = true
+# routes = ["https://your-domain.com/api/video2gif"]

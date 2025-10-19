@@ -167,3 +167,4 @@ docs/*.png
 dist-firefox
 
 scripts/.profile-*
+.wrangler

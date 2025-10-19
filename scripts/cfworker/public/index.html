@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频转 GIF - Video to GIF Converter</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      padding: 30px;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .section {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    input[type="file"],
+    input[type="url"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .params-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+    .btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .btn:hover { background: #5568d3; transform: translateY(-2px); }
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-secondary {
+      background: #6c757d;
+    }
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .loading {
+      text-align: center;
+      color: #667eea;
+      margin: 20px 0;
+      font-weight: 500;
+    }
+    .result {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .result img {
+      max-width: 100%;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-top: 15px;
+    }
+    .log {
+      background: #000;
+      color: #0f0;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      margin-top: 20px;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+    .hint {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 视频转 GIF</h1>
+    <p class="subtitle">上传 MP4 视频或提供 URL，快速转换为 GIF 动图</p>
+
+    <!-- 输入区域 -->
+    <div class="section">
+      <div class="section-title">1. 选择视频</div>
+      <div class="input-group">
+        <label>上传 MP4 文件</label>
+        <input type="file" id="fileInput" accept="video/mp4">
+        <p class="hint">或</p>
+      </div>
+      <div class="input-group">
+        <label>视频 URL</label>
+        <input type="url" id="urlInput" placeholder="https://example.com/video.mp4">
+      </div>
+    </div>
+
+    <!-- 参数设置 -->
+    <div class="section">
+      <div class="section-title">2. 转换参数（可选）</div>
+      <div class="params-grid">
+        <div class="input-group">
+          <label>帧率 (FPS)</label>
+          <input type="number" id="fps" value="10" min="1" max="30">
+        </div>
+        <div class="input-group">
+          <label>宽度 (px)</label>
+          <input type="number" id="width" value="480" min="64" max="1280" step="16">
+        </div>
+        <div class="input-group">
+          <label>高度 (px)</label>
+          <input type="number" id="height" value="-1">
+          <p class="hint">-1 为自动</p>
+        </div>
+        <div class="input-group">
+          <label>起始时间 (秒)</label>
+          <input type="number" id="startTime" value="" placeholder="0">
+        </div>
+        <div class="input-group">
+          <label>持续时长 (秒)</label>
+          <input type="number" id="duration" value="" placeholder="全部">
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="btn-group">
+      <button class="btn" onclick="convert()" id="convertBtn">开始转换</button>
+      <button class="btn btn-secondary" onclick="reset()">重置</button>
+    </div>
+
+    <!-- 状态信息 -->
+    <div id="status"></div>
+
+    <!-- 结果展示 -->
+    <div id="result"></div>
+
+    <!-- 日志 -->
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    function log(msg) {
+      const logEl = document.getElementById('log');
+      logEl.textContent += new Date().toLocaleTimeString() + ' - ' + msg + '\n';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function convert() {
+      const fileInput = document.getElementById('fileInput');
+      const urlInput = document.getElementById('urlInput');
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+      const btn = document.getElementById('convertBtn');
+
+      // 清空之前的结果
+      statusEl.innerHTML = '';
+      resultEl.innerHTML = '';
+
+      // 验证输入
+      const file = fileInput.files[0];
+      const url = urlInput.value.trim();
+      if (!file && !url) {
+        statusEl.innerHTML = '<div class="error">请选择文件或填写 URL</div>';
+        return;
+      }
+
+      // 禁用按钮
+      btn.disabled = true;
+      btn.textContent = '转换中...';
+      log('开始转换...');
+
+      try {
+        // 构造表单
+        const formData = new FormData();
+        if (file) formData.append('file', file);
+        if (url) formData.append('url', url);
+        formData.append('fps', document.getElementById('fps').value);
+        formData.append('width', document.getElementById('width').value);
+        formData.append('height', document.getElementById('height').value);
+        const startTime = document.getElementById('startTime').value;
+        const duration = document.getElementById('duration').value;
+        if (startTime) formData.append('startTime', startTime);
+        if (duration) formData.append('duration', duration);
+
+        log('上传中...');
+        statusEl.innerHTML = '<div class="loading">⏳ 转码中，请稍候...</div>';
+
+        // 调用 API
+        const resp = await fetch('/api/video2gif', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!resp.ok) {
+          throw new Error('转码失败：' + resp.status);
+        }
+
+        log('转码完成！');
+        const blob = await resp.blob();
+        const gifUrl = URL.createObjectURL(blob);
+
+        // 显示结果
+        statusEl.innerHTML = '<div class="success">✅ 转换成功！</div>';
+        resultEl.innerHTML = `
+          <div class="result">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3>结果预览</h3>
+              <a href="${gifUrl}" download="video.gif" class="btn">下载 GIF</a>
+            </div>
+            <p class="hint">大小：${(blob.size / 1024).toFixed(2)} KB</p>
+            <img src="${gifUrl}" alt="GIF 预览">
+          </div>
+        `;
+        log(`文件大小：${(blob.size / 1024).toFixed(2)} KB`);
+      } catch (err) {
+        log('错误：' + err.message);
+        statusEl.innerHTML = '<div class="error">❌ ' + err.message + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '开始转换';
+      }
+    }
+
+    function reset() {
+      document.getElementById('fileInput').value = '';
+      document.getElementById('urlInput').value = '';
+      document.getElementById('fps').value = '10';
+      document.getElementById('width').value = '480';
+      document.getElementById('height').value = '-1';
+      document.getElementById('startTime').value = '';
+      document.getElementById('duration').value = '';
+      document.getElementById('status').innerHTML = '';
+      document.getElementById('result').innerHTML = '';
+      document.getElementById('log').textContent = '';
+      log('已重置');
+    }
+
+    // 初始化日志
+    log('页面加载完成');
+  </script>
+</body>
+</html>
