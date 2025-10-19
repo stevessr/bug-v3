@@ -219,6 +219,25 @@
           <input type="number" id="fps" value="10" min="1" max="30">
         </div>
         <div class="input-group">
+          <label>输出格式</label>
+          <select id="format">
+            <option value="gif" selected>GIF（动图）</option>
+            <option value="webp">WebP（动图）</option>
+            <option value="apng">APNG（动图）</option>
+            <option value="avif">AVIF（实验/可能仅静态）</option>
+          </select>
+          <p class="hint">不同格式体积和兼容性不同，GIF 通用，WebP 体积更小。</p>
+        </div>
+        <div class="input-group" id="gifProfileGroup">
+          <label>GIF 模式</label>
+          <select id="gifProfile">
+            <option value="hq" selected>高质量（两步法，抖动优化）</option>
+            <option value="classic">经典（Floyd-Steinberg 抖动）</option>
+            <option value="small">体积优先（64 色 + 强抖动）</option>
+          </select>
+          <p class="hint">仅在选择 GIF 格式时生效。体积优先适合表情包/大幅压缩。</p>
+        </div>
+        <div class="input-group">
           <label>宽度 (px)</label>
           <input type="number" id="width" value="480" min="64" max="1280" step="16">
         </div>
@@ -507,8 +526,8 @@
         await ffmpeg.writeFile('input.mp4', inputData);
         log('开始转码...');
 
-        // 构造参数
-        const args = [];
+  // 构造参数
+  const args = [];
         const startTime = document.getElementById('startTime').value;
         if (startTime) args.push('-ss', startTime);
         args.push('-i', 'input.mp4');
@@ -524,30 +543,97 @@
           vf.push(`scale=${widthVal}:${heightVal}:flags=lanczos`);
         }
         if (vf.length) args.push('-vf', vf.join(','));
-        args.push('-loop', '0', '-f', 'gif', 'output.gif');
 
-        log(`执行：ffmpeg ${args.join(' ')}`);
-        statusEl.innerHTML = '<div class="loading">⏳ 转码中，请稍候...</div>';
+        // 输出格式处理
+        const format = document.getElementById('format').value;
+        let outFile = 'output.gif';
+        let mime = 'image/gif';
+        let extra = [];
+        
+        if (format === 'gif') {
+          // 使用 palettegen/paletteuse 两步法生成高质量 GIF
+          log('生成调色板（pass 1）...');
+          const p1 = [];
+          if (startTime) p1.push('-ss', startTime);
+          p1.push('-i', 'input.mp4');
+          if (duration) p1.push('-t', duration);
+          // 与最终输出保持一致的预处理滤镜
+          // 用于生成调色板的滤镜（避免与后面合并滤镜变量名冲突）
+          const paletteGenFilter = vf.length ? `${vf.join(',')},palettegen=stats_mode=full:reserve_transparent=1` : 'palettegen=stats_mode=full:reserve_transparent=1';
+          p1.push('-vf', paletteGenFilter, '-y', 'palette.png');
 
-        // 执行转码
-        await ffmpeg.exec(args);
-        log('转码完成！');
+          log(`执行：ffmpeg ${p1.join(' ')}`);
+          await ffmpeg.exec(p1);
 
-        // 读取输出
-        const data = await ffmpeg.readFile('output.gif');
-        const blob = new Blob([data.buffer], { type: 'image/gif' });
-        const gifUrl = URL.createObjectURL(blob);
+          log('应用调色板生成 GIF（pass 2）...');
+          const p2 = [];
+          if (startTime) p2.push('-ss', startTime);
+          p2.push('-i', 'input.mp4', '-i', 'palette.png');
+          if (duration) p2.push('-t', duration);
+          const gifProfile = document.getElementById('gifProfile').value;
+          let palettegen = 'palettegen=stats_mode=full:reserve_transparent=1';
+          let paletteuse = 'paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle';
+          if (gifProfile === 'classic') {
+            paletteuse = 'paletteuse=dither=floyd_steinberg';
+          } else if (gifProfile === 'small') {
+            palettegen = 'palettegen=max_colors=32:stats_mode=full:reserve_transparent=1';
+            paletteuse = 'paletteuse=dither=none';
+          }
+          // 合并滤镜
+          // 合并后的调色板滤镜（与上面生成调色板的变量区分）
+          const paletteFiltersCombined = vf.length ? `${vf.join(',')},${palettegen}` : palettegen;
+          p1[p1.indexOf('-vf') + 1] = paletteFiltersCombined;
+          const useFilters = vf.length ? `${vf.join(',')},${paletteuse}` : paletteuse;
+          p2.push('-lavfi', useFilters, '-loop', '0', '-f', 'gif', '-y', 'output.gif');
+          log(`执行：ffmpeg ${p2.join(' ')}`);
+          statusEl.innerHTML = '<div class="loading">⏳ 转码中（高质量 GIF，两步处理）...</div>';
+          await ffmpeg.exec(p2);
+
+          outFile = 'output.gif';
+          mime = 'image/gif';
+        } else if (format === 'webp') {
+          // webp: 动图 webp 支持，减少大小
+          extra = ['-loop', '0', '-f', 'webp', '-lossless', '0', '-qscale', '70'];
+          outFile = 'output.webp';
+          mime = 'image/webp';
+          args.push(...extra, outFile);
+        } else if (format === 'apng') {
+          // apng: 兼容性较好，体积较大
+          extra = ['-f', 'apng'];
+          outFile = 'output.png';
+          mime = 'image/apng';
+          args.push(...extra, outFile);
+        } else if (format === 'avif') {
+          // avif: ffmpeg wasm 编码器可能不支持动图，导出单帧
+          extra = ['-frames:v', '1', '-f', 'avif'];
+          outFile = 'output.avif';
+          mime = 'image/avif';
+          args.push(...extra, outFile);
+        }
+
+        if (format !== 'gif') {
+          log(`执行：ffmpeg ${args.join(' ')}`);
+          statusEl.innerHTML = '<div class="loading">⏳ 转码中，请稍候...</div>';
+          await ffmpeg.exec(args);
+          log('转码完成！');
+        }
+
+  // 读取输出
+  const data = await ffmpeg.readFile(outFile);
+  const blob = new Blob([data.buffer], { type: mime });
+  const outUrl = URL.createObjectURL(blob);
 
         // 显示结果
         statusEl.innerHTML = '<div class="success">✅ 转换成功！</div>';
         resultEl.innerHTML = `
           <div class="result">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <h3>结果预览</h3>
-              <a href="${gifUrl}" download="video.gif" class="btn">下载 GIF</a>
+              <h3>结果预览（${format.toUpperCase()}）</h3>
+              <a href="${outUrl}" download="video.${format === 'apng' ? 'png' : format}" class="btn">下载 ${format.toUpperCase()}</a>
             </div>
             <p class="hint">大小：${(blob.size / 1024).toFixed(2)} KB</p>
-            <img src="${gifUrl}" alt="GIF 预览">
+            ${format === 'avif' ? '<p class="hint">AVIF 预览可能不被所有浏览器支持。</p>' : ''}
+            <img src="${outUrl}" alt="结果预览">
           </div>
         `;
         log(`文件大小：${(blob.size / 1024).toFixed(2)} KB`);
@@ -577,6 +663,16 @@
     // 暴露到全局
     window.convert = convert;
     window.reset = reset;
+
+    // UI: 根据格式显示/隐藏 GIF 模式
+    const formatEl = document.getElementById('format');
+    const gifProfileGroup = document.getElementById('gifProfileGroup');
+    function toggleGifProfile() {
+      gifProfileGroup.style.display = formatEl.value === 'gif' ? 'block' : 'none';
+    }
+    formatEl.addEventListener('change', toggleGifProfile);
+    // 初始化
+    toggleGifProfile();
 
     // 初始化日志
     log('页面加载完成');

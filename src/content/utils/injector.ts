@@ -477,26 +477,23 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   })
   list.appendChild(autoReadLi2)
 
-  const generateLi = createListItem('AI 生成图片', '🎨', () => {
-    menu.remove()
-    try {
-      window.open('https://gemini-image.smnet.studio/', '_blank')
-    } catch {
-      window.location.href = 'https://gemini-image.smnet.studio/'
-    }
-  })
-  list.appendChild(generateLi)
+  const makeitem = (text: string, icon: string, url: string) =>
+    createListItem(text, icon, () => {
+      menu.remove()
+      try {
+        window.open(url, '_blank')
+      } catch {
+        window.location.href = url
+      }
+    })
 
-  const learnxv6 = createListItem('学习 xv6', '🖥︎', () => {
-    menu.remove()
-    try {
-      window.open('https://pwsh.edu.deal/', '_blank')
-    } catch {
-      window.location.href = 'https://pwsh.edu.deal/'
-    }
-  })
+  const autoList = (text: string, icon: string, url: string) =>
+    list.appendChild(makeitem(text, icon, url))
 
-  list.appendChild(learnxv6)
+  autoList('AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/')
+  autoList('学习 xv6', '🖥︎', 'https://pwsh.edu.deal/')
+  autoList('视频转 gif', '📹', 'https://1f284bee.ffmpeg-1i6.pages.dev/')
+  
 
   const passwall = createListItem('过盾', '🛡', () => {
     // If a modal iframe already exists, don't create another
