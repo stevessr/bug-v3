@@ -1,794 +1,139 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>视频转 GIF - Video to GIF Converter</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-    const file = fileInput.files[0];
-    const url = urlInput.value.trim();
-    // 验证输入
-      padding: 30px;
-    }
-    h1 {
-      color: #333;
-      margin-bottom: 10px;
-      font-size: 28px;
-    }
-    .subtitle {
-      color: #666;
-      margin-bottom: 30px;
-      font-size: 14px;
-    }
-    .section {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    .section-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 15px;
-    }
-    .input-group {
-      margin-bottom: 15px;
-    }
-    label {
-      display: block;
-      font-size: 14px;
-      color: #555;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-    input[type="file"],
-    input[type="url"],
-    input[type="number"] {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-      transition: border-color 0.3s;
-    }
-    input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-    .params-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-    }
-    .btn {
-      background: #667eea;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    .btn:hover { background: #5568d3; transform: translateY(-2px); }
-    .btn:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-      transform: none;
-    }
-    .btn-secondary {
-      background: #6c757d;
-    }
-    .btn-secondary:hover {
-      background: #5a6268;
-    }
-    .btn-group {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .loading {
-      text-align: center;
-      color: #667eea;
-      margin: 20px 0;
-      font-weight: 500;
-    }
-    .result {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 20px;
-      margin-top: 20px;
-    }
-    .result img {
-      max-width: 100%;
-      border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      margin-top: 15px;
-    }
-    .log {
-      background: #000;
-      color: #0f0;
-      padding: 15px;
-      border-radius: 6px;
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      max-height: 200px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      margin-top: 20px;
-    }
-    .error {
-      background: #f8d7da;
-      color: #721c24;
-      padding: 12px;
-      border-radius: 6px;
-      margin: 10px 0;
-    }
-    .success {
-      background: #d4edda;
-      color: #155724;
-      padding: 12px;
-      border-radius: 6px;
-      margin: 10px 0;
-    }
-    .hint {
-      font-size: 12px;
-      color: #888;
-      margin-top: 5px;
-    }
-    .preset-buttons {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 15px;
-    }
-    .btn-preset {
-      background: #f0f0f0;
-      color: #333;
-      border: 1px solid #ddd;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-preset:hover:not(:disabled) {
-      background: #e0e0e0;
-      border-color: #999;
-    }
-    .btn-preset.active {
-      background: #667eea;
-      color: white;
-      border-color: #667eea;
-    }
-    .btn-preset:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>🎬 视频转 GIF</h1>
-    <p class="subtitle">上传 MP4 视频或提供 URL，快速转换为 GIF 动图</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>视频转 GIF - Video to GIF Converter</title>
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎬 视频转 GIF</h1>
+      <p class="subtitle">上传 MP4 视频或提供 URL，快速转换为 GIF 动图</p>
+      <p style="margin: 8px 0 16px">
+        <a class="btn" href="/webcodecs-check.html" target="_blank" rel="noopener">
+          🧪 打开 WebCodecs 检测页
+        </a>
+      </p>
 
-    <!-- 输入区域 -->
-    <div class="section">
-      <div class="section-title">1. 选择视频</div>
-      <div class="input-group">
-        <label>上传 MP4 文件</label>
-        <input type="file" id="fileInput" accept="video/mp4">
-        <p class="hint">或</p>
-      </div>
-      <div class="input-group">
-        <label>视频 URL</label>
-        <input type="url" id="urlInput" placeholder="https://example.com/video.mp4">
-        <button class="btn-preset" id="analyzeBtn" onclick="analyzeVideoFromUrl()" style="margin-top: 8px;" disabled>🔍 分析视频</button>
-      </div>
-    </div>
-
-    <!-- 参数设置 -->
-    <div class="section">
-      <div class="section-title">2. 转换参数（可选）</div>
-      
-      <!-- 预设按钮 -->
-      <div class="preset-buttons">
-        <button class="btn-preset" id="originalBtn" onclick="useOriginalParams()" disabled>📹 使用原视频参数</button>
-        <button class="btn-preset" onclick="applyPreset('high')">🎯 高质量 (15fps/720p)</button>
-        <button class="btn-preset" onclick="applyPreset('medium')">⚡ 平衡 (10fps/480p)</button>
-        <button class="btn-preset" onclick="applyPreset('low')">💾 低体积 (8fps/360p)</button>
-        <button class="btn-preset" onclick="applyPreset('emoji')">😄 表情包 (12fps/320p)</button>
-        <button class="btn-preset" onclick="applyPreset('short')">⏱️ 3 秒片段</button>
-      </div>
-      let msg = err && (err.message || err.toString()) ? (err.message || err.toString()) : '未知错误';
-      log('错误：' + msg);
-      // 针对 AVIF 编码失败，给出更友好的提示
-      if (format === 'avif') {
-        statusEl.innerHTML = '<div class="error">❌ AVIF 编码失败，当前 FFmpeg.wasm 不支持。已自动尝试 WebCodecs（如浏览器支持）。<br>详细信息：' + msg + '</div>';
-      } else {
-        statusEl.innerHTML = '<div class="error">❌ ' + msg + '</div>';
-      }
+      <!-- 输入区域 -->
+      <div class="section">
+        <div class="section-title">1. 选择视频</div>
         <div class="input-group">
-          <label>帧率 (FPS)</label>
-          <input type="number" id="fps" value="10" min="1" max="30">
+          <label>上传 MP4 文件</label>
+          <input type="file" id="fileInput" accept="video/mp4" />
+          <p class="hint">或</p>
         </div>
         <div class="input-group">
-          <label>输出格式</label>
-          <select id="format">
-            <option value="gif" selected>GIF（动图）</option>
-            <option value="webp">WebP（动图）</option>
-            <option value="apng">APNG（动图）</option>
-            <option value="avif">AVIF（实验/可能仅静态）</option>
-          </select>
-          <p class="hint">不同格式体积和兼容性不同，GIF 通用，WebP 体积更小。</p>
-        </div>
-        <div class="input-group" id="gifProfileGroup">
-          <label>GIF 模式</label>
-          <select id="gifProfile">
-            <option value="hq" selected>高质量（两步法，抖动优化）</option>
-            <option value="classic">经典（Floyd-Steinberg 抖动）</option>
-            <option value="small">体积优先（64 色 + 强抖动）</option>
-          </select>
-          <p class="hint">仅在选择 GIF 格式时生效。体积优先适合表情包/大幅压缩。</p>
-        </div>
-        <div class="input-group">
-          <label>宽度 (px)</label>
-          <input type="number" id="width" value="480" min="64" max="1280" step="16">
-        </div>
-        <div class="input-group">
-          <label>高度 (px)</label>
-          <input type="number" id="height" value="-1">
-          <p class="hint">-1 为自动</p>
-        </div>
-        <div class="input-group">
-          <label>起始时间 (秒)</label>
-          <input type="number" id="startTime" value="" placeholder="0">
-        </div>
-        <div class="input-group">
-          <label>持续时长 (秒)</label>
-          <input type="number" id="duration" value="" placeholder="全部">
+          <label>视频 URL</label>
+          <input type="url" id="urlInput" placeholder="https://example.com/video.mp4" />
+          <button
+            class="btn-preset"
+            id="analyzeBtn"
+            onclick="analyzeVideoFromUrl()"
+            style="margin-top: 8px"
+            disabled
+          >
+            🔍 分析视频
+          </button>
         </div>
       </div>
-    </div>
 
-    <!-- 操作按钮 -->
-    <div class="btn-group">
-      <button class="btn" onclick="convert()" id="convertBtn">开始转换</button>
-      <button class="btn btn-secondary" onclick="reset()">重置</button>
-    </div>
+      <!-- 参数设置 -->
+      <div class="section">
+        <div class="section-title">2. 转换参数（可选）</div>
 
-    <!-- 状态信息 -->
-    <div id="status"></div>
+        <!-- 预设按钮 -->
+        <div class="preset-buttons">
+          <button class="btn-preset" id="originalBtn" onclick="useOriginalParams()" disabled>
+            📹 使用原视频参数
+          </button>
+          <button class="btn-preset" onclick="applyPreset('high')">🎯 高质量 (15fps/720p)</button>
+          <button class="btn-preset" onclick="applyPreset('medium')">⚡ 平衡 (10fps/480p)</button>
+          <button class="btn-preset" onclick="applyPreset('low')">💾 低体积 (8fps/360p)</button>
+          <button class="btn-preset" onclick="applyPreset('emoji')">😄 表情包 (12fps/320p)</button>
+          <button class="btn-preset" onclick="applyPreset('short')">⏱️ 3 秒片段</button>
+        </div>
 
-    <!-- 结果展示 -->
-    <div id="result"></div>
-
-    <!-- 日志 -->
-    <div class="log" id="log"></div>
-  </div>
-
-  <script type="module">
-    import { FFmpeg } from '/assets/ffmpeg/esm/index.js';
-    import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js';
-
-    let ffmpeg = null;
-    let loaded = false;
-    let videoMetadata = null;
-
-    function log(msg) {
-      const logEl = document.getElementById('log');
-      logEl.textContent += new Date().toLocaleTimeString() + ' - ' + msg + '\n';
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    // 初始化提示
-    log('✅ 本应用完全在浏览器中运行，无需后端服务');
-    log('💡 首次使用需要下载 FFmpeg（约 30MB），请耐心等待');
-
-    // 获取视频元数据
-    async function getVideoMetadata(source) {
-      return new Promise((resolve, reject) => {
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        
-        video.onloadedmetadata = () => {
-          const metadata = {
-            width: video.videoWidth,
-            height: video.videoHeight,
-            duration: video.duration,
-            fps: 25 // 默认值，无法从 video 元素直接获取准确帧率
-          };
-          URL.revokeObjectURL(video.src);
-          resolve(metadata);
-        };
-        
-        video.onerror = () => {
-          URL.revokeObjectURL(video.src);
-          reject(new Error('无法读取视频信息'));
-        };
-        
-        if (source instanceof File) {
-          video.src = URL.createObjectURL(source);
-        } else {
-          video.src = source;
-          video.crossOrigin = 'anonymous';
-        }
-      });
-    }
-
-    // 监听文件选择，自动获取元数据
-    document.getElementById('fileInput').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        try {
-          log('正在读取视频信息...');
-          videoMetadata = await getVideoMetadata(file);
-          document.getElementById('originalBtn').disabled = false;
-          log(`视频信息：${videoMetadata.width}x${videoMetadata.height}, ${videoMetadata.duration.toFixed(1)}秒`);
-        } catch (err) {
-          log('读取视频信息失败：' + err.message);
-          videoMetadata = null;
-          document.getElementById('originalBtn').disabled = true;
-        }
-      }
-    });
-
-    // 监听 URL 输入
-    document.getElementById('urlInput').addEventListener('input', (e) => {
-      const url = e.target.value.trim();
-      const analyzeBtn = document.getElementById('analyzeBtn');
-      analyzeBtn.disabled = !url;
-      
-      // 清空之前的元数据
-      if (!url) {
-        videoMetadata = null;
-        document.getElementById('originalBtn').disabled = true;
-      }
-    });
-
-    // 从 URL 分析视频
-    window.analyzeVideoFromUrl = async function() {
-      const urlInput = document.getElementById('urlInput');
-      const url = urlInput.value.trim();
-      
-      if (!url) {
-        log('请输入视频 URL');
-        return;
-      }
-
-      try {
-        log('正在分析视频...');
-        videoMetadata = await getVideoMetadata(url);
-        document.getElementById('originalBtn').disabled = false;
-        log(`视频信息：${videoMetadata.width}x${videoMetadata.height}, ${videoMetadata.duration.toFixed(1)}秒`);
-      } catch (err) {
-        log('分析视频失败：' + err.message + '（可能存在跨域限制）');
-        videoMetadata = null;
-        document.getElementById('originalBtn').disabled = true;
-      }
-    };
-
-    // 使用原视频参数
-    window.useOriginalParams = function() {
-      if (!videoMetadata) {
-        log('未找到视频信息');
-        return;
-      }
-
-      document.getElementById('fps').value = videoMetadata.fps;
-      document.getElementById('width').value = videoMetadata.width;
-      document.getElementById('height').value = videoMetadata.height;
-      document.getElementById('startTime').value = '';
-      document.getElementById('duration').value = '';
-
-      // 视觉反馈
-      document.querySelectorAll('.btn-preset').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-      
-      log(`已应用原视频参数：${videoMetadata.width}x${videoMetadata.height} @ ${videoMetadata.fps}fps`);
-    };
-
-    // 预设配置
-    const presets = {
-      high: { fps: 15, width: 720, height: -1, startTime: '', duration: '', name: '高质量' },
-      medium: { fps: 10, width: 480, height: -1, startTime: '', duration: '', name: '平衡' },
-      low: { fps: 8, width: 360, height: -1, startTime: '', duration: '', name: '低体积' },
-      emoji: { fps: 12, width: 320, height: 320, startTime: '', duration: '', name: '表情包' },
-      short: { fps: 10, width: 480, height: -1, startTime: 0, duration: 3, name: '3 秒片段' }
-    };
-
-    // 应用预设
-    window.applyPreset = function(presetName) {
-      const preset = presets[presetName];
-      if (!preset) return;
-
-      document.getElementById('fps').value = preset.fps;
-      document.getElementById('width').value = preset.width;
-      document.getElementById('height').value = preset.height;
-      document.getElementById('startTime').value = preset.startTime;
-      document.getElementById('duration').value = preset.duration;
-
-      // 视觉反馈
-      document.querySelectorAll('.btn-preset').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-      
-      log(`已应用预设：${preset.name}`);
-    };
-
-    async function loadFFmpeg() {
-      if (loaded) return;
-      log('正在加载 FFmpeg（首次加载约 30MB，请耐心等待）...');
-      
-      try {
-        // 混合方案：小文件用本地，大文件（wasm）用 CDN
-        const localBase = window.location.origin + '/assets/ffmpeg';
-        const cdnBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
-        
-        log('下载 FFmpeg 文件...');
-        // 本地文件（已打包在 Pages）
-        const coreURL = await toBlobURL(`${localBase}/ffmpeg-core.js`, 'text/javascript');
-        const workerURL = await toBlobURL(`${localBase}/worker.js`, 'text/javascript');
-        
-        // WASM 从 CDN 加载（避免 Pages 25MB 限制）
-        log('从 CDN 下载 WASM 文件（30MB）...');
-        const wasmURL = await toBlobURL(`${cdnBase}/ffmpeg-core.wasm`, 'application/wasm');
-        
-        log('✓ 文件下载完成，转换为 Blob URL');
-        
-        log('初始化 FFmpeg 实例...');
-        // 延迟创建 FFmpeg 实例，避免过早加载 Worker
-        if (!ffmpeg) {
-          ffmpeg = new FFmpeg();
-          ffmpeg.on('log', ({ message }) => {
-            log(`[FFmpeg] ${message}`);
-          });
-          ffmpeg.on('progress', ({ progress, time }) => {
-            log(`处理进度：${(progress * 100).toFixed(2)}%`);
-          });
-        }
-        
-        log('加载 FFmpeg 核心（多线程模式）...');
-        try {
-          await ffmpeg.load({
-            coreURL,
-            wasmURL,
-            workerURL
-          });
-          loaded = true;
-          log('✅ FFmpeg 加载完成（多线程模式）！');
-        } catch (workerErr) {
-          log('⚠️ 多线程模式失败，尝试单线程模式...');
-          log('错误：' + workerErr.message);
-          
-          // 降级到单线程模式（不使用 Worker）
-          await ffmpeg.load({
-            coreURL,
-            wasmURL
-            // 不传 workerURL，使用单线程
-          });
-          loaded = true;
-          log('✅ FFmpeg 加载完成（单线程模式）！');
-        }
-      } catch (err) {
-        log('❌ FFmpeg 加载失败：' + err.message);
-        log('提示：首次使用需要从 CDN 下载 30MB 文件，请检查网络连接');
-        console.error('FFmpeg 加载错误详情：', err);
-        throw err;
-      }
-    }
-
-    async function convert() {
-      const fileInput = document.getElementById('fileInput');
-      const urlInput = document.getElementById('urlInput');
-      const statusEl = document.getElementById('status');
-      const resultEl = document.getElementById('result');
-      const btn = document.getElementById('convertBtn');
-
-      // 清空之前的结果
-      statusEl.innerHTML = '';
-      resultEl.innerHTML = '';
-
-      // 验证输入
-      const file = fileInput.files[0];
-      const url = urlInput.value.trim();
-      if (!file && !url) {
-        statusEl.innerHTML = '<div class="error">请选择文件或填写 URL</div>';
-        return;
-      }
-
-      // 禁用按钮
-      btn.disabled = true;
-      btn.textContent = '转换中...';
-      log('开始转换...');
-
-      try {
-        // 加载 FFmpeg
-        await loadFFmpeg();
-
-        // 获取输入数据
-        let inputData;
-        if (file) {
-          inputData = await fetchFile(file);
-          log('文件已读取');
-        } else {
-          log('下载中...');
-          inputData = await fetchFile(url);
-          log('下载完成');
-        }
-
-        // 写入文件
-        await ffmpeg.writeFile('input.mp4', inputData);
-        log('开始转码...');
-
-  // 构造参数
-  const args = [];
-        const startTime = document.getElementById('startTime').value;
-        if (startTime) args.push('-ss', startTime);
-        args.push('-i', 'input.mp4');
-        const duration = document.getElementById('duration').value;
-        if (duration) args.push('-t', duration);
-
-        const vf = [];
-        const fpsVal = document.getElementById('fps').value;
-        if (fpsVal) vf.push(`fps=${fpsVal}`);
-        const widthVal = document.getElementById('width').value;
-        if (widthVal) {
-          const heightVal = document.getElementById('height').value || -1;
-          vf.push(`scale=${widthVal}:${heightVal}:flags=lanczos`);
-        }
-        if (vf.length) args.push('-vf', vf.join(','));
-
-        // 输出格式处理
-        const format = document.getElementById('format').value;
-        let outFile = 'output.gif';
-        let mime = 'image/gif';
-        let extra = [];
-        
-        if (format === 'gif') {
-          // 使用 palettegen/paletteuse 两步法生成高质量 GIF
-          log('生成调色板（pass 1）...');
-          const p1 = [];
-          if (startTime) p1.push('-ss', startTime);
-          p1.push('-i', 'input.mp4');
-          if (duration) p1.push('-t', duration);
-          // 与最终输出保持一致的预处理滤镜
-          // 用于生成调色板的滤镜（避免与后面合并滤镜变量名冲突）
-          const paletteGenFilter = vf.length ? `${vf.join(',')},palettegen=stats_mode=full:reserve_transparent=1` : 'palettegen=stats_mode=full:reserve_transparent=1';
-          p1.push('-vf', paletteGenFilter, '-y', 'palette.png');
-
-          log(`执行：ffmpeg ${p1.join(' ')}`);
-          await ffmpeg.exec(p1);
-
-          log('应用调色板生成 GIF（pass 2）...');
-          const p2 = [];
-          if (startTime) p2.push('-ss', startTime);
-          p2.push('-i', 'input.mp4', '-i', 'palette.png');
-          if (duration) p2.push('-t', duration);
-          const gifProfile = document.getElementById('gifProfile').value;
-          let palettegen = 'palettegen=stats_mode=full:reserve_transparent=1';
-          let paletteuse = 'paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle';
-          if (gifProfile === 'classic') {
-            paletteuse = 'paletteuse=dither=floyd_steinberg';
-          } else if (gifProfile === 'small') {
-            palettegen = 'palettegen=max_colors=32:stats_mode=full:reserve_transparent=1';
-            paletteuse = 'paletteuse=dither=none';
-          }
-          // 合并滤镜
-          // 合并后的调色板滤镜（与上面生成调色板的变量区分）
-          const paletteFiltersCombined = vf.length ? `${vf.join(',')},${palettegen}` : palettegen;
-          p1[p1.indexOf('-vf') + 1] = paletteFiltersCombined;
-          const useFilters = vf.length ? `${vf.join(',')},${paletteuse}` : paletteuse;
-          p2.push('-lavfi', useFilters, '-loop', '0', '-f', 'gif', '-y', 'output.gif');
-          log(`执行：ffmpeg ${p2.join(' ')}`);
-          statusEl.innerHTML = '<div class="loading">⏳ 转码中（高质量 GIF，两步处理）...</div>';
-          await ffmpeg.exec(p2);
-
-          outFile = 'output.gif';
-          mime = 'image/gif';
-        } else if (format === 'webp') {
-          // webp: 动图 webp 支持，减少大小
-          extra = ['-loop', '0', '-f', 'webp', '-lossless', '0', '-qscale', '70'];
-          outFile = 'output.webp';
-          mime = 'image/webp';
-          args.push(...extra, outFile);
-        } else if (format === 'apng') {
-          // apng: 兼容性较好，体积较大
-          extra = ['-f', 'apng'];
-          outFile = 'output.png';
-          mime = 'image/apng';
-          args.push(...extra, outFile);
-        } else if (format === 'avif') {
-          // avif: ffmpeg wasm 编码器可能不支持动图，导出单帧 PNG，再用 WebCodecs 转 AVIF
-          // 先尝试 ffmpeg.wasm 直接导出 AVIF
-          extra = ['-frames:v', '1', '-f', 'avif'];
-          outFile = 'output.avif';
-          mime = 'image/avif';
-          args.push(...extra, outFile);
-          let avifSuccess = false;
-          try {
-            log(`执行：ffmpeg ${args.join(' ')}`);
-            statusEl.innerHTML = '<div class="loading">⏳ 转码中，请稍候...</div>';
-            await ffmpeg.exec(args);
-            avifSuccess = true;
-          } catch (e) {
-            log('ffmpeg.wasm AVIF 失败，尝试 WebCodecs 方案...');
-          }
-          let data, blob, outUrl;
-          if (avifSuccess) {
-            data = await ffmpeg.readFile(outFile);
-            blob = new Blob([data.buffer], { type: mime });
-            outUrl = URL.createObjectURL(blob);
-          } else {
-            // ffmpeg.wasm 不支持，导出 PNG 再用 WebCodecs 转 AVIF
-            const pngArgs = ['-frames:v', '1', '-f', 'png', 'output.png'];
-            log(`执行：ffmpeg ${pngArgs.join(' ')}`);
-            await ffmpeg.exec(pngArgs);
-            const pngData = await ffmpeg.readFile('output.png');
-            const pngBlob = new Blob([pngData.buffer], { type: 'image/png' });
-            // WebCodecs API 转 AVIF
-            if (window.VideoEncoder && window.ImageEncoder) {
-              try {
-                const imgBitmap = await createImageBitmap(pngBlob);
-                const avifBlob = await encodeAvifWithWebCodecs(imgBitmap);
-                blob = avifBlob;
-                outUrl = URL.createObjectURL(blob);
-                mime = 'image/avif';
-                log('WebCodecs AVIF 编码成功！');
-              } catch (e) {
-                statusEl.innerHTML = '<div class="error">❌ 浏览器 WebCodecs AVIF 编码失败：' + e.message + '</div>';
-                return;
-              }
-            } else {
-              statusEl.innerHTML = '<div class="error">❌ 当前浏览器不支持 WebCodecs AVIF 编码</div>';
-              return;
-            }
-          }
-          // 显示结果
-          statusEl.innerHTML = '<div class="success">✅ 转换成功！（WebCodecs AVIF）</div>';
-          resultEl.innerHTML = `
-            <div class="result">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3>结果预览（AVIF）</h3>
-                <a href="${outUrl}" download="video.avif" class="btn">下载 AVIF</a>
-              </div>
-              <p class="hint">大小：${(blob.size / 1024).toFixed(2)} KB</p>
-              <p class="hint">AVIF 预览和下载仅支持部分浏览器。</p>
-              <img src="${outUrl}" alt="结果预览">
-            </div>
-          `;
-          log(`文件大小：${(blob.size / 1024).toFixed(2)} KB`);
-          return;
-        }
-        if (format !== 'gif' && format !== 'avif') {
-          log(`执行：ffmpeg ${args.join(' ')}`);
-          statusEl.innerHTML = '<div class="loading">⏳ 转码中，请稍候...</div>';
-          await ffmpeg.exec(args);
-          log('转码完成！');
-        }
-
-        // 读取输出
-        const data = await ffmpeg.readFile(outFile);
-        const blob = new Blob([data.buffer], { type: mime });
-        const outUrl = URL.createObjectURL(blob);
-
-        // 显示结果
-        statusEl.innerHTML = '<div class="success">✅ 转换成功！</div>';
-        resultEl.innerHTML = `
-          <div class="result">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <h3>结果预览（${format.toUpperCase()}）</h3>
-              <a href="${outUrl}" download="video.${format === 'apng' ? 'png' : format}" class="btn">下载 ${format.toUpperCase()}</a>
-            </div>
-            <p class="hint">大小：${(blob.size / 1024).toFixed(2)} KB</p>
-            ${format === 'avif' ? '<p class="hint">AVIF 预览可能不被所有浏览器支持。</p>' : ''}
-            <img src="${outUrl}" alt="结果预览">
+        <div class="params-grid">
+          <div class="input-group">
+            <label>帧率 (FPS)</label>
+            <input type="number" id="fps" value="10" min="1" max="30" />
           </div>
-        `;
-        log(`文件大小：${(blob.size / 1024).toFixed(2)} KB`);
-      } catch (err) {
-        log('错误：' + err.message);
-        statusEl.innerHTML = '<div class="error">❌ ' + err.message + '</div>';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = '开始转换';
-      }
-    }
+          <div class="input-group">
+            <label>输出格式</label>
+            <select id="format">
+              <option value="gif" selected>GIF（动图）</option>
+              <option value="webp">WebP（动图）</option>
+              <option value="apng">APNG（动图）</option>
+              <option value="avif">AVIF（实验/可能仅静态）</option>
+            </select>
+            <p class="hint">不同格式体积和兼容性不同，GIF 通用，WebP 体积更小。</p>
+          </div>
+          <div class="input-group" id="globalQualityGroup">
+            <label for="quality">
+              质量：
+              <span id="qualityValue">1%</span>
+            </label>
+            <input type="range" id="quality" min="0" max="100" step="1" value="1" />
+            <p class="hint">
+              适用于所有可调质量的格式：GIF/WEBP/APNG/AVIF（或其降级）。数值越大质量越高、体积越大。
+            </p>
+          </div>
+          <div class="input-group" id="gifProfileGroup">
+            <label>GIF 模式</label>
+            <select id="gifProfile">
+              <option value="hq" selected>高质量（两步法，抖动优化）</option>
+              <option value="classic">经典（Floyd-Steinberg 抖动）</option>
+              <option value="small">体积优先（64 色 + 强抖动）</option>
+            </select>
+            <p class="hint">仅在选择 GIF 格式时生效。体积优先适合表情包/大幅压缩。</p>
+          </div>
+          <div class="input-group" id="avifWebCodecsGroup" style="display: none">
+            <label>
+              <input type="checkbox" id="useWebCodecs" />
+              使用 WebCodecs 编码真正的 AVIF
+            </label>
+            <p class="hint">
+              ⚠️ 实验性功能！需要浏览器支持 WebCodecs ImageEncoder。不勾选则降级为 WebP。
+            </p>
+          </div>
+          <div class="input-group">
+            <label>宽度 (px)</label>
+            <input type="number" id="width" value="480" min="64" max="1280" step="16" />
+          </div>
+          <div class="input-group">
+            <label>高度 (px)</label>
+            <input type="number" id="height" value="-1" />
+            <p class="hint">-1 为自动</p>
+          </div>
+          <div class="input-group">
+            <label>起始时间 (秒)</label>
+            <input type="number" id="startTime" value="" placeholder="0" />
+          </div>
+          <div class="input-group">
+            <label>持续时长 (秒)</label>
+            <input type="number" id="duration" value="" placeholder="全部" />
+          </div>
+        </div>
+      </div>
 
-    function reset() {
-      document.getElementById('fileInput').value = '';
-      document.getElementById('urlInput').value = '';
-      document.getElementById('fps').value = '10';
-      document.getElementById('width').value = '480';
-      document.getElementById('height').value = '-1';
-      document.getElementById('startTime').value = '';
-      document.getElementById('duration').value = '';
-      document.getElementById('status').innerHTML = '';
-      document.getElementById('result').innerHTML = '';
-      document.getElementById('log').textContent = '';
-      log('已重置');
-    }
+      <!-- 操作按钮 -->
+      <div class="btn-group">
+        <button class="btn" onclick="convert()" id="convertBtn">开始转换</button>
+        <button class="btn btn-secondary" onclick="reset()">重置</button>
+      </div>
 
-    // 暴露到全局
-    window.convert = convert;
-    window.reset = reset;
+      <!-- 状态信息 -->
+      <div id="status"></div>
 
-    // UI: 根据格式显示/隐藏 GIF 模式
-    const formatEl = document.getElementById('format');
-    const gifProfileGroup = document.getElementById('gifProfileGroup');
-    function toggleGifProfile() {
-      gifProfileGroup.style.display = formatEl.value === 'gif' ? 'block' : 'none';
-    }
-    formatEl.addEventListener('change', toggleGifProfile);
-    // 初始化
-    toggleGifProfile();
+      <!-- 结果展示 -->
+      <div id="result"></div>
 
-    // 初始化日志
-    log('页面加载完成');
-    log('本应用完全在浏览器中运行，无需后端服务');
+      <!-- 日志 -->
+      <div class="log" id="log"></div>
+    </div>
 
-    // 检查编码器支持
-    async function checkEncoders() {
-      await loadFFmpeg();
-      log('查询支持的编码器...');
-      await ffmpeg.exec(['-hide_banner', '-encoders']);
-      const encodersTxt = await ffmpeg.readFile('ffmpeg.log', { encoding: 'utf8' });
-      let support = { gif: false, webp: false, apng: false, avif: false };
-      if (encodersTxt) {
-        support.gif = /gif/i.test(encodersTxt);
-        support.webp = /webp/i.test(encodersTxt);
-        support.apng = /apng/i.test(encodersTxt);
-        support.avif = /avif/i.test(encodersTxt);
-      }
-      // 检查 WebCodecs AVIF 支持
-      let webcodecsAvif = false;
-      if (window.ImageEncoder) {
-        try {
-          const enc = new window.ImageEncoder('avif', {});
-          webcodecsAvif = true;
-        } catch (e) {
-          webcodecsAvif = false;
-        }
-      }
-      // 动态禁用不支持的格式
-      const formatEl = document.getElementById('format');
-      Array.from(formatEl.options).forEach(opt => {
-        if (opt.value === 'avif') {
-          if (!support.avif && !webcodecsAvif) {
-            opt.disabled = true;
-            opt.text = 'AVIF（不支持）';
-          } else if (!support.avif && webcodecsAvif) {
-            opt.text = 'AVIF（仅静态/实验）';
-          }
-        } else {
-          if (support[opt.value] === false) {
-            opt.disabled = true;
-            opt.text += '（不支持）';
-          }
-        }
-      });
-      log('编码器支持情况：' + JSON.stringify(support) + ', WebCodecs AVIF: ' + webcodecsAvif);
-    }
-    checkEncoders();
-
-    // WebCodecs API AVIF 编码辅助函数
-    async function encodeAvifWithWebCodecs(imgBitmap) {
-      if (!window.ImageEncoder) throw new Error('WebCodecs ImageEncoder 不支持');
-      const encoder = new window.ImageEncoder('avif', { quality: 0.8 });
-      const result = await encoder.encode(imgBitmap);
-      return result.image;
-    }
-  </script>
-</body>
+    <script type="module" src="/assets/js/app.js"></script>
+  </body>
 </html>
