@@ -116,36 +116,6 @@ try {
   // ignore
 }
 
-// Ensure ffmpeg core assets are available in public for runtime loading in extension options
-try {
-  const coreBase = path.resolve(process.cwd(), 'node_modules', '@ffmpeg', 'core', 'dist')
-  const coreDstDir = path.resolve(process.cwd(), 'public', 'assets', 'ffmpeg')
-  const candidates = [
-    path.join(coreBase, 'esm'),
-    path.join(coreBase, 'umd'),
-    coreBase
-  ]
-  const srcDir = candidates.find(d => fs.existsSync(d))
-  if (!srcDir) {
-    console.warn('⚠️ @ffmpeg/core not found, skipping ffmpeg asset copy')
-  } else {
-    fs.mkdirSync(coreDstDir, { recursive: true })
-    const toCopy = ['ffmpeg-core.js', 'ffmpeg-core.wasm']
-    let copied = 0
-    for (const f of toCopy) {
-      const src = path.join(srcDir, f)
-      const dst = path.join(coreDstDir, f)
-      if (fs.existsSync(src)) {
-        fs.copyFileSync(src, dst)
-        copied++
-      }
-    }
-    console.log(`ℹ️ Copied @ffmpeg/core assets (${copied} files) from ${srcDir} to ${coreDstDir}`)
-  }
-} catch (e) {
-  console.warn('⚠️ Failed to copy @ffmpeg/core assets:', e)
-}
-
 // 打印配置信息
 console.log(`🚀 开始构建 (${buildType})`)
 console.log(`📋 配置:`)

@@ -15,9 +15,9 @@
     .container {
       max-width: 900px;
       margin: 0 auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    const file = fileInput.files[0];
+    const url = urlInput.value.trim();
+    // 验证输入
       padding: 30px;
     }
     h1 {
@@ -212,8 +212,14 @@
         <button class="btn-preset" onclick="applyPreset('emoji')">😄 表情包 (12fps/320p)</button>
         <button class="btn-preset" onclick="applyPreset('short')">⏱️ 3 秒片段</button>
       </div>
-      
-      <div class="params-grid">
+      let msg = err && (err.message || err.toString()) ? (err.message || err.toString()) : '未知错误';
+      log('错误：' + msg);
+      // 针对 AVIF 编码失败，给出更友好的提示
+      if (format === 'avif') {
+        statusEl.innerHTML = '<div class="error">❌ AVIF 编码失败，当前 FFmpeg.wasm 不支持。已自动尝试 WebCodecs（如浏览器支持）。<br>详细信息：' + msg + '</div>';
+      } else {
+        statusEl.innerHTML = '<div class="error">❌ ' + msg + '</div>';
+      }
         <div class="input-group">
           <label>帧率 (FPS)</label>
           <input type="number" id="fps" value="10" min="1" max="30">
@@ -604,24 +610,78 @@
           mime = 'image/apng';
           args.push(...extra, outFile);
         } else if (format === 'avif') {
-          // avif: ffmpeg wasm 编码器可能不支持动图，导出单帧
+          // avif: ffmpeg wasm 编码器可能不支持动图，导出单帧 PNG，再用 WebCodecs 转 AVIF
+          // 先尝试 ffmpeg.wasm 直接导出 AVIF
           extra = ['-frames:v', '1', '-f', 'avif'];
           outFile = 'output.avif';
           mime = 'image/avif';
           args.push(...extra, outFile);
+          let avifSuccess = false;
+          try {
+            log(`执行：ffmpeg ${args.join(' ')}`);
+            statusEl.innerHTML = '<div class="loading">⏳ 转码中，请稍候...</div>';
+            await ffmpeg.exec(args);
+            avifSuccess = true;
+          } catch (e) {
+            log('ffmpeg.wasm AVIF 失败，尝试 WebCodecs 方案...');
+          }
+          let data, blob, outUrl;
+          if (avifSuccess) {
+            data = await ffmpeg.readFile(outFile);
+            blob = new Blob([data.buffer], { type: mime });
+            outUrl = URL.createObjectURL(blob);
+          } else {
+            // ffmpeg.wasm 不支持，导出 PNG 再用 WebCodecs 转 AVIF
+            const pngArgs = ['-frames:v', '1', '-f', 'png', 'output.png'];
+            log(`执行：ffmpeg ${pngArgs.join(' ')}`);
+            await ffmpeg.exec(pngArgs);
+            const pngData = await ffmpeg.readFile('output.png');
+            const pngBlob = new Blob([pngData.buffer], { type: 'image/png' });
+            // WebCodecs API 转 AVIF
+            if (window.VideoEncoder && window.ImageEncoder) {
+              try {
+                const imgBitmap = await createImageBitmap(pngBlob);
+                const avifBlob = await encodeAvifWithWebCodecs(imgBitmap);
+                blob = avifBlob;
+                outUrl = URL.createObjectURL(blob);
+                mime = 'image/avif';
+                log('WebCodecs AVIF 编码成功！');
+              } catch (e) {
+                statusEl.innerHTML = '<div class="error">❌ 浏览器 WebCodecs AVIF 编码失败：' + e.message + '</div>';
+                return;
+              }
+            } else {
+              statusEl.innerHTML = '<div class="error">❌ 当前浏览器不支持 WebCodecs AVIF 编码</div>';
+              return;
+            }
+          }
+          // 显示结果
+          statusEl.innerHTML = '<div class="success">✅ 转换成功！（WebCodecs AVIF）</div>';
+          resultEl.innerHTML = `
+            <div class="result">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>结果预览（AVIF）</h3>
+                <a href="${outUrl}" download="video.avif" class="btn">下载 AVIF</a>
+              </div>
+              <p class="hint">大小：${(blob.size / 1024).toFixed(2)} KB</p>
+              <p class="hint">AVIF 预览和下载仅支持部分浏览器。</p>
+              <img src="${outUrl}" alt="结果预览">
+            </div>
+          `;
+          log(`文件大小：${(blob.size / 1024).toFixed(2)} KB`);
+          return;
         }
-
-        if (format !== 'gif') {
+        if (format !== 'gif' && format !== 'avif') {
           log(`执行：ffmpeg ${args.join(' ')}`);
           statusEl.innerHTML = '<div class="loading">⏳ 转码中，请稍候...</div>';
           await ffmpeg.exec(args);
           log('转码完成！');
         }
 
-  // 读取输出
-  const data = await ffmpeg.readFile(outFile);
-  const blob = new Blob([data.buffer], { type: mime });
-  const outUrl = URL.createObjectURL(blob);
+        // 读取输出
+        const data = await ffmpeg.readFile(outFile);
+        const blob = new Blob([data.buffer], { type: mime });
+        const outUrl = URL.createObjectURL(blob);
 
         // 显示结果
         statusEl.innerHTML = '<div class="success">✅ 转换成功！</div>';
@@ -677,6 +737,58 @@
     // 初始化日志
     log('页面加载完成');
     log('本应用完全在浏览器中运行，无需后端服务');
+
+    // 检查编码器支持
+    async function checkEncoders() {
+      await loadFFmpeg();
+      log('查询支持的编码器...');
+      await ffmpeg.exec(['-hide_banner', '-encoders']);
+      const encodersTxt = await ffmpeg.readFile('ffmpeg.log', { encoding: 'utf8' });
+      let support = { gif: false, webp: false, apng: false, avif: false };
+      if (encodersTxt) {
+        support.gif = /gif/i.test(encodersTxt);
+        support.webp = /webp/i.test(encodersTxt);
+        support.apng = /apng/i.test(encodersTxt);
+        support.avif = /avif/i.test(encodersTxt);
+      }
+      // 检查 WebCodecs AVIF 支持
+      let webcodecsAvif = false;
+      if (window.ImageEncoder) {
+        try {
+          const enc = new window.ImageEncoder('avif', {});
+          webcodecsAvif = true;
+        } catch (e) {
+          webcodecsAvif = false;
+        }
+      }
+      // 动态禁用不支持的格式
+      const formatEl = document.getElementById('format');
+      Array.from(formatEl.options).forEach(opt => {
+        if (opt.value === 'avif') {
+          if (!support.avif && !webcodecsAvif) {
+            opt.disabled = true;
+            opt.text = 'AVIF（不支持）';
+          } else if (!support.avif && webcodecsAvif) {
+            opt.text = 'AVIF（仅静态/实验）';
+          }
+        } else {
+          if (support[opt.value] === false) {
+            opt.disabled = true;
+            opt.text += '（不支持）';
+          }
+        }
+      });
+      log('编码器支持情况：' + JSON.stringify(support) + ', WebCodecs AVIF: ' + webcodecsAvif);
+    }
+    checkEncoders();
+
+    // WebCodecs API AVIF 编码辅助函数
+    async function encodeAvifWithWebCodecs(imgBitmap) {
+      if (!window.ImageEncoder) throw new Error('WebCodecs ImageEncoder 不支持');
+      const encoder = new window.ImageEncoder('avif', { quality: 0.8 });
+      const result = await encoder.encode(imgBitmap);
+      return result.image;
+    }
   </script>
 </body>
 </html>

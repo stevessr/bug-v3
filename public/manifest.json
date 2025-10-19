@@ -6,18 +6,9 @@
   "description": "一个功能强大的表情管理扩展，支持自定义表情分组、收藏夹、多平台导入（Bilibili/Tenor/Waline），以及在各大网站（Discord、Reddit、X、小红书等）快速插入表情。",
   "author": "stevessr",
   "homepage_url": "https://github.com/stevessr/bug-v3",
-  "permissions": [
-    "storage",
-    "activeTab",
-    "scripting",
-    "downloads"
-  ],
-  "optional_permissions": [
-    "cookies"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "permissions": ["storage", "activeTab", "scripting", "downloads"],
+  "optional_permissions": ["cookies"],
+  "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "index.html?mode=popup",
     "default_title": "表情管理",
@@ -41,12 +32,8 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "js/content.js"
-      ],
+      "matches": ["<all_urls>"],
+      "js": ["js/content.js"],
       "type": "module",
       "run_at": "document_idle"
     }
@@ -59,19 +46,13 @@
     "1000": "img/1000.png",
     "1200": "img/1200.jpg"
   },
-  "content_security_policy": {
-  "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://cdn.jsdelivr.net"
+  "cross_origin_opener_policy": {
+    "value": "unsafe-none"
   },
   "web_accessible_resources": [
     {
-      "resources": [
-        "assets/*",
-        "js/*",
-        "*.html"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
+      "resources": ["assets/*", "js/*", "*.html"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
