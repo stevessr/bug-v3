@@ -6,6 +6,7 @@ import {
   AddEmojiButtonData,
   isXMediaHost
 } from '../utils'
+import { isImageInjectionEnabled, ImageType } from '../xConfig'
 
 const carouselOverlayMap = new WeakMap<Element, { btn: HTMLElement; raf?: number }>()
 const processedElements = new WeakSet<Element>()
@@ -215,27 +216,65 @@ function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
   return btn
 }
 
-function isInCarousel(el: Element): boolean {
-  return !!(
-    el.closest('[role="group"][aria-roledescription="carousel"]') ||
-    el.closest('li[role="listitem"]') ||
-    el.closest('[data-testid="swipe-to-dismiss"]') ||
-    el
-      .closest('div[style*="position: relative"]')
-      ?.querySelector('[data-testid="swipe-to-dismiss"]') ||
-    el.closest('[role="dialog"]') ||
-    el.closest('[aria-modal="true"]') ||
-    (el.closest('article[data-testid="tweet"]') &&
+/**
+ * 检测元素所属的图片类型
+ */
+function detectImageType(el: Element): ImageType | null {
+  // 检查是否在轮播图中
+  if (el.closest('[role="group"][aria-roledescription="carousel"]')) {
+    return ImageType.Carousel
+  }
+  
+  // 检查是否在对话框/模态框中
+  if (el.closest('[role="dialog"]') || el.closest('[aria-modal="true"]')) {
+    return ImageType.Dialog
+  }
+  
+  // 检查是否在推文中
+  if (el.closest('article[data-testid="tweet"]') &&
       (el.closest('div[aria-label="Image"]') ||
-        el.matches('div[aria-label="Image"]') ||
-        el.closest('div[data-testid="tweetPhoto"]') ||
-        el.matches('div[data-testid="tweetPhoto"]')))
-  )
+       el.matches('div[aria-label="Image"]') ||
+       el.closest('div[data-testid="tweetPhoto"]') ||
+       el.matches('div[data-testid="tweetPhoto"]'))) {
+    return ImageType.Tweet
+  }
+  
+  // 检查是否在列表项中
+  if (el.closest('li[role="listitem"]')) {
+    return ImageType.ListItem
+  }
+  
+  // 检查是否在滑动关闭元素中
+  if (el.closest('[data-testid="swipe-to-dismiss"]') ||
+      el.closest('div[style*="position: relative"]')?.querySelector('[data-testid="swipe-to-dismiss"]')) {
+    return ImageType.SwipeToDismiss
+  }
+  
+  // 检查是否是独立媒体页面
+  if (isXMediaHost() && el instanceof HTMLImageElement) {
+    return ImageType.StandaloneMedia
+  }
+  
+  return null
+}
+
+function isInCarousel(el: Element): boolean {
+  return detectImageType(el) !== null
 }
 
 function addCarouselButtonToEl(el: Element) {
   try {
     const isPbsHost = isXMediaHost()
+    
+    // 检测图片类型
+    const imageType = detectImageType(el)
+    if (!imageType) return
+    
+    // 检查该类型的图片注入是否启用
+    if (!isImageInjectionEnabled(imageType)) {
+      return
+    }
+    
     if (!isInCarousel(el) && !(isPbsHost && el instanceof HTMLImageElement)) return
     if (
       isInjected(el) ||
@@ -366,43 +405,81 @@ function addCarouselButtonToEl(el: Element) {
 }
 
 export function scanAndInjectCarousel() {
-  const selectors = [
-    '[role="group"][aria-roledescription="carousel"] div[aria-label="Image"]',
-    '[role="group"][aria-roledescription="carousel"] div[style*="background-image"]',
-    '[role="group"][aria-roledescription="carousel"] img',
-    'li[role="listitem"] div[aria-label="Image"]',
-    'li[role="listitem"] div[style*="background-image"]',
-    'li[role="listitem"] img',
-    '[data-testid="swipe-to-dismiss"] div[aria-label="Image"]',
-    '[data-testid="swipe-to-dismiss"] div[style*="background-image"]',
-    '[data-testid="swipe-to-dismiss"] img',
-    '[role="dialog"] div[aria-label="Image"]',
-    '[role="dialog"] div[style*="background-image"]',
-    '[role="dialog"] img',
-    '[aria-modal="true"] div[aria-label="Image"]',
-    '[aria-modal="true"] div[style*="background-image"]',
-    '[aria-modal="true"] img',
-    'article[data-testid="tweet"] div[aria-label="Image"]',
-    'article[data-testid="tweet"] div[data-testid="tweetPhoto"]',
-    'article[data-testid="tweet"] div[style*="background-image"]',
-    'article[data-testid="tweet"] img'
-  ]
+  // 检查是否至少有一个类型启用
+  if (!isImageInjectionEnabled()) {
+    return
+  }
+  
+  const selectors: string[] = []
+  
+  // 根据配置动态构建选择器
+  if (isImageInjectionEnabled(ImageType.Carousel)) {
+    selectors.push(
+      '[role="group"][aria-roledescription="carousel"] div[aria-label="Image"]',
+      '[role="group"][aria-roledescription="carousel"] div[style*="background-image"]',
+      '[role="group"][aria-roledescription="carousel"] img'
+    )
+  }
+  
+  if (isImageInjectionEnabled(ImageType.ListItem)) {
+    selectors.push(
+      'li[role="listitem"] div[aria-label="Image"]',
+      'li[role="listitem"] div[style*="background-image"]',
+      'li[role="listitem"] img'
+    )
+  }
+  
+  if (isImageInjectionEnabled(ImageType.SwipeToDismiss)) {
+    selectors.push(
+      '[data-testid="swipe-to-dismiss"] div[aria-label="Image"]',
+      '[data-testid="swipe-to-dismiss"] div[style*="background-image"]',
+      '[data-testid="swipe-to-dismiss"] img'
+    )
+  }
+  
+  if (isImageInjectionEnabled(ImageType.Dialog)) {
+    selectors.push(
+      '[role="dialog"] div[aria-label="Image"]',
+      '[role="dialog"] div[style*="background-image"]',
+      '[role="dialog"] img',
+      '[aria-modal="true"] div[aria-label="Image"]',
+      '[aria-modal="true"] div[style*="background-image"]',
+      '[aria-modal="true"] img'
+    )
+  }
+  
+  if (isImageInjectionEnabled(ImageType.Tweet)) {
+    selectors.push(
+      'article[data-testid="tweet"] div[aria-label="Image"]',
+      'article[data-testid="tweet"] div[data-testid="tweetPhoto"]',
+      'article[data-testid="tweet"] div[style*="background-image"]',
+      'article[data-testid="tweet"] img'
+    )
+  }
+  
+  // 如果没有任何选择器，直接返回
+  if (selectors.length === 0) {
+    return
+  }
 
   const set = new Set<Element>()
   selectors.forEach(s => document.querySelectorAll(s).forEach(el => set.add(el)))
+  
   // Special-case: when visiting a standalone twitter/pbs image page the document
   // may simply contain one or more top-level <img> elements (or an image inside
   // a minimal wrapper). Add any images whose src points to pbs.twimg.com so they
   // are picked up by the existing injection logic.
-  try {
-    if (isXMediaHost()) {
-      document.querySelectorAll('img').forEach(img => {
-        const src = (img as HTMLImageElement).src || img.getAttribute('src') || ''
-        if (src && src.includes('pbs.twimg.com')) set.add(img)
-      })
+  if (isImageInjectionEnabled(ImageType.StandaloneMedia)) {
+    try {
+      if (isXMediaHost()) {
+        document.querySelectorAll('img').forEach(img => {
+          const src = (img as HTMLImageElement).src || img.getAttribute('src') || ''
+          if (src && src.includes('pbs.twimg.com')) set.add(img)
+        })
+      }
+    } catch {
+      // ignore
     }
-  } catch {
-    // ignore
   }
 
   // Filter out elements whose ancestors are also in the set to prevent duplicate processing
@@ -498,6 +575,12 @@ let carouselObserver: MutationObserver | null = null
 let carouselDebounceTimer: number | null = null
 
 export function observeCarousel() {
+  // 检查图片注入功能开关
+  if (!isImageInjectionEnabled()) {
+    console.log('[XCarousel] Image injection disabled by config')
+    return null
+  }
+  
   if (carouselObserver) return carouselObserver
 
   carouselObserver = new MutationObserver(ms => {
