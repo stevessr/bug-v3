@@ -255,10 +255,10 @@
   </div>
 
   <script type="module">
-    import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js';
-    import { fetchFile } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js';
+    import { FFmpeg } from '/assets/ffmpeg/esm/index.js';
+    import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js';
 
-    const ffmpeg = new FFmpeg();
+    let ffmpeg = null;
     let loaded = false;
     let videoMetadata = null;
 
@@ -267,6 +267,10 @@
       logEl.textContent += new Date().toLocaleTimeString() + ' - ' + msg + '\n';
       logEl.scrollTop = logEl.scrollHeight;
     }
+
+    // 初始化提示
+    log('✅ 本应用完全在浏览器中运行，无需后端服务');
+    log('💡 首次使用需要下载 FFmpeg（约 30MB），请耐心等待');
 
     // 获取视频元数据
     async function getVideoMetadata(source) {
@@ -400,14 +404,64 @@
 
     async function loadFFmpeg() {
       if (loaded) return;
-      log('正在加载 FFmpeg（首次较慢）...');
-      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
-      await ffmpeg.load({
-        coreURL: `${baseURL}/ffmpeg-core.js`,
-        wasmURL: `${baseURL}/ffmpeg-core.wasm`
-      });
-      loaded = true;
-      log('FFmpeg 加载完成');
+      log('正在加载 FFmpeg（首次加载约 30MB，请耐心等待）...');
+      
+      try {
+        // 混合方案：小文件用本地，大文件（wasm）用 CDN
+        const localBase = window.location.origin + '/assets/ffmpeg';
+        const cdnBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
+        
+        log('下载 FFmpeg 文件...');
+        // 本地文件（已打包在 Pages）
+        const coreURL = await toBlobURL(`${localBase}/ffmpeg-core.js`, 'text/javascript');
+        const workerURL = await toBlobURL(`${localBase}/worker.js`, 'text/javascript');
+        
+        // WASM 从 CDN 加载（避免 Pages 25MB 限制）
+        log('从 CDN 下载 WASM 文件（30MB）...');
+        const wasmURL = await toBlobURL(`${cdnBase}/ffmpeg-core.wasm`, 'application/wasm');
+        
+        log('✓ 文件下载完成，转换为 Blob URL');
+        
+        log('初始化 FFmpeg 实例...');
+        // 延迟创建 FFmpeg 实例，避免过早加载 Worker
+        if (!ffmpeg) {
+          ffmpeg = new FFmpeg();
+          ffmpeg.on('log', ({ message }) => {
+            log(`[FFmpeg] ${message}`);
+          });
+          ffmpeg.on('progress', ({ progress, time }) => {
+            log(`处理进度：${(progress * 100).toFixed(2)}%`);
+          });
+        }
+        
+        log('加载 FFmpeg 核心（多线程模式）...');
+        try {
+          await ffmpeg.load({
+            coreURL,
+            wasmURL,
+            workerURL
+          });
+          loaded = true;
+          log('✅ FFmpeg 加载完成（多线程模式）！');
+        } catch (workerErr) {
+          log('⚠️ 多线程模式失败，尝试单线程模式...');
+          log('错误：' + workerErr.message);
+          
+          // 降级到单线程模式（不使用 Worker）
+          await ffmpeg.load({
+            coreURL,
+            wasmURL
+            // 不传 workerURL，使用单线程
+          });
+          loaded = true;
+          log('✅ FFmpeg 加载完成（单线程模式）！');
+        }
+      } catch (err) {
+        log('❌ FFmpeg 加载失败：' + err.message);
+        log('提示：首次使用需要从 CDN 下载 30MB 文件，请检查网络连接');
+        console.error('FFmpeg 加载错误详情：', err);
+        throw err;
+      }
     }
 
     async function convert() {
