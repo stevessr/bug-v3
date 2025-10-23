@@ -47,47 +47,36 @@ async function injectDesktopPicker(button: HTMLElement) {
   const pickerElement = currentPicker
   if (pickerElement) document.body.appendChild(pickerElement)
 
-  const editorWrapper = document.querySelector('.d-editor-textarea-wrapper')
-  if (editorWrapper) {
-    const editorRect = editorWrapper.getBoundingClientRect()
-    const replyControl = document.querySelector('#reply-control')
-    const isMinireply = replyControl?.className.includes('hide-preview') && window.innerWidth < 1600
-    pickerElement.style.position = 'fixed'
-    if (isMinireply) {
-      pickerElement.style.bottom = window.innerHeight - editorRect.top + 10 + 'px'
-      pickerElement.style.left = editorRect.left + editorRect.width / 2 - 200 + 'px'
-    } else {
-      const pickerRect = pickerElement.getBoundingClientRect()
-      // Preferred: centered above the button
-      pickerElement.style.top = buttonRect.top - pickerRect.height - 5 + 'px'
-      let left = buttonRect.left + buttonRect.width / 2 - pickerRect.width / 2
+  // Use similar logic as userscript toolbar: adaptive positioning to keep picker inside viewport
+  pickerElement.style.position = 'fixed'
+  const margin = 8
+  const vpWidth = window.innerWidth
+  const vpHeight = window.innerHeight
 
-      // If the picker would overflow the left edge, prefer opening to the right of the button
-      const VIEWPORT_MARGIN = 8
-      if (left < VIEWPORT_MARGIN) {
-        // Try positioning picker to the right of the button
-        left = buttonRect.right + VIEWPORT_MARGIN
-      }
+  // Temporarily place below button to measure
+  pickerElement.style.top = buttonRect.bottom + margin + 'px'
+  pickerElement.style.left = buttonRect.left + 'px'
 
-      // Clamp to viewport to ensure visibility on both sides
-      const maxLeft = Math.max(
-        VIEWPORT_MARGIN,
-        window.innerWidth - pickerRect.width - VIEWPORT_MARGIN
-      )
-      left = Math.min(Math.max(left, VIEWPORT_MARGIN), maxLeft)
+  // Measure after appended
+  const pickerRect = pickerElement.getBoundingClientRect()
+  const spaceBelow = vpHeight - buttonRect.bottom
+  const neededHeight = pickerRect.height + margin
+  let top = buttonRect.bottom + margin
 
-      pickerElement.style.left = left + 'px'
-
-      // If the picker would be off the top edge, place it below the button
-      if (pickerElement.getBoundingClientRect().top < 0) {
-        pickerElement.style.top = buttonRect.bottom + 5 + 'px'
-      }
-    }
-  } else {
-    pickerElement.style.position = 'fixed'
-    pickerElement.style.top = buttonRect.bottom + 5 + 'px'
-    pickerElement.style.left = buttonRect.left + 'px'
+  if (spaceBelow < neededHeight) {
+    // Not enough space below, place above the button
+    top = Math.max(margin, buttonRect.top - pickerRect.height - margin)
   }
+
+  // Keep left within viewport
+  let left = buttonRect.left
+  if (left + pickerRect.width + margin > vpWidth) {
+    left = Math.max(margin, vpWidth - pickerRect.width - margin)
+  }
+  if (left < margin) left = margin
+
+  pickerElement.style.top = top + 'px'
+  pickerElement.style.left = left + 'px'
 
   setTimeout(() => {
     document.addEventListener('click', event => handleClickOutside(event, button))
