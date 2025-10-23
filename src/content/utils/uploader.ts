@@ -22,7 +22,9 @@ function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
 // Generic function to insert text into editor
 function insertIntoEditor(text: string) {
   // Priority 1: Chat composer (highest priority)
-  const chatComposer = document.querySelector('textarea#channel-composer.chat-composer__input') as HTMLTextAreaElement | null
+  const chatComposer = document.querySelector(
+    'textarea#channel-composer.chat-composer__input'
+  ) as HTMLTextAreaElement | null
   // Priority 2: Standard editor textarea
   const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
   // Priority 3: Rich text editor

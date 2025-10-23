@@ -601,7 +601,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       console.warn('[EmojiStore] Favorites group not found')
       return
     }
-    
+
     // Clear all emojis from favorites group
     favoritesGroup.emojis = []
     console.log('[EmojiStore] clearAllFavorites - cleared all favorite emojis')

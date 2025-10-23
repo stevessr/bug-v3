@@ -14,37 +14,37 @@ export const xConfig = {
      * 包括：[role="group"][aria-roledescription="carousel"]
      */
     enableCarousel: true,
-    
+
     /**
      * 推文中的图片
      * 包括：article[data-testid="tweet"] 中的图片
      */
     enableTweetImages: false,
-    
+
     /**
      * 对话框/模态框中的图片
      * 包括：[role="dialog"], [aria-modal="true"]
      */
     enableDialogImages: true,
-    
+
     /**
      * 列表项图片
      * 包括：li[role="listitem"]
      */
     enableListItemImages: false,
-    
+
     /**
      * 滑动关闭元素中的图片
      * 包括：[data-testid="swipe-to-dismiss"]
      */
     enableSwipeToDismissImages: false,
-    
+
     /**
      * 独立媒体页面图片
      * 访问 pbs.twimg.com 图片链接时
      */
-    enableStandaloneMediaImages: true,
-  },
+    enableStandaloneMediaImages: true
+  }
 } as const
 
 /**
@@ -56,7 +56,7 @@ export enum ImageType {
   Dialog = 'dialog',
   ListItem = 'listItem',
   SwipeToDismiss = 'swipeToDismiss',
-  StandaloneMedia = 'standaloneMedia',
+  StandaloneMedia = 'standaloneMedia'
 }
 
 /**
@@ -74,7 +74,7 @@ export function isImageInjectionEnabled(type?: ImageType): boolean {
       xConfig.imageInjection.enableStandaloneMediaImages
     )
   }
-  
+
   // 根据类型返回对应的配置
   switch (type) {
     case ImageType.Carousel:

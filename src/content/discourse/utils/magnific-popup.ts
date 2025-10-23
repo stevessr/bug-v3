@@ -17,11 +17,17 @@ function createMfpEmojiButton(data: AddEmojiButtonData): HTMLElement {
 
 function addEmojiButtonToMfp(mfpContainer: Element) {
   // 仅处理 pswp__top-bar 结构
-  const topBar = mfpContainer.querySelector('.pswp__top-bar') || (mfpContainer.classList.contains('pswp__top-bar') ? mfpContainer : null)
+  const topBar =
+    mfpContainer.querySelector('.pswp__top-bar') ||
+    (mfpContainer.classList.contains('pswp__top-bar') ? mfpContainer : null)
   if (!topBar) return
   if (topBar.querySelector('.emoji-add-link')) return
-  const originalBtn = topBar.querySelector('.pswp__button--original-image') as HTMLAnchorElement | null
-  const downloadBtn = topBar.querySelector('.pswp__button--download-image') as HTMLAnchorElement | null
+  const originalBtn = topBar.querySelector(
+    '.pswp__button--original-image'
+  ) as HTMLAnchorElement | null
+  const downloadBtn = topBar.querySelector(
+    '.pswp__button--download-image'
+  ) as HTMLAnchorElement | null
   let imgUrl = ''
   if (originalBtn && originalBtn.href) {
     imgUrl = originalBtn.href

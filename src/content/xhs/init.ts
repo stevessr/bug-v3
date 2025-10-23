@@ -48,7 +48,7 @@ function addButtonToXhsImage(img: HTMLImageElement) {
   try {
     const parent = img.parentElement || (img as Element)
     if (!parent) return
-    
+
     // Skip duplicate swiper slides (Swiper creates duplicate slides for infinite loop)
     let element: Element | null = parent
     while (element && element !== document.body) {
@@ -58,7 +58,7 @@ function addButtonToXhsImage(img: HTMLImageElement) {
       }
       element = element.parentElement
     }
-    
+
     // avoid double-inserting
     if (
       (parent as Element).querySelector &&
@@ -86,12 +86,9 @@ function addButtonToXhsImage(img: HTMLImageElement) {
 }
 
 export function scanAndInjectXhs() {
-  const selectors = [
-    'img.note-slider-img',
-    '.img-container img'
-  ]
+  const selectors = ['img.note-slider-img', '.img-container img']
   const set = new Set<HTMLImageElement>()
-  
+
   selectors.forEach(sel => {
     try {
       document.querySelectorAll(sel).forEach(el => {
@@ -106,9 +103,9 @@ export function scanAndInjectXhs() {
       console.warn(`[XHSOneClick] selector ${sel} failed:`, e)
     }
   })
-  
+
   console.log(`[XHSOneClick] scanAndInjectXhs found ${set.size} images`)
-  
+
   // 如果没有找到图片，尝试查找所有图片
   if (set.size === 0) {
     console.log('[XHSOneClick] No images found with specific selectors, trying all images')
@@ -118,7 +115,7 @@ export function scanAndInjectXhs() {
       }
     })
   }
-  
+
   set.forEach(img => addButtonToXhsImage(img))
 }
 
@@ -138,14 +135,14 @@ function observeXhs() {
         for (const n of Array.from(m.addedNodes)) {
           if (n.nodeType !== 1) continue
           const el = n as Element
-          
+
           // 检查是否是图片或包含图片
           if (el.tagName === 'IMG') {
             needs = true
             console.log('[XHSOneClick] observeXhs detected IMG element')
             break
           }
-          
+
           try {
             if (el.querySelector && el.querySelector('img')) {
               needs = true

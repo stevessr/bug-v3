@@ -19,7 +19,7 @@ export function toPixivOriginalUrl(candidate: string): string {
     url = url.replace('/img-master/', '/img-original/')
 
     // 去除文件名中的缩略后缀
-  // 形如：xxxx_p0_master1200.jpg 或 xxxx_p0_square1200.jpg 或 xxxx_p0_custom1200.jpg
+    // 形如：xxxx_p0_master1200.jpg 或 xxxx_p0_square1200.jpg 或 xxxx_p0_custom1200.jpg
     url = url.replace(/(_p\d+)_(?:master|square|custom)\d+(\.[a-zA-Z0-9]+)$/i, '$1$2')
 
     // 某些场景无 _pN 标记，仅有 master 后缀：xxxx_master1200.jpg -> xxxx.jpg
@@ -47,7 +47,11 @@ export function findPixivOriginalInContainer(container: Element | null): string 
     ) as HTMLImageElement | null
     if (!img) return null
 
-    const fromData = (img.getAttribute('data-src') || img.getAttribute('data-original') || '').trim()
+    const fromData = (
+      img.getAttribute('data-src') ||
+      img.getAttribute('data-original') ||
+      ''
+    ).trim()
     const srcset = img.getAttribute('srcset') || ''
     const firstSrcset = (srcset.split(',')[0] || '').split(' ')[0]
     const candidate = fromData || img.src || firstSrcset

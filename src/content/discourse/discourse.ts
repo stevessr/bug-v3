@@ -14,7 +14,7 @@ export async function initDiscourse() {
       return
     }
 
-  scanForMagnificPopup()
+    scanForMagnificPopup()
     observeMagnificPopup()
     setupDiscourseUploadHandler()
 

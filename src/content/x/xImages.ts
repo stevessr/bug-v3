@@ -8,7 +8,7 @@ export function initXImages() {
       console.log('[XImages] Image injection disabled by config')
       return
     }
-    
+
     scanAndInjectCarousel()
     observeCarousel()
   } catch (err) {

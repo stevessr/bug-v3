@@ -6,7 +6,9 @@ import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
 // isPixivViewer: no longer used for scanning outer containers; we now work per-image.
 
 function extractEmojiDataFromPixiv(container: Element): AddEmojiButtonData | null {
-  const img = container.querySelector('img[src*="i.pximg.net"], img[src*="pximg.net"]') as HTMLImageElement | null
+  const img = container.querySelector(
+    'img[src*="i.pximg.net"], img[src*="pximg.net"]'
+  ) as HTMLImageElement | null
   if (!img) return null
 
   // 优先容器推断

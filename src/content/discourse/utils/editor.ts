@@ -120,8 +120,7 @@ export function insertEmojiIntoEditor(emoji: unknown) {
       }
       void _e
     }
-  }
-  else if (contentEditable) {
+  } else if (contentEditable) {
     // Insert into a generic contenteditable. If the format is HTML, insert
     // an <img>; otherwise append a markdown-like text node.
     try {

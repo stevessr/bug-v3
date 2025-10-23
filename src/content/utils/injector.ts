@@ -483,11 +483,10 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     ['AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/'],
     ['学习 xv6', '🖥︎', 'https://pwsh.edu.deal/'],
     ['视频转 gif', '📹', 'https://video2gif-pages.pages.dev/'],
-    ['connect','🔗', 'https://connect.linux.do/'],
-    ['idcalre','📅', 'https://idcflare.com/']
+    ['connect', '🔗', 'https://connect.linux.do/'],
+    ['idcalre', '📅', 'https://idcflare.com/']
   ]
   autoItems.forEach(([text, icon, url]) => autoList(text, icon, url))
-  
 
   const passwall = createListItem('过盾', '🛡', () => {
     // If a modal iframe already exists, don't create another

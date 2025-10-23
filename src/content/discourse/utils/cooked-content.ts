@@ -19,22 +19,22 @@ function extractEmojiDataFromLightbox(lightboxWrapper: Element): AddEmojiButtonD
   const anchor = lightboxWrapper.querySelector('a.lightbox') as HTMLAnchorElement | null
   const img = lightboxWrapper.querySelector('img') as HTMLImageElement | null
   if (!anchor || !img) return results
-  
+
   // 提取图片信息
   const title = anchor.getAttribute('title') || ''
   const originalUrl = anchor.getAttribute('href') || ''
   const downloadUrl = anchor.getAttribute('data-download-href') || ''
   const imgSrc = img.getAttribute('src') || ''
-  
+
   // 确定表情名称
   let name = title || img.getAttribute('alt') || ''
   if (!name || name.length < 2) name = extractNameFromUrl(originalUrl || downloadUrl || imgSrc)
   name = name.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || '表情'
-  
+
   // 确定使用的 URL
   const urlToUse = originalUrl || downloadUrl || imgSrc
   if (urlToUse && urlToUse.startsWith('http')) results.push({ name, url: urlToUse })
-  
+
   return results
 }
 
@@ -68,13 +68,13 @@ function createSingleEmojiButton(data: AddEmojiButtonData): HTMLElement {
 function addEmojiButtonToLightbox(lightboxWrapper: Element) {
   // 避免重复添加
   if (lightboxWrapper.querySelector('.emoji-add-link-single')) return
-  
+
   const emojiDataList = extractEmojiDataFromLightbox(lightboxWrapper)
   if (emojiDataList.length === 0) return
-  
+
   const emojiData = emojiDataList[0] // 通常一个 lightbox 只有一张图
   const button = createSingleEmojiButton(emojiData)
-  
+
   // 注入位置：在 lightbox-wrapper 内部的最后
   lightboxWrapper.appendChild(button)
 }
@@ -153,12 +153,12 @@ function addBatchParseButtonToCooked(cookedElement: Element) {
   if (cookedElement.querySelector('.emoji-batch-parse-button')) return
   const lightboxWrappers = cookedElement.querySelectorAll('.lightbox-wrapper')
   if (lightboxWrappers.length === 0) return
-  
+
   // 为每个 lightbox 添加单独的表情按钮
   lightboxWrappers.forEach(wrapper => {
     addEmojiButtonToLightbox(wrapper)
   })
-  
+
   // 在内容顶部添加批量解析按钮（如果有多张图片）
   const button = createBatchParseButton(cookedElement)
   const firstChild = cookedElement.firstChild
