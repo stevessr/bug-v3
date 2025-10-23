@@ -1,4 +1,10 @@
 // Emoji management interface module
+// 
+// Injection Configuration (inspired by magnific-popup.ts):
+// - Selectors: Target containers and buttons (e.g., '.emoji-manager-card', '.btn')
+// - Parsers: Extract emoji data from URL inputs, name inputs, and dimension inputs
+// - Injection Points: Add emoji cards to the grid, insert buttons into action rows
+//
 import { injectManagerStyles } from '../manager/styles'
 import { createEl } from '../utils/createEl'
 import { userscriptState } from '../state'
@@ -10,6 +16,74 @@ import {
 } from '../userscript-storage'
 
 import { showImportExportModal } from './importExport'
+
+// Emoji injection configuration (inspired by magnific-popup.ts)
+interface EmojiInjectionConfig {
+  // Selectors for finding target elements
+  selectors: {
+    container: string           // Main container for emoji grid
+    card: string                // Individual emoji card
+    actionRow: string           // Action button row in card
+    editButton: string          // Edit button selector
+    deleteButton: string        // Delete button selector
+  }
+  // Parsers for extracting emoji data
+  parsers: {
+    getUrl: (inputs: { urlInput: HTMLInputElement }) => string
+    getName: (inputs: { nameInput: HTMLInputElement; urlInput: HTMLInputElement }) => string
+    getWidth: (inputs: { widthInput: HTMLInputElement }) => number | undefined
+    getHeight: (inputs: { heightInput: HTMLInputElement }) => number | undefined
+  }
+  // Injection points for adding buttons/elements
+  injectionPoints: {
+    addButton: (parent: HTMLElement, button: HTMLElement) => void
+    insertCard: (container: HTMLElement, card: HTMLElement) => void
+  }
+}
+
+const emojiManagerConfig: EmojiInjectionConfig = {
+  selectors: {
+    container: '.emoji-manager-emojis',
+    card: '.emoji-manager-card',
+    actionRow: '.emoji-manager-card-actions',
+    editButton: '.btn.btn-sm:first-child',
+    deleteButton: '.btn.btn-sm:last-child'
+  },
+  parsers: {
+    getUrl: ({ urlInput }) => (urlInput.value || '').trim(),
+    getName: ({ nameInput, urlInput }) => {
+      const name = (nameInput.value || '').trim()
+      // Fallback: extract from URL if name is empty
+      if (!name && urlInput.value) {
+        const url = urlInput.value.trim()
+        const lastPart = url.split('/').pop() || ''
+        const withoutExt = lastPart.replace(/\.[^.]+$/, '')
+        return withoutExt || '表情'
+      }
+      return name || '表情'
+    },
+    getWidth: ({ widthInput }) => {
+      const val = (widthInput.value || '').trim()
+      const parsed = parseInt(val, 10)
+      return !isNaN(parsed) && parsed > 0 ? parsed : undefined
+    },
+    getHeight: ({ heightInput }) => {
+      const val = (heightInput.value || '').trim()
+      const parsed = parseInt(val, 10)
+      return !isNaN(parsed) && parsed > 0 ? parsed : undefined
+    }
+  },
+  injectionPoints: {
+    addButton: (parent, button) => {
+      // Insert button at the end of parent
+      parent.appendChild(button)
+    },
+    insertCard: (container, card) => {
+      // Append card to emoji grid
+      container.appendChild(card)
+    }
+  }
+}
 
 // Create popup editor for emoji editing
 function createEditorPopup(
@@ -222,7 +296,14 @@ export function openManagementInterface() {
     placeholder: '高度 (px) 可选',
     className: 'form-control'
   }) as HTMLInputElement
-  const addEmojiBtn = createEl('button', { text: '添加表情', className: 'btn btn-primary' })
+  const addEmojiBtn = createEl('button', { 
+    text: '添加表情', 
+    className: 'btn btn-primary',
+    attrs: {
+      'data-action': 'add-emoji',
+      'aria-label': '添加表情到当前分组'
+    }
+  })
   addEmojiForm.appendChild(emojiUrlInput)
   addEmojiForm.appendChild(emojiNameInput)
   addEmojiForm.appendChild(emojiWidthInput)
@@ -328,26 +409,40 @@ export function openManagementInterface() {
 
       const edit = createEl('button', {
         text: '编辑',
-        className: 'btn btn-sm'
+        className: 'btn btn-sm',
+        attrs: {
+          'data-action': 'edit-emoji',
+          'aria-label': `编辑表情 ${emo.name}`
+        }
       }) as HTMLButtonElement
       edit.addEventListener('click', () => {
         showEditorFor(group.id, idx)
       })
 
-      const del = createEl('button', { text: '删除', className: 'btn btn-sm' }) as HTMLButtonElement
+      const del = createEl('button', { 
+        text: '删除', 
+        className: 'btn btn-sm',
+        attrs: {
+          'data-action': 'delete-emoji',
+          'aria-label': `删除表情 ${emo.name}`
+        }
+      }) as HTMLButtonElement
       del.addEventListener('click', () => {
         group.emojis.splice(idx, 1)
         renderGroups()
         renderSelectedGroup()
       })
 
-      actions.appendChild(edit)
-      actions.appendChild(del)
+      // Use configured injection points
+      emojiManagerConfig.injectionPoints.addButton(actions, edit)
+      emojiManagerConfig.injectionPoints.addButton(actions, del)
 
       card.appendChild(img)
       card.appendChild(name)
       card.appendChild(actions)
-      emojisContainer.appendChild(card)
+      
+      // Use configured injection to add card to container
+      emojiManagerConfig.injectionPoints.insertCard(emojisContainer, card)
 
       // bind hover preview events
       bindHoverPreview(img, emo)
@@ -410,20 +505,27 @@ export function openManagementInterface() {
 
   addEmojiBtn.addEventListener('click', () => {
     if (!selectedGroupId) return alert('请先选择分组')
-    const url = (emojiUrlInput.value || '').trim()
-    const name = (emojiNameInput.value || '').trim()
-    const widthVal = (emojiWidthInput.value || '').trim()
-    const heightVal = (emojiHeightInput.value || '').trim()
-    const width: number = widthVal ? parseInt(widthVal, 10) : NaN
-    const height: number = heightVal ? parseInt(heightVal, 10) : NaN
+    
+    // Use configured parsers to extract emoji data
+    const url = emojiManagerConfig.parsers.getUrl({ urlInput: emojiUrlInput })
+    const name = emojiManagerConfig.parsers.getName({ 
+      nameInput: emojiNameInput, 
+      urlInput: emojiUrlInput 
+    })
+    const width = emojiManagerConfig.parsers.getWidth({ widthInput: emojiWidthInput })
+    const height = emojiManagerConfig.parsers.getHeight({ heightInput: emojiHeightInput })
+    
     if (!url || !name) return alert('请输入 url 和 名称')
+    
     const group = userscriptState.emojiGroups.find(g => g.id === selectedGroupId)
     if (!group) return
+    
     group.emojis = group.emojis || []
     const newEmo: any = { url, name }
-    if (!isNaN(width) && width > 0) newEmo.width = width
-    if (!isNaN(height) && height > 0) newEmo.height = height
+    if (width !== undefined) newEmo.width = width
+    if (height !== undefined) newEmo.height = height
     group.emojis.push(newEmo)
+    
     emojiUrlInput.value = ''
     emojiNameInput.value = ''
     emojiWidthInput.value = ''
