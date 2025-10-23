@@ -12,6 +12,7 @@ export interface UserscriptStorage {
     showSearchBar: boolean
     enableFloatingPreview: boolean
     enableCalloutSuggestions: boolean // 是否在 textarea 中启用 callout suggestions（当输入 '[' 时触发）
+    enableBatchParseImages?: boolean // 控制是否注入“一键解析并添加所有图片”按钮
   }
   emojiUsageStats?: { [key: string]: { count: number; lastUsed: number } }
 }
@@ -52,7 +53,8 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
       defaultGroup: 'nachoneko',
       showSearchBar: true,
       enableFloatingPreview: true,
-      enableCalloutSuggestions: true
+      enableCalloutSuggestions: true,
+      enableBatchParseImages: true
     }
 
     if (settingsData) {
@@ -91,7 +93,8 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
         defaultGroup: 'nachoneko',
         showSearchBar: true,
         enableFloatingPreview: true,
-        enableCalloutSuggestions: true
+            enableCalloutSuggestions: true,
+            enableBatchParseImages: true
       }
     }
   }

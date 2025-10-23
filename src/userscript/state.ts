@@ -11,7 +11,9 @@ export const userscriptState: UserscriptStorage = {
     showSearchBar: true,
     enableFloatingPreview: true,
     // 是否在 textarea 中启用 callout suggestions（当输入 '[' 时触发）
-    enableCalloutSuggestions: true
+    enableCalloutSuggestions: true,
+    // 控制是否注入“一键解析并添加所有图片”按钮
+    enableBatchParseImages: true
   },
   emojiUsageStats: {}
 }

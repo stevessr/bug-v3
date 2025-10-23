@@ -41,7 +41,7 @@ export function showSettingsModal() {
     </div>
     
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; color: var(--emoji-modal-label); font-weight: 500;">图片缩放比例: <span id="scaleValue">${userscriptState.settings.imageScale}%</span></label>
+      <label style="display: block; margin-bottom: 8px; color: var(--emoji-modal-label); font-weight: 500;">图片缩放比例：<span id="scaleValue">${userscriptState.settings.imageScale}%</span></label>
       <input type="range" id="scaleSlider" min="5" max="150" step="5" value="${userscriptState.settings.imageScale}" 
              style="width: 100%; margin-bottom: 8px;">
     </div>
@@ -78,6 +78,13 @@ export function showSettingsModal() {
       <label style="display: flex; align-items: center; color: var(--emoji-modal-label); font-weight: 500;">
         <input type="checkbox" id="enableCalloutSuggestions" ${userscriptState.settings.enableCalloutSuggestions ? 'checked' : ''} style="margin-right: 8px;">
         在 textarea 中启用 Callout Suggestion（输入 [ 即可触发）
+      </label>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <label style="display: flex; align-items: center; color: var(--emoji-modal-label); font-weight: 500;">
+        <input type="checkbox" id="enableBatchParseImages" ${userscriptState.settings.enableBatchParseImages ? 'checked' : ''} style="margin-right: 8px;">
+        注入“一键解析并添加所有图片”按钮
       </label>
     </div>
     
@@ -150,7 +157,8 @@ export function showSettingsModal() {
         defaultGroup: 'nachoneko',
         showSearchBar: true,
         enableFloatingPreview: true,
-        enableCalloutSuggestions: true
+            enableCalloutSuggestions: true,
+            enableBatchParseImages: true
       }
       modal.remove()
     }
@@ -186,13 +194,18 @@ export function showSettingsModal() {
       userscriptState.settings.enableCalloutSuggestions = !!enableCalloutEl.checked
     }
 
+    const enableBatchEl = content.querySelector('#enableBatchParseImages') as HTMLInputElement | null
+    if (enableBatchEl) {
+      userscriptState.settings.enableBatchParseImages = !!enableBatchEl.checked
+    }
+
     const forceMobileEl = content.querySelector('#forceMobileMode') as HTMLInputElement | null
     if (forceMobileEl) {
       userscriptState.settings.forceMobileMode = !!forceMobileEl.checked
     }
 
     // Save to localStorage
-    saveDataToLocalStorage({ settings: userscriptState.settings })
+  saveDataToLocalStorage({ settings: userscriptState.settings })
     // Also persist remote config URL for remote variant
     try {
       const remoteInput = content.querySelector('#remoteConfigUrl') as HTMLInputElement | null

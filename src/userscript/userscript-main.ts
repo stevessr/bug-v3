@@ -74,7 +74,17 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
 
   // Initialize data and features
   await initializeUserscriptData()
-  initOneClickAdd()
+  // 仅在设置允许时初始化一键解析并添加图片功能
+  try {
+    if (userscriptState.settings?.enableBatchParseImages !== false) {
+      initOneClickAdd()
+      console.log('[Userscript] One-click batch parse images enabled')
+    } else {
+      console.log('[Userscript] One-click batch parse images disabled by setting')
+    }
+  } catch (e) {
+    console.warn('[Userscript] initOneClickAdd failed', e)
+  }
   // Initialize callout suggestions (enabled by default for Discourse)
   try {
     // 默认启用，只有明确设置为 false 时才禁用
