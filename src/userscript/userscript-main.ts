@@ -7,6 +7,7 @@ declare const __USERSCRIPT_PLATFORM__: string
 import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync } from './userscript-storage'
 import { userscriptState } from './state'
 import { initOneClickAdd } from './modules/oneClickAdd'
+import { initPhotoSwipeTopbarUserscript } from './modules/photoSwipeTopbar'
 import { initCalloutSuggestionsUserscript } from './modules/calloutSuggestions'
 import { attemptInjection, startPeriodicInjection } from './modules/toolbar'
 import {
@@ -78,6 +79,8 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
   try {
     if (userscriptState.settings?.enableBatchParseImages !== false) {
       initOneClickAdd()
+      // 初始化 PhotoSwipe 顶部栏的添加表情按钮（Discourse 新版图片预览）
+      initPhotoSwipeTopbarUserscript()
       console.log('[Userscript] One-click batch parse images enabled')
     } else {
       console.log('[Userscript] One-click batch parse images disabled by setting')
