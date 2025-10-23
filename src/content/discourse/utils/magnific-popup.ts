@@ -62,21 +62,40 @@ export function scanForMagnificPopup() {
   })
 }
 
-export function observeMagnificPopup() {
-  // 仅观察 pswp__top-bar 结构
+export function observeMagnificPopup(): MutationObserver {
+  // 启动时先立即扫描一次（确保现有弹窗处理到位）
+  scanForMagnificPopup()
+
+  // 简单防抖，聚合短时间内的多次 DOM 变更
+  function debounce<T extends (...args: any[]) => void>(fn: T, wait = 100) {
+    let timer: number | null = null
+    return (...args: Parameters<T>) => {
+      if (timer !== null) window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        timer = null
+        fn(...args)
+      }, wait)
+    }
+  }
+
+  const debouncedScan = debounce(scanForMagnificPopup, 100)
+
+  // 仅观察 pswp__top-bar 结构相关的 DOM 变更，但使用子树观察以捕获动态插入
   const observer = new MutationObserver(mutations => {
-    mutations.forEach(m => {
-      if (m.type === 'childList') {
-        m.addedNodes.forEach(node => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as Element
-            if (el.classList && el.classList.contains('pswp__top-bar')) {
-              addEmojiButtonToMfp(el)
-            }
-          }
-        })
+    for (const m of mutations) {
+      if (m.type === 'childList' && (m.addedNodes.length > 0 || m.removedNodes.length > 0)) {
+        // 有节点新增/删除，触发防抖扫描
+        debouncedScan()
+        return
       }
-    })
+      // 如果需要也可以响应属性变更（比如 class）
+      if (m.type === 'attributes') {
+        debouncedScan()
+        return
+      }
+    }
   })
-  observer.observe(document.body, { childList: true, subtree: true })
+
+  observer.observe(document.body, { childList: true, subtree: true, attributes: false })
+  return observer
 }
