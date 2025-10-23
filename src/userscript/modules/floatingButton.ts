@@ -2,6 +2,7 @@
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { userscriptNotify } from '../utils/notify'
+import { userscriptState } from '../state'
 
 import { attemptInjection } from './toolbar'
 
@@ -228,6 +229,16 @@ function createAutoReadMenuItem(variant: 'dropdown' | 'sidebar' = 'dropdown'): H
 
 // Show floating button
 export function showFloatingButton() {
+  // Don't show floating button if force mobile mode with d-menu-portals is active
+  const forceMobileMode = userscriptState.settings?.forceMobileMode || false
+  if (forceMobileMode) {
+    const portalContainer = document.querySelector('#d-menu-portals')
+    if (portalContainer) {
+      console.log('[Emoji Extension Userscript] Force mobile mode with #d-menu-portals detected, skipping floating button')
+      return
+    }
+  }
+
   if (floatingButton) {
     return // Already shown
   }
@@ -329,6 +340,19 @@ export function autoShowFloatingButton() {
 
 // Check if floating button should be shown based on page state
 export function checkAndShowFloatingButton() {
+  // Don't show floating button if force mobile mode with d-menu-portals is active
+  const forceMobileMode = userscriptState.settings?.forceMobileMode || false
+  if (forceMobileMode) {
+    const portalContainer = document.querySelector('#d-menu-portals')
+    if (portalContainer) {
+      // Hide floating button if it's currently visible
+      if (isButtonVisible) {
+        hideFloatingButton()
+      }
+      return
+    }
+  }
+
   // Show floating button if no emoji buttons are currently injected
   const existingButtons = document.querySelectorAll('.emoji-extension-button')
 

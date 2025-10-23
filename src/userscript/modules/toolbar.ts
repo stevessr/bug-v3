@@ -1,6 +1,7 @@
 // Toolbar injection and button management module
 import { createEl } from '../utils/createEl'
 import { getPlatformToolbarSelectors } from '../utils/platformDetection'
+import { userscriptState } from '../state'
 
 import { createEmojiPicker } from './emojiPicker'
 import { showPopularEmojisModal } from './popularEmojis'
@@ -243,8 +244,23 @@ function createQuickInsertMenu(): HTMLElement {
   return menu
 }
 
+// Check if force mobile mode with d-menu-portals is active
+export function shouldSkipToolbarInjection(): boolean {
+  const forceMobileMode = userscriptState.settings?.forceMobileMode || false
+  if (!forceMobileMode) return false
+
+  const portalContainer = document.querySelector('#d-menu-portals')
+  return !!portalContainer
+}
+
 // Find toolbars where we can inject buttons using platform-specific selectors
 export function findAllToolbars(): HTMLElement[] {
+  // Skip toolbar injection if force mobile mode with d-menu-portals is active
+  if (shouldSkipToolbarInjection()) {
+    console.log('[Emoji Extension Userscript] Force mobile mode with #d-menu-portals detected, skipping toolbar injection')
+    return []
+  }
+
   const toolbars: HTMLElement[] = []
   const selectors = getPlatformToolbarSelectors()
 
@@ -253,6 +269,223 @@ export function findAllToolbars(): HTMLElement[] {
     toolbars.push(...(Array.from(elements) as HTMLElement[]))
   }
   return toolbars
+}
+
+// Setup listeners for force mobile mode menu triggers
+let menuTriggersInitialized = false
+
+function setupForceMobileMenuTriggers() {
+  if (menuTriggersInitialized) return
+
+  const forceMobileMode = userscriptState.settings?.forceMobileMode || false
+  if (!forceMobileMode) return
+
+  // Check for d-menu-portals container
+  const portalContainer = document.querySelector('#d-menu-portals')
+  if (!portalContainer) {
+    console.log('[Emoji Extension Userscript] #d-menu-portals not found, skipping force mobile menu triggers')
+    return
+  }
+
+  console.log('[Emoji Extension Userscript] Force mobile mode enabled, setting up menu triggers')
+
+  // Find toolbar options trigger button
+  const toolbarOptionsTrigger = document.querySelector(
+    'button.toolbar-menu__options-trigger[data-identifier="toolbar-menu__options"]'
+  ) as HTMLButtonElement | null
+
+  // Find chat composer dropdown trigger button (try multiple selectors)
+  const chatComposerTrigger = document.querySelector(
+    'button.chat-composer-dropdown__trigger-btn[data-identifier="chat-composer-dropdown__menu"], button.chat-composer-dropdown__menu-trigger[data-identifier="chat-composer-dropdown__menu"]'
+  ) as HTMLButtonElement | null
+
+  // Setup observer for menu content
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as HTMLElement
+
+          // Check if this is a toolbar menu or chat composer menu
+          if (
+            element.classList.contains('toolbar-menu__options-content') ||
+            element.classList.contains('chat-composer-dropdown__content') ||
+            element.classList.contains('chat-composer-dropdown__menu-content')
+          ) {
+            console.log('[Emoji Extension Userscript] Menu expanded, injecting custom buttons')
+            injectCustomMenuButtons(element)
+          }
+        }
+      })
+    })
+  })
+
+  // Observe the portal container for new menus
+  observer.observe(portalContainer, {
+    childList: true,
+    subtree: true
+  })
+
+  // Also add click listeners to trigger buttons to ensure we catch the menu
+  if (toolbarOptionsTrigger) {
+    toolbarOptionsTrigger.addEventListener('click', () => {
+      setTimeout(() => {
+        const menu = document.querySelector(
+          '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+        ) as HTMLElement | null
+        if (menu) {
+          injectCustomMenuButtons(menu)
+        }
+      }, 100)
+    })
+    console.log('[Emoji Extension Userscript] Toolbar options trigger listener added')
+  }
+
+  if (chatComposerTrigger) {
+    chatComposerTrigger.addEventListener('click', () => {
+      setTimeout(() => {
+        const menu = document.querySelector(
+          '.chat-composer-dropdown__content[data-identifier="chat-composer-dropdown__menu"], .chat-composer-dropdown__menu-content[data-identifier="chat-composer-dropdown__menu"]'
+        ) as HTMLElement | null
+        if (menu) {
+          injectCustomMenuButtons(menu)
+        }
+      }, 100)
+    })
+    console.log('[Emoji Extension Userscript] Chat composer trigger listener added')
+  }
+
+  menuTriggersInitialized = true
+}
+
+// Inject custom buttons into expanded menu
+function injectCustomMenuButtons(menu: HTMLElement) {
+  // Check if already injected
+  if (menu.querySelector('.emoji-extension-menu-item')) {
+    return
+  }
+
+  // Try multiple selectors for different menu types
+  let dropdownMenu = menu.querySelector('ul.dropdown-menu')
+  if (!dropdownMenu) {
+    dropdownMenu = menu.querySelector('ul.chat-composer-dropdown__list')
+  }
+  if (!dropdownMenu) {
+    console.warn('[Emoji Extension Userscript] No dropdown-menu or chat-composer-dropdown__list found in expanded menu')
+    return
+  }
+
+  // Determine menu type for appropriate styling
+  const isChatComposerMenu = dropdownMenu.classList.contains('chat-composer-dropdown__list')
+  const itemClassName = isChatComposerMenu 
+    ? 'chat-composer-dropdown__item emoji-extension-menu-item'
+    : 'dropdown-menu__item emoji-extension-menu-item'
+  const btnClassName = isChatComposerMenu
+    ? 'btn btn-icon-text chat-composer-dropdown__action-btn btn-transparent'
+    : 'btn btn-icon-text'
+
+  // Create emoji picker menu item
+  const emojiPickerItem = createEl('li', {
+    className: itemClassName
+  }) as HTMLLIElement
+
+  const emojiPickerBtn = createEl('button', {
+    className: btnClassName,
+    type: 'button',
+    title: '表情包选择器',
+    innerHTML: `
+      <svg class="fa d-icon d-icon-smile svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-smile"></use></svg>
+      <span class="d-button-label">表情包选择器</span>
+    `
+  }) as HTMLButtonElement
+
+  emojiPickerBtn.addEventListener('click', async e => {
+    e.stopPropagation()
+    // Close the menu
+    if (menu.parentElement) {
+      menu.remove()
+    }
+
+    // Open emoji picker
+    if (currentPicker) {
+      closeCurrentPicker()
+      return
+    }
+
+    currentPicker = await createEmojiPicker()
+    if (!currentPicker) return
+
+    document.body.appendChild(currentPicker)
+
+    // Position as modal for force mobile mode
+    currentPicker.style.position = 'fixed'
+    currentPicker.style.top = '0'
+    currentPicker.style.left = '0'
+    currentPicker.style.right = '0'
+    currentPicker.style.bottom = '0'
+    currentPicker.style.zIndex = '999999'
+
+    // Close on outside click
+    setTimeout(() => {
+      const handleClick = (e: Event) => {
+        if (currentPicker && !currentPicker.contains(e.target as Node)) {
+          closeCurrentPicker()
+          document.removeEventListener('click', handleClick)
+        }
+      }
+      document.addEventListener('click', handleClick)
+    }, 100)
+  })
+
+  emojiPickerItem.appendChild(emojiPickerBtn)
+  dropdownMenu.appendChild(emojiPickerItem)
+
+  // Create quick insert menu item
+  const quickInsertItem = createEl('li', {
+    className: itemClassName
+  }) as HTMLLIElement
+
+  const quickInsertBtn = createEl('button', {
+    className: btnClassName,
+    type: 'button',
+    title: '快捷输入',
+    innerHTML: `
+      <svg class="fa d-icon d-icon-list svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#list"></use></svg>
+      <span class="d-button-label">快捷输入</span>
+    `
+  }) as HTMLButtonElement
+
+  quickInsertBtn.addEventListener('click', e => {
+    e.stopPropagation()
+    // Close the current menu
+    if (menu.parentElement) {
+      menu.remove()
+    }
+
+    // Show quick insert menu
+    const quickMenu = createQuickInsertMenu()
+    const portal = document.querySelector('#d-menu-portals') || document.body
+    ;(portal as HTMLElement).appendChild(quickMenu)
+
+    const rect = quickInsertBtn.getBoundingClientRect()
+    quickMenu.style.position = 'fixed'
+    quickMenu.style.zIndex = '10000'
+    quickMenu.style.top = `${rect.bottom + 5}px`
+    quickMenu.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - 150, window.innerWidth - 300))}px`
+
+    const removeMenu = (ev: Event) => {
+      if (!quickMenu.contains(ev.target as Node)) {
+        if (quickMenu.parentElement) quickMenu.parentElement.removeChild(quickMenu)
+        document.removeEventListener('click', removeMenu)
+      }
+    }
+    setTimeout(() => document.addEventListener('click', removeMenu), 100)
+  })
+
+  quickInsertItem.appendChild(quickInsertBtn)
+  dropdownMenu.appendChild(quickInsertItem)
+
+  console.log('[Emoji Extension Userscript] Custom menu buttons injected')
 }
 
 // Current picker management
@@ -467,6 +700,9 @@ export function attemptInjection() {
     }
   })
 
+  // Setup force mobile mode menu triggers if enabled
+  setupForceMobileMenuTriggers()
+
   return { injectedCount, totalToolbars: toolbars.length }
 }
 
@@ -480,5 +716,8 @@ export function startPeriodicInjection() {
         injectEmojiButton(toolbar)
       }
     })
+
+    // Also check for force mobile mode menu triggers
+    setupForceMobileMenuTriggers()
   }, 30000)
 }
