@@ -31,10 +31,29 @@ export function insertEmojiIntoEditor(emoji: any) {
     trackEmojiUsage(emoji.name, emoji.url)
   }
 
-  const textarea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
+  // Try several selectors as fallback targets to support chat composer variants
+  const selectors = [
+    'textarea.d-editor-input',
+    'textarea.ember-text-area',
+    '#channel-composer',
+    '.chat-composer__input',
+    'textarea.chat-composer__input'
+  ]
+
   const proseMirror = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
 
-  if (!textarea && !proseMirror) {
+  let textarea: HTMLTextAreaElement | null = null
+  for (const s of selectors) {
+    const el = document.querySelector(s) as HTMLTextAreaElement | null
+    if (el) {
+      textarea = el
+      break
+    }
+  }
+
+  const contentEditable = document.querySelector('[contenteditable="true"]') as HTMLElement | null
+
+  if (!textarea && !proseMirror && !contentEditable) {
     console.error('找不到输入框')
     return
   }
@@ -96,6 +115,45 @@ export function insertEmojiIntoEditor(emoji: any) {
       } catch (fallbackError) {
         console.error('无法向富文本编辑器中插入表情', fallbackError)
       }
+    }
+  } else if (contentEditable) {
+    try {
+      if (outputFormat === 'html') {
+        const imgWidth = Number(width) || 500
+        const scaledWidth = Math.max(1, Math.round(imgWidth * (scale / 100)))
+        const htmlContent = `<img src="${emoji.url}" alt="${emoji.name}" width="${width}" height="${height}" data-scale="${scale}" style="width: ${scaledWidth}px"> `
+        const sel = window.getSelection()
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0)
+          const frag = document.createRange().createContextualFragment(htmlContent)
+          range.deleteContents()
+          range.insertNode(frag)
+          range.collapse(false)
+          sel.removeAllRanges()
+          sel.addRange(range)
+        } else {
+          contentEditable.insertAdjacentHTML('beforeend', htmlContent)
+        }
+      } else {
+        const insertText = `![${emoji.name}|${width}x${height},${scale}%](${emoji.url}) `
+        const textNode = document.createTextNode(insertText)
+        const sel = window.getSelection()
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0)
+          range.deleteContents()
+          range.insertNode(textNode)
+          range.setStartAfter(textNode)
+          range.collapse(true)
+          sel.removeAllRanges()
+          sel.addRange(range)
+        } else {
+          contentEditable.appendChild(textNode)
+        }
+      }
+      const inputEvent = new Event('input', { bubbles: true, cancelable: true })
+      contentEditable.dispatchEvent(inputEvent)
+    } catch (e) {
+      console.error('无法向 contenteditable 插入表情', e)
     }
   }
 }
