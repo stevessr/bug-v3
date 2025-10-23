@@ -21,6 +21,19 @@ const STORAGE_KEY = 'emoji_extension_userscript_data'
 const SETTINGS_KEY = 'emoji_extension_userscript_settings'
 const USAGE_STATS_KEY = 'emoji_extension_userscript_usage_stats'
 
+// DRY: 统一默认设置，供同步/异步加载与异常回退复用
+export const DEFAULT_USER_SETTINGS = {
+  imageScale: 30,
+  gridColumns: 4,
+  outputFormat: 'markdown' as const,
+  forceMobileMode: false,
+  defaultGroup: 'nachoneko',
+  showSearchBar: true,
+  enableFloatingPreview: true,
+  enableCalloutSuggestions: true,
+  enableBatchParseImages: true
+}
+
 export function loadDataFromLocalStorage(): UserscriptStorage {
   try {
     // Load emoji groups
@@ -45,17 +58,7 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
 
     // Load settings
     const settingsData = localStorage.getItem(SETTINGS_KEY)
-    let settings = {
-      imageScale: 30,
-      gridColumns: 4,
-      outputFormat: 'markdown' as const,
-      forceMobileMode: false,
-      defaultGroup: 'nachoneko',
-      showSearchBar: true,
-      enableFloatingPreview: true,
-      enableCalloutSuggestions: true,
-      enableBatchParseImages: true
-    }
+    let settings = { ...DEFAULT_USER_SETTINGS }
 
     if (settingsData) {
       try {
@@ -82,20 +85,9 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
     console.error('[Userscript] Failed to load from localStorage:', error)
 
     // Return defaults on error: empty groups and default settings
-    console.error('[Userscript] Failed to load from localStorage:', error)
     return {
       emojiGroups: [],
-      settings: {
-        imageScale: 30,
-        gridColumns: 4,
-        outputFormat: 'markdown',
-        forceMobileMode: false,
-        defaultGroup: 'nachoneko',
-        showSearchBar: true,
-        enableFloatingPreview: true,
-            enableCalloutSuggestions: true,
-            enableBatchParseImages: true
-      }
+      settings: { ...DEFAULT_USER_SETTINGS }
     }
   }
 }
@@ -173,16 +165,7 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
     console.error('[Userscript] loadDataFromLocalStorageAsync failed:', error)
     return {
       emojiGroups: [],
-      settings: {
-        imageScale: 30,
-        gridColumns: 4,
-        outputFormat: 'markdown',
-        forceMobileMode: false,
-        defaultGroup: 'nachoneko',
-        showSearchBar: true,
-        enableFloatingPreview: true,
-        enableCalloutSuggestions: true
-      }
+      settings: { ...DEFAULT_USER_SETTINGS }
     }
   }
 }
@@ -239,35 +222,8 @@ export function addEmojiToUserscript(emojiData: { name: string; url: string }): 
   }
 }
 
-export function exportUserscriptData(): string {
-  try {
-    const data = loadDataFromLocalStorage()
-    return JSON.stringify(data, null, 2)
-  } catch (error) {
-    console.error('[Userscript] Failed to export data:', error)
-    return ''
-  }
-}
-
-export function importUserscriptData(jsonData: string): boolean {
-  try {
-    const data = JSON.parse(jsonData)
-
-    if (data.emojiGroups && Array.isArray(data.emojiGroups)) {
-      saveDataToLocalStorage({ emojiGroups: data.emojiGroups })
-    }
-
-    if (data.settings && typeof data.settings === 'object') {
-      saveDataToLocalStorage({ settings: data.settings })
-    }
-
-    console.log('[Userscript] Data imported successfully')
-    return true
-  } catch (error) {
-    console.error('[Userscript] Failed to import data:', error)
-    return false
-  }
-}
+// 注意：用户脚本的导入/导出由 modules/importExport.ts 提供更完整的 UI 与逻辑，
+// 过去在此文件内的简易导入/导出已移除以避免重复实现。
 
 export function syncFromManager(): boolean {
   try {

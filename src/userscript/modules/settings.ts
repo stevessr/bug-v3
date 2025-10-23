@@ -1,6 +1,6 @@
 // Settings modal module
 import { userscriptState } from '../state'
-import { saveDataToLocalStorage } from '../userscript-storage'
+import { saveDataToLocalStorage, DEFAULT_USER_SETTINGS } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 
@@ -149,17 +149,7 @@ export function showSettingsModal() {
   content.querySelector('#resetSettings')?.addEventListener('click', async () => {
     const confirmed = confirm('确定要重置所有设置吗？')
     if (confirmed) {
-      userscriptState.settings = {
-        imageScale: 30,
-        gridColumns: 4,
-        outputFormat: 'markdown',
-        forceMobileMode: false,
-        defaultGroup: 'nachoneko',
-        showSearchBar: true,
-        enableFloatingPreview: true,
-            enableCalloutSuggestions: true,
-            enableBatchParseImages: true
-      }
+      userscriptState.settings = { ...DEFAULT_USER_SETTINGS }
       modal.remove()
     }
   })
