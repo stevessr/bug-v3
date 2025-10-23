@@ -299,8 +299,8 @@ function setupForceMobileMenuTriggers() {
     'button.chat-composer-dropdown__trigger-btn[data-identifier="chat-composer-dropdown__menu"], button.chat-composer-dropdown__menu-trigger[data-identifier="chat-composer-dropdown__menu"]'
   ) as HTMLButtonElement | null
 
-  // Setup observer for menu content
-  const observer = new MutationObserver(mutations => {
+  // Setup observer for menu content in portals
+  const portalObserver = new MutationObserver(mutations => {
     mutations.forEach(mutation => {
       mutation.addedNodes.forEach(node => {
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -312,7 +312,7 @@ function setupForceMobileMenuTriggers() {
             element.classList.contains('chat-composer-dropdown__content') ||
             element.classList.contains('chat-composer-dropdown__menu-content')
           ) {
-            console.log('[Emoji Extension Userscript] Menu expanded, injecting custom buttons')
+            console.log('[Emoji Extension Userscript] Menu expanded in portal, injecting custom buttons')
             injectCustomMenuButtons(element)
           }
         }
@@ -321,22 +321,109 @@ function setupForceMobileMenuTriggers() {
   })
 
   // Observe the portal container for new menus
-  observer.observe(portalContainer, {
+  portalObserver.observe(portalContainer, {
     childList: true,
     subtree: true
   })
 
+  // Also observe modal-container for modal-based menus (PRIORITY: inject immediately)
+  const modalObserver = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as HTMLElement
+
+          // Check for modal container with toolbar menu
+          if (element.classList.contains('modal-container')) {
+            // Try to find menu immediately
+            const modalMenu = element.querySelector(
+              '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+            ) as HTMLElement | null
+            
+            if (modalMenu) {
+              console.log('[Emoji Extension Userscript] Modal menu detected (immediate), injecting custom buttons')
+              injectCustomMenuButtons(modalMenu)
+            } else {
+              // If menu not found immediately, observe the modal container for menu appearance
+              const modalContentObserver = new MutationObserver(() => {
+                const delayedMenu = element.querySelector(
+                  '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+                ) as HTMLElement | null
+                if (delayedMenu) {
+                  console.log('[Emoji Extension Userscript] Modal menu detected (delayed), injecting custom buttons')
+                  injectCustomMenuButtons(delayedMenu)
+                  modalContentObserver.disconnect()
+                }
+              })
+              
+              modalContentObserver.observe(element, {
+                childList: true,
+                subtree: true
+              })
+              
+              // Disconnect after 1 second to prevent memory leaks
+              setTimeout(() => modalContentObserver.disconnect(), 1000)
+            }
+          }
+        }
+      })
+    })
+  })
+
+  // Observe document body for modal containers
+  modalObserver.observe(document.body, {
+    childList: true,
+    subtree: false
+  })
+
+  // --- INITIAL CHECK: if a modal-container already exists on page load, inject immediately ---
+  try {
+    const existingModal = document.querySelector('.modal-container') as HTMLElement | null
+    if (existingModal) {
+      const existingMenu = existingModal.querySelector(
+        '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+      ) as HTMLElement | null
+      if (existingMenu) {
+        console.log('[Emoji Extension Userscript] Found existing modal menu at init, injecting custom buttons')
+        // Inject synchronously to prioritize modal menus
+        injectCustomMenuButtons(existingMenu)
+      }
+    }
+  } catch (e) {
+    // ignore errors during initial check
+  }
+
   // Also add click listeners to trigger buttons to ensure we catch the menu
   if (toolbarOptionsTrigger) {
     toolbarOptionsTrigger.addEventListener('click', () => {
-      setTimeout(() => {
-        const menu = document.querySelector(
-          '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
-        ) as HTMLElement | null
+      // Multiple check attempts for faster injection
+      const checkMenu = (attempt: number = 0) => {
+        // Try modal container first (PRIORITY)
+        const modalContainer = document.querySelector('.modal-container')
+        let menu: HTMLElement | null = null
+        
+        if (modalContainer) {
+          menu = modalContainer.querySelector(
+            '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+          ) as HTMLElement | null
+        }
+        
+        // Fallback to portal-based menu
+        if (!menu) {
+          menu = document.querySelector(
+            '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+          ) as HTMLElement | null
+        }
+        
         if (menu) {
           injectCustomMenuButtons(menu)
+        } else if (attempt < 5) {
+          // Retry up to 5 times with shorter intervals for faster injection
+          setTimeout(() => checkMenu(attempt + 1), 20)
         }
-      }, 100)
+      }
+      
+      checkMenu()
     })
     console.log('[Emoji Extension Userscript] Toolbar options trigger listener added')
   }
@@ -495,6 +582,79 @@ export function closeCurrentPicker() {
   if (currentPicker) {
     currentPicker.remove()
     currentPicker = null
+  }
+}
+
+// Insert a floating emoji button into the header panel as a fallback when no toolbar
+export function injectHeaderFloatingButton(): boolean {
+  try {
+    // Prefer header-buttons span inside .panel, else fall back to .icons.d-header-icons
+    const panel = document.querySelector('.panel') as HTMLElement | null
+    let target: HTMLElement | null = null
+
+    if (panel) {
+      const headerButtons = panel.querySelector('.header-buttons') as HTMLElement | null
+      if (headerButtons) target = headerButtons
+    }
+
+    if (!target) {
+      target = document.querySelector('.icons.d-header-icons') as HTMLElement | null
+    }
+
+    if (!target) return false
+
+    // Avoid duplicating button
+    if (target.querySelector('.emoji-extension-header-button')) return false
+
+    const wrapper = createEl('li', { className: 'header-dropdown-toggle emoji-extension-header-item' }) as HTMLLIElement
+    const btn = createEl('button', {
+      className: 'btn no-text icon btn-flat emoji-extension-header-button',
+      title: '表情包',
+      type: 'button',
+      innerHTML: '🐈‍⬛'
+    }) as HTMLButtonElement
+
+    btn.addEventListener('click', async (e: Event) => {
+      e.stopPropagation()
+      if (currentPicker) {
+        closeCurrentPicker()
+        return
+      }
+      currentPicker = await createEmojiPicker()
+      if (!currentPicker) return
+      document.body.appendChild(currentPicker)
+      // position as floating near header
+      currentPicker.style.position = 'fixed'
+      currentPicker.style.top = '56px'
+      currentPicker.style.right = '16px'
+      currentPicker.style.zIndex = '999999'
+
+      setTimeout(() => {
+        const handleClick = (ev: Event) => {
+          if (currentPicker && !currentPicker.contains(ev.target as Node) && ev.target !== btn) {
+            closeCurrentPicker()
+            document.removeEventListener('click', handleClick)
+          }
+        }
+        document.addEventListener('click', handleClick)
+      }, 50)
+    })
+
+    wrapper.appendChild(btn)
+
+    // Many header lists are <ul class="icons d-header-icons"> with <li> children
+    if (target.tagName.toLowerCase() === 'ul') {
+      ;(target as HTMLElement).appendChild(wrapper)
+    } else {
+      // header-buttons span: append as child
+      target.appendChild(wrapper)
+    }
+
+    console.log('[Emoji Extension Userscript] Header floating button injected')
+    return true
+  } catch (error) {
+    console.warn('[Emoji Extension Userscript] Failed to inject header floating button', error)
+    return false
   }
 }
 
@@ -702,6 +862,18 @@ export function attemptInjection() {
 
   // Setup force mobile mode menu triggers if enabled
   setupForceMobileMenuTriggers()
+
+  // Fallback: if no toolbars found and not in force mobile mode, try header panel injection
+  try {
+    const forceMobile = userscriptState.settings?.forceMobileMode || false
+    // Only inject header floating button as a fallback when force mobile mode is active
+    if (injectedCount === 0 && forceMobile) {
+      const headerInserted = injectHeaderFloatingButton()
+      if (headerInserted) injectedCount++
+    }
+  } catch (e) {
+    // ignore
+  }
 
   return { injectedCount, totalToolbars: toolbars.length }
 }
