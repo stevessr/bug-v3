@@ -2,6 +2,8 @@
 import { createEl } from '../utils/createEl'
 import { createEmojiPicker } from './emojiPicker'
 import { showPopularEmojisModal } from './popularEmojis'
+import { getIcon } from '../utils/sharedIcons'
+import { insertIntoEditor } from '../utils/editorUtils'
 
 // Quick inserts for userscript variant
 const QUICK_INSERTS: string[] = [
@@ -21,163 +23,7 @@ const QUICK_INSERTS: string[] = [
   'quote'
 ]
 
-const ICONS: Record<
-  string,
-  {
-    icon: string
-    color: string
-    svg: string
-  }
-> = {
-  info: {
-    icon: 'ℹ️',
-    color: 'rgba(2, 122, 255, 0.1)',
-    svg: '<svg class="fa d-icon d-icon-far-lightbulb svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-lightbulb"></use></svg>'
-  },
-  tip: {
-    icon: '💡',
-    color: 'rgba(0, 191, 188, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-fire-flame-curved svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#fire-flame-curved"></use></svg>'
-  },
-  faq: {
-    icon: '❓',
-    color: 'rgba(236, 117, 0, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-far-circle-question svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-question"></use></svg>'
-  },
-  question: {
-    icon: '🤔',
-    color: 'rgba(236, 117, 0, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-far-circle-question svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-question"></use></svg>'
-  },
-  note: {
-    icon: '📝',
-    color: 'rgba(8, 109, 221, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-far-pen-to-square svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-pen-to-square"></use></svg>'
-  },
-  abstract: {
-    icon: '📋',
-    color: 'rgba(0, 191, 188, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-far-clipboard svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-clipboard"></use></svg>'
-  },
-  todo: {
-    icon: '☑️',
-    color: 'rgba(2, 122, 255, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-far-circle-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-check"></use></svg>'
-  },
-  success: {
-    icon: '🎉',
-    color: 'rgba(68, 207, 110, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#check"></use></svg>'
-  },
-  warning: {
-    icon: '⚠️',
-    color: 'rgba(236, 117, 0, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-triangle-exclamation svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#triangle-exclamation"></use></svg>'
-  },
-  failure: {
-    icon: '❌',
-    color: 'rgba(233, 49, 71, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>'
-  },
-  danger: {
-    icon: '☠️',
-    color: 'rgba(233, 49, 71, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-bolt svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#bolt"></use></svg>'
-  },
-  bug: {
-    icon: '🐛',
-    color: 'rgba(233, 49, 71, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-bug svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#bug"></use></svg>'
-  },
-  example: {
-    icon: '🔎',
-    color: 'rgba(120, 82, 238, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-list svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#list"></use></svg>'
-  },
-  quote: {
-    icon: '💬',
-    color: 'rgba(158, 158, 158, 0.1);',
-    svg: '<svg class="fa d-icon d-icon-quote-left svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#quote-left"></use></svg>'
-  }
-}
 
-function insertIntoEditor(text: string) {
-  // Priority 1: Chat composer (highest priority)
-  const chatComposer = document.querySelector('textarea#channel-composer.chat-composer__input') as HTMLTextAreaElement | null
-  
-  // Check if chat composer is the active element or exists
-  if (chatComposer) {
-    const start = chatComposer.selectionStart ?? 0
-    const end = chatComposer.selectionEnd ?? start
-    const value = chatComposer.value
-    chatComposer.value = value.slice(0, start) + text + value.slice(end)
-    const pos = start + text.length
-    if ('setSelectionRange' in chatComposer) {
-      try {
-        chatComposer.setSelectionRange(pos, pos)
-      } catch (e) {
-        // ignore
-      }
-    }
-    chatComposer.dispatchEvent(new Event('input', { bubbles: true }))
-    return
-  }
-
-  // Priority 2: Active textarea element
-  const active = document.activeElement as HTMLElement | null
-  const isTextarea = (el: Element | null) => !!el && el.tagName === 'TEXTAREA'
-
-  if (isTextarea(active)) {
-    const textarea = active as HTMLTextAreaElement
-    const start = textarea.selectionStart ?? 0
-    const end = textarea.selectionEnd ?? start
-    const value = textarea.value
-    textarea.value = value.slice(0, start) + text + value.slice(end)
-    const pos = start + text.length
-    if ('setSelectionRange' in textarea) {
-      try {
-        textarea.setSelectionRange(pos, pos)
-      } catch (e) {
-        // ignore
-      }
-    }
-    textarea.dispatchEvent(new Event('input', { bubbles: true }))
-    return
-  }
-
-  if (active && active.isContentEditable) {
-    const sel = window.getSelection()
-    if (!sel) return
-    const range = sel.getRangeAt(0)
-    range.deleteContents()
-    const node = document.createTextNode(text)
-    range.insertNode(node)
-    range.setStartAfter(node)
-    range.setEndAfter(node)
-    sel.removeAllRanges()
-    sel.addRange(range)
-    active.dispatchEvent(new Event('input', { bubbles: true }))
-    return
-  }
-
-  const fallback = document.querySelector('textarea') as HTMLTextAreaElement | null
-  if (fallback) {
-    fallback.focus()
-    const start = (fallback as HTMLTextAreaElement).selectionStart ?? fallback.value.length
-    const end = (fallback as HTMLTextAreaElement).selectionEnd ?? start
-    const value = fallback.value
-    fallback.value = value.slice(0, start) + text + value.slice(end)
-    const pos = start + text.length
-    if ('setSelectionRange' in fallback) {
-      try {
-        ;(fallback as HTMLTextAreaElement).setSelectionRange(pos, pos)
-      } catch (e) {
-        // ignore
-      }
-    }
-    fallback.dispatchEvent(new Event('input', { bubbles: true }))
-  }
-}
 
 function createQuickInsertMenu(): HTMLElement {
   const menu = createEl('div', {
@@ -197,7 +43,7 @@ function createQuickInsertMenu(): HTMLElement {
       className: 'btn btn-icon-text',
       type: 'button',
       title: key.charAt(0).toUpperCase() + key.slice(1),
-      style: 'background: ' + (ICONS[key]?.color || 'auto')
+      style: 'background: ' + (getIcon(key)?.color || 'auto')
     }) as HTMLButtonElement
     btn.addEventListener('click', () => {
       if (menu.parentElement) menu.parentElement.removeChild(menu)
@@ -206,7 +52,7 @@ function createQuickInsertMenu(): HTMLElement {
 
     const emojiSpan = createEl('span', {
       className: 'd-button-emoji',
-      text: ICONS[key]?.icon || '✳️',
+      text: getIcon(key)?.icon || '✳️',
       style: 'margin-right: 6px;'
     }) as HTMLSpanElement
     // Add small spacing between emoji and label
@@ -221,7 +67,7 @@ function createQuickInsertMenu(): HTMLElement {
     // Instead of appending raw SVG into the text node, create a separate span
     // for the svg so it appears to the right of the label text.
     labelWrap.appendChild(labelText)
-    const svgHtml = ICONS[key]?.svg || ''
+    const svgHtml = getIcon(key)?.svg || ''
     if (svgHtml) {
       const svgSpan = createEl('span', {
         className: 'd-button-label__svg',

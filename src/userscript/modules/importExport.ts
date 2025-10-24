@@ -1,55 +1,20 @@
 // Import/Export module for userscript data - Group-focused operations
 import { userscriptState } from '../state'
 import { saveDataToLocalStorage } from '../userscript-storage'
-import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { showTemporaryMessage } from '../utils/tempMessage'
+import { createModalElement } from '../utils/editorUtils'
 
 export function showImportExportModal(currentGroupId?: string) {
   // Ensure theme styles are injected
   injectGlobalThemeStyles()
-
-  const modal = createEl('div', {
-    style: `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.5);
-    `
-  })
-
-  const content = createEl('div', {
-    style: `
-      background: var(--secondary);
-      color: var(--emoji-modal-text);
-      border: 1px solid var(--emoji-modal-border);
-      border-radius: 8px;
-      padding: 24px;
-      max-width: 90%;
-      max-height: 90%;
-      overflow-y: auto;
-      position: relative;
-      width: 600px;
-    `
-  })
 
   // 获取当前选中的分组
   const currentGroup = currentGroupId
     ? userscriptState.emojiGroups.find(g => g.id === currentGroupId)
     : null
 
-  content.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2 style="margin: 0; color: var(--emoji-modal-text);">分组表情导入/导出</h2>
-      <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
-    </div>
-
+  const contentHTML = `
     ${
       currentGroup
         ? `
@@ -173,7 +138,14 @@ export function showImportExportModal(currentGroupId?: string) {
     </div>
   `
 
-  modal.appendChild(content)
+  const modal = createModalElement({
+    title: '分组表情导入/导出',
+    content: contentHTML,
+    onClose: () => modal.remove()
+  })
+
+  // Get the actual content div inside the modal
+  const content = modal.querySelector('div:last-child') as HTMLElement
   document.body.appendChild(modal)
 
   // 工具函数：创建下载链接
@@ -203,17 +175,7 @@ export function showImportExportModal(currentGroupId?: string) {
     }
   }
 
-  // 事件监听器
-  content.querySelector('#closeModal')?.addEventListener('click', () => {
-    modal.remove()
-  })
 
-  // 点击模态窗口外部关闭
-  modal.addEventListener('click', e => {
-    if (e.target === modal) {
-      modal.remove()
-    }
-  })
 
   // 导出分组功能
   content.querySelector('#exportGroup')?.addEventListener('click', () => {

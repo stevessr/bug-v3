@@ -1,10 +1,10 @@
 // Group editor module for editing emoji group names and icons
 import { userscriptState } from '../state'
 import { saveDataToLocalStorage } from '../userscript-storage'
-import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { showTemporaryMessage } from '../utils/tempMessage'
 import { ensureStyleInjected } from '../utils/injectStyles'
+import { createModalElement } from '../utils/editorUtils'
 
 import { showImportExportModal } from './importExport'
 
@@ -12,41 +12,7 @@ export function showGroupEditorModal() {
   // Ensure theme styles are injected
   injectGlobalThemeStyles()
 
-  const modal = createEl('div', {
-    style: `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `
-  })
-
-  const content = createEl('div', {
-    style: `
-      color: var(--emoji-modal-text);
-      padding: 20px;
-      width: min(900px, 95%);
-      max-width: 95%;
-      max-height: calc(100vh - 40px);
-      overflow: auto;
-      position: relative;
-      box-sizing: border-box;
-      border-radius: 10px;
-      background: var(--emoji-modal-bg, #fff);
-    `
-  })
-
-  content.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2 style="margin: 0; color: var(--emoji-modal-text);backdrop-filter: blur(10px);">表情分组编辑器</h2>
-      <button id="closeModal" style="border:none;font-size: 24px; cursor: pointer;">×</button>
-    </div>
-    
+  const contentHTML = `
     <div style="margin-bottom: 20px; padding: 16px; background: var(--emoji-modal-button-bg);">
       <div>编辑说明</div>
       <div>
@@ -57,7 +23,7 @@ export function showGroupEditorModal() {
       </div>
     </div>
     
-    <div id="groupsList" style="display: flex; flex-direction: column; gap: 12px;">
+    <div id="groupsList" style="display: flex; flex-direction: column; gap: 12px; max-height: 70vh; overflow-y: auto;">
       ${userscriptState.emojiGroups
         .map(
           (group, index) =>
@@ -146,7 +112,14 @@ export function showGroupEditorModal() {
     </div>
   `
 
-  modal.appendChild(content)
+  const modal = createModalElement({
+    title: '表情分组编辑器',
+    content: contentHTML,
+    onClose: () => modal.remove()
+  })
+
+  // Get the actual content div inside the modal
+  const content = modal.querySelector('div:last-child') as HTMLElement
   document.body.appendChild(modal)
 
   // Add hover effects
@@ -210,17 +183,7 @@ export function showGroupEditorModal() {
   `
   ensureStyleInjected(id, css)
 
-  // Event listeners
-  content.querySelector('#closeModal')?.addEventListener('click', () => {
-    modal.remove()
-  })
 
-  // Close on outside click
-  modal.addEventListener('click', e => {
-    if (e.target === modal) {
-      modal.remove()
-    }
-  })
 
   // Group name editing
   content.querySelectorAll('.group-name-editor').forEach(input => {

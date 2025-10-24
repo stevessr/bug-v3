@@ -5,53 +5,22 @@ import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { showTemporaryMessage } from '../utils/tempMessage'
 import { ensureStyleInjected } from '../utils/injectStyles'
+import { createModalElement } from '../utils/editorUtils'
 
 export function showPopularEmojisModal() {
   // Ensure theme styles are injected
   injectGlobalThemeStyles()
 
-  const modal = createEl('div', {
-    style: `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `
-  })
-
   const popularEmojis = getPopularEmojis(50) // Get top 50 popular emojis
 
-  const content = createEl('div', {
-    style: `
-      background: var(--secondary);
-      color: var(--emoji-modal-text);
-      border-radius: 8px;
-      padding: 24px;
-      max-height: 80vh;
-      overflow-y: auto;
-      position: relative;
-    `,
-    innerHTML: `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-      <h2 style="margin: 0; color: var(--emoji-modal-text);">常用表情 (${popularEmojis.length})</h2>
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <button id="clearStats" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">清空统计</button>
-        <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
-      </div>
-    </div>
-    
+  const contentHTML = `
     <div style="margin-bottom: 16px; padding: 12px; background: var(--emoji-modal-button-bg); border-radius: 6px; border: 1px solid var(--emoji-modal-border);">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 500; color: var(--emoji-modal-label);">表情按使用次数排序</span>
         <span style="font-size: 12px; color: var(--emoji-modal-text);">点击表情直接使用</span>
       </div>
       <div style="font-size: 12px; color: var(--emoji-modal-text);">
-        总使用次数: ${popularEmojis.reduce((sum, emoji) => sum + emoji.count, 0)}
+        总使用次数：${popularEmojis.reduce((sum, emoji) => sum + emoji.count, 0)}
       </div>
     </div>
     
@@ -117,9 +86,40 @@ export function showPopularEmojisModal() {
         : ''
     }
   `
+
+  const modal = createModalElement({
+    title: `常用表情 (${popularEmojis.length})`,
+    content: contentHTML,
+    onClose: () => modal.remove()
   })
 
-  modal.appendChild(content)
+  // Add clearStats button to the title area
+  const titleDiv = modal.querySelector('div:first-child > div:first-child, div:first-child > h2 + div') as HTMLElement
+  if (titleDiv) {
+    const clearStatsButton = createEl('button', {
+      id: 'clearStats',
+      text: '清空统计',
+      style: 'padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;'
+    }) as HTMLButtonElement
+
+    titleDiv.appendChild(clearStatsButton)
+
+    clearStatsButton.addEventListener('click', () => {
+      if (confirm('确定要清空所有表情使用统计吗？此操作不可撤销。')) {
+        clearEmojiUsageStats()
+        modal.remove()
+
+        // Show success message
+        showTemporaryMessage('表情使用统计已清空')
+
+        // Reopen the modal to show updated state
+        setTimeout(() => showPopularEmojisModal(), 300)
+      }
+    })
+  }
+
+  // Get the actual content div inside the modal
+  const content = modal.querySelector('div:last-child') as HTMLElement
   document.body.appendChild(modal)
 
   // Add hover effects for emoji items
@@ -132,24 +132,6 @@ export function showPopularEmojisModal() {
     }
   `
   ensureStyleInjected(id, css)
-
-  // Event listeners
-  content.querySelector('#closeModal')?.addEventListener('click', () => {
-    modal.remove()
-  })
-
-  content.querySelector('#clearStats')?.addEventListener('click', () => {
-    if (confirm('确定要清空所有表情使用统计吗？此操作不可撤销。')) {
-      clearEmojiUsageStats()
-      modal.remove()
-
-      // Show success message
-      showTemporaryMessage('表情使用统计已清空')
-
-      // Reopen the modal to show updated state
-      setTimeout(() => showPopularEmojisModal(), 300)
-    }
-  })
 
   // Add click handlers for emoji items
   const emojiItems = content.querySelectorAll('.popular-emoji-item')
@@ -171,13 +153,6 @@ export function showPopularEmojisModal() {
         showTemporaryMessage(`已使用表情: ${name}`)
       }
     })
-  })
-
-  // Close on outside click
-  modal.addEventListener('click', e => {
-    if (e.target === modal) {
-      modal.remove()
-    }
   })
 }
 

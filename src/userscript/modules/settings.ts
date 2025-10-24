@@ -3,6 +3,7 @@ import { userscriptState } from '../state'
 import { saveDataToLocalStorage, DEFAULT_USER_SETTINGS } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
+import { createModalElement } from '../utils/editorUtils'
 
 import { showGroupEditorModal } from './groupEditor'
 import { showPopularEmojisModal } from './popularEmojis'
@@ -27,14 +28,15 @@ export function showSettingsModal() {
   `
   })
 
-  const content = createEl('div', {
-    style: `
+  modal.appendChild(
+    createEl('div', {
+      style: `
     backdrop-filter: blur(10px);
     padding: 24px;
     overflow-y: auto;
     position: relative;
   `,
-    innerHTML: `
+      innerHTML: `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="margin: 0; color: var(--emoji-modal-text);">设置</h2>
       <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
@@ -127,10 +129,12 @@ export function showSettingsModal() {
       <button id="saveSettings" style="padding: 8px 16px; background: var(--emoji-modal-primary-bg); color: white; border: none; border-radius: 4px; cursor: pointer;">保存</button>
     </div>
   `
-  })
-
-  modal.appendChild(content)
+    })
+  )
   document.body.appendChild(modal)
+
+  // Get the actual content div inside the modal
+  const content = modal.querySelector('div:last-child') as HTMLElement
 
   // Event listeners
   const scaleSlider = content.querySelector('#scaleSlider') as HTMLInputElement
@@ -140,10 +144,6 @@ export function showSettingsModal() {
     if (scaleValue) {
       scaleValue.textContent = scaleSlider.value + '%'
     }
-  })
-
-  content.querySelector('#closeModal')?.addEventListener('click', () => {
-    modal.remove()
   })
 
   content.querySelector('#resetSettings')?.addEventListener('click', async () => {
@@ -184,7 +184,9 @@ export function showSettingsModal() {
       userscriptState.settings.enableCalloutSuggestions = !!enableCalloutEl.checked
     }
 
-    const enableBatchEl = content.querySelector('#enableBatchParseImages') as HTMLInputElement | null
+    const enableBatchEl = content.querySelector(
+      '#enableBatchParseImages'
+    ) as HTMLInputElement | null
     if (enableBatchEl) {
       userscriptState.settings.enableBatchParseImages = !!enableBatchEl.checked
     }
@@ -195,7 +197,7 @@ export function showSettingsModal() {
     }
 
     // Save to localStorage
-  saveDataToLocalStorage({ settings: userscriptState.settings })
+    saveDataToLocalStorage({ settings: userscriptState.settings })
     // Also persist remote config URL for remote variant
     try {
       const remoteInput = content.querySelector('#remoteConfigUrl') as HTMLInputElement | null
@@ -224,12 +226,5 @@ export function showSettingsModal() {
   content.querySelector('#openImportExport')?.addEventListener('click', () => {
     modal.remove()
     showImportExportModal()
-  })
-
-  // Close on outside click
-  modal.addEventListener('click', e => {
-    if (e.target === modal) {
-      modal.remove()
-    }
   })
 }

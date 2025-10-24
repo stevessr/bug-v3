@@ -3,6 +3,7 @@ import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
 import { userscriptNotify } from '../utils/notify'
 import { userscriptState } from '../state'
+import { ensureStyleInjected } from '../utils/injectStyles'
 
 import { attemptInjection } from './toolbar'
 
@@ -62,8 +63,7 @@ const FLOATING_BUTTON_STYLES = `
 }
 `
 
-// Create and inject styles with platform-specific sizing
-import { ensureStyleInjected } from '../utils/injectStyles'
+
 
 function injectStyles() {
   // Inject global theme variables first
@@ -145,7 +145,7 @@ async function invokeAutoRead(showNotify = false) {
     console.error('[Emoji Extension] auto-read menu invocation failed', err)
     if (showNotify)
       userscriptNotify(
-        '自动阅读调用失败: ' + (err && (err as any).message ? (err as any).message : String(err)),
+        '自动阅读调用失败：' + (err && (err as any).message ? (err as any).message : String(err)),
         'error'
       )
   }
