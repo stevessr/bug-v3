@@ -445,6 +445,125 @@ function setupForceMobileMenuTriggers() {
   menuTriggersInitialized = true
 }
 
+// Scan all platform toolbars and attach click listeners to their menu triggers
+// when forceMobileMode is active. This ensures we catch toolbar/menu opens even
+// when menus are portalled into #d-menu-portals and normal injection is skipped.
+function setupForceMobileToolbarListeners() {
+  const forceMobileMode = userscriptState.settings?.forceMobileMode || false
+  if (!forceMobileMode) return
+
+  const selectors = getPlatformToolbarSelectors()
+  selectors.forEach(selector => {
+    const elements = Array.from(document.querySelectorAll(selector)) as HTMLElement[]
+    elements.forEach(toolbar => {
+      try {
+        // Avoid attaching multiple listeners to the same toolbar
+        if ((toolbar as HTMLElement).dataset?.emojiListenerAttached === 'true') return
+
+        // Try to find toolbar options trigger(s) inside this toolbar
+        const toolbarOptionsTriggers = Array.from(
+          toolbar.querySelectorAll(
+            'button.toolbar-menu__options-trigger[data-identifier="toolbar-menu__options"], button.toolbar-menu__options-trigger'
+          )
+        ) as HTMLButtonElement[]
+
+        toolbarOptionsTriggers.forEach(trigger => {
+          const handler = () => {
+            // Multiple quick attempts to locate the menu (priority: modal, then portal)
+            const checkMenu = (attempt: number = 0) => {
+              const modalContainer = document.querySelector('.modal-container')
+              let menu: HTMLElement | null = null
+
+              if (modalContainer) {
+                menu = modalContainer.querySelector(
+                  '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+                ) as HTMLElement | null
+              }
+
+              if (!menu) {
+                menu = document.querySelector(
+                  '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+                ) as HTMLElement | null
+              }
+
+              if (menu) {
+                injectCustomMenuButtons(menu)
+              } else if (attempt < 5) {
+                setTimeout(() => checkMenu(attempt + 1), 20)
+              }
+            }
+
+            checkMenu()
+          }
+
+          trigger.addEventListener('click', handler)
+        })
+
+        // Also try to attach to any chat-composer dropdown triggers inside toolbar
+        const chatComposerTriggers = Array.from(
+          toolbar.querySelectorAll(
+            'button.chat-composer-dropdown__trigger-btn[data-identifier="chat-composer-dropdown__menu"], button.chat-composer-dropdown__menu-trigger[data-identifier="chat-composer-dropdown__menu"], button.chat-composer-dropdown__trigger-btn, button.chat-composer-dropdown__menu-trigger'
+          )
+        ) as HTMLButtonElement[]
+
+        chatComposerTriggers.forEach(trigger => {
+          const handler = () => {
+            setTimeout(() => {
+              const menu = document.querySelector(
+                '.chat-composer-dropdown__content[data-identifier="chat-composer-dropdown__menu"], .chat-composer-dropdown__menu-content[data-identifier="chat-composer-dropdown__menu"]'
+              ) as HTMLElement | null
+              if (menu) {
+                injectCustomMenuButtons(menu)
+              }
+            }, 80)
+          }
+          trigger.addEventListener('click', handler)
+        })
+
+        ;(toolbar as HTMLElement).dataset.emojiListenerAttached = 'true'
+      } catch (e) {
+        // Don't let one toolbar failure stop the rest
+        console.warn('[Emoji Extension Userscript] Failed to attach force-mobile listeners to toolbar', e)
+      }
+    })
+  })
+}
+
+// Interval handle for periodic force-mobile toolbar listener attachment
+let _forceMobileToolbarIntervalId: number | null = null
+
+/**
+ * Start a periodic runner that calls `setupForceMobileToolbarListeners()`.
+ * It will no-op if forceMobileMode is not enabled or if already started.
+ */
+function startForceMobileToolbarListenerInterval(intervalMs: number = 15000) {
+  const forceMobileMode = userscriptState.settings?.forceMobileMode || false
+  if (!forceMobileMode) return
+  if (_forceMobileToolbarIntervalId !== null) return
+
+  // Run once immediately, then schedule periodic runs
+  try {
+    setupForceMobileToolbarListeners()
+  } catch (e) {
+    // ignore
+  }
+
+  _forceMobileToolbarIntervalId = window.setInterval(() => {
+    try {
+      setupForceMobileToolbarListeners()
+    } catch (e) {
+      // ignore per-interval errors
+    }
+  }, intervalMs)
+}
+
+function stopForceMobileToolbarListenerInterval() {
+  if (_forceMobileToolbarIntervalId !== null) {
+    clearInterval(_forceMobileToolbarIntervalId)
+    _forceMobileToolbarIntervalId = null
+  }
+}
+
 // Inject custom buttons into expanded menu
 function injectCustomMenuButtons(menu: HTMLElement) {
   // Check if already injected
@@ -862,6 +981,18 @@ export function attemptInjection() {
 
   // Setup force mobile mode menu triggers if enabled
   setupForceMobileMenuTriggers()
+  // Also setup toolbar trigger listeners for force mobile mode (attach per-toolbar)
+  try {
+    setupForceMobileToolbarListeners()
+    // Ensure periodic runner is started when force mobile mode is enabled
+    try {
+      startForceMobileToolbarListenerInterval()
+    } catch (e) {
+      // ignore
+    }
+  } catch (e) {
+    // ignore
+  }
 
   // Fallback: if no toolbars found and not in force mobile mode, try header panel injection
   try {
@@ -891,5 +1022,12 @@ export function startPeriodicInjection() {
 
     // Also check for force mobile mode menu triggers
     setupForceMobileMenuTriggers()
+    // Periodically ensure per-toolbar listeners are attached when forceMobileMode is enabled
+    try {
+      setupForceMobileToolbarListeners()
+      startForceMobileToolbarListenerInterval()
+    } catch (e) {
+      // ignore
+    }
   }, 30000)
 }
