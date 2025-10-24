@@ -12,6 +12,7 @@
     "build:userscript": "node scripts/build.js build:userscript",
     "build:userscript:oneline": "USERSCRIPT_EMBED_JSON_ONELINE=true node scripts/build.js build:userscript",
     "build:userscript:remote": "node scripts/build.js build:userscript remote",
+    "build:userscript:remote:oneline": "USERSCRIPT_EMBED_JSON_ONELINE=true node scripts/build.js build:userscript remote --no-eslint",
     "build:userscript:min": "node scripts/build.js build:userscript:min",
     "build:userscript:tampermonkey": "node scripts/build.js build:userscript tampermonkey",
     "build:userscript:tampermonkey:min": "node scripts/build.js build:userscript:min tampermonkey",

@@ -129,6 +129,9 @@ if (variant && variant !== 'default') {
   console.log(`🔀 构建变体：${variant}`)
 }
 
+// 检查命令行参数是否包含 --no-eslint
+const skipEslint = args.includes('--no-eslint')
+
 // 执行 vite（开发或构建）
 const isUserscript = buildType.startsWith('build:userscript')
 // 构建时传递给 `vite` 的参数数组。dev 模式不传额外参数（等价于 `pnpm exec vite`）。
@@ -142,7 +145,7 @@ const distDir = path.resolve(process.cwd(), 'dist')
 
 const child = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
   stdio: 'inherit',
-  env: process.env,
+  env: { ...process.env, SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT },
   shell: false
 })
 
@@ -151,8 +154,10 @@ child.on('exit', code => {
     // For userscript builds, run post-processing instead of clean-empty-chunks
     if (isUserscript) {
       console.log('🔧 Post-processing userscript...')
+      const postProcessEnv = { ...process.env, SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT }
       const postProcessChild = spawn('node', ['./scripts/post-process-userscript.js', buildType], {
         stdio: 'inherit',
+        env: postProcessEnv,
         shell: false
       })
 
