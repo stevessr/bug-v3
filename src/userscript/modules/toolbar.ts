@@ -271,6 +271,43 @@ export function findAllToolbars(): HTMLElement[] {
   return toolbars
 }
 
+// Setup DOM change observer for force mobile mode
+let domObserver: MutationObserver | null = null
+let lastDomChangeTime = Date.now()
+
+function setupDomObserver() {
+  if (domObserver) return // Already set up
+
+  domObserver = new MutationObserver(mutations => {
+    let hasChanges = false
+    
+    for (const mutation of mutations) {
+      if (mutation.type === 'childList' && (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
+        hasChanges = true
+        break
+      }
+      if (mutation.type === 'attributes') {
+        hasChanges = true
+        break
+      }
+    }
+    
+    if (hasChanges) {
+      lastDomChangeTime = Date.now()
+    }
+  })
+
+  domObserver.observe(document, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'id']
+  })
+
+  console.log('[Emoji Extension Userscript] DOM observer set up for force mobile mode')
+}
+
+
 // Setup listeners for force mobile mode menu triggers
 let menuTriggersInitialized = false
 
@@ -289,15 +326,26 @@ function setupForceMobileMenuTriggers() {
 
   console.log('[Emoji Extension Userscript] Force mobile mode enabled, setting up menu triggers')
 
+  // Setup DOM observer if not already set up
+  setupDomObserver()
+
   // Find toolbar options trigger button
   const toolbarOptionsTrigger = document.querySelector(
-    'button.toolbar-menu__options-trigger[data-identifier="toolbar-menu__options"]'
+    'button.toolbar-menu__options-trigger[data-identifier="toolbar-menu__options"]:not(.emoji-detected)'
   ) as HTMLButtonElement | null
 
   // Find chat composer dropdown trigger button (try multiple selectors)
   const chatComposerTrigger = document.querySelector(
-    'button.chat-composer-dropdown__trigger-btn[data-identifier="chat-composer-dropdown__menu"], button.chat-composer-dropdown__menu-trigger[data-identifier="chat-composer-dropdown__menu"]'
+    'button.chat-composer-dropdown__trigger-btn[data-identifier="chat-composer-dropdown__menu"]:not(.emoji-detected), button.chat-composer-dropdown__menu-trigger[data-identifier="chat-composer-dropdown__menu"]:not(.emoji-detected), button.chat-composer-dropdown__menu-trigger.chat-composer-dropdown__trigger-btn:not(.emoji-detected)'
   ) as HTMLButtonElement | null
+
+  // Add emoji-detected class to found triggers
+  if (toolbarOptionsTrigger) {
+    toolbarOptionsTrigger.classList.add('emoji-detected')
+  }
+  if (chatComposerTrigger) {
+    chatComposerTrigger.classList.add('emoji-detected')
+  }
 
   // Setup observer for menu content in portals
   const portalObserver = new MutationObserver(mutations => {
@@ -333,12 +381,19 @@ function setupForceMobileMenuTriggers() {
         if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as HTMLElement
 
-          // Check for modal container with toolbar menu
+          // Check for modal container with toolbar menu or chat composer dropdown menu
           if (element.classList.contains('modal-container')) {
-            // Try to find menu immediately
-            const modalMenu = element.querySelector(
+            // Try to find toolbar menu first
+            let modalMenu = element.querySelector(
               '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
             ) as HTMLElement | null
+            
+            // If no toolbar menu, try to find chat composer dropdown menu
+            if (!modalMenu) {
+              modalMenu = element.querySelector(
+                '.chat-composer-dropdown__menu-content[data-identifier="chat-composer-dropdown__menu"]'
+              ) as HTMLElement | null
+            }
             
             if (modalMenu) {
               console.log('[Emoji Extension Userscript] Modal menu detected (immediate), injecting custom buttons')
@@ -346,9 +401,18 @@ function setupForceMobileMenuTriggers() {
             } else {
               // If menu not found immediately, observe the modal container for menu appearance
               const modalContentObserver = new MutationObserver(() => {
-                const delayedMenu = element.querySelector(
+                // Check for toolbar menu
+                let delayedMenu = element.querySelector(
                   '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
                 ) as HTMLElement | null
+                
+                // If no toolbar menu, try to find chat composer dropdown menu
+                if (!delayedMenu) {
+                  delayedMenu = element.querySelector(
+                    '.chat-composer-dropdown__menu-content[data-identifier="chat-composer-dropdown__menu"]'
+                  ) as HTMLElement | null
+                }
+                
                 if (delayedMenu) {
                   console.log('[Emoji Extension Userscript] Modal menu detected (delayed), injecting custom buttons')
                   injectCustomMenuButtons(delayedMenu)
@@ -395,51 +459,59 @@ function setupForceMobileMenuTriggers() {
 
   // Also add click listeners to trigger buttons to ensure we catch the menu
   if (toolbarOptionsTrigger) {
-    toolbarOptionsTrigger.addEventListener('click', () => {
-      // Multiple check attempts for faster injection
-      const checkMenu = (attempt: number = 0) => {
-        // Try modal container first (PRIORITY)
-        const modalContainer = document.querySelector('.modal-container')
-        let menu: HTMLElement | null = null
-        
-        if (modalContainer) {
-          menu = modalContainer.querySelector(
-            '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
-          ) as HTMLElement | null
+    // Only add listener if it doesn't already have one
+    if (!toolbarOptionsTrigger.dataset.emojiListenerAttached) {
+      toolbarOptionsTrigger.addEventListener('click', () => {
+        // Multiple check attempts for faster injection
+        const checkMenu = (attempt: number = 0) => {
+          // Try modal container first (PRIORITY)
+          const modalContainer = document.querySelector('.modal-container')
+          let menu: HTMLElement | null = null
+          
+          if (modalContainer) {
+            menu = modalContainer.querySelector(
+              '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+            ) as HTMLElement | null
+          }
+          
+          // Fallback to portal-based menu
+          if (!menu) {
+            menu = document.querySelector(
+              '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
+            ) as HTMLElement | null
+          }
+          
+          if (menu) {
+            injectCustomMenuButtons(menu)
+          } else if (attempt < 5) {
+            // Retry up to 5 times with shorter intervals for faster injection
+            setTimeout(() => checkMenu(attempt + 1), 20)
+          }
         }
         
-        // Fallback to portal-based menu
-        if (!menu) {
-          menu = document.querySelector(
-            '.toolbar-menu__options-content[data-identifier="toolbar-menu__options"]'
-          ) as HTMLElement | null
-        }
-        
-        if (menu) {
-          injectCustomMenuButtons(menu)
-        } else if (attempt < 5) {
-          // Retry up to 5 times with shorter intervals for faster injection
-          setTimeout(() => checkMenu(attempt + 1), 20)
-        }
-      }
-      
-      checkMenu()
-    })
-    console.log('[Emoji Extension Userscript] Toolbar options trigger listener added')
+        checkMenu()
+      })
+      toolbarOptionsTrigger.dataset.emojiListenerAttached = 'true'
+      console.log('[Emoji Extension Userscript] Toolbar options trigger listener added')
+    }
   }
 
   if (chatComposerTrigger) {
-    chatComposerTrigger.addEventListener('click', () => {
-      setTimeout(() => {
-        const menu = document.querySelector(
-          '.chat-composer-dropdown__content[data-identifier="chat-composer-dropdown__menu"], .chat-composer-dropdown__menu-content[data-identifier="chat-composer-dropdown__menu"]'
-        ) as HTMLElement | null
-        if (menu) {
-          injectCustomMenuButtons(menu)
-        }
-      }, 100)
-    })
-    console.log('[Emoji Extension Userscript] Chat composer trigger listener added')
+    // Only add listener if it doesn't already have one
+    if (!chatComposerTrigger.dataset.emojiListenerAttached) {
+      chatComposerTrigger.addEventListener('click', () => {
+        setTimeout(() => {
+          const menu = document.querySelector(
+            '.chat-composer-dropdown__content[data-identifier="chat-composer-dropdown__menu"], .chat-composer-dropdown__menu-content[data-identifier="chat-composer-dropdown__menu"]'
+          ) as HTMLElement | null
+          if (menu) {
+            injectCustomMenuButtons(menu)
+          }
+        }, 100)
+      })
+      chatComposerTrigger.dataset.emojiListenerAttached = 'true'
+      console.log('[Emoji Extension Userscript] Chat composer trigger listener added')
+    }
   }
 
   menuTriggersInitialized = true
@@ -454,6 +526,7 @@ function setupForceMobileToolbarListeners() {
 
   const selectors = getPlatformToolbarSelectors()
   selectors.forEach(selector => {
+    // Add :not(.emoji-detected) to selector to skip already detected buttons
     const elements = Array.from(document.querySelectorAll(selector)) as HTMLElement[]
     elements.forEach(toolbar => {
       try {
@@ -463,11 +536,14 @@ function setupForceMobileToolbarListeners() {
         // Try to find toolbar options trigger(s) inside this toolbar
         const toolbarOptionsTriggers = Array.from(
           toolbar.querySelectorAll(
-            'button.toolbar-menu__options-trigger[data-identifier="toolbar-menu__options"], button.toolbar-menu__options-trigger'
+            'button.toolbar-menu__options-trigger[data-identifier="toolbar-menu__options"]:not(.emoji-detected), button.toolbar-menu__options-trigger:not(.emoji-detected)'
           )
         ) as HTMLButtonElement[]
 
         toolbarOptionsTriggers.forEach(trigger => {
+          // Mark trigger as detected to avoid re-processing
+          trigger.classList.add('emoji-detected')
+          
           const handler = () => {
             // Multiple quick attempts to locate the menu (priority: modal, then portal)
             const checkMenu = (attempt: number = 0) => {
@@ -496,17 +572,24 @@ function setupForceMobileToolbarListeners() {
             checkMenu()
           }
 
-          trigger.addEventListener('click', handler)
+          // Only add listener if it doesn't already have one
+          if (!trigger.dataset.emojiListenerAttached) {
+            trigger.addEventListener('click', handler)
+            trigger.dataset.emojiListenerAttached = 'true'
+          }
         })
 
         // Also try to attach to any chat-composer dropdown triggers inside toolbar
         const chatComposerTriggers = Array.from(
           toolbar.querySelectorAll(
-            'button.chat-composer-dropdown__trigger-btn[data-identifier="chat-composer-dropdown__menu"], button.chat-composer-dropdown__menu-trigger[data-identifier="chat-composer-dropdown__menu"], button.chat-composer-dropdown__trigger-btn, button.chat-composer-dropdown__menu-trigger'
+            'button.chat-composer-dropdown__trigger-btn[data-identifier="chat-composer-dropdown__menu"]:not(.emoji-detected), button.chat-composer-dropdown__menu-trigger[data-identifier="chat-composer-dropdown__menu"]:not(.emoji-detected), button.chat-composer-dropdown__trigger-btn:not(.emoji-detected), button.chat-composer-dropdown__menu-trigger:not(.emoji-detected)'
           )
         ) as HTMLButtonElement[]
 
         chatComposerTriggers.forEach(trigger => {
+          // Mark trigger as detected to avoid re-processing
+          trigger.classList.add('emoji-detected')
+          
           const handler = () => {
             setTimeout(() => {
               const menu = document.querySelector(
@@ -517,7 +600,12 @@ function setupForceMobileToolbarListeners() {
               }
             }, 80)
           }
-          trigger.addEventListener('click', handler)
+          
+          // Only add listener if it doesn't already have one
+          if (!trigger.dataset.emojiListenerAttached) {
+            trigger.addEventListener('click', handler)
+            trigger.dataset.emojiListenerAttached = 'true'
+          }
         })
 
         ;(toolbar as HTMLElement).dataset.emojiListenerAttached = 'true'
@@ -531,6 +619,7 @@ function setupForceMobileToolbarListeners() {
 
 // Interval handle for periodic force-mobile toolbar listener attachment
 let _forceMobileToolbarIntervalId: number | null = null
+let _domChangeCheckIntervalId: number | null = null
 
 /**
  * Start a periodic runner that calls `setupForceMobileToolbarListeners()`.
@@ -557,12 +646,71 @@ function startForceMobileToolbarListenerInterval(intervalMs: number = 15000) {
   }, intervalMs)
 }
 
-function stopForceMobileToolbarListenerInterval() {
-  if (_forceMobileToolbarIntervalId !== null) {
-    clearInterval(_forceMobileToolbarIntervalId)
-    _forceMobileToolbarIntervalId = null
+// Function to check for DOM changes and attempt injection if needed
+function startDomChangeCheckInterval() {
+  const forceMobileMode = userscriptState.settings?.forceMobileMode || false
+  if (!forceMobileMode) return
+  if (_domChangeCheckIntervalId !== null) return // Already running
+
+  // Run once immediately, then schedule periodic runs
+  try {
+    checkButtonsAndInjectIfNeeded()
+  } catch (e) {
+    // ignore
+  }
+
+  _domChangeCheckIntervalId = window.setInterval(() => {
+    const now = Date.now()
+    // Check if there have been DOM changes in the last 1 second
+    if (now - lastDomChangeTime < 1000) {
+      try {
+        checkButtonsAndInjectIfNeeded()
+      } catch (e) {
+        // ignore per-interval errors
+      }
+    }
+  }, 1000) // Check every 1 second
+}
+
+function checkButtonsAndInjectIfNeeded() {
+  const forceMobileMode = userscriptState.settings?.forceMobileMode || false
+  if (!forceMobileMode) return
+
+  // Check if toolbar trigger listener exists (not marked as emoji-detected)
+  const toolbarTrigger = document.querySelector(
+    'button.toolbar-menu__options-trigger[data-identifier="toolbar-menu__options"]:not(.emoji-detected)'
+  ) as HTMLButtonElement | null
+
+  // Check if chat composer trigger listener exists (not marked as emoji-detected)
+  const chatComposerTrigger = document.querySelector(
+    'button.chat-composer-dropdown__trigger-btn[data-identifier="chat-composer-dropdown__menu"]:not(.emoji-detected), button.chat-composer-dropdown__menu-trigger[data-identifier="chat-composer-dropdown__menu"]:not(.emoji-detected), button.chat-composer-dropdown__menu-trigger.chat-composer-dropdown__trigger-btn:not(.emoji-detected)'
+  ) as HTMLButtonElement | null
+
+  // If either trigger is missing the emoji-detected class, set up the listeners
+  if (toolbarTrigger || chatComposerTrigger) {
+    setupForceMobileMenuTriggers()
+  }
+
+  // Also check for toolbar triggers that may have been added
+  const selectors = getPlatformToolbarSelectors()
+  for (const selector of selectors) {
+    const elements = Array.from(document.querySelectorAll(selector)) as HTMLElement[]
+    for (const toolbar of elements) {
+      // Check if this toolbar has any triggers without emoji-detected class
+      const toolbarOptionsTriggers = Array.from(
+        toolbar.querySelectorAll(
+          'button.toolbar-menu__options-trigger:not(.emoji-detected), button.chat-composer-dropdown__trigger-btn:not(.emoji-detected), button.chat-composer-dropdown__menu-trigger:not(.emoji-detected), button.chat-composer-dropdown__menu-trigger.chat-composer-dropdown__trigger-btn:not(.emoji-detected)'
+        )
+      ) as HTMLButtonElement[]
+      
+      if (toolbarOptionsTriggers.length > 0) {
+        setupForceMobileToolbarListeners()
+        break // Found a toolbar that needs listeners, break outer loop
+      }
+    }
   }
 }
+
 
 // Inject custom buttons into expanded menu
 function injectCustomMenuButtons(menu: HTMLElement) {
@@ -704,78 +852,7 @@ export function closeCurrentPicker() {
   }
 }
 
-// Insert a floating emoji button into the header panel as a fallback when no toolbar
-export function injectHeaderFloatingButton(): boolean {
-  try {
-    // Prefer header-buttons span inside .panel, else fall back to .icons.d-header-icons
-    const panel = document.querySelector('.panel') as HTMLElement | null
-    let target: HTMLElement | null = null
 
-    if (panel) {
-      const headerButtons = panel.querySelector('.header-buttons') as HTMLElement | null
-      if (headerButtons) target = headerButtons
-    }
-
-    if (!target) {
-      target = document.querySelector('.icons.d-header-icons') as HTMLElement | null
-    }
-
-    if (!target) return false
-
-    // Avoid duplicating button
-    if (target.querySelector('.emoji-extension-header-button')) return false
-
-    const wrapper = createEl('li', { className: 'header-dropdown-toggle emoji-extension-header-item' }) as HTMLLIElement
-    const btn = createEl('button', {
-      className: 'btn no-text icon btn-flat emoji-extension-header-button',
-      title: '表情包',
-      type: 'button',
-      innerHTML: '🐈‍⬛'
-    }) as HTMLButtonElement
-
-    btn.addEventListener('click', async (e: Event) => {
-      e.stopPropagation()
-      if (currentPicker) {
-        closeCurrentPicker()
-        return
-      }
-      currentPicker = await createEmojiPicker()
-      if (!currentPicker) return
-      document.body.appendChild(currentPicker)
-      // position as floating near header
-      currentPicker.style.position = 'fixed'
-      currentPicker.style.top = '56px'
-      currentPicker.style.right = '16px'
-      currentPicker.style.zIndex = '999999'
-
-      setTimeout(() => {
-        const handleClick = (ev: Event) => {
-          if (currentPicker && !currentPicker.contains(ev.target as Node) && ev.target !== btn) {
-            closeCurrentPicker()
-            document.removeEventListener('click', handleClick)
-          }
-        }
-        document.addEventListener('click', handleClick)
-      }, 50)
-    })
-
-    wrapper.appendChild(btn)
-
-    // Many header lists are <ul class="icons d-header-icons"> with <li> children
-    if (target.tagName.toLowerCase() === 'ul') {
-      ;(target as HTMLElement).appendChild(wrapper)
-    } else {
-      // header-buttons span: append as child
-      target.appendChild(wrapper)
-    }
-
-    console.log('[Emoji Extension Userscript] Header floating button injected')
-    return true
-  } catch (error) {
-    console.warn('[Emoji Extension Userscript] Failed to inject header floating button', error)
-    return false
-  }
-}
 
 // Inject emoji button into toolbar
 export function injectEmojiButton(toolbar: HTMLElement) {
@@ -987,6 +1064,7 @@ export function attemptInjection() {
     // Ensure periodic runner is started when force mobile mode is enabled
     try {
       startForceMobileToolbarListenerInterval()
+      startDomChangeCheckInterval() // Start DOM change check interval too
     } catch (e) {
       // ignore
     }
@@ -994,17 +1072,7 @@ export function attemptInjection() {
     // ignore
   }
 
-  // Fallback: if no toolbars found and not in force mobile mode, try header panel injection
-  try {
-    const forceMobile = userscriptState.settings?.forceMobileMode || false
-    // Only inject header floating button as a fallback when force mobile mode is active
-    if (injectedCount === 0 && forceMobile) {
-      const headerInserted = injectHeaderFloatingButton()
-      if (headerInserted) injectedCount++
-    }
-  } catch (e) {
-    // ignore
-  }
+  // No header panel injection when force mobile mode is active
 
   return { injectedCount, totalToolbars: toolbars.length }
 }
@@ -1026,6 +1094,7 @@ export function startPeriodicInjection() {
     try {
       setupForceMobileToolbarListeners()
       startForceMobileToolbarListenerInterval()
+      startDomChangeCheckInterval() // Start DOM change check interval too
     } catch (e) {
       // ignore
     }
