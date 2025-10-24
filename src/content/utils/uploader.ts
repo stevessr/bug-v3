@@ -107,6 +107,7 @@ interface UploadError {
 interface UploadQueueItem {
   id: string
   file: File
+  originalFilename: string  // Store original filename separately
 
   resolve: (value: UploadResponse) => void
 
@@ -131,6 +132,7 @@ class ImageUploader {
       const item: UploadQueueItem = {
         id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         file,
+        originalFilename: file.name,  // Store the original filename
         resolve,
         reject,
         retryCount: 0,
@@ -189,8 +191,8 @@ class ImageUploader {
         this.moveToQueue(item, 'success')
         item.resolve(result)
 
-        // Insert into editor
-        const markdown = `![${result.original_filename}](${result.url})`
+        // Insert into editor using the original client filename to avoid issues with server-renamed files
+        const markdown = `![${item.originalFilename}](${result.url})`
         insertIntoEditor(markdown)
       } catch (_error: any) {
         item.error = _error
@@ -805,25 +807,30 @@ export async function showImageUploadDialog(): Promise<void> {
       // Don't cleanup - keep the window open
       // cleanup()
 
-      // Upload progress now shown in file picker dialog
-      try {
-        const promises = Array.from(files).map(async file => {
+      // Show upload progress for drag-and-drop uploads using the same mechanism as custom file picker
+      // Create a temporary file list from the dropped files and process them
+      const fileList = Array.from(files);
+      
+      // Process the files directly with progress updates
+      await showCustomImagePicker(true, async (selectedFiles, updateStatus) => {
+        // For drag-and-drop, we upload the passed files directly
+        for (const file of selectedFiles) {
           try {
-            const result = await uploader.uploadImage(file)
-            return result
-          } catch (_error: any) {
-            console.error('[Image Uploader] Upload failed:', _error)
-            throw _error
-          }
-        })
+            updateStatus(file, { status: 'uploading', progress: 0 })
 
-        await Promise.allSettled(promises)
-      } finally {
-        // Keep progress dialog open - don't auto-hide
-        // setTimeout(() => {
-        //   uploader.hideProgressDialog()
-        // }, 3000)
-      }
+            // Upload using the uploader's method
+            const result = await uploader.uploadImage(file)
+
+            updateStatus(file, { status: 'success', url: result.url })
+          } catch (error: any) {
+            console.error(`Failed to upload ${file.name}:`, error)
+            updateStatus(file, {
+              status: 'failed',
+              error: error.message || '上传失败'
+            })
+          }
+        }
+      }, undefined, fileList) // Pass the dropped files to be processed
     }
 
     const handleDiffFiles = async (files: FileList) => {
