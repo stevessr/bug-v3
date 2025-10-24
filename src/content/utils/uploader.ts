@@ -107,7 +107,7 @@ interface UploadError {
 interface UploadQueueItem {
   id: string
   file: File
-  originalFilename: string  // Store original filename separately
+  originalFilename: string // Store original filename separately
 
   resolve: (value: UploadResponse) => void
 
@@ -132,7 +132,7 @@ class ImageUploader {
       const item: UploadQueueItem = {
         id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         file,
-        originalFilename: file.name,  // Store the original filename
+        originalFilename: file.name, // Store the original filename
         resolve,
         reject,
         retryCount: 0,
@@ -807,30 +807,39 @@ export async function showImageUploadDialog(): Promise<void> {
       // Don't cleanup - keep the window open
       // cleanup()
 
-      // Show upload progress for drag-and-drop uploads using the same mechanism as custom file picker
-      // Create a temporary file list from the dropped files and process them
-      const fileList = Array.from(files);
-      
-      // Process the files directly with progress updates
-      await showCustomImagePicker(true, async (selectedFiles, updateStatus) => {
-        // For drag-and-drop, we upload the passed files directly
-        for (const file of selectedFiles) {
-          try {
-            updateStatus(file, { status: 'uploading', progress: 0 })
+      // Upload each file and provide simple progress feedback
+      const filesArray = Array.from(files)
+      notify(`开始上传 ${filesArray.length} 个文件...`, 'info')
 
-            // Upload using the uploader's method
-            const result = await uploader.uploadImage(file)
+      // Track upload results for progress
+      let successCount = 0
+      let failCount = 0
 
-            updateStatus(file, { status: 'success', url: result.url })
-          } catch (error: any) {
-            console.error(`Failed to upload ${file.name}:`, error)
-            updateStatus(file, {
-              status: 'failed',
-              error: error.message || '上传失败'
-            })
-          }
+      const uploadPromises = filesArray.map(async file => {
+        try {
+          const result = await uploader.uploadImage(file)
+          successCount++
+          const progressMsg = `已上传：${successCount} 成功，${failCount} 失败`
+          notify(progressMsg, 'info')
+          return result
+        } catch (error: any) {
+          failCount++
+          console.error(`[Image Uploader] Failed to upload ${file.name}:`, error)
+          const progressMsg = `已上传：${successCount} 成功，${failCount} 失败`
+          notify(progressMsg, 'error')
+          throw error
         }
-      }, undefined, fileList) // Pass the dropped files to be processed
+      })
+
+      try {
+        await Promise.allSettled(uploadPromises)
+        notify(
+          `上传完成：${successCount} 成功，${failCount} 失败`,
+          successCount > 0 ? 'success' : 'info'
+        )
+      } catch (error) {
+        console.error('[Image Uploader] Drag-and-drop upload failed:', error)
+      }
     }
 
     const handleDiffFiles = async (files: FileList) => {
@@ -884,24 +893,34 @@ export async function showImageUploadDialog(): Promise<void> {
       // Don't cleanup - keep the window open
       // cleanup()
 
-      // Upload progress now shown in file picker dialog
+      // Upload progress with status updates
+      notify(`开始差分上传 ${filesToUpload.length} 个新文件...`, 'info')
+
+      // Track upload results for progress
+      let successCount = 0
+      let failCount = 0
+
+      const uploadPromises = filesToUpload.map(async file => {
+        try {
+          const result = await uploader.uploadImage(file)
+          successCount++
+          const progressMsg = `差分上传：${successCount}/${filesToUpload.length} (成功)`
+          notify(progressMsg, 'info')
+          return result
+        } catch (error: any) {
+          failCount++
+          console.error(`[Image Uploader] Failed to upload ${file.name}:`, error)
+          notify(`差分上传 ${file.name} 失败：${error.message || '上传失败'}`, 'error')
+          throw error
+        }
+      })
+
       try {
-        const promises = filesToUpload.map(async file => {
-          try {
-            const result = await uploader.uploadImage(file)
-            return result
-          } catch (_error: any) {
-            console.error('[Image Uploader] Diff upload failed:', _error)
-            throw _error
-          }
-        })
-
-        await Promise.allSettled(promises)
-
+        await Promise.allSettled(uploadPromises)
         // Show summary notification
         notify(
-          `差分上传完成：已跳过 ${files.length - filesToUpload.length} 个重复文件，上传 ${filesToUpload.length} 个新文件`,
-          'success'
+          `差分上传完成：已跳过 ${files.length - filesToUpload.length} 个重复文件，上传 ${successCount} 个新文件，${failCount} 个失败`,
+          successCount > 0 ? 'success' : 'info'
         )
       } finally {
         // Keep progress dialog open - don't auto-hide
