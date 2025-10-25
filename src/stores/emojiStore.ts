@@ -8,6 +8,9 @@ import { normalizeImageUrl } from '../utils/isImageUrl'
 import { defaultSettings } from '@/types/emoji'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
+// Global flag to ensure runtime message listener is only registered once across all store instances
+let runtimeMessageListenerRegistered = false
+
 export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- State ---
   const groups = ref<EmojiGroup[]>([])
@@ -784,8 +787,25 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     { deep: true }
   )
 
+  // Message deduplication: Track recently processed emoji additions to prevent duplicates
+  const processedEmojiIds = new Set<string>()
+  const EMOJI_DEDUP_WINDOW_MS = 5000 // 5 seconds window for deduplication
+
   const applyUngroupedAddition = (payload: { emoji: Emoji; group?: EmojiGroup }) => {
     if (!payload || !payload.emoji) return
+
+    // Deduplication check: Skip if we recently processed this emoji
+    const emojiKey = `${payload.emoji.id || ''}_${payload.emoji.url || ''}_${payload.emoji.addedAt || Date.now()}`
+    if (processedEmojiIds.has(emojiKey)) {
+      console.log('[EmojiStore] Skipping duplicate emoji addition:', emojiKey)
+      return
+    }
+
+    // Mark as processed and schedule cleanup
+    processedEmojiIds.add(emojiKey)
+    setTimeout(() => {
+      processedEmojiIds.delete(emojiKey)
+    }, EMOJI_DEDUP_WINDOW_MS)
 
     const targetGroupId = payload.emoji.groupId || 'ungrouped'
     let targetGroup = groups.value.find(g => g.id === targetGroupId)
@@ -810,7 +830,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       if (payload.emoji.groupId === 'favorites') {
         favorites.value.add(payload.emoji.id)
       }
-      maybeSave()
+      console.log('[EmojiStore] Applied emoji addition:', payload.emoji.id || payload.emoji.name)
+      // Only save if not already saving or loading
+      if (!isSaving.value && !isLoading.value) {
+        maybeSave()
+      }
+    } else {
+      console.log('[EmojiStore] Emoji already exists, skipping:', payload.emoji.id || payload.emoji.name)
     }
   }
 
@@ -821,6 +847,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Debounce timer to coalesce multiple rapid change events
   let externalChangeTimer: NodeJS.Timeout | null = null
   const EXTERNAL_CHANGE_DEBOUNCE_MS = 500
+  // Flag to suppress storage change events when we're processing runtime messages
+  let isProcessingRuntimeMessage = false
 
   // Note: The new storage system handles cross-context synchronization internally
   // We'll add a conservative listener for backward compatibility but only react
@@ -828,14 +856,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // when unrelated keys or older events are received.
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
-      if (isSaving.value || isLoading.value || isUpdatingFromStorage) {
+      if (isSaving.value || isLoading.value || isUpdatingFromStorage || isProcessingRuntimeMessage) {
         console.log(
           '[EmojiStore] Ignoring storage change - save:',
           isSaving.value,
           'load:',
           isLoading.value,
           'updating:',
-          isUpdatingFromStorage
+          isUpdatingFromStorage,
+          'processingMsg:',
+          isProcessingRuntimeMessage
         )
         return // Prevent loops
       }
@@ -1019,18 +1049,35 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     })
   }
 
-  try {
-    const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
-    if (chromeAPI?.runtime?.onMessage) {
-      chromeAPI.runtime.onMessage.addListener((message: any) => {
-        if (!message || typeof message !== 'object') return
-        if (message.type === 'EMOJI_EXTENSION_UNGROUPED_ADDED') {
-          applyUngroupedAddition(message.payload || {})
-        }
-      })
+  // Register runtime message listener only once globally to prevent duplicate handlers
+  if (!runtimeMessageListenerRegistered) {
+    try {
+      const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
+      if (chromeAPI?.runtime?.onMessage) {
+        chromeAPI.runtime.onMessage.addListener((message: any) => {
+          if (!message || typeof message !== 'object') return
+          if (message.type === 'EMOJI_EXTENSION_UNGROUPED_ADDED') {
+            // Set flag to suppress storage change events during message processing
+            isProcessingRuntimeMessage = true
+            try {
+              console.log('[EmojiStore] Processing EMOJI_EXTENSION_UNGROUPED_ADDED message')
+              applyUngroupedAddition(message.payload || {})
+            } finally {
+              // Clear flag after a short delay to allow storage writes to complete
+              setTimeout(() => {
+                isProcessingRuntimeMessage = false
+              }, 1000)
+            }
+          }
+        })
+        runtimeMessageListenerRegistered = true
+        console.log('[EmojiStore] Runtime message listener registered')
+      }
+    } catch (runtimeListenerError) {
+      console.warn('[EmojiStore] Failed to register runtime listener', runtimeListenerError)
     }
-  } catch (runtimeListenerError) {
-    console.warn('[EmojiStore] Failed to register runtime listener', runtimeListenerError)
+  } else {
+    console.log('[EmojiStore] Runtime message listener already registered, skipping')
   }
 
   return {

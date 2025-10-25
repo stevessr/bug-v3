@@ -193,8 +193,10 @@ export async function initializeEmojiFeature(
     console.warn('[Emoji Extension] Failed to start read tracker', e)
   }
 
-  // storage change listener (using chrome.storage.onChanged if available)
+  // storage change listener with debounce (using chrome.storage.onChanged if available)
   if ((window as any).chrome?.storage?.onChanged) {
+    let debounceTimer: number | null = null;
+    
     ;(window as any).chrome.storage.onChanged.addListener((changes: any, _namespace: string) => {
       if (_namespace === 'local') {
         const relevantKeys = ['emojiGroups', 'emojiGroupIndex', 'appSettings']
@@ -202,16 +204,23 @@ export async function initializeEmojiFeature(
           k => relevantKeys.includes(k) || k.startsWith('emojiGroup_')
         )
         if (hasRelevant) {
-          console.log('[Emoji Extension] Storage change detected (module), reloading data')
-          loadDataFromStorage()
-          // re-apply custom css after storage changes
-          setTimeout(() => {
+          // Clear existing timer if any
+          if (debounceTimer !== null) {
+            clearTimeout(debounceTimer);
+          }
+          
+          // Set new timer
+          debounceTimer = window.setTimeout(() => {
+            console.log('[Emoji Extension] Storage change detected (module), reloading data')
+            loadDataFromStorage()
+            // re-apply custom css after storage changes
             try {
               applyCustomCssFromCache()
             } catch (_e) {
               void _e
             }
-          }, 50)
+            debounceTimer = null;
+          }, 300) as unknown as number; // Type assertion for browser compatibility
         }
       }
     })
