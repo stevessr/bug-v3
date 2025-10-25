@@ -607,7 +607,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
     // Clear all emojis from favorites group
     favoritesGroup.emojis = []
-    console.log('[EmojiStore] clearAllFavorites - cleared all favorite emojis')
+    // Also clear favorites index/set so persistence reflects the cleared state
+    try {
+      favorites.value.clear()
+    } catch {
+      favorites.value = new Set()
+    }
+
+    console.log('[EmojiStore] clearAllFavorites - cleared all favorite emojis and cleared favorites index')
     maybeSave()
   }
 
