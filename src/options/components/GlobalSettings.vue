@@ -2,7 +2,7 @@
 import { ref, watch, isRef, type Ref } from 'vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
-import type { AppSettings } from '../../types/emoji'
+import type { AppSettings } from '../../types/type'
 
 import ThemeColorPicker from './ThemeColorPicker.vue'
 import SettingSwitch from './SettingSwitch.vue'
