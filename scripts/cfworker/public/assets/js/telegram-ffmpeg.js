@@ -29,8 +29,9 @@
         console.log(`FFmpeg conversion progress: ${(progress * 100).toFixed(2)}%`);
       });
 
-      const localBase = '/assets/ffmpeg';
-      const cdnBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.2/dist/esm';
+  const localBase = '/assets/ffmpeg';
+  // Use the same core version as bundled in assets (0.12.10) to avoid API/runtime mismatches
+  const cdnBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
 
       let wasmURL = `${localBase}/ffmpeg-core.wasm`;
       try {
