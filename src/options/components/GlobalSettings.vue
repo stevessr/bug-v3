@@ -24,7 +24,8 @@ const emit = defineEmits([
   'update:customColorScheme',
   'update:enableHoverPreview',
   'update:syncVariantToDisplayUrl',
-  'update:customCss'
+  'update:customCss',
+  'update:uploadMenuItems'
 ])
 
 const getCustomPrimaryColor = () => {
@@ -200,6 +201,83 @@ const cancelCustomCss = () => {
     : (settings as AppSettings).customCss || ''
   showCustomCssEditor.value = false
 }
+
+// --- uploadMenuItems editor ---
+const getUploadMenuItems = () => {
+  try {
+    if (isRef(settings)) return (settings.value && (settings.value as any).uploadMenuItems) || null
+    return (settings && (settings as AppSettings).uploadMenuItems) || null
+  } catch {
+    return null
+  }
+}
+
+import { reactive } from 'vue'
+
+const _initialUploadMenuItems = getUploadMenuItems() || {
+  autoItems: [],
+  iframes: [],
+  sides: []
+}
+
+const localUploadMenuItems = reactive<any>({
+  autoItems: Array.isArray(_initialUploadMenuItems.autoItems)
+    ? JSON.parse(JSON.stringify(_initialUploadMenuItems.autoItems))
+    : [],
+  iframes: Array.isArray(_initialUploadMenuItems.iframes)
+    ? JSON.parse(JSON.stringify(_initialUploadMenuItems.iframes))
+    : [],
+  sides: Array.isArray(_initialUploadMenuItems.sides)
+    ? JSON.parse(JSON.stringify(_initialUploadMenuItems.sides))
+    : []
+})
+
+watch(
+  () => getUploadMenuItems(),
+  v => {
+    const val = v || { autoItems: [], iframes: [], sides: [] }
+    localUploadMenuItems.autoItems = Array.isArray(val.autoItems) ? JSON.parse(JSON.stringify(val.autoItems)) : []
+    localUploadMenuItems.iframes = Array.isArray(val.iframes) ? JSON.parse(JSON.stringify(val.iframes)) : []
+    localUploadMenuItems.sides = Array.isArray(val.sides) ? JSON.parse(JSON.stringify(val.sides)) : []
+  }
+)
+
+const emitUploadMenuItems = () => {
+  // Emit the entire structure whenever user changes it
+  emit('update:uploadMenuItems', {
+    autoItems: localUploadMenuItems.autoItems,
+    iframes: localUploadMenuItems.iframes,
+    sides: localUploadMenuItems.sides
+  })
+}
+
+const addAutoItem = () => {
+  localUploadMenuItems.autoItems.push(['新项', '🔗', 'https://example.com'])
+  emitUploadMenuItems()
+}
+const removeAutoItem = (i: number) => {
+  localUploadMenuItems.autoItems.splice(i, 1)
+  emitUploadMenuItems()
+}
+
+const addIframeItem = () => {
+  localUploadMenuItems.iframes.push(['新 iframe', '🌐', 'https://example.com', ''])
+  emitUploadMenuItems()
+}
+const removeIframeItem = (i: number) => {
+  localUploadMenuItems.iframes.splice(i, 1)
+  emitUploadMenuItems()
+}
+
+const addSideItem = () => {
+  localUploadMenuItems.sides.push(['新 侧边', '📎', 'https://example.com', ''])
+  emitUploadMenuItems()
+}
+const removeSideItem = (i: number) => {
+  localUploadMenuItems.sides.splice(i, 1)
+  emitUploadMenuItems()
+}
+
 </script>
 
 <template>
@@ -352,6 +430,56 @@ const cancelCustomCss = () => {
         label="启用一键解析全部图片"
         description="控制前端是否注入'一键解析并添加所有图片'按钮"
       />
+
+      <!-- Upload menu items editor -->
+      <div class="pt-4 border-t">
+        <h3 class="text-sm font-medium dark:text-white">上传菜单项（高级）</h3>
+        <p class="text-sm dark:text-white mb-2">管理上传菜单和 iframe / 侧边链接（保存后会同步到后台）</p>
+
+        <!-- Auto items -->
+        <div class="mb-3">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-sm font-medium dark:text-white">自动项 (autoItems)</div>
+            <a-button size="small" @click="addAutoItem">添加</a-button>
+          </div>
+          <div v-for="(item, i) in localUploadMenuItems.autoItems" :key="'auto-'+i" class="flex gap-2 items-center mb-2">
+            <input class="border rounded px-2 py-1 flex-1" :value="item[0]" @input="e => { localUploadMenuItems.autoItems[i][0] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 w-20" :value="item[1]" @input="e => { localUploadMenuItems.autoItems[i][1] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.autoItems[i][2] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <a-button size="small" type="danger" @click="removeAutoItem(i)">删除</a-button>
+          </div>
+        </div>
+
+        <!-- Iframes -->
+        <div class="mb-3">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-sm font-medium dark:text-white">Iframe 模态 (iframes)</div>
+            <a-button size="small" @click="addIframeItem">添加</a-button>
+          </div>
+          <div v-for="(item, i) in localUploadMenuItems.iframes" :key="'iframe-'+i" class="flex gap-2 items-center mb-2">
+            <input class="border rounded px-2 py-1 w-40" :value="item[0]" @input="e => { localUploadMenuItems.iframes[i][0] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 w-16" :value="item[1]" @input="e => { localUploadMenuItems.iframes[i][1] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.iframes[i][2] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 w-48" :value="item[3]" placeholder="className" @input="e => { localUploadMenuItems.iframes[i][3] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <a-button size="small" type="danger" @click="removeIframeItem(i)">删除</a-button>
+          </div>
+        </div>
+
+        <!-- Sides -->
+        <div class="mb-3">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-sm font-medium dark:text-white">侧边 iframe (sides)</div>
+            <a-button size="small" @click="addSideItem">添加</a-button>
+          </div>
+          <div v-for="(item, i) in localUploadMenuItems.sides" :key="'side-'+i" class="flex gap-2 items-center mb-2">
+            <input class="border rounded px-2 py-1 w-40" :value="item[0]" @input="e => { localUploadMenuItems.sides[i][0] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 w-16" :value="item[1]" @input="e => { localUploadMenuItems.sides[i][1] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.sides[i][2] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 w-48" :value="item[3]" placeholder="className" @input="e => { localUploadMenuItems.sides[i][3] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <a-button size="small" type="danger" @click="removeSideItem(i)">删除</a-button>
+          </div>
+        </div>
+      </div>
 
       <div class="flex items-center justify-between">
         <div>

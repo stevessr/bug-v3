@@ -314,6 +314,15 @@ export default function useOptions() {
     emojiStore.updateSettings({ customCss: css })
   }
 
+  const updateUploadMenuItems = (payload: any) => {
+    try {
+      // store the structure under settings so it will be read by content scripts
+      emojiStore.updateSettings({ uploadMenuItems: payload })
+    } catch (e) {
+      console.error('Failed to update uploadMenuItems', e)
+    }
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -925,6 +934,7 @@ export default function useOptions() {
     updateCustomCss,
     updateSyncVariantToDisplayUrl,
     updateEnableHoverPreview,
+  updateUploadMenuItems,
     // drag/drop
     handleDragStart,
     handleDrop,

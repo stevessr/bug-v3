@@ -24,6 +24,7 @@ const {
   updateCustomPrimaryColor,
   updateCustomColorScheme,
   updateCustomCss
+  ,updateUploadMenuItems
 } = options
 </script>
 
@@ -45,6 +46,7 @@ const {
       @update:customPrimaryColor="updateCustomPrimaryColor"
       @update:customColorScheme="updateCustomColorScheme"
       @update:customCss="updateCustomCss"
+  @update:uploadMenuItems="updateUploadMenuItems"
     >
       <template #grid-selector>
         <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />

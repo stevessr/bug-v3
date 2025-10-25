@@ -1,5 +1,6 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
+import { DEFAULT_UPLOAD_MENU_ITEMS } from '@/types/emoji'
 
 import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
 import { notify } from './notify'
@@ -476,13 +477,21 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   const autoList = (text: string, icon: string, url: string) =>
     list.appendChild(makeitem(text, icon, url))
 
-  const autoItems = [
-    // ['AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/'],
-    ['学习 xv6', '🖥︎', 'https://pwsh.edu.deal/'],
-    ['connect', '🔗', 'https://connect.linux.do/'],
-    ['idcalre', '📅', 'https://idcflare.com/']
-  ]
-  autoItems.forEach(([text, icon, url]) => autoList(text, icon, url))
+  // Merge backend-provided uploadMenuItems with centralized defaults so
+  // a single source of truth controls default items. If backend does not
+  // provide a value it will be filled from DEFAULT_UPLOAD_MENU_ITEMS.
+  const backendUploadConfig = (cachedState.settings as any)?.uploadMenuItems || {}
+  const merged = {
+    autoItems: Array.isArray(backendUploadConfig.autoItems)
+      ? backendUploadConfig.autoItems
+      : DEFAULT_UPLOAD_MENU_ITEMS.autoItems,
+    iframes: Array.isArray(backendUploadConfig.iframes)
+      ? backendUploadConfig.iframes
+      : DEFAULT_UPLOAD_MENU_ITEMS.iframes,
+    sides: Array.isArray(backendUploadConfig.sides) ? backendUploadConfig.sides : DEFAULT_UPLOAD_MENU_ITEMS.sides
+  }
+
+  merged.autoItems.forEach(([text, icon, url]: any) => autoList(text, icon, url))
 
   const createiframe = (text: string, icon: string, url: string, className: string) =>
     createListItem(text, icon, () => {
@@ -529,22 +538,13 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
       )
     })
 
-  const iframes = [['过盾', '🛡', 'https://linux.do/challenge', 'emoji-extension-passwall-iframe']]
-
-  const sides = [
-    [
-      '视频转 gif(iframe)',
-      '🎞️',
-      'https://video2gif-pages.pages.dev/',
-      'emoji-extension-video2gif-iframe'
-    ]
-  ]
-
-  sides.forEach(([text, icon, url, className]) =>
+  // Append side items first (keeps previous order)
+  merged.sides.forEach(([text, icon, url, className]: any) =>
     list.appendChild(createside(text, icon, url, className as string))
   )
 
-  iframes.forEach(([text, icon, url, className]) =>
+  // Then append iframe modal items
+  merged.iframes.forEach(([text, icon, url, className]: any) =>
     list.appendChild(createiframe(text, icon, url, className as string))
   )
 
