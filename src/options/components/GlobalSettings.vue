@@ -242,8 +242,14 @@ watch(
   }
 )
 
+const dirty = ref(false)
+
+const markDirty = () => {
+  dirty.value = true
+}
+
 const emitUploadMenuItems = () => {
-  // Emit the entire structure whenever user changes it
+  // Emit the entire structure when user clicks 保存
   emit('update:uploadMenuItems', {
     autoItems: localUploadMenuItems.autoItems,
     iframes: localUploadMenuItems.iframes,
@@ -251,31 +257,45 @@ const emitUploadMenuItems = () => {
   })
 }
 
+const saveUploadMenuItems = () => {
+  emitUploadMenuItems()
+  dirty.value = false
+}
+
+const cancelUploadMenuItems = () => {
+  // Revert local copy to current settings from parent
+  const val = getUploadMenuItems() || { autoItems: [], iframes: [], sides: [] }
+  localUploadMenuItems.autoItems = Array.isArray(val.autoItems) ? JSON.parse(JSON.stringify(val.autoItems)) : []
+  localUploadMenuItems.iframes = Array.isArray(val.iframes) ? JSON.parse(JSON.stringify(val.iframes)) : []
+  localUploadMenuItems.sides = Array.isArray(val.sides) ? JSON.parse(JSON.stringify(val.sides)) : []
+  dirty.value = false
+}
+
 const addAutoItem = () => {
   localUploadMenuItems.autoItems.push(['新项', '🔗', 'https://example.com'])
-  emitUploadMenuItems()
+  markDirty()
 }
 const removeAutoItem = (i: number) => {
   localUploadMenuItems.autoItems.splice(i, 1)
-  emitUploadMenuItems()
+  markDirty()
 }
 
 const addIframeItem = () => {
   localUploadMenuItems.iframes.push(['新 iframe', '🌐', 'https://example.com', ''])
-  emitUploadMenuItems()
+  markDirty()
 }
 const removeIframeItem = (i: number) => {
   localUploadMenuItems.iframes.splice(i, 1)
-  emitUploadMenuItems()
+  markDirty()
 }
 
 const addSideItem = () => {
   localUploadMenuItems.sides.push(['新 侧边', '📎', 'https://example.com', ''])
-  emitUploadMenuItems()
+  markDirty()
 }
 const removeSideItem = (i: number) => {
   localUploadMenuItems.sides.splice(i, 1)
-  emitUploadMenuItems()
+  markDirty()
 }
 
 </script>
@@ -443,9 +463,9 @@ const removeSideItem = (i: number) => {
             <a-button size="small" @click="addAutoItem">添加</a-button>
           </div>
           <div v-for="(item, i) in localUploadMenuItems.autoItems" :key="'auto-'+i" class="flex gap-2 items-center mb-2">
-            <input class="border rounded px-2 py-1 flex-1" :value="item[0]" @input="e => { localUploadMenuItems.autoItems[i][0] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
-            <input class="border rounded px-2 py-1 w-20" :value="item[1]" @input="e => { localUploadMenuItems.autoItems[i][1] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
-            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.autoItems[i][2] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 flex-1" :value="item[0]" @input="e => { localUploadMenuItems.autoItems[i][0] = (e.target as HTMLInputElement).value; markDirty() }" />
+            <input class="border rounded px-2 py-1 w-20" :value="item[1]" @input="e => { localUploadMenuItems.autoItems[i][1] = (e.target as HTMLInputElement).value; markDirty() }" />
+            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.autoItems[i][2] = (e.target as HTMLInputElement).value; markDirty() }" />
             <a-button size="small" type="danger" @click="removeAutoItem(i)">删除</a-button>
           </div>
         </div>
@@ -457,10 +477,10 @@ const removeSideItem = (i: number) => {
             <a-button size="small" @click="addIframeItem">添加</a-button>
           </div>
           <div v-for="(item, i) in localUploadMenuItems.iframes" :key="'iframe-'+i" class="flex gap-2 items-center mb-2">
-            <input class="border rounded px-2 py-1 w-40" :value="item[0]" @input="e => { localUploadMenuItems.iframes[i][0] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
-            <input class="border rounded px-2 py-1 w-16" :value="item[1]" @input="e => { localUploadMenuItems.iframes[i][1] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
-            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.iframes[i][2] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
-            <input class="border rounded px-2 py-1 w-48" :value="item[3]" placeholder="className" @input="e => { localUploadMenuItems.iframes[i][3] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 w-40" :value="item[0]" @input="e => { localUploadMenuItems.iframes[i][0] = (e.target as HTMLInputElement).value; markDirty() }" />
+            <input class="border rounded px-2 py-1 w-16" :value="item[1]" @input="e => { localUploadMenuItems.iframes[i][1] = (e.target as HTMLInputElement).value; markDirty() }" />
+            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.iframes[i][2] = (e.target as HTMLInputElement).value; markDirty() }" />
+            <input class="border rounded px-2 py-1 w-48" :value="item[3]" placeholder="className" @input="e => { localUploadMenuItems.iframes[i][3] = (e.target as HTMLInputElement).value; markDirty() }" />
             <a-button size="small" type="danger" @click="removeIframeItem(i)">删除</a-button>
           </div>
         </div>
@@ -472,12 +492,18 @@ const removeSideItem = (i: number) => {
             <a-button size="small" @click="addSideItem">添加</a-button>
           </div>
           <div v-for="(item, i) in localUploadMenuItems.sides" :key="'side-'+i" class="flex gap-2 items-center mb-2">
-            <input class="border rounded px-2 py-1 w-40" :value="item[0]" @input="e => { localUploadMenuItems.sides[i][0] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
-            <input class="border rounded px-2 py-1 w-16" :value="item[1]" @input="e => { localUploadMenuItems.sides[i][1] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
-            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.sides[i][2] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
-            <input class="border rounded px-2 py-1 w-48" :value="item[3]" placeholder="className" @input="e => { localUploadMenuItems.sides[i][3] = (e.target as HTMLInputElement).value; emitUploadMenuItems() }" />
+            <input class="border rounded px-2 py-1 w-40" :value="item[0]" @input="e => { localUploadMenuItems.sides[i][0] = (e.target as HTMLInputElement).value; markDirty() }" />
+            <input class="border rounded px-2 py-1 w-16" :value="item[1]" @input="e => { localUploadMenuItems.sides[i][1] = (e.target as HTMLInputElement).value; markDirty() }" />
+            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.sides[i][2] = (e.target as HTMLInputElement).value; markDirty() }" />
+            <input class="border rounded px-2 py-1 w-48" :value="item[3]" placeholder="className" @input="e => { localUploadMenuItems.sides[i][3] = (e.target as HTMLInputElement).value; markDirty() }" />
             <a-button size="small" type="danger" @click="removeSideItem(i)">删除</a-button>
           </div>
+        </div>
+        
+        <!-- Save / Cancel bar -->
+        <div class="flex justify-end gap-2 mt-2">
+          <a-button @click="cancelUploadMenuItems" :disabled="!dirty">取消</a-button>
+          <a-button type="primary" @click="saveUploadMenuItems" :disabled="!dirty">保存</a-button>
         </div>
       </div>
 

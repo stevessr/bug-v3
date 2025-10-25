@@ -177,11 +177,18 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           console.error('[EmojiStore] Failed to save default groups:', error)
         })
       }
-      if (!settingsData || Object.keys(settingsData).length === 0) {
-        console.log('[EmojiStore] No settings loaded, saving default settings to storage')
-        newStorageHelpers.setSettings(settings.value).catch(error => {
-          console.error('[EmojiStore] Failed to save default settings:', error)
-        })
+      // If settings were missing entirely, or if uploadMenuItems is absent, persist merged defaults so
+      // future reads include the uploadMenuItems and other defaults. This ensures a single canonical
+      // persisted copy of settings exists after first run.
+      try {
+        const missingSettings = !settingsData || Object.keys(settingsData).length === 0
+        const missingUploadMenu = !(settingsData && Object.prototype.hasOwnProperty.call(settingsData, 'uploadMenuItems'))
+        if (missingSettings || missingUploadMenu) {
+          console.log('[EmojiStore] Persisting default/merged settings (ensure uploadMenuItems present)')
+          await newStorageHelpers.setSettings(settings.value)
+        }
+      } catch (error) {
+        console.error('[EmojiStore] Failed to persist default/merged settings:', error)
       }
 
       activeGroupId.value = settings.value.defaultGroup || 'nachoneko'
