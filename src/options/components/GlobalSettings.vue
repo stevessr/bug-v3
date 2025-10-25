@@ -236,9 +236,15 @@ watch(
   () => getUploadMenuItems(),
   v => {
     const val = v || { autoItems: [], iframes: [], sides: [] }
-    localUploadMenuItems.autoItems = Array.isArray(val.autoItems) ? JSON.parse(JSON.stringify(val.autoItems)) : []
-    localUploadMenuItems.iframes = Array.isArray(val.iframes) ? JSON.parse(JSON.stringify(val.iframes)) : []
-    localUploadMenuItems.sides = Array.isArray(val.sides) ? JSON.parse(JSON.stringify(val.sides)) : []
+    localUploadMenuItems.autoItems = Array.isArray(val.autoItems)
+      ? JSON.parse(JSON.stringify(val.autoItems))
+      : []
+    localUploadMenuItems.iframes = Array.isArray(val.iframes)
+      ? JSON.parse(JSON.stringify(val.iframes))
+      : []
+    localUploadMenuItems.sides = Array.isArray(val.sides)
+      ? JSON.parse(JSON.stringify(val.sides))
+      : []
   }
 )
 
@@ -265,8 +271,12 @@ const saveUploadMenuItems = () => {
 const cancelUploadMenuItems = () => {
   // Revert local copy to current settings from parent
   const val = getUploadMenuItems() || { autoItems: [], iframes: [], sides: [] }
-  localUploadMenuItems.autoItems = Array.isArray(val.autoItems) ? JSON.parse(JSON.stringify(val.autoItems)) : []
-  localUploadMenuItems.iframes = Array.isArray(val.iframes) ? JSON.parse(JSON.stringify(val.iframes)) : []
+  localUploadMenuItems.autoItems = Array.isArray(val.autoItems)
+    ? JSON.parse(JSON.stringify(val.autoItems))
+    : []
+  localUploadMenuItems.iframes = Array.isArray(val.iframes)
+    ? JSON.parse(JSON.stringify(val.iframes))
+    : []
   localUploadMenuItems.sides = Array.isArray(val.sides) ? JSON.parse(JSON.stringify(val.sides)) : []
   dirty.value = false
 }
@@ -297,7 +307,6 @@ const removeSideItem = (i: number) => {
   localUploadMenuItems.sides.splice(i, 1)
   markDirty()
 }
-
 </script>
 
 <template>
@@ -454,7 +463,9 @@ const removeSideItem = (i: number) => {
       <!-- Upload menu items editor -->
       <div class="pt-4 border-t">
         <h3 class="text-sm font-medium dark:text-white">上传菜单项（高级）</h3>
-        <p class="text-sm dark:text-white mb-2">管理上传菜单和 iframe / 侧边链接（保存后会同步到后台）</p>
+        <p class="text-sm dark:text-white mb-2">
+          管理上传菜单和 iframe / 侧边链接（保存后会同步到后台）
+        </p>
 
         <!-- Auto items -->
         <div class="mb-3">
@@ -462,10 +473,41 @@ const removeSideItem = (i: number) => {
             <div class="text-sm font-medium dark:text-white">自动项 (autoItems)</div>
             <a-button size="small" @click="addAutoItem">添加</a-button>
           </div>
-          <div v-for="(item, i) in localUploadMenuItems.autoItems" :key="'auto-'+i" class="flex gap-2 items-center mb-2">
-            <input class="border rounded px-2 py-1 flex-1" :value="item[0]" @input="e => { localUploadMenuItems.autoItems[i][0] = (e.target as HTMLInputElement).value; markDirty() }" />
-            <input class="border rounded px-2 py-1 w-20" :value="item[1]" @input="e => { localUploadMenuItems.autoItems[i][1] = (e.target as HTMLInputElement).value; markDirty() }" />
-            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.autoItems[i][2] = (e.target as HTMLInputElement).value; markDirty() }" />
+          <div
+            v-for="(item, i) in localUploadMenuItems.autoItems"
+            :key="'auto-' + i"
+            class="flex gap-2 items-center mb-2"
+          >
+            <input
+              class="border rounded px-2 py-1 flex-1"
+              :value="item[0]"
+              @input="
+                e => {
+                  localUploadMenuItems.autoItems[i][0] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
+            <input
+              class="border rounded px-2 py-1 w-20"
+              :value="item[1]"
+              @input="
+                e => {
+                  localUploadMenuItems.autoItems[i][1] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
+            <input
+              class="border rounded px-2 py-1 flex-1"
+              :value="item[2]"
+              @input="
+                e => {
+                  localUploadMenuItems.autoItems[i][2] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
             <a-button size="small" type="danger" @click="removeAutoItem(i)">删除</a-button>
           </div>
         </div>
@@ -476,11 +518,52 @@ const removeSideItem = (i: number) => {
             <div class="text-sm font-medium dark:text-white">Iframe 模态 (iframes)</div>
             <a-button size="small" @click="addIframeItem">添加</a-button>
           </div>
-          <div v-for="(item, i) in localUploadMenuItems.iframes" :key="'iframe-'+i" class="flex gap-2 items-center mb-2">
-            <input class="border rounded px-2 py-1 w-40" :value="item[0]" @input="e => { localUploadMenuItems.iframes[i][0] = (e.target as HTMLInputElement).value; markDirty() }" />
-            <input class="border rounded px-2 py-1 w-16" :value="item[1]" @input="e => { localUploadMenuItems.iframes[i][1] = (e.target as HTMLInputElement).value; markDirty() }" />
-            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.iframes[i][2] = (e.target as HTMLInputElement).value; markDirty() }" />
-            <input class="border rounded px-2 py-1 w-48" :value="item[3]" placeholder="className" @input="e => { localUploadMenuItems.iframes[i][3] = (e.target as HTMLInputElement).value; markDirty() }" />
+          <div
+            v-for="(item, i) in localUploadMenuItems.iframes"
+            :key="'iframe-' + i"
+            class="flex gap-2 items-center mb-2"
+          >
+            <input
+              class="border rounded px-2 py-1 w-40"
+              :value="item[0]"
+              @input="
+                e => {
+                  localUploadMenuItems.iframes[i][0] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
+            <input
+              class="border rounded px-2 py-1 w-16"
+              :value="item[1]"
+              @input="
+                e => {
+                  localUploadMenuItems.iframes[i][1] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
+            <input
+              class="border rounded px-2 py-1 flex-1"
+              :value="item[2]"
+              @input="
+                e => {
+                  localUploadMenuItems.iframes[i][2] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
+            <input
+              class="border rounded px-2 py-1 w-48"
+              :value="item[3]"
+              placeholder="className"
+              @input="
+                e => {
+                  localUploadMenuItems.iframes[i][3] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
             <a-button size="small" type="danger" @click="removeIframeItem(i)">删除</a-button>
           </div>
         </div>
@@ -491,15 +574,56 @@ const removeSideItem = (i: number) => {
             <div class="text-sm font-medium dark:text-white">侧边 iframe (sides)</div>
             <a-button size="small" @click="addSideItem">添加</a-button>
           </div>
-          <div v-for="(item, i) in localUploadMenuItems.sides" :key="'side-'+i" class="flex gap-2 items-center mb-2">
-            <input class="border rounded px-2 py-1 w-40" :value="item[0]" @input="e => { localUploadMenuItems.sides[i][0] = (e.target as HTMLInputElement).value; markDirty() }" />
-            <input class="border rounded px-2 py-1 w-16" :value="item[1]" @input="e => { localUploadMenuItems.sides[i][1] = (e.target as HTMLInputElement).value; markDirty() }" />
-            <input class="border rounded px-2 py-1 flex-1" :value="item[2]" @input="e => { localUploadMenuItems.sides[i][2] = (e.target as HTMLInputElement).value; markDirty() }" />
-            <input class="border rounded px-2 py-1 w-48" :value="item[3]" placeholder="className" @input="e => { localUploadMenuItems.sides[i][3] = (e.target as HTMLInputElement).value; markDirty() }" />
+          <div
+            v-for="(item, i) in localUploadMenuItems.sides"
+            :key="'side-' + i"
+            class="flex gap-2 items-center mb-2"
+          >
+            <input
+              class="border rounded px-2 py-1 w-40"
+              :value="item[0]"
+              @input="
+                e => {
+                  localUploadMenuItems.sides[i][0] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
+            <input
+              class="border rounded px-2 py-1 w-16"
+              :value="item[1]"
+              @input="
+                e => {
+                  localUploadMenuItems.sides[i][1] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
+            <input
+              class="border rounded px-2 py-1 flex-1"
+              :value="item[2]"
+              @input="
+                e => {
+                  localUploadMenuItems.sides[i][2] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
+            <input
+              class="border rounded px-2 py-1 w-48"
+              :value="item[3]"
+              placeholder="className"
+              @input="
+                e => {
+                  localUploadMenuItems.sides[i][3] = (e.target as HTMLInputElement).value
+                  markDirty()
+                }
+              "
+            />
             <a-button size="small" type="danger" @click="removeSideItem(i)">删除</a-button>
           </div>
         </div>
-        
+
         <!-- Save / Cancel bar -->
         <div class="flex justify-end gap-2 mt-2">
           <a-button @click="cancelUploadMenuItems" :disabled="!dirty">取消</a-button>

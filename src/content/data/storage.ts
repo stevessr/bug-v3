@@ -1,4 +1,5 @@
 import { cachedState } from './state'
+
 import { defaultSettings } from '@/types/defaultSettings'
 
 function sendMessageToBackground(message: any): Promise<any> {
@@ -87,7 +88,7 @@ export async function loadDataFromStorage(): Promise<void> {
       emojisCount: finalEmojisCount,
       settings: cachedState.settings
     })
-    } catch (error) {
+  } catch (error) {
     console.error('[Emoji Extension] Failed to load from background (module):', error)
     cachedState.emojiGroups = []
     // Use centralized default settings

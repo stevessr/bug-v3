@@ -934,7 +934,7 @@ export default function useOptions() {
     updateCustomCss,
     updateSyncVariantToDisplayUrl,
     updateEnableHoverPreview,
-  updateUploadMenuItems,
+    updateUploadMenuItems,
     // drag/drop
     handleDragStart,
     handleDrop,

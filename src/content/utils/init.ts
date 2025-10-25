@@ -195,8 +195,8 @@ export async function initializeEmojiFeature(
 
   // storage change listener with debounce (using chrome.storage.onChanged if available)
   if ((window as any).chrome?.storage?.onChanged) {
-    let debounceTimer: number | null = null;
-    
+    let debounceTimer: number | null = null
+
     ;(window as any).chrome.storage.onChanged.addListener((changes: any, _namespace: string) => {
       if (_namespace === 'local') {
         const relevantKeys = ['emojiGroups', 'emojiGroupIndex', 'appSettings']
@@ -206,9 +206,9 @@ export async function initializeEmojiFeature(
         if (hasRelevant) {
           // Clear existing timer if any
           if (debounceTimer !== null) {
-            clearTimeout(debounceTimer);
+            clearTimeout(debounceTimer)
           }
-          
+
           // Set new timer
           debounceTimer = window.setTimeout(() => {
             console.log('[Emoji Extension] Storage change detected (module), reloading data')
@@ -219,8 +219,8 @@ export async function initializeEmojiFeature(
             } catch (_e) {
               void _e
             }
-            debounceTimer = null;
-          }, 300) as unknown as number; // Type assertion for browser compatibility
+            debounceTimer = null
+          }, 300) as unknown as number // Type assertion for browser compatibility
         }
       }
     })

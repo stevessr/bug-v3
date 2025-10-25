@@ -182,9 +182,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       // persisted copy of settings exists after first run.
       try {
         const missingSettings = !settingsData || Object.keys(settingsData).length === 0
-        const missingUploadMenu = !(settingsData && Object.prototype.hasOwnProperty.call(settingsData, 'uploadMenuItems'))
+        const missingUploadMenu = !(
+          settingsData && Object.prototype.hasOwnProperty.call(settingsData, 'uploadMenuItems')
+        )
         if (missingSettings || missingUploadMenu) {
-          console.log('[EmojiStore] Persisting default/merged settings (ensure uploadMenuItems present)')
+          console.log(
+            '[EmojiStore] Persisting default/merged settings (ensure uploadMenuItems present)'
+          )
           await newStorageHelpers.setSettings(settings.value)
         }
       } catch (error) {
@@ -621,7 +625,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       favorites.value = new Set()
     }
 
-    console.log('[EmojiStore] clearAllFavorites - cleared all favorite emojis and cleared favorites index')
+    console.log(
+      '[EmojiStore] clearAllFavorites - cleared all favorite emojis and cleared favorites index'
+    )
     maybeSave()
   }
 
@@ -850,7 +856,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         maybeSave()
       }
     } else {
-      console.log('[EmojiStore] Emoji already exists, skipping:', payload.emoji.id || payload.emoji.name)
+      console.log(
+        '[EmojiStore] Emoji already exists, skipping:',
+        payload.emoji.id || payload.emoji.name
+      )
     }
   }
 
@@ -870,7 +879,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // when unrelated keys or older events are received.
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
-      if (isSaving.value || isLoading.value || isUpdatingFromStorage || isProcessingRuntimeMessage) {
+      if (
+        isSaving.value ||
+        isLoading.value ||
+        isUpdatingFromStorage ||
+        isProcessingRuntimeMessage
+      ) {
         console.log(
           '[EmojiStore] Ignoring storage change - save:',
           isSaving.value,

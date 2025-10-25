@@ -7,12 +7,18 @@ export const DEFAULT_UPLOAD_MENU_ITEMS = {
     ['connect', '🔗', 'https://connect.linux.do/'],
     ['idcalre', '📅', 'https://idcflare.com/']
   ] as Array<[string, string, string]>,
-  iframes: [['过盾', '🛡', 'https://linux.do/challenge', 'emoji-extension-passwall-iframe']] as Array<[string, string, string, string]>,
+  iframes: [
+    ['过盾', '🛡', 'https://linux.do/challenge', 'emoji-extension-passwall-iframe']
+  ] as Array<[string, string, string, string]>,
   sides: [
-    ['视频转 gif(iframe)', '🎞️', 'https://video2gif-pages.pages.dev/', 'emoji-extension-video2gif-iframe']
+    [
+      '视频转 gif(iframe)',
+      '🎞️',
+      'https://video2gif-pages.pages.dev/',
+      'emoji-extension-video2gif-iframe'
+    ]
   ] as Array<[string, string, string, string]>
 }
-
 
 export const defaultSettings: AppSettings = {
   imageScale: 100,
