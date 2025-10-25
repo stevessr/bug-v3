@@ -153,3 +153,174 @@ export function createAndShowIframeModal(
     iframe
   }
 }
+
+/**
+ * Create and show a side panel iframe that slides in from the right.
+ * Occupies up to half the viewport width. Closing slides it out to the right then removes it.
+ */
+export function createAndShowSideIframeModal(
+  initialUrl: string,
+  closeWhenHref?: (href: string) => boolean,
+  opts?: {
+    title?: string
+    className?: string
+    maxWidth?: string // e.g. '600px'
+    iframeSandbox?: string
+  }
+) {
+  const titleText = opts?.title || 'iframe'
+  const className = opts?.className || 'emoji-extension-side-iframe'
+  const maxWidth = opts?.maxWidth || '50vw'
+
+  const panel = createE('div', {
+    class: className,
+    style: `position:fixed;top:0;right:0;height:100%;width:${maxWidth};max-width:60%;transform:translateX(100%);transition:transform 300ms ease;z-index:100000;display:flex;flex-direction:column;background:#fff;box-shadow:-10px 0 30px rgba(0,0,0,0.2);`
+  }) as HTMLDivElement
+
+  const header = createE('div', {
+    style:
+      'height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid #e6e6e6;flex:0 0 48px;'
+  })
+  const titleSpan = createE('span', { text: titleText, style: 'font-weight:600;color:#222' })
+  const openBtn = createE('button', {
+    class: 'btn btn-sm',
+    type: 'button',
+    in: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 3h7v7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 21H3V3h7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    style:
+      'background:transparent;border:none;padding:6px;margin-right:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer',
+    attrs: { 'aria-label': '在新窗口打开' }
+  }) as HTMLButtonElement
+
+  const closeBtn = createE('button', {
+    class: 'btn btn-sm',
+    type: 'button',
+    text: '✕',
+    style:
+      'background:transparent;border:none;font-size:18px;color:#666;cursor:pointer;padding:6px;border-radius:4px'
+  }) as HTMLButtonElement
+
+  closeBtn.addEventListener('mouseenter', () => {
+    closeBtn.style.background = '#ff4444'
+    closeBtn.style.color = '#fff'
+  })
+  closeBtn.addEventListener('mouseleave', () => {
+    closeBtn.style.background = 'transparent'
+    closeBtn.style.color = '#666'
+  })
+
+  header.appendChild(titleSpan)
+  // Add aria attributes for accessibility
+  panel.setAttribute('role', 'dialog')
+  panel.setAttribute('aria-modal', 'true')
+  panel.setAttribute('aria-label', titleText)
+
+  header.appendChild(openBtn)
+  header.appendChild(closeBtn)
+
+  const iframeContainer = createE('div', {
+    style: 'flex:1 1 auto;overflow:hidden;position:relative'
+  })
+
+  const iframe = createE('iframe', {
+    src: initialUrl,
+    style: 'width:100%;height:100%;border:0',
+    attrs: {
+      sandbox: opts?.iframeSandbox || 'allow-scripts allow-forms allow-same-origin allow-popups',
+      referrerpolicy: 'no-referrer'
+    }
+  }) as HTMLIFrameElement
+
+  iframeContainer.appendChild(iframe)
+  panel.appendChild(header)
+  panel.appendChild(iframeContainer)
+
+  // Append hidden (off-screen) then trigger slide-in
+  document.body.appendChild(panel)
+  // allow style to apply
+  requestAnimationFrame(() => {
+    panel.style.transform = 'translateX(0)'
+  })
+
+  let removed = false
+
+  const cleanup = () => {
+    if (removed) return
+    removed = true
+    try {
+      if (panel.parentElement) panel.parentElement.removeChild(panel)
+    } catch {
+      /* ignore */
+    }
+    iframe.removeEventListener('load', onLoad)
+    closeBtn.removeEventListener('click', onClose)
+    openBtn.removeEventListener('click', onOpenInNew)
+    document.removeEventListener('keydown', onKeyDown)
+    panel.removeEventListener('transitionend', onTransitionEnd)
+  }
+
+  const onClose = () => {
+    // slide out to right
+    panel.style.transform = 'translateX(100%)'
+    // wait for transitionend to remove element
+  }
+
+  const onOpenInNew = () => {
+    const href = iframe.src || initialUrl
+    try {
+      window.open(href, '_blank')
+    } catch {
+      try {
+        window.location.href = href
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+      onClose()
+    }
+  }
+
+  const onTransitionEnd = (e: TransitionEvent) => {
+    if (e.target === panel && panel.style.transform.includes('100%')) {
+      cleanup()
+    }
+  }
+
+  const onLoad = () => {
+    let href: string | null = null
+    try {
+      href =
+        (iframe.contentWindow &&
+          iframe.contentWindow.location &&
+          iframe.contentWindow.location.href) ||
+        null
+    } catch {
+      href = iframe.src || null
+    }
+
+    if (href && closeWhenHref) {
+      try {
+        if (closeWhenHref(href)) onClose()
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  closeBtn.addEventListener('click', onClose)
+  openBtn.addEventListener('click', onOpenInNew)
+  document.addEventListener('keydown', onKeyDown)
+  iframe.addEventListener('load', onLoad)
+  panel.addEventListener('transitionend', onTransitionEnd)
+
+  return {
+    close: () => {
+      onClose()
+    },
+    element: panel,
+    iframe
+  }
+}

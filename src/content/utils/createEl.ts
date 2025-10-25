@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 export function createE<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   opts?: {

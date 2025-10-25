@@ -5,7 +5,7 @@ import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
 import { notify } from './notify'
 import { createE } from './createEl'
 import { showImageUploadDialog } from './uploader'
-import { createAndShowIframeModal } from './iframe'
+import { createAndShowIframeModal, createAndShowSideIframeModal } from './iframe'
 
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [
@@ -479,7 +479,6 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   const autoItems = [
     // ['AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/'],
     ['学习 xv6', '🖥︎', 'https://pwsh.edu.deal/'],
-    ['视频转 gif', '📹', 'https://video2gif-pages.pages.dev/'],
     ['connect', '🔗', 'https://connect.linux.do/'],
     ['idcalre', '📅', 'https://idcflare.com/']
   ]
@@ -487,7 +486,6 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
 
   const createiframe = (text: string, icon: string, url: string, className: string) =>
     createListItem(text, icon, () => {
-      // If a modal iframe already exists, don't create another
       const existing = document.querySelector(`.${className}`) as HTMLElement | null
       if (existing) return
       createAndShowIframeModal(
@@ -509,8 +507,31 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
       )
     })
 
-  const autoiframes = [
-    ['过盾', '🛡', 'https://linux.do/challenge', 'emoji-extension-passwall-iframe'],
+  const createside = (text: string, icon: string, url: string, className: string) =>
+    createListItem(text, icon, () => {
+      // If a modal iframe already exists, don't create another
+      const existing = document.querySelector(`.${className}`) as HTMLElement | null
+      if (existing) return
+      createAndShowSideIframeModal(
+        url,
+        href => {
+          try {
+            const url = new URL(href)
+            return url.hostname.endsWith('linux.do')
+          } catch {
+            return false
+          }
+        },
+        {
+          title: text,
+          className: className
+        }
+      )
+    })
+
+  const iframes = [['过盾', '🛡', 'https://linux.do/challenge', 'emoji-extension-passwall-iframe']]
+
+  const sides = [
     [
       '视频转 gif(iframe)',
       '🎞️',
@@ -519,7 +540,11 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     ]
   ]
 
-  autoiframes.forEach(([text, icon, url, className]) =>
+  sides.forEach(([text, icon, url, className]) =>
+    list.appendChild(createside(text, icon, url, className as string))
+  )
+
+  iframes.forEach(([text, icon, url, className]) =>
     list.appendChild(createiframe(text, icon, url, className as string))
   )
 
