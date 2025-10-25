@@ -31,6 +31,7 @@ const historyContainer = document.getElementById('historyContainer')
 const clearHistoryBtn = document.getElementById('clearHistoryBtn')
 const batchDownloadBtn = document.getElementById('batchDownloadBtn')
 const convertWebMtoWebPCheckbox = document.getElementById('convertWebMtoWebP')
+const initFFmpegBtn = document.getElementById('initFFmpegBtn')
 
 // State variables
 let botToken = ''
@@ -67,6 +68,22 @@ function ensureFFmpegLoaded() {
 
 // NOTE: FFmpeg-related implementation moved to /assets/js/telegram-ffmpeg.js
 // Helper to call convert/compress functions from that module when needed.
+
+// Helper: check whether a Blob is actually a WebP image by peeking at file signature
+async function isBlobWebP(blob) {
+  try {
+    const ab = await blob.arrayBuffer()
+    if (ab.byteLength < 12) return false
+    const dv = new DataView(ab)
+    // Check 'RIFF' at 0 and 'WEBP' at offset 8
+    const riff = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3))
+    const webp = String.fromCharCode(dv.getUint8(8), dv.getUint8(9), dv.getUint8(10), dv.getUint8(11))
+    return riff === 'RIFF' && webp === 'WEBP'
+  } catch (e) {
+    console.warn('isBlobWebP check failed:', e)
+    return false
+  }
+}
 
 // Initialize from localStorage
 function initialize() {
@@ -678,26 +695,41 @@ async function downloadSingleSticker(sticker, index) {
         // Convert WebM to WebP if checkbox is checked (show conversion progress)
         showStatus(`Converting ${originalFilename} to WebP...`, 'info')
         let webpBlob = webmBlob
+        let didConvert = false
         if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
-          webpBlob = await window.TelegramFFmpeg.convertWebMtoWebP(webmBlob, index, 1)
+          try {
+            webpBlob = await window.TelegramFFmpeg.convertWebMtoWebP(webmBlob, index, 1)
+            // Verify returned blob is actually WebP; fallback to original if not
+            if (webpBlob && await isBlobWebP(webpBlob)) {
+              didConvert = true
+            } else {
+              console.warn('Conversion returned non-WebP blob, falling back to original WebM')
+              webpBlob = webmBlob
+              didConvert = false
+            }
+          } catch (convErr) {
+            console.warn('Conversion threw error, falling back to original:', convErr)
+            webpBlob = webmBlob
+            didConvert = false
+          }
         }
-        
-        // Create download link from the converted WebP blob
+
+        // Create download link from the blob we actually have
         const url = URL.createObjectURL(webpBlob)
-        const webpFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
-        
+        const downloadFilename = didConvert ? `${sticker.file_id}.webp` : originalFilename
+
         const a = document.createElement('a')
         a.href = url
-        a.download = webpFilename
+        a.download = downloadFilename
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
-        
+
         // Clean up
         URL.revokeObjectURL(url)
-        
+
         updateStickerStatus(index, 'downloaded')
-        showStatus(`Successfully converted and downloaded as WebP: ${webpFilename}`, 'success')
+        showStatus(didConvert ? `Successfully converted and downloaded as WebP: ${downloadFilename}` : `Downloaded original format (conversion unavailable): ${downloadFilename}`, didConvert ? 'success' : 'info')
       } catch (convertError) {
         console.error(`Error converting WebM to WebP for sticker ${index}:`, convertError)
         // Fall back to original download method
@@ -791,22 +823,31 @@ async function retryDownload(sticker, index) {
         showStatus(`Converting ${originalFilename} to WebP...`, 'info')
         await ensureFFmpegLoaded()
         let webpBlob = webmBlob
+        let didConvert = false
         if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
           try {
             webpBlob = await window.TelegramFFmpeg.convertWebMtoWebP(webmBlob, index, 1)
+            if (webpBlob && await isBlobWebP(webpBlob)) {
+              didConvert = true
+            } else {
+              console.warn('Conversion returned non-WebP blob, falling back to original WebM')
+              webpBlob = webmBlob
+              didConvert = false
+            }
           } catch (err) {
             console.warn('FFmpeg conversion failed, falling back to original blob', err)
             webpBlob = webmBlob
+            didConvert = false
           }
         }
 
-        // Create download link from the converted WebP blob
+        // Create download link from the blob we actually have
         const url = URL.createObjectURL(webpBlob)
-        const webpFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
+        const downloadFilename = didConvert ? `${sticker.file_id}.webp` : originalFilename
 
         const a = document.createElement('a')
         a.href = url
-        a.download = webpFilename
+        a.download = downloadFilename
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -815,7 +856,7 @@ async function retryDownload(sticker, index) {
         URL.revokeObjectURL(url)
 
         updateStickerStatus(index, 'downloaded')
-        showStatus(`Successfully converted and downloaded as WebP: ${webpFilename}`, 'success')
+        showStatus(didConvert ? `Successfully converted and downloaded as WebP: ${downloadFilename}` : `Downloaded original format (conversion unavailable): ${downloadFilename}`, didConvert ? 'success' : 'info')
       } catch (convertError) {
         console.error(`Error converting WebM to WebP for sticker ${index}:`, convertError)
         // Fall back to original download method
@@ -926,7 +967,15 @@ async function downloadAllStickers() {
             await ensureFFmpegLoaded()
             if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
               try {
-                fileToDownload = await window.TelegramFFmpeg.convertWebMtoWebP(blob, i, stickers.length)
+                const converted = await window.TelegramFFmpeg.convertWebMtoWebP(blob, i, stickers.length)
+                if (converted && await isBlobWebP(converted)) {
+                  fileToDownload = converted
+                  finalFilename = `${sticker.file_id}.webp`
+                } else {
+                  console.warn('Conversion returned non-WebP, falling back to original blob')
+                  showStatus(`Conversion returned non-WebP for ${sticker.file_id}, using original`, 'info')
+                  fileToDownload = blob
+                }
               } catch (err) {
                 console.warn('FFmpeg conversion failed, falling back to original blob', err)
                 fileToDownload = blob
@@ -935,12 +984,12 @@ async function downloadAllStickers() {
               // FFmpeg module not available
               fileToDownload = blob
             }
-            finalFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
           } catch (convertError) {
             console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
             showStatus(`Conversion failed for ${originalFilename}, downloading original`, 'info')
-            // Continue with original file
+            fileToDownload = blob
           }
+          // finalFilename will be set above in success case
         }
 
         // Create download link
@@ -1089,16 +1138,23 @@ async function batchDownloadAllStickers() {
         showStatus(`Downloading and converting ${finalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
         try {
           await ensureFFmpegLoaded()
-          if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
-            try {
-              const convertedBlob = await window.TelegramFFmpeg.convertWebMtoWebP(blob, i, stickers.length)
-              fileData = await convertedBlob.arrayBuffer()
-              finalFilename = `${sticker.file_id}.webp`
-            } catch (convertError) {
-              console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
-              showStatus(`Conversion failed for ${finalFilename}, downloading original`, 'info')
-              fileData = await blob.arrayBuffer()
-            }
+            if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
+              try {
+                const convertedBlob = await window.TelegramFFmpeg.convertWebMtoWebP(blob, i, stickers.length)
+                // Verify converted blob is actually WebP
+                if (convertedBlob && await isBlobWebP(convertedBlob)) {
+                  fileData = await convertedBlob.arrayBuffer()
+                  finalFilename = `${sticker.file_id}.webp`
+                } else {
+                  console.warn(`Conversion returned non-WebP for sticker ${i}, using original blob`)
+                  showStatus(`Conversion returned non-WebP for ${sticker.file_id}, using original`, 'info')
+                  fileData = await blob.arrayBuffer()
+                }
+              } catch (convertError) {
+                console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
+                showStatus(`Conversion failed for ${finalFilename}, downloading original`, 'info')
+                fileData = await blob.arrayBuffer()
+              }
           } else {
             // No FFmpeg module available, use original
             fileData = await blob.arrayBuffer()
@@ -1439,6 +1495,38 @@ batchDownloadBtn.addEventListener('click', batchDownloadAllStickers)
 retryFailedBtn.addEventListener('click', retryAllFailed)
 sidePanelToggle.addEventListener('click', toggleSidePanel)
 clearHistoryBtn.addEventListener('click', clearDownloadHistory)
+
+// Preheat / initialize FFmpeg on demand to reduce latency during conversions
+if (initFFmpegBtn) {
+  initFFmpegBtn.addEventListener('click', async () => {
+    try {
+      initFFmpegBtn.disabled = true
+      showStatus('Loading FFmpeg module...', 'info')
+      await ensureFFmpegLoaded()
+
+      if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.initFFmpeg === 'function') {
+        showStatus('Initializing FFmpeg (this may take a while)...', 'info')
+        const ok = await window.TelegramFFmpeg.initFFmpeg()
+        if (ok) {
+          ffmpegLoaded = true
+          showStatus('FFmpeg initialized and ready', 'success')
+        } else {
+          showStatus('FFmpeg initialization failed (check console)', 'error')
+        }
+      } else if (window.TelegramFFmpeg) {
+        // Module loaded but no init function - treat as ready
+        showStatus('FFmpeg module loaded (no explicit init required)', 'success')
+      } else {
+        showStatus('FFmpeg module could not be loaded', 'error')
+      }
+    } catch (e) {
+      console.error('Error during FFmpeg preheat:', e)
+      showStatus('Error initializing FFmpeg: ' + (e && e.message ? e.message : String(e)), 'error')
+    } finally {
+      initFFmpegBtn.disabled = false
+    }
+  })
+}
 
 // Enable loadStickersBtn when there's text in the sticker set name input
 stickerSetNameInput.addEventListener('input', function () {

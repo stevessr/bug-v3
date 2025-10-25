@@ -34,14 +34,46 @@
 
       let wasmURL = `${localBase}/ffmpeg-core.wasm`;
       try {
-        const response = await fetch(wasmURL, { method: 'HEAD' });
-        if (!response.ok) {
+        // First try a HEAD to see if the resource exists and has a wasm-like content-type
+        const headResp = await fetch(wasmURL, { method: 'HEAD' });
+        if (headResp.ok) {
+          const ctype = headResp.headers.get('content-type') || '';
+          // If server reports wasm content-type, accept it
+          if (/application\/wasm/i.test(ctype)) {
+            // keep local wasmURL
+          } else {
+            // Content-Type is not wasm (could be HTML fallback). Try to fetch only first 4 bytes
+            try {
+              const rangeResp = await fetch(wasmURL, { method: 'GET', headers: { Range: 'bytes=0-3' } });
+              if (rangeResp.ok) {
+                const ab = await rangeResp.arrayBuffer();
+                if (ab && ab.byteLength >= 4) {
+                  const dv = new DataView(ab);
+                  // wasm magic: 0x00 0x61 0x73 0x6d
+                  if (!(dv.getUint8(0) === 0x00 && dv.getUint8(1) === 0x61 && dv.getUint8(2) === 0x73 && dv.getUint8(3) === 0x6d)) {
+                    // not wasm
+                    wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
+                  }
+                } else {
+                  wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
+                }
+              } else {
+                wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
+              }
+            } catch (e) {
+              // Range request failed or returned non-wasm
+              wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
+            }
+          }
+        } else {
           wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
         }
       } catch (e) {
         wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
       }
 
+      // Log which wasm URL we're using to help debugging CDN vs local issues
+      console.log('FFmpeg: using wasmURL =', wasmURL);
       await ffmpeg.load({
         coreURL: `${localBase}/ffmpeg-core.js`,
         wasmURL: wasmURL,
