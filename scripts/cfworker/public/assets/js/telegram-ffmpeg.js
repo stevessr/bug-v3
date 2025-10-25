@@ -20,13 +20,30 @@
       ffmpeg = new FFmpeg();
 
       ffmpeg.on('log', ({ message }) => {
-        if (message.toLowerCase().includes('error') || message.toLowerCase().includes('fail')) {
+        // forward to console and optional UI callback
+        if (message && (message.toLowerCase().includes('error') || message.toLowerCase().includes('fail'))) {
           console.error(`[FFmpeg] ${message}`);
+        } else {
+          console.log(`[FFmpeg] ${message}`);
+        }
+        try {
+          if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg._onLog === 'function') {
+            window.TelegramFFmpeg._onLog(String(message));
+          }
+        } catch (e) {
+          console.warn('Error forwarding FFmpeg log to UI callback', e);
         }
       });
 
-      ffmpeg.on('progress', ({ progress }) => {
+      ffmpeg.on('progress', ({ progress, time }) => {
         console.log(`FFmpeg conversion progress: ${(progress * 100).toFixed(2)}%`);
+        try {
+          if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg._onProgress === 'function') {
+            window.TelegramFFmpeg._onProgress({ progress, time });
+          }
+        } catch (e) {
+          console.warn('Error forwarding FFmpeg progress to UI callback', e);
+        }
       });
 
   const localBase = '/assets/ffmpeg';
@@ -155,16 +172,39 @@
       const webmArrayBuffer = await webmBlob.arrayBuffer();
       await ffmpeg.writeFile('input.webm', new Uint8Array(webmArrayBuffer));
 
+      // Attach a temporary progress forwarder that includes stickerIndex context
+      const progressHandler = ({ progress, time }) => {
+        try {
+          if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg._onProgress === 'function') {
+            window.TelegramFFmpeg._onProgress({ stickerIndex, totalStickers, progress, time });
+          }
+        } catch (e) {
+          console.warn('Error in progressHandler:', e);
+        }
+      };
+      if (ffmpeg && typeof ffmpeg.on === 'function') {
+        ffmpeg.on('progress', progressHandler);
+      }
+
       const execResult = await ffmpeg.exec([
         '-i', 'input.webm',
         '-c:v', 'libwebp_anim',
         '-lossless', '0',
-        '-q:v', '85',
+        '-q:v', '100',
         '-compression_level', '6',
         '-f', 'webp',
         '-y',
         'output.webp'
       ]);
+
+      // remove temporary progress handler if off is supported
+      try {
+        if (ffmpeg && typeof ffmpeg.off === 'function') {
+          ffmpeg.off('progress', progressHandler);
+        }
+      } catch (e) {
+        // ignore
+      }
 
       if (execResult !== 0 && execResult !== undefined) {
         console.warn(`FFmpeg exec returned error code: ${execResult}, returning original blob`);

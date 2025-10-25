@@ -32,6 +32,7 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn')
 const batchDownloadBtn = document.getElementById('batchDownloadBtn')
 const convertWebMtoWebPCheckbox = document.getElementById('convertWebMtoWebP')
 const initFFmpegBtn = document.getElementById('initFFmpegBtn')
+const ffmpegLogEl = document.getElementById('ffmpegLog')
 
 // State variables
 let botToken = ''
@@ -64,6 +65,33 @@ function ensureFFmpegLoaded() {
   })
 
   return _ffmpegModuleLoading
+}
+
+// Register FFmpeg UI callbacks when module is available
+function registerFFmpegUICallbacks() {
+  if (!window.TelegramFFmpeg) return
+  // log forwarding
+  window.TelegramFFmpeg._onLog = (msg) => {
+    appendFFmpegLog(String(msg))
+  }
+  // progress forwarding (general or sticker-specific)
+  window.TelegramFFmpeg._onProgress = (info) => {
+    // info may contain stickerIndex and progress
+    try {
+      if (info && typeof info === 'object' && typeof info.progress === 'number') {
+        if (typeof info.stickerIndex === 'number') {
+          // per-sticker ffmpeg progress (0..1)
+          updateStickerProgress(info.stickerIndex, Math.round(info.progress * 100))
+        } else {
+          // global ffmpeg progress show near top progressText (optional)
+          // for now append to logs
+          appendFFmpegLog(`Progress: ${(info.progress * 100).toFixed(2)}%`)
+        }
+      }
+    } catch (e) {
+      console.warn('Error handling ffmpeg progress info', e)
+    }
+  }
 }
 
 // NOTE: FFmpeg-related implementation moved to /assets/js/telegram-ffmpeg.js
@@ -261,6 +289,19 @@ function createStickerElement(sticker, index) {
   statusElement.className = 'status-indicator'
   statusElement.textContent = ''
 
+  // per-sticker progress bar
+  const progressWrap = document.createElement('div')
+  progressWrap.className = 'sticker-progress-wrap hidden'
+  const progressBarInner = document.createElement('div')
+  progressBarInner.className = 'sticker-progress-bar'
+  const progressPct = document.createElement('span')
+  progressPct.className = 'sticker-progress-pct'
+  progressPct.textContent = ''
+  progressWrap.appendChild(progressBarInner)
+  progressWrap.appendChild(progressPct)
+
+  actionsContainer.appendChild(progressWrap)
+
   actionsContainer.appendChild(downloadBtn)
   actionsContainer.appendChild(retryBtn)
   actionsContainer.appendChild(statusElement)
@@ -268,6 +309,11 @@ function createStickerElement(sticker, index) {
   stickerItem.appendChild(previewContainer)
   stickerItem.appendChild(infoContainer)
   stickerItem.appendChild(actionsContainer)
+
+  // store references for progress updates
+  stickerItem._progressBar = progressBarInner
+  stickerItem._progressWrap = progressWrap
+  stickerItem._progressPct = progressPct
 
   // Update status based on download state
   updateStickerStatus(index, 'not-downloaded')
@@ -332,6 +378,9 @@ async function loadStickers() {
   localStorage.setItem('currentStickerSetName', setName)
 
   showStatus('Loading stickers...', 'info')
+
+  // Register FFmpeg UI callbacks if loaded
+  registerFFmpegUICallbacks()
 
   try {
     const stickerSet = await getStickerSet(setName)
@@ -675,19 +724,11 @@ async function downloadSingleSticker(sticker, index) {
         
         const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
         
-        const response = await fetch(proxyUrl, {
-          method: 'GET',
-          headers: {
-            Accept: '*/*'
-          },
-          mode: 'cors'
+        // Fetch with progress (streaming) to update per-sticker download progress
+        const webmBlob = await fetchWithProgress(proxyUrl, (loaded, total) => {
+          const pct = total ? (loaded / total) * 100 : Math.round((loaded / 1024) / 10)
+          updateStickerProgress(index, pct)
         })
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        
-        const webmBlob = await response.blob()
 
         // Ensure ffmpeg module is loaded
         await ensureFFmpegLoaded()
@@ -805,19 +846,11 @@ async function retryDownload(sticker, index) {
         
         const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
         
-        const response = await fetch(proxyUrl, {
-          method: 'GET',
-          headers: {
-            Accept: '*/*'
-          },
-          mode: 'cors'
+        // Fetch with progress (streaming) to update per-sticker download progress
+        const webmBlob = await fetchWithProgress(proxyUrl, (loaded, total) => {
+          const pct = total ? (loaded / total) * 100 : 0
+          updateStickerProgress(index, pct)
         })
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        
-        const webmBlob = await response.blob()
         
         // Convert WebM to WebP if checkbox is checked (show conversion progress)
         showStatus(`Converting ${originalFilename} to WebP...`, 'info')
@@ -939,19 +972,11 @@ async function downloadAllStickers() {
         const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
 
         // Create a request to the CF Worker proxy
-        const response = await fetch(proxyUrl, {
-          method: 'GET',
-          headers: {
-            Accept: '*/*'
-          },
-          mode: 'cors'
+        // Fetch with progress for batch download
+        const blob = await fetchWithProgress(proxyUrl, (loaded, total) => {
+          const pct = total ? (loaded / total) * 100 : 0
+          updateStickerProgress(i, pct)
         })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const blob = await response.blob()
 
         // Use the sticker's file_id as the filename
         const fileExtension = sticker.file_path.split('.').pop() || 'webp'
@@ -1046,6 +1071,42 @@ function updateProgress(percent) {
   } else if (percent === 0) {
     progressContainer.classList.add('hidden')
   }
+}
+
+// Update per-sticker progress
+function updateStickerProgress(index, percent) {
+  const stickerItem = stickersContainer.children[index]
+  if (!stickerItem) return
+  const wrap = stickerItem._progressWrap
+  const bar = stickerItem._progressBar
+  const pct = stickerItem._progressPct
+  if (!wrap || !bar || !pct) return
+
+  if (percent <= 0) {
+    wrap.classList.add('hidden')
+    bar.style.width = `0%`
+    pct.textContent = ''
+  } else {
+    wrap.classList.remove('hidden')
+    const p = Math.min(100, Math.max(0, Math.round(percent)))
+    bar.style.width = `${p}%`
+    pct.textContent = `${p}%`
+  }
+}
+
+// Append FFmpeg log to UI
+function appendFFmpegLog(line) {
+  if (!ffmpegLogEl) return
+  const div = document.createElement('div')
+  div.textContent = line
+  ffmpegLogEl.appendChild(div)
+  // keep scroll at bottom
+  ffmpegLogEl.scrollTop = ffmpegLogEl.scrollHeight
+}
+
+function clearFFmpegLog() {
+  if (!ffmpegLogEl) return
+  ffmpegLogEl.innerHTML = ''
 }
 
 // Batch download all stickers as a tar.gz file with sequential downloads
@@ -1428,22 +1489,29 @@ async function retryAllFailed() {
       const fileExtension = sticker.file_path.split('.').pop() || 'webp'
       const filename = `${sticker.file_id}.${fileExtension}`
 
-      // Try direct download first
+      // Try downloading via streaming to show progress and avoid CORS issues via proxy
       try {
-        // Create download link directly using the URL
+        const downloadedBlob = await fetchWithProgress(fileUrl, (loaded, total) => {
+          const pct = total ? (loaded / total) * 100 : 0
+          updateStickerProgress(index, pct)
+        })
+
+        // Create a temporary link to download the blob
+        const url = URL.createObjectURL(downloadedBlob)
         const a = document.createElement('a')
-        a.href = fileUrl
+        a.href = url
         a.download = filename
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
+        URL.revokeObjectURL(url)
 
         updateStickerStatus(index, 'downloaded')
         successCount++
       } catch (downloadError) {
-        // If direct download fails due to CORS, open in new tab
+        // If direct streaming download fails (likely due to CORS), open in new tab
         console.warn(
-          `Direct download failed for sticker ${index + 1}, opening in new tab:`,
+          `Streaming download failed for sticker ${index + 1}, opening in new tab:`,
           downloadError
         )
         downloadFileWithCORSHandling(fileUrl, filename)
@@ -1536,6 +1604,49 @@ stickerSetNameInput.addEventListener('input', function () {
   loadStickersBtn.disabled = !hasInput || !hasToken
   batchDownloadBtn.disabled = !hasInput || !hasToken
 })
+
+// Helper: fetch with progress reporting, returns Blob
+async function fetchWithProgress(url, onProgress) {
+  const res = await fetch(url, { method: 'GET', headers: { Accept: '*/*' }, mode: 'cors' })
+  if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
+
+  const contentLength = res.headers && res.headers.get ? parseInt(res.headers.get('content-length') || '0', 10) : 0
+  if (!res.body || !res.body.getReader) {
+    // fallback
+    const blob = await res.blob()
+    if (onProgress) onProgress(blob.size, contentLength || blob.size)
+    return blob
+  }
+
+  const reader = res.body.getReader()
+  const chunks = []
+  let received = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+    received += value.length || value.byteLength || 0
+    if (onProgress) {
+      try {
+        onProgress(received, contentLength || 0)
+      } catch (e) {
+        // ignore progress callback errors
+      }
+    }
+  }
+
+  // concatenate
+  let total = 0
+  for (const c of chunks) total += c.length || c.byteLength
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const c of chunks) {
+    out.set(c, offset)
+    offset += c.length || c.byteLength
+  }
+
+  return new Blob([out.buffer || out], { type: res.headers.get('content-type') || 'application/octet-stream' })
+}
 
 // Set up auto-hide functionality
 document.addEventListener('click', e => {
