@@ -245,15 +245,23 @@ async function convert() {
     // 加载 FFmpeg
     await loadFFmpeg()
 
-    // 获取输入数据
+    // 获取输入数据和文件名
     let inputData
+    let originalFileName = 'video' // default name
+    
     if (file) {
       inputData = await fetchFile(file)
       log('文件已读取')
+      // Extract original file name without extension
+      originalFileName = file.name.replace(/\.[^/.]+$/, "") || 'video'
     } else {
       log('下载中...')
       inputData = await fetchFile(url)
       log('下载完成')
+      // Extract filename from URL if possible
+      const urlParts = url.split('/')
+      const lastPart = urlParts[urlParts.length - 1]
+      originalFileName = lastPart.replace(/\.[^/.]+$/, "") || 'video'
     }
 
     // 写入文件
@@ -404,7 +412,7 @@ async function convert() {
           <div style="display: flex; justify-content: space-between; align-items: center;">
               <h3>结果预览（${formatLabel}）</h3>
               <div style="display:flex; gap:8px;">
-                <a href="${outUrl}" download="video.${downloadExt}" class="btn">下载 ${formatLabel}</a>
+                <a href="${outUrl}" download="${originalFileName}.${downloadExt}" class="btn">下载 ${formatLabel}</a>
                 <button class="btn" id="copyResult">复制文件</button>
               </div>
           </div>
@@ -424,6 +432,14 @@ async function convert() {
           }
           
           try {
+            // 检查 Clipboard API 权限
+            if (navigator.clipboard && navigator.permissions) {
+              const permission = await navigator.permissions.query({ name: 'clipboard-write' });
+              if (permission.state !== 'granted' && permission.state !== 'prompt') {
+                throw new Error('Clipboard write permission not granted');
+              }
+            }
+            
             // 使用 fetch 获取图片 blob
             const response = await fetch(imgEl.src)
             const blob = await response.blob()
@@ -431,19 +447,35 @@ async function convert() {
             // 确定 MIME 类型
             const imageType = blob.type || 'image/' + imgEl.src.split('.').slice(-1)[0].replace('jpg', 'jpeg')
             
-            // 使用剪贴板 API 复制
-            const data = [new ClipboardItem({ [imageType]: blob })]
-            await navigator.clipboard.write(data)
+            // 检查是否支持该 MIME 类型
+            let canCopyImage = false;
+            if (ClipboardItem.supports) {
+              canCopyImage = await ClipboardItem.supports(imageType);
+            } else {
+              // 降级：对常见格式做基本检查
+              canCopyImage = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'].includes(imageType);
+            }
             
-            log('✅ 已复制图片到剪贴板')
-            alert('已复制图片到剪贴板，可直接粘贴到其他应用')
+            if (canCopyImage) {
+              // 使用剪贴板 API 复制
+              const data = [new ClipboardItem({ [imageType]: blob })]
+              await navigator.clipboard.write(data)
+              
+              log('✅ 已复制图片到剪贴板')
+              alert('已复制图片到剪贴板，可直接粘贴到其他应用')
+            } else {
+              // 格式不支持，复制下载链接
+              await navigator.clipboard.writeText(outUrl)
+              log('ℹ️ 浏览器不支持该图片格式的复制，已复制下载链接')
+              alert('浏览器不支持此图片格式的复制，已复制下载链接')
+            }
           } catch (e) {
             log('❌ 图片复制失败：' + (e.message || e))
             // 降级：复制下载链接
             try {
               await navigator.clipboard.writeText(outUrl)
-              log('ℹ️ 已复制下载链接到剪贴板（浏览器不支持图片复制）')
-              alert('浏览器不支持图片复制，已复制下载链接')
+              log('ℹ️ 已复制下载链接到剪贴板（浏览器不支持图片复制或权限被拒绝）')
+              alert('浏览器不支持图片复制或权限被拒绝，已复制下载链接')
             } catch (e2) {
               alert('复制失败：' + (e2.message || e2))
             }
@@ -472,7 +504,7 @@ async function convert() {
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <h3>结果预览（${format.toUpperCase()}）</h3>
           <div style="display:flex; gap:8px;">
-            <a href="${outUrl}" download="video.${format === 'apng' ? 'png' : format}" class="btn">下载 ${format.toUpperCase()}</a>
+            <a href="${outUrl}" download="${originalFileName}.${format === 'apng' ? 'png' : format}" class="btn">下载 ${format.toUpperCase()}</a>
             <button class="btn" id="copyResult">复制文件</button>
           </div>
         </div>
@@ -493,6 +525,14 @@ async function convert() {
           }
           
           try {
+            // 检查 Clipboard API 权限
+            if (navigator.clipboard && navigator.permissions) {
+              const permission = await navigator.permissions.query({ name: 'clipboard-write' });
+              if (permission.state !== 'granted' && permission.state !== 'prompt') {
+                throw new Error('Clipboard write permission not granted');
+              }
+            }
+            
             // 使用 fetch 获取图片 blob
             const response = await fetch(imgEl.src)
             const blob = await response.blob()
@@ -500,19 +540,35 @@ async function convert() {
             // 确定 MIME 类型
             const imageType = blob.type || 'image/' + imgEl.src.split('.').slice(-1)[0].replace('jpg', 'jpeg')
             
-            // 使用剪贴板 API 复制
-            const data = [new ClipboardItem({ [imageType]: blob })]
-            await navigator.clipboard.write(data)
+            // 检查是否支持该 MIME 类型
+            let canCopyImage = false;
+            if (ClipboardItem.supports) {
+              canCopyImage = await ClipboardItem.supports(imageType);
+            } else {
+              // 降级：对常见格式做基本检查
+              canCopyImage = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'].includes(imageType);
+            }
             
-            log('✅ 已复制图片到剪贴板')
-            alert('已复制图片到剪贴板，可直接粘贴到其他应用')
+            if (canCopyImage) {
+              // 使用剪贴板 API 复制
+              const data = [new ClipboardItem({ [imageType]: blob })]
+              await navigator.clipboard.write(data)
+              
+              log('✅ 已复制图片到剪贴板')
+              alert('已复制图片到剪贴板，可直接粘贴到其他应用')
+            } else {
+              // 格式不支持，复制下载链接
+              await navigator.clipboard.writeText(outUrl)
+              log('ℹ️ 浏览器不支持该图片格式的复制，已复制下载链接')
+              alert('浏览器不支持此图片格式的复制，已复制下载链接')
+            }
           } catch (e) {
             log('❌ 图片复制失败：' + (e.message || e))
             // 降级：复制下载链接
             try {
               await navigator.clipboard.writeText(outUrl)
-              log('ℹ️ 已复制下载链接到剪贴板（浏览器不支持图片复制）')
-              alert('浏览器不支持图片复制，已复制下载链接')
+              log('ℹ️ 已复制下载链接到剪贴板（浏览器不支持图片复制或权限被拒绝）')
+              alert('浏览器不支持图片复制或权限被拒绝，已复制下载链接')
             } catch (e2) {
               alert('复制失败：' + (e2.message || e2))
             }
@@ -676,3 +732,5 @@ async function encodeAvifWithWebCodecs(imgBitmap, useRealWebCodecs = false, qual
     )
   })
 }
+
+
