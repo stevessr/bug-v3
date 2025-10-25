@@ -1,3 +1,7 @@
+// FFmpeg functionality for WebM to WebP conversion
+let ffmpeg = null;
+let ffmpegLoaded = false;
+
 // DOM elements
 const botTokenInput = document.getElementById('botToken')
 const saveTokenBtn = document.getElementById('saveTokenBtn')
@@ -25,12 +29,190 @@ const downloadHistorySection = document.getElementById('downloadHistorySection')
 const historyContainer = document.getElementById('historyContainer')
 const clearHistoryBtn = document.getElementById('clearHistoryBtn')
 const batchDownloadBtn = document.getElementById('batchDownloadBtn')
+const convertWebMtoWebPCheckbox = document.getElementById('convertWebMtoWebP')
 
 // State variables
 let botToken = ''
 let stickers = []
 let downloadedStickers = new Set()
 let failedDownloads = new Set()
+
+// Initialize FFmpeg for WebM to WebP conversion
+async function initFFmpeg() {
+  if (ffmpegLoaded) return true;
+  
+  try {
+    // Dynamically import FFmpeg (similar to the main app)
+    const { FFmpeg } = await import('/assets/ffmpeg/esm/index.js');
+    // Import fetchFile is not always needed for basic operations
+    // const { fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js');
+    
+    ffmpeg = new FFmpeg();
+    
+    ffmpeg.on('log', ({ message }) => {
+      // Only log important messages
+      if (message.toLowerCase().includes('error') || message.toLowerCase().includes('fail')) {
+        console.error(`[FFmpeg] ${message}`);
+      }
+    });
+    
+    ffmpeg.on('progress', ({ progress }) => {
+      // Progress is updated elsewhere with more context
+      console.log(`FFmpeg conversion progress: ${(progress * 100).toFixed(2)}%`);
+    });
+    
+    // Set up CDN paths for FFmpeg assets
+    const localBase = '/assets/ffmpeg';
+    const cdnBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.2/dist/esm';
+    
+    // Check if local WASM file exists first, if not, use CDN
+    let wasmURL = `${localBase}/ffmpeg-core.wasm`;
+    
+    // Try to check if local WASM exists by attempting a HEAD request
+    try {
+      const response = await fetch(wasmURL, { method: 'HEAD' });
+      if (!response.ok) {
+        // If local WASM doesn't exist or is invalid, use CDN
+        wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
+      }
+    } catch (e) {
+      // If fetch fails, fall back to CDN
+      wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
+    }
+    
+    // Load FFmpeg
+    await ffmpeg.load({
+      coreURL: `${localBase}/ffmpeg-core.js`,
+      wasmURL: wasmURL, // Use either local or CDN based on availability
+      workerURL: `${localBase}/worker.js`
+    });
+    
+    ffmpegLoaded = true;
+    console.log('FFmpeg initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('Error initializing FFmpeg:', error);
+    showStatus(`FFmpeg initialization failed: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+// Compress data using the Compression Streams API
+async function compressData(data) {
+  // Check if CompressionStream is supported in this browser
+  if (typeof CompressionStream === 'undefined') {
+    console.warn('CompressionStream not supported, returning original data as blob');
+    return new Blob([data], { type: 'application/octet-stream' });
+  }
+  
+  // Create a readable stream from our data
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(data);
+      controller.close();
+    }
+  });
+  
+  try {
+    // Create compression stream
+    const compressionStream = new CompressionStream('gzip');
+    
+    // Create a transformer that combines the readable stream and compression stream
+    const compressedStream = stream.pipeThrough(compressionStream);
+    
+    // Collect the compressed chunks
+    const chunks = [];
+    const reader = compressedStream.getReader();
+    
+    let done = false;
+    while (!done) {
+      const { value, done: readerDone } = await reader.read();
+      done = readerDone;
+      if (value) {
+        chunks.push(value);
+      }
+    }
+    
+    // Concatenate all chunks
+    let totalLength = 0;
+    for (const chunk of chunks) {
+      totalLength += chunk.length;
+    }
+    
+    const concatenated = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      concatenated.set(chunk, offset);
+      offset += chunk.length;
+    }
+    
+    return new Blob([concatenated], { type: 'application/gzip' });
+  } catch (error) {
+    console.error('Error during compression, returning original data as blob:', error);
+    // If compression fails, return the original data as is
+    return new Blob([data], { type: 'application/octet-stream' });
+  }
+}
+
+// Convert WebM blob to WebP format preserving original resolution and frame rate
+async function convertWebMtoWebP(webmBlob, stickerIndex = null, totalStickers = 0) {
+  // First, check if FFmpeg is properly loaded and available
+  if (!ffmpegLoaded || !ffmpeg || !ffmpeg.loaded) {
+    if (!(await initFFmpeg())) {
+      console.warn('FFmpeg not available for conversion, returning original blob');
+      return webmBlob; // Return original blob if FFmpeg cannot be initialized
+    }
+  }
+  
+  // Additional check to ensure ffmpeg is loaded after initialization attempt
+  if (!ffmpeg || !ffmpeg.loaded) {
+    console.warn('FFmpeg is not properly loaded, returning original blob');
+    return webmBlob;
+  }
+  
+  try {
+    // Write WebM file to FFmpeg's virtual filesystem
+    const webmArrayBuffer = await webmBlob.arrayBuffer();
+    await ffmpeg.writeFile('input.webm', new Uint8Array(webmArrayBuffer));
+    
+    // Convert WebM to WebP using FFmpeg, preserving original resolution and frame rate
+    // Use the exact same parameters as the original file to maintain quality
+    const execResult = await ffmpeg.exec([
+      '-i', 'input.webm',           // Input file
+      '-c:v', 'libwebp_anim',       // Use libwebp_anim codec for animated WebP
+      '-lossless', '0',             // Lossy compression for smaller file sizes
+      '-q:v', '85',                 // Quality (0-100, higher is better)
+      '-compression_level', '6',    // Compression level (0-6, higher is slower but smaller)
+      '-f', 'webp',                 // Output format
+      '-y',                         // Overwrite output file
+      'output.webp'                 // Output file
+    ]);
+    
+    // Check if the execution was successful (should be 0 for success)
+    if (execResult !== 0 && execResult !== undefined) {
+      console.warn(`FFmpeg exec returned error code: ${execResult}, returning original blob`);
+      return webmBlob; // Return original blob if conversion fails
+    }
+    
+    // Read the converted WebP file
+    const webpData = await ffmpeg.readFile('output.webp');
+    const webpBlob = new Blob([webpData], { type: 'image/webp' });
+    
+    // Clean up virtual filesystem
+    try {
+      await ffmpeg.deleteFile('input.webm');
+      await ffmpeg.deleteFile('output.webp');
+    } catch (cleanupError) {
+      console.warn('Error during FFmpeg cleanup:', cleanupError);
+    }
+    
+    return webpBlob;
+  } catch (error) {
+    console.error('Error converting WebM to WebP, returning original blob:', error);
+    // Return the original blob if conversion fails
+    return webmBlob;
+  }
+}
 
 // Initialize from localStorage
 function initialize() {
@@ -596,31 +778,92 @@ async function downloadSingleSticker(sticker, index) {
       sticker.file_size = fileInfo.file_size
     }
 
-    const fileUrl = createFileUrl(sticker.file_path)
     // Use the sticker's file_id as the filename instead of file_XX
     const fileExtension = sticker.file_path.split('.').pop() || 'webp'
-    const filename = `${sticker.file_id}.${fileExtension}`
+    const originalFilename = `${sticker.file_id}.${fileExtension}`
+    
+    // Check if we need to convert from WebM to WebP
+    if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'webm') {
+      try {
+        // Fetch the WebM file via the proxy (show download progress)
+        showStatus(`Downloading ${originalFilename}...`, 'info')
+        
+        const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
+        
+        const response = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: {
+            Accept: '*/*'
+          },
+          mode: 'cors'
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const webmBlob = await response.blob()
+        
+        // Convert WebM to WebP if checkbox is checked (show conversion progress)
+        showStatus(`Converting ${originalFilename} to WebP...`, 'info')
+        const webpBlob = await convertWebMtoWebP(webmBlob, index, 1) // 1 for single download
+        
+        // Create download link from the converted WebP blob
+        const url = URL.createObjectURL(webpBlob)
+        const webpFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
+        
+        const a = document.createElement('a')
+        a.href = url
+        a.download = webpFilename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        
+        // Clean up
+        URL.revokeObjectURL(url)
+        
+        updateStickerStatus(index, 'downloaded')
+        showStatus(`Successfully converted and downloaded as WebP: ${webpFilename}`, 'success')
+      } catch (convertError) {
+        console.error(`Error converting WebM to WebP for sticker ${index}:`, convertError)
+        // Fall back to original download method
+        const fileUrl = createFileUrl(sticker.file_path)
+        const a = document.createElement('a')
+        a.href = fileUrl
+        a.download = originalFilename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        
+        updateStickerStatus(index, 'downloaded')
+        showStatus(`Downloaded original format (conversion failed): ${originalFilename}`, 'info')
+      }
+    } else {
+      // Normal download without conversion
+      showStatus(`Downloading ${originalFilename}...`, 'info')
+      const fileUrl = createFileUrl(sticker.file_path)
+      
+      // Try direct download first
+      try {
+        // Create download link directly using the URL
+        const a = document.createElement('a')
+        a.href = fileUrl
+        a.download = originalFilename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
 
-    // Try direct download first
-    try {
-      // Create download link directly using the URL
-      const a = document.createElement('a')
-      a.href = fileUrl
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-
-      updateStickerStatus(index, 'downloaded')
-    } catch (downloadError) {
-      // If direct download fails due to CORS, open in new tab
-      console.warn(
-        `Direct download failed for sticker ${index + 1}, opening in new tab:`,
-        downloadError
-      )
-      downloadFileWithCORSHandling(fileUrl, filename)
-      // Consider it as downloaded since it's opened for user to handle
-      updateStickerStatus(index, 'downloaded')
+        updateStickerStatus(index, 'downloaded')
+      } catch (downloadError) {
+        // If direct download fails due to CORS, open in new tab
+        console.warn(
+          `Direct download failed for sticker ${index + 1}, opening in new tab:`,
+          downloadError
+        )
+        downloadFileWithCORSHandling(fileUrl, originalFilename)
+        // Consider it as downloaded since it's opened for user to handle
+        updateStickerStatus(index, 'downloaded')
+      }
     }
   } catch (error) {
     console.error(`Error downloading sticker ${index}:`, error)
@@ -644,31 +887,92 @@ async function retryDownload(sticker, index) {
       sticker.file_size = fileInfo.file_size
     }
 
-    const fileUrl = createFileUrl(sticker.file_path)
     // Use the sticker's file_id as the filename instead of file_XX
     const fileExtension = sticker.file_path.split('.').pop() || 'webp'
-    const filename = `${sticker.file_id}.${fileExtension}`
+    const originalFilename = `${sticker.file_id}.${fileExtension}`
+    
+    // Check if we need to convert from WebM to WebP
+    if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'webm') {
+      try {
+        // Fetch the WebM file via the proxy (show download progress)
+        showStatus(`Downloading ${originalFilename}...`, 'info')
+        
+        const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
+        
+        const response = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: {
+            Accept: '*/*'
+          },
+          mode: 'cors'
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const webmBlob = await response.blob()
+        
+        // Convert WebM to WebP if checkbox is checked (show conversion progress)
+        showStatus(`Converting ${originalFilename} to WebP...`, 'info')
+        const webpBlob = await convertWebMtoWebP(webmBlob, index, 1) // 1 for single download
+        
+        // Create download link from the converted WebP blob
+        const url = URL.createObjectURL(webpBlob)
+        const webpFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
+        
+        const a = document.createElement('a')
+        a.href = url
+        a.download = webpFilename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        
+        // Clean up
+        URL.revokeObjectURL(url)
+        
+        updateStickerStatus(index, 'downloaded')
+        showStatus(`Successfully converted and downloaded as WebP: ${webpFilename}`, 'success')
+      } catch (convertError) {
+        console.error(`Error converting WebM to WebP for sticker ${index}:`, convertError)
+        // Fall back to original download method
+        const fileUrl = createFileUrl(sticker.file_path)
+        const a = document.createElement('a')
+        a.href = fileUrl
+        a.download = originalFilename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        
+        updateStickerStatus(index, 'downloaded')
+        showStatus(`Downloaded original format (conversion failed): ${originalFilename}`, 'info')
+      }
+    } else {
+      // Normal download without conversion
+      showStatus(`Downloading ${originalFilename}...`, 'info')
+      const fileUrl = createFileUrl(sticker.file_path)
+      
+      // Try direct download first
+      try {
+        // Create download link directly using the URL
+        const a = document.createElement('a')
+        a.href = fileUrl
+        a.download = originalFilename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
 
-    // Try direct download first
-    try {
-      // Create download link directly using the URL
-      const a = document.createElement('a')
-      a.href = fileUrl
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-
-      updateStickerStatus(index, 'downloaded')
-    } catch (downloadError) {
-      // If direct download fails due to CORS, open in new tab
-      console.warn(
-        `Direct download failed for sticker ${index + 1}, opening in new tab:`,
-        downloadError
-      )
-      downloadFileWithCORSHandling(fileUrl, filename)
-      // Consider it as downloaded since it's opened for user to handle
-      updateStickerStatus(index, 'downloaded')
+        updateStickerStatus(index, 'downloaded')
+      } catch (downloadError) {
+        // If direct download fails due to CORS, open in new tab
+        console.warn(
+          `Direct download failed for sticker ${index + 1}, opening in new tab:`,
+          downloadError
+        )
+        downloadFileWithCORSHandling(fileUrl, originalFilename)
+        // Consider it as downloaded since it's opened for user to handle
+        updateStickerStatus(index, 'downloaded')
+      }
     }
   } catch (error) {
     console.error(`Error retrying download for sticker ${index}:`, error)
@@ -727,13 +1031,29 @@ async function downloadAllStickers() {
 
         // Use the sticker's file_id as the filename
         const fileExtension = sticker.file_path.split('.').pop() || 'webp'
-        const filename = `${sticker.file_id}.${fileExtension}`
+        const originalFilename = `${sticker.file_id}.${fileExtension}`
+        
+        // Check if we need to convert from WebM to WebP
+        let fileToDownload = blob;
+        let finalFilename = originalFilename;
+        
+        if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'webm') {
+          try {
+            showStatus(`Converting ${originalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
+            fileToDownload = await convertWebMtoWebP(blob, i, stickers.length)
+            finalFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
+          } catch (convertError) {
+            console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
+            showStatus(`Conversion failed for ${originalFilename}, downloading original`, 'info')
+            // Continue with original file
+          }
+        }
 
         // Create download link
-        const url = URL.createObjectURL(blob)
+        const url = URL.createObjectURL(fileToDownload)
         const a = document.createElement('a')
         a.href = url
-        a.download = filename
+        a.download = finalFilename
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -837,16 +1157,35 @@ async function batchDownloadAllStickers() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const blob = await response.blob()
-      const arrayBuffer = await blob.arrayBuffer()
-
-      // Store file data with the proper filename using file_id
-      const fileExtension = sticker.file_path.split('.').pop() || 'webp'
-      const filename = `${sticker.file_id}.${fileExtension}`
+      // Get the blob from the response
+      const blob = await response.blob();
+      
+      // Check if we need to convert from WebM to WebP
+      let fileData;
+      let finalFilename = `${sticker.file_id}.${sticker.file_path.split('.').pop() || 'webp'}`;
+      
+      if (convertWebMtoWebPCheckbox.checked && finalFilename.toLowerCase().endsWith('.webm')) {
+        // Fetch and convert
+        showStatus(`Downloading and converting ${finalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
+        try {
+          const convertedBlob = await convertWebMtoWebP(blob, i, stickers.length)
+          fileData = await convertedBlob.arrayBuffer()
+          finalFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
+        } catch (convertError) {
+          console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
+          showStatus(`Conversion failed for ${finalFilename}, downloading original`, 'info')
+          // Use original blob if conversion fails
+          fileData = await blob.arrayBuffer()
+        }
+      } else {
+        // Just download normally
+        showStatus(`Downloading ${finalFilename} (sticker ${i+1}/${stickers.length})...`, 'info')
+        fileData = await blob.arrayBuffer()
+      }
 
       filesData.push({
-        name: filename,
-        data: arrayBuffer
+        name: finalFilename,
+        data: fileData
       })
 
       successCount++
@@ -869,38 +1208,69 @@ async function batchDownloadAllStickers() {
 
   if (successCount > 0) {
     try {
-      showStatus(`Creating archive with ${successCount} files...`, 'info')
+      showStatus(`Compressing ${successCount} files using Compression Streams API...`, 'info')
       
-      // Use JSZip to create a zip archive (as tar.gz creation is complex in browser)
-      const zip = new JSZip()
+      // Create a simple concatenated format with headers for each file
+      // Format: [HEADER_LENGTH][HEADER][FILE_DATA][NEXT_FILE...] where HEADER contains filename and size
+      const outputStream = [];
       
       for (const file of filesData) {
-        zip.file(file.name, new Uint8Array(file.data))
+        const filename = file.name;
+        const fileSize = file.data.byteLength;
+        
+        // Create a simple header with filename length, filename, and file size
+        const encoder = new TextEncoder();
+        const filenameBytes = encoder.encode(filename);
+        
+        // Create header buffer: [filename length (4 bytes)][filename bytes][file size (4 bytes)]
+        const headerBuffer = new Uint8Array(4 + filenameBytes.length + 4);
+        const headerView = new DataView(headerBuffer.buffer);
+        
+        headerView.setUint32(0, filenameBytes.length, true);  // Little endian
+        headerBuffer.set(filenameBytes, 4);
+        headerView.setUint32(4 + filenameBytes.length, fileSize, true);
+        
+        // Add header and file data to output
+        outputStream.push(headerBuffer);
+        outputStream.push(new Uint8Array(file.data));
       }
       
-      // Generate the ZIP file
-      const zipContent = await zip.generateAsync({type: "blob"})
+      // Concatenate all data
+      let totalLength = 0;
+      for (const buffer of outputStream) {
+        totalLength += buffer.length;
+      }
       
-      // Create download link for the ZIP file
-      const url = URL.createObjectURL(zipContent)
-      const setName = localStorage.getItem('currentStickerSetName') || 'stickers'
-      const filename = `${setName}_${new Date().getTime()}.tar.gz`  // Using requested extension
+      const totalBuffer = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const buffer of outputStream) {
+        totalBuffer.set(buffer, offset);
+        offset += buffer.length;
+      }
       
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      // Compress the entire bundle using Compression Streams API
+      const compressedBlob = await compressData(totalBuffer);
+      
+      // Create download link for the compressed file
+      const url = URL.createObjectURL(compressedBlob);
+      const setName = localStorage.getItem('currentStickerSetName') || 'stickers';
+      const filename = `${setName}_${new Date().getTime()}.tar.gz`;  // Using requested extension
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       
       // Clean up
-      URL.revokeObjectURL(url)
+      URL.revokeObjectURL(url);
       
-      const message = `Batch download complete! ${successCount} stickers in archive, ${failedCount} failed.`
-      showStatus(message, 'success')
+      const message = `Batch download complete! ${successCount} stickers compressed, ${failedCount} failed.`;
+      showStatus(message, 'success');
     } catch (error) {
-      console.error('Error creating archive:', error)
-      showStatus(`Error creating archive: ${error.message}`, 'error')
+      console.error('Error creating compressed archive:', error);
+      showStatus(`Error creating compressed archive: ${error.message}`, 'error');
     }
   } else {
     showStatus(`All downloads failed! ${failedCount} stickers failed to download.`, 'error')

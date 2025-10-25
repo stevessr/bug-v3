@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Sticker Downloader</title>
     <link rel="stylesheet" href="/assets/css/telegram-sticker-downloader.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tar-js@2.2.2/dist/tar.min.js"></script>
+
 </head>
 <body>
     <button id="sidePanelToggle" class="side-panel-toggle">⚙️ Token</button>
@@ -32,6 +31,11 @@
         <button id="loadStickersBtn" disabled>Load Stickers</button>
         <button id="downloadAllBtn" disabled>Download All Stickers</button>
         <button id="batchDownloadBtn" disabled>Batch Download All (tar.gz)</button>
+        <div style="margin-top: 15px;">
+            <label>
+                <input type="checkbox" id="convertWebMtoWebP"> Convert WebM to WebP during download
+            </label>
+        </div>
         
         <div id="statusMessage" class="status"></div>
         
