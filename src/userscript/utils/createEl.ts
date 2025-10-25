@@ -17,6 +17,10 @@ export function createEl<K extends keyof HTMLElementTagNameMap>(
     title?: string
     alt?: string
     id?: string
+    on?: Partial<{
+      [K in keyof GlobalEventHandlersEventMap]: (ev: GlobalEventHandlersEventMap[K]) => any
+    }> &
+      Record<string, any>
   }
 ) {
   const el = document.createElement(tag)
@@ -30,16 +34,14 @@ export function createEl<K extends keyof HTMLElementTagNameMap>(
     if (opts.value !== undefined && 'value' in el) (el as any).value = opts.value
     if (opts.style) el.style.cssText = opts.style
     if (opts.src && 'src' in el) (el as any).src = opts.src
-    if (opts.attrs) {
-      for (const k in opts.attrs) el.setAttribute(k, opts.attrs[k])
-    }
-    if (opts.dataset) {
-      for (const k in opts.dataset) (el as any).dataset[k] = opts.dataset[k]
-    }
+    if (opts.attrs) for (const k in opts.attrs) el.setAttribute(k, opts.attrs[k])
+    if (opts.dataset) for (const k in opts.dataset) (el as any).dataset[k] = opts.dataset[k]
     if (opts.innerHTML) el.innerHTML = opts.innerHTML
     if (opts.title) el.title = opts.title
     if (opts.alt && 'alt' in el) (el as any).alt = opts.alt
     if (opts.id) el.id = opts.id
+    if (opts.on)
+      for (const [evt, handler] of Object.entries(opts.on)) el.addEventListener(evt, handler as any)
   }
   return el
 }

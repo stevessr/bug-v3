@@ -435,8 +435,6 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   })
   list.appendChild(uploadLi)
 
-  // (已移除) 旧的“自动请求绑定”菜单项已删除，使用“自动阅读所有回复”替代
-
   const autoReadLi = createListItem('自动阅读所有回复', '📖', async () => {
     menu.remove()
     try {
@@ -502,15 +500,27 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
         'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:900px;height:80%;max-height:700px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;cursor:move'
     })
 
+    // Dragging functionality
+    let isDragging = false
+    let currentX = 0
+    let currentY = 0
+    let initialX = 0
+    let initialY = 0
+
     // Create draggable title bar
     const titleBar = createE('div', {
       style:
-        'position:absolute;top:0;left:0;width:100%;height:40px;border-bottom:1px solid #ccc;display:flex;align-items:center;justify-content:space-between;padding:0 10px;cursor:move;user-select:none'
-    })
+        'position:absolute;top:0;left:0;width:100%;height:40px;border-bottom:1px solid #ccc;display:flex;align-items:center;justify-content:space-between;padding:0 10px;cursor:move;user-select:none',
+      on: {
+        mousedown: (e: MouseEvent) => {
+          if ((e.target as HTMLElement).closest('button')) return // Don't drag when clicking close button
 
-    const title = createE('span', {
-      text: '过盾',
-      style: 'font-weight:bold;color:#333'
+          isDragging = true
+          initialX = e.clientX - currentX
+          initialY = e.clientY - currentY
+          frameWrap.style.cursor = 'grabbing'
+        }
+      }
     })
 
     const closeBtn = createE('button', {
@@ -518,20 +528,28 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
       type: 'button',
       text: '✕',
       style:
-        'background:transparent;border:none;font-size:20px;color:#666;cursor:pointer;padding:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:4px'
+        'background:transparent;border:none;font-size:20px;color:#666;cursor:pointer;padding:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:4px',
+      on: {
+        mouseenter: () => {
+          closeBtn.style.background = '#ff4444'
+          closeBtn.style.color = '#fff'
+        },
+        mouseleave: () => {
+          closeBtn.style.background = 'transparent'
+          closeBtn.style.color = '#666'
+        },
+        click: () => {
+          closeModal()
+        }
+      }
     }) as HTMLButtonElement
 
-    // Add hover effect to close button
-    closeBtn.addEventListener('mouseenter', () => {
-      closeBtn.style.background = '#ff4444'
-      closeBtn.style.color = '#fff'
-    })
-    closeBtn.addEventListener('mouseleave', () => {
-      closeBtn.style.background = 'transparent'
-      closeBtn.style.color = '#666'
-    })
-
-    titleBar.appendChild(title)
+    titleBar.appendChild(
+      createE('span', {
+        text: '过盾',
+        style: 'font-weight:bold;color:#333'
+      })
+    )
     titleBar.appendChild(closeBtn)
 
     const iframeContainer = createE('div', {
@@ -541,59 +559,39 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     const iframe = createE('iframe', {
       src: 'https://linux.do/challenge',
       style: 'width:100%;height:100%;border:0',
-      attrs: { sandbox: 'allow-scripts allow-forms allow-same-origin allow-popups' }
+      attrs: { sandbox: 'allow-scripts allow-forms allow-same-origin allow-popups' },
+      on: {
+        load: () => {
+          let href: string | null = null
+          try {
+            href =
+              (iframe.contentWindow &&
+                iframe.contentWindow.location &&
+                iframe.contentWindow.location.href) ||
+              null
+          } catch {
+            // Cross-origin access will throw; fallback to using src or keep open
+            href = iframe.src || null
+          }
+
+          if (href) {
+            try {
+              const url = new URL(href)
+              if (url.hostname.endsWith('linux.do')) {
+                // Automatically close when navigated to linux.do domain
+                closeModal()
+              }
+            } catch {
+              // ignore malformed URLs
+            }
+          }
+        }
+      }
     }) as HTMLIFrameElement
 
     // Close helper
     const closeModal = () => {
       if (frameWrap.parentElement) frameWrap.parentElement.removeChild(frameWrap)
-    }
-
-    closeBtn.addEventListener('click', () => {
-      closeModal()
-    })
-
-    // Listen for navigation and close when domain is linux.do
-    iframe.addEventListener('load', () => {
-      let href: string | null = null
-      try {
-        href =
-          (iframe.contentWindow &&
-            iframe.contentWindow.location &&
-            iframe.contentWindow.location.href) ||
-          null
-      } catch {
-        // Cross-origin access will throw; fallback to using src or keep open
-        href = iframe.src || null
-      }
-
-      if (href) {
-        try {
-          const url = new URL(href)
-          if (url.hostname.endsWith('linux.do')) {
-            // Automatically close when navigated to linux.do domain
-            closeModal()
-          }
-        } catch {
-          // ignore malformed URLs
-        }
-      }
-    })
-
-    // Dragging functionality
-    let isDragging = false
-    let currentX = 0
-    let currentY = 0
-    let initialX = 0
-    let initialY = 0
-
-    const dragStart = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).closest('button')) return // Don't drag when clicking close button
-
-      isDragging = true
-      initialX = e.clientX - currentX
-      initialY = e.clientY - currentY
-      frameWrap.style.cursor = 'grabbing'
     }
 
     const drag = (e: MouseEvent) => {
@@ -611,7 +609,6 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
       frameWrap.style.cursor = 'move'
     }
 
-    titleBar.addEventListener('mousedown', dragStart)
     document.addEventListener('mousemove', drag)
     document.addEventListener('mouseup', dragEnd)
 
@@ -622,6 +619,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
       document.removeEventListener('mouseup', dragEnd)
       originalClose()
     }
+
     closeBtn.removeEventListener('click', closeModal)
     closeBtn.addEventListener('click', closeModalWithCleanup)
 

@@ -197,12 +197,14 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
   const closeButton = createEl('button', {
     className: 'btn no-text btn-icon btn-transparent emoji-picker__close-btn',
     type: 'button',
-    innerHTML: `<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>`
+    innerHTML: `<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>`,
+    on: {
+      click: () => {
+        ;(modal.closest('.modal-container') || modal)?.remove()
+        document.querySelector('.d-modal__backdrop')?.remove()
+      }
+    }
   }) as HTMLButtonElement
-  closeButton.addEventListener('click', () => {
-    const container = modal.closest('.modal-container') || modal
-    if (container) container.remove()
-  })
 
   filterContainer.appendChild(filterInputContainer)
   filterContainer.appendChild(closeButton)
@@ -217,14 +219,16 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
     attrs: { tabindex: '-1', style: 'border-right: 1px solid #ddd;' },
     innerHTML: '⚙️',
     title: '管理表情 - 点击打开完整管理界面',
-    type: 'button'
+    type: 'button',
+    on: {
+      click: () => {
+        // Import manager module dynamically
+        import('./manager').then(({ openManagementInterface }) => {
+          openManagementInterface()
+        })
+      }
+    }
   }) as HTMLButtonElement
-  managementButton.addEventListener('click', () => {
-    // Import manager module dynamically
-    import('./manager').then(({ openManagementInterface }) => {
-      openManagementInterface()
-    })
-  })
   sectionsNav.appendChild(managementButton)
 
   const settingsButton = createEl('button', {
@@ -232,16 +236,18 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
     innerHTML: '🔧',
     title: '设置',
     attrs: { tabindex: '-1', style: 'border-right: 1px solid #ddd;' },
-    type: 'button'
-  }) as HTMLButtonElement
-  settingsButton.addEventListener('click', async () => {
-    try {
-      const { showSettingsModal } = await import('./settings')
-      showSettingsModal()
-    } catch (e) {
-      console.error('[Userscript] Failed to load settings module:', e)
+    type: 'button',
+    on: {
+      click: async () => {
+        try {
+          const { showSettingsModal } = await import('./settings')
+          showSettingsModal()
+        } catch (e) {
+          console.error('[Userscript] Failed to load settings module:', e)
+        }
+      }
     }
-  })
+  }) as HTMLButtonElement
   sectionsNav.appendChild(settingsButton)
 
   const scrollableContent = createEl('div', {
@@ -252,8 +258,6 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
     className: 'emoji-picker__sections',
     attrs: { role: 'button' }
   }) as HTMLDivElement
-
-  // Use module-level ensureHoverPreview() to provide a singleton hover preview element
 
   groups.forEach((group: any, index: number) => {
     if (!group?.emojis?.length) return
@@ -294,11 +298,13 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
     const titleContainer = createEl('div', {
       className: 'emoji-picker__section-title-container'
     }) as HTMLDivElement
-    const title = createEl('h2', {
-      className: 'emoji-picker__section-title',
-      text: group.name
-    }) as HTMLHeadingElement
-    titleContainer.appendChild(title)
+
+    titleContainer.appendChild(
+      createEl('h2', {
+        className: 'emoji-picker__section-title',
+        text: group.name
+      })
+    )
 
     const sectionEmojis = createEl('div', {
       className: 'emoji-picker__section-emojis'
@@ -452,13 +458,16 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
     attrs: { tabindex: '-1', style: 'border-right: 1px solid #ddd;' },
     type: 'button',
     innerHTML: '⚙️',
-    title: '管理表情 - 点击打开完整管理界面'
+    title: '管理表情 - 点击打开完整管理界面',
+    on: {
+      click: () => {
+        // Import manager module dynamically
+        import('./manager').then(({ openManagementInterface }) => {
+          openManagementInterface()
+        })
+      }
+    }
   }) as HTMLButtonElement
-  managementButton.addEventListener('click', () => {
-    import('./manager').then(({ openManagementInterface }) => {
-      openManagementInterface()
-    })
-  })
   sectionsNav.appendChild(managementButton)
 
   const settingsButton = createEl('button', {
@@ -466,16 +475,18 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
     attrs: { tabindex: '-1', style: 'border-right: 1px solid #ddd;' },
     type: 'button',
     innerHTML: '🔧',
-    title: '设置'
-  }) as HTMLButtonElement
-  settingsButton.addEventListener('click', async () => {
-    try {
-      const { showSettingsModal } = await import('./settings')
-      showSettingsModal()
-    } catch (e) {
-      console.error('[Userscript] Failed to load settings module:', e)
+    title: '设置',
+    on:{
+      click: async () => {
+        try {
+          const { showSettingsModal } = await import('./settings')
+          showSettingsModal()
+        } catch (e) {
+          console.error('[Userscript] Failed to load settings module:', e)
+        }
+      }
     }
-  })
+  }) as HTMLButtonElement
   sectionsNav.appendChild(settingsButton)
 
   const scrollableContent = createEl('div', {
