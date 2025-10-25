@@ -1,6 +1,7 @@
 // FFmpeg functionality for WebM to WebP conversion
 let ffmpeg = null;
 let ffmpegLoaded = false;
+let ffmpegFailed = false; // Flag to track if FFmpeg has permanently failed to initialize
 
 // DOM elements
 const botTokenInput = document.getElementById('botToken')
@@ -37,182 +38,35 @@ let stickers = []
 let downloadedStickers = new Set()
 let failedDownloads = new Set()
 
-// Initialize FFmpeg for WebM to WebP conversion
-async function initFFmpeg() {
-  if (ffmpegLoaded) return true;
-  
-  try {
-    // Dynamically import FFmpeg (similar to the main app)
-    const { FFmpeg } = await import('/assets/ffmpeg/esm/index.js');
-    // Import fetchFile is not always needed for basic operations
-    // const { fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js');
-    
-    ffmpeg = new FFmpeg();
-    
-    ffmpeg.on('log', ({ message }) => {
-      // Only log important messages
-      if (message.toLowerCase().includes('error') || message.toLowerCase().includes('fail')) {
-        console.error(`[FFmpeg] ${message}`);
+// Ensure FFmpeg module is loaded and available on window.TelegramFFmpeg
+let _ffmpegModuleLoading = null
+function ensureFFmpegLoaded() {
+  if (window.TelegramFFmpeg) return Promise.resolve()
+  if (_ffmpegModuleLoading) return _ffmpegModuleLoading
+
+  _ffmpegModuleLoading = new Promise((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = '/assets/js/telegram-ffmpeg.js'
+    script.async = true
+    script.onload = () => {
+      if (window.TelegramFFmpeg) {
+        resolve()
+      } else {
+        reject(new Error('FFmpeg module loaded but API missing'))
       }
-    });
-    
-    ffmpeg.on('progress', ({ progress }) => {
-      // Progress is updated elsewhere with more context
-      console.log(`FFmpeg conversion progress: ${(progress * 100).toFixed(2)}%`);
-    });
-    
-    // Set up CDN paths for FFmpeg assets
-    const localBase = '/assets/ffmpeg';
-    const cdnBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.2/dist/esm';
-    
-    // Check if local WASM file exists first, if not, use CDN
-    let wasmURL = `${localBase}/ffmpeg-core.wasm`;
-    
-    // Try to check if local WASM exists by attempting a HEAD request
-    try {
-      const response = await fetch(wasmURL, { method: 'HEAD' });
-      if (!response.ok) {
-        // If local WASM doesn't exist or is invalid, use CDN
-        wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
-      }
-    } catch (e) {
-      // If fetch fails, fall back to CDN
-      wasmURL = `${cdnBase}/ffmpeg-core.wasm`;
     }
-    
-    // Load FFmpeg
-    await ffmpeg.load({
-      coreURL: `${localBase}/ffmpeg-core.js`,
-      wasmURL: wasmURL, // Use either local or CDN based on availability
-      workerURL: `${localBase}/worker.js`
-    });
-    
-    ffmpegLoaded = true;
-    console.log('FFmpeg initialized successfully');
-    return true;
-  } catch (error) {
-    console.error('Error initializing FFmpeg:', error);
-    showStatus(`FFmpeg initialization failed: ${error.message}`, 'error');
-    return false;
-  }
+    script.onerror = (e) => reject(new Error('Failed to load FFmpeg module'))
+    document.head.appendChild(script)
+  }).catch(err => {
+    console.warn('Could not load FFmpeg module:', err)
+    // Keep promise resolved so callers continue, but module won't be available
+  })
+
+  return _ffmpegModuleLoading
 }
 
-// Compress data using the Compression Streams API
-async function compressData(data) {
-  // Check if CompressionStream is supported in this browser
-  if (typeof CompressionStream === 'undefined') {
-    console.warn('CompressionStream not supported, returning original data as blob');
-    return new Blob([data], { type: 'application/octet-stream' });
-  }
-  
-  // Create a readable stream from our data
-  const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue(data);
-      controller.close();
-    }
-  });
-  
-  try {
-    // Create compression stream
-    const compressionStream = new CompressionStream('gzip');
-    
-    // Create a transformer that combines the readable stream and compression stream
-    const compressedStream = stream.pipeThrough(compressionStream);
-    
-    // Collect the compressed chunks
-    const chunks = [];
-    const reader = compressedStream.getReader();
-    
-    let done = false;
-    while (!done) {
-      const { value, done: readerDone } = await reader.read();
-      done = readerDone;
-      if (value) {
-        chunks.push(value);
-      }
-    }
-    
-    // Concatenate all chunks
-    let totalLength = 0;
-    for (const chunk of chunks) {
-      totalLength += chunk.length;
-    }
-    
-    const concatenated = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const chunk of chunks) {
-      concatenated.set(chunk, offset);
-      offset += chunk.length;
-    }
-    
-    return new Blob([concatenated], { type: 'application/gzip' });
-  } catch (error) {
-    console.error('Error during compression, returning original data as blob:', error);
-    // If compression fails, return the original data as is
-    return new Blob([data], { type: 'application/octet-stream' });
-  }
-}
-
-// Convert WebM blob to WebP format preserving original resolution and frame rate
-async function convertWebMtoWebP(webmBlob, stickerIndex = null, totalStickers = 0) {
-  // First, check if FFmpeg is properly loaded and available
-  if (!ffmpegLoaded || !ffmpeg || !ffmpeg.loaded) {
-    if (!(await initFFmpeg())) {
-      console.warn('FFmpeg not available for conversion, returning original blob');
-      return webmBlob; // Return original blob if FFmpeg cannot be initialized
-    }
-  }
-  
-  // Additional check to ensure ffmpeg is loaded after initialization attempt
-  if (!ffmpeg || !ffmpeg.loaded) {
-    console.warn('FFmpeg is not properly loaded, returning original blob');
-    return webmBlob;
-  }
-  
-  try {
-    // Write WebM file to FFmpeg's virtual filesystem
-    const webmArrayBuffer = await webmBlob.arrayBuffer();
-    await ffmpeg.writeFile('input.webm', new Uint8Array(webmArrayBuffer));
-    
-    // Convert WebM to WebP using FFmpeg, preserving original resolution and frame rate
-    // Use the exact same parameters as the original file to maintain quality
-    const execResult = await ffmpeg.exec([
-      '-i', 'input.webm',           // Input file
-      '-c:v', 'libwebp_anim',       // Use libwebp_anim codec for animated WebP
-      '-lossless', '0',             // Lossy compression for smaller file sizes
-      '-q:v', '85',                 // Quality (0-100, higher is better)
-      '-compression_level', '6',    // Compression level (0-6, higher is slower but smaller)
-      '-f', 'webp',                 // Output format
-      '-y',                         // Overwrite output file
-      'output.webp'                 // Output file
-    ]);
-    
-    // Check if the execution was successful (should be 0 for success)
-    if (execResult !== 0 && execResult !== undefined) {
-      console.warn(`FFmpeg exec returned error code: ${execResult}, returning original blob`);
-      return webmBlob; // Return original blob if conversion fails
-    }
-    
-    // Read the converted WebP file
-    const webpData = await ffmpeg.readFile('output.webp');
-    const webpBlob = new Blob([webpData], { type: 'image/webp' });
-    
-    // Clean up virtual filesystem
-    try {
-      await ffmpeg.deleteFile('input.webm');
-      await ffmpeg.deleteFile('output.webp');
-    } catch (cleanupError) {
-      console.warn('Error during FFmpeg cleanup:', cleanupError);
-    }
-    
-    return webpBlob;
-  } catch (error) {
-    console.error('Error converting WebM to WebP, returning original blob:', error);
-    // Return the original blob if conversion fails
-    return webmBlob;
-  }
-}
+// NOTE: FFmpeg-related implementation moved to /assets/js/telegram-ffmpeg.js
+// Helper to call convert/compress functions from that module when needed.
 
 // Initialize from localStorage
 function initialize() {
@@ -528,6 +382,20 @@ async function loadStickers() {
 
     showStatus(`Successfully loaded ${stickers.length} stickers`, 'success')
 
+    // Store the loaded stickers in localStorage for persistence
+    try {
+      const stickerData = {
+        setName: setName,
+        stickers: stickers,
+        downloadedStickers: Array.from(downloadedStickers), // Convert Set to Array
+        failedDownloads: Array.from(failedDownloads), // Convert Set to Array
+        timestamp: Date.now()
+      };
+      localStorage.setItem('cachedStickers', JSON.stringify(stickerData));
+    } catch (storageError) {
+      console.warn('Could not save stickers to localStorage:', storageError);
+    }
+
     updateStats()
   } catch (error) {
     showStatus(`Error loading stickers: ${error.message}`, 'error')
@@ -803,10 +671,16 @@ async function downloadSingleSticker(sticker, index) {
         }
         
         const webmBlob = await response.blob()
-        
+
+        // Ensure ffmpeg module is loaded
+        await ensureFFmpegLoaded()
+
         // Convert WebM to WebP if checkbox is checked (show conversion progress)
         showStatus(`Converting ${originalFilename} to WebP...`, 'info')
-        const webpBlob = await convertWebMtoWebP(webmBlob, index, 1) // 1 for single download
+        let webpBlob = webmBlob
+        if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
+          webpBlob = await window.TelegramFFmpeg.convertWebMtoWebP(webmBlob, index, 1)
+        }
         
         // Create download link from the converted WebP blob
         const url = URL.createObjectURL(webpBlob)
@@ -915,22 +789,31 @@ async function retryDownload(sticker, index) {
         
         // Convert WebM to WebP if checkbox is checked (show conversion progress)
         showStatus(`Converting ${originalFilename} to WebP...`, 'info')
-        const webpBlob = await convertWebMtoWebP(webmBlob, index, 1) // 1 for single download
-        
+        await ensureFFmpegLoaded()
+        let webpBlob = webmBlob
+        if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
+          try {
+            webpBlob = await window.TelegramFFmpeg.convertWebMtoWebP(webmBlob, index, 1)
+          } catch (err) {
+            console.warn('FFmpeg conversion failed, falling back to original blob', err)
+            webpBlob = webmBlob
+          }
+        }
+
         // Create download link from the converted WebP blob
         const url = URL.createObjectURL(webpBlob)
         const webpFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
-        
+
         const a = document.createElement('a')
         a.href = url
         a.download = webpFilename
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
-        
+
         // Clean up
         URL.revokeObjectURL(url)
-        
+
         updateStickerStatus(index, 'downloaded')
         showStatus(`Successfully converted and downloaded as WebP: ${webpFilename}`, 'success')
       } catch (convertError) {
@@ -1040,7 +923,18 @@ async function downloadAllStickers() {
         if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'webm') {
           try {
             showStatus(`Converting ${originalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
-            fileToDownload = await convertWebMtoWebP(blob, i, stickers.length)
+            await ensureFFmpegLoaded()
+            if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
+              try {
+                fileToDownload = await window.TelegramFFmpeg.convertWebMtoWebP(blob, i, stickers.length)
+              } catch (err) {
+                console.warn('FFmpeg conversion failed, falling back to original blob', err)
+                fileToDownload = blob
+              }
+            } else {
+              // FFmpeg module not available
+              fileToDownload = blob
+            }
             finalFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
           } catch (convertError) {
             console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
@@ -1159,6 +1053,32 @@ async function batchDownloadAllStickers() {
 
       // Get the blob from the response
       const blob = await response.blob();
+
+      // Quick content-type check: if the proxy returned HTML/JSON/text (likely an error page),
+      // don't treat it as a sticker image. Instead include a small .error.txt file in the tar
+      // so the user can inspect the server response.
+      const contentType = (response.headers && response.headers.get)
+        ? (response.headers.get('content-type') || '')
+        : ''
+      if (/html|json|text/i.test(contentType) || blob.size < 20) {
+        // Try to extract text for diagnostics
+        let txt = ''
+        try {
+          txt = await blob.text()
+        } catch (e) {
+          txt = `Failed to read error response, size=${blob.size}`
+        }
+
+        const encoder = new TextEncoder()
+        const errName = `${sticker.file_id}.error.txt`
+        filesData.push({ name: errName, data: encoder.encode(`Content-Type: ${contentType}\n\n${txt}`).buffer })
+        failedCount++
+        showStatus(`Received non-binary response for ${sticker.file_id}, added ${errName} to archive`, 'error')
+        // skip further processing for this sticker
+        // Add small delay to avoid tight loop
+        await new Promise(resolve => setTimeout(resolve, 50))
+        continue
+      }
       
       // Check if we need to convert from WebM to WebP
       let fileData;
@@ -1168,13 +1088,24 @@ async function batchDownloadAllStickers() {
         // Fetch and convert
         showStatus(`Downloading and converting ${finalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
         try {
-          const convertedBlob = await convertWebMtoWebP(blob, i, stickers.length)
-          fileData = await convertedBlob.arrayBuffer()
-          finalFilename = `${sticker.file_id}.webp`  // Changed extension to .webp
+          await ensureFFmpegLoaded()
+          if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
+            try {
+              const convertedBlob = await window.TelegramFFmpeg.convertWebMtoWebP(blob, i, stickers.length)
+              fileData = await convertedBlob.arrayBuffer()
+              finalFilename = `${sticker.file_id}.webp`
+            } catch (convertError) {
+              console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
+              showStatus(`Conversion failed for ${finalFilename}, downloading original`, 'info')
+              fileData = await blob.arrayBuffer()
+            }
+          } else {
+            // No FFmpeg module available, use original
+            fileData = await blob.arrayBuffer()
+          }
         } catch (convertError) {
           console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
           showStatus(`Conversion failed for ${finalFilename}, downloading original`, 'info')
-          // Use original blob if conversion fails
           fileData = await blob.arrayBuffer()
         }
       } else {
@@ -1210,46 +1141,127 @@ async function batchDownloadAllStickers() {
     try {
       showStatus(`Compressing ${successCount} files using Compression Streams API...`, 'info')
       
-      // Create a simple concatenated format with headers for each file
-      // Format: [HEADER_LENGTH][HEADER][FILE_DATA][NEXT_FILE...] where HEADER contains filename and size
-      const outputStream = [];
-      
-      for (const file of filesData) {
-        const filename = file.name;
-        const fileSize = file.data.byteLength;
-        
-        // Create a simple header with filename length, filename, and file size
-        const encoder = new TextEncoder();
-        const filenameBytes = encoder.encode(filename);
-        
-        // Create header buffer: [filename length (4 bytes)][filename bytes][file size (4 bytes)]
-        const headerBuffer = new Uint8Array(4 + filenameBytes.length + 4);
-        const headerView = new DataView(headerBuffer.buffer);
-        
-        headerView.setUint32(0, filenameBytes.length, true);  // Little endian
-        headerBuffer.set(filenameBytes, 4);
-        headerView.setUint32(4 + filenameBytes.length, fileSize, true);
-        
-        // Add header and file data to output
-        outputStream.push(headerBuffer);
-        outputStream.push(new Uint8Array(file.data));
+      // Build a proper tar archive (ustar) and gzip it.
+      // Helper: create tar header and concatenate file data with 512-byte blocks.
+      function padUint8Array(arr, blockSize) {
+        const pad = (blockSize - (arr.length % blockSize)) % blockSize
+        if (pad === 0) return arr
+        const out = new Uint8Array(arr.length + pad)
+        out.set(arr, 0)
+        return out
       }
-      
-      // Concatenate all data
-      let totalLength = 0;
-      for (const buffer of outputStream) {
-        totalLength += buffer.length;
+
+      function numberToOctal(value, length) {
+        // return ascii octal string padded with leading zeros, no leading 0o
+        let oct = value.toString(8)
+        if (oct.length > length - 1) {
+          // overflow, fill with zeros
+          oct = oct.slice(- (length - 1))
+        }
+        return oct.padStart(length - 1, '0') + '\0'
       }
-      
-      const totalBuffer = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const buffer of outputStream) {
-        totalBuffer.set(buffer, offset);
-        offset += buffer.length;
+
+      function createTar(files) {
+        const encoder = new TextEncoder()
+        const blocks = []
+
+        for (const file of files) {
+          const name = file.name
+          const data = new Uint8Array(file.data)
+          const size = data.byteLength
+
+          const header = new Uint8Array(512)
+          // name field (100)
+          let nameBytes = encoder.encode(name)
+          if (nameBytes.length > 100) {
+            // try to split into prefix (155) + name (100)
+            // simple approach: if name <= 255, put last 100 into name and prefix the rest
+            if (nameBytes.length <= 255) {
+              const prefixLen = nameBytes.length - 100
+              const prefix = nameBytes.slice(0, prefixLen)
+              nameBytes = nameBytes.slice(prefixLen)
+              header.set(prefix.slice(0, 155), 345) // prefix offset
+            } else {
+              // truncate
+              nameBytes = nameBytes.slice(-100)
+            }
+          }
+          header.set(nameBytes.slice(0, 100), 0)
+
+          // mode (8) - default 644
+          header.set(encoder.encode(numberToOctal(0o644, 8)), 100)
+          // uid (8)
+          header.set(encoder.encode(numberToOctal(0, 8)), 108)
+          // gid (8)
+          header.set(encoder.encode(numberToOctal(0, 8)), 116)
+          // size (12)
+          header.set(encoder.encode(numberToOctal(size, 12)), 124)
+          // mtime (12)
+          header.set(encoder.encode(numberToOctal(Math.floor(Date.now() / 1000), 12)), 136)
+          // checksum (8) - fill with spaces for calculation
+          for (let i = 148; i < 156; i++) header[i] = 0x20
+          // typeflag (1) - '0'
+          header[156] = 0x30
+          // linkname (100) left zero
+          // magic (6) ustar\0
+          header.set(encoder.encode('ustar\0'), 257)
+          // version (2) '00'
+          header.set(encoder.encode('00'), 263)
+          // uname (32)
+          header.set(encoder.encode('user'), 265)
+          // gname (32)
+          header.set(encoder.encode('user'), 297)
+          // devmajor (8)
+          header.set(encoder.encode(numberToOctal(0, 8)), 329)
+          // devminor (8)
+          header.set(encoder.encode(numberToOctal(0, 8)), 337)
+          // prefix already handled at 345
+
+          // compute checksum
+          let sum = 0
+          for (let i = 0; i < 512; i++) sum += header[i]
+          // Tar checksum field convention: 6 octal digits, NUL, SPACE (total 8 bytes)
+          const chkOct = sum.toString(8).padStart(6, '0') + '\0 '
+          header.set(encoder.encode(chkOct), 148)
+
+          blocks.push(header)
+
+          // file data, padded to 512
+          blocks.push(padUint8Array(data, 512))
+        }
+
+        // two 512-byte zero blocks at end
+        blocks.push(new Uint8Array(512))
+        blocks.push(new Uint8Array(512))
+
+        // concat
+        let total = 0
+        for (const b of blocks) total += b.length
+        const out = new Uint8Array(total)
+        let off = 0
+        for (const b of blocks) {
+          out.set(b, off)
+          off += b.length
+        }
+        return out
       }
-      
-      // Compress the entire bundle using Compression Streams API
-      const compressedBlob = await compressData(totalBuffer);
+
+      const tarBuffer = createTar(filesData)
+
+      // Compress the tar using Compression Streams API (via ffmpeg module helper)
+      await ensureFFmpegLoaded()
+      let compressedBlob
+      if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.compressData === 'function') {
+        compressedBlob = await window.TelegramFFmpeg.compressData(tarBuffer)
+      } else if (typeof CompressionStream !== 'undefined') {
+        // fallback to local CompressionStream
+        const cs = new CompressionStream('gzip')
+        const rs = new Response(new Blob([tarBuffer]).stream().pipeThrough(cs))
+        compressedBlob = await rs.blob()
+      } else {
+        // last resort: return tar as blob without compression
+        compressedBlob = new Blob([tarBuffer], { type: 'application/x-tar' })
+      }
       
       // Create download link for the compressed file
       const url = URL.createObjectURL(compressedBlob);
@@ -1449,8 +1461,63 @@ document.addEventListener('click', e => {
   }
 })
 
+// Restore previously loaded stickers from localStorage if available
+function restoreCachedStickers() {
+  try {
+    const cachedData = localStorage.getItem('cachedStickers');
+    if (cachedData) {
+      const stickerData = JSON.parse(cachedData);
+      
+      // Check if data is not too old (older than 24 hours)
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      if (Date.now() - stickerData.timestamp <= maxAge) {
+        // Restore the sticker data
+        stickers = stickerData.stickers || [];
+        
+        // Restore the download status
+        downloadedStickers = new Set(stickerData.downloadedStickers || []);
+        failedDownloads = new Set(stickerData.failedDownloads || []);
+        
+        // Restore the sticker set name
+        if (stickerData.setName) {
+          const savedToken = localStorage.getItem('telegramBotToken');
+          if (savedToken) {
+            botToken = savedToken;
+            stickerSetNameInput.value = stickerData.setName;
+            localStorage.setItem('currentStickerSetName', stickerData.setName);
+          }
+        }
+        
+        if (stickers.length > 0) {
+          // Update UI to show the restored stickers
+          renderStickers();
+          stickerList.classList.remove('hidden');
+          downloadAllBtn.disabled = false;
+          batchDownloadBtn.disabled = false;
+          
+          showStatus(`Restored ${stickers.length} stickers from cache`, 'success');
+          updateStats();
+          
+          console.log(`Restored ${stickers.length} stickers from cache, ${downloadedStickers.size} downloaded, ${failedDownloads.size} failed`);
+        }
+      } else {
+        // Cached data is too old, remove it
+        localStorage.removeItem('cachedStickers');
+        console.log('Removed expired cached stickers');
+      }
+    }
+  } catch (error) {
+    console.error('Error restoring cached stickers:', error);
+    // If there's an error, remove the cached data to prevent repeated errors
+    localStorage.removeItem('cachedStickers');
+  }
+}
+
 // Initialize
 initialize()
+
+// Restore cached stickers after initialization
+restoreCachedStickers()
 
 // Set up auto-hide when page loads
 if (sidePanel.classList.contains('active')) {

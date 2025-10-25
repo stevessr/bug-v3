@@ -87,6 +87,10 @@
         </div>
     </div>
 
+    <!-- Optional: FFmpeg helper module. Keeping this static ensures the module is available
+         as `window.TelegramFFmpeg`. If you prefer on-demand loading, this tag can be removed
+         because the main script will dynamically load /assets/js/telegram-ffmpeg.js when needed. -->
+    <script src="/assets/js/telegram-ffmpeg.js"></script>
     <script src="/assets/js/telegram-sticker-downloader.js"></script>
 </body>
 </html>
