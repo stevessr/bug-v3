@@ -293,12 +293,12 @@ function addCarouselButtonToEl(el: Element) {
       return
     }
 
-    let targetContainer: HTMLElement | null = null
-    let url: string | null = null
+    let targetContainer: HTMLElement = null as any
+    let url: string = null as any
 
     const finalizeTarget = (container: HTMLElement | null, resolvedUrl: string | null) => {
-      targetContainer = container
-      url = resolvedUrl
+      targetContainer = container as HTMLElement
+      url = resolvedUrl as string
     }
 
     if (el instanceof HTMLImageElement) {

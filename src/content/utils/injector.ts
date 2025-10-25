@@ -5,6 +5,7 @@ import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
 import { notify } from './notify'
 import { createE } from './createEl'
 import { showImageUploadDialog } from './uploader'
+import { createAndShowIframeModal } from './iframe'
 
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [
@@ -438,7 +439,6 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   const autoReadLi = createListItem('自动阅读所有回复', '📖', async () => {
     menu.remove()
     try {
-      // trigger auto read; autoReadAll will notify progress
       await autoReadAll()
     } catch (error) {
       notify(
@@ -452,7 +452,6 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   const autoReadLi2 = createListItem('全自动自动阅读所有帖子', '📖', async () => {
     menu.remove()
     try {
-      // trigger auto read; autoReadAll will notify progress
       await autoReadAllv2()
     } catch (error) {
       notify(
@@ -488,145 +487,23 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
 
   const passwall = createListItem('过盾', '🛡', () => {
     // If a modal iframe already exists, don't create another
-    const existing = document.querySelector(
-      '.emoji-extension-passwall-iframe'
-    ) as HTMLElement | null
+    const existing = document.querySelector('.emoji-extension-passwall-iframe') as HTMLElement | null
     if (existing) return
 
-    // Build draggable floating window for iframe (no backdrop)
-    const frameWrap = createE('div', {
-      class: 'emoji-extension-passwall-iframe',
+    // Use the reusable iframe modal helper. Close when navigated to linux.do host.
+    createAndShowIframeModal('https://linux.do/challenge', href => {
+      try {
+        const url = new URL(href)
+        return url.hostname.endsWith('linux.do')
+      } catch {
+        return false
+      }
+    }, {
+      title: '过盾',
+      className: 'emoji-extension-passwall-iframe',
       style:
         'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:900px;height:80%;max-height:700px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;cursor:move'
     })
-
-    // Dragging functionality
-    let isDragging = false
-    let currentX = 0
-    let currentY = 0
-    let initialX = 0
-    let initialY = 0
-
-    // Create draggable title bar
-    const titleBar = createE('div', {
-      style:
-        'position:absolute;top:0;left:0;width:100%;height:40px;border-bottom:1px solid #ccc;display:flex;align-items:center;justify-content:space-between;padding:0 10px;cursor:move;user-select:none',
-      on: {
-        mousedown: (e: MouseEvent) => {
-          if ((e.target as HTMLElement).closest('button')) return // Don't drag when clicking close button
-
-          isDragging = true
-          initialX = e.clientX - currentX
-          initialY = e.clientY - currentY
-          frameWrap.style.cursor = 'grabbing'
-        }
-      }
-    })
-
-    const closeBtn = createE('button', {
-      class: 'btn btn-sm',
-      type: 'button',
-      text: '✕',
-      style:
-        'background:transparent;border:none;font-size:20px;color:#666;cursor:pointer;padding:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:4px',
-      on: {
-        mouseenter: () => {
-          closeBtn.style.background = '#ff4444'
-          closeBtn.style.color = '#fff'
-        },
-        mouseleave: () => {
-          closeBtn.style.background = 'transparent'
-          closeBtn.style.color = '#666'
-        },
-        click: () => {
-          closeModal()
-        }
-      }
-    }) as HTMLButtonElement
-
-    titleBar.appendChild(
-      createE('span', {
-        text: '过盾',
-        style: 'font-weight:bold;color:#333'
-      })
-    )
-    titleBar.appendChild(closeBtn)
-
-    const iframeContainer = createE('div', {
-      style: 'position:absolute;top:40px;left:0;width:100%;height:calc(100% - 40px);overflow:hidden'
-    })
-
-    const iframe = createE('iframe', {
-      src: 'https://linux.do/challenge',
-      style: 'width:100%;height:100%;border:0',
-      attrs: { sandbox: 'allow-scripts allow-forms allow-same-origin allow-popups' },
-      on: {
-        load: () => {
-          let href: string | null = null
-          try {
-            href =
-              (iframe.contentWindow &&
-                iframe.contentWindow.location &&
-                iframe.contentWindow.location.href) ||
-              null
-          } catch {
-            // Cross-origin access will throw; fallback to using src or keep open
-            href = iframe.src || null
-          }
-
-          if (href) {
-            try {
-              const url = new URL(href)
-              if (url.hostname.endsWith('linux.do')) {
-                // Automatically close when navigated to linux.do domain
-                closeModal()
-              }
-            } catch {
-              // ignore malformed URLs
-            }
-          }
-        }
-      }
-    }) as HTMLIFrameElement
-
-    // Close helper
-    const closeModal = () => {
-      if (frameWrap.parentElement) frameWrap.parentElement.removeChild(frameWrap)
-    }
-
-    const drag = (e: MouseEvent) => {
-      if (!isDragging) return
-
-      e.preventDefault()
-      currentX = e.clientX - initialX
-      currentY = e.clientY - initialY
-
-      frameWrap.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`
-    }
-
-    const dragEnd = () => {
-      isDragging = false
-      frameWrap.style.cursor = 'move'
-    }
-
-    document.addEventListener('mousemove', drag)
-    document.addEventListener('mouseup', dragEnd)
-
-    // Cleanup event listeners when modal is closed
-    const originalClose = closeModal
-    const closeModalWithCleanup = () => {
-      document.removeEventListener('mousemove', drag)
-      document.removeEventListener('mouseup', dragEnd)
-      originalClose()
-    }
-
-    closeBtn.removeEventListener('click', closeModal)
-    closeBtn.addEventListener('click', closeModalWithCleanup)
-
-    iframeContainer.appendChild(iframe)
-    frameWrap.appendChild(titleBar)
-    frameWrap.appendChild(iframeContainer)
-    document.body.appendChild(frameWrap)
   })
   list.appendChild(passwall)
   // end of upload menu

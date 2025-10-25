@@ -3,7 +3,6 @@ import { userscriptState } from '../state'
 import { saveDataToLocalStorage, DEFAULT_USER_SETTINGS } from '../userscript-storage'
 import { createEl } from '../utils/createEl'
 import { injectGlobalThemeStyles } from '../utils/themeSupport'
-import { createModalElement } from '../utils/editorUtils'
 
 import { showGroupEditorModal } from './groupEditor'
 import { showPopularEmojisModal } from './popularEmojis'
