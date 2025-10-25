@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, isRef, type Ref } from 'vue'
 import { DownOutlined } from '@ant-design/icons-vue'
+import { ref, watch, isRef, type Ref } from 'vue'
+import { reactive } from 'vue'
 
 import type { AppSettings } from '../../types/type'
 
@@ -211,8 +212,6 @@ const getUploadMenuItems = () => {
     return null
   }
 }
-
-import { reactive } from 'vue'
 
 const _initialUploadMenuItems = getUploadMenuItems() || {
   autoItems: [],
