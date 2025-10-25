@@ -1,5 +1,5 @@
 import { cachedState } from './state'
-import { defaultSettings } from '@/types/emoji'
+import { defaultSettings } from '@/types/defaultSettings'
 
 function sendMessageToBackground(message: any): Promise<any> {
   return new Promise(resolve => {

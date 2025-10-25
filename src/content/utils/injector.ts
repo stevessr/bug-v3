@@ -1,6 +1,5 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
-import { DEFAULT_UPLOAD_MENU_ITEMS } from '@/types/emoji'
 
 import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
 import { notify } from './notify'
@@ -479,16 +478,11 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
 
   // Merge backend-provided uploadMenuItems with centralized defaults so
   // a single source of truth controls default items. If backend does not
-  // provide a value it will be filled from DEFAULT_UPLOAD_MENU_ITEMS.
   const backendUploadConfig = (cachedState.settings as any)?.uploadMenuItems || {}
   const merged = {
-    autoItems: Array.isArray(backendUploadConfig.autoItems)
-      ? backendUploadConfig.autoItems
-      : DEFAULT_UPLOAD_MENU_ITEMS.autoItems,
-    iframes: Array.isArray(backendUploadConfig.iframes)
-      ? backendUploadConfig.iframes
-      : DEFAULT_UPLOAD_MENU_ITEMS.iframes,
-    sides: Array.isArray(backendUploadConfig.sides) ? backendUploadConfig.sides : DEFAULT_UPLOAD_MENU_ITEMS.sides
+    autoItems: Array.isArray(backendUploadConfig.autoItems) ? backendUploadConfig.autoItems : null,
+    iframes: Array.isArray(backendUploadConfig.iframes) ? backendUploadConfig.iframes : null,
+    sides: Array.isArray(backendUploadConfig.sides) ? backendUploadConfig.sides : null
   }
 
   merged.autoItems.forEach(([text, icon, url]: any) => autoList(text, icon, url))

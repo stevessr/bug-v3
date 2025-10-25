@@ -127,7 +127,22 @@ function isValidUrl(string: string): boolean {
 
 import { loadDefaultEmojiGroups } from '@/types/defaultEmojiGroups.loader'
 
-const defaultSettings: AppSettings = {
+// Central default for uploadMenuItems used by content scripts and options
+export const DEFAULT_UPLOAD_MENU_ITEMS = {
+  autoItems: [
+    // ['AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/'],
+    ['学习 xv6', '🖥︎', 'https://pwsh.edu.deal/'],
+    ['connect', '🔗', 'https://connect.linux.do/'],
+    ['idcalre', '📅', 'https://idcflare.com/']
+  ] as Array<[string, string, string]>,
+  iframes: [['过盾', '🛡', 'https://linux.do/challenge', 'emoji-extension-passwall-iframe']] as Array<[string, string, string, string]>,
+  sides: [
+    ['视频转 gif(iframe)', '🎞️', 'https://video2gif-pages.pages.dev/', 'emoji-extension-video2gif-iframe']
+  ] as Array<[string, string, string, string]>
+}
+
+
+export const defaultSettings: AppSettings = {
   imageScale: 100,
   defaultGroup: 'nachoneko',
   showSearchBar: true,
@@ -144,26 +159,9 @@ const defaultSettings: AppSettings = {
   customCss: '',
   // Default: keep legacy conservative behavior for backward compatibility
   // (set to true if you prefer selected variant to always override displayUrl)
-  syncVariantToDisplayUrl: true
+  syncVariantToDisplayUrl: true,
+  uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS
 }
-// Central default for uploadMenuItems used by content scripts and options
-export const DEFAULT_UPLOAD_MENU_ITEMS = {
-  autoItems: [
-    // ['AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/'],
-    ['学习 xv6', '🖥︎', 'https://pwsh.edu.deal/'],
-    ['connect', '🔗', 'https://connect.linux.do/'],
-    ['idcalre', '📅', 'https://idcflare.com/']
-  ] as Array<[string, string, string]>,
-  iframes: [['过盾', '🛡', 'https://linux.do/challenge', 'emoji-extension-passwall-iframe']] as Array<[string, string, string, string]>,
-  sides: [
-    ['视频转 gif(iframe)', '🎞️', 'https://video2gif-pages.pages.dev/', 'emoji-extension-video2gif-iframe']
-  ] as Array<[string, string, string, string]>
-}
-
-// Ensure defaultSettings contains uploadMenuItems so callers always receive a complete object
-;(defaultSettings as any).uploadMenuItems = DEFAULT_UPLOAD_MENU_ITEMS
-
-export { defaultSettings }
 
 // Runtime loader for default emoji groups
 export { loadDefaultEmojiGroups }
