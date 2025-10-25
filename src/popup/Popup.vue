@@ -130,7 +130,7 @@ const openOptionsInNewWindow = () => {
             :emptyMessage="'没有找到匹配的表情'"
             :showAddButton="false"
             groupId="search"
-            :isActive="true"
+            isActive
             @select="selectEmoji"
             @openOptions="openOptions"
           />
@@ -146,7 +146,7 @@ const openOptionsInNewWindow = () => {
             :favorites="emojiStore.favorites"
             :gridColumns="emojiStore.settings.gridColumns"
             :emptyMessage="'该分组还没有表情'"
-            :showAddButton="true"
+            showAddButton
             :groupId="group.id"
             :isActive="emojiStore.activeGroupId === group.id"
             @select="selectEmoji"

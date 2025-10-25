@@ -477,7 +477,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
     list.appendChild(makeitem(text, icon, url))
 
   const autoItems = [
-    ['AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/'],
+    // ['AI 生成图片', '🎨', 'https://gemini-image.smnet.studio/'],
     ['学习 xv6', '🖥︎', 'https://pwsh.edu.deal/'],
     ['视频转 gif', '📹', 'https://video2gif-pages.pages.dev/'],
     ['connect', '🔗', 'https://connect.linux.do/'],
@@ -485,28 +485,43 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   ]
   autoItems.forEach(([text, icon, url]) => autoList(text, icon, url))
 
-  const passwall = createListItem('过盾', '🛡', () => {
-    // If a modal iframe already exists, don't create another
-    const existing = document.querySelector('.emoji-extension-passwall-iframe') as HTMLElement | null
-    if (existing) return
-
-    // Use the reusable iframe modal helper. Close when navigated to linux.do host.
-    createAndShowIframeModal('https://linux.do/challenge', href => {
-      try {
-        const url = new URL(href)
-        return url.hostname.endsWith('linux.do')
-      } catch {
-        return false
-      }
-    }, {
-      title: '过盾',
-      className: 'emoji-extension-passwall-iframe',
-      style:
-        'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:900px;height:80%;max-height:700px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;cursor:move'
+  const createiframe = (text: string, icon: string, url: string, className: string) =>
+    createListItem(text, icon, () => {
+      // If a modal iframe already exists, don't create another
+      const existing = document.querySelector(`.${className}`) as HTMLElement | null
+      if (existing) return
+      createAndShowIframeModal(
+        url,
+        href => {
+          try {
+            const url = new URL(href)
+            return url.hostname.endsWith('linux.do')
+          } catch {
+            return false
+          }
+        },
+        {
+          title: text,
+          className: className,
+          style:
+            'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:900px;height:80%;max-height:700px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;cursor:move'
+        }
+      )
     })
-  })
-  list.appendChild(passwall)
-  // end of upload menu
+
+  const autoiframes = [
+    ['过盾', '🛡', 'https://linux.do/challenge', 'emoji-extension-passwall-iframe'],
+    [
+      '视频转 gif(iframe)',
+      '🎞️',
+      'https://video2gif-pages.pages.dev/',
+      'emoji-extension-video2gif-iframe'
+    ]
+  ]
+
+  autoiframes.forEach(([text, icon, url, className]) =>
+    list.appendChild(createiframe(text, icon, url, className as string))
+  )
 
   inner.appendChild(list)
   menu.appendChild(inner)

@@ -29,7 +29,7 @@ export default [
       'test-results/**',
       'scripts/**',
       'src/userscript/**',
-  // buildFlags shims removed - no longer ignored
+      // buildFlags shims removed - no longer ignored
       'server/**',
       '*.config.*s',
       '*.crx',
@@ -101,6 +101,8 @@ export default [
       // 通用规则
       'no-debugger': 'error',
       'no-alert': 'warn',
+      // TypeScript handles undefined globals/types; disable no-undef for TS files
+      'no-undef': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
       'no-unused-vars': 'off',
@@ -166,6 +168,8 @@ export default [
 
       // 通用规则
       'no-debugger': 'error',
+      // TypeScript handles undefined globals/types; disable no-undef for TS files
+      'no-undef': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
       'no-unused-vars': 'off',
@@ -271,7 +275,6 @@ export default [
       }
     }
   },
-
 
   // Prettier 配置（必须放在最后）
   prettierConfig

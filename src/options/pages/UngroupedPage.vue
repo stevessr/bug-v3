@@ -14,6 +14,6 @@ const { emojiStore, removeEmojiFromGroup, openEditEmoji, openAddEmojiModal } = o
     :emojiStore="emojiStore"
     @remove="removeEmojiFromGroup"
     @edit="openEditEmoji"
-    @add-emoji="openAddEmojiModal"
+    @addEmoji="openAddEmojiModal"
   />
 </template>

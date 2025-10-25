@@ -6,7 +6,7 @@ import type { EmojiGroup, Emoji } from '../../types/emoji'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 
-defineEmits(['remove', 'edit', 'add-emoji'])
+defineEmits(['remove', 'edit', 'addEmoji'])
 
 // use store instance directly
 const emojiStore = useEmojiStore()
@@ -357,7 +357,7 @@ const cancelCreateGroup = () => {
         <!-- 左侧：添加表情按钮 -->
         <div class="flex items-center gap-2">
           <a-button
-            @click="$emit('add-emoji', 'ungrouped')"
+            @click="$emit('addEmoji', 'ungrouped')"
             class="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
             title="添加表情到未分组"
           >

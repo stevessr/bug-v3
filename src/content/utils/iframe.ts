@@ -79,7 +79,8 @@ export function createAndShowIframeModal(
     src: initialUrl,
     style: 'width:100%;height:100%;border:0',
     attrs: {
-      sandbox: opts?.iframeSandbox || 'allow-scripts allow-forms allow-same-origin allow-popups'
+      sandbox: opts?.iframeSandbox || 'allow-scripts allow-forms allow-same-origin allow-popups',
+      referrerpolicy: 'no-referrer'
     }
   }) as HTMLIFrameElement
 

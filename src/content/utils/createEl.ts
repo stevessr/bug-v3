@@ -40,12 +40,10 @@ export function createE<K extends keyof HTMLElementTagNameMap>(
     if (opts.val !== undefined && 'value' in el) (el as any).value = opts.val
     if (opts.style) el.style.cssText = opts.style
     if (opts.src && 'src' in el) (el as any).src = opts.src
-    if (opts.attrs) {
-      for (const k in opts.attrs) el.setAttribute(k, opts.attrs[k])
-    }
-    if (opts.dataset) {
-      for (const k in opts.dataset) (el as any).dataset[k] = opts.dataset[k]
-    }
+    if (opts.attrs) for (const k in opts.attrs) el.setAttribute(k, opts.attrs[k])
+
+    if (opts.dataset) for (const k in opts.dataset) (el as any).dataset[k] = opts.dataset[k]
+
     if (opts.in) el.innerHTML = opts.in
     if (opts.ti) el.title = opts.ti
     if (opts.alt && 'alt' in el) (el as any).alt = opts.alt
@@ -55,14 +53,8 @@ export function createE<K extends keyof HTMLElementTagNameMap>(
     if (opts.role) el.setAttribute('role', opts.role)
     if (opts.tabIndex !== undefined) el.tabIndex = Number(opts.tabIndex)
     if (opts.ld && 'loading' in el) (el as any).loading = opts.ld
-    if (opts.on) {
-      for (const [evt, handler] of Object.entries(opts.on)) {
-        // handler may be typed as a specific event handler (e.g. (e: KeyboardEvent) => void)
-        // but addEventListener expects EventListenerOrEventListenerObject. Cast to satisfy runtime.
-
-        el.addEventListener(evt, handler as any)
-      }
-    }
+    if (opts.on)
+      for (const [evt, handler] of Object.entries(opts.on)) el.addEventListener(evt, handler as any)
   }
   return el
 }

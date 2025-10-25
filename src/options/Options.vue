@@ -276,7 +276,9 @@ onMounted(() => {
         emojiStore.activeGroupId = g.id
         try {
           emojiStore.updateSettings({ defaultGroup: g.id })
-        } catch {}
+        } catch (e) {
+          console.error(e)
+        }
       }
     }
   }
