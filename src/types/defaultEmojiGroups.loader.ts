@@ -1,4 +1,4 @@
-import type { DefaultEmojiData, EmojiGroup } from './emoji'
+import type { DefaultEmojiData, EmojiGroup } from './type'
 
 // Runtime loader: fetch runtime JSON from /assets/defaultEmojiGroups.json
 // Returns empty defaults if fetch fails.

@@ -1,3 +1,4 @@
+import type { AppSettings } from './type'
 // Central default for uploadMenuItems used by content scripts and options
 export const DEFAULT_UPLOAD_MENU_ITEMS = {
   autoItems: [
