@@ -121,7 +121,7 @@ async function getFile(fileId) {
 // Create direct file URL from cached file path
 function createFileUrl(filePath) {
   try {
-    // Return the direct URL - we'll handle CORS in the download functions
+    // Return the direct URL to Telegram API for individual downloads
     const fileUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`
     return fileUrl
   } catch (error) {
@@ -129,6 +129,7 @@ function createFileUrl(filePath) {
     throw error
   }
 }
+
 
 // Create a sticker element for the UI
 function createStickerElement(sticker, index) {
@@ -706,18 +707,16 @@ async function downloadAllStickers() {
           sticker.file_size = fileInfo.file_size
         }
 
-        // Download the file using fetch with proper headers to avoid referer issues
-        const fileUrl = `https://api.telegram.org/file/bot${botToken}/${sticker.file_path}`
+        // Download the file using the CF Worker as a proxy to avoid CORS and rate limiting
+        const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
 
-        // Create a request without referer and other sensitive headers
-        const response = await fetch(fileUrl, {
+        // Create a request to the CF Worker proxy
+        const response = await fetch(proxyUrl, {
           method: 'GET',
           headers: {
             Accept: '*/*'
           },
-          mode: 'cors',
-          credentials: 'omit',
-          referrer: ''
+          mode: 'cors'
         })
 
         if (!response.ok) {
@@ -822,11 +821,11 @@ async function batchDownloadAllStickers() {
     }
 
     try {
-      // Download the file using fetch with proper headers to avoid referer issues
-      const fileUrl = `https://api.telegram.org/file/bot${botToken}/${sticker.file_path}`
+      // Download the file using the CF Worker as a proxy to avoid CORS and rate limiting
+      const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
 
-      // Create a request without referer and other sensitive headers
-      const response = await fetch(fileUrl, {
+      // Create a request to the CF Worker proxy
+      const response = await fetch(proxyUrl, {
         method: 'GET',
         headers: {
           Accept: '*/*'
@@ -986,8 +985,8 @@ async function retryAllFailed() {
         sticker.file_size = fileInfo.file_size
       }
 
-      // Create URL directly instead of blob for CORS compatibility
-      const fileUrl = `https://api.telegram.org/file/bot${botToken}/${sticker.file_path}`
+      // Create URL via CF Worker proxy to avoid CORS and rate limiting
+      const fileUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
       const fileExtension = sticker.file_path.split('.').pop() || 'webp'
       const filename = `${sticker.file_id}.${fileExtension}`
 
