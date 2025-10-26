@@ -22,7 +22,7 @@ export function createAndShowIframeModal(
   const className = opts?.className || 'emoji-extension-iframe-modal'
   const style =
     opts?.style ||
-    'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:900px;height:80%;max-height:700px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;cursor:move'
+    'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:900px;height:80%;max-height:700px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;cursor:move;background: transparent;'
 
   const frameWrap = createE('div', {
     class: className,
@@ -174,7 +174,7 @@ export function createAndShowSideIframeModal(
 
   const panel = createE('div', {
     class: className,
-    style: `position:fixed;top:0;right:0;height:100%;width:${maxWidth};max-width:60%;transform:translateX(100%);transition:transform 300ms ease;z-index:100000;display:flex;flex-direction:column;background:#fff;box-shadow:-10px 0 30px rgba(0,0,0,0.2);`
+    style: `position:fixed;top:0;right:0;height:100%;width:${maxWidth};max-width:60%;transform:translateX(100%);transition:transform 300ms ease, width 300ms ease;z-index:100000;display:flex;flex-direction:column;background:#fff;box-shadow:-10px 0 30px rgba(0,0,0,0.2);overflow:hidden;`
   }) as HTMLDivElement
 
   const header = createE('div', {
@@ -189,6 +189,16 @@ export function createAndShowSideIframeModal(
     style:
       'background:transparent;border:none;padding:6px;margin-right:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer',
     attrs: { 'aria-label': '在新窗口打开' }
+  }) as HTMLButtonElement
+
+  // 新增：最小化/恢复 按钮（隐藏到侧边）
+  const hideBtn = createE('button', {
+    class: 'btn btn-sm',
+    type: 'button',
+    text: '—',
+    style:
+      'background:transparent;border:none;font-size:16px;color:#666;cursor:pointer;padding:6px;border-radius:4px',
+    attrs: { 'aria-label': '最小化到侧边' }
   }) as HTMLButtonElement
 
   const closeBtn = createE('button', {
@@ -214,7 +224,9 @@ export function createAndShowSideIframeModal(
   panel.setAttribute('aria-modal', 'true')
   panel.setAttribute('aria-label', titleText)
 
+  // 按钮顺序：打开新窗口、最小化/恢复、关闭
   header.appendChild(openBtn)
+  header.appendChild(hideBtn)
   header.appendChild(closeBtn)
 
   const iframeContainer = createE('div', {
@@ -242,6 +254,17 @@ export function createAndShowSideIframeModal(
   })
 
   let removed = false
+  // 最小化状态相关
+  let isMinimized = false
+  let prevWidth = panel.style.width || maxWidth
+  let isDocked = false
+  let isClosing = false
+  let floatingBtn: HTMLButtonElement | null = null
+  // floating drag state
+  let floatDragging = false
+  let floatInitialY = 0
+  let floatOffsetY = 0
+  let floatMoved = false
 
   const cleanup = () => {
     if (removed) return
@@ -254,12 +277,26 @@ export function createAndShowSideIframeModal(
     iframe.removeEventListener('load', onLoad)
     closeBtn.removeEventListener('click', onClose)
     openBtn.removeEventListener('click', onOpenInNew)
+    hideBtn.removeEventListener('click', onToggleHide)
+    // remove floating button and its listeners
+    if (floatingBtn) {
+      floatingBtn.removeEventListener('mousedown', onFloatMouseDown)
+      floatingBtn.removeEventListener('click', onFloatClick)
+      floatingBtn.removeEventListener('touchstart', onFloatTouchStart)
+      document.removeEventListener('mousemove', onFloatMouseMove)
+      document.removeEventListener('mouseup', onFloatMouseUp)
+      document.removeEventListener('touchmove', onFloatTouchMove)
+      document.removeEventListener('touchend', onFloatTouchEnd)
+      floatingBtn.remove()
+      floatingBtn = null
+    }
     document.removeEventListener('keydown', onKeyDown)
     panel.removeEventListener('transitionend', onTransitionEnd)
   }
 
   const onClose = () => {
     // slide out to right
+    isClosing = true
     panel.style.transform = 'translateX(100%)'
     // wait for transitionend to remove element
   }
@@ -277,6 +314,170 @@ export function createAndShowSideIframeModal(
     }
   }
 
+  const onToggleHide = () => {
+    // 点击隐藏：直接停靠到侧边（把整个面板滑出屏幕），再次点击从停靠恢复为展开
+    try {
+      if (!isDocked) {
+        // remember expanded width if not already
+        if (!isMinimized) prevWidth = panel.style.width || maxWidth
+        isMinimized = false
+        dockToSide()
+      } else {
+        undockFromSide()
+      }
+    } catch {
+      // ignore safety errors
+    }
+  }
+
+  const dockToSide = () => {
+    if (isDocked) return
+    try {
+      // Restore panel width to previous expanded width so translateX(100%) will move it fully out
+      panel.style.width = prevWidth
+      panel.style.maxWidth = ''
+      // allow width to take effect, then slide it fully out
+      requestAnimationFrame(() => {
+        panel.style.transform = 'translateX(100%)'
+        panel.style.pointerEvents = 'none'
+        panel.setAttribute('aria-hidden', 'true')
+      })
+      // create floating button
+      floatingBtn = createE('button', {
+        class: 'emoji-extension-floating-btn',
+        type: 'button',
+        text: '',
+        style:
+          'position:fixed;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;z-index:100001;cursor:pointer;background:var(--d-button-default-bg-color);border:none;box-shadow:0 6px 16px rgba(0,0,0,0.2);'
+      }) as HTMLButtonElement
+
+      // small icon inside (using ›)
+      floatingBtn.textContent = '◀'
+
+  // floating drag handlers (mouse + touch)
+  floatingBtn.addEventListener('mousedown', onFloatMouseDown)
+  floatingBtn.addEventListener('click', onFloatClick)
+  floatingBtn.addEventListener('touchstart', onFloatTouchStart, { passive: false })
+  document.addEventListener('mousemove', onFloatMouseMove)
+  document.addEventListener('mouseup', onFloatMouseUp)
+  document.addEventListener('touchmove', onFloatTouchMove, { passive: false })
+  document.addEventListener('touchend', onFloatTouchEnd, { passive: false })
+
+      document.body.appendChild(floatingBtn)
+      isDocked = true
+    } catch {
+      // ignore
+    }
+  }
+
+  const undockFromSide = () => {
+    if (!isDocked) return
+    try {
+      // remove floating button
+      if (floatingBtn) {
+        floatingBtn.removeEventListener('mousedown', onFloatMouseDown)
+        floatingBtn.removeEventListener('click', onFloatClick)
+        floatingBtn.removeEventListener('touchstart', onFloatTouchStart)
+        document.removeEventListener('mousemove', onFloatMouseMove)
+        document.removeEventListener('mouseup', onFloatMouseUp)
+        document.removeEventListener('touchmove', onFloatTouchMove)
+        document.removeEventListener('touchend', onFloatTouchEnd)
+        floatingBtn.remove()
+        floatingBtn = null
+      }
+      // restore panel to fully expanded and visible state (show iframe)
+      panel.style.pointerEvents = ''
+      panel.removeAttribute('aria-hidden')
+      panel.style.transform = 'translateX(0)'
+      panel.style.width = prevWidth
+      panel.style.maxWidth = ''
+      iframeContainer.style.display = ''
+      titleSpan.style.display = ''
+      hideBtn.textContent = '—'
+      panel.setAttribute('aria-expanded', 'true')
+      isMinimized = false
+      isDocked = false
+    } catch {
+      // ignore
+    }
+  }
+
+  // Floating drag handlers
+  const onFloatMouseDown = (e: MouseEvent) => {
+    floatDragging = true
+    floatInitialY = e.clientY
+    const rect = (floatingBtn as HTMLElement).getBoundingClientRect()
+    floatOffsetY = rect.top
+    // prevent click from also triggering restore
+    e.stopPropagation()
+    e.preventDefault()
+  }
+
+  const onFloatTouchStart = (e: TouchEvent) => {
+    if (!floatingBtn) return
+    floatDragging = true
+    floatMoved = false
+    floatInitialY = e.touches[0].clientY
+    const rect = (floatingBtn as HTMLElement).getBoundingClientRect()
+    floatOffsetY = rect.top
+    // prevent the browser from handling touch as scroll
+    e.stopPropagation()
+    e.preventDefault()
+  }
+
+  const onFloatMouseMove = (e: MouseEvent) => {
+    if (!floatDragging || !floatingBtn) return
+    const delta = e.clientY - floatInitialY
+    let newTop = floatOffsetY + delta
+    const btnH = floatingBtn.offsetHeight
+    const minTop = 8
+    const maxTop = window.innerHeight - btnH - 8
+    if (newTop < minTop) newTop = minTop
+    if (newTop > maxTop) newTop = maxTop
+    floatingBtn.style.top = `${newTop}px`
+    floatingBtn.style.transform = 'translateY(0)'
+  }
+
+  const onFloatTouchMove = (e: TouchEvent) => {
+    if (!floatDragging || !floatingBtn) return
+    const touch = e.touches[0]
+    if (!touch) return
+    const delta = touch.clientY - floatInitialY
+    if (Math.abs(delta) > 2) floatMoved = true
+    let newTop = floatOffsetY + delta
+    const btnH = floatingBtn.offsetHeight
+    const minTop = 8
+    const maxTop = window.innerHeight - btnH - 8
+    if (newTop < minTop) newTop = minTop
+    if (newTop > maxTop) newTop = maxTop
+    floatingBtn.style.top = `${newTop}px`
+    floatingBtn.style.transform = 'translateY(0)'
+    e.stopPropagation()
+    e.preventDefault()
+  }
+
+  const onFloatMouseUp = (_e: MouseEvent) => {
+    if (!floatDragging) return
+    floatDragging = false
+  }
+
+  const onFloatTouchEnd = (e: TouchEvent) => {
+    if (!floatDragging) return
+    floatDragging = false
+    // if touch didn't move much, treat as click -> restore
+    if (!floatMoved) {
+      undockFromSide()
+    }
+    e.stopPropagation()
+    e.preventDefault()
+  }
+
+  const onFloatClick = (e: MouseEvent) => {
+    // restore panel
+    e.stopPropagation()
+    undockFromSide()
+  }
+
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' || e.key === 'Esc') {
       onClose()
@@ -284,7 +485,8 @@ export function createAndShowSideIframeModal(
   }
 
   const onTransitionEnd = (e: TransitionEvent) => {
-    if (e.target === panel && panel.style.transform.includes('100%')) {
+    if (e.target === panel && panel.style.transform.includes('100%') && isClosing) {
+      // only cleanup when we intentionally closed the panel
       cleanup()
     }
   }
@@ -312,6 +514,7 @@ export function createAndShowSideIframeModal(
 
   closeBtn.addEventListener('click', onClose)
   openBtn.addEventListener('click', onOpenInNew)
+  hideBtn.addEventListener('click', onToggleHide)
   document.addEventListener('keydown', onKeyDown)
   iframe.addEventListener('load', onLoad)
   panel.addEventListener('transitionend', onTransitionEnd)
