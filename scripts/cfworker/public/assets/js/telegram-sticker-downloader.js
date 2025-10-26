@@ -153,6 +153,99 @@ function initialize() {
   })
 }
 
+// Detect whether the page is running inside a sandboxed iframe and what tokens
+// the iframe has. We use a combination of accessible iframe attributes and
+// heuristics. If the iframe element is accessible (same-origin / allow-same-origin)
+// we can inspect its sandbox attribute directly.
+function detectSandboxRestrictions() {
+  const inIframe = window.self !== window.top
+  let sandboxAttr = null
+  let hasAllowDownloads = false
+  let hasAllowPopups = false
+  let canAccessFrameElement = false
+
+  try {
+    const fe = window.frameElement
+    if (fe) {
+      canAccessFrameElement = true
+      sandboxAttr = fe.getAttribute && fe.getAttribute('sandbox')
+      if (sandboxAttr) {
+        const tokens = sandboxAttr.split(/\s+/).map(t => t.trim()).filter(Boolean)
+        hasAllowDownloads = tokens.includes('allow-downloads')
+        hasAllowPopups = tokens.includes('allow-popups')
+      }
+    }
+  } catch (e) {
+    // Access to frameElement may be blocked cross-origin; leave defaults
+  }
+
+  return {
+    inIframe,
+    sandboxAttr,
+    hasAllowDownloads,
+    hasAllowPopups,
+    canAccessFrameElement
+  }
+}
+
+function canDirectDownload() {
+  const info = detectSandboxRestrictions()
+  // If not in an iframe we can download directly. If iframe and it explicitly
+  // has allow-downloads token we can also download directly.
+  return !info.inIframe || info.hasAllowDownloads
+}
+
+// Unified download trigger that will attempt a direct download when possible,
+// otherwise fall back to notifying the parent via postMessage, opening a new
+// tab, or showing a user-visible instruction.
+function triggerDownload(url, filename) {
+  // Prefer direct download when allowed
+  if (canDirectDownload()) {
+    try {
+      const a = document.createElement('a')
+      a.href = url
+      if (filename) a.download = filename
+      // some browsers require the element to be in the document
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      return 'direct'
+    } catch (e) {
+      console.warn('Direct download attempt failed, will try fallback', e)
+      // fall through to fallbacks
+    }
+  }
+
+  // Try to notify parent to perform the download (works when parent listens
+  // for message and is not sandboxed). Use '*' for broad compatibility but
+  // applications should prefer specifying exact origin when integrating.
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'telegram-sticker-download', url, filename }, '*')
+      showStatus('Requested parent frame to download the file.', 'info')
+      return 'parent'
+    }
+  } catch (e) {
+    console.warn('postMessage to parent failed', e)
+  }
+
+  // Try opening in a new tab/window as a last automatic fallback
+  try {
+    const w = window.open(url, '_blank', 'noopener')
+    if (w) {
+      showStatus('Opened file in a new tab. Please save it from there.', 'info')
+      return 'popup'
+    }
+  } catch (e) {
+    console.warn('window.open failed', e)
+  }
+
+  // Final fallback: show instructions to user
+  showStatus('Download blocked by iframe sandbox. Please open this page in a new tab to download, or allow downloads on the parent iframe.', 'error')
+  return 'blocked'
+}
+
 // Save token to localStorage
 function saveToken() {
   const token = botTokenInput.value.trim()
@@ -310,6 +403,9 @@ function createStickerElement(sticker, index) {
   stickerItem.appendChild(infoContainer)
   stickerItem.appendChild(actionsContainer)
 
+  // mark the DOM element with its logical index so updateStickerStatus can find it
+  stickerItem.dataset.index = String(index)
+
   // store references for progress updates
   stickerItem._progressBar = progressBarInner
   stickerItem._progressWrap = progressWrap
@@ -324,20 +420,13 @@ function createStickerElement(sticker, index) {
 // Alternative download method for CORS issues
 function downloadFileWithCORSHandling(fileUrl, filename) {
   // Open the file URL in a new tab/window to allow the user to download manually
-  const newWindow = window.open(fileUrl, '_blank')
-  if (!newWindow) {
-    // If popup is blocked, show an error message
-    showStatus(
-      'Please allow popups to download the file, or right-click and select "Save link as..."',
-      'error'
-    )
-    throw new Error('Popup blocked')
+  const method = triggerDownload(fileUrl, filename)
+  if (method === 'popup' || method === 'parent' || method === 'direct') {
+    // triggerDownload already set an appropriate status message
+    return
   }
-  // Provide instructions to user
-  showStatus(
-    `File opened in new tab. Click the download button or right-click and "Save link as..." to save: ${filename}`,
-    'info'
-  )
+  // If all automatic attempts failed, throw so callers can handle as needed
+  throw new Error('Download blocked')
 }
 
 // Get sticker set by name
@@ -560,7 +649,8 @@ function renderStickers() {
     stickerItem.appendChild(infoContainer)
     stickerItem.appendChild(actionsContainer)
 
-    stickersContainer.appendChild(stickerItem)
+  stickerItem.dataset.index = String(index)
+  stickersContainer.appendChild(stickerItem)
 
     // Update status based on download state
     updateStickerStatus(index, 'not-downloaded')
@@ -571,44 +661,65 @@ function renderStickers() {
 
 // Update sticker status display
 function updateStickerStatus(index, status) {
-  const stickerItem = stickersContainer.children[index]
-  if (!stickerItem) return
+  // Try to find the sticker element by data-index first (more robust),
+  // then fall back to child order lookup.
+  const selector = `[data-index="${index}"]`
+  const stickerItem = stickersContainer.querySelector(selector) || stickersContainer.children[index]
+  const hasElement = !!stickerItem
 
-  const downloadBtn = stickerItem.querySelector('button:first-child')
-  const retryBtn = stickerItem.querySelector('button:nth-child(2)')
-  const statusElement = stickerItem.querySelector('.status-indicator')
+  let downloadBtn = null
+  let retryBtn = null
+  let statusElement = null
+  if (hasElement) {
+    downloadBtn = stickerItem.querySelector('button:first-child')
+    retryBtn = stickerItem.querySelector('button:nth-child(2)')
+    statusElement = stickerItem.querySelector('.status-indicator')
+  }
 
   switch (status) {
     case 'downloading':
-      downloadBtn.disabled = true
-      statusElement.textContent = 'Downloading...'
-      statusElement.className = 'status-indicator spinner'
+      if (downloadBtn) downloadBtn.disabled = true
+      if (statusElement) {
+        statusElement.textContent = '🌍'
+        statusElement.className = 'status-indicator spinner'
+      }
       break
     case 'downloaded':
-      downloadBtn.disabled = true
-      downloadBtn.textContent = 'Downloaded'
-      downloadBtn.className = 'btn-success'
-      statusElement.textContent = '✓'
-      statusElement.className = 'status-indicator'
-      downloadedStickers.add(index)
+      if (downloadBtn) {
+        downloadBtn.disabled = true
+        downloadBtn.textContent = 'Downloaded'
+        downloadBtn.className = 'btn-success'
+      }
+      if (statusElement) {
+        statusElement.textContent = '✓'
+        statusElement.className = 'status-indicator'
+      }
 
-      // Add to download history
-      addToDownloadHistory(stickers[index])
+      // Always update state sets even if the DOM element is missing
+      downloadedStickers.add(index)
+      // Add to download history if sticker exists in array
+      if (stickers[index]) addToDownloadHistory(stickers[index])
       break
     case 'failed':
-      downloadBtn.disabled = true
-      retryBtn.style.display = 'inline-block'
-      statusElement.textContent = 'Failed'
-      statusElement.className = 'status-indicator'
+      if (downloadBtn) downloadBtn.disabled = true
+      if (retryBtn) retryBtn.style.display = 'inline-block'
+      if (statusElement) {
+        statusElement.textContent = 'Failed'
+        statusElement.className = 'status-indicator'
+      }
       failedDownloads.add(index)
       break
     case 'not-downloaded':
-      downloadBtn.disabled = false
-      downloadBtn.textContent = 'Download'
-      downloadBtn.className = ''
-      retryBtn.style.display = 'none'
-      statusElement.textContent = ''
-      statusElement.className = 'status-indicator'
+      if (downloadBtn) {
+        downloadBtn.disabled = false
+        downloadBtn.textContent = 'Download'
+        downloadBtn.className = ''
+      }
+      if (retryBtn) retryBtn.style.display = 'none'
+      if (statusElement) {
+        statusElement.textContent = ''
+        statusElement.className = 'status-indicator'
+      }
       break
   }
 
@@ -759,30 +870,21 @@ async function downloadSingleSticker(sticker, index) {
         const url = URL.createObjectURL(webpBlob)
         const downloadFilename = didConvert ? `${sticker.file_id}.webp` : originalFilename
 
-        const a = document.createElement('a')
-        a.href = url
-        a.download = downloadFilename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-
-        // Clean up
-        URL.revokeObjectURL(url)
+        // Use unified download helper which will auto-detect sandbox restrictions
+        const method = triggerDownload(url, downloadFilename)
+        // If we performed a direct download we can safely revoke the object URL
+        if (method === 'direct') {
+          try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+        }
 
         updateStickerStatus(index, 'downloaded')
         showStatus(didConvert ? `Successfully converted and downloaded as WebP: ${downloadFilename}` : `Downloaded original format (conversion unavailable): ${downloadFilename}`, didConvert ? 'success' : 'info')
       } catch (convertError) {
         console.error(`Error converting WebM to WebP for sticker ${index}:`, convertError)
         // Fall back to original download method
-        const fileUrl = createFileUrl(sticker.file_path)
-        const a = document.createElement('a')
-        a.href = fileUrl
-        a.download = originalFilename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        
-        updateStickerStatus(index, 'downloaded')
+  const fileUrl = createFileUrl(sticker.file_path)
+  triggerDownload(fileUrl, originalFilename)
+  updateStickerStatus(index, 'downloaded')
         showStatus(`Downloaded original format (conversion failed): ${originalFilename}`, 'info')
       }
     } else {
@@ -877,16 +979,10 @@ async function retryDownload(sticker, index) {
         // Create download link from the blob we actually have
         const url = URL.createObjectURL(webpBlob)
         const downloadFilename = didConvert ? `${sticker.file_id}.webp` : originalFilename
-
-        const a = document.createElement('a')
-        a.href = url
-        a.download = downloadFilename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-
-        // Clean up
-        URL.revokeObjectURL(url)
+        const method = triggerDownload(url, downloadFilename)
+        if (method === 'direct') {
+          try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+        }
 
         updateStickerStatus(index, 'downloaded')
         showStatus(didConvert ? `Successfully converted and downloaded as WebP: ${downloadFilename}` : `Downloaded original format (conversion unavailable): ${downloadFilename}`, didConvert ? 'success' : 'info')
@@ -894,15 +990,9 @@ async function retryDownload(sticker, index) {
         console.error(`Error converting WebM to WebP for sticker ${index}:`, convertError)
         // Fall back to original download method
         const fileUrl = createFileUrl(sticker.file_path)
-        const a = document.createElement('a')
-        a.href = fileUrl
-        a.download = originalFilename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        
-        updateStickerStatus(index, 'downloaded')
-        showStatus(`Downloaded original format (conversion failed): ${originalFilename}`, 'info')
+  triggerDownload(fileUrl, originalFilename)
+  updateStickerStatus(index, 'downloaded')
+  showStatus(`Downloaded original format (conversion failed): ${originalFilename}`, 'info')
       }
     } else {
       // Normal download without conversion
@@ -1019,15 +1109,10 @@ async function downloadAllStickers() {
 
         // Create download link
         const url = URL.createObjectURL(fileToDownload)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = finalFilename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-
-        // Clean up
-        URL.revokeObjectURL(url)
+        const method = triggerDownload(url, finalFilename)
+        if (method === 'direct') {
+          try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+        }
 
         // Update status to downloaded
         updateStickerStatus(i, 'downloaded')
@@ -1384,16 +1469,10 @@ async function batchDownloadAllStickers() {
       const url = URL.createObjectURL(compressedBlob);
       const setName = localStorage.getItem('currentStickerSetName') || 'stickers';
       const filename = `${setName}_${new Date().getTime()}.tar.gz`;  // Using requested extension
-      
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      // Clean up
-      URL.revokeObjectURL(url);
+      const method = triggerDownload(url, filename)
+      if (method === 'direct') {
+        try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+      }
       
       const message = `Batch download complete! ${successCount} stickers compressed, ${failedCount} failed.`;
       showStatus(message, 'success');
