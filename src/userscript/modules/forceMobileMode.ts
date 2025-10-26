@@ -5,7 +5,7 @@ import { injectCustomMenuButtons } from './uiComponents'
 
 // Setup DOM change observer for force mobile mode
 let domObserver: MutationObserver | null = null
-let lastDomChangeTime = Date.now()
+// (removed unused lastDomChangeTime variable)
 
 function setupDomObserver() {
   if (domObserver) return // Already set up
@@ -25,7 +25,7 @@ function setupDomObserver() {
     }
     
     if (hasChanges) {
-      lastDomChangeTime = Date.now()
+      // DOM changed — no-op (previously recorded timestamp here)
     }
   })
 
@@ -40,7 +40,7 @@ function setupDomObserver() {
 }
 
 // Setup listeners for force mobile mode menu triggers
-let menuTriggersInitialized = false
+// menuTriggersInitialized removed (not used)
 let toolbarOptionsTriggerInitialized = false
 let chatComposerTriggerInitialized = false
 
@@ -250,7 +250,7 @@ export function setupForceMobileMenuTriggers() {
     chatComposerTriggerInitialized = true
   }
 
-  menuTriggersInitialized = true
+  // menuTriggersInitialized removed (no longer tracked)
 }
 
 // Track toolbar and chat composer triggers independently
