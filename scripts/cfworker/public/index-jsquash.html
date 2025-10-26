@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>视频转 GIF（前端版：jSquash/Browser）</title>
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎬 视频转 GIF — 前端版</h1>
+      <p class="subtitle">在浏览器内直接转换（使用 jSquash 的浏览器实现），无需后端 API。</p>
+
+      <div class="section">
+        <div class="section-title">1. 选择视频</div>
+        <div class="input-group">
+          <label>上传 MP4 文件</label>
+          <input type="file" id="fileInput" accept="video/mp4,video/*" />
+          <p class="hint">或</p>
+        </div>
+        <div class="input-group">
+          <label>视频 URL（须允许 CORS）</label>
+          <input type="url" id="urlInput" placeholder="https://example.com/video.mp4" />
+          <button
+            class="btn-preset"
+            id="analyzeBtn"
+            onclick="analyzeVideoFromUrl()"
+            style="margin-top: 8px"
+            disabled
+          >
+            🔍 分析视频
+          </button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">2. 转换参数（前端转换）</div>
+        <div class="preset-buttons">
+          <button class="btn-preset" id="originalBtn" onclick="useOriginalParams()">
+            📹 使用原视频参数
+          </button>
+          <button class="btn-preset" onclick="applyPreset('high')">🎯 高质量 (15fps/720p)</button>
+          <button class="btn-preset" onclick="applyPreset('medium')">⚡ 平衡 (10fps/480p)</button>
+          <button class="btn-preset" onclick="applyPreset('low')">💾 低体积 (8fps/360p)</button>
+          <button class="btn-preset" onclick="applyPreset('emoji')">😄 表情包 (12fps/320p)</button>
+        </div>
+
+        <div class="params-grid">
+          <div class="input-group">
+            <label>帧率 (FPS)</label>
+            <input type="number" id="fps" value="10" min="1" max="30" />
+          </div>
+          <div class="input-group">
+            <label>输出格式</label>
+            <select id="format">
+              <option value="webp" selected>WebP（动图）</option>
+              <option value="gif">GIF（已弃用）</option>
+              <option value="avif">AVIF</option>
+              <option value="jpeg">JPEG</option>
+              <option value="jxl">JPEG XL (JXL)</option>
+              <option value="png">PNG</option>
+              <option value="oxipng">Oxipng (优化 PNG)</option>
+              <option value="qoi">QOI</option>
+            </select>
+            <p class="hint">
+              这些高级格式需要 jSquash 模块支持。页面会自动尝试加载官方 @jsquash
+              模块；如模块未加载，请点击“刷新模块状态”。
+            </p>
+          </div>
+          <!-- 已移除：手动提供 jSquash 浏览器包 URL 的输入（改为自动尝试加载官方 @jsquash 模块） -->
+          <div class="input-group">
+            <label for="quality">
+              质量：
+              <span id="qualityValue">1%</span>
+            </label>
+            <input type="range" id="quality" min="0" max="100" step="1" value="1" />
+          </div>
+          <div class="input-group">
+            <label>宽度 (px)</label>
+            <input type="number" id="width" value="480" min="64" max="1280" step="16" />
+          </div>
+          <div class="input-group">
+            <label>高度 (px)</label>
+            <input type="number" id="height" value="-1" />
+            <p class="hint">-1 为自动（保持纵横比）</p>
+          </div>
+          <div class="input-group">
+            <label>起始时间 (秒)</label>
+            <input type="number" id="startTime" value="" placeholder="0" />
+          </div>
+          <div class="input-group">
+            <label>持续时长 (秒)</label>
+            <input type="number" id="duration" value="" placeholder="全部" />
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn" onclick="convert()" id="convertBtn">开始转换（前端）</button>
+        <button class="btn btn-secondary" onclick="reset()">重置</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title">模块支持（编码能力）</div>
+        <div class="input-group">
+          <button class="btn-preset" id="refreshModulesBtn" style="margin-bottom: 8px">
+            刷新模块状态
+          </button>
+          <div id="moduleSupport" class="module-support">
+            <!-- 动态填充：显示各格式模块是否加载及其能力 -->
+          </div>
+        </div>
+      </div>
+
+      <div id="status"></div>
+      <div id="result"></div>
+      <div class="log" id="log"></div>
+
+      <p class="hint" style="margin-top: 18px; font-size: 0.9em">
+        注意：前端转换受限于浏览器内存与 CPU，且远程 URL 必须允许 CORS 才能读取像素。
+      </p>
+    </div>
+
+    <!-- 使用 jSquash 的浏览器实现进行编码（不再使用 gif.js） -->
+    <script type="module" src="/assets/js/app-jsquash-browser.js"></script>
+  </body>
+</html>
