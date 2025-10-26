@@ -1,16 +1,6 @@
 // Platform detection and optimization utilities
-declare const __USERSCRIPT_PLATFORM__: string
 
 export type PlatformType = 'pc' | 'mobile' | 'original'
-
-// Get the build-time platform setting
-export function getBuildPlatform(): PlatformType {
-  try {
-    return __USERSCRIPT_PLATFORM__ as PlatformType
-  } catch {
-    return 'original'
-  }
-}
 
 // Runtime detection of device type
 export function detectRuntimePlatform(): PlatformType {
@@ -42,13 +32,8 @@ export function detectRuntimePlatform(): PlatformType {
 
 // Get effective platform (build-time override or runtime detection)
 export function getEffectivePlatform(): PlatformType {
-  const buildPlatform = getBuildPlatform()
-
-  if (buildPlatform === 'original') {
-    return detectRuntimePlatform()
-  }
-
-  return buildPlatform
+  // Build-time platform override removed; always use runtime detection
+  return detectRuntimePlatform()
 }
 
 // Check if platform-specific optimization should be applied
@@ -142,7 +127,7 @@ export function getPlatformToolbarSelectors(): string[] {
 
 // Log platform information
 export function logPlatformInfo(): void {
-  const buildPlatform = getBuildPlatform()
+  const buildPlatform = 'original' // build-time platform support removed
   const runtimePlatform = detectRuntimePlatform()
   const effectivePlatform = getEffectivePlatform()
   const config = getPlatformUIConfig()

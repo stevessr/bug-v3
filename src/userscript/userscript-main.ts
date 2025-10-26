@@ -2,7 +2,6 @@
 
 // Compile-time flag injected by vite config: when true the build is the remote variant
 declare const __USERSCRIPT_REMOTE_DEFAULTS__: boolean
-declare const __USERSCRIPT_PLATFORM__: string
 
 import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync } from './userscript-storage'
 import { userscriptState } from './state'

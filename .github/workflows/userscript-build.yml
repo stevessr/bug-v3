@@ -28,7 +28,6 @@ on:
           - standard
           - minified
           - remote
-          - oneline
       version_suffix:
         description: 'Version suffix (optional, e.g., -beta.1)'
         required: false
@@ -97,9 +96,6 @@ jobs:
         if: github.event.inputs.release_type == 'remote'
         run: pnpm run build:userscript:remote
 
-      - name: Build oneline userscript
-        if: github.event.inputs.release_type == 'oneline'
-        run: pnpm run build:userscript:oneline
 
       - name: Prepare userscript artifacts
         run: |
@@ -170,7 +166,6 @@ jobs:
             - **Standard**: Full-featured build with all capabilities
             - **Minified**: Compressed version for better loading speed
             - **Remote**: Loads emoji data from remote sources
-            - **Oneline**: Single-line embedded version
 
             ### Compatibility
             - ✅ Tampermonkey (recommended)

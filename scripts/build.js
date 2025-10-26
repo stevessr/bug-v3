@@ -44,28 +44,21 @@ const configs = {
 
 // 解析命令行参数
 const args = process.argv.slice(2)
-// 兼容两种用法：
-// 1) node scripts/build.js build:userscript remote（旧）
-// 2) node scripts/build.js remote（新：首个参数作为变体，默认构建为 userscript）
+// 移除变体选择功能：不再把首个参数解释为变体。
+// 用法现在为：node scripts/build.js <buildType>
 let buildType = 'dev'
-let variant = 'default'
-let platform = process.env.USERSCRIPT_PLATFORM || 'original' // pc, mobile, original
+
 
 if (args.length === 0) {
   buildType = 'dev'
-} else if (args.length === 1) {
+} else {
   if (Object.prototype.hasOwnProperty.call(configs, args[0])) {
-    // 传入的是已知的构建类型
     buildType = args[0]
   } else {
-    // 传入的是变体（首个参数），默认构建为 userscript
-    buildType = 'build:userscript'
-    variant = args[0]
+    console.error(`未知的构建类型或不再支持变体参数：${args[0]}`)
+    console.error(`可用的构建类型：${Object.keys(configs).join(', ')}`)
+    process.exit(1)
   }
-} else {
-  // 两个及以上参数，保持原有语义：第一个为构建类型，第二个为变体
-  buildType = args[0]
-  variant = args[1] || 'default'
 }
 
 const config = configs[buildType]
@@ -77,21 +70,10 @@ if (!config) {
 
 // 设置环境变量
 Object.assign(process.env, config)
-// 把可选的构建变体注入环境变量，供 vite 配置读取
-// For userscript builds, default to 'embedded' unless caller explicitly set a variant.
-if (
-  buildType.startsWith('build:userscript') &&
-  process.env.USERSCRIPT_VARIANT === undefined &&
-  args.length <= 1
-) {
-  // If user didn't pass an explicit variant, embed defaults into the userscript bundle.
-  process.env.USERSCRIPT_VARIANT = 'embedded'
-} else {
-  process.env.USERSCRIPT_VARIANT = variant
+// 固定 userscript 变体为 remote，移除变体选择和平台支持
+if (buildType.startsWith('build:userscript')) {
+  process.env.USERSCRIPT_VARIANT = 'remote'
 }
-
-// Set platform variant for userscript builds
-process.env.USERSCRIPT_PLATFORM = platform
 
 // Note: build-time generation of defaultEmojiGroups.ts has been removed.
 
@@ -123,11 +105,8 @@ Object.entries(config).forEach(([key, value]) => {
   console.log(`   ${key}: ${value}`)
 })
 console.log(`   USERSCRIPT_VARIANT: ${process.env.USERSCRIPT_VARIANT}`)
-console.log(`   USERSCRIPT_PLATFORM: ${process.env.USERSCRIPT_PLATFORM}`)
 console.log('')
-if (variant && variant !== 'default') {
-  console.log(`🔀 构建变体：${variant}`)
-}
+// Platform and variant selection removed; builds are fixed to remote defaults
 
 // 检查命令行参数是否包含 --no-eslint
 const skipEslint = args.includes('--no-eslint')

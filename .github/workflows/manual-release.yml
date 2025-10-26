@@ -101,29 +101,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Create exactly 12 variants as requested:
-        # (embedded&oneline, remote) × (compressed, uncompressed) × (pc, mobile, original) = 2×2×3 = 12
+        # Only remote variants are produced now. Keep combinations for
+        # compression (compressed/uncompressed) and platform (pc/mobile/original)
         include:
-          # Embedded variants (includes both embedded and oneline in same build)
-          - variant: 'embedded' 
-            platform: 'pc'
-            compression: 'compressed'
-          - variant: 'embedded'
-            platform: 'pc' 
-            compression: 'uncompressed'
-          - variant: 'embedded'
-            platform: 'mobile'
-            compression: 'compressed'
-          - variant: 'embedded'
-            platform: 'mobile'
-            compression: 'uncompressed'
-          - variant: 'embedded'
-            platform: 'original'
-            compression: 'compressed'
-          - variant: 'embedded'
-            platform: 'original'
-            compression: 'uncompressed'
-          # Remote variants
           - variant: 'remote'
             platform: 'pc'
             compression: 'compressed'
@@ -173,106 +153,40 @@ jobs:
 
       - name: Build userscript variants
         env:
-          USERSCRIPT_PLATFORM: ${{ matrix.platform }}
           BUILD_MINIFIED: ${{ matrix.compression == 'compressed' && 'true' || 'false' }}
         run: |
           mkdir -p userscript-artifacts
-          
-          if [ "${{ matrix.variant }}" = "embedded" ]; then
-            echo "Building embedded variants for platform: ${{ matrix.platform }}, compression: ${{ matrix.compression }}"
-            
-            # Build standard embedded variant
-            if [ "${{ matrix.compression }}" = "compressed" ]; then
-              case "${{ matrix.platform }}" in
-                "pc") pnpm run build:userscript:pc:min ;;
-                "mobile") pnpm run build:userscript:mobile:min ;;
-                "original") pnpm run build:userscript:min ;;
-              esac
-            else
-              case "${{ matrix.platform }}" in
-                "pc") pnpm run build:userscript:pc ;;
-                "mobile") pnpm run build:userscript:mobile ;;
-                "original") pnpm run build:userscript ;;
-              esac
-            fi
-            
-            # Copy standard embedded file
-            EMBEDDED_NAME="emoji-extension"
-            if [ "${{ matrix.platform }}" != "original" ]; then
-              EMBEDDED_NAME="${EMBEDDED_NAME}-${{ matrix.platform }}"
-            fi
-            EMBEDDED_NAME="${EMBEDDED_NAME}-embedded"
-            if [ "${{ matrix.compression }}" = "compressed" ]; then
-              EMBEDDED_NAME="${EMBEDDED_NAME}-min"
-            fi
-            EMBEDDED_NAME="${EMBEDDED_NAME}-v${{ inputs.version }}.user.js"
-            
-            if [ -f "dist/emoji-extension.user.js" ]; then
-              cp "dist/emoji-extension.user.js" "userscript-artifacts/${EMBEDDED_NAME}"
-            fi
-            
-            # Build oneline variant
-            if [ "${{ matrix.compression }}" = "compressed" ]; then
-              case "${{ matrix.platform }}" in
-                "pc") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:pc:min ;;
-                "mobile") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:mobile:min ;;
-                "original") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:min ;;
-              esac
-            else
-              case "${{ matrix.platform }}" in
-                "pc") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:pc ;;
-                "mobile") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript:mobile ;;
-                "original") USERSCRIPT_EMBED_JSON_ONELINE=true pnpm run build:userscript ;;
-              esac
-            fi
-            
-            # Copy oneline file
-            ONELINE_NAME="emoji-extension"
-            if [ "${{ matrix.platform }}" != "original" ]; then
-              ONELINE_NAME="${ONELINE_NAME}-${{ matrix.platform }}"
-            fi
-            ONELINE_NAME="${ONELINE_NAME}-oneline"
-            if [ "${{ matrix.compression }}" = "compressed" ]; then
-              ONELINE_NAME="${ONELINE_NAME}-min"
-            fi
-            ONELINE_NAME="${ONELINE_NAME}-v${{ inputs.version }}.user.js"
-            
-            if [ -f "dist/emoji-extension.user.js" ]; then
-              cp "dist/emoji-extension.user.js" "userscript-artifacts/${ONELINE_NAME}"
-            fi
-            
+
+          echo "Building remote variant for platform: ${{ matrix.platform }}, compression: ${{ matrix.compression }}"
+
+          # Build remote variant for the chosen platform and compression
+          if [ "${{ matrix.compression }}" = "compressed" ]; then
+            case "${{ matrix.platform }}" in
+              "pc") BUILD_MINIFIED=true pnpm run build:userscript:pc:remote ;;
+              "mobile") BUILD_MINIFIED=true pnpm run build:userscript:mobile:remote ;;
+              "original") BUILD_MINIFIED=true pnpm run build:userscript:remote ;;
+            esac
           else
-            echo "Building remote variant for platform: ${{ matrix.platform }}, compression: ${{ matrix.compression }}"
-            
-            # Build remote variant
-            if [ "${{ matrix.compression }}" = "compressed" ]; then
-              case "${{ matrix.platform }}" in
-                "pc") BUILD_MINIFIED=true pnpm run build:userscript:pc:remote ;;
-                "mobile") BUILD_MINIFIED=true pnpm run build:userscript:mobile:remote ;;
-                "original") BUILD_MINIFIED=true pnpm run build:userscript:remote ;;
-              esac
-            else
-              case "${{ matrix.platform }}" in
-                "pc") pnpm run build:userscript:pc:remote ;;
-                "mobile") pnpm run build:userscript:mobile:remote ;;
-                "original") pnpm run build:userscript:remote ;;
-              esac
-            fi
-            
-            # Copy remote file
-            REMOTE_NAME="emoji-extension"
-            if [ "${{ matrix.platform }}" != "original" ]; then
-              REMOTE_NAME="${REMOTE_NAME}-${{ matrix.platform }}"
-            fi
-            REMOTE_NAME="${REMOTE_NAME}-remote"
-            if [ "${{ matrix.compression }}" = "compressed" ]; then
-              REMOTE_NAME="${REMOTE_NAME}-min"
-            fi
-            REMOTE_NAME="${REMOTE_NAME}-v${{ inputs.version }}.user.js"
-            
-            if [ -f "dist/emoji-extension.user.js" ]; then
-              cp "dist/emoji-extension.user.js" "userscript-artifacts/${REMOTE_NAME}"
-            fi
+            case "${{ matrix.platform }}" in
+              "pc") pnpm run build:userscript:pc:remote ;;
+              "mobile") pnpm run build:userscript:mobile:remote ;;
+              "original") pnpm run build:userscript:remote ;;
+            esac
+          fi
+
+          # Copy remote file
+          REMOTE_NAME="emoji-extension"
+          if [ "${{ matrix.platform }}" != "original" ]; then
+            REMOTE_NAME="${REMOTE_NAME}-${{ matrix.platform }}"
+          fi
+          REMOTE_NAME="${REMOTE_NAME}-remote"
+          if [ "${{ matrix.compression }}" = "compressed" ]; then
+            REMOTE_NAME="${REMOTE_NAME}-min"
+          fi
+          REMOTE_NAME="${REMOTE_NAME}-v${{ inputs.version }}.user.js"
+
+          if [ -f "dist/emoji-extension.user.js" ]; then
+            cp "dist/emoji-extension.user.js" "userscript-artifacts/${REMOTE_NAME}"
           fi
 
       - name: Upload userscript artifact
@@ -352,7 +266,7 @@ jobs:
             - 🌐 **Original**: Universal compatibility for all devices with adaptive detection
 
             **Build Types:**
-            - 📝 **Embedded**: All emoji data included in the script (includes both standard and oneline versions)
+            - 📝 **Embedded**: All emoji data included in the script (standard version)
             - 🌐 **Remote**: Loads emoji data from remote sources for smaller file sizes
 
             **Compression:**
@@ -362,7 +276,7 @@ jobs:
             **Total Variants: 12 Combinations**
             - 6 Embedded variants: (PC, Mobile, Original) × (Compressed, Uncompressed)
             - 6 Remote variants: (PC, Mobile, Original) × (Compressed, Uncompressed)
-            - Each embedded build includes both standard and oneline versions
+            - Each embedded build includes the standard embedded version only
 
             ### New Features
             - ✨ **Popular Emoji Display**: Shows frequently used emojis with usage count

@@ -8,17 +8,15 @@ import { spawn } from 'child_process'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const buildType = process.argv[2] || 'build:userscript'
 
-function getUserscriptHeader(minified = false, variant = 'default') {
+function getUserscriptHeader(minified = false, variant = 'remote') {
   const version = getPackageVersion()
   const minSuffix = minified ? ' (Minified)' : ''
   const liteSuffix = variant === 'remote' ? ' lite' : ''
   // If the build variant requests Tampermonkey-specific behavior, add
   // Tampermonkey grants. Otherwise default to no grants for broader
   // userscript manager compatibility.
-  const grants =
-    variant && String(variant).toLowerCase().includes('tampermonkey')
-      ? `// @grant        GM_registerMenuCommand\n// @grant        GM_openInTab\n// @grant        GM_getValue\n// @grant        GM_setValue`
-      : '// @grant        none'
+  // Variant selection removed; default to remote (no special grants)
+  const grants = '// @grant        none'
 
   return `// ==UserScript==
 // @name         Discourse 表情扩展 (Emoji Extension for Discourse)${liteSuffix}${minSuffix}
@@ -251,9 +249,9 @@ function processUserscript() {
   const outputDir = 'dist'
   const inputFile = path.resolve(__dirname, '..', inputDir, 'userscript.js')
   // Allow variant-specific output filename (e.g. emoji-extension.remote.user.js)
-  const variant = process.env.USERSCRIPT_VARIANT || 'default'
-  // Treat the internal 'embedded' variant as the default output (no suffix)
-  const normalizedVariant = variant === 'embedded' ? 'default' : variant
+  // Variant selection removed; always use remote
+  const variant = 'remote'
+  const normalizedVariant = 'remote'
   const variantSuffix =
     normalizedVariant && normalizedVariant !== 'default' ? `.${normalizedVariant}` : ''
   const outputFile = path.resolve(
@@ -313,50 +311,6 @@ function processUserscript() {
       userscriptContent = inlinedPrefix + '\n' + userscriptContent
     }
 
-    // Optionally compact the embedded defaultEmojiGroups array into a single line
-    const embedOneline =
-      process.env.USERSCRIPT_EMBED_JSON_ONELINE === 'true' ||
-      (process.env.USERSCRIPT_VARIANT || '').includes('oneline')
-    if (embedOneline) {
-      try {
-        const varName = 'defaultEmojiGroups'
-        const assign = `${varName} = `
-        const start = userscriptContent.indexOf(assign)
-        const end = start === -1 ? -1 : userscriptContent.indexOf('];', start)
-        if (start !== -1 && end !== -1) {
-          const raw = userscriptContent.slice(start + assign.length, end + 2) // include closing ']'
-          let compact = null
-          try {
-            // Try to parse as JSON and re-stringify compactly
-            const parsed = JSON.parse(raw)
-            compact = JSON.stringify(parsed)
-          } catch (e) {
-            // Fallback: remove newlines and excessive indentation
-            compact = raw
-              .replace(/[\r\n]+/g, '')
-              .replace(/\s{2,}/g, ' ')
-              .trim()
-          }
-
-          // Replace the original multi-line array with the compact one-line version
-          userscriptContent =
-            userscriptContent.slice(0, start) +
-            assign +
-            compact +
-            ';' +
-            userscriptContent.slice(end + 2)
-          console.log('🔧 Compacted embedded defaultEmojiGroups to one line')
-        } else {
-          console.log('ℹ️ Could not locate defaultEmojiGroups assignment to compact')
-        }
-      } catch (err) {
-        console.warn(
-          '⚠️ Failed to compact defaultEmojiGroups:',
-          err && err.message ? err.message : err
-        )
-      }
-    }
-
     // Combine header + optional runtime helpers + content + footer
     const header = getUserscriptHeader(isMinified, normalizedVariant)
     const footer = getUserscriptFooter()
@@ -411,12 +365,11 @@ async function main() {
       process.exit(1)
     }
 
-    // Optionally skip ESLint in CI or when building an embedded userscript
-    const variant = process.env.USERSCRIPT_VARIANT || 'default'
-    const skipEslint = process.env.SKIP_ESLINT === 'true' || variant === 'embedded'
+    // Optionally skip ESLint in CI. Variant selection removed; skip only when explicitly requested
+    const skipEslint = process.env.SKIP_ESLINT === 'true'
 
     if (skipEslint) {
-      console.log(`⚠️ Skipping ESLint validation for userscript (variant=${variant})`)
+      console.log(`⚠️ Skipping ESLint validation for userscript (variant=remote)`)
       console.log('🎉 Userscript build completed (ESLint skipped).')
       // Attempt to restore original loader. If a backup exists restore it,
       // otherwise write a runtime-fetching loader template to avoid leaving
