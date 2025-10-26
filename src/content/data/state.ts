@@ -1,4 +1,4 @@
-import { AppSettings } from '../../types/emoji'
+import { AppSettings } from '@/types/type'
 
 // Shared mutable state for content scripts
 export const cachedState: {

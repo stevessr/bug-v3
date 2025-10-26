@@ -1,5 +1,5 @@
 import { useEmojiStore } from '../../stores/emojiStore'
-import type { EmojiGroup } from '../../types/emoji'
+import type { EmojiGroup } from '../../types/type'
 
 function generateEmojiName(emoji: any): string {
   const name = emoji.name || emoji.alt || '未命名'

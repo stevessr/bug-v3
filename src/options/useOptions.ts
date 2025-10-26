@@ -2,7 +2,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
-import type { EmojiGroup, Emoji, AppSettings } from '../types/emoji'
+import type { EmojiGroup, Emoji, AppSettings } from '../types/type'
 import { isImageUrl } from '../utils/isImageUrl'
 
 import {

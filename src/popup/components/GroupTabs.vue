@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { defineProps, toRefs, type Ref } from 'vue'
 
-import type { EmojiGroup } from '../../types/emoji'
-import { isImageUrl, normalizeImageUrl } from '../../utils/isImageUrl'
+import type { EmojiGroup } from '@/types/type'
+import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 
 const props = defineProps<{
   groups: EmojiGroup[]

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { defineProps, toRefs } from 'vue'
 
-import type { Emoji } from '../../types/emoji'
+import type { Emoji } from '@/types/type'
 
 const props = defineProps<{
   emojis: Emoji[]

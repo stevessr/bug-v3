@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { DownOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 
-import type { EmojiGroup, Emoji } from '../../types/emoji'
+import type { EmojiGroup, Emoji } from '../../types/type'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 

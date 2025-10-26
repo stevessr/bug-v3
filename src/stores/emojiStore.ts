@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 
-import type { Emoji, EmojiGroup, AppSettings } from '../types/emoji'
+import type { Emoji, EmojiGroup, AppSettings } from '../types/type'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
 

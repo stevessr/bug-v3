@@ -7,7 +7,7 @@ const emojiStore = useEmojiStore()
 
 const groupCount = computed(() => emojiStore.sortedGroups.length)
 const totalEmojis = computed(() =>
-  emojiStore.sortedGroups.reduce((sum, g) => sum + (g.emojis?.length || 0), 0)
+  emojiStore.sortedGroups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0)
 )
 const favoritesCount = computed(() => {
   const fav = emojiStore.sortedGroups.find(g => g.id === 'favorites')

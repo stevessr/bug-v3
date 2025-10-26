@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 
-import type { Emoji } from '../../types/emoji'
+import type { Emoji } from '@/types/type'
 
 interface Props {
   emojis: Emoji[]

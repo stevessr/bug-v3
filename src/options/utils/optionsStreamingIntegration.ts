@@ -2,7 +2,7 @@
  * 流式处理集成 - 将流式优化集成到 options 中
  */
 
-import type { EmojiGroup } from '../../types/emoji'
+import type { EmojiGroup } from '../../types/type'
 
 import { StreamingOptimizer, streamingUtils } from './streamingOptimizer'
 
