@@ -5,16 +5,14 @@ export function setupContextMenu() {
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onInstalled && chromeAPI.contextMenus) {
     chromeAPI.runtime.onInstalled.addListener(() => {
       chrome.storage.local.get('appSettings', result => {
-        // 解析新的存储格式来获取 forceMobileMode
+        // 解析存储格式（仅支持新格式 { data: {...}, timestamp: ... }）来获取 forceMobileMode
         let forceMobileMode = false
-        if (result.appSettings) {
-          if (result.appSettings.data && typeof result.appSettings.data === 'object') {
-            // 新格式：{ data: {...}, timestamp: ... }
-            forceMobileMode = result.appSettings.data.forceMobileMode || false
-          } else if (typeof result.appSettings === 'object') {
-            // 兼容旧格式：直接是设置对象
-            forceMobileMode = result.appSettings.forceMobileMode || false
-          }
+        if (
+          result.appSettings &&
+          result.appSettings.data &&
+          typeof result.appSettings.data === 'object'
+        ) {
+          forceMobileMode = !!result.appSettings.data.forceMobileMode
         }
 
         if (chromeAPI.contextMenus && chromeAPI.contextMenus.create) {
@@ -47,13 +45,14 @@ export function setupContextMenu() {
 
           // 获取当前设置并更新 forceMobileMode
           chrome.storage.local.get('appSettings', result => {
+            // 仅从新格式读取当前设置（{ data: {...}, timestamp })，否则使用空对象
             let currentSettings = {}
-            if (result.appSettings) {
-              if (result.appSettings.data && typeof result.appSettings.data === 'object') {
-                currentSettings = result.appSettings.data
-              } else if (typeof result.appSettings === 'object') {
-                currentSettings = result.appSettings
-              }
+            if (
+              result.appSettings &&
+              result.appSettings.data &&
+              typeof result.appSettings.data === 'object'
+            ) {
+              currentSettings = result.appSettings.data
             }
 
             // 更新设置并保存为新格式

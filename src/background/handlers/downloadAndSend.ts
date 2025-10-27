@@ -10,8 +10,7 @@ export async function downloadAndUploadDirect(
   const { discourseBase, cookie, csrf, mimeType } = opts
   // download
   const defaultHeaders: Record<string, string> = {
-    Accept:
-      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
     'Cache-Control': 'max-age=0'
   }
@@ -20,7 +19,7 @@ export async function downloadAndUploadDirect(
     method: 'GET',
     headers: defaultHeaders,
     referrer: 'https://www.pixiv.net/',
-    referrerPolicy: 'no-referrer-when-downgrade',
+    referrerPolicy: 'no-referrer',
     cache: 'no-cache',
     redirect: 'follow'
   })
@@ -59,7 +58,3 @@ export async function downloadAndUploadDirect(
   const data = await uploadResp.json()
   return data
 }
-
-// NOTE: handlers for uploading images to linux.do and adding emoji were intentionally removed
-// as they were unused and added maintenance overhead. If needed in future, refer to git
-// history to restore a previous implementation.
