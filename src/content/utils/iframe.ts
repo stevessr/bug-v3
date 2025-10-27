@@ -165,7 +165,8 @@ export function createAndShowSideIframeModal(
     title?: string
     className?: string
     maxWidth?: string // e.g. '600px'
-    iframeSandbox?: string
+    iframeSandbox?: string,
+    icon?: string
   }
 ) {
   const titleText = opts?.title || 'iframe'
@@ -174,7 +175,20 @@ export function createAndShowSideIframeModal(
 
   const panel = createE('div', {
     class: className,
-    style: `position:fixed;top:0;right:0;height:100%;width:${maxWidth};max-width:60%;transform:translateX(100%);transition:transform 300ms ease, width 300ms ease;z-index:100000;display:flex;flex-direction:column;background:#fff;box-shadow:-10px 0 30px rgba(0,0,0,0.2);overflow:hidden;`
+    style: `
+    position:fixed;
+    top:0;
+    right:0;
+    height:100%;
+    width:${maxWidth};
+    transform:translateX(100%);
+    transition:transform 300ms ease, width 300ms ease;
+    z-index:100000;
+    display:flex;
+    flex-direction:column;
+    background:transparent;
+    box-shadow:-10px 0 30px rgba(0,0,0,0.2);
+    overflow:hidden;`
   }) as HTMLDivElement
 
   const header = createE('div', {
@@ -246,6 +260,21 @@ export function createAndShowSideIframeModal(
   panel.appendChild(header)
   panel.appendChild(iframeContainer)
 
+  // add a resize handle on the left edge to allow adjusting width (when expanded)
+  let resizeHandle: HTMLDivElement | null = null
+  // save original transition so we can temporarily disable width transition while resizing
+  let savedTransition = panel.style.transition
+  const rh = createE('div', {
+    class: 'emoji-extension-resize-handle',
+    style:
+      'position:absolute;left:0;top:0;height:100%;width:8px;cursor:ew-resize;z-index:100002;background:transparent'
+  }) as HTMLDivElement
+  panel.appendChild(rh)
+  // bind listeners (functions declared below are hoisted as function declarations)
+  rh.addEventListener('mousedown', onResizeMouseDown as any)
+  rh.addEventListener('touchstart', onResizeTouchStart as any, { passive: false } as any)
+  resizeHandle = rh
+
   // Append hidden (off-screen) then trigger slide-in
   document.body.appendChild(panel)
   // allow style to apply
@@ -265,6 +294,13 @@ export function createAndShowSideIframeModal(
   let floatInitialY = 0
   let floatOffsetY = 0
   let floatMoved = false
+  // resize state
+  let isResizing = false
+  let resizeStartX = 0
+  let initialPanelWidth = 0
+  const MIN_PANEL_WIDTH = 300
+  const FLOAT_POS_KEY = 'emoji_extension_floating_btn_top'
+  
 
   const cleanup = () => {
     if (removed) return
@@ -289,6 +325,16 @@ export function createAndShowSideIframeModal(
       document.removeEventListener('touchend', onFloatTouchEnd)
       floatingBtn.remove()
       floatingBtn = null
+    }
+    if (resizeHandle) {
+      resizeHandle.removeEventListener('mousedown', onResizeMouseDown)
+      resizeHandle.removeEventListener('touchstart', onResizeTouchStart)
+      document.removeEventListener('mousemove', onResizeMouseMove)
+      document.removeEventListener('mouseup', onResizeMouseUp)
+      document.removeEventListener('touchmove', onResizeTouchMove)
+      document.removeEventListener('touchend', onResizeTouchEnd)
+      resizeHandle.remove()
+      resizeHandle = null
     }
     document.removeEventListener('keydown', onKeyDown)
     panel.removeEventListener('transitionend', onTransitionEnd)
@@ -352,16 +398,18 @@ export function createAndShowSideIframeModal(
       }) as HTMLButtonElement
 
       // small icon inside (using ›)
-      floatingBtn.textContent = '◀'
+      floatingBtn.textContent = opts?.icon || '◀'
 
-  // floating drag handlers (mouse + touch)
-  floatingBtn.addEventListener('mousedown', onFloatMouseDown)
-  floatingBtn.addEventListener('click', onFloatClick)
-  floatingBtn.addEventListener('touchstart', onFloatTouchStart, { passive: false })
-  document.addEventListener('mousemove', onFloatMouseMove)
-  document.addEventListener('mouseup', onFloatMouseUp)
-  document.addEventListener('touchmove', onFloatTouchMove, { passive: false })
-  document.addEventListener('touchend', onFloatTouchEnd, { passive: false })
+    // floating drag handlers (mouse + touch)
+    floatingBtn.addEventListener('mousedown', onFloatMouseDown)
+    floatingBtn.addEventListener('click', onFloatClick)
+    floatingBtn.addEventListener('touchstart', onFloatTouchStart, { passive: false })
+    document.addEventListener('mousemove', onFloatMouseMove)
+    document.addEventListener('mouseup', onFloatMouseUp)
+    document.addEventListener('touchmove', onFloatTouchMove, { passive: false })
+    document.addEventListener('touchend', onFloatTouchEnd, { passive: false })
+    // restore saved floating position
+    restoreFloatingPos()
 
       document.body.appendChild(floatingBtn)
       isDocked = true
@@ -413,6 +461,121 @@ export function createAndShowSideIframeModal(
     e.preventDefault()
   }
 
+  // Resize handlers (mouse + touch) - function declarations are hoisted
+  function onResizeMouseDown(e: MouseEvent) {
+    isResizing = true
+    resizeStartX = e.clientX
+    initialPanelWidth = panel.getBoundingClientRect().width
+    // temporarily remove width transition so width follows the pointer instantly
+    try {
+      if (!savedTransition) savedTransition = panel.style.transition
+      // keep transform transition (for slide-in/out) but drop width transition for responsiveness
+      panel.style.transition = 'transform 300ms ease'
+      panel.style.willChange = 'width'
+    } catch {
+      /* ignore */
+    }
+    e.stopPropagation()
+    e.preventDefault()
+    document.addEventListener('mousemove', onResizeMouseMove)
+    document.addEventListener('mouseup', onResizeMouseUp)
+  }
+
+  function onResizeTouchStart(e: TouchEvent) {
+    if (!e.touches || e.touches.length === 0) return
+    isResizing = true
+    resizeStartX = e.touches[0].clientX
+    initialPanelWidth = panel.getBoundingClientRect().width
+    // temporarily remove width transition so width follows the touch instantly
+    try {
+      if (!savedTransition) savedTransition = panel.style.transition
+      panel.style.transition = 'transform 300ms ease'
+      panel.style.willChange = 'width'
+    } catch {
+      /* ignore */
+    }
+    e.stopPropagation()
+    e.preventDefault()
+    document.addEventListener('touchmove', onResizeTouchMove, { passive: false } as any)
+    document.addEventListener('touchend', onResizeTouchEnd)
+  }
+
+  function onResizeMouseMove(e: MouseEvent) {
+    if (!isResizing) return
+    const delta = resizeStartX - e.clientX
+    let newW = Math.round(initialPanelWidth + delta)
+    if (newW < MIN_PANEL_WIDTH) newW = MIN_PANEL_WIDTH
+    panel.style.width = `${newW}px`
+    prevWidth = panel.style.width
+  }
+
+  function onResizeMouseUp(_e: MouseEvent) {
+    if (!isResizing) return
+    isResizing = false
+    // restore transition
+    try {
+      panel.style.transition = savedTransition || ''
+      panel.style.willChange = ''
+    } catch {
+      /* ignore */
+    }
+    document.removeEventListener('mousemove', onResizeMouseMove)
+    document.removeEventListener('mouseup', onResizeMouseUp)
+  }
+
+  function onResizeTouchMove(e: TouchEvent) {
+    if (!isResizing || !e.touches || e.touches.length === 0) return
+    const delta = resizeStartX - e.touches[0].clientX
+    let newW = Math.round(initialPanelWidth + delta)
+    if (newW < MIN_PANEL_WIDTH) newW = MIN_PANEL_WIDTH
+    panel.style.width = `${newW}px`
+    prevWidth = panel.style.width
+    e.stopPropagation()
+    e.preventDefault()
+  }
+
+  function onResizeTouchEnd(_e: TouchEvent) {
+    if (!isResizing) return
+    isResizing = false
+    // restore transition
+    try {
+      panel.style.transition = savedTransition || ''
+      panel.style.willChange = ''
+    } catch {
+      /* ignore */
+    }
+    document.removeEventListener('touchmove', onResizeTouchMove as any)
+    document.removeEventListener('touchend', onResizeTouchEnd as any)
+  }
+
+  // Persist floating button top position
+  const saveFloatingPos = (top: number) => {
+    try {
+      localStorage.setItem(FLOAT_POS_KEY, String(Math.round(top)))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const restoreFloatingPos = () => {
+    try {
+      const v = localStorage.getItem(FLOAT_POS_KEY)
+      if (v && floatingBtn) {
+        const top = Number(v)
+        const btnH = floatingBtn.offsetHeight
+        const minTop = 8
+        const maxTop = window.innerHeight - btnH - 8
+        let clamped = top
+        if (clamped < minTop) clamped = minTop
+        if (clamped > maxTop) clamped = maxTop
+        floatingBtn.style.top = `${clamped}px`
+        floatingBtn.style.transform = 'translateY(0)'
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   const onFloatTouchStart = (e: TouchEvent) => {
     if (!floatingBtn) return
     floatDragging = true
@@ -436,6 +599,8 @@ export function createAndShowSideIframeModal(
     if (newTop > maxTop) newTop = maxTop
     floatingBtn.style.top = `${newTop}px`
     floatingBtn.style.transform = 'translateY(0)'
+    // persist position while dragging
+    saveFloatingPos(newTop)
   }
 
   const onFloatTouchMove = (e: TouchEvent) => {
@@ -454,11 +619,15 @@ export function createAndShowSideIframeModal(
     floatingBtn.style.transform = 'translateY(0)'
     e.stopPropagation()
     e.preventDefault()
+    // persist position while dragging
+    saveFloatingPos(newTop)
   }
 
   const onFloatMouseUp = (_e: MouseEvent) => {
     if (!floatDragging) return
     floatDragging = false
+    // persist on release
+    if (floatingBtn) saveFloatingPos((floatingBtn.getBoundingClientRect().top))
   }
 
   const onFloatTouchEnd = (e: TouchEvent) => {
@@ -470,6 +639,7 @@ export function createAndShowSideIframeModal(
     }
     e.stopPropagation()
     e.preventDefault()
+    if (floatingBtn) saveFloatingPos((floatingBtn.getBoundingClientRect().top))
   }
 
   const onFloatClick = (e: MouseEvent) => {

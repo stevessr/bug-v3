@@ -27,7 +27,7 @@ export const DEFAULT_UPLOAD_MENU_ITEMS = {
 // focused on runtime values the content script relies on; other code paths
 // (background, options) continue to use the canonical `src/types/emoji.ts`.
 export const defaultSettings: any = {
-  imageScale: 100,
+  imageScale: 30,
   defaultGroup: 'nachoneko',
   showSearchBar: true,
   gridColumns: 4,
@@ -45,5 +45,3 @@ export const defaultSettings: any = {
   // ensure uploadMenuItems exists so content consumers always have it
   uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS
 }
-
-export default defaultSettings

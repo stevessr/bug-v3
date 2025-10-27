@@ -37,7 +37,7 @@ export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
       enableXcomExtraSelectors: true,
       lastModified: Date.now(),
       // NOTE: Tenor API key intentionally left empty for repository; set at runtime by consumers.
-      tenorApiKey: 'AIzaSyC-P6_qz3FzCoXGLk6tgitZo4jEJ5mLzD8'
+      tenorApiKey: ''
     }
   } as unknown as DefaultEmojiData
 }

@@ -527,7 +527,8 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
         },
         {
           title: text,
-          className: className
+          className: className,
+          icon: icon
         }
       )
     })
