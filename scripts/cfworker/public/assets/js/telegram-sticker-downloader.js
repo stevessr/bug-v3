@@ -113,6 +113,176 @@ async function isBlobWebP(blob) {
   }
 }
 
+// Decompress gzip Blob (used for .tgs Lottie files). Uses DecompressionStream when available.
+async function gunzipBlob(blob) {
+  if (typeof DecompressionStream === 'function') {
+    try {
+      const ds = new DecompressionStream('gzip')
+      const decompressedStream = blob.stream().pipeThrough(ds)
+      const res = await new Response(decompressedStream).arrayBuffer()
+      return res
+    } catch (e) {
+      console.warn('DecompressionStream failed:', e)
+    }
+  }
+
+  // Fallback: try pako if present
+  if (window.pako && typeof window.pako.ungzip === 'function') {
+    try {
+      const ab = await blob.arrayBuffer()
+      const u8 = new Uint8Array(ab)
+      const out = window.pako.ungzip(u8)
+      return out.buffer
+    } catch (e) {
+      console.warn('pako ungzip failed:', e)
+    }
+  }
+
+  throw new Error('No gzip decompression available in this environment')
+}
+
+// Render Lottie (parsed JSON) to an array of PNG blobs (frames)
+// Returns array of Blob (PNG) and used fps
+async function renderLottieToFrames(animationJson, maxFrames = 200) {
+  return new Promise((resolve, reject) => {
+    try {
+      // Create hidden container for canvas
+      const container = document.createElement('div')
+      container.style.position = 'fixed'
+      container.style.left = '-9999px'
+      container.style.top = '-9999px'
+      container.style.width = (animationJson.w || 512) + 'px'
+      container.style.height = (animationJson.h || 512) + 'px'
+      document.body.appendChild(container)
+
+      const fps = animationJson.fr || 30
+      const ip = typeof animationJson.ip === 'number' ? animationJson.ip : 0
+      const op = typeof animationJson.op === 'number' ? animationJson.op : Math.round((animationJson.ip || 0) + (animationJson.fr || 30) * 3)
+      const totalFrames = Math.max(1, op - ip)
+
+      // Compute sampling step to keep frames <= maxFrames
+      const step = Math.max(1, Math.ceil(totalFrames / maxFrames))
+      const framesToCapture = []
+      for (let f = ip; f < op; f += step) framesToCapture.push(f)
+
+      const anim = lottie.loadAnimation({
+        container: container,
+        renderer: 'canvas',
+        loop: false,
+        autoplay: false,
+        animationData: animationJson,
+        rendererSettings: {
+          preserveAspectRatio: 'xMidYMid meet',
+          clearCanvas: true
+        }
+      })
+
+      // Wait until the animation has rendered its first frame/DOM
+      const onLoaded = () => {
+        try {
+          const canvas = container.querySelector('canvas')
+          if (!canvas) throw new Error('Canvas not found for lottie renderer')
+
+          const captureFrame = (frameIndex) => new Promise((resFrame) => {
+            try {
+              // goToAndStop expects a frame number when second arg is true
+              anim.goToAndStop(frameIndex, true)
+              // let the renderer draw
+              requestAnimationFrame(async () => {
+                try {
+                  canvas.toBlob((blob) => {
+                    if (!blob) {
+                      resFrame(null)
+                    } else {
+                      resFrame(blob)
+                    }
+                  }, 'image/png')
+                } catch (e) { resFrame(null) }
+              })
+            } catch (e) { resFrame(null) }
+          })
+
+          (async () => {
+            const out = []
+            for (let i = 0; i < framesToCapture.length; i++) {
+              const f = framesToCapture[i]
+              const b = await captureFrame(f)
+              if (b) out.push(b)
+              // small pause to avoid blocking
+              await new Promise(r => setTimeout(r, 8))
+            }
+
+            try { anim.destroy() } catch (e) { /* ignore */ }
+            try { document.body.removeChild(container) } catch (e) { /* ignore */ }
+            resolve({ frames: out, fps: Math.round(fps / step) || 15 })
+          })()
+        } catch (err) {
+          try { anim.destroy() } catch (e) { /* ignore */ }
+          try { document.body.removeChild(container) } catch (e) { /* ignore */ }
+          reject(err)
+        }
+      }
+
+      // Hook an event to know when lottie is ready
+      anim.addEventListener('DOMLoaded', onLoaded)
+      // Fallback if event doesn't fire
+      setTimeout(() => {
+        if (!container.querySelector('canvas')) {
+          // try one more time
+          if (container.querySelector('canvas')) onLoaded()
+        }
+      }, 200)
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
+// Full flow: fetch .tgs, decompress, render frames, call FFmpeg helper to encode, return webpBlob
+async function convertTgsBlobToWebP(tgsBlob, index = null, total = 0) {
+  try {
+    // Decompress gzip
+    showStatus('Decompressing .tgs (gzip)...', 'info')
+    console.log('TGS: starting gunzip')
+    const buf = await gunzipBlob(tgsBlob)
+    console.log('TGS: gunzip finished, bytes=', buf && buf.byteLength)
+    const decoder = new TextDecoder('utf-8')
+    const jsonText = decoder.decode(buf)
+    const animationJson = JSON.parse(jsonText)
+
+    // Render frames (limit number of frames to avoid OOM)
+    showStatus('Rendering Lottie frames (this may take a moment)...', 'info')
+    console.log('TGS: starting renderLottieToFrames')
+    const rendered = await renderLottieToFrames(animationJson, 200)
+    if (!rendered || !rendered.frames || rendered.frames.length === 0) throw new Error('No frames captured from TGS')
+    const { frames, fps } = rendered
+    console.log('TGS: captured frames=', frames.length, 'fps=', fps)
+    showStatus(`Rendered ${frames.length} frames (fps ${fps})`, 'info')
+
+    // Ensure ffmpeg is loaded and call the new converter
+    showStatus('Initializing FFmpeg (if needed)...', 'info')
+    const t0 = Date.now()
+    await ensureFFmpegLoaded()
+    console.log('TGS: ensureFFmpegLoaded returned, elapsed=', Date.now() - t0)
+    showStatus('Starting encoding frames to animated WebP (this can be slow)...', 'info')
+
+    if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertTGStoWebP === 'function') {
+      // call converter with a soft timeout handled inside module
+      const webp = await window.TelegramFFmpeg.convertTGStoWebP(frames, index, total, fps)
+      if (!webp) throw new Error('FFmpeg conversion returned null or timed out')
+      showStatus('Encoding finished', 'success')
+      return webp
+    }
+
+    throw new Error('FFmpeg TGS conversion API not available')
+  } catch (e) {
+    console.error('Error converting TGS to WebP:', e)
+    // Surface a helpful UI message
+    showStatus('TGS -> WebP 转换失败或超时：' + (e && e.message ? e.message : String(e)), 'error')
+    throw e
+  }
+}
+
 // Initialize from localStorage
 function initialize() {
   const savedToken = localStorage.getItem('telegramBotToken')
@@ -827,6 +997,66 @@ async function downloadSingleSticker(sticker, index) {
     const fileExtension = sticker.file_path.split('.').pop() || 'webp'
     const originalFilename = `${sticker.file_id}.${fileExtension}`
     
+    // Handle TGS (Lottie) -> WebP conversion when enabled
+    if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'tgs') {
+      try {
+        showStatus(`Downloading ${originalFilename}...`, 'info')
+        const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
+        const tgsBlob = await fetchWithProgress(proxyUrl, (loaded, total) => {
+          const pct = total ? (loaded / total) * 100 : 0
+          updateStickerProgress(index, pct)
+        })
+
+        showStatus(`Converting ${originalFilename} to WebP...`, 'info')
+        const webpBlob = await convertTgsBlobToWebP(tgsBlob, index, 1)
+        if (webpBlob) {
+          const url = URL.createObjectURL(webpBlob)
+          const downloadFilename = `${sticker.file_id}.webp`
+          const method = triggerDownload(url, downloadFilename)
+          if (method === 'direct') try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+          updateStickerStatus(index, 'downloaded')
+          showStatus(`Successfully converted and downloaded as WebP: ${downloadFilename}`, 'success')
+          return
+        } else {
+          throw new Error('Conversion returned no blob')
+        }
+      } catch (e) {
+        console.error('TGS conversion failed on retry, falling back to original download', e)
+        showStatus(`TGS conversion failed, downloading original: ${originalFilename}`, 'info')
+        // fall through to original download
+      }
+    }
+
+    // Handle TGS (Lottie) -> WebP conversion when enabled
+    if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'tgs') {
+      try {
+        showStatus(`Downloading ${originalFilename}...`, 'info')
+        const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
+        const tgsBlob = await fetchWithProgress(proxyUrl, (loaded, total) => {
+          const pct = total ? (loaded / total) * 100 : 0
+          updateStickerProgress(index, pct)
+        })
+
+        showStatus(`Converting ${originalFilename} to WebP...`, 'info')
+        const webpBlob = await convertTgsBlobToWebP(tgsBlob, index, 1)
+        if (webpBlob) {
+          const url = URL.createObjectURL(webpBlob)
+          const downloadFilename = `${sticker.file_id}.webp`
+          const method = triggerDownload(url, downloadFilename)
+          if (method === 'direct') try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+          updateStickerStatus(index, 'downloaded')
+          showStatus(`Successfully converted and downloaded as WebP: ${downloadFilename}`, 'success')
+          return
+        } else {
+          throw new Error('Conversion returned no blob')
+        }
+      } catch (e) {
+        console.error('TGS conversion failed, falling back to original download', e)
+        // fall through to original download below
+        showStatus(`TGS conversion failed, downloading original: ${originalFilename}`, 'info')
+      }
+    }
+
     // Check if we need to convert from WebM to WebP
     if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'webm') {
       try {
@@ -1076,6 +1306,33 @@ async function downloadAllStickers() {
         let fileToDownload = blob;
         let finalFilename = originalFilename;
         
+        // TGS (Lottie) conversion
+        if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'tgs') {
+          try {
+            showStatus(`Converting ${originalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
+            await ensureFFmpegLoaded()
+            if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertTGStoWebP === 'function') {
+              const converted = await convertTgsBlobToWebP(blob, i, stickers.length)
+              if (converted) {
+                fileToDownload = converted
+                finalFilename = `${sticker.file_id}.webp`
+              } else {
+                console.warn('TGS conversion returned null, using original')
+                showStatus(`Conversion returned no data for ${sticker.file_id}, using original`, 'info')
+                fileToDownload = blob
+              }
+            } else {
+              // FFmpeg module or API not available
+              showStatus('FFmpeg TGS conversion API not available, downloading original', 'info')
+              fileToDownload = blob
+            }
+          } catch (convertError) {
+            console.error(`Error converting TGS to WebP for sticker ${i}:`, convertError)
+            showStatus(`Conversion failed for ${originalFilename}, downloading original`, 'info')
+            fileToDownload = blob
+          }
+        }
+
         if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'webm') {
           try {
             showStatus(`Converting ${originalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
@@ -1279,7 +1536,25 @@ async function batchDownloadAllStickers() {
       let fileData;
       let finalFilename = `${sticker.file_id}.${sticker.file_path.split('.').pop() || 'webp'}`;
       
-      if (convertWebMtoWebPCheckbox.checked && finalFilename.toLowerCase().endsWith('.webm')) {
+      if (convertWebMtoWebPCheckbox.checked && finalFilename.toLowerCase().endsWith('.tgs')) {
+        // TGS -> WebP conversion
+        showStatus(`Downloading and converting ${finalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
+        try {
+          await ensureFFmpegLoaded()
+          const convertedBlob = await convertTgsBlobToWebP(blob, i, stickers.length)
+          if (convertedBlob) {
+            fileData = await convertedBlob.arrayBuffer()
+            finalFilename = `${sticker.file_id}.webp`
+          } else {
+            console.warn(`TGS conversion returned null for sticker ${i}, using original blob`)
+            fileData = await blob.arrayBuffer()
+          }
+        } catch (convertError) {
+          console.error(`Error converting TGS to WebP for sticker ${i}:`, convertError)
+          showStatus(`Conversion failed for ${finalFilename}, downloading original`, 'info')
+          fileData = await blob.arrayBuffer()
+        }
+      } else if (convertWebMtoWebPCheckbox.checked && finalFilename.toLowerCase().endsWith('.webm')) {
         // Fetch and convert
         showStatus(`Downloading and converting ${finalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
         try {

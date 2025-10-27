@@ -228,10 +228,151 @@
     }
   }
 
+  // Convert a series of image frames (Uint8Array or ArrayBuffer per frame) to animated WebP
+  // frames: Array of ArrayBuffer/Uint8Array/Blob
+  // fps: frames per second (optional, default 30)
+  async function convertTGStoWebP(frames, stickerIndex = null, totalStickers = 0, fps = 30) {
+    if (ffmpegFailed) {
+      console.debug('FFmpeg permanently failed, cannot convert TGS');
+      return null;
+    }
+
+    if (!ffmpegLoaded || !ffmpeg || !ffmpeg.loaded) {
+      if (!(await initFFmpeg())) {
+        console.warn('FFmpeg not available for TGS conversion');
+        return null;
+      }
+    }
+
+    if (!ffmpeg || !ffmpeg.loaded) {
+      console.warn('FFmpeg not properly loaded for TGS conversion');
+      return null;
+    }
+
+    try {
+      // Write each frame to the FFmpeg FS as frameNNN.png
+      for (let i = 0; i < frames.length; i++) {
+        const name = `frame${String(i).padStart(3, '0')}.png`;
+        let data = frames[i];
+        if (data instanceof Blob) data = await data.arrayBuffer();
+        if (data instanceof ArrayBuffer) data = new Uint8Array(data);
+        else if (!(data instanceof Uint8Array)) data = new Uint8Array(data);
+        await ffmpeg.writeFile(name, data);
+      }
+
+      // progress handler forwarding sticker context
+      const progressHandler = ({ progress, time }) => {
+        try {
+          if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg._onProgress === 'function') {
+            window.TelegramFFmpeg._onProgress({ stickerIndex, totalStickers, progress, time });
+          }
+        } catch (e) {
+          console.warn('Error in progressHandler for TGS:', e);
+        }
+      };
+      if (ffmpeg && typeof ffmpeg.on === 'function') ffmpeg.on('progress', progressHandler);
+
+      // Build ffmpeg arguments to take sequential images and encode animated webp
+      // using libwebp_anim. Use -framerate to set input FPS.
+      const inputPattern = 'frame%03d.png';
+      const args = [
+        '-framerate', String(fps),
+        '-i', inputPattern,
+        '-c:v', 'libwebp_anim',
+        '-lossless', '0',
+        '-q:v', '100',
+        '-compression_level', '6',
+        '-f', 'webp',
+        '-y',
+        'output.webp'
+      ];
+
+      // Run ffmpeg.exec with a timeout safeguard to avoid indefinite hangs in wasm
+      const execPromise = (async () => {
+        try {
+          return await ffmpeg.exec(args)
+        } catch (e) {
+          console.error('FFmpeg exec threw:', e)
+          throw e
+        }
+      })()
+
+      const TIMEOUT_MS = 90000; // 90s timeout for encoding; adjust if needed
+
+      let execResult
+      try {
+        execResult = await Promise.race([
+          execPromise,
+          new Promise((_, rej) => setTimeout(() => rej(new Error('FFmpeg exec timeout')), TIMEOUT_MS))
+        ])
+      } catch (raceErr) {
+        console.warn('FFmpeg exec promise race failed or timed out:', raceErr)
+        // try to read partial output if any
+        try {
+          const maybe = await ffmpeg.readFile('output.webp')
+          if (maybe && maybe.length) {
+            console.warn('Found partial output.webp after timeout')
+            const webpBlob = new Blob([maybe], { type: 'image/webp' })
+            try { await ffmpeg.deleteFile('output.webp') } catch (e) { /* ignore */ }
+            try { if (ffmpeg && typeof ffmpeg.off === 'function') ffmpeg.off('progress', progressHandler); } catch (e) { /* ignore */ }
+            // cleanup frames
+            try {
+              for (let i = 0; i < frames.length; i++) {
+                await ffmpeg.deleteFile(`frame${String(i).padStart(3, '0')}.png`);
+              }
+            } catch (cleanupErr) { /* ignore */ }
+            return webpBlob
+          }
+        } catch (readErr) {
+          console.warn('Could not read output.webp after timeout:', readErr)
+        }
+        try { if (ffmpeg && typeof ffmpeg.off === 'function') ffmpeg.off('progress', progressHandler); } catch (e) { /* ignore */ }
+        // As a last resort, return null to indicate failure/timeout
+        return null
+      }
+
+      try {
+        if (ffmpeg && typeof ffmpeg.off === 'function') ffmpeg.off('progress', progressHandler);
+      } catch (e) {
+        // ignore
+      }
+
+      if (execResult !== 0 && execResult !== undefined) {
+        console.warn('FFmpeg exec returned error code for TGS conversion:', execResult);
+        // cleanup frames
+        try {
+          for (let i = 0; i < frames.length; i++) {
+            await ffmpeg.deleteFile(`frame${String(i).padStart(3, '0')}.png`);
+          }
+        } catch (cleanupErr) { /* ignore */ }
+        return null;
+      }
+
+      const webpData = await ffmpeg.readFile('output.webp');
+      const webpBlob = new Blob([webpData], { type: 'image/webp' });
+
+      // cleanup temporary files
+      try {
+        await ffmpeg.deleteFile('output.webp');
+        for (let i = 0; i < frames.length; i++) {
+          await ffmpeg.deleteFile(`frame${String(i).padStart(3, '0')}.png`);
+        }
+      } catch (cleanupError) {
+        console.warn('Error cleaning up ffmpeg files after TGS conversion:', cleanupError);
+      }
+
+      return webpBlob;
+    } catch (error) {
+      console.error('Error converting TGS frames to WebP:', error);
+      return null;
+    }
+  }
+
   // Expose API on window
   window.TelegramFFmpeg = {
     initFFmpeg,
     convertWebMtoWebP,
+    convertTGStoWebP,
     compressData
   };
 })();

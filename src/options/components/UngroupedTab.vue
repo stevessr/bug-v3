@@ -54,6 +54,7 @@ const onTargetGroupSelect = (info: { key: string | number }) => {
 const showCreateGroupDialog = ref(false)
 const newGroupName = ref('')
 const newGroupIcon = ref('')
+const copyButtonLabel = ref('复制为 markdown')
 
 const ungroup = computed(() => emojiStore.groups.find((g: EmojiGroup) => g.id === 'ungrouped'))
 
@@ -264,6 +265,48 @@ const moveSelectedEmojis = async () => {
   }
 }
 
+// 复制选中的表情为 markdown 格式到剪贴板
+const copySelectedAsMarkdown = async () => {
+  if (selectedEmojis.value.size === 0 || !ungroup.value) return
+
+  const lines = Array.from(selectedEmojis.value)
+    .map(idx => {
+      const e = ungroup.value!.emojis[idx]
+      return e && e.url ? `![](${e.url})` : null
+    })
+    .filter((v): v is string => !!v)
+
+  if (lines.length === 0) return
+
+  const markdown = lines.join('\n')
+
+  try {
+    if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(markdown)
+    } else {
+      // fallback
+      const ta = document.createElement('textarea')
+      ta.value = markdown
+      // Avoid visible flash
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      try {
+        document.execCommand('copy')
+      } catch (e) {
+        // ignore
+      }
+      document.body.removeChild(ta)
+    }
+  } catch (err) {
+    console.error('Failed to copy markdown to clipboard', err)
+  }
+}
+
+// Avoid TS "declared but its value is never read" if template uses the function via $emit or similar
+void copySelectedAsMarkdown
+
 // 确认创建新分组
 const confirmCreateGroup = async () => {
   if (!newGroupName.value.trim()) return
@@ -338,6 +381,13 @@ const cancelCreateGroup = () => {
                 class="text-sm px-3 py-1 bg-blue-500 dark:bg-blue-600 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 移动
+              </a-button>
+              <a-button
+                @click="copySelectedAsMarkdown"
+                :disabled="selectedEmojis.size === 0"
+                class="text-sm px-3 py-1 bg-indigo-500 dark:bg-indigo-600 text-white rounded hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {{ copyButtonLabel }}
               </a-button>
               <a-button
                 @click="clearSelection"

@@ -435,13 +435,8 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
       if (existing) return
       createAndShowSideIframeModal(
         url,
-        href => {
-          try {
-            const url = new URL(href)
-            return url.hostname.endsWith('linux.do')
-          } catch {
-            return false
-          }
+        _herf => {
+          return false
         },
         {
           title: text,
