@@ -2,7 +2,7 @@ import { createE, DOA, DEBI } from './createEl'
 // Lightweight toast notification utility for content scripts
 export function notify(
   message: string,
-  type: 'info' | 'success' | 'error' = 'info',
+  type: 'info' | 'success' | 'error' | 'transparent' | 'rainbow' = 'info',
   timeout = 4000
 ) {
   try {
@@ -39,7 +39,9 @@ export function notify(
 
     if (type === 'success') el.style.background = '#16a34a'
     else if (type === 'error') el.style.background = '#dc2626'
-    else el.style.background = '#0369a1'
+    else if (type === 'transparent') el.style.background = 'transparent'
+    else if (type === 'rainbow') el.style.background = 'linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet)'
+    else el.style.background = '#0369a1' // info
 
     container.appendChild(el)
 

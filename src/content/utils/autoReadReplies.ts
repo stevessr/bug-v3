@@ -38,6 +38,66 @@ async function fetchPostsForTopic(topicId: number) {
   return { posts, totalCount }
 }
 
+function getCSRFToken(): string | null {
+  try {
+    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
+    if (meta && meta.content) return meta.content
+
+    const meta2 = document.querySelector('meta[name="x-csrf-token"]') as HTMLMetaElement | null
+    if (meta2 && meta2.content) return meta2.content
+
+    // window variable fallback
+    const anyWin = window as any
+    if (anyWin && anyWin.csrfToken) return anyWin.csrfToken
+    if (anyWin && anyWin._csrf_token) return anyWin._csrf_token
+
+    // cookie fallback (XSRF-TOKEN or _csrf)
+    const m = document.cookie.match(/(?:XSRF-TOKEN|_csrf)=([^;]+)/)
+    if (m && m[1]) return decodeURIComponent(m[1])
+  } catch (e) {
+    // ignore
+  }
+  return null
+}
+
+async function setNotificationLevel(topicId: number, level = 1) {
+  const token = getCSRFToken()
+  if (!token) {
+    notify('无法获取 CSRF token，未能设置追踪等级', 'error')
+    return
+  }
+
+  const url = `${location.origin}/t/${topicId}/notifications`
+  const body = `notification_level=${encodeURIComponent(String(level))}`
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        accept: '*/*',
+        'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'x-csrf-token': token,
+        'x-requested-with': 'XMLHttpRequest',
+        // keep these similar to the example; they are harmless if ignored
+        'discourse-logged-in': 'true',
+        'discourse-present': 'true',
+        priority: 'u=1, i'
+      },
+      body,
+      mode: 'cors',
+      credentials: 'include'
+    })
+
+    if (!resp.ok) {
+      throw new Error(`设置追踪等级请求失败：${resp.status}`)
+    }
+
+    notify(`话题 ${topicId} 的追踪等级已设置为 ${level}`, 'rainbow')
+  } catch (e: any) {
+    notify('设置追踪等级失败：' + (e && e.message ? e.message : String(e)), 'error')
+  }
+}
+
 async function autoReadAll(topicId?: number, startFrom = 1) {
   try {
     let tid = topicId || 0
@@ -69,15 +129,20 @@ async function autoReadAll(topicId?: number, startFrom = 1) {
     const total = totalCount || posts.length
     const postNumbers: number[] = []
     if (startFrom > total) {
-      notify(`起始帖子号 ${startFrom} 超过总帖子数 ${total}，已跳过`, 'info')
+      notify(`起始帖子号 ${startFrom} 超过总帖子数 ${total}，已跳过`, 'transparent')
       return
     }
     for (let n = startFrom; n <= total; n++) postNumbers.push(n)
 
-    // Process in batches of 7
-    const BATCH_SIZE = 10
+    // Process in batches with a randomized batch size between 50 and 1000
+    // 说明：范围可按需调整。如果需要更小或更大的批次，请告诉我。
+    let BATCH_SIZE = Math.floor(Math.random() * 951) + 50 // 50..1000
+    const ran = () => {
+      BATCH_SIZE = Math.floor(Math.random() * 1000) + 50 // 50..1000
+    }
     for (let i = 0; i < postNumbers.length; i += BATCH_SIZE) {
       const batch = postNumbers.slice(i, i + BATCH_SIZE)
+      ran()
 
       // Build timings: map post_number to a small read time (e.g., 1000ms)
       const timings: Record<number, number> = {}
@@ -97,6 +162,13 @@ async function autoReadAll(topicId?: number, startFrom = 1) {
       // random delay between 500ms and 1500ms
       const delay = 500 + Math.floor(Math.random() * 1000)
       await sleep(delay)
+    }
+
+    // 在所有帖子已标记为已读后，将话题的追踪等级设置为常规（1）
+    try {
+      await setNotificationLevel(tid, 1)
+    } catch (e) {
+      // setNotificationLevel 自行通知错误，这里保持沉默
     }
 
     notify('自动阅读完成', 'success')

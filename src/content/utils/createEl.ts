@@ -22,11 +22,11 @@ export function createE<K extends keyof HTMLElementTagNameMap>(
     role?: string
     tabIndex?: number | string
     ld?: string // shortened 'loading' to 'ld'
-
     on?: Partial<{
       [K in keyof GlobalEventHandlersEventMap]: (ev: GlobalEventHandlersEventMap[K]) => any
     }> &
       Record<string, any>
+    child?: HTMLElement[]
   }
 ) {
   const el = document.createElement(tag)
@@ -55,6 +55,7 @@ export function createE<K extends keyof HTMLElementTagNameMap>(
     if (opts.ld && 'loading' in el) (el as any).loading = opts.ld
     if (opts.on)
       for (const [evt, handler] of Object.entries(opts.on)) el.addEventListener(evt, handler as any)
+    if (opts.child) opts.child.forEach(child => el.appendChild(child))
   }
   return el
 }
