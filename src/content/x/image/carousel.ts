@@ -66,9 +66,7 @@ function createCarouselBtn(data: AddEmojiButtonData) {
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     backdrop-filter: blur(4px);
     pointerEvents: auto;  
-  `
-      .replace(/\s+/g, ' ')
-      .trim(),
+  `,
     on: {
       mouseenter: () => {
         btn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
@@ -161,17 +159,7 @@ function findButtonMenuBar(carouselElement: Element): Element | null {
 
 function createMenuBarBtn(data: AddEmojiButtonData, menuBar: Element) {
   const wrapper = document.createElement('div')
-  wrapper.className = 'css-175oi2r r-18u37iz r-1h0z5md r-13awgt0'
   const btn = createCarouselBtn(data)
-  btn.classList.add(
-    'css-175oi2r',
-    'r-1777fci',
-    'r-bt1l66',
-    'r-bztko3',
-    'r-lrvibr',
-    'r-1loqt21',
-    'r-1ny4l3l'
-  )
   wrapper.appendChild(btn)
   menuBar.appendChild(wrapper)
   return btn
