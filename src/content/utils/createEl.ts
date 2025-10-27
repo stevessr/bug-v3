@@ -60,13 +60,15 @@ export function createE<K extends keyof HTMLElementTagNameMap>(
 }
 
 // Append element to document.body
-export const DOA = document.body.appendChild
-export const DHA = document.head.appendChild
+// Bind DOM methods to their owners to avoid "Illegal invocation" when they're
+// exported and called unbound elsewhere (e.g. const fn = document.querySelectorAll).
+export const DOA = document.body.appendChild.bind(document.body)
+export const DHA = document.head.appendChild.bind(document.head)
 // Delete element by id, return null if not found, otherwise return the element itself.
-export const DEBI = document.getElementById
+export const DEBI = document.getElementById.bind(document)
 
-export const DAEL = document.addEventListener
+export const DAEL = document.addEventListener.bind(document)
 
-export const DQSA = document.querySelectorAll
+export const DQSA = document.querySelectorAll.bind(document)
 
-export const DQS = document.querySelector
+export const DQS = document.querySelector.bind(document)
