@@ -16,7 +16,7 @@
 
 ### 重复问题
 
-1. **表情数据重复** - 40个表情在3个文件中重复定义
+1. **表情数据重复** - 40 个表情在 3 个文件中重复定义
 2. **类型定义重复** - `Emoji` 接口在多个文件中重复
 3. **验证函数重复** - `validateEmojiArray` 在多个文件中实现
 4. **导入路径混乱** - 不同文件引用不同的数据源
@@ -68,11 +68,11 @@ export interface AppSettings { ... }
 export function validateEmojiArray(...) { ... }
 
 // 统一的默认数据
-export const defaultEmojiGroups = [...] // 完整的40个表情
+export const defaultEmojiGroups = [...] // 完整的 40 个表情
 export const defaultSettings = {...}
 
 // 向后兼容的平坦数据结构
-export const defaultEmojiSet = [...] // 用于content script
+export const defaultEmojiSet = [...] // 用于 content script
 ```
 
 ### 简化的重新导出 (`content/emoji-data.ts`)
@@ -96,15 +96,15 @@ import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
 
 ### 数据统一
 
-- ✅ 消除了3处重复的表情数据定义
+- ✅ 消除了 3 处重复的表情数据定义
 - ✅ 统一了类型接口定义
 - ✅ 集中管理验证逻辑
 
 ### 代码减少
 
-- **删除重复代码** - 约200行重复的表情数据
-- **删除重复函数** - 2个重复的验证函数实现
-- **删除重复文件** - 3个重复或过时的文件
+- **删除重复代码** - 约 200 行重复的表情数据
+- **删除重复函数** - 2 个重复的验证函数实现
+- **删除重复文件** - 3 个重复或过时的文件
 
 ### 维护性提升
 
@@ -120,13 +120,13 @@ import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
 
 ## 🔄 向后兼容
 
-### Content Script兼容
+### Content Script 兼容
 
 - 保持 `defaultEmojiSet` 的平坦结构
 - 维持原有的 `{ packet, name, url }` 格式
 - 确保现有功能不受影响
 
-### Options页面兼容
+### Options 页面兼容
 
 - 继续使用分组结构 `EmojiGroup[]`
 - 保持验证函数的接口不变
@@ -136,7 +136,7 @@ import { defaultEmojiGroups, defaultSettings } from '../types/emoji'
 
 通过这次重构：
 
-1. **消除了重复** - 解决了3处表情数据重复的问题
+1. **消除了重复** - 解决了 3 处表情数据重复的问题
 2. **统一了管理** - 建立了单一可信的数据源
 3. **简化了维护** - 未来只需要在一个文件中更新表情数据
 4. **保持了兼容** - 不影响现有功能的正常运行

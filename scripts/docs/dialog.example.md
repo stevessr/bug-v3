@@ -67,7 +67,7 @@ import { customPrompt } from './dialog'
 // 基本使用
 const name = await customPrompt('请输入您的名字：')
 if (name !== null) {
-  console.log('用户输入了:', name)
+  console.log('用户输入了：', name)
 } else {
   console.log('用户取消了输入')
 }

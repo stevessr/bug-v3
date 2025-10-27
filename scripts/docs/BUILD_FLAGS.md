@@ -30,7 +30,7 @@
 npm run dev
 ```
 
-- 日志: ✅ 启用
+- 日志：✅ 启用
 - IndexedDB: ✅ 启用
 
 ### 标准生产构建
@@ -39,9 +39,9 @@ npm run dev
 npm run build
 ```
 
-- 日志: ✅ 启用
+- 日志：✅ 启用
 - IndexedDB: ✅ 启用
-- 优化: ✅ 启用
+- 优化：✅ 启用
 
 ### 生产构建（无日志）
 
@@ -49,10 +49,10 @@ npm run build
 npm run build:prod
 ```
 
-- 日志: ❌ 禁用
+- 日志：❌ 禁用
 - IndexedDB: ✅ 启用
-- 优化: ✅ 启用
-- 特点: 体积更小，性能更好
+- 优化：✅ 启用
+- 特点：体积更小，性能更好
 
 ### 无 IndexedDB 构建
 
@@ -60,9 +60,9 @@ npm run build:prod
 npm run build:no-indexeddb
 ```
 
-- 日志: ✅ 启用
+- 日志：✅ 启用
 - IndexedDB: ❌ 禁用
-- 特点: 适合不需要本地存储的环境
+- 特点：适合不需要本地存储的环境
 
 ### 最小化构建
 
@@ -70,9 +70,9 @@ npm run build:no-indexeddb
 npm run build:minimal
 ```
 
-- 日志: ❌ 禁用
+- 日志：❌ 禁用
 - IndexedDB: ❌ 禁用
-- 特点: 最小体积，最高性能，适合资源受限环境
+- 特点：最小体积，最高性能，适合资源受限环境
 
 ### 油猴脚本构建
 
@@ -80,9 +80,9 @@ npm run build:minimal
 npm run build:userscript
 ```
 
-- 日志: ✅ 启用
+- 日志：✅ 启用
 - IndexedDB: ❌ 禁用 (使用 localStorage)
-- 特点: 生成油猴脚本，无需浏览器扩展即可使用
+- 特点：生成油猴脚本，无需浏览器扩展即可使用
 
 ### 油猴脚本构建（混淆版）
 
@@ -90,9 +90,9 @@ npm run build:userscript
 npm run build:userscript:min
 ```
 
-- 日志: ✅ 启用
+- 日志：✅ 启用
 - IndexedDB: ❌ 禁用 (使用 localStorage)
-- 特点: 压缩混淆的油猴脚本，体积更小
+- 特点：压缩混淆的油猴脚本，体积更小
 
 ## 手动配置环境变量
 
