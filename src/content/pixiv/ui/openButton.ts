@@ -1,5 +1,6 @@
 import type { AddEmojiButtonData } from '../types'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
+import { createE } from '@/content/utils/createEl'
 
 export function setupOpenInNewTabHandler(button: HTMLElement, data: AddEmojiButtonData) {
   let running = false
@@ -76,34 +77,36 @@ export function setupOpenInNewTabHandler(button: HTMLElement, data: AddEmojiButt
 }
 
 export function createPixivOpenInNewTabButton(data: AddEmojiButtonData): HTMLElement {
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.className = 'pixiv-open-in-newtab'
-  button.style.cssText = `
-    position: absolute;
-    left: 12px;
-    top: 12px;
-    z-index: 100000;
-    color: #ffffff;
-    background: linear-gradient(135deg, #374151, #1f2937);
-    border: 2px solid rgba(255,255,255,0.9);
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    pointer-events: auto;
-  `
-  button.innerHTML = `
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M14 3v2h3.59L7.76 15.83l1.41 1.41L19 6.41V10h2V3h-7z"/>
-    </svg>
-    在新标签页打开
-  `
-  button.title = '在新标签页打开图片'
+  const button = createE('button', {
+    type: 'button',
+    class: 'pixiv-open-in-newtab',
+    style: `
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      z-index: 100000;
+      color: #ffffff;
+      background: linear-gradient(135deg, #374151, #1f2937);
+      border: 2px solid rgba(255,255,255,0.9);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: auto;
+    `,
+    in: `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M14 3v2h3.59L7.76 15.83l1.41 1.41L19 6.41V10h2V3h-7z"/>
+      </svg>
+      在新标签页打开
+    `,
+    ti: '在新标签页打开图片'
+  })
+  
   try {
     button.dataset.emojiName = data.name
     button.dataset.emojiUrl = data.url
