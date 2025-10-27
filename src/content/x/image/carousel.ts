@@ -34,16 +34,11 @@ function clearInjected(el: Element | null | undefined) {
 }
 
 function createCarouselBtn(data: AddEmojiButtonData) {
+  // create button without innerHTML, append SVG via DOM for reliability
   const btn = createE('button', {
     class: 'x-emoji-add-btn-carousel',
     type: 'button',
     ti: '添加到未分组表情',
-    in: `<div dir="ltr" style="color: rgb(255, 255, 255);">
-      <div></div>
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <g><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></g>
-        </svg>
-    </div>`,
     attrs: {
       'aria-label': '添加表情',
       role: 'button'
@@ -76,7 +71,116 @@ function createCarouselBtn(data: AddEmojiButtonData) {
       }
     }
   })
+  // build SVG icon via DOM
+  const svgNS = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(svgNS, 'svg')
+  svg.setAttribute('viewBox', '0 0 24 24')
+  svg.setAttribute('aria-hidden', 'true')
+  svg.style.width = '18px'
+  svg.style.height = '18px'
+  svg.style.display = 'block'
+  const g = document.createElementNS(svgNS, 'g')
+  const path = document.createElementNS(svgNS, 'path')
+  path.setAttribute('d', 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z')
+  g.appendChild(path)
+  svg.appendChild(g)
+  const wrapper = document.createElement('div')
+  wrapper.setAttribute('dir', 'ltr')
+  wrapper.style.color = 'rgb(255, 255, 255)'
+  wrapper.appendChild(svg)
+  btn.appendChild(wrapper)
   setupButtonClick(btn, data)
+  return btn
+}
+
+function createDownloadBtn(data: AddEmojiButtonData) {
+  const btn = createE('button', {
+    class: 'x-emoji-download-btn-carousel',
+    type: 'button',
+    ti: '下载图片',
+    attrs: {
+      'aria-label': '下载图片',
+      role: 'button'
+    },
+    style: `
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    cursor: pointer;
+    color: rgb(255, 255, 255);
+    padding: 0;
+    margin: 0 6px 0 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
+    min-height: 32px;
+    min-width: 32px;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+    pointerEvents: auto;  
+  `,
+    on: {
+      mouseenter: () => {
+        btn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+      },
+      mouseleave: () => {
+        btn.style.backgroundColor = 'transparent'
+      },
+      click: async () => {
+        try {
+          const url = data.url
+          const name = data.name || 'image'
+          // Try to fetch the resource and save via blob to preserve filename where possible
+          try {
+            const resp = await fetch(url)
+            if (!resp.ok) throw new Error('network')
+            const blob = await resp.blob()
+            const blobUrl = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = blobUrl
+            a.download = name
+            // append to DOM so click works in all browsers
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
+            return
+          } catch (e) {
+            // fallback to opening in new tab if fetch fails (CORS etc)
+            window.open(url, '_blank')
+            return
+          }
+        } catch (err) {
+          // final fallback
+          try {
+            window.open(data.url, '_blank')
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    }
+  })
+  // append SVG icon via DOM
+  const svgNS = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(svgNS, 'svg')
+  svg.setAttribute('viewBox', '0 0 24 24')
+  svg.setAttribute('aria-hidden', 'true')
+  svg.style.width = '18px'
+  svg.style.height = '18px'
+  svg.style.display = 'block'
+  const g = document.createElementNS(svgNS, 'g')
+  const path = document.createElementNS(svgNS, 'path')
+  path.setAttribute('d', 'M5 20h14v-2H5v2zm7-18L5.33 9h3.67v6h6V9h3.67L12 2z')
+  g.appendChild(path)
+  svg.appendChild(g)
+  const wrapper = document.createElement('div')
+  wrapper.setAttribute('dir', 'ltr')
+  wrapper.style.color = 'rgb(255, 255, 255)'
+  wrapper.appendChild(svg)
+  btn.appendChild(wrapper)
   return btn
 }
 
@@ -158,50 +262,65 @@ function findButtonMenuBar(carouselElement: Element): Element | null {
 }
 
 function createMenuBarBtn(data: AddEmojiButtonData, menuBar: Element) {
-  const wrapper = document.createElement('div')
-  const btn = createCarouselBtn(data)
-  wrapper.appendChild(btn)
+  const wrapper = createE('div')
+  const addBtn = createCarouselBtn(data)
+  const downloadBtn = createDownloadBtn(data)
+
+  wrapper.appendChild(downloadBtn)
+  wrapper.appendChild(addBtn)
   menuBar.appendChild(wrapper)
-  return btn
+  return addBtn
 }
 
 function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
   const existing = carouselOverlayMap.get(target)
   if (existing) return existing.btn
-  const btn = createCarouselBtn(data)
-  btn.style.position = 'absolute'
-  btn.style.zIndex = '2147483647'
-  btn.style.background = 'rgba(0,0,0,0.6)'
-  btn.style.pointerEvents = 'auto'
-  DOA(btn)
+  // wrapper to hold both buttons — create with DOM API and set proper CSS so it can be positioned
+  const wrapper = document.createElement('div')
+  wrapper.className = 'x-emoji-overlay-wrapper'
+  wrapper.style.position = 'absolute'
+  wrapper.style.zIndex = '2147483647'
+  wrapper.style.pointerEvents = 'auto'
+  wrapper.style.display = 'flex'
+  wrapper.style.gap = '6px'
+  wrapper.style.alignItems = 'center'
+
+  const downloadBtn = createDownloadBtn(data)
+  const addBtn = createCarouselBtn(data)
+  downloadBtn.style.position = 'static'
+  addBtn.style.position = 'static'
+  wrapper.appendChild(downloadBtn)
+  wrapper.appendChild(addBtn)
+
+  DOA(wrapper)
   markInjected(target)
   let raf = 0
   const update = () => {
     try {
       if (!document.body.contains(target)) {
         cancelAnimationFrame(raf)
-        if (btn.parentElement) btn.parentElement.removeChild(btn)
+        if (wrapper.parentElement) wrapper.parentElement.removeChild(wrapper)
         carouselOverlayMap.delete(target)
         clearInjected(target)
         return
       }
       const r = (target as Element).getBoundingClientRect()
       const top = Math.max(0, window.scrollY + r.top + 6)
-      const left = Math.max(0, window.scrollX + r.right - btn.offsetWidth - 6)
-      btn.style.top = top + 'px'
-      btn.style.left = left + 'px'
+      const left = Math.max(0, window.scrollX + r.right - wrapper.offsetWidth - 6)
+      wrapper.style.top = top + 'px'
+      wrapper.style.left = left + 'px'
       const inView =
         r.bottom >= 0 && r.top <= window.innerHeight && r.right >= 0 && r.left <= window.innerWidth
-      btn.style.display = inView ? '' : 'none'
+      wrapper.style.display = inView ? '' : 'none'
     } catch {
       /* ignore */
     }
     raf = requestAnimationFrame(update)
-    carouselOverlayMap.set(target, { btn, raf })
+    carouselOverlayMap.set(target, { btn: wrapper, raf })
   }
   raf = requestAnimationFrame(update)
-  carouselOverlayMap.set(target, { btn, raf })
-  return btn
+  carouselOverlayMap.set(target, { btn: wrapper, raf })
+  return wrapper
 }
 
 /**
