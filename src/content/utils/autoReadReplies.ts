@@ -1,5 +1,6 @@
 import { postTimings } from './timingsBinder'
 import { notify } from './notify'
+import { DQS, DQSA } from './createEl'
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -46,7 +47,7 @@ async function autoReadAll(topicId?: number, startFrom = 1) {
       if (m1 && m1[1]) tid = Number(m1[1])
       else if (m2 && m2[1]) tid = Number(m2[1])
       else {
-        const el = document.querySelector('[data-topic-id]') as HTMLElement | null
+        const el = DQS('[data-topic-id]') as HTMLElement | null
         if (el) tid = Number(el.getAttribute('data-topic-id')) || 0
       }
     }
@@ -113,7 +114,7 @@ async function autoReadAllv2(topicId?: number) {
     else if (m2 && m2[1]) tid = Number(m2[1])
     else {
       // only consider anchor links of the form /t/topic/{id}/1
-      const anchors = Array.from(document.querySelectorAll('a[href]')) as HTMLAnchorElement[]
+      const anchors = Array.from(DQSA('a[href]')) as HTMLAnchorElement[]
       const seen = new Set<number>()
       for (const a of anchors) {
         const href = a.getAttribute('href') || ''

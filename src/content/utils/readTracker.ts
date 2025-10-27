@@ -1,4 +1,5 @@
 import { postTimings } from './timingsBinder'
+import { DQSA, DQS } from './createEl'
 
 // Simplified read tracker inspired by Discourse's screen-track logic.
 // - tick() runs every second and accumulates time for visible posts
@@ -21,7 +22,7 @@ function readTopicId(): number {
   const m2 = window.location.pathname.match(/t\/(\d+)/)
   if (m1 && m1[1]) return Number(m1[1])
   if (m2 && m2[1]) return Number(m2[1])
-  const el = document.querySelector('[data-topic-id]') as HTMLElement | null
+  const el = DQS('[data-topic-id]') as HTMLElement | null
   if (el) return Number(el.getAttribute('data-topic-id')) || 0
   return 0
 }
@@ -32,7 +33,7 @@ function isVisible(el: Element) {
 }
 
 function collectVisiblePosts() {
-  const postEls = Array.from(document.querySelectorAll('[data-post-number]')) as HTMLElement[]
+  const postEls = Array.from(DQSA('[data-post-number]')) as HTMLElement[]
   return postEls.filter(isVisible)
 }
 

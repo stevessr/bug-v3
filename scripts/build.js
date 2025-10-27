@@ -148,24 +148,6 @@ child.on('exit', code => {
         }
         process.exit(postCode)
       })
-    } else {
-      // Original Chrome extension build flow
-      console.log('🧹 清理空文件...')
-      const cleanChild = spawn('node', ['./scripts/clean-empty-chunks.mjs'], {
-        stdio: 'inherit',
-        shell: false
-      })
-
-      cleanChild.on('exit', cleanCode => {
-        if (cleanCode === 0) {
-          // Vite produced the content.js chunk according to rollupOptions.manualChunks
-          // and output file names; no separate bundling step is required.
-          console.log('✅ 构建完成！')
-        } else {
-          console.error('❌ 清理过程出错')
-        }
-        process.exit(cleanCode)
-      })
     }
   } else {
     process.exit(code)

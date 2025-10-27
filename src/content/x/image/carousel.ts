@@ -7,6 +7,7 @@ import {
   isXMediaHost
 } from '../utils'
 import { isImageInjectionEnabled, ImageType } from '../xConfig'
+import { DOA, DQSA, createE } from '../../utils/createEl'
 
 const carouselOverlayMap = new WeakMap<Element, { btn: HTMLElement; raf?: number }>()
 const processedElements = new WeakSet<Element>()
@@ -33,23 +34,21 @@ function clearInjected(el: Element | null | undefined) {
 }
 
 function createCarouselBtn(data: AddEmojiButtonData) {
-  const btn = document.createElement('button')
-  btn.className = 'x-emoji-add-btn-carousel'
-  btn.type = 'button'
-  btn.title = '添加到未分组表情'
-  btn.setAttribute('aria-label', '添加表情')
-  btn.setAttribute('role', 'button')
-
-  btn.innerHTML = `
-    <div dir="ltr" style="color: rgb(255, 255, 255);">
+  const btn = createE('button', {
+    class: 'x-emoji-add-btn-carousel',
+    type: 'button',
+    ti: '添加到未分组表情',
+    in: `<div dir="ltr" style="color: rgb(255, 255, 255);">
       <div></div>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <g><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></g>
         </svg>
-    </div>
-  `
-
-  btn.style.cssText = `
+    </div>`,
+    attrs: {
+      'aria-label': '添加表情',
+      role: 'button'
+    },
+    style: `
     background: rgba(0, 0, 0, 0.6);
     border: none;
     cursor: pointer;
@@ -66,18 +65,19 @@ function createCarouselBtn(data: AddEmojiButtonData) {
     z-index: 9999;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     backdrop-filter: blur(4px);
+    pointerEvents: auto;  
   `
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  btn.addEventListener('mouseenter', () => {
-    btn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+      .replace(/\s+/g, ' ')
+      .trim(),
+    on: {
+      mouseenter: () => {
+        btn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+      },
+      mouseleave: () => {
+        btn.style.backgroundColor = 'transparent'
+      }
+    }
   })
-  btn.addEventListener('mouseleave', () => {
-    btn.style.backgroundColor = 'transparent'
-  })
-
-  btn.style.pointerEvents = 'auto'
   setupButtonClick(btn, data)
   return btn
 }
@@ -185,7 +185,7 @@ function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
   btn.style.zIndex = '2147483647'
   btn.style.background = 'rgba(0,0,0,0.6)'
   btn.style.pointerEvents = 'auto'
-  document.body.appendChild(btn)
+  DOA(btn)
   markInjected(target)
   let raf = 0
   const update = () => {
@@ -469,7 +469,7 @@ export function scanAndInjectCarousel() {
   }
 
   const set = new Set<Element>()
-  selectors.forEach(s => document.querySelectorAll(s).forEach(el => set.add(el)))
+  selectors.forEach(s => DQSA(s).forEach(el => set.add(el)))
 
   // Special-case: when visiting a standalone twitter/pbs image page the document
   // may simply contain one or more top-level <img> elements (or an image inside
@@ -478,7 +478,7 @@ export function scanAndInjectCarousel() {
   if (isImageInjectionEnabled(ImageType.StandaloneMedia)) {
     try {
       if (isXMediaHost()) {
-        document.querySelectorAll('img').forEach(img => {
+        DQSA('img').forEach(img => {
           const src = (img as HTMLImageElement).src || img.getAttribute('src') || ''
           if (src && src.includes('pbs.twimg.com')) set.add(img)
         })

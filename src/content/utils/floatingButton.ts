@@ -1,7 +1,9 @@
 // Floating button module for manual injection (content script version)
-import { ensureStyleInjected } from '../../userscript/utils/injectStyles'
 
 import { findAllToolbars, injectButton } from './injector'
+import { DOA, DQSA } from './createEl'
+
+import { ESI } from '@/content/utils/injectCustomCss'
 
 // State management for floating button
 let floatingButton: HTMLElement | null = null
@@ -60,7 +62,7 @@ const FLOATING_BUTTON_STYLES = `
 
 // Create and inject styles
 function injectStyles() {
-  ensureStyleInjected('emoji-extension-floating-button-styles', FLOATING_BUTTON_STYLES)
+  ESI('emoji-extension-floating-button-styles', FLOATING_BUTTON_STYLES)
 }
 
 // Create floating button element
@@ -148,7 +150,7 @@ export function showFloatingButton() {
 
   injectStyles()
   floatingButton = createFloatingButton()
-  document.body.appendChild(floatingButton)
+  DOA(floatingButton)
   isButtonVisible = true
 
   console.log('[Emoji Extension] Floating manual injection button shown')
@@ -183,7 +185,7 @@ function autoShowFloatingButton() {
 // Check if floating button should be shown based on page state
 export function checkAndShowFloatingButton() {
   // Show floating button if no emoji buttons are currently injected
-  const existingButtons = document.querySelectorAll('.emoji-extension-button, .image-upload-button')
+  const existingButtons = DQSA('.emoji-extension-button, .image-upload-button')
 
   if (existingButtons.length === 0 && !isButtonVisible) {
     setTimeout(() => {

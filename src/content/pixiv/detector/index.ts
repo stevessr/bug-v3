@@ -2,6 +2,7 @@ import type { AddEmojiButtonData } from '../types'
 import { extractNameFromUrl } from '../core/helpers'
 import { createPixivEmojiButton } from '../ui/button'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
+import { DQSA, DQS, DOA } from '../../utils/createEl'
 
 // isPixivViewer: no longer used for scanning outer containers; we now work per-image.
 
@@ -56,7 +57,7 @@ function addEmojiButtonToPixiv(pixivContainer: Element) {
 
 function scanForPixivViewer() {
   // 以图片为单位扫描，给每张图片注入到其最近的 [role=presentation] 容器
-  const imgs = document.querySelectorAll('img[src*="i.pximg.net"], img[src*="pximg.net"]')
+  const imgs = DQSA('img[src*="i.pximg.net"], img[src*="pximg.net"]')
   imgs.forEach(img => {
     const container = img.closest('div[role="presentation"]') as Element | null
     if (container) addEmojiButtonToPixiv(container)
@@ -69,7 +70,7 @@ function scanForImagePage() {
     return
   }
 
-  const images = document.querySelectorAll('img')
+  const images = DQSA('img')
 
   for (const img of images) {
     const parent = img.closest('div[role="presentation"]') as HTMLElement | null
@@ -99,7 +100,8 @@ function scanForImagePage() {
         ;(imgContainer as HTMLElement).style.position = 'relative'
       }
 
-      imgContainer.appendChild(button)
+      if (imgContainer === document.body) DOA(button)
+      else imgContainer.appendChild(button)
       ;(imgContainer as HTMLElement).dataset.oneclickPixivInjected = '1'
 
       break
@@ -161,21 +163,17 @@ function isPixivPage(): boolean {
       return true
     }
 
-    const ogSite =
-      document.querySelector('meta[property="og:site_name"]')?.getAttribute('content') || ''
+    const ogSite = DQS('meta[property="og:site_name"]')?.getAttribute('content') || ''
     if (ogSite.toLowerCase().includes('pixiv')) return true
 
-    const twitterMeta =
-      document.querySelector('meta[property="twitter:site"]') ||
-      document.querySelector('meta[name="twitter:site"]')
+    const twitterMeta = DQS('meta[property="twitter:site"]') || DQS('meta[name="twitter:site"]')
     const twitterSite = (twitterMeta && twitterMeta.getAttribute('content')) || ''
     if (twitterSite.toLowerCase().includes('pixiv')) return true
 
-    const desc = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
+    const desc = DQS('meta[name="description"]')?.getAttribute('content') || ''
     if (desc.toLowerCase().includes('pixiv')) return true
 
-    const ogImage =
-      document.querySelector('meta[property="og:image"]')?.getAttribute('content') || ''
+    const ogImage = DQS('meta[property="og:image"]')?.getAttribute('content') || ''
     if (
       ogImage.includes('pixiv.net') ||
       ogImage.includes('pximg.net') ||

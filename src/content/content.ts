@@ -4,6 +4,7 @@ import { initializeEmojiFeature } from './utils/init'
 import { Uninject } from './utils/Uninject'
 import { postTimings } from './utils/timingsBinder'
 import { autoReadAllv2 } from './utils/autoReadReplies'
+import { DQS, DQSA } from './utils/createEl'
 // antiRateLimit removed — content script no longer listens for network-level 429 notifications
 
 console.log('[Emoji Extension] Content script loaded (entry)')
@@ -11,7 +12,7 @@ console.log('[Emoji Extension] Content script loaded (entry)')
 // Function to check if current page should have emoji injection
 function shouldInjectEmoji(): boolean {
   // Check for discourse meta tag as example
-  const discourseMetaTags = document.querySelectorAll(
+  const discourseMetaTags = DQSA(
     'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
   )
   if (discourseMetaTags.length > 0) {
@@ -20,7 +21,7 @@ function shouldInjectEmoji(): boolean {
   }
 
   // Check for common forum/discussion platforms
-  const generatorMeta = document.querySelector('meta[name="generator"]')
+  const generatorMeta = DQS('meta[name="generator"]')
   if (generatorMeta) {
     const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
     if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
@@ -38,7 +39,7 @@ function shouldInjectEmoji(): boolean {
   }
 
   // Check for editor elements that suggest a discussion platform
-  const editors = document.querySelectorAll(
+  const editors = DQSA(
     'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
   )
   if (editors.length > 0) {
@@ -65,7 +66,7 @@ if (window.location.hostname.includes('linux.do')) {
     if (message.type === 'GET_CSRF_TOKEN') {
       try {
         // Try to get CSRF token from meta tag
-        const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement
+        const metaToken = DQS('meta[name="csrf-token"]') as HTMLMetaElement
         if (metaToken) {
           sendResponse({ csrfToken: metaToken.content })
           return true // 表示异步响应
@@ -79,9 +80,7 @@ if (window.location.hostname.includes('linux.do')) {
         }
 
         // Fallback - try to extract from any form
-        const hiddenInput = document.querySelector(
-          'input[name="authenticity_token"]'
-        ) as HTMLInputElement
+        const hiddenInput = DQS('input[name="authenticity_token"]') as HTMLInputElement
         if (hiddenInput) {
           sendResponse({ csrfToken: hiddenInput.value })
           return true // 表示异步响应

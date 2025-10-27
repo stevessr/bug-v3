@@ -1,4 +1,5 @@
 import type { AddEmojiButtonData } from '../pixiv/types'
+import { DQSA } from '../utils/createEl'
 
 // create a minimal floating button that sends the direct URL to background
 function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
@@ -130,15 +131,13 @@ function addEmojiButtonToContainer(container: Element) {
 
 function scanForRedditImages() {
   try {
-    const candidates = Array.from(
-      document.querySelectorAll('[role="presentation"], .media-lightbox-img, .preview-img')
-    )
+    const candidates = Array.from(DQSA('[role="presentation"], .media-lightbox-img, .preview-img'))
     candidates.forEach(c => {
       if (isRedditImageContainer(c)) addEmojiButtonToContainer(c)
     })
 
     // fallback: scan images in posts
-    const imgs = Array.from(document.querySelectorAll('img'))
+    const imgs = Array.from(DQSA('img'))
     for (const img of imgs) {
       const parent = img.parentElement
       if (!parent) continue

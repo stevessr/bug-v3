@@ -1,5 +1,5 @@
 import type { AddEmojiButtonData } from '../types/main'
-import { createE } from '../../utils/createEl'
+import { createE, DQSA } from '../../utils/createEl'
 
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'
@@ -169,7 +169,7 @@ function addBatchParseButtonToCooked(cookedElement: Element) {
 // ========== 扫描和观察 ==========
 // 立即扫描页面上所有的 cooked 内容
 export function scanForCookedContent() {
-  const cookedElements = document.querySelectorAll('.cooked')
+  const cookedElements = DQSA('.cooked')
   cookedElements.forEach(el => {
     if (isCookedContent(el)) addBatchParseButtonToCooked(el)
   })

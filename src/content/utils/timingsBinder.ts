@@ -1,3 +1,5 @@
+import { DQS } from './createEl'
+
 // Helper to POST timings to linux.do/topics/timings
 // Builds form body and sends with X-CSRF-Token pulled from page
 export async function postTimings(
@@ -7,11 +9,9 @@ export async function postTimings(
   // Resolve CSRF token from common places
   function readCsrfToken(): string | null {
     try {
-      const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
+      const meta = DQS('meta[name="csrf-token"]') as HTMLMetaElement | null
       if (meta && meta.content) return meta.content
-      const input = document.querySelector(
-        'input[name="authenticity_token"]'
-      ) as HTMLInputElement | null
+      const input = DQS('input[name="authenticity_token"]') as HTMLInputElement | null
       if (input && input.value) return input.value
       const match = document.cookie.match(/csrf_token=([^;]+)/)
       if (match) return decodeURIComponent(match[1])

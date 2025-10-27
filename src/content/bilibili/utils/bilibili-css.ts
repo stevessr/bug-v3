@@ -1,13 +1,16 @@
 /**
- * 注入按钮样式修复CSS
+ * 注入按钮样式修复 CSS
  */
+import { DEBI, createE, DHA } from '@/content/utils/createEl'
+
 export function injectBilibiliButtonStyles() {
   // Check if styles are already injected
-  if (document.getElementById('bilibili-emoji-button-fixes')) {
-    return
-  }
+  const id = 'bilibili-emoji-button-fixes'
+  if (DEBI(id)) return
 
-  const css = `
+  const style = createE('style', {
+    id: id,
+    text: `
     /* Bilibili Button Styling Fixes */
     .bili-album__watch__control__option.add-emoji {
       background: inherit !important;
@@ -64,9 +67,6 @@ export function injectBilibiliButtonStyles() {
       opacity: 1 !important;
     }
   `
-
-  const style = document.createElement('style')
-  style.id = 'bilibili-emoji-button-fixes'
-  style.textContent = css
-  document.head.appendChild(style)
+  })
+  DHA(style)
 }

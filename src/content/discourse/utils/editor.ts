@@ -1,6 +1,7 @@
 // editor.ts - 负责把选中的表情插入到编辑器
 
 import { cachedState } from '../../data/state'
+import { DQS } from '../../utils/createEl'
 
 export function insertEmojiIntoEditor(emoji: unknown) {
   // avoid noisy console in lint; keep only minimal info in debug environments
@@ -37,12 +38,12 @@ export function insertEmojiIntoEditor(emoji: unknown) {
   ]
 
   // Prefer the rich ProseMirror editor when present
-  const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
+  const richEle = DQS('.ProseMirror.d-editor-input') as HTMLElement | null
 
   // Find the first matching textarea from the selectors list
   let textArea: HTMLTextAreaElement | null = null
   for (const s of selectors) {
-    const el = document.querySelector(s) as HTMLTextAreaElement | null
+    const el = DQS(s) as HTMLTextAreaElement | null
     if (el) {
       textArea = el
       break
@@ -52,7 +53,7 @@ export function insertEmojiIntoEditor(emoji: unknown) {
   // As an extra fallback, try any contenteditable element often used as an
   // input (for chat/composer implementations). We'll treat it similar to a
   // rich editor and insert HTML or plain text accordingly.
-  const contentEditable = document.querySelector('[contenteditable="true"]') as HTMLElement | null
+  const contentEditable = DQS('[contenteditable="true"]') as HTMLElement | null
 
   if (!textArea && !richEle && !contentEditable) {
     console.warn('找不到输入框')

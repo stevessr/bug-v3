@@ -1,109 +1,9 @@
 // 移植自 docs/referense/2mix.js — 将用户脚本逻辑封装为一个可初始化的模块
 // 功能：在 textarea 输入 `[!` 时显示候选 Callout（英文），支持键盘和点击完成
 
-import { ensureStyleInjected } from '../../userscript/utils/injectStyles'
-
-const calloutKeywords = [
-  'note',
-  'abstract',
-  'summary',
-  'tldr',
-  'info',
-  'todo',
-  'tip',
-  'hint',
-  'success',
-  'check',
-  'done',
-  'question',
-  'help',
-  'faq',
-  'warning',
-  'caution',
-  'attention',
-  'failure',
-  'fail',
-  'missing',
-  'danger',
-  'error',
-  'bug',
-  'example',
-  'quote',
-  'cite'
-].sort()
-
-const ICONS: Record<string, { icon?: string; color?: string; svg?: string }> = {
-  info: {
-    icon: 'ℹ️',
-    color: 'rgba(2, 122, 255, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-far-lightbulb svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-lightbulb"></use></svg>'
-  },
-  tip: {
-    icon: '💡',
-    color: 'rgba(0, 191, 188, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-fire-flame-curved svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#fire-flame-curved"></use></svg>'
-  },
-  faq: {
-    icon: '❓',
-    color: 'rgba(236, 117, 0, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-far-circle-question svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-question"></use></svg>'
-  },
-  question: {
-    icon: '🤔',
-    color: 'rgba(236, 117, 0, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-far-circle-question svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-question"></use></svg>'
-  },
-  note: {
-    icon: '📝',
-    color: 'rgba(8, 109, 221, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-far-pen-to-square svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-pen-to-square"></use></svg>'
-  },
-  abstract: {
-    icon: '📋',
-    color: 'rgba(0, 191, 188, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-far-clipboard svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-clipboard"></use></svg>'
-  },
-  todo: {
-    icon: '☑️',
-    color: 'rgba(2, 122, 255, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-far-circle-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-check"></use></svg>'
-  },
-  success: {
-    icon: '🎉',
-    color: 'rgba(68, 207, 110, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#check"></use></svg>'
-  },
-  warning: {
-    icon: '⚠️',
-    color: 'rgba(236, 117, 0, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-triangle-exclamation svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#triangle-exclamation"></use></svg>'
-  },
-  failure: {
-    icon: '❌',
-    color: 'rgba(233, 49, 71, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>'
-  },
-  danger: {
-    icon: '☠️',
-    color: 'rgba(233, 49, 71, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-bolt svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#bolt"></use></svg>'
-  },
-  bug: {
-    icon: '🐛',
-    color: 'rgba(233, 49, 71, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-bug svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#bug"></use></svg>'
-  },
-  example: {
-    icon: '🔎',
-    color: 'rgba(120, 82, 238, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-list svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#list"></use></svg>'
-  },
-  quote: {
-    icon: '💬',
-    color: 'rgba(158, 158, 158, 0.06)',
-    svg: '<svg class="fa d-icon d-icon-quote-left svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#quote-left"></use></svg>'
-  }
-}
+import { ESI } from '@/content/utils/injectCustomCss'
+import { createE, DOA, DEBI, DAEL } from '@/content/utils/createEl'
+import { ICONS, calloutKeywords } from '@/content/data/callout'
 
 const DEFAULT_ICON = {
   icon: '📝',
@@ -111,24 +11,15 @@ const DEFAULT_ICON = {
   svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor"><path d="M490.3 40.4C512.2 62.27 512.2 97.73 490.3 119.6L460.3 149.7 362.3 51.72 392.4 21.66C414.3-.2135 449.7-.2135 471.6 21.66L490.3 40.4zM172.4 241.7L339.7 74.34 437.7 172.3 270.3 339.6C264.2 345.8 256.7 350.4 248.4 352.1L159.6 372.9C152.1 374.7 144.3 373.1 138.6 367.4C132.9 361.7 131.3 353.9 133.1 346.4L153.9 257.6C155.6 249.3 160.2 241.8 166.4 235.7L172.4 241.7zM96 64C42.98 64 0 106.1 0 160V416C0 469 42.98 512 96 512H352C405 512 448 469 448 416V320H400V416C400 442.5 378.5 464 352 464H96C69.54 464 48 442.5 48 416V160C48 133.5 69.54 112 96 112H192V64H96z"/></svg>'
 }
 
-// 为别名设置相同的图标和颜色（与 docs/referense/2mix.js 保持一致）
-ICONS.summary = ICONS.tldr = ICONS.abstract
-ICONS.hint = ICONS.tip
-ICONS.check = ICONS.done = ICONS.success
-ICONS.help = ICONS.faq
-ICONS.caution = ICONS.attention = ICONS.warning
-ICONS.fail = ICONS.missing = ICONS.failure
-ICONS.error = ICONS.danger
-ICONS.cite = ICONS.quote
-
 let suggestionBox: HTMLDivElement | null = null
 let activeSuggestionIndex = 0
 
 function createSuggestionBox() {
   if (suggestionBox) return
-  suggestionBox = document.createElement('div')
-  suggestionBox.id = 'callout-suggestion-box-en'
-  document.body.appendChild(suggestionBox)
+  suggestionBox = createE('div', {
+    id: 'callout-suggestion-box-en'
+  })
+  DOA(suggestionBox)
   injectStyles()
 }
 
@@ -167,7 +58,7 @@ function injectStyles() {
       color: var(--primary-medium);
     }
   `
-  ensureStyleInjected(id, css)
+  ESI(id, css)
 }
 
 function hideSuggestionBox() {
@@ -262,12 +153,13 @@ function getCursorXY(element: HTMLTextAreaElement | HTMLElement) {
     // accurate caret position in page coordinates. This approach handles
     // scrolling, transforms, zoom, and different box-sizing modes.
     const mirrorId = 'textarea-mirror-div-en'
-    let mirror = document.getElementById(mirrorId) as HTMLDivElement | null
+    let mirror = DEBI(mirrorId)
     const rect = element.getBoundingClientRect()
     if (!mirror) {
-      mirror = document.createElement('div')
-      mirror.id = mirrorId
-      document.body.appendChild(mirror)
+      mirror = createE('div', {
+        id: mirrorId
+      })
+      DOA(mirror)
     }
 
     const style = window.getComputedStyle(element)
@@ -313,7 +205,7 @@ function getCursorXY(element: HTMLTextAreaElement | HTMLElement) {
     // Use textContent so characters are rendered as in the textarea. newlines
     // are preserved by pre-wrap.
     mirror.textContent = textUpToCursor
-    const span = document.createElement('span')
+    const span = createE('span')
     // zero-width character ensures span has a position without visible glyphs
     span.textContent = '\u200b'
     mirror.appendChild(span)
@@ -487,9 +379,9 @@ function handleKeydown(event: KeyboardEvent) {
 export function initCalloutSuggestions() {
   try {
     createSuggestionBox()
-    document.addEventListener('input', handleInput, true)
-    document.addEventListener('keydown', handleKeydown, true)
-    document.addEventListener('click', e => {
+    DAEL('input', handleInput, true)
+    DAEL('keydown', handleKeydown, true)
+    DAEL('click', (e: Event) => {
       if (
         (e.target as Element)?.tagName !== 'TEXTAREA' &&
         !suggestionBox?.contains(e.target as Node)

@@ -1,3 +1,5 @@
+import { DQS } from '../../utils/createEl'
+
 /**
  * 处理上传 blob 到 Discourse 的功能
  */
@@ -25,7 +27,7 @@ export function setupDiscourseUploadHandler() {
           form.append('file', file, file.name)
 
           // CSRF token
-          const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
+          const meta = DQS('meta[name="csrf-token"]') as HTMLMetaElement | null
           const csrf = meta
             ? meta.content
             : (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || ''

@@ -1,5 +1,7 @@
 import { loadDataFromStorage } from '../data/storage'
 
+import { DAEL } from './createEl'
+
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'
 import { initOneClickAdd } from './oneClickAdd'
@@ -34,7 +36,7 @@ function setupReplyButtonListeners() {
   ]
 
   // Use event delegation to handle dynamically added buttons
-  document.addEventListener('click', (event: Event) => {
+  DAEL('click', (event: Event) => {
     const target = event.target as HTMLElement
 
     // Check if the clicked element matches any reply button selector
@@ -181,7 +183,7 @@ export async function initializeEmojiFeature(
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attemptInjection)
+    DAEL('DOMContentLoaded', attemptInjection)
   } else {
     attemptInjection()
   }

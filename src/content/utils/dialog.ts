@@ -1,4 +1,4 @@
-import { createE } from './createEl'
+import { createE, DOA, DHA, DAEL } from './createEl'
 
 /**
  * Custom alert dialog to replace window.alert
@@ -62,15 +62,16 @@ export function customAlert(message: string): Promise<void> {
         font-weight: 500;
         cursor: pointer;
         transition: background 0.2s;
-      `
+      `,
+      on: {
+        mouseenter: () => {
+          button.style.background = '#2563eb'
+        },
+        mouseleave: () => {
+          button.style.background = '#3b82f6'
+        }
+      }
     }) as HTMLButtonElement
-
-    button.addEventListener('mouseenter', () => {
-      button.style.background = '#2563eb'
-    })
-    button.addEventListener('mouseleave', () => {
-      button.style.background = '#3b82f6'
-    })
 
     const cleanup = () => {
       backdrop.style.opacity = '0'
@@ -97,7 +98,7 @@ export function customAlert(message: string): Promise<void> {
         document.removeEventListener('keydown', handleEscape)
       }
     }
-    document.addEventListener('keydown', handleEscape)
+    DAEL('keydown', handleEscape)
 
     dialog.appendChild(messageEl)
     dialog.appendChild(button)
@@ -121,9 +122,9 @@ export function customAlert(message: string): Promise<void> {
         }
       }
     `
-    document.head.appendChild(style)
+    DHA(style)
 
-    document.body.appendChild(backdrop)
+    DOA(backdrop)
 
     // Auto focus button
     setTimeout(() => button.focus(), 100)
@@ -259,7 +260,7 @@ export function customConfirm(message: string): Promise<boolean> {
         document.removeEventListener('keydown', handleEscape)
       }
     }
-    document.addEventListener('keydown', handleEscape)
+    DAEL('keydown', handleEscape)
 
     buttonContainer.appendChild(cancelButton)
     buttonContainer.appendChild(confirmButton)
@@ -285,9 +286,9 @@ export function customConfirm(message: string): Promise<boolean> {
         }
       }
     `
-    document.head.appendChild(style)
+    DHA(style)
 
-    document.body.appendChild(backdrop)
+    DOA(backdrop)
 
     // Auto focus confirm button
     setTimeout(() => confirmButton.focus(), 100)
@@ -388,15 +389,30 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
         font-weight: 500;
         cursor: pointer;
         transition: all 0.2s;
-      `
+      `,
+      on: {
+        mouseenter: () => {
+          cancelButton.style.background = 'var(--primary-low-mid, #e5e7eb)'
+        },
+        mouseleave: () => {
+          cancelButton.style.background = 'var(--primary-low, #f3f4f6)'
+        },
+        click: () => {
+          cleanup(null)
+        }
+      }
     }) as HTMLButtonElement
 
-    cancelButton.addEventListener('mouseenter', () => {
-      cancelButton.style.background = 'var(--primary-low-mid, #e5e7eb)'
-    })
-    cancelButton.addEventListener('mouseleave', () => {
-      cancelButton.style.background = 'var(--primary-low, #f3f4f6)'
-    })
+    const cleanup = (result: string | null) => {
+      backdrop.style.opacity = '0'
+      dialog.style.transform = 'scale(0.95)'
+      setTimeout(() => {
+        if (backdrop.parentElement) {
+          backdrop.parentElement.removeChild(backdrop)
+        }
+        resolve(result)
+      }, 150)
+    }
 
     // Create confirm button
     const confirmButton = createE('button', {
@@ -411,29 +427,20 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
         font-weight: 500;
         cursor: pointer;
         transition: background 0.2s;
-      `
+      `,
+      on: {
+        mouseenter: () => {
+          confirmButton.style.background = '#2563eb'
+        },
+        mouseleave: () => {
+          confirmButton.style.background = '#3b82f6'
+        },
+        click: () => {
+          cleanup(input.value)
+        }
+      }
     }) as HTMLButtonElement
 
-    confirmButton.addEventListener('mouseenter', () => {
-      confirmButton.style.background = '#2563eb'
-    })
-    confirmButton.addEventListener('mouseleave', () => {
-      confirmButton.style.background = '#3b82f6'
-    })
-
-    const cleanup = (result: string | null) => {
-      backdrop.style.opacity = '0'
-      dialog.style.transform = 'scale(0.95)'
-      setTimeout(() => {
-        if (backdrop.parentElement) {
-          backdrop.parentElement.removeChild(backdrop)
-        }
-        resolve(result)
-      }, 150)
-    }
-
-    cancelButton.addEventListener('click', () => cleanup(null))
-    confirmButton.addEventListener('click', () => cleanup(input.value))
     backdrop.addEventListener('click', e => {
       if (e.target === backdrop) {
         cleanup(null)
@@ -450,7 +457,7 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
         document.removeEventListener('keydown', handleKeydown)
       }
     }
-    document.addEventListener('keydown', handleKeydown)
+    DAEL('keydown', handleKeydown)
 
     buttonContainer.appendChild(cancelButton)
     buttonContainer.appendChild(confirmButton)
@@ -477,9 +484,9 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
         }
       }
     `
-    document.head.appendChild(style)
+    DHA(style)
 
-    document.body.appendChild(backdrop)
+    DOA(backdrop)
 
     // Auto focus input and select text
     setTimeout(() => {

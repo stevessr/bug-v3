@@ -1,3 +1,4 @@
+// Create element
 export function createE<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   opts?: {
@@ -57,3 +58,15 @@ export function createE<K extends keyof HTMLElementTagNameMap>(
   }
   return el
 }
+
+// Append element to document.body
+export const DOA = document.body.appendChild
+export const DHA = document.head.appendChild
+// Delete element by id, return null if not found, otherwise return the element itself.
+export const DEBI = document.getElementById
+
+export const DAEL = document.addEventListener
+
+export const DQSA = document.querySelectorAll
+
+export const DQS = document.querySelector

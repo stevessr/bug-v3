@@ -1,4 +1,4 @@
-import { createE } from './createEl'
+import { createE, DOA, DQS, DAEL } from './createEl'
 import { notify } from './notify'
 import { customAlert, customConfirm } from './dialog'
 import { showCustomImagePicker, showCustomFolderPicker } from './customFilePicker'
@@ -22,13 +22,13 @@ function parseImageFilenamesFromMarkdown(markdownText: string): string[] {
 // Generic function to insert text into editor
 function insertIntoEditor(text: string) {
   // Priority 1: Chat composer (highest priority)
-  const chatComposer = document.querySelector(
+  const chatComposer = DQS(
     'textarea#channel-composer.chat-composer__input'
   ) as HTMLTextAreaElement | null
   // Priority 2: Standard editor textarea
-  const textArea = document.querySelector('textarea.d-editor-input') as HTMLTextAreaElement | null
+  const textArea = DQS('textarea.d-editor-input') as HTMLTextAreaElement | null
   // Priority 3: Rich text editor
-  const richEle = document.querySelector('.ProseMirror.d-editor-input') as HTMLElement | null
+  const richEle = DQS('.ProseMirror.d-editor-input') as HTMLElement | null
 
   if (!chatComposer && !textArea && !richEle) {
     console.error('找不到输入框')
@@ -305,7 +305,7 @@ class ImageUploader {
 
   private getCSRFToken(): string {
     // Try to get CSRF token from meta tag
-    const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement
+    const metaToken = DQS('meta[name="csrf-token"]') as HTMLMetaElement
     if (metaToken) {
       return metaToken.content
     }
@@ -317,9 +317,7 @@ class ImageUploader {
     }
 
     // Fallback - try to extract from any form
-    const hiddenInput = document.querySelector(
-      'input[name="authenticity_token"]'
-    ) as HTMLInputElement
+    const hiddenInput = DQS('input[name="authenticity_token"]') as HTMLInputElement
     if (hiddenInput) {
       return hiddenInput.value
     }
@@ -532,8 +530,8 @@ function createDragDropUploadPanel(): DragDropElements {
   }
 
   header.addEventListener('mousedown', dragStart)
-  document.addEventListener('mousemove', drag)
-  document.addEventListener('mouseup', dragEnd)
+  DAEL('mousemove', drag)
+  DAEL('mouseup', dragEnd)
 
   // Regular upload panel
   const regularPanel = createE('div', {
@@ -1201,7 +1199,7 @@ export async function showImageUploadDialog(): Promise<void> {
     }
 
     ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      document.addEventListener(eventName, preventDefaults, false)
+      DAEL(eventName, preventDefaults, false)
     })
 
     // Cleanup event listeners when panel is closed
@@ -1219,7 +1217,7 @@ export async function showImageUploadDialog(): Promise<void> {
     // No overlay to add listeners to
 
     // No overlay to append
-    document.body.appendChild(panel)
+    DOA(panel)
   })
 }
 

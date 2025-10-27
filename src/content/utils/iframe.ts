@@ -1,4 +1,4 @@
-import { createE } from './createEl'
+import { createE, DOA, DAEL } from './createEl'
 
 /**
  * Create and show a draggable iframe modal.
@@ -110,8 +110,8 @@ export function createAndShowIframeModal(
     frameWrap.style.cursor = 'move'
   }
 
-  document.addEventListener('mousemove', drag)
-  document.addEventListener('mouseup', dragEnd)
+  DAEL('mousemove', drag)
+  DAEL('mouseup', dragEnd)
 
   // iframe load handler: try to read href, apply close condition
   iframe.addEventListener('load', () => {
@@ -145,7 +145,7 @@ export function createAndShowIframeModal(
   iframeContainer.appendChild(iframe)
   frameWrap.appendChild(titleBar)
   frameWrap.appendChild(iframeContainer)
-  document.body.appendChild(frameWrap)
+  DOA(frameWrap)
 
   return {
     close: closeModal,
@@ -165,7 +165,7 @@ export function createAndShowSideIframeModal(
     title?: string
     className?: string
     maxWidth?: string // e.g. '600px'
-    iframeSandbox?: string,
+    iframeSandbox?: string
     icon?: string
   }
 ) {
@@ -276,7 +276,7 @@ export function createAndShowSideIframeModal(
   resizeHandle = rh
 
   // Append hidden (off-screen) then trigger slide-in
-  document.body.appendChild(panel)
+  DOA(panel)
   // allow style to apply
   requestAnimationFrame(() => {
     panel.style.transform = 'translateX(0)'
@@ -300,7 +300,6 @@ export function createAndShowSideIframeModal(
   let initialPanelWidth = 0
   const MIN_PANEL_WIDTH = 300
   const FLOAT_POS_KEY = 'emoji_extension_floating_btn_top'
-  
 
   const cleanup = () => {
     if (removed) return
@@ -400,18 +399,18 @@ export function createAndShowSideIframeModal(
       // small icon inside (using ›)
       floatingBtn.textContent = opts?.icon || '◀'
 
-    // floating drag handlers (mouse + touch)
-    floatingBtn.addEventListener('mousedown', onFloatMouseDown)
-    floatingBtn.addEventListener('click', onFloatClick)
-    floatingBtn.addEventListener('touchstart', onFloatTouchStart, { passive: false })
-    document.addEventListener('mousemove', onFloatMouseMove)
-    document.addEventListener('mouseup', onFloatMouseUp)
-    document.addEventListener('touchmove', onFloatTouchMove, { passive: false })
-    document.addEventListener('touchend', onFloatTouchEnd, { passive: false })
-    // restore saved floating position
-    restoreFloatingPos()
+      // floating drag handlers (mouse + touch)
+      floatingBtn.addEventListener('mousedown', onFloatMouseDown)
+      floatingBtn.addEventListener('click', onFloatClick)
+      floatingBtn.addEventListener('touchstart', onFloatTouchStart, { passive: false })
+      DAEL('mousemove', onFloatMouseMove)
+      DAEL('mouseup', onFloatMouseUp)
+      DAEL('touchmove', onFloatTouchMove, { passive: false } as any)
+      DAEL('touchend', onFloatTouchEnd, { passive: false } as any)
+      // restore saved floating position
+      restoreFloatingPos()
 
-      document.body.appendChild(floatingBtn)
+      DOA(floatingBtn)
       isDocked = true
     } catch {
       // ignore
@@ -477,8 +476,8 @@ export function createAndShowSideIframeModal(
     }
     e.stopPropagation()
     e.preventDefault()
-    document.addEventListener('mousemove', onResizeMouseMove)
-    document.addEventListener('mouseup', onResizeMouseUp)
+    DAEL('mousemove', onResizeMouseMove)
+    DAEL('mouseup', onResizeMouseUp)
   }
 
   function onResizeTouchStart(e: TouchEvent) {
@@ -496,8 +495,8 @@ export function createAndShowSideIframeModal(
     }
     e.stopPropagation()
     e.preventDefault()
-    document.addEventListener('touchmove', onResizeTouchMove, { passive: false } as any)
-    document.addEventListener('touchend', onResizeTouchEnd)
+    DAEL('touchmove', onResizeTouchMove, { passive: false } as any)
+    DAEL('touchend', onResizeTouchEnd)
   }
 
   function onResizeMouseMove(e: MouseEvent) {
@@ -627,7 +626,7 @@ export function createAndShowSideIframeModal(
     if (!floatDragging) return
     floatDragging = false
     // persist on release
-    if (floatingBtn) saveFloatingPos((floatingBtn.getBoundingClientRect().top))
+    if (floatingBtn) saveFloatingPos(floatingBtn.getBoundingClientRect().top)
   }
 
   const onFloatTouchEnd = (e: TouchEvent) => {
@@ -639,7 +638,7 @@ export function createAndShowSideIframeModal(
     }
     e.stopPropagation()
     e.preventDefault()
-    if (floatingBtn) saveFloatingPos((floatingBtn.getBoundingClientRect().top))
+    if (floatingBtn) saveFloatingPos(floatingBtn.getBoundingClientRect().top)
   }
 
   const onFloatClick = (e: MouseEvent) => {
@@ -685,7 +684,7 @@ export function createAndShowSideIframeModal(
   closeBtn.addEventListener('click', onClose)
   openBtn.addEventListener('click', onOpenInNew)
   hideBtn.addEventListener('click', onToggleHide)
-  document.addEventListener('keydown', onKeyDown)
+  DAEL('keydown', onKeyDown)
   iframe.addEventListener('load', onLoad)
   panel.addEventListener('transitionend', onTransitionEnd)
 

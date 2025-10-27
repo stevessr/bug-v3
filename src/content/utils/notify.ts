@@ -1,4 +1,4 @@
-import { createE } from './createEl'
+import { createE, DOA, DEBI } from './createEl'
 // Lightweight toast notification utility for content scripts
 export function notify(
   message: string,
@@ -6,7 +6,7 @@ export function notify(
   timeout = 4000
 ) {
   try {
-    let container = document.getElementById('emoji-ext-toast-container') as HTMLElement | null
+    let container = DEBI('emoji-ext-toast-container') as HTMLElement | null
     if (!container) {
       container = createE('div', {
         id: 'emoji-ext-toast-container',
@@ -20,7 +20,7 @@ export function notify(
           gap: 8px;
         `
       }) as HTMLElement
-      document.body.appendChild(container)
+      DOA(container)
     }
 
     const el = createE('div', {

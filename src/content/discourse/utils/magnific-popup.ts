@@ -1,5 +1,5 @@
 import type { AddEmojiButtonData } from '../types/main'
-import { createE } from '../../utils/createEl'
+import { createE, DQS, DQSA } from '../../utils/createEl'
 
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'
@@ -37,7 +37,7 @@ function addEmojiButtonToMfp(mfpContainer: Element) {
   if (!imgUrl) return
   // 优先取图片标题
   let name = ''
-  const captionTitle = document.querySelector('.pswp__caption-title')
+  const captionTitle = DQS('.pswp__caption-title')
   if (captionTitle && captionTitle.textContent && captionTitle.textContent.trim().length > 0) {
     name = captionTitle.textContent.trim()
   }
@@ -62,7 +62,7 @@ function addEmojiButtonToMfp(mfpContainer: Element) {
 
 export function scanForMagnificPopup() {
   // 仅处理 pswp__top-bar 结构
-  const topBars = document.querySelectorAll('.pswp__top-bar')
+  const topBars = DQSA('.pswp__top-bar')
   topBars.forEach(topBar => {
     addEmojiButtonToMfp(topBar)
   })

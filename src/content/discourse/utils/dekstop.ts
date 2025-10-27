@@ -1,5 +1,5 @@
 import { isImageUrl } from '../../utils/isimage'
-import { createE } from '../../utils/createEl'
+import { createE, DOA } from '../../utils/createEl'
 
 import { ensureDefaultIfEmpty, cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
@@ -56,13 +56,14 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   groupsToUse.forEach((group: any, index: number) => {
     if (!group?.emojis?.length) return
 
-    const navButton = document.createElement('button')
-    navButton.className = `btn no-text btn-flat emoji-picker__section-btn ${
-      index === 0 ? 'active' : ''
-    }`
-    navButton.setAttribute('tabindex', '-1')
-    navButton.setAttribute('data-section', group.id)
-    navButton.type = 'button'
+    const navButton = createE('button', {
+      class: `btn no-text btn-flat emoji-picker__section-btn ${index === 0 ? 'active' : ''}`,
+      attrs: {
+        tabindex: '-1',
+        'data-section': group.id
+      },
+      type: 'button'
+    })
 
     const iconVal = group.icon || '📁'
     if (isImageUrl(iconVal)) {
@@ -273,7 +274,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     }) as HTMLDivElement
     el.appendChild(label)
 
-    document.body.appendChild(el)
+    DOA(el)
     _previewEl = el
     // start fully opaque
     _previewEl.style.opacity = '1'

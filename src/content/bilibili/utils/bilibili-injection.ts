@@ -15,6 +15,7 @@ import {
   createBatchParseButton
 } from './bilibili-buttons'
 
+import { DQS, DQSA } from '@/content/utils/createEl'
 /**
  * 获取当前显示的图片 - 改进 URL 解析
  */
@@ -48,7 +49,7 @@ function getCurrentDisplayedImage(): Element | null {
 
   // 首先尝试找到最相关的图片
   for (const selector of selectors) {
-    const elements = document.querySelectorAll(selector)
+    const elements = DQSA(selector)
     for (const element of elements) {
       const url = extractImageUrlFromPicture(element)
       if (url) {
@@ -172,7 +173,7 @@ function addBatchParseButtonToAlbum(container: Element) {
  */
 export function scanAndInject() {
   // Check for PhotoSwipe previews first (with debouncing)
-  const pswpContainer = document.querySelector('.pswp__scroll-wrap')
+  const pswpContainer = DQS('.pswp__scroll-wrap')
   if (pswpContainer) {
     addButtonToPhotoSwipeDebounced()
   }
@@ -180,19 +181,19 @@ export function scanAndInject() {
   const selectors = getSelectorsForCurrentUrl()
   const set = new Set<Element>()
   selectors.forEach(sel => {
-    document.querySelectorAll(sel).forEach(el => set.add(el))
+    DQSA(sel).forEach(el => set.add(el))
   })
 
   set.forEach(el => addButtonToPicture(el))
 
   // Add button to control sections (image viewer controls)
-  const controlSections = document.querySelectorAll('.bili-album__watch__control')
+  const controlSections = DQSA('.bili-album__watch__control')
   controlSections.forEach(controlSection => {
     addButtonToControlSection(controlSection)
   })
 
   // Add batch parse button for full album container
-  const albumContainers = document.querySelectorAll('.bili-album')
+  const albumContainers = DQSA('.bili-album')
   albumContainers.forEach(container => {
     addBatchParseButtonToAlbum(container)
   })

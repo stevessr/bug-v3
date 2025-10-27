@@ -4,6 +4,7 @@ import {
   setupButtonClick,
   AddEmojiButtonData
 } from '../x/utils'
+import { DQSA, createE } from '../utils/createEl'
 
 function isXhsPage(): boolean {
   try {
@@ -15,13 +16,12 @@ function isXhsPage(): boolean {
 }
 
 function createXhsBtn(data: AddEmojiButtonData) {
-  const btn = document.createElement('button')
-  btn.className = 'xhs-emoji-add-btn'
-  btn.type = 'button'
-  btn.title = '添加到未分组表情'
-  // Use visible text so it always fits; increase padding and min-width
-  btn.innerText = '添加到未分组表情'
-  btn.style.cssText = `
+  const btn = createE('button', {
+    class: 'xhs-emoji-add-btn',
+    type: 'button',
+    ti: '添加到未分组表情',
+    in: '添加到未分组表情',
+    style: `
     position: absolute;
     top: 8px;
     right: 8px;
@@ -40,6 +40,7 @@ function createXhsBtn(data: AddEmojiButtonData) {
     font-size: 13px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.25);
   `
+  })
   setupButtonClick(btn, data)
   return btn
 }
@@ -91,7 +92,7 @@ export function scanAndInjectXhs() {
 
   selectors.forEach(sel => {
     try {
-      document.querySelectorAll(sel).forEach(el => {
+      DQSA(sel).forEach(el => {
         if (el instanceof HTMLImageElement) {
           set.add(el)
         } else {
@@ -109,7 +110,7 @@ export function scanAndInjectXhs() {
   // 如果没有找到图片，尝试查找所有图片
   if (set.size === 0) {
     console.log('[XHSOneClick] No images found with specific selectors, trying all images')
-    document.querySelectorAll('img').forEach(img => {
+    DQSA('img').forEach(img => {
       if (img instanceof HTMLImageElement && img.src) {
         console.log('[XHSOneClick] Found image:', img.src, 'class:', img.className)
       }

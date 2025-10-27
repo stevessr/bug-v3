@@ -3,9 +3,11 @@ import { cachedState } from '../data/state'
 
 import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
 import { notify } from './notify'
-import { createE } from './createEl'
+import { createE, DQSA, DQS, DOA, DAEL } from './createEl'
 import { showImageUploadDialog } from './uploader'
 import { createAndShowIframeModal, createAndShowSideIframeModal } from './iframe'
+
+import { ICONS } from '@/content/data/callout'
 
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [
@@ -15,7 +17,7 @@ const TOOLBAR_SELECTORS = [
 
 export function findToolbar(): Element | null {
   for (const selector of TOOLBAR_SELECTORS) {
-    const toolbar = document.querySelector(selector)
+    const toolbar = DQS(selector)
     if (toolbar) {
       return toolbar
     }
@@ -26,7 +28,7 @@ export function findToolbar(): Element | null {
 export function findAllToolbars(): Element[] {
   const toolbars: Element[] = []
   for (const selector of TOOLBAR_SELECTORS) {
-    const elements = document.querySelectorAll(selector)
+    const elements = DQSA(selector)
     toolbars.push(...Array.from(elements))
   }
   return toolbars
@@ -46,7 +48,7 @@ async function injectDesktopPicker(button: HTMLElement) {
   currentPicker = await createEmojiPicker(false)
   const buttonRect = button.getBoundingClientRect()
   const pickerElement = currentPicker
-  if (pickerElement) document.body.appendChild(pickerElement)
+  if (pickerElement) DOA(pickerElement)
 
   // Use similar logic as userscript toolbar: adaptive positioning to keep picker inside viewport
   pickerElement.style.position = 'fixed'
@@ -80,17 +82,17 @@ async function injectDesktopPicker(button: HTMLElement) {
   pickerElement.style.left = left + 'px'
 
   setTimeout(() => {
-    document.addEventListener('click', event => handleClickOutside(event, button))
+    DAEL('click', event => handleClickOutside(event, button))
   }, 100)
 }
 
 async function injectMobilePicker() {
   const picker = await createEmojiPicker(true)
 
-  let modalContainer = document.querySelector('.modal-container')
+  let modalContainer = DQS('.modal-container')
   if (!modalContainer) {
     modalContainer = createE('div', { class: 'modal-container' })
-    document.body.appendChild(modalContainer)
+    DOA(modalContainer)
   }
 
   modalContainer.innerHTML = '' // Clear any previous content
@@ -180,11 +182,7 @@ function insertIntoEditor(text: string) {
   ]
 
   for (const sel of selectors) {
-    const el = document.querySelector(sel) as
-      | HTMLTextAreaElement
-      | HTMLInputElement
-      | HTMLElement
-      | null
+    const el = DQS(sel) as HTMLTextAreaElement | HTMLInputElement | HTMLElement | null
     if (!el) continue
     if ((el as HTMLElement).isContentEditable) {
       const editable = el as HTMLElement
@@ -234,86 +232,6 @@ function createQuickInsertMenu(): HTMLElement {
   })
   const inner = createE('div', { class: 'fk-d-menu__inner-content' })
   const list = createE('ul', { class: 'dropdown-menu' })
-
-  const ICONS: Record<
-    string,
-    {
-      icon: string
-      color: string
-      svg: string
-    }
-  > = {
-    info: {
-      icon: 'ℹ️',
-      color: 'rgba(2, 122, 255, 0.1)',
-      svg: '<svg class="fa d-icon d-icon-far-lightbulb svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-lightbulb"></use></svg>'
-    },
-    tip: {
-      icon: '💡',
-      color: 'rgba(0, 191, 188, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-fire-flame-curved svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#fire-flame-curved"></use></svg>'
-    },
-    faq: {
-      icon: '❓',
-      color: 'rgba(236, 117, 0, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-far-circle-question svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-question"></use></svg>'
-    },
-    question: {
-      icon: '🤔',
-      color: 'rgba(236, 117, 0, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-far-circle-question svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-question"></use></svg>'
-    },
-    note: {
-      icon: '📝',
-      color: 'rgba(8, 109, 221, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-far-pen-to-square svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-pen-to-square"></use></svg>'
-    },
-    abstract: {
-      icon: '📋',
-      color: 'rgba(0, 191, 188, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-far-clipboard svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-clipboard"></use></svg>'
-    },
-    todo: {
-      icon: '☑️',
-      color: 'rgba(2, 122, 255, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-far-circle-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-check"></use></svg>'
-    },
-    success: {
-      icon: '🎉',
-      color: 'rgba(68, 207, 110, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#check"></use></svg>'
-    },
-    warning: {
-      icon: '⚠️',
-      color: 'rgba(236, 117, 0, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-triangle-exclamation svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#triangle-exclamation"></use></svg>'
-    },
-    failure: {
-      icon: '❌',
-      color: 'rgba(233, 49, 71, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>'
-    },
-    danger: {
-      icon: '☠️',
-      color: 'rgba(233, 49, 71, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-bolt svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#bolt"></use></svg>'
-    },
-    bug: {
-      icon: '🐛',
-      color: 'rgba(233, 49, 71, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-bug svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#bug"></use></svg>'
-    },
-    example: {
-      icon: '🔎',
-      color: 'rgba(120, 82, 238, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-list svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#list"></use></svg>'
-    },
-    quote: {
-      icon: '💬',
-      color: 'rgba(158, 158, 158, 0.1);',
-      svg: '<svg class="fa d-icon d-icon-quote-left svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#quote-left"></use></svg>'
-    }
-  }
 
   QUICK_INSERTS.forEach(item => {
     const displayLabel =
@@ -489,7 +407,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
 
   const createiframe = (text: string, icon: string, url: string, className: string) =>
     createListItem(text, icon, () => {
-      const existing = document.querySelector(`.${className}`) as HTMLElement | null
+      const existing = DQS(`.${className}`) as HTMLElement | null
       if (existing) return
       createAndShowIframeModal(
         url,
@@ -513,7 +431,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   const createside = (text: string, icon: string, url: string, className: string) =>
     createListItem(text, icon, () => {
       // If a modal iframe already exists, don't create another
-      const existing = document.querySelector(`.${className}`) as HTMLElement | null
+      const existing = DQS(`.${className}`) as HTMLElement | null
       if (existing) return
       createAndShowSideIframeModal(
         url,
@@ -669,19 +587,19 @@ export function injectButton(toolbar: Element) {
 
     if (isMobile) {
       // Try to find existing modal container on the page and reuse it
-      const modalPortal = document.querySelector('.modal-container') as HTMLElement | null
+      const modalPortal = DQS('.modal-container') as HTMLElement | null
       if (!modalPortal) {
         // If no modal container exists, append to body
-        document.body.appendChild(menu)
+        DOA(menu)
       } else {
         modalPortal.appendChild(menu)
       }
     } else {
       // Ensure portal container exists
-      let portal = document.querySelector('#d-menu-portals') as HTMLElement | null
+      let portal = DQS('#d-menu-portals') as HTMLElement | null
       if (!portal) {
         portal = createE('div', { id: 'd-menu-portals' }) as HTMLDivElement
-        document.body.appendChild(portal)
+        DOA(portal)
       }
 
       // Append hidden first to measure size
@@ -725,7 +643,7 @@ export function injectButton(toolbar: Element) {
         const modalContainer =
           menu.classList && (menu as HTMLElement).classList.contains('modal-container')
             ? (menu as HTMLElement)
-            : (document.querySelector('.modal-container') as HTMLElement | null)
+            : (DQS('.modal-container') as HTMLElement | null)
 
         if (modalContainer && !modalContainer.contains(e.target as Node)) {
           // Clear children inside the modal container rather than removing the container element
@@ -751,7 +669,7 @@ export function injectButton(toolbar: Element) {
     }
 
     setTimeout(() => {
-      document.addEventListener('click', removeMenu)
+      DAEL('click', removeMenu)
     }, 100)
   })
 
@@ -777,10 +695,10 @@ export function injectButton(toolbar: Element) {
 
     if (isMobile) {
       // Inject into a shared modal container like the emoji picker does
-      let modalPortal = document.querySelector('.modal-container') as HTMLElement | null
+      let modalPortal = DQS('.modal-container') as HTMLElement | null
       if (!modalPortal) {
         modalPortal = createE('div', { class: 'modal-container' }) as HTMLElement
-        document.body.appendChild(modalPortal)
+        DOA(modalPortal)
       }
 
       // Clear any previous content and mount our menu + backdrop
@@ -797,10 +715,10 @@ export function injectButton(toolbar: Element) {
       // Track the menu element itself so toggling will unmount only the menu
       currentPicker = menu as HTMLElement
     } else {
-      let portal = document.querySelector('#d-menu-portals') as HTMLElement | null
+      let portal = DQS('#d-menu-portals') as HTMLElement | null
       if (!portal) {
         portal = createE('div', { id: 'd-menu-portals' }) as HTMLDivElement
-        document.body.appendChild(portal)
+        DOA(portal)
       }
       portal.appendChild(menu)
       const rect = quickInsertButton.getBoundingClientRect()
@@ -815,7 +733,7 @@ export function injectButton(toolbar: Element) {
         const modalContainer =
           menu.classList && (menu as HTMLElement).classList.contains('modal-container')
             ? (menu as HTMLElement)
-            : (document.querySelector('.modal-container') as HTMLElement | null)
+            : (DQS('.modal-container') as HTMLElement | null)
 
         if (modalContainer && !modalContainer.contains(e.target as Node)) {
           try {
@@ -840,7 +758,7 @@ export function injectButton(toolbar: Element) {
     }
 
     setTimeout(() => {
-      document.addEventListener('click', removeMenu)
+      DAEL('click', removeMenu)
     }, 100)
   })
 

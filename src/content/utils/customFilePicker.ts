@@ -1,4 +1,4 @@
-import { createE } from './createEl'
+import { createE, DOA, DHA, DQS, DAEL } from './createEl'
 
 /**
  * Custom file picker that mimics native file input but with custom UI
@@ -414,8 +414,9 @@ export async function showCustomFilePicker(
     }
 
     header.addEventListener('mousedown', dragStart)
-    document.addEventListener('mousemove', drag)
-    document.addEventListener('mouseup', dragEnd)
+    header.addEventListener('mousedown', dragStart)
+    DAEL('mousemove', drag)
+    DAEL('mouseup', dragEnd)
 
     // Update preview UI
     const updatePreview = () => {
@@ -725,10 +726,10 @@ export async function showCustomFilePicker(
             const notification = createE('div', {
               text: message,
               style: `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: #3b82f6;
+                position: fixed; 
+                bottom: 20px; 
+                right: 20px; 
+                background: #3b82f6; 
                 color: white;
                 padding: 12px 20px;
                 border-radius: 8px;
@@ -737,7 +738,7 @@ export async function showCustomFilePicker(
                 font-size: 14px;
               `
             })
-            document.body.appendChild(notification)
+            DOA(notification)
             setTimeout(() => {
               notification.style.opacity = '0'
               notification.style.transition = 'opacity 0.3s'
@@ -770,8 +771,8 @@ export async function showCustomFilePicker(
     }
 
     // Add paste event listener
-    document.addEventListener('paste', handlePaste)
-    document.addEventListener('keydown', handleEscape)
+    DAEL('paste', handlePaste)
+    DAEL('keydown', handleEscape)
 
     // Handle file selection from native input
     nativeInput.addEventListener('change', (e: Event) => {
@@ -822,7 +823,7 @@ export async function showCustomFilePicker(
                 animation: slideInRight 0.3s ease-out;
               `
             })
-            document.body.appendChild(notification)
+            DOA(notification)
             setTimeout(() => {
               notification.style.opacity = '0'
               notification.style.transition = 'opacity 0.3s'
@@ -857,7 +858,7 @@ export async function showCustomFilePicker(
               font-size: 14px;
             `
           })
-          document.body.appendChild(allFilteredMsg)
+          DOA(allFilteredMsg)
           setTimeout(() => {
             allFilteredMsg.style.opacity = '0'
             allFilteredMsg.style.transition = 'opacity 0.3s'
@@ -1015,12 +1016,12 @@ export async function showCustomFilePicker(
         }
       }
     `
-    if (!document.querySelector('style[data-custom-picker-animations]')) {
+    if (!DQS('style[data-custom-picker-animations]')) {
       style.setAttribute('data-custom-picker-animations', 'true')
-      document.head.appendChild(style)
+      DHA(style)
     }
 
-    document.body.appendChild(dialog)
+    DOA(dialog)
 
     // Auto focus select button
     setTimeout(() => selectButton.focus(), 100)

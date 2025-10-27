@@ -5,6 +5,7 @@
 import { createFloatingButton, createPhotoSwipeButton } from './bilibili-buttons'
 import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
 
+import { DQS } from '@/content/utils/createEl'
 // 防抖和状态管理
 let isProcessingPhotoSwipe = false
 let photoSwipeDebounceTimer: number | null = null
@@ -26,14 +27,14 @@ export function resetPhotoSwipeState(): void {
  * 检查 PhotoSwipe 预览器是否存在
  */
 function isPhotoSwipeActive(): boolean {
-  return !!document.querySelector('.pswp__scroll-wrap')
+  return !!DQS('.pswp__scroll-wrap')
 }
 
 /**
  * 获取当前活动的 PhotoSwipe 图片项
  */
 function getCurrentPhotoSwipeItem(): Element | null {
-  const pswpContainer = document.querySelector('.pswp__scroll-wrap')
+  const pswpContainer = DQS('.pswp__scroll-wrap')
   if (!pswpContainer) return null
 
   return pswpContainer.querySelector('.pswp__item[aria-hidden="false"]')
@@ -54,7 +55,7 @@ function getCurrentPhotoSwipeImage(): HTMLImageElement | null {
  */
 function hasPhotoSwipeButton(): boolean {
   // Check in top bar
-  const topBar = document.querySelector('.pswp__top-bar')
+  const topBar = DQS('.pswp__top-bar')
   if (topBar && topBar.querySelector('.bili-emoji-add-btn')) return true
 
   // Check in active item
@@ -68,7 +69,7 @@ function hasPhotoSwipeButton(): boolean {
  * 向 PhotoSwipe 顶部栏添加按钮，定位在关闭按钮旁边
  */
 function addButtonToPhotoSwipeTopBar(name: string, url: string): boolean {
-  const topBar = document.querySelector('.pswp__top-bar')
+  const topBar = DQS('.pswp__top-bar')
   if (!topBar || topBar.querySelector('.bili-emoji-add-btn')) return false
 
   // Find the close button to position our button next to it
@@ -189,7 +190,7 @@ function createPhotoSwipeObserver(callback: () => void): MutationObserver {
  * 监听 PhotoSwipe 容器的变化
  */
 export function observePhotoSwipeContainer(callback: () => void): MutationObserver | null {
-  const pswpContainer = document.querySelector('.pswp__scroll-wrap')
+  const pswpContainer = DQS('.pswp__scroll-wrap')
   if (!pswpContainer) return null
 
   const observer = createPhotoSwipeObserver(callback)

@@ -1,3 +1,5 @@
+import { DOA, DQSA, createE } from '../../utils/createEl'
+
 function isXPage(): boolean {
   try {
     const host = window.location.hostname.toLowerCase()
@@ -30,15 +32,20 @@ function getVideoUrl(video: HTMLVideoElement): string | null {
 async function downloadBlob(url: string): Promise<void> {
   try {
     const response = await fetch(url)
-    if (!response.ok) throw new Error(`网络请求失败: ${response.status} ${response.statusText}`)
+    if (!response.ok) throw new Error(`网络请求失败：${response.status} ${response.statusText}`)
     const blob = await response.blob()
     const downloadUrl = URL.createObjectURL(blob)
-    const link = document.createElement('a')
+    const link = createE('a')
     link.href = downloadUrl
     link.download = `video_${Date.now()}.mp4`
-    document.body.appendChild(link)
+    DOA(link)
     link.click()
-    document.body.removeChild(link)
+    // remove by DOM method to be safe
+    try {
+      if (link.parentElement) link.parentElement.removeChild(link)
+    } catch {
+      /* ignore */
+    }
     URL.revokeObjectURL(downloadUrl)
   } catch (error) {
     try {
@@ -48,7 +55,7 @@ async function downloadBlob(url: string): Promise<void> {
     }
     try {
       safeAlert(
-        '下载失败: ' +
+        '下载失败：' +
           (error && (error as Error).message ? (error as Error).message : String(error))
       )
     } catch {
@@ -234,7 +241,7 @@ function addInlineButtonsToAncestors(video: HTMLVideoElement, url: string) {
 }
 
 function scanAndInjectVideo() {
-  const videos = Array.from(document.querySelectorAll('video')) as HTMLVideoElement[]
+  const videos = Array.from(DQSA('video')) as HTMLVideoElement[]
   videos.forEach(v => {
     try {
       const rect = v.getBoundingClientRect()
