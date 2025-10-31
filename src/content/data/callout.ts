@@ -1,4 +1,5 @@
 export const ICONS: Record<string, { icon?: string; color?: string; svg?: string }> = {
+  // --- 原有项目 ---
   info: {
     icon: 'ℹ️',
     color: 'rgba(2, 122, 255, 0.06)',
@@ -67,6 +68,68 @@ export const ICONS: Record<string, { icon?: string; color?: string; svg?: string
   quote: {
     icon: '💬',
     color: 'rgba(158, 158, 158, 0.06)',
+    svg: '<svg class="fa d-icon d-icon-quote-left svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#quote-left"></use></svg>'
+  },
+
+  // --- 新增项目 ---
+  summary: {
+    icon: '📋',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-far-clipboard svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-clipboard"></use></svg>'
+  },
+  tldr: {
+    icon: '📋',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-far-clipboard svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-clipboard"></use></svg>'
+  },
+  hint: {
+    icon: '💡',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-fire-flame-curved svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#fire-flame-curved"></use></svg>'
+  },
+  check: {
+    icon: '🎉',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#check"></use></svg>'
+  },
+  done: {
+    icon: '🎉',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#check"></use></svg>'
+  },
+  help: {
+    icon: '❓',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-far-circle-question svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-circle-question"></use></svg>'
+  },
+  caution: {
+    icon: '⚠️',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-triangle-exclamation svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#triangle-exclamation"></use></svg>'
+  },
+  attention: {
+    icon: '⚠️',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-triangle-exclamation svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#triangle-exclamation"></use></svg>'
+  },
+  fail: {
+    icon: '❌',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>'
+  },
+  missing: {
+    icon: '❌',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>'
+  },
+  error: {
+    icon: '☠️',
+    color: 'currentcolor',
+    svg: '<svg class="fa d-icon d-icon-bolt svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#bolt"></use></svg>'
+  },
+  cite: {
+    icon: '💬',
+    color: 'currentcolor',
     svg: '<svg class="fa d-icon d-icon-quote-left svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#quote-left"></use></svg>'
   }
 }
