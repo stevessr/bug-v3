@@ -58,6 +58,10 @@ const RAW_PREVIEW_STYLES = `
   background: linear-gradient(90deg,#fffbe6,#f0f7ff);
   border-color: rgba(3,102,214,0.12);
 }
+.raw-preview-small-btn.json {
+  background: linear-gradient(90deg,#e6fffb,#f0fff4);
+  border-color: rgba(0,128,96,0.12);
+}
 `
 
 ensureStyleInjected('raw-preview-styles', RAW_PREVIEW_STYLES)
@@ -66,18 +70,25 @@ let overlay: HTMLElement | null = null
 let iframeEl: HTMLIFrameElement | null = null
 let currentTopicId: string | null = null
 let currentPage = 1
-let renderMode: 'iframe' | 'markdown' = 'iframe'
+let renderMode: 'iframe' | 'markdown' | 'json' = 'iframe'
+let currentTopicSlug: string | null = null
 
 function rawUrl(topicId: string, page: number) {
   // Build the raw page url per site pattern
   return new URL(`/raw/${topicId}?page=${page}`, window.location.origin).toString()
 }
 
-function createOverlay(topicId: string, startPage = 1, mode: 'iframe' | 'markdown' = 'iframe') {
+function jsonUrl(topicId: string, page: number, slug?: string) {
+  const usedSlug = slug || currentTopicSlug || 'topic'
+  return new URL(`/t/${usedSlug}/${topicId}.json?page=${page}`, window.location.origin).toString()
+}
+
+function createOverlay(topicId: string, startPage = 1, mode: 'iframe' | 'markdown' | 'json' = 'iframe', slug?: string) {
   if (overlay) return // already open
   currentTopicId = topicId
   currentPage = startPage
   renderMode = mode
+  currentTopicSlug = slug || null
 
   overlay = createEl('div', { className: 'raw-preview-overlay' }) as HTMLElement
   const modal = createEl('div', { className: 'raw-preview-modal' }) as HTMLDivElement
@@ -152,8 +163,12 @@ function createOverlay(topicId: string, startPage = 1, mode: 'iframe' | 'markdow
   if (renderMode === 'iframe') {
     iframeEl.src = rawUrl(topicId, currentPage)
   } else {
-    // render markdown into iframe by fetching raw text
-    fetchAndRenderMarkdown(topicId, currentPage)
+    // render markdown/json into iframe by fetching
+    if (renderMode === 'markdown') {
+      fetchAndRenderMarkdown(topicId, currentPage)
+    } else if (renderMode === 'json') {
+      fetchAndRenderJson(topicId, currentPage, currentTopicSlug || undefined)
+    }
   }
 }
 
@@ -162,7 +177,11 @@ function updateIframeSrc() {
   if (renderMode === 'iframe') {
     iframeEl.src = rawUrl(currentTopicId, currentPage)
   } else {
-    fetchAndRenderMarkdown(currentTopicId, currentPage)
+    if (renderMode === 'markdown') {
+      fetchAndRenderMarkdown(currentTopicId, currentPage)
+    } else if (renderMode === 'json') {
+      fetchAndRenderJson(currentTopicId, currentPage, currentTopicSlug || undefined)
+    }
   }
 }
 
@@ -193,11 +212,11 @@ function handleKeydown(e: KeyboardEvent) {
 
 // (createTriggerButton removed - use createTriggerButtonFor instead)
 
-function createTriggerButtonFor(mode: 'iframe' | 'markdown') {
+function createTriggerButtonFor(mode: 'iframe' | 'markdown' | 'json') {
   const text = mode === 'markdown' ? '预览(MD)' : '预览'
   const btn = createEl('button', {
-    className: `raw-preview-small-btn ${mode === 'markdown' ? 'md' : 'iframe'}`,
-    text
+    className: `raw-preview-small-btn ${mode === 'markdown' ? 'md' : mode === 'json' ? 'json' : 'iframe'}`,
+    text: mode === 'json' ? '预览 (JSON)' : text
   }) as HTMLButtonElement
   ;(btn as any).dataset.previewMode = mode
   return btn
@@ -391,6 +410,47 @@ async function fetchAndRenderMarkdown(topicId: string, page: number) {
   }
 }
 
+async function fetchAndRenderJson(topicId: string, page: number, slug?: string) {
+  if (!iframeEl) return
+  const url = jsonUrl(topicId, page, slug)
+  try {
+    const res = await fetch(url, { credentials: 'include' })
+    if (!res.ok) throw new Error('fetch failed ' + res.status)
+    const data = await res.json()
+    const posts = (data && data.post_stream && Array.isArray(data.post_stream.posts))
+      ? data.post_stream.posts as Array<any>
+      : []
+
+    // Build simple HTML by concatenating cooked per post (楼层顺序)
+    const parts: string[] = []
+    for (const p of posts) {
+      const cooked = typeof p.cooked === 'string' ? p.cooked : ''
+      // optional header for each floor
+      const header = `<div class="json-post-header" style="font: 500 13px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#555;margin:8px 0 4px;">#${p.post_number || ''} @${p.username || ''} <span style="color:#999;">${p.created_at || ''}</span></div>`
+      parts.push(`<article class="json-post" style="padding:8px 0;border-bottom:1px solid #eee;">${header}<div class="json-post-body">${cooked}</div></article>`)
+    }
+
+    const doc = iframeEl.contentDocument || (iframeEl as any).contentWindow?.document
+    if (!doc) throw new Error('iframe document unavailable')
+
+    const css = `
+      body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px;color:#111}
+      img{max-width:100%;height:auto}
+      .json-post-body pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}
+      .json-post-body code{background:#f0f0f0;padding:2px 4px;border-radius:4px}
+      a{color:#0366d6}
+    `
+    const baseHref = window.location.origin
+    doc.open()
+    doc.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="${baseHref}/"><style>${css}</style></head><body>${parts.join('\n')}</body></html>`)
+    doc.close()
+  } catch (err) {
+    console.warn('[rawPreview] fetchAndRenderJson failed', err)
+    // fallback to setting iframe src to the JSON url (not ideal for UX)
+    iframeEl.src = url
+  }
+}
+
 // Dynamic loader for markdown-it via CDN. Returns the global factory (window.markdownit)
 function loadMarkdownIt(): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -471,54 +531,7 @@ function uploadUrlPlugin(mdLib: any) {
   }
 }
 
-function injectOnTopicPage() {
-  const m = window.location.pathname.match(/\/t\/(?:[^\/]+)\/(\d+)(?:\/|$)/)
-  if (!m) return
-  const topicId = m[1]
-
-  // Avoid duplicate insertion
-  if (document.querySelector('.raw-preview-page-trigger')) return
-
-  const btn = createTriggerButtonFor('iframe')
-  btn.classList.add('raw-preview-page-trigger')
-  btn.addEventListener('click', () => createOverlay(topicId, 1, 'iframe'))
-  // markdown variant
-  const mdBtn = createTriggerButtonFor('markdown')
-  mdBtn.classList.add('raw-preview-page-trigger-md')
-  mdBtn.addEventListener('click', () => createOverlay(topicId, 1, 'markdown'))
-
-  // Try to insert into topic header area; fallback to body append
-  const headerSelectors = [
-    '.topic-map',
-    '.topic-main',
-    '.topic-footer',
-    '.topic-header',
-    '.topic-title'
-  ]
-  let placed = false
-  for (const sel of headerSelectors) {
-    const el = document.querySelector(sel) as HTMLElement | null
-    if (el) {
-      el.appendChild(btn)
-      el.appendChild(mdBtn)
-      placed = true
-      break
-    }
-  }
-  if (!placed) {
-    // fixed small buttons at top-right as fallback
-    btn.style.position = 'fixed'
-    btn.style.top = '16px'
-    btn.style.right = '96px'
-    btn.style.zIndex = '999999'
-    mdBtn.style.position = 'fixed'
-    mdBtn.style.top = '16px'
-    mdBtn.style.right = '16px'
-    mdBtn.style.zIndex = '999999'
-    document.body.appendChild(btn)
-    document.body.appendChild(mdBtn)
-  }
-}
+// Note: per requirement, we no longer inject buttons on individual topic pages.
 
 function injectIntoTopicList() {
   // Find all rows with data-topic-id and inject a small button near the title link
@@ -533,14 +546,14 @@ function injectIntoTopicList() {
       const titleLink = row.querySelector(
         'a.title, a.raw-topic-link, a.raw-link'
       ) as HTMLElement | null
-      const btn = createTriggerButtonFor('iframe')
+  const btn = createTriggerButtonFor('iframe')
       btn.classList.add('raw-preview-list-trigger')
       btn.addEventListener('click', (e: Event) => {
         e.preventDefault()
         e.stopPropagation()
         createOverlay(topicId, 1, 'iframe')
       })
-      const mdBtn = createTriggerButtonFor('markdown')
+  const mdBtn = createTriggerButtonFor('markdown')
       mdBtn.classList.add('raw-preview-list-trigger-md')
       mdBtn.addEventListener('click', (e: Event) => {
         e.preventDefault()
@@ -548,14 +561,30 @@ function injectIntoTopicList() {
         createOverlay(topicId, 1, 'markdown')
       })
 
+      // json variant
+      const jsonBtn = createTriggerButtonFor('json')
+      jsonBtn.classList.add('raw-preview-list-trigger-json')
+      jsonBtn.addEventListener('click', (e: Event) => {
+        e.preventDefault()
+        e.stopPropagation()
+        // parse slug from title link href like /t/<slug>/<id>
+        let slug: string | undefined
+        const href = (titleLink as HTMLAnchorElement | null)?.getAttribute('href') || ''
+        const m = href.match(/\/t\/([^/]+)\/(\d+)/)
+        if (m) slug = m[1]
+        createOverlay(topicId, 1, 'json', slug)
+      })
+
       if (titleLink && titleLink.parentElement) {
         // insert after the title link
         titleLink.parentElement.appendChild(btn)
         titleLink.parentElement.appendChild(mdBtn)
+        titleLink.parentElement.appendChild(jsonBtn)
       } else {
         // append to the row as fallback
         ;(row as HTMLElement).appendChild(btn)
         ;(row as HTMLElement).appendChild(mdBtn)
+        ;(row as HTMLElement).appendChild(jsonBtn)
       }
     } catch (err) {
       // ignore bad rows
@@ -567,7 +596,6 @@ function injectIntoTopicList() {
 export function initRawPreview() {
   // Run initial injections
   try {
-    injectOnTopicPage()
     injectIntoTopicList()
   } catch (e) {
     console.warn('[rawPreview] initial injection failed', e)
@@ -575,7 +603,6 @@ export function initRawPreview() {
 
   // Observe for dynamic list updates (infinite scroll or navigation)
   const observer = new MutationObserver(() => {
-    injectOnTopicPage()
     injectIntoTopicList()
   })
 
