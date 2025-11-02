@@ -83,7 +83,12 @@ function jsonUrl(topicId: string, page: number, slug?: string) {
   return new URL(`/t/${usedSlug}/${topicId}.json?page=${page}`, window.location.origin).toString()
 }
 
-function createOverlay(topicId: string, startPage = 1, mode: 'iframe' | 'markdown' | 'json' = 'iframe', slug?: string) {
+function createOverlay(
+  topicId: string,
+  startPage = 1,
+  mode: 'iframe' | 'markdown' | 'json' = 'iframe',
+  slug?: string
+) {
   if (overlay) return // already open
   currentTopicId = topicId
   currentPage = startPage
@@ -417,9 +422,10 @@ async function fetchAndRenderJson(topicId: string, page: number, slug?: string) 
     const res = await fetch(url, { credentials: 'include' })
     if (!res.ok) throw new Error('fetch failed ' + res.status)
     const data = await res.json()
-    const posts = (data && data.post_stream && Array.isArray(data.post_stream.posts))
-      ? data.post_stream.posts as Array<any>
-      : []
+    const posts =
+      data && data.post_stream && Array.isArray(data.post_stream.posts)
+        ? (data.post_stream.posts as Array<any>)
+        : []
 
     // Build simple HTML by concatenating cooked per post (楼层顺序)
     const parts: string[] = []
@@ -427,7 +433,9 @@ async function fetchAndRenderJson(topicId: string, page: number, slug?: string) 
       const cooked = typeof p.cooked === 'string' ? p.cooked : ''
       // optional header for each floor
       const header = `<div class="json-post-header" style="font: 500 13px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#555;margin:8px 0 4px;">#${p.post_number || ''} @${p.username || ''} <span style="color:#999;">${p.created_at || ''}</span></div>`
-      parts.push(`<article class="json-post" style="padding:8px 0;border-bottom:1px solid #eee;">${header}<div class="json-post-body">${cooked}</div></article>`)
+      parts.push(
+        `<article class="json-post" style="padding:8px 0;border-bottom:1px solid #eee;">${header}<div class="json-post-body">${cooked}</div></article>`
+      )
     }
 
     const doc = iframeEl.contentDocument || (iframeEl as any).contentWindow?.document
@@ -442,7 +450,9 @@ async function fetchAndRenderJson(topicId: string, page: number, slug?: string) 
     `
     const baseHref = window.location.origin
     doc.open()
-    doc.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="${baseHref}/"><style>${css}</style></head><body>${parts.join('\n')}</body></html>`)
+    doc.write(
+      `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="${baseHref}/"><style>${css}</style></head><body>${parts.join('\n')}</body></html>`
+    )
     doc.close()
   } catch (err) {
     console.warn('[rawPreview] fetchAndRenderJson failed', err)
@@ -479,7 +489,7 @@ function loadMarkdownIt(): Promise<any> {
         if (md) resolve(md)
         else reject(new Error('markdownit not found after script load'))
       }
-  s.onerror = () => reject(new Error('failed to load markdown-it script'))
+      s.onerror = () => reject(new Error('failed to load markdown-it script'))
       document.head.appendChild(s)
     } catch (e) {
       reject(e)
@@ -489,11 +499,19 @@ function loadMarkdownIt(): Promise<any> {
 
 // Plugin to map upload:// URLs to site uploads and extract alt|WxH sizing
 function uploadUrlPlugin(mdLib: any) {
-  const defaultRender = mdLib.renderer.rules.image || function(tokens: any, idx: number, options: any, _env: any, self: any) {
-    return self.renderToken(tokens, idx, options)
-  }
+  const defaultRender =
+    mdLib.renderer.rules.image ||
+    function (tokens: any, idx: number, options: any, _env: any, self: any) {
+      return self.renderToken(tokens, idx, options)
+    }
 
-  mdLib.renderer.rules.image = function(tokens: any, idx: number, options: any, env: any, self: any) {
+  mdLib.renderer.rules.image = function (
+    tokens: any,
+    idx: number,
+    options: any,
+    env: any,
+    self: any
+  ) {
     try {
       const token = tokens[idx]
       // token.attrs is array of [name, value]
@@ -546,20 +564,18 @@ function injectIntoTopicList() {
       const titleLink = row.querySelector(
         'a.title, a.raw-topic-link, a.raw-link'
       ) as HTMLElement | null
-  const btn = createTriggerButtonFor('iframe')
+      const btn = createTriggerButtonFor('iframe')
       btn.classList.add('raw-preview-list-trigger')
       btn.addEventListener('click', (e: Event) => {
         e.preventDefault()
         e.stopPropagation()
         createOverlay(topicId, 1, 'iframe')
       })
-  const mdBtn = createTriggerButtonFor('markdown')
-      mdBtn.classList.add('raw-preview-list-trigger-md')
-      mdBtn.addEventListener('click', (e: Event) => {
-        e.preventDefault()
-        e.stopPropagation()
-        createOverlay(topicId, 1, 'markdown')
-      })
+      
+      // markdown variant
+      //const mdBtn = createTriggerButtonFor('markdown')
+      //mdBtn.classList.add('raw-preview-list-trigger-md')
+      //mdBtn.addEventListener('click', (e: Event) => {e.preventDefault()e.stopPropagation()createOverlay(topicId, 1, 'markdown')})
 
       // json variant
       const jsonBtn = createTriggerButtonFor('json')
@@ -578,12 +594,12 @@ function injectIntoTopicList() {
       if (titleLink && titleLink.parentElement) {
         // insert after the title link
         titleLink.parentElement.appendChild(btn)
-        titleLink.parentElement.appendChild(mdBtn)
+        //titleLink.parentElement.appendChild(mdBtn)
         titleLink.parentElement.appendChild(jsonBtn)
       } else {
         // append to the row as fallback
         ;(row as HTMLElement).appendChild(btn)
-        ;(row as HTMLElement).appendChild(mdBtn)
+        //;(row as HTMLElement).appendChild(mdBtn)
         ;(row as HTMLElement).appendChild(jsonBtn)
       }
     } catch (err) {
