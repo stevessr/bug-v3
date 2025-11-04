@@ -14,12 +14,18 @@ importers:
       ant-design-vue:
         specifier: ^4.2.6
         version: 4.2.6(vue@3.5.22(typescript@5.9.3))
+      dompurify:
+        specifier: ^3.3.0
+        version: 3.3.0
       eslint:
         specifier: ^9.38.0
         version: 9.38.0(jiti@1.21.7)
       ignore:
         specifier: ^7.0.5
         version: 7.0.5
+      marked:
+        specifier: ^16.4.1
+        version: 16.4.1
       pinia:
         specifier: ^2.3.1
         version: 2.3.1(typescript@5.9.3)(vue@3.5.22(typescript@5.9.3))
@@ -48,6 +54,12 @@ importers:
       '@types/chrome':
         specifier: ^0.1.24
         version: 0.1.24
+      '@types/dompurify':
+        specifier: ^3.2.0
+        version: 3.2.0
+      '@types/marked':
+        specifier: ^6.0.0
+        version: 6.0.0
       '@types/node':
         specifier: ^24.9.1
         version: 24.9.1
@@ -667,6 +679,10 @@ packages:
   '@types/chrome@0.1.24':
     resolution: {integrity: sha512-9iO9HL2bMeGS4C8m6gNFWUyuPE5HEUFk+rGh+7oriUjg+ata4Fc9PoVlu8xvGm7yoo3AmS3J6fAjoFj61NL2rw==}
 
+  '@types/dompurify@3.2.0':
+    resolution: {integrity: sha512-Fgg31wv9QbLDA0SpTOXO3MaxySc4DKGLi8sna4/Utjo4r3ZRPdCt4UQee8BWr+Q5z21yifghREPJGYaEOEIACg==}
+    deprecated: This is a stub types definition. dompurify provides its own type definitions, so you do not need this installed.
+
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
@@ -685,8 +701,15 @@ packages:
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
 
+  '@types/marked@6.0.0':
+    resolution: {integrity: sha512-jmjpa4BwUsmhxcfsgUit/7A9KbrC48Q0q8KvnY107ogcjGgTFDlIL3RpihNpx2Mu1hM4mdFQjoVc4O6JoGKHsA==}
+    deprecated: This is a stub types definition. marked provides its own type definitions, so you do not need this installed.
+
   '@types/node@24.9.1':
     resolution: {integrity: sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg==}
+
+  '@types/trusted-types@2.0.7':
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
 
   '@types/web-animations-js@2.2.16':
     resolution: {integrity: sha512-ATELeWMFwj8eQiH0KmvsCl1V2lu/qx/CjOBmv4ADSZS5u8r4reMyjCXtxG7khqyiwH3IOMNdrON/Ugn94OUcRA==}
@@ -1121,6 +1144,9 @@ packages:
 
   dom-scroll-into-view@2.0.1:
     resolution: {integrity: sha512-bvVTQe1lfaUr1oFzZX80ce9KLDlZ3iU+XGNE/bz9HnGdklTieqsbmsLHe+rT2XWqopvL0PckkYqN7ksmm5pe3w==}
+
+  dompurify@3.3.0:
+    resolution: {integrity: sha512-r+f6MYR1gGN1eJv0TVQbhA7if/U7P87cdPl3HN5rikqaBSBxLiCb/b9O+2eG0cxz0ghyU+mU1QkbsOwERMYlWQ==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -1851,6 +1877,11 @@ packages:
   make-dir@2.1.0:
     resolution: {integrity: sha512-LS9X+dc8KLxXCb8dni79fLIIUA5VyZoyjSMCwTluaXA0o27cCK0bhXkpgw+sTXVpPy/lSO57ilRixqk0vDmtRA==}
     engines: {node: '>=6'}
+
+  marked@16.4.1:
+    resolution: {integrity: sha512-ntROs7RaN3EvWfy3EZi14H4YxmT6A5YvywfhO+0pm+cH/dnSQRmdAmoFIc3B9aiwTehyk7pESH4ofyBY+V5hZg==}
+    engines: {node: '>= 20'}
+    hasBin: true
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -3040,6 +3071,10 @@ snapshots:
       '@types/filesystem': 0.0.36
       '@types/har-format': 1.2.16
 
+  '@types/dompurify@3.2.0':
+    dependencies:
+      dompurify: 3.3.0
+
   '@types/estree@1.0.8': {}
 
   '@types/filesystem@0.0.36':
@@ -3054,9 +3089,16 @@ snapshots:
 
   '@types/json5@0.0.29': {}
 
+  '@types/marked@6.0.0':
+    dependencies:
+      marked: 16.4.1
+
   '@types/node@24.9.1':
     dependencies:
       undici-types: 7.16.0
+
+  '@types/trusted-types@2.0.7':
+    optional: true
 
   '@types/web-animations-js@2.2.16': {}
 
@@ -3608,6 +3650,10 @@ snapshots:
   dom-align@1.12.4: {}
 
   dom-scroll-into-view@2.0.1: {}
+
+  dompurify@3.3.0:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
 
   dunder-proto@1.0.1:
     dependencies:
@@ -4421,6 +4467,8 @@ snapshots:
       pify: 4.0.1
       semver: 5.7.2
     optional: true
+
+  marked@16.4.1: {}
 
   math-intrinsics@1.1.0: {}
 

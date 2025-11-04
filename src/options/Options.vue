@@ -100,6 +100,7 @@ const {
   editingGroupId,
   editGroupName,
   editGroupIcon,
+  editGroupDetail,
   showExportModal,
   exportModalPercent,
   exportModalCurrentName,
@@ -326,11 +327,14 @@ const onModalCancel = () => {
 }
 
 // Extracted handler for EditGroupModal save to avoid inline template expression
-const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } | null) => {
+const handleSaveGroup = (
+  payload: { id?: string; name?: string; icon?: string; detail?: string } | null
+) => {
   if (payload && payload.id) {
     emojiStore.updateGroup(payload.id, {
       name: payload.name,
-      icon: payload.icon
+      icon: payload.icon,
+      detail: payload.detail
     })
     // IndexedDB removed: no-op flushBuffer was removed — nothing to do here
     options.showSuccess('分组已更新')
@@ -394,6 +398,7 @@ const handleSaveGroup = (payload: { id?: string; name?: string; icon?: string } 
         :editingGroupId="editingGroupId"
         :initialName="editGroupName"
         :initialIcon="editGroupIcon"
+        :initialDetail="editGroupDetail"
         :isImageUrl="options.isImageUrl"
         @save="handleSaveGroup"
         @imageError="handleImageError"

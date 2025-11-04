@@ -7,12 +7,14 @@ const props = defineProps({
   editingGroupId: { type: String, required: true },
   initialName: { type: String, required: true },
   initialIcon: { type: String, required: true },
+  initialDetail: { type: String, default: '' },
   isImageUrl: { type: Function }
 })
 const emits = defineEmits(['update:show', 'save', 'imageError'])
 
 const localName = ref(props.initialName || '')
 const localIcon = ref(props.initialIcon || '')
+const localDetail = ref(props.initialDetail || '')
 
 watch(
   () => props.initialName,
@@ -22,12 +24,17 @@ watch(
   () => props.initialIcon,
   v => (localIcon.value = v || '')
 )
+watch(
+  () => props.initialDetail,
+  v => (localDetail.value = v || '')
+)
 
 const save = () => {
   emits('save', {
     id: props.editingGroupId,
     name: localName.value.trim(),
-    icon: localIcon.value || '📁'
+    icon: localIcon.value || '📁',
+    detail: localDetail.value.trim()
   })
   emits('update:show', false)
 }
@@ -73,6 +80,17 @@ const save = () => {
               @error="$emit('imageError', $event)"
             />
           </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+            详细信息（支持 Markdown 格式）
+          </label>
+          <textarea
+            v-model="localDetail"
+            rows="6"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+            placeholder="输入分组的详细描述信息，支持 Markdown 格式..."
+          ></textarea>
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-6">

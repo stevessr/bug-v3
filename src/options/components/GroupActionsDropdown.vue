@@ -13,7 +13,8 @@ const emit = defineEmits([
   'exportZip',
   'dedupe',
   'confirmDelete',
-  'batchUpdateSize'
+  'batchUpdateSize',
+  'viewDetail'
 ])
 
 const onEdit = () => emit('edit', props.group)
@@ -22,6 +23,7 @@ const onExportZip = () => emit('exportZip', props.group)
 const onDedupe = () => emit('dedupe', props.group)
 const onConfirmDelete = () => emit('confirmDelete', props.group)
 const onBatchUpdateSize = () => emit('batchUpdateSize', props.group)
+const onViewDetail = () => emit('viewDetail', props.group)
 </script>
 
 <template>
@@ -35,6 +37,7 @@ const onBatchUpdateSize = () => emit('batchUpdateSize', props.group)
       <template #overlay>
         <a-menu>
           <a-menu-item @click.prevent="onEdit">编辑</a-menu-item>
+          <a-menu-item @click.prevent="onViewDetail">查看详细信息</a-menu-item>
           <a-menu-item @click.prevent="onExport">导出</a-menu-item>
           <a-menu-item @click.prevent="onBatchUpdateSize">批量更新尺寸</a-menu-item>
           <a-popconfirm
