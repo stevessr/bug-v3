@@ -1,5 +1,6 @@
 import type { AddEmojiButtonData } from '../types'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
+
 import { createE } from '@/content/utils/createEl'
 
 export function setupOpenInNewTabHandler(button: HTMLElement, data: AddEmojiButtonData) {
@@ -106,7 +107,7 @@ export function createPixivOpenInNewTabButton(data: AddEmojiButtonData): HTMLEle
     `,
     ti: '在新标签页打开图片'
   })
-  
+
   try {
     button.dataset.emojiName = data.name
     button.dataset.emojiUrl = data.url

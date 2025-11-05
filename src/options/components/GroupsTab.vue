@@ -1,4 +1,18 @@
 <script setup lang="ts">
+import { computed, ref, reactive, onMounted, onUnmounted, inject, type PropType } from 'vue'
+
+import { useEmojiStore } from '../../stores/emojiStore'
+import { normalizeImageUrl } from '../../utils/isImageUrl'
+import ViewGroupDetailModal from '../modals/ViewGroupDetailModal.vue'
+
+import GroupsCardView from './GroupsCardView.vue'
+import GroupActionsDropdown from './GroupActionsDropdown.vue'
+import DedupeChooser from './DedupeChooser.vue'
+import DomainManager from './DomainManager.vue'
+import EmojiGrid from './EmojiGrid.vue'
+
+import { TouchDragHandler } from '@/options/utils/touchDragDrop'
+
 const emit = defineEmits([
   'openCreateGroup',
   'groupDragStart',
@@ -18,7 +32,6 @@ const emit = defineEmits([
   'exportGroupStreaming'
 ])
 // props: only expandedGroups / isImageUrl / activeTab are expected from parent
-import { computed, ref, reactive, onMounted, onUnmounted, inject, type PropType } from 'vue'
 
 // 注入流式处理方法
 const streamingHandlers = inject('streamingHandlers') as any
@@ -35,17 +48,6 @@ const { expandedGroups, isImageUrl } = defineProps({
   expandedGroups: { type: Object as PropType<Set<string>>, required: true },
   isImageUrl: { type: Function }
 })
-
-import { useEmojiStore } from '../../stores/emojiStore'
-import { normalizeImageUrl } from '../../utils/isImageUrl'
-
-import GroupsCardView from './GroupsCardView.vue'
-import GroupActionsDropdown from './GroupActionsDropdown.vue'
-import DedupeChooser from './DedupeChooser.vue'
-import DomainManager from './DomainManager.vue'
-import EmojiGrid from './EmojiGrid.vue'
-
-import { TouchDragHandler } from '@/options/utils/touchDragDrop'
 
 // computed list that excludes the favorites group so it doesn't appear in group management
 const emojiStore = useEmojiStore()
@@ -215,6 +217,21 @@ const performDedupeChoice = (groupId: string | null, mode: 'name' | 'url') => {
 const onDelete = (group: any) => {
   closeMenu()
   emit('confirmDeleteGroup', group)
+}
+
+// --- View Detail Modal ---
+const viewDetailModalVisible = ref(false)
+const viewDetailGroup = ref<any | null>(null)
+
+const onViewDetail = (group: any) => {
+  closeMenu()
+  viewDetailGroup.value = group
+  viewDetailModalVisible.value = true
+}
+
+const closeViewDetailModal = () => {
+  viewDetailModalVisible.value = false
+  viewDetailGroup.value = null
 }
 
 // --- Batch update size modal state & handlers ---
@@ -422,6 +439,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                       <GroupActionsDropdown
                         :group="group"
                         @edit="onEdit"
+                        @viewDetail="onViewDetail"
                         @export="onExport"
                         @exportZip="onExportZip"
                         @dedupe="onDedupe"
@@ -563,6 +581,14 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
       :previewByUrlCount="previewDedupeByUrlCount"
       @update:visible="v => (chooseDedupeFor = v)"
       @confirm="(groupId, mode) => performDedupeChoice(groupId, mode)"
+    />
+
+    <!-- View Detail Modal -->
+    <ViewGroupDetailModal
+      :show="viewDetailModalVisible"
+      :groupName="viewDetailGroup?.name || ''"
+      :detail="viewDetailGroup?.detail || ''"
+      @update:show="closeViewDetailModal"
     />
 
     <!-- Domain manager handled by DomainManager.vue -->

@@ -38,6 +38,7 @@ export interface EmojiGroup {
   icon: string
   order: number
   emojis: Emoji[]
+  detail?: string // Optional markdown-formatted detail description
 }
 
 export interface Emoji {

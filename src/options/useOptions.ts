@@ -52,6 +52,7 @@ export default function useOptions() {
   const editingGroupId = ref<string>('')
   const editGroupName = ref<string>('')
   const editGroupIcon = ref<string>('')
+  const editGroupDetail = ref<string>('')
 
   // Edit emoji state
   const editingEmoji = ref<Emoji | null>(null)
@@ -331,6 +332,7 @@ export default function useOptions() {
     editingGroupId.value = group.id
     editGroupName.value = group.name
     editGroupIcon.value = group.icon
+    editGroupDetail.value = group.detail || ''
     showEditGroupModal.value = true
   }
 
@@ -915,6 +917,7 @@ export default function useOptions() {
     editingGroupId,
     editGroupName,
     editGroupIcon,
+    editGroupDetail,
     editingEmoji,
     editingEmojiGroupId,
     editingEmojiIndex,
