@@ -72,6 +72,10 @@ let currentTopicId: string | null = null
 let currentPage = 1
 let renderMode: 'iframe' | 'markdown' | 'json' = 'iframe'
 let currentTopicSlug: string | null = null
+// auto paging state (for json mode)
+let jsonScrollAttached = false
+let jsonIsLoading = false
+let jsonReachedEnd = false
 
 function rawUrl(topicId: string, page: number) {
   // Build the raw page url per site pattern
@@ -172,12 +176,14 @@ function createOverlay(
     if (renderMode === 'markdown') {
       fetchAndRenderMarkdown(topicId, currentPage)
     } else if (renderMode === 'json') {
-      fetchAndRenderJson(topicId, currentPage, currentTopicSlug || undefined)
+      fetchAndRenderJson(topicId, currentPage, currentTopicSlug || undefined).then(() => {
+        attachJsonAutoPager()
+      })
     }
   }
 }
 
-function updateIframeSrc() {
+async function updateIframeSrc() {
   if (!iframeEl || !currentTopicId) return
   if (renderMode === 'iframe') {
     iframeEl.src = rawUrl(currentTopicId, currentPage)
@@ -185,7 +191,32 @@ function updateIframeSrc() {
     if (renderMode === 'markdown') {
       fetchAndRenderMarkdown(currentTopicId, currentPage)
     } else if (renderMode === 'json') {
-      fetchAndRenderJson(currentTopicId, currentPage, currentTopicSlug || undefined)
+      // If target page already exists, just scroll to it; otherwise append missing pages up to it.
+      try {
+        const doc = getIframeDoc()
+        const targetId = `json-page-${currentPage}`
+        if (doc.getElementById(targetId)) {
+          scrollToJsonPage(currentPage)
+          return
+        }
+        // find highest loaded page
+        const nodes = Array.from(doc.querySelectorAll('[id^="json-page-"]')) as HTMLElement[]
+        let maxLoaded = 0
+        for (const n of nodes) {
+          const m = n.id.match(/json-page-(\d+)/)
+          if (m) maxLoaded = Math.max(maxLoaded, parseInt(m[1], 10))
+        }
+        let start = Math.max(1, maxLoaded + 1)
+        for (let p = start; p <= currentPage; p++) {
+          // eslint-disable-next-line no-await-in-loop
+          const added = await fetchAndRenderJson(currentTopicId, p, currentTopicSlug || undefined)
+          if (added === 0) break
+        }
+        scrollToJsonPage(currentPage)
+      } catch {
+        // fallback
+        fetchAndRenderJson(currentTopicId, currentPage, currentTopicSlug || undefined)
+      }
     }
   }
 }
@@ -198,6 +229,9 @@ function removeOverlay() {
   iframeEl = null
   currentTopicId = null
   currentPage = 1
+  jsonScrollAttached = false
+  jsonIsLoading = false
+  jsonReachedEnd = false
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -218,7 +252,7 @@ function handleKeydown(e: KeyboardEvent) {
 // (createTriggerButton removed - use createTriggerButtonFor instead)
 
 function createTriggerButtonFor(mode: 'iframe' | 'markdown' | 'json') {
-  const text = mode === 'markdown' ? '预览(MD)' : '预览'
+  const text = mode === 'markdown' ? '预览 (MD)' : '预览'
   const btn = createEl('button', {
     className: `raw-preview-small-btn ${mode === 'markdown' ? 'md' : mode === 'json' ? 'json' : 'iframe'}`,
     text: mode === 'json' ? '预览 (JSON)' : text
@@ -415,8 +449,36 @@ async function fetchAndRenderMarkdown(topicId: string, page: number) {
   }
 }
 
-async function fetchAndRenderJson(topicId: string, page: number, slug?: string) {
-  if (!iframeEl) return
+function getIframeDoc(): Document {
+  const doc =
+    (iframeEl as HTMLIFrameElement).contentDocument || (iframeEl as any).contentWindow?.document
+  if (!doc) throw new Error('iframe document unavailable')
+  return doc
+}
+
+function ensureJsonSkeleton(): HTMLElement {
+  const doc = getIframeDoc()
+  const existing = doc.getElementById('json-container') as HTMLElement | null
+  if (existing) return existing
+  const css = `
+    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px;color:#111}
+    img{max-width:100%;height:auto}
+    .json-post-body pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}
+    .json-post-body code{background:#f0f0f0;padding:2px 4px;border-radius:4px}
+    a{color:#0366d6}
+    .json-page{padding-bottom:16px;margin-bottom:16px;border-bottom:1px dashed #e5e7eb}
+  `
+  const baseHref = window.location.origin
+  doc.open()
+  doc.write(
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="${baseHref}/"><style>${css}</style></head><body><div id="json-container"></div></body></html>`
+  )
+  doc.close()
+  return doc.getElementById('json-container') as HTMLElement
+}
+
+async function fetchAndRenderJson(topicId: string, page: number, slug?: string): Promise<number> {
+  if (!iframeEl) return 0
   const url = jsonUrl(topicId, page, slug)
   try {
     const res = await fetch(url, { credentials: 'include' })
@@ -438,26 +500,69 @@ async function fetchAndRenderJson(topicId: string, page: number, slug?: string) 
       )
     }
 
-    const doc = iframeEl.contentDocument || (iframeEl as any).contentWindow?.document
-    if (!doc) throw new Error('iframe document unavailable')
-
-    const css = `
-      body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px;color:#111}
-      img{max-width:100%;height:auto}
-      .json-post-body pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}
-      .json-post-body code{background:#f0f0f0;padding:2px 4px;border-radius:4px}
-      a{color:#0366d6}
-    `
-    const baseHref = window.location.origin
-    doc.open()
-    doc.write(
-      `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="${baseHref}/"><style>${css}</style></head><body>${parts.join('\n')}</body></html>`
-    )
-    doc.close()
+    const container = ensureJsonSkeleton()
+    const wrapper = `<div class="json-page" id="json-page-${page}">${parts.join('\n')}</div>`
+    container.insertAdjacentHTML('beforeend', wrapper)
+    return posts.length
   } catch (err) {
     console.warn('[rawPreview] fetchAndRenderJson failed', err)
     // fallback to setting iframe src to the JSON url (not ideal for UX)
     iframeEl.src = url
+    return 0
+  }
+}
+
+function scrollToJsonPage(page: number) {
+  try {
+    if (!iframeEl) return
+    const doc = getIframeDoc()
+    const el = doc.getElementById(`json-page-${page}`)
+    if (!el) return
+    const top = (el as HTMLElement).offsetTop
+    const win = (iframeEl.contentWindow || (iframeEl as any).contentDocument?.defaultView) as
+      | Window
+      | null
+    if (win) win.scrollTo({ top, behavior: 'smooth' })
+  } catch {}
+}
+
+function attachJsonAutoPager() {
+  if (jsonScrollAttached || !iframeEl || renderMode !== 'json') return
+  try {
+    const win = (iframeEl.contentWindow ||
+      (iframeEl as any).contentDocument?.defaultView) as Window | null
+    if (!win) return
+    const onScroll = async () => {
+      if (jsonIsLoading || jsonReachedEnd) return
+      const doc = win.document
+      const scrollTop = win.scrollY || doc.documentElement.scrollTop || doc.body.scrollTop
+      const ih = win.innerHeight
+      const sh = doc.documentElement.scrollHeight || doc.body.scrollHeight
+      if (scrollTop + ih >= sh - 200) {
+        jsonIsLoading = true
+        try {
+          const nextPage = currentPage + 1
+          const added = await fetchAndRenderJson(
+            currentTopicId!,
+            nextPage,
+            currentTopicSlug || undefined
+          )
+          if (added > 0) {
+            currentPage = nextPage
+          } else {
+            jsonReachedEnd = true
+          }
+        } catch (e) {
+          jsonReachedEnd = true
+        } finally {
+          jsonIsLoading = false
+        }
+      }
+    }
+    win.addEventListener('scroll', onScroll, { passive: true })
+    jsonScrollAttached = true
+  } catch (e) {
+    // ignore
   }
 }
 
@@ -571,7 +676,7 @@ function injectIntoTopicList() {
         e.stopPropagation()
         createOverlay(topicId, 1, 'iframe')
       })
-      
+
       // markdown variant
       //const mdBtn = createTriggerButtonFor('markdown')
       //mdBtn.classList.add('raw-preview-list-trigger-md')
