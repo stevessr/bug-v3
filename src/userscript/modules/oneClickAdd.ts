@@ -254,8 +254,8 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      color: #fff;
+      background: var(--tertiary-low);
+      color: var(--d-button-default-icon-color);
       border-radius: 8px;
       padding: 8px 12px;
       margin: 10px 0;

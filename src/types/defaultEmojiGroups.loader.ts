@@ -3,10 +3,10 @@ import type { DefaultEmojiData, EmojiGroup } from './type'
 // Runtime loader: fetch runtime JSON from /assets/defaultEmojiGroups.json
 // Returns empty defaults if fetch fails.
 
-async function fetchPackagedJSON(): Promise<DefaultEmojiData | null> {
+async function fetchPackagedJSON(url?: string): Promise<DefaultEmojiData | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const res = await fetch('/assets/defaultEmojiGroups.json', { cache: 'no-cache' })
+    const res = await fetch(url || '/assets/defaultEmojiGroups.json', { cache: 'no-cache' })
     if (!res.ok) return null
     const data = await res.json()
     return data as DefaultEmojiData
@@ -15,17 +15,17 @@ async function fetchPackagedJSON(): Promise<DefaultEmojiData | null> {
   }
 }
 
-export async function loadDefaultEmojiGroups(): Promise<EmojiGroup[]> {
-  const packaged = await fetchPackagedJSON()
+export async function loadDefaultEmojiGroups(url?: string): Promise<EmojiGroup[]> {
+  const packaged = await fetchPackagedJSON(url)
   if (packaged && Array.isArray(packaged.groups)) return packaged.groups
   return []
 }
 
-export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
-  const packaged = await fetchPackagedJSON()
+export async function loadPackagedDefaults(url?: string): Promise<DefaultEmojiData> {
+  const packaged = await fetchPackagedJSON(url)
   if (packaged) return packaged
   return {
-    groups: await loadDefaultEmojiGroups(),
+    groups: await loadDefaultEmojiGroups(url),
     settings: {
       imageScale: 30,
       defaultGroup: 'nachoneko',

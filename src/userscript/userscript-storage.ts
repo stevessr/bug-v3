@@ -146,7 +146,9 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
 
     // No remote or failed: try runtime loader, then fallback to empty list
     try {
-      const runtime = await loadDefaultEmojiGroups()
+      const runtime = await loadDefaultEmojiGroups(
+        'https://video2gif-pages.pages.dev/assets/defaultEmojiGroups.json'
+      )
       const source = runtime && runtime.length ? runtime : []
       const cloned = JSON.parse(JSON.stringify(source))
       const filtered = cloned.filter((g: any) => g.id !== 'favorites')
