@@ -691,6 +691,13 @@
     return menu
   }
 
+  function calculateMenuLeftPosition(rect, windowWidth) {
+    // Calculate horizontal position: center menu under button, but keep within viewport bounds
+    const centerX = rect.left + rect.width / 2 - MENU_BASE_WIDTH
+    const maxLeft = windowWidth - MENU_MAX_WIDTH
+    return Math.max(MENU_MIN_MARGIN, Math.min(centerX, maxLeft))
+  }
+
   function injectQuickInsertButton(toolbar) {
     if (toolbar.querySelector('.quick-insert-button')) {
       return // Already injected
@@ -719,7 +726,7 @@
       menu.style.position = 'fixed'
       menu.style.zIndex = '10000'
       menu.style.top = rect.bottom + MENU_HORIZONTAL_OFFSET + 'px'
-      menu.style.left = Math.max(MENU_MIN_MARGIN, Math.min(rect.left + rect.width / 2 - MENU_BASE_WIDTH, window.innerWidth - MENU_MAX_WIDTH)) + 'px'
+      menu.style.left = calculateMenuLeftPosition(rect, window.innerWidth) + 'px'
 
       const removeMenu = ev => {
         if (!menu.contains(ev.target)) {
@@ -759,15 +766,17 @@
     return cachedSettings
   }
 
-  function findAllToolbars() {
-    // Check if force mobile mode with d-menu-portals is active
-    // When both conditions are true, we skip toolbar injection because
-    // the mobile mode uses the #d-menu-portals container for menus
+  function shouldSkipToolbarInjection() {
+    // Skip toolbar injection when force mobile mode is active AND #d-menu-portals exists
+    // because in this mode, the mobile UI uses the portal container for menu rendering
     const settings = getCachedSettings()
     const forceMobileMode = settings.forceMobileMode === true
     const hasPortals = !!document.querySelector('#d-menu-portals')
-    
-    if (forceMobileMode && hasPortals) {
+    return forceMobileMode && hasPortals
+  }
+
+  function findAllToolbars() {
+    if (shouldSkipToolbarInjection()) {
       console.log('[Callout Suggestions] Force mobile mode with #d-menu-portals detected, skipping toolbar injection')
       return []
     }
