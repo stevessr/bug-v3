@@ -277,14 +277,14 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
 
   button.addEventListener('mouseenter', () => {
     if (!button.disabled) {
-      button.style.background = 'linear-gradient(135deg, #d97706, #b45309)'
+      button.style.background = 'var(--tertiary-high)'
       button.style.transform = 'scale(1.02)'
     }
   })
 
   button.addEventListener('mouseleave', () => {
     if (!button.disabled && !button.innerHTML.includes('已处理')) {
-      button.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'
+      button.style.background = 'var(--tertiary-very-low)'
       button.style.transform = 'scale(1)'
     }
   })
@@ -298,7 +298,7 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
 
     try {
       button.innerHTML = '正在解析...'
-      button.style.background = 'linear-gradient(135deg, #6b7280, #4b5563)'
+      button.style.background = 'var(--primary-medium)'
       button.disabled = true
 
       const lightboxWrappers = cookedElement.querySelectorAll('.lightbox-wrapper')

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse 话题预览按钮 (Topic Preview Button)
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.0.0
+// @version      1.2.1
 // @description  为 Discourse 话题列表添加预览按钮功能 (Add preview button functionality to Discourse topic lists)
 // @author       stevessr
 // @match        https://linux.do/*

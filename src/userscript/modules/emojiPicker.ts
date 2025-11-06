@@ -213,43 +213,6 @@ function createMobileEmojiPicker(groups: any[]): HTMLElement {
 
   const sectionsNav = createEl('div', { className: 'emoji-picker__sections-nav' }) as HTMLDivElement
 
-  // Add management and settings buttons
-  const managementButton = createEl('button', {
-    className: 'btn no-text btn-flat emoji-picker__section-btn management-btn',
-    attrs: { tabindex: '-1', style: 'border-right: 1px solid #ddd;' },
-    innerHTML: '⚙️',
-    title: '管理表情 - 点击打开完整管理界面',
-    type: 'button',
-    on: {
-      click: () => {
-        // Import manager module dynamically
-        import('./manager').then(({ openManagementInterface }) => {
-          openManagementInterface()
-        })
-      }
-    }
-  }) as HTMLButtonElement
-  sectionsNav.appendChild(managementButton)
-
-  const settingsButton = createEl('button', {
-    className: 'btn no-text btn-flat emoji-picker__section-btn settings-btn',
-    innerHTML: '🔧',
-    title: '设置',
-    attrs: { tabindex: '-1', style: 'border-right: 1px solid #ddd;' },
-    type: 'button',
-    on: {
-      click: async () => {
-        try {
-          const { showSettingsModal } = await import('./settings')
-          showSettingsModal()
-        } catch (e) {
-          console.error('[Userscript] Failed to load settings module:', e)
-        }
-      }
-    }
-  }) as HTMLButtonElement
-  sectionsNav.appendChild(settingsButton)
-
   const scrollableContent = createEl('div', {
     className: 'emoji-picker__scrollable-content'
   }) as HTMLDivElement
@@ -451,43 +414,6 @@ function createDesktopEmojiPicker(groups: any[]): HTMLElement {
 
   const content = createEl('div', { className: 'emoji-picker__content' }) as HTMLDivElement
   const sectionsNav = createEl('div', { className: 'emoji-picker__sections-nav' }) as HTMLDivElement
-
-  // Add management and settings buttons
-  const managementButton = createEl('button', {
-    className: 'btn no-text btn-flat emoji-picker__section-btn management-btn',
-    attrs: { tabindex: '-1', style: 'border-right: 1px solid #ddd;' },
-    type: 'button',
-    innerHTML: '⚙️',
-    title: '管理表情 - 点击打开完整管理界面',
-    on: {
-      click: () => {
-        // Import manager module dynamically
-        import('./manager').then(({ openManagementInterface }) => {
-          openManagementInterface()
-        })
-      }
-    }
-  }) as HTMLButtonElement
-  sectionsNav.appendChild(managementButton)
-
-  const settingsButton = createEl('button', {
-    className: 'btn no-text btn-flat emoji-picker__section-btn settings-btn',
-    attrs: { tabindex: '-1', style: 'border-right: 1px solid #ddd;' },
-    type: 'button',
-    innerHTML: '🔧',
-    title: '设置',
-    on:{
-      click: async () => {
-        try {
-          const { showSettingsModal } = await import('./settings')
-          showSettingsModal()
-        } catch (e) {
-          console.error('[Userscript] Failed to load settings module:', e)
-        }
-      }
-    }
-  }) as HTMLButtonElement
-  sectionsNav.appendChild(settingsButton)
 
   const scrollableContent = createEl('div', {
     className: 'emoji-picker__scrollable-content'
