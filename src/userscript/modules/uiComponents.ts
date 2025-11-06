@@ -2,90 +2,6 @@
 import { createEl } from '../utils/createEl'
 import { createEmojiPicker } from './emojiPicker'
 import { showPopularEmojisModal } from './popularEmojis'
-import { getIcon } from '../utils/sharedIcons'
-import { insertIntoEditor } from '../utils/editorUtils'
-
-// Quick inserts for userscript variant
-const QUICK_INSERTS: string[] = [
-  'info',
-  'tip',
-  'faq',
-  'question',
-  'note',
-  'abstract',
-  'todo',
-  'success',
-  'warning',
-  'failure',
-  'danger',
-  'bug',
-  'example',
-  'quote'
-]
-
-
-
-function createQuickInsertMenu(): HTMLElement {
-  const menu = createEl('div', {
-    className:
-      'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
-  }) as HTMLDivElement
-  const inner = createEl('div', {
-    className: 'fk-d-menu__inner-content'
-  }) as HTMLDivElement
-  const list = createEl('ul', {
-    className: 'dropdown-menu'
-  }) as HTMLUListElement
-
-  QUICK_INSERTS.forEach(key => {
-    const li = createEl('li', { className: 'dropdown-menu__item' }) as HTMLLIElement
-    const btn = createEl('button', {
-      className: 'btn btn-icon-text',
-      type: 'button',
-      title: key.charAt(0).toUpperCase() + key.slice(1),
-      style: 'background: ' + (getIcon(key)?.color || 'auto')
-    }) as HTMLButtonElement
-    btn.addEventListener('click', () => {
-      if (menu.parentElement) menu.parentElement.removeChild(menu)
-      insertIntoEditor(`>[!${key}]+\n`)
-    })
-
-    const emojiSpan = createEl('span', {
-      className: 'd-button-emoji',
-      text: getIcon(key)?.icon || '✳️',
-      style: 'margin-right: 6px;'
-    }) as HTMLSpanElement
-    // Add small spacing between emoji and label
-    const labelWrap = createEl('span', {
-      className: 'd-button-label'
-    }) as HTMLSpanElement
-    const labelText = createEl('span', {
-      className: 'd-button-label__text',
-      text: key.charAt(0).toUpperCase() + key.slice(1)
-    }) as HTMLSpanElement
-
-    // Instead of appending raw SVG into the text node, create a separate span
-    // for the svg so it appears to the right of the label text.
-    labelWrap.appendChild(labelText)
-    const svgHtml = getIcon(key)?.svg || ''
-    if (svgHtml) {
-      const svgSpan = createEl('span', {
-        className: 'd-button-label__svg',
-        innerHTML: svgHtml,
-        style: 'margin-left: 6px; display: inline-flex; align-items: center;'
-      }) as HTMLSpanElement
-      labelWrap.appendChild(svgSpan)
-    }
-    btn.appendChild(emojiSpan)
-    btn.appendChild(labelWrap)
-    li.appendChild(btn)
-    list.appendChild(li)
-  })
-
-  inner.appendChild(list)
-  menu.appendChild(inner)
-  return menu
-}
 
 // Current picker management
 let currentPicker: HTMLElement | null = null
@@ -178,51 +94,6 @@ export function injectCustomMenuButtons(menu: HTMLElement) {
 
   emojiPickerItem.appendChild(emojiPickerBtn)
   dropdownMenu.appendChild(emojiPickerItem)
-
-  // Create quick insert menu item
-  const quickInsertItem = createEl('li', {
-    className: itemClassName
-  }) as HTMLLIElement
-
-  const quickInsertBtn = createEl('button', {
-    className: btnClassName,
-    type: 'button',
-    title: '快捷输入',
-    innerHTML: `
-      <svg class="fa d-icon d-icon-list svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#list"></use></svg>
-      <span class="d-button-label">快捷输入</span>
-    `
-  }) as HTMLButtonElement
-
-  quickInsertBtn.addEventListener('click', e => {
-    e.stopPropagation()
-    // Close the current menu
-    if (menu.parentElement) {
-      menu.remove()
-    }
-
-    // Show quick insert menu
-    const quickMenu = createQuickInsertMenu()
-    const portal = document.querySelector('#d-menu-portals') || document.body
-    ;(portal as HTMLElement).appendChild(quickMenu)
-
-    const rect = quickInsertBtn.getBoundingClientRect()
-    quickMenu.style.position = 'fixed'
-    quickMenu.style.zIndex = '10000'
-    quickMenu.style.top = `${rect.bottom + 5}px`
-    quickMenu.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - 150, window.innerWidth - 300))}px`
-
-    const removeMenu = (ev: Event) => {
-      if (!quickMenu.contains(ev.target as Node)) {
-        if (quickMenu.parentElement) quickMenu.parentElement.removeChild(quickMenu)
-        document.removeEventListener('click', removeMenu)
-      }
-    }
-    setTimeout(() => document.addEventListener('click', removeMenu), 100)
-  })
-
-  quickInsertItem.appendChild(quickInsertBtn)
-  dropdownMenu.appendChild(quickInsertItem)
 
   console.log('[Emoji Extension Userscript] Custom menu buttons injected')
 }
@@ -355,40 +226,6 @@ export function injectEmojiButton(toolbar: HTMLElement) {
     showPopularEmojisModal()
   })
 
-  // Create quick-insert button
-  const quickInsertButton = createEl('button', {
-    className: 'btn no-text btn-icon toolbar__button quick-insert-button',
-    title: '快捷输入',
-    type: 'button',
-    innerHTML: '⎘'
-  }) as HTMLButtonElement
-
-  if (isChatComposer) {
-    quickInsertButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
-    quickInsertButton.setAttribute('aria-expanded', 'false')
-    quickInsertButton.setAttribute('data-trigger', '')
-  }
-
-  quickInsertButton.addEventListener('click', e => {
-    e.stopPropagation()
-    const menu = createQuickInsertMenu()
-    const portal = document.querySelector('#d-menu-portals') || document.body
-    ;(portal as HTMLElement).appendChild(menu)
-    const rect = quickInsertButton.getBoundingClientRect()
-    menu.style.position = 'fixed'
-    menu.style.zIndex = '10000'
-    menu.style.top = `${rect.bottom + 5}px`
-    menu.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - 150, window.innerWidth - 300))}px`
-
-    const removeMenu = (ev: Event) => {
-      if (!menu.contains(ev.target as Node)) {
-        if (menu.parentElement) menu.parentElement.removeChild(menu)
-        document.removeEventListener('click', removeMenu)
-      }
-    }
-    setTimeout(() => document.addEventListener('click', removeMenu), 100)
-  })
-
   try {
     // Try to insert in the right place
     if (isChatComposer) {
@@ -397,16 +234,13 @@ export function injectEmojiButton(toolbar: HTMLElement) {
       )
       if (existingEmojiTrigger) {
         toolbar.insertBefore(button, existingEmojiTrigger)
-        toolbar.insertBefore(quickInsertButton, existingEmojiTrigger)
         toolbar.insertBefore(popularButton, existingEmojiTrigger)
       } else {
         toolbar.appendChild(button)
-        toolbar.appendChild(quickInsertButton)
         toolbar.appendChild(popularButton)
       }
     } else {
       toolbar.appendChild(button)
-      toolbar.appendChild(quickInsertButton)
       toolbar.appendChild(popularButton)
     }
   } catch (error) {

@@ -547,6 +547,254 @@
     }
   }
 
+  // ===== Quick Insert Button =====
+  // Quick insert callout types (subset of calloutKeywords for quick access)
+  const QUICK_INSERTS = [
+    'info',
+    'tip',
+    'faq',
+    'question',
+    'note',
+    'abstract',
+    'todo',
+    'success',
+    'warning',
+    'failure',
+    'danger',
+    'bug',
+    'example',
+    'quote'
+  ]
+
+  function insertIntoEditor(text) {
+    // Try several selectors as fallback targets to support different editor types
+    const selectors = [
+      'textarea.d-editor-input',
+      'textarea.ember-text-area',
+      '#channel-composer',
+      '.chat-composer__input',
+      'textarea.chat-composer__input'
+    ]
+
+    const proseMirror = document.querySelector('.ProseMirror.d-editor-input')
+    let textarea = null
+    for (const s of selectors) {
+      const el = document.querySelector(s)
+      if (el) {
+        textarea = el
+        break
+      }
+    }
+
+    const contentEditable = document.querySelector('[contenteditable="true"]')
+
+    if (textarea) {
+      const selectionStart = textarea.selectionStart || 0
+      const selectionEnd = textarea.selectionEnd || 0
+      textarea.value =
+        textarea.value.substring(0, selectionStart) +
+        text +
+        textarea.value.substring(selectionEnd, textarea.value.length)
+      textarea.selectionStart = textarea.selectionEnd = selectionStart + text.length
+      textarea.focus()
+      const inputEvent = new Event('input', { bubbles: true, cancelable: true })
+      textarea.dispatchEvent(inputEvent)
+    } else if (proseMirror) {
+      try {
+        const dataTransfer = new DataTransfer()
+        dataTransfer.setData('text/plain', text)
+        const pasteEvent = new ClipboardEvent('paste', { clipboardData: dataTransfer, bubbles: true })
+        proseMirror.dispatchEvent(pasteEvent)
+      } catch (error) {
+        try {
+          document.execCommand('insertText', false, text)
+        } catch (fallbackError) {
+          console.error('[Callout Suggestions] Failed to insert text into ProseMirror', fallbackError)
+        }
+      }
+    } else if (contentEditable) {
+      try {
+        const textNode = document.createTextNode(text)
+        const sel = window.getSelection()
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0)
+          range.deleteContents()
+          range.insertNode(textNode)
+          range.setStartAfter(textNode)
+          range.collapse(true)
+          sel.removeAllRanges()
+          sel.addRange(range)
+        } else {
+          contentEditable.appendChild(textNode)
+        }
+        const inputEvent = new Event('input', { bubbles: true, cancelable: true })
+        contentEditable.dispatchEvent(inputEvent)
+      } catch (e) {
+        console.error('[Callout Suggestions] Failed to insert into contenteditable', e)
+      }
+    }
+  }
+
+  function createQuickInsertMenu() {
+    const menu = document.createElement('div')
+    menu.className = 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
+    menu.id = 'quick-insert-menu'
+    const inner = document.createElement('div')
+    inner.className = 'fk-d-menu__inner-content'
+    const list = document.createElement('ul')
+    list.className = 'dropdown-menu'
+
+    QUICK_INSERTS.forEach(key => {
+      const li = document.createElement('li')
+      li.className = 'dropdown-menu__item'
+      const btn = document.createElement('button')
+      btn.className = 'btn btn-icon-text'
+      btn.type = 'button'
+      btn.title = key.charAt(0).toUpperCase() + key.slice(1)
+      const iconData = getIcon(key)
+      btn.style.background = iconData.color || 'auto'
+
+      btn.addEventListener('click', () => {
+        if (menu.parentElement) menu.parentElement.removeChild(menu)
+        insertIntoEditor(`>[!${key}]+\n`)
+      })
+
+      const emojiSpan = document.createElement('span')
+      emojiSpan.className = 'd-button-emoji'
+      emojiSpan.textContent = iconData.icon || '✳️'
+      emojiSpan.style.marginRight = '6px'
+
+      const labelWrap = document.createElement('span')
+      labelWrap.className = 'd-button-label'
+      const labelText = document.createElement('span')
+      labelText.className = 'd-button-label__text'
+      labelText.textContent = key.charAt(0).toUpperCase() + key.slice(1)
+
+      labelWrap.appendChild(labelText)
+      if (iconData.svg) {
+        const svgSpan = document.createElement('span')
+        svgSpan.className = 'd-button-label__svg'
+        svgSpan.innerHTML = iconData.svg
+        svgSpan.style.marginLeft = '6px'
+        svgSpan.style.display = 'inline-flex'
+        svgSpan.style.alignItems = 'center'
+        labelWrap.appendChild(svgSpan)
+      }
+      btn.appendChild(emojiSpan)
+      btn.appendChild(labelWrap)
+      li.appendChild(btn)
+      list.appendChild(li)
+    })
+
+    inner.appendChild(list)
+    menu.appendChild(inner)
+    return menu
+  }
+
+  function injectQuickInsertButton(toolbar) {
+    if (toolbar.querySelector('.quick-insert-button')) {
+      return // Already injected
+    }
+
+    const isChatComposer = toolbar.classList.contains('chat-composer__inner-container')
+
+    const quickInsertButton = document.createElement('button')
+    quickInsertButton.className = 'btn no-text btn-icon toolbar__button quick-insert-button'
+    quickInsertButton.title = '快捷输入'
+    quickInsertButton.type = 'button'
+    quickInsertButton.innerHTML = '⎘'
+
+    if (isChatComposer) {
+      quickInsertButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
+      quickInsertButton.setAttribute('aria-expanded', 'false')
+      quickInsertButton.setAttribute('data-trigger', '')
+    }
+
+    quickInsertButton.addEventListener('click', e => {
+      e.stopPropagation()
+      const menu = createQuickInsertMenu()
+      const portal = document.querySelector('#d-menu-portals') || document.body
+      portal.appendChild(menu)
+      const rect = quickInsertButton.getBoundingClientRect()
+      menu.style.position = 'fixed'
+      menu.style.zIndex = '10000'
+      menu.style.top = rect.bottom + 5 + 'px'
+      menu.style.left = Math.max(8, Math.min(rect.left + rect.width / 2 - 150, window.innerWidth - 300)) + 'px'
+
+      const removeMenu = ev => {
+        if (!menu.contains(ev.target)) {
+          if (menu.parentElement) menu.parentElement.removeChild(menu)
+          document.removeEventListener('click', removeMenu)
+        }
+      }
+      setTimeout(() => document.addEventListener('click', removeMenu), 100)
+    })
+
+    try {
+      toolbar.appendChild(quickInsertButton)
+      console.log('[Callout Suggestions] Quick insert button injected into toolbar')
+    } catch (error) {
+      console.error('[Callout Suggestions] Failed to inject quick insert button:', error)
+    }
+  }
+
+  function findAllToolbars() {
+    // Check if force mobile mode with d-menu-portals is active
+    const settings = loadSettings()
+    const forceMobileMode = settings.forceMobileMode === true
+    const hasPortals = !!document.querySelector('#d-menu-portals')
+    
+    if (forceMobileMode && hasPortals) {
+      console.log('[Callout Suggestions] Force mobile mode with #d-menu-portals detected, skipping toolbar injection')
+      return []
+    }
+
+    const toolbars = []
+    const selectors = [
+      '.d-editor-button-bar',
+      '.chat-composer__inner-container',
+      '.d-editor-toolbar'
+    ]
+
+    for (const selector of selectors) {
+      const elements = document.querySelectorAll(selector)
+      toolbars.push(...Array.from(elements))
+    }
+    return toolbars
+  }
+
+  function attemptQuickInsertInjection() {
+    const toolbars = findAllToolbars()
+    let injectedCount = 0
+
+    toolbars.forEach(toolbar => {
+      if (!toolbar.querySelector('.quick-insert-button')) {
+        injectQuickInsertButton(toolbar)
+        injectedCount++
+      }
+    })
+
+    return { injectedCount, totalToolbars: toolbars.length }
+  }
+
+  function initQuickInsertButton() {
+    try {
+      console.log('[Callout Suggestions] Initializing quick insert button...')
+      
+      // Initial injection
+      attemptQuickInsertInjection()
+      
+      // Periodic check for new toolbars
+      setInterval(() => {
+        attemptQuickInsertInjection()
+      }, 3000)
+      
+      console.log('[Callout Suggestions] Quick insert button initialized')
+    } catch (e) {
+      console.error('[Callout Suggestions] Quick insert button initialization failed', e)
+    }
+  }
+
   // ===== Discourse Detection =====
   function isDiscoursePage() {
     const discourseMetaTags = document.querySelectorAll(
@@ -580,15 +828,19 @@
 
   // ===== Entry Point =====
   if (isDiscoursePage()) {
-    console.log('[Callout Suggestions] Discourse detected, initializing callout suggestions')
+    console.log('[Callout Suggestions] Discourse detected, initializing callout suggestions and quick insert button')
     // Check forceMobileMode setting (respects global setting)
     if (shouldRespectForceMobileMode()) {
       console.log('[Callout Suggestions] Force mobile mode is enabled - respecting global setting')
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initCalloutSuggestions)
+      document.addEventListener('DOMContentLoaded', () => {
+        initCalloutSuggestions()
+        initQuickInsertButton()
+      })
     } else {
       initCalloutSuggestions()
+      initQuickInsertButton()
     }
   } else {
     console.log('[Callout Suggestions] Not a Discourse site, skipping initialization')
