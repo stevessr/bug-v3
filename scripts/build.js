@@ -116,26 +116,44 @@ const skipEslint = args.includes('--no-eslint')
 
 // 执行 vite（开发或构建）
 const isUserscript = buildType.startsWith('build:userscript')
-// 构建时传递给 `vite` 的参数数组。dev 模式不传额外参数（等价于 `pnpm exec vite`）。
-const viteArgs =
-  buildType === 'dev'
-    ? []
-    : ['build', ...(isUserscript ? ['--config', 'vite.config.userscript.ts'] : [])]
-// Variant flag functionality removed - development variant no longer supported
-const publicDir = path.resolve(process.cwd(), 'public')
-const distDir = path.resolve(process.cwd(), 'dist')
 
-const child = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
-  stdio: 'inherit',
-  env: { ...process.env, SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT },
-  shell: false
-})
+// For userscript builds, we need to build two separate scripts
+if (isUserscript) {
+  // Build core script first
+  console.log('📦 Building core emoji picker script...')
+  const coreEnv = { ...process.env, SCRIPT_TARGET: 'core', SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT }
+  const viteArgs = ['build', '--config', 'vite.config.userscript.ts']
+  
+  const coreChild = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
+    stdio: 'inherit',
+    env: coreEnv,
+    shell: false
+  })
 
-child.on('exit', code => {
-  if (code === 0 && buildType !== 'dev') {
-    // For userscript builds, run post-processing instead of clean-empty-chunks
-    if (isUserscript) {
-      console.log('🔧 Post-processing userscript...')
+  coreChild.on('exit', coreCode => {
+    if (coreCode !== 0) {
+      console.error('❌ Core script build failed')
+      process.exit(coreCode)
+    }
+    
+    // Build manager script
+    console.log('📦 Building emoji manager script...')
+    const managerEnv = { ...process.env, SCRIPT_TARGET: 'manager', SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT }
+    
+    const managerChild = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
+      stdio: 'inherit',
+      env: managerEnv,
+      shell: false
+    })
+
+    managerChild.on('exit', managerCode => {
+      if (managerCode !== 0) {
+        console.error('❌ Manager script build failed')
+        process.exit(managerCode)
+      }
+      
+      // Post-process both scripts
+      console.log('🔧 Post-processing userscripts...')
       const postProcessEnv = {
         ...process.env,
         SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT
@@ -154,8 +172,29 @@ child.on('exit', code => {
         }
         process.exit(postCode)
       })
+    })
+  })
+} else {
+  // 构建时传递给 `vite` 的参数数组。dev 模式不传额外参数（等价于 `pnpm exec vite`）。
+  const viteArgs =
+    buildType === 'dev'
+      ? []
+      : ['build']
+  // Variant flag functionality removed - development variant no longer supported
+  const publicDir = path.resolve(process.cwd(), 'public')
+  const distDir = path.resolve(process.cwd(), 'dist')
+
+  const child = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
+    stdio: 'inherit',
+    env: { ...process.env, SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT },
+    shell: false
+  })
+
+  child.on('exit', code => {
+    if (code === 0 && buildType !== 'dev') {
+      // For non-userscript builds, just exit
+      console.log('✅ Build completed!')
     }
-  } else {
     process.exit(code)
-  }
-})
+  })
+}
