@@ -48,7 +48,6 @@ const args = process.argv.slice(2)
 // 用法现在为：node scripts/build.js <buildType>
 let buildType = 'dev'
 
-
 if (args.length === 0) {
   buildType = 'dev'
 } else {
@@ -83,7 +82,11 @@ try {
   const jsonOut = path.resolve(process.cwd(), 'public', 'assets', 'defaultEmojiGroups.json')
   const configContent = fs.readFileSync(configPath, 'utf-8')
   const configData = JSON.parse(configContent)
-  if (configData && Array.isArray(configData.groups)) {
+  if (
+    configData &&
+    Array.isArray(configData.groups) &&
+    process.env.USERSCRIPT_VARIANT != 'remote'
+  ) {
     try {
       fs.mkdirSync(path.dirname(jsonOut), { recursive: true })
       // Write compact (minified) JSON to reduce file size. Do NOT produce a .gz file here.
@@ -133,7 +136,10 @@ child.on('exit', code => {
     // For userscript builds, run post-processing instead of clean-empty-chunks
     if (isUserscript) {
       console.log('🔧 Post-processing userscript...')
-      const postProcessEnv = { ...process.env, SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT }
+      const postProcessEnv = {
+        ...process.env,
+        SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT
+      }
       const postProcessChild = spawn('node', ['./scripts/post-process-userscript.js', buildType], {
         stdio: 'inherit',
         env: postProcessEnv,

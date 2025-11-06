@@ -51,16 +51,18 @@ const RAW_PREVIEW_STYLES = `
   font-size: 12px;
   border-radius: 4px;
   border: 1px solid rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.9);
+  background: var(--d-button-primary-bg-color);
   cursor: pointer;
+  color: var(--d-button-primary-text-color);
 }
 .raw-preview-small-btn.md {
   background: linear-gradient(90deg,#fffbe6,#f0f7ff);
   border-color: rgba(3,102,214,0.12);
 }
 .raw-preview-small-btn.json {
-  background: linear-gradient(90deg,#e6fffb,#f0fff4);
+  background: var(--d-button-default-bg-color);
   border-color: rgba(0,128,96,0.12);
+  color: var(--d-button-default-text-color);
 }
 `
 

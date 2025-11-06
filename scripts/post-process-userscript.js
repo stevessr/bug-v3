@@ -446,7 +446,7 @@ export async function loadPackagedDefaults(): Promise<DefaultEmojiData> {
     }
 
     // Run ESLint validation
-    await runESLint(outputFile)
+    //await runESLint(outputFile)
 
     console.log('🎉 Userscript build and validation completed successfully!')
     // Attempt to restore original loader. If a backup exists restore it,

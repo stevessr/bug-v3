@@ -19,32 +19,44 @@ export function showGroupEditorModal() {
         • 点击分组名称或图标进行编辑<br>
         • 图标支持 emoji 字符或单个字符<br>
         • 修改会立即保存到本地存储<br>
-        • 可以调整分组的显示顺序
+        • 使用上移/下移按钮调整分组的显示顺序
       </div>
     </div>
     
-    <div id="groupsList" style="display: flex; flex-direction: column; gap: 12px; max-height: 70vh; overflow-y: auto;">
+    <div id="groupsList" style="display: flex; flex-wrap: wrap; gap: 16px; max-height: 70vh; overflow-y: auto; justify-content: flex-start;">
       ${userscriptState.emojiGroups
         .map(
           (group, index) =>
             `
         <div class="group-item" data-group-id="${group.id}" data-index="${index}" style="
           display: flex;
-          align-items: center;
+          flex-direction: column;
           gap: 12px;
           padding: 16px;
           background: var(--emoji-modal-button-bg);
+          border: 1px solid var(--emoji-modal-border);
+          border-radius: 8px;
+          width: calc(20% - 13px);
+          min-width: 200px;
+          box-sizing: border-box;
         ">
-          <div class="drag-handle" style="
-            cursor: grab;
-            color: var(--emoji-modal-text);
-            opacity: 0.5;
-            font-size: 16px;
-            user-select: none;
-          " title="拖拽调整顺序">⋮⋮</div>` +
+          <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
+            <button class="delete-group" data-index="${index}" data-group-id="${group.id}" data-group-name="${group.name}" style="
+              background: #dc3545;
+              border: 1px solid #c82333;
+              border-radius: 3px;
+              padding: 4px 8px;
+              cursor: pointer;
+              font-size: 12px;
+              color: white;
+            " title="删除分组">🗑️</button>
+          </div>` +
             (group.icon?.startsWith('https://')
               ? `<img class="group-icon-editor" src="${group.icon}" alt="图标" style="
-            max-width: 100px;
+            width: 100%;
+            height: 100px;
+            object-fit: contain;
+            cursor: pointer;
           " data-group-id="${group.id}" title="点击编辑图标">`
               : `
           <div class="group-icon-editor" style="
@@ -52,12 +64,15 @@ export function showGroupEditorModal() {
             align-items: center;
             justify-content: center;
             background: var(--secondary);
-            font-size: 18px;
+            font-size: 48px;
             user-select: none;
+            cursor: pointer;
+            height: 100px;
+            border-radius: 6px;
           " data-group-id="${group.id}" title="点击编辑图标">
             ${group.icon || '📁'}
           </div>`) +
-            `<div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+            `<div style="display: flex; flex-direction: column; gap: 8px;">
             <input class="group-name-editor" 
                    type="text" 
                    value="${group.name || 'Unnamed Group'}" 
@@ -70,32 +85,37 @@ export function showGroupEditorModal() {
                      padding: 8px 12px;
                      font-size: 14px;
                      font-weight: 500;
+                     width: 100%;
+                     box-sizing: border-box;
                    " 
                    placeholder="分组名称">
-            <div style="font-size: 12px; color: var(--emoji-modal-text);">
-              ID: ${group.id} | 表情数：${group.emojis ? group.emojis.length : 0}
+            <div style="font-size: 12px; color: var(--emoji-modal-text); opacity: 0.7;">
+              ID: ${group.id}<br>
+              表情数：${group.emojis ? group.emojis.length : 0}
             </div>
           </div>
           
-          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+          <div style="display: flex; gap: 4px; justify-content: center;">
             <button class="move-up" data-index="${index}" style="
               background: var(--emoji-modal-button-bg);
               border: 1px solid var(--emoji-modal-border);
               border-radius: 3px;
-              padding: 4px 8px;
+              padding: 6px 12px;
               cursor: pointer;
               font-size: 12px;
               color: var(--emoji-modal-text);
-            " ${index === 0 ? 'disabled' : ''}>↑</button>
+              flex: 1;
+            " ${index === 0 ? 'disabled' : ''}>↑ 上移</button>
             <button class="move-down" data-index="${index}" style="
               background: var(--emoji-modal-button-bg);
               border: 1px solid var(--emoji-modal-border);
               border-radius: 3px;
-              padding: 4px 8px;
+              padding: 6px 12px;
               cursor: pointer;
               font-size: 12px;
               color: var(--emoji-modal-text);
-            " ${index === userscriptState.emojiGroups.length - 1 ? 'disabled' : ''}>↓</button>
+              flex: 1;
+            " ${index === userscriptState.emojiGroups.length - 1 ? 'disabled' : ''}>↓ 下移</button>
           </div>
         </div>
       `
@@ -120,6 +140,14 @@ export function showGroupEditorModal() {
 
   // Get the actual content div inside the modal
   const content = modal.querySelector('div:last-child') as HTMLElement
+  
+  // Apply custom width to the modal content container
+  const modalContent = modal.querySelector('div > div') as HTMLElement
+  if (modalContent) {
+    modalContent.style.width = '80vw'
+    modalContent.style.maxWidth = '80vw'
+  }
+  
   document.body.appendChild(modal)
 
   // Add hover effects
@@ -141,43 +169,31 @@ export function showGroupEditorModal() {
       opacity: 0.3;
       cursor: not-allowed !important;
     }
-    /* responsive fixes to avoid modal/content overflow on small screens */
-    .group-item {
-      flex-wrap: wrap;
-      align-items: flex-start;
+    .delete-group:hover {
+      background: #c82333 !important;
+      border-color: #bd2130 !important;
     }
-    .group-item .group-icon-editor {
-      flex: 0 0 auto;
-      width: 56px;
-      height: 56px;
-      min-width: 56px;
-      min-height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .group-item .group-icon-editor img {
-      max-width: 100%;
-      max-height: 100%;
-      display: block;
-    }
-    .group-item > div[style*="flex: 1"] {
-      min-width: 160px;
-    }
-    @media (max-width: 480px) {
-      /* on very small screens, make modal full height and align to top */
-      div[style*="position: fixed;"] {
-        align-items: flex-start !important;
+    
+    /* Responsive layout adjustments */
+    @media (max-width: 1600px) {
+      .group-item {
+        width: calc(25% - 12px) !important;
       }
-      /* content area adjustments */
-      div[style*="width: min(900px, 95%)"] {
+    }
+    @media (max-width: 1200px) {
+      .group-item {
+        width: calc(33.333% - 11px) !important;
+      }
+    }
+    @media (max-width: 900px) {
+      .group-item {
+        width: calc(50% - 8px) !important;
+      }
+    }
+    @media (max-width: 600px) {
+      .group-item {
         width: 100% !important;
-        max-width: 100% !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
-        border-radius: 0 !important;
+        min-width: unset !important;
       }
     }
   `
@@ -248,6 +264,25 @@ export function showGroupEditorModal() {
 
         modal.remove()
         showTemporaryMessage('分组顺序已调整')
+        setTimeout(() => showGroupEditorModal(), 300)
+      }
+    })
+  })
+
+  // Delete group
+  content.querySelectorAll('.delete-group').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const target = e.target as HTMLElement
+      const index = parseInt(target.getAttribute('data-index') || '0')
+      const groupName = target.getAttribute('data-group-name')
+
+      // Confirm deletion
+      const confirmMsg = `确认删除分组 "${groupName}"？\n\n该分组包含 ${userscriptState.emojiGroups[index].emojis?.length || 0} 个表情。\n删除后数据将无法恢复。`
+      
+      if (confirm(confirmMsg)) {
+        userscriptState.emojiGroups.splice(index, 1)
+        modal.remove()
+        showTemporaryMessage(`分组 "${groupName}" 已删除`)
         setTimeout(() => showGroupEditorModal(), 300)
       }
     })

@@ -64,13 +64,13 @@ export function injectManagerStyles() {
     }
     
     .emoji-manager-groups-list > div:hover { 
-      background: var(--primary); 
+      background: var(--d-selected); 
     }
     
     .emoji-manager-groups-list > div:focus { 
       outline: none; 
       box-shadow: inset 0 0 0 2px #007bff; 
-      background: var(--primary); 
+      background: var(--d-selected); 
     }
     
     /* Right panel - emoji display and editing */
@@ -200,15 +200,6 @@ export function injectManagerStyles() {
       font-size: 14px; 
       cursor: pointer; 
       transition: all 0.2s; 
-    }
-    
-    .btn-primary { 
-      background-color: var(--primary);
-      color: white; 
-    }
-    
-    .btn-primary:hover { 
-      background-color: var(--primary-high);
     }
     
     .btn-sm { 
