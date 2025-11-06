@@ -41,9 +41,9 @@ npm run build:userscript:min
 ### 核心脚本（二选一）
 
 **推荐：模块化安装**
-- `emoji-picker-core.remote.user.js` - 表情选择器核心 (~188KB)
-  - 包含：表情选择器、工具栏注入、批量添加、Callout 建议
-  - 不包含：管理界面、设置面板、导入导出
+- `emoji-picker-core.remote.user.js` - 表情选择器核心 (~176KB)
+  - 包含：表情选择器、工具栏注入、批量添加
+  - 不包含：管理界面、设置面板、导入导出、Callout 建议
   - 适合：只需要使用表情的用户
 
 - `emoji-manager.remote.user.js` - 表情管理器 (~85KB)
@@ -60,10 +60,19 @@ npm run build:userscript:min
 
 以下功能已分离为独立的用户脚本，可按需安装：
 
+- `scripts/callout-suggestions.user.js` - Callout 自动建议功能 (~21KB)
+  - Markdown callout 自动补全
+  - 支持 textarea 和 ProseMirror 编辑器
+  - 键盘导航（方向键、Tab、Enter）
+  - 30+ 内置 callout 类型（note、warning、tip 等）
+  - 遵从全局强制移动模式设置
+  - 可独立使用，不依赖主脚本
+  
 - `scripts/preview-button.user.js` - 话题预览按钮功能 (~24KB)
   - 在 Discourse 话题列表中添加预览按钮
   - 支持三种预览模式：原始、Markdown、JSON
   - 可独立使用，不依赖主脚本
+  
 - `scripts/userscript-upload.user.js` - 图片上传功能 (~28KB)
   - 独立的图片上传界面
   - 支持批量上传和管理
@@ -102,7 +111,6 @@ npm run build:userscript:min
 - **一键添加**: 在图片弹窗中点击"添加表情"按钮将图片添加到表情库
 - **搜索功能**: 在表情选择器中搜索表情名称
 - **自适应布局**: 根据页面环境自动选择最佳显示方式
-- **Callout 建议**: Markdown callout 自动补全功能
 
 ### 🔧 管理功能（emoji-manager.user.js）
 
@@ -115,6 +123,14 @@ npm run build:userscript:min
 ### 🔌 可选独立功能
 
 以下功能可作为独立脚本安装（与主脚本分离，可按需选择）：
+
+- **Callout 自动建议** (`scripts/callout-suggestions.user.js`):
+  - Markdown callout 自动补全功能
+  - 输入 `[` 触发建议列表
+  - 支持 30+ callout 类型（note、warning、tip、success、danger 等）
+  - 键盘导航和图标显示
+  - 遵从全局强制移动模式设置
+  - 不依赖主脚本，可单独使用
 
 - **话题预览按钮** (`scripts/preview-button.user.js`):
   - 在话题列表中添加预览按钮
