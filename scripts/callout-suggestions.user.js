@@ -738,9 +738,22 @@
     }
   }
 
+  let cachedSettings = null
+  let settingsCacheTime = 0
+  const CACHE_DURATION = 5000 // Cache for 5 seconds
+
+  function getCachedSettings() {
+    const now = Date.now()
+    if (!cachedSettings || now - settingsCacheTime > CACHE_DURATION) {
+      cachedSettings = loadSettings()
+      settingsCacheTime = now
+    }
+    return cachedSettings
+  }
+
   function findAllToolbars() {
     // Check if force mobile mode with d-menu-portals is active
-    const settings = loadSettings()
+    const settings = getCachedSettings()
     const forceMobileMode = settings.forceMobileMode === true
     const hasPortals = !!document.querySelector('#d-menu-portals')
     
@@ -784,12 +797,21 @@
       // Initial injection
       attemptQuickInsertInjection()
       
-      // Periodic check for new toolbars
-      setInterval(() => {
-        attemptQuickInsertInjection()
-      }, 3000)
+      // Use MutationObserver with debouncing to detect new toolbars
+      let debounceTimer = null
+      const observer = new MutationObserver(() => {
+        if (debounceTimer) clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => {
+          attemptQuickInsertInjection()
+        }, 500)
+      })
       
-      console.log('[Callout Suggestions] Quick insert button initialized')
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      })
+      
+      console.log('[Callout Suggestions] Quick insert button initialized with MutationObserver')
     } catch (e) {
       console.error('[Callout Suggestions] Quick insert button initialization failed', e)
     }
