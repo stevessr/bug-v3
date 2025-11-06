@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse Callout 建议 (Callout Suggestions)
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.0.0
+// @version      1.2.1
 // @description  为 Discourse 论坛添加 Markdown Callout 自动建议功能 (Add Markdown callout autocomplete to Discourse forums)
 // @author       stevessr
 // @match        https://linux.do/*
