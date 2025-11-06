@@ -24,18 +24,67 @@
 
   // ===== Settings Management =====
   const SETTINGS_KEY = 'emoji_extension_userscript_settings'
+  const REMOTE_CONFIG_KEY = 'emoji_extension_remote_config_url'
+
+  // Default settings (inline optimized)
+  const DEFAULT_SETTINGS = {
+    imageScale: 30,
+    gridColumns: 4,
+    outputFormat: 'markdown',
+    forceMobileMode: false,
+    defaultGroup: 'nachoneko',
+    showSearchBar: true,
+    enableFloatingPreview: true,
+    enableCalloutSuggestions: true,
+    enableBatchParseImages: true
+  }
 
   function loadSettings() {
     try {
       const settingsData = localStorage.getItem(SETTINGS_KEY)
       if (settingsData) {
         const settings = JSON.parse(settingsData)
-        return settings
+        // Merge with defaults to ensure all properties exist
+        return { ...DEFAULT_SETTINGS, ...settings }
       }
     } catch (e) {
       console.warn('[Callout Suggestions] Failed to load settings:', e)
     }
-    return {}
+    return { ...DEFAULT_SETTINGS }
+  }
+
+  // Async version: fetch settings from cloud if available
+  async function loadSettingsAsync() {
+    try {
+      // Try local settings first (fast path)
+      const local = loadSettings()
+      
+      // Check if remote config URL is available
+      const remoteUrl = localStorage.getItem(REMOTE_CONFIG_KEY)
+      if (remoteUrl && typeof remoteUrl === 'string' && remoteUrl.trim().length > 0) {
+        try {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 3000)
+          const res = await fetch(remoteUrl, { signal: controller.signal })
+          clearTimeout(timeout)
+          
+          if (res && res.ok) {
+            const json = await res.json()
+            // Extract settings from remote config
+            const remoteSettings = json.settings && typeof json.settings === 'object' ? json.settings : {}
+            // Merge: defaults < local < remote
+            return { ...DEFAULT_SETTINGS, ...local, ...remoteSettings }
+          }
+        } catch (err) {
+          console.warn('[Callout Suggestions] Failed to fetch remote settings:', err)
+        }
+      }
+      
+      return local
+    } catch (e) {
+      console.warn('[Callout Suggestions] Failed to load settings async:', e)
+      return { ...DEFAULT_SETTINGS }
+    }
   }
 
   // Check forceMobileMode setting - if enabled, script respects it
@@ -883,6 +932,19 @@
   // ===== Entry Point =====
   if (isDiscoursePage()) {
     console.log('[Callout Suggestions] Discourse detected, initializing callout suggestions and quick insert button')
+    
+    // Try to load settings from cloud if available (async, non-blocking)
+    loadSettingsAsync().then(settings => {
+      if (settings) {
+        // Update cache with fetched settings
+        cachedSettings = settings
+        settingsCacheTime = Date.now()
+        console.log('[Callout Suggestions] Settings loaded from cloud:', settings)
+      }
+    }).catch(err => {
+      console.warn('[Callout Suggestions] Failed to load settings from cloud:', err)
+    })
+    
     // Check forceMobileMode setting (respects global setting)
     if (shouldRespectForceMobileMode()) {
       console.log('[Callout Suggestions] Force mobile mode is enabled - respecting global setting')
