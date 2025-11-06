@@ -718,8 +718,8 @@
       const rect = quickInsertButton.getBoundingClientRect()
       menu.style.position = 'fixed'
       menu.style.zIndex = '10000'
-      menu.style.top = rect.bottom + 5 + 'px'
-      menu.style.left = Math.max(8, Math.min(rect.left + rect.width / 2 - 150, window.innerWidth - 300)) + 'px'
+      menu.style.top = rect.bottom + MENU_HORIZONTAL_OFFSET + 'px'
+      menu.style.left = Math.max(MENU_MIN_MARGIN, Math.min(rect.left + rect.width / 2 - MENU_BASE_WIDTH, window.innerWidth - MENU_MAX_WIDTH)) + 'px'
 
       const removeMenu = ev => {
         if (!menu.contains(ev.target)) {
@@ -738,13 +738,21 @@
     }
   }
 
+  // Settings caching to avoid repeated localStorage access
   let cachedSettings = null
   let settingsCacheTime = 0
-  const CACHE_DURATION = 5000 // Cache for 5 seconds
+  const SETTINGS_CACHE_DURATION = 10000 // Cache for 10 seconds
+  const DEBOUNCE_DELAY = 500 // Debounce delay for MutationObserver
+
+  // Menu positioning constants
+  const MENU_HORIZONTAL_OFFSET = 5 // Space between button and menu (vertical)
+  const MENU_MIN_MARGIN = 8 // Minimum margin from viewport edge
+  const MENU_BASE_WIDTH = 150 // Base width for menu positioning calculation
+  const MENU_MAX_WIDTH = 300 // Maximum width for menu positioning
 
   function getCachedSettings() {
     const now = Date.now()
-    if (!cachedSettings || now - settingsCacheTime > CACHE_DURATION) {
+    if (!cachedSettings || now - settingsCacheTime > SETTINGS_CACHE_DURATION) {
       cachedSettings = loadSettings()
       settingsCacheTime = now
     }
@@ -753,6 +761,8 @@
 
   function findAllToolbars() {
     // Check if force mobile mode with d-menu-portals is active
+    // When both conditions are true, we skip toolbar injection because
+    // the mobile mode uses the #d-menu-portals container for menus
     const settings = getCachedSettings()
     const forceMobileMode = settings.forceMobileMode === true
     const hasPortals = !!document.querySelector('#d-menu-portals')
@@ -803,7 +813,7 @@
         if (debounceTimer) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(() => {
           attemptQuickInsertInjection()
-        }, 500)
+        }, DEBOUNCE_DELAY)
       })
       
       observer.observe(document.body, {
