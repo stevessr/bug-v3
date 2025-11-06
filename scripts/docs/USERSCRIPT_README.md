@@ -38,9 +38,21 @@ npm run build:userscript:min
 
 构建完成后，会在 `dist/` 目录下生成以下文件：
 
-- `emoji-extension.user.js` - 标准版本 (~45KB)
-- `emoji-extension-min.user.js` - 混淆版本 (~37KB)
+- `emoji-extension.remote.user.js` - 标准版本 (~188KB) - 主要表情功能
+- `emoji-extension.remote-min.user.js` - 混淆版本 - 主要表情功能（压缩）
 - `emoji-manager.html` - 完整管理界面
+
+### 独立功能脚本
+
+以下功能已分离为独立的用户脚本，可按需安装：
+
+- `scripts/preview-button.user.js` - 话题预览按钮功能
+  - 在 Discourse 话题列表中添加预览按钮
+  - 支持三种预览模式：原始、Markdown、JSON
+  - 可独立使用，不依赖主脚本
+- `scripts/userscript-upload.user.js` - 图片上传功能
+  - 独立的图片上传界面
+  - 支持批量上传和管理
 
 ## 安装方法
 
@@ -76,6 +88,16 @@ npm run build:userscript:min
 - **一键添加**: 在图片弹窗中点击"添加表情"按钮将图片添加到表情库
 - **搜索功能**: 在表情选择器中搜索表情名称
 - **自适应布局**: 根据页面环境自动选择最佳显示方式
+
+### 🔌 可选独立功能
+
+以下功能可作为独立脚本安装（与主脚本分离，可按需选择）：
+
+- **话题预览按钮** (`scripts/preview-button.user.js`):
+  - 在话题列表中添加预览按钮
+  - 支持原始格式、Markdown、JSON 三种预览模式
+  - 支持分页浏览和键盘导航
+  - 不依赖主脚本，可单独使用
 
 ### ⚙️ 管理功能
 
