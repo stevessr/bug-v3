@@ -105,7 +105,7 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
         const originalStyle = button.style.cssText
         try {
           button.innerHTML = '正在解析...'
-          button.style.background = 'linear-gradient(135deg,#6b7280,#4b5563)'
+          button.style.background = 'var(--tertiary)'
           button.disabled = true
           const lightboxWrappers = cookedElement.querySelectorAll('.lightbox-wrapper')
           const allEmojiData: AddEmojiButtonData[] = []
