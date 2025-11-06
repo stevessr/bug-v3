@@ -317,6 +317,16 @@
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   }
 
+  function escapeHtmlAttr(str) {
+    // For HTML attributes, we need to escape quotes as well
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+  }
+
   function simpleMarkdownToHtml(md) {
     const lines = md.replace(/\r\n/g, '\n').split('\n')
     let inCode = false
@@ -395,25 +405,30 @@
     let t = escapeHtml(text)
     t = t.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m, altRaw, urlRaw) => {
       const altParts = (altRaw || '').split('|')
-      const alt = escapeHtml(altParts[0] || '')
+      const alt = escapeHtmlAttr(altParts[0] || '')
       let widthAttr = ''
       let heightAttr = ''
       if (altParts[1]) {
         const dim = altParts[1].match(/(\d+)x(\d+)/)
         if (dim) {
-          widthAttr = ` width="${dim[1]}"`
-          heightAttr = ` height="${dim[2]}"`
+          // Use escapeHtmlAttr for attribute values to prevent XSS
+          const width = escapeHtmlAttr(dim[1])
+          const height = escapeHtmlAttr(dim[2])
+          widthAttr = ` width="${width}"`
+          heightAttr = ` height="${height}"`
         }
       }
 
       const url = String(urlRaw || '')
       if (url.startsWith('upload://')) {
         const filename = url.replace(/^upload:\/\//, '')
-        const src = `${window.location.origin}/uploads/short-url/${filename}`
+        // Escape the entire URL to prevent XSS
+        const src = escapeHtmlAttr(`${window.location.origin}/uploads/short-url/${filename}`)
         return `<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} />`
       }
 
-      return `<img src="${escapeHtml(url)}" alt="${alt}"${widthAttr}${heightAttr} />`
+      // Use escapeHtmlAttr for URL attribute
+      return `<img src="${escapeHtmlAttr(url)}" alt="${alt}"${widthAttr}${heightAttr} />`
     })
     t = t.replace(/`([^`]+)`/g, '<code>$1</code>')
     t = t.replace(/~~([\s\S]+?)~~/g, '<del>$1</del>')
