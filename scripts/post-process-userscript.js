@@ -8,24 +8,19 @@ import { spawn } from 'child_process'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const buildType = process.argv[2] || 'build:userscript'
 
-function getUserscriptHeader(minified = false, variant = 'remote') {
+function getUserscriptHeader(minified = false, variant = 'remote', scriptName = 'emoji-extension', scriptTitle = 'Discourse 表情扩展 (Emoji Extension for Discourse)', scriptDescription = '为 Discourse 论坛添加表情选择器功能 (Add emoji picker functionality to Discourse forums)') {
   const version = getPackageVersion()
   const minSuffix = minified ? ' (Minified)' : ''
   const liteSuffix = variant === 'remote' ? ' lite' : ''
-  // If the build variant requests Tampermonkey-specific behavior, add
-  // Tampermonkey grants. Otherwise default to no grants for broader
-  // userscript manager compatibility.
-  // Variant selection removed; default to remote (no special grants)
   const grants = '// @grant        none'
   
-  // Calculate variant suffix for download URLs
   const variantSuffix = variant && variant !== 'default' ? `.${variant}` : ''
 
   return `// ==UserScript==
-// @name         Discourse 表情扩展 (Emoji Extension for Discourse)${liteSuffix}${minSuffix}
+// @name         ${scriptTitle}${liteSuffix}${minSuffix}
 // @namespace    https://github.com/stevessr/bug-v3
 // @version      ${version}
-// @description  为 Discourse 论坛添加表情选择器功能 (Add emoji picker functionality to Discourse forums)
+// @description  ${scriptDescription}
 // @author       stevessr
 // @match        https://linux.do/*
 // @match        https://meta.discourse.org/*
@@ -37,8 +32,8 @@ ${grants}
 // @license      MIT
 // @homepageURL  https://github.com/stevessr/bug-v3
 // @supportURL   https://github.com/stevessr/bug-v3/issues
-// @downloadURL  https://github.com/stevessr/bug-v3/releases/latest/download/emoji-extension${variantSuffix}${minified ? '-min' : ''}.user.js
-// @updateURL    https://github.com/stevessr/bug-v3/releases/latest/download/emoji-extension${variantSuffix}${minified ? '-min' : ''}.user.js
+// @downloadURL  https://github.com/stevessr/bug-v3/releases/latest/download/${scriptName}${variantSuffix}${minified ? '-min' : ''}.user.js
+// @updateURL    https://github.com/stevessr/bug-v3/releases/latest/download/${scriptName}${variantSuffix}${minified ? '-min' : ''}.user.js
 // @run-at       document-end
 // ==/UserScript==
 
@@ -246,12 +241,10 @@ function getPackageVersion() {
   }
 }
 
-function processUserscript() {
+function processUserscript(scriptName, scriptTitle, scriptDescription) {
   const isMinified = buildType === 'build:userscript:min'
   const outputDir = 'dist'
-  const inputFile = path.resolve(__dirname, '..', outputDir, 'userscript.js')
-  // Allow variant-specific output filename (e.g. emoji-extension.remote.user.js)
-  // Variant selection removed; always use remote
+  const inputFile = path.resolve(__dirname, '..', outputDir, `${scriptName}.js`)
   const variant = 'remote'
   const normalizedVariant = 'remote'
   const variantSuffix =
@@ -260,13 +253,13 @@ function processUserscript() {
     __dirname,
     '..',
     outputDir,
-    `emoji-extension${variantSuffix}${isMinified ? '-min' : ''}.user.js`
+    `${scriptName}${variantSuffix}${isMinified ? '-min' : ''}.user.js`
   )
   const managerFile = path.resolve(__dirname, '..', 'emoji-manager.html')
   const managerOutput = path.resolve(__dirname, '..', outputDir, 'emoji-manager.html')
 
   try {
-    console.log(`📦 Processing ${isMinified ? 'minified' : 'standard'} userscript...`)
+    console.log(`📦 Processing ${scriptTitle} (${isMinified ? 'minified' : 'standard'})...`)
 
     // Read the built userscript
     if (!fs.existsSync(inputFile)) {
@@ -276,8 +269,6 @@ function processUserscript() {
     let userscriptContent = fs.readFileSync(inputFile, 'utf8')
 
     // Inline simple top-level import statements that reference local chunks
-    // e.g. import "./userscript2.js"; -> prepend the contents of that file and remove the import line
-    // This keeps the final userscript as a single flat file (required for userscript packaging)
     const importLineRegex = /^\s*import\s+["'](.+)["'];?\s*$/gm
     const imports = []
     let importMatch
@@ -309,16 +300,11 @@ function processUserscript() {
     }
 
     // Combine header + optional runtime helpers + content + footer
-    const header = getUserscriptHeader(isMinified, normalizedVariant)
+    const header = getUserscriptHeader(isMinified, normalizedVariant, scriptName, scriptTitle, scriptDescription)
     const footer = getUserscriptFooter()
 
-    // If this is a Tampermonkey targeted variant, inject the runtime helper
-    // that registers a menu command and exposes a global open helper.
+    // Tampermonkey runtime helpers removed for modular scripts
     let runtimeHelpers = ''
-    if (String(normalizedVariant).toLowerCase().includes('tampermonkey')) {
-      runtimeHelpers = getTampermonkeyRuntimeSnippet()
-      console.log('🔌 Injecting Tampermonkey runtime helpers')
-    }
 
     const finalContent = header + runtimeHelpers + userscriptContent + footer
 
@@ -328,28 +314,28 @@ function processUserscript() {
     const stats = fs.statSync(outputFile)
     const sizeKB = (stats.size / 1024).toFixed(2)
 
-    console.log(`✅ Created ${isMinified ? 'minified' : 'standard'} userscript: ${outputFile}`)
+    console.log(`✅ Created ${scriptTitle}: ${outputFile}`)
     console.log(`📊 File size: ${sizeKB} KB`)
 
-    // Copy emoji manager if it exists (only for standard build to avoid duplication)
-    if (!isMinified && fs.existsSync(managerFile)) {
+    // Copy emoji manager if it exists (only for core script and standard build)
+    if (!isMinified && scriptName === 'emoji-picker-core' && fs.existsSync(managerFile)) {
       fs.copyFileSync(managerFile, managerOutput)
       console.log(`📋 Copied emoji manager: ${managerOutput}`)
     }
 
-    // Clean up the original userscript.js file after processing
+    // Clean up the original temporary file after processing
     try {
       if (fs.existsSync(inputFile)) {
         fs.unlinkSync(inputFile)
-        console.log(`🧹 Cleaned up temporary file: userscript.js`)
+        console.log(`🧹 Cleaned up temporary file: ${scriptName}.js`)
       }
     } catch (cleanupError) {
-      console.warn(`⚠️  Could not clean up userscript.js:`, cleanupError.message)
+      console.warn(`⚠️  Could not clean up ${scriptName}.js:`, cleanupError.message)
     }
 
     return outputFile
   } catch (error) {
-    console.error('❌ Failed to process userscript:', error.message)
+    console.error(`❌ Failed to process ${scriptName}:`, error.message)
     return null
   }
 }
@@ -358,25 +344,42 @@ async function main() {
   console.log(`🔧 Post-processing userscript build: ${buildType}`)
 
   try {
-    const outputFile = processUserscript()
-    if (!outputFile) {
-      console.error('❌ Userscript processing failed')
-      process.exit(1)
+    // Process both scripts
+    const scripts = [
+      {
+        name: 'emoji-picker-core',
+        title: 'Discourse 表情选择器 (Emoji Picker) core',
+        description: 'Discourse 论坛表情选择器 - 核心功能 (Emoji picker for Discourse - Core features only)'
+      },
+      {
+        name: 'emoji-manager',
+        title: 'Discourse 表情管理器 (Emoji Manager) mgr',
+        description: 'Discourse 论坛表情管理 - 设置、导入导出、分组编辑 (Emoji management for Discourse - Settings, import/export, group editor)'
+      }
+    ]
+
+    const outputFiles = []
+    for (const script of scripts) {
+      const outputFile = processUserscript(script.name, script.title, script.description)
+      if (!outputFile) {
+        console.error(`❌ ${script.title} processing failed`)
+        process.exit(1)
+      }
+      outputFiles.push(outputFile)
     }
 
-    // Optionally skip ESLint in CI. Variant selection removed; skip only when explicitly requested
+    // Optionally skip ESLint
     const skipEslint = process.env.SKIP_ESLINT === 'true'
 
     if (skipEslint) {
-      console.log(`⚠️ Skipping ESLint validation for userscript (variant=remote)`)
+      console.log(`⚠️ Skipping ESLint validation for userscripts`)
       console.log('🎉 Userscript build completed (ESLint skipped).')
       process.exit(0)
     }
 
-    // Run ESLint validation
-    //await runESLint(outputFile)
-
     console.log('🎉 Userscript build and validation completed successfully!')
+    console.log(`📦 Generated ${outputFiles.length} userscripts:`)
+    outputFiles.forEach(f => console.log(`   - ${path.basename(f)}`))
     process.exit(0)
   } catch (error) {
     console.error('❌ Build process failed:', error.message)

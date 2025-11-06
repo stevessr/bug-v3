@@ -38,9 +38,44 @@ npm run build:userscript:min
 
 构建完成后，会在 `dist/` 目录下生成以下文件：
 
-- `emoji-extension.user.js` - 标准版本 (~45KB)
-- `emoji-extension-min.user.js` - 混淆版本 (~37KB)
-- `emoji-manager.html` - 完整管理界面
+### 核心脚本（二选一）
+
+**推荐：模块化安装**
+- `emoji-picker-core.remote.user.js` - 表情选择器核心 (~176KB)
+  - 包含：表情选择器、工具栏注入、批量添加
+  - 不包含：管理界面、设置面板、导入导出、Callout 建议
+  - 适合：只需要使用表情的用户
+
+- `emoji-manager.remote.user.js` - 表情管理器 (~85KB)
+  - 包含：设置面板、导入/导出、分组编辑、完整管理界面
+  - 不包含：表情选择器（需要配合核心脚本使用，或独立管理表情）
+  - 适合：需要管理表情、调整设置的用户
+
+**使用建议：**
+- 只想用表情：安装 `emoji-picker-core`
+- 需要管理表情：同时安装两个脚本
+- 只想管理不选择：只安装 `emoji-manager`
+
+### 独立功能脚本
+
+以下功能已分离为独立的用户脚本，可按需安装：
+
+- `scripts/callout-suggestions.user.js` - Callout 自动建议功能 (~21KB)
+  - Markdown callout 自动补全
+  - 支持 textarea 和 ProseMirror 编辑器
+  - 键盘导航（方向键、Tab、Enter）
+  - 30+ 内置 callout 类型（note、warning、tip 等）
+  - 遵从全局强制移动模式设置
+  - 可独立使用，不依赖主脚本
+  
+- `scripts/preview-button.user.js` - 话题预览按钮功能 (~24KB)
+  - 在 Discourse 话题列表中添加预览按钮
+  - 支持三种预览模式：原始、Markdown、JSON
+  - 可独立使用，不依赖主脚本
+  
+- `scripts/userscript-upload.user.js` - 图片上传功能 (~28KB)
+  - 独立的图片上传界面
+  - 支持批量上传和管理
 
 ## 安装方法
 
@@ -69,7 +104,7 @@ npm run build:userscript:min
 
 > **注意**：用户脚本版本专门为 Discourse 论坛优化，不支持其他平台（如 Reddit、Twitter、Pixiv 等）。如需多平台支持，请使用浏览器扩展版本。
 
-### 🎯 核心功能
+### 🎯 核心功能（emoji-picker-core.user.js）
 
 - **表情选择器**: 点击工具栏中的猫咪图标 🐈‍⬛ 打开表情选择器
 - **本地存储**: 使用 localStorage 存储用户设置和自定义表情
@@ -77,20 +112,35 @@ npm run build:userscript:min
 - **搜索功能**: 在表情选择器中搜索表情名称
 - **自适应布局**: 根据页面环境自动选择最佳显示方式
 
-### ⚙️ 管理功能
+### 🔧 管理功能（emoji-manager.user.js）
 
-- **设置面板**: 点击 🔧 图标配置缩放比例、输出格式等
-- **数据管理**: 点击 ⚙️ 图标进行导入/导出、同步操作
-- **完整管理界面**: 使用独立 HTML 文件进行高级管理：
-  - 分组创建、编辑、删除
-  - 表情添加、编辑、移除
-  - 拖拽排序
-  - 收藏夹管理
-  - 批量导入/导出
+- **设置面板**: 配置缩放比例、输出格式等
+- **完整管理界面**: 分组创建、编辑、删除；表情添加、编辑、移除
+- **导入/导出**: 数据备份和迁移功能
+- **拖拽排序**: 可视化管理表情顺序
+- **收藏夹管理**: 管理常用表情
+
+### 🔌 可选独立功能
+
+以下功能可作为独立脚本安装（与主脚本分离，可按需选择）：
+
+- **Callout 自动建议** (`scripts/callout-suggestions.user.js`):
+  - Markdown callout 自动补全功能
+  - 输入 `[` 触发建议列表
+  - 支持 30+ callout 类型（note、warning、tip、success、danger 等）
+  - 键盘导航和图标显示
+  - 遵从全局强制移动模式设置
+  - 不依赖主脚本，可单独使用
+
+- **话题预览按钮** (`scripts/preview-button.user.js`):
+  - 在话题列表中添加预览按钮
+  - 支持原始格式、Markdown、JSON 三种预览模式
+  - 支持分页浏览和键盘导航
+  - 不依赖主脚本，可单独使用
 
 ### 与浏览器扩展的差异
 
-| 特性     | 浏览器扩展     | 油猴脚本               |
+| 特性     | 浏览器扩展     | 油猴脚本（核心+管理）   |
 | -------- | -------------- | ---------------------- |
 | 安装方式 | 扩展商店       | 用户脚本管理器         |
 | 存储方式 | chrome.storage | localStorage           |
@@ -98,6 +148,7 @@ npm run build:userscript:min
 | 更新方式 | 自动更新       | 手动更新或脚本自动检查 |
 | 权限要求 | 扩展权限       | 无特殊权限             |
 | 跨浏览器 | 需要不同扩展   | 通用兼容               |
+| 功能模块 | 一体化         | 可分离安装（核心/管理） |
 
 ## 技术实现
 

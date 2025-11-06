@@ -8,7 +8,8 @@ import { userscriptState } from './state'
 import { initOneClickAdd } from './modules/oneClickAdd'
 import { initPhotoSwipeTopbarUserscript } from './modules/photoSwipeTopbar'
 import { initCalloutSuggestionsUserscript } from './modules/calloutSuggestions'
-import { initRawPreview } from './modules/rawPreview'
+// Preview button logic has been separated into a standalone userscript (scripts/preview-button.user.js)
+// import { initRawPreview } from './modules/rawPreview'
 import { attemptInjection, startPeriodicInjection } from './modules/toolbar'
 import {
   showFloatingButton,
@@ -106,14 +107,15 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
     console.warn('[Userscript] initCalloutSuggestionsUserscript failed', e)
   }
 
-  // 初始化 raw preview（在话题页或话题列表中注入“预览”按钮，打开悬浮窗渲染 /raw/<id>?page=N）
-  try {
-    initRawPreview()
-    console.log('[Userscript] Raw preview initialized')
-  } catch (e) {
-    console.warn('[Userscript] initRawPreview failed', e)
-  }
-
+  // Preview button logic has been separated into a standalone userscript (scripts/preview-button.user.js)
+  // 初始化 raw preview（在话题页或话题列表中注入"预览"按钮，打开悬浮窗渲染 /raw/<id>?page=N）
+  // The preview button functionality is now available as a separate userscript
+  // try {
+  //   initRawPreview()
+  //   console.log('[Userscript] Raw preview initialized')
+  // } catch (e) {
+  //   console.warn('[Userscript] initRawPreview failed', e)
+  // }
   // Inject auto-read button into user menu (userscript-managed)
   try {
     void showAutoReadInMenu()
