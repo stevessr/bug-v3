@@ -70,11 +70,6 @@ https://github.com/stevessr/bug-v3/releases/latest/download/preview-button.user.
 - 保留原始格式和样式
 - 加载速度快
 
-### Markdown 模式（已移除按钮，可通过代码启用）
-- 获取原始 Markdown 并渲染为 HTML
-- 自动处理图片链接（upload:// 协议）
-- 支持基本 Markdown 语法
-
 ### JSON 格式
 - 解析话题的 JSON 数据
 - 逐楼显示帖子内容

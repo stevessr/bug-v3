@@ -461,6 +461,7 @@
       const doc = iframeEl.contentDocument || iframeEl.contentWindow?.document
       if (!doc) throw new Error('iframe document unavailable')
 
+      // Custom CSS can be added here for preview styling
       const css = ``
 
       doc.open()
@@ -484,6 +485,7 @@
     const doc = getIframeDoc()
     const existing = doc.getElementById('json-container')
     if (existing) return existing
+    // Custom CSS can be added here for JSON preview styling
     const css = ``
     const baseHref = window.location.origin
     doc.open()
