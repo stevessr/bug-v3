@@ -62,8 +62,8 @@ export default defineConfig(({ mode }) => {
         inlineDynamicImports: true,
         external: () => false // Don't externalize anything
       },
-      outDir: process.env.BUILD_MINIFIED === 'true' ? 'dist-userscript-min' : 'dist-userscript',
-      emptyOutDir: true
+      outDir: 'dist',
+      emptyOutDir: false // Don't empty dist directory - other builds may use it
     },
     // Embedding defaults at build time was removed. Userscripts should load defaults at runtime
     // from `public/assets/defaultEmojiGroups.json` (remote variant). Keep plugins empty here.

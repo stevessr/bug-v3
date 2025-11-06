@@ -17,6 +17,9 @@ function getUserscriptHeader(minified = false, variant = 'remote') {
   // userscript manager compatibility.
   // Variant selection removed; default to remote (no special grants)
   const grants = '// @grant        none'
+  
+  // Calculate variant suffix for download URLs
+  const variantSuffix = variant && variant !== 'default' ? `.${variant}` : ''
 
   return `// ==UserScript==
 // @name         Discourse 表情扩展 (Emoji Extension for Discourse)${liteSuffix}${minSuffix}
@@ -34,8 +37,8 @@ ${grants}
 // @license      MIT
 // @homepageURL  https://github.com/stevessr/bug-v3
 // @supportURL   https://github.com/stevessr/bug-v3/issues
-// @downloadURL  https://github.com/stevessr/bug-v3/releases/latest/download/emoji-extension${minified ? '-min' : ''}.user.js
-// @updateURL    https://github.com/stevessr/bug-v3/releases/latest/download/emoji-extension${minified ? '-min' : ''}.user.js
+// @downloadURL  https://github.com/stevessr/bug-v3/releases/latest/download/emoji-extension${variantSuffix}${minified ? '-min' : ''}.user.js
+// @updateURL    https://github.com/stevessr/bug-v3/releases/latest/download/emoji-extension${variantSuffix}${minified ? '-min' : ''}.user.js
 // @run-at       document-end
 // ==/UserScript==
 
@@ -245,9 +248,8 @@ function getPackageVersion() {
 
 function processUserscript() {
   const isMinified = buildType === 'build:userscript:min'
-  const inputDir = isMinified ? 'dist-userscript-min' : 'dist-userscript'
   const outputDir = 'dist'
-  const inputFile = path.resolve(__dirname, '..', inputDir, 'userscript.js')
+  const inputFile = path.resolve(__dirname, '..', outputDir, 'userscript.js')
   // Allow variant-specific output filename (e.g. emoji-extension.remote.user.js)
   // Variant selection removed; always use remote
   const variant = 'remote'
@@ -265,11 +267,6 @@ function processUserscript() {
 
   try {
     console.log(`📦 Processing ${isMinified ? 'minified' : 'standard'} userscript...`)
-
-    // Ensure output directory exists
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true })
-    }
 
     // Read the built userscript
     if (!fs.existsSync(inputFile)) {
@@ -291,7 +288,7 @@ function processUserscript() {
     let inlinedPrefix = ''
     for (const importPath of imports) {
       try {
-        const importedFile = path.resolve(__dirname, '..', inputDir, importPath)
+        const importedFile = path.resolve(__dirname, '..', outputDir, importPath)
         if (fs.existsSync(importedFile)) {
           const importedContent = fs.readFileSync(importedFile, 'utf8')
           inlinedPrefix +=
@@ -340,12 +337,14 @@ function processUserscript() {
       console.log(`📋 Copied emoji manager: ${managerOutput}`)
     }
 
-    // Clean up temporary build directory
+    // Clean up the original userscript.js file after processing
     try {
-      fs.rmSync(path.resolve(__dirname, '..', inputDir), { recursive: true, force: true })
-      console.log(`🧹 Cleaned up temporary directory: ${inputDir}`)
+      if (fs.existsSync(inputFile)) {
+        fs.unlinkSync(inputFile)
+        console.log(`🧹 Cleaned up temporary file: userscript.js`)
+      }
     } catch (cleanupError) {
-      console.warn(`⚠️  Could not clean up ${inputDir}:`, cleanupError.message)
+      console.warn(`⚠️  Could not clean up userscript.js:`, cleanupError.message)
     }
 
     return outputFile
