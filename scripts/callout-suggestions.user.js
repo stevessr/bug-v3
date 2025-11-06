@@ -693,7 +693,8 @@
 
   function calculateMenuLeftPosition(rect, windowWidth) {
     // Calculate horizontal position: center menu under button, but keep within viewport bounds
-    const centerX = rect.left + rect.width / 2 - MENU_BASE_WIDTH
+    // Note: We use MENU_MAX_WIDTH / 2 to properly center the menu
+    const centerX = rect.left + rect.width / 2 - MENU_MAX_WIDTH / 2
     const maxLeft = windowWidth - MENU_MAX_WIDTH
     return Math.max(MENU_MIN_MARGIN, Math.min(centerX, maxLeft))
   }
@@ -748,7 +749,10 @@
   // Settings caching to avoid repeated localStorage access
   let cachedSettings = null
   let settingsCacheTime = 0
+  let cachedHasPortals = null
+  let portalsCacheTime = 0
   const SETTINGS_CACHE_DURATION = 10000 // Cache for 10 seconds
+  const PORTALS_CACHE_DURATION = 5000 // Cache portal check for 5 seconds
   const DEBOUNCE_DELAY = 500 // Debounce delay for MutationObserver
 
   // Menu positioning constants
@@ -766,12 +770,21 @@
     return cachedSettings
   }
 
+  function getCachedHasPortals() {
+    const now = Date.now()
+    if (cachedHasPortals === null || now - portalsCacheTime > PORTALS_CACHE_DURATION) {
+      cachedHasPortals = !!document.querySelector('#d-menu-portals')
+      portalsCacheTime = now
+    }
+    return cachedHasPortals
+  }
+
   function shouldSkipToolbarInjection() {
     // Skip toolbar injection when force mobile mode is active AND #d-menu-portals exists
     // because in this mode, the mobile UI uses the portal container for menu rendering
     const settings = getCachedSettings()
     const forceMobileMode = settings.forceMobileMode === true
-    const hasPortals = !!document.querySelector('#d-menu-portals')
+    const hasPortals = getCachedHasPortals()
     return forceMobileMode && hasPortals
   }
 
