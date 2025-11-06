@@ -348,12 +348,12 @@ async function main() {
     const scripts = [
       {
         name: 'emoji-picker-core',
-        title: 'Discourse 表情选择器 (Emoji Picker)',
+        title: 'Discourse 表情选择器 (Emoji Picker) core',
         description: 'Discourse 论坛表情选择器 - 核心功能 (Emoji picker for Discourse - Core features only)'
       },
       {
         name: 'emoji-manager',
-        title: 'Discourse 表情管理器 (Emoji Manager)',
+        title: 'Discourse 表情管理器 (Emoji Manager) mgr',
         description: 'Discourse 论坛表情管理 - 设置、导入导出、分组编辑 (Emoji management for Discourse - Settings, import/export, group editor)'
       }
     ]

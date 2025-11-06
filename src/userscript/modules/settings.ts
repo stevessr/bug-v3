@@ -139,6 +139,11 @@ export function showSettingsModal() {
   const scaleSlider = content.querySelector('#scaleSlider') as HTMLInputElement
   const scaleValue = content.querySelector('#scaleValue') as HTMLElement
 
+  // Close button
+  content.querySelector('#closeModal')?.addEventListener('click', () => {
+    modal.remove()
+  })
+
   scaleSlider?.addEventListener('input', () => {
     if (scaleValue) {
       scaleValue.textContent = scaleSlider.value + '%'
