@@ -5,7 +5,8 @@ import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync } from './users
 import { userscriptState } from './state'
 import { initOneClickAdd } from './modules/oneClickAdd'
 import { initPhotoSwipeTopbarUserscript } from './modules/photoSwipeTopbar'
-import { initCalloutSuggestionsUserscript } from './modules/calloutSuggestions'
+// Callout suggestions moved to standalone userscript (scripts/callout-suggestions.user.js)
+// import { initCalloutSuggestionsUserscript } from './modules/calloutSuggestions'
 import { attemptInjection, startPeriodicInjection } from './modules/toolbar'
 import {
   showFloatingButton,
@@ -84,17 +85,18 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
     console.warn('[Emoji Picker] initOneClickAdd failed', e)
   }
   
+  // Callout suggestions moved to standalone userscript (scripts/callout-suggestions.user.js)
   // Initialize callout suggestions
-  try {
-    if (userscriptState.settings?.enableCalloutSuggestions !== false) {
-      initCalloutSuggestionsUserscript()
-      console.log('[Emoji Picker] Callout suggestions enabled')
-    } else {
-      console.log('[Emoji Picker] Callout suggestions disabled by user setting')
-    }
-  } catch (e) {
-    console.warn('[Emoji Picker] initCalloutSuggestionsUserscript failed', e)
-  }
+  // try {
+  //   if (userscriptState.settings?.enableCalloutSuggestions !== false) {
+  //     initCalloutSuggestionsUserscript()
+  //     console.log('[Emoji Picker] Callout suggestions enabled')
+  //   } else {
+  //     console.log('[Emoji Picker] Callout suggestions disabled by user setting')
+  //   }
+  // } catch (e) {
+  //   console.warn('[Emoji Picker] initCalloutSuggestionsUserscript failed', e)
+  // }
 
   // Inject auto-read button into user menu
   try {
