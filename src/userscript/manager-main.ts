@@ -56,8 +56,10 @@ async function initializeEmojiManager() {
   logPlatformInfo()
   await initializeUserscriptData()
   
-  // Detect if we're on mobile
-  const isMobile = window.innerWidth <= 768 || /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent.toLowerCase())
+  // Detect if we're on mobile (using matchMedia for better performance)
+  const isMobileQuery = window.matchMedia('(max-width: 768px)')
+  const isMobileUserAgent = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent.toLowerCase())
+  const isMobile = isMobileQuery.matches || isMobileUserAgent
   
   // Create floating management button with mobile-optimized styling
   const managerButton = document.createElement('button')

@@ -302,9 +302,9 @@ export function injectManagerStyles() {
         gap: 8px;
       }
       
-      .emoji-manager-card-actions button {
-        padding: 8px 12px !important;
-        font-size: 13px !important;
+      .emoji-manager-card-actions .btn-sm {
+        padding: 8px 12px;
+        font-size: 13px;
         min-height: 36px;
         flex: 1;
       }
