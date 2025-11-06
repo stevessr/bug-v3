@@ -26,7 +26,7 @@ const RAW_PREVIEW_STYLES = `
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(0,0,0,0.04);
+  background: var(--secondary);
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 .raw-preview-title {
@@ -41,6 +41,8 @@ const RAW_PREVIEW_STYLES = `
   width: 100%;
   height: 100%;
   flex: 1 1 auto;
+  background: var(--secondary);
+  color: var(--title-color);
 }
 .raw-preview-small-btn {
   display: inline-flex;
@@ -429,15 +431,7 @@ async function fetchAndRenderMarkdown(topicId: string, page: number) {
     const doc = iframeEl.contentDocument || (iframeEl as any).contentWindow?.document
     if (!doc) throw new Error('iframe document unavailable')
 
-    const css = `
-      body{font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px;color:#111}
-      pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}
-      code{background:#f0f0f0;padding:2px 4px;border-radius:4px}
-      h1,h2,h3,h4{margin:8px 0}
-      p{margin:6px 0}
-      a{color:#0366d6}
-      ul,ol{margin:6px 0 6px 20px}
-    `
+    const css = ``
 
     doc.open()
     doc.write(
@@ -462,14 +456,7 @@ function ensureJsonSkeleton(): HTMLElement {
   const doc = getIframeDoc()
   const existing = doc.getElementById('json-container') as HTMLElement | null
   if (existing) return existing
-  const css = `
-    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px;color:#111}
-    img{max-width:100%;height:auto}
-    .json-post-body pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}
-    .json-post-body code{background:#f0f0f0;padding:2px 4px;border-radius:4px}
-    a{color:#0366d6}
-    .json-page{padding-bottom:16px;margin-bottom:16px;border-bottom:1px dashed #e5e7eb}
-  `
+  const css = ``
   const baseHref = window.location.origin
   doc.open()
   doc.write(
