@@ -168,3 +168,5 @@ dist-firefox
 
 scripts/.profile-*
 .wrangler
+demo-mobile-manager.html
+test-mobile.html

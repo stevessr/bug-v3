@@ -56,33 +56,52 @@ async function initializeEmojiManager() {
   logPlatformInfo()
   await initializeUserscriptData()
   
-  // Create floating management button
+  // Detect if we're on mobile (using matchMedia for better performance)
+  const isMobileQuery = window.matchMedia('(max-width: 768px)')
+  const isMobileUserAgent = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent.toLowerCase())
+  const isMobile = isMobileQuery.matches || isMobileUserAgent
+  
+  // Create floating management button with mobile-optimized styling
   const managerButton = document.createElement('button')
   managerButton.id = 'emoji-manager-floating-button'
-  managerButton.textContent = '⚙️ 表情管理'
+  managerButton.textContent = isMobile ? '⚙️' : '⚙️ 表情管理'
   managerButton.title = 'Open Emoji Management Interface'
   Object.assign(managerButton.style, {
     position: 'fixed',
-    right: '12px',
-    bottom: '12px',
+    right: isMobile ? '16px' : '12px',
+    bottom: isMobile ? '16px' : '12px',
     zIndex: '2147483647',
-    padding: '12px 16px',
-    borderRadius: '8px',
+    padding: isMobile ? '14px 18px' : '12px 16px',
+    borderRadius: isMobile ? '12px' : '8px',
     border: 'none',
     background: '#1f2937',
     color: '#fff',
-    fontSize: '14px',
+    fontSize: isMobile ? '16px' : '14px',
     fontWeight: '500',
     boxShadow: '0 6px 18px rgba(0,0,0,0.3)',
     cursor: 'pointer',
-    transition: 'transform 0.2s'
+    transition: 'transform 0.2s',
+    minWidth: isMobile ? '56px' : 'auto',
+    minHeight: isMobile ? '56px' : 'auto'
   })
   
   managerButton.addEventListener('mouseenter', () => {
-    managerButton.style.transform = 'scale(1.05)'
+    if (!isMobile) {
+      managerButton.style.transform = 'scale(1.05)'
+    }
   })
   
   managerButton.addEventListener('mouseleave', () => {
+    if (!isMobile) {
+      managerButton.style.transform = 'scale(1)'
+    }
+  })
+  
+  managerButton.addEventListener('touchstart', () => {
+    managerButton.style.transform = 'scale(0.95)'
+  })
+  
+  managerButton.addEventListener('touchend', () => {
     managerButton.style.transform = 'scale(1)'
   })
   
@@ -96,33 +115,47 @@ async function initializeEmojiManager() {
     }
   })
   
-  // Add settings button
+  // Add settings button with mobile-optimized styling
   const settingsButton = document.createElement('button')
   settingsButton.id = 'emoji-settings-floating-button'
-  settingsButton.textContent = '🔧 设置'
+  settingsButton.textContent = isMobile ? '🔧' : '🔧 设置'
   settingsButton.title = 'Open Settings'
   Object.assign(settingsButton.style, {
     position: 'fixed',
-    right: '12px',
-    bottom: '70px',
+    right: isMobile ? '16px' : '12px',
+    bottom: isMobile ? '84px' : '70px',
     zIndex: '2147483647',
-    padding: '10px 14px',
-    borderRadius: '8px',
+    padding: isMobile ? '12px 16px' : '10px 14px',
+    borderRadius: isMobile ? '12px' : '8px',
     border: 'none',
     background: '#374151',
     color: '#fff',
-    fontSize: '13px',
+    fontSize: isMobile ? '15px' : '13px',
     fontWeight: '500',
     boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
     cursor: 'pointer',
-    transition: 'transform 0.2s'
+    transition: 'transform 0.2s',
+    minWidth: isMobile ? '52px' : 'auto',
+    minHeight: isMobile ? '52px' : 'auto'
   })
   
   settingsButton.addEventListener('mouseenter', () => {
-    settingsButton.style.transform = 'scale(1.05)'
+    if (!isMobile) {
+      settingsButton.style.transform = 'scale(1.05)'
+    }
   })
   
   settingsButton.addEventListener('mouseleave', () => {
+    if (!isMobile) {
+      settingsButton.style.transform = 'scale(1)'
+    }
+  })
+  
+  settingsButton.addEventListener('touchstart', () => {
+    settingsButton.style.transform = 'scale(0.95)'
+  })
+  
+  settingsButton.addEventListener('touchend', () => {
     settingsButton.style.transform = 'scale(1)'
   })
   
@@ -135,33 +168,47 @@ async function initializeEmojiManager() {
     }
   })
   
-  // Add import/export button
+  // Add import/export button with mobile-optimized styling
   const importExportButton = document.createElement('button')
   importExportButton.id = 'emoji-importexport-floating-button'
-  importExportButton.textContent = '📦 导入/导出'
+  importExportButton.textContent = isMobile ? '📦' : '📦 导入/导出'
   importExportButton.title = 'Import/Export Data'
   Object.assign(importExportButton.style, {
     position: 'fixed',
-    right: '12px',
-    bottom: '128px',
+    right: isMobile ? '16px' : '12px',
+    bottom: isMobile ? '152px' : '128px',
     zIndex: '2147483647',
-    padding: '10px 14px',
-    borderRadius: '8px',
+    padding: isMobile ? '12px 16px' : '10px 14px',
+    borderRadius: isMobile ? '12px' : '8px',
     border: 'none',
     background: '#374151',
     color: '#fff',
-    fontSize: '13px',
+    fontSize: isMobile ? '15px' : '13px',
     fontWeight: '500',
     boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
     cursor: 'pointer',
-    transition: 'transform 0.2s'
+    transition: 'transform 0.2s',
+    minWidth: isMobile ? '52px' : 'auto',
+    minHeight: isMobile ? '52px' : 'auto'
   })
   
   importExportButton.addEventListener('mouseenter', () => {
-    importExportButton.style.transform = 'scale(1.05)'
+    if (!isMobile) {
+      importExportButton.style.transform = 'scale(1.05)'
+    }
   })
   
   importExportButton.addEventListener('mouseleave', () => {
+    if (!isMobile) {
+      importExportButton.style.transform = 'scale(1)'
+    }
+  })
+  
+  importExportButton.addEventListener('touchstart', () => {
+    importExportButton.style.transform = 'scale(0.95)'
+  })
+  
+  importExportButton.addEventListener('touchend', () => {
     importExportButton.style.transform = 'scale(1)'
   })
   

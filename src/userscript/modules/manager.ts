@@ -250,6 +250,17 @@ export function openManagementInterface() {
   addGroupRow.appendChild(addGroupBtn)
   left.appendChild(addGroupRow)
 
+  // Add group selector dropdown (for mobile)
+  const groupSelectorContainer = createEl('div', { 
+    className: 'emoji-manager-group-selector' 
+  }) as HTMLDivElement
+  const groupSelector = createEl('select', {
+    className: 'form-control',
+    attrs: { 'aria-label': '选择表情分组' }
+  }) as HTMLSelectElement
+  groupSelectorContainer.appendChild(groupSelector)
+  left.appendChild(groupSelectorContainer)
+
   const groupsList = createEl('div', { className: 'emoji-manager-groups-list' }) as HTMLDivElement
   left.appendChild(groupsList)
 
@@ -342,12 +353,15 @@ export function openManagementInterface() {
 
   function renderGroups() {
     groupsList.innerHTML = ''
+    groupSelector.innerHTML = ''
+    
     // If no selection yet, default to first group (if any)
     if (!selectedGroupId && userscriptState.emojiGroups.length > 0) {
       selectedGroupId = userscriptState.emojiGroups[0].id
     }
 
     userscriptState.emojiGroups.forEach(g => {
+      // Add to desktop list
       const row = createEl('div', {
         style:
           'display:flex; justify-content:space-between; align-items:center; padding:6px; border-radius:4px; cursor:pointer;',
@@ -379,6 +393,18 @@ export function openManagementInterface() {
       }
 
       groupsList.appendChild(row)
+      
+      // Add to mobile dropdown
+      const option = createEl('option', {
+        text: `${g.name || g.id} (${(g.emojis || []).length})`,
+        attrs: { value: g.id }
+      }) as HTMLOptionElement
+      
+      if (selectedGroupId === g.id) {
+        option.selected = true
+      }
+      
+      groupSelector.appendChild(option)
     })
   }
 
@@ -499,6 +525,13 @@ export function openManagementInterface() {
     // select new group
     const newIdx = userscriptState.emojiGroups.findIndex(g => g.id === id)
     if (newIdx >= 0) selectedGroupId = userscriptState.emojiGroups[newIdx].id
+    renderGroups()
+    renderSelectedGroup()
+  })
+  
+  // Add event listener for mobile group selector
+  groupSelector.addEventListener('change', () => {
+    selectedGroupId = groupSelector.value
     renderGroups()
     renderSelectedGroup()
   })
