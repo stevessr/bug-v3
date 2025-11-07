@@ -1,5 +1,5 @@
 // Storage adapter for userscript environment using localStorage
-import { loadDefaultEmojiGroups } from '@/types/defaultEmojiGroups.loader'
+import { loadAndFilterDefaultEmojiGroups } from './default-emoji-loader'
 
 export interface UserscriptStorage {
   emojiGroups: any[]
@@ -93,12 +93,35 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
 }
 
 // 异步版本：在本地无数据时，尝试从远程 URL 拉取默认配置（localStorage key: emoji_extension_remote_config_url）
-export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage> {
+export async function loadDataFromLocalStorageAsync(
+  hostname?: string
+): Promise<UserscriptStorage> {
   try {
     // Try synchronous load first (fast path)
     const local = loadDataFromLocalStorage()
     if (local.emojiGroups && local.emojiGroups.length > 0) {
       return local
+    }
+
+    const filterGroupsByHostname = (groups: any[], host: string | undefined) => {
+      if (!host) return groups
+      return groups
+        .map(group => {
+          const filteredEmojis = group.emojis.filter((emoji: any) => {
+            try {
+              const url = emoji.url
+              if (!url) return false
+              const emojiHostname = new URL(url).hostname
+              return emojiHostname === host || emojiHostname.endsWith('.' + host)
+            } catch (e) {
+              // If new URL() fails, it's likely a relative URL.
+              // A relative URL is on the same host, so it should be included.
+              return true
+            }
+          })
+          return { ...group, emojis: filteredEmojis }
+        })
+        .filter(group => group.emojis.length > 0)
     }
 
     // If no groups locally, check for remote config URL in localStorage
@@ -113,7 +136,7 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
         if (res && res.ok) {
           const json = await res.json()
           // Expecting an object with emojiGroups or groups array
-          const groups = Array.isArray(json.emojiGroups)
+          let groups = Array.isArray(json.emojiGroups)
             ? json.emojiGroups
             : Array.isArray(json.groups)
               ? json.groups
@@ -123,6 +146,9 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
             json.settings && typeof json.settings === 'object' ? json.settings : local.settings
 
           if (groups && groups.length > 0) {
+            // Filter by hostname if provided
+            groups = filterGroupsByHostname(groups, hostname)
+
             // Save fetched groups to localStorage for offline use
             try {
               localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
@@ -146,8 +172,9 @@ export async function loadDataFromLocalStorageAsync(): Promise<UserscriptStorage
 
     // No remote or failed: try runtime loader, then fallback to empty list
     try {
-      const runtime = await loadDefaultEmojiGroups(
-        'https://video2gif-pages.pages.dev/assets/defaultEmojiGroups.json'
+      const runtime = await loadAndFilterDefaultEmojiGroups(
+        'https://video2gif-pages.pages.dev/assets/defaultEmojiGroups.json',
+        hostname
       )
       const source = runtime && runtime.length ? runtime : []
       const cloned = JSON.parse(JSON.stringify(source))

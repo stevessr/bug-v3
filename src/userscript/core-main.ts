@@ -22,7 +22,7 @@ if(!(window as any).autoReadAllRepliesV2){
 
 // Initialize from localStorage
 async function initializeUserscriptData() {
-  const data = await loadDataFromLocalStorageAsync().catch((err: any) => {
+  const data = await loadDataFromLocalStorageAsync(window.location.hostname).catch((err: any) => {
     console.warn(
       '[Emoji Picker] loadDataFromLocalStorageAsync failed, falling back to sync loader',
       err
