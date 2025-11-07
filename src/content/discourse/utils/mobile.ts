@@ -1,11 +1,11 @@
 import { isImageUrl } from '../../utils/isimage'
 import { createE } from '../../utils/createEl'
 
-import { ensureDefaultIfEmpty, cachedState } from './ensure'
+import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
 
 export async function createMobileEmojiPicker(): Promise<HTMLElement> {
-  ensureDefaultIfEmpty()
+  // Data is already loaded via loadDataFromStorage() in initializeEmojiFeature()
   const groupsToUse = cachedState.emojiGroups
 
   const modal = createE('div', {
