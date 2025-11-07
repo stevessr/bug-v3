@@ -84,8 +84,7 @@ try {
   const configData = JSON.parse(configContent)
   if (
     configData &&
-    Array.isArray(configData.groups) &&
-    process.env.USERSCRIPT_VARIANT != 'remote'
+    Array.isArray(configData.groups)
   ) {
     try {
       fs.mkdirSync(path.dirname(jsonOut), { recursive: true })

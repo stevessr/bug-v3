@@ -1,13 +1,13 @@
 // Manager userscript entry point - emoji management interface
 // This script provides settings, import/export, and emoji management features
 
-import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync, saveDataToLocalStorage } from './userscript-storage'
+import { loadDataFromLocalStorage, loadDataFromLocalStorageAsync } from './userscript-storage'
 import { userscriptState } from './state'
 import { logPlatformInfo } from './utils/platformDetection'
 
 // Initialize from localStorage
 async function initializeUserscriptData() {
-  const data = await loadDataFromLocalStorageAsync().catch((err: any) => {
+  const data = await loadDataFromLocalStorageAsync(window.location.hostname).catch((err: any) => {
     console.warn(
       '[Manager] loadDataFromLocalStorageAsync failed, falling back to sync loader',
       err
