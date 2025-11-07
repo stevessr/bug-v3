@@ -167,13 +167,11 @@ async function useOriginalParams() {
   let revoke = null;
   if (file) { revoke = URL.createObjectURL(file); video.src = revoke; }
   else {
-    // Use proxy to avoid CORS issues
-    const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(url)}`
-    video.src = proxyUrl;
+    video.src = url;
   }
 
   try {
-    await videoLoaded(video);
+    await videoLoaded(video, url); // Pass original URL for proxy fallback
   } catch (err) {
     setStatus('无法读取视频元数据：' + err.message);
     if (revoke) URL.revokeObjectURL(revoke);
@@ -282,10 +280,8 @@ async function applyOriginalParamsForSource(source) {
 
   let revokeUrl = null;
   if (typeof source === 'string') {
-    // Use proxy to avoid CORS issues
-    const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(source)}`
-    video.src = proxyUrl;
-    log('applyOriginalParams: 使用远程 URL ' + source + ' (通过代理)');
+    video.src = source;
+    log('applyOriginalParams: 使用远程 URL ' + source);
   } else if (source instanceof File) {
     const blobUrl = URL.createObjectURL(source);
     revokeUrl = blobUrl;
@@ -296,7 +292,7 @@ async function applyOriginalParamsForSource(source) {
   }
 
   try {
-    await videoLoaded(video);
+    await videoLoaded(video, typeof source === 'string' ? source : null); // Pass original URL for proxy fallback
   } catch (err) {
     if (revokeUrl) URL.revokeObjectURL(revokeUrl);
     throw err;
@@ -368,14 +364,12 @@ async function convert() {
     video.src = blobUrl;
     log(`使用本地文件：${file.name}`);
   } else {
-    // Use proxy to avoid CORS issues
-    const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(url)}`
-    video.src = proxyUrl;
-    log(`使用远程 URL：${url} (通过代理)`);
+    video.src = url;
+    log(`使用远程 URL：${url}`);
   }
 
   try {
-    await videoLoaded(video);
+    await videoLoaded(video, file ? null : url); // Pass original URL for proxy fallback
   } catch (err) {
     setStatus('视频加载失败：' + err.message);
     $('convertBtn').disabled = false;
@@ -613,9 +607,20 @@ function supportsMultiFrame(format) {
   return false;
 }
 
-function videoLoaded(video) {
+async function videoLoaded(video, originalUrl = null) {
   return new Promise((resolve, reject) => {
-    const onError = (e) => { cleanup(); reject(new Error('视频加载错误')); };
+    const onError = (e) => { 
+      if (originalUrl) {
+        // If direct URL failed and original URL was provided, try proxy
+        console.log('Direct URL failed, trying proxy...');
+        const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(originalUrl)}`;
+        video.src = proxyUrl;
+        video.load();
+      } else {
+        cleanup(); 
+        reject(new Error('视频加载错误')); 
+      }
+    };
     const onLoaded = () => { cleanup(); resolve(); };
     function cleanup() {
       video.removeEventListener('error', onError);
