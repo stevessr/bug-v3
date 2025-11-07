@@ -7,6 +7,7 @@ import { ensureStyleInjected } from '../utils/injectStyles'
 import { createModalElement } from '../utils/editorUtils'
 
 import { showImportExportModal } from './importExport'
+import { customPrompt, customConfirm } from '../utils'
 
 export function showGroupEditorModal() {
   // Ensure theme styles are injected
@@ -225,15 +226,16 @@ export function showGroupEditorModal() {
       const groupId = target.getAttribute('data-group-id')
 
       if (groupId) {
-        const newIcon = prompt('请输入新的图标字符 (emoji 或单个字符):', target.textContent || '📁')
-        if (newIcon && newIcon.trim()) {
-          const group = userscriptState.emojiGroups.find(g => g.id === groupId)
-          if (group) {
-            group.icon = newIcon.trim()
-            target.textContent = newIcon.trim()
-            showTemporaryMessage(`分组图标已更新为: ${newIcon.trim()}`)
+        customPrompt('请输入新的图标字符 (emoji 或单个字符):', target.textContent || '📁').then(newIcon => {
+          if (newIcon && newIcon.trim()) {
+            const group = userscriptState.emojiGroups.find(g => g.id === groupId)
+            if (group) {
+              group.icon = newIcon.trim()
+              target.textContent = newIcon.trim()
+              showTemporaryMessage(`分组图标已更新为: ${newIcon.trim()}`)
+            }
           }
-        }
+        })
       }
     })
   })
@@ -279,33 +281,36 @@ export function showGroupEditorModal() {
       // Confirm deletion
       const confirmMsg = `确认删除分组 "${groupName}"？\n\n该分组包含 ${userscriptState.emojiGroups[index].emojis?.length || 0} 个表情。\n删除后数据将无法恢复。`
       
-      if (confirm(confirmMsg)) {
-        userscriptState.emojiGroups.splice(index, 1)
-        modal.remove()
-        showTemporaryMessage(`分组 "${groupName}" 已删除`)
-        setTimeout(() => showGroupEditorModal(), 300)
-      }
+      customConfirm(confirmMsg).then(confirmed => {
+        if (confirmed) {
+          userscriptState.emojiGroups.splice(index, 1)
+          modal.remove()
+          showTemporaryMessage(`分组 "${groupName}" 已删除`)
+          setTimeout(() => showGroupEditorModal(), 300)
+        }
+      })
     })
   })
 
   // Add new group
   content.querySelector('#addNewGroup')?.addEventListener('click', () => {
-    const groupName = prompt('请输入新分组的名称:')
-    if (groupName && groupName.trim()) {
-      const newGroupId = 'custom_' + Date.now()
-      const newGroup = {
-        id: newGroupId,
-        name: groupName.trim(),
-        icon: '📁',
-        order: userscriptState.emojiGroups.length,
-        emojis: []
-      }
+    customPrompt('请输入新分组的名称:').then(groupName => {
+      if (groupName && groupName.trim()) {
+        const newGroupId = 'custom_' + Date.now()
+        const newGroup = {
+          id: newGroupId,
+          name: groupName.trim(),
+          icon: '📁',
+          order: userscriptState.emojiGroups.length,
+          emojis: []
+        }
 
-      userscriptState.emojiGroups.push(newGroup)
-      modal.remove()
-      showTemporaryMessage(`新分组 "${groupName.trim()}" 已创建`)
-      setTimeout(() => showGroupEditorModal(), 300)
-    }
+        userscriptState.emojiGroups.push(newGroup)
+        modal.remove()
+        showTemporaryMessage(`新分组 "${groupName.trim()}" 已创建`)
+        setTimeout(() => showGroupEditorModal(), 300)
+      }
+    })
   })
 
   // Save all changes

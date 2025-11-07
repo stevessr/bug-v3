@@ -16,6 +16,9 @@ import {
 } from '../userscript-storage'
 
 import { showImportExportModal } from './importExport'
+import { loadAndFilterDefaultEmojiGroups } from '../default-emoji-loader'
+import { showGroupEditorModal } from './groupEditor'
+import { customAlert } from '../utils'
 
 // Emoji injection configuration (inspired by magnific-popup.ts)
 interface EmojiInjectionConfig {
@@ -185,7 +188,7 @@ function createEditorPopup(
     const newWidth = parseInt((editorWidthInput.value || '').trim(), 10)
     const newHeight = parseInt((editorHeightInput.value || '').trim(), 10)
     if (!newName || !newUrl) {
-      alert('名称和 URL 均不能为空')
+      customAlert('名称和 URL 均不能为空')
       return
     }
     emo.name = newName
@@ -328,6 +331,8 @@ export function openManagementInterface() {
   const footer = createEl('div', { className: 'emoji-manager-footer' }) as HTMLDivElement
   const exportBtn = createEl('button', { text: '分组导出', className: 'btn' }) as HTMLButtonElement
   const importBtn = createEl('button', { text: '分组导入', className: 'btn' }) as HTMLButtonElement
+  const groupEditBtn = createEl('button', { text: '分组编辑', className: 'btn', style: 'background:#3b82f6; color:#fff;' }) as HTMLButtonElement
+  const restoreBtn = createEl('button', { text: '恢复默认配置', className: 'btn', style: 'background:#f97316; color:#fff;' }) as HTMLButtonElement
   const exitBtn = createEl('button', { text: '退出', className: 'btn' }) as HTMLButtonElement
   exitBtn.addEventListener('click', () => modal.remove())
   const saveBtn = createEl('button', {
@@ -335,6 +340,48 @@ export function openManagementInterface() {
     className: 'btn btn-primary'
   }) as HTMLButtonElement
   const syncBtn = createEl('button', { text: '同步管理器', className: 'btn' }) as HTMLButtonElement
+  
+  // Open group editor functionality
+  groupEditBtn.addEventListener('click', () => {
+    // Close the current manager modal
+    modal.remove()
+    // Open the custom group editor modal
+    showGroupEditorModal()
+  })
+  
+  // Restore to default configuration functionality
+  restoreBtn.addEventListener('click', async () => {
+    const confirmed = await customConfirm('确认恢复到默认配置？此操作将清除当前所有分组和表情，且不可撤销！')
+    if (!confirmed) return
+    
+    try {
+      // Load default emoji groups filtered by current hostname
+      const defaultGroups = await loadAndFilterDefaultEmojiGroups(undefined, window.location.hostname)
+      
+      if (!defaultGroups || defaultGroups.length === 0) {
+        await customAlert('无法加载默认配置，请检查网络连接')
+        return
+      }
+      
+      // Update the in-memory state
+      userscriptState.emojiGroups = defaultGroups
+      
+      // Save to localStorage
+      saveDataToLocalStorage({ emojiGroups: userscriptState.emojiGroups })
+      
+      // Update UI
+      renderGroups()
+      renderSelectedGroup()
+      
+      await customAlert('已成功恢复到默认配置')
+    } catch (error) {
+      console.error('Failed to restore default configuration:', error)
+      await customAlert('恢复默认配置失败：' + error)
+    }
+  })
+  
+  footer.appendChild(groupEditBtn)
+  footer.appendChild(restoreBtn)
   footer.appendChild(syncBtn)
   footer.appendChild(exportBtn)
   footer.appendChild(importBtn)
@@ -516,10 +563,16 @@ export function openManagementInterface() {
   }
 
   // actions
-  addGroupBtn.addEventListener('click', () => {
+  addGroupBtn.addEventListener('click', async () => {
     const id = (addGroupInput.value || '').trim()
-    if (!id) return alert('请输入分组 id')
-    if (userscriptState.emojiGroups.find(g => g.id === id)) return alert('分组已存在')
+    if (!id) {
+      await customAlert('请输入分组 id')
+      return
+    }
+    if (userscriptState.emojiGroups.find(g => g.id === id)) {
+      await customAlert('分组已存在')
+      return
+    }
     userscriptState.emojiGroups.push({ id, name: id, emojis: [] })
     addGroupInput.value = ''
     // select new group
@@ -536,8 +589,11 @@ export function openManagementInterface() {
     renderSelectedGroup()
   })
 
-  addEmojiBtn.addEventListener('click', () => {
-    if (!selectedGroupId) return alert('请先选择分组')
+  addEmojiBtn.addEventListener('click', async () => {
+    if (!selectedGroupId) {
+      await customAlert('请先选择分组')
+      return
+    }
     
     // Use configured parsers to extract emoji data
     const url = emojiManagerConfig.parsers.getUrl({ urlInput: emojiUrlInput })
@@ -548,7 +604,10 @@ export function openManagementInterface() {
     const width = emojiManagerConfig.parsers.getWidth({ widthInput: emojiWidthInput })
     const height = emojiManagerConfig.parsers.getHeight({ heightInput: emojiHeightInput })
     
-    if (!url || !name) return alert('请输入 url 和 名称')
+    if (!url || !name) {
+      await customAlert('请输入 url 和 名称')
+      return
+    }
     
     const group = userscriptState.emojiGroups.find(g => g.id === selectedGroupId)
     if (!group) return
@@ -567,11 +626,15 @@ export function openManagementInterface() {
     renderSelectedGroup()
   })
 
-  deleteGroupBtn.addEventListener('click', () => {
-    if (!selectedGroupId) return alert('请先选择分组')
+  deleteGroupBtn.addEventListener('click', async () => {
+    if (!selectedGroupId) {
+      await customAlert('请先选择分组')
+      return
+    }
     const idx = userscriptState.emojiGroups.findIndex(g => g.id === selectedGroupId)
     if (idx >= 0) {
-      if (!confirm('确认删除该分组？该操作不可撤销')) return
+      const confirmed = await customConfirm('确认删除该分组？该操作不可撤销')
+      if (!confirmed) return
       userscriptState.emojiGroups.splice(idx, 1)
       // choose next group if exists, otherwise previous, otherwise null
       if (userscriptState.emojiGroups.length > 0) {
@@ -596,16 +659,16 @@ export function openManagementInterface() {
     showImportExportModal(selectedGroupId || undefined)
   })
 
-  saveBtn.addEventListener('click', () => {
+  saveBtn.addEventListener('click', async () => {
     try {
       saveDataToLocalStorage({ emojiGroups: userscriptState.emojiGroups })
-      alert('已保存')
+      await customAlert('已保存')
     } catch (e) {
-      alert('保存失败：' + e)
+      await customAlert('保存失败：' + e)
     }
   })
 
-  syncBtn.addEventListener('click', () => {
+  syncBtn.addEventListener('click', async () => {
     try {
       const ok = syncFromManager()
       if (ok) {
@@ -613,14 +676,14 @@ export function openManagementInterface() {
         const data = loadDataFromLocalStorage()
         userscriptState.emojiGroups = data.emojiGroups || []
         userscriptState.settings = data.settings || userscriptState.settings
-        alert('同步成功，已导入管理器数据')
+        await customAlert('同步成功，已导入管理器数据')
         renderGroups()
         renderSelectedGroup()
       } else {
-        alert('同步未成功，未检测到管理器数据')
+        await customAlert('同步未成功，未检测到管理器数据')
       }
     } catch (e) {
-      alert('同步异常：' + e)
+      await customAlert('同步异常：' + e)
     }
   })
 
