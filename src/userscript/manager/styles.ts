@@ -529,7 +529,6 @@ export function injectManagerStyles() {
       font-weight: 500;
       cursor: pointer; 
       transition: all 0.2s; 
-      background: var(--primary-medium);
       color: var(--primary);
     }
     
