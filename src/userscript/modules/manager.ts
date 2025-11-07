@@ -353,12 +353,7 @@ export function openManagementInterface() {
 
   function renderGroups() {
     groupsList.innerHTML = ''
-    
-    // Get current selector element
-    const currentSelector = groupSelectorContainer.querySelector('select') as HTMLSelectElement
-    if (currentSelector) {
-      currentSelector.innerHTML = ''
-    }
+    groupSelector.innerHTML = ''
     
     // If no selection yet, default to first group (if any)
     if (!selectedGroupId && userscriptState.emojiGroups.length > 0) {
@@ -400,18 +395,16 @@ export function openManagementInterface() {
       groupsList.appendChild(row)
       
       // Add to mobile dropdown
-      if (currentSelector) {
-        const option = createEl('option', {
-          text: `${g.name || g.id} (${(g.emojis || []).length})`,
-          attrs: { value: g.id }
-        }) as HTMLOptionElement
-        
-        if (selectedGroupId === g.id) {
-          option.selected = true
-        }
-        
-        currentSelector.appendChild(option)
+      const option = createEl('option', {
+        text: `${g.name || g.id} (${(g.emojis || []).length})`,
+        attrs: { value: g.id }
+      }) as HTMLOptionElement
+      
+      if (selectedGroupId === g.id) {
+        option.selected = true
       }
+      
+      groupSelector.appendChild(option)
     })
   }
 
