@@ -103,93 +103,39 @@ export async function loadDataFromLocalStorageAsync(
       return local
     }
 
-    const filterGroupsByHostname = (groups: any[], host: string | undefined) => {
-      if (!host) return groups
-      return groups
-        .map(group => {
-          const filteredEmojis = group.emojis.filter((emoji: any) => {
-            try {
-              const url = emoji.url
-              if (!url) return false
-              const emojiHostname = new URL(url).hostname
-              return emojiHostname === host || emojiHostname.endsWith('.' + host)
-            } catch (e) {
-              // If new URL() fails, it's likely a relative URL.
-              // A relative URL is on the same host, so it should be included.
-              return true
-            }
-          })
-          return { ...group, emojis: filteredEmojis }
-        })
-        .filter(group => group.emojis.length > 0)
-    }
-
     // If no groups locally, check for remote config URL in localStorage
     const remoteKey = 'emoji_extension_remote_config_url'
     const remoteUrl = localStorage.getItem(remoteKey)
-    if (remoteUrl && typeof remoteUrl === 'string' && remoteUrl.trim().length > 0) {
-      try {
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 5000)
-        const res = await fetch(remoteUrl, { signal: controller.signal })
-        clearTimeout(timeout)
-        if (res && res.ok) {
-          const json = await res.json()
-          // Expecting an object with emojiGroups or groups array
-          let groups = Array.isArray(json.emojiGroups)
-            ? json.emojiGroups
-            : Array.isArray(json.groups)
-              ? json.groups
-              : null
 
-          const settings =
-            json.settings && typeof json.settings === 'object' ? json.settings : local.settings
+    // 统一使用 loadAndFilterDefaultEmojiGroups 处理远程和默认配置
+    const configUrl =
+      remoteUrl && typeof remoteUrl === 'string' && remoteUrl.trim().length > 0
+        ? remoteUrl
+        : 'https://video2gif-pages.pages.dev/assets/defaultEmojiGroups.json'
 
-          if (groups && groups.length > 0) {
-            // Filter by hostname if provided
-            groups = filterGroupsByHostname(groups, hostname)
-
-            // Save fetched groups to localStorage for offline use
-            try {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
-            } catch (e) {
-              console.warn(
-                '[Userscript] Failed to persist fetched remote groups to localStorage',
-                e
-              )
-            }
-
-            // Filter out favorites for userscript mode
-            const filtered = groups.filter((g: any) => g.id !== 'favorites')
-            return { emojiGroups: filtered, settings }
-          }
-        }
-      } catch (err) {
-        console.warn('[Userscript] Failed to fetch remote default config:', err)
-        // fall through to generated defaults
-      }
-    }
-
-    // No remote or failed: try runtime loader, then fallback to empty list
     try {
-      const runtime = await loadAndFilterDefaultEmojiGroups(
-        'https://video2gif-pages.pages.dev/assets/defaultEmojiGroups.json',
-        hostname
-      )
-      const source = runtime && runtime.length ? runtime : []
-      const cloned = JSON.parse(JSON.stringify(source))
-      const filtered = cloned.filter((g: any) => g.id !== 'favorites')
-      // Save to localStorage for future fast loads
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
-      } catch (e) {
-        /* ignore */
+      const groups = await loadAndFilterDefaultEmojiGroups(configUrl, hostname)
+
+      if (groups && groups.length > 0) {
+        // Save fetched groups to localStorage for offline use
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
+        } catch (e) {
+          console.warn('[Userscript] Failed to persist fetched groups to localStorage', e)
+        }
+
+        // Filter out favorites for userscript mode
+        const filtered = groups.filter((g: any) => g.id !== 'favorites')
+        return { emojiGroups: filtered, settings: local.settings }
       }
-      return { emojiGroups: filtered, settings: local.settings }
-    } catch (e) {
-      console.error('[Userscript] Failed to load default groups in async fallback:', e)
-      return { emojiGroups: [], settings: local.settings }
+    } catch (err) {
+      console.warn(`[Userscript] Failed to fetch config from ${configUrl}:`, err)
+      // fall through to generated defaults
     }
+
+    // If we fall through, it means no local data and remote fetch failed.
+    // Return empty groups and existing settings.
+    return { emojiGroups: [], settings: local.settings }
   } catch (error) {
     console.error('[Userscript] loadDataFromLocalStorageAsync failed:', error)
     return {

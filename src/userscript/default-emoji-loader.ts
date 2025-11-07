@@ -6,7 +6,12 @@ import type { DefaultEmojiData, EmojiGroup, Emoji } from '../types/type'
 async function fetchPackagedJSON(url?: string): Promise<DefaultEmojiData | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const res = await fetch(url || '/assets/defaultEmojiGroups.json', { cache: 'no-cache' })
+    // In a userscript context, we might be fetching from a different origin.
+    // Omit credentials to avoid CORS issues.
+    const res = await fetch(url || '/assets/defaultEmojiGroups.json', {
+      cache: 'no-cache',
+      credentials: 'omit'
+    })
     if (!res.ok) return null
     const data = await res.json()
     return data as DefaultEmojiData
