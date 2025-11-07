@@ -66,13 +66,13 @@ export function injectManagerStyles() {
       flex: 1;
     }
     
-    /* Mobile: Left panel becomes a tab bar or collapsible section */
+    /* Mobile: Left panel becomes a dropdown selector */
     @media (max-width: 768px) {
       .emoji-manager-left {
         border-right: none;
         border-bottom: 1px solid #e9ecef;
-        max-height: 60vh;
-        overflow-y: auto;
+        max-height: none;
+        overflow-y: visible;
       }
       
       .emoji-manager-left-header {
@@ -84,6 +84,16 @@ export function injectManagerStyles() {
       
       .emoji-manager-left-header h3 {
         font-size: 16px;
+      }
+      
+      /* Hide the groups list on mobile */
+      .emoji-manager-groups-list {
+        display: none;
+      }
+      
+      /* Hide add group row on mobile */
+      .emoji-manager-addgroup-row {
+        display: none;
       }
     }
     
@@ -98,8 +108,29 @@ export function injectManagerStyles() {
       min-width: 0;
     }
     
+    /* Group selector dropdown for mobile */
+    .emoji-manager-group-selector {
+      display: none;
+      width: 100%;
+      padding: 12px;
+    }
+    
+    .emoji-manager-group-selector select {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      background: var(--primary-very-low);
+      color: var(--primary);
+    }
+    
     /* Mobile: Larger touch targets for add group */
     @media (max-width: 768px) {
+      .emoji-manager-group-selector {
+        display: block;
+      }
+      
       .emoji-manager-addgroup-row {
         padding: 12px 16px;
       }
