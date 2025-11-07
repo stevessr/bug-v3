@@ -1,5 +1,7 @@
 import type { DefaultEmojiData, EmojiGroup } from './type'
 
+import { getDomainFilterPattern, filterEmojisByDomain } from '@/utils/domainValidator'
+
 // Runtime loader: fetch runtime JSON from /assets/defaultEmojiGroups.json
 // Returns empty defaults if fetch fails.
 
@@ -15,15 +17,60 @@ async function fetchPackagedJSON(url?: string): Promise<DefaultEmojiData | null>
   }
 }
 
+/**
+ * Filter emoji groups based on current domain
+ * If a domain pattern is active (e.g., on linux.do), only keep emojis from matching domains
+ * Groups with no matching emojis are excluded entirely
+ */
+function filterGroupsByDomain(groups: EmojiGroup[]): EmojiGroup[] {
+  const domainPattern = getDomainFilterPattern()
+
+  // No filtering needed
+  if (!domainPattern) {
+    return groups
+  }
+
+  const filteredGroups: EmojiGroup[] = []
+
+  for (const group of groups) {
+    // Always keep the favorites group regardless of domain
+    if (group.id === 'favorites') {
+      filteredGroups.push(group)
+      continue
+    }
+
+    // Filter emojis in this group by domain
+    const filteredEmojis = filterEmojisByDomain(group.emojis, domainPattern)
+
+    // Only include the group if it has at least one matching emoji
+    if (filteredEmojis.length > 0) {
+      filteredGroups.push({
+        ...group,
+        emojis: filteredEmojis
+      })
+    }
+  }
+
+  return filteredGroups
+}
+
 export async function loadDefaultEmojiGroups(url?: string): Promise<EmojiGroup[]> {
   const packaged = await fetchPackagedJSON(url)
-  if (packaged && Array.isArray(packaged.groups)) return packaged.groups
+  if (packaged && Array.isArray(packaged.groups)) {
+    return filterGroupsByDomain(packaged.groups)
+  }
   return []
 }
 
 export async function loadPackagedDefaults(url?: string): Promise<DefaultEmojiData> {
   const packaged = await fetchPackagedJSON(url)
-  if (packaged) return packaged
+  if (packaged) {
+    // Apply domain filtering to the groups
+    return {
+      ...packaged,
+      groups: filterGroupsByDomain(packaged.groups)
+    }
+  }
   return {
     groups: await loadDefaultEmojiGroups(url),
     settings: {
