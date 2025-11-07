@@ -71,8 +71,9 @@ export async function loadPackagedDefaults(url?: string): Promise<DefaultEmojiDa
       groups: filterGroupsByDomain(packaged.groups)
     }
   }
+  // If fetch failed, return empty defaults with no groups (already filtered)
   return {
-    groups: await loadDefaultEmojiGroups(url),
+    groups: [],
     settings: {
       imageScale: 30,
       defaultGroup: 'nachoneko',

@@ -39,11 +39,6 @@ function matchesDomainPattern(hostname: string, domainPattern: string): boolean 
     return host === baseDomain || host.endsWith('.' + baseDomain)
   }
 
-  // No wildcard but check if hostname is a subdomain of the pattern
-  if (host.endsWith('.' + pattern)) {
-    return true
-  }
-
   return false
 }
 
