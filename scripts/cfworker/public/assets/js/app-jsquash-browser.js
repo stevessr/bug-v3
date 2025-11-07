@@ -166,7 +166,11 @@ async function useOriginalParams() {
 
   let revoke = null;
   if (file) { revoke = URL.createObjectURL(file); video.src = revoke; }
-  else video.src = url;
+  else {
+    // Use proxy to avoid CORS issues
+    const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(url)}`
+    video.src = proxyUrl;
+  }
 
   try {
     await videoLoaded(video);
@@ -278,8 +282,10 @@ async function applyOriginalParamsForSource(source) {
 
   let revokeUrl = null;
   if (typeof source === 'string') {
-    video.src = source;
-    log('applyOriginalParams: 使用远程 URL ' + source);
+    // Use proxy to avoid CORS issues
+    const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(source)}`
+    video.src = proxyUrl;
+    log('applyOriginalParams: 使用远程 URL ' + source + ' (通过代理)');
   } else if (source instanceof File) {
     const blobUrl = URL.createObjectURL(source);
     revokeUrl = blobUrl;
@@ -362,8 +368,10 @@ async function convert() {
     video.src = blobUrl;
     log(`使用本地文件：${file.name}`);
   } else {
-    video.src = url;
-    log(`使用远程 URL：${url}`);
+    // Use proxy to avoid CORS issues
+    const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(url)}`
+    video.src = proxyUrl;
+    log(`使用远程 URL：${url} (通过代理)`);
   }
 
   try {

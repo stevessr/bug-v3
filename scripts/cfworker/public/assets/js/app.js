@@ -44,7 +44,14 @@ async function getVideoMetadata(source) {
     if (source instanceof File) {
       video.src = URL.createObjectURL(source)
     } else {
-      video.src = source
+      // Check if this is already a proxy URL, if not create one
+      if (source.startsWith('/api/video/proxy')) {
+        video.src = source
+      } else {
+        // Use proxy for URL to avoid CORS issues
+        const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(source)}`
+        video.src = proxyUrl
+      }
       video.crossOrigin = 'anonymous'
     }
   })
@@ -94,15 +101,28 @@ window.analyzeVideoFromUrl = async function () {
 
   try {
     log('正在分析视频...')
-    videoMetadata = await getVideoMetadata(url)
+    // Use the proxy to avoid CORS issues
+    const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(url)}`
+    videoMetadata = await getVideoMetadata(proxyUrl)
     document.getElementById('originalBtn').disabled = false
     log(
       `视频信息：${videoMetadata.width}x${videoMetadata.height}, ${videoMetadata.duration.toFixed(1)}秒`
     )
   } catch (err) {
     log('分析视频失败：' + err.message + '（可能存在跨域限制）')
-    videoMetadata = null
-    document.getElementById('originalBtn').disabled = true
+    log('尝试直接访问 URL...')
+    // Fallback to direct URL if proxy fails
+    try {
+      videoMetadata = await getVideoMetadata(url)
+      document.getElementById('originalBtn').disabled = false
+      log(
+        `视频信息：${videoMetadata.width}x${videoMetadata.height}, ${videoMetadata.duration.toFixed(1)}秒`
+      )
+    } catch (directErr) {
+      log('直接访问也失败：' + directErr.message)
+      videoMetadata = null
+      document.getElementById('originalBtn').disabled = true
+    }
   }
 }
 
@@ -256,8 +276,18 @@ async function convert() {
       originalFileName = file.name.replace(/\.[^/.]+$/, "") || 'video'
     } else {
       log('下载中...')
-      inputData = await fetchFile(url)
-      log('下载完成')
+      // Use the proxy to avoid CORS issues
+      const proxyUrl = `/api/video/proxy?url=${encodeURIComponent(url)}`
+      try {
+        inputData = await fetchFile(proxyUrl)
+        log('通过代理下载完成')
+      } catch (err) {
+        log('通过代理下载失败：' + err.message)
+        log('尝试直接下载...')
+        // Fallback to direct URL if proxy fails
+        inputData = await fetchFile(url)
+        log('直接下载完成')
+      }
       // Extract filename from URL if possible
       const urlParts = url.split('/')
       const lastPart = urlParts[urlParts.length - 1]
