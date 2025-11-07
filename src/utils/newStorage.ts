@@ -582,10 +582,8 @@ export const newStorageHelpers = {
     const existing = await this.getDiscourseDomain(domain)
     if (existing) return existing
 
-    // Default: enable all existing groups
-    const groups = await this.getAllEmojiGroups()
-    const ids = groups.map(g => g.id)
-    const entry = { domain, enabledGroups: ids }
+    // Default: no groups enabled
+    const entry = { domain, enabledGroups: [] }
     const domains = await this.getDiscourseDomains()
     domains.push(entry)
     await this.setDiscourseDomains(domains)
