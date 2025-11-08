@@ -99,7 +99,37 @@ export function showSyncConfigModal() {
       ">
         <option value="webdav" ${syncType === 'webdav' ? 'selected' : ''}>WebDAV</option>
         <option value="s3" ${syncType === 's3' ? 'selected' : ''}>S3</option>
+        <option value="cloudflare" ${syncType === 'cloudflare' ? 'selected' : ''}>Cloudflare Worker</option>
       </select>
+    </div>
+
+    <!-- Cloudflare Worker Configuration -->
+    <div id="cloudflareConfig" style="display: ${syncType === 'cloudflare' ? 'block' : 'none'};">
+      <h3 style="margin: 0 0 12px 0; color: var(--emoji-modal-label);">Cloudflare Worker 配置</h3>
+      
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Worker URL:</label>
+        <input type="text" id="cfWorkerUrl" placeholder="https://your-worker.workers.dev" value="${existingConfig?.type === 'cloudflare' ? existingConfig.url : ''}" style="
+          width: 100%;
+          padding: 8px;
+          background: var(--emoji-modal-button-bg);
+          color: var(--emoji-modal-text);
+          border: 1px solid var(--emoji-modal-border);
+          border-radius: 4px;
+        ">
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">授权密钥 (Auth Token):</label>
+        <input type="password" id="cfAuthToken" value="${existingConfig?.type === 'cloudflare' ? existingConfig.authToken : ''}" style="
+          width: 100%;
+          padding: 8px;
+          background: var(--emoji-modal-button-bg);
+          color: var(--emoji-modal-text);
+          border: 1px solid var(--emoji-modal-border);
+          border-radius: 4px;
+        ">
+      </div>
     </div>
 
     <!-- WebDAV Configuration -->
@@ -250,11 +280,13 @@ export function showSyncConfigModal() {
   const syncTypeSelect = modal.querySelector('#syncTypeSelect') as HTMLSelectElement
   const webdavConfigDiv = modal.querySelector('#webdavConfig') as HTMLDivElement
   const s3ConfigDiv = modal.querySelector('#s3Config') as HTMLDivElement
+  const cloudflareConfigDiv = modal.querySelector('#cloudflareConfig') as HTMLDivElement
 
   syncTypeSelect.addEventListener('change', () => {
     const selectedType = syncTypeSelect.value
     webdavConfigDiv.style.display = selectedType === 'webdav' ? 'block' : 'none'
     s3ConfigDiv.style.display = selectedType === 's3' ? 'block' : 'none'
+    cloudflareConfigDiv.style.display = selectedType === 'cloudflare' ? 'block' : 'none'
   })
 
   // Handle test connection
@@ -345,6 +377,20 @@ function getCurrentConfigFromModal(modal: HTMLElement): SyncTargetConfig | null 
       secretAccessKey,
       path: path || undefined
     } as S3Config
+  } else if (syncType === 'cloudflare') {
+    const url = (modal.querySelector('#cfWorkerUrl') as HTMLInputElement).value.trim()
+    const authToken = (modal.querySelector('#cfAuthToken') as HTMLInputElement).value.trim()
+
+    if (!url || !authToken) {
+      return null
+    }
+
+    return {
+      type: 'cloudflare',
+      enabled: true,
+      url,
+      authToken
+    } as CloudflareConfig
   }
 
   return null

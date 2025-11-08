@@ -1,0 +1,16 @@
+name = "emoji-backup-worker"
+main = "src/index.ts"
+compatibility_date = "2023-10-30"
+
+# Add your account_id
+# account_id = "YOUR_ACCOUNT_ID"
+
+# KV Namespace binding for backups
+[[kv_namespaces]]
+binding = "EMOJI_BACKUP"
+id = "bc9aabd33d1948c08db86f9d23421847" # TODO: Replace with your production KV namespace ID
+preview_id = "904b460f0be14709ba1d28930329064f" # TODO: Replace with your preview KV namespace ID
+
+[vars]
+# This is a fallback for local development. For production, use secrets.
+AUTH_SECRET = "dev-secret-password"

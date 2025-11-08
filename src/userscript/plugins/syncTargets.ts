@@ -2,7 +2,7 @@
 // This module provides the plugin infrastructure for syncing emoji data
 
 export interface SyncConfig {
-  type: 'webdav' | 's3'
+  type: 'webdav' | 's3' | 'cloudflare'
   enabled: boolean
   lastSyncTime?: number
 }
@@ -25,7 +25,13 @@ export interface S3Config extends SyncConfig {
   path?: string // Optional path prefix in the bucket
 }
 
-export type SyncTargetConfig = WebDAVConfig | S3Config
+export interface CloudflareConfig extends SyncConfig {
+  type: 'cloudflare'
+  url: string
+  authToken: string
+}
+
+export type SyncTargetConfig = WebDAVConfig | S3Config | CloudflareConfig
 
 export interface SyncResult {
   success: boolean
@@ -342,7 +348,131 @@ export function createSyncTarget(config: SyncTargetConfig): ISyncTarget {
       return new WebDAVSyncTarget(config)
     case 's3':
       return new S3SyncTarget(config)
+    case 'cloudflare':
+      return new CloudflareSyncTarget(config)
     default:
       throw new Error(`Unknown sync target type: ${(config as any).type}`)
+  }
+}
+
+// Cloudflare Worker implementation
+export class CloudflareSyncTarget implements ISyncTarget {
+  config: CloudflareConfig
+
+  constructor(config: CloudflareConfig) {
+    this.config = config
+  }
+
+  private getAuthHeader(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${this.config.authToken}`
+    }
+  }
+
+  private getUrl(): string {
+    return this.config.url.replace(/\/$/, '')
+  }
+
+  async test(): Promise<SyncResult> {
+    try {
+      const url = this.getUrl()
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeader()
+      })
+
+      if (response.ok || response.status === 404) {
+        return {
+          success: true,
+          message: 'Cloudflare Worker connection successful',
+          timestamp: Date.now()
+        }
+      }
+
+      return {
+        success: false,
+        message: `Cloudflare Worker connection failed: ${response.statusText}`,
+        error: response.statusText
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Cloudflare Worker connection error: ${error}`,
+        error
+      }
+    }
+  }
+
+  async push(data: SyncData): Promise<SyncResult> {
+    try {
+      const url = this.getUrl()
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeader(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data, null, 2)
+      })
+
+      if (response.ok) {
+        return {
+          success: true,
+          message: 'Data pushed to Cloudflare Worker successfully',
+          timestamp: Date.now()
+        }
+      }
+
+      return {
+        success: false,
+        message: `Failed to push to Cloudflare Worker: ${response.statusText}`,
+        error: response.statusText
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error pushing to Cloudflare Worker: ${error}`,
+        error
+      }
+    }
+  }
+
+  async pull(): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+    try {
+      const url = this.getUrl()
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeader()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        return {
+          success: true,
+          data,
+          message: 'Data pulled from Cloudflare Worker successfully'
+        }
+      }
+
+      if (response.status === 404) {
+        return {
+          success: false,
+          message: 'No data found on Cloudflare Worker',
+          error: 'Backup not found'
+        }
+      }
+
+      return {
+        success: false,
+        message: `Failed to pull from Cloudflare Worker: ${response.statusText}`,
+        error: response.statusText
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error pulling from Cloudflare Worker: ${error}`,
+        error
+      }
+    }
   }
 }
