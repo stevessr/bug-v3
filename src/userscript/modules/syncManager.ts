@@ -1,5 +1,5 @@
 // Sync manager module for userscript - handles WebDAV and S3 synchronization
-// 
+//
 // SECURITY WARNING: This module stores credentials (passwords and API keys) in localStorage.
 // While this is necessary for the userscript to function, users should be aware that:
 // 1. localStorage is accessible to any script running on the same domain
@@ -17,7 +17,8 @@ import {
   type SyncTargetConfig,
   type WebDAVConfig,
   type S3Config,
-  type SyncData
+  type SyncData,
+  type ProgressCallback
 } from '../plugins/syncTargets'
 
 const SYNC_CONFIG_KEY = 'emoji_extension_sync_config'
@@ -99,7 +100,9 @@ export function showSyncConfigModal() {
       ">
         <option value="webdav" ${syncType === 'webdav' ? 'selected' : ''}>WebDAV</option>
         <option value="s3" ${syncType === 's3' ? 'selected' : ''}>S3</option>
-        <option value="cloudflare" ${syncType === 'cloudflare' ? 'selected' : ''}>Cloudflare Worker</option>
+        <option value="cloudflare" ${
+          syncType === 'cloudflare' ? 'selected' : ''
+        }>Cloudflare Worker</option>
       </select>
     </div>
 
@@ -109,7 +112,9 @@ export function showSyncConfigModal() {
       
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Worker URL:</label>
-        <input type="text" id="cfWorkerUrl" placeholder="https://your-worker.workers.dev" value="${existingConfig?.type === 'cloudflare' ? existingConfig.url : ''}" style="
+        <input type="text" id="cfWorkerUrl" placeholder="https://your-worker.workers.dev" value="${
+          existingConfig?.type === 'cloudflare' ? existingConfig.url : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -121,7 +126,9 @@ export function showSyncConfigModal() {
 
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">授权密钥 (Auth Token):</label>
-        <input type="password" id="cfAuthToken" value="${existingConfig?.type === 'cloudflare' ? existingConfig.authToken : ''}" style="
+        <input type="password" id="cfAuthToken" value="${
+          existingConfig?.type === 'cloudflare' ? existingConfig.authToken : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -138,7 +145,9 @@ export function showSyncConfigModal() {
       
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">服务器 URL:</label>
-        <input type="text" id="webdavUrl" placeholder="https://your-webdav-server.com" value="${existingConfig?.type === 'webdav' ? existingConfig.url : ''}" style="
+        <input type="text" id="webdavUrl" placeholder="https://your-webdav-server.com" value="${
+          existingConfig?.type === 'webdav' ? existingConfig.url : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -150,7 +159,9 @@ export function showSyncConfigModal() {
 
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">用户名:</label>
-        <input type="text" id="webdavUsername" value="${existingConfig?.type === 'webdav' ? existingConfig.username : ''}" style="
+        <input type="text" id="webdavUsername" value="${
+          existingConfig?.type === 'webdav' ? existingConfig.username : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -162,7 +173,9 @@ export function showSyncConfigModal() {
 
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">密码:</label>
-        <input type="password" id="webdavPassword" value="${existingConfig?.type === 'webdav' ? existingConfig.password : ''}" style="
+        <input type="password" id="webdavPassword" value="${
+          existingConfig?.type === 'webdav' ? existingConfig.password : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -174,7 +187,9 @@ export function showSyncConfigModal() {
 
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">文件路径 (可选):</label>
-        <input type="text" id="webdavPath" placeholder="emoji-data.json" value="${existingConfig?.type === 'webdav' ? existingConfig.path || '' : ''}" style="
+        <input type="text" id="webdavPath" placeholder="emoji-data.json" value="${
+          existingConfig?.type === 'webdav' ? existingConfig.path || '' : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -191,7 +206,9 @@ export function showSyncConfigModal() {
       
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Endpoint:</label>
-        <input type="text" id="s3Endpoint" placeholder="s3.amazonaws.com" value="${existingConfig?.type === 's3' ? existingConfig.endpoint : ''}" style="
+        <input type="text" id="s3Endpoint" placeholder="s3.amazonaws.com" value="${
+          existingConfig?.type === 's3' ? existingConfig.endpoint : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -203,7 +220,9 @@ export function showSyncConfigModal() {
 
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Region:</label>
-        <input type="text" id="s3Region" placeholder="us-east-1" value="${existingConfig?.type === 's3' ? existingConfig.region : ''}" style="
+        <input type="text" id="s3Region" placeholder="us-east-1" value="${
+          existingConfig?.type === 's3' ? existingConfig.region : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -215,7 +234,9 @@ export function showSyncConfigModal() {
 
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Bucket:</label>
-        <input type="text" id="s3Bucket" placeholder="my-bucket" value="${existingConfig?.type === 's3' ? existingConfig.bucket : ''}" style="
+        <input type="text" id="s3Bucket" placeholder="my-bucket" value="${
+          existingConfig?.type === 's3' ? existingConfig.bucket : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -227,7 +248,9 @@ export function showSyncConfigModal() {
 
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Access Key ID:</label>
-        <input type="text" id="s3AccessKeyId" value="${existingConfig?.type === 's3' ? existingConfig.accessKeyId : ''}" style="
+        <input type="text" id="s3AccessKeyId" value="${
+          existingConfig?.type === 's3' ? existingConfig.accessKeyId : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -239,7 +262,9 @@ export function showSyncConfigModal() {
 
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Secret Access Key:</label>
-        <input type="password" id="s3SecretAccessKey" value="${existingConfig?.type === 's3' ? existingConfig.secretAccessKey : ''}" style="
+        <input type="password" id="s3SecretAccessKey" value="${
+          existingConfig?.type === 's3' ? existingConfig.secretAccessKey : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -251,7 +276,9 @@ export function showSyncConfigModal() {
 
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">路径前缀 (可选):</label>
-        <input type="text" id="s3Path" placeholder="emoji-data.json" value="${existingConfig?.type === 's3' ? existingConfig.path || '' : ''}" style="
+        <input type="text" id="s3Path" placeholder="emoji-data.json" value="${
+          existingConfig?.type === 's3' ? existingConfig.path || '' : ''
+        }" style="
           width: 100%;
           padding: 8px;
           background: var(--emoji-modal-button-bg);
@@ -360,7 +387,9 @@ function getCurrentConfigFromModal(modal: HTMLElement): SyncTargetConfig | null 
     const region = (modal.querySelector('#s3Region') as HTMLInputElement).value.trim()
     const bucket = (modal.querySelector('#s3Bucket') as HTMLInputElement).value.trim()
     const accessKeyId = (modal.querySelector('#s3AccessKeyId') as HTMLInputElement).value.trim()
-    const secretAccessKey = (modal.querySelector('#s3SecretAccessKey') as HTMLInputElement).value.trim()
+    const secretAccessKey = (
+      modal.querySelector('#s3SecretAccessKey') as HTMLInputElement
+    ).value.trim()
     const path = (modal.querySelector('#s3Path') as HTMLInputElement).value.trim()
 
     if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey) {
@@ -394,6 +423,68 @@ function getCurrentConfigFromModal(modal: HTMLElement): SyncTargetConfig | null 
   }
 
   return null
+}
+
+function showPullPreviewModal(
+  data: SyncData,
+  config: SyncTargetConfig,
+  onConfirm: () => void
+) {
+  const groupListHTML =
+    data.emojiGroups.length > 0
+      ? `<ul>${data.emojiGroups
+          .map((g) => `<li style="color: var(--emoji-modal-text);">${g.name}</li>`)
+          .join('')}</ul>`
+      : '<p style="color: var(--emoji-modal-text);">没有表情分组</p>'
+
+  const contentHTML = `
+    <div style="margin-bottom: 16px;">
+      <h3 style="margin: 0 0 12px 0; color: var(--emoji-modal-label);">恢复预览</h3>
+      <div style="padding: 12px; background: var(--emoji-modal-button-bg); border-radius: 4px;">
+        <div style="color: var(--emoji-modal-text); margin-bottom: 8px;">
+          <strong>备份时间:</strong> ${new Date(data.timestamp).toLocaleString()}
+        </div>
+        <div style="color: var(--emoji-modal-text); margin-bottom: 8px;">
+          <strong>表情分组数量:</strong> ${data.emojiGroups.length}
+        </div>
+        <div>
+          <strong style="color: var(--emoji-modal-text);">分组列表:</strong>
+          <div style="max-height: 150px; overflow-y: auto; border: 1px solid var(--emoji-modal-border); padding: 8px; border-radius: 4px; margin-top: 4px;">
+            ${groupListHTML}
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="color: #f59e0b; font-weight: bold;">确定要用此备份覆盖本地数据吗？此操作不可撤销。</p>
+    <div style="display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end;">
+      <button id="cancelPull" style="padding: 8px 16px; background: var(--emoji-modal-button-bg); color: var(--emoji-modal-text); border: 1px solid var(--emoji-modal-border); border-radius: 4px; cursor: pointer;">取消</button>
+      <button id="confirmPull" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">确认恢复</button>
+    </div>
+  `
+
+  const modal = createModalElement({
+    title: '确认恢复',
+    content: contentHTML,
+    onClose: () => modal.remove()
+  })
+
+  document.body.appendChild(modal)
+
+  modal.querySelector('#confirmPull')?.addEventListener('click', () => {
+    applySyncDataToState(data)
+    config.lastSyncTime = Date.now()
+    saveSyncConfig(config)
+    showTemporaryMessage('数据恢复成功，页面将刷新', 'success')
+    modal.remove()
+    onConfirm() // This will close the parent modal
+    setTimeout(() => {
+      window.location.reload()
+    }, 1000)
+  })
+
+  modal.querySelector('#cancelPull')?.addEventListener('click', () => {
+    modal.remove()
+  })
 }
 
 // Show sync operations modal (push/pull)
@@ -498,8 +589,10 @@ export function showSyncOperationsModal() {
   const progressContainer = modal.querySelector('#syncProgressContainer') as HTMLDivElement
   const progressText = modal.querySelector('#syncProgressText') as HTMLDivElement
   const progressBar = modal.querySelector('#syncProgressBar') as HTMLProgressElement
+  const pullBtn = modal.querySelector('#pullData') as HTMLButtonElement
+  const pushBtn = modal.querySelector('#pushData') as HTMLButtonElement
 
-  const updateProgress = (progress: { current: number; total: number; action: 'push' | 'pull' }) => {
+  const updateProgress: ProgressCallback = (progress) => {
     progressContainer.style.display = 'block'
     const actionText = progress.action === 'push' ? '推送' : '拉取'
     progressText.textContent = `${actionText}中... (${progress.current} / ${progress.total})`
@@ -512,7 +605,6 @@ export function showSyncOperationsModal() {
   }
 
   // Handle push
-  const pushBtn = modal.querySelector('#pushData') as HTMLButtonElement
   pushBtn.addEventListener('click', async () => {
     pushBtn.disabled = true
     pullBtn.disabled = true
@@ -543,12 +635,7 @@ export function showSyncOperationsModal() {
   })
 
   // Handle pull
-  const pullBtn = modal.querySelector('#pullData') as HTMLButtonElement
   pullBtn.addEventListener('click', async () => {
-    if (!confirm('拉取数据会覆盖当前的本地数据，确定要继续吗？')) {
-      return
-    }
-
     pullBtn.disabled = true
     pushBtn.disabled = true
     pullBtn.textContent = '拉取中...'
@@ -559,13 +646,8 @@ export function showSyncOperationsModal() {
       const result = await target.pull(updateProgress)
 
       if (result.success && result.data) {
-        applySyncDataToState(result.data)
-        config.lastSyncTime = Date.now()
-        saveSyncConfig(config)
-        showTemporaryMessage('数据拉取成功，页面将刷新', 'success')
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000)
+        // Show preview modal instead of applying directly
+        showPullPreviewModal(result.data, config, () => modal.remove())
       } else {
         showTemporaryMessage(`拉取失败: ${result.message}`, 'error')
       }
