@@ -47,11 +47,21 @@ export interface SyncData {
   version: string
 }
 
+export interface Progress {
+  current: number
+  total: number
+  action: 'push' | 'pull' | 'test'
+}
+
+export type ProgressCallback = (progress: Progress) => void
+
 // Base sync target interface
 export interface ISyncTarget {
   config: SyncTargetConfig
-  push(data: SyncData): Promise<SyncResult>
-  pull(): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }>
+  push(data: SyncData, onProgress?: ProgressCallback): Promise<SyncResult>
+  pull(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }>
   test(): Promise<SyncResult> // Test connection
 }
 
@@ -106,8 +116,9 @@ export class WebDAVSyncTarget implements ISyncTarget {
     }
   }
 
-  async push(data: SyncData): Promise<SyncResult> {
+  async push(data: SyncData, onProgress?: ProgressCallback): Promise<SyncResult> {
     try {
+      onProgress?.({ current: 0, total: 1, action: 'push' })
       const url = this.getFullUrl()
       const response = await fetch(url, {
         method: 'PUT',
@@ -117,6 +128,8 @@ export class WebDAVSyncTarget implements ISyncTarget {
         },
         body: JSON.stringify(data, null, 2)
       })
+
+      onProgress?.({ current: 1, total: 1, action: 'push' })
 
       if (response.ok || response.status === 201 || response.status === 204) {
         return {
@@ -140,8 +153,11 @@ export class WebDAVSyncTarget implements ISyncTarget {
     }
   }
 
-  async pull(): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+  async pull(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
     try {
+      onProgress?.({ current: 0, total: 1, action: 'pull' })
       const url = this.getFullUrl()
       const response = await fetch(url, {
         method: 'GET',
@@ -150,6 +166,8 @@ export class WebDAVSyncTarget implements ISyncTarget {
           Accept: 'application/json'
         }
       })
+
+      onProgress?.({ current: 1, total: 1, action: 'pull' })
 
       if (response.ok) {
         const data = await response.json()
@@ -265,8 +283,9 @@ export class S3SyncTarget implements ISyncTarget {
     }
   }
 
-  async push(data: SyncData): Promise<SyncResult> {
+  async push(data: SyncData, onProgress?: ProgressCallback): Promise<SyncResult> {
     try {
+      onProgress?.({ current: 0, total: 1, action: 'push' })
       const url = this.getS3Url()
       const body = JSON.stringify(data, null, 2)
       const headers = await this.signRequest('PUT', url, body)
@@ -276,6 +295,7 @@ export class S3SyncTarget implements ISyncTarget {
         headers,
         body
       })
+      onProgress?.({ current: 1, total: 1, action: 'push' })
 
       if (response.ok || response.status === 201 || response.status === 204) {
         return {
@@ -299,8 +319,11 @@ export class S3SyncTarget implements ISyncTarget {
     }
   }
 
-  async pull(): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+  async pull(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
     try {
+      onProgress?.({ current: 0, total: 1, action: 'pull' })
       const url = this.getS3Url()
       const headers = await this.signRequest('GET', url)
 
@@ -308,6 +331,7 @@ export class S3SyncTarget implements ISyncTarget {
         method: 'GET',
         headers
       })
+      onProgress?.({ current: 1, total: 1, action: 'pull' })
 
       if (response.ok) {
         const data = await response.json()
@@ -405,7 +429,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
     }
   }
 
-  async push(data: SyncData): Promise<SyncResult> {
+  async push(data: SyncData, onProgress?: ProgressCallback): Promise<SyncResult> {
     try {
       const baseUrl = this.getUrl()
       const headers = {
@@ -413,48 +437,29 @@ export class CloudflareSyncTarget implements ISyncTarget {
         'Content-Type': 'application/json'
       }
 
-      const tasks: Promise<Response>[] = []
+      const itemsToPush = [{ key: 'settings', data: data.settings }, ...data.emojiGroups.map((g) => ({ key: encodeURIComponent(g.name), data: g }))]
+      const total = itemsToPush.length
+      let current = 0
 
-      // Task for backing up settings
-      tasks.push(
-        fetch(`${baseUrl}/settings`, {
+      onProgress?.({ current, total, action: 'push' })
+
+      for (const item of itemsToPush) {
+        const response = await fetch(`${baseUrl}/${item.key}`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(data.settings)
+          body: JSON.stringify(item.data)
         })
-      )
 
-      // Tasks for backing up each emoji group
-      for (const group of data.emojiGroups) {
-        // Use group name as key, ensure it's URL-safe
-        const key = encodeURIComponent(group.name)
-        tasks.push(
-          fetch(`${baseUrl}/${key}`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(group)
-          })
-        )
-      }
-
-      const results = await Promise.allSettled(tasks)
-
-      const failedUploads = results.filter(
-        (result) => result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.ok)
-      )
-
-      if (failedUploads.length > 0) {
-        console.error('Failed sync uploads:', failedUploads)
-        return {
-          success: false,
-          message: `Failed to push ${failedUploads.length} item(s) to Cloudflare Worker.`,
-          error: failedUploads.map((r) => (r.status === 'rejected' ? r.reason : 'Request failed'))
+        if (!response.ok) {
+          throw new Error(`Failed to push item ${item.key}: ${response.statusText}`)
         }
+        current++
+        onProgress?.({ current, total, action: 'push' })
       }
 
       return {
         success: true,
-        message: `Data pushed to Cloudflare Worker successfully (${tasks.length} items).`,
+        message: `Data pushed to Cloudflare Worker successfully (${total} items).`,
         timestamp: Date.now()
       }
     } catch (error) {
@@ -466,27 +471,37 @@ export class CloudflareSyncTarget implements ISyncTarget {
     }
   }
 
-  async pull(): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+  async pull(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
     try {
       const baseUrl = this.getUrl()
       const headers = this.getAuthHeader()
+      let current = 0
 
       // 1. Get list of all keys
+      onProgress?.({ current, total: 1, action: 'pull' }) // We don't know the total yet, so we'll update it.
       const listResponse = await fetch(`${baseUrl}/`, { method: 'GET', headers })
       if (!listResponse.ok) {
         throw new Error(`Failed to list keys: ${listResponse.statusText}`)
       }
       const keys: { name: string }[] = await listResponse.json()
+      const total = keys.length
+      onProgress?.({ current, total, action: 'pull' })
 
-      // 2. Fetch all keys concurrently
-      const fetchPromises = keys.map((key) =>
-        fetch(`${baseUrl}/${key.name}`, { method: 'GET', headers }).then((res) => {
-          if (!res.ok) throw new Error(`Failed to fetch key ${key.name}`)
-          return res.json().then((data) => ({ key: key.name, data }))
-        })
-      )
-
-      const results = await Promise.all(fetchPromises)
+      // 2. Fetch all keys sequentially to report progress
+      const pulledItems: { key: string; data: any }[] = []
+      for (const key of keys) {
+        const res = await fetch(`${baseUrl}/${key.name}`, { method: 'GET', headers })
+        if (!res.ok) {
+          console.warn(`Failed to fetch key ${key.name}, skipping.`)
+          continue
+        }
+        const data = await res.json()
+        pulledItems.push({ key: key.name, data })
+        current++
+        onProgress?.({ current, total, action: 'pull' })
+      }
 
       // 3. Reconstruct the data
       const pulledData: Partial<SyncData> = {
@@ -495,21 +510,17 @@ export class CloudflareSyncTarget implements ISyncTarget {
       let version = '0.0.0' // Default version
       let timestamp = Date.now()
 
-      for (const item of results) {
+      for (const item of pulledItems) {
         if (item.key === 'settings') {
           pulledData.settings = item.data
-          // Infer version and timestamp from settings if available
-          if (item.data.version) version = item.data.version
-          if (item.data.timestamp) timestamp = item.data.timestamp
         } else {
           pulledData.emojiGroups!.push(item.data)
         }
       }
-      
-      // Try to get top level version/timestamp if it was set
-      if(pulledData.settings?.version) version = pulledData.settings.version;
-      if(pulledData.settings?.timestamp) timestamp = pulledData.settings.timestamp;
 
+      // Try to get top level version/timestamp if it was set
+      if (pulledData.settings?.version) version = pulledData.settings.version
+      if (pulledData.settings?.timestamp) timestamp = pulledData.settings.timestamp
 
       const finalData: SyncData = {
         settings: pulledData.settings || {},
@@ -521,7 +532,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
       return {
         success: true,
         data: finalData,
-        message: `Data pulled from Cloudflare Worker successfully (${keys.length} items).`
+        message: `Data pulled from Cloudflare Worker successfully (${pulledItems.length} items).`
       }
     } catch (error) {
       console.error('Error pulling from Cloudflare Worker:', error)

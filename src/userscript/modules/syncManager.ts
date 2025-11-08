@@ -423,6 +423,12 @@ export function showSyncOperationsModal() {
       </div>
     </div>
 
+    <!-- Progress Indicator -->
+    <div id="syncProgressContainer" style="display: none; margin-bottom: 16px;">
+      <div id="syncProgressText" style="margin-bottom: 4px; color: var(--emoji-modal-text);"></div>
+      <progress id="syncProgressBar" value="0" max="100" style="width: 100%;"></progress>
+    </div>
+
     <div style="margin-bottom: 24px;">
       <h3 style="margin: 0 0 12px 0; color: var(--emoji-modal-label);">同步操作</h3>
       
@@ -489,16 +495,34 @@ export function showSyncOperationsModal() {
 
   document.body.appendChild(modal)
 
+  const progressContainer = modal.querySelector('#syncProgressContainer') as HTMLDivElement
+  const progressText = modal.querySelector('#syncProgressText') as HTMLDivElement
+  const progressBar = modal.querySelector('#syncProgressBar') as HTMLProgressElement
+
+  const updateProgress = (progress: { current: number; total: number; action: 'push' | 'pull' }) => {
+    progressContainer.style.display = 'block'
+    const actionText = progress.action === 'push' ? '推送' : '拉取'
+    progressText.textContent = `${actionText}中... (${progress.current} / ${progress.total})`
+    progressBar.max = progress.total
+    progressBar.value = progress.current
+  }
+
+  const hideProgress = () => {
+    progressContainer.style.display = 'none'
+  }
+
   // Handle push
   const pushBtn = modal.querySelector('#pushData') as HTMLButtonElement
   pushBtn.addEventListener('click', async () => {
     pushBtn.disabled = true
+    pullBtn.disabled = true
     pushBtn.textContent = '推送中...'
+    updateProgress({ current: 0, total: 1, action: 'push' })
 
     try {
       const target = createSyncTarget(config)
       const syncData = createSyncDataFromState()
-      const result = await target.push(syncData)
+      const result = await target.push(syncData, updateProgress)
 
       if (result.success) {
         config.lastSyncTime = Date.now()
@@ -512,7 +536,9 @@ export function showSyncOperationsModal() {
       showTemporaryMessage(`推送错误: ${error}`, 'error')
     } finally {
       pushBtn.disabled = false
+      pullBtn.disabled = false
       pushBtn.textContent = '⬆️ 推送 (Push) - 上传本地数据到服务器'
+      hideProgress()
     }
   })
 
@@ -524,11 +550,13 @@ export function showSyncOperationsModal() {
     }
 
     pullBtn.disabled = true
+    pushBtn.disabled = true
     pullBtn.textContent = '拉取中...'
+    updateProgress({ current: 0, total: 1, action: 'pull' })
 
     try {
       const target = createSyncTarget(config)
-      const result = await target.pull()
+      const result = await target.pull(updateProgress)
 
       if (result.success && result.data) {
         applySyncDataToState(result.data)
@@ -545,7 +573,9 @@ export function showSyncOperationsModal() {
       showTemporaryMessage(`拉取错误: ${error}`, 'error')
     } finally {
       pullBtn.disabled = false
+      pushBtn.disabled = false
       pullBtn.textContent = '⬇️ 拉取 (Pull) - 从服务器下载数据'
+      hideProgress()
     }
   })
 
