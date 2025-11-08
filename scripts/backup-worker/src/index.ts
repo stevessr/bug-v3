@@ -5,7 +5,7 @@ export interface Env {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
@@ -28,36 +28,51 @@ export default {
       return new Response('Unauthorized: Invalid token', { status: 401, headers: corsHeaders });
     }
 
-    if (request.method === 'POST') {
-      // Backup data
-      try {
+    const url = new URL(request.url);
+    const key = url.pathname.substring(1);
+
+    try {
+      if (request.method === 'POST') {
+        if (!key) {
+          return new Response('No key provided in URL path', { status: 400, headers: corsHeaders });
+        }
         const data = await request.text();
         if (!data) {
           return new Response('No data provided', { status: 400, headers: corsHeaders });
         }
-        await env.EMOJI_BACKUP.put('backup', data);
-        return new Response('Backup successful', { status: 200, headers: corsHeaders });
-      } catch (error) {
-        console.error('Error during backup:', error);
-        return new Response('Internal Server Error', { status: 500, headers: corsHeaders });
-      }
-    } else if (request.method === 'GET') {
-      // Restore data
-      try {
-        const data = await env.EMOJI_BACKUP.get('backup');
-        if (data === null) {
-          return new Response('No backup found', { status: 404, headers: corsHeaders });
+        await env.EMOJI_BACKUP.put(key, data);
+        return new Response(`Backup successful for key: ${key}`, { status: 200, headers: corsHeaders });
+      } else if (request.method === 'GET') {
+        if (!key) {
+          // List all keys
+          const list = await env.EMOJI_BACKUP.list();
+          return new Response(JSON.stringify(list.keys), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } else {
+          // Get a specific key
+          const data = await env.EMOJI_BACKUP.get(key);
+          if (data === null) {
+            return new Response('No backup found for this key', { status: 404, headers: corsHeaders });
+          }
+          return new Response(data, {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
-        return new Response(data, {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch (error) {
-        console.error('Error during restore:', error);
-        return new Response('Internal Server Error', { status: 500, headers: corsHeaders });
+      } else if (request.method === 'DELETE') {
+        if (!key) {
+          return new Response('No key provided in URL path', { status: 400, headers: corsHeaders });
+        }
+        await env.EMOJI_BACKUP.delete(key);
+        return new Response(`Deleted key: ${key}`, { status: 200, headers: corsHeaders });
+      } else {
+        return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
       }
-    } else {
-      return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
+    } catch (error) {
+      console.error(`Error during ${request.method} for key "${key}":`, error);
+      return new Response('Internal Server Error', { status: 500, headers: corsHeaders });
     }
   },
 };

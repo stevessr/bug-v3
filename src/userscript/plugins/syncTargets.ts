@@ -375,13 +375,15 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
   async test(): Promise<SyncResult> {
     try {
-      const url = this.getUrl()
+      const url = this.getUrl() + '/'
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getAuthHeader()
       })
 
-      if (response.ok || response.status === 404) {
+      // Expecting a JSON array of keys
+      if (response.ok) {
+        await response.json() // Try to parse to ensure it's valid
         return {
           success: true,
           message: 'Cloudflare Worker connection successful',
@@ -405,28 +407,55 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
   async push(data: SyncData): Promise<SyncResult> {
     try {
-      const url = this.getUrl()
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          ...this.getAuthHeader(),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data, null, 2)
-      })
+      const baseUrl = this.getUrl()
+      const headers = {
+        ...this.getAuthHeader(),
+        'Content-Type': 'application/json'
+      }
 
-      if (response.ok) {
+      const tasks: Promise<Response>[] = []
+
+      // Task for backing up settings
+      tasks.push(
+        fetch(`${baseUrl}/settings`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(data.settings)
+        })
+      )
+
+      // Tasks for backing up each emoji group
+      for (const group of data.emojiGroups) {
+        // Use group name as key, ensure it's URL-safe
+        const key = encodeURIComponent(group.name)
+        tasks.push(
+          fetch(`${baseUrl}/${key}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(group)
+          })
+        )
+      }
+
+      const results = await Promise.allSettled(tasks)
+
+      const failedUploads = results.filter(
+        (result) => result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.ok)
+      )
+
+      if (failedUploads.length > 0) {
+        console.error('Failed sync uploads:', failedUploads)
         return {
-          success: true,
-          message: 'Data pushed to Cloudflare Worker successfully',
-          timestamp: Date.now()
+          success: false,
+          message: `Failed to push ${failedUploads.length} item(s) to Cloudflare Worker.`,
+          error: failedUploads.map((r) => (r.status === 'rejected' ? r.reason : 'Request failed'))
         }
       }
 
       return {
-        success: false,
-        message: `Failed to push to Cloudflare Worker: ${response.statusText}`,
-        error: response.statusText
+        success: true,
+        message: `Data pushed to Cloudflare Worker successfully (${tasks.length} items).`,
+        timestamp: Date.now()
       }
     } catch (error) {
       return {
@@ -439,35 +468,63 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
   async pull(): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
     try {
-      const url = this.getUrl()
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: this.getAuthHeader()
-      })
+      const baseUrl = this.getUrl()
+      const headers = this.getAuthHeader()
 
-      if (response.ok) {
-        const data = await response.json()
-        return {
-          success: true,
-          data,
-          message: 'Data pulled from Cloudflare Worker successfully'
+      // 1. Get list of all keys
+      const listResponse = await fetch(`${baseUrl}/`, { method: 'GET', headers })
+      if (!listResponse.ok) {
+        throw new Error(`Failed to list keys: ${listResponse.statusText}`)
+      }
+      const keys: { name: string }[] = await listResponse.json()
+
+      // 2. Fetch all keys concurrently
+      const fetchPromises = keys.map((key) =>
+        fetch(`${baseUrl}/${key.name}`, { method: 'GET', headers }).then((res) => {
+          if (!res.ok) throw new Error(`Failed to fetch key ${key.name}`)
+          return res.json().then((data) => ({ key: key.name, data }))
+        })
+      )
+
+      const results = await Promise.all(fetchPromises)
+
+      // 3. Reconstruct the data
+      const pulledData: Partial<SyncData> = {
+        emojiGroups: []
+      }
+      let version = '0.0.0' // Default version
+      let timestamp = Date.now()
+
+      for (const item of results) {
+        if (item.key === 'settings') {
+          pulledData.settings = item.data
+          // Infer version and timestamp from settings if available
+          if (item.data.version) version = item.data.version
+          if (item.data.timestamp) timestamp = item.data.timestamp
+        } else {
+          pulledData.emojiGroups!.push(item.data)
         }
       }
+      
+      // Try to get top level version/timestamp if it was set
+      if(pulledData.settings?.version) version = pulledData.settings.version;
+      if(pulledData.settings?.timestamp) timestamp = pulledData.settings.timestamp;
 
-      if (response.status === 404) {
-        return {
-          success: false,
-          message: 'No data found on Cloudflare Worker',
-          error: 'Backup not found'
-        }
+
+      const finalData: SyncData = {
+        settings: pulledData.settings || {},
+        emojiGroups: pulledData.emojiGroups || [],
+        version,
+        timestamp
       }
 
       return {
-        success: false,
-        message: `Failed to pull from Cloudflare Worker: ${response.statusText}`,
-        error: response.statusText
+        success: true,
+        data: finalData,
+        message: `Data pulled from Cloudflare Worker successfully (${keys.length} items).`
       }
     } catch (error) {
+      console.error('Error pulling from Cloudflare Worker:', error)
       return {
         success: false,
         message: `Error pulling from Cloudflare Worker: ${error}`,
