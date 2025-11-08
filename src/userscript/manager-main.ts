@@ -221,16 +221,71 @@ async function initializeEmojiManager() {
     }
   })
   
+  // Add sync button with mobile-optimized styling
+  const syncButton = document.createElement('button')
+  syncButton.id = 'emoji-sync-floating-button'
+  syncButton.textContent = isMobile ? '☁️' : '☁️ 同步'
+  syncButton.title = 'Sync with WebDAV/S3'
+  Object.assign(syncButton.style, {
+    position: 'fixed',
+    right: isMobile ? '16px' : '12px',
+    bottom: isMobile ? '220px' : '186px',
+    zIndex: '2147483647',
+    padding: isMobile ? '12px 16px' : '10px 14px',
+    borderRadius: isMobile ? '12px' : '8px',
+    border: 'none',
+    background: '#374151',
+    color: '#fff',
+    fontSize: isMobile ? '15px' : '13px',
+    fontWeight: '500',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+    cursor: 'pointer',
+    transition: 'transform 0.2s',
+    minWidth: isMobile ? '52px' : 'auto',
+    minHeight: isMobile ? '52px' : 'auto'
+  })
+  
+  syncButton.addEventListener('mouseenter', () => {
+    if (!isMobile) {
+      syncButton.style.transform = 'scale(1.05)'
+    }
+  })
+  
+  syncButton.addEventListener('mouseleave', () => {
+    if (!isMobile) {
+      syncButton.style.transform = 'scale(1)'
+    }
+  })
+  
+  syncButton.addEventListener('touchstart', () => {
+    syncButton.style.transform = 'scale(0.95)'
+  })
+  
+  syncButton.addEventListener('touchend', () => {
+    syncButton.style.transform = 'scale(1)'
+  })
+  
+  syncButton.addEventListener('click', async () => {
+    try {
+      const { showSyncOperationsModal } = await import('./modules/syncManager')
+      showSyncOperationsModal()
+    } catch (e) {
+      console.error('[Emoji Manager] Failed to open sync manager:', e)
+    }
+  })
+  
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(managerButton)
       document.body.appendChild(settingsButton)
       document.body.appendChild(importExportButton)
+      document.body.appendChild(syncButton)
     })
   } else {
     document.body.appendChild(managerButton)
     document.body.appendChild(settingsButton)
     document.body.appendChild(importExportButton)
+    document.body.appendChild(syncButton)
   }
   
   console.log('[Emoji Manager] Initialization complete')
