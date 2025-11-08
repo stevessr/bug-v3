@@ -11,6 +11,7 @@ A modern emoji extension built with Vue 3, Vite, and TypeScript featuring a prog
 - 📱 **Touch Optimized**: Drag-and-drop support with mobile optimization
 - 🔧 **Comprehensive Logging**: Detailed debugging and error tracking with compile-time toggles
 - ☁️ **Cloud Sync**: Chrome sync storage support for configuration backup
+- 🌐 **WebDAV & S3 Sync**: Manual push/pull synchronization with WebDAV and S3-compatible storage (see [SYNC_DOCUMENTATION.md](./SYNC_DOCUMENTATION.md))
 - ⚡ **Build Optimization**: Compile-time flags for logging and IndexedDB to reduce bundle size
 
 ## Build Configurations
@@ -34,7 +35,22 @@ npm run build:no-indexeddb
 
 # Minimal build (no logging, no IndexedDB - smallest bundle)
 npm run build:minimal
+
+# Userscript builds (for Tampermonkey/Violentmonkey)
+npm run build:userscript      # Build emoji picker and manager userscripts
+npm run build:userscript:min  # Build minified userscripts
 ```
+
+### Userscript Builds
+
+The project includes two userscript targets:
+
+1. **emoji-picker-core.user.js** - Core emoji picker functionality for Discourse sites
+2. **emoji-manager.user.js** - Management interface with WebDAV/S3 sync support
+
+Both scripts can be installed via Tampermonkey or Violentmonkey and work on Discourse forums.
+
+For detailed information about WebDAV and S3 synchronization, see [SYNC_DOCUMENTATION.md](./SYNC_DOCUMENTATION.md).
 
 ### Bundle Size Comparison
 
