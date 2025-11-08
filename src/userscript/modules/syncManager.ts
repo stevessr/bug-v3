@@ -1,4 +1,12 @@
 // Sync manager module for userscript - handles WebDAV and S3 synchronization
+// 
+// SECURITY WARNING: This module stores credentials (passwords and API keys) in localStorage.
+// While this is necessary for the userscript to function, users should be aware that:
+// 1. localStorage is accessible to any script running on the same domain
+// 2. Credentials are stored in plain text in the browser's storage
+// 3. Users should only use this feature on trusted devices
+// 4. Strong, unique passwords should be used
+// 5. For S3, consider using IAM roles with minimal permissions
 import { createEl } from '../utils/createEl'
 import { userscriptState } from '../state'
 import { saveDataToLocalStorage, loadDataFromLocalStorage } from '../userscript-storage'
@@ -15,6 +23,7 @@ import {
 const SYNC_CONFIG_KEY = 'emoji_extension_sync_config'
 
 // Load sync configuration from localStorage
+// WARNING: This retrieves sensitive credentials from localStorage
 function loadSyncConfig(): SyncTargetConfig | null {
   try {
     const configData = localStorage.getItem(SYNC_CONFIG_KEY)
@@ -28,6 +37,8 @@ function loadSyncConfig(): SyncTargetConfig | null {
 }
 
 // Save sync configuration to localStorage
+// WARNING: This stores sensitive credentials (passwords, API keys) in plain text in localStorage
+// This is a necessary trade-off for userscript functionality, but users should be aware of the risks
 function saveSyncConfig(config: SyncTargetConfig): void {
   try {
     localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config))
@@ -63,6 +74,18 @@ export function showSyncConfigModal() {
   const syncType = existingConfig?.type || 'webdav'
 
   const contentHTML = `
+    <div style="margin-bottom: 16px; padding: 12px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; color: #92400e;">
+      <div style="font-weight: bold; margin-bottom: 4px;">⚠️ 安全提示</div>
+      <div style="font-size: 13px;">
+        您的密码和密钥将以明文形式存储在浏览器的 localStorage 中。请确保：
+        <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+          <li>仅在受信任的设备上使用此功能</li>
+          <li>使用强密码和独立的凭据</li>
+          <li>定期更换密码和密钥</li>
+        </ul>
+      </div>
+    </div>
+
     <div style="margin-bottom: 24px;">
       <h3 style="margin: 0 0 12px 0; color: var(--emoji-modal-label);">同步类型</h3>
       <select id="syncTypeSelect" style="

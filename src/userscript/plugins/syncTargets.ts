@@ -220,7 +220,8 @@ export class S3SyncTarget implements ISyncTarget {
     const key = this.getObjectKey()
 
     // Support both path-style and virtual-hosted-style URLs
-    if (endpoint.includes('amazonaws.com')) {
+    // Check if endpoint ends with amazonaws.com for proper AWS URL construction
+    if (endpoint.endsWith('.amazonaws.com') || endpoint === 's3.amazonaws.com') {
       return `https://${bucket}.${endpoint}/${key}`
     }
     return `${endpoint}/${bucket}/${key}`
