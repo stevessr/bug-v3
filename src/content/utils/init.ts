@@ -1,4 +1,5 @@
 import { loadDataFromStorage } from '../data/storage'
+
 import { DAEL } from './createEl'
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'

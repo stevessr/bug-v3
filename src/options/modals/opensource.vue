@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import {
   GithubOutlined,
   CloudUploadOutlined,
+  DownloadOutlined,
   SwapOutlined,
   ExportOutlined,
   FileAddOutlined,
@@ -202,6 +203,103 @@ const importFromMarkdown = async () => {
     selectedTargetGroupForMarkdown.value = ''
   }
 }
+
+// Cloud sync functionality methods
+const uploadToCloudSync = async () => {
+  try {
+    // Check if sync is configured
+    if (!emojiStore.isSyncConfigured()) {
+      importResults.value = {
+        success: false,
+        message: '同步未配置',
+        details: '请先在设置页面配置云同步参数'
+      }
+      setTimeout(() => {
+        importResults.value = null
+      }, 5000)
+      return
+    }
+
+    isImporting.value = true
+    importStatus.value = '正在上传配置到云端...'
+    importResults.value = null
+
+    const result = await emojiStore.pushToCloudflare()
+    
+    if (result.success) {
+      importResults.value = {
+        success: true,
+        message: '上传成功',
+        details: result.message || '配置已成功上传到云端'
+      }
+    } else {
+      importResults.value = {
+        success: false,
+        message: '上传失败',
+        details: result.message || '上传到云端时发生错误'
+      }
+    }
+  } catch (error) {
+    importResults.value = {
+      success: false,
+      message: '上传失败',
+      details: error instanceof Error ? error.message : '未知错误'
+    }
+  } finally {
+    isImporting.value = false
+    setTimeout(() => {
+      importResults.value = null
+    }, 3000)
+  }
+}
+
+const pullFromCloudSync = async () => {
+  try {
+    // Check if sync is configured
+    if (!emojiStore.isSyncConfigured()) {
+      importResults.value = {
+        success: false,
+        message: '同步未配置',
+        details: '请先在设置页面配置云同步参数'
+      }
+      setTimeout(() => {
+        importResults.value = null
+      }, 5000)
+      return
+    }
+
+    isImporting.value = true
+    importStatus.value = '正在从云端拉取配置...'
+    importResults.value = null
+
+    const result = await emojiStore.pullFromCloudflare()
+    
+    if (result.success) {
+      importResults.value = {
+        success: true,
+        message: '拉取成功',
+        details: result.message || '配置已成功从云端拉取'
+      }
+    } else {
+      importResults.value = {
+        success: false,
+        message: '拉取失败',
+        details: result.message || '从云端拉取时发生错误'
+      }
+    }
+  } catch (error) {
+    importResults.value = {
+      success: false,
+      message: '拉取失败',
+      details: error instanceof Error ? error.message : '未知错误'
+    }
+  } finally {
+    isImporting.value = false
+    setTimeout(() => {
+      importResults.value = null
+    }, 3000)
+  }
+}
 </script>
 
 <template>
@@ -249,9 +347,14 @@ const importFromMarkdown = async () => {
           <ClearOutlined />
         </template>
       </a-float-button>
-      <a-float-button tooltip="上传到Chrome同步" type="default" @click="$emit('syncToChrome')">
+      <a-float-button tooltip="上传到云端同步" type="default" @click="uploadToCloudSync">
         <template #icon>
           <CloudUploadOutlined />
+        </template>
+      </a-float-button>
+      <a-float-button tooltip="从云端拉取" type="default" @click="pullFromCloudSync">
+        <template #icon>
+          <DownloadOutlined />
         </template>
       </a-float-button>
       <a-float-button
