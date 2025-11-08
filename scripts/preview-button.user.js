@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Discourse 话题预览按钮 (Topic Preview Button)
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.2.1
-// @description  为 Discourse 话题列表添加预览按钮功能 (Add preview button functionality to Discourse topic lists)
+// @version      1.2.3
+// @description  为 Discourse 话题列表添加预览按钮与快捷回复功能 (Add preview and quick-reply to Discourse topic lists)
 // @author       stevessr
 // @match        https://linux.do/*
 // @match        https://meta.discourse.org/*
@@ -131,6 +131,57 @@
 
   ensureStyleInjected('raw-preview-styles', RAW_PREVIEW_STYLES)
 
+  // ===== Quick Reply Styles (overlay-level) =====
+  const QUICK_REPLY_STYLES = `
+.qr-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  margin-left: 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: linear-gradient(90deg,#fffbe6,#f0f7ff);
+  cursor: pointer;
+}
+.quick-reply-panel {
+  display: none;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  background: var(--color-bg, #fff);
+}
+.quick-reply-list {
+  max-height: 150px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.quick-reply-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+  border-radius: 4px;
+}
+.quick-reply-item:hover { background: #f7f7f7; }
+.quick-reply-item .text { flex: 1; cursor: pointer; }
+.quick-reply-item .del {
+  color: #d33; font-weight: 700; margin-left: 10px; cursor: pointer;
+}
+.quick-reply-input {
+  width: 100%; box-sizing: border-box; padding: 6px 8px;
+  border: 1px solid #ccc; border-radius: 4px;
+}
+.quick-reply-actions { display: flex; gap: 8px; margin-top: 8px; }
+.quick-reply-actions button {
+  padding: 5px 10px; border: 1px solid #ccc; border-radius: 5px; cursor: pointer;
+  background: var(--d-button-default-bg-color, #f7f7f7);
+}
+.quick-reply-status { font-size: 12px; color: #666; margin-left: auto; }
+`
+  ensureStyleInjected('quick-reply-styles', QUICK_REPLY_STYLES)
+
   // ===== Preview Logic =====
 
   let overlay = null
@@ -142,6 +193,85 @@
   let jsonScrollAttached = false
   let jsonIsLoading = false
   let jsonReachedEnd = false
+
+  // ===== Quick Reply State & Helpers =====
+  const QUICK_REPLY_KEY = 'preview_quick_replies'
+  const DEFAULT_REPLIES = [
+    '我再也吃不下了 :distorted_face:',
+    '感谢分享！',
+    '学到了，很有用。',
+    '这个帖子太棒了！',
+    '顶一下！'
+  ]
+
+  function getReplies() {
+    try {
+      const raw = localStorage.getItem(QUICK_REPLY_KEY)
+      if (!raw) return DEFAULT_REPLIES.slice()
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr) && arr.every((x) => typeof x === 'string')) return arr
+      return DEFAULT_REPLIES.slice()
+    } catch {
+      return DEFAULT_REPLIES.slice()
+    }
+  }
+
+  function saveReplies(list) {
+    try {
+      if (Array.isArray(list)) localStorage.setItem(QUICK_REPLY_KEY, JSON.stringify(list))
+    } catch {
+      // ignore
+    }
+  }
+
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]')
+    return meta?.getAttribute('content') || ''
+  }
+
+  async function sendReply(topicId, raw, onStatus) {
+    const token = getCsrfToken()
+    if (!token) {
+      onStatus && onStatus('未登录或缺少权限，无法发送。')
+      return { ok: false, status: 0 }
+    }
+
+    const data = new URLSearchParams()
+    data.append('raw', raw)
+    data.append('unlist_topic', 'false')
+    data.append('topic_id', String(topicId))
+    data.append('is_warning', 'false')
+    data.append('whisper', 'false')
+    data.append('archetype', 'regular')
+    data.append('typing_duration_msecs', '1500')
+    data.append('composer_open_duration_msecs', '3000')
+    data.append('draft_key', `topic_${topicId}`)
+    data.append('nested_post', 'true')
+
+    try {
+      onStatus && onStatus('发送中...')
+      const res = await fetch('/posts', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json, text/javascript, */*; q=0.01',
+          'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'x-csrf-token': token,
+          'x-requested-with': 'XMLHttpRequest'
+        },
+        body: data.toString(),
+        credentials: 'include'
+      })
+      if (!res.ok) {
+        onStatus && onStatus(`发送失败 (${res.status})`)
+        return { ok: false, status: res.status }
+      }
+      onStatus && onStatus('发送成功！')
+      return { ok: true, status: res.status }
+    } catch (e) {
+      onStatus && onStatus('网络错误，发送失败')
+      return { ok: false, status: -1, error: e }
+    }
+  }
 
   function rawUrl(topicId, page) {
     return new URL(`/raw/${topicId}?page=${page}`, window.location.origin).toString()
@@ -185,6 +315,13 @@
       text: '关闭 ✖'
     })
 
+    // Quick Reply toggle button
+    const qrToggleBtn = createEl('button', {
+      className: 'qr-toggle-btn',
+      text: '快捷回复'
+    })
+    const qrStatus = createEl('span', { className: 'quick-reply-status' })
+
     prevBtn.addEventListener('click', () => {
       if (!currentTopicId) return
       if (currentPage > 1) {
@@ -204,10 +341,23 @@
     ctrls.appendChild(modeLabel)
     ctrls.appendChild(prevBtn)
     ctrls.appendChild(nextBtn)
+    ctrls.appendChild(qrToggleBtn)
+    ctrls.appendChild(qrStatus)
     ctrls.appendChild(closeBtn)
 
     header.appendChild(title)
     header.appendChild(ctrls)
+
+    // Quick Reply Panel
+    const quickPanel = createQuickReplyPanel(() => currentTopicId, (msg) => {
+      qrStatus.textContent = msg || ''
+      if (msg === '发送成功！') {
+        setTimeout(() => {
+          qrStatus.textContent = ''
+          quickPanel.style.display = 'none'
+        }, 800)
+      }
+    })
 
     iframeEl = createEl('iframe', {
       className: 'raw-preview-iframe',
@@ -215,6 +365,7 @@
     })
 
     modal.appendChild(header)
+    modal.appendChild(quickPanel)
     modal.appendChild(iframeEl)
     overlay.appendChild(modal)
 
@@ -225,6 +376,18 @@
     window.addEventListener('keydown', handleKeydown)
 
     document.body.appendChild(overlay)
+
+    // toggle panel
+    qrToggleBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (quickPanel.style.display === 'none' || !quickPanel.style.display) {
+        quickPanel.refresh && quickPanel.refresh()
+        quickPanel.style.display = 'block'
+      } else {
+        quickPanel.style.display = 'none'
+      }
+    })
 
     if (renderMode === 'iframe') {
       iframeEl.src = rawUrl(topicId, currentPage)
@@ -237,6 +400,78 @@
         })
       }
     }
+  }
+
+  // Build Quick Reply Panel
+  function createQuickReplyPanel(getTopicId, setStatus) {
+    const panel = createEl('div', { className: 'quick-reply-panel' })
+
+    const listDiv = createEl('div', { className: 'quick-reply-list' })
+    const input = createEl('input', {
+      className: 'quick-reply-input',
+      placeholder: '输入自定义回复...'
+    })
+    const actions = createEl('div', { className: 'quick-reply-actions' })
+    const addBtn = createEl('button', { text: '添加到预设' })
+    const sendBtn = createEl('button', { text: '发送' })
+
+    function populate() {
+      listDiv.innerHTML = ''
+      const replies = getReplies()
+      replies.forEach((text, idx) => {
+        const item = createEl('div', { className: 'quick-reply-item' })
+        const span = createEl('span', { className: 'text', text })
+        const del = createEl('span', { className: 'del', text: '×', title: '删除此条预设' })
+        span.addEventListener('click', async () => {
+          const topicId = getTopicId()
+          if (!topicId) return
+          await sendReply(topicId, text, setStatus)
+        })
+        del.addEventListener('click', (e) => {
+          e.stopPropagation()
+          const list = getReplies()
+          list.splice(idx, 1)
+          saveReplies(list)
+          populate()
+        })
+        item.appendChild(span)
+        item.appendChild(del)
+        listDiv.appendChild(item)
+      })
+    }
+
+    addBtn.addEventListener('click', () => {
+      const v = (input.value || '').trim()
+      if (!v) return
+      const list = getReplies()
+      if (!list.includes(v)) {
+        list.push(v)
+        saveReplies(list)
+        populate()
+        input.value = ''
+      } else {
+        setStatus && setStatus('该回复已存在')
+        setTimeout(() => setStatus && setStatus(''), 1200)
+      }
+    })
+
+    sendBtn.addEventListener('click', async () => {
+      const v = (input.value || '').trim()
+      if (!v) return
+      const topicId = getTopicId()
+      if (!topicId) return
+      await sendReply(topicId, v, setStatus)
+      input.value = ''
+    })
+
+    actions.appendChild(addBtn)
+    actions.appendChild(sendBtn)
+    panel.appendChild(listDiv)
+    panel.appendChild(input)
+    panel.appendChild(actions)
+
+    panel.refresh = populate
+    return panel
   }
 
   async function updateIframeSrc() {
