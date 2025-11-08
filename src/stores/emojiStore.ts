@@ -4,6 +4,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import type { Emoji, EmojiGroup, AppSettings } from '../types/type'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
+import { cloudflareSyncService } from '../utils/cloudflareSync'
 
 import { defaultSettings } from '@/types/emoji'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
@@ -86,6 +87,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     console.log('[EmojiStore] Starting loadData with new storage system')
     isLoading.value = true
     try {
+      // Initialize sync service first
+      await initializeSync()
+
       // Load data using new storage system with conflict resolution
       console.log('[EmojiStore] Loading data from new storage system')
       const [loadedGroups, loadedSettings, loadedFavorites] = await Promise.allSettled([
@@ -782,6 +786,41 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
+  // --- Cloudflare Sync Methods ---
+  const initializeSync = async () => {
+    // Try to load sync configuration
+    await cloudflareSyncService.initialize()
+  }
+
+  const saveSyncConfig = async (config: any) => {
+    await cloudflareSyncService.saveConfig(config)
+  }
+
+  const loadSyncConfig = async () => {
+    return await cloudflareSyncService.loadConfig()
+  }
+
+  const testSyncConnection = async () => {
+    return await cloudflareSyncService.testConnection()
+  }
+
+  const syncToCloudflare = async (direction: 'push' | 'pull' | 'both' = 'both') => {
+    const result = await cloudflareSyncService.sync(direction)
+    return result
+  }
+
+  const pushToCloudflare = async () => {
+    return await cloudflareSyncService.pushData()
+  }
+
+  const pullFromCloudflare = async () => {
+    return await cloudflareSyncService.pullData()
+  }
+
+  const isSyncConfigured = (): boolean => {
+    return cloudflareSyncService.isConfigured()
+  }
+
   // --- Synchronization and Persistence ---
 
   // Watch for local changes and persist them (with better debouncing)
@@ -1153,7 +1192,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     beginBatch,
     endBatch,
     // one-click add from web
-    addEmojiFromWeb
+    addEmojiFromWeb,
+    // Cloudflare sync methods
+    initializeSync,
+    saveSyncConfig,
+    loadSyncConfig,
+    testSyncConnection,
+    syncToCloudflare,
+    pushToCloudflare,
+    pullFromCloudflare,
+    isSyncConfigured
     // (lazy-load removed)
   }
 })

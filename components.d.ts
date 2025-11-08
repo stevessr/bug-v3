@@ -18,6 +18,7 @@ declare module 'vue' {
     AImage: typeof import('ant-design-vue/es')['Image']
     AImagePreviewGroup: typeof import('ant-design-vue/es')['ImagePreviewGroup']
     AInput: typeof import('ant-design-vue/es')['Input']
+    AInputPassword: typeof import('ant-design-vue/es')['InputPassword']
     AMenu: typeof import('ant-design-vue/es')['Menu']
     AMenuDivider: typeof import('ant-design-vue/es')['MenuDivider']
     AMenuItem: typeof import('ant-design-vue/es')['MenuItem']

@@ -4,6 +4,7 @@ import { inject } from 'vue'
 import type { OptionsInject } from '../types'
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import GlobalSettings from '../components/GlobalSettings.vue'
+import CloudflareSyncConfig from '../components/CloudflareSyncConfig.vue'
 
 const options = inject<OptionsInject>('options')!
 
@@ -52,5 +53,8 @@ const {
         <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
       </template>
     </GlobalSettings>
+
+    <!-- Cloudflare Sync Configuration -->
+    <CloudflareSyncConfig />
   </div>
 </template>
