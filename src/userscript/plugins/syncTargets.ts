@@ -29,6 +29,7 @@ export interface CloudflareConfig extends SyncConfig {
   type: 'cloudflare'
   url: string
   authToken: string
+  authTokenReadonly?: string
 }
 
 export type SyncTargetConfig = WebDAVConfig | S3Config | CloudflareConfig
@@ -387,9 +388,16 @@ export class CloudflareSyncTarget implements ISyncTarget {
     this.config = config
   }
 
-  private getAuthHeader(): Record<string, string> {
+  private getWriteAuthHeader(): Record<string, string> {
     return {
       Authorization: `Bearer ${this.config.authToken}`
+    }
+  }
+
+  private getReadAuthHeader(): Record<string, string> {
+    const token = this.config.authTokenReadonly || this.config.authToken
+    return {
+      Authorization: `Bearer ${token}`
     }
   }
 
@@ -400,9 +408,10 @@ export class CloudflareSyncTarget implements ISyncTarget {
   async test(): Promise<SyncResult> {
     try {
       const url = this.getUrl() + '/'
+      // Test uses GET, so read auth is sufficient
       const response = await fetch(url, {
         method: 'GET',
-        headers: this.getAuthHeader()
+        headers: this.getReadAuthHeader()
       })
 
       // Expecting a JSON array of keys
@@ -432,8 +441,9 @@ export class CloudflareSyncTarget implements ISyncTarget {
   async push(data: SyncData, onProgress?: ProgressCallback): Promise<SyncResult> {
     try {
       const baseUrl = this.getUrl()
+      // Push is a write operation
       const headers = {
-        ...this.getAuthHeader(),
+        ...this.getWriteAuthHeader(),
         'Content-Type': 'application/json'
       }
 
@@ -476,7 +486,8 @@ export class CloudflareSyncTarget implements ISyncTarget {
   ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
     try {
       const baseUrl = this.getUrl()
-      const headers = this.getAuthHeader()
+      // Pull is a read operation
+      const headers = this.getReadAuthHeader()
       let current = 0
 
       // 1. Get list of all keys

@@ -1,11 +1,13 @@
 # Cloudflare Worker for Userscript Backup
 
-This worker provides a secure backup and restore service for the emoji extension's userscript version. It uses Cloudflare KV for storage and requires a secret token for authorization.
+This worker provides a secure backup and restore service for the emoji extension's userscript version. It uses Cloudflare KV for storage and requires a secret token for authorization. It supports both a read-write and a read-only token for enhanced security.
 
 ## API Endpoints
 
-- `POST /`: Saves the request body to the KV store. Requires `Authorization` header.
-- `GET /`: Retrieves the data from the KV store. Requires `Authorization` header.
+- `POST /:key`: Saves the request body to the KV store under the specified `key`. Requires read-write token.
+- `GET /`: Lists all keys in the KV namespace. Requires read-only or read-write token.
+- `GET /:key`: Retrieves the data for the specified `key`. Requires read-only or read-write token.
+- `DELETE /:key`: Deletes the specified `key` and its data. Requires read-write token.
 
 ## Setup and Deployment
 
@@ -32,16 +34,21 @@ This worker provides a secure backup and restore service for the emoji extension
     ```
     Copy the generated IDs into `wrangler.toml`, replacing the placeholder values.
 
-4.  **Set the Authorization Secret:**
-    For security, the authorization token should be set as a secret, not stored in `wrangler.toml`.
+4.  **Set the Authorization Secrets:**
+    For security, the authorization tokens should be set as secrets, not stored in `wrangler.toml`. You should generate two strong, unique passwords.
+
     ```bash
-    # Generate a strong secret password
+    # Generate strong secret passwords
+    # openssl rand -base64 32
     # openssl rand -base64 32
 
-    # Set the secret for the production environment
-    echo "YOUR_SECRET_PASSWORD" | wrangler secret put AUTH_SECRET
+    # Set the read-write secret for the production environment
+    echo "YOUR_READ_WRITE_PASSWORD" | wrangler secret put AUTH_SECRET
+
+    # Set the read-only secret for the production environment
+    echo "YOUR_READ_ONLY_PASSWORD" | wrangler secret put AUTH_SECRET_READONLY
     ```
-    For local development, the secret is read from the `[vars]` section in `wrangler.toml`.
+    For local development, the secrets are read from the `[vars]` section in `wrangler.toml`.
 
 5.  **Deploy the Worker:**
     ```bash
@@ -50,46 +57,4 @@ This worker provides a secure backup and restore service for the emoji extension
 
 ## Usage in Userscript
 
-You must include the `Authorization` header in your requests.
-
-### Backup
-
-```javascript
-async function backupSettings(settings, authToken) {
-  const response = await fetch('https://your-worker-url.workers.dev/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authToken}`,
-    },
-    body: JSON.stringify(settings),
-  });
-
-  if (response.ok) {
-    console.log('Backup successful');
-  } else {
-    console.error('Backup failed:', await response.text());
-  }
-}
-```
-
-### Restore
-
-```javascript
-async function restoreSettings(authToken) {
-  const response = await fetch('https://your-worker-url.workers.dev/', {
-    headers: {
-      'Authorization': `Bearer ${authToken}`,
-    },
-  });
-
-  if (response.ok) {
-    const settings = await response.json();
-    console.log('Restore successful', settings);
-    return settings;
-  } else {
-    console.error('Restore failed:', await response.text());
-    return null;
-  }
-}
-```
+You must include the `Authorization` header in your requests. Use the read-write token for push operations and the read-only token (if configured) for pull operations.

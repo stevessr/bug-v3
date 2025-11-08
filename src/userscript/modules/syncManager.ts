@@ -9,7 +9,7 @@
 // 5. For S3, consider using IAM roles with minimal permissions
 import { createEl } from '../utils/createEl'
 import { userscriptState } from '../state'
-import { saveDataToLocalStorage, loadDataFromLocalStorage } from '../userscript-storage'
+import { saveDataToLocalStorage } from '../userscript-storage'
 import { createModalElement } from '../utils/editorUtils'
 import { showTemporaryMessage } from '../utils/tempMessage'
 import {
@@ -17,6 +17,7 @@ import {
   type SyncTargetConfig,
   type WebDAVConfig,
   type S3Config,
+  type CloudflareConfig,
   type SyncData,
   type ProgressCallback
 } from '../plugins/syncTargets'
@@ -24,7 +25,6 @@ import {
 const SYNC_CONFIG_KEY = 'emoji_extension_sync_config'
 
 // Load sync configuration from localStorage
-// WARNING: This retrieves sensitive credentials from localStorage
 function loadSyncConfig(): SyncTargetConfig | null {
   try {
     const configData = localStorage.getItem(SYNC_CONFIG_KEY)
@@ -38,8 +38,6 @@ function loadSyncConfig(): SyncTargetConfig | null {
 }
 
 // Save sync configuration to localStorage
-// WARNING: This stores sensitive credentials (passwords, API keys) in plain text in localStorage
-// This is a necessary trade-off for userscript functionality, but users should be aware of the risks
 function saveSyncConfig(config: SyncTargetConfig): void {
   try {
     localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config))
@@ -59,14 +57,51 @@ function createSyncDataFromState(): SyncData {
   }
 }
 
-// Apply sync data to current state
+// Apply sync data to current state by merging
 function applySyncDataToState(data: SyncData): void {
-  userscriptState.emojiGroups = data.emojiGroups || []
-  userscriptState.settings = data.settings || userscriptState.settings
+  const localData = createSyncDataFromState()
+  const mergedData = mergeSyncData(localData, data)
+  userscriptState.emojiGroups = mergedData.emojiGroups
+  userscriptState.settings = mergedData.settings
   saveDataToLocalStorage({
     emojiGroups: userscriptState.emojiGroups,
     settings: userscriptState.settings
   })
+}
+
+// Merge remote data into local data
+function mergeSyncData(local: SyncData, remote: SyncData): SyncData {
+  // Settings: Remote settings overwrite local settings
+  const mergedSettings = { ...local.settings, ...remote.settings }
+
+  // Emoji Groups: Merge based on group name
+  const localGroupsMap = new Map(local.emojiGroups.map((g) => [g.name, g]))
+  const mergedGroups = [...local.emojiGroups]
+
+  for (const remoteGroup of remote.emojiGroups) {
+    const localGroup = localGroupsMap.get(remoteGroup.name)
+    if (localGroup) {
+      // Group exists, merge emojis within it
+      const localEmojisMap = new Map(
+        (localGroup.emojis || []).map((e: any) => [e.name, e])
+      )
+      for (const remoteEmoji of remoteGroup.emojis || []) {
+        // If emoji exists, remote overwrites local. If not, it's added.
+        localEmojisMap.set(remoteEmoji.name, remoteEmoji)
+      }
+      localGroup.emojis = Array.from(localEmojisMap.values())
+    } else {
+      // Group does not exist locally, add the whole group
+      mergedGroups.push(remoteGroup)
+    }
+  }
+
+  return {
+    settings: mergedSettings,
+    emojiGroups: mergedGroups,
+    timestamp: remote.timestamp, // Use timestamp from remote data
+    version: remote.version
+  }
 }
 
 // Show sync configuration modal
@@ -125,7 +160,7 @@ export function showSyncConfigModal() {
       </div>
 
       <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">授权密钥 (Auth Token):</label>
+        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">读写授权密钥 (Auth Token):</label>
         <input type="password" id="cfAuthToken" value="${
           existingConfig?.type === 'cloudflare' ? existingConfig.authToken : ''
         }" style="
@@ -137,161 +172,68 @@ export function showSyncConfigModal() {
           border-radius: 4px;
         ">
       </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">只读授权密钥 (可选):</label>
+        <input type="password" id="cfAuthTokenReadonly" value="${
+          existingConfig?.type === 'cloudflare' ? existingConfig.authTokenReadonly || '' : ''
+        }" style="
+          width: 100%;
+          padding: 8px;
+          background: var(--emoji-modal-button-bg);
+          color: var(--emoji-modal-text);
+          border: 1px solid var(--emoji-modal-border);
+          border-radius: 4px;
+        ">
+        <div style="font-size: 12px; color: var(--emoji-modal-text); opacity: 0.7; margin-top: 4px;">
+          如果提供，拉取数据时将优先使用此密钥。
+        </div>
+      </div>
     </div>
 
     <!-- WebDAV Configuration -->
     <div id="webdavConfig" style="display: ${syncType === 'webdav' ? 'block' : 'none'};">
       <h3 style="margin: 0 0 12px 0; color: var(--emoji-modal-label);">WebDAV 配置</h3>
-      
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">服务器 URL:</label>
-        <input type="text" id="webdavUrl" placeholder="https://your-webdav-server.com" value="${
-          existingConfig?.type === 'webdav' ? existingConfig.url : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">用户名:</label>
-        <input type="text" id="webdavUsername" value="${
-          existingConfig?.type === 'webdav' ? existingConfig.username : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">密码:</label>
-        <input type="password" id="webdavPassword" value="${
-          existingConfig?.type === 'webdav' ? existingConfig.password : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">文件路径 (可选):</label>
-        <input type="text" id="webdavPath" placeholder="emoji-data.json" value="${
-          existingConfig?.type === 'webdav' ? existingConfig.path || '' : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
+      <input type="text" id="webdavUrl" placeholder="服务器 URL" value="${
+        existingConfig?.type === 'webdav' ? existingConfig.url : ''
+      }">
+      <input type="text" id="webdavUsername" placeholder="用户名" value="${
+        existingConfig?.type === 'webdav' ? existingConfig.username : ''
+      }">
+      <input type="password" id="webdavPassword" placeholder="密码" value="${
+        existingConfig?.type === 'webdav' ? existingConfig.password : ''
+      }">
+      <input type="text" id="webdavPath" placeholder="文件路径 (可选)" value="${
+        existingConfig?.type === 'webdav' ? existingConfig.path || '' : ''
+      }">
     </div>
 
     <!-- S3 Configuration -->
     <div id="s3Config" style="display: ${syncType === 's3' ? 'block' : 'none'};">
       <h3 style="margin: 0 0 12px 0; color: var(--emoji-modal-label);">S3 配置</h3>
-      
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Endpoint:</label>
-        <input type="text" id="s3Endpoint" placeholder="s3.amazonaws.com" value="${
-          existingConfig?.type === 's3' ? existingConfig.endpoint : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Region:</label>
-        <input type="text" id="s3Region" placeholder="us-east-1" value="${
-          existingConfig?.type === 's3' ? existingConfig.region : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Bucket:</label>
-        <input type="text" id="s3Bucket" placeholder="my-bucket" value="${
-          existingConfig?.type === 's3' ? existingConfig.bucket : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Access Key ID:</label>
-        <input type="text" id="s3AccessKeyId" value="${
-          existingConfig?.type === 's3' ? existingConfig.accessKeyId : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">Secret Access Key:</label>
-        <input type="password" id="s3SecretAccessKey" value="${
-          existingConfig?.type === 's3' ? existingConfig.secretAccessKey : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display: block; margin-bottom: 4px; color: var(--emoji-modal-label);">路径前缀 (可选):</label>
-        <input type="text" id="s3Path" placeholder="emoji-data.json" value="${
-          existingConfig?.type === 's3' ? existingConfig.path || '' : ''
-        }" style="
-          width: 100%;
-          padding: 8px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-        ">
-      </div>
+      <input type="text" id="s3Endpoint" placeholder="Endpoint" value="${
+        existingConfig?.type === 's3' ? existingConfig.endpoint : ''
+      }">
+      <input type="text" id="s3Region" placeholder="Region" value="${
+        existingConfig?.type === 's3' ? existingConfig.region : ''
+      }">
+      <input type="text" id="s3Bucket" placeholder="Bucket" value="${
+        existingConfig?.type === 's3' ? existingConfig.bucket : ''
+      }">
+      <input type="text" id="s3AccessKeyId" placeholder="Access Key ID" value="${
+        existingConfig?.type === 's3' ? existingConfig.accessKeyId : ''
+      }">
+      <input type="password" id="s3SecretAccessKey" placeholder="Secret Access Key" value="${
+        existingConfig?.type === 's3' ? existingConfig.secretAccessKey : ''
+      }">
+      <input type="text" id="s3Path" placeholder="路径前缀 (可选)" value="${
+        existingConfig?.type === 's3' ? existingConfig.path || '' : ''
+      }">
     </div>
 
     <div style="display: flex; gap: 8px; margin-top: 16px;">
-      <button id="testConnection" style="padding: 8px 16px; background: var(--emoji-modal-button-bg); color: var(--emoji-modal-text); border: 1px solid var(--emoji-modal-border); border-radius: 4px; cursor: pointer;">测试连接</button>
-      <button id="saveConfig" style="padding: 8px 16px; background: var(--emoji-modal-primary-bg); color: white; border: none; border-radius: 4px; cursor: pointer;">保存配置</button>
+      <button id="testConnection">测试连接</button>
+      <button id="saveConfig">保存配置</button>
     </div>
   `
 
@@ -317,43 +259,34 @@ export function showSyncConfigModal() {
   })
 
   // Handle test connection
-  const testBtn = modal.querySelector('#testConnection') as HTMLButtonElement
-  testBtn.addEventListener('click', async () => {
+  modal.querySelector('#testConnection')?.addEventListener('click', async () => {
     const config = getCurrentConfigFromModal(modal)
     if (!config) {
       showTemporaryMessage('请填写完整的配置信息', 'error')
       return
     }
-
-    testBtn.disabled = true
-    testBtn.textContent = '测试中...'
-
+    const btn = modal.querySelector('#testConnection') as HTMLButtonElement
+    btn.disabled = true
+    btn.textContent = '测试中...'
     try {
       const target = createSyncTarget(config)
       const result = await target.test()
-
-      if (result.success) {
-        showTemporaryMessage(result.message, 'success')
-      } else {
-        showTemporaryMessage(result.message, 'error')
-      }
+      showTemporaryMessage(result.message, result.success ? 'success' : 'error')
     } catch (error) {
       showTemporaryMessage(`测试失败: ${error}`, 'error')
     } finally {
-      testBtn.disabled = false
-      testBtn.textContent = '测试连接'
+      btn.disabled = false
+      btn.textContent = '测试连接'
     }
   })
 
   // Handle save config
-  const saveBtn = modal.querySelector('#saveConfig') as HTMLButtonElement
-  saveBtn.addEventListener('click', () => {
+  modal.querySelector('#saveConfig')?.addEventListener('click', () => {
     const config = getCurrentConfigFromModal(modal)
     if (!config) {
       showTemporaryMessage('请填写完整的配置信息', 'error')
       return
     }
-
     saveSyncConfig(config)
     showTemporaryMessage('配置已保存', 'success')
     modal.remove()
@@ -364,6 +297,27 @@ export function showSyncConfigModal() {
 function getCurrentConfigFromModal(modal: HTMLElement): SyncTargetConfig | null {
   const syncType = (modal.querySelector('#syncTypeSelect') as HTMLSelectElement).value
 
+  if (syncType === 'cloudflare') {
+    const url = (modal.querySelector('#cfWorkerUrl') as HTMLInputElement).value.trim()
+    const authToken = (modal.querySelector('#cfAuthToken') as HTMLInputElement).value.trim()
+    const authTokenReadonly = (
+      modal.querySelector('#cfAuthTokenReadonly') as HTMLInputElement
+    ).value.trim()
+
+    if (!url || !authToken) {
+      return null
+    }
+
+    return {
+      type: 'cloudflare',
+      enabled: true,
+      url,
+      authToken,
+      authTokenReadonly: authTokenReadonly || undefined
+    } as CloudflareConfig
+  }
+
+  // ... (WebDAV and S3 logic remains the same)
   if (syncType === 'webdav') {
     const url = (modal.querySelector('#webdavUrl') as HTMLInputElement).value.trim()
     const username = (modal.querySelector('#webdavUsername') as HTMLInputElement).value.trim()
@@ -406,20 +360,6 @@ function getCurrentConfigFromModal(modal: HTMLElement): SyncTargetConfig | null 
       secretAccessKey,
       path: path || undefined
     } as S3Config
-  } else if (syncType === 'cloudflare') {
-    const url = (modal.querySelector('#cfWorkerUrl') as HTMLInputElement).value.trim()
-    const authToken = (modal.querySelector('#cfAuthToken') as HTMLInputElement).value.trim()
-
-    if (!url || !authToken) {
-      return null
-    }
-
-    return {
-      type: 'cloudflare',
-      enabled: true,
-      url,
-      authToken
-    } as CloudflareConfig
   }
 
   return null
@@ -455,15 +395,15 @@ function showPullPreviewModal(
         </div>
       </div>
     </div>
-    <p style="color: #f59e0b; font-weight: bold;">确定要用此备份覆盖本地数据吗？此操作不可撤销。</p>
+    <p style="color: #f59e0b; font-weight: bold;">将使用此备份与本地数据合并。此操作不可撤销。</p>
     <div style="display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end;">
-      <button id="cancelPull" style="padding: 8px 16px; background: var(--emoji-modal-button-bg); color: var(--emoji-modal-text); border: 1px solid var(--emoji-modal-border); border-radius: 4px; cursor: pointer;">取消</button>
-      <button id="confirmPull" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">确认恢复</button>
+      <button id="cancelPull">取消</button>
+      <button id="confirmPull">确认合并</button>
     </div>
   `
 
   const modal = createModalElement({
-    title: '确认恢复',
+    title: '确认合并恢复',
     content: contentHTML,
     onClose: () => modal.remove()
   })
@@ -471,10 +411,10 @@ function showPullPreviewModal(
   document.body.appendChild(modal)
 
   modal.querySelector('#confirmPull')?.addEventListener('click', () => {
-    applySyncDataToState(data)
+    applySyncDataToState(data) // This now merges instead of overwriting
     config.lastSyncTime = Date.now()
     saveSyncConfig(config)
-    showTemporaryMessage('数据恢复成功，页面将刷新', 'success')
+    showTemporaryMessage('数据合并成功，页面将刷新', 'success')
     modal.remove()
     onConfirm() // This will close the parent modal
     setTimeout(() => {
@@ -524,56 +464,21 @@ export function showSyncOperationsModal() {
       <h3 style="margin: 0 0 12px 0; color: var(--emoji-modal-label);">同步操作</h3>
       
       <div style="margin-bottom: 16px;">
-        <button id="pushData" style="
-          width: 100%;
-          padding: 12px;
-          background: var(--emoji-modal-primary-bg);
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-        ">
-          ⬆️ 推送 (Push) - 上传本地数据到服务器
-        </button>
+        <button id="pushData">⬆️ 推送 (Push) - 上传本地数据到服务器</button>
         <div style="font-size: 12px; color: var(--emoji-modal-text); opacity: 0.7; margin-top: 4px;">
           将当前的表情分组和设置推送到远程服务器
         </div>
       </div>
 
       <div style="margin-bottom: 16px;">
-        <button id="pullData" style="
-          width: 100%;
-          padding: 12px;
-          background: #10b981;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-        ">
-          ⬇️ 拉取 (Pull) - 从服务器下载数据
-        </button>
+        <button id="pullData">⬇️ 拉取 (Pull) - 从服务器合并数据</button>
         <div style="font-size: 12px; color: var(--emoji-modal-text); opacity: 0.7; margin-top: 4px;">
-          从远程服务器拉取表情分组和设置（会覆盖本地数据）
+          从远程服务器拉取数据并与本地数据合并
         </div>
       </div>
 
       <div>
-        <button id="configSync" style="
-          width: 100%;
-          padding: 12px;
-          background: var(--emoji-modal-button-bg);
-          color: var(--emoji-modal-text);
-          border: 1px solid var(--emoji-modal-border);
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-        ">
-          ⚙️ 同步配置
-        </button>
+        <button id="configSync">⚙️ 同步配置</button>
       </div>
     </div>
   `
@@ -646,7 +551,6 @@ export function showSyncOperationsModal() {
       const result = await target.pull(updateProgress)
 
       if (result.success && result.data) {
-        // Show preview modal instead of applying directly
         showPullPreviewModal(result.data, config, () => modal.remove())
       } else {
         showTemporaryMessage(`拉取失败: ${result.message}`, 'error')
@@ -656,14 +560,13 @@ export function showSyncOperationsModal() {
     } finally {
       pullBtn.disabled = false
       pushBtn.disabled = false
-      pullBtn.textContent = '⬇️ 拉取 (Pull) - 从服务器下载数据'
+      pullBtn.textContent = '⬇️ 拉取 (Pull) - 从服务器合并数据'
       hideProgress()
     }
   })
 
   // Handle config
-  const configBtn = modal.querySelector('#configSync') as HTMLButtonElement
-  configBtn.addEventListener('click', () => {
+  modal.querySelector('#configSync')?.addEventListener('click', () => {
     modal.remove()
     showSyncConfigModal()
   })

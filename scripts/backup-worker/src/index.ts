@@ -1,6 +1,7 @@
 export interface Env {
   EMOJI_BACKUP: KVNamespace;
   AUTH_SECRET: string;
+  AUTH_SECRET_READONLY: string;
 }
 
 const corsHeaders = {
@@ -8,6 +9,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
+
+type AccessLevel = 'readonly' | 'readwrite' | 'none';
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -24,7 +27,14 @@ export default {
     }
 
     const token = authHeader.substring('Bearer '.length);
-    if (token !== env.AUTH_SECRET) {
+    let accessLevel: AccessLevel = 'none';
+    if (token === env.AUTH_SECRET) {
+      accessLevel = 'readwrite';
+    } else if (token === env.AUTH_SECRET_READONLY) {
+      accessLevel = 'readonly';
+    }
+
+    if (accessLevel === 'none') {
       return new Response('Unauthorized: Invalid token', { status: 401, headers: corsHeaders });
     }
 
@@ -32,16 +42,29 @@ export default {
     const key = url.pathname.substring(1);
 
     try {
-      if (request.method === 'POST') {
+      if (request.method === 'POST' || request.method === 'DELETE') {
+        if (accessLevel === 'readonly') {
+          return new Response('Forbidden: This key only has read-only access.', {
+            status: 403,
+            headers: corsHeaders,
+          });
+        }
+
         if (!key) {
           return new Response('No key provided in URL path', { status: 400, headers: corsHeaders });
         }
-        const data = await request.text();
-        if (!data) {
-          return new Response('No data provided', { status: 400, headers: corsHeaders });
+
+        if (request.method === 'POST') {
+          const data = await request.text();
+          if (!data) {
+            return new Response('No data provided', { status: 400, headers: corsHeaders });
+          }
+          await env.EMOJI_BACKUP.put(key, data);
+          return new Response(`Backup successful for key: ${key}`, { status: 200, headers: corsHeaders });
+        } else { // DELETE
+          await env.EMOJI_BACKUP.delete(key);
+          return new Response(`Deleted key: ${key}`, { status: 200, headers: corsHeaders });
         }
-        await env.EMOJI_BACKUP.put(key, data);
-        return new Response(`Backup successful for key: ${key}`, { status: 200, headers: corsHeaders });
       } else if (request.method === 'GET') {
         if (!key) {
           // List all keys
@@ -61,12 +84,6 @@ export default {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-      } else if (request.method === 'DELETE') {
-        if (!key) {
-          return new Response('No key provided in URL path', { status: 400, headers: corsHeaders });
-        }
-        await env.EMOJI_BACKUP.delete(key);
-        return new Response(`Deleted key: ${key}`, { status: 200, headers: corsHeaders });
       } else {
         return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
       }
