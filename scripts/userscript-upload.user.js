@@ -125,6 +125,69 @@
     }
   }
 
+  // Custom confirmation dialog
+  function showConfirmDialog(message) {
+    return new Promise(resolve => {
+      const overlay = createE('div', {
+        style: `position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index:2147483647; display:flex; justify-content:center; align-items:center;`
+      })
+
+      const dialog = createE('div', {
+        style: `background:white; padding:20px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.3); max-width:400px; text-align:center; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;`
+      })
+
+      const messageEl = createE('p', {
+        text: message,
+        style: `margin-bottom:20px; font-size:15px; color:#333;`
+      })
+
+      const buttonContainer = createE('div', {
+        style: `display:flex; justify-content:center; gap:10px;`
+      })
+
+      const confirmButton = createE('button', {
+        text: '确认',
+        style: `background:#3b82f6; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-size:14px; transition:background-color .2s;`
+      })
+      confirmButton.addEventListener(
+        'mouseenter',
+        () => (confirmButton.style.backgroundColor = '#2563eb')
+      )
+      confirmButton.addEventListener(
+        'mouseleave',
+        () => (confirmButton.style.backgroundColor = '#3b82f6')
+      )
+
+      const cancelButton = createE('button', {
+        text: '取消',
+        style: `background:#6b7280; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-size:14px; transition:background-color .2s;`
+      })
+      cancelButton.addEventListener(
+        'mouseenter',
+        () => (cancelButton.style.backgroundColor = '#4b5563')
+      )
+      cancelButton.addEventListener(
+        'mouseleave',
+        () => (cancelButton.style.backgroundColor = '#6b7280')
+      )
+
+      const cleanup = result => {
+        document.body.removeChild(overlay)
+        resolve(result)
+      }
+
+      confirmButton.addEventListener('click', () => cleanup(true))
+      cancelButton.addEventListener('click', () => cleanup(false))
+
+      buttonContainer.appendChild(cancelButton)
+      buttonContainer.appendChild(confirmButton)
+      dialog.appendChild(messageEl)
+      dialog.appendChild(buttonContainer)
+      overlay.appendChild(dialog)
+      document.body.appendChild(overlay)
+    })
+  }
+
   // Helper: insert into common editors (textarea or ProseMirror)
   function insertIntoEditor(text) {
     // Priority 1: Chat composer (highest priority)
@@ -825,7 +888,7 @@
         }
         if (filesToUpload.length < files.length) {
           const skippedCount = files.length - filesToUpload.length
-          const proceed = confirm(
+          const proceed = await showConfirmDialog(
             `发现 ${skippedCount} 个图片已存在于markdown文本中，将被跳过。是否继续上传剩余 ${filesToUpload.length} 个图片？`
           )
           if (!proceed) return
