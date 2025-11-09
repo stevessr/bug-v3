@@ -202,7 +202,6 @@
         }
       }
     }
-
     ;[sendCustomBtn, addPresetBtn].forEach(btn =>
       Object.assign(btn.style, {
         padding: '5px 10px',
