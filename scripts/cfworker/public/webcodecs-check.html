@@ -1,32 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebCodecs 支持检测</title>
-  <link rel="stylesheet" href="/assets/css/style.css">
-</head>
-<body>
-  <div class="container">
-    <h1>🧪 WebCodecs 支持检测</h1>
-    <p class="subtitle">基于 MDN: <a href="https://mdn.org.cn/en-US/docs/Web/API/WebCodecs_API" target="_blank" rel="noopener">WebCodecs API</a></p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebCodecs 支持检测</title>
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>🧪 WebCodecs 支持检测</h1>
+      <p class="subtitle">
+        基于 MDN:
+        <a
+          href="https://mdn.org.cn/en-US/docs/Web/API/WebCodecs_API"
+          target="_blank"
+          rel="noopener"
+        >
+          WebCodecs API
+        </a>
+      </p>
 
-    <div class="section">
-      <div class="section-title">检测概览</div>
-      <div id="summary" class="result">
-        <p>正在检测环境与能力...</p>
+      <div class="section">
+        <div class="section-title">检测概览</div>
+        <div id="summary" class="result">
+          <p>正在检测环境与能力...</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">详细结果</div>
+        <div id="details" class="result"></div>
+      </div>
+
+      <div class="section">
+        <a class="btn" href="/index.html">← 返回转换页面</a>
       </div>
     </div>
-
-    <div class="section">
-      <div class="section-title">详细结果</div>
-      <div id="details" class="result"></div>
-    </div>
-
-    <div class="section">
-      <a class="btn" href="/index.html">← 返回转换页面</a>
-    </div>
-  </div>
-  <script src="/assets/js/webcodecs-check.js" type="module"></script>
-</body>
+    <script src="/assets/js/webcodecs-check.js" type="module"></script>
+  </body>
 </html>

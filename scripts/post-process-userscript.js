@@ -8,12 +8,18 @@ import { spawn } from 'child_process'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const buildType = process.argv[2] || 'build:userscript'
 
-function getUserscriptHeader(minified = false, variant = 'remote', scriptName = 'emoji-extension', scriptTitle = 'Discourse 表情扩展 (Emoji Extension for Discourse)', scriptDescription = '为 Discourse 论坛添加表情选择器功能 (Add emoji picker functionality to Discourse forums)') {
+function getUserscriptHeader(
+  minified = false,
+  variant = 'remote',
+  scriptName = 'emoji-extension',
+  scriptTitle = 'Discourse 表情扩展 (Emoji Extension for Discourse)',
+  scriptDescription = '为 Discourse 论坛添加表情选择器功能 (Add emoji picker functionality to Discourse forums)'
+) {
   const version = getPackageVersion()
   const minSuffix = minified ? ' (Minified)' : ''
   const liteSuffix = variant === 'remote' ? ' lite' : ''
   const grants = '// @grant        none'
-  
+
   const variantSuffix = variant && variant !== 'default' ? `.${variant}` : ''
 
   return `// ==UserScript==
@@ -300,7 +306,13 @@ function processUserscript(scriptName, scriptTitle, scriptDescription) {
     }
 
     // Combine header + optional runtime helpers + content + footer
-    const header = getUserscriptHeader(isMinified, normalizedVariant, scriptName, scriptTitle, scriptDescription)
+    const header = getUserscriptHeader(
+      isMinified,
+      normalizedVariant,
+      scriptName,
+      scriptTitle,
+      scriptDescription
+    )
     const footer = getUserscriptFooter()
 
     // Tampermonkey runtime helpers removed for modular scripts
@@ -349,12 +361,14 @@ async function main() {
       {
         name: 'emoji-picker-core',
         title: 'Discourse 表情选择器 (Emoji Picker) core',
-        description: 'Discourse 论坛表情选择器 - 核心功能 (Emoji picker for Discourse - Core features only)'
+        description:
+          'Discourse 论坛表情选择器 - 核心功能 (Emoji picker for Discourse - Core features only)'
       },
       {
         name: 'emoji-manager',
         title: 'Discourse 表情管理器 (Emoji Manager) mgr',
-        description: 'Discourse 论坛表情管理 - 设置、导入导出、分组编辑 (Emoji management for Discourse - Settings, import/export, group editor)'
+        description:
+          'Discourse 论坛表情管理 - 设置、导入导出、分组编辑 (Emoji management for Discourse - Settings, import/export, group editor)'
       }
     ]
 

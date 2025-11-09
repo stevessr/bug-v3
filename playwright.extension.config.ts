@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: 'html',
   use: {
     trace: 'on-first-retry',
-    headless: false, // Extensions need to run in headed mode
+    headless: false // Extensions need to run in headed mode
   },
 
   projects: [
@@ -27,9 +27,9 @@ export default defineConfig({
             '--disable-features=VizDisplayCompositor',
             '--no-sandbox',
             '--disable-setuid-sandbox'
-          ],
-        },
-      },
-    },
-  ],
+          ]
+        }
+      }
+    }
+  ]
 })

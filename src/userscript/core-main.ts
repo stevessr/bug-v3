@@ -16,8 +16,8 @@ import {
 import { logPlatformInfo } from './utils/platformDetection'
 import { autoReadAllv2 } from '../content/utils/autoReadReplies'
 
-if(!(window as any).autoReadAllRepliesV2){
-  (window as any).autoReadAllRepliesV2 = autoReadAllv2
+if (!(window as any).autoReadAllRepliesV2) {
+  ;(window as any).autoReadAllRepliesV2 = autoReadAllv2
 }
 
 // Initialize from localStorage
@@ -69,9 +69,9 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
   console.log('[Emoji Picker] Initializing...')
 
   logPlatformInfo()
-  
+
   await initializeUserscriptData()
-  
+
   // 仅在设置允许时初始化一键解析并添加图片功能
   try {
     if (userscriptState.settings?.enableBatchParseImages !== false) {
@@ -84,7 +84,7 @@ async function initializeEmojiFeature(maxAttempts: number = 10, delay: number = 
   } catch (e) {
     console.warn('[Emoji Picker] initOneClickAdd failed', e)
   }
-  
+
   // Callout suggestions moved to standalone userscript (scripts/callout-suggestions.user.js)
   // Initialize callout suggestions
   // try {

@@ -8,8 +8,6 @@ import {
 
 import { newStorageHelpers } from './newStorage'
 
-
-
 // Use the CloudflareConfig from syncTargets and extend it with sync times
 export interface ExtendedCloudflareConfig extends CloudflareConfig {
   lastSyncTime?: number
@@ -97,7 +95,7 @@ export class CloudflareSyncService {
             resolve(result[SYNC_CONFIG_KEY] || null)
           })
         })
-        
+
         if (config && typeof config === 'object' && config.type === 'cloudflare') {
           this.config = config
           return config
@@ -204,11 +202,11 @@ export class CloudflareSyncService {
       ])
 
       // Include favorites in the settings
-      const syncSettings: AppSettings = { 
-        ...settings, 
+      const syncSettings: AppSettings = {
+        ...settings,
         lastModified: Date.now()
       }
-      
+
       const syncData: SyncData = {
         emojiGroups: groups,
         settings: syncSettings,
@@ -319,8 +317,10 @@ export class CloudflareSyncService {
 
       // Get favorites from remote data (they might be in settings or separate)
       let remoteFavorites: string[] = []
-      if ((remoteData as ExtendedSyncData).settings && 
-          Array.isArray((remoteData as ExtendedSyncData).settings.favorites)) {
+      if (
+        (remoteData as ExtendedSyncData).settings &&
+        Array.isArray((remoteData as ExtendedSyncData).settings.favorites)
+      ) {
         remoteFavorites = (remoteData as ExtendedSyncData).settings.favorites as string[]
       }
 

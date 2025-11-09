@@ -16,12 +16,14 @@
 ### 两种模式
 
 #### 1. WebCodecs 模式（勾选复选框）
+
 - ✅ **真正的 AVIF 格式**：使用浏览器原生 WebCodecs ImageEncoder API
 - 🎯 **高压缩率**：AVIF 比 WebP 体积更小（通常减少 20-50%）
 - 🎨 **高质量**：支持 HDR、广色域
 - ⚠️ **浏览器要求**：需要最新版 Chrome/Edge（90+），Firefox 不支持
 
 #### 2. Canvas 降级模式（不勾选复选框，默认）
+
 - 🔄 **自动降级为 WebP**：通用兼容方案
 - ✅ **广泛兼容**：所有现代浏览器都支持
 - 💾 **体积较小**：比 PNG 小 70-90%
@@ -29,12 +31,12 @@
 
 ## 浏览器兼容性
 
-| 浏览器 | ImageEncoder API | Canvas WebP |
-|--------|-----------------|-------------|
-| Chrome 90+ | ✅ 支持 | ✅ 支持 |
-| Edge 90+ | ✅ 支持 | ✅ 支持 |
-| Firefox | ❌ 不支持 | ✅ 支持 |
-| Safari | ❌ 不支持 | ✅ 支持 |
+| 浏览器     | ImageEncoder API | Canvas WebP |
+| ---------- | ---------------- | ----------- |
+| Chrome 90+ | ✅ 支持          | ✅ 支持     |
+| Edge 90+   | ✅ 支持          | ✅ 支持     |
+| Firefox    | ❌ 不支持        | ✅ 支持     |
+| Safari     | ❌ 不支持        | ✅ 支持     |
 
 ## 技术细节
 
@@ -50,7 +52,7 @@
 
 ```javascript
 // 检查是否启用 WebCodecs
-const useWebCodecs = document.getElementById('useWebCodecs').checked;
+const useWebCodecs = document.getElementById('useWebCodecs').checked
 
 // 尝试使用真正的 WebCodecs API
 if (useWebCodecs && 'ImageEncoder' in window) {
@@ -59,15 +61,15 @@ if (useWebCodecs && 'ImageEncoder' in window) {
     width: imgBitmap.width,
     height: imgBitmap.height,
     quality: 0.8
-  });
-  
-  await encoder.encode(imgBitmap);
-  const result = await encoder.flush();
-  return new Blob([result], { type: 'image/avif' });
+  })
+
+  await encoder.encode(imgBitmap)
+  const result = await encoder.flush()
+  return new Blob([result], { type: 'image/avif' })
 }
 
 // 降级方案：Canvas WebP
-canvas.toBlob(blob => resolve(blob), 'image/webp', 0.8);
+canvas.toBlob(blob => resolve(blob), 'image/webp', 0.8)
 ```
 
 ## 错误处理
@@ -79,11 +81,13 @@ canvas.toBlob(blob => resolve(blob), 'image/webp', 0.8);
 ## 建议
 
 ### 何时使用 WebCodecs AVIF？
+
 - ✅ 使用最新版 Chrome/Edge 浏览器
 - ✅ 需要极致的文件体积压缩
 - ✅ 目标用户也使用现代浏览器
 
 ### 何时使用 Canvas WebP？
+
 - ✅ 需要广泛的浏览器兼容性
 - ✅ 移动设备用户
 - ✅ 不确定用户浏览器版本

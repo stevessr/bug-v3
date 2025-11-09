@@ -1,96 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Telegram Sticker Downloader</title>
-    <link rel="stylesheet" href="/assets/css/telegram-sticker-downloader.css">
-
-</head>
-<body>
+    <link rel="stylesheet" href="/assets/css/telegram-sticker-downloader.css" />
+  </head>
+  <body>
     <button id="sidePanelToggle" class="side-panel-toggle">⚙️ Token</button>
-    
+
     <div id="sidePanel" class="side-panel">
-        <h2>Settings</h2>
-        <div class="token-input-group">
-            <label for="botToken">Bot Token:</label>
-            <input type="text" id="botToken" placeholder="Enter your Telegram bot token">
-        </div>
-        <button id="saveTokenBtn">Save Token</button>
-        <p style="margin-top: 20px; font-size: 14px; color: #777;">Enter your Telegram bot token to access sticker sets. You can get one from @BotFather on Telegram.</p>
+      <h2>Settings</h2>
+      <div class="token-input-group">
+        <label for="botToken">Bot Token:</label>
+        <input type="text" id="botToken" placeholder="Enter your Telegram bot token" />
+      </div>
+      <button id="saveTokenBtn">Save Token</button>
+      <p style="margin-top: 20px; font-size: 14px; color: #777">
+        Enter your Telegram bot token to access sticker sets. You can get one from @BotFather on
+        Telegram.
+      </p>
     </div>
-    
+
     <div class="container">
-        <h1>Telegram Sticker Downloader</h1>
-        
-        <div class="input-group">
-            <label for="stickerSetName">Sticker Set Name or URL:</label>
-            <input type="text" id="stickerSetName" placeholder="Enter sticker set name or URL (e.g., https://t.me/addstickers/MyStickerSet)">
+      <h1>Telegram Sticker Downloader</h1>
+
+      <div class="input-group">
+        <label for="stickerSetName">Sticker Set Name or URL:</label>
+        <input
+          type="text"
+          id="stickerSetName"
+          placeholder="Enter sticker set name or URL (e.g., https://t.me/addstickers/MyStickerSet)"
+        />
+      </div>
+
+      <button id="loadStickersBtn" disabled>Load Stickers</button>
+      <button id="downloadAllBtn" disabled>Download All Stickers</button>
+      <button id="batchDownloadBtn" disabled>Batch Download All (tar.gz)</button>
+      <button id="initFFmpegBtn" title="Preload and initialize FFmpeg to speed up conversions">
+        Preheat FFmpeg
+      </button>
+      <div style="margin-top: 15px">
+        <label>
+          <input type="checkbox" id="convertWebMtoWebP" />
+          Convert WebM to WebP during download
+        </label>
+      </div>
+
+      <div id="statusMessage" class="status"></div>
+
+      <div id="stats" class="stats hidden">
+        <div class="stat-item">
+          <div class="stat-number" id="totalStat">0</div>
+          <div class="stat-label">Total</div>
         </div>
-        
-    <button id="loadStickersBtn" disabled>Load Stickers</button>
-    <button id="downloadAllBtn" disabled>Download All Stickers</button>
-    <button id="batchDownloadBtn" disabled>Batch Download All (tar.gz)</button>
-    <button id="initFFmpegBtn" title="Preload and initialize FFmpeg to speed up conversions">Preheat FFmpeg</button>
-        <div style="margin-top: 15px;">
-            <label>
-                <input type="checkbox" id="convertWebMtoWebP"> Convert WebM to WebP during download
-            </label>
+        <div class="stat-item">
+          <div class="stat-number" id="downloadedStat">0</div>
+          <div class="stat-label">Downloaded</div>
         </div>
-        
-        <div id="statusMessage" class="status"></div>
-        
-        <div id="stats" class="stats hidden">
-            <div class="stat-item">
-                <div class="stat-number" id="totalStat">0</div>
-                <div class="stat-label">Total</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="downloadedStat">0</div>
-                <div class="stat-label">Downloaded</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="failedStat">0</div>
-                <div class="stat-label">Failed</div>
-            </div>
+        <div class="stat-item">
+          <div class="stat-number" id="failedStat">0</div>
+          <div class="stat-label">Failed</div>
         </div>
-        
-        <div id="progressContainer" class="hidden">
-            <label>Total Progress:</label>
-            <div class="progress-bar">
-                <div id="progressBar" class="progress"></div>
-            </div>
-            <div id="progressText">0%</div>
+      </div>
+
+      <div id="progressContainer" class="hidden">
+        <label>Total Progress:</label>
+        <div class="progress-bar">
+          <div id="progressBar" class="progress"></div>
         </div>
-        
-        <div id="stickerList" class="sticker-list hidden">
-            <h2>Stickers</h2>
-            <div id="stickersContainer"></div>
+        <div id="progressText">0%</div>
+      </div>
+
+      <div id="stickerList" class="sticker-list hidden">
+        <h2>Stickers</h2>
+        <div id="stickersContainer"></div>
+      </div>
+
+      <div id="retrySection" class="retry-section hidden">
+        <h2>Retry Failed Downloads</h2>
+        <button id="retryFailedBtn" class="btn-danger">Retry All Failed</button>
+
+        <div id="failedStickersList" class="failed-stickers hidden">
+          <h3>Failed Stickers:</h3>
+          <div id="failedStickersContainer"></div>
         </div>
-        
-        <div id="retrySection" class="retry-section hidden">
-            <h2>Retry Failed Downloads</h2>
-            <button id="retryFailedBtn" class="btn-danger">Retry All Failed</button>
-            
-            <div id="failedStickersList" class="failed-stickers hidden">
-                <h3>Failed Stickers:</h3>
-                <div id="failedStickersContainer"></div>
-            </div>
+      </div>
+
+      <div id="downloadHistorySection" class="download-history hidden">
+        <h2>Download History</h2>
+        <button id="clearHistoryBtn" class="btn-danger">Clear History</button>
+
+        <div id="historyContainer" class="history-list">
+          <!-- Download history will be populated here -->
         </div>
-        
-        <div id="downloadHistorySection" class="download-history hidden">
-            <h2>Download History</h2>
-            <button id="clearHistoryBtn" class="btn-danger">Clear History</button>
-            
-            <div id="historyContainer" class="history-list">
-                <!-- Download history will be populated here -->
-            </div>
-        </div>
-        
-        <div id="ffmpegLogSection" class="ffmpeg-log-section">
-            <h2>FFmpeg Logs</h2>
-            <div id="ffmpegLog" class="ffmpeg-log"></div>
-        </div>
+      </div>
+
+      <div id="ffmpegLogSection" class="ffmpeg-log-section">
+        <h2>FFmpeg Logs</h2>
+        <div id="ffmpegLog" class="ffmpeg-log"></div>
+      </div>
     </div>
 
     <!-- Optional: FFmpeg helper module. Keeping this static ensures the module is available
@@ -100,5 +109,5 @@
     <!-- Lottie (bodymovin) library used to render .tgs (Lottie) files to a canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
     <script src="/assets/js/telegram-sticker-downloader.js"></script>
-</body>
+  </body>
 </html>

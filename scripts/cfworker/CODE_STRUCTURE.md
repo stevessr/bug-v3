@@ -21,16 +21,19 @@ scripts/cfworker/public/
 ### 文件说明
 
 #### index.html
+
 - 仅包含 HTML 结构
 - 通过 `<link>` 引用外部 CSS
 - 通过 `<script type="module">` 引用外部 JS
 
 #### assets/css/style.css
+
 - 包含所有页面样式
 - 响应式设计
 - 按钮、表单、布局等所有 CSS
 
 #### assets/js/app.js
+
 - 使用 ES6 模块语法
 - FFmpeg.wasm 集成
 - 视频转换逻辑

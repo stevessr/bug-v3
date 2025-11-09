@@ -1,9 +1,9 @@
 // Toolbar injection and button management module
 import { getPlatformToolbarSelectors } from '../utils/platformDetection'
 import { injectEmojiButton } from './uiComponents'
-import { 
-  setupForceMobileMenuTriggers, 
-  setupForceMobileToolbarListeners, 
+import {
+  setupForceMobileMenuTriggers,
+  setupForceMobileToolbarListeners,
   shouldSkipToolbarInjection,
   startAllForceMobileIntervals
 } from './forceMobileMode'
@@ -12,7 +12,9 @@ import {
 export function findAllToolbars(): HTMLElement[] {
   // Skip toolbar injection if force mobile mode with d-menu-portals is active
   if (shouldSkipToolbarInjection()) {
-    console.log('[Emoji Extension Userscript] Force mobile mode with #d-menu-portals detected, skipping toolbar injection')
+    console.log(
+      '[Emoji Extension Userscript] Force mobile mode with #d-menu-portals detected, skipping toolbar injection'
+    )
     return []
   }
 

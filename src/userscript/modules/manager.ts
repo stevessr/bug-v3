@@ -1,5 +1,5 @@
 // Emoji management interface module
-// 
+//
 // Injection Configuration (inspired by magnific-popup.ts):
 // - Selectors: Target containers and buttons (e.g., '.emoji-manager-card', '.btn')
 // - Parsers: Extract emoji data from URL inputs, name inputs, and dimension inputs
@@ -24,11 +24,11 @@ import { customAlert } from '../utils'
 interface EmojiInjectionConfig {
   // Selectors for finding target elements
   selectors: {
-    container: string           // Main container for emoji grid
-    card: string                // Individual emoji card
-    actionRow: string           // Action button row in card
-    editButton: string          // Edit button selector
-    deleteButton: string        // Delete button selector
+    container: string // Main container for emoji grid
+    card: string // Individual emoji card
+    actionRow: string // Action button row in card
+    editButton: string // Edit button selector
+    deleteButton: string // Delete button selector
   }
   // Parsers for extracting emoji data
   parsers: {
@@ -254,8 +254,8 @@ export function openManagementInterface() {
   left.appendChild(addGroupRow)
 
   // Add group selector dropdown (for mobile)
-  const groupSelectorContainer = createEl('div', { 
-    className: 'emoji-manager-group-selector' 
+  const groupSelectorContainer = createEl('div', {
+    className: 'emoji-manager-group-selector'
   }) as HTMLDivElement
   const groupSelector = createEl('select', {
     className: 'form-control',
@@ -310,8 +310,8 @@ export function openManagementInterface() {
     placeholder: '高度 (px) 可选',
     className: 'form-control'
   }) as HTMLInputElement
-  const addEmojiBtn = createEl('button', { 
-    text: '添加表情', 
+  const addEmojiBtn = createEl('button', {
+    text: '添加表情',
     className: 'btn btn-primary',
     attrs: {
       'data-action': 'add-emoji',
@@ -331,8 +331,16 @@ export function openManagementInterface() {
   const footer = createEl('div', { className: 'emoji-manager-footer' }) as HTMLDivElement
   const exportBtn = createEl('button', { text: '分组导出', className: 'btn' }) as HTMLButtonElement
   const importBtn = createEl('button', { text: '分组导入', className: 'btn' }) as HTMLButtonElement
-  const groupEditBtn = createEl('button', { text: '分组编辑', className: 'btn', style: 'background:#3b82f6; color:#fff;' }) as HTMLButtonElement
-  const restoreBtn = createEl('button', { text: '恢复默认配置', className: 'btn', style: 'background:#f97316; color:#fff;' }) as HTMLButtonElement
+  const groupEditBtn = createEl('button', {
+    text: '分组编辑',
+    className: 'btn',
+    style: 'background:#3b82f6; color:#fff;'
+  }) as HTMLButtonElement
+  const restoreBtn = createEl('button', {
+    text: '恢复默认配置',
+    className: 'btn',
+    style: 'background:#f97316; color:#fff;'
+  }) as HTMLButtonElement
   const exitBtn = createEl('button', { text: '退出', className: 'btn' }) as HTMLButtonElement
   exitBtn.addEventListener('click', () => modal.remove())
   const saveBtn = createEl('button', {
@@ -340,7 +348,7 @@ export function openManagementInterface() {
     className: 'btn btn-primary'
   }) as HTMLButtonElement
   const syncBtn = createEl('button', { text: '同步管理器', className: 'btn' }) as HTMLButtonElement
-  
+
   // Open group editor functionality
   groupEditBtn.addEventListener('click', () => {
     // Close the current manager modal
@@ -348,38 +356,43 @@ export function openManagementInterface() {
     // Open the custom group editor modal
     showGroupEditorModal()
   })
-  
+
   // Restore to default configuration functionality
   restoreBtn.addEventListener('click', async () => {
-    const confirmed = await customConfirm('确认恢复到默认配置？此操作将清除当前所有分组和表情，且不可撤销！')
+    const confirmed = await customConfirm(
+      '确认恢复到默认配置？此操作将清除当前所有分组和表情，且不可撤销！'
+    )
     if (!confirmed) return
-    
+
     try {
       // Load default emoji groups filtered by current hostname
-      const defaultGroups = await loadAndFilterDefaultEmojiGroups(undefined, window.location.hostname)
-      
+      const defaultGroups = await loadAndFilterDefaultEmojiGroups(
+        undefined,
+        window.location.hostname
+      )
+
       if (!defaultGroups || defaultGroups.length === 0) {
         await customAlert('无法加载默认配置，请检查网络连接')
         return
       }
-      
+
       // Update the in-memory state
       userscriptState.emojiGroups = defaultGroups
-      
+
       // Save to localStorage
       saveDataToLocalStorage({ emojiGroups: userscriptState.emojiGroups })
-      
+
       // Update UI
       renderGroups()
       renderSelectedGroup()
-      
+
       await customAlert('已成功恢复到默认配置')
     } catch (error) {
       console.error('Failed to restore default configuration:', error)
       await customAlert('恢复默认配置失败：' + error)
     }
   })
-  
+
   footer.appendChild(groupEditBtn)
   footer.appendChild(restoreBtn)
   footer.appendChild(syncBtn)
@@ -401,7 +414,7 @@ export function openManagementInterface() {
   function renderGroups() {
     groupsList.innerHTML = ''
     groupSelector.innerHTML = ''
-    
+
     // If no selection yet, default to first group (if any)
     if (!selectedGroupId && userscriptState.emojiGroups.length > 0) {
       selectedGroupId = userscriptState.emojiGroups[0].id
@@ -440,17 +453,17 @@ export function openManagementInterface() {
       }
 
       groupsList.appendChild(row)
-      
+
       // Add to mobile dropdown
       const option = createEl('option', {
         text: `${g.name || g.id} (${(g.emojis || []).length})`,
         attrs: { value: g.id }
       }) as HTMLOptionElement
-      
+
       if (selectedGroupId === g.id) {
         option.selected = true
       }
-      
+
       groupSelector.appendChild(option)
     })
   }
@@ -492,8 +505,8 @@ export function openManagementInterface() {
         showEditorFor(group.id, idx)
       })
 
-      const del = createEl('button', { 
-        text: '删除', 
+      const del = createEl('button', {
+        text: '删除',
         className: 'btn btn-sm',
         attrs: {
           'data-action': 'delete-emoji',
@@ -513,7 +526,7 @@ export function openManagementInterface() {
       card.appendChild(img)
       card.appendChild(name)
       card.appendChild(actions)
-      
+
       // Use configured injection to add card to container
       emojiManagerConfig.injectionPoints.insertCard(emojisContainer, card)
 
@@ -581,7 +594,7 @@ export function openManagementInterface() {
     renderGroups()
     renderSelectedGroup()
   })
-  
+
   // Add event listener for mobile group selector
   groupSelector.addEventListener('change', () => {
     selectedGroupId = groupSelector.value
@@ -594,30 +607,30 @@ export function openManagementInterface() {
       await customAlert('请先选择分组')
       return
     }
-    
+
     // Use configured parsers to extract emoji data
     const url = emojiManagerConfig.parsers.getUrl({ urlInput: emojiUrlInput })
-    const name = emojiManagerConfig.parsers.getName({ 
-      nameInput: emojiNameInput, 
-      urlInput: emojiUrlInput 
+    const name = emojiManagerConfig.parsers.getName({
+      nameInput: emojiNameInput,
+      urlInput: emojiUrlInput
     })
     const width = emojiManagerConfig.parsers.getWidth({ widthInput: emojiWidthInput })
     const height = emojiManagerConfig.parsers.getHeight({ heightInput: emojiHeightInput })
-    
+
     if (!url || !name) {
       await customAlert('请输入 url 和 名称')
       return
     }
-    
+
     const group = userscriptState.emojiGroups.find(g => g.id === selectedGroupId)
     if (!group) return
-    
+
     group.emojis = group.emojis || []
     const newEmo: any = { url, name }
     if (width !== undefined) newEmo.width = width
     if (height !== undefined) newEmo.height = height
     group.emojis.push(newEmo)
-    
+
     emojiUrlInput.value = ''
     emojiNameInput.value = ''
     emojiWidthInput.value = ''

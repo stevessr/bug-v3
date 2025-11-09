@@ -447,7 +447,10 @@ export class CloudflareSyncTarget implements ISyncTarget {
         'Content-Type': 'application/json'
       }
 
-      const itemsToPush = [{ key: 'settings', data: data.settings }, ...data.emojiGroups.map((g) => ({ key: encodeURIComponent(g.name), data: g }))]
+      const itemsToPush = [
+        { key: 'settings', data: data.settings },
+        ...data.emojiGroups.map(g => ({ key: encodeURIComponent(g.name), data: g }))
+      ]
       const total = itemsToPush.length
       let current = 0
 

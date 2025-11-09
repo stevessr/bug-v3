@@ -10,7 +10,7 @@
 // @license MIT
 // ==/UserScript==
 
-(function () {
+;(function () {
   'use strict'
 
   // Minimal styles for the panel
@@ -114,18 +114,16 @@
       keysListEl.innerHTML = '<div class="small">(no keys)</div>'
       return
     }
-    keys
-      .sort()
-      .forEach(k => {
-        const el = document.createElement('div')
-        el.className = 'key'
-        if (k === selectedKey) el.classList.add('selected')
-        el.textContent = k + ' (' + (localStorage.getItem(k) || '').length + ' chars)'
-        el.addEventListener('click', () => {
-          selectKey(k)
-        })
-        keysListEl.appendChild(el)
+    keys.sort().forEach(k => {
+      const el = document.createElement('div')
+      el.className = 'key'
+      if (k === selectedKey) el.classList.add('selected')
+      el.textContent = k + ' (' + (localStorage.getItem(k) || '').length + ' chars)'
+      el.addEventListener('click', () => {
+        selectKey(k)
       })
+      keysListEl.appendChild(el)
+    })
   }
 
   function selectKey(k) {
@@ -269,7 +267,7 @@
   })
 
   fileInput.addEventListener('change', ev => {
-  const input = ev.target
+    const input = ev.target
     if (!input.files || input.files.length === 0) return
     const file = input.files[0]
     const reader = new FileReader()
@@ -287,7 +285,7 @@
   listKeys()
 
   // expose for debugging in console
-  ;(window).__localStorageEditor = {
+  window.__localStorageEditor = {
     open: () => (panel.style.display = 'block'),
     close: () => (panel.style.display = 'none'),
     listKeys

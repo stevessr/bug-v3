@@ -41,6 +41,7 @@ npm run build:userscript:min
 ### 核心脚本（二选一）
 
 **推荐：模块化安装**
+
 - `emoji-picker-core.remote.user.js` - 表情选择器核心 (~176KB)
   - 包含：表情选择器、工具栏注入、批量添加
   - 不包含：管理界面、设置面板、导入导出、Callout 建议
@@ -52,6 +53,7 @@ npm run build:userscript:min
   - 适合：需要管理表情、调整设置的用户
 
 **使用建议：**
+
 - 只想用表情：安装 `emoji-picker-core`
 - 需要管理表情：同时安装两个脚本
 - 只想管理不选择：只安装 `emoji-manager`
@@ -67,12 +69,10 @@ npm run build:userscript:min
   - 30+ 内置 callout 类型（note、warning、tip 等）
   - 遵从全局强制移动模式设置
   - 可独立使用，不依赖主脚本
-  
 - `scripts/preview-button.user.js` - 话题预览按钮功能 (~24KB)
   - 在 Discourse 话题列表中添加预览按钮
   - 支持三种预览模式：原始、Markdown、JSON
   - 可独立使用，不依赖主脚本
-  
 - `scripts/userscript-upload.user.js` - 图片上传功能 (~28KB)
   - 独立的图片上传界面
   - 支持批量上传和管理
@@ -141,13 +141,13 @@ npm run build:userscript:min
 ### 与浏览器扩展的差异
 
 | 特性     | 浏览器扩展     | 油猴脚本（核心+管理）   |
-| -------- | -------------- | ---------------------- |
-| 安装方式 | 扩展商店       | 用户脚本管理器         |
-| 存储方式 | chrome.storage | localStorage           |
-| 后台通信 | chrome.runtime | 无 (自包含)            |
-| 更新方式 | 自动更新       | 手动更新或脚本自动检查 |
-| 权限要求 | 扩展权限       | 无特殊权限             |
-| 跨浏览器 | 需要不同扩展   | 通用兼容               |
+| -------- | -------------- | ----------------------- |
+| 安装方式 | 扩展商店       | 用户脚本管理器          |
+| 存储方式 | chrome.storage | localStorage            |
+| 后台通信 | chrome.runtime | 无 (自包含)             |
+| 更新方式 | 自动更新       | 手动更新或脚本自动检查  |
+| 权限要求 | 扩展权限       | 无特殊权限              |
+| 跨浏览器 | 需要不同扩展   | 通用兼容                |
 | 功能模块 | 一体化         | 可分离安装（核心/管理） |
 
 ## 技术实现

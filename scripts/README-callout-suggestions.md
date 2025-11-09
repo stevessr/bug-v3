@@ -17,7 +17,7 @@
   - danger, error, bug
   - example, quote, cite
 - **视觉化图标**: 每种 callout 类型都有独特的图标和配色
-- **键盘导航**: 
+- **键盘导航**:
   - 上下箭头键：选择建议项
   - Tab/Enter：应用选中的建议
   - ESC：关闭建议框
@@ -47,11 +47,13 @@
 ### 安装脚本
 
 方法 1: 从 GitHub Release 安装
+
 ```
 https://github.com/stevessr/bug-v3/releases/latest/download/callout-suggestions.user.js
 ```
 
 方法 2: 手动安装
+
 1. 打开 `scripts/callout-suggestions.user.js` 文件
 2. 复制全部内容
 3. 在 Tampermonkey 管理面板创建新脚本
@@ -70,10 +72,12 @@ https://github.com/stevessr/bug-v3/releases/latest/download/callout-suggestions.
 ### 示例
 
 输入 `[w` 会显示匹配的建议：
+
 - warning
 - (其他以 w 开头的 callout)
 
 选择 "warning" 后，会在编辑器中插入：
+
 ```
 [!warning]
 ```
@@ -89,29 +93,36 @@ https://github.com/stevessr/bug-v3/releases/latest/download/callout-suggestions.
 ## Callout 类型说明
 
 ### 信息类
+
 - **note** 📝: 笔记/备注
 - **info** ℹ️: 一般信息
 - **abstract/summary/tldr** 📋: 摘要
 
 ### 提示类
+
 - **tip/hint** 💡: 提示/技巧
 - **todo** ☑️: 待办事项
 
 ### 问题类
+
 - **question/help/faq** ❓: 问题/帮助
 
 ### 成功类
+
 - **success/check/done** 🎉: 成功/完成
 
 ### 警告类
+
 - **warning/caution/attention** ⚠️: 警告/注意
 
 ### 错误类
+
 - **failure/fail/missing** ❌: 失败
 - **danger/error** ☠️: 危险/错误
 - **bug** 🐛: 程序错误
 
 ### 其他
+
 - **example** 🔎: 示例
 - **quote/cite** 💬: 引用
 
@@ -128,6 +139,7 @@ https://github.com/stevessr/bug-v3/releases/latest/download/callout-suggestions.
 ### 设置管理
 
 脚本读取共享的 localStorage 设置：
+
 ```javascript
 // 读取设置
 const SETTINGS_KEY = 'emoji_extension_userscript_settings'
@@ -150,11 +162,13 @@ if (settings.forceMobileMode === true) {
 此脚本原本是 `emoji-extension` 核心脚本的一部分，现已分离为独立脚本：
 
 ### 优点
+
 - **按需安装**: 不需要此功能的用户无需安装
 - **独立更新**: 功能可以独立更新维护
 - **减小体积**: 核心脚本减小约 12KB
 
 ### 注意事项
+
 - 安装核心脚本后，Callout 建议功能不再包含
 - 需要单独安装此脚本才能使用自动建议
 - 两个脚本共享 localStorage 设置
@@ -183,6 +197,7 @@ if (settings.forceMobileMode === true) {
 ## 更新日志
 
 ### v1.0.0
+
 - 从主脚本分离为独立脚本
 - 支持 30+ callout 类型
 - 完整的键盘导航

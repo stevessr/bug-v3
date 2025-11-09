@@ -67,9 +67,9 @@ function packWithCrx(distPath, keyPath, outPath) {
   const outFile = outPath || path.resolve(process.cwd(), 'dist.crx')
   console.log(`📦 Packing ${distPath} -> ${outFile}`)
 
-    // Try common CLI forms for 'crx' package. Prefer: pnpm exec crx pack <dir> --private-key <key> -o <out>
-    const args = ['crx', 'pack', distPath, '--private-key', keyPath, '-o', outFile]
-    const res = spawnSync('pnpm', ['exec', ...args], { stdio: 'inherit', shell: false })
+  // Try common CLI forms for 'crx' package. Prefer: pnpm exec crx pack <dir> --private-key <key> -o <out>
+  const args = ['crx', 'pack', distPath, '--private-key', keyPath, '-o', outFile]
+  const res = spawnSync('pnpm', ['exec', ...args], { stdio: 'inherit', shell: false })
   if (res.status === 0) {
     console.log('✅ .crx created at', outFile)
     return
@@ -79,7 +79,7 @@ function packWithCrx(distPath, keyPath, outPath) {
 
   // Alternate flags
   const altArgs = ['crx', 'pack', distPath, '-k', keyPath, '-o', outFile]
-    const res2 = spawnSync('pnpm', ['exec', ...altArgs], { stdio: 'inherit', shell: false })
+  const res2 = spawnSync('pnpm', ['exec', ...altArgs], { stdio: 'inherit', shell: false })
   if (res2.status === 0) {
     console.log('✅ .crx created at', outFile)
     return

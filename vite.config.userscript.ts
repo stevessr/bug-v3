@@ -12,9 +12,8 @@ export default defineConfig(({ mode }) => {
 
   // Get which script to build from environment variable
   const scriptTarget = process.env.SCRIPT_TARGET || 'core'
-  const entryFile = scriptTarget === 'manager' 
-    ? 'src/userscript/manager-main.ts'
-    : 'src/userscript/core-main.ts'
+  const entryFile =
+    scriptTarget === 'manager' ? 'src/userscript/manager-main.ts' : 'src/userscript/core-main.ts'
   const outputName = scriptTarget === 'manager' ? 'emoji-manager' : 'emoji-picker-core'
 
   return {

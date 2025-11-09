@@ -175,8 +175,6 @@ export function showImportExportModal(currentGroupId?: string) {
     }
   }
 
-
-
   // 导出分组功能
   content.querySelector('#exportGroup')?.addEventListener('click', () => {
     try {

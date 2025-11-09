@@ -63,8 +63,6 @@ const FLOATING_BUTTON_STYLES = `
 }
 `
 
-
-
 function injectStyles() {
   // Inject global theme variables first
   injectGlobalThemeStyles()
@@ -234,7 +232,9 @@ export function showFloatingButton() {
   if (forceMobileMode) {
     const portalContainer = document.querySelector('#d-menu-portals')
     if (portalContainer) {
-      console.log('[Emoji Extension Userscript] Force mobile mode with #d-menu-portals detected, skipping floating button')
+      console.log(
+        '[Emoji Extension Userscript] Force mobile mode with #d-menu-portals detected, skipping floating button'
+      )
       return
     }
   }

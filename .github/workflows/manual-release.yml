@@ -65,7 +65,7 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          
+
           # Update package.json and manifest.json
           jq --arg version "$VERSION" '.version = $version' package.json > tmp.json && mv tmp.json package.json
           jq --arg version "$VERSION" '.version = $version' public/manifest.json > tmp.json && mv tmp.json public/manifest.json
@@ -213,15 +213,15 @@ jobs:
       - name: Prepare release assets
         run: |
           mkdir -p release-final
-          
+
           # Copy extension files if they exist
           if [ -d "all-artifacts/extension-release-v${{ inputs.version }}" ]; then
             cp all-artifacts/extension-release-v${{ inputs.version }}/* release-final/ 2>/dev/null || true
           fi
-          
+
           # Copy all userscript files
           find all-artifacts -name "*.user.js" -exec cp {} release-final/ \; 2>/dev/null || true
-          
+
           # Create combined info file
           cat > release-final/RELEASE_INFO.txt << EOF
           Release Information
@@ -230,14 +230,14 @@ jobs:
           Release Type: ${{ inputs.release_type }}
           Build Time: $(date -u)
           Commit: ${{ github.sha }}
-          
+
           Extension Files:
           $(ls -la release-final/*.zip 2>/dev/null || echo "No extension ZIP files")
           $(ls -la release-final/*.crx 2>/dev/null || echo "No extension CRX files")
-          
+
           Userscript Files:
           $(ls -la release-final/*.user.js 2>/dev/null || echo "No userscript files")
-          
+
           Total Files: $(ls -1 release-final | wc -l)
           EOF
 

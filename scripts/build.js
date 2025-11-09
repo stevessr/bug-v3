@@ -82,10 +82,7 @@ try {
   const jsonOut = path.resolve(process.cwd(), 'public', 'assets', 'defaultEmojiGroups.json')
   const configContent = fs.readFileSync(configPath, 'utf-8')
   const configData = JSON.parse(configContent)
-  if (
-    configData &&
-    Array.isArray(configData.groups)
-  ) {
+  if (configData && Array.isArray(configData.groups)) {
     try {
       fs.mkdirSync(path.dirname(jsonOut), { recursive: true })
       // Write compact (minified) JSON to reduce file size. Do NOT produce a .gz file here.
@@ -120,9 +117,13 @@ const isUserscript = buildType.startsWith('build:userscript')
 if (isUserscript) {
   // Build core script first
   console.log('📦 Building core emoji picker script...')
-  const coreEnv = { ...process.env, SCRIPT_TARGET: 'core', SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT }
+  const coreEnv = {
+    ...process.env,
+    SCRIPT_TARGET: 'core',
+    SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT
+  }
   const viteArgs = ['build', '--config', 'vite.config.userscript.ts']
-  
+
   const coreChild = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
     stdio: 'inherit',
     env: coreEnv,
@@ -134,11 +135,15 @@ if (isUserscript) {
       console.error('❌ Core script build failed')
       process.exit(coreCode)
     }
-    
+
     // Build manager script
     console.log('📦 Building emoji manager script...')
-    const managerEnv = { ...process.env, SCRIPT_TARGET: 'manager', SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT }
-    
+    const managerEnv = {
+      ...process.env,
+      SCRIPT_TARGET: 'manager',
+      SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT
+    }
+
     const managerChild = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
       stdio: 'inherit',
       env: managerEnv,
@@ -150,7 +155,7 @@ if (isUserscript) {
         console.error('❌ Manager script build failed')
         process.exit(managerCode)
       }
-      
+
       // Post-process both scripts
       console.log('🔧 Post-processing userscripts...')
       const postProcessEnv = {
@@ -175,10 +180,7 @@ if (isUserscript) {
   })
 } else {
   // 构建时传递给 `vite` 的参数数组。dev 模式不传额外参数（等价于 `pnpm exec vite`）。
-  const viteArgs =
-    buildType === 'dev'
-      ? []
-      : ['build']
+  const viteArgs = buildType === 'dev' ? [] : ['build']
   // Variant flag functionality removed - development variant no longer supported
   const publicDir = path.resolve(process.cwd(), 'public')
   const distDir = path.resolve(process.cwd(), 'dist')

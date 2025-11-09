@@ -261,12 +261,12 @@ async function convert() {
     // 获取输入数据和文件名
     let inputData
     let originalFileName = 'video' // default name
-    
+
     if (file) {
       inputData = await fetchFile(file)
       log('文件已读取')
       // Extract original file name without extension
-      originalFileName = file.name.replace(/\.[^/.]+$/, "") || 'video'
+      originalFileName = file.name.replace(/\.[^/.]+$/, '') || 'video'
     } else {
       log('下载中...')
       try {
@@ -284,7 +284,7 @@ async function convert() {
       // Extract filename from URL if possible
       const urlParts = url.split('/')
       const lastPart = urlParts[urlParts.length - 1]
-      originalFileName = lastPart.replace(/\.[^/.]+$/, "") || 'video'
+      originalFileName = lastPart.replace(/\.[^/.]+$/, '') || 'video'
     }
 
     // 写入文件
@@ -364,22 +364,22 @@ async function convert() {
       const qCtl = document.getElementById('quality')
       const qNum = qCtl ? Math.min(100, Math.max(1, parseInt(qCtl.value || '100', 10))) : 100
       const qscale = String(Math.round(101 - qNum)) // 数值越大质量越低，反向映射
-      extra = ['-loop', '0', '-f', 'webp', '-lossless', '0', '-qscale', qscale];
+      extra = ['-loop', '0', '-f', 'webp', '-lossless', '0', '-qscale', qscale]
       outFile = 'output.webp'
       mime = 'image/webp'
       args.push(...extra, outFile)
     } else if (format === 'apng') {
       // apng: 兼容性较好，体积较大
       // APNG 通常是无损，质量控制有限，这里仅保留格式参数
-      extra = ['-f', 'apng'];
+      extra = ['-f', 'apng']
       outFile = 'output.png'
       mime = 'image/apng'
       args.push(...extra, outFile)
     } else if (format === 'avif') {
       // avif: ffmpeg wasm 不支持 AVIF 编码器，直接导出 PNG 再用 WebCodecs 转 AVIF
-  const useWebCodecs = document.getElementById('useWebCodecs').checked;
-  const qInput = document.getElementById('quality');
-  const q = qInput ? Math.min(100, Math.max(1, parseInt(qInput.value || '100', 10))) : 100;
+      const useWebCodecs = document.getElementById('useWebCodecs').checked
+      const qInput = document.getElementById('quality')
+      const q = qInput ? Math.min(100, Math.max(1, parseInt(qInput.value || '100', 10))) : 100
       const qNorm = q / 100 // 0-1
       log(
         useWebCodecs
@@ -453,37 +453,44 @@ async function convert() {
             alert('图片未加载完成，请稍后再试')
             return
           }
-          
+
           try {
             // 检查 Clipboard API 权限
             if (navigator.clipboard && navigator.permissions) {
-              const permission = await navigator.permissions.query({ name: 'clipboard-write' });
+              const permission = await navigator.permissions.query({ name: 'clipboard-write' })
               if (permission.state !== 'granted' && permission.state !== 'prompt') {
-                throw new Error('Clipboard write permission not granted');
+                throw new Error('Clipboard write permission not granted')
               }
             }
-            
+
             // 使用 fetch 获取图片 blob
             const response = await fetch(imgEl.src)
             const blob = await response.blob()
-            
+
             // 确定 MIME 类型
-            const imageType = blob.type || 'image/' + imgEl.src.split('.').slice(-1)[0].replace('jpg', 'jpeg')
-            
+            const imageType =
+              blob.type || 'image/' + imgEl.src.split('.').slice(-1)[0].replace('jpg', 'jpeg')
+
             // 检查是否支持该 MIME 类型
-            let canCopyImage = false;
+            let canCopyImage = false
             if (ClipboardItem.supports) {
-              canCopyImage = await ClipboardItem.supports(imageType);
+              canCopyImage = await ClipboardItem.supports(imageType)
             } else {
               // 降级：对常见格式做基本检查
-              canCopyImage = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'].includes(imageType);
+              canCopyImage = [
+                'image/png',
+                'image/jpeg',
+                'image/jpg',
+                'image/gif',
+                'image/webp'
+              ].includes(imageType)
             }
-            
+
             if (canCopyImage) {
               // 使用剪贴板 API 复制
               const data = [new ClipboardItem({ [imageType]: blob })]
               await navigator.clipboard.write(data)
-              
+
               log('✅ 已复制图片到剪贴板')
               alert('已复制图片到剪贴板，可直接粘贴到其他应用')
             } else {
@@ -546,37 +553,44 @@ async function convert() {
             alert('图片未加载完成，请稍后再试')
             return
           }
-          
+
           try {
             // 检查 Clipboard API 权限
             if (navigator.clipboard && navigator.permissions) {
-              const permission = await navigator.permissions.query({ name: 'clipboard-write' });
+              const permission = await navigator.permissions.query({ name: 'clipboard-write' })
               if (permission.state !== 'granted' && permission.state !== 'prompt') {
-                throw new Error('Clipboard write permission not granted');
+                throw new Error('Clipboard write permission not granted')
               }
             }
-            
+
             // 使用 fetch 获取图片 blob
             const response = await fetch(imgEl.src)
             const blob = await response.blob()
-            
+
             // 确定 MIME 类型
-            const imageType = blob.type || 'image/' + imgEl.src.split('.').slice(-1)[0].replace('jpg', 'jpeg')
-            
+            const imageType =
+              blob.type || 'image/' + imgEl.src.split('.').slice(-1)[0].replace('jpg', 'jpeg')
+
             // 检查是否支持该 MIME 类型
-            let canCopyImage = false;
+            let canCopyImage = false
             if (ClipboardItem.supports) {
-              canCopyImage = await ClipboardItem.supports(imageType);
+              canCopyImage = await ClipboardItem.supports(imageType)
             } else {
               // 降级：对常见格式做基本检查
-              canCopyImage = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'].includes(imageType);
+              canCopyImage = [
+                'image/png',
+                'image/jpeg',
+                'image/jpg',
+                'image/gif',
+                'image/webp'
+              ].includes(imageType)
             }
-            
+
             if (canCopyImage) {
               // 使用剪贴板 API 复制
               const data = [new ClipboardItem({ [imageType]: blob })]
               await navigator.clipboard.write(data)
-              
+
               log('✅ 已复制图片到剪贴板')
               alert('已复制图片到剪贴板，可直接粘贴到其他应用')
             } else {
@@ -648,7 +662,8 @@ function toggleGifProfile() {
   avifWebCodecsGroup.style.display = formatEl.value === 'avif' ? 'block' : 'none'
   const gq = document.getElementById('globalQualityGroup')
   // GIF 和 APNG 隐藏质量滑块（GIF 用模式控制，APNG 无损不支持质量调节）
-  if (gq) gq.style.display = (formatEl.value === 'gif' || formatEl.value === 'apng') ? 'none' : 'block'
+  if (gq)
+    gq.style.display = formatEl.value === 'gif' || formatEl.value === 'apng' ? 'none' : 'block'
 }
 formatEl.addEventListener('change', toggleGifProfile)
 // 初始化
@@ -671,13 +686,13 @@ log('本应用完全在浏览器中运行，无需后端服务')
 // 检查编码器支持
 async function checkEncoders() {
   await loadFFmpeg()
-  
+
   // 抑制编码器列表输出
   suppressFFmpegLogs = true
   await ffmpeg.exec(['-hide_banner', '-encoders'])
   const encodersTxt = await ffmpeg.readFile('ffmpeg.log', { encoding: 'utf8' })
   suppressFFmpegLogs = false
-  
+
   let support = { gif: false, webp: false, apng: false, avif: false }
   if (encodersTxt) {
     support.gif = /gif/i.test(encodersTxt)
@@ -755,5 +770,3 @@ async function encodeAvifWithWebCodecs(imgBitmap, useRealWebCodecs = false, qual
     )
   })
 }
-
-

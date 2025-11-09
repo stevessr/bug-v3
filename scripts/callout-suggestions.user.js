@@ -19,7 +19,7 @@
 // @run-at       document-end
 // ==/UserScript==
 
-(function () {
+;(function () {
   'use strict'
 
   // ===== Settings Management =====
@@ -260,7 +260,9 @@
 
         const range = selection.getRangeAt(0)
         const textBeforeCursor =
-          range.startContainer.textContent && range.startContainer.textContent.substring(0, range.startOffset) || ''
+          (range.startContainer.textContent &&
+            range.startContainer.textContent.substring(0, range.startOffset)) ||
+          ''
 
         let triggerIndex = textBeforeCursor.lastIndexOf('[')
         if (triggerIndex === -1) triggerIndex = textBeforeCursor.lastIndexOf('［')
@@ -475,7 +477,9 @@
 
       const range = selection.getRangeAt(0)
       const textBeforeCursor =
-        range.startContainer.textContent && range.startContainer.textContent.substring(0, range.startOffset) || ''
+        (range.startContainer.textContent &&
+          range.startContainer.textContent.substring(0, range.startOffset)) ||
+        ''
       const match = textBeforeCursor.match(/(?:\[|［|【])(?:!|！)?([a-z]*)$/i)
       if (match) {
         const keyword = match[1].toLowerCase()
@@ -534,10 +538,7 @@
       da('input', handleInput, true)
       da('keydown', handleKeydown, true)
       da('click', e => {
-        if (
-          e.target && e.target.tagName !== 'TEXTAREA' &&
-          !suggestionBox.contains(e.target)
-        ) {
+        if (e.target && e.target.tagName !== 'TEXTAREA' && !suggestionBox.contains(e.target)) {
           hideSuggestionBox()
         }
       })
@@ -603,13 +604,19 @@
       try {
         const dataTransfer = new DataTransfer()
         dataTransfer.setData('text/plain', text)
-        const pasteEvent = new ClipboardEvent('paste', { clipboardData: dataTransfer, bubbles: true })
+        const pasteEvent = new ClipboardEvent('paste', {
+          clipboardData: dataTransfer,
+          bubbles: true
+        })
         proseMirror.dispatchEvent(pasteEvent)
       } catch (error) {
         try {
           document.execCommand('insertText', false, text)
         } catch (fallbackError) {
-          console.error('[Callout Suggestions] Failed to insert text into ProseMirror', fallbackError)
+          console.error(
+            '[Callout Suggestions] Failed to insert text into ProseMirror',
+            fallbackError
+          )
         }
       }
     } else if (contentEditable) {
@@ -637,7 +644,8 @@
 
   function createQuickInsertMenu() {
     const menu = document.createElement('div')
-    menu.className = 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
+    menu.className =
+      'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded'
     menu.id = 'quick-insert-menu'
     const inner = document.createElement('div')
     inner.className = 'fk-d-menu__inner-content'
@@ -713,7 +721,11 @@
     quickInsertButton.innerHTML = '⎘'
 
     if (isChatComposer) {
-      quickInsertButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
+      quickInsertButton.classList.add(
+        'fk-d-menu__trigger',
+        'chat-composer-button',
+        'btn-transparent'
+      )
       quickInsertButton.setAttribute('aria-expanded', 'false')
       quickInsertButton.setAttribute('data-trigger', '')
     }
@@ -790,7 +802,9 @@
 
   function findAllToolbars() {
     if (shouldSkipToolbarInjection()) {
-      console.log('[Callout Suggestions] Force mobile mode with #d-menu-portals detected, skipping toolbar injection')
+      console.log(
+        '[Callout Suggestions] Force mobile mode with #d-menu-portals detected, skipping toolbar injection'
+      )
       return []
     }
 
@@ -825,10 +839,10 @@
   function initQuickInsertButton() {
     try {
       console.log('[Callout Suggestions] Initializing quick insert button...')
-      
+
       // Initial injection
       attemptQuickInsertInjection()
-      
+
       // Use MutationObserver with debouncing to detect new toolbars
       let debounceTimer = null
       const observer = new MutationObserver(() => {
@@ -837,12 +851,12 @@
           attemptQuickInsertInjection()
         }, DEBOUNCE_DELAY)
       })
-      
+
       observer.observe(document.body, {
         childList: true,
         subtree: true
       })
-      
+
       console.log('[Callout Suggestions] Quick insert button initialized with MutationObserver')
     } catch (e) {
       console.error('[Callout Suggestions] Quick insert button initialization failed', e)
@@ -882,7 +896,9 @@
 
   // ===== Entry Point =====
   if (isDiscoursePage()) {
-    console.log('[Callout Suggestions] Discourse detected, initializing callout suggestions and quick insert button')
+    console.log(
+      '[Callout Suggestions] Discourse detected, initializing callout suggestions and quick insert button'
+    )
     // Check forceMobileMode setting (respects global setting)
     if (shouldRespectForceMobileMode()) {
       console.log('[Callout Suggestions] Force mobile mode is enabled - respecting global setting')

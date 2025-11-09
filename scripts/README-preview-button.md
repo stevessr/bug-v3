@@ -12,7 +12,7 @@
   - Markdown 模式：渲染 Markdown 为 HTML 显示
   - JSON 模式：解析话题 JSON 数据并格式化显示
 - **分页浏览**: 支持前后翻页查看长话题
-- **键盘导航**: 
+- **键盘导航**:
   - 左右箭头键：翻页
   - ESC 键：关闭预览窗口
 - **自动分页**: JSON 模式支持滚动自动加载下一页
@@ -35,11 +35,13 @@
 ### 安装脚本
 
 方法 1: 从 GitHub Release 安装
+
 ```
 https://github.com/stevessr/bug-v3/releases/latest/download/preview-button.user.js
 ```
 
 方法 2: 手动安装
+
 1. 打开 `scripts/preview-button.user.js` 文件
 2. 复制全部内容
 3. 在 Tampermonkey 管理面板创建新脚本
@@ -66,11 +68,13 @@ https://github.com/stevessr/bug-v3/releases/latest/download/preview-button.user.
 ## 预览模式说明
 
 ### 原始格式（iframe）
+
 - 直接嵌入 Discourse 的 `/raw/<id>` 页面
 - 保留原始格式和样式
 - 加载速度快
 
 ### JSON 格式
+
 - 解析话题的 JSON 数据
 - 逐楼显示帖子内容
 - 支持滚动自动加载下一页
@@ -94,6 +98,7 @@ https://github.com/stevessr/bug-v3/releases/latest/download/preview-button.user.
 ### 自动检测
 
 脚本会自动检测当前页面是否为 Discourse 论坛：
+
 - 检查 meta 标签
 - 检查特定 DOM 元素
 - 只在 Discourse 站点上激活
@@ -115,6 +120,7 @@ scripts/preview-button.user.js
 ### 修改预览模式
 
 在 `createTriggerButtonFor` 函数中可以修改按钮的显示文本和模式：
+
 - `'iframe'`: 原始格式
 - `'markdown'`: Markdown 模式
 - `'json'`: JSON 模式
@@ -155,6 +161,7 @@ scripts/preview-button.user.js
 ## 更新日志
 
 ### v1.0.0
+
 - 从主脚本分离为独立脚本
 - 支持三种预览模式
 - 完整的键盘导航

@@ -75,16 +75,14 @@ function mergeSyncData(local: SyncData, remote: SyncData): SyncData {
   const mergedSettings = { ...local.settings, ...remote.settings }
 
   // Emoji Groups: Merge based on group name
-  const localGroupsMap = new Map(local.emojiGroups.map((g) => [g.name, g]))
+  const localGroupsMap = new Map(local.emojiGroups.map(g => [g.name, g]))
   const mergedGroups = [...local.emojiGroups]
 
   for (const remoteGroup of remote.emojiGroups) {
     const localGroup = localGroupsMap.get(remoteGroup.name)
     if (localGroup) {
       // Group exists, merge emojis within it
-      const localEmojisMap = new Map(
-        (localGroup.emojis || []).map((e: any) => [e.name, e])
-      )
+      const localEmojisMap = new Map((localGroup.emojis || []).map((e: any) => [e.name, e]))
       for (const remoteEmoji of remoteGroup.emojis || []) {
         // If emoji exists, remote overwrites local. If not, it's added.
         localEmojisMap.set(remoteEmoji.name, remoteEmoji)
@@ -365,15 +363,11 @@ function getCurrentConfigFromModal(modal: HTMLElement): SyncTargetConfig | null 
   return null
 }
 
-function showPullPreviewModal(
-  data: SyncData,
-  config: SyncTargetConfig,
-  onConfirm: () => void
-) {
+function showPullPreviewModal(data: SyncData, config: SyncTargetConfig, onConfirm: () => void) {
   const groupListHTML =
     data.emojiGroups.length > 0
       ? `<ul>${data.emojiGroups
-          .map((g) => `<li style="color: var(--emoji-modal-text);">${g.name}</li>`)
+          .map(g => `<li style="color: var(--emoji-modal-text);">${g.name}</li>`)
           .join('')}</ul>`
       : '<p style="color: var(--emoji-modal-text);">没有表情分组</p>'
 
@@ -497,7 +491,7 @@ export function showSyncOperationsModal() {
   const pullBtn = modal.querySelector('#pullData') as HTMLButtonElement
   const pushBtn = modal.querySelector('#pushData') as HTMLButtonElement
 
-  const updateProgress: ProgressCallback = (progress) => {
+  const updateProgress: ProgressCallback = progress => {
     progressContainer.style.display = 'block'
     const actionText = progress.action === 'push' ? '推送' : '拉取'
     progressText.textContent = `${actionText}中... (${progress.current} / ${progress.total})`

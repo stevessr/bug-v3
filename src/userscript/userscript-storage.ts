@@ -93,9 +93,7 @@ export function loadDataFromLocalStorage(): UserscriptStorage {
 }
 
 // 异步版本：在本地无数据时，尝试从远程 URL 拉取默认配置（localStorage key: emoji_extension_remote_config_url）
-export async function loadDataFromLocalStorageAsync(
-  hostname?: string
-): Promise<UserscriptStorage> {
+export async function loadDataFromLocalStorageAsync(hostname?: string): Promise<UserscriptStorage> {
   try {
     // Try synchronous load first (fast path)
     const local = loadDataFromLocalStorage()

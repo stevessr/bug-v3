@@ -94,12 +94,15 @@ export function showPopularEmojisModal() {
   })
 
   // Add clearStats button to the title area
-  const titleDiv = modal.querySelector('div:first-child > div:first-child, div:first-child > h2 + div') as HTMLElement
+  const titleDiv = modal.querySelector(
+    'div:first-child > div:first-child, div:first-child > h2 + div'
+  ) as HTMLElement
   if (titleDiv) {
     const clearStatsButton = createEl('button', {
       id: 'clearStats',
       text: '清空统计',
-      style: 'padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;'
+      style:
+        'padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;'
     }) as HTMLButtonElement
 
     titleDiv.appendChild(clearStatsButton)

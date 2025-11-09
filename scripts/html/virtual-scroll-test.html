@@ -1,561 +1,576 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>虚拟滚动测试</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        
-        .test-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .header {
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #e8e8e8;
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-card {
-            padding: 16px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border-left: 4px solid #1890ff;
-        }
-        
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 4px;
-        }
-        
-        .stat-value {
-            font-size: 24px;
-            font-weight: 600;
-            color: #333;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        input, select, button {
-            padding: 6px 12px;
-            border: 1px solid #d9d9d9;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        
-        button {
-            background: #1890ff;
-            color: white;
-            border-color: #1890ff;
-            cursor: pointer;
-        }
-        
-        button:hover {
-            background: #40a9ff;
-            border-color: #40a9ff;
-        }
-        
-        button:disabled {
-            background: #f5f5f5;
-            color: #ccc;
-            cursor: not-allowed;
-            border-color: #d9d9d9;
-        }
-        
-        .virtual-grid {
-            border: 1px solid #e8e8e8;
-            border-radius: 6px;
-            position: relative;
-        }
-        
-        .virtual-container {
-            height: 500px;
-            overflow-y: auto;
-            position: relative;
-        }
-        
-        .virtual-spacer {
-            position: relative;
-        }
-        
-        .emoji-grid {
-            display: grid;
-            gap: 12px;
-            padding: 16px;
-        }
-        
-        .emoji-item {
-            aspect-ratio: 1;
-            border: 2px solid #f0f0f0;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            position: relative;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-weight: 500;
-        }
-        
-        .emoji-item:hover {
-            border-color: #1890ff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
-        }
-        
-        .emoji-name {
-            font-size: 12px;
-            margin-top: 4px;
-        }
-        
-        .emoji-index {
-            font-size: 10px;
-            opacity: 0.7;
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 2px 4px;
-            border-radius: 2px;
-        }
-        
-        .performance-info {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            min-width: 200px;
-        }
-        
-        .performance-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-        }
-        
-        .warning {
-            background: #fff7e6;
-            border: 1px solid #ffd591;
-            color: #d46b08;
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 16px;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+
+      .test-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e8e8e8;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        padding: 16px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border-left: 4px solid #1890ff;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 4px;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .control-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      input,
+      select,
+      button {
+        padding: 6px 12px;
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      button {
+        background: #1890ff;
+        color: white;
+        border-color: #1890ff;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #40a9ff;
+        border-color: #40a9ff;
+      }
+
+      button:disabled {
+        background: #f5f5f5;
+        color: #ccc;
+        cursor: not-allowed;
+        border-color: #d9d9d9;
+      }
+
+      .virtual-grid {
+        border: 1px solid #e8e8e8;
+        border-radius: 6px;
+        position: relative;
+      }
+
+      .virtual-container {
+        height: 500px;
+        overflow-y: auto;
+        position: relative;
+      }
+
+      .virtual-spacer {
+        position: relative;
+      }
+
+      .emoji-grid {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+      }
+
+      .emoji-item {
+        aspect-ratio: 1;
+        border: 2px solid #f0f0f0;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        position: relative;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: 500;
+      }
+
+      .emoji-item:hover {
+        border-color: #1890ff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+      }
+
+      .emoji-name {
+        font-size: 12px;
+        margin-top: 4px;
+      }
+
+      .emoji-index {
+        font-size: 10px;
+        opacity: 0.7;
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 2px 4px;
+        border-radius: 2px;
+      }
+
+      .performance-info {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        min-width: 200px;
+      }
+
+      .performance-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+
+      .warning {
+        background: #fff7e6;
+        border: 1px solid #ffd591;
+        color: #d46b08;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="test-container">
-        <div class="header">
-            <h1>虚拟滚动性能测试</h1>
-            <p>测试大量表情数据的虚拟滚动渲染性能</p>
+      <div class="header">
+        <h1>虚拟滚动性能测试</h1>
+        <p>测试大量表情数据的虚拟滚动渲染性能</p>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">总表情数</div>
+          <div class="stat-value" id="totalCount">0</div>
         </div>
-        
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-label">总表情数</div>
-                <div class="stat-value" id="totalCount">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">可见表情数</div>
-                <div class="stat-value" id="visibleCount">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">内存节省</div>
-                <div class="stat-value" id="memorySaving">0%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">FPS</div>
-                <div class="stat-value" id="fps">0</div>
-            </div>
+        <div class="stat-card">
+          <div class="stat-label">可见表情数</div>
+          <div class="stat-value" id="visibleCount">0</div>
         </div>
-        
-        <div class="controls">
-            <div class="control-group">
-                <label>表情数量:</label>
-                <select id="emojiCount">
-                    <option value="100">100</option>
-                    <option value="500">500</option>
-                    <option value="1000" selected>1000</option>
-                    <option value="5000">5000</option>
-                    <option value="10000">10000</option>
-                </select>
-            </div>
-            
-            <div class="control-group">
-                <label>网格列数:</label>
-                <input type="number" id="gridColumns" min="2" max="8" value="4">
-            </div>
-            
-            <div class="control-group">
-                <label>容器高度:</label>
-                <input type="number" id="containerHeight" min="300" max="800" value="500" step="50">
-            </div>
-            
-            <div class="control-group">
-                <label>项目高度:</label>
-                <input type="number" id="itemHeight" min="80" max="200" value="120" step="10">
-            </div>
-            
-            <div class="control-group">
-                <input type="checkbox" id="enableVirtual" checked>
-                <label for="enableVirtual">启用虚拟滚动</label>
-            </div>
-            
-            <button onclick="generateData()">重新生成数据</button>
-            <button onclick="scrollToTop()">回到顶部</button>
-            <button onclick="scrollToBottom()">滚动到底部</button>
+        <div class="stat-card">
+          <div class="stat-label">内存节省</div>
+          <div class="stat-value" id="memorySaving">0%</div>
         </div>
-        
-        <div id="warningMsg" class="warning" style="display: none;">
-            ⚠️ 当前数据量较大，建议启用虚拟滚动以获得最佳性能
+        <div class="stat-card">
+          <div class="stat-label">FPS</div>
+          <div class="stat-value" id="fps">0</div>
         </div>
-        
-        <div class="virtual-grid">
-            <div class="virtual-container" id="container">
-                <div class="loading" id="loading">正在生成测试数据...</div>
-                <div class="virtual-spacer" id="spacer" style="display: none;">
-                    <div class="emoji-grid" id="emojiGrid"></div>
-                </div>
-            </div>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>表情数量:</label>
+          <select id="emojiCount">
+            <option value="100">100</option>
+            <option value="500">500</option>
+            <option value="1000" selected>1000</option>
+            <option value="5000">5000</option>
+            <option value="10000">10000</option>
+          </select>
         </div>
+
+        <div class="control-group">
+          <label>网格列数:</label>
+          <input type="number" id="gridColumns" min="2" max="8" value="4" />
+        </div>
+
+        <div class="control-group">
+          <label>容器高度:</label>
+          <input type="number" id="containerHeight" min="300" max="800" value="500" step="50" />
+        </div>
+
+        <div class="control-group">
+          <label>项目高度:</label>
+          <input type="number" id="itemHeight" min="80" max="200" value="120" step="10" />
+        </div>
+
+        <div class="control-group">
+          <input type="checkbox" id="enableVirtual" checked />
+          <label for="enableVirtual">启用虚拟滚动</label>
+        </div>
+
+        <button onclick="generateData()">重新生成数据</button>
+        <button onclick="scrollToTop()">回到顶部</button>
+        <button onclick="scrollToBottom()">滚动到底部</button>
+      </div>
+
+      <div id="warningMsg" class="warning" style="display: none">
+        ⚠️ 当前数据量较大，建议启用虚拟滚动以获得最佳性能
+      </div>
+
+      <div class="virtual-grid">
+        <div class="virtual-container" id="container">
+          <div class="loading" id="loading">正在生成测试数据...</div>
+          <div class="virtual-spacer" id="spacer" style="display: none">
+            <div class="emoji-grid" id="emojiGrid"></div>
+          </div>
+        </div>
+      </div>
     </div>
-    
+
     <div class="performance-info" id="performanceInfo">
-        <div class="performance-row">
-            <span>滚动位置:</span>
-            <span id="scrollPos">0px</span>
-        </div>
-        <div class="performance-row">
-            <span>可见范围:</span>
-            <span id="visibleRange">0-0</span>
-        </div>
-        <div class="performance-row">
-            <span>渲染时间:</span>
-            <span id="renderTime">0ms</span>
-        </div>
-        <div class="performance-row">
-            <span>内存使用:</span>
-            <span id="memoryUsage">N/A</span>
-        </div>
+      <div class="performance-row">
+        <span>滚动位置:</span>
+        <span id="scrollPos">0px</span>
+      </div>
+      <div class="performance-row">
+        <span>可见范围:</span>
+        <span id="visibleRange">0-0</span>
+      </div>
+      <div class="performance-row">
+        <span>渲染时间:</span>
+        <span id="renderTime">0ms</span>
+      </div>
+      <div class="performance-row">
+        <span>内存使用:</span>
+        <span id="memoryUsage">N/A</span>
+      </div>
     </div>
-    
+
     <script>
-        class VirtualScrollTest {
-            constructor() {
-                this.data = []
-                this.visibleItems = []
-                this.scrollTop = 0
-                this.containerHeight = 500
-                this.itemHeight = 120
-                this.gridColumns = 4
-                this.overscan = 3
-                this.isVirtualEnabled = true
-                
-                this.container = document.getElementById('container')
-                this.spacer = document.getElementById('spacer')
-                this.grid = document.getElementById('emojiGrid')
-                this.loading = document.getElementById('loading')
-                
-                this.lastFrameTime = performance.now()
-                this.frameCount = 0
-                this.fps = 0
-                
-                this.init()
-            }
-            
-            init() {
-                this.setupEventListeners()
-                this.generateData()
-                this.startFPSMonitor()
-            }
-            
-            setupEventListeners() {
-                this.container.addEventListener('scroll', this.handleScroll.bind(this))
-                
-                // 控制面板事件
-                document.getElementById('emojiCount').addEventListener('change', this.generateData.bind(this))
-                document.getElementById('gridColumns').addEventListener('input', this.updateGridColumns.bind(this))
-                document.getElementById('containerHeight').addEventListener('input', this.updateContainerHeight.bind(this))
-                document.getElementById('itemHeight').addEventListener('input', this.updateItemHeight.bind(this))
-                document.getElementById('enableVirtual').addEventListener('change', this.toggleVirtual.bind(this))
-            }
-            
-            generateData() {
-                this.showLoading(true)
-                
-                const count = parseInt(document.getElementById('emojiCount').value)
-                const startTime = performance.now()
-                
-                // 模拟生成表情数据
-                this.data = Array.from({ length: count }, (_, i) => ({
-                    id: i,
-                    name: `表情${i + 1}`,
-                    groupId: `group${Math.floor(i / 50)}`,
-                    url: `https://via.placeholder.com/100x100/667eea/ffffff?text=${i + 1}`,
-                    index: i
-                }))
-                
-                const generateTime = performance.now() - startTime
-                
-                // 显示警告
-                const warning = document.getElementById('warningMsg')
-                if (count > 1000 && !this.isVirtualEnabled) {
-                    warning.style.display = 'block'
-                } else {
-                    warning.style.display = 'none'
-                }
-                
-                setTimeout(() => {
-                    this.render()
-                    this.showLoading(false)
-                    console.log(`Generated ${count} items in ${generateTime.toFixed(2)}ms`)
-                }, 100)
-            }
-            
-            showLoading(show) {
-                this.loading.style.display = show ? 'block' : 'none'
-                this.spacer.style.display = show ? 'none' : 'block'
-            }
-            
-            updateGridColumns() {
-                this.gridColumns = parseInt(document.getElementById('gridColumns').value)
-                this.render()
-            }
-            
-            updateContainerHeight() {
-                this.containerHeight = parseInt(document.getElementById('containerHeight').value)
-                this.container.style.height = `${this.containerHeight}px`
-                this.render()
-            }
-            
-            updateItemHeight() {
-                this.itemHeight = parseInt(document.getElementById('itemHeight').value)
-                this.render()
-            }
-            
-            toggleVirtual() {
-                this.isVirtualEnabled = document.getElementById('enableVirtual').checked
-                this.render()
-            }
-            
-            handleScroll() {
-                this.scrollTop = this.container.scrollTop
-                
-                if (this.isVirtualEnabled) {
-                    this.updateVisibleItems()
-                }
-                
-                this.updatePerformanceInfo()
-            }
-            
-            calculateLayout() {
-                if (this.data.length === 0) return { totalHeight: 0, rowCount: 0 }
-                
-                const itemsPerRow = this.gridColumns
-                const rowCount = Math.ceil(this.data.length / itemsPerRow)
-                const totalHeight = rowCount * this.itemHeight
-                
-                return { totalHeight, rowCount, itemsPerRow }
-            }
-            
-            updateVisibleItems() {
-                const { totalHeight, rowCount, itemsPerRow } = this.calculateLayout()
-                
-                if (rowCount === 0) {
-                    this.visibleItems = []
-                    return
-                }
-                
-                const viewportTop = this.scrollTop
-                const viewportBottom = viewportTop + this.containerHeight
-                
-                const startRow = Math.max(0, Math.floor(viewportTop / this.itemHeight) - this.overscan)
-                const endRow = Math.min(rowCount - 1, Math.ceil(viewportBottom / this.itemHeight) + this.overscan)
-                
-                this.visibleItems = []
-                
-                for (let row = startRow; row <= endRow; row++) {
-                    for (let col = 0; col < itemsPerRow; col++) {
-                        const index = row * itemsPerRow + col
-                        if (index < this.data.length) {
-                            this.visibleItems.push({
-                                ...this.data[index],
-                                row,
-                                col,
-                                top: row * this.itemHeight
-                            })
-                        }
-                    }
-                }
-                
-                this.renderVisibleItems()
-            }
-            
-            renderVisibleItems() {
-                const renderStart = performance.now()
-                
-                // 清空网格
-                this.grid.innerHTML = ''
-                this.grid.style.gridTemplateColumns = `repeat(${this.gridColumns}, minmax(0, 1fr))`
-                
-                // 渲染可见项
-                this.visibleItems.forEach(item => {
-                    const element = this.createEmojiElement(item)
-                    this.grid.appendChild(element)
+      class VirtualScrollTest {
+        constructor() {
+          this.data = []
+          this.visibleItems = []
+          this.scrollTop = 0
+          this.containerHeight = 500
+          this.itemHeight = 120
+          this.gridColumns = 4
+          this.overscan = 3
+          this.isVirtualEnabled = true
+
+          this.container = document.getElementById('container')
+          this.spacer = document.getElementById('spacer')
+          this.grid = document.getElementById('emojiGrid')
+          this.loading = document.getElementById('loading')
+
+          this.lastFrameTime = performance.now()
+          this.frameCount = 0
+          this.fps = 0
+
+          this.init()
+        }
+
+        init() {
+          this.setupEventListeners()
+          this.generateData()
+          this.startFPSMonitor()
+        }
+
+        setupEventListeners() {
+          this.container.addEventListener('scroll', this.handleScroll.bind(this))
+
+          // 控制面板事件
+          document
+            .getElementById('emojiCount')
+            .addEventListener('change', this.generateData.bind(this))
+          document
+            .getElementById('gridColumns')
+            .addEventListener('input', this.updateGridColumns.bind(this))
+          document
+            .getElementById('containerHeight')
+            .addEventListener('input', this.updateContainerHeight.bind(this))
+          document
+            .getElementById('itemHeight')
+            .addEventListener('input', this.updateItemHeight.bind(this))
+          document
+            .getElementById('enableVirtual')
+            .addEventListener('change', this.toggleVirtual.bind(this))
+        }
+
+        generateData() {
+          this.showLoading(true)
+
+          const count = parseInt(document.getElementById('emojiCount').value)
+          const startTime = performance.now()
+
+          // 模拟生成表情数据
+          this.data = Array.from({ length: count }, (_, i) => ({
+            id: i,
+            name: `表情${i + 1}`,
+            groupId: `group${Math.floor(i / 50)}`,
+            url: `https://via.placeholder.com/100x100/667eea/ffffff?text=${i + 1}`,
+            index: i
+          }))
+
+          const generateTime = performance.now() - startTime
+
+          // 显示警告
+          const warning = document.getElementById('warningMsg')
+          if (count > 1000 && !this.isVirtualEnabled) {
+            warning.style.display = 'block'
+          } else {
+            warning.style.display = 'none'
+          }
+
+          setTimeout(() => {
+            this.render()
+            this.showLoading(false)
+            console.log(`Generated ${count} items in ${generateTime.toFixed(2)}ms`)
+          }, 100)
+        }
+
+        showLoading(show) {
+          this.loading.style.display = show ? 'block' : 'none'
+          this.spacer.style.display = show ? 'none' : 'block'
+        }
+
+        updateGridColumns() {
+          this.gridColumns = parseInt(document.getElementById('gridColumns').value)
+          this.render()
+        }
+
+        updateContainerHeight() {
+          this.containerHeight = parseInt(document.getElementById('containerHeight').value)
+          this.container.style.height = `${this.containerHeight}px`
+          this.render()
+        }
+
+        updateItemHeight() {
+          this.itemHeight = parseInt(document.getElementById('itemHeight').value)
+          this.render()
+        }
+
+        toggleVirtual() {
+          this.isVirtualEnabled = document.getElementById('enableVirtual').checked
+          this.render()
+        }
+
+        handleScroll() {
+          this.scrollTop = this.container.scrollTop
+
+          if (this.isVirtualEnabled) {
+            this.updateVisibleItems()
+          }
+
+          this.updatePerformanceInfo()
+        }
+
+        calculateLayout() {
+          if (this.data.length === 0) return { totalHeight: 0, rowCount: 0 }
+
+          const itemsPerRow = this.gridColumns
+          const rowCount = Math.ceil(this.data.length / itemsPerRow)
+          const totalHeight = rowCount * this.itemHeight
+
+          return { totalHeight, rowCount, itemsPerRow }
+        }
+
+        updateVisibleItems() {
+          const { totalHeight, rowCount, itemsPerRow } = this.calculateLayout()
+
+          if (rowCount === 0) {
+            this.visibleItems = []
+            return
+          }
+
+          const viewportTop = this.scrollTop
+          const viewportBottom = viewportTop + this.containerHeight
+
+          const startRow = Math.max(0, Math.floor(viewportTop / this.itemHeight) - this.overscan)
+          const endRow = Math.min(
+            rowCount - 1,
+            Math.ceil(viewportBottom / this.itemHeight) + this.overscan
+          )
+
+          this.visibleItems = []
+
+          for (let row = startRow; row <= endRow; row++) {
+            for (let col = 0; col < itemsPerRow; col++) {
+              const index = row * itemsPerRow + col
+              if (index < this.data.length) {
+                this.visibleItems.push({
+                  ...this.data[index],
+                  row,
+                  col,
+                  top: row * this.itemHeight
                 })
-                
-                const renderTime = performance.now() - renderStart
-                document.getElementById('renderTime').textContent = `${renderTime.toFixed(2)}ms`
+              }
             }
-            
-            render() {
-                const renderStart = performance.now()
-                const { totalHeight } = this.calculateLayout()
-                
-                // 更新总高度
-                this.spacer.style.height = `${totalHeight}px`
-                this.grid.style.gridTemplateColumns = `repeat(${this.gridColumns}, minmax(0, 1fr))`
-                
-                if (this.isVirtualEnabled) {
-                    this.updateVisibleItems()
-                } else {
-                    this.renderAllItems()
-                }
-                
-                this.updateStats()
-                
-                const renderTime = performance.now() - renderStart
-                document.getElementById('renderTime').textContent = `${renderTime.toFixed(2)}ms`
-            }
-            
-            renderAllItems() {
-                this.grid.innerHTML = ''
-                
-                this.data.forEach(item => {
-                    const element = this.createEmojiElement(item)
-                    this.grid.appendChild(element)
-                })
-            }
-            
-            createEmojiElement(item) {
-                const div = document.createElement('div')
-                div.className = 'emoji-item'
-                div.innerHTML = `
+          }
+
+          this.renderVisibleItems()
+        }
+
+        renderVisibleItems() {
+          const renderStart = performance.now()
+
+          // 清空网格
+          this.grid.innerHTML = ''
+          this.grid.style.gridTemplateColumns = `repeat(${this.gridColumns}, minmax(0, 1fr))`
+
+          // 渲染可见项
+          this.visibleItems.forEach(item => {
+            const element = this.createEmojiElement(item)
+            this.grid.appendChild(element)
+          })
+
+          const renderTime = performance.now() - renderStart
+          document.getElementById('renderTime').textContent = `${renderTime.toFixed(2)}ms`
+        }
+
+        render() {
+          const renderStart = performance.now()
+          const { totalHeight } = this.calculateLayout()
+
+          // 更新总高度
+          this.spacer.style.height = `${totalHeight}px`
+          this.grid.style.gridTemplateColumns = `repeat(${this.gridColumns}, minmax(0, 1fr))`
+
+          if (this.isVirtualEnabled) {
+            this.updateVisibleItems()
+          } else {
+            this.renderAllItems()
+          }
+
+          this.updateStats()
+
+          const renderTime = performance.now() - renderStart
+          document.getElementById('renderTime').textContent = `${renderTime.toFixed(2)}ms`
+        }
+
+        renderAllItems() {
+          this.grid.innerHTML = ''
+
+          this.data.forEach(item => {
+            const element = this.createEmojiElement(item)
+            this.grid.appendChild(element)
+          })
+        }
+
+        createEmojiElement(item) {
+          const div = document.createElement('div')
+          div.className = 'emoji-item'
+          div.innerHTML = `
                     <div class="emoji-index">#${item.id}</div>
                     <div>🎭</div>
                     <div class="emoji-name">${item.name}</div>
                 `
-                return div
-            }
-            
-            updateStats() {
-                const total = this.data.length
-                const visible = this.isVirtualEnabled ? this.visibleItems.length : total
-                const memorySaving = total > 0 ? Math.round(((total - visible) / total) * 100) : 0
-                
-                document.getElementById('totalCount').textContent = total.toLocaleString()
-                document.getElementById('visibleCount').textContent = visible.toLocaleString()
-                document.getElementById('memorySaving').textContent = `${memorySaving}%`
-            }
-            
-            updatePerformanceInfo() {
-                document.getElementById('scrollPos').textContent = `${this.scrollTop}px`
-                
-                if (this.isVirtualEnabled && this.visibleItems.length > 0) {
-                    const firstIndex = this.visibleItems[0].id
-                    const lastIndex = this.visibleItems[this.visibleItems.length - 1].id
-                    document.getElementById('visibleRange').textContent = `${firstIndex}-${lastIndex}`
-                } else {
-                    document.getElementById('visibleRange').textContent = `0-${this.data.length - 1}`
-                }
-                
-                // 内存使用情况（估算）
-                if (performance.memory) {
-                    const memory = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1)
-                    document.getElementById('memoryUsage').textContent = `${memory}MB`
-                }
-            }
-            
-            startFPSMonitor() {
-                const updateFPS = () => {
-                    const now = performance.now()
-                    const delta = now - this.lastFrameTime
-                    
-                    this.frameCount++
-                    
-                    if (delta >= 1000) {
-                        this.fps = Math.round((this.frameCount * 1000) / delta)
-                        document.getElementById('fps').textContent = this.fps
-                        
-                        this.frameCount = 0
-                        this.lastFrameTime = now
-                    }
-                    
-                    requestAnimationFrame(updateFPS)
-                }
-                
-                requestAnimationFrame(updateFPS)
-            }
+          return div
         }
-        
-        // 全局函数
-        function scrollToTop() {
-            virtualTest.container.scrollTop = 0
+
+        updateStats() {
+          const total = this.data.length
+          const visible = this.isVirtualEnabled ? this.visibleItems.length : total
+          const memorySaving = total > 0 ? Math.round(((total - visible) / total) * 100) : 0
+
+          document.getElementById('totalCount').textContent = total.toLocaleString()
+          document.getElementById('visibleCount').textContent = visible.toLocaleString()
+          document.getElementById('memorySaving').textContent = `${memorySaving}%`
         }
-        
-        function scrollToBottom() {
-            virtualTest.container.scrollTop = virtualTest.container.scrollHeight
+
+        updatePerformanceInfo() {
+          document.getElementById('scrollPos').textContent = `${this.scrollTop}px`
+
+          if (this.isVirtualEnabled && this.visibleItems.length > 0) {
+            const firstIndex = this.visibleItems[0].id
+            const lastIndex = this.visibleItems[this.visibleItems.length - 1].id
+            document.getElementById('visibleRange').textContent = `${firstIndex}-${lastIndex}`
+          } else {
+            document.getElementById('visibleRange').textContent = `0-${this.data.length - 1}`
+          }
+
+          // 内存使用情况（估算）
+          if (performance.memory) {
+            const memory = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1)
+            document.getElementById('memoryUsage').textContent = `${memory}MB`
+          }
         }
-        
-        function generateData() {
-            virtualTest.generateData()
+
+        startFPSMonitor() {
+          const updateFPS = () => {
+            const now = performance.now()
+            const delta = now - this.lastFrameTime
+
+            this.frameCount++
+
+            if (delta >= 1000) {
+              this.fps = Math.round((this.frameCount * 1000) / delta)
+              document.getElementById('fps').textContent = this.fps
+
+              this.frameCount = 0
+              this.lastFrameTime = now
+            }
+
+            requestAnimationFrame(updateFPS)
+          }
+
+          requestAnimationFrame(updateFPS)
         }
-        
-        // 初始化
-        const virtualTest = new VirtualScrollTest()
+      }
+
+      // 全局函数
+      function scrollToTop() {
+        virtualTest.container.scrollTop = 0
+      }
+
+      function scrollToBottom() {
+        virtualTest.container.scrollTop = virtualTest.container.scrollHeight
+      }
+
+      function generateData() {
+        virtualTest.generateData()
+      }
+
+      // 初始化
+      const virtualTest = new VirtualScrollTest()
     </script>
-</body>
+  </body>
 </html>

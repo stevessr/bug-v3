@@ -7,6 +7,7 @@
 ## 原因分析
 
 原来的逻辑按照以下优先级判断：
+
 1. 检查 URL 参数 `mode=popup` → 设置为 Popup 模式
 2. 但 Popup 组件不支持路由
 3. 当 URL 包含 `#/groups` 这样的路由时，Popup 无法处理，显示空白
@@ -22,7 +23,7 @@ onMounted(() => {
   const params = new URLSearchParams(window.location.search)
   const mode = params.get('mode')
   const hasRouteHash = window.location.hash && window.location.hash.length > 1
-  
+
   // 优先级1: 如果有路由 hash（如 #/groups），强制使用 options 模式
   // 因为 Popup 不支持路由，带路由的一定是 options 页面
   if (hasRouteHash) {
@@ -43,17 +44,18 @@ onMounted(() => {
 
 ## 新的优先级逻辑
 
-| 优先级 | 条件 | 结果 | 说明 |
-|-------|------|------|------|
-| 1 | 有路由 hash（`#/xxx`） | Options 模式 | 路由只在 Options 中使用 |
-| 2 | `?mode=popup` | Popup 模式 | 明确指定 Popup |
-| 3 | `?mode=options` | Options 模式 | 明确指定 Options |
-| 4 | 窗口 < 500px | Popup 模式 | 小窗口默认 Popup |
-| 5 | 其他 | Options 模式 | 默认 Options |
+| 优先级 | 条件                   | 结果         | 说明                    |
+| ------ | ---------------------- | ------------ | ----------------------- |
+| 1      | 有路由 hash（`#/xxx`） | Options 模式 | 路由只在 Options 中使用 |
+| 2      | `?mode=popup`          | Popup 模式   | 明确指定 Popup          |
+| 3      | `?mode=options`        | Options 模式 | 明确指定 Options        |
+| 4      | 窗口 < 500px           | Popup 模式   | 小窗口默认 Popup        |
+| 5      | 其他                   | Options 模式 | 默认 Options            |
 
 ## URL 测试用例
 
 ### ✅ 正确显示 Options 模式
+
 ```
 index.html?mode=options
 index.html?mode=options#/groups
@@ -64,6 +66,7 @@ index.html  (窗口 > 500px)
 ```
 
 ### ✅ 正确显示 Popup 模式
+
 ```
 index.html?mode=popup
 index.html  (窗口 < 500px)
@@ -72,6 +75,7 @@ index.html  (窗口 < 500px)
 ## 实际场景
 
 ### 场景1: 用户在 Popup 中点击设置按钮
+
 ```
 跳转前: index.html?mode=popup
 跳转后: index.html?mode=options#/groups
@@ -79,18 +83,21 @@ index.html  (窗口 < 500px)
 ```
 
 ### 场景2: 扩展图标点击
+
 ```
 URL: index.html?mode=popup
 结果: ✅ 显示 Popup 界面
 ```
 
 ### 场景3: 右键 → 选项
+
 ```
 URL: index.html?mode=options
 结果: ✅ 显示 Options 页面
 ```
 
 ### 场景4: 直接访问带路由的 URL（问题场景）
+
 ```
 URL: index.html?mode=popup#/groups
 修复前: ❌ 显示空白（Popup 不支持路由）
@@ -110,6 +117,7 @@ URL: index.html?mode=popup#/groups
 ## 测试建议
 
 安装扩展后测试以下 URL：
+
 1. `chrome-extension://xxx/index.html?mode=popup` - 应显示 Popup
 2. `chrome-extension://xxx/index.html?mode=options` - 应显示 Options
 3. `chrome-extension://xxx/index.html?mode=popup#/groups` - 应显示 Options（带路由）

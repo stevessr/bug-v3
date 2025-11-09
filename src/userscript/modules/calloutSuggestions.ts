@@ -96,10 +96,7 @@ function updateActiveSuggestion() {
   })
 }
 
-function applyCompletion(
-  element: HTMLTextAreaElement | HTMLElement,
-  selectedKeyword: string
-) {
+function applyCompletion(element: HTMLTextAreaElement | HTMLElement, selectedKeyword: string) {
   if (element instanceof HTMLTextAreaElement) {
     // Handle textarea
     const text = element.value
@@ -124,7 +121,8 @@ function applyCompletion(
       if (!selection || selection.rangeCount === 0) return
 
       const range = selection.getRangeAt(0)
-      const textBeforeCursor = range.startContainer.textContent?.substring(0, range.startOffset) || ''
+      const textBeforeCursor =
+        range.startContainer.textContent?.substring(0, range.startOffset) || ''
 
       // 压缩搜索：查找最近的半角或全角左括号触发符
       let triggerIndex = textBeforeCursor.lastIndexOf('[')

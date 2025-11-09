@@ -1,7 +1,7 @@
 // FFmpeg functionality for WebM to WebP conversion
-let ffmpeg = null;
-let ffmpegLoaded = false;
-let ffmpegFailed = false; // Flag to track if FFmpeg has permanently failed to initialize
+let ffmpeg = null
+let ffmpegLoaded = false
+let ffmpegFailed = false // Flag to track if FFmpeg has permanently failed to initialize
 
 // DOM elements
 const botTokenInput = document.getElementById('botToken')
@@ -57,7 +57,7 @@ function ensureFFmpegLoaded() {
         reject(new Error('FFmpeg module loaded but API missing'))
       }
     }
-    script.onerror = (e) => reject(new Error('Failed to load FFmpeg module'))
+    script.onerror = e => reject(new Error('Failed to load FFmpeg module'))
     document.head.appendChild(script)
   }).catch(err => {
     console.warn('Could not load FFmpeg module:', err)
@@ -71,11 +71,11 @@ function ensureFFmpegLoaded() {
 function registerFFmpegUICallbacks() {
   if (!window.TelegramFFmpeg) return
   // log forwarding
-  window.TelegramFFmpeg._onLog = (msg) => {
+  window.TelegramFFmpeg._onLog = msg => {
     appendFFmpegLog(String(msg))
   }
   // progress forwarding (general or sticker-specific)
-  window.TelegramFFmpeg._onProgress = (info) => {
+  window.TelegramFFmpeg._onProgress = info => {
     // info may contain stickerIndex and progress
     try {
       if (info && typeof info === 'object' && typeof info.progress === 'number') {
@@ -105,7 +105,12 @@ async function isBlobWebP(blob) {
     const dv = new DataView(ab)
     // Check 'RIFF' at 0 and 'WEBP' at offset 8
     const riff = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3))
-    const webp = String.fromCharCode(dv.getUint8(8), dv.getUint8(9), dv.getUint8(10), dv.getUint8(11))
+    const webp = String.fromCharCode(
+      dv.getUint8(8),
+      dv.getUint8(9),
+      dv.getUint8(10),
+      dv.getUint8(11)
+    )
     return riff === 'RIFF' && webp === 'WEBP'
   } catch (e) {
     console.warn('isBlobWebP check failed:', e)
@@ -157,7 +162,10 @@ async function renderLottieToFrames(animationJson, maxFrames = 200) {
 
       const fps = animationJson.fr || 30
       const ip = typeof animationJson.ip === 'number' ? animationJson.ip : 0
-      const op = typeof animationJson.op === 'number' ? animationJson.op : Math.round((animationJson.ip || 0) + (animationJson.fr || 30) * 3)
+      const op =
+        typeof animationJson.op === 'number'
+          ? animationJson.op
+          : Math.round((animationJson.ip || 0) + (animationJson.fr || 30) * 3)
       const totalFrames = Math.max(1, op - ip)
 
       // Compute sampling step to keep frames <= maxFrames
@@ -183,42 +191,61 @@ async function renderLottieToFrames(animationJson, maxFrames = 200) {
           const canvas = container.querySelector('canvas')
           if (!canvas) throw new Error('Canvas not found for lottie renderer')
 
-          const captureFrame = (frameIndex) => new Promise((resFrame) => {
-            try {
-              // goToAndStop expects a frame number when second arg is true
-              anim.goToAndStop(frameIndex, true)
-              // let the renderer draw
-              requestAnimationFrame(async () => {
-                try {
-                  canvas.toBlob((blob) => {
-                    if (!blob) {
-                      resFrame(null)
-                    } else {
-                      resFrame(blob)
-                    }
-                  }, 'image/png')
-                } catch (e) { resFrame(null) }
-              })
-            } catch (e) { resFrame(null) }
-          })
+          const captureFrame = frameIndex =>
+            new Promise(resFrame => {
+              try {
+                // goToAndStop expects a frame number when second arg is true
+                anim.goToAndStop(frameIndex, true)
+                // let the renderer draw
+                requestAnimationFrame(async () => {
+                  try {
+                    canvas.toBlob(blob => {
+                      if (!blob) {
+                        resFrame(null)
+                      } else {
+                        resFrame(blob)
+                      }
+                    }, 'image/png')
+                  } catch (e) {
+                    resFrame(null)
+                  }
+                })
+              } catch (e) {
+                resFrame(null)
+              }
+            })(async () => {
+              const out = []
+              for (let i = 0; i < framesToCapture.length; i++) {
+                const f = framesToCapture[i]
+                const b = await captureFrame(f)
+                if (b) out.push(b)
+                // small pause to avoid blocking
+                await new Promise(r => setTimeout(r, 8))
+              }
 
-          (async () => {
-            const out = []
-            for (let i = 0; i < framesToCapture.length; i++) {
-              const f = framesToCapture[i]
-              const b = await captureFrame(f)
-              if (b) out.push(b)
-              // small pause to avoid blocking
-              await new Promise(r => setTimeout(r, 8))
-            }
-
-            try { anim.destroy() } catch (e) { /* ignore */ }
-            try { document.body.removeChild(container) } catch (e) { /* ignore */ }
-            resolve({ frames: out, fps: Math.round(fps / step) || 15 })
-          })()
+              try {
+                anim.destroy()
+              } catch (e) {
+                /* ignore */
+              }
+              try {
+                document.body.removeChild(container)
+              } catch (e) {
+                /* ignore */
+              }
+              resolve({ frames: out, fps: Math.round(fps / step) || 15 })
+            })()
         } catch (err) {
-          try { anim.destroy() } catch (e) { /* ignore */ }
-          try { document.body.removeChild(container) } catch (e) { /* ignore */ }
+          try {
+            anim.destroy()
+          } catch (e) {
+            /* ignore */
+          }
+          try {
+            document.body.removeChild(container)
+          } catch (e) {
+            /* ignore */
+          }
           reject(err)
         }
       }
@@ -254,7 +281,8 @@ async function convertTgsBlobToWebP(tgsBlob, index = null, total = 0) {
     showStatus('Rendering Lottie frames (this may take a moment)...', 'info')
     console.log('TGS: starting renderLottieToFrames')
     const rendered = await renderLottieToFrames(animationJson, 200)
-    if (!rendered || !rendered.frames || rendered.frames.length === 0) throw new Error('No frames captured from TGS')
+    if (!rendered || !rendered.frames || rendered.frames.length === 0)
+      throw new Error('No frames captured from TGS')
     const { frames, fps } = rendered
     console.log('TGS: captured frames=', frames.length, 'fps=', fps)
     showStatus(`Rendered ${frames.length} frames (fps ${fps})`, 'info')
@@ -340,7 +368,10 @@ function detectSandboxRestrictions() {
       canAccessFrameElement = true
       sandboxAttr = fe.getAttribute && fe.getAttribute('sandbox')
       if (sandboxAttr) {
-        const tokens = sandboxAttr.split(/\s+/).map(t => t.trim()).filter(Boolean)
+        const tokens = sandboxAttr
+          .split(/\s+/)
+          .map(t => t.trim())
+          .filter(Boolean)
         hasAllowDownloads = tokens.includes('allow-downloads')
         hasAllowPopups = tokens.includes('allow-popups')
       }
@@ -412,7 +443,10 @@ function triggerDownload(url, filename) {
   }
 
   // Final fallback: show instructions to user
-  showStatus('Download blocked by iframe sandbox. Please open this page in a new tab to download, or allow downloads on the parent iframe.', 'error')
+  showStatus(
+    'Download blocked by iframe sandbox. Please open this page in a new tab to download, or allow downloads on the parent iframe.',
+    'error'
+  )
   return 'blocked'
 }
 
@@ -473,7 +507,6 @@ function createFileUrl(filePath) {
     throw error
   }
 }
-
 
 // Create a sticker element for the UI
 function createStickerElement(sticker, index) {
@@ -715,10 +748,10 @@ async function loadStickers() {
         downloadedStickers: Array.from(downloadedStickers), // Convert Set to Array
         failedDownloads: Array.from(failedDownloads), // Convert Set to Array
         timestamp: Date.now()
-      };
-      localStorage.setItem('cachedStickers', JSON.stringify(stickerData));
+      }
+      localStorage.setItem('cachedStickers', JSON.stringify(stickerData))
     } catch (storageError) {
-      console.warn('Could not save stickers to localStorage:', storageError);
+      console.warn('Could not save stickers to localStorage:', storageError)
     }
 
     updateStats()
@@ -819,8 +852,8 @@ function renderStickers() {
     stickerItem.appendChild(infoContainer)
     stickerItem.appendChild(actionsContainer)
 
-  stickerItem.dataset.index = String(index)
-  stickersContainer.appendChild(stickerItem)
+    stickerItem.dataset.index = String(index)
+    stickersContainer.appendChild(stickerItem)
 
     // Update status based on download state
     updateStickerStatus(index, 'not-downloaded')
@@ -996,7 +1029,7 @@ async function downloadSingleSticker(sticker, index) {
     // Use the sticker's file_id as the filename instead of file_XX
     const fileExtension = sticker.file_path.split('.').pop() || 'webp'
     const originalFilename = `${sticker.file_id}.${fileExtension}`
-    
+
     // Handle TGS (Lottie) -> WebP conversion when enabled
     if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'tgs') {
       try {
@@ -1013,9 +1046,17 @@ async function downloadSingleSticker(sticker, index) {
           const url = URL.createObjectURL(webpBlob)
           const downloadFilename = `${sticker.file_id}.webp`
           const method = triggerDownload(url, downloadFilename)
-          if (method === 'direct') try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+          if (method === 'direct')
+            try {
+              URL.revokeObjectURL(url)
+            } catch (e) {
+              /* ignore */
+            }
           updateStickerStatus(index, 'downloaded')
-          showStatus(`Successfully converted and downloaded as WebP: ${downloadFilename}`, 'success')
+          showStatus(
+            `Successfully converted and downloaded as WebP: ${downloadFilename}`,
+            'success'
+          )
           return
         } else {
           throw new Error('Conversion returned no blob')
@@ -1043,9 +1084,17 @@ async function downloadSingleSticker(sticker, index) {
           const url = URL.createObjectURL(webpBlob)
           const downloadFilename = `${sticker.file_id}.webp`
           const method = triggerDownload(url, downloadFilename)
-          if (method === 'direct') try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+          if (method === 'direct')
+            try {
+              URL.revokeObjectURL(url)
+            } catch (e) {
+              /* ignore */
+            }
           updateStickerStatus(index, 'downloaded')
-          showStatus(`Successfully converted and downloaded as WebP: ${downloadFilename}`, 'success')
+          showStatus(
+            `Successfully converted and downloaded as WebP: ${downloadFilename}`,
+            'success'
+          )
           return
         } else {
           throw new Error('Conversion returned no blob')
@@ -1062,12 +1111,12 @@ async function downloadSingleSticker(sticker, index) {
       try {
         // Fetch the WebM file via the proxy (show download progress)
         showStatus(`Downloading ${originalFilename}...`, 'info')
-        
+
         const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
-        
+
         // Fetch with progress (streaming) to update per-sticker download progress
         const webmBlob = await fetchWithProgress(proxyUrl, (loaded, total) => {
-          const pct = total ? (loaded / total) * 100 : Math.round((loaded / 1024) / 10)
+          const pct = total ? (loaded / total) * 100 : Math.round(loaded / 1024 / 10)
           updateStickerProgress(index, pct)
         })
 
@@ -1078,11 +1127,14 @@ async function downloadSingleSticker(sticker, index) {
         showStatus(`Converting ${originalFilename} to WebP...`, 'info')
         let webpBlob = webmBlob
         let didConvert = false
-        if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
+        if (
+          window.TelegramFFmpeg &&
+          typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function'
+        ) {
           try {
             webpBlob = await window.TelegramFFmpeg.convertWebMtoWebP(webmBlob, index, 1)
             // Verify returned blob is actually WebP; fallback to original if not
-            if (webpBlob && await isBlobWebP(webpBlob)) {
+            if (webpBlob && (await isBlobWebP(webpBlob))) {
               didConvert = true
             } else {
               console.warn('Conversion returned non-WebP blob, falling back to original WebM')
@@ -1104,24 +1156,33 @@ async function downloadSingleSticker(sticker, index) {
         const method = triggerDownload(url, downloadFilename)
         // If we performed a direct download we can safely revoke the object URL
         if (method === 'direct') {
-          try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+          try {
+            URL.revokeObjectURL(url)
+          } catch (e) {
+            /* ignore */
+          }
         }
 
         updateStickerStatus(index, 'downloaded')
-        showStatus(didConvert ? `Successfully converted and downloaded as WebP: ${downloadFilename}` : `Downloaded original format (conversion unavailable): ${downloadFilename}`, didConvert ? 'success' : 'info')
+        showStatus(
+          didConvert
+            ? `Successfully converted and downloaded as WebP: ${downloadFilename}`
+            : `Downloaded original format (conversion unavailable): ${downloadFilename}`,
+          didConvert ? 'success' : 'info'
+        )
       } catch (convertError) {
         console.error(`Error converting WebM to WebP for sticker ${index}:`, convertError)
         // Fall back to original download method
-  const fileUrl = createFileUrl(sticker.file_path)
-  triggerDownload(fileUrl, originalFilename)
-  updateStickerStatus(index, 'downloaded')
+        const fileUrl = createFileUrl(sticker.file_path)
+        triggerDownload(fileUrl, originalFilename)
+        updateStickerStatus(index, 'downloaded')
         showStatus(`Downloaded original format (conversion failed): ${originalFilename}`, 'info')
       }
     } else {
       // Normal download without conversion
       showStatus(`Downloading ${originalFilename}...`, 'info')
       const fileUrl = createFileUrl(sticker.file_path)
-      
+
       // Try direct download first
       try {
         // Create download link directly using the URL
@@ -1169,30 +1230,33 @@ async function retryDownload(sticker, index) {
     // Use the sticker's file_id as the filename instead of file_XX
     const fileExtension = sticker.file_path.split('.').pop() || 'webp'
     const originalFilename = `${sticker.file_id}.${fileExtension}`
-    
+
     // Check if we need to convert from WebM to WebP
     if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'webm') {
       try {
         // Fetch the WebM file via the proxy (show download progress)
         showStatus(`Downloading ${originalFilename}...`, 'info')
-        
+
         const proxyUrl = `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(sticker.file_path)}`
-        
+
         // Fetch with progress (streaming) to update per-sticker download progress
         const webmBlob = await fetchWithProgress(proxyUrl, (loaded, total) => {
           const pct = total ? (loaded / total) * 100 : 0
           updateStickerProgress(index, pct)
         })
-        
+
         // Convert WebM to WebP if checkbox is checked (show conversion progress)
         showStatus(`Converting ${originalFilename} to WebP...`, 'info')
         await ensureFFmpegLoaded()
         let webpBlob = webmBlob
         let didConvert = false
-        if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
+        if (
+          window.TelegramFFmpeg &&
+          typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function'
+        ) {
           try {
             webpBlob = await window.TelegramFFmpeg.convertWebMtoWebP(webmBlob, index, 1)
-            if (webpBlob && await isBlobWebP(webpBlob)) {
+            if (webpBlob && (await isBlobWebP(webpBlob))) {
               didConvert = true
             } else {
               console.warn('Conversion returned non-WebP blob, falling back to original WebM')
@@ -1211,24 +1275,33 @@ async function retryDownload(sticker, index) {
         const downloadFilename = didConvert ? `${sticker.file_id}.webp` : originalFilename
         const method = triggerDownload(url, downloadFilename)
         if (method === 'direct') {
-          try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+          try {
+            URL.revokeObjectURL(url)
+          } catch (e) {
+            /* ignore */
+          }
         }
 
         updateStickerStatus(index, 'downloaded')
-        showStatus(didConvert ? `Successfully converted and downloaded as WebP: ${downloadFilename}` : `Downloaded original format (conversion unavailable): ${downloadFilename}`, didConvert ? 'success' : 'info')
+        showStatus(
+          didConvert
+            ? `Successfully converted and downloaded as WebP: ${downloadFilename}`
+            : `Downloaded original format (conversion unavailable): ${downloadFilename}`,
+          didConvert ? 'success' : 'info'
+        )
       } catch (convertError) {
         console.error(`Error converting WebM to WebP for sticker ${index}:`, convertError)
         // Fall back to original download method
         const fileUrl = createFileUrl(sticker.file_path)
-  triggerDownload(fileUrl, originalFilename)
-  updateStickerStatus(index, 'downloaded')
-  showStatus(`Downloaded original format (conversion failed): ${originalFilename}`, 'info')
+        triggerDownload(fileUrl, originalFilename)
+        updateStickerStatus(index, 'downloaded')
+        showStatus(`Downloaded original format (conversion failed): ${originalFilename}`, 'info')
       }
     } else {
       // Normal download without conversion
       showStatus(`Downloading ${originalFilename}...`, 'info')
       const fileUrl = createFileUrl(sticker.file_path)
-      
+
       // Try direct download first
       try {
         // Create download link directly using the URL
@@ -1301,24 +1374,33 @@ async function downloadAllStickers() {
         // Use the sticker's file_id as the filename
         const fileExtension = sticker.file_path.split('.').pop() || 'webp'
         const originalFilename = `${sticker.file_id}.${fileExtension}`
-        
+
         // Check if we need to convert from WebM to WebP
-        let fileToDownload = blob;
-        let finalFilename = originalFilename;
-        
+        let fileToDownload = blob
+        let finalFilename = originalFilename
+
         // TGS (Lottie) conversion
         if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'tgs') {
           try {
-            showStatus(`Converting ${originalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
+            showStatus(
+              `Converting ${originalFilename} to WebP (sticker ${i + 1}/${stickers.length})...`,
+              'info'
+            )
             await ensureFFmpegLoaded()
-            if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertTGStoWebP === 'function') {
+            if (
+              window.TelegramFFmpeg &&
+              typeof window.TelegramFFmpeg.convertTGStoWebP === 'function'
+            ) {
               const converted = await convertTgsBlobToWebP(blob, i, stickers.length)
               if (converted) {
                 fileToDownload = converted
                 finalFilename = `${sticker.file_id}.webp`
               } else {
                 console.warn('TGS conversion returned null, using original')
-                showStatus(`Conversion returned no data for ${sticker.file_id}, using original`, 'info')
+                showStatus(
+                  `Conversion returned no data for ${sticker.file_id}, using original`,
+                  'info'
+                )
                 fileToDownload = blob
               }
             } else {
@@ -1335,17 +1417,30 @@ async function downloadAllStickers() {
 
         if (convertWebMtoWebPCheckbox.checked && fileExtension.toLowerCase() === 'webm') {
           try {
-            showStatus(`Converting ${originalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
+            showStatus(
+              `Converting ${originalFilename} to WebP (sticker ${i + 1}/${stickers.length})...`,
+              'info'
+            )
             await ensureFFmpegLoaded()
-            if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
+            if (
+              window.TelegramFFmpeg &&
+              typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function'
+            ) {
               try {
-                const converted = await window.TelegramFFmpeg.convertWebMtoWebP(blob, i, stickers.length)
-                if (converted && await isBlobWebP(converted)) {
+                const converted = await window.TelegramFFmpeg.convertWebMtoWebP(
+                  blob,
+                  i,
+                  stickers.length
+                )
+                if (converted && (await isBlobWebP(converted))) {
                   fileToDownload = converted
                   finalFilename = `${sticker.file_id}.webp`
                 } else {
                   console.warn('Conversion returned non-WebP, falling back to original blob')
-                  showStatus(`Conversion returned non-WebP for ${sticker.file_id}, using original`, 'info')
+                  showStatus(
+                    `Conversion returned non-WebP for ${sticker.file_id}, using original`,
+                    'info'
+                  )
                   fileToDownload = blob
                 }
               } catch (err) {
@@ -1368,7 +1463,11 @@ async function downloadAllStickers() {
         const url = URL.createObjectURL(fileToDownload)
         const method = triggerDownload(url, finalFilename)
         if (method === 'direct') {
-          try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+          try {
+            URL.revokeObjectURL(url)
+          } catch (e) {
+            /* ignore */
+          }
         }
 
         // Update status to downloaded
@@ -1504,14 +1603,13 @@ async function batchDownloadAllStickers() {
       }
 
       // Get the blob from the response
-      const blob = await response.blob();
+      const blob = await response.blob()
 
       // Quick content-type check: if the proxy returned HTML/JSON/text (likely an error page),
       // don't treat it as a sticker image. Instead include a small .error.txt file in the tar
       // so the user can inspect the server response.
-      const contentType = (response.headers && response.headers.get)
-        ? (response.headers.get('content-type') || '')
-        : ''
+      const contentType =
+        response.headers && response.headers.get ? response.headers.get('content-type') || '' : ''
       if (/html|json|text/i.test(contentType) || blob.size < 20) {
         // Try to extract text for diagnostics
         let txt = ''
@@ -1523,22 +1621,31 @@ async function batchDownloadAllStickers() {
 
         const encoder = new TextEncoder()
         const errName = `${sticker.file_id}.error.txt`
-        filesData.push({ name: errName, data: encoder.encode(`Content-Type: ${contentType}\n\n${txt}`).buffer })
+        filesData.push({
+          name: errName,
+          data: encoder.encode(`Content-Type: ${contentType}\n\n${txt}`).buffer
+        })
         failedCount++
-        showStatus(`Received non-binary response for ${sticker.file_id}, added ${errName} to archive`, 'error')
+        showStatus(
+          `Received non-binary response for ${sticker.file_id}, added ${errName} to archive`,
+          'error'
+        )
         // skip further processing for this sticker
         // Add small delay to avoid tight loop
         await new Promise(resolve => setTimeout(resolve, 50))
         continue
       }
-      
+
       // Check if we need to convert from WebM to WebP
-      let fileData;
-      let finalFilename = `${sticker.file_id}.${sticker.file_path.split('.').pop() || 'webp'}`;
-      
+      let fileData
+      let finalFilename = `${sticker.file_id}.${sticker.file_path.split('.').pop() || 'webp'}`
+
       if (convertWebMtoWebPCheckbox.checked && finalFilename.toLowerCase().endsWith('.tgs')) {
         // TGS -> WebP conversion
-        showStatus(`Downloading and converting ${finalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
+        showStatus(
+          `Downloading and converting ${finalFilename} to WebP (sticker ${i + 1}/${stickers.length})...`,
+          'info'
+        )
         try {
           await ensureFFmpegLoaded()
           const convertedBlob = await convertTgsBlobToWebP(blob, i, stickers.length)
@@ -1554,28 +1661,44 @@ async function batchDownloadAllStickers() {
           showStatus(`Conversion failed for ${finalFilename}, downloading original`, 'info')
           fileData = await blob.arrayBuffer()
         }
-      } else if (convertWebMtoWebPCheckbox.checked && finalFilename.toLowerCase().endsWith('.webm')) {
+      } else if (
+        convertWebMtoWebPCheckbox.checked &&
+        finalFilename.toLowerCase().endsWith('.webm')
+      ) {
         // Fetch and convert
-        showStatus(`Downloading and converting ${finalFilename} to WebP (sticker ${i+1}/${stickers.length})...`, 'info')
+        showStatus(
+          `Downloading and converting ${finalFilename} to WebP (sticker ${i + 1}/${stickers.length})...`,
+          'info'
+        )
         try {
           await ensureFFmpegLoaded()
-            if (window.TelegramFFmpeg && typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function') {
-              try {
-                const convertedBlob = await window.TelegramFFmpeg.convertWebMtoWebP(blob, i, stickers.length)
-                // Verify converted blob is actually WebP
-                if (convertedBlob && await isBlobWebP(convertedBlob)) {
-                  fileData = await convertedBlob.arrayBuffer()
-                  finalFilename = `${sticker.file_id}.webp`
-                } else {
-                  console.warn(`Conversion returned non-WebP for sticker ${i}, using original blob`)
-                  showStatus(`Conversion returned non-WebP for ${sticker.file_id}, using original`, 'info')
-                  fileData = await blob.arrayBuffer()
-                }
-              } catch (convertError) {
-                console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
-                showStatus(`Conversion failed for ${finalFilename}, downloading original`, 'info')
+          if (
+            window.TelegramFFmpeg &&
+            typeof window.TelegramFFmpeg.convertWebMtoWebP === 'function'
+          ) {
+            try {
+              const convertedBlob = await window.TelegramFFmpeg.convertWebMtoWebP(
+                blob,
+                i,
+                stickers.length
+              )
+              // Verify converted blob is actually WebP
+              if (convertedBlob && (await isBlobWebP(convertedBlob))) {
+                fileData = await convertedBlob.arrayBuffer()
+                finalFilename = `${sticker.file_id}.webp`
+              } else {
+                console.warn(`Conversion returned non-WebP for sticker ${i}, using original blob`)
+                showStatus(
+                  `Conversion returned non-WebP for ${sticker.file_id}, using original`,
+                  'info'
+                )
                 fileData = await blob.arrayBuffer()
               }
+            } catch (convertError) {
+              console.error(`Error converting WebM to WebP for sticker ${i}:`, convertError)
+              showStatus(`Conversion failed for ${finalFilename}, downloading original`, 'info')
+              fileData = await blob.arrayBuffer()
+            }
           } else {
             // No FFmpeg module available, use original
             fileData = await blob.arrayBuffer()
@@ -1587,7 +1710,7 @@ async function batchDownloadAllStickers() {
         }
       } else {
         // Just download normally
-        showStatus(`Downloading ${finalFilename} (sticker ${i+1}/${stickers.length})...`, 'info')
+        showStatus(`Downloading ${finalFilename} (sticker ${i + 1}/${stickers.length})...`, 'info')
         fileData = await blob.arrayBuffer()
       }
 
@@ -1617,7 +1740,7 @@ async function batchDownloadAllStickers() {
   if (successCount > 0) {
     try {
       showStatus(`Compressing ${successCount} files using Compression Streams API...`, 'info')
-      
+
       // Build a proper tar archive (ustar) and gzip it.
       // Helper: create tar header and concatenate file data with 512-byte blocks.
       function padUint8Array(arr, blockSize) {
@@ -1633,7 +1756,7 @@ async function batchDownloadAllStickers() {
         let oct = value.toString(8)
         if (oct.length > length - 1) {
           // overflow, fill with zeros
-          oct = oct.slice(- (length - 1))
+          oct = oct.slice(-(length - 1))
         }
         return oct.padStart(length - 1, '0') + '\0'
       }
@@ -1739,21 +1862,25 @@ async function batchDownloadAllStickers() {
         // last resort: return tar as blob without compression
         compressedBlob = new Blob([tarBuffer], { type: 'application/x-tar' })
       }
-      
+
       // Create download link for the compressed file
-      const url = URL.createObjectURL(compressedBlob);
-      const setName = localStorage.getItem('currentStickerSetName') || 'stickers';
-      const filename = `${setName}_${new Date().getTime()}.tar.gz`;  // Using requested extension
+      const url = URL.createObjectURL(compressedBlob)
+      const setName = localStorage.getItem('currentStickerSetName') || 'stickers'
+      const filename = `${setName}_${new Date().getTime()}.tar.gz` // Using requested extension
       const method = triggerDownload(url, filename)
       if (method === 'direct') {
-        try { URL.revokeObjectURL(url) } catch (e) { /* ignore */ }
+        try {
+          URL.revokeObjectURL(url)
+        } catch (e) {
+          /* ignore */
+        }
       }
-      
-      const message = `Batch download complete! ${successCount} stickers compressed, ${failedCount} failed.`;
-      showStatus(message, 'success');
+
+      const message = `Batch download complete! ${successCount} stickers compressed, ${failedCount} failed.`
+      showStatus(message, 'success')
     } catch (error) {
-      console.error('Error creating compressed archive:', error);
-      showStatus(`Error creating compressed archive: ${error.message}`, 'error');
+      console.error('Error creating compressed archive:', error)
+      showStatus(`Error creating compressed archive: ${error.message}`, 'error')
     }
   } else {
     showStatus(`All downloads failed! ${failedCount} stickers failed to download.`, 'error')
@@ -1762,8 +1889,6 @@ async function batchDownloadAllStickers() {
   // Update stats to reflect the downloads
   updateStats()
 }
-
-
 
 // Update statistics display
 function updateStats() {
@@ -1964,7 +2089,8 @@ async function fetchWithProgress(url, onProgress) {
   const res = await fetch(url, { method: 'GET', headers: { Accept: '*/*' }, mode: 'cors' })
   if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
 
-  const contentLength = res.headers && res.headers.get ? parseInt(res.headers.get('content-length') || '0', 10) : 0
+  const contentLength =
+    res.headers && res.headers.get ? parseInt(res.headers.get('content-length') || '0', 10) : 0
   if (!res.body || !res.body.getReader) {
     // fallback
     const blob = await res.blob()
@@ -1999,7 +2125,9 @@ async function fetchWithProgress(url, onProgress) {
     offset += c.length || c.byteLength
   }
 
-  return new Blob([out.buffer || out], { type: res.headers.get('content-type') || 'application/octet-stream' })
+  return new Blob([out.buffer || out], {
+    type: res.headers.get('content-type') || 'application/octet-stream'
+  })
 }
 
 // Set up auto-hide functionality
@@ -2017,52 +2145,54 @@ document.addEventListener('click', e => {
 // Restore previously loaded stickers from localStorage if available
 function restoreCachedStickers() {
   try {
-    const cachedData = localStorage.getItem('cachedStickers');
+    const cachedData = localStorage.getItem('cachedStickers')
     if (cachedData) {
-      const stickerData = JSON.parse(cachedData);
-      
+      const stickerData = JSON.parse(cachedData)
+
       // Check if data is not too old (older than 24 hours)
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      const maxAge = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
       if (Date.now() - stickerData.timestamp <= maxAge) {
         // Restore the sticker data
-        stickers = stickerData.stickers || [];
-        
+        stickers = stickerData.stickers || []
+
         // Restore the download status
-        downloadedStickers = new Set(stickerData.downloadedStickers || []);
-        failedDownloads = new Set(stickerData.failedDownloads || []);
-        
+        downloadedStickers = new Set(stickerData.downloadedStickers || [])
+        failedDownloads = new Set(stickerData.failedDownloads || [])
+
         // Restore the sticker set name
         if (stickerData.setName) {
-          const savedToken = localStorage.getItem('telegramBotToken');
+          const savedToken = localStorage.getItem('telegramBotToken')
           if (savedToken) {
-            botToken = savedToken;
-            stickerSetNameInput.value = stickerData.setName;
-            localStorage.setItem('currentStickerSetName', stickerData.setName);
+            botToken = savedToken
+            stickerSetNameInput.value = stickerData.setName
+            localStorage.setItem('currentStickerSetName', stickerData.setName)
           }
         }
-        
+
         if (stickers.length > 0) {
           // Update UI to show the restored stickers
-          renderStickers();
-          stickerList.classList.remove('hidden');
-          downloadAllBtn.disabled = false;
-          batchDownloadBtn.disabled = false;
-          
-          showStatus(`Restored ${stickers.length} stickers from cache`, 'success');
-          updateStats();
-          
-          console.log(`Restored ${stickers.length} stickers from cache, ${downloadedStickers.size} downloaded, ${failedDownloads.size} failed`);
+          renderStickers()
+          stickerList.classList.remove('hidden')
+          downloadAllBtn.disabled = false
+          batchDownloadBtn.disabled = false
+
+          showStatus(`Restored ${stickers.length} stickers from cache`, 'success')
+          updateStats()
+
+          console.log(
+            `Restored ${stickers.length} stickers from cache, ${downloadedStickers.size} downloaded, ${failedDownloads.size} failed`
+          )
         }
       } else {
         // Cached data is too old, remove it
-        localStorage.removeItem('cachedStickers');
-        console.log('Removed expired cached stickers');
+        localStorage.removeItem('cachedStickers')
+        console.log('Removed expired cached stickers')
       }
     }
   } catch (error) {
-    console.error('Error restoring cached stickers:', error);
+    console.error('Error restoring cached stickers:', error)
     // If there's an error, remove the cached data to prevent repeated errors
-    localStorage.removeItem('cachedStickers');
+    localStorage.removeItem('cachedStickers')
   }
 }
 

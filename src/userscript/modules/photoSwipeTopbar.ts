@@ -94,12 +94,12 @@ function addEmojiButtonToPswp(container: Element) {
   if (!topBar) return
   if (topBar.querySelector('.emoji-add-link')) return
 
-  const originalBtn = topBar.querySelector('.pswp__button--original-image') as
-    | HTMLAnchorElement
-    | null
-  const downloadBtn = topBar.querySelector('.pswp__button--download-image') as
-    | HTMLAnchorElement
-    | null
+  const originalBtn = topBar.querySelector(
+    '.pswp__button--original-image'
+  ) as HTMLAnchorElement | null
+  const downloadBtn = topBar.querySelector(
+    '.pswp__button--download-image'
+  ) as HTMLAnchorElement | null
 
   let imgUrl = ''
   if (originalBtn?.href) imgUrl = originalBtn.href
@@ -121,7 +121,8 @@ function addEmojiButtonToPswp(container: Element) {
 
   const addButton = createAddButton({ name, url: imgUrl })
 
-  if (downloadBtn?.parentElement) downloadBtn.parentElement.insertBefore(addButton, downloadBtn.nextSibling)
+  if (downloadBtn?.parentElement)
+    downloadBtn.parentElement.insertBefore(addButton, downloadBtn.nextSibling)
   else topBar.appendChild(addButton)
 }
 

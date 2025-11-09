@@ -8,10 +8,7 @@ import { logPlatformInfo } from './utils/platformDetection'
 // Initialize from localStorage
 async function initializeUserscriptData() {
   const data = await loadDataFromLocalStorageAsync(window.location.hostname).catch((err: any) => {
-    console.warn(
-      '[Manager] loadDataFromLocalStorageAsync failed, falling back to sync loader',
-      err
-    )
+    console.warn('[Manager] loadDataFromLocalStorageAsync failed, falling back to sync loader', err)
     return loadDataFromLocalStorage()
   })
   userscriptState.emojiGroups = data.emojiGroups || []
@@ -52,15 +49,17 @@ function isDiscoursePage(): boolean {
 // Main initialization function for manager
 async function initializeEmojiManager() {
   console.log('[Emoji Manager] Initializing...')
-  
+
   logPlatformInfo()
   await initializeUserscriptData()
-  
+
   // Detect if we're on mobile (using matchMedia for better performance)
   const isMobileQuery = window.matchMedia('(max-width: 768px)')
-  const isMobileUserAgent = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent.toLowerCase())
+  const isMobileUserAgent = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+    navigator.userAgent.toLowerCase()
+  )
   const isMobile = isMobileQuery.matches || isMobileUserAgent
-  
+
   // Create floating management button with mobile-optimized styling
   const managerButton = document.createElement('button')
   managerButton.id = 'emoji-manager-floating-button'
@@ -84,27 +83,27 @@ async function initializeEmojiManager() {
     minWidth: isMobile ? '56px' : 'auto',
     minHeight: isMobile ? '56px' : 'auto'
   })
-  
+
   managerButton.addEventListener('mouseenter', () => {
     if (!isMobile) {
       managerButton.style.transform = 'scale(1.05)'
     }
   })
-  
+
   managerButton.addEventListener('mouseleave', () => {
     if (!isMobile) {
       managerButton.style.transform = 'scale(1)'
     }
   })
-  
+
   managerButton.addEventListener('touchstart', () => {
     managerButton.style.transform = 'scale(0.95)'
   })
-  
+
   managerButton.addEventListener('touchend', () => {
     managerButton.style.transform = 'scale(1)'
   })
-  
+
   managerButton.addEventListener('click', async () => {
     try {
       // Dynamically import the manager module
@@ -114,7 +113,7 @@ async function initializeEmojiManager() {
       console.error('[Emoji Manager] Failed to open management interface:', e)
     }
   })
-  
+
   // Add settings button with mobile-optimized styling
   const settingsButton = document.createElement('button')
   settingsButton.id = 'emoji-settings-floating-button'
@@ -138,27 +137,27 @@ async function initializeEmojiManager() {
     minWidth: isMobile ? '52px' : 'auto',
     minHeight: isMobile ? '52px' : 'auto'
   })
-  
+
   settingsButton.addEventListener('mouseenter', () => {
     if (!isMobile) {
       settingsButton.style.transform = 'scale(1.05)'
     }
   })
-  
+
   settingsButton.addEventListener('mouseleave', () => {
     if (!isMobile) {
       settingsButton.style.transform = 'scale(1)'
     }
   })
-  
+
   settingsButton.addEventListener('touchstart', () => {
     settingsButton.style.transform = 'scale(0.95)'
   })
-  
+
   settingsButton.addEventListener('touchend', () => {
     settingsButton.style.transform = 'scale(1)'
   })
-  
+
   settingsButton.addEventListener('click', async () => {
     try {
       const { showSettingsModal } = await import('./modules/settings')
@@ -167,7 +166,7 @@ async function initializeEmojiManager() {
       console.error('[Emoji Manager] Failed to open settings:', e)
     }
   })
-  
+
   // Add import/export button with mobile-optimized styling
   const importExportButton = document.createElement('button')
   importExportButton.id = 'emoji-importexport-floating-button'
@@ -191,27 +190,27 @@ async function initializeEmojiManager() {
     minWidth: isMobile ? '52px' : 'auto',
     minHeight: isMobile ? '52px' : 'auto'
   })
-  
+
   importExportButton.addEventListener('mouseenter', () => {
     if (!isMobile) {
       importExportButton.style.transform = 'scale(1.05)'
     }
   })
-  
+
   importExportButton.addEventListener('mouseleave', () => {
     if (!isMobile) {
       importExportButton.style.transform = 'scale(1)'
     }
   })
-  
+
   importExportButton.addEventListener('touchstart', () => {
     importExportButton.style.transform = 'scale(0.95)'
   })
-  
+
   importExportButton.addEventListener('touchend', () => {
     importExportButton.style.transform = 'scale(1)'
   })
-  
+
   importExportButton.addEventListener('click', async () => {
     try {
       const { showImportExportModal } = await import('./modules/importExport')
@@ -220,7 +219,7 @@ async function initializeEmojiManager() {
       console.error('[Emoji Manager] Failed to open import/export:', e)
     }
   })
-  
+
   // Add sync button with mobile-optimized styling
   const syncButton = document.createElement('button')
   syncButton.id = 'emoji-sync-floating-button'
@@ -244,27 +243,27 @@ async function initializeEmojiManager() {
     minWidth: isMobile ? '52px' : 'auto',
     minHeight: isMobile ? '52px' : 'auto'
   })
-  
+
   syncButton.addEventListener('mouseenter', () => {
     if (!isMobile) {
       syncButton.style.transform = 'scale(1.05)'
     }
   })
-  
+
   syncButton.addEventListener('mouseleave', () => {
     if (!isMobile) {
       syncButton.style.transform = 'scale(1)'
     }
   })
-  
+
   syncButton.addEventListener('touchstart', () => {
     syncButton.style.transform = 'scale(0.95)'
   })
-  
+
   syncButton.addEventListener('touchend', () => {
     syncButton.style.transform = 'scale(1)'
   })
-  
+
   syncButton.addEventListener('click', async () => {
     try {
       const { showSyncOperationsModal } = await import('./modules/syncManager')
@@ -273,7 +272,7 @@ async function initializeEmojiManager() {
       console.error('[Emoji Manager] Failed to open sync manager:', e)
     }
   })
-  
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(managerButton)
@@ -287,7 +286,7 @@ async function initializeEmojiManager() {
     document.body.appendChild(importExportButton)
     document.body.appendChild(syncButton)
   }
-  
+
   console.log('[Emoji Manager] Initialization complete')
 }
 

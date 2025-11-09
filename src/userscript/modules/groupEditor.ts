@@ -141,14 +141,14 @@ export function showGroupEditorModal() {
 
   // Get the actual content div inside the modal
   const content = modal.querySelector('div:last-child') as HTMLElement
-  
+
   // Apply custom width to the modal content container
   const modalContent = modal.querySelector('div > div') as HTMLElement
   if (modalContent) {
     modalContent.style.width = '80vw'
     modalContent.style.maxWidth = '80vw'
   }
-  
+
   document.body.appendChild(modal)
 
   // Add hover effects
@@ -200,8 +200,6 @@ export function showGroupEditorModal() {
   `
   ensureStyleInjected(id, css)
 
-
-
   // Group name editing
   content.querySelectorAll('.group-name-editor').forEach(input => {
     input.addEventListener('change', e => {
@@ -226,16 +224,18 @@ export function showGroupEditorModal() {
       const groupId = target.getAttribute('data-group-id')
 
       if (groupId) {
-        customPrompt('请输入新的图标字符 (emoji 或单个字符):', target.textContent || '📁').then(newIcon => {
-          if (newIcon && newIcon.trim()) {
-            const group = userscriptState.emojiGroups.find(g => g.id === groupId)
-            if (group) {
-              group.icon = newIcon.trim()
-              target.textContent = newIcon.trim()
-              showTemporaryMessage(`分组图标已更新为: ${newIcon.trim()}`)
+        customPrompt('请输入新的图标字符 (emoji 或单个字符):', target.textContent || '📁').then(
+          newIcon => {
+            if (newIcon && newIcon.trim()) {
+              const group = userscriptState.emojiGroups.find(g => g.id === groupId)
+              if (group) {
+                group.icon = newIcon.trim()
+                target.textContent = newIcon.trim()
+                showTemporaryMessage(`分组图标已更新为: ${newIcon.trim()}`)
+              }
             }
           }
-        })
+        )
       }
     })
   })
@@ -280,7 +280,7 @@ export function showGroupEditorModal() {
 
       // Confirm deletion
       const confirmMsg = `确认删除分组 "${groupName}"？\n\n该分组包含 ${userscriptState.emojiGroups[index].emojis?.length || 0} 个表情。\n删除后数据将无法恢复。`
-      
+
       customConfirm(confirmMsg).then(confirmed => {
         if (confirmed) {
           userscriptState.emojiGroups.splice(index, 1)

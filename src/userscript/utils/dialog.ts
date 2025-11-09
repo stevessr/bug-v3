@@ -1,5 +1,5 @@
 // Custom dialog utilities for userscripts
-import { createEl } from './createEl';
+import { createEl } from './createEl'
 
 /**
  * Custom alert dialog to replace window.alert
@@ -20,7 +20,7 @@ export function customAlert(message: string): Promise<void> {
         align-items: center;
         justify-content: center;
       `
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create dialog container
     const dialog = createEl('div', {
@@ -36,55 +36,56 @@ export function customAlert(message: string): Promise<void> {
         text-align: center;
         min-width: 300px;
       `
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create message element
     const messageEl = createEl('div', {
       text: message,
       style: 'margin-bottom: 20px; word-wrap: break-word;'
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create OK button
     const okButton = createEl('button', {
       text: '确定',
       className: 'btn btn-primary',
-      style: 'padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: white;'
-    }) as HTMLButtonElement;
+      style:
+        'padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: white;'
+    }) as HTMLButtonElement
 
     okButton.addEventListener('click', () => {
-      backdrop.remove();
-      resolve();
-    });
+      backdrop.remove()
+      resolve()
+    })
 
     // Add elements to dialog
-    dialog.appendChild(messageEl);
-    dialog.appendChild(okButton);
+    dialog.appendChild(messageEl)
+    dialog.appendChild(okButton)
 
     // Add dialog to backdrop
-    backdrop.appendChild(dialog);
+    backdrop.appendChild(dialog)
 
     // Add backdrop to document
-    document.body.appendChild(backdrop);
+    document.body.appendChild(backdrop)
 
     // Allow closing with Escape key
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        backdrop.remove();
-        document.removeEventListener('keydown', handleEsc);
-        resolve();
+        backdrop.remove()
+        document.removeEventListener('keydown', handleEsc)
+        resolve()
       }
-    };
-    document.addEventListener('keydown', handleEsc);
+    }
+    document.addEventListener('keydown', handleEsc)
 
     // Allow closing by clicking backdrop
-    backdrop.addEventListener('click', (e) => {
+    backdrop.addEventListener('click', e => {
       if (e.target === backdrop) {
-        backdrop.remove();
-        document.removeEventListener('keydown', handleEsc);
-        resolve();
+        backdrop.remove()
+        document.removeEventListener('keydown', handleEsc)
+        resolve()
       }
-    });
-  });
+    })
+  })
 }
 
 /**
@@ -106,7 +107,7 @@ export function customConfirm(message: string): Promise<boolean> {
         align-items: center;
         justify-content: center;
       `
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create dialog container
     const dialog = createEl('div', {
@@ -122,67 +123,69 @@ export function customConfirm(message: string): Promise<boolean> {
         text-align: center;
         min-width: 300px;
       `
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create message element
     const messageEl = createEl('div', {
       text: message,
       style: 'margin-bottom: 20px; word-wrap: break-word;'
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create button container
     const buttonContainer = createEl('div', {
       style: 'display: flex; gap: 10px; justify-content: center;'
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create Cancel button
     const cancelButton = createEl('button', {
       text: '取消',
       className: 'btn',
-      style: 'padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #f8f9fa; color: #333;'
-    }) as HTMLButtonElement;
+      style:
+        'padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #f8f9fa; color: #333;'
+    }) as HTMLButtonElement
 
     // Create OK button
     const okButton = createEl('button', {
       text: '确定',
       className: 'btn btn-primary',
-      style: 'padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: white;'
-    }) as HTMLButtonElement;
+      style:
+        'padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: white;'
+    }) as HTMLButtonElement
 
     cancelButton.addEventListener('click', () => {
-      backdrop.remove();
-      resolve(false);
-    });
+      backdrop.remove()
+      resolve(false)
+    })
 
     okButton.addEventListener('click', () => {
-      backdrop.remove();
-      resolve(true);
-    });
+      backdrop.remove()
+      resolve(true)
+    })
 
     // Add buttons to container
-    buttonContainer.appendChild(cancelButton);
-    buttonContainer.appendChild(okButton);
+    buttonContainer.appendChild(cancelButton)
+    buttonContainer.appendChild(okButton)
 
     // Add elements to dialog
-    dialog.appendChild(messageEl);
-    dialog.appendChild(buttonContainer);
+    dialog.appendChild(messageEl)
+    dialog.appendChild(buttonContainer)
 
     // Add dialog to backdrop
-    backdrop.appendChild(dialog);
+    backdrop.appendChild(dialog)
 
     // Add backdrop to document
-    document.body.appendChild(backdrop);
+    document.body.appendChild(backdrop)
 
     // Allow closing with Escape key
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        backdrop.remove();
-        document.removeEventListener('keydown', handleEsc);
-        resolve(false);
+        backdrop.remove()
+        document.removeEventListener('keydown', handleEsc)
+        resolve(false)
       }
-    };
-    document.addEventListener('keydown', handleEsc);
-  });
+    }
+    document.addEventListener('keydown', handleEsc)
+  })
 }
 
 /**
@@ -204,7 +207,7 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
         align-items: center;
         justify-content: center;
       `
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create dialog container
     const dialog = createEl('div', {
@@ -218,13 +221,13 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
         text-align: center;
         min-width: 300px;
       `
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create message element
     const messageEl = createEl('div', {
       text: message,
       style: 'margin-bottom: 15px; word-wrap: break-word;'
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create input element
     const input = createEl('input', {
@@ -238,74 +241,76 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
         border-radius: 4px;
         box-sizing: border-box;
       `
-    }) as HTMLInputElement;
+    }) as HTMLInputElement
 
     // Create button container
     const buttonContainer = createEl('div', {
       style: 'display: flex; gap: 10px; justify-content: center;'
-    }) as HTMLDivElement;
+    }) as HTMLDivElement
 
     // Create Cancel button
     const cancelButton = createEl('button', {
       text: '取消',
       className: 'btn',
-      style: 'padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #f8f9fa; color: #333;'
-    }) as HTMLButtonElement;
+      style:
+        'padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #f8f9fa; color: #333;'
+    }) as HTMLButtonElement
 
     // Create OK button
     const okButton = createEl('button', {
       text: '确定',
       className: 'btn btn-primary',
-      style: 'padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: white;'
-    }) as HTMLButtonElement;
+      style:
+        'padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: white;'
+    }) as HTMLButtonElement
 
     cancelButton.addEventListener('click', () => {
-      backdrop.remove();
-      resolve(null);
-    });
+      backdrop.remove()
+      resolve(null)
+    })
 
     okButton.addEventListener('click', () => {
-      backdrop.remove();
-      resolve(input.value);
-    });
+      backdrop.remove()
+      resolve(input.value)
+    })
 
     // Focus input and select text
     setTimeout(() => {
-      input.focus();
-      input.select();
-    }, 10);
+      input.focus()
+      input.select()
+    }, 10)
 
     // Add Enter key support
-    input.addEventListener('keydown', (e) => {
+    input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
-        backdrop.remove();
-        resolve(input.value);
+        backdrop.remove()
+        resolve(input.value)
       }
-    });
+    })
 
     // Add buttons to container
-    buttonContainer.appendChild(cancelButton);
-    buttonContainer.appendChild(okButton);
+    buttonContainer.appendChild(cancelButton)
+    buttonContainer.appendChild(okButton)
 
     // Add elements to dialog
-    dialog.appendChild(messageEl);
-    dialog.appendChild(input);
-    dialog.appendChild(buttonContainer);
+    dialog.appendChild(messageEl)
+    dialog.appendChild(input)
+    dialog.appendChild(buttonContainer)
 
     // Add dialog to backdrop
-    backdrop.appendChild(dialog);
+    backdrop.appendChild(dialog)
 
     // Add backdrop to document
-    document.body.appendChild(backdrop);
+    document.body.appendChild(backdrop)
 
     // Allow closing with Escape key
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        backdrop.remove();
-        document.removeEventListener('keydown', handleEsc);
-        resolve(null);
+        backdrop.remove()
+        document.removeEventListener('keydown', handleEsc)
+        resolve(null)
       }
-    };
-    document.addEventListener('keydown', handleEsc);
-  });
+    }
+    document.addEventListener('keydown', handleEsc)
+  })
 }

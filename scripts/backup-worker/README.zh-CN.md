@@ -12,6 +12,7 @@
 ## 设置和部署
 
 1.  **安装依赖：**
+
     ```bash
     # 导航到此目录
     cd scripts/backup-worker
@@ -25,6 +26,7 @@
 
 3.  **创建 KV 命名空间：**
     为生产和预览环境创建一个 KV 命名空间。
+
     ```bash
     # 创建生产环境的命名空间
     wrangler kv namespace create "EMOJI_BACKUP"
@@ -32,6 +34,7 @@
     # 创建预览环境的命名空间
     wrangler kv namespace create "EMOJI_BACKUP" --preview
     ```
+
     将生成的 ID 复制到 `wrangler.toml` 文件中，替换占位符值。
 
 4.  **设置授权密钥：**
@@ -48,6 +51,7 @@
     # 为生产环境设置只读密钥
     echo "你的只读密码" | wrangler secret put AUTH_SECRET_READONLY
     ```
+
     在本地开发中，密钥会从 `wrangler.toml` 的 `[vars]` 部分读取。
 
 5.  **部署 Worker:**

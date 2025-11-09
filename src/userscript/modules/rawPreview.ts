@@ -508,9 +508,8 @@ function scrollToJsonPage(page: number) {
     const el = doc.getElementById(`json-page-${page}`)
     if (!el) return
     const top = (el as HTMLElement).offsetTop
-    const win = (iframeEl.contentWindow || (iframeEl as any).contentDocument?.defaultView) as
-      | Window
-      | null
+    const win = (iframeEl.contentWindow ||
+      (iframeEl as any).contentDocument?.defaultView) as Window | null
     if (win) win.scrollTo({ top, behavior: 'smooth' })
   } catch {}
 }

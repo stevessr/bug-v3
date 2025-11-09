@@ -69,13 +69,13 @@ jobs:
           TIMESTAMP=$(date -u +%Y%m%d%H%M)
           BASE_VERSION="1.0.0"
           SUFFIX="${{ github.event.inputs.version_suffix }}"
-          
+
           if [ -n "$SUFFIX" ]; then
             VERSION="${BASE_VERSION}${SUFFIX}.${TIMESTAMP}"
           else
             VERSION="${BASE_VERSION}.${TIMESTAMP}"
           fi
-          
+
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_OUTPUT
 
@@ -96,11 +96,10 @@ jobs:
         if: github.event.inputs.release_type == 'remote'
         run: pnpm run build:userscript:remote
 
-
       - name: Prepare userscript artifacts
         run: |
           mkdir -p userscript-release
-          
+
           # Copy the main userscript file
           if [ -f "dist/emoji-extension.user.js" ]; then
             cp dist/emoji-extension.user.js userscript-release/
@@ -109,12 +108,12 @@ jobs:
             VERSION="${{ steps.version.outputs.VERSION }}"
             cp dist/emoji-extension.user.js "userscript-release/emoji-extension-v${VERSION}.user.js"
           fi
-          
+
           # Copy any other userscript variants if they exist
           if [ -d "dist" ]; then
             find dist -name "*.user.js" -exec cp {} userscript-release/ \;
           fi
-          
+
           # Create info file
           cat > userscript-release/BUILD_INFO.txt << EOF
           Build Information
@@ -124,7 +123,7 @@ jobs:
           Timestamp: ${{ steps.version.outputs.TIMESTAMP }}
           Commit: ${{ github.sha }}
           Branch: ${{ github.ref_name }}
-          
+
           Files included:
           $(ls -la userscript-release/*.user.js)
           EOF
@@ -185,7 +184,7 @@ jobs:
           # based on GreasyFork's API or webhook system
           echo "GreasyFork upload would happen here"
           echo "Webhook URL: ${{ vars.GREASYFORK_WEBHOOK_URL }}"
-          
+
           # Example webhook call (adjust based on actual GreasyFork API)
           # curl -X POST "${{ vars.GREASYFORK_WEBHOOK_URL }}" \
           #   -H "Content-Type: application/json" \

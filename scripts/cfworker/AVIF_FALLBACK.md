@@ -21,12 +21,12 @@
 ```javascript
 if (format === 'avif') {
   // 1. 使用 ffmpeg.wasm 导出 PNG（保留所有视频滤镜）
-  await ffmpeg.exec([...args, '-frames:v', '1', '-f', 'png', 'output.png']);
-  
+  await ffmpeg.exec([...args, '-frames:v', '1', '-f', 'png', 'output.png'])
+
   // 2. 通过 Canvas API 转换为 WebP
-  const imgBitmap = await createImageBitmap(pngBlob);
-  canvas.toBlob(callback, 'image/webp', 0.8);
-  
+  const imgBitmap = await createImageBitmap(pngBlob)
+  canvas.toBlob(callback, 'image/webp', 0.8)
+
   // 3. 返回 WebP blob，提示用户已降级
 }
 ```
@@ -70,16 +70,17 @@ if (format === 'avif') {
 ### 替代方案对比
 
 | 格式 | 体积 | 质量 | 浏览器支持 | 编码速度 |
-|------|------|------|------------|----------|
-| AVIF | 最小 | 最高 | 部分支持 | 极慢 |
-| WebP | 很小 | 很高 | 广泛支持 | 快速 |
-| PNG  | 大   | 无损 | 全部支持 | 快速 |
+| ---- | ---- | ---- | ---------- | -------- |
+| AVIF | 最小 | 最高 | 部分支持   | 极慢     |
+| WebP | 很小 | 很高 | 广泛支持   | 快速     |
+| PNG  | 大   | 无损 | 全部支持   | 快速     |
 
 ## 未来改进
 
 如果需要真正的 AVIF 支持，可以考虑：
 
 1. **自定义编译 ffmpeg.wasm**
+
    ```bash
    # 包含 libaom-av1 编码器
    emcc --enable-libaom ...
@@ -96,6 +97,7 @@ if (format === 'avif') {
 ## 总结
 
 当前方案平衡了**功能、性能、兼容性**：
+
 - 用户可以选择 AVIF，不会遇到错误
 - 自动降级为 WebP，体积和质量接近 AVIF
 - 清晰的 UI 提示，用户体验良好

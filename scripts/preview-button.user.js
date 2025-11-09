@@ -19,7 +19,7 @@
 // @run-at       document-end
 // ==/UserScript==
 
-(function () {
+;(function () {
   'use strict'
 
   // ===== Utility Functions =====
@@ -209,7 +209,7 @@
       const raw = localStorage.getItem(QUICK_REPLY_KEY)
       if (!raw) return DEFAULT_REPLIES.slice()
       const arr = JSON.parse(raw)
-      if (Array.isArray(arr) && arr.every((x) => typeof x === 'string')) return arr
+      if (Array.isArray(arr) && arr.every(x => typeof x === 'string')) return arr
       return DEFAULT_REPLIES.slice()
     } catch {
       return DEFAULT_REPLIES.slice()
@@ -253,7 +253,7 @@
       const res = await fetch('/posts', {
         method: 'POST',
         headers: {
-          'accept': 'application/json, text/javascript, */*; q=0.01',
+          accept: 'application/json, text/javascript, */*; q=0.01',
           'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
           'x-csrf-token': token,
           'x-requested-with': 'XMLHttpRequest'
@@ -349,15 +349,18 @@
     header.appendChild(ctrls)
 
     // Quick Reply Panel
-    const quickPanel = createQuickReplyPanel(() => currentTopicId, (msg) => {
-      qrStatus.textContent = msg || ''
-      if (msg === '发送成功！') {
-        setTimeout(() => {
-          qrStatus.textContent = ''
-          quickPanel.style.display = 'none'
-        }, 800)
+    const quickPanel = createQuickReplyPanel(
+      () => currentTopicId,
+      msg => {
+        qrStatus.textContent = msg || ''
+        if (msg === '发送成功！') {
+          setTimeout(() => {
+            qrStatus.textContent = ''
+            quickPanel.style.display = 'none'
+          }, 800)
+        }
       }
-    })
+    )
 
     iframeEl = createEl('iframe', {
       className: 'raw-preview-iframe',
@@ -369,7 +372,7 @@
     modal.appendChild(iframeEl)
     overlay.appendChild(modal)
 
-    overlay.addEventListener('click', (e) => {
+    overlay.addEventListener('click', e => {
       if (e.target === overlay) removeOverlay()
     })
 
@@ -378,7 +381,7 @@
     document.body.appendChild(overlay)
 
     // toggle panel
-    qrToggleBtn.addEventListener('click', (e) => {
+    qrToggleBtn.addEventListener('click', e => {
       e.preventDefault()
       e.stopPropagation()
       if (quickPanel.style.display === 'none' || !quickPanel.style.display) {
@@ -427,7 +430,7 @@
           if (!topicId) return
           await sendReply(topicId, text, setStatus)
         })
-        del.addEventListener('click', (e) => {
+        del.addEventListener('click', e => {
           e.stopPropagation()
           const list = getReplies()
           list.splice(idx, 1)
@@ -903,7 +906,7 @@
 
   function injectIntoTopicList() {
     const rows = document.querySelectorAll('tr[data-topic-id]')
-    rows.forEach((row) => {
+    rows.forEach(row => {
       try {
         const topicId = row.dataset.topicId
         if (!topicId) return
@@ -912,7 +915,7 @@
         const titleLink = row.querySelector('a.title, a.raw-topic-link, a.raw-link')
         const btn = createTriggerButtonFor('iframe')
         btn.classList.add('raw-preview-list-trigger')
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', e => {
           e.preventDefault()
           e.stopPropagation()
           createOverlay(topicId, 1, 'iframe')
@@ -920,7 +923,7 @@
 
         const jsonBtn = createTriggerButtonFor('json')
         jsonBtn.classList.add('raw-preview-list-trigger-json')
-        jsonBtn.addEventListener('click', (e) => {
+        jsonBtn.addEventListener('click', e => {
           e.preventDefault()
           e.stopPropagation()
           let slug

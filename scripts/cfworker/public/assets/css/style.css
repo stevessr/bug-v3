@@ -1,7 +1,7 @@
-* { 
-  margin: 0; 
-  padding: 0; 
-  box-sizing: border-box; 
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
@@ -16,7 +16,7 @@ body {
   margin: 0 auto;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   padding: 30px;
 }
 
@@ -58,9 +58,9 @@ label {
   font-weight: 500;
 }
 
-input[type="file"],
-input[type="url"],
-input[type="number"],
+input[type='file'],
+input[type='url'],
+input[type='number'],
 select {
   width: 100%;
   padding: 10px 12px;
@@ -94,9 +94,9 @@ select:focus {
   transition: all 0.3s;
 }
 
-.btn:hover { 
-  background: #5568d3; 
-  transform: translateY(-2px); 
+.btn:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
 }
 
 .btn:disabled {
@@ -136,7 +136,7 @@ select:focus {
 .result img {
   max-width: 100%;
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   margin-top: 15px;
 }
 

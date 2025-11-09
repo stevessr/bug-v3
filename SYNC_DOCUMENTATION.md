@@ -17,6 +17,7 @@
 首先需要安装 emoji-manager 用户脚本：
 
 1. 构建管理器脚本：
+
    ```bash
    npm run build:userscript
    ```
@@ -49,6 +50,7 @@
 ```
 
 支持的 WebDAV 服务器：
+
 - Nextcloud
 - ownCloud
 - Box
@@ -70,6 +72,7 @@ Secret Access Key: your-secret-access-key
 ```
 
 支持的 S3 兼容服务：
+
 - Amazon S3
 - MinIO
 - Backblaze B2
@@ -84,13 +87,17 @@ Secret Access Key: your-secret-access-key
 ### 6. 同步操作
 
 #### 推送 (Push)
+
 将当前浏览器中的表情数据推送到远程服务器：
+
 1. 点击 "☁️ 同步" 按钮
 2. 选择 "⬆️ 推送 (Push)"
 3. 等待上传完成
 
 #### 拉取 (Pull)
+
 从远程服务器拉取表情数据到当前浏览器：
+
 1. 点击 "☁️ 同步" 按钮
 2. 选择 "⬇️ 拉取 (Pull)"
 3. 确认覆盖本地数据
@@ -99,6 +106,7 @@ Secret Access Key: your-secret-access-key
 ## 数据格式
 
 同步的数据包含：
+
 ```json
 {
   "emojiGroups": [...],
@@ -139,18 +147,21 @@ Secret Access Key: your-secret-access-key
 ## 故障排除
 
 ### WebDAV 连接失败
+
 - 检查 URL 是否正确（包括协议 https://）
 - 验证用户名和密码
 - 确认服务器允许 WebDAV 访问
 - 检查 CORS 设置（如果适用）
 
 ### S3 连接失败
+
 - 验证 Endpoint 和 Region 是否正确
 - 检查 Access Key 和 Secret Key
 - 确认 Bucket 存在且可访问
 - 检查 Bucket 策略和 CORS 配置
 
 ### 数据同步失败
+
 - 检查网络连接
 - 验证存储空间是否充足
 - 查看浏览器控制台的错误信息
@@ -176,16 +187,17 @@ src/userscript/
 3. 在 `syncManager.ts` 中添加相应的配置 UI
 
 示例：
+
 ```typescript
 export class GoogleDriveSyncTarget implements ISyncTarget {
   async push(data: SyncData): Promise<SyncResult> {
     // 实现推送逻辑
   }
-  
+
   async pull(): Promise<...> {
     // 实现拉取逻辑
   }
-  
+
   async test(): Promise<SyncResult> {
     // 实现连接测试
   }

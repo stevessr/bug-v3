@@ -12,6 +12,7 @@ This worker provides a secure backup and restore service for the emoji extension
 ## Setup and Deployment
 
 1.  **Install Dependencies:**
+
     ```bash
     # Navigate to this directory
     cd scripts/backup-worker
@@ -25,6 +26,7 @@ This worker provides a secure backup and restore service for the emoji extension
 
 3.  **Create a KV Namespace:**
     Create a KV namespace for production and preview environments.
+
     ```bash
     # Create a production namespace
     wrangler kv namespace create "EMOJI_BACKUP"
@@ -32,6 +34,7 @@ This worker provides a secure backup and restore service for the emoji extension
     # Create a preview namespace
     wrangler kv namespace create "EMOJI_BACKUP" --preview
     ```
+
     Copy the generated IDs into `wrangler.toml`, replacing the placeholder values.
 
 4.  **Set the Authorization Secrets:**
@@ -48,6 +51,7 @@ This worker provides a secure backup and restore service for the emoji extension
     # Set the read-only secret for the production environment
     echo "YOUR_READ_ONLY_PASSWORD" | wrangler secret put AUTH_SECRET_READONLY
     ```
+
     For local development, the secrets are read from the `[vars]` section in `wrangler.toml`.
 
 5.  **Deploy the Worker:**

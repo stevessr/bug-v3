@@ -19,8 +19,8 @@ import {
 import { logPlatformInfo } from './utils/platformDetection'
 import { autoReadAllv2 } from '../content/utils/autoReadReplies'
 
-if(!(window as any).autoReadAllRepliesV2){
-  (window as any).autoReadAllRepliesV2 = autoReadAllv2
+if (!(window as any).autoReadAllRepliesV2) {
+  ;(window as any).autoReadAllRepliesV2 = autoReadAllv2
 }
 
 // userscriptState is imported from ./state and initialized there

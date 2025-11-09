@@ -225,7 +225,7 @@ const uploadToCloudSync = async () => {
     importResults.value = null
 
     const result = await emojiStore.pushToCloudflare()
-    
+
     if (result.success) {
       importResults.value = {
         success: true,
@@ -273,7 +273,7 @@ const pullFromCloudSync = async () => {
     importResults.value = null
 
     const result = await emojiStore.pullFromCloudflare()
-    
+
     if (result.success) {
       importResults.value = {
         success: true,

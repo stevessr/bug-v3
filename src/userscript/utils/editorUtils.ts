@@ -3,8 +3,10 @@ import { createEl } from './createEl'
 
 export function insertIntoEditor(text: string) {
   // Priority 1: Chat composer (highest priority)
-  const chatComposer = document.querySelector('textarea#channel-composer.chat-composer__input') as HTMLTextAreaElement | null
-  
+  const chatComposer = document.querySelector(
+    'textarea#channel-composer.chat-composer__input'
+  ) as HTMLTextAreaElement | null
+
   // Check if chat composer is the active element or exists
   if (chatComposer) {
     const start = chatComposer.selectionStart ?? 0
@@ -130,7 +132,7 @@ export function createModalElement(options: {
     })
 
     content.appendChild(titleElement)
-    
+
     const closeButton = content.querySelector('#closeModal') as HTMLButtonElement
     if (closeButton && options.onClose) {
       closeButton.addEventListener('click', options.onClose)

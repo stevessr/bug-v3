@@ -26,13 +26,15 @@ export function injectCustomMenuButtons(menu: HTMLElement) {
     dropdownMenu = menu.querySelector('ul.chat-composer-dropdown__list')
   }
   if (!dropdownMenu) {
-    console.warn('[Emoji Extension Userscript] No dropdown-menu or chat-composer-dropdown__list found in expanded menu')
+    console.warn(
+      '[Emoji Extension Userscript] No dropdown-menu or chat-composer-dropdown__list found in expanded menu'
+    )
     return
   }
 
   // Determine menu type for appropriate styling
   const isChatComposerMenu = dropdownMenu.classList.contains('chat-composer-dropdown__list')
-  const itemClassName = isChatComposerMenu 
+  const itemClassName = isChatComposerMenu
     ? 'chat-composer-dropdown__item emoji-extension-menu-item'
     : 'dropdown-menu__item emoji-extension-menu-item'
   const btnClassName = isChatComposerMenu

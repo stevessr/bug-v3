@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import {
-  UploadOutlined,
-  DownloadOutlined,
-  SwapOutlined
-} from '@ant-design/icons-vue'
+import { UploadOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons-vue'
 import { inject } from 'vue'
 
 import type { SyncResult } from '../../userscript/plugins/syncTargets'
@@ -155,11 +151,11 @@ const sync = async (direction: 'push' | 'pull' | 'both') => {
   syncDirection.value = direction
   syncResult.value = null
   // Use 'push' as default action when starting sync; actual action will be updated during operation
-  syncProgress.value = { 
-    current: 0, 
-    total: 1, 
-    action: direction === 'both' ? 'push' : direction, 
-    message: '准备开始同步...' 
+  syncProgress.value = {
+    current: 0,
+    total: 1,
+    action: direction === 'both' ? 'push' : direction,
+    message: '准备开始同步...'
   }
 
   try {
@@ -193,8 +189,6 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
       return '同步'
   }
 }
-
-
 </script>
 
 <template>
