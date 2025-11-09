@@ -43,6 +43,88 @@
     return el
   }
 
+  // Custom notification function (adapted from src/userscript/utils/notify.ts)
+  function showUploadNotification(
+    message,
+    type = 'info', // 'info' | 'success' | 'error'
+    timeout = 4000
+  ) {
+    try {
+      let container = document.getElementById('emoji-ext-userscript-toast')
+      if (!container) {
+        container = createE('div', {
+          id: 'emoji-ext-userscript-toast',
+          attrs: { 'aria-live': 'polite' },
+          style: `
+            position: fixed;
+            right: 12px;
+            bottom: 12px;
+            z-index: 2147483646;
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+            pointer-events: none; /* Allow clicks to pass through container */
+          `
+        })
+
+        try {
+          if (document.body) document.body.appendChild(container)
+          else document.documentElement.appendChild(container)
+        } catch (e) {
+          document.documentElement.appendChild(container)
+        }
+      }
+
+      const el = createE('div', {
+        text: message,
+        style: `
+          padding:8px 12px;
+          border-radius:6px;
+          color:#fff;
+          font-size:13px;
+          max-width:320px;
+          word-break:break-word;
+          opacity:0;
+          transform: translateY(8px);
+          transition: all 220ms ease ease-out;
+          pointer-events: auto; /* Re-enable pointer events for the toast itself */
+        `
+      })
+
+      if (type === 'success') el.style.backgroundColor = '#16a34a'
+      else if (type === 'error') el.style.backgroundColor = '#dc2626'
+      else el.style.backgroundColor = '#0369a1'
+
+      container.appendChild(el)
+
+      // force a paint then show (for transition)
+      el.offsetHeight
+      el.style.opacity = '1'
+      el.style.transform = 'translateY(0)'
+
+      const id = setTimeout(() => {
+        try {
+          el.style.opacity = '0'
+          el.style.transform = 'translateY(8px)'
+          setTimeout(() => el.remove(), 250)
+        } catch (_e) {}
+        clearTimeout(id)
+      }, timeout)
+
+      console.log('[ImageUploader] Notification shown:', message, 'type=', type)
+
+      return () => {
+        try {
+          el.remove()
+        } catch (_e) {}
+        clearTimeout(id)
+      }
+    } catch (e) {
+      console.error('[ImageUploader] Failed to show notification:', e)
+      return () => {}
+    }
+  }
+
   // Helper: insert into common editors (textarea or ProseMirror)
   function insertIntoEditor(text) {
     // Priority 1: Chat composer (highest priority)
@@ -192,6 +274,7 @@
         item.resolve(result)
         const markdown = `![${result.original_filename}](${result.url})`
         insertIntoEditor(markdown)
+        showUploadNotification(`${result.original_filename} 上传成功`, 'success')
       } catch (error) {
         item.error = error
         if (this.shouldRetry(error, item)) {
