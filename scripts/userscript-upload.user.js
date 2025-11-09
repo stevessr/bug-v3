@@ -310,8 +310,15 @@
       if (Date.now() < this.rateLimitUntil) {
         if (!this.rateLimitTimer) {
           const waitTime = this.rateLimitUntil - Date.now()
+          const waitSeconds = Math.ceil(waitTime / 1000)
+          showUploadNotification(
+            `遇到限流，将等待 ${waitSeconds} 秒后重试...`,
+            'error',
+            waitTime + 500
+          )
           this.rateLimitTimer = setTimeout(() => {
             this.rateLimitTimer = null
+            showUploadNotification('限流等待结束，继续上传...', 'success')
             this.processQueue()
           }, waitTime + 100)
         }
