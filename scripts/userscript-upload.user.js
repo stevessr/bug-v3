@@ -109,7 +109,7 @@
   const clientIdMap = new Map([
     ['linux.do', 'f06cb5577ba9410d94b9faf94e48c2d8'],
     ['idcflare.com', '33298f72df1145d49f0e343a8f943076'],
-    ['meta.discourse.org','fd7f48cf6fe34c799cb4a4c58aabefee']
+    ['meta.discourse.org', 'fd7f48cf6fe34c799cb4a4c58aabefee']
     // Add other domain-client_id pairs here
   ])
   const defaultClientId = 'b9cdb79908284b25925d62befbff3921'
@@ -121,9 +121,11 @@
       this.uploadingQueue = []
       this.failedQueue = []
       this.successQueue = []
-      this.isProcessing = false
       this.maxRetries = 2
       this.progressDialog = null
+      this.maxConcurrentUploads = 5
+      this.rateLimitUntil = 0
+      this.rateLimitTimer = null
     }
 
     uploadImage(file) {
@@ -159,39 +161,65 @@
       this.updateProgressDialog()
     }
 
-    async processQueue() {
-      if (this.isProcessing || this.waitingQueue.length === 0) return
-      this.isProcessing = true
+    processQueue() {
+      if (Date.now() < this.rateLimitUntil) {
+        if (!this.rateLimitTimer) {
+          const waitTime = this.rateLimitUntil - Date.now()
+          this.rateLimitTimer = setTimeout(() => {
+            this.rateLimitTimer = null
+            this.processQueue()
+          }, waitTime + 100)
+        }
+        return
+      }
 
-      while (this.waitingQueue.length > 0) {
+      while (
+        this.uploadingQueue.length < this.maxConcurrentUploads &&
+        this.waitingQueue.length > 0
+      ) {
         const item = this.waitingQueue.shift()
         if (!item) continue
         this.moveToQueue(item, 'uploading')
-        try {
-          const result = await this.performUpload(item.file)
-          item.result = result
-          this.moveToQueue(item, 'success')
-          item.resolve(result)
-          const markdown = `![${result.original_filename}](${result.url})`
-          insertIntoEditor(markdown)
-        } catch (error) {
-          item.error = error
-          if (this.shouldRetry(error, item)) {
-            item.retryCount++
-            if (error.error_type === 'rate_limit' && error.extras?.wait_seconds) {
-              await this.sleep(error.extras.wait_seconds * 1000)
-            } else {
-              await this.sleep(Math.pow(2, item.retryCount) * 1000)
-            }
-            this.moveToQueue(item, 'waiting')
-          } else {
-            this.moveToQueue(item, 'failed')
-            item.reject(error)
-          }
-        }
+        this.uploadItem(item)
       }
+    }
 
-      this.isProcessing = false
+    async uploadItem(item) {
+      try {
+        const result = await this.performUpload(item.file)
+        item.result = result
+        this.moveToQueue(item, 'success')
+        item.resolve(result)
+        const markdown = `![${result.original_filename}](${result.url})`
+        insertIntoEditor(markdown)
+      } catch (error) {
+        item.error = error
+        if (this.shouldRetry(error, item)) {
+          item.retryCount++
+          if (error.error_type === 'rate_limit' && error.extras?.wait_seconds) {
+            this.moveToQueue(item, 'waiting')
+            const newWaitUntil = Date.now() + error.extras.wait_seconds * 1000
+            if (newWaitUntil > this.rateLimitUntil) {
+              this.rateLimitUntil = newWaitUntil
+            }
+          } else {
+            this.moveToQueue(item, 'failed') // Show as failed while waiting
+            const waitTime = Math.pow(2, item.retryCount) * 1000
+            setTimeout(() => {
+              this.moveToQueue(item, 'waiting')
+              this.processQueue()
+            }, waitTime)
+          }
+        } else {
+          this.moveToQueue(item, 'failed')
+          item.reject(error)
+        }
+      } finally {
+        // An item has finished its upload attempt (successful, failed, or requeued).
+        // It has been moved out of the uploadingQueue.
+        // We can now try to process another item.
+        this.processQueue()
+      }
     }
 
     shouldRetry(error, item) {
