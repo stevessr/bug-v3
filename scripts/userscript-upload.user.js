@@ -271,6 +271,7 @@
       this.maxConcurrentUploads = 5
       this.rateLimitUntil = 0
       this.rateLimitTimer = null
+      this.rateLimitCountdownInterval = null
     }
 
     uploadImage(file) {
@@ -310,17 +311,13 @@
       if (Date.now() < this.rateLimitUntil) {
         if (!this.rateLimitTimer) {
           const waitTime = this.rateLimitUntil - Date.now()
-          const waitSeconds = Math.ceil(waitTime / 1000)
-          showUploadNotification(
-            `遇到限流，将等待 ${waitSeconds} 秒后重试...`,
-            'error',
-            waitTime + 500
-          )
           this.rateLimitTimer = setTimeout(() => {
             this.rateLimitTimer = null
-            showUploadNotification('限流等待结束，继续上传...', 'success')
+            this.clearRateLimitStatus()
             this.processQueue()
           }, waitTime + 100)
+
+          this.startRateLimitCountdown(this.rateLimitUntil)
         }
         return
       }
@@ -399,6 +396,7 @@
       if (this.progressDialog) {
         this.progressDialog.remove()
         this.progressDialog = null
+        this.clearRateLimitStatus() // Clear status when dialog is hidden
       }
     }
 
@@ -432,11 +430,18 @@
       })
       closeButton.addEventListener('click', () => this.hideProgressDialog())
       header.appendChild(closeButton)
+
+      const rateLimitStatusEl = createE('div', {
+        id: 'rate-limit-status',
+        style: `padding: 8px 20px; background: #fffbe6; color: #d97706; font-size: 12px; text-align: center; display: none; border-bottom: 1px solid #e5e7eb;`
+      })
+
       const content = createE('div', {
         class: 'upload-queue-content',
         style: `max-height:320px; overflow-y:auto; padding:12px;`
       })
       dialog.appendChild(header)
+      dialog.appendChild(rateLimitStatusEl)
       dialog.appendChild(content)
       return dialog
     }
@@ -597,6 +602,40 @@
       }
       return Math.abs(hash).toString(16).padStart(40, '0')
     }
+
+    startRateLimitCountdown(untilTime) {
+      if (this.rateLimitCountdownInterval) {
+        clearInterval(this.rateLimitCountdownInterval)
+      }
+      this.showProgressDialog() // Ensure dialog is visible
+      const updateCountdown = () => {
+        const remainingTime = untilTime - Date.now()
+        const rateLimitStatusEl = this.progressDialog?.querySelector('#rate-limit-status')
+        if (rateLimitStatusEl) {
+          if (remainingTime > 0) {
+            const seconds = Math.ceil(remainingTime / 1000)
+            rateLimitStatusEl.textContent = `请求过于频繁，等待 ${seconds} 秒后继续...`
+            rateLimitStatusEl.style.display = 'block'
+          } else {
+            this.clearRateLimitStatus()
+          }
+        }
+      }
+      updateCountdown()
+      this.rateLimitCountdownInterval = setInterval(updateCountdown, 1000)
+    }
+
+    clearRateLimitStatus() {
+      if (this.rateLimitCountdownInterval) {
+        clearInterval(this.rateLimitCountdownInterval)
+        this.rateLimitCountdownInterval = null
+      }
+      const rateLimitStatusEl = this.progressDialog?.querySelector('#rate-limit-status')
+      if (rateLimitStatusEl) {
+        rateLimitStatusEl.style.display = 'none'
+        rateLimitStatusEl.textContent = ''
+      }
+    }
   }
 
   const uploader = new ImageUploader()
@@ -731,7 +770,6 @@
       in: '✕',
       style: `background:none; border:none; font-size:20px; cursor:pointer; color:#6b7280; padding:4px; border-radius:4px; transition:background-color .2s;`
     })
-    header.appendChild(title)
     header.appendChild(closeButton)
 
     const content = createE('div', { class: 'upload-panel-content', style: `padding:24px;` })
