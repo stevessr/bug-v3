@@ -69,10 +69,6 @@ if (!config) {
 
 // 设置环境变量
 Object.assign(process.env, config)
-// 固定 userscript 变体为 remote，移除变体选择和平台支持
-if (buildType.startsWith('build:userscript')) {
-  process.env.USERSCRIPT_VARIANT = 'remote'
-}
 
 // Note: build-time generation of defaultEmojiGroups.ts has been removed.
 
@@ -103,9 +99,6 @@ console.log(`📋 配置:`)
 Object.entries(config).forEach(([key, value]) => {
   console.log(`   ${key}: ${value}`)
 })
-console.log(`   USERSCRIPT_VARIANT: ${process.env.USERSCRIPT_VARIANT}`)
-console.log('')
-// Platform and variant selection removed; builds are fixed to remote defaults
 
 // 检查命令行参数是否包含 --no-eslint
 const skipEslint = args.includes('--no-eslint')
