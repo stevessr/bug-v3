@@ -106,10 +106,11 @@ export async function loadDataFromLocalStorageAsync(hostname?: string): Promise<
     const remoteUrl = localStorage.getItem(remoteKey)
 
     // 统一使用 loadAndFilterDefaultEmojiGroups 处理远程和默认配置
+    // Updated to use new split JSON structure: point to the directory containing the JSON files
     const configUrl =
       remoteUrl && typeof remoteUrl === 'string' && remoteUrl.trim().length > 0
         ? remoteUrl
-        : 'https://video2gif-pages.pages.dev/assets/defaultEmojiGroups.json'
+        : 'https://video2gif-pages.pages.dev/assets/json' // This directory should contain settings.json, manifest.json, and group JSON files
 
     try {
       const groups = await loadAndFilterDefaultEmojiGroups(configUrl, hostname)

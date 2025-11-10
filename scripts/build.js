@@ -75,22 +75,59 @@ Object.assign(process.env, config)
 // Also, ensure a runtime JSON is available in public/assets for the loader
 try {
   const configPath = path.resolve(process.cwd(), 'src/config/default.json')
-  const jsonOut = path.resolve(process.cwd(), 'public', 'assets', 'defaultEmojiGroups.json')
   const configContent = fs.readFileSync(configPath, 'utf-8')
   const configData = JSON.parse(configContent)
-  if (configData && Array.isArray(configData.groups)) {
-    try {
-      fs.mkdirSync(path.dirname(jsonOut), { recursive: true })
-      // Write compact (minified) JSON to reduce file size. Do NOT produce a .gz file here.
-      const jsonString = JSON.stringify({ groups: configData.groups })
-      fs.writeFileSync(jsonOut, jsonString, 'utf-8')
-      console.log(`ℹ️ Wrote runtime defaultEmojiGroups JSON to ${jsonOut}`)
-    } catch (e) {
-      console.warn('⚠️ Failed to write runtime defaultEmojiGroups JSON:', e)
+  
+  if (configData) {
+    // Create assets/json directory
+    const jsonDir = path.resolve(process.cwd(), 'public', 'assets', 'json')
+    fs.mkdirSync(jsonDir, { recursive: true })
+    
+    // Write settings.json
+    if (configData.settings) {
+      const settingsOut = path.resolve(jsonDir, 'settings.json')
+      const settingsJsonString = JSON.stringify(configData.settings)
+      fs.writeFileSync(settingsOut, settingsJsonString, 'utf-8')
+      console.log(`ℹ️ Wrote runtime settings JSON to ${settingsOut}`)
     }
+    
+    // Prepare group index for manifest
+    const groupIndex = []
+    
+    // Write individual emoji group JSON files
+    if (configData.groups && Array.isArray(configData.groups)) {
+      for (const group of configData.groups) {
+        const groupOut = path.resolve(jsonDir, `${group.id}.json`)
+        const groupJsonString = JSON.stringify({ 
+          emojis: group.emojis,
+          icon: group.icon,
+          id: group.id,
+          name: group.name,
+          order: group.order
+        })
+        fs.writeFileSync(groupOut, groupJsonString, 'utf-8')
+        
+        // Add to group index for manifest
+        groupIndex.push({
+          id: group.id,
+          order: group.order || 0
+        })
+      }
+      console.log(`ℹ️ Wrote ${configData.groups.length} emoji group JSON files to ${jsonDir}`)
+    }
+    
+    // Write manifest file with group index
+    const manifestOut = path.resolve(jsonDir, 'manifest.json')
+    const manifestJsonString = JSON.stringify({
+      groups: groupIndex,
+      version: configData.version,
+      exportDate: configData.exportDate
+    })
+    fs.writeFileSync(manifestOut, manifestJsonString, 'utf-8')
+    console.log(`ℹ️ Wrote runtime manifest JSON to ${manifestOut}`)
   }
 } catch (e) {
-  // ignore
+  console.warn('⚠️ Failed to write runtime JSON files:', e)
 }
 
 // 打印配置信息

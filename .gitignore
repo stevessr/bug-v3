@@ -170,3 +170,4 @@ scripts/.profile-*
 .wrangler
 demo-mobile-manager.html
 test-mobile.html
+public/assets/json/*.json
