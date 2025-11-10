@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => {
           assetFileNames: `[name].[ext]`,
           format: 'iife'
         },
-        inlineDynamicImports: true,
+        inlineDynamicImports: false, // Disable for better chunking
         external: () => false
       },
       outDir: 'dist',
