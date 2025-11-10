@@ -8,7 +8,8 @@ async function fetchManifest(url?: string): Promise<{ groups: Array<{ id: string
     if (typeof fetch === 'undefined') return null
     // In a userscript context, we might be fetching from a different origin.
     // Omit credentials to avoid CORS issues.
-    const res = await fetch(url || '/assets/json/manifest.json', {
+    const manifestUrl = url ? `${url}/manifest.json` : '/assets/json/manifest.json'
+    const res = await fetch(manifestUrl, {
       cache: 'no-cache',
       credentials: 'omit'
     })
