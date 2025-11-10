@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler pages dev public --compatibility-date=2024-01-01",
-    "deploy": "wrangler pages deploy public"
+    "deploy": "wrangler pages deploc"
   },
   "devDependencies": {
     "wrangler": "^3.114.15"
