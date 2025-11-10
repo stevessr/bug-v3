@@ -66,7 +66,7 @@ export function showGroupEditorModal() {
             justify-content: center;
             background: var(--secondary);
             font-size: 48px;
-            user-select: none;
+            user-select: none; -webkit-user-select: none;
             cursor: pointer;
             height: 100px;
             border-radius: 6px;
@@ -89,7 +89,7 @@ export function showGroupEditorModal() {
                      width: 100%;
                      box-sizing: border-box;
                    " 
-                   placeholder="分组名称">
+                   placeholder="分组名称" title="编辑分组名称">
             <div style="font-size: 12px; color: var(--emoji-modal-text); opacity: 0.7;">
               ID: ${group.id}<br>
               表情数：${group.emojis ? group.emojis.length : 0}

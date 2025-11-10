@@ -396,7 +396,7 @@ function createDragDropUploadPanel(): DragDropElements {
       justify-content: space-between;
       align-items: center;
       cursor: move;
-      user-select: none;
+      user-select: none; -webkit-user-select: none;
     `
   })
 

@@ -24,7 +24,7 @@ export function injectBilibiliButtonStyles() {
       align-items: center !important;
       gap: 4px !important;
       cursor: pointer !important;
-      user-select: none !important;
+      user-select: none !important; -webkit-user-select: none !important;
     }
 
     .bili-album__watch__control__option.add-emoji:hover {

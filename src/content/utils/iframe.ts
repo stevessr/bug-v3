@@ -38,7 +38,7 @@ export function createAndShowIframeModal(
 
   const titleBar = createE('div', {
     style:
-      'position:absolute;top:0;left:0;width:100%;height:40px;border-bottom:1px solid #ccc;display:flex;align-items:center;justify-content:space-between;padding:0 10px;cursor:move;user-select:none',
+      'position:absolute;top:0;left:0;width:100%;height:40px;border-bottom:1px solid #ccc;display:flex;align-items:center;justify-content:space-between;padding:0 10px;cursor:move;user-select:none;-webkit-user-select:none',
     on: {
       mousedown: (e: MouseEvent) => {
         if ((e.target as HTMLElement).closest('button')) return
