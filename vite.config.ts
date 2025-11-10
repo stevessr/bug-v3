@@ -40,7 +40,11 @@ export default defineConfig(({ mode }) => {
           : {
               compress: {
                 drop_console: !enableLogging, // 根据日志开关决定是否移除 console
-                drop_debugger: !isDev // 生产环境移除 debugger
+                drop_debugger: !isDev, // 生产环境移除 debugger
+                passes: 3 // More aggressive compression
+              },
+              format: {
+                comments: false // Remove all comments in production
               }
             },
       rollupOptions: {
