@@ -354,6 +354,7 @@ const cancelCreateGroup = () => {
                 :indeterminate="indeterminate"
                 @change="onCheckAllChange"
                 class="text-sm"
+                title="全选所有未分组表情"
               >
                 全选
               </a-checkbox>
@@ -370,7 +371,7 @@ const cancelCreateGroup = () => {
                     <a-menu-item key="__create_new__">+ 创建新分组</a-menu-item>
                   </a-menu>
                 </template>
-                <a-button>
+                <a-button title="选择目标分组">
                   {{ targetGroupId || '选择目标分组' }}
                   <DownOutlined />
                 </a-button>
@@ -379,6 +380,7 @@ const cancelCreateGroup = () => {
                 @click="moveSelectedEmojis"
                 :disabled="!targetGroupId"
                 class="text-sm px-3 py-1 bg-blue-500 dark:bg-blue-600 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                title="移动选中的表情到目标分组"
               >
                 移动
               </a-button>
@@ -386,18 +388,20 @@ const cancelCreateGroup = () => {
                 @click="copySelectedAsMarkdown"
                 :disabled="selectedEmojis.size === 0"
                 class="text-sm px-3 py-1 bg-indigo-500 dark:bg-indigo-600 text-white rounded hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                title="复制选中的表情为 Markdown 格式"
               >
                 {{ copyButtonLabel }}
               </a-button>
               <a-button
                 @click="clearSelection"
                 class="text-sm px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                title="清空所有表情选择"
               >
                 清空选择
               </a-button>
             </div>
             <!-- 多选模式开关 -->
-            <a-checkbox v-model:checked="isMultiSelectMode" @change="onMultiSelectModeChange">
+            <a-checkbox v-model:checked="isMultiSelectMode" @change="onMultiSelectModeChange" title="切换多选模式">
               <span class="text-sm text-gray-700 dark:text-white">多选模式</span>
             </a-checkbox>
           </div>
@@ -469,6 +473,7 @@ const cancelCreateGroup = () => {
                 :checked="selectedEmojis.has(idx)"
                 @change="toggleEmojiSelection(idx)"
                 class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 rounded focus:ring-blue-500"
+                :title="'选择表情 ' + emoji.name"
               />
             </div>
 
@@ -521,6 +526,7 @@ const cancelCreateGroup = () => {
               type="text"
               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
               placeholder="输入分组名称"
+              title="新分组名称"
               @keyup.enter="confirmCreateGroup"
             />
           </div>
@@ -533,6 +539,7 @@ const cancelCreateGroup = () => {
               type="text"
               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
               placeholder="输入图标 URL 或 emoji"
+              title="新分组图标 URL 或 emoji"
             />
           </div>
         </div>
@@ -540,6 +547,7 @@ const cancelCreateGroup = () => {
           <a-button
             @click="cancelCreateGroup"
             class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+            title="取消创建新分组"
           >
             取消
           </a-button>
@@ -547,6 +555,7 @@ const cancelCreateGroup = () => {
             @click="confirmCreateGroup"
             :disabled="!newGroupName.trim()"
             class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            title="确认创建新分组"
           >
             创建
           </a-button>

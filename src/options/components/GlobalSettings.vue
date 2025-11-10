@@ -327,7 +327,7 @@ const removeSideItem = (i: number) => {
               <a-menu-item key="dark">暗色模式</a-menu-item>
             </a-menu>
           </template>
-          <a-button>
+          <a-button title="选择主题">
             {{
               localTheme === 'system'
                 ? '跟随系统'
@@ -362,16 +362,16 @@ const removeSideItem = (i: number) => {
           <p class="text-sm dark:text-white">控制插入表情的默认尺寸</p>
         </div>
         <div class="flex items-center gap-3">
-          <ASlider
-            id="imageScaleSlider"
-            v-model:value="localImageScale"
-            :min="5"
-            :max="150"
-            :step="5"
-            class="w-32"
-            @change="handleImageScaleChange"
-          />
-          <span class="text-sm text-gray-600 dark:text-white w-12">{{ localImageScale }}%</span>
+                      <ASlider
+                        id="imageScaleSlider"
+                        v-model:value="localImageScale"
+                        :min="5"
+                        :max="150"
+                        :step="5"
+                        class="w-32"
+                        @change="handleImageScaleChange"
+                        title="默认图片缩放比例"
+                      />          <span class="text-sm text-gray-600 dark:text-white w-12">{{ localImageScale }}%</span>
         </div>
       </div>
 
@@ -416,7 +416,7 @@ const removeSideItem = (i: number) => {
               <a-menu-item key="html">HTML 格式</a-menu-item>
             </a-menu>
           </template>
-          <a-button>
+          <a-button title="选择输出格式">
             {{ localOutputFormat === 'markdown' ? 'Markdown 格式' : 'HTML 格式' }}
             <DownOutlined />
           </a-button>
@@ -470,7 +470,7 @@ const removeSideItem = (i: number) => {
         <div class="mb-3">
           <div class="flex items-center justify-between mb-2">
             <div class="text-sm font-medium dark:text-white">自动项 (autoItems)</div>
-            <a-button size="small" @click="addAutoItem">添加</a-button>
+            <a-button size="small" @click="addAutoItem" title="添加自动项">添加</a-button>
           </div>
           <div
             v-for="(item, i) in localUploadMenuItems.autoItems"
@@ -486,6 +486,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'自动项名称 ' + (i + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-20"
@@ -496,6 +497,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'自动项图标 ' + (i + 1)"
             />
             <input
               class="border rounded px-2 py-1 flex-1"
@@ -506,8 +508,9 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'自动项 URL ' + (i + 1)"
             />
-            <a-button size="small" type="danger" @click="removeAutoItem(i)">删除</a-button>
+            <a-button size="small" type="danger" @click="removeAutoItem(i)" :title="'删除第 ' + (i + 1) + ' 项'">删除</a-button>
           </div>
         </div>
 
@@ -515,7 +518,7 @@ const removeSideItem = (i: number) => {
         <div class="mb-3">
           <div class="flex items-center justify-between mb-2">
             <div class="text-sm font-medium dark:text-white">Iframe 模态 (iframes)</div>
-            <a-button size="small" @click="addIframeItem">添加</a-button>
+            <a-button size="small" @click="addIframeItem" title="添加 Iframe 模态项">添加</a-button>
           </div>
           <div
             v-for="(item, i) in localUploadMenuItems.iframes"
@@ -531,6 +534,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'Iframe 模态名称 ' + (i + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-16"
@@ -541,6 +545,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'Iframe 模态图标 ' + (i + 1)"
             />
             <input
               class="border rounded px-2 py-1 flex-1"
@@ -551,6 +556,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'Iframe 模态 URL ' + (i + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-48"
@@ -562,8 +568,9 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'Iframe 模态 CSS 类名 ' + (i + 1)"
             />
-            <a-button size="small" type="danger" @click="removeIframeItem(i)">删除</a-button>
+            <a-button size="small" type="danger" @click="removeIframeItem(i)" :title="'删除第 ' + (i + 1) + ' 项'">删除</a-button>
           </div>
         </div>
 
@@ -571,7 +578,7 @@ const removeSideItem = (i: number) => {
         <div class="mb-3">
           <div class="flex items-center justify-between mb-2">
             <div class="text-sm font-medium dark:text-white">侧边 iframe (sides)</div>
-            <a-button size="small" @click="addSideItem">添加</a-button>
+            <a-button size="small" @click="addSideItem" title="添加侧边 Iframe 项">添加</a-button>
           </div>
           <div
             v-for="(item, i) in localUploadMenuItems.sides"
@@ -587,6 +594,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'侧边 iframe 名称 ' + (i + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-16"
@@ -597,6 +605,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'侧边 iframe 图标 ' + (i + 1)"
             />
             <input
               class="border rounded px-2 py-1 flex-1"
@@ -607,6 +616,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'侧边 iframe URL ' + (i + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-48"
@@ -618,15 +628,16 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
+              :title="'侧边 iframe CSS 类名 ' + (i + 1)"
             />
-            <a-button size="small" type="danger" @click="removeSideItem(i)">删除</a-button>
+            <a-button size="small" type="danger" @click="removeSideItem(i)" :title="'删除第 ' + (i + 1) + ' 项'">删除</a-button>
           </div>
         </div>
 
         <!-- Save / Cancel bar -->
         <div class="flex justify-end gap-2 mt-2">
-          <a-button @click="cancelUploadMenuItems" :disabled="!dirty">取消</a-button>
-          <a-button type="primary" @click="saveUploadMenuItems" :disabled="!dirty">保存</a-button>
+          <a-button @click="cancelUploadMenuItems" :disabled="!dirty" title="取消上传菜单项更改">取消</a-button>
+          <a-button type="primary" @click="saveUploadMenuItems" :disabled="!dirty" title="保存上传菜单项更改">保存</a-button>
         </div>
       </div>
 
@@ -638,7 +649,7 @@ const removeSideItem = (i: number) => {
           </p>
         </div>
         <div>
-          <a-button @click="openCustomCssEditor">管理自定义 CSS</a-button>
+          <a-button @click="openCustomCssEditor" title="打开自定义 CSS 编辑器">管理自定义 CSS</a-button>
         </div>
       </div>
 
@@ -650,10 +661,11 @@ const removeSideItem = (i: number) => {
             v-model="localCustomCss"
             rows="10"
             class="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
+            title="自定义 CSS 内容"
           ></textarea>
           <div class="mt-3 flex justify-end gap-2">
-            <a-button @click="cancelCustomCss">取消</a-button>
-            <a-button type="primary" @click="saveCustomCss">保存并注入</a-button>
+            <a-button @click="cancelCustomCss" title="取消自定义 CSS 更改">取消</a-button>
+            <a-button type="primary" @click="saveCustomCss" title="保存并注入自定义 CSS">保存并注入</a-button>
           </div>
         </div>
       </div>

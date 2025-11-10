@@ -311,6 +311,7 @@ const pullFromCloudSync = async () => {
       accept=".json"
       class="hidden"
       @change="handleConfigFileSelect"
+      title="选择配置文件"
     />
     <input
       ref="emojiFileInput"
@@ -318,6 +319,7 @@ const pullFromCloudSync = async () => {
       accept=".json,.txt"
       class="hidden"
       @change="handleEmojiFileSelect"
+      title="选择表情文件"
     />
 
     <!-- Floating buttons -->
@@ -393,7 +395,7 @@ const pullFromCloudSync = async () => {
               </a-menu-item>
             </a-menu>
           </template>
-          <a-button class="w-full">
+          <a-button class="w-full" title="选择导入表情的目标分组">
             {{ selectedTargetGroup || '自动创建分组' }}
             <DownOutlined />
           </a-button>
@@ -420,6 +422,7 @@ const pullFromCloudSync = async () => {
             v-model="markdownText"
             placeholder="粘贴包含 ![表情名](表情URL) 格式的文本..."
             class="w-full h-48 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            title="粘贴 Markdown 格式的表情文本"
           ></textarea>
         </div>
         <div>
@@ -435,7 +438,7 @@ const pullFromCloudSync = async () => {
                 </a-menu-item>
               </a-menu>
             </template>
-            <a-button class="w-full">
+            <a-button class="w-full" title="选择导入表情的目标分组">
               {{ selectedTargetGroupForMarkdown || '自动创建分组' }}
               <DownOutlined />
             </a-button>
@@ -443,8 +446,8 @@ const pullFromCloudSync = async () => {
         </div>
       </div>
       <template #footer>
-        <a-button @click="closeMarkdownDialog">取消</a-button>
-        <a-button type="primary" :disabled="!markdownText.trim()" @click="importFromMarkdown">
+        <a-button @click="closeMarkdownDialog" title="取消从文本导入表情">取消</a-button>
+        <a-button type="primary" :disabled="!markdownText.trim()" @click="importFromMarkdown" title="从文本导入表情">
           导入
         </a-button>
       </template>

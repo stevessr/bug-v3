@@ -395,7 +395,7 @@ const importSelectedFromIndex = async () => {
       <div class="p-6 space-y-4">
         <div class="space-y-4">
           <div class="flex items-center space-x-3">
-            <a-button type="primary" @click="openFile">选择 Bilibili JSON 文件</a-button>
+            <a-button type="primary" @click="openFile" title="选择 Bilibili 表情 JSON 文件进行导入">选择 Bilibili JSON 文件</a-button>
             <input ref="fileInput" type="file" accept=".json" class="hidden" @change="handleFile" />
             <span v-if="isImporting" class="text-sm text-blue-600">{{ importStatus }}</span>
           </div>
@@ -404,46 +404,48 @@ const importSelectedFromIndex = async () => {
             <AInput
               v-model:value="indexUrl"
               placeholder="请输入索引 JSON 的 URL"
+              title="Bilibili 表情索引 URL"
               class="dark:bg-black dark:text-white"
             />
-            <a-button @click="() => loadIndexFromUrl()">加载索引</a-button>
+            <a-button @click="() => loadIndexFromUrl()" title="从 URL 加载 Bilibili 表情索引">加载索引</a-button>
           </div>
 
           <div class="flex items-center space-x-3">
             <AInput
               v-model:value="query"
               placeholder="按包名或别名搜索"
+              title="按包名或别名搜索 Bilibili 表情"
               class="dark:bg-black dark:text-white"
             />
-            <a-button type="primary" @click="applySearch">搜索</a-button>
-            <a-button type="default" @click="query = ''">清空</a-button>
-            <a-button type="primary" @click="importSelectedFromIndex">导入选中包</a-button>
+            <a-button type="primary" @click="applySearch" title="搜索 Bilibili 表情包">搜索</a-button>
+            <a-button type="default" @click="query = ''" title="清空搜索关键词">清空</a-button>
+            <a-button type="primary" @click="importSelectedFromIndex" title="导入选中的 Bilibili 表情包">导入选中包</a-button>
           </div>
 
           <!-- ID 拉取区 -->
           <div class="mt-4 p-3 border rounded bg-gray-50 dark:bg-gray-700">
             <div class="flex items-center space-x-3">
               <AInput
-                v-model:value="fetchIdStart"
-                placeholder="起始 ID(例如 10600)"
-                class="dark:bg-black dark:text-white"
-              />
-              <AInput
-                v-model:value="consecutiveNullsToStop"
-                placeholder="连续空响应阈值(默认 50)"
-                class="dark:bg-black dark:text-white"
-              />
-              <label class="flex items-center space-x-2">
+                              v-model:value="fetchIdStart"
+                              placeholder="起始 ID(例如 10600)"
+                              title="Bilibili 表情包起始 ID"
+                              class="dark:bg-black dark:text-white"
+                            />              <AInput
+                              v-model:value="consecutiveNullsToStop"
+                              placeholder="连续空响应阈值(默认 50)"
+                              title="连续空响应停止阈值"
+                              class="dark:bg-black dark:text-white"
+                            />              <label class="flex items-center space-x-2">
                 <a-switch v-model:checked="importToStoreOnFetch" />
                 <span class="text-sm dark:text-white">自动导入到 Store</span>
               </label>
             </div>
             <div class="mt-3 flex items-center space-x-3">
-              <a-button type="primary" @click="fetchSingleId">单次获取</a-button>
-              <a-button type="primary" @click="fetchByIdLoop" :disabled="isFetchingById">
+              <a-button type="primary" @click="fetchSingleId" title="单次获取指定 ID 的 Bilibili 表情包">单次获取</a-button>
+              <a-button type="primary" @click="fetchByIdLoop" :disabled="isFetchingById" title="开始连续拉取 Bilibili 表情包">
                 开始连续拉取
               </a-button>
-              <a-button type="default" @click="stopFetchingById" :disabled="!isFetchingById">
+              <a-button type="default" @click="stopFetchingById" :disabled="!isFetchingById" title="停止连续拉取">
                 停止
               </a-button>
             </div>

@@ -57,6 +57,7 @@ const save = () => {
             v-model="localName"
             type="text"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+            title="分组名称"
           />
         </div>
         <div>
@@ -68,6 +69,7 @@ const save = () => {
             type="text"
             placeholder="例如：😀 或 https://..."
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+            title="分组图标或图片链接"
           />
           <div
             v-if="isImageUrl && isImageUrl(normalizeImageUrl(localIcon))"
@@ -90,6 +92,7 @@ const save = () => {
             rows="6"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
             placeholder="输入分组的详细描述信息，支持 Markdown 格式..."
+            title="分组详细描述 (支持 Markdown)"
           ></textarea>
         </div>
       </div>
@@ -97,12 +100,14 @@ const save = () => {
         <a-button
           @click="$emit('update:show', false)"
           class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 rounded transition-colors"
+          title="取消编辑分组"
         >
           取消
         </a-button>
         <a-button
           @click="save"
           class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          title="保存分组更改"
         >
           保存
         </a-button>

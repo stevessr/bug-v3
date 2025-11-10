@@ -252,12 +252,14 @@ onBeforeUnmount(() => {
               v-model="customColorInput"
               type="text"
               placeholder="#1890ff 或 rgb(24, 144, 255)"
+              title="自定义颜色值"
               class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             <a-button
               @click="saveCustomColor"
               :disabled="!isValidColor(customColorInput)"
               class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              title="确定自定义颜色"
             >
               确定
             </a-button>
@@ -270,6 +272,7 @@ onBeforeUnmount(() => {
               :value="customColorInput"
               @input="onColorInput"
               @click.stop
+              title="选择自定义颜色"
             />
             <!-- palette removed: only native color input is shown -->
           </div>
@@ -289,6 +292,7 @@ onBeforeUnmount(() => {
           <button
             @click.prevent="closeCustomPicker"
             class="text-sm text-gray-500 hover:text-gray-700 dark:text-white"
+            title="取消自定义颜色"
           >
             取消
           </button>

@@ -67,6 +67,7 @@ const create = () => {
             type="text"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="输入分组名称"
+            title="新分组名称"
           />
         </div>
         <div>
@@ -78,6 +79,7 @@ const create = () => {
             type="text"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="例如：😀 或 https://..."
+            title="新分组图标或图片链接"
           />
           <div v-if="isImageUrl && isImageUrl(normalizeImageUrl(icon))" class="mt-2 text-center">
             <img
@@ -104,6 +106,7 @@ const create = () => {
               ]"
               :style="{ backgroundColor: color }"
               @click="selectColor(color)"
+              :title="'选择颜色 ' + color"
             ></div>
           </div>
         </div>
@@ -112,12 +115,14 @@ const create = () => {
         <a-button
           @click="close"
           class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+          title="取消创建分组"
         >
           取消
         </a-button>
         <a-button
           @click="create"
           class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          title="创建新分组"
         >
           创建
         </a-button>

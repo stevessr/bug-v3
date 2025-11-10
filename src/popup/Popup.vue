@@ -79,6 +79,7 @@ const openOptionsInNewWindow = () => {
             min="5"
             max="150"
             step="5"
+            title="缩放"
             class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
             @input="updateScale"
           />
@@ -93,6 +94,7 @@ const openOptionsInNewWindow = () => {
             v-model="emojiStore.searchQuery"
             type="text"
             placeholder="搜索表情..."
+            title="搜索表情"
             class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
           />
           <svg

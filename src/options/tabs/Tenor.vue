@@ -285,6 +285,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             id="api-key"
             v-model="inputApiKey"
             type="text"
+            title="Tenor API Key"
             class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="输入你的 Tenor API Key"
           />
@@ -293,6 +294,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           @click="saveApiKey"
           :disabled="!inputApiKey.trim()"
           class="px-4 py-2 text-sm bg-blue-600 dark:bg-blue-700 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          title="保存 Tenor API Key"
         >
           保存 API Key
         </a-button>
@@ -313,6 +315,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <a-button
             @click="clearApiKey"
             class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="重新配置 Tenor API Key"
           >
             重新配置
           </a-button>
@@ -327,12 +330,14 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             @keyup.enter="searchGifs"
             type="text"
             placeholder="搜索 GIF..."
+            title="搜索 GIF"
             class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           />
           <a-button
             @click="searchGifs"
             :disabled="isSearching || !searchQuery.trim()"
             class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            title="搜索 GIF"
           >
             {{ isSearching ? '搜索中...' : '搜索' }}
           </a-button>
@@ -349,7 +354,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                   <a-menu-item key="48">48 个结果</a-menu-item>
                 </a-menu>
               </template>
-              <a-button>
+              <a-button title="选择搜索结果数量">
                 {{ searchLimit }} 个结果
                 <DownOutlined />
               </a-button>
@@ -366,7 +371,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                   <a-menu-item key="off">关闭过滤</a-menu-item>
                 </a-menu>
               </template>
-              <a-button>
+              <a-button title="选择内容过滤级别">
                 {{ contentFilter }}
                 <DownOutlined />
               </a-button>
@@ -384,6 +389,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             <a-button
               @click="importSelected"
               class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+              title="导入选中的 GIF"
             >
               导入选中
             </a-button>
@@ -435,6 +441,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             @click="loadMore"
             :disabled="isLoadingMore"
             class="px-6 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+            title="加载更多 GIF"
           >
             {{ isLoadingMore ? '加载中...' : '加载更多' }}
           </a-button>
@@ -478,7 +485,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                 :key="group.id"
                 class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
               >
-                <input type="radio" :value="group.id" v-model="selectedGroupId" class="mr-3" />
+                <input type="radio" :value="group.id" v-model="selectedGroupId" class="mr-3" :title="group.name" />
                 <div class="flex items-center gap-2">
                   <span class="text-lg">{{ group.icon }}</span>
                   <span class="font-medium">{{ group.name }}</span>
@@ -494,12 +501,14 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                 @click="confirmImport"
                 :disabled="!selectedGroupId || isImporting"
                 class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                title="确认导入选中的 GIF"
               >
                 {{ isImporting ? '导入中...' : `导入 ${selectedGifs.size} 个 GIF` }}
               </a-button>
               <a-button
                 @click="showGroupModal = false"
                 class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                title="取消导入"
               >
                 取消
               </a-button>
@@ -546,6 +555,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             <a-button
               @click="message.text = ''"
               class="inline-flex text-gray-400 hover:text-gray-600"
+              title="关闭消息"
             >
               <span class="sr-only">关闭</span>
               ✕

@@ -50,6 +50,7 @@ const close = () => {
         <button
           @click="close"
           class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+          title="关闭"
         >
           ✕
         </button>
@@ -65,6 +66,7 @@ const close = () => {
         <a-button
           @click="close"
           class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          title="关闭分组详细信息"
         >
           关闭
         </a-button>

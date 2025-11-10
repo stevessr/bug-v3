@@ -372,6 +372,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               id="url-input"
               v-model="urlInput"
               type="url"
+              title="Waline 表情配置 URL"
               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="https://raw.githubusercontent.com/user/repo/main/emoji.json"
             />
@@ -385,6 +386,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               id="url-group-name"
               v-model="urlGroupName"
               type="text"
+              title="导入分组名称"
               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="Waline 表情包"
             />
@@ -394,6 +396,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             @click="importFromUrl"
             :disabled="!urlInput.trim() || isImportingUrl"
             class="w-full px-4 py-2 text-sm bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            title="从 URL 导入 Waline 表情"
           >
             {{ isImportingUrl ? '导入中...' : '从 URL 导入' }}
           </a-button>
@@ -419,6 +422,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               id="json-input"
               v-model="jsonInput"
               rows="8"
+              title="Waline 表情 JSON 配置内容"
               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono text-xs"
               placeholder='示例格式1: { "表情包名": { "type": "image", "container": [{ "icon": "😀", "text": "表情名", "src": "图片链接" }] } }
 示例格式2: { "name": "Weibo", "prefix": "weibo_", "type": "png", "items": ["smile", "lovely"] }'
@@ -433,6 +437,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
               id="json-group-name"
               v-model="jsonGroupName"
               type="text"
+              title="导入分组名称"
               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="Waline 表情包"
             />
@@ -442,6 +447,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             @click="importFromJson"
             :disabled="!jsonInput.trim() || isImportingJson"
             class="w-full px-4 py-2 text-sm bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            title="从 JSON 内容导入 Waline 表情"
           >
             {{ isImportingJson ? '导入中...' : '从 JSON 导入' }}
           </a-button>
@@ -471,6 +477,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             @click="importFromSource(source)"
             :disabled="isImportingSource === source.name"
             class="w-full mt-2 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+            :title="'快速导入 ' + source.name + ' 表情包'"
           >
             {{ isImportingSource === source.name ? '导入中...' : '快速导入' }}
           </a-button>
@@ -512,6 +519,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             v-if="result.success"
             @click="viewGroup(result.groupId)"
             class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            :title="'查看 ' + result.groupName + ' 分组'"
           >
             查看分组
           </a-button>
@@ -522,6 +530,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
         <a-button
           @click="clearResults"
           class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
+          title="清除所有导入结果"
         >
           清除结果
         </a-button>
@@ -565,6 +574,7 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
             <a-button
               @click="message.text = ''"
               class="inline-flex text-gray-400 hover:text-gray-600"
+              title="关闭消息"
             >
               <span class="sr-only">关闭</span>
               ✕

@@ -89,6 +89,7 @@ const fillExample = () => {
             accept=".json"
             @change="handleFile"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            title="选择表情 JSON 文件"
           />
         </div>
         <div>
@@ -100,12 +101,14 @@ const fillExample = () => {
             rows="6"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="粘贴表情JSON内容..."
+            title="粘贴表情 JSON 内容"
           ></textarea>
           <div class="mt-2 text-xs text-gray-500 dark:text-white">
             示例：
             <a-button
               class="ml-2 text-blue-600 dark:text-blue-400 hover:underline"
               @click="fillExample"
+              title="填充示例 JSON 内容"
             >
               填充示例
             </a-button>
@@ -119,6 +122,7 @@ const fillExample = () => {
             v-model="targetGroupId"
             placeholder="留空按 JSON 中分组创建"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
+            title="导入表情的目标分组 ID (可选)"
           />
         </div>
       </div>
@@ -126,12 +130,14 @@ const fillExample = () => {
         <a-button
           @click="close"
           class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+          title="取消导入表情"
         >
           取消
         </a-button>
         <a-button
           @click="doImport"
           class="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+          title="导入表情"
         >
           导入
         </a-button>

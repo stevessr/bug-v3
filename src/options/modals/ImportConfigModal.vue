@@ -57,6 +57,7 @@ const doImport = () => {
             accept=".json"
             @change="handleFile"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            title="选择配置文件"
           />
         </div>
         <div>
@@ -68,6 +69,7 @@ const doImport = () => {
             rows="6"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="粘贴JSON配置内容..."
+            title="粘贴 JSON 配置内容"
           ></textarea>
         </div>
       </div>
@@ -75,12 +77,14 @@ const doImport = () => {
         <a-button
           @click="close"
           class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+          title="取消导入配置"
         >
           取消
         </a-button>
         <a-button
           @click="doImport"
           class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          title="导入配置"
         >
           导入
         </a-button>

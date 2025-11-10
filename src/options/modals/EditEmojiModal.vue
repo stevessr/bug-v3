@@ -209,6 +209,7 @@ const handleSubmit = () => {
                     placeholder="输入表情名称"
                     required
                     @keydown.enter.prevent="handleSubmit"
+                    title="表情名称"
                   />
                 </div>
 
@@ -228,6 +229,7 @@ const handleSubmit = () => {
                     placeholder="https://example.com/emoji.png"
                     required
                     @keydown.enter.prevent="handleSubmit"
+                    title="表情输出链接"
                   />
                   <p class="mt-1 text-xs text-gray-500 dark:text-white">插入到编辑器时使用的链接</p>
                 </div>
@@ -247,6 +249,7 @@ const handleSubmit = () => {
                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="https://example.com/preview.png"
                     @keydown.enter.prevent="handleSubmit"
+                    title="表情显示链接 (可选)"
                   />
                   <p class="mt-1 text-xs text-gray-500 dark:text-white">
                     表情选择器中显示的链接，留空则使用输出链接
@@ -270,6 +273,7 @@ const handleSubmit = () => {
                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                       placeholder="可选，像素"
                       @keydown.enter.prevent="handleSubmit"
+                      title="表情宽度 (像素)"
                     />
                   </div>
                   <div>
@@ -287,6 +291,7 @@ const handleSubmit = () => {
                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                       placeholder="可选，像素"
                       @keydown.enter.prevent="handleSubmit"
+                      title="表情高度 (像素)"
                     />
                   </div>
                 </div>
@@ -318,7 +323,7 @@ const handleSubmit = () => {
                         </a-menu-item>
                       </a-menu>
                     </template>
-                    <a-button class="dark:text-white dark:bg-gray-800">
+                    <a-button class="dark:text-white dark:bg-gray-800" title="选择表情所属分组">
                       <a-image
                         v-if="editSelectedGroupIcon.startsWith('https://')"
                         :src="editSelectedGroupIcon"
@@ -355,6 +360,7 @@ const handleSubmit = () => {
                       type="button"
                       @click="handleSubmit"
                       class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                      title="保存表情更改"
                     >
                       保存
                     </a-button>
@@ -362,6 +368,7 @@ const handleSubmit = () => {
                       type="button"
                       @click="closeModal"
                       class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
+                      title="取消编辑表情"
                     >
                       取消
                     </a-button>

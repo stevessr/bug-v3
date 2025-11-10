@@ -503,6 +503,7 @@ const importParsed = () => {
                     type="text"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="输入表情名称"
+                    title="表情名称"
                   />
                 </div>
                 <div v-if="inputMode === 'url'">
@@ -514,6 +515,7 @@ const importParsed = () => {
                     type="url"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="插入到编辑器时使用的链接"
+                    title="表情输出链接"
                   />
                   <label class="block text-sm font-medium text-gray-700 mb-1 mt-3 dark:text-white">
                     显示链接 (可选)
@@ -523,6 +525,7 @@ const importParsed = () => {
                     type="url"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
                     placeholder="表情选择器中显示的链接，留空则使用输出链接"
+                    title="表情显示链接 (可选)"
                   />
                 </div>
                 <div v-else>
@@ -539,12 +542,13 @@ const importParsed = () => {
                           ? '粘贴 Markdown 图片，如 ![name|512x512](url)...'
                           : '粘贴 HTML 片段 (例如 discourse lightbox 的 HTML)'
                       "
+                      title="粘贴 Markdown 或 HTML 内容"
                     ></textarea>
 
                     <div class="flex items-center justify-between mt-2">
                       <div class="flex items-center gap-3">
                         <label class="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                          <input type="checkbox" v-model="autoPreview" class="mr-1" />
+                          <input type="checkbox" v-model="autoPreview" class="mr-1" title="自动预览粘贴内容" />
                           自动预览
                         </label>
                         <div class="text-xs text-gray-500">
@@ -556,6 +560,7 @@ const importParsed = () => {
                           @click="((pasteText = ''), (parsedItems = []))"
                           type="button"
                           class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
+                          title="清空粘贴内容"
                         >
                           清空内容
                         </a-button>
@@ -563,6 +568,7 @@ const importParsed = () => {
                           @click="previewParse"
                           type="button"
                           class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
+                          title="预览粘贴内容"
                         >
                           预览
                         </a-button>
@@ -570,6 +576,7 @@ const importParsed = () => {
                           @click="importParsed"
                           type="button"
                           class="px-3 py-1 text-xs bg-blue-600 text-white rounded"
+                          title="导入所有解析出的表情"
                         >
                           导入解析项
                         </a-button>
@@ -598,7 +605,7 @@ const importParsed = () => {
                         </a-menu-item>
                       </a-menu>
                     </template>
-                    <a-button class="dark:text-white dark:bg-gray-800">
+                    <a-button class="dark:text-white dark:bg-gray-800" title="选择表情所属分组">
                       {{ selectedGroupLabel }}
                       <DownOutlined />
                     </a-button>
@@ -613,6 +620,7 @@ const importParsed = () => {
                       type="button"
                       @click="add"
                       class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                      title="添加表情"
                     >
                       {{ inputMode === 'url' ? '添加' : '导入解析项' }}
                     </a-button>
@@ -620,6 +628,7 @@ const importParsed = () => {
                       type="button"
                       @click="close"
                       class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
+                      title="取消添加表情"
                     >
                       取消
                     </a-button>
@@ -684,6 +693,7 @@ const importParsed = () => {
                     @click="parsedItems = []"
                     type="button"
                     class="text-xs text-gray-500 hover:text-gray-700"
+                    title="清空解析结果"
                   >
                     清空
                   </a-button>
@@ -713,6 +723,7 @@ const importParsed = () => {
                           v-model="item.name"
                           rows="2"
                           class="w-full px-2 py-1 border border-gray-200 dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-900 dark:text-white resize-none break-words whitespace-normal"
+                          :title="'编辑表情名称 ' + item.name"
                         ></textarea>
                       </div>
 
@@ -731,7 +742,7 @@ const importParsed = () => {
                                 </a-menu-item>
                               </a-menu>
                             </template>
-                            <a-button class="text-xs w-full flex items-center justify-between">
+                            <a-button class="text-xs w-full flex items-center justify-between" :title="'选择表情变体 ' + item.name">
                               <span>
                                 {{
                                   item.variants.find(v => v.url === item.selectedVariant)?.label ||
@@ -752,7 +763,7 @@ const importParsed = () => {
 
                       <!-- Delete button at bottom right -->
                       <div class="mt-3 flex justify-end">
-                        <a-button type="text" class="text-red-500" @click="removeParsedItem(index)">
+                        <a-button type="text" class="text-red-500" @click="removeParsedItem(index)" title="删除此表情">
                           <DeleteOutlined />
                         </a-button>
                       </div>
