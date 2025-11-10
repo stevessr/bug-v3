@@ -12,8 +12,7 @@ export async function onRequestGet(context) {
   // Validate parameters
   if (!token || !path) {
     return new Response('Missing token or path parameters', {
-      status: 400,
-      headers: { 'Content-Type': 'text/plain' }
+      headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
     })
   }
 
@@ -27,7 +26,7 @@ export async function onRequestGet(context) {
     if (!response.ok) {
       return new Response(`Telegram API error: ${response.status} ${response.statusText}`, {
         status: response.status,
-        headers: { 'Content-Type': 'text/plain' }
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
       })
     }
 
@@ -52,9 +51,8 @@ export async function onRequestGet(context) {
   } catch (error) {
     console.error('Proxy error:', error)
     return new Response(`Proxy error: ${error.message}`, {
-      status: 500,
-      headers: { 'Content-Type': 'text/plain' }
-    })
+              status: 500,
+              headers: { 'Content-Type': 'text/plain; charset=UTF-8' }    })
   }
 }
 

@@ -10,9 +10,7 @@ export async function onRequestGet(context) {
 
   // Validate parameters
   if (!targetUrl) {
-    return new Response('Missing url parameter', {
-      status: 400,
-      headers: { 'Content-Type': 'text/plain' }
+      headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
     })
   }
 
@@ -22,7 +20,7 @@ export async function onRequestGet(context) {
   } catch (error) {
     return new Response('Invalid target URL', {
       status: 400,
-      headers: { 'Content-Type': 'text/plain' }
+      headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
     })
   }
 
@@ -32,10 +30,9 @@ export async function onRequestGet(context) {
 
     if (!response.ok) {
       return new Response(`Remote server error: ${response.status} ${response.statusText}`, {
-        status: response.status,
-        headers: { 'Content-Type': 'text/plain' }
-      })
-    }
+              status: response.status,
+              headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
+            })    }
 
     // Get the content type from the response
     let contentType = response.headers.get('content-type') || ''
@@ -71,7 +68,7 @@ export async function onRequestGet(context) {
       if (!hasVideoExtension) {
         return new Response('Content is not a recognized video type', {
           status: 400,
-          headers: { 'Content-Type': 'text/plain' }
+          headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
         })
       }
     }
@@ -95,7 +92,7 @@ export async function onRequestGet(context) {
     console.error('Video proxy error:', error)
     return new Response(`Proxy error: ${error.message}`, {
       status: 500,
-      headers: { 'Content-Type': 'text/plain' }
+      headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
     })
   }
 }

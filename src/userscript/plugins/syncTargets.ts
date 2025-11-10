@@ -125,7 +125,7 @@ export class WebDAVSyncTarget implements ISyncTarget {
         method: 'PUT',
         headers: {
           Authorization: this.getAuthHeader(),
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json; charset=UTF-8'
         },
         body: JSON.stringify(data, null, 2)
       })
@@ -231,7 +231,7 @@ export class S3SyncTarget implements ISyncTarget {
     }
 
     if (body) {
-      headers['Content-Type'] = 'application/json'
+      headers['Content-Type'] = 'application/json; charset=UTF-8'
     }
 
     // Note: Full AWS Signature V4 implementation would be needed here
@@ -444,7 +444,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
       // Push is a write operation
       const headers = {
         ...this.getWriteAuthHeader(),
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json; charset=UTF-8'
       }
 
       const itemsToPush = [

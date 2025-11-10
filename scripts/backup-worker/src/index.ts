@@ -73,10 +73,7 @@ export default {
         if (!key) {
           // List all keys
           const list = await env.EMOJI_BACKUP.list()
-          return new Response(JSON.stringify(list.keys), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
         } else {
           // Get a specific key
           const data = await env.EMOJI_BACKUP.get(key)
@@ -88,7 +85,7 @@ export default {
           }
           return new Response(data, {
             status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
           })
         }
       } else {
