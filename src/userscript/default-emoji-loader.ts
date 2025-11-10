@@ -8,7 +8,7 @@ async function fetchManifest(url?: string): Promise<{ groups: Array<{ id: string
     if (typeof fetch === 'undefined') return null
     // In a userscript context, we might be fetching from a different origin.
     // Omit credentials to avoid CORS issues.
-    const manifestUrl = url ? `${url}/manifest.json` : '/assets/json/manifest.json'
+    const manifestUrl = url ? `${url}/manifest.json` : 'https://video2gif-pages.pages.dev/assets/json/manifest.json'
     const res = await fetch(manifestUrl, {
       cache: 'no-cache',
       credentials: 'omit'
@@ -24,7 +24,7 @@ async function fetchManifest(url?: string): Promise<{ groups: Array<{ id: string
 async function fetchGroup(groupId: string, url?: string): Promise<EmojiGroup | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const fileName = url ? `${url}/${groupId}.json` : `/assets/json/${groupId}.json`
+    const fileName = url ? `${url}/${groupId}.json` : `https://video2gif-pages.pages.dev/assets/json/${groupId}.json`
     const res = await fetch(fileName, {
       cache: 'no-cache',
       credentials: 'omit'

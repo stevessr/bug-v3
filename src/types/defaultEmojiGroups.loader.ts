@@ -6,7 +6,7 @@ import type { DefaultEmojiData, EmojiGroup } from './type'
 async function fetchSettings(url?: string): Promise<any | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const res = await fetch(url || '/assets/json/settings.json', { cache: 'no-cache' })
+    const res = await fetch(url || 'https://video2gif-pages.pages.dev/assets/json/settings.json', { cache: 'no-cache' })
     if (!res.ok) return null
     const data = await res.json()
     return data
@@ -18,7 +18,7 @@ async function fetchSettings(url?: string): Promise<any | null> {
 async function fetchManifest(url?: string): Promise<{ groups: Array<{ id: string, order: number }> } | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const res = await fetch(url || '/assets/json/manifest.json', { cache: 'no-cache' })
+    const res = await fetch(url || 'https://video2gif-pages.pages.dev/assets/json/manifest.json', { cache: 'no-cache' })
     if (!res.ok) return null
     const data = await res.json()
     return data
@@ -30,7 +30,7 @@ async function fetchManifest(url?: string): Promise<{ groups: Array<{ id: string
 async function fetchGroup(groupId: string, url?: string): Promise<EmojiGroup | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const fileName = url ? `${url}/${groupId}.json` : `/assets/json/${groupId}.json`
+    const fileName = url ? `${url}/${groupId}.json` : `https://video2gif-pages.pages.dev/assets/json/${groupId}.json`
     const res = await fetch(fileName, { cache: 'no-cache' })
     if (!res.ok) return null
     const data = await res.json()

@@ -80,7 +80,7 @@ try {
   
   if (configData) {
     // Create assets/json directory
-    const jsonDir = path.resolve(process.cwd(), 'public', 'assets', 'json')
+    const jsonDir = path.resolve(process.cwd(), 'scripts', 'cfworker', 'public', 'assets', 'json')
     fs.mkdirSync(jsonDir, { recursive: true })
     
     // Write settings.json
