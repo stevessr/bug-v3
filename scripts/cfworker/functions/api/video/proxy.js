@@ -10,6 +10,8 @@ export async function onRequestGet(context) {
 
   // Validate parameters
   if (!targetUrl) {
+    return new Response('Missing url parameter', {
+      status: 400,
       headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
     })
   }

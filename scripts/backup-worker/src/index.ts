@@ -73,7 +73,11 @@ export default {
         if (!key) {
           // List all keys
           const list = await env.EMOJI_BACKUP.list()
-          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+          // 返回键列表（JSON），并包含 CORS 与 Content-Type 头
+          return new Response(JSON.stringify(list.keys), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+          })
         } else {
           // Get a specific key
           const data = await env.EMOJI_BACKUP.get(key)
