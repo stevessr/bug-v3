@@ -531,6 +531,146 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
+  // Find duplicate emojis across all groups based on perceptual hash
+  const findDuplicatesAcrossGroups = async (similarityThreshold = 10) => {
+    try {
+      const { areSimilarImages, calculatePerceptualHash } = await import('@/utils/geminiService')
+
+      // Calculate hashes for all emojis that don't have one
+      const allEmojis: Array<{ emoji: Emoji; groupId: string; groupName: string }> = []
+
+      for (const group of groups.value) {
+        for (const emoji of group.emojis) {
+          allEmojis.push({
+            emoji,
+            groupId: group.id,
+            groupName: group.name
+          })
+        }
+      }
+
+      // Calculate missing hashes
+      console.log('[EmojiStore] Calculating perceptual hashes for emojis...')
+      for (const item of allEmojis) {
+        if (!item.emoji.perceptualHash && item.emoji.url) {
+          try {
+            const hash = await calculatePerceptualHash(item.emoji.url)
+            item.emoji.perceptualHash = hash
+          } catch (err) {
+            console.error('[EmojiStore] Failed to calculate hash for', item.emoji.id, err)
+          }
+        }
+      }
+
+      // Find duplicates based on similarity
+      const duplicateGroups: Array<Array<(typeof allEmojis)[0]>> = []
+      const processed = new Set<string>()
+
+      for (let i = 0; i < allEmojis.length; i++) {
+        const item1 = allEmojis[i]
+        if (processed.has(item1.emoji.id) || !item1.emoji.perceptualHash) continue
+
+        const duplicates: Array<(typeof allEmojis)[0]> = [item1]
+        processed.add(item1.emoji.id)
+
+        for (let j = i + 1; j < allEmojis.length; j++) {
+          const item2 = allEmojis[j]
+          if (processed.has(item2.emoji.id) || !item2.emoji.perceptualHash) continue
+
+          if (
+            areSimilarImages(
+              item1.emoji.perceptualHash,
+              item2.emoji.perceptualHash,
+              similarityThreshold
+            )
+          ) {
+            duplicates.push(item2)
+            processed.add(item2.emoji.id)
+          }
+        }
+
+        if (duplicates.length > 1) {
+          duplicateGroups.push(duplicates)
+        }
+      }
+
+      console.log('[EmojiStore] Found', duplicateGroups.length, 'groups of duplicates')
+      return duplicateGroups
+    } catch (err) {
+      console.error('[EmojiStore] findDuplicatesAcrossGroups error', err)
+      return []
+    }
+  }
+
+  // Remove duplicate emojis across groups and optionally create references
+  const removeDuplicatesAcrossGroups = async (
+    duplicates: Array<Array<{ emoji: Emoji; groupId: string; groupName: string }>>,
+    createReferences = true
+  ) => {
+    try {
+      let totalRemoved = 0
+
+      for (const duplicateSet of duplicates) {
+        if (duplicateSet.length < 2) continue
+
+        // Keep the first emoji (original), remove others
+        const [original, ...duplicatesToRemove] = duplicateSet
+
+        for (const duplicate of duplicatesToRemove) {
+          const group = groups.value.find(g => g.id === duplicate.groupId)
+          if (!group) continue
+
+          const index = group.emojis.findIndex(e => e.id === duplicate.emoji.id)
+          if (index === -1) continue
+
+          if (createReferences) {
+            // Replace with a reference instead of deleting
+            group.emojis[index] = {
+              ...duplicate.emoji,
+              referenceId: original.emoji.id,
+              url: original.emoji.url
+            }
+          } else {
+            // Delete the duplicate
+            group.emojis.splice(index, 1)
+            totalRemoved++
+          }
+        }
+      }
+
+      if (totalRemoved > 0) {
+        console.log('[EmojiStore] Removed', totalRemoved, 'duplicate emojis')
+        maybeSave()
+      }
+
+      return totalRemoved
+    } catch (err) {
+      console.error('[EmojiStore] removeDuplicatesAcrossGroups error', err)
+      return 0
+    }
+  }
+
+  // Get the actual emoji for a reference (resolves referenceId)
+  const resolveEmojiReference = (emoji: Emoji): Emoji | undefined => {
+    if (!emoji.referenceId) return emoji
+
+    // Find the referenced emoji
+    for (const group of groups.value) {
+      const referenced = group.emojis.find(e => e.id === emoji.referenceId)
+      if (referenced) {
+        // Return a merged object with reference's URL but current emoji's other properties
+        return {
+          ...emoji,
+          url: referenced.url,
+          displayUrl: referenced.displayUrl || referenced.url
+        }
+      }
+    }
+
+    // If reference not found, return original
+    return emoji
+  }
+
   const updateEmojiInGroup = (groupId: string, index: number, updatedEmoji: Partial<Emoji>) => {
     const group = groups.value.find(g => g.id === groupId)
     if (group && index >= 0 && index < group.emojis.length) {
@@ -1188,6 +1328,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     forceSync,
     dedupeGroup,
     dedupeGroupByName,
+    // Cross-group duplicate detection
+    findDuplicatesAcrossGroups,
+    removeDuplicatesAcrossGroups,
+    resolveEmojiReference,
     // expose batching helpers for bulk operations
     beginBatch,
     endBatch,

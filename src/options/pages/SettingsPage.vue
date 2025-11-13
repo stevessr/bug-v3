@@ -5,6 +5,7 @@ import type { OptionsInject } from '../types'
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import GlobalSettings from '../components/GlobalSettings.vue'
 import CloudflareSyncConfig from '../components/CloudflareSyncConfig.vue'
+import DuplicateDetector from '../components/DuplicateDetector.vue'
 
 const options = inject<OptionsInject>('options')!
 
@@ -58,5 +59,8 @@ const {
 
     <!-- Cloudflare Sync Configuration -->
     <CloudflareSyncConfig />
+
+    <!-- Duplicate Detector -->
+    <DuplicateDetector />
   </div>
 </template>

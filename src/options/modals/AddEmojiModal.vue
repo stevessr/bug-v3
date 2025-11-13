@@ -3,7 +3,9 @@ import { ref, watch, toRefs, reactive, computed } from 'vue'
 import { DownOutlined, DeleteOutlined, RobotOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
+
 import GeminiNamingModal from './GeminiNamingModal.vue'
+
 import type { ImageAnalysisResult } from '@/utils/geminiService'
 
 const props = defineProps<{ show: boolean; groups: unknown[]; defaultGroupId?: string }>()
@@ -522,7 +524,8 @@ const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisR
                       @click="openGeminiNaming"
                       title="使用 AI 智能命名"
                     >
-                      <RobotOutlined /> AI 命名
+                      <RobotOutlined />
+                      AI 命名
                     </a-button>
                   </div>
                   <input
@@ -575,7 +578,12 @@ const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisR
                     <div class="flex items-center justify-between mt-2">
                       <div class="flex items-center gap-3">
                         <label class="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                          <input type="checkbox" v-model="autoPreview" class="mr-1" title="自动预览粘贴内容" />
+                          <input
+                            type="checkbox"
+                            v-model="autoPreview"
+                            class="mr-1"
+                            title="自动预览粘贴内容"
+                          />
                           自动预览
                         </label>
                         <div class="text-xs text-gray-500">
@@ -769,7 +777,10 @@ const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisR
                                 </a-menu-item>
                               </a-menu>
                             </template>
-                            <a-button class="text-xs w-full flex items-center justify-between" :title="'选择表情变体 ' + item.name">
+                            <a-button
+                              class="text-xs w-full flex items-center justify-between"
+                              :title="'选择表情变体 ' + item.name"
+                            >
                               <span>
                                 {{
                                   item.variants.find(v => v.url === item.selectedVariant)?.label ||
@@ -790,7 +801,12 @@ const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisR
 
                       <!-- Delete button at bottom right -->
                       <div class="mt-3 flex justify-end">
-                        <a-button type="text" class="text-red-500" @click="removeParsedItem(index)" title="删除此表情">
+                        <a-button
+                          type="text"
+                          class="text-red-500"
+                          @click="removeParsedItem(index)"
+                          title="删除此表情"
+                        >
                           <DeleteOutlined />
                         </a-button>
                       </div>
@@ -809,7 +825,7 @@ const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisR
       :show="showGeminiModal"
       :image-url="url"
       @update:show="showGeminiModal = $event"
-      @name-selected="handleGeminiNameSelected"
+      @nameSelected="handleGeminiNameSelected"
     />
   </div>
 </template>

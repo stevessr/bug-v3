@@ -6,7 +6,9 @@ import type { DefaultEmojiData, EmojiGroup } from './type'
 async function fetchSettings(url?: string): Promise<any | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const res = await fetch(url || 'https://video2gif-pages.pages.dev/assets/json/settings.json', { cache: 'no-cache' })
+    const res = await fetch(url || 'https://video2gif-pages.pages.dev/assets/json/settings.json', {
+      cache: 'no-cache'
+    })
     if (!res.ok) return null
     const data = await res.json()
     return data
@@ -15,10 +17,14 @@ async function fetchSettings(url?: string): Promise<any | null> {
   }
 }
 
-async function fetchManifest(url?: string): Promise<{ groups: Array<{ id: string, order: number }> } | null> {
+async function fetchManifest(
+  url?: string
+): Promise<{ groups: Array<{ id: string; order: number }> } | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const res = await fetch(url || 'https://video2gif-pages.pages.dev/assets/json/manifest.json', { cache: 'no-cache' })
+    const res = await fetch(url || 'https://video2gif-pages.pages.dev/assets/json/manifest.json', {
+      cache: 'no-cache'
+    })
     if (!res.ok) return null
     const data = await res.json()
     return data
@@ -30,7 +36,9 @@ async function fetchManifest(url?: string): Promise<{ groups: Array<{ id: string
 async function fetchGroup(groupId: string, url?: string): Promise<EmojiGroup | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const fileName = url ? `${url}/${groupId}.json` : `https://video2gif-pages.pages.dev/assets/json/${groupId}.json`
+    const fileName = url
+      ? `${url}/${groupId}.json`
+      : `https://video2gif-pages.pages.dev/assets/json/${groupId}.json`
     const res = await fetch(fileName, { cache: 'no-cache' })
     if (!res.ok) return null
     const data = await res.json()
@@ -47,14 +55,14 @@ export async function loadDefaultEmojiGroups(url?: string): Promise<EmojiGroup[]
     if (!manifest || !Array.isArray(manifest.groups)) {
       return []
     }
-    
+
     // Load each group based on the manifest
     const groups = await Promise.all(
-      manifest.groups.map(async (groupInfo) => {
+      manifest.groups.map(async groupInfo => {
         return await fetchGroup(groupInfo.id, url)
       })
     )
-    
+
     // Filter out any null results and sort by order
     const validGroups = groups.filter((group): group is EmojiGroup => group !== null)
     return validGroups.sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -66,11 +74,8 @@ export async function loadDefaultEmojiGroups(url?: string): Promise<EmojiGroup[]
 
 export async function loadPackagedDefaults(url?: string): Promise<DefaultEmojiData> {
   try {
-    const [settings, groups] = await Promise.all([
-      fetchSettings(url),
-      loadDefaultEmojiGroups(url)
-    ])
-    
+    const [settings, groups] = await Promise.all([fetchSettings(url), loadDefaultEmojiGroups(url)])
+
     return {
       groups,
       settings: {

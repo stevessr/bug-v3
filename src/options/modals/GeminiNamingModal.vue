@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { LoadingOutlined } from '@ant-design/icons-vue'
+import { watch } from 'vue'
 
 import { analyzeImageForNaming, type ImageAnalysisResult } from '@/utils/geminiService'
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -12,7 +13,7 @@ const props = defineProps<{
 
 const emits = defineEmits<{
   'update:show': [value: boolean]
-  'name-selected': [name: string, analysis: ImageAnalysisResult]
+  nameSelected: [name: string, analysis: ImageAnalysisResult]
 }>()
 
 const emojiStore = useEmojiStore()
@@ -80,7 +81,7 @@ const handleConfirm = () => {
   }
 
   if (analysis.value) {
-    emits('name-selected', finalName, analysis.value)
+    emits('nameSelected', finalName, analysis.value)
   }
   handleCancel()
 }
@@ -98,7 +99,6 @@ const handleCancel = () => {
 }
 
 // Auto-analyze when modal opens
-import { watch } from 'vue'
 watch(
   () => props.show,
   newShow => {
@@ -113,24 +113,14 @@ watch(
 </script>
 
 <template>
-  <a-modal
-    :open="show"
-    title="AI 智能命名"
-    :footer="null"
-    @cancel="handleCancel"
-    width="600px"
-  >
+  <a-modal :open="show" title="AI 智能命名" :footer="null" @cancel="handleCancel" width="600px">
     <div class="space-y-4">
       <!-- API Key Warning -->
       <div v-if="!hasApiKey" class="bg-yellow-50 border border-yellow-200 rounded p-3">
         <p class="text-sm text-yellow-800">
           ⚠️ 请先在设置页面配置 Gemini API Key 才能使用智能命名功能
         </p>
-        <a
-          href="#/settings"
-          class="text-sm text-blue-600 hover:underline"
-          @click="handleCancel"
-        >
+        <a href="#/settings" class="text-sm text-blue-600 hover:underline" @click="handleCancel">
           前往设置 →
         </a>
       </div>
@@ -171,8 +161,8 @@ watch(
             <button
               v-for="name in suggestedNames"
               :key="name"
+              class="px-3 py-2 rounded border text-sm transition-colors"
               :class="[
-                'px-3 py-2 rounded border text-sm transition-colors',
                 selectedName === name
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-gray-200 bg-white hover:border-blue-300'
@@ -200,9 +190,7 @@ watch(
 
         <!-- Custom Name Input -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            或者输入自定义名称：
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">或者输入自定义名称：</label>
           <a-input
             v-model:value="customName"
             placeholder="输入自定义名称"
@@ -211,9 +199,13 @@ watch(
         </div>
 
         <!-- Selected Name Preview -->
-        <div v-if="selectedName || customName" class="bg-blue-50 border border-blue-200 rounded p-2">
+        <div
+          v-if="selectedName || customName"
+          class="bg-blue-50 border border-blue-200 rounded p-2"
+        >
           <p class="text-sm text-blue-800">
-            将使用名称: <strong>{{ customName || selectedName }}</strong>
+            将使用名称:
+            <strong>{{ customName || selectedName }}</strong>
           </p>
         </div>
       </div>
@@ -221,18 +213,8 @@ watch(
       <!-- Action Buttons -->
       <div class="flex justify-end gap-2 pt-4 border-t">
         <a-button @click="handleCancel">取消</a-button>
-        <a-button
-          v-if="!hasApiKey"
-          type="primary"
-          disabled
-        >
-          配置 API Key
-        </a-button>
-        <a-button
-          v-else-if="!analysis && !isAnalyzing"
-          type="primary"
-          @click="analyzeImage"
-        >
+        <a-button v-if="!hasApiKey" type="primary" disabled>配置 API Key</a-button>
+        <a-button v-else-if="!analysis && !isAnalyzing" type="primary" @click="analyzeImage">
           开始分析
         </a-button>
         <a-button

@@ -363,16 +363,17 @@ const removeSideItem = (i: number) => {
           <p class="text-sm dark:text-white">控制插入表情的默认尺寸</p>
         </div>
         <div class="flex items-center gap-3">
-                      <ASlider
-                        id="imageScaleSlider"
-                        v-model:value="localImageScale"
-                        :min="5"
-                        :max="150"
-                        :step="5"
-                        class="w-32"
-                        @change="handleImageScaleChange"
-                        title="默认图片缩放比例"
-                      />          <span class="text-sm text-gray-600 dark:text-white w-12">{{ localImageScale }}%</span>
+          <ASlider
+            id="imageScaleSlider"
+            v-model:value="localImageScale"
+            :min="5"
+            :max="150"
+            :step="5"
+            class="w-32"
+            @change="handleImageScaleChange"
+            title="默认图片缩放比例"
+          />
+          <span class="text-sm text-gray-600 dark:text-white w-12">{{ localImageScale }}%</span>
         </div>
       </div>
 
@@ -478,7 +479,14 @@ const removeSideItem = (i: number) => {
           />
         </div>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          获取 API Key: <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-500 hover:underline">Google AI Studio</a>
+          获取 API Key:
+          <a
+            href="https://aistudio.google.com/app/apikey"
+            target="_blank"
+            class="text-blue-500 hover:underline"
+          >
+            Google AI Studio
+          </a>
         </p>
       </div>
 
@@ -533,7 +541,14 @@ const removeSideItem = (i: number) => {
               "
               :title="'自动项 URL ' + (i + 1)"
             />
-            <a-button size="small" type="danger" @click="removeAutoItem(i)" :title="'删除第 ' + (i + 1) + ' 项'">删除</a-button>
+            <a-button
+              size="small"
+              type="danger"
+              @click="removeAutoItem(i)"
+              :title="'删除第 ' + (i + 1) + ' 项'"
+            >
+              删除
+            </a-button>
           </div>
         </div>
 
@@ -593,7 +608,14 @@ const removeSideItem = (i: number) => {
               "
               :title="'Iframe 模态 CSS 类名 ' + (i + 1)"
             />
-            <a-button size="small" type="danger" @click="removeIframeItem(i)" :title="'删除第 ' + (i + 1) + ' 项'">删除</a-button>
+            <a-button
+              size="small"
+              type="danger"
+              @click="removeIframeItem(i)"
+              :title="'删除第 ' + (i + 1) + ' 项'"
+            >
+              删除
+            </a-button>
           </div>
         </div>
 
@@ -653,14 +675,30 @@ const removeSideItem = (i: number) => {
               "
               :title="'侧边 iframe CSS 类名 ' + (i + 1)"
             />
-            <a-button size="small" type="danger" @click="removeSideItem(i)" :title="'删除第 ' + (i + 1) + ' 项'">删除</a-button>
+            <a-button
+              size="small"
+              type="danger"
+              @click="removeSideItem(i)"
+              :title="'删除第 ' + (i + 1) + ' 项'"
+            >
+              删除
+            </a-button>
           </div>
         </div>
 
         <!-- Save / Cancel bar -->
         <div class="flex justify-end gap-2 mt-2">
-          <a-button @click="cancelUploadMenuItems" :disabled="!dirty" title="取消上传菜单项更改">取消</a-button>
-          <a-button type="primary" @click="saveUploadMenuItems" :disabled="!dirty" title="保存上传菜单项更改">保存</a-button>
+          <a-button @click="cancelUploadMenuItems" :disabled="!dirty" title="取消上传菜单项更改">
+            取消
+          </a-button>
+          <a-button
+            type="primary"
+            @click="saveUploadMenuItems"
+            :disabled="!dirty"
+            title="保存上传菜单项更改"
+          >
+            保存
+          </a-button>
         </div>
       </div>
 
@@ -672,7 +710,9 @@ const removeSideItem = (i: number) => {
           </p>
         </div>
         <div>
-          <a-button @click="openCustomCssEditor" title="打开自定义 CSS 编辑器">管理自定义 CSS</a-button>
+          <a-button @click="openCustomCssEditor" title="打开自定义 CSS 编辑器">
+            管理自定义 CSS
+          </a-button>
         </div>
       </div>
 
@@ -688,7 +728,9 @@ const removeSideItem = (i: number) => {
           ></textarea>
           <div class="mt-3 flex justify-end gap-2">
             <a-button @click="cancelCustomCss" title="取消自定义 CSS 更改">取消</a-button>
-            <a-button type="primary" @click="saveCustomCss" title="保存并注入自定义 CSS">保存并注入</a-button>
+            <a-button type="primary" @click="saveCustomCss" title="保存并注入自定义 CSS">
+              保存并注入
+            </a-button>
           </div>
         </div>
       </div>

@@ -447,7 +447,12 @@ const pullFromCloudSync = async () => {
       </div>
       <template #footer>
         <a-button @click="closeMarkdownDialog" title="取消从文本导入表情">取消</a-button>
-        <a-button type="primary" :disabled="!markdownText.trim()" @click="importFromMarkdown" title="从文本导入表情">
+        <a-button
+          type="primary"
+          :disabled="!markdownText.trim()"
+          @click="importFromMarkdown"
+          title="从文本导入表情"
+        >
           导入
         </a-button>
       </template>
