@@ -14,6 +14,7 @@ export interface AppSettings {
   enableBatchParseImages?: boolean // 控制是否显示“一键解析并添加所有图片”按钮
   // Optional API key fields for third-party services
   tenorApiKey?: string
+  geminiApiKey?: string
   theme?: 'system' | 'light' | 'dark'
   // Custom theme colors
   customPrimaryColor?: string // 主题主色
@@ -55,6 +56,9 @@ export interface Emoji {
   usageCount?: number
   lastUsed?: number // timestamp
   addedAt?: number // timestamp when first added to favorites
+  // Reference to another emoji (for deduplication)
+  referenceId?: string // If set, this emoji references another emoji by ID
+  perceptualHash?: string // Perceptual hash for similarity detection
 }
 
 export interface DefaultEmojiData {

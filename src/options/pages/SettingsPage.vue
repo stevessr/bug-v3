@@ -25,7 +25,8 @@ const {
   updateCustomPrimaryColor,
   updateCustomColorScheme,
   updateCustomCss,
-  updateUploadMenuItems
+  updateUploadMenuItems,
+  updateGeminiApiKey
 } = options
 </script>
 
@@ -48,6 +49,7 @@ const {
       @update:customColorScheme="updateCustomColorScheme"
       @update:customCss="updateCustomCss"
       @update:uploadMenuItems="updateUploadMenuItems"
+      @update:geminiApiKey="updateGeminiApiKey"
     >
       <template #grid-selector>
         <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />

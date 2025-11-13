@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, toRefs, reactive, computed } from 'vue'
-import { DownOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, DeleteOutlined, RobotOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
+import GeminiNamingModal from './GeminiNamingModal.vue'
+import type { ImageAnalysisResult } from '@/utils/geminiService'
 
 const props = defineProps<{ show: boolean; groups: unknown[]; defaultGroupId?: string }>()
 
@@ -23,6 +25,7 @@ const removeParsedItem = (index: number) => {
 const name = ref('')
 const url = ref('')
 const displayUrl = ref('')
+const showGeminiModal = ref(false)
 const inputMode = ref<'url' | 'markdown' | 'html'>('url')
 const pasteText = ref('')
 const parsedItems = ref<ImageVariant[]>([])
@@ -443,6 +446,19 @@ const importParsed = () => {
   parsedItems.value = []
   emits('update:show', false)
 }
+
+// Gemini naming handlers
+const openGeminiNaming = () => {
+  if (!url.value.trim()) {
+    return
+  }
+  showGeminiModal.value = true
+}
+
+const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisResult) => {
+  name.value = selectedName
+  showGeminiModal.value = false
+}
 </script>
 
 <template>
@@ -495,9 +511,20 @@ const importParsed = () => {
                 </div>
 
                 <div v-if="inputMode === 'url'">
-                  <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-                    表情名称
-                  </label>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-white">
+                      表情名称
+                    </label>
+                    <a-button
+                      v-if="url.trim()"
+                      size="small"
+                      type="link"
+                      @click="openGeminiNaming"
+                      title="使用 AI 智能命名"
+                    >
+                      <RobotOutlined /> AI 命名
+                    </a-button>
+                  </div>
                   <input
                     v-model="name"
                     type="text"
@@ -776,6 +803,14 @@ const importParsed = () => {
         </ACard>
       </transition>
     </div>
+
+    <!-- Gemini Naming Modal -->
+    <GeminiNamingModal
+      :show="showGeminiModal"
+      :image-url="url"
+      @update:show="showGeminiModal = $event"
+      @name-selected="handleGeminiNameSelected"
+    />
   </div>
 </template>
 
