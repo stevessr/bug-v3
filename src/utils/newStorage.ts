@@ -398,19 +398,12 @@ export const newStorageHelpers = {
     try {
       const stored = await this.getEmojiGroup(groupId)
 
-      let emojisToPersist = group.emojis
-      // If caller explicitly provides an emojis array (even empty), persist it as-is.
-      // Only fall back to stored emojis when the incoming group.emojis is absent/undefined
-      // This ensures explicit clears (empty arrays) are honoured instead of being
-      // overwritten by previously stored data.
-      if (!Array.isArray(group.emojis) && stored) {
-        emojisToPersist = stored.emojis
-      }
+      const currentEmojis = Array.isArray(group.emojis) ? group.emojis : [];
 
       const merged = {
         ...(stored || {}),
         ...group,
-        ...(Array.isArray(emojisToPersist) ? { emojis: emojisToPersist } : {})
+        emojis: currentEmojis // Always use the (potentially empty) array
       }
 
       const clean = ensureSerializable(merged)

@@ -42,7 +42,7 @@ async function fetchGroup(groupId: string, url?: string): Promise<EmojiGroup | n
     const res = await fetch(fileName, { cache: 'no-cache' })
     if (!res.ok) return null
     const data = await res.json()
-    return data as EmojiGroup
+    return { ...data, emojis: Array.isArray(data.emojis) ? data.emojis : [] } as EmojiGroup
   } catch (err) {
     return null
   }
