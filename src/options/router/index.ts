@@ -116,7 +116,7 @@ const routes: RouteRecordRaw[] = [
 
 const router = createRouter({
   // Use HTML5 history mode (no hash)
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })
 

@@ -7,10 +7,10 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    AAlert: typeof import('ant-design-vue/es')['Alert']
     ABadge: typeof import('ant-design-vue/es')['Badge']
     AButton: typeof import('ant-design-vue/es')['Button']
     ACard: typeof import('ant-design-vue/es')['Card']
-    ACardMeta: typeof import('ant-design-vue/es')['CardMeta']
     ACheckbox: typeof import('ant-design-vue/es')['Checkbox']
     ADropdown: typeof import('ant-design-vue/es')['Dropdown']
     AFloatButton: typeof import('ant-design-vue/es')['FloatButton']
@@ -29,11 +29,14 @@ declare module 'vue' {
     ARadioButton: typeof import('ant-design-vue/es')['RadioButton']
     ARadioGroup: typeof import('ant-design-vue/es')['RadioGroup']
     ASegmented: typeof import('ant-design-vue/es')['Segmented']
+    ASelect: typeof import('ant-design-vue/es')['Select']
+    ASelectOption: typeof import('ant-design-vue/es')['SelectOption']
     ASlider: typeof import('ant-design-vue/es')['Slider']
+    ASpin: typeof import('ant-design-vue/es')['Spin']
     ASwitch: typeof import('ant-design-vue/es')['Switch']
     ATabPane: typeof import('ant-design-vue/es')['TabPane']
     ATabs: typeof import('ant-design-vue/es')['Tabs']
-    ATransfer: typeof import('ant-design-vue/es')['Transfer']
+    ATextarea: typeof import('ant-design-vue/es')['Textarea']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

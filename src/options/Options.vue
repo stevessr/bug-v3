@@ -170,7 +170,7 @@ const handleMenuSelect = (info: any) => {
   const key = info && info.key ? String(info.key) : ''
   if (!key) return
 
-  // 根据菜单键导航到对应路由，但保持地址栏为 index.html?type=...&tabs=...（通过 history.replaceState）
+  // 根据菜单键导航到对应路由
   const routeMap: Record<string, string> = {
     settings: '/settings',
     favorites: '/favorites',
@@ -186,26 +186,13 @@ const handleMenuSelect = (info: any) => {
     sync: '/sync',
     about: '/about'
   }
-  const targetRoute = routeMap[key]
-  const originalPath = window.location.pathname
-  const newSearchParams = new URLSearchParams(window.location.search)
-  newSearchParams.set('type', 'options')
-  newSearchParams.set('tabs', key)
-  const newSearch = newSearchParams.toString() ? `?${newSearchParams.toString()}` : ''
 
-  // First update visible URL to include the tabs param (so external links reflect selection)
-  window.history.replaceState({}, '', originalPath + newSearch)
+  const targetRoute = routeMap[key]
 
   if (targetRoute && route.path !== targetRoute) {
-    // Navigate internally with router, then restore visible URL (router will change path)
-    router
-      .push(targetRoute)
-      .then(() => {
-        window.history.replaceState({}, '', originalPath + newSearch)
-      })
-      .catch(() => {
-        // ignore navigation failures
-      })
+    router.push(targetRoute).catch(() => {
+      // ignore navigation failures
+    })
   }
 }
 
@@ -244,52 +231,6 @@ onMounted(() => {
 
   // 初始化主题模式
   currentThemeMode.value = getCurrentThemeMode()
-  // 处理通过 query tabs 指定的初始页面或分组
-  const queryTabs =
-    (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
-  const keys = menuItems.value.map(i => i.key)
-  const originalPath = window.location.pathname
-  const originalSearch = window.location.search
-  if (queryTabs) {
-    if (keys.includes(queryTabs)) {
-      // 如果是菜单键，导航内部路由然后恢复可见 URL
-      const routeMap: Record<string, string> = {
-        settings: '/settings',
-        favorites: '/favorites',
-        groups: '/groups',
-        ungrouped: '/ungrouped',
-        import: '/import',
-        bilibili: '/bilibili',
-        tenor: '/tenor',
-        waline: '/waline',
-        stats: '/stats',
-        duplicates: '/duplicates',
-        'ai-rename': '/ai-rename',
-        about: '/about'
-      }
-      const targetRoute = routeMap[queryTabs]
-      if (targetRoute) {
-        router
-          .replace(targetRoute)
-          .then(() => {
-            // restore visible URL to original (keep query)
-            window.history.replaceState({}, '', originalPath + (originalSearch || ''))
-          })
-          .catch(() => {})
-      }
-    } else {
-      // 视为分组名称，尝试查找并选中该分组
-      const g = emojiStore.groups.find((x: any) => x.name === queryTabs || x.id === queryTabs)
-      if (g && g.id) {
-        emojiStore.activeGroupId = g.id
-        try {
-          emojiStore.updateSettings({ defaultGroup: g.id })
-        } catch (e) {
-          console.error(e)
-        }
-      }
-    }
-  }
 })
 
 onBeforeUnmount(() => {
