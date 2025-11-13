@@ -316,7 +316,7 @@ const handleSubmit = () => {
                             v-if="group.icon.startsWith('https://')"
                             :src="group.icon"
                             class="inline-block mr-1"
-                            style="max-width: 10px"
+                            style="max-width: 20px"
                           />
                           <span v-else class="inline-block mr-1">{{ group.icon }}</span>
                           {{ group.name }}
@@ -328,7 +328,7 @@ const handleSubmit = () => {
                         v-if="editSelectedGroupIcon.startsWith('https://')"
                         :src="editSelectedGroupIcon"
                         class="inline-block mr-1"
-                        style="max-width: 10px"
+                        style="max-width: 20px"
                       />
                       <span v-else class="inline-block mr-1">{{ editSelectedGroupIcon }}</span>
                       {{ editSelectedGroupName }}

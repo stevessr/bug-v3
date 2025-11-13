@@ -103,13 +103,22 @@ const onGroupSelect = (info: any) => {
   groupId.value = String(info.key)
 }
 
-const selectedGroupLabel = computed(() => {
+const selectedGroupIcon = computed(() => {
   if (!groupId.value || groupId.value === 'ungrouped') {
-    return '📝 未分组表情'
+    return '📝'
   }
   const list = (groups.value as any[]) || []
   const g = list.find((x: { id?: string }) => x.id === groupId.value) as any
-  return g ? `${g.icon ? g.icon + ' ' : ''}${g.name}` : '选择分组'
+  return g ? g.icon : ''
+})
+
+const selectedGroupName = computed(() => {
+  if (!groupId.value || groupId.value === 'ungrouped') {
+    return '未分组表情'
+  }
+  const list = (groups.value as any[]) || []
+  const g = list.find((x: { id?: string }) => x.id === groupId.value) as any
+  return g ? g.name : '选择分组'
 })
 
 // 图片加载状态
@@ -633,7 +642,7 @@ const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisR
                             v-if="g.icon && g.icon.startsWith('https://')"
                             :src="g.icon"
                             class="inline-block mr-1"
-                            style="max-width: 10px"
+                            style="max-width: 20px"
                           />
                           <span v-else class="inline-block mr-1">{{ g.icon }}</span>
                           {{ g.name }}
@@ -641,7 +650,14 @@ const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisR
                       </a-menu>
                     </template>
                     <a-button class="dark:text-white dark:bg-gray-800" title="选择表情所属分组">
-                      {{ selectedGroupLabel }}
+                      <a-image
+                        v-if="selectedGroupIcon && selectedGroupIcon.startsWith('https://')"
+                        :src="selectedGroupIcon"
+                        class="inline-block mr-1"
+                        style="max-width: 20px"
+                      />
+                      <span v-else class="inline-block mr-1">{{ selectedGroupIcon }}</span>
+                      {{ selectedGroupName }}
                       <DownOutlined />
                     </a-button>
                   </a-dropdown>
