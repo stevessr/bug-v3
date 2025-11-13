@@ -37,7 +37,28 @@ async function downloadBlob(url: string): Promise<void> {
     const downloadUrl = URL.createObjectURL(blob)
     const link = createE('a')
     link.href = downloadUrl
-    link.download = `video_${Date.now()}.mp4`
+    // try to derive a sensible filename from the URL when possible
+    try {
+      let filename = `video_${Date.now()}.mp4`
+      if (url && !url.startsWith('blob:')) {
+        try {
+          const u = new URL(url)
+          const parts = u.pathname.split('/').filter(Boolean)
+          const last = parts.length ? parts[parts.length - 1] : ''
+          if (last) filename = decodeURIComponent(last)
+          else if (u.search) {
+            // attempt to find a filename-like query param
+            const nameParam = u.searchParams.get('filename') || u.searchParams.get('name')
+            if (nameParam) filename = nameParam
+          }
+        } catch {
+          /* ignore URL parse errors and keep fallback */
+        }
+      }
+      link.download = filename
+    } catch {
+      link.download = `video_${Date.now()}.mp4`
+    }
     DOA(link)
     link.click()
     // remove by DOM method to be safe
@@ -125,6 +146,34 @@ function setupCopyClick(btn: HTMLElement, url: string) {
   })
 }
 
+function setupDownloadClick(btn: HTMLElement, url: string) {
+  btn.addEventListener('click', async e => {
+    e.preventDefault()
+    e.stopPropagation()
+    const orig = btn.innerHTML
+    const origStyle = btn.style.background
+    try {
+      btn.innerHTML = '下载中...'
+      btn.style.background = 'linear-gradient(135deg,#3b82f6,#1d4ed8)'
+      await downloadBlob(url)
+      btn.innerHTML = '已下载'
+      btn.style.background = 'linear-gradient(135deg,#10b981,#059669)'
+      setTimeout(() => {
+        btn.innerHTML = orig
+        btn.style.background = origStyle
+      }, 1400)
+    } catch (err) {
+      console.error('[XVideoCopy] 下载失败', err)
+      btn.innerHTML = '失败'
+      btn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
+      setTimeout(() => {
+        btn.innerHTML = orig
+        btn.style.background = origStyle
+      }, 1400)
+    }
+  })
+}
+
 function createCopyBtn(url: string) {
   const btn = document.createElement('button')
   btn.className = 'x-video-copy-btn'
@@ -134,6 +183,18 @@ function createCopyBtn(url: string) {
   btn.style.cssText =
     'position:absolute;right:6px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;'
   setupCopyClick(btn, url)
+  return btn
+}
+
+function createDownloadBtn(url: string) {
+  const btn = document.createElement('button')
+  btn.className = 'x-video-download-btn'
+  btn.type = 'button'
+  btn.title = '下载视频'
+  btn.innerHTML = '⬇️'
+  btn.style.cssText =
+    'position:absolute;right:40px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;'
+  setupDownloadClick(btn, url)
   return btn
 }
 
@@ -151,7 +212,31 @@ function createInlineBtn(url: string) {
 
 function addButtonToVideo(video: HTMLVideoElement) {
   try {
+    // If we've already attached buttons for this video, try to ensure both buttons exist.
+    try {
+      const el = video as HTMLElement & { dataset: DOMStringMap }
+      if (el.dataset && el.dataset.xVideoCopyAttached === '1') {
+        const parent = video.parentElement || video
+        try {
+          // if download button missing, add it
+          if (!(parent as Element).querySelector('.x-video-download-btn')) {
+            const url = getVideoUrl(video)
+            if (url) {
+              const container = parent as HTMLElement
+              const dbtn = createDownloadBtn(url)
+              container.appendChild(dbtn)
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+        return
+      }
+    } catch {
+      /* ignore dataset read errors */
+    }
     const parent = video.parentElement || video
+    // if parent already has copy button, assume already handled
     if ((parent as Element).querySelector('.x-video-copy-btn')) return
     const url = getVideoUrl(video)
     if (!url) return
@@ -160,6 +245,20 @@ function addButtonToVideo(video: HTMLVideoElement) {
     if (computed.position === 'static' || !computed.position) container.style.position = 'relative'
     const btn = createCopyBtn(url)
     container.appendChild(btn)
+    // also add a download button next to the copy button
+    try {
+      const dbtn = createDownloadBtn(url)
+      container.appendChild(dbtn)
+    } catch {
+      /* ignore */
+    }
+    // mark the video so subsequent scans won't add duplicate buttons
+    try {
+      const el = video as HTMLElement & { dataset: DOMStringMap }
+      if (el.dataset) el.dataset.xVideoCopyAttached = '1'
+    } catch {
+      /* ignore */
+    }
     try {
       addInlineButtonsToAncestors(video, url)
     } catch {
