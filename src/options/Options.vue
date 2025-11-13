@@ -317,7 +317,7 @@ const handleSaveGroup = (
       <nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <a-menu
-            v-model:selectedKeys="menuSelectedKeys"
+            :selectedKeys="menuSelectedKeys"
             mode="horizontal"
             :items="menuItems"
             class="bg-transparent"
