@@ -485,7 +485,13 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
                 :key="group.id"
                 class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
               >
-                <input type="radio" :value="group.id" v-model="selectedGroupId" class="mr-3" :title="group.name" />
+                <input
+                  type="radio"
+                  :value="group.id"
+                  v-model="selectedGroupId"
+                  class="mr-3"
+                  :title="group.name"
+                />
                 <div class="flex items-center gap-2">
                   <span class="text-lg">{{ group.icon }}</span>
                   <span class="font-medium">{{ group.name }}</span>

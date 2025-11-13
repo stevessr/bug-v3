@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
 // 页面组件
@@ -11,6 +11,9 @@ import TenorPage from '../pages/TenorPage.vue'
 import WalinePage from '../pages/WalinePage.vue'
 import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
+import DuplicateDetectionPage from '../pages/DuplicateDetectionPage.vue'
+import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
+import SyncSettingsPage from '../pages/SyncSettingsPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -78,6 +81,30 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/duplicates',
+    name: 'duplicates',
+    component: DuplicateDetectionPage,
+    meta: {
+      title: '重复检测'
+    }
+  },
+  {
+    path: '/ai-rename',
+    name: 'ai-rename',
+    component: AIRenamePage,
+    meta: {
+      title: 'AI 批量重命名'
+    }
+  },
+  {
+    path: '/sync',
+    name: 'sync',
+    component: SyncSettingsPage,
+    meta: {
+      title: '云同步'
+    }
+  },
+  {
     path: '/about',
     name: 'about',
     component: AboutPage,
@@ -89,7 +116,7 @@ const routes: RouteRecordRaw[] = [
 
 const router = createRouter({
   // Use HTML5 history mode (no hash)
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })
 

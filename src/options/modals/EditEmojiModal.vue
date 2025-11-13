@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { DownOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, RobotOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/type'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
+
+import GeminiNamingModal from './GeminiNamingModal.vue'
+
+import type { ImageAnalysisResult } from '@/utils/geminiService'
 
 const props = defineProps<{
   show: boolean
@@ -22,6 +26,22 @@ const localEmoji = ref<Partial<Emoji>>({
   url: '',
   displayUrl: ''
 })
+
+const showGeminiModal = ref(false)
+
+const openGeminiNaming = () => {
+  if (!localEmoji.value.url?.trim()) {
+    return
+  }
+  showGeminiModal.value = true
+}
+
+const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisResult) => {
+  if (localEmoji.value) {
+    localEmoji.value.name = selectedName
+  }
+  showGeminiModal.value = false
+}
 
 // Upload functionality
 const uploadingEmojiIds = ref(new Set<string>())
@@ -195,12 +215,24 @@ const handleSubmit = () => {
               <form @submit.prevent="handleSubmit" class="space-y-4">
                 <!-- Name field -->
                 <div>
-                  <label
-                    for="emoji-name"
-                    class="block text-sm font-medium text-gray-700 dark:text-white"
-                  >
-                    表情名称
-                  </label>
+                  <div class="flex items-center justify-between mb-1">
+                    <label
+                      for="emoji-name"
+                      class="block text-sm font-medium text-gray-700 dark:text-white"
+                    >
+                      表情名称
+                    </label>
+                    <a-button
+                      v-if="localEmoji.url?.trim()"
+                      size="small"
+                      type="link"
+                      @click="openGeminiNaming"
+                      title="使用 AI 智能命名"
+                    >
+                      <RobotOutlined />
+                      AI 命名
+                    </a-button>
+                  </div>
                   <input
                     id="emoji-name"
                     v-model="localEmoji.name"
@@ -316,7 +348,7 @@ const handleSubmit = () => {
                             v-if="group.icon.startsWith('https://')"
                             :src="group.icon"
                             class="inline-block mr-1"
-                            style="max-width: 10px"
+                            style="max-width: 20px"
                           />
                           <span v-else class="inline-block mr-1">{{ group.icon }}</span>
                           {{ group.name }}
@@ -328,7 +360,7 @@ const handleSubmit = () => {
                         v-if="editSelectedGroupIcon.startsWith('https://')"
                         :src="editSelectedGroupIcon"
                         class="inline-block mr-1"
-                        style="max-width: 10px"
+                        style="max-width: 20px"
                       />
                       <span v-else class="inline-block mr-1">{{ editSelectedGroupIcon }}</span>
                       {{ editSelectedGroupName }}
@@ -431,6 +463,14 @@ const handleSubmit = () => {
         <a-image :src="localEmoji.displayUrl || localEmoji.url" />
       </a-image-preview-group>
     </div>
+
+    <!-- Gemini Naming Modal -->
+    <GeminiNamingModal
+      :show="showGeminiModal"
+      :image-url="localEmoji.url || ''"
+      @update:show="showGeminiModal = $event"
+      @nameSelected="handleGeminiNameSelected"
+    />
   </div>
 </template>
 

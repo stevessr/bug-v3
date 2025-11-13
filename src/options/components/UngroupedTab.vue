@@ -401,7 +401,11 @@ const cancelCreateGroup = () => {
               </a-button>
             </div>
             <!-- 多选模式开关 -->
-            <a-checkbox v-model:checked="isMultiSelectMode" @change="onMultiSelectModeChange" title="切换多选模式">
+            <a-checkbox
+              v-model:checked="isMultiSelectMode"
+              @change="onMultiSelectModeChange"
+              title="切换多选模式"
+            >
               <span class="text-sm text-gray-700 dark:text-white">多选模式</span>
             </a-checkbox>
           </div>

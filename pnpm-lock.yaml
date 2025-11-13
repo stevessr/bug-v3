@@ -130,7 +130,7 @@ importers:
         specifier: ^0.26.0
         version: 0.26.0(@babel/parser@7.28.5)(rollup@4.47.1)(vue@3.5.24(typescript@5.9.3))
       vite:
-        specifier: npm:rolldown-vite@^7.2.5
+        specifier: npm:rolldown-vite@latest
         version: rolldown-vite@7.2.5(@types/node@24.10.1)(esbuild@0.25.9)(jiti@1.21.7)(less@4.4.2)(terser@5.44.1)(yaml@2.8.1)
       vue-eslint-parser:
         specifier: ^10.2.0

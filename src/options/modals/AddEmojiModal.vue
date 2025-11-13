@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, watch, toRefs, reactive, computed } from 'vue'
-import { DownOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, DeleteOutlined, RobotOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
+
+import GeminiNamingModal from './GeminiNamingModal.vue'
+
+import type { ImageAnalysisResult } from '@/utils/geminiService'
 
 const props = defineProps<{ show: boolean; groups: unknown[]; defaultGroupId?: string }>()
 
@@ -23,6 +27,7 @@ const removeParsedItem = (index: number) => {
 const name = ref('')
 const url = ref('')
 const displayUrl = ref('')
+const showGeminiModal = ref(false)
 const inputMode = ref<'url' | 'markdown' | 'html'>('url')
 const pasteText = ref('')
 const parsedItems = ref<ImageVariant[]>([])
@@ -98,13 +103,22 @@ const onGroupSelect = (info: any) => {
   groupId.value = String(info.key)
 }
 
-const selectedGroupLabel = computed(() => {
+const selectedGroupIcon = computed(() => {
   if (!groupId.value || groupId.value === 'ungrouped') {
-    return '📝 未分组表情'
+    return '📝'
   }
   const list = (groups.value as any[]) || []
   const g = list.find((x: { id?: string }) => x.id === groupId.value) as any
-  return g ? `${g.icon ? g.icon + ' ' : ''}${g.name}` : '选择分组'
+  return g ? g.icon : ''
+})
+
+const selectedGroupName = computed(() => {
+  if (!groupId.value || groupId.value === 'ungrouped') {
+    return '未分组表情'
+  }
+  const list = (groups.value as any[]) || []
+  const g = list.find((x: { id?: string }) => x.id === groupId.value) as any
+  return g ? g.name : '选择分组'
 })
 
 // 图片加载状态
@@ -443,6 +457,19 @@ const importParsed = () => {
   parsedItems.value = []
   emits('update:show', false)
 }
+
+// Gemini naming handlers
+const openGeminiNaming = () => {
+  if (!url.value.trim()) {
+    return
+  }
+  showGeminiModal.value = true
+}
+
+const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisResult) => {
+  name.value = selectedName
+  showGeminiModal.value = false
+}
 </script>
 
 <template>
@@ -495,9 +522,21 @@ const importParsed = () => {
                 </div>
 
                 <div v-if="inputMode === 'url'">
-                  <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-                    表情名称
-                  </label>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-white">
+                      表情名称
+                    </label>
+                    <a-button
+                      v-if="url.trim()"
+                      size="small"
+                      type="link"
+                      @click="openGeminiNaming"
+                      title="使用 AI 智能命名"
+                    >
+                      <RobotOutlined />
+                      AI 命名
+                    </a-button>
+                  </div>
                   <input
                     v-model="name"
                     type="text"
@@ -548,7 +587,12 @@ const importParsed = () => {
                     <div class="flex items-center justify-between mt-2">
                       <div class="flex items-center gap-3">
                         <label class="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                          <input type="checkbox" v-model="autoPreview" class="mr-1" title="自动预览粘贴内容" />
+                          <input
+                            type="checkbox"
+                            v-model="autoPreview"
+                            class="mr-1"
+                            title="自动预览粘贴内容"
+                          />
                           自动预览
                         </label>
                         <div class="text-xs text-gray-500">
@@ -598,7 +642,7 @@ const importParsed = () => {
                             v-if="g.icon && g.icon.startsWith('https://')"
                             :src="g.icon"
                             class="inline-block mr-1"
-                            style="max-width: 10px"
+                            style="max-width: 20px"
                           />
                           <span v-else class="inline-block mr-1">{{ g.icon }}</span>
                           {{ g.name }}
@@ -606,7 +650,14 @@ const importParsed = () => {
                       </a-menu>
                     </template>
                     <a-button class="dark:text-white dark:bg-gray-800" title="选择表情所属分组">
-                      {{ selectedGroupLabel }}
+                      <a-image
+                        v-if="selectedGroupIcon && selectedGroupIcon.startsWith('https://')"
+                        :src="selectedGroupIcon"
+                        class="inline-block mr-1"
+                        style="max-width: 20px"
+                      />
+                      <span v-else class="inline-block mr-1">{{ selectedGroupIcon }}</span>
+                      {{ selectedGroupName }}
                       <DownOutlined />
                     </a-button>
                   </a-dropdown>
@@ -742,7 +793,10 @@ const importParsed = () => {
                                 </a-menu-item>
                               </a-menu>
                             </template>
-                            <a-button class="text-xs w-full flex items-center justify-between" :title="'选择表情变体 ' + item.name">
+                            <a-button
+                              class="text-xs w-full flex items-center justify-between"
+                              :title="'选择表情变体 ' + item.name"
+                            >
                               <span>
                                 {{
                                   item.variants.find(v => v.url === item.selectedVariant)?.label ||
@@ -763,7 +817,12 @@ const importParsed = () => {
 
                       <!-- Delete button at bottom right -->
                       <div class="mt-3 flex justify-end">
-                        <a-button type="text" class="text-red-500" @click="removeParsedItem(index)" title="删除此表情">
+                        <a-button
+                          type="text"
+                          class="text-red-500"
+                          @click="removeParsedItem(index)"
+                          title="删除此表情"
+                        >
                           <DeleteOutlined />
                         </a-button>
                       </div>
@@ -776,6 +835,14 @@ const importParsed = () => {
         </ACard>
       </transition>
     </div>
+
+    <!-- Gemini Naming Modal -->
+    <GeminiNamingModal
+      :show="showGeminiModal"
+      :image-url="url"
+      @update:show="showGeminiModal = $event"
+      @nameSelected="handleGeminiNameSelected"
+    />
   </div>
 </template>
 

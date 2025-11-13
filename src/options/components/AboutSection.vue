@@ -46,6 +46,23 @@ const features = ref([
 const changelog = ref([
   {
     version: version,
+    date: '2025-11-13', // Today's date
+    notes: [
+      '新增 AI 批量重命名功能',
+      '新增 AI 批量重命名独立页面',
+      '优化 Gemini 命名功能，支持语言选择和默认设置；更新相关组件和服务',
+      '优化表情选择器，调整分组图标和名称的显示逻辑；增加图标最大宽度',
+      '优化云同步设置页面，更新路由和相关组件；优化重复检测功能，增加过滤查询',
+      '优化跨分组重复检测功能，更新相关路由和组件',
+      '修复 Options.vue 中 "computed value is readonly" 警告',
+      '修复路由 index 中 createWebHashHistory 导入问题',
+      '修复选项页面导航问题',
+      '样式：修复添加 AI 重命名标签后的 linting 问题',
+      '样式：修复 linting 问题'
+    ]
+  },
+  {
+    version: '1.2.5',
     date: '2025-10-07',
     notes: [
       '新增左右布局模态框设计',

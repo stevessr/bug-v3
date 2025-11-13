@@ -26,7 +26,8 @@ const emit = defineEmits([
   'update:enableHoverPreview',
   'update:syncVariantToDisplayUrl',
   'update:customCss',
-  'update:uploadMenuItems'
+  'update:uploadMenuItems',
+  'update:geminiApiKey'
 ])
 
 const getCustomPrimaryColor = () => {
@@ -65,6 +66,21 @@ const getTheme = () => {
   }
 }
 
+// Helper function to get setting value (moved up so it's available before top-level refs use it)
+const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
+  try {
+    if (isRef(settings)) return (settings.value && settings.value[key]) ?? defaultValue
+    return (settings && (settings as AppSettings)[key]) ?? defaultValue
+  } catch {
+    return defaultValue
+  }
+}
+
+// Helper function to handle setting updates (also moved up to avoid ordering issues)
+const handleSettingUpdate = (key: string, value: any) => {
+  emit(`update:${key}` as any, value)
+}
+
 // local reactive copy for outputFormat so the select will update when parent props change
 const localOutputFormat = ref<string>(getOutputFormat())
 watch(
@@ -96,6 +112,15 @@ watch(
   () => getCustomColorScheme(),
   val => {
     localCustomColorScheme.value = val || 'default'
+  }
+)
+
+// localGeminiApiKey now safely uses getSetting which is already declared
+const localGeminiApiKey = ref<string>(getSetting('geminiApiKey', ''))
+watch(
+  () => getSetting('geminiApiKey', ''),
+  (val: string) => {
+    localGeminiApiKey.value = val
   }
 )
 
@@ -150,21 +175,6 @@ const handleImageScaleChange = (value: number | number[]) => {
   const num = Array.isArray(value) ? value[0] : value
   // emit immediately so UI updates take effect while dragging
   setTimeout(() => emit('update:imageScale', num), 0)
-}
-
-// Helper function to get setting value
-const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
-  try {
-    if (isRef(settings)) return (settings.value && settings.value[key]) ?? defaultValue
-    return (settings && (settings as AppSettings)[key]) ?? defaultValue
-  } catch {
-    return defaultValue
-  }
-}
-
-// Helper function to handle setting updates
-const handleSettingUpdate = (key: string, value: any) => {
-  emit(`update:${key}` as any, value)
 }
 
 // Custom CSS editor state
@@ -362,16 +372,17 @@ const removeSideItem = (i: number) => {
           <p class="text-sm dark:text-white">控制插入表情的默认尺寸</p>
         </div>
         <div class="flex items-center gap-3">
-                      <ASlider
-                        id="imageScaleSlider"
-                        v-model:value="localImageScale"
-                        :min="5"
-                        :max="150"
-                        :step="5"
-                        class="w-32"
-                        @change="handleImageScaleChange"
-                        title="默认图片缩放比例"
-                      />          <span class="text-sm text-gray-600 dark:text-white w-12">{{ localImageScale }}%</span>
+          <ASlider
+            id="imageScaleSlider"
+            v-model:value="localImageScale"
+            :min="5"
+            :max="150"
+            :step="5"
+            class="w-32"
+            @change="handleImageScaleChange"
+            title="默认图片缩放比例"
+          />
+          <span class="text-sm text-gray-600 dark:text-white w-12">{{ localImageScale }}%</span>
         </div>
       </div>
 
@@ -459,6 +470,35 @@ const removeSideItem = (i: number) => {
         description="控制前端是否注入'一键解析并添加所有图片'按钮"
       />
 
+      <!-- Gemini API Configuration -->
+      <div class="pt-4 border-t">
+        <h3 class="text-sm font-medium dark:text-white mb-2">Gemini API 配置</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          配置 Google Gemini API 以启用智能表情命名和相似度检测功能
+        </p>
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium dark:text-white min-w-[100px]">API Key:</label>
+          <input
+            v-model="localGeminiApiKey"
+            type="password"
+            class="border rounded px-3 py-2 flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            @change="handleSettingUpdate('geminiApiKey', localGeminiApiKey)"
+            placeholder="输入你的 Gemini API Key"
+            title="Gemini API Key"
+          />
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          获取 API Key:
+          <a
+            href="https://aistudio.google.com/app/apikey"
+            target="_blank"
+            class="text-blue-500 hover:underline"
+          >
+            Google AI Studio
+          </a>
+        </p>
+      </div>
+
       <!-- Upload menu items editor -->
       <div class="pt-4 border-t">
         <h3 class="text-sm font-medium dark:text-white">上传菜单项（高级）</h3>
@@ -510,7 +550,14 @@ const removeSideItem = (i: number) => {
               "
               :title="'自动项 URL ' + (i + 1)"
             />
-            <a-button size="small" type="danger" @click="removeAutoItem(i)" :title="'删除第 ' + (i + 1) + ' 项'">删除</a-button>
+            <a-button
+              size="small"
+              type="danger"
+              @click="removeAutoItem(i)"
+              :title="'删除第 ' + (i + 1) + ' 项'"
+            >
+              删除
+            </a-button>
           </div>
         </div>
 
@@ -570,7 +617,14 @@ const removeSideItem = (i: number) => {
               "
               :title="'Iframe 模态 CSS 类名 ' + (i + 1)"
             />
-            <a-button size="small" type="danger" @click="removeIframeItem(i)" :title="'删除第 ' + (i + 1) + ' 项'">删除</a-button>
+            <a-button
+              size="small"
+              type="danger"
+              @click="removeIframeItem(i)"
+              :title="'删除第 ' + (i + 1) + ' 项'"
+            >
+              删除
+            </a-button>
           </div>
         </div>
 
@@ -630,14 +684,30 @@ const removeSideItem = (i: number) => {
               "
               :title="'侧边 iframe CSS 类名 ' + (i + 1)"
             />
-            <a-button size="small" type="danger" @click="removeSideItem(i)" :title="'删除第 ' + (i + 1) + ' 项'">删除</a-button>
+            <a-button
+              size="small"
+              type="danger"
+              @click="removeSideItem(i)"
+              :title="'删除第 ' + (i + 1) + ' 项'"
+            >
+              删除
+            </a-button>
           </div>
         </div>
 
         <!-- Save / Cancel bar -->
         <div class="flex justify-end gap-2 mt-2">
-          <a-button @click="cancelUploadMenuItems" :disabled="!dirty" title="取消上传菜单项更改">取消</a-button>
-          <a-button type="primary" @click="saveUploadMenuItems" :disabled="!dirty" title="保存上传菜单项更改">保存</a-button>
+          <a-button @click="cancelUploadMenuItems" :disabled="!dirty" title="取消上传菜单项更改">
+            取消
+          </a-button>
+          <a-button
+            type="primary"
+            @click="saveUploadMenuItems"
+            :disabled="!dirty"
+            title="保存上传菜单项更改"
+          >
+            保存
+          </a-button>
         </div>
       </div>
 
@@ -649,7 +719,9 @@ const removeSideItem = (i: number) => {
           </p>
         </div>
         <div>
-          <a-button @click="openCustomCssEditor" title="打开自定义 CSS 编辑器">管理自定义 CSS</a-button>
+          <a-button @click="openCustomCssEditor" title="打开自定义 CSS 编辑器">
+            管理自定义 CSS
+          </a-button>
         </div>
       </div>
 
@@ -665,7 +737,9 @@ const removeSideItem = (i: number) => {
           ></textarea>
           <div class="mt-3 flex justify-end gap-2">
             <a-button @click="cancelCustomCss" title="取消自定义 CSS 更改">取消</a-button>
-            <a-button type="primary" @click="saveCustomCss" title="保存并注入自定义 CSS">保存并注入</a-button>
+            <a-button type="primary" @click="saveCustomCss" title="保存并注入自定义 CSS">
+              保存并注入
+            </a-button>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 # Emoji Extension
 
-A modern emoji extension built with Vue 3, Vite, and TypeScript featuring a progressive multi-layer storage system and compile-time optimization flags.
+A modern emoji extension built with Vue 3, Vite, and TypeScript featuring a progressive multi-layer storage system, AI-powered features, and compile-time optimization flags.
 
 ## Features
 
@@ -13,6 +13,9 @@ A modern emoji extension built with Vue 3, Vite, and TypeScript featuring a prog
 - ☁️ **Cloud Sync**: Chrome sync storage support for configuration backup
 - 🌐 **WebDAV & S3 Sync**: Manual push/pull synchronization with WebDAV and S3-compatible storage (see [SYNC_DOCUMENTATION.md](./SYNC_DOCUMENTATION.md))
 - ⚡ **Build Optimization**: Compile-time flags for logging and IndexedDB to reduce bundle size
+- 🤖 **AI-Powered Naming**: Automatic emoji naming using Google Gemini API (see [GEMINI_FEATURES.md](./GEMINI_FEATURES.md))
+- 🔍 **Duplicate Detection**: Cross-group duplicate detection based on image similarity
+- 🔗 **Emoji References**: Reduce storage with smart emoji referencing system
 
 ## Build Configurations
 

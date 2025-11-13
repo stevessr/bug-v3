@@ -4,7 +4,6 @@ import { inject } from 'vue'
 import type { OptionsInject } from '../types'
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import GlobalSettings from '../components/GlobalSettings.vue'
-import CloudflareSyncConfig from '../components/CloudflareSyncConfig.vue'
 
 const options = inject<OptionsInject>('options')!
 
@@ -25,7 +24,8 @@ const {
   updateCustomPrimaryColor,
   updateCustomColorScheme,
   updateCustomCss,
-  updateUploadMenuItems
+  updateUploadMenuItems,
+  updateGeminiApiKey
 } = options
 </script>
 
@@ -48,13 +48,11 @@ const {
       @update:customColorScheme="updateCustomColorScheme"
       @update:customCss="updateCustomCss"
       @update:uploadMenuItems="updateUploadMenuItems"
+      @update:geminiApiKey="updateGeminiApiKey"
     >
       <template #grid-selector>
         <GridColumnsSelector v-model="localGridColumns" :min="2" :max="8" :step="1" />
       </template>
     </GlobalSettings>
-
-    <!-- Cloudflare Sync Configuration -->
-    <CloudflareSyncConfig />
   </div>
 </template>
