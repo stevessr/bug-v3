@@ -32,6 +32,7 @@ export const defaultSettings: AppSettings = {
   enableXcomExtraSelectors: false, // 默认不启用 X.com 额外选择器
   enableCalloutSuggestions: true, // 默认启用 callout suggestions
   enableBatchParseImages: true, // 默认启用一键解析图片按钮
+  geminiLanguage: 'Chinese', // 默认 AI 命名语言
   customColorScheme: 'default', // 默认配色方案
   customPrimaryColor: '#1890ff', // 默认主色（Ant Design 蓝色）
   customCss: '',

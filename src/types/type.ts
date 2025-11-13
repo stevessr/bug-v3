@@ -15,6 +15,7 @@ export interface AppSettings {
   // Optional API key fields for third-party services
   tenorApiKey?: string
   geminiApiKey?: string
+  geminiLanguage?: 'English' | 'Chinese'
   theme?: 'system' | 'light' | 'dark'
   // Custom theme colors
   customPrimaryColor?: string // 主题主色

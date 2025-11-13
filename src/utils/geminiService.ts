@@ -6,6 +6,7 @@
 export interface GeminiConfig {
   apiKey: string
   model?: string
+  language?: string
 }
 
 export interface ImageAnalysisResult {
@@ -14,7 +15,7 @@ export interface ImageAnalysisResult {
   tags?: string[]
 }
 
-const DEFAULT_MODEL = 'gemini-2.0-flash-exp'
+const DEFAULT_MODEL = 'gemini-flash-latest'
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 /**
@@ -26,6 +27,7 @@ export async function analyzeImageForNaming(
 ): Promise<ImageAnalysisResult> {
   const apiKey = config.apiKey
   const model = config.model || DEFAULT_MODEL
+  const language = config.language || 'Chinese'
 
   if (!apiKey) {
     throw new Error('Gemini API key is required')
@@ -48,9 +50,9 @@ The names should be:
 - Short (1-3 words)
 - Descriptive of the main subject or emotion
 - Easy to remember and search for
-- In English (lowercase, use hyphens for spaces)
+- In ${language}
 
-Also provide a brief description of the image and relevant tags.
+Also provide a brief description of the image and relevant tags (in ${language}).
 
 Format your response as JSON with this structure:
 {
