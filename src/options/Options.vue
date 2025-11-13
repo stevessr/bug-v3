@@ -137,6 +137,7 @@ const menuItems = computed(() => {
     { key: 'waline', label: 'Waline 导入', route: '/waline' },
     { key: 'stats', label: '统计', route: '/stats' },
     { key: 'duplicates', label: '重复检测', route: '/duplicates' },
+    { key: 'ai-rename', label: 'AI 批量重命名', route: '/ai-rename' },
     { key: 'sync', label: '云同步', route: '/sync' },
     { key: 'about', label: '关于', route: '/about' }
   ]
@@ -181,10 +182,10 @@ const handleMenuSelect = (info: any) => {
     waline: '/waline',
     stats: '/stats',
     duplicates: '/duplicates',
+    'ai-rename': '/ai-rename',
     sync: '/sync',
     about: '/about'
   }
-
   const targetRoute = routeMap[key]
   const originalPath = window.location.pathname
   const newSearchParams = new URLSearchParams(window.location.search)
@@ -263,6 +264,7 @@ onMounted(() => {
         waline: '/waline',
         stats: '/stats',
         duplicates: '/duplicates',
+        'ai-rename': '/ai-rename',
         about: '/about'
       }
       const targetRoute = routeMap[queryTabs]

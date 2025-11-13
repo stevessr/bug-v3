@@ -12,6 +12,7 @@ import WalinePage from '../pages/WalinePage.vue'
 import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
 import DuplicateDetectionPage from '../pages/DuplicateDetectionPage.vue'
+import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
 import SyncSettingsPage from '../pages/SyncSettingsPage.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -85,6 +86,14 @@ const routes: RouteRecordRaw[] = [
     component: DuplicateDetectionPage,
     meta: {
       title: '重复检测'
+    }
+  },
+  {
+    path: '/ai-rename',
+    name: 'ai-rename',
+    component: AIRenamePage,
+    meta: {
+      title: 'AI 批量重命名'
     }
   },
   {

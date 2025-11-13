@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+
 import { useEmojiStore } from '@/stores/emojiStore'
 import EmojiGrid from '@/options/components/EmojiGrid.vue'
 import BatchActionsBar from '@/options/components/BatchActionsBar.vue'
@@ -9,7 +10,9 @@ import type { Emoji } from '@/types/emoji'
 const emojiStore = useEmojiStore()
 
 const allEmojis = computed(() => {
-  return emojiStore.sortedGroups.flatMap(group => group.emojis.map(emoji => ({ ...emoji, groupId: group.id })))
+  return emojiStore.sortedGroups.flatMap(group =>
+    group.emojis.map(emoji => ({ ...emoji, groupId: group.id }))
+  )
 })
 
 const selectedEmojis = ref(new Set<string>())
