@@ -170,7 +170,7 @@ const handleMenuSelect = (info: any) => {
   const key = info && info.key ? String(info.key) : ''
   if (!key) return
 
-  // 根据菜单键导航到对应路由
+  // 根据菜单键导航到对应路由，但保持地址栏为 index.html?type=...&tabs=...（通过 history.replaceState）
   const routeMap: Record<string, string> = {
     settings: '/settings',
     favorites: '/favorites',
@@ -188,11 +188,25 @@ const handleMenuSelect = (info: any) => {
   }
 
   const targetRoute = routeMap[key]
+  const originalPath = window.location.pathname
+  const newSearchParams = new URLSearchParams(window.location.search)
+  newSearchParams.set('type', 'options')
+  newSearchParams.set('tabs', key)
+  const newSearch = newSearchParams.toString() ? `?${newSearchParams.toString()}` : ''
+
+  // First update visible URL to include the tabs param (so external links reflect selection)
+  window.history.replaceState({}, '', originalPath + newSearch)
 
   if (targetRoute && route.path !== targetRoute) {
-    router.push(targetRoute).catch(() => {
-      // ignore navigation failures
-    })
+    // Navigate internally with router, then restore visible URL (router will change path)
+    router
+      .push(targetRoute)
+      .then(() => {
+        window.history.replaceState({}, '', originalPath + newSearch)
+      })
+      .catch(() => {
+        // ignore navigation failures
+      })
   }
 }
 
