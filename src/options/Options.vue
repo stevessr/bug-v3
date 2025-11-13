@@ -245,6 +245,51 @@ onMounted(() => {
 
   // 初始化主题模式
   currentThemeMode.value = getCurrentThemeMode()
+  // 处理通过 query tabs 指定的初始页面或分组
+  const queryTabs =
+    (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
+  const keys = menuItems.value.map(i => i.key)
+  const originalPath = window.location.pathname
+  const originalSearch = window.location.search
+  if (queryTabs) {
+    if (keys.includes(queryTabs)) {
+      // 如果是菜单键，导航内部路由然后恢复可见 URL
+      const routeMap: Record<string, string> = {
+        settings: '/settings',
+        favorites: '/favorites',
+        groups: '/groups',
+        ungrouped: '/ungrouped',
+        import: '/import',
+        bilibili: '/bilibili',
+        tenor: '/tenor',
+        waline: '/waline',
+        stats: '/stats',
+        duplicates: '/duplicates',
+        about: '/about'
+      }
+      const targetRoute = routeMap[queryTabs]
+      if (targetRoute) {
+        router
+          .replace(targetRoute)
+          .then(() => {
+            // restore visible URL to original (keep query)
+            window.history.replaceState({}, '', originalPath + (originalSearch || ''))
+          })
+          .catch(() => {})
+      }
+    } else {
+      // 视为分组名称，尝试查找并选中该分组
+      const g = emojiStore.groups.find((x: any) => x.name === queryTabs || x.id === queryTabs)
+      if (g && g.id) {
+        emojiStore.activeGroupId = g.id
+        try {
+          emojiStore.updateSettings({ defaultGroup: g.id })
+        } catch (e) {
+          console.error(e)
+        }
+      }
+    }
+  }
 })
 
 onBeforeUnmount(() => {
