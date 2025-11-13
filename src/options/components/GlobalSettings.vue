@@ -66,6 +66,21 @@ const getTheme = () => {
   }
 }
 
+// Helper function to get setting value (moved up so it's available before top-level refs use it)
+const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
+  try {
+    if (isRef(settings)) return (settings.value && settings.value[key]) ?? defaultValue
+    return (settings && (settings as AppSettings)[key]) ?? defaultValue
+  } catch {
+    return defaultValue
+  }
+}
+
+// Helper function to handle setting updates (also moved up to avoid ordering issues)
+const handleSettingUpdate = (key: string, value: any) => {
+  emit(`update:${key}` as any, value)
+}
+
 // local reactive copy for outputFormat so the select will update when parent props change
 const localOutputFormat = ref<string>(getOutputFormat())
 watch(
@@ -97,6 +112,15 @@ watch(
   () => getCustomColorScheme(),
   val => {
     localCustomColorScheme.value = val || 'default'
+  }
+)
+
+// localGeminiApiKey now safely uses getSetting which is already declared
+const localGeminiApiKey = ref<string>(getSetting('geminiApiKey', ''))
+watch(
+  () => getSetting('geminiApiKey', ''),
+  (val: string) => {
+    localGeminiApiKey.value = val
   }
 )
 
@@ -151,21 +175,6 @@ const handleImageScaleChange = (value: number | number[]) => {
   const num = Array.isArray(value) ? value[0] : value
   // emit immediately so UI updates take effect while dragging
   setTimeout(() => emit('update:imageScale', num), 0)
-}
-
-// Helper function to get setting value
-const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
-  try {
-    if (isRef(settings)) return (settings.value && settings.value[key]) ?? defaultValue
-    return (settings && (settings as AppSettings)[key]) ?? defaultValue
-  } catch {
-    return defaultValue
-  }
-}
-
-// Helper function to handle setting updates
-const handleSettingUpdate = (key: string, value: any) => {
-  emit(`update:${key}` as any, value)
 }
 
 // Custom CSS editor state
@@ -470,10 +479,10 @@ const removeSideItem = (i: number) => {
         <div class="flex items-center gap-2">
           <label class="text-sm font-medium dark:text-white min-w-[100px]">API Key:</label>
           <input
+            v-model="localGeminiApiKey"
             type="password"
             class="border rounded px-3 py-2 flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            :value="getSetting('geminiApiKey', '')"
-            @input="e => handleSettingUpdate('geminiApiKey', (e.target as HTMLInputElement).value)"
+            @change="handleSettingUpdate('geminiApiKey', localGeminiApiKey)"
             placeholder="输入你的 Gemini API Key"
             title="Gemini API Key"
           />

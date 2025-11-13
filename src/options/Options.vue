@@ -136,6 +136,7 @@ const menuItems = computed(() => {
     { key: 'tenor', label: 'Tenor GIF', route: '/tenor' },
     { key: 'waline', label: 'Waline 导入', route: '/waline' },
     { key: 'stats', label: '统计', route: '/stats' },
+    { key: 'duplicates', label: '重复检测', route: '/duplicates' },
     { key: 'about', label: '关于', route: '/about' }
   ]
 
@@ -178,6 +179,7 @@ const handleMenuSelect = (info: any) => {
     tenor: '/tenor',
     waline: '/waline',
     stats: '/stats',
+    duplicates: '/duplicates',
     about: '/about'
   }
 
@@ -258,6 +260,7 @@ onMounted(() => {
         tenor: '/tenor',
         waline: '/waline',
         stats: '/stats',
+        duplicates: '/duplicates',
         about: '/about'
       }
       const targetRoute = routeMap[queryTabs]

@@ -78,6 +78,14 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/duplicates',
+    name: 'duplicates',
+    component: () => import('../pages/DuplicateDetectionPage.vue'),
+    meta: {
+      title: '重复检测'
+    }
+  },
+  {
     path: '/about',
     name: 'about',
     component: AboutPage,

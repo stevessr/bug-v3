@@ -532,13 +532,23 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   }
 
   // Find duplicate emojis across all groups based on perceptual hash
-  const findDuplicatesAcrossGroups = async (similarityThreshold = 10) => {
+  const findDuplicatesAcrossGroups = async (
+    similarityThreshold = 10,
+    onProgress?: (progress: {
+      total: number
+      processed: number
+      group: string
+      emojiName: string
+      groupTotal: number
+      groupProcessed: number
+    }) => void
+  ) => {
     try {
       const { areSimilarImages, calculatePerceptualHash } = await import('@/utils/geminiService')
 
       // Calculate hashes for all emojis that don't have one
       const allEmojis: Array<{ emoji: Emoji; groupId: string; groupName: string }> = []
-
+      let totalEmojis = 0
       for (const group of groups.value) {
         for (const emoji of group.emojis) {
           allEmojis.push({
@@ -546,12 +556,38 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
             groupId: group.id,
             groupName: group.name
           })
+          totalEmojis++
         }
       }
 
       // Calculate missing hashes
       console.log('[EmojiStore] Calculating perceptual hashes for emojis...')
+      let processedCount = 0
+      let groupProcessedCount = 0
+      let currentProcessingGroup = ''
+
       for (const item of allEmojis) {
+        processedCount++
+
+        if (item.groupName !== currentProcessingGroup) {
+          currentProcessingGroup = item.groupName
+          groupProcessedCount = 0
+        }
+        groupProcessedCount++
+
+        if (onProgress) {
+          const group = groups.value.find(g => g.id === item.groupId)
+          const groupTotal = group ? group.emojis.length : 0
+          onProgress({
+            total: totalEmojis,
+            processed: processedCount,
+            group: item.groupName,
+            emojiName: item.emoji.name,
+            groupTotal,
+            groupProcessed: groupProcessedCount
+          })
+        }
+
         if (!item.emoji.perceptualHash && item.emoji.url) {
           try {
             const hash = await calculatePerceptualHash(item.emoji.url)
@@ -599,6 +635,23 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     } catch (err) {
       console.error('[EmojiStore] findDuplicatesAcrossGroups error', err)
       return []
+    }
+  }
+
+  // Remove all perceptual hashes from all emojis
+  const clearAllPerceptualHashes = async () => {
+    try {
+      beginBatch()
+      for (const group of groups.value) {
+        for (const emoji of group.emojis) {
+          if (emoji.perceptualHash) {
+            delete emoji.perceptualHash
+          }
+        }
+      }
+      console.log('[EmojiStore] Cleared all perceptual hashes')
+    } finally {
+      await endBatch()
     }
   }
 
@@ -1331,6 +1384,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // Cross-group duplicate detection
     findDuplicatesAcrossGroups,
     removeDuplicatesAcrossGroups,
+    clearAllPerceptualHashes,
     resolveEmojiReference,
     // expose batching helpers for bulk operations
     beginBatch,

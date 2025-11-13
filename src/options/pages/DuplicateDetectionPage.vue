@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { LoadingOutlined, DeleteOutlined, LinkOutlined } from '@ant-design/icons-vue'
+import { ref } from 'vue'
+import { LoadingOutlined, DeleteOutlined, LinkOutlined, ClearOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 import type { Emoji } from '@/types/type'
@@ -13,6 +14,15 @@ const selectedAction = ref<'delete' | 'reference'>('reference')
 const similarityThreshold = ref(10)
 const scanError = ref('')
 
+// Progress indicators
+const progress = ref(0)
+const currentGroup = ref('')
+const currentEmojiName = ref('')
+const totalEmojis = ref(0)
+const processedEmojis = ref(0)
+const groupTotal = ref(0)
+const groupProcessed = ref(0)
+
 interface DuplicateGroup {
   emoji: Emoji
   groupId: string
@@ -23,9 +33,36 @@ const scanForDuplicates = async () => {
   isScanning.value = true
   scanError.value = ''
   duplicateGroups.value = []
+  progress.value = 0
+  currentGroup.value = ''
+  currentEmojiName.value = ''
+  totalEmojis.value = 0
+  processedEmojis.value = 0
+  groupTotal.value = 0
+  groupProcessed.value = 0
+
+  const handleProgress = (p: {
+    total: number
+    processed: number
+    group: string
+    emojiName: string
+    groupTotal: number
+    groupProcessed: number
+  }) => {
+    totalEmojis.value = p.total
+    processedEmojis.value = p.processed
+    progress.value = p.total > 0 ? (p.processed / p.total) * 100 : 0
+    currentGroup.value = p.group
+    currentEmojiName.value = p.emojiName
+    groupTotal.value = p.groupTotal
+    groupProcessed.value = p.groupProcessed
+  }
 
   try {
-    const results = await emojiStore.findDuplicatesAcrossGroups(similarityThreshold.value)
+    const results = await emojiStore.findDuplicatesAcrossGroups(
+      similarityThreshold.value,
+      handleProgress
+    )
     duplicateGroups.value = results
 
     if (results.length === 0) {
@@ -53,13 +90,25 @@ const removeDuplicates = async () => {
     // Clear the duplicate groups after processing
     duplicateGroups.value = []
 
-    const message = createReferences
+    const msg = createReferences
       ? `已将 ${removed} 个重复表情转换为引用`
       : `已删除 ${removed} 个重复表情`
 
-    console.log(message)
+    message.success(msg)
+    console.log(msg)
   } catch (error) {
+    message.error('处理重复项失败')
     console.error('Remove duplicates error:', error)
+  }
+}
+
+const clearHashes = async () => {
+  try {
+    await emojiStore.clearAllPerceptualHashes()
+    message.success('已清空所有表情的哈希值')
+  } catch (error) {
+    message.error('清空哈希值失败')
+    console.error('Clear hashes error:', error)
   }
 }
 
@@ -81,7 +130,7 @@ const getTotalDuplicates = () => {
       <!-- Similarity Threshold -->
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
-          相似度阈值: {{ similarityThreshold }}
+          相似度阈值：{{ similarityThreshold }}
         </label>
         <div class="flex items-center gap-3">
           <a-slider
@@ -135,6 +184,33 @@ const getTotalDuplicates = () => {
         <a-button v-if="duplicateGroups.length > 0" type="default" danger @click="removeDuplicates">
           处理重复项 ({{ getTotalDuplicates() }})
         </a-button>
+
+        <a-button @click="clearHashes">
+          <ClearOutlined />
+          清空哈希值
+        </a-button>
+      </div>
+
+      <!-- Progress Indicator -->
+      <div v-if="isScanning" class="space-y-2">
+        <div class="flex items-center gap-4">
+          <a-progress type="circle" :percent="progress" :width="80" />
+          <div class="flex-1 space-y-1">
+            <p class="text-sm font-medium dark:text-white">
+              总进度：{{ processedEmojis }} / {{ totalEmojis }}
+            </p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">当前分组：{{ currentGroup }}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">正在处理：{{ currentEmojiName }}</p>
+            <a-progress
+              :percent="groupTotal > 0 ? (groupProcessed / groupTotal) * 100 : 0"
+              :stroke-width="6"
+              :show-info="false"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-500">
+              {{ groupProcessed }} / {{ groupTotal }}
+            </p>
+          </div>
+        </div>
       </div>
 
       <!-- Error Message -->
@@ -210,7 +286,8 @@ const getTotalDuplicates = () => {
         </p>
         <ul class="list-disc list-inside space-y-1 ml-2">
           <li>扫描会计算所有表情的感知哈希值（首次可能需要较长时间）</li>
-          <li>基于图片内容相似度检测重复，而非文件名或URL</li>
+          <li>如果表情已经有哈希值，将会跳过计算</li>
+          <li>基于图片内容相似度检测重复，而非文件名或 URL</li>
           <li>创建引用会保留第一个表情，其他重复项指向它，节省存储空间</li>
           <li>建议先使用"创建引用"方式，如需完全删除可稍后手动处理</li>
         </ul>
