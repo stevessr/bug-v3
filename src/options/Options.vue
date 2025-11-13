@@ -137,6 +137,7 @@ const menuItems = computed(() => {
     { key: 'waline', label: 'Waline 导入', route: '/waline' },
     { key: 'stats', label: '统计', route: '/stats' },
     { key: 'duplicates', label: '重复检测', route: '/duplicates' },
+    { key: 'sync', label: '云同步', route: '/sync' },
     { key: 'about', label: '关于', route: '/about' }
   ]
 
@@ -180,6 +181,7 @@ const handleMenuSelect = (info: any) => {
     waline: '/waline',
     stats: '/stats',
     duplicates: '/duplicates',
+    sync: '/sync',
     about: '/about'
   }
 

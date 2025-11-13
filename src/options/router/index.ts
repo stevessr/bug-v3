@@ -11,6 +11,8 @@ import TenorPage from '../pages/TenorPage.vue'
 import WalinePage from '../pages/WalinePage.vue'
 import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
+import DuplicateDetectionPage from '../pages/DuplicateDetectionPage.vue'
+import SyncSettingsPage from '../pages/SyncSettingsPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -80,9 +82,17 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/duplicates',
     name: 'duplicates',
-    component: () => import('../pages/DuplicateDetectionPage.vue'),
+    component: DuplicateDetectionPage,
     meta: {
       title: '重复检测'
+    }
+  },
+  {
+    path: '/sync',
+    name: 'sync',
+    component: SyncSettingsPage,
+    meta: {
+      title: '云同步'
     }
   },
   {

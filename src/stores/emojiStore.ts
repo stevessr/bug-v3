@@ -550,6 +550,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const allEmojis: Array<{ emoji: Emoji; groupId: string; groupName: string }> = []
       let totalEmojis = 0
       for (const group of groups.value) {
+        if (group.id === 'favorites') continue // Ignore favorites group
         for (const emoji of group.emojis) {
           allEmojis.push({
             emoji,
@@ -614,6 +615,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           if (processed.has(item2.emoji.id) || !item2.emoji.perceptualHash) continue
 
           if (
+            item1.emoji.id !== item2.emoji.id &&
             areSimilarImages(
               item1.emoji.perceptualHash,
               item2.emoji.perceptualHash,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { LoadingOutlined, DeleteOutlined, LinkOutlined, ClearOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
@@ -13,6 +13,7 @@ const duplicateGroups = ref<Array<Array<{ emoji: Emoji; groupId: string; groupNa
 const selectedAction = ref<'delete' | 'reference'>('reference')
 const similarityThreshold = ref(10)
 const scanError = ref('')
+const filterQuery = ref('')
 
 // Progress indicators
 const progress = ref(0)
@@ -27,6 +28,32 @@ interface DuplicateGroup {
   emoji: Emoji
   groupId: string
   groupName: string
+}
+
+const filteredDuplicateGroups = computed(() => {
+  if (!filterQuery.value) {
+    return duplicateGroups.value
+  }
+  const query = filterQuery.value.toLowerCase()
+  return duplicateGroups.value.filter(group => {
+    return group.some(
+      item =>
+        item.emoji.name.toLowerCase().includes(query) ||
+        item.groupName.toLowerCase().includes(query)
+    )
+  })
+})
+
+const setAsOriginal = (groupIndex: number, itemIndex: number) => {
+  if (itemIndex === 0) return // Already the original
+
+  const group = duplicateGroups.value[groupIndex]
+  const [item] = group.splice(itemIndex, 1)
+  group.unshift(item)
+}
+
+const removeDuplicateGroup = (groupIndex: number) => {
+  duplicateGroups.value.splice(groupIndex, 1)
 }
 
 const scanForDuplicates = async () => {
@@ -220,36 +247,45 @@ const getTotalDuplicates = () => {
 
       <!-- Results -->
       <div v-if="duplicateGroups.length > 0" class="space-y-4">
-        <div class="bg-blue-50 border border-blue-200 rounded p-3">
+        <div
+          class="flex justify-between items-center bg-blue-50 border border-blue-200 rounded p-3"
+        >
           <p class="text-sm text-blue-800">
             找到 {{ duplicateGroups.length }} 组重复表情，共 {{ getTotalDuplicates() }} 个重复项
           </p>
+          <a-input v-model:value="filterQuery" placeholder="过滤结果..." class="w-48" allow-clear />
         </div>
 
         <!-- Duplicate Groups -->
         <div class="space-y-4 max-h-96 overflow-y-auto">
           <div
-            v-for="(group, groupIndex) in duplicateGroups"
+            v-for="(group, groupIndex) in filteredDuplicateGroups"
             :key="groupIndex"
             class="border border-gray-200 dark:border-gray-700 rounded p-4"
           >
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-sm font-medium text-gray-700 dark:text-white">
-                重复组 #{{ groupIndex + 1 }}
-              </span>
-              <span class="text-xs text-gray-500">{{ group.length }} 个相似表情</span>
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-gray-700 dark:text-white">
+                  重复组 #{{ groupIndex + 1 }}
+                </span>
+                <span class="text-xs text-gray-500">{{ group.length }} 个相似表情</span>
+              </div>
+              <a-button size="small" danger @click="removeDuplicateGroup(groupIndex)">
+                移除该组
+              </a-button>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               <div
                 v-for="(item, itemIndex) in group"
                 :key="item.emoji.id"
-                class="border rounded p-2"
+                class="border rounded p-2 cursor-pointer transition-all"
                 :class="[
                   itemIndex === 0
                     ? 'border-green-500 bg-green-50'
-                    : 'border-gray-200 dark:border-gray-700'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-blue-500'
                 ]"
+                @click="setAsOriginal(groupIndex, itemIndex)"
               >
                 <div class="relative">
                   <img
@@ -263,6 +299,12 @@ const getTotalDuplicates = () => {
                     class="absolute top-1 right-1 bg-green-500 text-white text-xs px-1 rounded"
                   >
                     保留
+                  </div>
+                  <div
+                    v-else
+                    class="absolute top-1 right-1 bg-gray-500 text-white text-xs px-1 rounded opacity-0 group-hover:opacity-100"
+                  >
+                    设为保留
                   </div>
                 </div>
                 <div class="mt-2">
