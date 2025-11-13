@@ -151,6 +151,16 @@ const menuItems = computed(() => {
 
 // 当前选中的菜单键
 const menuSelectedKeys = computed(() => {
+  // 优先使用 URL 查询参数中的 tabs（保持地址为 index.html?type=...&tabs=...）
+  const queryTabs =
+    (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
+  const keys = menuItems.value.map(i => i.key)
+  if (queryTabs) {
+    // 如果 tabs 对应于菜单键，直接使用；否则将视为分组名称，选中 groups 菜单
+    if (keys.includes(queryTabs)) return [queryTabs]
+    return ['groups']
+  }
+
   const currentRouteName = route.name as string
   return currentRouteName ? [currentRouteName] : ['groups']
 })
