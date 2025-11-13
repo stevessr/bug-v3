@@ -6,6 +6,8 @@ import { normalizeImageUrl } from '../../utils/isImageUrl'
 import ViewGroupDetailModal from '../modals/ViewGroupDetailModal.vue'
 
 import EmojiGrid from './EmojiGrid.vue'
+import GroupsCardView from './GroupsCardView.vue'
+import DomainManager from './DomainManager.vue'
 
 import { TouchDragHandler } from '@/options/utils/touchDragDrop'
 
