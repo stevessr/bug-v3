@@ -406,6 +406,22 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
+  const updateEmojiNames = (nameUpdates: Record<string, string>) => {
+    beginBatch()
+    try {
+      for (const group of groups.value) {
+        for (const emoji of group.emojis) {
+          if (nameUpdates[emoji.id]) {
+            emoji.name = nameUpdates[emoji.id]
+          }
+        }
+      }
+      console.log('[EmojiStore] updateEmojiNames', { count: Object.keys(nameUpdates).length })
+    } finally {
+      endBatch()
+    }
+  }
+
   const deleteEmoji = (emojiId: string) => {
     for (const group of groups.value) {
       group.emojis = group.emojis.filter(e => e.id !== emojiId)
@@ -1368,6 +1384,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     addEmoji,
     addEmojiWithoutSave,
     updateEmoji,
+    updateEmojiNames,
     deleteEmoji,
     moveEmoji,
     removeEmojiFromGroup,

@@ -183,6 +183,106 @@ function parseGeminiResponse(text: string): any {
 }
 
 /**
+ * Generate names for a batch of emojis using a single API call
+ */
+export async function generateBatchNames(
+  emojis: { id: string; url: string; name: string }[],
+  prompt: string,
+  config: GeminiConfig
+): Promise<Record<string, string>> {
+  const apiKey = config.apiKey
+  const model = config.model || DEFAULT_MODEL
+  const language = config.language || 'Chinese'
+
+  if (!apiKey) {
+    throw new Error('Gemini API key is required')
+  }
+
+  try {
+    // 1. Construct the text part of the prompt
+    const textPrompt = `You are an expert in naming things. I have a list of emojis that I want to rename based on my instructions.
+
+My instruction is: "${prompt}"
+The language for the new names is: ${language}.
+
+Following this text are ${emojis.length} images. I will refer to them as Image 1, Image 2, and so on.
+
+Please generate a new name for each emoji.
+
+Return the result as a single JSON object where keys are the image index (e.g., "image_1", "image_2") and values are the new names. For example:
+{
+  "image_1": "new name for first image",
+  "image_2": "new name for second image"
+}
+`
+
+    // 2. Fetch all images as base64 in parallel
+    const imageParts = await Promise.all(
+      emojis.map(async (emoji) => {
+        const base64 = await fetchImageAsBase64(emoji.url)
+        return {
+          inline_data: {
+            mime_type: getMimeType(emoji.url),
+            data: base64
+          }
+        }
+      })
+    )
+
+    // 3. Combine text and image parts
+    const requestBody = {
+      contents: [
+        {
+          parts: [{ text: textPrompt }, ...imageParts]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.5,
+        topK: 32,
+        topP: 1,
+        maxOutputTokens: 2048,
+        response_mime_type: 'application/json'
+      }
+    }
+
+    // 4. Make the API call
+    const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const parsedResponse = parseGeminiResponse(responseText)
+
+    // 5. Map the results back to emoji IDs
+    const newNames: Record<string, string> = {}
+    for (let i = 0; i < emojis.length; i++) {
+      const emojiId = emojis[i].id
+      const responseKey = `image_${i + 1}`
+      if (parsedResponse[responseKey]) {
+        newNames[emojiId] = parsedResponse[responseKey]
+      }
+    }
+
+    return newNames
+  } catch (error) {
+    console.error('Error in generateBatchNames with Gemini:', error)
+    throw error
+  }
+}
+
+
+/**
  * Calculate perceptual hash for an image (simplified version)
  * This is a placeholder - for production, use a library like pHash
  */

@@ -10,8 +10,64 @@ import GroupActionsDropdown from './GroupActionsDropdown.vue'
 import DedupeChooser from './DedupeChooser.vue'
 import DomainManager from './DomainManager.vue'
 import EmojiGrid from './EmojiGrid.vue'
+import BatchActionsBar from './BatchActionsBar.vue'
+import BatchRenameModal from '../modals/BatchRenameModal.vue'
 
 import { TouchDragHandler } from '@/options/utils/touchDragDrop'
+
+const isBatchRenameModalVisible = ref(false)
+const selectedEmojis = ref(new Set<string>())
+
+const toggleSelection = (emojiId: string) => {
+  if (selectedEmojis.value.has(emojiId)) {
+    selectedEmojis.value.delete(emojiId)
+  } else {
+    selectedEmojis.value.add(emojiId)
+  }
+}
+
+const selectedCount = computed(() => selectedEmojis.value.size)
+
+const handleSelectAll = () => {
+  const allEmojiIds = displayGroups.value
+    .filter(group => expandedGroups.has(group.id))
+    .flatMap(group => group.emojis.map(emoji => emoji.id))
+  selectedEmojis.value = new Set(allEmojiIds)
+}
+
+const handleDeselectAll = () => {
+  selectedEmojis.value.clear()
+}
+
+const handleCancelSelection = () => {
+  selectedEmojis.value.clear()
+}
+
+const handleBatchRename = () => {
+  isBatchRenameModalVisible.value = true
+}
+
+const selectedEmojiObjects = computed(() => {
+  const emojis: any[] = []
+  const selected = selectedEmojis.value
+  if (selected.size === 0) return emojis
+
+  for (const group of displayGroups.value) {
+    for (const emoji of group.emojis) {
+      if (selected.has(emoji.id)) {
+        emojis.push(emoji)
+      }
+    }
+  }
+  return emojis
+})
+
+const handleApplyBatchRename = (newNames: Record<string, string>) => {
+  emojiStore.updateEmojiNames(newNames)
+  isBatchRenameModalVisible.value = false
+  selectedEmojis.value.clear()
+}
+
 
 const emit = defineEmits([
   'openCreateGroup',
@@ -491,6 +547,8 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                       :emojis="group.emojis || []"
                       :group-id="group.id"
                       :grid-columns="emojiStore.settings.gridColumns"
+                      :selected-emojis="selectedEmojis"
+                      @toggle-selection="toggleSelection"
                       @edit-emoji="
                         (emoji, groupId, index) => $emit('editEmoji', emoji, groupId, index)
                       "
@@ -574,6 +632,16 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
       </div>
     </div>
 
+    <!-- Batch Actions Bar -->
+    <BatchActionsBar
+      v-if="selectedCount > 0"
+      :selected-count="selectedCount"
+      @select-all="handleSelectAll"
+      @deselect-all="handleDeselectAll"
+      @batch-rename="handleBatchRename"
+      @cancel="handleCancelSelection"
+    />
+
     <!-- Dedupe chooser component -->
     <DedupeChooser
       :visible="chooseDedupeFor"
@@ -589,6 +657,14 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
       :groupName="viewDetailGroup?.name || ''"
       :detail="viewDetailGroup?.detail || ''"
       @update:show="closeViewDetailModal"
+    />
+
+    <!-- Batch Rename Modal -->
+    <BatchRenameModal
+      :visible="isBatchRenameModalVisible"
+      :selected-emojis="selectedEmojiObjects"
+      @close="isBatchRenameModalVisible = false"
+      @apply="handleApplyBatchRename"
     />
 
     <!-- Domain manager handled by DomainManager.vue -->
