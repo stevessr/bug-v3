@@ -5,7 +5,9 @@ import { DownOutlined, RobotOutlined } from '@ant-design/icons-vue'
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/type'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
+
 import GeminiNamingModal from './GeminiNamingModal.vue'
+
 import type { ImageAnalysisResult } from '@/utils/geminiService'
 
 const props = defineProps<{

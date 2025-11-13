@@ -15,9 +15,7 @@ const hasSelection = computed(() => props.selectedCount > 0)
     class="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 shadow-lg z-10"
   >
     <div class="flex justify-between items-center">
-      <div class="text-sm text-gray-600 dark:text-gray-300">
-        已选择 {{ selectedCount }} 个表情
-      </div>
+      <div class="text-sm text-gray-600 dark:text-gray-300">已选择 {{ selectedCount }} 个表情</div>
       <div class="flex items-center gap-2">
         <a-button @click="$emit('selectAll')">全选</a-button>
         <a-button @click="$emit('deselectAll')">全不选</a-button>

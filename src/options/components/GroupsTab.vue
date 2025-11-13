@@ -4,6 +4,7 @@ import { computed, ref, reactive, onMounted, onUnmounted, inject, type PropType 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { normalizeImageUrl } from '../../utils/isImageUrl'
 import ViewGroupDetailModal from '../modals/ViewGroupDetailModal.vue'
+import BatchRenameModal from '../modals/BatchRenameModal.vue'
 
 import GroupsCardView from './GroupsCardView.vue'
 import GroupActionsDropdown from './GroupActionsDropdown.vue'
@@ -11,7 +12,6 @@ import DedupeChooser from './DedupeChooser.vue'
 import DomainManager from './DomainManager.vue'
 import EmojiGrid from './EmojiGrid.vue'
 import BatchActionsBar from './BatchActionsBar.vue'
-import BatchRenameModal from '../modals/BatchRenameModal.vue'
 
 import { TouchDragHandler } from '@/options/utils/touchDragDrop'
 
@@ -67,7 +67,6 @@ const handleApplyBatchRename = (newNames: Record<string, string>) => {
   isBatchRenameModalVisible.value = false
   selectedEmojis.value.clear()
 }
-
 
 const emit = defineEmits([
   'openCreateGroup',

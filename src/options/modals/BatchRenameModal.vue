@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, type PropType } from 'vue'
+
 import type { Emoji } from '@/types/emoji'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { generateBatchNames } from '@/utils/geminiService'
@@ -7,12 +8,12 @@ import { generateBatchNames } from '@/utils/geminiService'
 const props = defineProps({
   visible: {
     type: Boolean,
-    required: true,
+    required: true
   },
   selectedEmojis: {
     type: Array as PropType<Emoji[]>,
-    required: true,
-  },
+    required: true
+  }
 })
 
 const emit = defineEmits(['close', 'apply'])
@@ -26,12 +27,12 @@ const error = ref<string | null>(null)
 
 const geminiConfig = computed(() => ({
   apiKey: emojiStore.settings.geminiApiKey,
-  model: emojiStore.settings.geminiModel,
+  model: emojiStore.settings.geminiModel
 }))
 
 watch(
   () => props.visible,
-  (isVisible) => {
+  isVisible => {
     if (isVisible) {
       // Reset state when modal becomes visible
       prompt.value = ''
@@ -56,7 +57,7 @@ const handleGenerateNames = async () => {
   try {
     const results = await generateBatchNames(props.selectedEmojis, prompt.value, {
       ...geminiConfig.value,
-      language: language.value,
+      language: language.value
     })
     newNames.value = results
   } catch (e: any) {
@@ -71,7 +72,7 @@ const handleApply = () => {
 }
 
 const okButtonProps = computed(() => ({
-  disabled: Object.keys(newNames.value).length === 0,
+  disabled: Object.keys(newNames.value).length === 0
 }))
 </script>
 

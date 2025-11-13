@@ -218,7 +218,7 @@ Return the result as a single JSON object where keys are the image index (e.g., 
 
     // 2. Fetch all images as base64 in parallel
     const imageParts = await Promise.all(
-      emojis.map(async (emoji) => {
+      emojis.map(async emoji => {
         const base64 = await fetchImageAsBase64(emoji.url)
         return {
           inline_data: {
@@ -280,7 +280,6 @@ Return the result as a single JSON object where keys are the image index (e.g., 
     throw error
   }
 }
-
 
 /**
  * Calculate perceptual hash for an image (simplified version)
