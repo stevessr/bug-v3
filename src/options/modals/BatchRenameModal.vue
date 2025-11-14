@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed, type PropType } from 'vue'
+import { ref, watch, computed, type PropType, onMounted, onUnmounted } from 'vue'
 
 import type { Emoji } from '@/types/emoji'
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -24,6 +24,10 @@ const newNames = ref<Record<string, string>>({})
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 
+// Lazy loading state
+const loadedImages = ref<Set<string>>(new Set())
+let imageObserver: IntersectionObserver | null = null
+
 const geminiConfig = computed(() => ({
   apiKey: emojiStore.settings.geminiApiKey,
   model: emojiStore.settings.geminiModel,
@@ -43,6 +47,10 @@ watch(
       newNames.value = {}
       isLoading.value = false
       error.value = null
+      loadedImages.value.clear()
+      setupImageObserver()
+    } else {
+      cleanupImageObserver()
     }
   }
 )
@@ -84,6 +92,53 @@ const handleApply = () => {
 const okButtonProps = computed(() => ({
   disabled: Object.keys(newNames.value).length === 0
 }))
+
+// Setup Intersection Observer for lazy loading images
+const setupImageObserver = () => {
+  if (typeof IntersectionObserver === 'undefined') return
+
+  imageObserver = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target as HTMLImageElement
+          const src = img.dataset.src
+          if (src && !loadedImages.value.has(src)) {
+            img.src = src
+            loadedImages.value.add(src)
+            imageObserver?.unobserve(img)
+          }
+        }
+      })
+    },
+    {
+      rootMargin: '50px'
+    }
+  )
+}
+
+const cleanupImageObserver = () => {
+  if (imageObserver) {
+    imageObserver.disconnect()
+    imageObserver = null
+  }
+}
+
+const observeImage = (el: HTMLImageElement | null) => {
+  if (el && imageObserver) {
+    imageObserver.observe(el)
+  }
+}
+
+onMounted(() => {
+  if (props.visible) {
+    setupImageObserver()
+  }
+})
+
+onUnmounted(() => {
+  cleanupImageObserver()
+})
 </script>
 
 <template>
@@ -137,7 +192,14 @@ const okButtonProps = computed(() => ({
                 class="border-b dark:border-gray-600"
               >
                 <td class="p-2">
-                  <img :src="emoji.url" class="w-10 h-10 object-contain" />
+                  <img
+                    :data-src="emoji.url"
+                    :src="loadedImages.has(emoji.url) ? emoji.url : ''"
+                    class="w-10 h-10 object-contain bg-gray-100"
+                    loading="lazy"
+                    :ref="observeImage"
+                    alt="emoji"
+                  />
                 </td>
                 <td class="p-2">{{ emoji.name }}</td>
                 <td class="p-2 text-green-600 font-medium">
