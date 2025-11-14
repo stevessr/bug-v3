@@ -460,7 +460,6 @@ const removeSideItem = (i: number) => {
         description="控制前端是否注入'一键解析并添加所有图片'按钮"
       />
 
-
       <!-- Upload menu items editor -->
       <div class="pt-4 border-t">
         <h3 class="text-sm font-medium dark:text-white">上传菜单项（高级）</h3>

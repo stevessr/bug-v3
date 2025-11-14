@@ -164,9 +164,7 @@ const handleCustomOpenAIModelChange = () => {
               <a-select-option value="English">English</a-select-option>
               <a-select-option value="Chinese">中文</a-select-option>
             </a-select>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              AI 生成命名时使用的语言
-            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">AI 生成命名时使用的语言</p>
           </div>
 
           <div>
@@ -178,9 +176,7 @@ const handleCustomOpenAIModelChange = () => {
             >
               <a-select-option value="gemini-pro">Gemini Pro (最强)</a-select-option>
               <a-select-option value="gemini-flash">Gemini Flash (推荐)</a-select-option>
-              <a-select-option value="gemini-flash-lite">
-                Gemini Flash Lite (最快)
-              </a-select-option>
+              <a-select-option value="gemini-flash-lite">Gemini Flash Lite (最快)</a-select-option>
             </a-select>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Pro: 最强性能 | Flash: 速度与性能平衡 | Flash Lite: 最快速度
@@ -198,10 +194,7 @@ const handleCustomOpenAIModelChange = () => {
               使用兼容 OpenAI API 的第三方服务（如 OpenAI、Azure OpenAI、本地部署等）
             </p>
           </div>
-          <a-switch
-            v-model:checked="localUseCustomOpenAI"
-            @change="handleUseCustomOpenAIChange"
-          />
+          <a-switch v-model:checked="localUseCustomOpenAI" @change="handleUseCustomOpenAIChange" />
         </div>
 
         <div v-if="localUseCustomOpenAI" class="space-y-3 pl-4 border-l-2 border-blue-200">
@@ -213,9 +206,7 @@ const handleCustomOpenAIModelChange = () => {
               @change="handleCustomOpenAIEndpointChange"
               class="w-full"
             />
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              OpenAI 兼容的 API 端点地址
-            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">OpenAI 兼容的 API 端点地址</p>
           </div>
 
           <div>

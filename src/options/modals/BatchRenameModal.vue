@@ -161,9 +161,7 @@ onUnmounted(() => {
           placeholder="例如：给这些表情加上'搞笑'前缀，或者'根据图片内容生成描述性名称'"
           :rows="2"
         />
-        <p class="text-xs text-gray-500 mt-1">
-          语言设置已移至 设置 → AI 设置
-        </p>
+        <p class="text-xs text-gray-500 mt-1">语言设置已移至 设置 → AI 设置</p>
       </div>
       <a-button type="primary" @click="handleGenerateNames" :loading="isLoading">
         {{ isLoading ? '生成中...' : '生成预览' }}
