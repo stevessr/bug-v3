@@ -2,7 +2,6 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import './styles/main.ts'
-import { useEmojiStore } from './stores/emojiStore'
 import router from './options/router'
 import App from './App.vue'
 
@@ -13,6 +12,4 @@ app.use(pinia)
 app.use(router)
 app.mount('#app')
 
-// Initialize store data
-const store = useEmojiStore(pinia)
-store.loadData()
+// Store data will be loaded by the active component (Popup or Options) in their respective composables

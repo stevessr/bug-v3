@@ -6,7 +6,7 @@ import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
 import { cloudflareSyncService } from '../utils/cloudflareSync'
 
-import { defaultSettings } from '@/types/emoji'
+import { defaultSettings } from '@/types/defaultSettings'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 // Global flag to ensure runtime message listener is only registered once across all store instances
@@ -874,9 +874,27 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   // --- Settings Management ---
   const updateSettings = (newSettings: Partial<AppSettings>) => {
+    // Check if settings actually changed to avoid unnecessary updates
+    let hasChanges = false
+    for (const key in newSettings) {
+      if (Object.prototype.hasOwnProperty.call(newSettings, key)) {
+        const typedKey = key as keyof AppSettings
+        if (settings.value[typedKey] !== newSettings[typedKey]) {
+          hasChanges = true
+          break
+        }
+      }
+    }
+    
+    if (!hasChanges) {
+      console.log('[EmojiStore] updateSettings - no changes detected, skipping')
+      return
+    }
+    
     settings.value = { ...settings.value, ...newSettings }
     console.log('[EmojiStore] updateSettings', { updates: newSettings })
-    maybeSave()
+    // Don't call maybeSave() here - let the watch handle all saves with debouncing
+    // This prevents duplicate saves when updating settings
     // attempt to notify background to sync to content scripts
     void syncSettingsToBackground()
   }
