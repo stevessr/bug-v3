@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DownOutlined } from '@ant-design/icons-vue'
-import { ref, watch, isRef, type Ref } from 'vue'
+import { ref, watch, isRef, type Ref, computed } from 'vue'
 import { reactive } from 'vue'
 
 import type { AppSettings } from '../../types/type'
@@ -9,8 +9,13 @@ import ThemeColorPicker from './ThemeColorPicker.vue'
 import SettingSwitch from './SettingSwitch.vue'
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
-// allow flexible typing (either a reactive ref or a plain object)
-const settings = props.settings as AppSettings | Ref<AppSettings>
+// keep settings reactive by using a computed that always reads from props
+const settings = computed(() => {
+  if (isRef(props.settings)) {
+    return props.settings.value
+  }
+  return props.settings
+})
 const emit = defineEmits([
   'update:imageScale',
   'update:showSearchBar',
@@ -32,8 +37,7 @@ const emit = defineEmits([
 
 const getCustomPrimaryColor = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.customPrimaryColor) || '#1890ff'
-    return (settings && (settings as AppSettings).customPrimaryColor) || '#1890ff'
+    return settings.value?.customPrimaryColor || '#1890ff'
   } catch {
     return '#1890ff'
   }
@@ -41,8 +45,7 @@ const getCustomPrimaryColor = () => {
 
 const getCustomColorScheme = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.customColorScheme) || 'default'
-    return (settings && (settings as AppSettings).customColorScheme) || 'default'
+    return settings.value?.customColorScheme || 'default'
   } catch {
     return 'default'
   }
@@ -50,8 +53,7 @@ const getCustomColorScheme = () => {
 // support both ref(settings) and plain settings object
 const getOutputFormat = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.outputFormat) || 'markdown'
-    return (settings && (settings as AppSettings).outputFormat) || 'markdown'
+    return settings.value?.outputFormat || 'markdown'
   } catch {
     return 'markdown'
   }
@@ -59,8 +61,7 @@ const getOutputFormat = () => {
 
 const getTheme = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.theme) || 'system'
-    return (settings && (settings as AppSettings).theme) || 'system'
+    return settings.value?.theme || 'system'
   } catch {
     return 'system'
   }
@@ -69,8 +70,7 @@ const getTheme = () => {
 // Helper function to get setting value (moved up so it's available before top-level refs use it)
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value[key]) ?? defaultValue
-    return (settings && (settings as AppSettings)[key]) ?? defaultValue
+    return settings.value?.[key] ?? defaultValue
   } catch {
     return defaultValue
   }

@@ -224,6 +224,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       favorites.value = new Set()
     } finally {
       isLoading.value = false
+      // Mark initial load as complete after a short delay to allow Vue reactivity to settle
+      setTimeout(() => {
+        initialLoadComplete = true
+      }, 100)
     }
   }
   // No lazy-load helpers; all groups remain fully loaded
@@ -1037,11 +1041,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Watch for local changes and persist them (with better debouncing)
   let saveTimeout: NodeJS.Timeout | null = null
   const SAVE_DEBOUNCE_DELAY = 500 // 500ms debounce
+  let initialLoadComplete = false // Track if initial load is complete
 
   watch(
     [groups, settings, favorites],
     () => {
-      if (!isLoading.value && !isUpdatingFromStorage && !isSaving.value) {
+      // Don't trigger saves during initial load or when explicitly disabled
+      if (initialLoadComplete && !isLoading.value && !isUpdatingFromStorage && !isSaving.value) {
         // Clear existing timeout
         if (saveTimeout) {
           clearTimeout(saveTimeout)
