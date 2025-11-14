@@ -20,14 +20,18 @@ const emit = defineEmits(['close', 'apply'])
 
 const emojiStore = useEmojiStore()
 const prompt = ref('')
-const language = ref(emojiStore.settings.geminiLanguage || 'en')
 const newNames = ref<Record<string, string>>({})
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 
 const geminiConfig = computed(() => ({
   apiKey: emojiStore.settings.geminiApiKey,
-  model: emojiStore.settings.geminiModel
+  model: emojiStore.settings.geminiModel,
+  language: emojiStore.settings.geminiLanguage || 'Chinese',
+  useCustomOpenAI: emojiStore.settings.useCustomOpenAI,
+  customOpenAIEndpoint: emojiStore.settings.customOpenAIEndpoint,
+  customOpenAIKey: emojiStore.settings.customOpenAIKey,
+  customOpenAIModel: emojiStore.settings.customOpenAIModel
 }))
 
 watch(
@@ -39,15 +43,24 @@ watch(
       newNames.value = {}
       isLoading.value = false
       error.value = null
-      language.value = emojiStore.settings.geminiLanguage || 'en'
     }
   }
 )
 
 const handleGenerateNames = async () => {
-  if (!geminiConfig.value.apiKey) {
-    error.value = 'Gemini API Key is not configured in the settings.'
-    return
+  const config = geminiConfig.value
+
+  // Check if we have the necessary API keys
+  if (config.useCustomOpenAI) {
+    if (!config.customOpenAIKey || !config.customOpenAIEndpoint) {
+      error.value = 'Custom OpenAI API configuration is incomplete. Please check settings.'
+      return
+    }
+  } else {
+    if (!config.apiKey) {
+      error.value = 'Gemini API Key is not configured in the settings.'
+      return
+    }
   }
 
   isLoading.value = true
@@ -55,10 +68,7 @@ const handleGenerateNames = async () => {
   newNames.value = {}
 
   try {
-    const results = await generateBatchNames(props.selectedEmojis, prompt.value, {
-      ...geminiConfig.value,
-      language: language.value
-    })
+    const results = await generateBatchNames(props.selectedEmojis, prompt.value, config)
     newNames.value = results
   } catch (e: any) {
     error.value = `Failed to generate names: ${e.message}`
@@ -96,15 +106,9 @@ const okButtonProps = computed(() => ({
           placeholder="例如：给这些表情加上'搞笑'前缀，或者'根据图片内容生成描述性名称'"
           :rows="2"
         />
-      </div>
-      <div>
-        <p class="font-semibold">目标语言:</p>
-        <a-select v-model:value="language" style="width: 120px">
-          <a-select-option value="en">English</a-select-option>
-          <a-select-option value="zh-CN">简体中文</a-select-option>
-          <a-select-option value="ja">日本語</a-select-option>
-          <a-select-option value="ko">한국어</a-select-option>
-        </a-select>
+        <p class="text-xs text-gray-500 mt-1">
+          语言设置已移至 设置 → AI 设置
+        </p>
       </div>
       <a-button type="primary" @click="handleGenerateNames" :loading="isLoading">
         {{ isLoading ? '生成中...' : '生成预览' }}

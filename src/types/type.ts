@@ -16,6 +16,12 @@ export interface AppSettings {
   tenorApiKey?: string
   geminiApiKey?: string
   geminiLanguage?: 'English' | 'Chinese'
+  geminiModel?: 'gemini-pro' | 'gemini-flash' | 'gemini-flash-lite'
+  // Custom OpenAI provider settings
+  useCustomOpenAI?: boolean
+  customOpenAIEndpoint?: string
+  customOpenAIKey?: string
+  customOpenAIModel?: string
   theme?: 'system' | 'light' | 'dark'
   // Custom theme colors
   customPrimaryColor?: string // 主题主色

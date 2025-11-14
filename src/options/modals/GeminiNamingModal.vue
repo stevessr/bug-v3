@@ -24,11 +24,8 @@ const analysis = ref<ImageAnalysisResult | null>(null)
 const selectedName = ref<string>('')
 const customName = ref<string>('')
 
-const language = computed({
-  get: () => emojiStore.settings.geminiLanguage || 'English',
-  set: val => {
-    emojiStore.updateSettings({ geminiLanguage: val })
-  }
+const language = computed(() => {
+  return emojiStore.settings.geminiLanguage || 'Chinese'
 })
 
 const hasApiKey = computed(() => {
@@ -59,7 +56,12 @@ const analyzeImage = async () => {
   try {
     const result = await analyzeImageForNaming(props.imageUrl, {
       apiKey: emojiStore.settings.geminiApiKey!,
-      language: language.value
+      language: language.value,
+      model: emojiStore.settings.geminiModel,
+      useCustomOpenAI: emojiStore.settings.useCustomOpenAI,
+      customOpenAIEndpoint: emojiStore.settings.customOpenAIEndpoint,
+      customOpenAIKey: emojiStore.settings.customOpenAIKey,
+      customOpenAIModel: emojiStore.settings.customOpenAIModel
     })
 
     analysis.value = result
@@ -118,13 +120,6 @@ watch(
     }
   }
 )
-
-// Re-analyze when language changes
-watch(language, () => {
-  if (props.show && hasApiKey.value && !isAnalyzing.value) {
-    analyzeImage()
-  }
-})
 </script>
 
 <template>
@@ -138,15 +133,6 @@ watch(language, () => {
         <a href="#/settings" class="text-sm text-blue-600 hover:underline" @click="handleCancel">
           前往设置 →
         </a>
-      </div>
-
-      <!-- Language Selection -->
-      <div class="flex items-center gap-4">
-        <label class="text-sm font-medium">语言偏好：</label>
-        <a-radio-group v-model:value="language" button-style="solid">
-          <a-radio-button value="English">English</a-radio-button>
-          <a-radio-button value="Chinese">中文</a-radio-button>
-        </a-radio-group>
       </div>
 
       <!-- Image Preview -->
