@@ -69,12 +69,14 @@ A modern, feature-rich browser extension for managing and using custom emojis ac
 
 ## 📖 Documentation
 
+- **[Contributing Guide](./CONTRIBUTING.md)** - How to contribute to the project
 - **[Changelog](./CHANGELOG.md)** - Version history and release notes
 - **[Permissions Guide](./PERMISSIONS.md)** - Explanation of required permissions
 - **[Sync Documentation](./SYNC_DOCUMENTATION.md)** - WebDAV and S3 sync setup guide
 - **[AI Features Guide](./GEMINI_FEATURES.md)** - Gemini API integration and AI features
 - **[Build Flags](./scripts/docs/BUILD_FLAGS.md)** - Compile-time optimization options
 - **[Userscript Guide](./scripts/docs/USERSCRIPT_GUIDE.md)** - Using as a userscript with Tampermonkey
+- **[Documentation Index](./docs/README.md)** - Complete documentation index
 
 ## 🛠️ Development
 
@@ -266,28 +268,33 @@ The extension uses a sophisticated progressive multi-layer storage system:
 
 ## 🤝 Contributing
 
-We welcome contributions! Here's how you can help:
+We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for detailed information on:
+
+- Setting up the development environment
+- Code style and standards
+- Testing requirements
+- Pull request process
+- Reporting issues
+
+### Quick Start for Contributors
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests if applicable
-5. Run linting and tests (`npm run lint && npm test`)
-6. Commit your changes (`git commit -m 'Add amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
-
-### Development Guidelines
-
-- Follow the existing code style
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation as needed
-- Keep PRs focused and atomic
+3. Make your changes following our [code standards](./CONTRIBUTING.md#coding-standards)
+4. Run tests and linting (`npm run lint && npm test`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
 ## 📝 License
 
-MIT License - see [LICENSE](./licences.md) file for details.
+This project is licensed under GPL-3.0 with additional attribution requirements. See [LICENSE.md](./LICENSE.md) for details.
+
+Key points:
+- Free to use, modify, and distribute
+- Attribution to original source required
+- Derivative works must also be GPL-3.0
+- Can be published to Chrome/Edge stores with attribution
 
 ## 🙏 Acknowledgments
 
