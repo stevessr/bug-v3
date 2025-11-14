@@ -77,8 +77,12 @@ const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
 }
 
 // Helper function to handle setting updates (also moved up to avoid ordering issues)
-const handleSettingUpdate = (key: string, value: any) => {
-  emit(`update:${key}` as any, value)
+const handleSettingUpdate = async (key: string, value: any) => {
+  try {
+    await emit(`update:${key}` as any, value)
+  } catch (error) {
+    console.error(`[GlobalSettings] Failed to update setting ${key}:`, error)
+  }
 }
 
 // local reactive copy for outputFormat so the select will update when parent props change
@@ -141,14 +145,22 @@ watch(
 
 // removed unused handleOutputFormatChange (dropdown is used instead)
 
-const handleOutputFormatSelect = (key: string) => {
+const handleOutputFormatSelect = async (key: string) => {
   localOutputFormat.value = key
-  emit('update:outputFormat', key)
+  try {
+    await emit('update:outputFormat', key)
+  } catch (error) {
+    console.error('[GlobalSettings] Failed to update outputFormat:', error)
+  }
 }
 
-const handleThemeSelect = (key: string) => {
+const handleThemeSelect = async (key: string) => {
   localTheme.value = key
-  emit('update:theme', key)
+  try {
+    await emit('update:theme', key)
+  } catch (error) {
+    console.error('[GlobalSettings] Failed to update theme:', error)
+  }
 }
 
 const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
@@ -160,21 +172,39 @@ const handleThemeSelectInfo = (info: { key: string | number }) => {
 }
 
 // Custom color handlers
-const handleCustomPrimaryColorUpdate = (color: string) => {
+const handleCustomPrimaryColorUpdate = async (color: string) => {
   localCustomPrimaryColor.value = color
-  emit('update:customPrimaryColor', color)
+  try {
+    await emit('update:customPrimaryColor', color)
+  } catch (error) {
+    console.error('[GlobalSettings] Failed to update customPrimaryColor:', error)
+  }
 }
 
-const handleCustomColorSchemeUpdate = (scheme: string) => {
+const handleCustomColorSchemeUpdate = async (scheme: string) => {
   localCustomColorScheme.value = scheme
-  emit('update:customColorScheme', scheme)
+  try {
+    await emit('update:customColorScheme', scheme)
+  } catch (error) {
+    console.error('[GlobalSettings] Failed to update customColorScheme:', error)
+  }
 }
 
 // Use Ant Design slider's afterChange to update settings when drag finishes.
-const handleImageScaleChange = (value: number | number[]) => {
+const handleImageScaleChange = async (value: number | number[]) => {
   const num = Array.isArray(value) ? value[0] : value
   // emit immediately so UI updates take effect while dragging
-  setTimeout(() => emit('update:imageScale', num), 0)
+  try {
+    setTimeout(async () => {
+      try {
+        await emit('update:imageScale', num)
+      } catch (error) {
+        console.error('[GlobalSettings] Failed to update imageScale:', error)
+      }
+    }, 0)
+  } catch (error) {
+    console.error('[GlobalSettings] Failed to handle imageScale change:', error)
+  }
 }
 
 // Custom CSS editor state
@@ -200,9 +230,13 @@ const openCustomCssEditor = () => {
   showCustomCssEditor.value = true
 }
 
-const saveCustomCss = () => {
-  emit('update:customCss', localCustomCss.value || '')
-  showCustomCssEditor.value = false
+const saveCustomCss = async () => {
+  try {
+    await emit('update:customCss', localCustomCss.value || '')
+    showCustomCssEditor.value = false
+  } catch (error) {
+    console.error('[GlobalSettings] Failed to save custom CSS:', error)
+  }
 }
 
 const cancelCustomCss = () => {
@@ -263,17 +297,21 @@ const markDirty = () => {
   dirty.value = true
 }
 
-const emitUploadMenuItems = () => {
+const emitUploadMenuItems = async () => {
   // Emit the entire structure when user clicks 保存
-  emit('update:uploadMenuItems', {
-    autoItems: localUploadMenuItems.autoItems,
-    iframes: localUploadMenuItems.iframes,
-    sides: localUploadMenuItems.sides
-  })
+  try {
+    await emit('update:uploadMenuItems', {
+      autoItems: localUploadMenuItems.autoItems,
+      iframes: localUploadMenuItems.iframes,
+      sides: localUploadMenuItems.sides
+    })
+  } catch (error) {
+    console.error('[GlobalSettings] Failed to update uploadMenuItems:', error)
+  }
 }
 
-const saveUploadMenuItems = () => {
-  emitUploadMenuItems()
+const saveUploadMenuItems = async () => {
+  await emitUploadMenuItems()
   dirty.value = false
 }
 

@@ -343,8 +343,21 @@ class NewStorageManager {
     ])
   }
 
-  // Conflict resolution: newer timestamp wins
+  // Conflict resolution: for settings, prefer extension storage to ensure persistence
   async getWithConflictResolution(key: string): Promise<any> {
+    // For settings, prioritize extension storage to ensure we get the latest saved settings
+    if (key === STORAGE_KEYS.SETTINGS) {
+      try {
+        const extensionValue = await this.extensionStorage.get(key)
+        if (extensionValue && extensionValue.data) {
+          logStorage('CONFLICT_RESOLUTION', key, { source: 'extensionStorage', timestamp: extensionValue.timestamp, value: extensionValue.data })
+          return extensionValue.data
+        }
+      } catch (error) {
+        console.warn('[Storage] Failed to get settings from extension storage:', error)
+      }
+    }
+
     const values = await Promise.allSettled([
       this.localStorage.get(key),
       this.sessionStorage.get(key),
@@ -353,19 +366,21 @@ class NewStorageManager {
 
     let newestValue = null
     let newestTimestamp = 0
+    let source = 'unknown'
 
-    values.forEach(result => {
+    values.forEach((result, index) => {
       if (result.status === 'fulfilled' && result.value) {
         const timestamp = result.value.timestamp || 0
         if (timestamp > newestTimestamp) {
           newestTimestamp = timestamp
           newestValue = result.value.data
+          source = ['localStorage', 'sessionStorage', 'extensionStorage'][index]
         }
       }
     })
 
     if (newestValue !== null) {
-      logStorage('CONFLICT_RESOLUTION', key, { timestamp: newestTimestamp, value: newestValue })
+      logStorage('CONFLICT_RESOLUTION', key, { source, timestamp: newestTimestamp, value: newestValue })
       return newestValue
     }
 
@@ -499,10 +514,28 @@ export const newStorageHelpers = {
   },
 
   async setSettings(settings: AppSettings): Promise<void> {
-    const stored = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
-    const mergedSettings = { ...(stored || {}), ...settings }
-    const updatedSettings = { ...defaultSettings, ...mergedSettings, lastModified: Date.now() }
-    await storageManager.set(STORAGE_KEYS.SETTINGS, updatedSettings)
+    console.log('[Storage] setSettings called with:', settings)
+    
+    try {
+      // Get current settings to merge properly
+      const stored = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
+      const mergedSettings = { ...(stored || {}), ...settings }
+      const updatedSettings = { ...defaultSettings, ...mergedSettings, lastModified: Date.now() }
+      
+      console.log('[Storage] Saving settings:', updatedSettings)
+      
+      // For settings, save immediately to all storage layers to ensure persistence
+      await Promise.allSettled([
+        storageManager.localStorage.set(STORAGE_KEYS.SETTINGS, updatedSettings),
+        storageManager.sessionStorage.set(STORAGE_KEYS.SETTINGS, updatedSettings),
+        storageManager.extensionStorage.set(STORAGE_KEYS.SETTINGS, updatedSettings)
+      ])
+      
+      console.log('[Storage] Settings saved successfully to all storage layers')
+    } catch (error) {
+      console.error('[Storage] Failed to save settings:', error)
+      throw error
+    }
   },
 
   // Favorites management

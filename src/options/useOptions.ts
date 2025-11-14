@@ -205,59 +205,62 @@ export default function useOptions() {
     showSuccess('表情已删除')
   }
 
-  const updateImageScale = (value: number) => {
+  const updateImageScale = async (value: number) => {
     if (Number.isInteger(value) && value > 0) {
-      emojiStore.updateSettings({ imageScale: value })
+      await emojiStore.updateSettings({ imageScale: value })
     }
   }
 
   const localGridColumns = ref<number>(emojiStore.settings.gridColumns || 4)
 
-  watch(localGridColumns, val => {
+  watch(localGridColumns, async (val) => {
     if (Number.isInteger(val) && val >= 1) {
-      emojiStore.updateSettings({ gridColumns: val })
+      await emojiStore.updateSettings({ gridColumns: val })
     }
   })
 
-  const updateShowSearchBar = (value: boolean) => {
-    emojiStore.updateSettings({ showSearchBar: value })
+  const updateShowSearchBar = async (value: boolean) => {
+    await emojiStore.updateSettings({ showSearchBar: value })
   }
 
-  const updateOutputFormat = (value: string) => {
-    emojiStore.updateSettings({ outputFormat: value as 'markdown' | 'html' })
+  const updateOutputFormat = async (value: string) => {
+    await emojiStore.updateSettings({ outputFormat: value as 'markdown' | 'html' })
   }
 
-  const updateForceMobileMode = (value: boolean) => {
-    emojiStore.updateSettings({ forceMobileMode: value })
+  const updateForceMobileMode = async (value: boolean) => {
+    await emojiStore.updateSettings({ forceMobileMode: value })
   }
 
-  const updateEnableLinuxDoInjection = (value: boolean) => {
-    emojiStore.updateSettings({ enableLinuxDoInjection: value })
+  const updateEnableLinuxDoInjection = async (value: boolean) => {
+    await emojiStore.updateSettings({ enableLinuxDoInjection: value })
   }
 
-  const updateEnableHoverPreview = (value: boolean) => {
-    emojiStore.updateSettings({ enableHoverPreview: value })
+  const updateEnableHoverPreview = async (value: boolean) => {
+    await emojiStore.updateSettings({ enableHoverPreview: value })
   }
 
-  const updateEnableXcomExtraSelectors = (value: boolean) => {
-    emojiStore.updateSettings({ enableXcomExtraSelectors: value })
+  const updateEnableXcomExtraSelectors = async (value: boolean) => {
+    await emojiStore.updateSettings({ enableXcomExtraSelectors: value })
   }
 
-  const updateEnableCalloutSuggestions = (value: boolean) => {
-    emojiStore.updateSettings({ enableCalloutSuggestions: value })
+  const updateEnableCalloutSuggestions = async (value: boolean) => {
+    await emojiStore.updateSettings({ enableCalloutSuggestions: value })
   }
 
-  const updateEnableBatchParseImages = (value: boolean) => {
-    emojiStore.updateSettings({ enableBatchParseImages: value })
+  const updateEnableBatchParseImages = async (value: boolean) => {
+    await emojiStore.updateSettings({ enableBatchParseImages: value })
   }
 
-  const updateSyncVariantToDisplayUrl = (value: boolean) => {
-    emojiStore.updateSettings({ syncVariantToDisplayUrl: value })
+  const updateSyncVariantToDisplayUrl = async (value: boolean) => {
+    await emojiStore.updateSettings({ syncVariantToDisplayUrl: value })
   }
 
-  const updateTheme = (theme: 'system' | 'light' | 'dark') => {
-    emojiStore.updateSettings({ theme })
+  const updateTheme = async (theme: 'system' | 'light' | 'dark') => {
+    await emojiStore.updateSettings({ theme })
+    
+    // Also save to localStorage for immediate persistence and compatibility
     localStorage.setItem('theme', theme)
+    localStorage.setItem('appSettings_theme', theme)
 
     // 应用主题类名
     if (theme === 'dark') {
@@ -292,8 +295,8 @@ export default function useOptions() {
     )
   }
 
-  const updateCustomPrimaryColor = (color: string) => {
-    emojiStore.updateSettings({ customPrimaryColor: color })
+  const updateCustomPrimaryColor = async (color: string) => {
+    await emojiStore.updateSettings({ customPrimaryColor: color })
 
     // 触发主题变化事件以更新 Ant Design Vue 主题
     const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
@@ -307,25 +310,25 @@ export default function useOptions() {
     )
   }
 
-  const updateCustomColorScheme = (scheme: AppSettings['customColorScheme']) => {
-    emojiStore.updateSettings({ customColorScheme: scheme })
+  const updateCustomColorScheme = async (scheme: AppSettings['customColorScheme']) => {
+    await emojiStore.updateSettings({ customColorScheme: scheme })
   }
 
-  const updateCustomCss = (css: string) => {
-    emojiStore.updateSettings({ customCss: css })
+  const updateCustomCss = async (css: string) => {
+    await emojiStore.updateSettings({ customCss: css })
   }
 
-  const updateUploadMenuItems = (payload: any) => {
+  const updateUploadMenuItems = async (payload: any) => {
     try {
       // store the structure under settings so it will be read by content scripts
-      emojiStore.updateSettings({ uploadMenuItems: payload })
+      await emojiStore.updateSettings({ uploadMenuItems: payload })
     } catch (e) {
       console.error('Failed to update uploadMenuItems', e)
     }
   }
 
-  const updateGeminiApiKey = (apiKey: string) => {
-    emojiStore.updateSettings({ geminiApiKey: apiKey })
+  const updateGeminiApiKey = async (apiKey: string) => {
+    await emojiStore.updateSettings({ geminiApiKey: apiKey })
   }
 
   const openEditGroup = (group: EmojiGroup) => {
@@ -834,6 +837,33 @@ export default function useOptions() {
 
   onMounted(async () => {
     await emojiStore.loadData()
+
+    // Initialize theme from multiple sources
+    const initializeTheme = () => {
+      const settingsTheme = emojiStore.settings.theme
+      const localTheme = localStorage.getItem('theme') || localStorage.getItem('appSettings_theme')
+      const finalTheme = settingsTheme || localTheme || 'system'
+      
+      console.log('[useOptions] Initializing theme:', {
+        settingsTheme,
+        localTheme,
+        finalTheme
+      })
+      
+      // Apply the theme
+      const updateFunc = async () => {
+        try {
+          await updateTheme(finalTheme as 'system' | 'light' | 'dark')
+        } catch (error) {
+          console.error('[useOptions] Failed to initialize theme:', error)
+        }
+      }
+      
+      updateFunc()
+    }
+    
+    // Initialize theme after settings are loaded
+    initializeTheme()
 
     if (emojiStore.groups.length > 0) {
       selectedGroupForAdd.value = emojiStore.groups[0].id

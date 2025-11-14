@@ -89,6 +89,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     try {
       // Initialize sync service first
       await initializeSync()
+      
+      // Setup storage change listener
+      setupStorageChangeListener()
 
       // Load data using new storage system with conflict resolution
       console.log('[EmojiStore] Loading data from new storage system')
@@ -163,9 +166,22 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       // Merge with packaged defaults where available
       try {
         const packaged = await loadPackagedDefaults()
-        settings.value = { ...defaultSettings, ...(packaged?.settings || {}), ...settingsData }
+        const mergedSettings = { ...defaultSettings, ...(packaged?.settings || {}), ...settingsData }
+        settings.value = mergedSettings
+        
+        // Ensure settings are immediately saved to all storage layers for persistence
+        if (settingsData) {
+          console.log('[EmojiStore] Re-saving loaded settings to ensure persistence')
+          await newStorageHelpers.setSettings(mergedSettings)
+        }
       } catch {
         settings.value = { ...defaultSettings, ...settingsData }
+        
+        // Ensure settings are immediately saved to all storage layers for persistence
+        if (settingsData) {
+          console.log('[EmojiStore] Re-saving loaded settings to ensure persistence')
+          await newStorageHelpers.setSettings(settings.value)
+        }
       }
       favorites.value = new Set(favoritesData || [])
 
@@ -873,12 +889,35 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   }
 
   // --- Settings Management ---
-  const updateSettings = (newSettings: Partial<AppSettings>) => {
-    settings.value = { ...settings.value, ...newSettings }
-    console.log('[EmojiStore] updateSettings', { updates: newSettings })
-    maybeSave()
-    // attempt to notify background to sync to content scripts
-    void syncSettingsToBackground()
+  const updateSettings = async (newSettings: Partial<AppSettings>) => {
+    console.log('[EmojiStore] updateSettings called with:', newSettings)
+    
+    try {
+      // Update local state immediately
+      const oldSettings = { ...settings.value }
+      settings.value = { ...settings.value, ...newSettings }
+      
+      console.log('[EmojiStore] Settings updated locally:', {
+        old: oldSettings,
+        new: settings.value,
+        updates: newSettings
+      })
+      
+      // Save to storage
+      await newStorageHelpers.setSettings(settings.value)
+      
+      // Notify background to sync settings across contexts
+      await syncSettingsToBackground()
+      
+      console.log('[EmojiStore] updateSettings completed successfully')
+    } catch (error) {
+      console.error('[EmojiStore] updateSettings failed:', error)
+      // Revert local state on failure
+      settings.value = { ...settings.value, ...Object.fromEntries(
+        Object.keys(newSettings).map(key => [key, settings.value[key as keyof AppSettings]])
+      )}
+      throw error
+    }
   }
 
   // Notify background to sync settings across contexts (content scripts)
@@ -1327,7 +1366,26 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     })
   }
 
-  // Register runtime message listener only once globally to prevent duplicate handlers
+  // Listen for storage changes from other tabs/windows
+  const setupStorageChangeListener = () => {
+    try {
+      const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
+      if (chromeAPI?.storage?.onChanged) {
+        chromeAPI.storage.onChanged.addListener((changes: any, namespace: string) => {
+          if (namespace === 'local' && changes[STORAGE_KEYS.SETTINGS]) {
+            const newSettings = changes[STORAGE_KEYS.SETTINGS].newValue
+            if (newSettings && newSettings.data) {
+              console.log('[EmojiStore] Settings changed from external source:', newSettings.data)
+              settings.value = { ...defaultSettings, ...newSettings.data }
+            }
+          }
+        })
+        console.log('[EmojiStore] Storage change listener registered')
+      }
+    } catch (error) {
+      console.warn('[EmojiStore] Failed to setup storage change listener:', error)
+    }
+  }
   if (!runtimeMessageListenerRegistered) {
     try {
       const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
