@@ -4,7 +4,7 @@ import { ref, computed } from 'vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import EmojiGrid from '@/options/components/EmojiGrid.vue'
 import BatchActionsBar from '@/options/components/BatchActionsBar.vue'
-import BatchRenameModal from '@/options/modals/BatchRenameModal.vue'
+import BatchRenameModalOptimized from '@/options/modals/BatchRenameModalOptimized.vue'
 import type { Emoji } from '@/types/emoji'
 
 const emojiStore = useEmojiStore()
@@ -67,8 +67,12 @@ const handleApplyBatchRename = (newNames: Record<string, string>) => {
 
 <template>
   <div class="p-4">
-    <h1 class="text-2xl font-bold mb-4">AI 批量重命名</h1>
-    <p class="mb-4 text-gray-600">在这里，您可以选择多个表情，并使用 AI 批量重命名它们。</p>
+    <div class="mb-4">
+      <h1 class="text-2xl font-bold">AI 批量重命名</h1>
+      <p class="text-gray-600 dark:text-gray-400">
+        选择多个表情，使用 AI 智能批量重命名。支持流式加载和虚拟滚动优化。
+      </p>
+    </div>
 
     <EmojiGrid
       :emojis="allEmojis"
@@ -87,7 +91,7 @@ const handleApplyBatchRename = (newNames: Record<string, string>) => {
       @cancel="handleCancelSelection"
     />
 
-    <BatchRenameModal
+    <BatchRenameModalOptimized
       :visible="isBatchRenameModalVisible"
       :selected-emojis="selectedEmojiObjects"
       @close="isBatchRenameModalVisible = false"
