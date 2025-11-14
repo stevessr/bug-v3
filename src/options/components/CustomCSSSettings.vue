@@ -58,7 +58,9 @@ const cancelCustomCss = () => {
           @click="cancelCustomCss"
           title="点击关闭"
         ></div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-3/4 max-w-3xl p-4 relative z-10">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-3/4 max-w-3xl p-4 relative z-10"
+        >
           <h3 class="text-lg font-semibold dark:text-white mb-2">编辑自定义 CSS</h3>
           <textarea
             v-model="localCustomCss"

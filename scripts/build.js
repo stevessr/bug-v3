@@ -1,8 +1,26 @@
 #!/usr/bin/env node
 // 跨平台构建脚本
-import { spawn } from 'child_process'
+import { spawn, execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+
+// 检测可用的包管理器
+function detectPackageManager() {
+  try {
+    execSync('pnpm --version', { stdio: 'ignore' })
+    return 'pnpm'
+  } catch {
+    try {
+      execSync('npm --version', { stdio: 'ignore' })
+      return 'npm'
+    } catch {
+      throw new Error('Neither pnpm nor npm found. Please install a package manager.')
+    }
+  }
+}
+
+const PKG_MANAGER = detectPackageManager()
+console.log(`📦 Using package manager: ${PKG_MANAGER}`)
 
 // 定义环境变量配置
 const configs = {
@@ -154,7 +172,7 @@ if (isUserscript) {
   }
   const viteArgs = ['build', '--config', 'vite.config.userscript.ts']
 
-  const coreChild = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
+  const coreChild = spawn(PKG_MANAGER, ['exec', 'vite', ...viteArgs], {
     stdio: 'inherit',
     env: coreEnv,
     shell: false
@@ -174,7 +192,7 @@ if (isUserscript) {
       SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT
     }
 
-    const managerChild = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
+    const managerChild = spawn(PKG_MANAGER, ['exec', 'vite', ...viteArgs], {
       stdio: 'inherit',
       env: managerEnv,
       shell: false
@@ -215,7 +233,7 @@ if (isUserscript) {
   const publicDir = path.resolve(process.cwd(), 'public')
   const distDir = path.resolve(process.cwd(), 'dist')
 
-  const child = spawn('pnpm', ['exec', 'vite', ...viteArgs], {
+  const child = spawn(PKG_MANAGER, ['exec', 'vite', ...viteArgs], {
     stdio: 'inherit',
     env: { ...process.env, SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT },
     shell: false

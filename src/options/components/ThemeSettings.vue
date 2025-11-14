@@ -9,11 +9,7 @@ import ThemeColorPicker from './ThemeColorPicker.vue'
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 const settings = props.settings as AppSettings | Ref<AppSettings>
 
-const emit = defineEmits([
-  'update:theme',
-  'update:customPrimaryColor',
-  'update:customColorScheme'
-])
+const emit = defineEmits(['update:theme', 'update:customPrimaryColor', 'update:customColorScheme'])
 
 const getTheme = () => {
   try {
