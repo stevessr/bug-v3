@@ -22,16 +22,8 @@ export interface ImageAnalysisResult {
 const DEFAULT_MODEL = 'gemini-1.5-flash-latest'
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-// Map friendly model names to actual Gemini API model names
-const MODEL_MAP: Record<string, string> = {
-  'gemini-pro': 'gemini-1.5-pro-latest',
-  'gemini-flash': 'gemini-1.5-flash-latest',
-  'gemini-flash-lite': 'gemini-1.5-flash-8b-latest'
-}
-
 function getGeminiModelName(model?: string): string {
-  if (!model) return DEFAULT_MODEL
-  return MODEL_MAP[model] || model
+  return model || DEFAULT_MODEL
 }
 
 /**

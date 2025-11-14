@@ -29,7 +29,7 @@ const getSetting = (key: keyof AppSettings, defaultValue: any = '') => {
 // Local state for form fields
 const localGeminiApiKey = ref<string>(getSetting('geminiApiKey', ''))
 const localGeminiLanguage = ref<string>(getSetting('geminiLanguage', 'Chinese'))
-const localGeminiModel = ref<string>(getSetting('geminiModel', 'gemini-flash'))
+const localGeminiModel = ref<string>(getSetting('geminiModel', 'gemini-flash-latest'))
 const localUseCustomOpenAI = ref<boolean>(getSetting('useCustomOpenAI', false))
 const localCustomOpenAIEndpoint = ref<string>(getSetting('customOpenAIEndpoint', ''))
 const localCustomOpenAIKey = ref<string>(getSetting('customOpenAIKey', ''))
@@ -51,7 +51,7 @@ watch(
 )
 
 watch(
-  () => getSetting('geminiModel', 'gemini-flash'),
+  () => getSetting('geminiModel', 'gemini-flash-latest'),
   (val: string) => {
     localGeminiModel.value = val
   }
@@ -155,7 +155,7 @@ const handleCustomOpenAIModelChange = () => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium dark:text-white mb-2">语言偏好:</label>
+            <label class="block text-sm font-medium dark:text-white mb-2">语言偏好：</label>
             <a-select
               v-model:value="localGeminiLanguage"
               @change="handleGeminiLanguageChange"
@@ -168,15 +168,15 @@ const handleCustomOpenAIModelChange = () => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium dark:text-white mb-2">模型选择:</label>
+            <label class="block text-sm font-medium dark:text-white mb-2">模型选择：</label>
             <a-select
               v-model:value="localGeminiModel"
               @change="handleGeminiModelChange"
               class="w-full"
             >
-              <a-select-option value="gemini-pro">Gemini Pro (最强)</a-select-option>
-              <a-select-option value="gemini-flash">Gemini Flash (推荐)</a-select-option>
-              <a-select-option value="gemini-flash-lite">Gemini Flash Lite (最快)</a-select-option>
+              <a-select-option value="gemini-2.5-pro">Gemini 2.5 Pro (最强)</a-select-option>
+              <a-select-option value="gemini-flash-latest">Gemini Flash (推荐)</a-select-option>
+              <a-select-option value="gemini-flash-lite-latest">Gemini Flash Lite (最快)</a-select-option>
             </a-select>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Pro: 最强性能 | Flash: 速度与性能平衡 | Flash Lite: 最快速度
@@ -199,7 +199,7 @@ const handleCustomOpenAIModelChange = () => {
 
         <div v-if="localUseCustomOpenAI" class="space-y-3 pl-4 border-l-2 border-blue-200">
           <div>
-            <label class="block text-sm font-medium dark:text-white mb-2">API 端点:</label>
+            <label class="block text-sm font-medium dark:text-white mb-2">API 端点：</label>
             <a-input
               v-model:value="localCustomOpenAIEndpoint"
               placeholder="https://api.openai.com/v1"
@@ -221,7 +221,7 @@ const handleCustomOpenAIModelChange = () => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium dark:text-white mb-2">模型名称:</label>
+            <label class="block text-sm font-medium dark:text-white mb-2">模型名称：</label>
             <a-input
               v-model:value="localCustomOpenAIModel"
               placeholder="gpt-4o-mini"
@@ -229,7 +229,7 @@ const handleCustomOpenAIModelChange = () => {
               class="w-full"
             />
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              例如: gpt-4o-mini, gpt-4, gpt-3.5-turbo
+              例如：gpt-4o-mini, gpt-4, gpt-3.5-turbo
             </p>
           </div>
         </div>

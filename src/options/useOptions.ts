@@ -334,7 +334,7 @@ export default function useOptions() {
 
   const updateGeminiModel = (model: string) => {
     emojiStore.updateSettings({
-      geminiModel: model as 'gemini-pro' | 'gemini-flash' | 'gemini-flash-lite'
+      geminiModel: model
     })
   }
 
