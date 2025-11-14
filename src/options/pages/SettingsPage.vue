@@ -9,6 +9,7 @@ import FeatureSwitchSettings from '../components/FeatureSwitchSettings.vue'
 import MenuBarSettings from '../components/MenuBarSettings.vue'
 import CustomCSSSettings from '../components/CustomCSSSettings.vue'
 import AISettings from '../components/AISettings.vue'
+import CloudSyncSettings from '../components/CloudSyncSettings.vue'
 
 const options = inject<OptionsInject>('options')!
 
@@ -36,7 +37,9 @@ const {
   updateUseCustomOpenAI,
   updateCustomOpenAIEndpoint,
   updateCustomOpenAIKey,
-  updateCustomOpenAIModel
+  updateCustomOpenAIModel,
+  showSuccess,
+  showError
 } = options
 
 const activeTab = ref('theme')
@@ -117,6 +120,17 @@ const activeTab = ref('theme')
               @update:customOpenAIEndpoint="updateCustomOpenAIEndpoint"
               @update:customOpenAIKey="updateCustomOpenAIKey"
               @update:customOpenAIModel="updateCustomOpenAIModel"
+            />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="sync" tab="云同步">
+          <div class="py-4">
+            <CloudSyncSettings
+              :settings="emojiStore.settings"
+              :emojiStore="emojiStore"
+              :showSuccess="showSuccess"
+              :showError="showError"
             />
           </div>
         </a-tab-pane>
