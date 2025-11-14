@@ -17,12 +17,13 @@ onMounted(() => {
   const tabs = params.get('tabs')
   const originalPath = window.location.pathname
   const originalSearch = window.location.search
-  console.log('[App.vue] 检测模式', {
-    type,
-    tabs,
-    url: window.location.href,
-    search: window.location.search
-  })
+
+  // console.log('[App.vue] 检测模式', {
+  //   type,
+  //   tabs,
+  //   url: window.location.href,
+  //   search: window.location.search
+  // })
 
   // 重构后的优先级逻辑：
   // 1. 有 tabs 参数 -> 强制 Options 模式（Popup 不支持路由）
@@ -31,7 +32,7 @@ onMounted(() => {
   // 4. 默认 -> Popup 模式
   if (tabs && tabs.length > 0) {
     // 最高优先级：有路由 hash 或 tabs 参数，必须使用 Options 模式
-    console.log('[App.vue] 检测到路由 hash 或 tabs 参数，强制使用 Options 模式（Popup 不支持路由）')
+    //console.log('[App.vue] 检测到路由 hash 或 tabs 参数，强制使用 Options 模式（Popup 不支持路由）')
     isPopupMode.value = false
 
     // 如果有 tabs 参数，尝试导航到对应的路由（使用 hash 导航以兼容现有 router）
@@ -61,23 +62,23 @@ onMounted(() => {
       const newUrl =
         window.location.pathname + (keptParams.toString() ? `?${keptParams.toString()}` : '')
       window.history.replaceState({}, '', newUrl)
-      console.log('[App.vue] 已清理 URL 为：', newUrl)
+      //console.log('[App.vue] 已清理 URL 为：', newUrl)
     }
   } else if (type === 'options') {
     // 优先级 2: URL 明确指定 options 模式
-    console.log('[App.vue] URL 明确指定 options 模式')
+    //console.log('[App.vue] URL 明确指定 options 模式')
     isPopupMode.value = false
   } else if (type === 'popup') {
     // 优先级 3: URL 明确指定 popup 模式
-    console.log('[App.vue] URL 明确指定 popup 模式')
+    //console.log('[App.vue] URL 明确指定 popup 模式')
     isPopupMode.value = true
   } else {
     // 优先级 4: 默认使用 popup 模式
-    console.log('[App.vue] 无明确参数，默认使用 Popup 模式')
+    //console.log('[App.vue] 无明确参数，默认使用 Popup 模式')
     isPopupMode.value = true
   }
 
-  console.log('[App.vue] 最终模式：', isPopupMode.value ? 'Popup' : 'Options')
+  //console.log('[App.vue] 最终模式：', isPopupMode.value ? 'Popup' : 'Options')
 
   // 根据模式为 body 添加对应的 class，以应用不同的样式
   if (isPopupMode.value) {

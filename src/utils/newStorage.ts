@@ -1,7 +1,7 @@
 import type { EmojiGroup, AppSettings } from '../types/type'
 
 import { formatPreview } from '@/options/utils/formatUtils'
-import { defaultSettings } from '@/types/emoji'
+import { defaultSettings } from '@/types/defaultSettings'
 import { loadDefaultEmojiGroups, loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 // In build/test environments `chrome` may not be declared. Provide a loose declaration
@@ -38,6 +38,7 @@ function getChromeAPI() {
 
 // --- Logging Helper ---
 function logStorage(operation: string, key: string, data?: any, error?: any) {
+  return;
   const timestamp = new Date().toISOString()
   const logPrefix = `[Storage ${timestamp}]`
 

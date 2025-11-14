@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
@@ -211,10 +211,29 @@ export default function useOptions() {
     }
   }
 
-  const localGridColumns = ref<number>(emojiStore.settings.gridColumns || 4)
+  const localGridColumns = ref<number>(emojiStore.settings.gridColumns)
+
+  // Flag to prevent circular updates during initialization
+  let isInitializingGridColumns = false
+
+  // Sync localGridColumns with store when settings change from external sources
+  watch(
+    () => emojiStore.settings.gridColumns,
+    newVal => {
+      if (newVal !== undefined && newVal !== localGridColumns.value && !isInitializingGridColumns) {
+        isInitializingGridColumns = true
+        localGridColumns.value = newVal
+        // Use nextTick to ensure the flag is reset after the update propagates
+        nextTick(() => {
+          isInitializingGridColumns = false
+        })
+      }
+    },
+    { immediate: true } // Ensure sync happens on mount
+  )
 
   watch(localGridColumns, val => {
-    if (Number.isInteger(val) && val >= 1) {
+    if (Number.isInteger(val) && val >= 1 && !isInitializingGridColumns) {
       emojiStore.updateSettings({ gridColumns: val })
     }
   })
