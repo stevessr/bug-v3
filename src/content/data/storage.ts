@@ -1,7 +1,5 @@
 import { cachedState } from './state'
 
-import { defaultSettings } from '@/types/defaultSettings'
-
 function sendMessageToBackground(message: any): Promise<any> {
   return new Promise(resolve => {
     try {
@@ -71,11 +69,11 @@ export async function loadDataFromStorage(): Promise<void> {
       }
     } else {
       console.warn(
-        '[Emoji Extension] Background did not return emoji data, falling back to defaults'
+        '[Emoji Extension] Background did not return emoji data, falling back to empty state'
       )
       cachedState.emojiGroups = []
-      // Use centralized default settings
-      cachedState.settings = { ...defaultSettings }
+      // Settings will be provided by background when available
+      cachedState.settings = {} as any
     }
 
     let finalEmojisCount = 0
@@ -91,7 +89,7 @@ export async function loadDataFromStorage(): Promise<void> {
   } catch (error) {
     console.error('[Emoji Extension] Failed to load from background (module):', error)
     cachedState.emojiGroups = []
-    // Use centralized default settings
-    cachedState.settings = { ...defaultSettings }
+    // Settings will be provided by background when available
+    cachedState.settings = {} as any
   }
 }

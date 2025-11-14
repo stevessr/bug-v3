@@ -138,7 +138,6 @@ const menuItems = computed(() => {
     { key: 'stats', label: '统计', route: '/stats' },
     { key: 'duplicates', label: '重复检测', route: '/duplicates' },
     { key: 'ai-rename', label: 'AI 批量重命名', route: '/ai-rename' },
-    { key: 'sync', label: '云同步', route: '/sync' },
     { key: 'about', label: '关于', route: '/about' }
   ]
 
@@ -183,7 +182,6 @@ const handleMenuSelect = (info: any) => {
     stats: '/stats',
     duplicates: '/duplicates',
     'ai-rename': '/ai-rename',
-    sync: '/sync',
     about: '/about'
   }
 

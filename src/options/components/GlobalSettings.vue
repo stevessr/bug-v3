@@ -26,8 +26,7 @@ const emit = defineEmits([
   'update:enableHoverPreview',
   'update:syncVariantToDisplayUrl',
   'update:customCss',
-  'update:uploadMenuItems',
-  'update:geminiApiKey'
+  'update:uploadMenuItems'
 ])
 
 const getCustomPrimaryColor = () => {
@@ -112,15 +111,6 @@ watch(
   () => getCustomColorScheme(),
   val => {
     localCustomColorScheme.value = val || 'default'
-  }
-)
-
-// localGeminiApiKey now safely uses getSetting which is already declared
-const localGeminiApiKey = ref<string>(getSetting('geminiApiKey', ''))
-watch(
-  () => getSetting('geminiApiKey', ''),
-  (val: string) => {
-    localGeminiApiKey.value = val
   }
 )
 
@@ -469,35 +459,6 @@ const removeSideItem = (i: number) => {
         label="启用一键解析全部图片"
         description="控制前端是否注入'一键解析并添加所有图片'按钮"
       />
-
-      <!-- Gemini API Configuration -->
-      <div class="pt-4 border-t">
-        <h3 class="text-sm font-medium dark:text-white mb-2">Gemini API 配置</h3>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-          配置 Google Gemini API 以启用智能表情命名和相似度检测功能
-        </p>
-        <div class="flex items-center gap-2">
-          <label class="text-sm font-medium dark:text-white min-w-[100px]">API Key:</label>
-          <input
-            v-model="localGeminiApiKey"
-            type="password"
-            class="border rounded px-3 py-2 flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            @change="handleSettingUpdate('geminiApiKey', localGeminiApiKey)"
-            placeholder="输入你的 Gemini API Key"
-            title="Gemini API Key"
-          />
-        </div>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          获取 API Key:
-          <a
-            href="https://aistudio.google.com/app/apikey"
-            target="_blank"
-            class="text-blue-500 hover:underline"
-          >
-            Google AI Studio
-          </a>
-        </p>
-      </div>
 
       <!-- Upload menu items editor -->
       <div class="pt-4 border-t">

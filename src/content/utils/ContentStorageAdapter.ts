@@ -1,5 +1,3 @@
-import { defaultSettings } from '../../types/emoji'
-
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 export class ContentStorageAdapter {
@@ -176,27 +174,24 @@ export class ContentStorageAdapter {
   async getSettings(): Promise<any> {
     console.log('[Content Storage] Getting settings')
     const settings = await this.get('appSettings')
-    // Merge with central defaultSettings so fields like outputFormat are always present
+    // Content script should get settings from background, not use defaults
     if (settings && typeof settings === 'object') {
-      const result = { ...defaultSettings, ...settings }
-      console.log('[Content Storage] Settings loaded:', result)
-      return result
+      console.log('[Content Storage] Settings loaded:', settings)
+      return settings
     }
 
     // Fallback to packaged defaults (runtime JSON) when no stored settings
     try {
       const packaged = await loadPackagedDefaults()
       if (packaged && packaged.settings && Object.keys(packaged.settings).length > 0) {
-        const result = { ...defaultSettings, ...packaged.settings }
-        console.log('[Content Storage] Settings loaded from packaged defaults:', result)
-        return result
+        console.log('[Content Storage] Settings loaded from packaged defaults:', packaged.settings)
+        return packaged.settings
       }
     } catch {
       // ignore loader errors
     }
 
-    const result = { ...defaultSettings }
-    console.log('[Content Storage] Settings loaded:', result)
-    return result
+    console.log('[Content Storage] No settings found, returning empty object')
+    return {}
   }
 }

@@ -200,6 +200,14 @@ const onExportZip = (group: any) => {
   emit('exportGroupZip', group)
 }
 
+const onAIRename = (group: any) => {
+  closeMenu()
+  // Select all emojis in the group for batch rename
+  const groupEmojis = group.emojis || []
+  selectedEmojis.value = new Set(groupEmojis.map((e: any) => e.id))
+  isBatchRenameModalVisible.value = true
+}
+
 const onDedupe = (group: any) => {
   closeMenu()
   // open a small chooser: by name or by url
@@ -498,6 +506,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                         @export="onExport"
                         @exportZip="onExportZip"
                         @dedupe="onDedupe"
+                        @aiRename="onAIRename"
                         @confirmDelete="onDelete"
                         @batchUpdateSize="openBatchModal"
                       />

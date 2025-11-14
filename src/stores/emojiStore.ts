@@ -160,13 +160,21 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       } catch {
         // ignore normalization errors - not critical
       }
-      // Merge with packaged defaults where available
-      try {
-        const packaged = await loadPackagedDefaults()
-        settings.value = { ...defaultSettings, ...(packaged?.settings || {}), ...settingsData }
-      } catch {
+      
+      // Only fetch remote defaults if local settings are missing or incomplete
+      if (!settingsData || Object.keys(settingsData).length === 0) {
+        // No local settings - merge with remote defaults
+        try {
+          const packaged = await loadPackagedDefaults()
+          settings.value = { ...defaultSettings, ...(packaged?.settings || {}) }
+        } catch {
+          settings.value = { ...defaultSettings }
+        }
+      } else {
+        // Local settings exist - just merge with static defaults (no network request)
         settings.value = { ...defaultSettings, ...settingsData }
       }
+      
       favorites.value = new Set(favoritesData || [])
 
       console.log('[EmojiStore] Final groups after assignment:', {

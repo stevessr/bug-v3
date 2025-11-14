@@ -347,6 +347,32 @@ export default function useOptions() {
     emojiStore.updateSettings({ geminiApiKey: apiKey })
   }
 
+  const updateGeminiLanguage = (language: string) => {
+    emojiStore.updateSettings({ geminiLanguage: language as 'English' | 'Chinese' })
+  }
+
+  const updateGeminiModel = (model: string) => {
+    emojiStore.updateSettings({
+      geminiModel: model
+    })
+  }
+
+  const updateUseCustomOpenAI = (value: boolean) => {
+    emojiStore.updateSettings({ useCustomOpenAI: value })
+  }
+
+  const updateCustomOpenAIEndpoint = (endpoint: string) => {
+    emojiStore.updateSettings({ customOpenAIEndpoint: endpoint })
+  }
+
+  const updateCustomOpenAIKey = (key: string) => {
+    emojiStore.updateSettings({ customOpenAIKey: key })
+  }
+
+  const updateCustomOpenAIModel = (model: string) => {
+    emojiStore.updateSettings({ customOpenAIModel: model })
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -962,6 +988,12 @@ export default function useOptions() {
     updateEnableHoverPreview,
     updateUploadMenuItems,
     updateGeminiApiKey,
+    updateGeminiLanguage,
+    updateGeminiModel,
+    updateUseCustomOpenAI,
+    updateCustomOpenAIEndpoint,
+    updateCustomOpenAIKey,
+    updateCustomOpenAIModel,
     // drag/drop
     handleDragStart,
     handleDrop,

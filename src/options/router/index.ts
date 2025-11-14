@@ -13,7 +13,6 @@ import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
 import DuplicateDetectionPage from '../pages/DuplicateDetectionPage.vue'
 import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
-import SyncSettingsPage from '../pages/SyncSettingsPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -94,14 +93,6 @@ const routes: RouteRecordRaw[] = [
     component: AIRenamePage,
     meta: {
       title: 'AI 批量重命名'
-    }
-  },
-  {
-    path: '/sync',
-    name: 'sync',
-    component: SyncSettingsPage,
-    meta: {
-      title: '云同步'
     }
   },
   {

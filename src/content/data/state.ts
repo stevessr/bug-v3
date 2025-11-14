@@ -1,11 +1,11 @@
 import { AppSettings } from '@/types/type'
-import { defaultSettings } from '@/types/defaultSettings'
 
 // Shared mutable state for content scripts
+// Settings will be loaded from background, not from defaults
 export const cachedState: {
   emojiGroups: any[]
   settings: AppSettings
 } = {
   emojiGroups: [],
-  settings: defaultSettings
+  settings: {} as AppSettings
 }

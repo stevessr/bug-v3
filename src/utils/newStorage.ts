@@ -399,7 +399,7 @@ export const newStorageHelpers = {
     try {
       const stored = await this.getEmojiGroup(groupId)
 
-      const currentEmojis = Array.isArray(group.emojis) ? group.emojis : [];
+      const currentEmojis = Array.isArray(group.emojis) ? group.emojis : []
 
       const merged = {
         ...(stored || {}),
