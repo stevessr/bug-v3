@@ -247,7 +247,8 @@ const sync = async (direction: 'push' | 'pull' | 'both') => {
   isSyncing.value = true
   syncDirection.value = direction
   syncResult.value = null
-  // Use 'push' as default action when starting sync; actual action will be updated during operation
+  
+  // 初始化进度
   syncProgress.value = {
     current: 0,
     total: 1,
@@ -256,7 +257,18 @@ const sync = async (direction: 'push' | 'pull' | 'both') => {
   }
 
   try {
-    const result = await emojiStore.syncToCloudflare(direction)
+    // 传递进度回调函数
+    const result = await emojiStore.syncToCloudflare(direction, (progress) => {
+      // 更新进度状态
+      syncProgress.value = {
+        current: progress.current,
+        total: progress.total,
+        action: (progress.action || direction) as 'push' | 'pull' | 'both',
+        message: progress.message || ''
+      }
+      console.log('[SyncSettingsPage] Progress update:', progress)
+    })
+    
     syncResult.value = result
 
     if (result.success) {
@@ -567,15 +579,37 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
         </div>
 
         <!-- Sync Progress -->
-        <div v-if="isSyncing" class="mt-4">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-sm dark:text-white">{{ syncProgress.message }}</span>
-            <span class="text-sm dark:text-white">{{ Math.round(syncProgressPercent) }}%</span>
+        <div v-if="isSyncing" class="mt-4 space-y-3">
+          <!-- Progress header -->
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium dark:text-white">
+              {{ syncDirection === 'push' ? '⬆️ 推送中' : syncDirection === 'pull' ? '⬇️ 拉取中' : '🔄 同步中' }}
+            </span>
+            <span class="text-sm font-semibold dark:text-white">
+              {{ syncProgress.current }} / {{ syncProgress.total }}
+            </span>
           </div>
+          
+          <!-- Current item being processed -->
+          <div v-if="syncProgress.message" class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+            <p class="text-xs text-blue-700 dark:text-blue-300 font-mono">
+              {{ syncProgress.message }}
+            </p>
+          </div>
+          
+          <!-- Progress bar -->
           <a-progress
             :percent="syncProgressPercent"
             :status="syncInProgress ? 'active' : 'normal'"
+            :show-info="false"
           />
+          
+          <!-- Progress percentage -->
+          <div class="text-right">
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+              {{ Math.round(syncProgressPercent) }}% 完成
+            </span>
+          </div>
         </div>
 
         <!-- Sync Status Messages -->

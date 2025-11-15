@@ -1070,8 +1070,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
-  const syncToCloudflare = async (direction: 'push' | 'pull' | 'both' = 'both') => {
-    const result = await cloudflareSyncService.sync(direction)
+  const syncToCloudflare = async (
+    direction: 'push' | 'pull' | 'both' = 'both',
+    onProgress?: (progress: { current: number; total: number; action: string; message?: string }) => void
+  ) => {
+    const result = await cloudflareSyncService.sync(direction, onProgress)
     return result
   }
 

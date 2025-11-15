@@ -52,6 +52,7 @@ export interface Progress {
   current: number
   total: number
   action: 'push' | 'pull' | 'test'
+  message?: string  // 可选的详细消息
 }
 
 export type ProgressCallback = (progress: Progress) => void
@@ -119,7 +120,17 @@ export class WebDAVSyncTarget implements ISyncTarget {
 
   async push(data: SyncData, onProgress?: ProgressCallback): Promise<SyncResult> {
     try {
-      onProgress?.({ current: 0, total: 1, action: 'push' })
+      const dataStr = JSON.stringify(data, null, 2)
+      const dataSizeKB = (dataStr.length / 1024).toFixed(2)
+      const itemCount = 1 + (data.emojiGroups?.length || 0)
+      
+      onProgress?.({ 
+        current: 0, 
+        total: 1, 
+        action: 'push',
+        message: `正在推送数据到 WebDAV (${itemCount} 项，${dataSizeKB} KB)...`
+      })
+      
       const url = this.getFullUrl()
       const response = await fetch(url, {
         method: 'PUT',
@@ -127,10 +138,15 @@ export class WebDAVSyncTarget implements ISyncTarget {
           Authorization: this.getAuthHeader(),
           'Content-Type': 'application/json; charset=UTF-8'
         },
-        body: JSON.stringify(data, null, 2)
+        body: dataStr
       })
 
-      onProgress?.({ current: 1, total: 1, action: 'push' })
+      onProgress?.({ 
+        current: 1, 
+        total: 1, 
+        action: 'push',
+        message: `✓ 已推送所有数据 (${dataSizeKB} KB)`
+      })
 
       if (response.ok || response.status === 201 || response.status === 204) {
         return {
@@ -158,7 +174,13 @@ export class WebDAVSyncTarget implements ISyncTarget {
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
     try {
-      onProgress?.({ current: 0, total: 1, action: 'pull' })
+      onProgress?.({ 
+        current: 0, 
+        total: 1, 
+        action: 'pull',
+        message: '正在从 WebDAV 拉取数据...'
+      })
+      
       const url = this.getFullUrl()
       const response = await fetch(url, {
         method: 'GET',
@@ -168,10 +190,18 @@ export class WebDAVSyncTarget implements ISyncTarget {
         }
       })
 
-      onProgress?.({ current: 1, total: 1, action: 'pull' })
-
       if (response.ok) {
         const data = await response.json()
+        const dataSizeKB = (JSON.stringify(data).length / 1024).toFixed(2)
+        const itemCount = 1 + (data.emojiGroups?.length || 0)
+        
+        onProgress?.({ 
+          current: 1, 
+          total: 1, 
+          action: 'pull',
+          message: `✓ 已拉取所有数据 (${itemCount} 项，${dataSizeKB} KB)`
+        })
+        
         return {
           success: true,
           data,
@@ -286,9 +316,18 @@ export class S3SyncTarget implements ISyncTarget {
 
   async push(data: SyncData, onProgress?: ProgressCallback): Promise<SyncResult> {
     try {
-      onProgress?.({ current: 0, total: 1, action: 'push' })
-      const url = this.getS3Url()
       const body = JSON.stringify(data, null, 2)
+      const dataSizeKB = (body.length / 1024).toFixed(2)
+      const itemCount = 1 + (data.emojiGroups?.length || 0)
+      
+      onProgress?.({ 
+        current: 0, 
+        total: 1, 
+        action: 'push',
+        message: `正在推送数据到 S3 (${itemCount} 项，${dataSizeKB} KB)...`
+      })
+      
+      const url = this.getS3Url()
       const headers = await this.signRequest('PUT', url, body)
 
       const response = await fetch(url, {
@@ -296,7 +335,13 @@ export class S3SyncTarget implements ISyncTarget {
         headers,
         body
       })
-      onProgress?.({ current: 1, total: 1, action: 'push' })
+      
+      onProgress?.({ 
+        current: 1, 
+        total: 1, 
+        action: 'push',
+        message: `✓ 已推送所有数据 (${dataSizeKB} KB)`
+      })
 
       if (response.ok || response.status === 201 || response.status === 204) {
         return {
@@ -324,7 +369,13 @@ export class S3SyncTarget implements ISyncTarget {
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
     try {
-      onProgress?.({ current: 0, total: 1, action: 'pull' })
+      onProgress?.({ 
+        current: 0, 
+        total: 1, 
+        action: 'pull',
+        message: '正在从 S3 拉取数据...'
+      })
+      
       const url = this.getS3Url()
       const headers = await this.signRequest('GET', url)
 
@@ -332,10 +383,19 @@ export class S3SyncTarget implements ISyncTarget {
         method: 'GET',
         headers
       })
-      onProgress?.({ current: 1, total: 1, action: 'pull' })
-
+      
       if (response.ok) {
         const data = await response.json()
+        const dataSizeKB = (JSON.stringify(data).length / 1024).toFixed(2)
+        const itemCount = 1 + (data.emojiGroups?.length || 0)
+        
+        onProgress?.({ 
+          current: 1, 
+          total: 1, 
+          action: 'pull',
+          message: `✓ 已拉取所有数据 (${itemCount} 项，${dataSizeKB} KB)`
+        })
+        
         return {
           success: true,
           data,
@@ -448,18 +508,42 @@ export class CloudflareSyncTarget implements ISyncTarget {
       }
 
       const itemsToPush = [
-        { key: 'settings', data: data.settings },
-        ...data.emojiGroups.map(g => ({ key: encodeURIComponent(g.name), data: g }))
+        { key: 'settings', data: data.settings, displayName: '设置配置' },
+        ...data.emojiGroups.map(g => ({ 
+          key: encodeURIComponent(g.name), 
+          data: g,
+          displayName: `表情组：${g.name}`
+        }))
       ]
-      const total = itemsToPush.length
-      let current = 0
-
-      onProgress?.({ current, total, action: 'push' })
+      
+      // 计算总请求次数：每个项目需要 1 个 POST 请求
+      const totalRequests = itemsToPush.length
+      let completedRequests = 0
+      
+      // 初始进度
+      onProgress?.({ 
+        current: completedRequests, 
+        total: totalRequests, 
+        action: 'push',
+        message: `准备推送 ${totalRequests} 个数据项...`
+      })
 
       for (const item of itemsToPush) {
         try {
           const jsonData = JSON.stringify(item.data)
+          const sizeKB = (jsonData.length / 1024).toFixed(2)
           console.log(`[CloudflareSync] Pushing ${item.key}, size: ${jsonData.length} bytes`)
+          
+          // 开始处理这个项目，增加计数器（进度条立即前进）
+          completedRequests++
+          
+          // 显示正在推送的项目
+          onProgress?.({ 
+            current: completedRequests, 
+            total: totalRequests, 
+            action: 'push',
+            message: `正在推送 ${item.displayName} (${sizeKB} KB)...`
+          })
           
           const response = await fetch(`${baseUrl}/${item.key}`, {
             method: 'POST',
@@ -481,8 +565,14 @@ export class CloudflareSyncTarget implements ISyncTarget {
             console.error(`[CloudflareSync] Failed to push ${item.key}:`, errorDetail)
             throw new Error(`Failed to push item ${item.key}: ${errorDetail}`)
           }
-          current++
-          onProgress?.({ current, total, action: 'push' })
+          
+          // 报告完成（保持同样的计数，只更新消息）
+          onProgress?.({ 
+            current: completedRequests, 
+            total: totalRequests, 
+            action: 'push',
+            message: `✓ 已推送 ${item.displayName}`
+          })
         } catch (itemError) {
           console.error(`[CloudflareSync] Error pushing ${item.key}:`, itemError)
           throw itemError
@@ -491,7 +581,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
       return {
         success: true,
-        message: `Data pushed to Cloudflare Worker successfully (${total} items).`,
+        message: `Data pushed to Cloudflare Worker successfully (${totalRequests} items).`,
         timestamp: Date.now()
       }
     } catch (error) {
@@ -510,33 +600,70 @@ export class CloudflareSyncTarget implements ISyncTarget {
       const baseUrl = this.getUrl()
       // Pull is a read operation
       const headers = this.getReadAuthHeader()
-      let current = 0
-
-      // 1. Get list of all keys
-      onProgress?.({ current, total: 1, action: 'pull' }) // We don't know the total yet, so we'll update it.
+      
+      // 初始进度（暂时不知道总请求数）
+      onProgress?.({ current: 0, total: 1, action: 'pull', message: '正在获取云端数据列表...' })
+      
+      // 1. Get list of all keys (第 1 个请求)
       const listResponse = await fetch(`${baseUrl}/`, { method: 'GET', headers })
       if (!listResponse.ok) {
         throw new Error(`Failed to list keys: ${listResponse.statusText}`)
       }
       const keys: { name: string }[] = await listResponse.json()
-      const total = keys.length
-      onProgress?.({ current, total, action: 'pull' })
+      
+      // 计算总请求次数：1 个列表请求 + N 个数据请求
+      const totalRequests = 1 + keys.length
+      let completedRequests = 1  // 列表请求已完成
+      
+      onProgress?.({ 
+        current: completedRequests, 
+        total: totalRequests, 
+        action: 'pull', 
+        message: `找到 ${keys.length} 个数据项，需要 ${totalRequests} 个请求`
+      })
 
       // 2. Fetch all keys sequentially to report progress
       const pulledItems: { key: string; data: any }[] = []
       for (const key of keys) {
+        const displayName = key.name === 'settings' ? '设置配置' : `表情组：${decodeURIComponent(key.name)}`
+        
+        // 开始处理这个项目，增加计数器（进度条立即前进）
+        completedRequests++
+        
+        // 显示正在拉取的项目
+        onProgress?.({ 
+          current: completedRequests, 
+          total: totalRequests, 
+          action: 'pull', 
+          message: `正在拉取 ${displayName}...`
+        })
+        
         const res = await fetch(`${baseUrl}/${key.name}`, { method: 'GET', headers })
         if (!res.ok) {
           console.warn(`Failed to fetch key ${key.name}, skipping.`)
           continue
         }
         const data = await res.json()
+        const dataSizeKB = (JSON.stringify(data).length / 1024).toFixed(2)
         pulledItems.push({ key: key.name, data })
-        current++
-        onProgress?.({ current, total, action: 'pull' })
+        
+        // 报告完成（保持同样的计数，只更新消息）
+        onProgress?.({ 
+          current: completedRequests, 
+          total: totalRequests, 
+          action: 'pull', 
+          message: `✓ 已拉取 ${displayName} (${dataSizeKB} KB)`
+        })
       }
 
       // 3. Reconstruct the data
+      onProgress?.({ 
+        current: completedRequests, 
+        total: totalRequests, 
+        action: 'pull', 
+        message: '正在整合数据...'
+      })
+      
       const pulledData: Partial<SyncData> = {
         emojiGroups: []
       }
