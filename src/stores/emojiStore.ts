@@ -5,9 +5,6 @@ import type { Emoji, EmojiGroup, AppSettings } from '../types/type'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
 import { cloudflareSyncService } from '../utils/cloudflareSync'
-import { createSyncTarget } from '../utils/extensionSync'
-import type { SyncConfig } from '../utils/extensionSync'
-import { universalSyncService, type UniversalSyncConfig } from '../utils/universalSync'
 
 import { defaultSettings } from '@/types/defaultSettings'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
@@ -1026,203 +1023,39 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
-  // --- Universal Sync Methods ---
+  // --- Cloudflare Sync Methods ---
   const initializeSync = async () => {
     // Try to load sync configuration
-    await universalSyncService.initialize()
+    await cloudflareSyncService.initialize()
   }
 
-  const saveSyncConfig = async (config: UniversalSyncConfig) => {
-    await universalSyncService.saveConfig(config)
+  const saveSyncConfig = async (config: any) => {
+    await cloudflareSyncService.saveConfig(config)
   }
 
   const loadSyncConfig = async () => {
-    return await universalSyncService.loadConfig()
+    return await cloudflareSyncService.loadConfig()
   }
 
   const testSyncConnection = async () => {
-    return await universalSyncService.testConnection()
+    return await cloudflareSyncService.testConnection()
   }
 
-  // Ensure we have the syncToCloudflare function even if it's used elsewhere
   const syncToCloudflare = async (direction: 'push' | 'pull' | 'both' = 'both') => {
-    // We need to implement the sync method that has access to store data
-    if (!universalSyncService.isConfigured()) {
-      return {
-        success: false,
-        message: 'No sync configuration available'
-      }
-    }
-
-    try {
-      // Get current data from store
-      const syncData = {
-        emojiGroups: groups.value,
-        settings: { ...settings.value, lastModified: Date.now() },
-        timestamp: Date.now(),
-        version: '3.0'
-      }
-
-      const config = universalSyncService.getConfig()
-      if (config?.type === 'cloudflare') {
-        // Use existing Cloudflare service for Cloudflare configs
-        return await cloudflareSyncService.sync(direction)
-      }
-
-      // For non-Cloudflare configs, use the extension sync target
-      const target = createSyncTarget(config!)
-
-      if (direction === 'push' || direction === 'both') {
-        const pushResult = await target.push(syncData)
-        if (!pushResult.success) {
-          return pushResult
-        }
-      }
-
-      if (direction === 'pull' || direction === 'both') {
-        const pullResult = await target.pull()
-        if (pullResult.success && pullResult.data) {
-          // Merge the pulled data with local data
-          await mergeSyncData(pullResult.data)
-          pullResult.message = `Data pulled successfully. ${pullResult.message}`
-          return pullResult
-        } else if (!pullResult.success) {
-          return pullResult
-        }
-      }
-
-      return {
-        success: true,
-        message:
-          direction === 'both'
-            ? 'Bidirectional sync completed.'
-            : direction === 'push'
-              ? 'Push completed.'
-              : 'Pull completed.'
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: `Sync failed: ${error}`
-      }
-    }
+    const result = await cloudflareSyncService.sync(direction)
+    return result
   }
 
   const pushToCloudflare = async () => {
-    // We need to implement the push method that has access to store data
-    if (!universalSyncService.isConfigured()) {
-      return {
-        success: false,
-        message: 'No sync configuration available'
-      }
-    }
-
-    try {
-      // Get current data from store
-      const syncData = {
-        emojiGroups: groups.value,
-        settings: { ...settings.value, lastModified: Date.now() },
-        timestamp: Date.now(),
-        version: '3.0'
-      }
-
-      const config = universalSyncService.getConfig()
-      if (config?.type === 'cloudflare') {
-        // Use existing Cloudflare service for Cloudflare configs
-        return await cloudflareSyncService.pushData()
-      }
-
-      // For non-Cloudflare configs, use the extension sync target
-      const target = createSyncTarget(config!)
-      return await target.push(syncData)
-    } catch (error) {
-      return {
-        success: false,
-        message: `Push failed: ${error}`
-      }
-    }
+    return await cloudflareSyncService.pushData()
   }
 
   const pullFromCloudflare = async () => {
-    // We need to implement the pull method that has access to store data
-    if (!universalSyncService.isConfigured()) {
-      return {
-        success: false,
-        message: 'No sync configuration available'
-      }
-    }
-
-    try {
-      const config = universalSyncService.getConfig()
-      if (config?.type === 'cloudflare') {
-        // Use existing Cloudflare service for Cloudflare configs
-        return await cloudflareSyncService.pullData()
-      }
-
-      // For non-Cloudflare configs, use the extension sync target
-      const target = createSyncTarget(config!)
-      const result = await target.pull()
-
-      if (result.success && result.data) {
-        // Merge the pulled data with local data
-        await mergeSyncData(result.data)
-        result.message = `Data pulled successfully. ${result.message}`
-      }
-
-      return result
-    } catch (error) {
-      return {
-        success: false,
-        message: `Pull failed: ${error}`
-      }
-    }
+    return await cloudflareSyncService.pullData()
   }
 
   const isSyncConfigured = (): boolean => {
-    return universalSyncService.isConfigured()
-  }
-
-  // Helper to merge sync data with local data
-  const mergeSyncData = async (remoteData: any) => {
-    try {
-      // Get current local data
-      const localFavorites = Array.from(favorites.value)
-
-      // Merge groups: prefer remote groups but preserve local-only groups if needed
-      const remoteGroupIds = new Set(remoteData.emojiGroups.map((g: any) => g.id))
-      const localOnlyGroups = groups.value.filter(g => !remoteGroupIds.has(g.id))
-
-      // For overlapping groups, prefer remote data (more recent sync)
-      const mergedGroups = [
-        ...localOnlyGroups, // Keep local-only groups
-        ...remoteData.emojiGroups // Add remote groups (potentially overwriting local)
-      ]
-
-      // Merge settings: prefer remote settings but preserve local-only settings
-      const mergedSettings = { ...settings.value, ...remoteData.settings }
-      // Ensure lastModified is updated to avoid sync conflicts
-      mergedSettings.lastModified = Date.now()
-
-      // Get favorites from remote data (they might be in settings or separate)
-      let remoteFavorites: string[] = []
-      if (remoteData.settings && Array.isArray(remoteData.settings.favorites)) {
-        remoteFavorites = remoteData.settings.favorites as string[]
-      }
-
-      // Merge favorites: combine both sets
-      const mergedFavorites = Array.from(new Set([...localFavorites, ...remoteFavorites]))
-
-      // Update store state directly
-      groups.value = mergedGroups
-      settings.value = mergedSettings
-      favorites.value = new Set(mergedFavorites)
-
-      // Save to storage
-      await saveData()
-    } catch (error) {
-      console.error('[EmojiStore] Error merging sync data:', error)
-      throw error
-    }
+    return cloudflareSyncService.isConfigured()
   }
 
   // --- Synchronization and Persistence ---
