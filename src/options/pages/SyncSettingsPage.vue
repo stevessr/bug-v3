@@ -3,8 +3,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { UploadOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons-vue'
 import { inject } from 'vue'
 
-import type { SyncResult } from '../../userscript/plugins/syncTargets'
-import type { ExtendedCloudflareConfig } from '../../utils/cloudflareSync'
+import type { SyncResult, SyncTargetConfig, WebDAVConfig, S3Config, CloudflareConfig } from '../../userscript/plugins/syncTargets'
 import type { OptionsInject } from '../types'
 
 // TypeScript interface for sync progress
@@ -19,11 +18,30 @@ interface SyncProgress {
 const options = inject<OptionsInject>('options')!
 const { emojiStore } = options
 
-// Local config state
-const localConfig = reactive<Partial<ExtendedCloudflareConfig>>({
+// Sync type selection
+const syncType = ref<'cloudflare' | 'webdav' | 's3'>('cloudflare')
+
+// Local config state for different types
+const cloudflareConfig = reactive({
   url: '',
   authToken: '',
   authTokenReadonly: ''
+})
+
+const webdavConfig = reactive({
+  url: '',
+  username: '',
+  password: '',
+  path: ''
+})
+
+const s3Config = reactive({
+  endpoint: '',
+  region: '',
+  bucket: '',
+  accessKeyId: '',
+  secretAccessKey: '',
+  path: ''
 })
 
 // UI state
@@ -46,7 +64,17 @@ const configSaved = ref(false) // Track if config has been saved
 
 // Computed properties
 const isValidConfig = computed(() => {
-  return localConfig.url && localConfig.authToken
+  switch (syncType.value) {
+    case 'cloudflare':
+      return cloudflareConfig.url && cloudflareConfig.authToken
+    case 'webdav':
+      return webdavConfig.url && webdavConfig.username && webdavConfig.password
+    case 's3':
+      return s3Config.endpoint && s3Config.region && s3Config.bucket && 
+             s3Config.accessKeyId && s3Config.secretAccessKey
+    default:
+      return false
+  }
 })
 
 const isConfigured = computed(() => {
@@ -65,21 +93,35 @@ const syncInProgress = computed(() => {
 // Load existing config on component mount
 onMounted(async () => {
   console.log('[SyncSettings] Loading config on mount...')
-  const config = await emojiStore.loadSyncConfig()
+  const config: any = await emojiStore.loadSyncConfig()
   console.log('[SyncSettings] Loaded config:', config)
   if (config) {
-    localConfig.url = config.url || ''
-    localConfig.authToken = config.authToken || ''
-    localConfig.authTokenReadonly = config.authTokenReadonly || ''
+    syncType.value = config.type
     lastSyncTime.value = config.lastSyncTime || null
-    lastPushTime.value = config.lastPushTime || null
-    lastPullTime.value = config.lastPullTime || null
-    configSaved.value = true // Mark as saved if config exists
-    console.log('[SyncSettings] Config loaded into form:', { 
-      url: localConfig.url, 
-      hasAuthToken: !!localConfig.authToken,
-      hasReadonlyToken: !!localConfig.authTokenReadonly 
-    })
+    
+    // Load config based on type
+    if (config.type === 'cloudflare') {
+      cloudflareConfig.url = config.url || ''
+      cloudflareConfig.authToken = config.authToken || ''
+      cloudflareConfig.authTokenReadonly = config.authTokenReadonly || ''
+      lastPushTime.value = (config as any).lastPushTime || null
+      lastPullTime.value = (config as any).lastPullTime || null
+    } else if (config.type === 'webdav') {
+      webdavConfig.url = config.url || ''
+      webdavConfig.username = config.username || ''
+      webdavConfig.password = config.password || ''
+      webdavConfig.path = config.path || ''
+    } else if (config.type === 's3') {
+      s3Config.endpoint = config.endpoint || ''
+      s3Config.region = config.region || ''
+      s3Config.bucket = config.bucket || ''
+      s3Config.accessKeyId = config.accessKeyId || ''
+      s3Config.secretAccessKey = config.secretAccessKey || ''
+      s3Config.path = config.path || ''
+    }
+    
+    configSaved.value = true
+    console.log('[SyncSettings] Config loaded into form, type:', syncType.value)
   } else {
     console.warn('[SyncSettings] No config found')
   }
@@ -90,7 +132,7 @@ watch(
   () => emojiStore.isSyncConfigured(),
   async configured => {
     if (configured) {
-      const config = await emojiStore.loadSyncConfig()
+      const config: any = await emojiStore.loadSyncConfig()
       if (config) {
         lastSyncTime.value = config.lastSyncTime || null
         lastPushTime.value = config.lastPushTime || null
@@ -106,15 +148,44 @@ const saveConfig = async () => {
 
   isSaving.value = true
   try {
-    const config: ExtendedCloudflareConfig = {
-      type: 'cloudflare',
-      enabled: true,
-      url: localConfig.url!,
-      authToken: localConfig.authToken!,
-      // Only include authTokenReadonly if it's not empty
-      authTokenReadonly: localConfig.authTokenReadonly && localConfig.authTokenReadonly.trim() 
-        ? localConfig.authTokenReadonly 
-        : undefined
+    let config: SyncTargetConfig
+    
+    switch (syncType.value) {
+      case 'cloudflare':
+        config = {
+          type: 'cloudflare',
+          enabled: true,
+          url: cloudflareConfig.url,
+          authToken: cloudflareConfig.authToken,
+          authTokenReadonly: cloudflareConfig.authTokenReadonly && cloudflareConfig.authTokenReadonly.trim()
+            ? cloudflareConfig.authTokenReadonly
+            : undefined
+        } as CloudflareConfig
+        break
+      case 'webdav':
+        config = {
+          type: 'webdav',
+          enabled: true,
+          url: webdavConfig.url,
+          username: webdavConfig.username,
+          password: webdavConfig.password,
+          path: webdavConfig.path || undefined
+        } as WebDAVConfig
+        break
+      case 's3':
+        config = {
+          type: 's3',
+          enabled: true,
+          endpoint: s3Config.endpoint,
+          region: s3Config.region,
+          bucket: s3Config.bucket,
+          accessKeyId: s3Config.accessKeyId,
+          secretAccessKey: s3Config.secretAccessKey,
+          path: s3Config.path || undefined
+        } as S3Config
+        break
+      default:
+        throw new Error('Invalid sync type')
     }
 
     await emojiStore.saveSyncConfig(config)
@@ -122,8 +193,8 @@ const saveConfig = async () => {
     // Mark config as saved to show sync operations section
     configSaved.value = true
     
-    // Reload config to update sync times and trigger the isConfigured computed property
-    const savedConfig = await emojiStore.loadSyncConfig()
+    // Reload config to update sync times
+    const savedConfig: any = await emojiStore.loadSyncConfig()
     if (savedConfig) {
       lastSyncTime.value = savedConfig.lastSyncTime || null
       lastPushTime.value = savedConfig.lastPushTime || null
@@ -225,57 +296,200 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
     <div class="p-6 space-y-6">
       <!-- Sync Configuration Form -->
       <div class="space-y-4">
+        <!-- Sync Type Selection -->
         <div class="mb-4">
-          <label class="block text-sm font-medium dark:text-white mb-1">同步类型</label>
-          <div class="text-sm dark:text-white">
-            <span class="inline-flex items-center">
-              <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
-              Cloudflare Worker
-            </span>
+          <label class="block text-sm font-medium dark:text-white mb-2">同步类型</label>
+          <a-radio-group v-model:value="syncType" :disabled="isSyncing" button-style="solid">
+            <a-radio-button value="cloudflare">☁️ Cloudflare Worker</a-radio-button>
+            <a-radio-button value="webdav">📁 WebDAV</a-radio-button>
+            <a-radio-button value="s3">🪣 Amazon S3</a-radio-button>
+          </a-radio-group>
+        </div>
+
+        <!-- Cloudflare Configuration -->
+        <div v-if="syncType === 'cloudflare'" class="space-y-4">
+          <div>
+            <label for="cfUrl" class="block text-sm font-medium dark:text-white mb-1">
+              Worker URL
+            </label>
+            <a-input
+              id="cfUrl"
+              v-model:value="cloudflareConfig.url"
+              placeholder="https://your-worker.your-account.workers.dev"
+              :disabled="isSyncing"
+            />
+            <p class="text-xs text-gray-500 dark:text-white mt-1">
+              输入你的 Cloudflare Worker 部署地址
+            </p>
+          </div>
+
+          <div>
+            <label for="cfAuthToken" class="block text-sm font-medium dark:text-white mb-1">
+              认证令牌
+            </label>
+            <a-input-password
+              id="cfAuthToken"
+              v-model:value="cloudflareConfig.authToken"
+              placeholder="输入读写权限的认证令牌"
+              :disabled="isSyncing"
+            />
+            <p class="text-xs text-gray-500 dark:text-white mt-1">用于写入和删除操作的认证令牌</p>
+          </div>
+
+          <div>
+            <label
+              for="cfAuthTokenReadonly"
+              class="block text-sm font-medium dark:text-white mb-1"
+            >
+              只读认证令牌 (可选)
+            </label>
+            <a-input-password
+              id="cfAuthTokenReadonly"
+              v-model:value="cloudflareConfig.authTokenReadonly"
+              placeholder="输入只读权限的认证令牌"
+              :disabled="isSyncing"
+            />
+            <p class="text-xs text-gray-500 dark:text-white mt-1">
+              用于只读操作的认证令牌 (如果与读写令牌相同可留空)
+            </p>
           </div>
         </div>
 
-        <div>
-          <label for="syncUrl" class="block text-sm font-medium dark:text-white mb-1">
-            Worker URL
-          </label>
-          <a-input
-            id="syncUrl"
-            v-model:value="localConfig.url"
-            placeholder="https://your-worker.your-account.workers.dev"
-            :disabled="isSyncing"
-          />
-          <p class="text-xs text-gray-500 dark:text-white mt-1">
-            输入你的 Cloudflare Worker 部署地址
-          </p>
+        <!-- WebDAV Configuration -->
+        <div v-if="syncType === 'webdav'" class="space-y-4">
+          <div>
+            <label for="wdUrl" class="block text-sm font-medium dark:text-white mb-1">
+              WebDAV 服务器地址
+            </label>
+            <a-input
+              id="wdUrl"
+              v-model:value="webdavConfig.url"
+              placeholder="https://your-webdav-server.com"
+              :disabled="isSyncing"
+            />
+            <p class="text-xs text-gray-500 dark:text-white mt-1">WebDAV 服务器的完整 URL</p>
+          </div>
+
+          <div>
+            <label for="wdUsername" class="block text-sm font-medium dark:text-white mb-1">
+              用户名
+            </label>
+            <a-input
+              id="wdUsername"
+              v-model:value="webdavConfig.username"
+              placeholder="输入用户名"
+              :disabled="isSyncing"
+            />
+          </div>
+
+          <div>
+            <label for="wdPassword" class="block text-sm font-medium dark:text-white mb-1">
+              密码
+            </label>
+            <a-input-password
+              id="wdPassword"
+              v-model:value="webdavConfig.password"
+              placeholder="输入密码"
+              :disabled="isSyncing"
+            />
+          </div>
+
+          <div>
+            <label for="wdPath" class="block text-sm font-medium dark:text-white mb-1">
+              文件路径 (可选)
+            </label>
+            <a-input
+              id="wdPath"
+              v-model:value="webdavConfig.path"
+              placeholder="emoji-data.json"
+              :disabled="isSyncing"
+            />
+            <p class="text-xs text-gray-500 dark:text-white mt-1">
+              在服务器上存储数据的文件名
+            </p>
+          </div>
         </div>
 
-        <div>
-          <label for="authToken" class="block text-sm font-medium dark:text-white mb-1">
-            认证令牌
-          </label>
-          <a-input-password
-            id="authToken"
-            v-model:value="localConfig.authToken"
-            placeholder="输入读写权限的认证令牌"
-            :disabled="isSyncing"
-          />
-          <p class="text-xs text-gray-500 dark:text-white mt-1">用于写入和删除操作的认证令牌</p>
-        </div>
+        <!-- S3 Configuration -->
+        <div v-if="syncType === 's3'" class="space-y-4">
+          <div>
+            <label for="s3Endpoint" class="block text-sm font-medium dark:text-white mb-1">
+              S3 端点
+            </label>
+            <a-input
+              id="s3Endpoint"
+              v-model:value="s3Config.endpoint"
+              placeholder="s3.amazonaws.com 或自定义端点"
+              :disabled="isSyncing"
+            />
+            <p class="text-xs text-gray-500 dark:text-white mt-1">
+              S3 兼容服务的端点地址
+            </p>
+          </div>
 
-        <div>
-          <label for="authTokenReadonly" class="block text-sm font-medium dark:text-white mb-1">
-            只读认证令牌 (可选)
-          </label>
-          <a-input-password
-            id="authTokenReadonly"
-            v-model:value="localConfig.authTokenReadonly"
-            placeholder="输入只读权限的认证令牌"
-            :disabled="isSyncing"
-          />
-          <p class="text-xs text-gray-500 dark:text-white mt-1">
-            用于只读操作的认证令牌 (如果与读写令牌相同可留空)
-          </p>
+          <div>
+            <label for="s3Region" class="block text-sm font-medium dark:text-white mb-1">
+              区域
+            </label>
+            <a-input
+              id="s3Region"
+              v-model:value="s3Config.region"
+              placeholder="us-east-1"
+              :disabled="isSyncing"
+            />
+          </div>
+
+          <div>
+            <label for="s3Bucket" class="block text-sm font-medium dark:text-white mb-1">
+              存储桶名称
+            </label>
+            <a-input
+              id="s3Bucket"
+              v-model:value="s3Config.bucket"
+              placeholder="my-emoji-backup"
+              :disabled="isSyncing"
+            />
+          </div>
+
+          <div>
+            <label for="s3AccessKeyId" class="block text-sm font-medium dark:text-white mb-1">
+              Access Key ID
+            </label>
+            <a-input
+              id="s3AccessKeyId"
+              v-model:value="s3Config.accessKeyId"
+              placeholder="输入 Access Key ID"
+              :disabled="isSyncing"
+            />
+          </div>
+
+          <div>
+            <label
+              for="s3SecretAccessKey"
+              class="block text-sm font-medium dark:text-white mb-1"
+            >
+              Secret Access Key
+            </label>
+            <a-input-password
+              id="s3SecretAccessKey"
+              v-model:value="s3Config.secretAccessKey"
+              placeholder="输入 Secret Access Key"
+              :disabled="isSyncing"
+            />
+          </div>
+
+          <div>
+            <label for="s3Path" class="block text-sm font-medium dark:text-white mb-1">
+              对象键前缀 (可选)
+            </label>
+            <a-input
+              id="s3Path"
+              v-model:value="s3Config.path"
+              placeholder="emoji-data.json"
+              :disabled="isSyncing"
+            />
+            <p class="text-xs text-gray-500 dark:text-white mt-1">存储桶中的对象键</p>
+          </div>
         </div>
 
         <div class="flex items-center justify-between pt-2">

@@ -5,6 +5,12 @@ import type { Emoji, EmojiGroup, AppSettings } from '../types/type'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
 import { cloudflareSyncService } from '../utils/cloudflareSync'
+import { 
+  saveSyncConfig as saveSyncConfigToStorage, 
+  loadSyncConfig as loadSyncConfigFromStorage 
+} from '../utils/syncConfigStorage'
+import { createSyncTarget } from '../userscript/plugins/syncTargets'
+import type { SyncTargetConfig } from '../userscript/plugins/syncTargets'
 
 import { defaultSettings } from '@/types/defaultSettings'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
@@ -1029,16 +1035,39 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     await cloudflareSyncService.initialize()
   }
 
-  const saveSyncConfig = async (config: any) => {
-    await cloudflareSyncService.saveConfig(config)
+  const saveSyncConfig = async (config: SyncTargetConfig) => {
+    // Save to general storage
+    await saveSyncConfigToStorage(config)
+    // Also update cloudflare service if it's a cloudflare config
+    if (config.type === 'cloudflare') {
+      await cloudflareSyncService.saveConfig(config)
+    }
   }
 
   const loadSyncConfig = async () => {
-    return await cloudflareSyncService.loadConfig()
+    // Load from general storage (supports all sync types)
+    return await loadSyncConfigFromStorage()
   }
 
   const testSyncConnection = async () => {
-    return await cloudflareSyncService.testConnection()
+    const config = await loadSyncConfig()
+    if (!config) {
+      return {
+        success: false,
+        message: 'No sync configuration found',
+        error: 'Missing configuration'
+      }
+    }
+    try {
+      const target = createSyncTarget(config)
+      return await target.test()
+    } catch (error) {
+      return {
+        success: false,
+        message: `Connection test failed: ${error}`,
+        error
+      }
+    }
   }
 
   const syncToCloudflare = async (direction: 'push' | 'pull' | 'both' = 'both') => {
