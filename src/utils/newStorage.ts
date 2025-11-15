@@ -37,34 +37,10 @@ function getChromeAPI() {
 }
 
 // --- Logging Helper ---
-function logStorage(operation: string, key: string, data?: any, error?: any) {
-  return;
-  const timestamp = new Date().toISOString()
-  const logPrefix = `[Storage ${timestamp}]`
-
-  if (error) {
-    console.error(`${logPrefix} ${operation} FAILED for "${key}":`, error)
-  } else {
-    // Ensure certain success messages explicitly contain the word 'success' so
-    // automated tests that search for 'success' can reliably match them.
-    const shouldMarkSuccess = [
-      'MULTI_SET_SUCCESS',
-      'IDB_SET',
-      'RESET_DEFAULTS',
-      'SYNC_BACKUP'
-    ].includes(operation)
-    const successSuffix = shouldMarkSuccess ? ' - success' : ''
-
-    if (typeof data !== 'undefined') {
-      const p = formatPreview(data)
-      console.log(
-        `${logPrefix} ${operation} for "${key}" - size: ${p.size ?? 'unknown'}${successSuffix}`,
-        p.preview
-      )
-    } else {
-      console.log(`${logPrefix} ${operation} for "${key}"${successSuffix}`)
-    }
-  }
+// Logging disabled - parameters prefixed with _ to indicate intentionally unused
+function logStorage(_operation: string, _key: string, _data?: any, _error?: any) {
+  // Function intentionally does nothing
+  return
 }
 
 // --- Storage Layer Implementations ---

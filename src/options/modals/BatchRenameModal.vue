@@ -128,10 +128,13 @@ const handleGenerateNames = async () => {
   try {
     // Process emojis in batches with streaming effect
     const concurrency = 3 // Process 3 at a time for streaming effect
-    
+
     for (let i = 0; i < props.selectedEmojis.length; i += concurrency) {
-      const batch = props.selectedEmojis.slice(i, Math.min(i + concurrency, props.selectedEmojis.length))
-      
+      const batch = props.selectedEmojis.slice(
+        i,
+        Math.min(i + concurrency, props.selectedEmojis.length)
+      )
+
       // Mark batch as processing
       batch.forEach(emoji => {
         renameStates.value[emoji.id].status = 'processing'
@@ -140,18 +143,14 @@ const handleGenerateNames = async () => {
 
       // Generate names for batch
       const results = await generateBatchNames(batch, prompt.value, config)
-      
+
       // Update states with results (simulate multiple candidates by generating variations)
       for (const emoji of batch) {
         const baseName = results[emoji.id]
         if (baseName) {
           // Generate 3 candidate variations
-          const candidates = [
-            baseName,
-            baseName + ' ✨',
-            baseName.replace(/\s+/g, '_')
-          ]
-          
+          const candidates = [baseName, baseName + ' ✨', baseName.replace(/\s+/g, '_')]
+
           renameStates.value[emoji.id].candidates = candidates
           renameStates.value[emoji.id].status = 'completed'
         } else {
@@ -204,13 +203,9 @@ const regenerateForEmoji = async (emoji: Emoji) => {
   try {
     const results = await generateBatchNames([emoji], prompt.value, config)
     const baseName = results[emoji.id]
-    
+
     if (baseName) {
-      state.candidates = [
-        baseName,
-        baseName + ' ✨',
-        baseName.replace(/\s+/g, '_')
-      ]
+      state.candidates = [baseName, baseName + ' ✨', baseName.replace(/\s+/g, '_')]
       state.selectedIndex = 0
       state.status = 'completed'
     }
@@ -223,13 +218,13 @@ const regenerateForEmoji = async (emoji: Emoji) => {
 
 const handleApply = () => {
   const finalNames: Record<string, string> = {}
-  
+
   Object.entries(renameStates.value).forEach(([emojiId, state]) => {
     if (state.status === 'completed' && state.candidates.length > 0) {
       finalNames[emojiId] = state.candidates[state.selectedIndex]
     }
   })
-  
+
   emit('apply', finalNames)
 }
 
@@ -296,7 +291,14 @@ onUnmounted(() => {
     ok-text="应用选中的重命名"
   >
     <div class="space-y-4">
-      <a-alert v-if="error" :message="error" type="error" show-icon closable @close="error = null" />
+      <a-alert
+        v-if="error"
+        :message="error"
+        type="error"
+        show-icon
+        closable
+        @close="error = null"
+      />
 
       <div>
         <p class="font-semibold mb-2">命名提示：</p>
@@ -308,11 +310,11 @@ onUnmounted(() => {
         />
         <p class="text-xs text-gray-500 mt-1">语言设置已移至 设置 → AI 设置</p>
       </div>
-      
+
       <div class="flex items-center justify-between">
-        <a-button 
-          type="primary" 
-          @click="handleGenerateNames" 
+        <a-button
+          type="primary"
+          @click="handleGenerateNames"
           :loading="isLoading"
           :disabled="isLoading || !prompt"
         >
@@ -320,9 +322,12 @@ onUnmounted(() => {
         </a-button>
 
         <div v-if="processedCount > 0" class="text-sm text-gray-600">
-          <span class="text-green-600 font-medium">✓ {{ acceptedCount }}</span> 已接受 · 
-          <span class="text-red-600 font-medium">✗ {{ rejectedCount }}</span> 已拒绝 · 
-          <span class="text-gray-500">{{ totalEmojis - processedCount }}</span> 待处理
+          <span class="text-green-600 font-medium">✓ {{ acceptedCount }}</span>
+          已接受 ·
+          <span class="text-red-600 font-medium">✗ {{ rejectedCount }}</span>
+          已拒绝 ·
+          <span class="text-gray-500">{{ totalEmojis - processedCount }}</span>
+          待处理
         </div>
       </div>
 
@@ -334,12 +339,12 @@ onUnmounted(() => {
           </span>
           <span class="text-gray-600">{{ progress }}%</span>
         </div>
-        <a-progress 
-          :percent="progress" 
+        <a-progress
+          :percent="progress"
           :status="isLoading ? 'active' : 'success'"
           :stroke-color="{
             '0%': '#108ee9',
-            '100%': '#87d068',
+            '100%': '#87d068'
           }"
         />
       </div>
@@ -402,7 +407,10 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Pending State -->
-                <div v-else-if="renameStates[emoji.id]?.status === 'pending'" class="text-sm text-gray-400">
+                <div
+                  v-else-if="renameStates[emoji.id]?.status === 'pending'"
+                  class="text-sm text-gray-400"
+                >
                   等待生成...
                 </div>
               </div>
@@ -414,7 +422,10 @@ onUnmounted(() => {
                     v-if="renameStates[emoji.id]?.status !== 'completed'"
                     type="text"
                     size="small"
-                    :disabled="!renameStates[emoji.id]?.candidates.length || renameStates[emoji.id]?.isGenerating"
+                    :disabled="
+                      !renameStates[emoji.id]?.candidates.length ||
+                      renameStates[emoji.id]?.isGenerating
+                    "
                     @click="acceptRename(emoji.id)"
                   >
                     <template #icon>

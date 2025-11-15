@@ -160,7 +160,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       } catch {
         // ignore normalization errors - not critical
       }
-      
+
       // Only fetch remote defaults if local settings are missing or incomplete
       if (!settingsData || Object.keys(settingsData).length === 0) {
         // No local settings - merge with remote defaults
@@ -174,7 +174,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         // Local settings exist - just merge with static defaults (no network request)
         settings.value = { ...defaultSettings, ...settingsData }
       }
-      
+
       favorites.value = new Set(favoritesData || [])
 
       console.log('[EmojiStore] Final groups after assignment:', {
@@ -893,12 +893,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         }
       }
     }
-    
+
     if (!hasChanges) {
       console.log('[EmojiStore] updateSettings - no changes detected, skipping')
       return
     }
-    
+
     settings.value = { ...settings.value, ...newSettings }
     console.log('[EmojiStore] updateSettings', { updates: newSettings })
     // Don't call maybeSave() here - let the watch handle all saves with debouncing

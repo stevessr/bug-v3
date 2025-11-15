@@ -163,9 +163,7 @@ const progressPercentage = computed(() => {
         <a-checkbox v-model:checked="enableGroupedStreaming" :disabled="isLoading">
           按分组流式加载
         </a-checkbox>
-        <span class="text-sm text-gray-600">
-          已选择 {{ selectedEmojis.length }} 个表情
-        </span>
+        <span class="text-sm text-gray-600">已选择 {{ selectedEmojis.length }} 个表情</span>
       </div>
 
       <div v-if="isLoading" class="space-y-2">

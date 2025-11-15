@@ -176,7 +176,9 @@ const handleCustomOpenAIModelChange = () => {
             >
               <a-select-option value="gemini-2.5-pro">Gemini 2.5 Pro (最强)</a-select-option>
               <a-select-option value="gemini-flash-latest">Gemini Flash (推荐)</a-select-option>
-              <a-select-option value="gemini-flash-lite-latest">Gemini Flash Lite (最快)</a-select-option>
+              <a-select-option value="gemini-flash-lite-latest">
+                Gemini Flash Lite (最快)
+              </a-select-option>
             </a-select>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Pro: 最强性能 | Flash: 速度与性能平衡 | Flash Lite: 最快速度
