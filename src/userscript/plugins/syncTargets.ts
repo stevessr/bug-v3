@@ -457,17 +457,36 @@ export class CloudflareSyncTarget implements ISyncTarget {
       onProgress?.({ current, total, action: 'push' })
 
       for (const item of itemsToPush) {
-        const response = await fetch(`${baseUrl}/${item.key}`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(item.data)
-        })
+        try {
+          const jsonData = JSON.stringify(item.data)
+          console.log(`[CloudflareSync] Pushing ${item.key}, size: ${jsonData.length} bytes`)
+          
+          const response = await fetch(`${baseUrl}/${item.key}`, {
+            method: 'POST',
+            headers,
+            body: jsonData
+          })
 
-        if (!response.ok) {
-          throw new Error(`Failed to push item ${item.key}: ${response.statusText}`)
+          if (!response.ok) {
+            // Try to get error details from response body
+            let errorDetail = response.statusText
+            try {
+              const errorBody = await response.text()
+              if (errorBody) {
+                errorDetail = `${response.statusText} - ${errorBody}`
+              }
+            } catch (e) {
+              // Ignore parsing error
+            }
+            console.error(`[CloudflareSync] Failed to push ${item.key}:`, errorDetail)
+            throw new Error(`Failed to push item ${item.key}: ${errorDetail}`)
+          }
+          current++
+          onProgress?.({ current, total, action: 'push' })
+        } catch (itemError) {
+          console.error(`[CloudflareSync] Error pushing ${item.key}:`, itemError)
+          throw itemError
         }
-        current++
-        onProgress?.({ current, total, action: 'push' })
       }
 
       return {

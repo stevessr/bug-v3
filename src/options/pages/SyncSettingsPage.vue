@@ -42,6 +42,7 @@ const syncProgress = ref<SyncProgress>({
 const lastSyncTime = ref<number | null>(null)
 const lastPushTime = ref<number | null>(null)
 const lastPullTime = ref<number | null>(null)
+const configSaved = ref(false) // Track if config has been saved
 
 // Computed properties
 const isValidConfig = computed(() => {
@@ -49,7 +50,7 @@ const isValidConfig = computed(() => {
 })
 
 const isConfigured = computed(() => {
-  return emojiStore.isSyncConfigured()
+  return configSaved.value || emojiStore.isSyncConfigured()
 })
 
 const syncProgressPercent = computed(() => {
@@ -63,14 +64,24 @@ const syncInProgress = computed(() => {
 
 // Load existing config on component mount
 onMounted(async () => {
+  console.log('[SyncSettings] Loading config on mount...')
   const config = await emojiStore.loadSyncConfig()
+  console.log('[SyncSettings] Loaded config:', config)
   if (config) {
-    localConfig.url = config.url
-    localConfig.authToken = config.authToken
-    localConfig.authTokenReadonly = config.authTokenReadonly
+    localConfig.url = config.url || ''
+    localConfig.authToken = config.authToken || ''
+    localConfig.authTokenReadonly = config.authTokenReadonly || ''
     lastSyncTime.value = config.lastSyncTime || null
     lastPushTime.value = config.lastPushTime || null
     lastPullTime.value = config.lastPullTime || null
+    configSaved.value = true // Mark as saved if config exists
+    console.log('[SyncSettings] Config loaded into form:', { 
+      url: localConfig.url, 
+      hasAuthToken: !!localConfig.authToken,
+      hasReadonlyToken: !!localConfig.authTokenReadonly 
+    })
+  } else {
+    console.warn('[SyncSettings] No config found')
   }
 })
 
@@ -100,10 +111,25 @@ const saveConfig = async () => {
       enabled: true,
       url: localConfig.url!,
       authToken: localConfig.authToken!,
-      authTokenReadonly: localConfig.authTokenReadonly
+      // Only include authTokenReadonly if it's not empty
+      authTokenReadonly: localConfig.authTokenReadonly && localConfig.authTokenReadonly.trim() 
+        ? localConfig.authTokenReadonly 
+        : undefined
     }
 
     await emojiStore.saveSyncConfig(config)
+    
+    // Mark config as saved to show sync operations section
+    configSaved.value = true
+    
+    // Reload config to update sync times and trigger the isConfigured computed property
+    const savedConfig = await emojiStore.loadSyncConfig()
+    if (savedConfig) {
+      lastSyncTime.value = savedConfig.lastSyncTime || null
+      lastPushTime.value = savedConfig.lastPushTime || null
+      lastPullTime.value = savedConfig.lastPullTime || null
+    }
+    
     options.showSuccess('同步配置已保存')
   } catch (error) {
     console.error('Failed to save sync config:', error)

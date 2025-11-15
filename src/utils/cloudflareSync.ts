@@ -76,12 +76,26 @@ export class CloudflareSyncService {
     this.config = config
     // Store sync config separately
     const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
+    console.log('[CloudflareSync] Saving config, chromeAPI available:', !!chromeAPI?.storage?.local)
+    console.log('[CloudflareSync] Config to save:', config)
+    
     if (chromeAPI?.storage?.local) {
+      // Use Chrome storage in extension context
       await new Promise(resolve => {
         chromeAPI.storage.local.set({ [SYNC_CONFIG_KEY]: config }, () => {
+          console.log('[CloudflareSync] Config saved to Chrome storage')
           resolve(undefined)
         })
       })
+    } else {
+      // Fallback to localStorage in development/standalone mode
+      console.log('[CloudflareSync] Using localStorage fallback')
+      try {
+        localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config))
+        console.log('[CloudflareSync] Config saved to localStorage')
+      } catch (e) {
+        console.error('[CloudflareSync] Failed to save to localStorage:', e)
+      }
     }
   }
 
@@ -89,16 +103,33 @@ export class CloudflareSyncService {
     try {
       // Load sync config separately
       const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
+      console.log('[CloudflareSync] Loading config, chromeAPI available:', !!chromeAPI?.storage?.local)
+      
       if (chromeAPI?.storage?.local) {
+        // Use Chrome storage in extension context
         const config = await new Promise<any>(resolve => {
           chromeAPI.storage.local.get([SYNC_CONFIG_KEY], (result: any) => {
+            console.log('[CloudflareSync] Chrome storage result:', result)
             resolve(result[SYNC_CONFIG_KEY] || null)
           })
         })
 
+        console.log('[CloudflareSync] Loaded config from Chrome storage:', config)
         if (config && typeof config === 'object' && config.type === 'cloudflare') {
           this.config = config
           return config
+        }
+      } else {
+        // Fallback to localStorage in development/standalone mode
+        console.log('[CloudflareSync] Using localStorage fallback')
+        const stored = localStorage.getItem(SYNC_CONFIG_KEY)
+        if (stored) {
+          const config = JSON.parse(stored)
+          console.log('[CloudflareSync] Loaded config from localStorage:', config)
+          if (config && typeof config === 'object' && config.type === 'cloudflare') {
+            this.config = config
+            return config
+          }
         }
       }
     } catch (error) {
@@ -116,6 +147,9 @@ export class CloudflareSyncService {
           resolve(undefined)
         })
       })
+    } else {
+      // Fallback to localStorage
+      localStorage.removeItem(SYNC_CONFIG_KEY)
     }
   }
 
@@ -201,10 +235,28 @@ export class CloudflareSyncService {
         newStorageHelpers.getSettings()
       ])
 
-      // Include favorites in the settings
+      // Include favorites in the settings, ensure it's serializable
       const syncSettings: AppSettings = {
         ...settings,
         lastModified: Date.now()
+      }
+      
+      // Clean up any non-serializable data
+      try {
+        JSON.stringify(syncSettings)
+      } catch (e) {
+        console.error('[CloudflareSync] Settings contains non-serializable data:', e)
+        // Try to salvage what we can
+        const cleanSettings: any = {}
+        for (const key in syncSettings) {
+          try {
+            JSON.stringify((syncSettings as any)[key])
+            cleanSettings[key] = (syncSettings as any)[key]
+          } catch {
+            console.warn(`[CloudflareSync] Skipping non-serializable setting: ${key}`)
+          }
+        }
+        Object.assign(syncSettings, cleanSettings)
       }
 
       const syncData: SyncData = {

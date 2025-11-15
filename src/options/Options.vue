@@ -265,6 +265,8 @@ onMounted(() => {
         waline: '/waline',
         stats: '/stats',
         duplicates: '/duplicates',
+        'ai-rename': '/ai-rename',
+        sync: '/sync',
         about: '/about'
       }
       const targetRoute = routeMap[queryTabs]
