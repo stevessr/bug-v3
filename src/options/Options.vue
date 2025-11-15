@@ -134,6 +134,7 @@ const menuItems = computed(() => {
     { key: 'ungrouped', label: '未分组', route: '/ungrouped' },
     { key: 'bilibili', label: 'Bilibili 导入', route: '/bilibili' },
     { key: 'tenor', label: 'Tenor GIF', route: '/tenor' },
+    { key: 'telegram', label: 'Telegram 贴纸', route: '/telegram' },
     { key: 'waline', label: 'Waline 导入', route: '/waline' },
     { key: 'stats', label: '统计', route: '/stats' },
     { key: 'duplicates', label: '重复检测', route: '/duplicates' },
