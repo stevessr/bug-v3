@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, computed, watch, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 
 import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
 

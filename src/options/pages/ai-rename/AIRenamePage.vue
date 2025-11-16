@@ -101,30 +101,49 @@ const containerHeight = 600
         :buffer="5"
         :items-per-row="gridColumns"
       >
-        <template #default="{ item: emoji, index }">
+        <template #default="{ item: emoji }">
           <a-card
-            class="m-1 cursor-pointer hover:shadow-md transition-shadow h-full flex flex-col"
-            :class="{ 'border-blue-500 border-2': selectedEmojis.has(emoji.id) }"
+            class="m-1 cursor-pointer transition-all duration-200 h-full flex flex-col"
+            :class="{
+              'hover:shadow-lg hover:border-green-300': !selectedEmojis.has(emoji.id),
+              'border-blue-500 border-2': selectedEmojis.has(emoji.id),
+              'shadow-md': !selectedEmojis.has(emoji.id)
+            }"
             @click="toggleSelection(emoji.id)"
             hoverable
           >
-            <div class="flex flex-col items-center flex-1 p-2">
-              <img
-                :src="emoji.url"
-                :alt="emoji.name"
-                class="w-16 h-16 object-contain mb-2"
-                loading="lazy"
-              />
-              <div class="text-center truncate w-full text-sm dark:text-white mb-1">
-                {{ emoji.name }}
-              </div>
-              <div class="flex items-center">
-                <input
-                  type="checkbox"
-                  :checked="selectedEmojis.has(emoji.id)"
-                  class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                  @click.stop="toggleSelection(emoji.id)"
+            <!-- 
+              修复 #1: 
+              - 移除了错误的 h-128。
+              - 使用 justify-between 来在垂直方向上分隔图片和文字内容。
+              - 确保此容器占满整个卡片高度 (h-full)。
+            -->
+            <div class="flex flex-col items-center justify-between p-2 h-full">
+              <!-- 
+                修复 #2: 
+                - 创建一个新的 div 作为图片的 "视窗"。
+                - 给它一个固定的高度 (例如 h-24)，这个高度决定了图片显示区域的大小。
+                - 在这个视窗上应用 overflow-hidden 来裁剪放大后的图片。
+              -->
+              <div class="h-24 w-full flex items-center justify-center overflow-hidden">
+                <a-image
+                  :src="emoji.url"
+                  :alt="emoji.name"
+                  loading="lazy"
                 />
+              </div>
+
+              <!-- 将文字和复选框组合在一起，位于卡片底部 -->
+              <div class="text-center w-full mt-2">
+                <div class="text-center truncate w-full text-sm dark:text-white mb-1">
+                  {{ emoji.name }}
+                </div>
+                <div class="flex items-center justify-center">
+                  <a-checkbox
+                    :checked="selectedEmojis.has(emoji.id)"
+                    @click.stop="toggleSelection(emoji.id)"
+                  />
+                </div>
               </div>
             </div>
           </a-card>
