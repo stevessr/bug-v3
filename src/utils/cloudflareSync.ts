@@ -78,7 +78,7 @@ export class CloudflareSyncService {
     const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
     console.log('[CloudflareSync] Saving config, chromeAPI available:', !!chromeAPI?.storage?.local)
     console.log('[CloudflareSync] Config to save:', config)
-    
+
     if (chromeAPI?.storage?.local) {
       // Use Chrome storage in extension context
       await new Promise(resolve => {
@@ -103,8 +103,11 @@ export class CloudflareSyncService {
     try {
       // Load sync config separately
       const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
-      console.log('[CloudflareSync] Loading config, chromeAPI available:', !!chromeAPI?.storage?.local)
-      
+      console.log(
+        '[CloudflareSync] Loading config, chromeAPI available:',
+        !!chromeAPI?.storage?.local
+      )
+
       if (chromeAPI?.storage?.local) {
         // Use Chrome storage in extension context
         const config = await new Promise<any>(resolve => {
@@ -240,7 +243,7 @@ export class CloudflareSyncService {
         ...settings,
         lastModified: Date.now()
       }
-      
+
       // Clean up any non-serializable data
       try {
         JSON.stringify(syncSettings)

@@ -5,9 +5,9 @@ import type { Emoji, EmojiGroup, AppSettings } from '../types/type'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
 import { cloudflareSyncService } from '../utils/cloudflareSync'
-import { 
-  saveSyncConfig as saveSyncConfigToStorage, 
-  loadSyncConfig as loadSyncConfigFromStorage 
+import {
+  saveSyncConfig as saveSyncConfigToStorage,
+  loadSyncConfig as loadSyncConfigFromStorage
 } from '../utils/syncConfigStorage'
 import { createSyncTarget } from '../userscript/plugins/syncTargets'
 import type { SyncTargetConfig } from '../userscript/plugins/syncTargets'
@@ -1072,7 +1072,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   const syncToCloudflare = async (
     direction: 'push' | 'pull' | 'both' = 'both',
-    onProgress?: (progress: { current: number; total: number; action: string; message?: string }) => void
+    onProgress?: (progress: {
+      current: number
+      total: number
+      action: string
+      message?: string
+    }) => void
   ) => {
     const result = await cloudflareSyncService.sync(direction, onProgress)
     return result

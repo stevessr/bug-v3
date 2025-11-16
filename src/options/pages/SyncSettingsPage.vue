@@ -3,7 +3,13 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { UploadOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons-vue'
 import { inject } from 'vue'
 
-import type { SyncResult, SyncTargetConfig, WebDAVConfig, S3Config, CloudflareConfig } from '../../userscript/plugins/syncTargets'
+import type {
+  SyncResult,
+  SyncTargetConfig,
+  WebDAVConfig,
+  S3Config,
+  CloudflareConfig
+} from '../../userscript/plugins/syncTargets'
 import type { OptionsInject } from '../types'
 
 // TypeScript interface for sync progress
@@ -70,8 +76,13 @@ const isValidConfig = computed(() => {
     case 'webdav':
       return webdavConfig.url && webdavConfig.username && webdavConfig.password
     case 's3':
-      return s3Config.endpoint && s3Config.region && s3Config.bucket && 
-             s3Config.accessKeyId && s3Config.secretAccessKey
+      return (
+        s3Config.endpoint &&
+        s3Config.region &&
+        s3Config.bucket &&
+        s3Config.accessKeyId &&
+        s3Config.secretAccessKey
+      )
     default:
       return false
   }
@@ -98,7 +109,7 @@ onMounted(async () => {
   if (config) {
     syncType.value = config.type
     lastSyncTime.value = config.lastSyncTime || null
-    
+
     // Load config based on type
     if (config.type === 'cloudflare') {
       cloudflareConfig.url = config.url || ''
@@ -119,7 +130,7 @@ onMounted(async () => {
       s3Config.secretAccessKey = config.secretAccessKey || ''
       s3Config.path = config.path || ''
     }
-    
+
     configSaved.value = true
     console.log('[SyncSettings] Config loaded into form, type:', syncType.value)
   } else {
@@ -149,7 +160,7 @@ const saveConfig = async () => {
   isSaving.value = true
   try {
     let config: SyncTargetConfig
-    
+
     switch (syncType.value) {
       case 'cloudflare':
         config = {
@@ -157,9 +168,10 @@ const saveConfig = async () => {
           enabled: true,
           url: cloudflareConfig.url,
           authToken: cloudflareConfig.authToken,
-          authTokenReadonly: cloudflareConfig.authTokenReadonly && cloudflareConfig.authTokenReadonly.trim()
-            ? cloudflareConfig.authTokenReadonly
-            : undefined
+          authTokenReadonly:
+            cloudflareConfig.authTokenReadonly && cloudflareConfig.authTokenReadonly.trim()
+              ? cloudflareConfig.authTokenReadonly
+              : undefined
         } as CloudflareConfig
         break
       case 'webdav':
@@ -189,10 +201,10 @@ const saveConfig = async () => {
     }
 
     await emojiStore.saveSyncConfig(config)
-    
+
     // Mark config as saved to show sync operations section
     configSaved.value = true
-    
+
     // Reload config to update sync times
     const savedConfig: any = await emojiStore.loadSyncConfig()
     if (savedConfig) {
@@ -200,7 +212,7 @@ const saveConfig = async () => {
       lastPushTime.value = savedConfig.lastPushTime || null
       lastPullTime.value = savedConfig.lastPullTime || null
     }
-    
+
     options.showSuccess('同步配置已保存')
   } catch (error) {
     console.error('Failed to save sync config:', error)
@@ -247,7 +259,7 @@ const sync = async (direction: 'push' | 'pull' | 'both') => {
   isSyncing.value = true
   syncDirection.value = direction
   syncResult.value = null
-  
+
   // 初始化进度
   syncProgress.value = {
     current: 0,
@@ -258,7 +270,7 @@ const sync = async (direction: 'push' | 'pull' | 'both') => {
 
   try {
     // 传递进度回调函数
-    const result = await emojiStore.syncToCloudflare(direction, (progress) => {
+    const result = await emojiStore.syncToCloudflare(direction, progress => {
       // 更新进度状态
       syncProgress.value = {
         current: progress.current,
@@ -268,7 +280,7 @@ const sync = async (direction: 'push' | 'pull' | 'both') => {
       }
       console.log('[SyncSettingsPage] Progress update:', progress)
     })
-    
+
     syncResult.value = result
 
     if (result.success) {
@@ -349,10 +361,7 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
           </div>
 
           <div>
-            <label
-              for="cfAuthTokenReadonly"
-              class="block text-sm font-medium dark:text-white mb-1"
-            >
+            <label for="cfAuthTokenReadonly" class="block text-sm font-medium dark:text-white mb-1">
               只读认证令牌 (可选)
             </label>
             <a-input-password
@@ -416,9 +425,7 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
               placeholder="emoji-data.json"
               :disabled="isSyncing"
             />
-            <p class="text-xs text-gray-500 dark:text-white mt-1">
-              在服务器上存储数据的文件名
-            </p>
+            <p class="text-xs text-gray-500 dark:text-white mt-1">在服务器上存储数据的文件名</p>
           </div>
         </div>
 
@@ -434,9 +441,7 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
               placeholder="s3.amazonaws.com 或自定义端点"
               :disabled="isSyncing"
             />
-            <p class="text-xs text-gray-500 dark:text-white mt-1">
-              S3 兼容服务的端点地址
-            </p>
+            <p class="text-xs text-gray-500 dark:text-white mt-1">S3 兼容服务的端点地址</p>
           </div>
 
           <div>
@@ -476,10 +481,7 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
           </div>
 
           <div>
-            <label
-              for="s3SecretAccessKey"
-              class="block text-sm font-medium dark:text-white mb-1"
-            >
+            <label for="s3SecretAccessKey" class="block text-sm font-medium dark:text-white mb-1">
               Secret Access Key
             </label>
             <a-input-password
@@ -583,27 +585,36 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
           <!-- Progress header -->
           <div class="flex items-center justify-between">
             <span class="text-sm font-medium dark:text-white">
-              {{ syncDirection === 'push' ? '⬆️ 推送中' : syncDirection === 'pull' ? '⬇️ 拉取中' : '🔄 同步中' }}
+              {{
+                syncDirection === 'push'
+                  ? '⬆️ 推送中'
+                  : syncDirection === 'pull'
+                    ? '⬇️ 拉取中'
+                    : '🔄 同步中'
+              }}
             </span>
             <span class="text-sm font-semibold dark:text-white">
               {{ syncProgress.current }} / {{ syncProgress.total }}
             </span>
           </div>
-          
+
           <!-- Current item being processed -->
-          <div v-if="syncProgress.message" class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+          <div
+            v-if="syncProgress.message"
+            class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800"
+          >
             <p class="text-xs text-blue-700 dark:text-blue-300 font-mono">
               {{ syncProgress.message }}
             </p>
           </div>
-          
+
           <!-- Progress bar -->
           <a-progress
             :percent="syncProgressPercent"
             :status="syncInProgress ? 'active' : 'normal'"
             :show-info="false"
           />
-          
+
           <!-- Progress percentage -->
           <div class="text-right">
             <span class="text-xs text-gray-500 dark:text-gray-400">

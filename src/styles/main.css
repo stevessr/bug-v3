@@ -16,6 +16,53 @@
   }
 }
 
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  :root {
+    --hc-border-color: #000;
+    --hc-bg-color: #fff;
+    --hc-text-color: #000;
+  }
+
+  .dark {
+    --hc-border-color: #fff;
+    --hc-bg-color: #000;
+    --hc-text-color: #fff;
+  }
+
+  .high-contrast {
+    border: 2px solid var(--hc-border-color) !important;
+    background: var(--hc-bg-color) !important;
+    color: var(--hc-text-color) !important;
+  }
+
+  .high-contrast .emoji-item {
+    border: 2px solid var(--hc-border-color) !important;
+  }
+
+  .high-contrast .group-tab-button {
+    border-bottom: 3px solid transparent !important;
+  }
+
+  .high-contrast .group-tab-button[aria-selected="true"] {
+    border-bottom: 3px solid var(--hc-border-color) !important;
+  }
+}
+
+/* 减少动画 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .no-motion {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 /* Custom utility classes for extension */
 @layer components {
   /* Global dark-mode text and input defaults for options/popup */
@@ -119,5 +166,20 @@
   .ant-dropdown .ant-dropdown-overlay::-webkit-scrollbar-thumb:hover,
   .ant-dropdown .ant-dropdown-content::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover-color);
+  }
+
+  /* 增强焦点指示器 */
+  .focus-enhanced:focus {
+    outline: 2px solid #0066cc !important;
+    outline-offset: 2px !important;
+  }
+
+  .focus-enhanced:focus-visible {
+    outline: 2px solid #0066cc !important;
+    outline-offset: 2px !important;
+  }
+
+  .focus-enhanced:focus:not(:focus-visible) {
+    outline: none !important;
   }
 }

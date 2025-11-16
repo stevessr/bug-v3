@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, toRefs, type Ref } from 'vue'
+import { defineProps, toRefs, type Ref, onMounted, onUnmounted } from 'vue'
 
 import type { EmojiGroup } from '@/types/type'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
@@ -17,27 +17,96 @@ const { groups, activeGroupId, setActive } = toRefs(props) as {
   setActive: Ref<(id: string) => void>
 }
 
+// 键盘导航功能
+const handleKeyNavigation = (event: KeyboardEvent, index: number) => {
+  const target = event.target as HTMLElement
+
+  switch (event.key) {
+    case 'Enter':
+    case ' ':
+      event.preventDefault()
+      setActive.value(props.groups[index].id)
+      break
+    case 'ArrowRight':
+      event.preventDefault()
+      focusAdjacentTab(index, 1)
+      break
+    case 'ArrowLeft':
+      event.preventDefault()
+      focusAdjacentTab(index, -1)
+      break
+    case 'Home':
+      event.preventDefault()
+      focusFirstTab()
+      break
+    case 'End':
+      event.preventDefault()
+      focusLastTab()
+      break
+  }
+}
+
+const focusAdjacentTab = (currentIndex: number, offset: number) => {
+  const newIndex = currentIndex + offset
+  if (newIndex >= 0 && newIndex < props.groups.length) {
+    const nextButton = document.querySelector(
+      `.group-tab-button[data-tab-index="${newIndex}"]`
+    ) as HTMLElement
+    if (nextButton) {
+      nextButton.focus()
+    }
+  }
+}
+
+const focusFirstTab = () => {
+  const firstButton = document.querySelector('.group-tab-button[data-tab-index="0"]') as HTMLElement
+  if (firstButton) {
+    firstButton.focus()
+  }
+}
+
+const focusLastTab = () => {
+  const lastIndex = props.groups.length - 1
+  const lastButton = document.querySelector(
+    `.group-tab-button[data-tab-index="${lastIndex}"]`
+  ) as HTMLElement
+  if (lastButton) {
+    lastButton.focus()
+  }
+}
+
 // isImageUrl is imported and usable directly in the template
 </script>
 
 <template>
-  <div class="group-tabs-scroll flex border-b border-gray-100 dark:border-gray-700 overflow-x-auto">
+  <div
+    class="group-tabs-scroll flex border-b border-gray-100 dark:border-gray-700 overflow-x-auto"
+    role="tablist"
+    aria-label="表情分组标签"
+  >
     <a-button
-      v-for="group in groups"
+      v-for="(group, index) in groups"
       :key="group.id"
       @click="setActive(group.id)"
-      class="flex-shrink-0 px-3 py-2 mobile:px-4 mobile:py-3 text-xs mobile:text-sm font-medium border-b-2 transition-colors"
+      @keydown="handleKeyNavigation($event, index)"
+      :data-tab-index="index"
+      class="group-tab-button flex-shrink-0 px-3 py-2 mobile:px-4 mobile:py-3 text-xs mobile:text-sm font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
       :class="[
         activeGroupId === group.id
           ? 'border-blue-500 text-blue-600 bg-blue-50 dark:border-blue-500 dark:text-white dark:bg-gray-700'
           : 'border-transparent bg-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-white dark:hover:text-white dark:hover:border-gray-600'
       ]"
+      role="tab"
+      :aria-selected="activeGroupId === group.id"
+      :aria-controls="`panel-${group.id}`"
+      :id="`tab-${group.id}`"
+      tabindex="0"
     >
       <span class="mr-1">
         <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
           <img
             :src="normalizeImageUrl(group.icon)"
-            alt="group icon"
+            :alt="group.name ? `${group.name} 图标` : '分组图标'"
             class="w-4 h-4 mobile:w-5 mobile:h-5 object-contain inline-block"
           />
         </template>

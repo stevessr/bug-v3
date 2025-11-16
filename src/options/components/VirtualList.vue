@@ -1,16 +1,18 @@
 <script setup lang="ts" generic="T">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 
 interface Props {
   items: T[]
   itemHeight: number
   containerHeight?: number
   buffer?: number
+  itemsPerRow?: number // 每行显示的项目数
 }
 
 const props = withDefaults(defineProps<Props>(), {
   containerHeight: 600,
-  buffer: 3
+  buffer: 3,
+  itemsPerRow: 1 // 默认为 1，保持向后兼容
 })
 
 defineSlots<{
@@ -20,18 +22,27 @@ defineSlots<{
 const containerRef = ref<HTMLElement | null>(null)
 const scrollTop = ref(0)
 
-const visibleCount = computed(() => Math.ceil(props.containerHeight / props.itemHeight))
+// 计算每行显示的项目数
+const itemsPerRow = computed(() => {
+  return props.itemsPerRow > 0 ? props.itemsPerRow : 1
+})
 
-const totalHeight = computed(() => props.items.length * props.itemHeight)
+const visibleCountPerRow = computed(() => Math.ceil(props.containerHeight / props.itemHeight))
+
+// 计算需要显示的行数
+const totalRows = computed(() => Math.ceil(props.items.length / itemsPerRow.value))
+
+const visibleRowCount = computed(() => Math.ceil(props.containerHeight / props.itemHeight))
 
 const startIndex = computed(() => {
-  const index = Math.floor(scrollTop.value / props.itemHeight) - props.buffer
-  return Math.max(0, index)
+  const rowIndex = Math.floor(scrollTop.value / props.itemHeight) - props.buffer
+  const index = Math.max(0, rowIndex) * itemsPerRow.value
+  return Math.min(index, props.items.length)
 })
 
 const endIndex = computed(() => {
-  const index = startIndex.value + visibleCount.value + props.buffer * 2
-  return Math.min(props.items.length, index)
+  const rowIndex = startIndex.value / itemsPerRow.value + visibleRowCount.value + props.buffer * 2
+  return Math.min(props.items.length, Math.ceil(rowIndex) * itemsPerRow.value)
 })
 
 const visibleItems = computed(() => {
@@ -41,7 +52,7 @@ const visibleItems = computed(() => {
   }))
 })
 
-const offsetY = computed(() => startIndex.value * props.itemHeight)
+const offsetY = computed(() => Math.floor(startIndex.value / itemsPerRow.value) * props.itemHeight)
 
 const handleScroll = (e: Event) => {
   const target = e.target as HTMLElement
@@ -51,16 +62,27 @@ const handleScroll = (e: Event) => {
 // Auto scroll to bottom when new items are added (for streaming)
 const autoScroll = ref(false)
 
+// 使用防抖优化滚动性能
+let scrollTimer: number | null = null
+const handleScrollDebounced = (e: Event) => {
+  if (scrollTimer) {
+    window.clearTimeout(scrollTimer)
+  }
+  scrollTimer = window.setTimeout(() => {
+    handleScroll(e)
+  }, 16) // 约 60fps
+}
+
 watch(
   () => props.items.length,
   (newLen, oldLen) => {
     if (newLen > oldLen && autoScroll.value && containerRef.value) {
-      // Scroll to bottom smoothly
-      setTimeout(() => {
+      // 使用 nextTick 确保 DOM 更新后再滚动
+      nextTick(() => {
         if (containerRef.value) {
           containerRef.value.scrollTop = containerRef.value.scrollHeight
         }
-      }, 50)
+      })
     }
   }
 )
@@ -73,18 +95,31 @@ const disableAutoScroll = () => {
   autoScroll.value = false
 }
 
+// 优化的滚动到顶部方法
+const scrollToTop = () => {
+  if (containerRef.value) {
+    containerRef.value.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+// 优化的滚动到底部方法
+const scrollToBottom = () => {
+  if (containerRef.value) {
+    containerRef.value.scrollTo({ top: containerRef.value.scrollHeight, behavior: 'smooth' })
+  }
+}
+
 defineExpose({
   enableAutoScroll,
   disableAutoScroll,
-  scrollToTop: () => {
-    if (containerRef.value) {
-      containerRef.value.scrollTop = 0
-    }
-  },
-  scrollToBottom: () => {
-    if (containerRef.value) {
-      containerRef.value.scrollTop = containerRef.value.scrollHeight
-    }
+  scrollToTop,
+  scrollToBottom
+})
+
+// 清理定时器
+onUnmounted(() => {
+  if (scrollTimer) {
+    window.clearTimeout(scrollTimer)
   }
 })
 </script>
@@ -94,16 +129,20 @@ defineExpose({
     ref="containerRef"
     class="virtual-list-container"
     :style="{ height: `${containerHeight}px`, overflow: 'auto' }"
-    @scroll="handleScroll"
+    @scroll="handleScrollDebounced"
   >
-    <div :style="{ height: `${totalHeight}px`, position: 'relative' }">
+    <div :style="{ height: `${totalRows * itemHeight}px`, position: 'relative' }">
       <div :style="{ transform: `translateY(${offsetY}px)` }">
         <div
-          v-for="{ item, index } in visibleItems"
-          :key="index"
-          :style="{ height: `${itemHeight}px` }"
+          v-for="(item, idx) in visibleItems"
+          :key="item.index"
+          :style="{
+            display: 'inline-block',
+            width: `${100 / itemsPerRow}%`,
+            height: `${itemHeight}px`
+          }"
         >
-          <slot :item="item" :index="index"></slot>
+          <slot :item="item.item" :index="item.index"></slot>
         </div>
       </div>
     </div>

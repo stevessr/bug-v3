@@ -80,8 +80,13 @@ const openOptionsInNewWindow = () => {
             max="150"
             step="5"
             title="缩放"
-            class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
             @input="updateScale"
+            role="slider"
+            aria-label="表情缩放控制"
+            aria-valuemin="5"
+            aria-valuemax="150"
+            :aria-valuenow="localScale"
           />
           <span class="w-10 text-right text-gray-600 dark:text-white">{{ localScale }}%</span>
         </div>

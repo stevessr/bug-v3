@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, toRefs } from 'vue'
+import { defineProps, toRefs, onMounted, onUnmounted } from 'vue'
 
 import type { Emoji } from '@/types/type'
 
@@ -14,10 +14,76 @@ const props = defineProps<{
   isActive: boolean
 }>()
 
-defineEmits(['select', 'openOptions'])
+const emit = defineEmits(['select', 'openOptions'])
 
 const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton, isActive } =
   toRefs(props)
+
+// 键盘导航功能
+const handleKeyNavigation = (event: KeyboardEvent, index: number) => {
+  const target = event.target as HTMLElement
+
+  switch (event.key) {
+    case 'Enter':
+    case ' ':
+      event.preventDefault()
+      emit('select', props.emojis[index])
+      break
+    case 'ArrowRight':
+      event.preventDefault()
+      focusAdjacentEmoji(index, 1)
+      break
+    case 'ArrowLeft':
+      event.preventDefault()
+      focusAdjacentEmoji(index, -1)
+      break
+    case 'ArrowDown':
+      event.preventDefault()
+      focusAdjacentEmoji(index, props.gridColumns)
+      break
+    case 'ArrowUp':
+      event.preventDefault()
+      focusAdjacentEmoji(index, -props.gridColumns)
+      break
+    case 'Home':
+      event.preventDefault()
+      focusFirstEmoji()
+      break
+    case 'End':
+      event.preventDefault()
+      focusLastEmoji()
+      break
+  }
+}
+
+const focusAdjacentEmoji = (currentIndex: number, offset: number) => {
+  const newIndex = currentIndex + offset
+  if (newIndex >= 0 && newIndex < props.emojis.length) {
+    const nextButton = document.querySelector(
+      `.emoji-item[data-emoji-index="${newIndex}"]`
+    ) as HTMLElement
+    if (nextButton) {
+      nextButton.focus()
+    }
+  }
+}
+
+const focusFirstEmoji = () => {
+  const firstButton = document.querySelector('.emoji-item[data-emoji-index="0"]') as HTMLElement
+  if (firstButton) {
+    firstButton.focus()
+  }
+}
+
+const focusLastEmoji = () => {
+  const lastIndex = props.emojis.length - 1
+  const lastButton = document.querySelector(
+    `.emoji-item[data-emoji-index="${lastIndex}"]`
+  ) as HTMLElement
+  if (lastButton) {
+    lastButton.focus()
+  }
+}
 </script>
 
 <template>
@@ -28,15 +94,18 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton, 
       <span class="ml-2 text-sm text-gray-600 dark:text-white">加载中...</span>
     </div>
 
-    <div v-else-if="emojis.length > 0" class="p-0 overflow-y-auto">
+    <div v-else-if="emojis.length > 0" class="p-0 overflow-y-auto" role="grid">
       <div
         class="emoji-grid overflow-y-auto"
         :style="`column-count: ${gridColumns}; column-gap: 12px; min-height: 300px;`"
+        role="row"
       >
         <a-button
-          v-for="emoji in emojis"
+          v-for="(emoji, index) in emojis"
           :key="emoji.id"
           @click="$emit('select', emoji)"
+          @keydown="handleKeyNavigation($event, index)"
+          :data-emoji-index="index"
           style="
             display: inline-block;
             width: 100%;
@@ -44,8 +113,10 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton, 
             break-inside: avoid;
             height: auto;
           "
-          class="emoji-item relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2 bg-transparent"
+          class="emoji-item relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
           :title="emoji.name"
+          role="gridcell"
+          tabindex="0"
         >
           <a-image
             :src="emoji.displayUrl || emoji.url"

@@ -12,7 +12,9 @@ const emit = defineEmits([
   'update:imageScale',
   'update:showSearchBar',
   'update:enableHoverPreview',
-  'update:syncVariantToDisplayUrl'
+  'update:syncVariantToDisplayUrl',
+  'update:highContrastMode',
+  'update:reduceMotion'
 ])
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
@@ -100,6 +102,20 @@ const handleImageScaleChange = () => {
         @update:model-value="handleSettingUpdate('syncVariantToDisplayUrl', $event)"
         label="导入时同步变体到显示图"
         description="当选择导入变体时，是否将该变体 URL 同步为项的 displayUrl（用于缩略图显示）"
+      />
+
+      <SettingSwitch
+        :model-value="getSetting('highContrastMode', false)"
+        @update:model-value="handleSettingUpdate('highContrastMode', $event)"
+        label="高对比度模式"
+        description="增强界面元素的颜色对比度，提高可读性"
+      />
+
+      <SettingSwitch
+        :model-value="getSetting('reduceMotion', false)"
+        @update:model-value="handleSettingUpdate('reduceMotion', $event)"
+        label="减少动画"
+        description="减少界面动画效果，提高性能和可访问性"
       />
     </div>
   </div>
