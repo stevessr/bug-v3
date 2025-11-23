@@ -73,6 +73,43 @@ export function usePopup() {
   }
 
   const selectEmoji = (emoji: Emoji) => {
+    // If emoji has customOutput configured, use it directly
+    if (emoji.customOutput && emoji.customOutput.trim()) {
+      const customText = emoji.customOutput
+
+      navigator.clipboard
+        .writeText(customText)
+        .then(() => {
+          // 显示复制成功提示，不关闭弹窗
+          showCopyToast.value = true
+          setTimeout(() => {
+            showCopyToast.value = false
+          }, 2000)
+        })
+        .catch(() => {
+          const chromeApi = (window as any).chrome
+          if (chromeApi && chromeApi.tabs) {
+            chromeApi.tabs.query({ active: true, currentWindow: true }, (tabs: any) => {
+              if (tabs[0] && tabs[0].id) {
+                chromeApi.tabs.sendMessage(tabs[0].id, {
+                  type: 'INSERT_EMOJI',
+                  emoji: emoji,
+                  customOutput: customText
+                })
+                showCopyToast.value = true
+                setTimeout(() => {
+                  showCopyToast.value = false
+                }, 2000)
+              }
+            })
+          }
+        })
+
+      emojiStore.addToFavorites(emoji)
+      return
+    }
+
+    // Default behavior: use markdown/html format based on settings
     const scale = emojiStore.settings.imageScale
     const match = emoji.url.match(/_(\d{3,})x(\d{3,})\./)
     let width = '500'

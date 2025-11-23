@@ -24,7 +24,8 @@ const emojiStore = useEmojiStore()
 const localEmoji = ref<Partial<Emoji>>({
   name: '',
   url: '',
-  displayUrl: ''
+  displayUrl: '',
+  customOutput: ''
 })
 
 const showGeminiModal = ref(false)
@@ -166,6 +167,7 @@ const handleSubmit = () => {
       name: localEmoji.value.name,
       url: localEmoji.value.url,
       displayUrl: localEmoji.value.displayUrl || undefined,
+      customOutput: localEmoji.value.customOutput || undefined,
       groupId: selectedGroupId.value,
       width: localEmoji.value.width,
       height: localEmoji.value.height,
@@ -285,6 +287,27 @@ const handleSubmit = () => {
                   />
                   <p class="mt-1 text-xs text-gray-500 dark:text-white">
                     表情选择器中显示的链接，留空则使用输出链接
+                  </p>
+                </div>
+
+                <!-- Custom Output field -->
+                <div>
+                  <label
+                    for="emoji-custom-output"
+                    class="block text-sm font-medium text-gray-700 dark:text-white"
+                  >
+                    自定义输出内容 (可选)
+                  </label>
+                  <textarea
+                    id="emoji-custom-output"
+                    v-model="localEmoji.customOutput"
+                    rows="3"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
+                    placeholder="留空则使用默认的 Markdown/HTML 格式"
+                    title="自定义输出内容 (可选)"
+                  />
+                  <p class="mt-1 text-xs text-gray-500 dark:text-white">
+                    点击表情时插入/复制此自定义内容。留空则使用默认的 Markdown 或 HTML 格式输出
                   </p>
                 </div>
 

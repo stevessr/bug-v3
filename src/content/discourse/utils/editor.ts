@@ -26,6 +26,80 @@ export function insertEmojiIntoEditor(emoji: unknown) {
     void _e
   }
 
+  // If emoji has customOutput configured, use it directly
+  if (em.customOutput && em.customOutput.trim()) {
+    const customText = em.customOutput
+
+    // Try several selectors as fallback targets
+    const selectors = [
+      'textarea.d-editor-input',
+      'textarea.ember-text-area',
+      '#channel-composer',
+      '.chat-composer__input',
+      'textarea.chat-composer__input'
+    ]
+
+    const richEle = DQS('.ProseMirror.d-editor-input') as HTMLElement | null
+    let textArea: HTMLTextAreaElement | null = null
+    for (const s of selectors) {
+      const el = DQS(s) as HTMLTextAreaElement | null
+      if (el) {
+        textArea = el
+        break
+      }
+    }
+
+    const contentEditable = DQS('[contenteditable="true"]') as HTMLElement | null
+
+    if (!textArea && !richEle && !contentEditable) {
+      console.warn('找不到输入框')
+      return
+    }
+
+    // Insert custom output text
+    if (textArea) {
+      const startPos = textArea.selectionStart
+      const endPos = textArea.selectionEnd
+      textArea.value =
+        textArea.value.substring(0, startPos) +
+        customText +
+        textArea.value.substring(endPos, textArea.value.length)
+
+      textArea.selectionStart = textArea.selectionEnd = startPos + customText.length
+      textArea.focus()
+    } else if (richEle) {
+      // For rich text editor, insert as text node
+      const textNode = document.createTextNode(customText)
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        range.deleteContents()
+        range.insertNode(textNode)
+        range.setStartAfter(textNode)
+        range.setEndAfter(textNode)
+        selection.removeAllRanges()
+        selection.addRange(range)
+      }
+      richEle.focus()
+    } else if (contentEditable) {
+      const textNode = document.createTextNode(customText)
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        range.deleteContents()
+        range.insertNode(textNode)
+        range.setStartAfter(textNode)
+        range.setEndAfter(textNode)
+        selection.removeAllRanges()
+        selection.addRange(range)
+      }
+      contentEditable.focus()
+    }
+
+    return
+  }
+
+  // Default behavior: use markdown/html format based on settings
   // Try several selectors as fallback targets. Some pages (eg. chat) use
   // different textarea ids/classes such as #channel-composer or
   // .chat-composer__input. Also prefer any ember-text-area instances.
