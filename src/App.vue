@@ -12,8 +12,9 @@ const isPopupMode = ref(false)
 
 onMounted(() => {
   // 通过 URL 查询参数判断模式（新格式：?type={options|popup}&tabs={route 或分组名}）
+  // 同时支持旧格式 ?mode={options|popup} 以保持向后兼容
   const params = new URLSearchParams(window.location.search)
-  const type = params.get('type')
+  const type = params.get('type') || params.get('mode')
   const tabs = params.get('tabs')
   const originalPath = window.location.pathname
   const originalSearch = window.location.search
