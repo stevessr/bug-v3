@@ -13,18 +13,7 @@ const isPopupMode = ref(false)
 onMounted(() => {
   // 通过 URL 查询参数判断模式（格式：?type={options|popup|sidebar}&tabs={route 或分组名}）
   const params = new URLSearchParams(window.location.search)
-  let type = params.get('type')
-
-  // 向后兼容：如果未指定 type 参数，但有 mode 参数，则使用 mode 参数
-  // 并输出警告提醒开发者迁移到 type 参数
-  if (!type) {
-    const mode = params.get('mode')
-    if (mode) {
-      console.warn('[App.vue] 警告：已弃用 "mode" 参数，请改用 "type" 参数。将在未来版本中移除对 "mode" 参数的支持。')
-      type = mode
-    }
-  }
-
+  const type = params.get('type')
   const tabs = params.get('tabs')
   const originalPath = window.location.pathname
   const originalSearch = window.location.search
@@ -40,7 +29,7 @@ onMounted(() => {
   // 1. 有 tabs 参数 -> 强制 Options 模式（Popup 不支持路由）
   // 2. 明确指定 type=options -> Options 模式
   // 3. 明确指定 type=popup -> Popup 模式
-  // 4. 明确指定 type=sidebar -> Options 模式 (显示为侧边栏)
+  // 4. 明确指定 type=sidebar -> Popup 模式
   // 5. 默认 -> Popup 模式
   if (tabs && tabs.length > 0) {
     // 最高优先级：有路由 hash 或 tabs 参数，必须使用 Options 模式
@@ -85,9 +74,9 @@ onMounted(() => {
     //console.log('[App.vue] URL 明确指定 popup 模式')
     isPopupMode.value = true
   } else if (type === 'sidebar') {
-    // 优先级 4: URL 明确指定 sidebar 模式
-    console.log('[App.vue] URL 明确指定 sidebar 模式')
-    isPopupMode.value = false
+    // 优先级 4: URL 明确指定 sidebar 模式，使用 Popup 模式
+    console.log('[App.vue] URL 明确指定 sidebar 模式，使用 Popup 模式')
+    isPopupMode.value = true
   } else {
     // 优先级 5: 默认使用 popup 模式
     //console.log('[App.vue] 无明确参数，默认使用 Popup 模式')
@@ -100,11 +89,11 @@ onMounted(() => {
   if (isPopupMode.value) {
     document.body.classList.add('popup-mode')
     document.body.classList.remove('options-mode')
-    document.body.classList.remove('sidebar-mode')
-  } else if (type === 'sidebar') {
-    document.body.classList.add('sidebar-mode')
-    document.body.classList.add('options-mode') // Sidebar uses options layout
-    document.body.classList.remove('popup-mode')
+    if (type === 'sidebar') {
+      document.body.classList.add('sidebar-mode') // Add sidebar mode for special dimensions
+    } else {
+      document.body.classList.remove('sidebar-mode')
+    }
   } else {
     document.body.classList.add('options-mode')
     document.body.classList.remove('popup-mode')

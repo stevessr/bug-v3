@@ -155,61 +155,22 @@ export function usePopup() {
     emojiStore.addToFavorites(emoji)
   }
 
-  const openOptionsInNewWindow = () => {
-    // Open options in new window using query params: ?type=options&tabs=groups
-    const url = chrome.runtime.getURL('index.html?type=options&tabs=groups')
-    chrome.tabs.create({ url })
-  }
-
   const openOptions = () => {
     // Use new query format to open options page: index.html?type=options&tabs=groups
     window.location.href = 'index.html?type=options&tabs=groups'
   }
 
   const openSidebar = async () => {
-    // Check if sidebar is already open by looking for existing panel
-    try {
-      // Query for existing emoji extension panels with sidebar URL
-      const existingPanels = await chrome.windows.getAll({
-        populate: true,
-        windowTypes: ['panel']
+    // Chrome
+    if (typeof chrome !== 'undefined' && chrome.sidePanel) {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
       })
-
-      const existingPanel = existingPanels.find(
-        win => win.tabs && win.tabs.some(tab => tab.url && tab.url.includes('type=sidebar'))
-      )
-
-      if (existingPanel && existingPanel.tabs && existingPanel.tabs[0]) {
-        // Focus existing panel
-        await chrome.windows.update(existingPanel.id!, { focused: true })
-        await chrome.tabs.update(existingPanel.tabs[0].id!, { active: true })
-        return
-      }
-    } catch (e) {
-      console.log('Could not find existing panel, creating new one:', e)
+      return chrome.sidePanel.open({ windowId: tab.windowId })
     }
 
-    // Create new sidebar panel
-    try {
-      const url = chrome.runtime.getURL('index.html?type=sidebar')
-      await chrome.windows.create({
-        url: url,
-        type: 'panel',
-        width: 400,
-        height: 600,
-        focused: true
-      })
-    } catch (e) {
-      // Fallback: open in new tab if panel creation fails
-      try {
-        const url = chrome.runtime.getURL('index.html?type=sidebar')
-        await chrome.tabs.create({ url })
-      } catch (fallbackError) {
-        console.error('Failed to open sidebar:', fallbackError)
-        // Final fallback: open options page in new window
-        openOptionsInNewWindow()
-      }
-    }
+    throw new Error('Sidebar not supported')
   }
 
   return {
