@@ -5,7 +5,7 @@ import GroupTabs from './components/GroupTabs.vue'
 import LazyEmojiGrid from './components/LazyEmojiGrid.vue'
 import { usePopup } from './usePopup'
 
-const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions } = usePopup()
+const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions, openSidebar } = usePopup()
 
 const setActiveHandler = (id: string) => {
   emojiStore.activeGroupId = id
@@ -64,6 +64,20 @@ const openOptionsInNewWindow = () => {
                   stroke-linejoin="round"
                   stroke-width="2"
                   d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                ></path>
+              </svg>
+            </a-button>
+            <a-button
+              @click="openSidebar"
+              class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              title="打开侧边栏"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
                 ></path>
               </svg>
             </a-button>

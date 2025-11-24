@@ -11,7 +11,7 @@ import router from '@/options/router'
 const isPopupMode = ref(false)
 
 onMounted(() => {
-  // 通过 URL 查询参数判断模式（新格式：?type={options|popup}&tabs={route 或分组名}）
+  // 通过 URL 查询参数判断模式（格式：?type={options|popup|sidebar}&tabs={route 或分组名}）
   const params = new URLSearchParams(window.location.search)
   const type = params.get('type')
   const tabs = params.get('tabs')
@@ -27,9 +27,10 @@ onMounted(() => {
 
   // 重构后的优先级逻辑：
   // 1. 有 tabs 参数 -> 强制 Options 模式（Popup 不支持路由）
-  // 2. 明确指定 mode=options -> Options 模式
+  // 2. 明确指定 type=options -> Options 模式
   // 3. 明确指定 type=popup -> Popup 模式
-  // 4. 默认 -> Popup 模式
+  // 4. 明确指定 type=sidebar -> Popup 模式
+  // 5. 默认 -> Popup 模式
   if (tabs && tabs.length > 0) {
     // 最高优先级：有路由 hash 或 tabs 参数，必须使用 Options 模式
     //console.log('[App.vue] 检测到路由 hash 或 tabs 参数，强制使用 Options 模式（Popup 不支持路由）')
@@ -72,8 +73,12 @@ onMounted(() => {
     // 优先级 3: URL 明确指定 popup 模式
     //console.log('[App.vue] URL 明确指定 popup 模式')
     isPopupMode.value = true
+  } else if (type === 'sidebar') {
+    // 优先级 4: URL 明确指定 sidebar 模式，使用 Popup 模式
+    console.log('[App.vue] URL 明确指定 sidebar 模式，使用 Popup 模式')
+    isPopupMode.value = true
   } else {
-    // 优先级 4: 默认使用 popup 模式
+    // 优先级 5: 默认使用 popup 模式
     //console.log('[App.vue] 无明确参数，默认使用 Popup 模式')
     isPopupMode.value = true
   }
@@ -84,9 +89,15 @@ onMounted(() => {
   if (isPopupMode.value) {
     document.body.classList.add('popup-mode')
     document.body.classList.remove('options-mode')
+    if (type === 'sidebar') {
+      document.body.classList.add('sidebar-mode') // Add sidebar mode for special dimensions
+    } else {
+      document.body.classList.remove('sidebar-mode')
+    }
   } else {
     document.body.classList.add('options-mode')
     document.body.classList.remove('popup-mode')
+    document.body.classList.remove('sidebar-mode')
   }
 })
 
@@ -129,5 +140,18 @@ body.options-mode {
 
 body.options-mode #app {
   min-height: 100vh;
+}
+
+/* Sidebar 模式：适配侧边栏尺寸 */
+body.sidebar-mode {
+  width: 400px;
+  height: 600px;
+  min-height: unset;
+  overflow-y: auto;
+}
+
+body.sidebar-mode #app {
+  width: 100%;
+  min-height: unset;
 }
 </style>

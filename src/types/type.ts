@@ -66,6 +66,7 @@ export interface Emoji {
   // Reference to another emoji (for deduplication)
   referenceId?: string // If set, this emoji references another emoji by ID
   perceptualHash?: string // Perceptual hash for similarity detection
+  customOutput?: string // Custom string to insert/copy when clicking emoji (overrides markdown/html format)
 }
 
 export interface DefaultEmojiData {
