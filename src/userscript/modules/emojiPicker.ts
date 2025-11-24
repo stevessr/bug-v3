@@ -77,7 +77,9 @@ export function insertEmojiIntoEditor(emoji: any) {
   if (textarea) {
     let insertText = ''
 
-    if (outputFormat === 'html') {
+    if (emoji.customOutput) {
+      insertText = emoji.customOutput
+    } else if (outputFormat === 'html') {
       const scaledWidth = Math.max(1, Math.round(Number(width) * (scale / 100)))
       const scaledHeight = Math.max(1, Math.round(Number(height) * (scale / 100)))
       insertText = `<img src="${emoji.url}" title=":${emoji.name}:" class="emoji only-emoji" alt=":${emoji.name}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}" style="aspect-ratio: ${scaledWidth} / ${scaledHeight};"> `

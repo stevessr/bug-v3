@@ -152,7 +152,9 @@ export function insertEmojiIntoEditor(emoji: unknown) {
   if (textArea) {
     let emojiText = ''
 
-    if (outputFormat === 'html') {
+    if (em.customOutput) {
+      emojiText = em.customOutput
+    } else if (outputFormat === 'html') {
       // HTML 格式输出
       const pixelWidth = Math.max(1, Math.round(Number(width) * (scale / 100)))
       const pixelHeight = Math.max(1, Math.round(Number(height) * (scale / 100)))
