@@ -66,37 +66,32 @@ class DiscourseUploadService implements UploadService {
       if (csrfToken) headers['X-Csrf-Token'] = csrfToken
       if (cookies) headers['Cookie'] = cookies
 
-      // Note: Progress tracking for fetch uploads is complex and requires XHR
-      // For now, we'll simulate progress
-      if (onProgress) {
-        let progress = 0
-        const interval = setInterval(() => {
-          progress += 10
-          if (progress <= 90) {
-            onProgress(progress)
-          } else {
-            clearInterval(interval)
-          }
-        }, 200)
-      }
-
       const uploadUrl = `https://${this.domain}/uploads.json?client_id=${this.clientId}`
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers,
-        body: form
-      })
 
-      if (response.ok) {
-        const data = await response.json()
-        if (data && data.url) {
-          if (onProgress) onProgress(100)
-          return data.url
+      try {
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          headers,
+          body: form
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data && data.url) {
+            if (onProgress) onProgress(100)
+            return data.url
+          }
+          throw new Error(`Invalid response from ${this.domain}: missing URL`)
+        } else {
+          const errorData = await response.json().catch(() => null)
+          throw new Error(
+            `Upload failed: ${response.status} ${
+              errorData?.message || errorData?.errors?.join(', ') || 'Unknown error'
+            }`
+          )
         }
-        throw new Error(`Invalid response from ${this.domain}`)
-      } else {
-        const errorData = await response.json().catch(() => null)
-        throw new Error(`Upload failed: ${response.status} ${errorData?.message || ''}`)
+      } catch (fetchError) {
+        throw fetchError
       }
     } catch (error) {
       console.error(`${this.domain} upload failed:`, error)
@@ -208,17 +203,15 @@ export async function uploadAndAddEmoji(
 
     // Add emoji to group
     const newEmoji = {
-      id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       packet: Date.now(),
       name: name || filename || 'image',
       url: finalUrl,
       displayUrl: finalUrl,
-      groupId: targetGroupId,
       originUrl: originUrl || undefined,
       addedAt: Date.now()
     }
 
-    emojiStore.addEmojiWithoutSave(newEmoji, targetGroupId)
+    emojiStore.addEmojiWithoutSave(targetGroupId, newEmoji)
     emojiStore.maybeSave()
 
     // Broadcast addition if not in buffer group

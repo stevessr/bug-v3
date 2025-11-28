@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 import { uploadServices } from '@/utils/uploadServices'
@@ -16,6 +16,22 @@ const fileInput = ref<HTMLInputElement>()
 
 // Computed
 const bufferGroup = computed(() => emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区'))
+
+// Debug: Watch for changes
+watch(bufferGroup, (newGroup, oldGroup) => {
+  console.log('[BufferPage] Buffer group changed:', {
+    oldCount: oldGroup?.emojis.length || 0,
+    newCount: newGroup?.emojis.length || 0,
+    groupId: newGroup?.id,
+    groupName: newGroup?.name
+  })
+}, { deep: true })
+
+// Debug: Watch all groups
+watch(() => emojiStore.groups, (groups) => {
+  const buffer = groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
+  console.log('[BufferPage] Groups updated, buffer group emoji count:', buffer?.emojis.length || 0)
+}, { deep: true })
 
 // Methods
 const handleDragOver = () => {
@@ -102,15 +118,13 @@ const uploadFiles = async () => {
         const uploadUrl = await service.uploadFile(file, updateProgress)
 
         // Add emoji to buffer group
-        emojiStore.addEmojiWithoutSave(
-          {
-            name: file.name,
-            url: uploadUrl,
-            displayUrl: uploadUrl
-          },
-          group.id || 'buffer'
-        )
+        const newEmoji = {
+          name: file.name,
+          url: uploadUrl,
+          displayUrl: uploadUrl
+        }
 
+        emojiStore.addEmojiWithoutSave(group.id || 'buffer', newEmoji)
         uploadProgress.value[i].percent = 100
       } catch (error) {
         console.error(`Failed to upload ${file.name}:`, error)
@@ -118,8 +132,8 @@ const uploadFiles = async () => {
       }
     }
 
-    // Save all changes at once
-    emojiStore.maybeSave()
+    // Save data directly instead of using maybeSave
+    await emojiStore.saveData()
 
     // Clear selected files
     selectedFiles.value = []
@@ -133,16 +147,39 @@ const uploadFiles = async () => {
   }
 }
 
+// Debug function to test adding emoji
+const testAddEmoji = async () => {
+  console.log('[BufferPage] Manual test: adding emoji to buffer')
+  const group = emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
+  if (group) {
+    emojiStore.addEmojiWithoutSave(group.id || 'buffer', {
+      name: `test-${Date.now()}`,
+      url: 'https://via.placeholder.com/50',
+      displayUrl: 'https://via.placeholder.com/50'
+    })
+    await emojiStore.saveData()
+    console.log('[BufferPage] Test emoji added manually')
+  } else {
+    console.error('[BufferPage] No buffer group found for test')
+  }
+}
 // Initialize buffer group on mount
 onMounted(() => {
-  if (!bufferGroup.value) {
+  const existingBuffer = emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
+  console.log('[BufferPage] Component mounted, buffer group found:', !!existingBuffer, existingBuffer?.emojis.length || 0)
+
+  if (!existingBuffer) {
     emojiStore.createGroup('缓冲区', '📦')
-    // Update the group ID to be consistent
+    // Find and update the group ID
     const buffer = emojiStore.groups.find(g => g.name === '缓冲区')
     if (buffer) {
       buffer.id = 'buffer'
+      console.log('[BufferPage] Buffer group created:', buffer.id)
     }
   }
+
+  // Make testAddEmoji available globally for debugging
+  ;(window as any).testAddEmoji = testAddEmoji
 })
 </script>
 

@@ -7,5 +7,14 @@
       "createdAt": "2025-11-28T23:44:08.818",
       "updatedAt": "2025-11-28T23:44:08.818"
     }
+  ],
+  "src/utils/uploadServices.ts": [
+    {
+      "id": "notebook-1764359817331_hmvw1lj2o",
+      "filePath": "src/utils/uploadServices.ts",
+      "note": "⚠️ addEmojiWithoutSave 的参数顺序必须是 (groupId, emoji)，且 emoji 对象不应包含 id 和 groupId 字段（这些会由 store 自动生成）",
+      "createdAt": "2025-11-29T03:56:57.331",
+      "updatedAt": "2025-11-29T03:56:57.331"
+    }
   ]
 }
