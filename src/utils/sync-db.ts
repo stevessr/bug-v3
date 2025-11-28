@@ -4,6 +4,7 @@
  */
 
 import Dexie, { Table } from 'dexie'
+
 import type { DeltaRecord, SyncVersion, ConflictRecord, QueueItem, DeviceInfo } from '@/types/sync'
 
 export class SyncDatabase extends Dexie {
@@ -67,7 +68,10 @@ export class SyncDatabase extends Dexie {
   /**
    * 标记冲突为已解决
    */
-  async resolveConflict(conflictId: string, resolution: ConflictRecord['resolution']): Promise<void> {
+  async resolveConflict(
+    conflictId: string,
+    resolution: ConflictRecord['resolution']
+  ): Promise<void> {
     await this.conflictHistory.update(conflictId, {
       resolved: true,
       resolution,

@@ -4,6 +4,7 @@ import { QuestionCircleOutlined, DownOutlined } from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
 import type { EmojiGroup } from '../types'
+
 import { uploadServices } from '@/utils/uploadServices'
 
 const options = inject<OptionsInject>('options')!
@@ -632,65 +633,65 @@ onMounted(() => {
           </div>
         </div>
         <div class="p-6">
-                <div
-                  class="grid gap-3"
-                  :style="{
-                    gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
-                  }"
+          <div
+            class="grid gap-3"
+            :style="{
+              gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
+            }"
+          >
+            <div
+              v-for="(emoji, idx) in bufferGroup.emojis"
+              :key="`buffer-${emoji.id || idx}`"
+              class="emoji-item relative"
+            >
+              <div
+                class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700"
+                :class="{
+                  'cursor-pointer': isMultiSelectMode,
+                  'ring-2 ring-blue-500': isMultiSelectMode && selectedEmojis.has(idx)
+                }"
+                @click="handleEmojiClick(idx)"
+              >
+                <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" />
+              </div>
+
+              <!-- 多选模式下的选择框 -->
+              <div v-if="isMultiSelectMode" class="absolute bottom-1 right-1">
+                <a-checkbox
+                  :checked="selectedEmojis.has(idx)"
+                  @change="toggleEmojiSelection(idx)"
+                  class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 rounded focus:ring-blue-500"
+                  :title="'选择表情 ' + emoji.name"
+                />
+              </div>
+
+              <!-- 非多选模式下的编辑/删除按钮 -->
+              <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
+                <a-button
+                  @click="editEmoji(emoji, idx)"
+                  title="编辑"
+                  class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
                 >
-                  <div
-                    v-for="(emoji, idx) in bufferGroup.emojis"
-                    :key="`buffer-${emoji.id || idx}`"
-                    class="emoji-item relative"
+                  编辑
+                </a-button>
+                <a-popconfirm title="确认移除此表情？" @confirm="removeEmoji(idx)">
+                  <template #icon>
+                    <QuestionCircleOutlined style="color: red" />
+                  </template>
+                  <a-button
+                    title="移除"
+                    class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
                   >
-                    <div
-                      class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700"
-                      :class="{
-                        'cursor-pointer': isMultiSelectMode,
-                        'ring-2 ring-blue-500': isMultiSelectMode && selectedEmojis.has(idx)
-                      }"
-                      @click="handleEmojiClick(idx)"
-                    >
-                      <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" />
-                    </div>
+                    移除
+                  </a-button>
+                </a-popconfirm>
+              </div>
 
-                    <!-- 多选模式下的选择框 -->
-                    <div v-if="isMultiSelectMode" class="absolute bottom-1 right-1">
-                      <a-checkbox
-                        :checked="selectedEmojis.has(idx)"
-                        @change="toggleEmojiSelection(idx)"
-                        class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 rounded focus:ring-blue-500"
-                        :title="'选择表情 ' + emoji.name"
-                      />
-                    </div>
-
-                    <!-- 非多选模式下的编辑/删除按钮 -->
-                    <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
-                      <a-button
-                        @click="editEmoji(emoji, idx)"
-                        title="编辑"
-                        class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
-                      >
-                        编辑
-                      </a-button>
-                      <a-popconfirm title="确认移除此表情？" @confirm="removeEmoji(idx)">
-                        <template #icon>
-                          <QuestionCircleOutlined style="color: red" />
-                        </template>
-                        <a-button
-                          title="移除"
-                          class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
-                        >
-                          移除
-                        </a-button>
-                      </a-popconfirm>
-                    </div>
-
-                    <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
-                      {{ emoji.name }}
-                    </div>
-                  </div>
-                </div>
+              <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
+                {{ emoji.name }}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div

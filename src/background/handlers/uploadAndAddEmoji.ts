@@ -19,14 +19,9 @@ export async function handleUploadAndAddEmoji(message: any, sendResponse: any) {
     }
 
     // Use the universal upload function
-    const result = await uploadAndAddEmoji(
-      arrayData,
-      filename,
-      mimeType,
-      name,
-      originUrl,
-      { groupId: 'ungrouped' }
-    )
+    const result = await uploadAndAddEmoji(arrayData, filename, mimeType, name, originUrl, {
+      groupId: 'ungrouped'
+    })
 
     sendResponse(result)
   } catch (error) {

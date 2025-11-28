@@ -4,6 +4,7 @@
  */
 
 import { syncDb } from './sync-db'
+
 import { changeTracker } from '@/services/change-tracker'
 import { incrementalSyncService } from '@/services/incremental-sync'
 import { conflictResolver } from '@/services/conflict-resolver'
@@ -83,10 +84,7 @@ export class SyncTestHelper {
     })
 
     // 获取变更并检测冲突
-    const deltas = await syncDb.deltaRecords
-      .where('entityId')
-      .equals('conflict-emoji-1')
-      .toArray()
+    const deltas = await syncDb.deltaRecords.where('entityId').equals('conflict-emoji-1').toArray()
 
     if (deltas.length >= 2) {
       return conflictResolver.detectConflicts([deltas[0]], [deltas[1]])

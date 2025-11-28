@@ -3,9 +3,10 @@
  * 拦截并记录所有数据变更操作
  */
 
+import { nanoid } from 'nanoid'
+
 import { syncDb } from '@/utils/sync-db'
 import { getDeviceId } from '@/utils/device'
-import { nanoid } from 'nanoid'
 import type { DeltaRecord, DeltaChange, OperationType, EntityType } from '@/types/sync'
 
 export class ChangeTracker {

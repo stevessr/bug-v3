@@ -3,6 +3,8 @@
  * 实现三方合并算法和智能冲突检测
  */
 
+import { nanoid } from 'nanoid'
+
 import type {
   DeltaRecord,
   ConflictInfo,
@@ -12,7 +14,6 @@ import type {
   EntityType
 } from '@/types/sync'
 import { syncDb } from '@/utils/sync-db'
-import { nanoid } from 'nanoid'
 
 export class ConflictResolver {
   /**
@@ -27,10 +28,7 @@ export class ConflictResolver {
     const remoteByEntity = this.groupByEntity(remoteDeltas)
 
     // 找出同时在本地和远程修改的实体
-    const commonEntities = new Set([
-      ...Object.keys(localByEntity),
-      ...Object.keys(remoteByEntity)
-    ])
+    const commonEntities = new Set([...Object.keys(localByEntity), ...Object.keys(remoteByEntity)])
 
     for (const entityKey of commonEntities) {
       const localChanges = localByEntity[entityKey] || []

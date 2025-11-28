@@ -1,98 +1,6 @@
-<template>
-  <div v-if="conflicts.length > 0" class="conflict-resolver">
-    <div class="conflict-header">
-      <h3>🔀 同步冲突</h3>
-      <p>检测到 {{ conflicts.length }} 个冲突，请选择如何解决</p>
-    </div>
-
-    <div class="conflict-list">
-      <div v-for="conflict in conflicts" :key="conflict.id" class="conflict-item">
-        <div class="conflict-info">
-          <div class="conflict-title">
-            <span class="entity-type">{{ getEntityTypeLabel(conflict.entityType) }}</span>
-            <span class="entity-id">{{ conflict.entityId }}</span>
-          </div>
-          <div class="conflict-timestamp">
-            {{ formatTimestamp(conflict.timestamp) }}
-          </div>
-        </div>
-
-        <div class="conflict-comparison">
-          <!-- 本地版本 -->
-          <div class="version-panel local">
-            <div class="version-header">
-              <h4>📱 本地版本</h4>
-              <span class="timestamp">{{ formatTimestamp(conflict.localChange.timestamp) }}</span>
-            </div>
-            <div class="version-content">
-              <div
-                v-for="change in conflict.localChange.changes"
-                :key="change.field"
-                class="change-item"
-              >
-                <div class="field-name">{{ change.field }}</div>
-                <div class="field-value">
-                  <span class="value-label">旧值:</span>
-                  <code>{{ formatValue(change.oldValue) }}</code>
-                </div>
-                <div class="field-value new">
-                  <span class="value-label">新值:</span>
-                  <code>{{ formatValue(change.newValue) }}</code>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 远程版本 -->
-          <div class="version-panel remote">
-            <div class="version-header">
-              <h4>☁️ 远程版本</h4>
-              <span class="timestamp">{{ formatTimestamp(conflict.remoteChange.timestamp) }}</span>
-            </div>
-            <div class="version-content">
-              <div
-                v-for="change in conflict.remoteChange.changes"
-                :key="change.field"
-                class="change-item"
-              >
-                <div class="field-name">{{ change.field }}</div>
-                <div class="field-value">
-                  <span class="value-label">旧值:</span>
-                  <code>{{ formatValue(change.oldValue) }}</code>
-                </div>
-                <div class="field-value new">
-                  <span class="value-label">新值:</span>
-                  <code>{{ formatValue(change.newValue) }}</code>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="conflict-actions">
-          <button class="action-btn local-btn" @click="resolveConflict(conflict, 'local')">
-            使用本地版本
-          </button>
-          <button class="action-btn remote-btn" @click="resolveConflict(conflict, 'remote')">
-            使用远程版本
-          </button>
-          <button class="action-btn merge-btn" @click="tryAutoMerge(conflict)">尝试自动合并</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="conflict-footer">
-      <button class="footer-btn cancel" @click="$emit('cancel')">取消同步</button>
-      <button class="footer-btn auto-resolve" @click="autoResolveAll">自动解决全部</button>
-      <button class="footer-btn continue" :disabled="!allResolved" @click="$emit('continue')">
-        继续同步
-      </button>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+
 import type { ConflictInfo, EntityType } from '@/types/sync'
 import { conflictResolver } from '@/services/conflict-resolver'
 
@@ -194,6 +102,99 @@ async function autoResolveAll() {
   }
 }
 </script>
+
+<template>
+  <div v-if="conflicts.length > 0" class="conflict-resolver">
+    <div class="conflict-header">
+      <h3>🔀 同步冲突</h3>
+      <p>检测到 {{ conflicts.length }} 个冲突，请选择如何解决</p>
+    </div>
+
+    <div class="conflict-list">
+      <div v-for="conflict in conflicts" :key="conflict.id" class="conflict-item">
+        <div class="conflict-info">
+          <div class="conflict-title">
+            <span class="entity-type">{{ getEntityTypeLabel(conflict.entityType) }}</span>
+            <span class="entity-id">{{ conflict.entityId }}</span>
+          </div>
+          <div class="conflict-timestamp">
+            {{ formatTimestamp(conflict.timestamp) }}
+          </div>
+        </div>
+
+        <div class="conflict-comparison">
+          <!-- 本地版本 -->
+          <div class="version-panel local">
+            <div class="version-header">
+              <h4>📱 本地版本</h4>
+              <span class="timestamp">{{ formatTimestamp(conflict.localChange.timestamp) }}</span>
+            </div>
+            <div class="version-content">
+              <div
+                v-for="change in conflict.localChange.changes"
+                :key="change.field"
+                class="change-item"
+              >
+                <div class="field-name">{{ change.field }}</div>
+                <div class="field-value">
+                  <span class="value-label">旧值:</span>
+                  <code>{{ formatValue(change.oldValue) }}</code>
+                </div>
+                <div class="field-value new">
+                  <span class="value-label">新值:</span>
+                  <code>{{ formatValue(change.newValue) }}</code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 远程版本 -->
+          <div class="version-panel remote">
+            <div class="version-header">
+              <h4>☁️ 远程版本</h4>
+              <span class="timestamp">{{ formatTimestamp(conflict.remoteChange.timestamp) }}</span>
+            </div>
+            <div class="version-content">
+              <div
+                v-for="change in conflict.remoteChange.changes"
+                :key="change.field"
+                class="change-item"
+              >
+                <div class="field-name">{{ change.field }}</div>
+                <div class="field-value">
+                  <span class="value-label">旧值:</span>
+                  <code>{{ formatValue(change.oldValue) }}</code>
+                </div>
+                <div class="field-value new">
+                  <span class="value-label">新值:</span>
+                  <code>{{ formatValue(change.newValue) }}</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="conflict-actions">
+          <button class="action-btn local-btn" @click="resolveConflict(conflict, 'local')">
+            使用本地版本
+          </button>
+          <button class="action-btn remote-btn" @click="resolveConflict(conflict, 'remote')">
+            使用远程版本
+          </button>
+          <button class="action-btn merge-btn" @click="tryAutoMerge(conflict)">尝试自动合并</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="conflict-footer">
+      <button class="footer-btn cancel" @click="$emit('cancel')">取消同步</button>
+      <button class="footer-btn auto-resolve" @click="autoResolveAll">自动解决全部</button>
+      <button class="footer-btn continue" :disabled="!allResolved" @click="$emit('continue')">
+        继续同步
+      </button>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .conflict-resolver {

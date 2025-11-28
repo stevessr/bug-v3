@@ -3,10 +3,11 @@
  * 管理增量同步、冲突检测和解决的核心逻辑
  */
 
-import { syncDb } from '@/utils/sync-db'
 import { changeTracker } from './change-tracker'
 import { conflictResolver } from './conflict-resolver'
 import { offlineQueue } from './offline-queue'
+
+import { syncDb } from '@/utils/sync-db'
 import { cloudflareSyncService } from '@/utils/cloudflareSync'
 import { newStorageHelpers } from '@/utils/newStorage'
 import { getDeviceId } from '@/utils/device'
@@ -450,11 +451,7 @@ export class IncrementalSyncService {
   /**
    * 更新同步状态
    */
-  private updateSyncState(
-    status: SyncState['status'],
-    progress: number,
-    message?: string
-  ): void {
+  private updateSyncState(status: SyncState['status'], progress: number, message?: string): void {
     this.syncState = {
       status,
       progress,

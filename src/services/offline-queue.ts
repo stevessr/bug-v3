@@ -3,8 +3,9 @@
  * 管理离线时的变更队列，网络恢复时自动同步
  */
 
-import { syncDb } from '@/utils/sync-db'
 import { nanoid } from 'nanoid'
+
+import { syncDb } from '@/utils/sync-db'
 import type { DeltaRecord, QueueItem } from '@/types/sync'
 
 export class OfflineQueue {
