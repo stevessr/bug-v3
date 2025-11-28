@@ -1,0 +1,11 @@
+{
+  "src/stores/emojiStore.ts": [
+    {
+      "id": "notebook-1764344648818_oymdc7hbd",
+      "filePath": "src/stores/emojiStore.ts",
+      "note": "⚠️ 需要集成增量同步：在 addEmoji、updateEmoji、deleteEmoji 等方法中调用 changeTracker.trackChange() 来记录变更。参考 docs/IMPLEMENTATION_SUMMARY.md 中的集成示例。",
+      "createdAt": "2025-11-28T23:44:08.818",
+      "updatedAt": "2025-11-28T23:44:08.818"
+    }
+  ]
+}

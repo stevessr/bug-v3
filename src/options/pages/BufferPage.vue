@@ -15,7 +15,7 @@ const uploadProgress = ref<Array<{ fileName: string; percent: number; error?: st
 const fileInput = ref<HTMLInputElement>()
 
 // Computed
-const bufferGroup = computed(() => emojiStore.groups.find(g => g.id === 'buffer'))
+const bufferGroup = computed(() => emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区'))
 
 // Methods
 const handleDragOver = () => {
@@ -57,7 +57,7 @@ const removeFile = (index: number) => {
 
 const removeEmoji = (index: number) => {
   if (bufferGroup.value) {
-    emojiStore.removeEmojiFromGroup(bufferGroup.value.id, index)
+    emojiStore.removeEmojiFromGroup(bufferGroup.value.id || 'buffer', index)
   }
 }
 
@@ -73,9 +73,18 @@ const uploadFiles = async () => {
   // Ensure buffer group exists
   let group = bufferGroup.value
   if (!group) {
-    group = emojiStore.createGroupWithoutSave('缓冲区', '📦')
-    // Update group ID to be consistent
-    group.id = 'buffer'
+    emojiStore.createGroup('缓冲区', '📦')
+    // Find and update the group ID
+    group = emojiStore.groups.find(g => g.name === '缓冲区')
+    if (group) {
+      group.id = 'buffer'
+    }
+  }
+
+  if (!group) {
+    console.error('Failed to create buffer group')
+    isUploading.value = false
+    return
   }
 
   try {
@@ -99,7 +108,7 @@ const uploadFiles = async () => {
             url: uploadUrl,
             displayUrl: uploadUrl
           },
-          group.id
+          group.id || 'buffer'
         )
 
         uploadProgress.value[i].percent = 100

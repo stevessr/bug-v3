@@ -1,6 +1,7 @@
 // Independent uploader for ungrouped emoji previews to linux.do
 // This is a copy of the front-end upload functionality to maintain code independence
 import { createElement } from './createElement'
+import { uploadServices } from '@/utils/uploadServices'
 
 interface EmojiUploadResponse {
   id: number
@@ -425,124 +426,43 @@ class EmojiPreviewUploader {
   }
 
   private async performUpload(file: File): Promise<EmojiUploadResponse> {
-    // Calculate SHA1 checksum
-    const sha1 = await this.calculateSHA1(file)
+    try {
+      // Use the upload service for linux.do
+      const url = await uploadServices['linux.do'].uploadFile(file)
 
-    // Create form data
-    const formData = new FormData()
-    formData.append('upload_type', 'composer')
-    formData.append('relativePath', 'null')
-    formData.append('name', file.name)
-    formData.append('type', file.type)
-    formData.append('sha1_checksum', sha1)
-    formData.append('file', file, file.name)
-
-    // Get authentication info
-    const authInfo = await this.requestAuthFromOptions()
-
-    const headers: Record<string, string> = {
-      'X-Csrf-Token': authInfo.csrfToken
-    }
-
-    // Add cookies if available
-    if (authInfo.cookies) {
-      headers['Cookie'] = authInfo.cookies
-    }
-
-    const response = await fetch(
-      `https://linux.do/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8`,
-      {
-        method: 'POST',
-        headers,
-        body: formData
-      }
-    )
-
-    if (!response.ok) {
-      const errorData = (await response.json()) as EmojiUploadError
-      throw errorData
-    }
-
-    return (await response.json()) as EmojiUploadResponse
-  }
-
-  private async requestAuthFromOptions(): Promise<{ csrfToken: string; cookies: string }> {
-    // Check if we're on linux.do already
-    if (window.location.hostname.includes('linux.do')) {
+      // Convert to expected response format
       return {
-        csrfToken: this.getCSRFToken(),
-        cookies: document.cookie
+        id: Date.now(),
+        url: url,
+        original_filename: file.name,
+        filesize: file.size,
+        width: 0, // Not available from upload service
+        height: 0, // Not available from upload service
+        thumbnail_width: 0,
+        thumbnail_height: 0,
+        extension: file.name.split('.').pop() || '',
+        short_url: url,
+        short_path: url,
+        retain_hours: null,
+        human_filesize: this.formatFileSize(file.size),
+        dominant_color: '',
+        thumbnail: null
+      }
+    } catch (error: any) {
+      // Convert error to expected format
+      throw {
+        errors: [error.message || 'Upload failed'],
+        error_type: error.error_type || 'upload_failed'
       }
     }
-
-    // Request auth info from background script
-    return new Promise((resolve, reject) => {
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage({ type: 'REQUEST_LINUX_DO_AUTH' }, (_response: any) => {
-          if (_response?.success) {
-            resolve({
-              csrfToken: _response.csrfToken || '',
-              cookies: _response.cookies || ''
-            })
-          } else {
-            reject(new Error(_response?.error || 'Failed to get authentication info'))
-          }
-        })
-      } else {
-        reject(new Error('Chrome extension API not available'))
-      }
-    })
   }
 
-  private getCSRFToken(): string {
-    // Try to get CSRF token from meta tag
-    const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement
-    if (metaToken) {
-      return metaToken.content
-    }
-
-    // Try to get from cookie
-    const match = document.cookie.match(/csrf_token=([^;]+)/)
-    if (match) {
-      return decodeURIComponent(match[1])
-    }
-
-    // Fallback - try to extract from any form
-    const hiddenInput = document.querySelector(
-      'input[name="authenticity_token"]'
-    ) as HTMLInputElement
-    if (hiddenInput) {
-      return hiddenInput.value
-    }
-
-    console.warn('[Emoji Preview Uploader] No CSRF token found')
-    return ''
-  }
-
-  private async calculateSHA1(file: File): Promise<string> {
-    // SHA1 calculation for file integrity
-    const text = `${file.name}-${file.size}-${file.lastModified}`
-    const encoder = new TextEncoder()
-    const data = encoder.encode(text)
-
-    if (crypto.subtle) {
-      try {
-        const hashBuffer = await crypto.subtle.digest('SHA-1', data)
-        const hashArray = Array.from(new Uint8Array(hashBuffer))
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-      } catch {
-        console.warn('[Emoji Preview Uploader] Could not calculate SHA1, using fallback')
-      }
-    }
-
-    // Fallback simple hash
-    let hash = 0
-    for (let i = 0; i < text.length; i++) {
-      const char = text.charCodeAt(i)
-      hash = (hash << 5) - hash + char
-      hash = hash & hash // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(16).padStart(40, '0')
+  private formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 }
 

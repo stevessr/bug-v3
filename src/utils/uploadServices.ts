@@ -3,10 +3,36 @@ export interface UploadService {
   uploadFile(file: File, onProgress?: (percent: number) => void): Promise<string>
 }
 
-class LinuxDoUploadService implements UploadService {
-  name = 'linux.do'
-  private readonly UPLOAD_URL =
-    'https://linux.do/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8'
+export interface UploadOptions {
+  groupId?: string
+  groupName?: string
+  onProgress?: (percent: number) => void
+}
+
+// Hardcoded map for discourse forum domains and their client IDs
+const DISCOURSE_UPLOAD_CONFIGS: Record<string, { domain: string; clientId: string }> = {
+  'linux.do': {
+    domain: 'linux.do',
+    clientId: 'f06cb5577ba9410d94b9faf94e48c2d8'
+  },
+  'idcflare.com': {
+    domain: 'idcflare.com',
+    clientId: '1b4186493e084a11955dd3cab51b5062'
+  }
+}
+
+class DiscourseUploadService implements UploadService {
+  private domain: string
+  private clientId: string
+
+  constructor(domain: string, clientId: string) {
+    this.domain = domain
+    this.clientId = clientId
+  }
+
+  get name() {
+    return this.domain
+  }
 
   async computeSHA1OfArrayBuffer(buffer: ArrayBuffer): Promise<string | null> {
     if (typeof crypto === 'undefined' || !crypto.subtle) return null
@@ -22,7 +48,7 @@ class LinuxDoUploadService implements UploadService {
   async uploadFile(file: File, onProgress?: (percent: number) => void): Promise<string> {
     try {
       // Get cookies and CSRF token
-      const { cookies, csrfToken } = await this.getLinuxDoAuth()
+      const { cookies, csrfToken } = await this.getAuth()
 
       // Build form data
       const arrayBuffer = await file.arrayBuffer()
@@ -54,7 +80,8 @@ class LinuxDoUploadService implements UploadService {
         }, 200)
       }
 
-      const response = await fetch(this.UPLOAD_URL, {
+      const uploadUrl = `https://${this.domain}/uploads.json?client_id=${this.clientId}`
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         headers,
         body: form
@@ -66,31 +93,31 @@ class LinuxDoUploadService implements UploadService {
           if (onProgress) onProgress(100)
           return data.url
         }
-        throw new Error('Invalid response from linux.do')
+        throw new Error(`Invalid response from ${this.domain}`)
       } else {
         const errorData = await response.json().catch(() => null)
         throw new Error(`Upload failed: ${response.status} ${errorData?.message || ''}`)
       }
     } catch (error) {
-      console.error('Linux.do upload failed:', error)
+      console.error(`${this.domain} upload failed:`, error)
       throw error
     }
   }
 
-  private async getLinuxDoAuth(): Promise<{ cookies: string; csrfToken: string }> {
+  private async getAuth(): Promise<{ cookies: string; csrfToken: string }> {
     let cookies = ''
     let csrfToken = ''
 
     try {
       // Get cookies from chrome API if available
       if (typeof chrome !== 'undefined' && chrome.cookies) {
-        const cookieList = await chrome.cookies.getAll({ domain: 'linux.do' })
+        const cookieList = await chrome.cookies.getAll({ domain: this.domain })
         cookies = cookieList.map(c => `${c.name}=${c.value}`).join('; ')
       }
 
-      // Get CSRF token from linux.do tabs
+      // Get CSRF token from tabs
       if (typeof chrome !== 'undefined' && chrome.tabs) {
-        const tabs = await chrome.tabs.query({ url: 'https://linux.do/*' })
+        const tabs = await chrome.tabs.query({ url: `https://${this.domain}/*` })
         for (const tab of tabs) {
           if (tab.id) {
             try {
@@ -106,124 +133,121 @@ class LinuxDoUploadService implements UploadService {
         }
       }
     } catch (error) {
-      console.warn('Failed to get linux.do auth:', error)
+      console.warn(`Failed to get ${this.domain} auth:`, error)
     }
 
     return { cookies, csrfToken }
   }
 }
 
-class IDCFlareUploadService implements UploadService {
-  name = 'idcflare.com'
-  private readonly UPLOAD_URL =
-    'https://idcflare.com/uploads.json?client_id=1b4186493e084a11955dd3cab51b5062'
+// Create upload services using the unified DiscourseUploadService
+export const uploadServices: Record<string, UploadService> = {}
+for (const [key, config] of Object.entries(DISCOURSE_UPLOAD_CONFIGS)) {
+  uploadServices[key] = new DiscourseUploadService(config.domain, config.clientId)
+}
 
-  async computeSHA1OfArrayBuffer(buffer: ArrayBuffer): Promise<string | null> {
-    if (typeof crypto === 'undefined' || !crypto.subtle) return null
+// Universal upload function that can be used for any group
+export async function uploadAndAddEmoji(
+  arrayData: number[],
+  filename: string,
+  mimeType: string,
+  name?: string,
+  originUrl?: string,
+  options: UploadOptions = {}
+): Promise<{ success: boolean; url?: string; error?: string; added?: boolean }> {
+  try {
+    // Reconstruct blob
+    const uint8 = new Uint8Array(arrayData)
+    const blob = new Blob([uint8], { type: mimeType || 'application/octet-stream' })
+    const file = new File([blob], filename || 'image', { type: blob.type })
+
+    // Try to upload to linux.do first
+    let finalUrl: string | null = null
     try {
-      const hash = await crypto.subtle.digest('SHA-1', buffer)
-      const arr = Array.from(new Uint8Array(hash))
-      return arr.map(b => b.toString(16).padStart(2, '0')).join('')
-    } catch {
-      return null
+      finalUrl = await uploadServices['linux.do'].uploadFile(file, options.onProgress)
+    } catch (e) {
+      console.warn('Upload to linux.do failed, will fallback to data/object URL', e)
     }
-  }
 
-  async uploadFile(file: File, onProgress?: (percent: number) => void): Promise<string> {
-    try {
-      // Get cookies and CSRF token
-      const { cookies, csrfToken } = await this.getIDCFlareAuth()
-
-      // Build form data
-      const arrayBuffer = await file.arrayBuffer()
-      const sha1 = await this.computeSHA1OfArrayBuffer(arrayBuffer)
-
-      const form = new FormData()
-      form.append('upload_type', 'composer')
-      form.append('relativePath', 'null')
-      form.append('name', file.name)
-      form.append('type', file.type)
-      if (sha1) form.append('sha1_checksum', sha1)
-      form.append('file', file, file.name)
-
-      const headers: Record<string, string> = {}
-      if (csrfToken) headers['X-Csrf-Token'] = csrfToken
-      if (cookies) headers['Cookie'] = cookies
-
-      // Note: Progress tracking for fetch uploads is complex and requires XHR
-      // For now, we'll simulate progress
-      if (onProgress) {
-        let progress = 0
-        const interval = setInterval(() => {
-          progress += 10
-          if (progress <= 90) {
-            onProgress(progress)
-          } else {
-            clearInterval(interval)
-          }
-        }, 200)
-      }
-
-      const response = await fetch(this.UPLOAD_URL, {
-        method: 'POST',
-        headers,
-        body: form
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data && data.url) {
-          if (onProgress) onProgress(100)
-          return data.url
+    // Fallback to data URL/object URL if upload failed
+    if (!finalUrl) {
+      const dataUrl: string | null = await new Promise(resolve => {
+        try {
+          const reader = new FileReader()
+          reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null)
+          reader.onerror = () => resolve(null)
+          reader.readAsDataURL(blob)
+        } catch (e) {
+          console.warn('Failed to create dataURL from blob', e)
+          resolve(null)
         }
-        throw new Error('Invalid response from idcflare.com')
-      } else {
-        const errorData = await response.json().catch(() => null)
-        throw new Error(`Upload failed: ${response.status} ${errorData?.message || ''}`)
-      }
-    } catch (error) {
-      console.error('IDCFlare upload failed:', error)
-      throw error
+      })
+      finalUrl = dataUrl || URL.createObjectURL(blob)
     }
-  }
 
-  private async getIDCFlareAuth(): Promise<{ cookies: string; csrfToken: string }> {
-    let cookies = ''
-    let csrfToken = ''
+    // Import store dynamically to avoid circular dependencies
+    const { useEmojiStore } = await import('@/stores/emojiStore')
+    const emojiStore = useEmojiStore()
 
-    try {
-      // Get cookies from chrome API if available
-      if (typeof chrome !== 'undefined' && chrome.cookies) {
-        const cookieList = await chrome.cookies.getAll({ domain: 'idcflare.com' })
-        cookies = cookieList.map(c => `${c.name}=${c.value}`).join('; ')
+    // Determine target group
+    const targetGroupId = options.groupId || 'ungrouped'
+
+    // Ensure group exists
+    let group = emojiStore.groups.find(g => g.id === targetGroupId)
+    if (!group && options.groupName) {
+      group = emojiStore.createGroupWithoutSave(options.groupName, '📦')
+      group.id = targetGroupId
+    } else if (!group) {
+      // Create ungrouped if it doesn't exist
+      group = emojiStore.groups.find(g => g.id === 'ungrouped')
+      if (!group) {
+        group = emojiStore.createGroupWithoutSave('未分组', '📦')
+        group.id = 'ungrouped'
       }
+    }
 
-      // Get CSRF token from idcflare.com tabs
-      if (typeof chrome !== 'undefined' && chrome.tabs) {
-        const tabs = await chrome.tabs.query({ url: 'https://idcflare.com/*' })
-        for (const tab of tabs) {
-          if (tab.id) {
-            try {
-              const resp = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CSRF_TOKEN' })
-              if (resp && resp.csrfToken) {
-                csrfToken = resp.csrfToken
-                break
-              }
-            } catch {
-              continue
+    // Add emoji to group
+    const newEmoji = {
+      id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      packet: Date.now(),
+      name: name || filename || 'image',
+      url: finalUrl,
+      displayUrl: finalUrl,
+      groupId: targetGroupId,
+      originUrl: originUrl || undefined,
+      addedAt: Date.now()
+    }
+
+    emojiStore.addEmojiWithoutSave(newEmoji, targetGroupId)
+    emojiStore.maybeSave()
+
+    // Broadcast addition if not in buffer group
+    if (targetGroupId !== 'buffer' && typeof chrome !== 'undefined' && chrome.runtime) {
+      try {
+        chrome.runtime.sendMessage({
+          type: 'EMOJI_EXTENSION_EMOJI_ADDED',
+          payload: {
+            emoji: newEmoji,
+            group: {
+              id: group.id,
+              name: group.name,
+              icon: group.icon,
+              order: group.order
             }
           }
-        }
+        })
+      } catch (broadcastError) {
+        console.warn('Failed to broadcast emoji addition', broadcastError)
       }
-    } catch (error) {
-      console.warn('Failed to get idcflare.com auth:', error)
     }
 
-    return { cookies, csrfToken }
+    console.log(`Added emoji to ${targetGroupId}`, newEmoji.name)
+    return { success: true, url: finalUrl, added: true }
+  } catch (error) {
+    console.error('Upload and add emoji failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    }
   }
-}
-
-export const uploadServices: Record<string, UploadService> = {
-  'linux.do': new LinuxDoUploadService(),
-  'idcflare.com': new IDCFlareUploadService()
 }

@@ -1471,6 +1471,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // expose batching helpers for bulk operations
     beginBatch,
     endBatch,
+    maybeSave,
     // one-click add from web
     addEmojiFromWeb,
     // Cloudflare sync methods
