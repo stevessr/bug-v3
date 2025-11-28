@@ -16,5 +16,14 @@
       "createdAt": "2025-11-29T03:56:57.331",
       "updatedAt": "2025-11-29T03:56:57.331"
     }
+  ],
+  "src/options/pages/BufferPage.vue": [
+    {
+      "id": "notebook-1764363720301_bryyi3x8q",
+      "filePath": "src/options/pages/BufferPage.vue",
+      "note": "✨ 新增功能：1. 一键移动所有缓冲区表情到未分组 (moveAllToUngrouped) 2. 表情卡片样式与未分组tab保持一致 3. 支持编辑和删除表情功能 4. 使用 inject 获取 options 中的 openEditEmoji 方法",
+      "createdAt": "2025-11-29T05:02:00.301",
+      "updatedAt": "2025-11-29T05:02:00.301"
+    }
   ]
 }

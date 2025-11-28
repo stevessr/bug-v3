@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, inject } from 'vue'
+import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 
-import { useEmojiStore } from '@/stores/emojiStore'
+import type { OptionsInject } from '../types'
 import { uploadServices } from '@/utils/uploadServices'
 
-const emojiStore = useEmojiStore()
+const options = inject<OptionsInject>('options')!
+const { emojiStore, openEditEmoji } = options
 
 // State
 const uploadService = ref<'linux.do' | 'idcflare.com'>('linux.do')
@@ -15,23 +17,36 @@ const uploadProgress = ref<Array<{ fileName: string; percent: number; error?: st
 const fileInput = ref<HTMLInputElement>()
 
 // Computed
-const bufferGroup = computed(() => emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区'))
+const bufferGroup = computed(() =>
+  emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
+)
 
 // Debug: Watch for changes
-watch(bufferGroup, (newGroup, oldGroup) => {
-  console.log('[BufferPage] Buffer group changed:', {
-    oldCount: oldGroup?.emojis.length || 0,
-    newCount: newGroup?.emojis.length || 0,
-    groupId: newGroup?.id,
-    groupName: newGroup?.name
-  })
-}, { deep: true })
+watch(
+  bufferGroup,
+  (newGroup, oldGroup) => {
+    console.log('[BufferPage] Buffer group changed:', {
+      oldCount: oldGroup?.emojis.length || 0,
+      newCount: newGroup?.emojis.length || 0,
+      groupId: newGroup?.id,
+      groupName: newGroup?.name
+    })
+  },
+  { deep: true }
+)
 
 // Debug: Watch all groups
-watch(() => emojiStore.groups, (groups) => {
-  const buffer = groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
-  console.log('[BufferPage] Groups updated, buffer group emoji count:', buffer?.emojis.length || 0)
-}, { deep: true })
+watch(
+  () => emojiStore.groups,
+  groups => {
+    const buffer = groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
+    console.log(
+      '[BufferPage] Groups updated, buffer group emoji count:',
+      buffer?.emojis.length || 0
+    )
+  },
+  { deep: true }
+)
 
 // Methods
 const handleDragOver = () => {
@@ -74,6 +89,50 @@ const removeFile = (index: number) => {
 const removeEmoji = (index: number) => {
   if (bufferGroup.value) {
     emojiStore.removeEmojiFromGroup(bufferGroup.value.id || 'buffer', index)
+  }
+}
+
+const editEmoji = (emoji: any, index: number) => {
+  openEditEmoji(emoji, bufferGroup.value?.id || 'buffer', index)
+}
+
+// 移动所有表情到未分组
+const moveAllToUngrouped = async () => {
+  if (!bufferGroup.value || bufferGroup.value.emojis.length === 0) return
+
+  try {
+    // 确保未分组存在
+    let ungroupedGroup = emojiStore.groups.find(g => g.id === 'ungrouped')
+    if (!ungroupedGroup) {
+      emojiStore.createGroup('未分组', '📝')
+      ungroupedGroup = emojiStore.groups.find(g => g.name === '未分组')
+      if (ungroupedGroup) {
+        ungroupedGroup.id = 'ungrouped'
+      }
+    }
+
+    if (!ungroupedGroup) {
+      console.error('Failed to create ungrouped group')
+      return
+    }
+
+    // 开始批量操作
+    emojiStore.beginBatch()
+
+    try {
+      // 从后往前移动，避免索引变化
+      const count = bufferGroup.value.emojis.length
+      for (let i = count - 1; i >= 0; i--) {
+        emojiStore.moveEmoji('buffer', i, 'ungrouped', -1)
+      }
+    } finally {
+      // 结束批量操作，触发保存
+      await emojiStore.endBatch()
+    }
+
+    console.log('[BufferPage] Moved all emojis to ungrouped')
+  } catch (error) {
+    console.error('[BufferPage] Failed to move emojis to ungrouped:', error)
   }
 }
 
@@ -166,7 +225,11 @@ const testAddEmoji = async () => {
 // Initialize buffer group on mount
 onMounted(() => {
   const existingBuffer = emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
-  console.log('[BufferPage] Component mounted, buffer group found:', !!existingBuffer, existingBuffer?.emojis.length || 0)
+  console.log(
+    '[BufferPage] Component mounted, buffer group found:',
+    !!existingBuffer,
+    existingBuffer?.emojis.length || 0
+  )
 
   if (!existingBuffer) {
     emojiStore.createGroup('缓冲区', '📦')
@@ -300,27 +363,62 @@ onMounted(() => {
     <div class="mt-6">
       <div
         v-if="bufferGroup && bufferGroup.emojis.length > 0"
-        class="bg-white dark:bg-gray-800 rounded-lg shadow p-4"
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700"
       >
-        <h3 class="text-lg font-semibold dark:text-white mb-4">缓冲区表情</h3>
-        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-          <div v-for="(emoji, index) in bufferGroup.emojis" :key="emoji.id" class="relative group">
-            <img
-              :src="emoji.url"
-              :alt="emoji.name"
-              class="w-full h-20 object-cover rounded border dark:border-gray-600"
-            />
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold dark:text-white">缓冲区表情</h3>
+            <a-button
+              @click="moveAllToUngrouped"
+              class="text-sm px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              title="将所有缓冲区表情移动到未分组"
+            >
+              📤 移动全部到未分组
+            </a-button>
+          </div>
+        </div>
+        <div class="p-6">
+          <div
+            class="grid gap-3"
+            :style="{
+              gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
+            }"
+          >
             <div
-              class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 text-center truncate"
+              v-for="(emoji, idx) in bufferGroup.emojis"
+              :key="`buffer-${emoji.id || idx}`"
+              class="emoji-item relative"
             >
-              {{ emoji.name }}
+              <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700">
+                <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" />
+              </div>
+
+              <!-- 编辑/删除按钮 -->
+              <div class="absolute top-1 right-1 flex gap-1">
+                <a-button
+                  @click="editEmoji(emoji, idx)"
+                  title="编辑"
+                  class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
+                >
+                  编辑
+                </a-button>
+                <a-popconfirm title="确认移除此表情？" @confirm="removeEmoji(idx)">
+                  <template #icon>
+                    <QuestionCircleOutlined style="color: red" />
+                  </template>
+                  <a-button
+                    title="移除"
+                    class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
+                  >
+                    移除
+                  </a-button>
+                </a-popconfirm>
+              </div>
+
+              <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
+                {{ emoji.name }}
+              </div>
             </div>
-            <button
-              @click="removeEmoji(index)"
-              class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              ×
-            </button>
           </div>
         </div>
       </div>
@@ -338,5 +436,9 @@ onMounted(() => {
 .buffer-page {
   max-width: 4xl;
   margin: 0 auto;
+}
+
+.emoji-item {
+  width: 80px;
 }
 </style>
