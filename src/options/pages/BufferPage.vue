@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject } from 'vue'
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { QuestionCircleOutlined, DownOutlined } from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
+import type { EmojiGroup } from '../types'
 import { uploadServices } from '@/utils/uploadServices'
 
 const options = inject<OptionsInject>('options')!
@@ -16,9 +17,40 @@ const isUploading = ref(false)
 const uploadProgress = ref<Array<{ fileName: string; percent: number; error?: string }>>([])
 const fileInput = ref<HTMLInputElement>()
 
+// 多选功能相关状态
+const isMultiSelectMode = ref(false)
+const selectedEmojis = ref(new Set<number>())
+const targetGroupId = ref('')
+const showCreateGroupDialog = ref(false)
+const newGroupName = ref('')
+const newGroupIcon = ref('')
 // Computed
 const bufferGroup = computed(() =>
   emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
+)
+
+// 可用的分组列表（排除缓冲区）
+const availableGroups = computed(
+  () => emojiStore.groups.filter((g: EmojiGroup) => g.id !== 'buffer') || []
+)
+
+// 全选状态
+const totalCount = computed(() => bufferGroup.value?.emojis?.length || 0)
+const checkedCount = computed(() => selectedEmojis.value.size)
+const checkAll = computed<boolean>({
+  get: () => totalCount.value > 0 && checkedCount.value === totalCount.value,
+  set: (val: boolean) => {
+    if (!bufferGroup.value) return
+    if (val) {
+      selectedEmojis.value = new Set(bufferGroup.value.emojis.map((_, i) => i))
+    } else {
+      clearSelection()
+    }
+  }
+})
+
+const indeterminate = computed(
+  () => checkedCount.value > 0 && checkedCount.value < totalCount.value
 )
 
 // Debug: Watch for changes
@@ -94,6 +126,154 @@ const removeEmoji = (index: number) => {
 
 const editEmoji = (emoji: any, index: number) => {
   openEditEmoji(emoji, bufferGroup.value?.id || 'buffer', index)
+}
+
+// 多选模式相关函数
+const onCheckAllChange = (e: any) => {
+  const checked = !!(e && e.target && e.target.checked)
+  if (!bufferGroup.value) return
+  if (checked) {
+    selectedEmojis.value = new Set(bufferGroup.value.emojis.map((_, i) => i))
+  } else {
+    clearSelection()
+  }
+}
+
+const onMultiSelectModeChange = () => {
+  if (!isMultiSelectMode.value) {
+    clearSelection()
+  }
+}
+
+const toggleEmojiSelection = (idx: number) => {
+  if (selectedEmojis.value.has(idx)) {
+    selectedEmojis.value.delete(idx)
+  } else {
+    selectedEmojis.value.add(idx)
+  }
+  selectedEmojis.value = new Set(selectedEmojis.value)
+}
+
+const handleEmojiClick = (idx: number) => {
+  if (isMultiSelectMode.value) toggleEmojiSelection(idx)
+}
+
+const clearSelection = () => {
+  selectedEmojis.value.clear()
+  selectedEmojis.value = new Set()
+  targetGroupId.value = ''
+}
+
+const onTargetGroupSelect = (info: { key: string | number }) => {
+  targetGroupId.value = String(info.key)
+}
+
+// 移动选中的表情到目标分组
+const moveSelectedEmojis = async () => {
+  if (!targetGroupId.value || selectedEmojis.value.size === 0) return
+
+  try {
+    // 如果选择创建新分组
+    if (targetGroupId.value === '__create_new__') {
+      showCreateGroupDialog.value = true
+      return
+    }
+
+    const targetGroup = emojiStore.groups.find((g: EmojiGroup) => g.id === targetGroupId.value)
+    if (!targetGroup) return
+
+    // 获取选中的表情索引（按降序排列，避免删除时索引变化）
+    const sortedIndices = Array.from(selectedEmojis.value).sort((a, b) => b - a)
+
+    // 开始批量操作
+    emojiStore.beginBatch()
+
+    try {
+      // 逐个移动表情
+      for (const index of sortedIndices) {
+        if (bufferGroup.value && index < bufferGroup.value.emojis.length) {
+          emojiStore.moveEmoji('buffer', index, targetGroupId.value, -1)
+        }
+      }
+    } finally {
+      // 结束批量操作，触发保存
+      await emojiStore.endBatch()
+    }
+
+    // 清空选择
+    clearSelection()
+  } catch {
+    // ignore errors during move
+  }
+}
+
+// 复制选中的表情为 markdown 格式
+const copySelectedAsMarkdown = async () => {
+  if (selectedEmojis.value.size === 0 || !bufferGroup.value) return
+
+  const lines = Array.from(selectedEmojis.value)
+    .map(idx => {
+      const e = bufferGroup.value!.emojis[idx]
+      return e && e.url ? `![](${e.url})` : null
+    })
+    .filter((v): v is string => !!v)
+
+  if (lines.length === 0) return
+
+  const markdown = lines.join('\n')
+
+  try {
+    if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(markdown)
+    } else {
+      // fallback
+      const ta = document.createElement('textarea')
+      ta.value = markdown
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      try {
+        document.execCommand('copy')
+      } catch (e) {
+        // ignore
+      }
+      document.body.removeChild(ta)
+    }
+  } catch (err) {
+    console.error('Failed to copy markdown to clipboard', err)
+  }
+}
+
+// 确认创建新分组
+const confirmCreateGroup = async () => {
+  if (!newGroupName.value.trim()) return
+
+  try {
+    // 创建新分组
+    const newGroup = emojiStore.createGroup(newGroupName.value.trim(), newGroupIcon.value || '📁')
+
+    // 设置目标分组 ID 并关闭对话框
+    targetGroupId.value = newGroup.id
+    showCreateGroupDialog.value = false
+
+    // 重置表单
+    newGroupName.value = ''
+    newGroupIcon.value = ''
+
+    // 立即执行移动操作
+    await moveSelectedEmojis()
+  } catch {
+    // ignore errors during group creation
+  }
+}
+
+// 取消创建分组
+const cancelCreateGroup = () => {
+  showCreateGroupDialog.value = false
+  newGroupName.value = ''
+  newGroupIcon.value = ''
+  targetGroupId.value = ''
 }
 
 // 移动所有表情到未分组
@@ -368,58 +548,149 @@ onMounted(() => {
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div class="flex justify-between items-center">
             <h3 class="text-lg font-semibold dark:text-white">缓冲区表情</h3>
-            <a-button
-              @click="moveAllToUngrouped"
-              class="text-sm px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              title="将所有缓冲区表情移动到未分组"
-            >
-              📤 移动全部到未分组
-            </a-button>
+            <div class="flex items-center gap-4">
+              <!-- 批量操作控制 -->
+              <div v-if="isMultiSelectMode" class="flex items-center gap-2">
+                <!-- 全选复选框 -->
+                <a-checkbox
+                  v-model:checked="checkAll"
+                  :indeterminate="indeterminate"
+                  @change="onCheckAllChange"
+                  class="text-sm"
+                  title="全选所有缓冲区表情"
+                >
+                  全选
+                </a-checkbox>
+                <span class="text-sm text-gray-600 dark:text-white">
+                  已选择 {{ selectedEmojis.size }} 个
+                </span>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu @click="onTargetGroupSelect">
+                      <a-menu-item key="">选择目标分组</a-menu-item>
+                      <a-menu-item
+                        v-for="group in availableGroups"
+                        :key="group.id"
+                        :value="group.id"
+                      >
+                        {{ group.name }}
+                      </a-menu-item>
+                      <a-menu-item key="__create_new__">+ 创建新分组</a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button title="选择目标分组">
+                    {{
+                      targetGroupId
+                        ? availableGroups.find(g => g.id === targetGroupId)?.name || '选择目标分组'
+                        : '选择目标分组'
+                    }}
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+                <a-button
+                  @click="moveSelectedEmojis"
+                  :disabled="!targetGroupId"
+                  class="text-sm px-3 py-1 bg-blue-500 dark:bg-blue-600 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  title="移动选中的表情到目标分组"
+                >
+                  移动
+                </a-button>
+                <a-button
+                  @click="copySelectedAsMarkdown"
+                  :disabled="selectedEmojis.size === 0"
+                  class="text-sm px-3 py-1 bg-indigo-500 dark:bg-indigo-600 text-white rounded hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  title="复制选中的表情为 Markdown 格式"
+                >
+                  复制为 Markdown
+                </a-button>
+                <a-button
+                  @click="clearSelection"
+                  class="text-sm px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                  title="清空所有表情选择"
+                >
+                  清空选择
+                </a-button>
+              </div>
+              <!-- 多选模式开关 -->
+              <a-checkbox
+                v-model:checked="isMultiSelectMode"
+                @change="onMultiSelectModeChange"
+                title="切换多选模式"
+              >
+                <span class="text-sm text-gray-700 dark:text-white">多选模式</span>
+              </a-checkbox>
+              <!-- 移动全部到未分组按钮 -->
+              <a-button
+                v-if="!isMultiSelectMode"
+                @click="moveAllToUngrouped"
+                class="text-sm px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                title="将所有缓冲区表情移动到未分组"
+              >
+                📤 移动全部到未分组
+              </a-button>
+            </div>
           </div>
         </div>
         <div class="p-6">
-          <div
-            class="grid gap-3"
-            :style="{
-              gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
-            }"
-          >
-            <div
-              v-for="(emoji, idx) in bufferGroup.emojis"
-              :key="`buffer-${emoji.id || idx}`"
-              class="emoji-item relative"
-            >
-              <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700">
-                <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" />
-              </div>
-
-              <!-- 编辑/删除按钮 -->
-              <div class="absolute top-1 right-1 flex gap-1">
-                <a-button
-                  @click="editEmoji(emoji, idx)"
-                  title="编辑"
-                  class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
+                <div
+                  class="grid gap-3"
+                  :style="{
+                    gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
+                  }"
                 >
-                  编辑
-                </a-button>
-                <a-popconfirm title="确认移除此表情？" @confirm="removeEmoji(idx)">
-                  <template #icon>
-                    <QuestionCircleOutlined style="color: red" />
-                  </template>
-                  <a-button
-                    title="移除"
-                    class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
+                  <div
+                    v-for="(emoji, idx) in bufferGroup.emojis"
+                    :key="`buffer-${emoji.id || idx}`"
+                    class="emoji-item relative"
                   >
-                    移除
-                  </a-button>
-                </a-popconfirm>
-              </div>
+                    <div
+                      class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700"
+                      :class="{
+                        'cursor-pointer': isMultiSelectMode,
+                        'ring-2 ring-blue-500': isMultiSelectMode && selectedEmojis.has(idx)
+                      }"
+                      @click="handleEmojiClick(idx)"
+                    >
+                      <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" />
+                    </div>
 
-              <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
-                {{ emoji.name }}
-              </div>
-            </div>
-          </div>
+                    <!-- 多选模式下的选择框 -->
+                    <div v-if="isMultiSelectMode" class="absolute bottom-1 right-1">
+                      <a-checkbox
+                        :checked="selectedEmojis.has(idx)"
+                        @change="toggleEmojiSelection(idx)"
+                        class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 rounded focus:ring-blue-500"
+                        :title="'选择表情 ' + emoji.name"
+                      />
+                    </div>
+
+                    <!-- 非多选模式下的编辑/删除按钮 -->
+                    <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
+                      <a-button
+                        @click="editEmoji(emoji, idx)"
+                        title="编辑"
+                        class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
+                      >
+                        编辑
+                      </a-button>
+                      <a-popconfirm title="确认移除此表情？" @confirm="removeEmoji(idx)">
+                        <template #icon>
+                          <QuestionCircleOutlined style="color: red" />
+                        </template>
+                        <a-button
+                          title="移除"
+                          class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
+                        >
+                          移除
+                        </a-button>
+                      </a-popconfirm>
+                    </div>
+
+                    <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
+                      {{ emoji.name }}
+                    </div>
+                  </div>
+                </div>
         </div>
       </div>
       <div
@@ -427,6 +698,60 @@ onMounted(() => {
         class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center text-gray-500 dark:text-gray-400"
       >
         缓冲区暂无表情
+      </div>
+    </div>
+
+    <!-- 创建新分组对话框 -->
+    <div
+      v-if="showCreateGroupDialog"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+        <h3 class="text-lg font-semibold mb-4 dark:text-white">创建新分组</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+              分组名称
+            </label>
+            <input
+              v-model="newGroupName"
+              type="text"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+              placeholder="输入分组名称"
+              title="新分组名称"
+              @keyup.enter="confirmCreateGroup"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+              分组图标
+            </label>
+            <input
+              v-model="newGroupIcon"
+              type="text"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+              placeholder="输入图标 URL 或 emoji"
+              title="新分组图标 URL 或 emoji"
+            />
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <a-button
+            @click="cancelCreateGroup"
+            class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+            title="取消创建新分组"
+          >
+            取消
+          </a-button>
+          <a-button
+            @click="confirmCreateGroup"
+            :disabled="!newGroupName.trim()"
+            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            title="确认创建新分组"
+          >
+            创建
+          </a-button>
+        </div>
       </div>
     </div>
   </div>
