@@ -3,7 +3,6 @@ import { ref, computed, onMounted, watch, inject } from 'vue'
 import { QuestionCircleOutlined, DownOutlined } from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
-import type { EmojiGroup } from '../types'
 
 import { uploadServices } from '@/utils/uploadServices'
 
@@ -386,23 +385,6 @@ const uploadFiles = async () => {
     isUploading.value = false
   }
 }
-
-// Debug function to test adding emoji
-const testAddEmoji = async () => {
-  console.log('[BufferPage] Manual test: adding emoji to buffer')
-  const group = emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
-  if (group) {
-    emojiStore.addEmojiWithoutSave(group.id || 'buffer', {
-      name: `test-${Date.now()}`,
-      url: 'https://via.placeholder.com/50',
-      displayUrl: 'https://via.placeholder.com/50'
-    })
-    await emojiStore.saveData()
-    console.log('[BufferPage] Test emoji added manually')
-  } else {
-    console.error('[BufferPage] No buffer group found for test')
-  }
-}
 // Initialize buffer group on mount
 onMounted(() => {
   const existingBuffer = emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
@@ -421,9 +403,6 @@ onMounted(() => {
       console.log('[BufferPage] Buffer group created:', buffer.id)
     }
   }
-
-  // Make testAddEmoji available globally for debugging
-  ;(window as any).testAddEmoji = testAddEmoji
 })
 </script>
 
@@ -440,14 +419,10 @@ onMounted(() => {
     <div class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
       <h3 class="text-lg font-semibold dark:text-white mb-4">选择上传服务</h3>
       <div class="flex space-x-4">
-        <label class="flex items-center">
-          <input type="radio" v-model="uploadService" value="linux.do" class="mr-2" />
-          <span>linux.do</span>
-        </label>
-        <label class="flex items-center">
-          <input type="radio" v-model="uploadService" value="idcflare.com" class="mr-2" />
-          <span>idcflare.com</span>
-        </label>
+        <a-radio-group v-model:value="uploadService">
+          <a-radio-button value="linux.do">linux.do</a-radio-button>
+          <a-radio-button value="idcflare.com">idcflare.com</a-radio-button>
+        </a-radio-group>
       </div>
     </div>
 
@@ -490,22 +465,28 @@ onMounted(() => {
             class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
           >
             <span class="text-sm dark:text-gray-300">{{ file.name }}</span>
-            <button @click="removeFile(index)" class="text-red-500 hover:text-red-700 text-sm">
+            <a-button
+              type="text"
+              size="small"
+              danger
+              @click="removeFile(index)"
+            >
               移除
-            </button>
+            </a-button>
           </li>
         </ul>
       </div>
 
       <!-- Upload Button -->
       <div class="mt-4 flex justify-end">
-        <button
+        <a-button
+          type="primary"
           @click="uploadFiles"
           :disabled="selectedFiles.length === 0 || isUploading"
-          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          :loading="isUploading"
         >
           {{ isUploading ? '上传中...' : `上传 ${selectedFiles.length} 个文件` }}
-        </button>
+        </a-button>
       </div>
     </div>
 
@@ -579,7 +560,7 @@ onMounted(() => {
                       <a-menu-item key="__create_new__">+ 创建新分组</a-menu-item>
                     </a-menu>
                   </template>
-                  <a-button title="选择目标分组">
+                  <a-button>
                     {{
                       targetGroupId
                         ? availableGroups.find(g => g.id === targetGroupId)?.name || '选择目标分组'
@@ -589,24 +570,27 @@ onMounted(() => {
                   </a-button>
                 </a-dropdown>
                 <a-button
+                  type="primary"
                   @click="moveSelectedEmojis"
                   :disabled="!targetGroupId"
-                  class="text-sm px-3 py-1 bg-blue-500 dark:bg-blue-600 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  size="small"
                   title="移动选中的表情到目标分组"
                 >
                   移动
                 </a-button>
                 <a-button
+                  type="default"
                   @click="copySelectedAsMarkdown"
                   :disabled="selectedEmojis.size === 0"
-                  class="text-sm px-3 py-1 bg-indigo-500 dark:bg-indigo-600 text-white rounded hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  size="small"
+                  class="bg-indigo-500 border-indigo-500 text-white hover:bg-indigo-600"
                   title="复制选中的表情为 Markdown 格式"
                 >
                   复制为 Markdown
                 </a-button>
                 <a-button
                   @click="clearSelection"
-                  class="text-sm px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                  size="small"
                   title="清空所有表情选择"
                 >
                   清空选择
@@ -623,8 +607,9 @@ onMounted(() => {
               <!-- 移动全部到未分组按钮 -->
               <a-button
                 v-if="!isMultiSelectMode"
+                type="default"
                 @click="moveAllToUngrouped"
-                class="text-sm px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                class="bg-green-500 border-green-500 text-white hover:bg-green-600"
                 title="将所有缓冲区表情移动到未分组"
               >
                 📤 移动全部到未分组
@@ -668,9 +653,11 @@ onMounted(() => {
               <!-- 非多选模式下的编辑/删除按钮 -->
               <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
                 <a-button
+                  type="text"
+                  size="small"
                   @click="editEmoji(emoji, idx)"
                   title="编辑"
-                  class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
+                  class="bg-white bg-opacity-80 dark:bg-black dark:text-white"
                 >
                   编辑
                 </a-button>
@@ -679,8 +666,10 @@ onMounted(() => {
                     <QuestionCircleOutlined style="color: red" />
                   </template>
                   <a-button
+                    type="text"
+                    size="small"
                     title="移除"
-                    class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
+                    class="bg-white bg-opacity-80 hover:bg-opacity-100 dark:bg-black dark:text-white"
                   >
                     移除
                   </a-button>
@@ -703,58 +692,37 @@ onMounted(() => {
     </div>
 
     <!-- 创建新分组对话框 -->
-    <div
-      v-if="showCreateGroupDialog"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    <a-modal
+      v-model:open="showCreateGroupDialog"
+      title="创建新分组"
+      @ok="confirmCreateGroup"
+      @cancel="cancelCreateGroup"
+      :ok-button-props="{ disabled: !newGroupName.trim() }"
+      cancel-text="取消"
+      ok-text="创建"
     >
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
-        <h3 class="text-lg font-semibold mb-4 dark:text-white">创建新分组</h3>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-              分组名称
-            </label>
-            <input
-              v-model="newGroupName"
-              type="text"
-              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-              placeholder="输入分组名称"
-              title="新分组名称"
-              @keyup.enter="confirmCreateGroup"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-              分组图标
-            </label>
-            <input
-              v-model="newGroupIcon"
-              type="text"
-              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-              placeholder="输入图标 URL 或 emoji"
-              title="新分组图标 URL 或 emoji"
-            />
-          </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+            分组名称
+          </label>
+          <AInput
+            v-model:value="newGroupName"
+            placeholder="输入分组名称"
+            @press-enter="confirmCreateGroup"
+          />
         </div>
-        <div class="flex justify-end gap-2 mt-6">
-          <a-button
-            @click="cancelCreateGroup"
-            class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-            title="取消创建新分组"
-          >
-            取消
-          </a-button>
-          <a-button
-            @click="confirmCreateGroup"
-            :disabled="!newGroupName.trim()"
-            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            title="确认创建新分组"
-          >
-            创建
-          </a-button>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+            分组图标
+          </label>
+          <AInput
+            v-model:value="newGroupIcon"
+            placeholder="输入图标 URL 或 emoji"
+          />
         </div>
       </div>
-    </div>
+    </a-modal>
   </div>
 </template>
 
