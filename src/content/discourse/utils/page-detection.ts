@@ -1,23 +1,15 @@
 /**
- * 判断当前页面是否为 Discourse（通过显式 meta 标签检测）
+ * 判断当前页面是否为 Discourse（仅通过 meta generator 标签检测）
  */
-import { DQS, DEBI } from '../../utils/createEl'
+import { DQS } from '../../utils/createEl'
 export function isDiscoursePage(): boolean {
   try {
-    // meta generator 中通常含有 Discourse
-    const gen = DQS('meta[name="generator"]')?.getAttribute('content') || ''
-    if (gen.toLowerCase().includes('discourse')) return true
+    // 当且仅当 head 中存在 Discourse 的 meta generator 标签时判定为 Discourse
+    const generatorMeta = DQS('meta[name="generator"]')
+    if (!generatorMeta) return false
 
-    // 存在以 discourse_ 开头的 meta 名称
-    if (DQS('meta[name^="discourse_"]')) return true
-
-    // 某些站点会在 head 中放置 data-discourse-setup 的 meta（示例中有 id）
-    if (DEBI('data-discourse-setup')) return true
-
-    // 额外检测：discourse/config/environment
-    if (DQS('meta[name="discourse/config/environment"]')) return true
-
-    return false
+    const content = generatorMeta.getAttribute('content') || ''
+    return content.toLowerCase().includes('discourse')
   } catch (e) {
     console.error('[DiscourseOneClick] isDiscoursePage check failed', e)
     return false
