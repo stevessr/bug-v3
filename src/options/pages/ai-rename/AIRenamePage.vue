@@ -126,11 +126,7 @@ const containerHeight = 600
                 - 在这个视窗上应用 overflow-hidden 来裁剪放大后的图片。
               -->
               <div class="h-24 w-full flex items-center justify-center overflow-hidden">
-                <a-image
-                  :src="emoji.url"
-                  :alt="emoji.name"
-                  loading="lazy"
-                />
+                <a-image :src="emoji.url" :alt="emoji.name" loading="lazy" />
               </div>
 
               <!-- 将文字和复选框组合在一起，位于卡片底部 -->

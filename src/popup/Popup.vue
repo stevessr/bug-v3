@@ -5,7 +5,15 @@ import GroupTabs from './components/GroupTabs.vue'
 import LazyEmojiGrid from './components/LazyEmojiGrid.vue'
 import { usePopup } from './usePopup'
 
-const { emojiStore, localScale, showCopyToast, updateScale, selectEmoji, openOptions, openSidebar } = usePopup()
+const {
+  emojiStore,
+  localScale,
+  showCopyToast,
+  updateScale,
+  selectEmoji,
+  openOptions,
+  openSidebar
+} = usePopup()
 
 const setActiveHandler = (id: string) => {
   emojiStore.activeGroupId = id

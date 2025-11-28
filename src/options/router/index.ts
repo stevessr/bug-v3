@@ -14,6 +14,7 @@ import AboutPage from '../pages/AboutPage.vue'
 import DuplicateDetectionPage from '../pages/DuplicateDetectionPage.vue'
 import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
 import SyncSettingsPage from '../pages/SyncSettingsPage.vue'
+import BufferPage from '../pages/BufferPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -102,6 +103,14 @@ const routes: RouteRecordRaw[] = [
     component: SyncSettingsPage,
     meta: {
       title: '云同步'
+    }
+  },
+  {
+    path: '/buffer',
+    name: 'buffer',
+    component: BufferPage,
+    meta: {
+      title: '缓冲区'
     }
   },
   {
