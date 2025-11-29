@@ -46,6 +46,7 @@ const {
   maxZoom,
   croppedEmojis,
   selectedEmojis,
+  activeResultKey,
   displayScale,
   gridPositions,
   canProcess,
@@ -290,57 +291,57 @@ const { token } = useToken()
         class="cropper-results"
         :style="{ borderColor: token.colorBorderSecondary }"
       >
-        <h4 :style="{ color: token.colorTextHeading }">
-          切割结果（{{ croppedEmojis.length }} 个表情）
-        </h4>
+        <a-collapse v-model:activeKey="activeResultKey" ghost>
+          <a-collapse-panel key="1" :header="`切割结果（${croppedEmojis.length} 个表情）`">
+            <div class="results-grid">
+              <div
+                v-for="emoji in croppedEmojis"
+                :key="emoji.id"
+                class="result-item"
+                :class="{ selected: selectedEmojis.has(emoji.id) }"
+                :style="{
+                  borderColor: selectedEmojis.has(emoji.id)
+                    ? token.colorPrimary
+                    : token.colorBorderSecondary,
+                  background: selectedEmojis.has(emoji.id)
+                    ? token.controlItemBgActive
+                    : token.colorBgContainer
+                }"
+              >
+                <div class="result-image">
+                  <img :src="emoji.imageUrl" :alt="emoji.name" />
+                  <a-checkbox
+                    :checked="selectedEmojis.has(emoji.id)"
+                    @change="() => toggleSelection(emoji.id)"
+                    class="result-checkbox"
+                  />
+                </div>
 
-        <div class="results-grid">
-          <div
-            v-for="emoji in croppedEmojis"
-            :key="emoji.id"
-            class="result-item"
-            :class="{ selected: selectedEmojis.has(emoji.id) }"
-            :style="{
-              borderColor: selectedEmojis.has(emoji.id)
-                ? token.colorPrimary
-                : token.colorBorderSecondary,
-              background: selectedEmojis.has(emoji.id)
-                ? token.controlItemBgActive
-                : token.colorBgContainer
-            }"
-          >
-            <div class="result-image">
-              <img :src="emoji.imageUrl" :alt="emoji.name" />
-              <a-checkbox
-                :checked="selectedEmojis.has(emoji.id)"
-                @change="() => toggleSelection(emoji.id)"
-                class="result-checkbox"
-              />
+                <a-input
+                  :value="emoji.name"
+                  @change="(e: any) => updateEmojiName(emoji.id, e.target.value)"
+                  placeholder="输入表情名称"
+                  size="small"
+                  class="result-name"
+                />
+              </div>
             </div>
 
-            <a-input
-              :value="emoji.name"
-              @change="(e: any) => updateEmojiName(emoji.id, e.target.value)"
-              placeholder="输入表情名称"
-              size="small"
-              class="result-name"
-            />
-          </div>
-        </div>
+            <div class="results-actions">
+              <span class="selected-count" :style="{ color: token.colorTextSecondary }">
+                已选择 {{ croppedEmojis.filter(e => selectedEmojis.has(e.id)).length }} 个表情
+              </span>
 
-        <div class="results-actions">
-          <span class="selected-count" :style="{ color: token.colorTextSecondary }">
-            已选择 {{ croppedEmojis.filter(e => selectedEmojis.has(e.id)).length }} 个表情
-          </span>
-
-          <a-button
-            type="primary"
-            @click="confirmUpload"
-            :disabled="croppedEmojis.filter(e => selectedEmojis.has(e.id)).length === 0"
-          >
-            上传到缓冲区
-          </a-button>
-        </div>
+              <a-button
+                type="primary"
+                @click="confirmUpload"
+                :disabled="croppedEmojis.filter(e => selectedEmojis.has(e.id)).length === 0"
+              >
+                上传到缓冲区
+              </a-button>
+            </div>
+          </a-collapse-panel>
+        </a-collapse>
       </div>
     </div>
   </div>

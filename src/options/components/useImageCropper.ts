@@ -42,6 +42,7 @@ export function useImageCropper(
 
   const croppedEmojis = ref<CroppedEmoji[]>([])
   const selectedEmojis = ref<Set<string>>(new Set())
+  const activeResultKey = ref(['1'])
 
   // Resize state
   const resizingId = ref<string | null>(null)
@@ -777,6 +778,7 @@ export function useImageCropper(
     containerSize,
     croppedEmojis,
     selectedEmojis,
+    activeResultKey,
     displayScale,
     gridPositions,
     canProcess,
