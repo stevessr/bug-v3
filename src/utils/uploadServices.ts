@@ -1,12 +1,17 @@
 export interface UploadService {
   name: string
-  uploadFile(file: File, onProgress?: (percent: number) => void): Promise<string>
+  uploadFile(
+    file: File,
+    onProgress?: (percent: number) => void,
+    onRateLimitWait?: (waitTime: number) => void
+  ): Promise<string>
 }
 
 export interface UploadOptions {
   groupId?: string
   groupName?: string
   onProgress?: (percent: number) => void
+  onRateLimitWait?: (waitTime: number) => void
 }
 
 // Hardcoded map for discourse forum domains and their client IDs
@@ -45,7 +50,46 @@ class DiscourseUploadService implements UploadService {
     }
   }
 
-  async uploadFile(file: File, onProgress?: (percent: number) => void): Promise<string> {
+  async uploadFile(
+    file: File,
+    onProgress?: (percent: number) => void,
+    onRateLimitWait?: (waitTime: number) => void
+  ): Promise<string> {
+    const maxRetries = 3
+    let attempt = 0
+    let delay = 1000 // 1 second
+
+    while (attempt < maxRetries) {
+      try {
+        return await this.attemptUpload(file, onProgress)
+      } catch (error: any) {
+        // If the error indicates a 429 status, wait and retry
+        if (error.isRateLimitError && attempt < maxRetries - 1) {
+          const waitTime = error.waitTime || delay
+          if (onRateLimitWait) {
+            onRateLimitWait(waitTime)
+          }
+          console.warn(
+            `Attempt ${attempt + 1} failed with 429. Retrying in ${waitTime / 1000}s...`
+          )
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+          delay *= 2 // Exponential backoff for subsequent fallbacks
+          attempt++
+        } else {
+          // For other errors or if max retries reached, rethrow
+          console.error(`${this.domain} upload failed after ${attempt + 1} attempts:`, error)
+          throw error
+        }
+      }
+    }
+    // This part should not be reachable if maxRetries > 0, but is here for type safety
+    throw new Error('Upload failed after multiple retries.')
+  }
+
+  private async attemptUpload(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<string> {
     try {
       // Get cookies and CSRF token
       const { cookies, csrfToken } = await this.getAuth()
@@ -84,6 +128,17 @@ class DiscourseUploadService implements UploadService {
           throw new Error(`Invalid response from ${this.domain}: missing URL`)
         } else {
           const errorData = await response.json().catch(() => null)
+          if (response.status === 429 && errorData?.extras?.wait_seconds) {
+            const waitTime = errorData.extras.wait_seconds * 1000
+            const rateLimitError = new Error(
+              `Upload failed: 429 Too Many Requests. Please wait ${
+                errorData.extras.wait_seconds
+              } seconds.`
+            ) as any
+            rateLimitError.isRateLimitError = true
+            rateLimitError.waitTime = waitTime
+            throw rateLimitError
+          }
           throw new Error(
             `Upload failed: ${response.status} ${
               errorData?.message || errorData?.errors?.join(', ') || 'Unknown error'
@@ -159,7 +214,11 @@ export async function uploadAndAddEmoji(
     // Try to upload to linux.do first
     let finalUrl: string | null = null
     try {
-      finalUrl = await uploadServices['linux.do'].uploadFile(file, options.onProgress)
+      finalUrl = await uploadServices['linux.do'].uploadFile(
+        file,
+        options.onProgress,
+        options.onRateLimitWait
+      )
     } catch (e) {
       console.warn('Upload to linux.do failed, will fallback to data/object URL', e)
     }

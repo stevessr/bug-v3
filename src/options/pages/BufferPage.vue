@@ -16,7 +16,15 @@ const uploadService = ref<'linux.do' | 'idcflare.com'>('linux.do')
 const selectedFiles = ref<{ file: File; url: string }[]>([])
 const isDragging = ref(false)
 const isUploading = ref(false)
-const uploadProgress = ref<Array<{ fileName: string; percent: number; error?: string }>>([])
+const uploadProgress = ref<
+  Array<{
+    fileName: string
+    percent: number
+    error?: string
+    waitingFor?: number
+    waitStart?: number
+  }>
+>([])
 const fileInput = ref<HTMLInputElement>()
 
 // 图片切割相关状态
@@ -87,6 +95,16 @@ watch(
 )
 
 // Methods
+const getWaitProgress = (progressItem: any) => {
+  if (!progressItem.waitingFor || !progressItem.waitStart) {
+    return { percent: 0, remaining: 0 }
+  }
+  const elapsed = (Date.now() - progressItem.waitStart) / 1000
+  const remaining = Math.max(0, progressItem.waitingFor - elapsed)
+  const percent = Math.min(100, (elapsed / progressItem.waitingFor) * 100)
+  return { percent: 100 - percent, remaining: Math.ceil(remaining) }
+}
+
 const handleDragOver = () => {
   isDragging.value = true
 }
@@ -375,77 +393,97 @@ const moveAllToUngrouped = async () => {
   }
 }
 
-const uploadFiles = async () => {
-  if (selectedFiles.value.length === 0) return
+  const uploadFiles = async () => {
+    if (selectedFiles.value.length === 0) return
 
-  isUploading.value = true
-  uploadProgress.value = selectedFiles.value.map(item => ({
-    fileName: item.file.name,
-    percent: 0
-  }))
+    isUploading.value = true
+    uploadProgress.value = selectedFiles.value.map(item => ({
+      fileName: item.file.name,
+      percent: 0
+    }))
 
-  // Ensure buffer group exists
-  let group = bufferGroup.value
-  if (!group) {
-    emojiStore.createGroup('缓冲区', '📦')
-    // Find and update the group ID
-    group = emojiStore.groups.find(g => g.name === '缓冲区')
-    if (group) {
-      group.id = 'buffer'
-    }
-  }
-
-  if (!group) {
-    console.error('Failed to create buffer group')
-    isUploading.value = false
-    return
-  }
-
-  try {
-    const service = uploadServices[uploadService.value]
-
-    for (let i = 0; i < selectedFiles.value.length; i++) {
-      const { file } = selectedFiles.value[i]
-
-      try {
-        const updateProgress = (percent: number) => {
-          uploadProgress.value[i].percent = percent
-        }
-
-        // Upload file using the selected service
-        const uploadUrl = await service.uploadFile(file, updateProgress)
-
-        // Add emoji to buffer group
-        const newEmoji = {
-          name: file.name,
-          url: uploadUrl,
-          displayUrl: uploadUrl,
-          packet: 0
-        }
-
-        emojiStore.addEmojiWithoutSave(group.id || 'buffer', newEmoji)
-        uploadProgress.value[i].percent = 100
-      } catch (error) {
-        console.error(`Failed to upload ${file.name}:`, error)
-        uploadProgress.value[i].error = error instanceof Error ? error.message : String(error)
+    // Ensure buffer group exists
+    let group = bufferGroup.value
+    if (!group) {
+      emojiStore.createGroup('缓冲区', '📦')
+      // Find and update the group ID
+      group = emojiStore.groups.find(g => g.name === '缓冲区')
+      if (group) {
+        group.id = 'buffer'
       }
     }
 
-    // Save data directly instead of using maybeSave
-    await emojiStore.saveData()
+    if (!group) {
+      console.error('Failed to create buffer group')
+      isUploading.value = false
+      return
+    }
 
-    // Clear selected files
-    selectedFiles.value = []
+    const newEmojis = []
 
-    // Clear progress after a delay
-    setTimeout(() => {
-      uploadProgress.value = []
-    }, 3000)
-  } finally {
-    isUploading.value = false
+    try {
+      const service = uploadServices[uploadService.value]
+
+      for (let i = 0; i < selectedFiles.value.length; i++) {
+        const { file } = selectedFiles.value[i]
+
+        try {
+          const updateProgress = (percent: number) => {
+            uploadProgress.value[i].percent = percent
+            // Clear waiting state if progress is updated
+            if (uploadProgress.value[i].waitingFor) {
+              uploadProgress.value[i].waitingFor = undefined
+              uploadProgress.value[i].waitStart = undefined
+            }
+          }
+          const onRateLimitWait = (waitTime: number) => {
+            uploadProgress.value[i].waitingFor = waitTime / 1000
+            uploadProgress.value[i].waitStart = Date.now()
+          }
+
+          // Upload file using the selected service
+          const uploadUrl = await service.uploadFile(file, updateProgress, onRateLimitWait)
+
+          // Add emoji to a temporary array
+          newEmojis.push({
+            name: file.name,
+            url: uploadUrl,
+            displayUrl: uploadUrl,
+            packet: 0
+          })
+
+          uploadProgress.value[i].percent = 100
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error)
+          uploadProgress.value[i].error = error instanceof Error ? error.message : String(error)
+        }
+      }
+
+      // Add all new emojis to the buffer group in one go
+      if (newEmojis.length > 0) {
+        emojiStore.beginBatch()
+        try {
+          for (const newEmoji of newEmojis) {
+            emojiStore.addEmojiWithoutSave(group.id || 'buffer', newEmoji)
+          }
+        } finally {
+          await emojiStore.endBatch()
+        }
+      }
+
+      // Clear selected files
+      selectedFiles.value = []
+
+      // Clear progress after a delay
+      setTimeout(() => {
+        uploadProgress.value = []
+      }, 3000)
+    } finally {
+      isUploading.value = false
+    }
   }
-}
 // Initialize buffer group on mount
+let progressInterval: NodeJS.Timeout | null = null
 onMounted(() => {
   const existingBuffer = emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
   console.log(
@@ -463,10 +501,20 @@ onMounted(() => {
       console.log('[BufferPage] Buffer group created:', buffer.id)
     }
   }
+
+  progressInterval = setInterval(() => {
+    // Force re-render for countdown
+    if (uploadProgress.value.some(p => p.waitingFor)) {
+      uploadProgress.value = [...uploadProgress.value]
+    }
+  }, 1000)
 })
 
 onBeforeUnmount(() => {
   selectedFiles.value.forEach(item => URL.revokeObjectURL(item.url))
+  if (progressInterval) {
+    clearInterval(progressInterval)
+  }
 })
 </script>
 
@@ -574,12 +622,22 @@ onBeforeUnmount(() => {
         >
           <span class="text-sm dark:text-gray-300">{{ progress.fileName }}</span>
           <div class="flex items-center space-x-2">
-            <div class="w-32 bg-gray-200 rounded-full h-2">
+            <div v-if="!progress.waitingFor" class="w-32 bg-gray-200 rounded-full h-2">
               <div
                 class="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 :style="{ width: `${progress.percent}%` }"
               ></div>
             </div>
+            <a-progress
+              v-else
+              type="circle"
+              :width="24"
+              :percent="getWaitProgress(progress).percent"
+            >
+              <template #format>
+                <span class="text-xs">{{ getWaitProgress(progress).remaining }}s</span>
+              </template>
+            </a-progress>
             <span class="text-xs text-gray-600 dark:text-gray-400 w-12 text-right">
               {{ progress.percent }}%
             </span>
