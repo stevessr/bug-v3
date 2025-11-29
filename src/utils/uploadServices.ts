@@ -69,9 +69,7 @@ class DiscourseUploadService implements UploadService {
           if (onRateLimitWait) {
             await onRateLimitWait(waitTime)
           }
-          console.warn(
-            `Attempt ${attempt + 1} failed with 429. Retrying in ${waitTime / 1000}s...`
-          )
+          console.warn(`Attempt ${attempt + 1} failed with 429. Retrying in ${waitTime / 1000}s...`)
           await new Promise(resolve => setTimeout(resolve, waitTime))
           delay *= 2 // Exponential backoff for subsequent fallbacks
           attempt++
@@ -86,10 +84,7 @@ class DiscourseUploadService implements UploadService {
     throw new Error('Upload failed after multiple retries.')
   }
 
-  private async attemptUpload(
-    file: File,
-    onProgress?: (percent: number) => void
-  ): Promise<string> {
+  private async attemptUpload(file: File, onProgress?: (percent: number) => void): Promise<string> {
     try {
       // Get cookies and CSRF token
       const { cookies, csrfToken } = await this.getAuth()

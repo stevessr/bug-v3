@@ -70,7 +70,6 @@ const resizeHandle = ref<'tl' | 'tr' | 'bl' | 'br' | null>(null)
 const startPos = ref({ x: 0, y: 0 })
 const startRect = ref({ x: 0, y: 0, width: 0, height: 0 })
 
-
 const startResize = (e: MouseEvent, id: string, handle: 'tl' | 'tr' | 'bl' | 'br') => {
   e.stopPropagation()
   e.preventDefault()
@@ -98,8 +97,11 @@ const handleResize = (e: MouseEvent) => {
   const emoji = croppedEmojis.value.find(e => e.id === resizingId.value)
   if (!emoji) return
 
-  const deltaX = (e.clientX - startPos.value.x) / ((imageElement.value?.width || 1) * displayScale.value) * 100
-  const deltaY = (e.clientY - startPos.value.y) / ((imageElement.value?.height || 1) * displayScale.value) * 100
+  const deltaX =
+    ((e.clientX - startPos.value.x) / ((imageElement.value?.width || 1) * displayScale.value)) * 100
+  const deltaY =
+    ((e.clientY - startPos.value.y) / ((imageElement.value?.height || 1) * displayScale.value)) *
+    100
 
   let newX = startRect.value.x
   let newY = startRect.value.y
@@ -479,7 +481,8 @@ const processAICrop = async () => {
                 required: requiredFields
               }
             }
-          }        })
+          }
+        })
       }
     )
 
@@ -778,10 +781,26 @@ watch(
                 </div>
 
                 <!-- Resize handles -->
-                <div v-if="selectedEmojis.has(emoji.id)" class="resize-handle handle-tl" @mousedown="startResize($event, emoji.id, 'tl')"></div>
-                <div v-if="selectedEmojis.has(emoji.id)" class="resize-handle handle-tr" @mousedown="startResize($event, emoji.id, 'tr')"></div>
-                <div v-if="selectedEmojis.has(emoji.id)" class="resize-handle handle-bl" @mousedown="startResize($event, emoji.id, 'bl')"></div>
-                <div v-if="selectedEmojis.has(emoji.id)" class="resize-handle handle-br" @mousedown="startResize($event, emoji.id, 'br')"></div>
+                <div
+                  v-if="selectedEmojis.has(emoji.id)"
+                  class="resize-handle handle-tl"
+                  @mousedown="startResize($event, emoji.id, 'tl')"
+                ></div>
+                <div
+                  v-if="selectedEmojis.has(emoji.id)"
+                  class="resize-handle handle-tr"
+                  @mousedown="startResize($event, emoji.id, 'tr')"
+                ></div>
+                <div
+                  v-if="selectedEmojis.has(emoji.id)"
+                  class="resize-handle handle-bl"
+                  @mousedown="startResize($event, emoji.id, 'bl')"
+                ></div>
+                <div
+                  v-if="selectedEmojis.has(emoji.id)"
+                  class="resize-handle handle-br"
+                  @mousedown="startResize($event, emoji.id, 'br')"
+                ></div>
               </div>
             </div>
           </div>

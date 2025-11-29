@@ -415,96 +415,96 @@ const moveAllToUngrouped = async () => {
   }
 }
 
-  const uploadFiles = async () => {
-    if (selectedFiles.value.length === 0) return
+const uploadFiles = async () => {
+  if (selectedFiles.value.length === 0) return
 
-    isUploading.value = true
-    uploadProgress.value = selectedFiles.value.map(item => ({
-      fileName: item.file.name,
-      percent: 0
-    }))
+  isUploading.value = true
+  uploadProgress.value = selectedFiles.value.map(item => ({
+    fileName: item.file.name,
+    percent: 0
+  }))
 
-    // Ensure buffer group exists
-    let group = bufferGroup.value
-    if (!group) {
-      emojiStore.createGroup('缓冲区', '📦')
-      group = emojiStore.groups.find(g => g.name === '缓冲区')
-      if (group) {
-        group.id = 'buffer'
-      }
-    }
-
-    if (!group) {
-      console.error('Failed to create buffer group')
-      isUploading.value = false
-      return
-    }
-
-    const newEmojis: any[] = []
-    const writeNewEmojis = async () => {
-      if (newEmojis.length === 0) return
-      console.log(`Writing batch of ${newEmojis.length} emojis.`)
-      emojiStore.beginBatch()
-      try {
-        for (const newEmoji of newEmojis) {
-          emojiStore.addEmojiWithoutSave(group!.id || 'buffer', newEmoji)
-        }
-      } finally {
-        await emojiStore.endBatch()
-        newEmojis.length = 0 // Clear the array after writing
-      }
-    }
-
-    try {
-      const service = uploadServices[uploadService.value]
-
-      for (let i = 0; i < selectedFiles.value.length; i++) {
-        const { file, width, height } = selectedFiles.value[i]
-
-        try {
-          const updateProgress = (percent: number) => {
-            uploadProgress.value[i].percent = percent
-            if (uploadProgress.value[i].waitingFor) {
-              uploadProgress.value[i].waitingFor = undefined
-              uploadProgress.value[i].waitStart = undefined
-            }
-          }
-
-          const onRateLimitWait = async (waitTime: number) => {
-            console.log('Rate limit hit. Writing existing batch before waiting.')
-            await writeNewEmojis()
-            uploadProgress.value[i].waitingFor = waitTime / 1000
-            uploadProgress.value[i].waitStart = Date.now()
-          }
-
-          const uploadUrl = await service.uploadFile(file, updateProgress, onRateLimitWait)
-
-          newEmojis.push({
-            name: file.name,
-            url: uploadUrl,
-            displayUrl: uploadUrl,
-            packet: 0,
-            width,
-            height
-          })
-          uploadProgress.value[i].percent = 100
-        } catch (error) {
-          console.error(`Failed to upload ${file.name}:`, error)
-          uploadProgress.value[i].error = error instanceof Error ? error.message : String(error)
-        }
-      }
-
-      // After the loop, write any remaining emojis.
-      await writeNewEmojis()
-
-      selectedFiles.value = []
-      setTimeout(() => {
-        uploadProgress.value = []
-      }, 3000)
-    } finally {
-      isUploading.value = false
+  // Ensure buffer group exists
+  let group = bufferGroup.value
+  if (!group) {
+    emojiStore.createGroup('缓冲区', '📦')
+    group = emojiStore.groups.find(g => g.name === '缓冲区')
+    if (group) {
+      group.id = 'buffer'
     }
   }
+
+  if (!group) {
+    console.error('Failed to create buffer group')
+    isUploading.value = false
+    return
+  }
+
+  const newEmojis: any[] = []
+  const writeNewEmojis = async () => {
+    if (newEmojis.length === 0) return
+    console.log(`Writing batch of ${newEmojis.length} emojis.`)
+    emojiStore.beginBatch()
+    try {
+      for (const newEmoji of newEmojis) {
+        emojiStore.addEmojiWithoutSave(group!.id || 'buffer', newEmoji)
+      }
+    } finally {
+      await emojiStore.endBatch()
+      newEmojis.length = 0 // Clear the array after writing
+    }
+  }
+
+  try {
+    const service = uploadServices[uploadService.value]
+
+    for (let i = 0; i < selectedFiles.value.length; i++) {
+      const { file, width, height } = selectedFiles.value[i]
+
+      try {
+        const updateProgress = (percent: number) => {
+          uploadProgress.value[i].percent = percent
+          if (uploadProgress.value[i].waitingFor) {
+            uploadProgress.value[i].waitingFor = undefined
+            uploadProgress.value[i].waitStart = undefined
+          }
+        }
+
+        const onRateLimitWait = async (waitTime: number) => {
+          console.log('Rate limit hit. Writing existing batch before waiting.')
+          await writeNewEmojis()
+          uploadProgress.value[i].waitingFor = waitTime / 1000
+          uploadProgress.value[i].waitStart = Date.now()
+        }
+
+        const uploadUrl = await service.uploadFile(file, updateProgress, onRateLimitWait)
+
+        newEmojis.push({
+          name: file.name,
+          url: uploadUrl,
+          displayUrl: uploadUrl,
+          packet: 0,
+          width,
+          height
+        })
+        uploadProgress.value[i].percent = 100
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error)
+        uploadProgress.value[i].error = error instanceof Error ? error.message : String(error)
+      }
+    }
+
+    // After the loop, write any remaining emojis.
+    await writeNewEmojis()
+
+    selectedFiles.value = []
+    setTimeout(() => {
+      uploadProgress.value = []
+    }, 3000)
+  } finally {
+    isUploading.value = false
+  }
+}
 // Initialize buffer group on mount
 let progressInterval: NodeJS.Timeout | null = null
 onMounted(() => {

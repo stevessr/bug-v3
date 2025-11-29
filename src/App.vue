@@ -79,14 +79,14 @@ onMounted(() => {
   // 根据模式为 body 添加对应的 class，以应用不同的样式
   document.body.classList.remove('options-mode')
   document.body.classList.remove('popup-mode')
-      document.body.classList.remove('sidebar-mode')
+  document.body.classList.remove('sidebar-mode')
   switch (mode.value) {
     case 'options':
       document.body.classList.add('options-mode')
       break
     case 'popup':
       document.body.classList.add('popup-mode')
-      
+
       break
     case 'sidebar':
       document.body.classList.add('sidebar-mode')

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+
 import LazyEmojiGrid from '../popup/components/LazyEmojiGrid.vue'
 import { usePopup } from '../popup/usePopup'
 
