@@ -3,7 +3,7 @@ export interface UploadService {
   uploadFile(
     file: File,
     onProgress?: (percent: number) => void,
-    onRateLimitWait?: (waitTime: number) => void
+    onRateLimitWait?: (waitTime: number) => Promise<void>
   ): Promise<string>
 }
 
@@ -11,7 +11,7 @@ export interface UploadOptions {
   groupId?: string
   groupName?: string
   onProgress?: (percent: number) => void
-  onRateLimitWait?: (waitTime: number) => void
+  onRateLimitWait?: (waitTime: number) => Promise<void>
 }
 
 // Hardcoded map for discourse forum domains and their client IDs
@@ -53,7 +53,7 @@ class DiscourseUploadService implements UploadService {
   async uploadFile(
     file: File,
     onProgress?: (percent: number) => void,
-    onRateLimitWait?: (waitTime: number) => void
+    onRateLimitWait?: (waitTime: number) => Promise<void>
   ): Promise<string> {
     const maxRetries = 3
     let attempt = 0
@@ -67,7 +67,7 @@ class DiscourseUploadService implements UploadService {
         if (error.isRateLimitError && attempt < maxRetries - 1) {
           const waitTime = error.waitTime || delay
           if (onRateLimitWait) {
-            onRateLimitWait(waitTime)
+            await onRateLimitWait(waitTime)
           }
           console.warn(
             `Attempt ${attempt + 1} failed with 429. Retrying in ${waitTime / 1000}s...`

@@ -13,7 +13,7 @@ const { emojiStore, openEditEmoji } = options
 
 // State
 const uploadService = ref<'linux.do' | 'idcflare.com'>('linux.do')
-const selectedFiles = ref<{ file: File; url: string }[]>([])
+const selectedFiles = ref<{ file: File; url: string; width?: number; height?: number }[]>([])
 const isDragging = ref(false)
 const isUploading = ref(false)
 const uploadProgress = ref<
@@ -135,10 +135,20 @@ const addFiles = (files: File[]) => {
   const existingNames = bufferGroup.value?.emojis.map(e => e.name) || []
   const newFiles = imageFiles
     .filter(file => !existingNames.includes(file.name))
-    .map(file => ({
-      file,
-      url: URL.createObjectURL(file)
-    }))
+    .map(file => {
+      const url = URL.createObjectURL(file)
+      const newFileEntry = { file, url, width: 0, height: 0 }
+
+      // Get image dimensions
+      const img = new Image()
+      img.onload = () => {
+        newFileEntry.width = img.width
+        newFileEntry.height = img.height
+      }
+      img.src = url
+
+      return newFileEntry
+    })
 
   selectedFiles.value = [...selectedFiles.value, ...newFiles]
 }
@@ -163,8 +173,20 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
       const blob = await response.blob()
       const file = new File([blob], `${croppedEmoji.name}.png`, { type: 'image/png' })
       const url = URL.createObjectURL(file)
-      newFilesWithUrls.push({ file, url })
+
+      // Get image dimensions
+      const img = new Image()
+      img.onload = () => {
+        newFilesWithUrls.push({ file, url, width: img.width, height: img.height })
+      }
+      img.src = url
     }
+
+    // This is now an async loop, so we need to wait for all images to load.
+    // A simple approach is to use a Promise.all, but that complicates the loop.
+    // Awaiting a small delay is a pragmatic alternative to ensure dimensions are likely set.
+    // A more robust solution might involve a different async pattern if this proves unreliable.
+    await new Promise(resolve => setTimeout(resolve, 100)) // Wait for image loading
 
     // Remove the original file that was cropped
     const originalFile = cropImageFile.value
@@ -406,7 +428,6 @@ const moveAllToUngrouped = async () => {
     let group = bufferGroup.value
     if (!group) {
       emojiStore.createGroup('缓冲区', '📦')
-      // Find and update the group ID
       group = emojiStore.groups.find(g => g.name === '缓冲区')
       if (group) {
         group.id = 'buffer'
@@ -419,39 +440,53 @@ const moveAllToUngrouped = async () => {
       return
     }
 
-    const newEmojis = []
+    const newEmojis: any[] = []
+    const writeNewEmojis = async () => {
+      if (newEmojis.length === 0) return
+      console.log(`Writing batch of ${newEmojis.length} emojis.`)
+      emojiStore.beginBatch()
+      try {
+        for (const newEmoji of newEmojis) {
+          emojiStore.addEmojiWithoutSave(group!.id || 'buffer', newEmoji)
+        }
+      } finally {
+        await emojiStore.endBatch()
+        newEmojis.length = 0 // Clear the array after writing
+      }
+    }
 
     try {
       const service = uploadServices[uploadService.value]
 
       for (let i = 0; i < selectedFiles.value.length; i++) {
-        const { file } = selectedFiles.value[i]
+        const { file, width, height } = selectedFiles.value[i]
 
         try {
           const updateProgress = (percent: number) => {
             uploadProgress.value[i].percent = percent
-            // Clear waiting state if progress is updated
             if (uploadProgress.value[i].waitingFor) {
               uploadProgress.value[i].waitingFor = undefined
               uploadProgress.value[i].waitStart = undefined
             }
           }
-          const onRateLimitWait = (waitTime: number) => {
+
+          const onRateLimitWait = async (waitTime: number) => {
+            console.log('Rate limit hit. Writing existing batch before waiting.')
+            await writeNewEmojis()
             uploadProgress.value[i].waitingFor = waitTime / 1000
             uploadProgress.value[i].waitStart = Date.now()
           }
 
-          // Upload file using the selected service
           const uploadUrl = await service.uploadFile(file, updateProgress, onRateLimitWait)
 
-          // Add emoji to a temporary array
           newEmojis.push({
             name: file.name,
             url: uploadUrl,
             displayUrl: uploadUrl,
-            packet: 0
+            packet: 0,
+            width,
+            height
           })
-
           uploadProgress.value[i].percent = 100
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error)
@@ -459,22 +494,10 @@ const moveAllToUngrouped = async () => {
         }
       }
 
-      // Add all new emojis to the buffer group in one go
-      if (newEmojis.length > 0) {
-        emojiStore.beginBatch()
-        try {
-          for (const newEmoji of newEmojis) {
-            emojiStore.addEmojiWithoutSave(group.id || 'buffer', newEmoji)
-          }
-        } finally {
-          await emojiStore.endBatch()
-        }
-      }
+      // After the loop, write any remaining emojis.
+      await writeNewEmojis()
 
-      // Clear selected files
       selectedFiles.value = []
-
-      // Clear progress after a delay
       setTimeout(() => {
         uploadProgress.value = []
       }, 3000)
