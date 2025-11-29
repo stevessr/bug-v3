@@ -3,28 +3,32 @@
  * 独立运行的 Live2D 小部件，自动注入到网页中
  */
 
-import { initializeLive2D, setExpression, setRandomExpression, setMessageBox, hideMessageBox, revealMessageBox } from 'Live2dRender'
-import type { LAppModel } from '../../lib/Live2dRender/src/lappmodel'
+import { initializeLive2D, setExpression, setRandomExpression, setMessageBox, hideMessageBox, revealMessageBox } from 'live2drender/main'
+import type { LAppModel } from 'live2drender/lappmodel'
 import './live2d-widget.css'
 
 // 配置选项
 interface Live2DConfig {
   modelPath: string
-  position: [number, number]
+  position: 'left' | 'right'
   scale: number | 'auto'
   canvasWidth: number
   canvasHeight: number
   enabled: boolean
+  showToolBox?: boolean
+  loadFromCache?: boolean
 }
 
 // 默认配置
 const DEFAULT_CONFIG: Live2DConfig = {
   modelPath: 'https://model.hacxy.cn/cat-black/model.json',
-  position: [0, 10],
+  position: 'right',
   scale: 0.15,
   canvasWidth: 300,
   canvasHeight: 400,
-  enabled: true
+  enabled: true,
+  showToolBox: false,
+  loadFromCache: true
 }
 
 class Live2DWidget {
@@ -56,8 +60,8 @@ class Live2DWidget {
     }
 
     try {
-      // 创建容器和 canvas
-      this.createElements()
+      // 创建容器（不创建 canvas，由 Live2dRender 创建）
+      this.createContainer()
 
       // 等待 DOM 完全加载
       if (document.readyState === 'loading') {
@@ -79,16 +83,14 @@ class Live2DWidget {
   }
 
   /**
-   * 创建 DOM 元素
+   * 创建容器元素（不包括 canvas，canvas 由 Live2dRender 创建）
    */
-  private createElements(): void {
+  private createContainer(): void {
     // 创建容器
     this.container = document.createElement('div')
     this.container.id = 'live2d-widget-container'
     this.container.className = 'live2d-widget-container'
 
-    // Live2dRender 库会在初始化时创建自己的 canvas 元素
-    // 我们只需要创建容器和控制按钮
     // 创建控制按钮容器
     const controls = document.createElement('div')
     controls.className = 'live2d-widget-controls'
@@ -122,29 +124,48 @@ class Live2DWidget {
    */
   private async initLive2D(): Promise<void> {
     try {
-      // 初始化 Live2DRender 并加载模型
+      // 使用正确的 Live2dRender API 初始化
       await initializeLive2D({
         CanvasId: 'live2d-widget-canvas',
         CanvasSize: this.config.scale === 'auto'
           ? 'auto'
           : { width: this.config.canvasWidth, height: this.config.canvasHeight },
+        CanvasPosition: this.config.position,
+        BackgroundRGBA: [0.0, 0.0, 0.0, 0.0],
         ResourcesPath: this.config.modelPath,
-        ShowToolBox: false
+        ShowToolBox: this.config.showToolBox ?? false,
+        LoadFromCache: this.config.loadFromCache ?? true,
+        MinifiedJSUrl: 'https://unpkg.com/core-js-bundle@3.6.1/minified.js',
+        Live2dCubismcoreUrl: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js'
       })
+
+      // Live2dRender 会创建 canvas 并添加到 body
+      // 等待一下让它完成创建
+      await new Promise(resolve => setTimeout(resolve, 100))
 
       // 获取由 Live2dRender 创建的 canvas 元素
       this.canvas = document.getElementById('live2d-widget-canvas') as HTMLCanvasElement
 
-      // 模型加载成功后设置点击事件
-      if (this.canvas) {
-        this.canvas.addEventListener('click', (e) => {
-          if (!this.isDragging) {
-            // 触发随机动作或表情
-            console.log('[Live2D] Model clicked')
-            setRandomExpression()
-          }
-        })
+      if (!this.canvas) {
+        throw new Error('Failed to find canvas element created by Live2dRender')
       }
+
+      // 将 canvas 移动到我们的容器中
+      if (this.container && this.canvas.parentElement !== this.container) {
+        this.container.appendChild(this.canvas)
+      }
+
+      // 为 canvas 添加样式类
+      this.canvas.classList.add('live2d-widget-canvas')
+
+      // 模型加载成功后设置点击事件
+      this.canvas.addEventListener('click', (e) => {
+        if (!this.isDragging) {
+          // 触发随机动作或表情
+          console.log('[Live2D] Model clicked')
+          setRandomExpression()
+        }
+      })
 
       console.log('[Live2D] Model loaded successfully')
 
@@ -162,10 +183,10 @@ class Live2DWidget {
 
     // 拖拽功能
     this.container.addEventListener('mousedown', (e) => {
-      // 只在点击容器顶部时才允许拖拽
+      // 只在点击容器顶部或控制按钮区域时才允许拖拽
       const target = e.target as HTMLElement
       if (this.canvas && e.target === this.canvas ||
-          target.className.includes('live2d-widget-controls')) {
+        target.className.includes('live2d-widget-controls')) {
         this.isDragging = true
         this.dragOffset.x = e.clientX - this.container!.offsetLeft
         this.dragOffset.y = e.clientY - this.container!.offsetTop
@@ -200,7 +221,7 @@ class Live2DWidget {
     this.container.addEventListener('touchstart', (e) => {
       const target = e.target as HTMLElement
       if (this.canvas && e.target === this.canvas ||
-          target.className.includes('live2d-widget-controls')) {
+        target.className.includes('live2d-widget-controls')) {
         const touch = e.touches[0]
         this.isDragging = true
         this.dragOffset.x = touch.clientX - this.container!.offsetLeft
@@ -288,7 +309,7 @@ const initWidget = () => {
   try {
     // 检查是否应该在当前页面启用
     const shouldEnable = checkIfShouldEnable()
-    
+
     if (shouldEnable) {
       widget = new Live2DWidget()
       console.log('[Live2D] Widget auto-initialized')
@@ -306,7 +327,7 @@ function checkIfShouldEnable(): boolean {
   // 可以添加黑名单或白名单逻辑
   const blacklist = ['localhost', '127.0.0.1']
   const hostname = window.location.hostname
-  
+
   // 如果在黑名单中，不启用
   if (blacklist.some(domain => hostname.includes(domain))) {
     console.log('[Live2D] Disabled on:', hostname)

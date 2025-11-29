@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
-        l2d: fileURLToPath(new URL('./lib/l2d/src', import.meta.url))
+        live2drender: fileURLToPath(new URL('./lib/Live2dRender/src', import.meta.url))
       }
     },
     define: {
@@ -40,15 +40,15 @@ export default defineConfig(({ mode }) => {
         process.env.BUILD_MINIFIED === 'false'
           ? undefined
           : {
-              compress: {
-                drop_console: !enableLogging, // 根据日志开关决定是否移除 console
-                drop_debugger: !isDev, // 生产环境移除 debugger
-                passes: 3 // More aggressive compression
-              },
-              format: {
-                comments: false // Remove all comments in production
-              }
+            compress: {
+              drop_console: !enableLogging, // 根据日志开关决定是否移除 console
+              drop_debugger: !isDev, // 生产环境移除 debugger
+              passes: 3 // More aggressive compression
             },
+            format: {
+              comments: false // Remove all comments in production
+            }
+          },
       rollupOptions: {
         input: {
           index: fileURLToPath(new URL('index.html', import.meta.url)),
