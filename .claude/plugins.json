@@ -1,0 +1,637 @@
+{
+  "version": 1,
+  "lastUpdated": 1764376568352,
+  "plugins": [
+    {
+      "filename": "api-docs.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/api-docs.md",
+        "filename": "api-docs.md",
+        "name": "api-docs",
+        "description": "Launch the API documentation specialist for OpenAPI specs",
+        "category": "commands",
+        "type": "command",
+        "size": 191,
+        "contentHash": "2b2f75df9281a935ffd693dfbc9bd6abc79d1bc49dc2f3691d287af5121f8cbf"
+      }
+    },
+    {
+      "filename": "api-developer.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/api-developer.md",
+        "filename": "api-developer.md",
+        "name": "api-developer",
+        "description": "Backend API development specialist for creating robust, scalable REST and GraphQL APIs with best practices",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "MultiEdit",
+          "Bash",
+          "Grep",
+          "Glob",
+          "Task"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 7809,
+        "contentHash": "6c6aa6e7809901622ad15ee4fd77296cf9a875beff2e82935b7d7e61529f844b"
+      }
+    },
+    {
+      "filename": "api.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/api.md",
+        "filename": "api.md",
+        "name": "api",
+        "description": "Launch the API development agent for backend implementation",
+        "category": "commands",
+        "type": "command",
+        "size": 193,
+        "contentHash": "fae083183a66af16fd6b7f8fc941a200d027298b30f01a796b1ca9ee254990a0"
+      }
+    },
+    {
+      "filename": "api-documenter.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/api-documenter.md",
+        "filename": "api-documenter.md",
+        "name": "api-documenter",
+        "description": "API documentation specialist for creating OpenAPI/Swagger specifications, API reference docs, and integration guides",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "MultiEdit",
+          "Grep",
+          "Glob"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 8530,
+        "contentHash": "6c5ddfac81d2f915df007174937089c3bdcc6c80f63206c3be7ebdfe1f6d2bf0"
+      }
+    },
+    {
+      "filename": "content.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/content.md",
+        "filename": "content.md",
+        "name": "content",
+        "description": "Alternative command for content creation",
+        "category": "commands",
+        "type": "command",
+        "size": 138,
+        "contentHash": "be2b82b036e63f51bd89da46bd55918d083d48ec4d1406d109cbdb70756ee23d"
+      }
+    },
+    {
+      "filename": "debug.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/debug.md",
+        "filename": "debug.md",
+        "name": "debug",
+        "description": "Debug an error or issue",
+        "allowed_tools": [
+          "Task"
+        ],
+        "category": "commands",
+        "type": "command",
+        "size": 279,
+        "contentHash": "6905b57a96bc71658e70dce22a3d5b302017c442b191e394158218c7d5ff556d"
+      }
+    },
+    {
+      "filename": "code-reviewer.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/code-reviewer.md",
+        "filename": "code-reviewer.md",
+        "name": "code-reviewer",
+        "description": "Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.",
+        "tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "Bash"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 4254,
+        "contentHash": "04ef2c0ec30bc30b67f81035cf12a00cfd967c29bc2a9283ad6cc00f7e4b37b9"
+      }
+    },
+    {
+      "filename": "deploy.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/deploy.md",
+        "filename": "deploy.md",
+        "name": "deploy",
+        "description": "Alternative command for DevOps deployment tasks",
+        "category": "commands",
+        "type": "command",
+        "size": 169,
+        "contentHash": "f039d9d18456a17b037773526eea82385b057bc1dcc443515beb3766ac0f1859"
+      }
+    },
+    {
+      "filename": "debugger.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/debugger.md",
+        "filename": "debugger.md",
+        "name": "debugger",
+        "description": "Expert debugging specialist for analyzing errors, stack traces, and unexpected behavior. Use proactively when encountering any errors or test failures.",
+        "tools": [
+          "Read",
+          "Edit",
+          "Bash",
+          "Grep",
+          "Glob"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 6229,
+        "contentHash": "032020891c21c6899e9cc0ca6345f7106f142465dd368a5976c1e38803147a3f"
+      }
+    },
+    {
+      "filename": "devops.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/devops.md",
+        "filename": "devops.md",
+        "name": "devops",
+        "description": "Launch the DevOps specialist for CI/CD and deployment",
+        "category": "commands",
+        "type": "command",
+        "size": 173,
+        "contentHash": "2326acb30e119832467312422ee43e70b69a3c099ed35cba4b6f3e04a9372d39"
+      }
+    },
+    {
+      "filename": "devops-engineer.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/devops-engineer.md",
+        "filename": "devops-engineer.md",
+        "name": "devops-engineer",
+        "description": "DevOps specialist for CI/CD pipelines, deployment automation, infrastructure as code, and monitoring",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "MultiEdit",
+          "Bash",
+          "Grep",
+          "Glob"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 10532,
+        "contentHash": "efa9e152277dd1b43eda4477d44566e74e26fe5a7fab18c2b657eac89fb3a80f"
+      }
+    },
+    {
+      "filename": "document.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/document.md",
+        "filename": "document.md",
+        "name": "document",
+        "description": "Generate or update documentation",
+        "allowed_tools": [
+          "Task"
+        ],
+        "category": "commands",
+        "type": "command",
+        "size": 359,
+        "contentHash": "d74c3adc69c2a72b73cca41ac01bec7f813400bfd8f8d938f011ff10bf6d162e"
+      }
+    },
+    {
+      "filename": "doc-writer.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/doc-writer.md",
+        "filename": "doc-writer.md",
+        "name": "doc-writer",
+        "description": "Documentation specialist for creating comprehensive technical documentation, API references, and README files. Automatically generates and updates documentation from code.",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "Grep",
+          "Glob"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 7550,
+        "contentHash": "2ef30f6b80f39dcb14fb5b18e99f0bac2b4b7b62adf8cb3784b569e06b6a1a55"
+      }
+    },
+    {
+      "filename": "frontend.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/frontend.md",
+        "filename": "frontend.md",
+        "name": "frontend",
+        "description": "Launch the frontend development agent for UI implementation",
+        "category": "commands",
+        "type": "command",
+        "size": 189,
+        "contentHash": "2d26edbb8affa4067a868f3415e255b807802cfc4d7f5681f8094699c94fd911"
+      }
+    },
+    {
+      "filename": "frontend-developer.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/frontend-developer.md",
+        "filename": "frontend-developer.md",
+        "name": "frontend-developer",
+        "description": "Frontend development specialist for creating modern, responsive web applications using React, Vue, and other frameworks",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "MultiEdit",
+          "Bash",
+          "Grep",
+          "Glob",
+          "Task"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 7071,
+        "contentHash": "46958b38d2d2ed26ef9a8aef7cc64fbb83aab2769fa6feb90c01618e1b7facad"
+      }
+    },
+    {
+      "filename": "marketing.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/marketing.md",
+        "filename": "marketing.md",
+        "name": "marketing",
+        "description": "Launch the marketing content specialist",
+        "category": "commands",
+        "type": "command",
+        "size": 164,
+        "contentHash": "4f27244b90c26c0a88348477c953934e1c188b6f17e75994ee602c7fd9104b76"
+      }
+    },
+    {
+      "filename": "marketing-writer.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/marketing-writer.md",
+        "filename": "marketing-writer.md",
+        "name": "marketing-writer",
+        "description": "Marketing content specialist for product descriptions, landing pages, blog posts, and technical marketing materials",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "MultiEdit",
+          "WebSearch",
+          "Grep",
+          "Glob"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 10002,
+        "contentHash": "2557e77b9f3439e8b67f4c694b6e7c79c2701dd0cfe769ac55c0d61f714f0b4d"
+      }
+    },
+    {
+      "filename": "plan.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/plan.md",
+        "filename": "plan.md",
+        "name": "plan",
+        "description": "Launch the project planning agent for strategic task decomposition",
+        "category": "commands",
+        "type": "command",
+        "size": 216,
+        "contentHash": "b1fc1db037576cca61d91e130dafd3447ce2d22199b7e8872ed30a031e0cf750"
+      }
+    },
+    {
+      "filename": "product-manager.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/product-manager.md",
+        "filename": "product-manager.md",
+        "name": "product-manager",
+        "description": "Product management specialist for requirements gathering, user stories, product roadmaps, and feature prioritization",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "Grep",
+          "Glob",
+          "TodoWrite"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 8709,
+        "contentHash": "3460fe507edcafde694a05beef8e60533ec2da9052c0642e224abb999051c998"
+      }
+    },
+    {
+      "filename": "product.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/product.md",
+        "filename": "product.md",
+        "name": "product",
+        "description": "Launch the product management specialist",
+        "category": "commands",
+        "type": "command",
+        "size": 155,
+        "contentHash": "204c69018fb9e8190e9f1ace7e63ea1fec78844a7f3ebddaaceba2f37091362a"
+      }
+    },
+    {
+      "filename": "project-planner.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/project-planner.md",
+        "filename": "project-planner.md",
+        "name": "project-planner",
+        "description": "Strategic planning specialist for breaking down complex projects into actionable tasks and managing development workflows",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "Grep",
+          "Glob",
+          "TodoWrite",
+          "Task"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 9421,
+        "contentHash": "36a0e8378428c348de25ed69fcc0182820ab6308937edc4533fcb3a4494905ad"
+      }
+    },
+    {
+      "filename": "refactor.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/refactor.md",
+        "filename": "refactor.md",
+        "name": "refactor",
+        "description": "Refactor code for better structure and maintainability",
+        "allowed_tools": [
+          "Task"
+        ],
+        "category": "commands",
+        "type": "command",
+        "size": 336,
+        "contentHash": "e7c1d7d0b656571652c7108291ab6bc330eee8baccb6be890501b255ec31a3fd"
+      }
+    },
+    {
+      "filename": "refactor.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/refactor.md",
+        "filename": "refactor.md",
+        "name": "refactor",
+        "description": "Code refactoring specialist. Expert at improving code structure, applying design patterns, and enhancing maintainability without changing functionality.",
+        "tools": [
+          "Read",
+          "Edit",
+          "MultiEdit",
+          "Grep",
+          "Glob"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 7529,
+        "contentHash": "7f747e0faaa861faaf01fe8c501bb286273e37f09c2f5072491ff7dbcad24f55"
+      }
+    },
+    {
+      "filename": "requirements.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/requirements.md",
+        "filename": "requirements.md",
+        "name": "requirements",
+        "description": "Alternative command for requirements gathering",
+        "category": "commands",
+        "type": "command",
+        "size": 156,
+        "contentHash": "6126ddd5ee300f36de51030464b741cfec03600d8fc8192b49c2d7e53936058d"
+      }
+    },
+    {
+      "filename": "review.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/review.md",
+        "filename": "review.md",
+        "name": "review",
+        "description": "Trigger code review on recent changes",
+        "allowed_tools": [
+          "Task"
+        ],
+        "category": "commands",
+        "type": "command",
+        "size": 286,
+        "contentHash": "d3eec178c9235211ddeeda6b68ee07613b10d5af13be936180dbeb4d9d4e29b3"
+      }
+    },
+    {
+      "filename": "security-scanner.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/security-scanner.md",
+        "filename": "security-scanner.md",
+        "name": "security-scanner",
+        "description": "Security vulnerability scanner that proactively detects security issues, exposed secrets, and suggests remediation. Use after code changes or for security audits.",
+        "tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "Bash"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 5537,
+        "contentHash": "e38a993fd669eb7ce2ddc54500ece6624c1ea5d61b4f1100b3636ee5572c5347"
+      }
+    },
+    {
+      "filename": "security-scan.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/security-scan.md",
+        "filename": "security-scan.md",
+        "name": "security-scan",
+        "description": "Scan for security vulnerabilities",
+        "allowed_tools": [
+          "Task"
+        ],
+        "category": "commands",
+        "type": "command",
+        "size": 354,
+        "contentHash": "764e630cfc41ad20f51bde886043689a2d081d3a28ca0e74a090735f9dd252fe"
+      }
+    },
+    {
+      "filename": "shadcn-ui-builder.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/shadcn-ui-builder.md",
+        "filename": "shadcn-ui-builder.md",
+        "name": "shadcn-ui-builder",
+        "description": "UI/UX specialist for designing and implementing interfaces using the ShadCN UI component library. Expert at creating modern, accessible, component-based designs.",
+        "tools": [
+          "Glob",
+          "Grep",
+          "LS",
+          "ExitPlanMode",
+          "Read",
+          "NotebookRead",
+          "WebFetch",
+          "TodoWrite",
+          "Task"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 5192,
+        "contentHash": "d3b8b98f6a63f48b29658e0884ba2b449720283cf27c32f8fd5aff7d381d3094"
+      }
+    },
+    {
+      "filename": "shadcn.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/shadcn.md",
+        "filename": "shadcn.md",
+        "name": "shadcn",
+        "description": "Launch the ShadCN UI builder agent for component-based UI development",
+        "category": "commands",
+        "type": "command",
+        "size": 205,
+        "contentHash": "24efd6150bcd35c5a56a93aa9bc0c85448fd7762bca24c8ce56672aee60e30f7"
+      }
+    },
+    {
+      "filename": "tdd-specialist.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/tdd-specialist.md",
+        "filename": "tdd-specialist.md",
+        "name": "tdd-specialist",
+        "description": "Test-Driven Development specialist for creating comprehensive test suites, implementing TDD workflows, and ensuring code quality",
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "MultiEdit",
+          "Bash",
+          "Grep",
+          "Glob"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 8020,
+        "contentHash": "5d990f9214c49b074d69224664ee51eeaea07317b62838d1296b46c6f92ff46b"
+      }
+    },
+    {
+      "filename": "tdd.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/tdd.md",
+        "filename": "tdd.md",
+        "name": "tdd",
+        "description": "Launch the TDD specialist for test-driven development",
+        "category": "commands",
+        "type": "command",
+        "size": 180,
+        "contentHash": "754815d00a4ec0f4d21a86206e2c91f64857e6e805c6c0704a48999c2ba0bf6c"
+      }
+    },
+    {
+      "filename": "test-runner.md",
+      "type": "agent",
+      "metadata": {
+        "sourcePath": "agents/test-runner.md",
+        "filename": "test-runner.md",
+        "name": "test-runner",
+        "description": "Automated test execution specialist. Use proactively to run tests and fix failures. Automatically detects test frameworks and ensures all tests pass.",
+        "tools": [
+          "Bash",
+          "Read",
+          "Edit",
+          "Grep",
+          "Glob"
+        ],
+        "category": "agents",
+        "type": "agent",
+        "size": 5262,
+        "contentHash": "7f60c55aa60508191611d257e1d8269075ec1b1f1bfece2e09ba7d310ba96522"
+      }
+    },
+    {
+      "filename": "test-first.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/test-first.md",
+        "filename": "test-first.md",
+        "name": "test-first",
+        "description": "Alternative command for TDD specialist focusing on test-first approach",
+        "category": "commands",
+        "type": "command",
+        "size": 189,
+        "contentHash": "4770647706f7a8cf5c91f5786dee91e1f97453668042aaf5273910045cbd3515"
+      }
+    },
+    {
+      "filename": "test.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/test.md",
+        "filename": "test.md",
+        "name": "test",
+        "description": "Run tests and fix failures",
+        "allowed_tools": [
+          "Task"
+        ],
+        "category": "commands",
+        "type": "command",
+        "size": 325,
+        "contentHash": "a09fd61c8aa577150031227161675d9fae3463f7472ab20edca3571eeb96050b"
+      }
+    },
+    {
+      "filename": "ui.md",
+      "type": "command",
+      "metadata": {
+        "sourcePath": "commands/ui.md",
+        "filename": "ui.md",
+        "name": "ui",
+        "description": "Launch the ShadCN UI builder agent for interface design and implementation",
+        "category": "commands",
+        "type": "command",
+        "size": 205,
+        "contentHash": "dd898ef6bd045bd1971340be7da69d5429fbd77128304c30e0228c5f58cadfbc"
+      }
+    }
+  ]
+}

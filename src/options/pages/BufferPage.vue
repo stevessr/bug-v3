@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, inject } from 'vue'
-import { QuestionCircleOutlined, DownOutlined } from '@ant-design/icons-vue'
+import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
+import { QuestionCircleOutlined, DownOutlined, ScissorOutlined } from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
+import ImageCropper from '../components/ImageCropper.vue'
 
+import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
 
 const options = inject<OptionsInject>('options')!
@@ -11,11 +13,15 @@ const { emojiStore, openEditEmoji } = options
 
 // State
 const uploadService = ref<'linux.do' | 'idcflare.com'>('linux.do')
-const selectedFiles = ref<File[]>([])
+const selectedFiles = ref<{ file: File; url: string }[]>([])
 const isDragging = ref(false)
 const isUploading = ref(false)
 const uploadProgress = ref<Array<{ fileName: string; percent: number; error?: string }>>([])
 const fileInput = ref<HTMLInputElement>()
+
+// 图片切割相关状态
+const showImageCropper = ref(false)
+const cropImageFile = ref<File | null>(null)
 
 // 多选功能相关状态
 const isMultiSelectMode = ref(false)
@@ -109,12 +115,65 @@ const addFiles = (files: File[]) => {
 
   // Filter out existing files
   const existingNames = bufferGroup.value?.emojis.map(e => e.name) || []
-  const newFiles = imageFiles.filter(file => !existingNames.includes(file.name))
+  const newFiles = imageFiles
+    .filter(file => !existingNames.includes(file.name))
+    .map(file => ({
+      file,
+      url: URL.createObjectURL(file)
+    }))
 
   selectedFiles.value = [...selectedFiles.value, ...newFiles]
 }
 
+// 图片切割相关方法
+const openImageCropper = (file: File) => {
+  cropImageFile.value = file
+  showImageCropper.value = true
+}
+
+const closeImageCropper = () => {
+  showImageCropper.value = false
+  cropImageFile.value = null
+}
+
+const handleCroppedEmojis = async (croppedEmojis: any[]) => {
+  try {
+    const newFilesWithUrls = []
+    for (const croppedEmoji of croppedEmojis) {
+      // Convert base64 to Blob
+      const response = await fetch(croppedEmoji.imageUrl)
+      const blob = await response.blob()
+      const file = new File([blob], `${croppedEmoji.name}.png`, { type: 'image/png' })
+      const url = URL.createObjectURL(file)
+      newFilesWithUrls.push({ file, url })
+    }
+
+    // Remove the original file that was cropped
+    const originalFile = cropImageFile.value
+    if (originalFile) {
+      const indexToRemove = selectedFiles.value.findIndex(item => item.file === originalFile)
+      if (indexToRemove > -1) {
+        URL.revokeObjectURL(selectedFiles.value[indexToRemove].url)
+        selectedFiles.value.splice(indexToRemove, 1)
+      }
+    }
+
+    // Add the new cropped files to the list
+    selectedFiles.value.push(...newFilesWithUrls)
+
+    // Close the cropper
+    closeImageCropper()
+  } catch (error) {
+    console.error('Failed to process cropped emojis:', error)
+    // You can add user-facing error notifications here
+  }
+}
+
 const removeFile = (index: number) => {
+  const fileToRemove = selectedFiles.value[index]
+  if (fileToRemove) {
+    URL.revokeObjectURL(fileToRemove.url)
+  }
   selectedFiles.value.splice(index, 1)
 }
 
@@ -320,8 +379,8 @@ const uploadFiles = async () => {
   if (selectedFiles.value.length === 0) return
 
   isUploading.value = true
-  uploadProgress.value = selectedFiles.value.map(file => ({
-    fileName: file.name,
+  uploadProgress.value = selectedFiles.value.map(item => ({
+    fileName: item.file.name,
     percent: 0
   }))
 
@@ -346,7 +405,7 @@ const uploadFiles = async () => {
     const service = uploadServices[uploadService.value]
 
     for (let i = 0; i < selectedFiles.value.length; i++) {
-      const file = selectedFiles.value[i]
+      const { file } = selectedFiles.value[i]
 
       try {
         const updateProgress = (percent: number) => {
@@ -360,7 +419,8 @@ const uploadFiles = async () => {
         const newEmoji = {
           name: file.name,
           url: uploadUrl,
-          displayUrl: uploadUrl
+          displayUrl: uploadUrl,
+          packet: 0
         }
 
         emojiStore.addEmojiWithoutSave(group.id || 'buffer', newEmoji)
@@ -403,6 +463,10 @@ onMounted(() => {
       console.log('[BufferPage] Buffer group created:', buffer.id)
     }
   }
+})
+
+onBeforeUnmount(() => {
+  selectedFiles.value.forEach(item => URL.revokeObjectURL(item.url))
 })
 </script>
 
@@ -460,25 +524,31 @@ onMounted(() => {
         <h4 class="font-medium dark:text-white mb-2">待上传文件：</h4>
         <ul class="space-y-2">
           <li
-            v-for="(file, index) in selectedFiles"
+            v-for="(item, index) in selectedFiles"
             :key="index"
             class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
           >
-            <span class="text-sm dark:text-gray-300">{{ file.name }}</span>
-            <a-button
-              type="text"
-              size="small"
-              danger
-              @click="removeFile(index)"
-            >
-              移除
-            </a-button>
+            <div class="flex items-center space-x-2">
+              <a-image :src="item.url" width="32px" height="32px" style="object-fit: cover" />
+              <span class="text-sm dark:text-gray-300">{{ item.file.name }}</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <a-button
+                type="text"
+                size="small"
+                @click="openImageCropper(item.file)"
+                title="切割图片"
+              >
+                <template #icon><ScissorOutlined /></template>
+              </a-button>
+              <a-button type="text" size="small" danger @click="removeFile(index)">移除</a-button>
+            </div>
           </li>
         </ul>
       </div>
 
       <!-- Upload Button -->
-      <div class="mt-4 flex justify-end">
+      <div class="mt-4 flex justify-end space-x-2">
         <a-button
           type="primary"
           @click="uploadFiles"
@@ -588,11 +658,7 @@ onMounted(() => {
                 >
                   复制为 Markdown
                 </a-button>
-                <a-button
-                  @click="clearSelection"
-                  size="small"
-                  title="清空所有表情选择"
-                >
+                <a-button @click="clearSelection" size="small" title="清空所有表情选择">
                   清空选择
                 </a-button>
               </div>
@@ -716,13 +782,19 @@ onMounted(() => {
           <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
             分组图标
           </label>
-          <AInput
-            v-model:value="newGroupIcon"
-            placeholder="输入图标 URL 或 emoji"
-          />
+          <AInput v-model:value="newGroupIcon" placeholder="输入图标 URL 或 emoji" />
         </div>
       </div>
     </a-modal>
+
+    <!-- 图片切割器 -->
+    <ImageCropper
+      v-if="showImageCropper && cropImageFile"
+      :image-file="cropImageFile"
+      :ai-settings="emojiStore.settings"
+      @close="closeImageCropper"
+      @upload="handleCroppedEmojis"
+    />
   </div>
 </template>
 
