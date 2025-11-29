@@ -39,6 +39,13 @@
       "js": ["js/content.js"],
       "type": "module",
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["js/live2d-widget.js"],
+      "css": ["assets/live2d-widget.css"],
+      "type": "module",
+      "run_at": "document_idle"
     }
   ],
   "icons": {

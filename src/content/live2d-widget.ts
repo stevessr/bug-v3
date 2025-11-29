@@ -3,8 +3,8 @@
  * 独立运行的 Live2D 小部件，自动注入到网页中
  */
 
-import { init } from 'l2d'
 import type { L2D, Model } from 'l2d'
+import { init } from './live2d-wrapper'
 import './live2d-widget.css'
 
 // 配置选项
@@ -133,12 +133,12 @@ class Live2DWidget {
     }
 
     try {
-      // 初始化 L2D 画布
-      this.l2d = init(this.canvas)
+      // 初始化 L2D 画布 - 现在使用包装器来处理库兼容性问题
+      this.l2d = await init(this.canvas)
 
       // 加载模型
       console.log('[Live2D] Loading model from:', this.config.modelPath)
-      
+
       this.model = await this.l2d.create({
         path: this.config.modelPath,
         position: this.config.position,

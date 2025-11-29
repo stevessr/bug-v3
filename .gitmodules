@@ -1,3 +1,6 @@
 [submodule "lib/l2d"]
 	path = lib/l2d
 	url = https://github.com/stevessr/l2d.git
+[submodule "lib/Live2dRender"]
+	path = lib/Live2dRender
+	url = https://github.com/stevessr/Live2dRender.git
