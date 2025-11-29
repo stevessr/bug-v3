@@ -5,7 +5,8 @@ import {
   CheckOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
-  UndoOutlined
+  UndoOutlined,
+  DeleteOutlined
 } from '@ant-design/icons-vue'
 import { theme } from 'ant-design-vue'
 
@@ -56,6 +57,7 @@ const {
   toggleSelection,
   selectAll,
   deselectAll,
+  deleteSection,
   processImage,
   updateEmojiName,
   confirmUpload,
@@ -315,6 +317,16 @@ const { token } = useToken()
                     @change="() => toggleSelection(emoji.id)"
                     class="result-checkbox"
                   />
+                  <a-button
+                    type="text"
+                    danger
+                    size="small"
+                    class="result-delete"
+                    @click.stop="deleteSection(emoji.id)"
+                    title="删除"
+                  >
+                    <template #icon><DeleteOutlined /></template>
+                  </a-button>
                 </div>
 
                 <a-input

@@ -37,7 +37,7 @@ export function useImageCropper(
   const baseScale = ref(1)
   const zoomLevel = ref(1)
   const minZoom = 0.1
-  const maxZoom = 5
+  const maxZoom = 10
   const containerSize = ref({ width: 0, height: 0 })
 
   const croppedEmojis = ref<CroppedEmoji[]>([])
@@ -221,14 +221,18 @@ export function useImageCropper(
   const toggleSelection = (id: string) => {
     if (selectedEmojis.value.has(id)) {
       selectedEmojis.value.delete(id)
-      // Custom mode self-destruct logic: if deselected, remove it
-      if (activeTab.value === 'custom') {
-        croppedEmojis.value = croppedEmojis.value.filter(e => e.id !== id)
-      }
     } else {
       selectedEmojis.value.add(id)
     }
     selectedEmojis.value = new Set(selectedEmojis.value)
+  }
+
+  const deleteSection = (id: string) => {
+    croppedEmojis.value = croppedEmojis.value.filter(e => e.id !== id)
+    if (selectedEmojis.value.has(id)) {
+      selectedEmojis.value.delete(id)
+      selectedEmojis.value = new Set(selectedEmojis.value)
+    }
   }
 
   const selectAll = () => {
@@ -788,6 +792,7 @@ export function useImageCropper(
     toggleSelection,
     selectAll,
     deselectAll,
+    deleteSection,
     processImage,
     updateEmojiName,
     confirmUpload,

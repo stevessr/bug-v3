@@ -100,8 +100,8 @@
 
 .main-image {
   display: block;
-  max-width: 100%;
-  height: auto;
+  /* max-width: 100%;  Removed to allow zooming without distortion */
+  /* height: auto;     Removed to allow zooming without distortion */
 }
 
 .zoom-controls {
@@ -243,10 +243,28 @@
 .result-checkbox {
   position: absolute;
   top: 4px;
-  right: 4px;
+  left: 4px;
   background: white;
   border-radius: 4px;
   padding: 2px;
+}
+
+.result-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.result-delete:hover {
+  background: white;
 }
 
 .result-name {
