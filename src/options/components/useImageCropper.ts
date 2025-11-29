@@ -608,8 +608,11 @@ export function useImageCropper(
 
       let response
       try {
+        const baseUrl = props.aiSettings.value.geminiApiUrl || 'https://generativelanguage.googleapis.com'
+        const cleanBaseUrl = baseUrl.replace(/\/$/, '')
+
         response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${props.aiSettings.value.geminiApiKey}`,
+          `${cleanBaseUrl}/v1beta/models/${modelName}:generateContent?key=${props.aiSettings.value.geminiApiKey}`,
           {
             signal: controller.signal,
             method: 'POST',

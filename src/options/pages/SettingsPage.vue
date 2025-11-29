@@ -31,6 +31,7 @@ const {
   updateCustomCss,
   updateUploadMenuItems,
   updateGeminiApiKey,
+  updateGeminiApiUrl,
   updateGeminiLanguage,
   updateGeminiModel,
   updateUseCustomOpenAI,
@@ -111,6 +112,7 @@ const activeTab = ref('theme')
             <AISettings
               :settings="emojiStore.settings"
               @update:geminiApiKey="updateGeminiApiKey"
+              @update:geminiApiUrl="updateGeminiApiUrl"
               @update:geminiLanguage="updateGeminiLanguage"
               @update:geminiModel="updateGeminiModel"
               @update:useCustomOpenAI="updateUseCustomOpenAI"

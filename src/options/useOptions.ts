@@ -347,6 +347,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ geminiApiKey: apiKey })
   }
 
+  const updateGeminiApiUrl = (url: string) => {
+    emojiStore.updateSettings({ geminiApiUrl: url })
+  }
+
   const updateGeminiLanguage = (language: string) => {
     emojiStore.updateSettings({ geminiLanguage: language as 'English' | 'Chinese' })
   }
@@ -989,6 +993,7 @@ export default function useOptions() {
     updateEnableHoverPreview,
     updateUploadMenuItems,
     updateGeminiApiKey,
+    updateGeminiApiUrl,
     updateGeminiLanguage,
     updateGeminiModel,
     updateUseCustomOpenAI,

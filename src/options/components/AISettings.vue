@@ -8,6 +8,7 @@ const settings = props.settings as AppSettings | Ref<AppSettings>
 
 const emit = defineEmits([
   'update:geminiApiKey',
+  'update:geminiApiUrl',
   'update:geminiLanguage',
   'update:geminiModel',
   'update:useCustomOpenAI',
@@ -28,6 +29,7 @@ const getSetting = (key: keyof AppSettings, defaultValue: any = '') => {
 
 // Local state for form fields
 const localGeminiApiKey = ref<string>(getSetting('geminiApiKey', ''))
+const localGeminiApiUrl = ref<string>(getSetting('geminiApiUrl', ''))
 const localGeminiLanguage = ref<string>(getSetting('geminiLanguage', 'Chinese'))
 const localGeminiModel = ref<string>(getSetting('geminiModel', 'gemini-flash-latest'))
 const localUseCustomOpenAI = ref<boolean>(getSetting('useCustomOpenAI', false))
@@ -40,6 +42,13 @@ watch(
   () => getSetting('geminiApiKey', ''),
   (val: string) => {
     localGeminiApiKey.value = val
+  }
+)
+
+watch(
+  () => getSetting('geminiApiUrl', ''),
+  (val: string) => {
+    localGeminiApiUrl.value = val
   }
 )
 
@@ -88,6 +97,10 @@ watch(
 // Update handlers
 const handleGeminiApiKeyChange = () => {
   emit('update:geminiApiKey', localGeminiApiKey.value)
+}
+
+const handleGeminiApiUrlChange = () => {
+  emit('update:geminiApiUrl', localGeminiApiUrl.value)
 }
 
 const handleGeminiLanguageChange = (value: string) => {
@@ -151,6 +164,21 @@ const handleCustomOpenAIModelChange = () => {
               >
                 Google AI Studio
               </a>
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">
+              API Base URL (可选):
+            </label>
+            <a-input
+              v-model:value="localGeminiApiUrl"
+              placeholder="https://generativelanguage.googleapis.com"
+              @change="handleGeminiApiUrlChange"
+              class="w-full"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              自定义 API 基础地址，用于反代或企业部署
             </p>
           </div>
 
