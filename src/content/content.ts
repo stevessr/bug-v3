@@ -5,6 +5,7 @@ import { Uninject } from './utils/Uninject'
 import { postTimings } from './utils/timingsBinder'
 import { autoReadAllv2 } from './utils/autoReadReplies'
 import { DQS, DQSA } from './utils/createEl'
+import { DISCOURSE_DOMAINS } from './data/domains'
 // antiRateLimit removed — content script no longer listens for network-level 429 notifications
 
 console.log('[Emoji Extension] Content script loaded (entry)')
@@ -32,8 +33,7 @@ function shouldInjectEmoji(): boolean {
 
   // Check current domain - allow linux.do and other known sites
   const hostname = window.location.hostname.toLowerCase()
-  const allowedDomains = ['linux.do', 'meta.discourse.org']
-  if (allowedDomains.some(domain => hostname.includes(domain))) {
+  if (DISCOURSE_DOMAINS.some(domain => hostname.includes(domain))) {
     console.log('[Emoji Extension] Allowed domain detected:', hostname)
     return true
   }
@@ -61,7 +61,7 @@ if (shouldInjectEmoji()) {
 }
 
 // Add message listener for linux.do CSRF token requests
-if (window.location.hostname.includes('linux.do')) {
+if (DISCOURSE_DOMAINS.some(domain => window.location.hostname.includes(domain))) {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === 'GET_CSRF_TOKEN') {
       try {
@@ -101,7 +101,7 @@ if (window.location.hostname.includes('linux.do')) {
 // Expose postTimings helper to page context for testing and manual triggers.
 // We attach it to window only on linux.do pages to avoid polluting other sites.
 try {
-  if (window.location.hostname.includes('linux.do')) {
+  if (DISCOURSE_DOMAINS.some(domain => window.location.hostname.includes(domain))) {
     // Directly bind the statically imported postTimings
 
     // @ts-ignore
