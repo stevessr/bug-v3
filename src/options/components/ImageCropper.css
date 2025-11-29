@@ -296,3 +296,42 @@
   right: -5px;
   cursor: se-resize;
 }
+
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 1px solid #1890ff;
+  border-radius: 50%;
+  z-index: 10;
+}
+
+.handle-tl {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+
+.handle-tr {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+
+.handle-bl {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+
+.handle-br {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+.custom-tip {
+  margin-right: auto;
+  font-size: 14px;
+}

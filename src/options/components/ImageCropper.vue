@@ -8,7 +8,6 @@ import {
   UndoOutlined
 } from '@ant-design/icons-vue'
 import { theme } from 'ant-design-vue'
-import './ImageCropper.css'
 
 import type { AppSettings } from '@/types/type'
 
@@ -35,7 +34,7 @@ const emit = defineEmits<{
 }>()
 
 // 状态管理
-const activeTab = ref<'manual' | 'ai'>('manual')
+const activeTab = ref<'manual' | 'ai' | 'custom'>('manual')
 const gridCols = ref(2)
 const gridRows = ref(2)
 const isLoading = ref(false)
@@ -152,6 +151,195 @@ const stopResize = async () => {
   window.removeEventListener('mousemove', handleResize)
   window.removeEventListener('mouseup', stopResize)
 }
+
+// Drawing state
+const isDrawing = ref(false)
+const drawingStart = ref({ x: 0, y: 0 })
+
+// Moving state
+const isMoving = ref(false)
+const movingId = ref<string | null>(null)
+const moveStartPos = ref({ x: 0, y: 0 })
+const moveStartRect = ref({ x: 0, y: 0 })
+const hasMoved = ref(false)
+
+// Drawing functions
+const startDraw = (e: MouseEvent) => {
+  // Only start drawing if clicking on the background (not on an existing box)
+  // and we are in AI mode (since manual mode uses grid)
+  if (activeTab.value !== 'custom' || (e.target as HTMLElement).closest('.ai-box')) return
+
+  e.preventDefault()
+  isDrawing.value = true
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+
+  // Calculate relative position in percentage
+  const x = ((e.clientX - rect.left) / rect.width) * 100
+  const y = ((e.clientY - rect.top) / rect.height) * 100
+
+  drawingStart.value = { x, y }
+
+  // Create a new temporary emoji box
+  const newId = `manual-${Date.now()}`
+  const newEmoji: CroppedEmoji = {
+    id: newId,
+    name: `表情_${croppedEmojis.value.length + 1}`,
+    imageUrl: '', // Will be generated on stop
+    x: x,
+    y: y,
+    width: 0,
+    height: 0
+  }
+
+  croppedEmojis.value.push(newEmoji)
+  resizingId.value = newId // Reuse resizing logic effectively by tracking this ID
+
+  window.addEventListener('mousemove', handleDraw)
+  window.addEventListener('mouseup', stopDraw)
+}
+
+const handleDraw = (e: MouseEvent) => {
+  if (!isDrawing.value || !resizingId.value) return
+
+  const container = containerRef.value
+  if (!container) return
+
+  // Find the emoji we are currently drawing
+  const emoji = croppedEmojis.value.find(e => e.id === resizingId.value)
+  if (!emoji) return
+
+  // We need to calculate position relative to the container image
+  const imageRect = imageElement.value ? {
+    width: imageElement.value.width * displayScale.value,
+    height: imageElement.value.height * displayScale.value,
+    left: container.getBoundingClientRect().left + (container.offsetWidth - imageElement.value.width * displayScale.value) / 2,
+    top: container.getBoundingClientRect().top + (container.offsetHeight - imageElement.value.height * displayScale.value) / 2
+  } : container.getBoundingClientRect()
+
+  // Wait, the previous logic used event delta on window, but for drawing we want relative to container
+  // Let's reuse the logic from the image-display element
+  // Actually, the `image-display` element is the container for the boxes.
+  // We can just use the bounding client rect of the image-display
+
+  const displayEl = container.querySelector('.image-display')
+  if (!displayEl) return
+  const rect = displayEl.getBoundingClientRect()
+
+  const currentX = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
+  const currentY = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100))
+
+  const startX = drawingStart.value.x
+  const startY = drawingStart.value.y
+
+  const newX = Math.min(startX, currentX)
+  const newY = Math.min(startY, currentY)
+  const newWidth = Math.abs(currentX - startX)
+  const newHeight = Math.abs(currentY - startY)
+
+  emoji.x = newX
+  emoji.y = newY
+  emoji.width = newWidth
+  emoji.height = newHeight
+}
+
+const stopDraw = async () => {
+  isDrawing.value = false
+  window.removeEventListener('mousemove', handleDraw)
+  window.removeEventListener('mouseup', stopDraw)
+
+  if (resizingId.value) {
+    const emoji = croppedEmojis.value.find(e => e.id === resizingId.value)
+    if (emoji) {
+      // If box is too small, remove it
+      if (emoji.width < 1 || emoji.height < 1) {
+        croppedEmojis.value = croppedEmojis.value.filter(e => e.id !== resizingId.value)
+      } else {
+        // Generate image
+        const newImageUrl = cropImage({
+          x: emoji.x,
+          y: emoji.y,
+          width: emoji.width,
+          height: emoji.height
+        })
+        if (newImageUrl) {
+          emoji.imageUrl = newImageUrl
+          selectedEmojis.value.add(emoji.id)
+          selectedEmojis.value = new Set(selectedEmojis.value)
+        }
+      }
+    }
+  }
+  resizingId.value = null
+}
+
+// Moving functions
+const startMove = (e: MouseEvent, id: string) => {
+  // Don't start move if we clicked on a resize handle
+  if ((e.target as HTMLElement).classList.contains('resize-handle')) return
+
+  // Only allow moving in AI or Custom mode
+  if (activeTab.value !== 'ai' && activeTab.value !== 'custom') return
+
+  e.preventDefault()
+  e.stopPropagation()
+
+  const emoji = croppedEmojis.value.find(e => e.id === id)
+  if (!emoji) return
+
+  isMoving.value = true
+  hasMoved.value = false
+  movingId.value = id
+  moveStartPos.value = { x: e.clientX, y: e.clientY }
+  moveStartRect.value = { x: emoji.x, y: emoji.y }
+
+  window.addEventListener('mousemove', handleMove)
+  window.addEventListener('mouseup', stopMove)
+}
+
+const handleMove = (e: MouseEvent) => {
+  if (!isMoving.value || !movingId.value) return
+
+  hasMoved.value = true
+
+  const emoji = croppedEmojis.value.find(e => e.id === movingId.value)
+  if (!emoji) return
+
+  const deltaX = (e.clientX - moveStartPos.value.x) / ((imageElement.value?.width || 1) * displayScale.value) * 100
+  const deltaY = (e.clientY - moveStartPos.value.y) / ((imageElement.value?.height || 1) * displayScale.value) * 100
+
+  const newX = Math.max(0, Math.min(100 - emoji.width, moveStartRect.value.x + deltaX))
+  const newY = Math.max(0, Math.min(100 - emoji.height, moveStartRect.value.y + deltaY))
+
+  emoji.x = newX
+  emoji.y = newY
+}
+
+const stopMove = async () => {
+  if (movingId.value) {
+    if (!hasMoved.value) {
+       toggleSelection(movingId.value)
+    } else {
+      const emoji = croppedEmojis.value.find(e => e.id === movingId.value)
+      if (emoji) {
+        // Re-generate the cropped image
+        const newImageUrl = cropImage({
+          x: emoji.x,
+          y: emoji.y,
+          width: emoji.width,
+          height: emoji.height
+        })
+        if (newImageUrl) {
+          emoji.imageUrl = newImageUrl
+        }
+      }
+    }
+  }
+
+  isMoving.value = false
+  movingId.value = null
+  window.removeEventListener('mousemove', handleMove)
+  window.removeEventListener('mouseup', stopMove)
+}
 // 计算属性
 const gridPositions = computed(() => {
   const positions = []
@@ -176,7 +364,9 @@ const gridPositions = computed(() => {
 
 const canProcess = computed(() => {
   return (
-    activeTab.value === 'manual' || (activeTab.value === 'ai' && props.aiSettings?.geminiApiKey)
+    activeTab.value === 'manual' ||
+    activeTab.value === 'custom' ||
+    (activeTab.value === 'ai' && props.aiSettings?.geminiApiKey)
   )
 })
 
@@ -573,7 +763,7 @@ const processImage = async () => {
   try {
     if (activeTab.value === 'manual') {
       await processManualCrop()
-    } else {
+    } else if (activeTab.value === 'ai') {
       await processAICrop()
     }
   } catch (error) {
@@ -638,6 +828,7 @@ watch(
       <div class="cropper-tabs" :style="{ borderColor: token.colorBorderSecondary }">
         <a-radio-group v-model:value="activeTab" button-style="solid">
           <a-radio-button value="manual">手动切割</a-radio-button>
+          <a-radio-button value="custom">手动标注</a-radio-button>
           <a-radio-button value="ai" :disabled="!props.aiSettings?.geminiApiKey">
             AI 自动识别
           </a-radio-button>
@@ -727,7 +918,7 @@ watch(
             <a-spin size="large" />
           </div>
 
-          <div v-if="showCropper" class="image-display" @wheel="handleWheel">
+          <div v-if="showCropper" class="image-display" @wheel="handleWheel" @mousedown="startDraw">
             <img
               :src="uploadedImageUrl"
               :style="{
@@ -759,7 +950,7 @@ watch(
             </div>
 
             <!-- AI 识别结果覆盖层 -->
-            <div v-if="activeTab === 'ai' && croppedEmojis.length > 0" class="ai-overlay">
+            <div v-if="(activeTab === 'ai' || activeTab === 'custom') && croppedEmojis.length > 0" class="ai-overlay">
               <div
                 v-for="emoji in croppedEmojis"
                 :key="emoji.id"
@@ -812,7 +1003,11 @@ watch(
 
       <!-- 处理按钮 -->
       <div class="cropper-actions" :style="{ borderColor: token.colorBorderSecondary }">
+        <div v-if="activeTab === 'custom'" class="custom-tip" :style="{ color: token.colorTextSecondary }">
+          在图片空白处拖拽以创建选区，点击选区可调整大小
+        </div>
         <a-button
+          v-else
           type="primary"
           @click="processImage"
           :loading="isProcessing"
@@ -883,3 +1078,5 @@ watch(
     </div>
   </div>
 </template>
+
+<style src="./ImageCropper.css"/>
