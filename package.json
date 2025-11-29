@@ -33,7 +33,7 @@
     "dompurify": "^3.3.0",
     "eslint": "^9.39.1",
     "ignore": "^7.0.5",
-    "l2d": "workspace:*",
+    "Live2dRender": "workspace:*",
     "marked": "^16.4.2",
     "nanoid": "^5.1.6",
     "pinia": "^2.3.1",

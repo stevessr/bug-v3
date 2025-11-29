@@ -3,8 +3,8 @@
  * 独立运行的 Live2D 小部件，自动注入到网页中
  */
 
-import type { L2D, Model } from 'l2d'
-import { init } from './live2d-wrapper'
+import { initializeLive2D, setExpression, setRandomExpression, setMessageBox, hideMessageBox, revealMessageBox } from 'Live2dRender'
+import type { LAppModel } from '../../lib/Live2dRender/src/lappmodel'
 import './live2d-widget.css'
 
 // 配置选项
@@ -30,8 +30,7 @@ const DEFAULT_CONFIG: Live2DConfig = {
 class Live2DWidget {
   private canvas: HTMLCanvasElement | null = null
   private container: HTMLDivElement | null = null
-  private l2d: L2D | null = null
-  private model: Model | null = null
+  private model: LAppModel | null = null
   private config: Live2DConfig
   private isDragging = false
   private dragOffset = { x: 0, y: 0 }
@@ -88,13 +87,8 @@ class Live2DWidget {
     this.container.id = 'live2d-widget-container'
     this.container.className = 'live2d-widget-container'
 
-    // 创建 canvas
-    this.canvas = document.createElement('canvas')
-    this.canvas.id = 'live2d-widget-canvas'
-    this.canvas.className = 'live2d-widget-canvas'
-    this.canvas.width = this.config.canvasWidth
-    this.canvas.height = this.config.canvasHeight
-
+    // Live2dRender 库会在初始化时创建自己的 canvas 元素
+    // 我们只需要创建容器和控制按钮
     // 创建控制按钮容器
     const controls = document.createElement('div')
     controls.className = 'live2d-widget-controls'
@@ -116,8 +110,7 @@ class Live2DWidget {
     controls.appendChild(minimizeBtn)
     controls.appendChild(closeBtn)
 
-    // 组装元素
-    this.container.appendChild(this.canvas)
+    // 添加控制按钮到容器
     this.container.appendChild(controls)
 
     // 添加到页面
@@ -128,39 +121,33 @@ class Live2DWidget {
    * 初始化 Live2D 模型
    */
   private async initLive2D(): Promise<void> {
-    if (!this.canvas) {
-      throw new Error('Canvas element not found')
-    }
-
     try {
-      // 初始化 L2D 画布 - 现在使用包装器来处理库兼容性问题
-      this.l2d = await init(this.canvas)
-
-      // 加载模型
-      console.log('[Live2D] Loading model from:', this.config.modelPath)
-
-      this.model = await this.l2d.create({
-        path: this.config.modelPath,
-        position: this.config.position,
-        scale: this.config.scale
+      // 初始化 Live2DRender 并加载模型
+      await initializeLive2D({
+        CanvasId: 'live2d-widget-canvas',
+        CanvasSize: this.config.scale === 'auto'
+          ? 'auto'
+          : { width: this.config.canvasWidth, height: this.config.canvasHeight },
+        ResourcesPath: this.config.modelPath,
+        ShowToolBox: false
       })
 
-      console.log('[Live2D] Model loaded successfully')
+      // 获取由 Live2dRender 创建的 canvas 元素
+      this.canvas = document.getElementById('live2d-widget-canvas') as HTMLCanvasElement
 
-      // 添加模型事件监听
-      this.model.on('ready', () => {
-        console.log('[Live2D] Model is ready')
-      })
-
-      // 点击模型时触发动作
+      // 模型加载成功后设置点击事件
       if (this.canvas) {
         this.canvas.addEventListener('click', (e) => {
-          if (!this.isDragging && this.model) {
+          if (!this.isDragging) {
             // 触发随机动作或表情
             console.log('[Live2D] Model clicked')
+            setRandomExpression()
           }
         })
       }
+
+      console.log('[Live2D] Model loaded successfully')
+
     } catch (error) {
       console.error('[Live2D] Failed to load model:', error)
       throw error
@@ -177,7 +164,7 @@ class Live2DWidget {
     this.container.addEventListener('mousedown', (e) => {
       // 只在点击容器顶部时才允许拖拽
       const target = e.target as HTMLElement
-      if (target.className.includes('live2d-widget-canvas') || 
+      if (this.canvas && e.target === this.canvas ||
           target.className.includes('live2d-widget-controls')) {
         this.isDragging = true
         this.dragOffset.x = e.clientX - this.container!.offsetLeft
@@ -190,11 +177,11 @@ class Live2DWidget {
       if (this.isDragging && this.container) {
         const x = e.clientX - this.dragOffset.x
         const y = e.clientY - this.dragOffset.y
-        
+
         // 限制在视口内
         const maxX = window.innerWidth - this.container.offsetWidth
         const maxY = window.innerHeight - this.container.offsetHeight
-        
+
         this.container.style.left = Math.max(0, Math.min(x, maxX)) + 'px'
         this.container.style.top = Math.max(0, Math.min(y, maxY)) + 'px'
       }
@@ -211,10 +198,14 @@ class Live2DWidget {
 
     // 触摸设备支持
     this.container.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0]
-      this.isDragging = true
-      this.dragOffset.x = touch.clientX - this.container!.offsetLeft
-      this.dragOffset.y = touch.clientY - this.container!.offsetTop
+      const target = e.target as HTMLElement
+      if (this.canvas && e.target === this.canvas ||
+          target.className.includes('live2d-widget-controls')) {
+        const touch = e.touches[0]
+        this.isDragging = true
+        this.dragOffset.x = touch.clientX - this.container!.offsetLeft
+        this.dragOffset.y = touch.clientY - this.container!.offsetTop
+      }
     })
 
     document.addEventListener('touchmove', (e) => {
@@ -222,10 +213,10 @@ class Live2DWidget {
         const touch = e.touches[0]
         const x = touch.clientX - this.dragOffset.x
         const y = touch.clientY - this.dragOffset.y
-        
+
         const maxX = window.innerWidth - this.container.offsetWidth
         const maxY = window.innerHeight - this.container.offsetHeight
-        
+
         this.container.style.left = Math.max(0, Math.min(x, maxX)) + 'px'
         this.container.style.top = Math.max(0, Math.min(y, maxY)) + 'px'
       }
@@ -274,7 +265,6 @@ class Live2DWidget {
       this.container = null
     }
     this.canvas = null
-    this.l2d = null
     this.model = null
     console.log('[Live2D] Widget destroyed')
   }

@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => {
         input: {
           index: fileURLToPath(new URL('index.html', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
-          'live2d-widget': fileURLToPath(new URL('src/content/live2d-widget.ts', import.meta.url)),
+          'live2d-widget': fileURLToPath(new URL('src/content/live2d/index.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
         },
         output: {
