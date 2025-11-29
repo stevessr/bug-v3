@@ -603,43 +603,52 @@ export function useImageCropper(
         requiredFields.push('mask')
       }
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${props.aiSettings.value.geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: prompt
-                  },
-                  {
-                    inline_data: {
-                      mime_type: props.imageFile.value!.type,
-                      data: base64Image.split(',')[1]
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 1800000) // 3 minutes timeout
+
+      let response
+      try {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${props.aiSettings.value.geminiApiKey}`,
+          {
+            signal: controller.signal,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: prompt
+                    },
+                    {
+                      inline_data: {
+                        mime_type: props.imageFile.value!.type,
+                        data: base64Image.split(',')[1]
+                      }
                     }
+                  ]
+                }
+              ],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                responseJsonSchema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: schemaProperties,
+                    required: requiredFields
                   }
-                ]
-              }
-            ],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              responseJsonSchema: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: schemaProperties,
-                  required: requiredFields
                 }
               }
-            }
-          })
-        }
-      )
+            })
+          }
+        )
+      } finally {
+        clearTimeout(timeoutId)
+      }
 
       if (!response.ok) {
         const errorData = await response.json()
