@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { CloseOutlined, CheckOutlined, ZoomInOutlined, ZoomOutOutlined, UndoOutlined } from '@ant-design/icons-vue'
+import {
+  CloseOutlined,
+  CheckOutlined,
+  ZoomInOutlined,
+  ZoomOutOutlined,
+  UndoOutlined
+} from '@ant-design/icons-vue'
 import { theme } from 'ant-design-vue'
+
 import type { AppSettings } from '@/types/type'
 
 interface CroppedEmoji {
@@ -79,8 +86,9 @@ const gridPositions = computed(() => {
 })
 
 const canProcess = computed(() => {
-  return activeTab.value === 'manual' ||
-    (activeTab.value === 'ai' && props.aiSettings?.geminiApiKey)
+  return (
+    activeTab.value === 'manual' || (activeTab.value === 'ai' && props.aiSettings?.geminiApiKey)
+  )
 })
 
 // 方法
@@ -171,14 +179,23 @@ const cropImage = (position: { x: number; y: number; width: number; height: numb
   // 绘制切割区域
   tempCtx.drawImage(
     imageElement.value,
-    actualX, actualY, actualWidth, actualHeight,
-    0, 0, actualWidth, actualHeight
+    actualX,
+    actualY,
+    actualWidth,
+    actualHeight,
+    0,
+    0,
+    actualWidth,
+    actualHeight
   )
 
   return tempCanvas.toDataURL('image/png')
 }
 
-const cropWithMask = async (position: { x: number; y: number; width: number; height: number }, maskBase64: string) => {
+const cropWithMask = async (
+  position: { x: number; y: number; width: number; height: number },
+  maskBase64: string
+) => {
   if (!imageElement.value) return null
 
   // Create temporary canvas for the mask
@@ -190,7 +207,9 @@ const cropWithMask = async (position: { x: number; y: number; width: number; hei
   const maskImage = new Image()
   await new Promise(resolve => {
     maskImage.onload = resolve
-    maskImage.src = maskBase64.startsWith('data:image') ? maskBase64 : `data:image/png;base64,${maskBase64}`
+    maskImage.src = maskBase64.startsWith('data:image')
+      ? maskBase64
+      : `data:image/png;base64,${maskBase64}`
   })
 
   // Calculate actual pixel dimensions
@@ -213,8 +232,14 @@ const cropWithMask = async (position: { x: number; y: number; width: number; hei
   // Draw original image portion
   finalCtx.drawImage(
     imageElement.value,
-    actualX, actualY, actualWidth, actualHeight,
-    0, 0, actualWidth, actualHeight
+    actualX,
+    actualY,
+    actualWidth,
+    actualHeight,
+    0,
+    0,
+    actualWidth,
+    actualHeight
   )
 
   // Apply mask
@@ -289,7 +314,7 @@ const processAICrop = async () => {
 
   try {
     // 将图片转换为 base64
-    const base64Image = await new Promise<string>((resolve) => {
+    const base64Image = await new Promise<string>(resolve => {
       const reader = new FileReader()
       reader.onload = () => resolve(reader.result as string)
       reader.readAsDataURL(props.imageFile)
@@ -298,67 +323,94 @@ const processAICrop = async () => {
     // 调用 Gemini API 进行图片分析
     const modelName = props.aiSettings.geminiModel
     const language = props.aiSettings.geminiLanguage || 'Chinese'
-    const prompt = language === 'Chinese'
-      ? `请为图中的表情符号或图标提供分割蒙版。输出一个 JSON 列表，其中每个条目包含一个 2D 边界框（"box_2d"）、一个分割蒙版（"mask"）和一个文本标签（"label"）。`
-      : `Give the segmentation masks for the emojis or icons in this image. Output a JSON list of segmentation masks where each entry contains the 2D bounding box in the key "box_2d", the segmentation mask in key "mask", and the text label in the key "label".`
+    const prompt =
+      language === 'Chinese'
+        ? `请为图中的表情符号或图标提供分割蒙版。输出一个 JSON 列表，其中每个条目包含一个 2D 边界框（"box_2d"）、一个分割蒙版（"mask"）和一个文本标签（"label"）。`
+        : `Give the segmentation masks for the emojis or icons in this image. Output a JSON list of segmentation masks where each entry contains the 2D bounding box in the key "box_2d", the segmentation mask in key "mask", and the text label in the key "label".`
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${props.aiSettings.geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }, {
-            inline_data: {
-              mime_type: props.imageFile.type,
-              data: base64Image.split(',')[1]
-            }
-          }]
-        }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseJsonSchema: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                label: {
-                  type: 'string',
-                  description: 'The text label for the detected object (e.g., emoji name).'
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?key=${props.aiSettings.geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
                 },
-                box_2d: {
-                  type: 'array',
-                  items: { type: 'integer' },
-                  minItems: 4,
-                  maxItems: 4,
-                  description: 'Bounding box coordinates [y_min, x_min, y_max, x_max], normalized to [0, 1000].'
-                },
-                mask: {
-                  type: 'string',
-                  description: 'Base64 encoded PNG segmentation mask.'
+                {
+                  inline_data: {
+                    mime_type: props.imageFile.type,
+                    data: base64Image.split(',')[1]
+                  }
                 }
-              },
-              required: ['label', 'box_2d', 'mask']
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseJsonSchema: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  label: {
+                    type: 'string',
+                    description: 'The text label for the detected object (e.g., emoji name).'
+                  },
+                  box_2d: {
+                    type: 'array',
+                    items: { type: 'integer' },
+                    minItems: 4,
+                    maxItems: 4,
+                    description:
+                      'Bounding box coordinates [y_min, x_min, y_max, x_max], normalized to [0, 1000].'
+                  },
+                  mask: {
+                    type: 'string',
+                    description: 'Base64 encoded PNG segmentation mask.'
+                  }
+                },
+                required: ['label', 'box_2d', 'mask']
+              }
             }
           }
-        }
-      })
-    })
+        })
+      }
+    )
 
     if (!response.ok) {
       const errorData = await response.json()
       throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`)
     }
 
-    const result = await response.json()
-
-    if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+    const reader = response.body!.getReader()
+    const decoder = new TextDecoder()
+    let fullText = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        break
+      }
+      const chunk = decoder.decode(value, { stream: true })
       try {
-        const jsonText = result.candidates[0].content.parts[0].text
-        const aiResult = JSON.parse(jsonText)
+        const json = JSON.parse(chunk.replace(/^\[|\]$/g, '').replace(/,$/, ''))
+        if (json.candidates?.[0]?.content?.parts?.[0]?.text) {
+          fullText += json.candidates[0].content.parts[0].text
+        }
+      } catch (e) {
+        // 部分 JSON 数据，继续累积
+        console.log('Partial JSON chunk, accumulating...')
+      }
+    }
+
+    if (fullText) {
+      try {
+        const aiResult = JSON.parse(fullText)
 
         if (Array.isArray(aiResult)) {
           const results: CroppedEmoji[] = []
@@ -382,7 +434,10 @@ const processAICrop = async () => {
               continue
             }
 
-            const croppedImageUrl = await cropWithMask({ x: clampedX, y: clampedY, width: clampedWidth, height: clampedHeight }, item.mask)
+            const croppedImageUrl = await cropWithMask(
+              { x: clampedX, y: clampedY, width: clampedWidth, height: clampedHeight },
+              item.mask
+            )
 
             if (croppedImageUrl) {
               results.push({
@@ -406,7 +461,7 @@ const processAICrop = async () => {
         }
       } catch (parseError) {
         console.error('解析 AI 结果失败：', parseError)
-        console.log('AI 响应文本：', result.candidates[0].content.parts[0].text)
+        console.log('AI 响应文本：', fullText)
         throw new Error('AI 识别结果解析失败，请重试')
       }
     } else {
@@ -439,9 +494,7 @@ const updateEmojiName = (id: string, newName: string) => {
 }
 
 const confirmUpload = () => {
-  const selectedResults = croppedEmojis.value.filter(emoji =>
-    selectedEmojis.value.has(emoji.id)
-  )
+  const selectedResults = croppedEmojis.value.filter(emoji => selectedEmojis.value.has(emoji.id))
 
   if (selectedResults.length > 0) {
     emit('upload', selectedResults)
@@ -462,82 +515,113 @@ onMounted(() => {
 })
 
 // 监听图片文件变化
-watch(() => props.imageFile, () => {
-  initCanvas()
-})
+watch(
+  () => props.imageFile,
+  () => {
+    initCanvas()
+  }
+)
 </script>
 
 <template>
   <div class="image-cropper-overlay">
-      <div class="image-cropper-modal" :style="{ background: token.colorBgContainer, color: token.colorText }">
-        <!-- 头部 -->
-        <div class="cropper-header" :style="{ borderColor: token.colorBorderSecondary }">
-          <h3 :style="{ color: token.colorTextHeading }">图片切割</h3>
-          <a-button type="text" @click="close">
-            <CloseOutlined />
-          </a-button>
+    <div
+      class="image-cropper-modal"
+      :style="{ background: token.colorBgContainer, color: token.colorText }"
+    >
+      <!-- 头部 -->
+      <div class="cropper-header" :style="{ borderColor: token.colorBorderSecondary }">
+        <h3 :style="{ color: token.colorTextHeading }">图片切割</h3>
+        <a-button type="text" @click="close">
+          <CloseOutlined />
+        </a-button>
+      </div>
+
+      <!-- 标签页 -->
+      <div class="cropper-tabs" :style="{ borderColor: token.colorBorderSecondary }">
+        <a-radio-group v-model:value="activeTab" button-style="solid">
+          <a-radio-button value="manual">手动切割</a-radio-button>
+          <a-radio-button value="ai" :disabled="!props.aiSettings?.geminiApiKey">
+            AI 自动识别
+          </a-radio-button>
+        </a-radio-group>
+      </div>
+
+      <!-- 手动切割设置 -->
+      <div
+        v-if="activeTab === 'manual'"
+        class="cropper-settings"
+        :style="{ borderColor: token.colorBorderSecondary }"
+      >
+        <div class="setting-item">
+          <label :style="{ color: token.colorText }">水平切割：</label>
+          <a-input-number v-model:value="gridCols" :min="1" :max="10" />
+          <label :style="{ color: token.colorText, marginLeft: '20px' }">垂直切割：</label>
+          <a-input-number v-model:value="gridRows" :min="1" :max="10" />
         </div>
 
-        <!-- 标签页 -->
-        <div class="cropper-tabs" :style="{ borderColor: token.colorBorderSecondary }">
-          <a-radio-group v-model:value="activeTab" button-style="solid">
-            <a-radio-button value="manual">手动切割</a-radio-button>
-            <a-radio-button value="ai" :disabled="!props.aiSettings?.geminiApiKey">
-              AI 自动识别
-            </a-radio-button>
-          </a-radio-group>
-        </div>
-
-        <!-- 手动切割设置 -->
-        <div v-if="activeTab === 'manual'" class="cropper-settings" :style="{ borderColor: token.colorBorderSecondary }">
-          <div class="setting-item">
-            <label :style="{ color: token.colorText }">水平切割：</label>
-            <a-input-number v-model:value="gridCols" :min="1" :max="10" />
-            <label :style="{ color: token.colorText, marginLeft: '20px' }">垂直切割：</label>
-            <a-input-number v-model:value="gridRows" :min="1" :max="10" />
-          </div>
-
-          <div class="setting-item">
-            <label :style="{ color: token.colorText }">图片缩放：</label>
-            <div class="zoom-controls">
-              <a-space>
-                <a-button shape="circle" size="small" @click="handleZoom(-0.1)" :disabled="zoomLevel <= minZoom">
-                  <template #icon><ZoomOutOutlined /></template>
-                </a-button>
-                <span class="zoom-text">{{ Math.round(zoomLevel * 100) }}%</span>
-                <a-button shape="circle" size="small" @click="handleZoom(0.1)" :disabled="zoomLevel >= maxZoom">
-                  <template #icon><ZoomInOutlined /></template>
-                </a-button>
-                <a-button shape="circle" size="small" @click="resetZoom" v-if="zoomLevel !== 1" title="重置缩放">
-                  <template #icon><UndoOutlined /></template>
-                </a-button>
-              </a-space>
-            </div>
-          </div>
-
-          <div class="setting-item">
-            <a-button @click="selectAll">全选</a-button>
-            <a-button @click="deselectAll" class="ml-2">取消全选</a-button>
-            <span class="selection-count" :style="{ color: token.colorTextSecondary }">
-              已选择 {{ selectedEmojis.size }} / {{ gridPositions.length }} 个区域
-            </span>
+        <div class="setting-item">
+          <label :style="{ color: token.colorText }">图片缩放：</label>
+          <div class="zoom-controls">
+            <a-space>
+              <a-button
+                shape="circle"
+                size="small"
+                @click="handleZoom(-0.1)"
+                :disabled="zoomLevel <= minZoom"
+              >
+                <template #icon><ZoomOutOutlined /></template>
+              </a-button>
+              <span class="zoom-text">{{ Math.round(zoomLevel * 100) }}%</span>
+              <a-button
+                shape="circle"
+                size="small"
+                @click="handleZoom(0.1)"
+                :disabled="zoomLevel >= maxZoom"
+              >
+                <template #icon><ZoomInOutlined /></template>
+              </a-button>
+              <a-button
+                shape="circle"
+                size="small"
+                @click="resetZoom"
+                v-if="zoomLevel !== 1"
+                title="重置缩放"
+              >
+                <template #icon><UndoOutlined /></template>
+              </a-button>
+            </a-space>
           </div>
         </div>
 
-        <!-- AI 识别提示 -->
-        <div v-if="activeTab === 'ai'" class="ai-notice" :style="{ borderColor: token.colorBorderSecondary }">
-          <a-alert
-            v-if="!props.aiSettings?.geminiApiKey"
-            message="需要配置 Gemini API 密钥"
-            description="请在设置页面配置 AI 功能中的 Gemini API 密钥"
-            type="warning"
-            show-icon
-          />
-          <div v-else class="ai-info">
-            <p :style="{ color: token.colorTextSecondary }">AI 将自动识别图片中的表情符号并生成名称</p>
-          </div>
+        <div class="setting-item">
+          <a-button @click="selectAll">全选</a-button>
+          <a-button @click="deselectAll" class="ml-2">取消全选</a-button>
+          <span class="selection-count" :style="{ color: token.colorTextSecondary }">
+            已选择 {{ selectedEmojis.size }} / {{ gridPositions.length }} 个区域
+          </span>
         </div>
+      </div>
 
+      <!-- AI 识别提示 -->
+      <div
+        v-if="activeTab === 'ai'"
+        class="ai-notice"
+        :style="{ borderColor: token.colorBorderSecondary }"
+      >
+        <a-alert
+          v-if="!props.aiSettings?.geminiApiKey"
+          message="需要配置 Gemini API 密钥"
+          description="请在设置页面配置 AI 功能中的 Gemini API 密钥"
+          type="warning"
+          show-icon
+        />
+        <div v-else class="ai-info">
+          <p :style="{ color: token.colorTextSecondary }">
+            AI 将自动识别图片中的表情符号并生成名称
+          </p>
+        </div>
+      </div>
 
       <!-- 图片展示区域 -->
       <div class="cropper-main">
@@ -604,7 +688,7 @@ watch(() => props.imageFile, () => {
         </div>
 
         <!-- 隐藏的 canvas 用于图片处理 -->
-        <canvas ref="canvasRef" style="display: none;" />
+        <canvas ref="canvasRef" style="display: none" />
       </div>
 
       <!-- 处理按钮 -->
@@ -620,8 +704,14 @@ watch(() => props.imageFile, () => {
       </div>
 
       <!-- 切割结果 -->
-      <div v-if="croppedEmojis.length > 0" class="cropper-results" :style="{ borderColor: token.colorBorderSecondary }">
-        <h4 :style="{ color: token.colorTextHeading }">切割结果（{{ croppedEmojis.length }} 个表情）</h4>
+      <div
+        v-if="croppedEmojis.length > 0"
+        class="cropper-results"
+        :style="{ borderColor: token.colorBorderSecondary }"
+      >
+        <h4 :style="{ color: token.colorTextHeading }">
+          切割结果（{{ croppedEmojis.length }} 个表情）
+        </h4>
 
         <div class="results-grid">
           <div
@@ -630,8 +720,12 @@ watch(() => props.imageFile, () => {
             class="result-item"
             :class="{ selected: selectedEmojis.has(emoji.id) }"
             :style="{
-              borderColor: selectedEmojis.has(emoji.id) ? token.colorPrimary : token.colorBorderSecondary,
-              background: selectedEmojis.has(emoji.id) ? token.controlItemBgActive : token.colorBgContainer
+              borderColor: selectedEmojis.has(emoji.id)
+                ? token.colorPrimary
+                : token.colorBorderSecondary,
+              background: selectedEmojis.has(emoji.id)
+                ? token.controlItemBgActive
+                : token.colorBgContainer
             }"
           >
             <div class="result-image">
