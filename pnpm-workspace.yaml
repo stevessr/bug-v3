@@ -1,3 +1,6 @@
+packages:
+  - 'lib/*'
+  
 onlyBuiltDependencies:
   - core-js
   - electron

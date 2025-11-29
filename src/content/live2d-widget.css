@@ -1,0 +1,186 @@
+/**
+ * Live2D Widget Styles
+ * 独立的 Live2D 小部件样式
+ */
+
+.live2d-widget-container {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 999999;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.1),
+    0 1px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  padding: 10px;
+  overflow: hidden;
+}
+
+.live2d-widget-container:hover {
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 1px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.live2d-widget-container.minimized {
+  width: 80px !important;
+  height: 80px !important;
+  overflow: hidden;
+}
+
+.live2d-widget-container.minimized .live2d-widget-canvas {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.live2d-widget-canvas {
+  display: block;
+  border-radius: 12px;
+  background: transparent;
+  transition: opacity 0.3s ease;
+}
+
+.live2d-widget-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.live2d-widget-container:hover .live2d-widget-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.live2d-widget-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: #666;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  padding: 0;
+  margin: 0;
+}
+
+.live2d-widget-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.1);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.live2d-widget-btn:active {
+  transform: scale(0.95);
+}
+
+.live2d-widget-close:hover {
+  background: #ff4d4f;
+  color: white;
+}
+
+.live2d-widget-minimize:hover {
+  background: #1890ff;
+  color: white;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .live2d-widget-container {
+    right: 10px;
+    bottom: 10px;
+    transform: scale(0.8);
+  }
+
+  .live2d-widget-container:hover {
+    transform: scale(0.8) translateY(-2px);
+  }
+}
+
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .live2d-widget-container {
+    background: rgba(30, 30, 30, 0.95);
+    box-shadow: 
+      0 10px 30px rgba(0, 0, 0, 0.3),
+      0 1px 8px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .live2d-widget-container:hover {
+    box-shadow: 
+      0 20px 40px rgba(0, 0, 0, 0.4),
+      0 1px 8px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .live2d-widget-btn {
+    background: rgba(50, 50, 50, 0.95);
+    color: #ddd;
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .live2d-widget-btn:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* 动画效果 */
+@keyframes live2d-widget-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.live2d-widget-container {
+  animation: live2d-widget-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 拖拽状态 */
+.live2d-widget-container:active {
+  cursor: grabbing !important;
+}
+
+/* 确保不影响页面布局 */
+.live2d-widget-container * {
+  box-sizing: border-box;
+}

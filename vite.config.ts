@@ -17,7 +17,8 @@ export default defineConfig(({ mode }) => {
     // resolve alias so imports using @/xxx map to src/xxx
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url))
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        l2d: fileURLToPath(new URL('./lib/l2d/src', import.meta.url))
       }
     },
     define: {
@@ -52,6 +53,7 @@ export default defineConfig(({ mode }) => {
         input: {
           index: fileURLToPath(new URL('index.html', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
+          'live2d-widget': fileURLToPath(new URL('src/content/live2d-widget.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
         },
         output: {
@@ -76,7 +78,7 @@ export default defineConfig(({ mode }) => {
                 return 'antd-icons'
               }
               // Default vendor chunk for other node_modules
-              return 'vendor'
+              return undefined
             }
             if (id.includes('src/stores')) {
               return 'emoji-store'
@@ -95,7 +97,7 @@ export default defineConfig(({ mode }) => {
               if (id.includes('tabs/')) {
                 if (id.includes('tabs/BilibiliImport')) return 'options-bilibili'
                 if (id.includes('tabs/Upload')) return 'options-upload'
-                if (id.includes('tabs/Settings')) return 'options-settings'  
+                if (id.includes('tabs/Settings')) return 'options-settings'
                 if (id.includes('tabs/ImportExport')) return 'options-import-export'
                 return 'options-tabs'
               }

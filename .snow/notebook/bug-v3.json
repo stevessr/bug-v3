@@ -21,9 +21,36 @@
     {
       "id": "notebook-1764363720301_bryyi3x8q",
       "filePath": "src/options/pages/BufferPage.vue",
-      "note": "✨ 新增功能：1. 一键移动所有缓冲区表情到未分组 (moveAllToUngrouped) 2. 表情卡片样式与未分组tab保持一致 3. 支持编辑和删除表情功能 4. 使用 inject 获取 options 中的 openEditEmoji 方法",
+      "note": "✨ 新增功能：1. 一键移动所有缓冲区表情到未分组 (moveAllToUngrouped) 2. 表情卡片样式与未分组 tab 保持一致 3. 支持编辑和删除表情功能 4. 使用 inject 获取 options 中的 openEditEmoji 方法",
       "createdAt": "2025-11-29T05:02:00.301",
       "updatedAt": "2025-11-29T05:02:00.301"
+    }
+  ],
+  "src/content/live2d-widget.ts": [
+    {
+      "id": "notebook-1764418013121_ud9ipooc9",
+      "filePath": "src/content/live2d-widget.ts",
+      "note": "⚠️ Live2D Widget Content Script - 獨立運行的 Live2D 小部件\n- 自動注入到所有網頁（<all_urls>）\n- 默認使用 https://model.hacxy.cn/cat-black/model.json 模型\n- 支持拖拽、最小化、關閉功能\n- 黑名單機制：localhost 和 127.0.0.1 默認不啟用\n- 構建時會有 l2d 庫的 CommonJS 警告，這是正常的，不影響功能\n- 如需禁用或修改，編輯 checkIfShouldEnable() 函數",
+      "createdAt": "2025-11-29T20:06:53.121",
+      "updatedAt": "2025-11-29T20:06:53.121"
+    }
+  ],
+  "vite.config.ts": [
+    {
+      "id": "notebook-1764418029721_x56q21k5d",
+      "filePath": "vite.config.ts",
+      "note": "⚠️ Live2D Widget 構建配置\n- 已添加 'live2d-widget' 入口到 rollupOptions.input\n- 構建輸出：dist/js/live2d-widget.js (約 4.7KB)\n- 包含 l2d 庫依賴，會有 CommonJS 模塊警告（可忽略）",
+      "createdAt": "2025-11-29T20:07:09.721",
+      "updatedAt": "2025-11-29T20:07:09.721"
+    }
+  ],
+  "public/manifest.json": [
+    {
+      "id": "notebook-1764418029721_y5pxmoicy",
+      "filePath": "public/manifest.json",
+      "note": "⚠️ Live2D Widget Content Script 註冊\n- 已添加獨立的 content_scripts 條目\n- 匹配所有 URL：<all_urls>\n- 運行時機：document_idle\n- 包含 CSS：assets/live2d-widget.css\n- 與原有 content.js 並行運行",
+      "createdAt": "2025-11-29T20:07:09.721",
+      "updatedAt": "2025-11-29T20:07:09.721"
     }
   ]
 }

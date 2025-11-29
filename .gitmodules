@@ -1,0 +1,3 @@
+[submodule "lib/l2d"]
+	path = lib/l2d
+	url = https://github.com/stevessr/l2d.git
