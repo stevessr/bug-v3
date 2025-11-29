@@ -1,0 +1,298 @@
+.image-cropper-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.image-cropper-modal {
+  border-radius: 8px;
+  width: 90vw;
+  max-width: 1200px;
+  height: 90vh;
+  max-height: 800px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cropper-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid;
+}
+
+.cropper-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.cropper-tabs {
+  padding: 16px 20px;
+  border-bottom: 1px solid;
+}
+
+.cropper-settings {
+  padding: 16px 20px;
+  border-bottom: 1px solid;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.setting-item label {
+  margin-right: 12px;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.ai-notice {
+  padding: 16px 20px;
+  border-bottom: 1px solid;
+}
+
+.ai-info p {
+  margin: 0;
+}
+
+.cropper-main {
+  flex: 1;
+  padding: 20px;
+  overflow: auto;
+}
+
+.cropper-container {
+  position: relative;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-display {
+  position: relative;
+  display: inline-block;
+}
+
+.main-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+}
+
+.zoom-text {
+  font-size: 12px;
+  min-width: 40px;
+  text-align: center;
+  margin: 0 8px;
+  color: inherit;
+}
+
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.grid-cell {
+  position: absolute;
+  border: 2px solid #1890ff;
+  background: rgba(24, 144, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.grid-cell:hover {
+  background: rgba(24, 144, 255, 0.2);
+}
+
+.grid-cell.selected {
+  background: rgba(24, 144, 255, 0.3);
+  border-color: #1890ff;
+}
+
+.selection-mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #1890ff;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.ai-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.ai-box {
+  position: absolute;
+  border: 2px solid #ff4d4f;
+  background: rgba(255, 77, 79, 0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ai-box:hover {
+  background: rgba(255, 77, 79, 0.2);
+}
+
+.ai-box.selected {
+  background: rgba(255, 77, 79, 0.3);
+  border-color: #ff4d4f;
+}
+
+.ai-box-name {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: #ff4d4f;
+  color: white;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.cropper-actions {
+  padding: 16px 20px;
+  border-top: 1px solid;
+  text-align: center;
+}
+
+.cropper-results {
+  border-top: 1px solid;
+  padding: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.cropper-results h4 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.result-item {
+  border: 2px solid;
+  border-radius: 8px;
+  padding: 8px;
+  transition: all 0.2s;
+}
+
+.result-item.selected {
+  border-color: #1890ff;
+}
+
+.result-image {
+  position: relative;
+  aspect-ratio: 1;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.result-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.result-checkbox {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: white;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.result-name {
+  width: 100%;
+}
+
+.results-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.selected-count {
+  font-size: 14px;
+}
+
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 1px solid #1890ff;
+  border-radius: 50%;
+  z-index: 10;
+}
+
+.handle-tl {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+
+.handle-tr {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+
+.handle-bl {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+
+.handle-br {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}

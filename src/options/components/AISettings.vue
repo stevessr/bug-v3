@@ -174,6 +174,10 @@ const handleCustomOpenAIModelChange = () => {
               @change="handleGeminiModelChange"
               class="w-full"
             >
+              <a-select-option value="gemini-3-pro-preview">Gemini 3 Pro Preview</a-select-option>
+              <a-select-option value="gemini-robotics-er-1.5-preview">
+                Gemini Robotics (对象检测)
+              </a-select-option>
               <a-select-option value="gemini-2.5-pro">Gemini 2.5 Pro (最强)</a-select-option>
               <a-select-option value="gemini-flash-latest">Gemini Flash (推荐)</a-select-option>
               <a-select-option value="gemini-flash-lite-latest">

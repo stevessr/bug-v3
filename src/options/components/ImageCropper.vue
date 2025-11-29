@@ -8,6 +8,7 @@ import {
   UndoOutlined
 } from '@ant-design/icons-vue'
 import { theme } from 'ant-design-vue'
+import './ImageCropper.css'
 
 import type { AppSettings } from '@/types/type'
 
@@ -63,6 +64,92 @@ const displayScale = computed(() => baseScale.value * zoomLevel.value)
 const croppedEmojis = ref<CroppedEmoji[]>([])
 const selectedEmojis = ref<Set<string>>(new Set())
 
+// Resize state
+const resizingId = ref<string | null>(null)
+const resizeHandle = ref<'tl' | 'tr' | 'bl' | 'br' | null>(null)
+const startPos = ref({ x: 0, y: 0 })
+const startRect = ref({ x: 0, y: 0, width: 0, height: 0 })
+
+
+const startResize = (e: MouseEvent, id: string, handle: 'tl' | 'tr' | 'bl' | 'br') => {
+  e.stopPropagation()
+  e.preventDefault()
+
+  const emoji = croppedEmojis.value.find(e => e.id === id)
+  if (!emoji) return
+
+  resizingId.value = id
+  resizeHandle.value = handle
+  startPos.value = { x: e.clientX, y: e.clientY }
+  startRect.value = {
+    x: emoji.x,
+    y: emoji.y,
+    width: emoji.width,
+    height: emoji.height
+  }
+
+  window.addEventListener('mousemove', handleResize)
+  window.addEventListener('mouseup', stopResize)
+}
+
+const handleResize = (e: MouseEvent) => {
+  if (!resizingId.value || !resizeHandle.value) return
+
+  const emoji = croppedEmojis.value.find(e => e.id === resizingId.value)
+  if (!emoji) return
+
+  const deltaX = (e.clientX - startPos.value.x) / ((imageElement.value?.width || 1) * displayScale.value) * 100
+  const deltaY = (e.clientY - startPos.value.y) / ((imageElement.value?.height || 1) * displayScale.value) * 100
+
+  let newX = startRect.value.x
+  let newY = startRect.value.y
+  let newWidth = startRect.value.width
+  let newHeight = startRect.value.height
+
+  if (resizeHandle.value.includes('l')) {
+    newX = Math.min(startRect.value.x + deltaX, startRect.value.x + startRect.value.width - 5)
+    newWidth = startRect.value.width + (startRect.value.x - newX)
+  }
+  if (resizeHandle.value.includes('r')) {
+    newWidth = Math.max(5, startRect.value.width + deltaX)
+  }
+  if (resizeHandle.value.includes('t')) {
+    newY = Math.min(startRect.value.y + deltaY, startRect.value.y + startRect.value.height - 5)
+    newHeight = startRect.value.height + (startRect.value.y - newY)
+  }
+  if (resizeHandle.value.includes('b')) {
+    newHeight = Math.max(5, startRect.value.height + deltaY)
+  }
+
+  // Update emoji position
+  emoji.x = Math.max(0, Math.min(100, newX))
+  emoji.y = Math.max(0, Math.min(100, newY))
+  emoji.width = Math.max(0, Math.min(100 - emoji.x, newWidth))
+  emoji.height = Math.max(0, Math.min(100 - emoji.y, newHeight))
+}
+
+const stopResize = async () => {
+  if (resizingId.value) {
+    const emoji = croppedEmojis.value.find(e => e.id === resizingId.value)
+    if (emoji) {
+      // Re-generate the cropped image
+      const newImageUrl = cropImage({
+        x: emoji.x,
+        y: emoji.y,
+        width: emoji.width,
+        height: emoji.height
+      })
+      if (newImageUrl) {
+        emoji.imageUrl = newImageUrl
+      }
+    }
+  }
+
+  resizingId.value = null
+  resizeHandle.value = null
+  window.removeEventListener('mousemove', handleResize)
+  window.removeEventListener('mouseup', stopResize)
+}
 // 计算属性
 const gridPositions = computed(() => {
   const positions = []
@@ -322,14 +409,45 @@ const processAICrop = async () => {
 
     // 调用 Gemini API 进行图片分析
     const modelName = props.aiSettings.geminiModel
+    const isRobotics = modelName === 'gemini-robotics-er-1.5-preview'
     const language = props.aiSettings.geminiLanguage || 'Chinese'
-    const prompt =
-      language === 'Chinese'
-        ? `请为图中的表情符号或图标提供分割蒙版。输出一个 JSON 列表，其中每个条目包含一个 2D 边界框（"box_2d"）、一个分割蒙版（"mask"）和一个文本标签（"label"）。`
-        : `Give the segmentation masks for the emojis or icons in this image. Output a JSON list of segmentation masks where each entry contains the 2D bounding box in the key "box_2d", the segmentation mask in key "mask", and the text label in the key "label".`
+
+    let prompt = ''
+    if (isRobotics) {
+      prompt = `Return bounding boxes as a JSON array with labels. Never return masks or code fencing. Limit to 25 objects. Include as many objects as you can identify. The format should be as follows: [{"box_2d": [ymin, xmin, ymax, xmax], "label": <label for the object>}] normalized to 0-1000. The values in box_2d must only be integers.`
+    } else {
+      prompt =
+        language === 'Chinese'
+          ? `请为图中的表情符号或图标提供分割蒙版。输出一个 JSON 列表，其中每个条目包含一个 2D 边界框（"box_2d"）、一个分割蒙版（"mask"）和一个文本标签（"label"）。`
+          : `Give the segmentation masks for the emojis or icons in this image. Output a JSON list of segmentation masks where each entry contains the 2D bounding box in the key "box_2d", the segmentation mask in key "mask", and the text label in the key "label".`
+    }
+
+    const schemaProperties: any = {
+      label: {
+        type: 'string',
+        description: 'The text label for the detected object (e.g., emoji name).'
+      },
+      box_2d: {
+        type: 'array',
+        items: { type: 'integer' },
+        minItems: 4,
+        maxItems: 4,
+        description:
+          'Bounding box coordinates [y_min, x_min, y_max, x_max], normalized to [0, 1000].'
+      }
+    }
+
+    const requiredFields = ['label', 'box_2d']
+    if (!isRobotics) {
+      schemaProperties.mask = {
+        type: 'string',
+        description: 'Base64 encoded PNG segmentation mask.'
+      }
+      requiredFields.push('mask')
+    }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?key=${props.aiSettings.geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${props.aiSettings.geminiApiKey}`,
       {
         method: 'POST',
         headers: {
@@ -357,29 +475,11 @@ const processAICrop = async () => {
               type: 'array',
               items: {
                 type: 'object',
-                properties: {
-                  label: {
-                    type: 'string',
-                    description: 'The text label for the detected object (e.g., emoji name).'
-                  },
-                  box_2d: {
-                    type: 'array',
-                    items: { type: 'integer' },
-                    minItems: 4,
-                    maxItems: 4,
-                    description:
-                      'Bounding box coordinates [y_min, x_min, y_max, x_max], normalized to [0, 1000].'
-                  },
-                  mask: {
-                    type: 'string',
-                    description: 'Base64 encoded PNG segmentation mask.'
-                  }
-                },
-                required: ['label', 'box_2d', 'mask']
+                properties: schemaProperties,
+                required: requiredFields
               }
             }
-          }
-        })
+          }        })
       }
     )
 
@@ -388,26 +488,8 @@ const processAICrop = async () => {
       throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`)
     }
 
-    const reader = response.body!.getReader()
-    const decoder = new TextDecoder()
-    let fullText = ''
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) {
-        break
-      }
-      const chunk = decoder.decode(value, { stream: true })
-      try {
-        const json = JSON.parse(chunk.replace(/^\[|\]$/g, '').replace(/,$/, ''))
-        if (json.candidates?.[0]?.content?.parts?.[0]?.text) {
-          fullText += json.candidates[0].content.parts[0].text
-        }
-      } catch (e) {
-        // 部分 JSON 数据，继续累积
-        console.log('Partial JSON chunk, accumulating...')
-      }
-    }
-
+    const data = await response.json()
+    const fullText = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
     if (fullText) {
       try {
         const aiResult = JSON.parse(fullText)
@@ -434,10 +516,22 @@ const processAICrop = async () => {
               continue
             }
 
-            const croppedImageUrl = await cropWithMask(
-              { x: clampedX, y: clampedY, width: clampedWidth, height: clampedHeight },
-              item.mask
-            )
+            let croppedImageUrl = ''
+            if (item.mask) {
+              croppedImageUrl =
+                (await cropWithMask(
+                  { x: clampedX, y: clampedY, width: clampedWidth, height: clampedHeight },
+                  item.mask
+                )) || ''
+            } else {
+              croppedImageUrl =
+                cropImage({
+                  x: clampedX,
+                  y: clampedY,
+                  width: clampedWidth,
+                  height: clampedHeight
+                }) || ''
+            }
 
             if (croppedImageUrl) {
               results.push({
@@ -555,9 +649,9 @@ watch(
       >
         <div class="setting-item">
           <label :style="{ color: token.colorText }">水平切割：</label>
-          <a-input-number v-model:value="gridCols" :min="1" :max="10" />
+          <a-input-number v-model:value="gridCols" :min="1" :max="100" />
           <label :style="{ color: token.colorText, marginLeft: '20px' }">垂直切割：</label>
-          <a-input-number v-model:value="gridRows" :min="1" :max="10" />
+          <a-input-number v-model:value="gridRows" :min="1" :max="100" />
         </div>
 
         <div class="setting-item">
@@ -674,7 +768,7 @@ watch(
                   width: emoji.width + '%',
                   height: emoji.height + '%'
                 }"
-                @click="toggleSelection(emoji.id)"
+                @click.stop="toggleSelection(emoji.id)"
               >
                 <div class="ai-box-name">
                   <span>{{ emoji.name }}</span>
@@ -682,6 +776,12 @@ watch(
                 <div v-if="selectedEmojis.has(emoji.id)" class="selection-mark">
                   <CheckOutlined />
                 </div>
+
+                <!-- Resize handles -->
+                <div v-if="selectedEmojis.has(emoji.id)" class="resize-handle handle-tl" @mousedown="startResize($event, emoji.id, 'tl')"></div>
+                <div v-if="selectedEmojis.has(emoji.id)" class="resize-handle handle-tr" @mousedown="startResize($event, emoji.id, 'tr')"></div>
+                <div v-if="selectedEmojis.has(emoji.id)" class="resize-handle handle-bl" @mousedown="startResize($event, emoji.id, 'bl')"></div>
+                <div v-if="selectedEmojis.has(emoji.id)" class="resize-handle handle-br" @mousedown="startResize($event, emoji.id, 'br')"></div>
               </div>
             </div>
           </div>
@@ -764,270 +864,3 @@ watch(
     </div>
   </div>
 </template>
-
-<style scoped>
-.image-cropper-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.image-cropper-modal {
-  border-radius: 8px;
-  width: 90vw;
-  max-width: 1200px;
-  height: 90vh;
-  max-height: 800px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.cropper-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid;
-}
-
-.cropper-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.cropper-tabs {
-  padding: 16px 20px;
-  border-bottom: 1px solid;
-}
-
-.cropper-settings {
-  padding: 16px 20px;
-  border-bottom: 1px solid;
-}
-
-.setting-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.setting-item label {
-  margin-right: 12px;
-  font-weight: 500;
-  min-width: 80px;
-}
-
-.ai-notice {
-  padding: 16px 20px;
-  border-bottom: 1px solid;
-}
-
-.ai-info p {
-  margin: 0;
-}
-
-.cropper-main {
-  flex: 1;
-  padding: 20px;
-  overflow: auto;
-}
-
-.cropper-container {
-  position: relative;
-  min-height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.image-display {
-  position: relative;
-  display: inline-block;
-}
-
-.main-image {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-.zoom-controls {
-  display: flex;
-  align-items: center;
-}
-
-.zoom-text {
-  font-size: 12px;
-  min-width: 40px;
-  text-align: center;
-  margin: 0 8px;
-  color: inherit;
-}
-
-.grid-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-.grid-cell {
-  position: absolute;
-  border: 2px solid #1890ff;
-  background: rgba(24, 144, 255, 0.1);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.grid-cell:hover {
-  background: rgba(24, 144, 255, 0.2);
-}
-
-.grid-cell.selected {
-  background: rgba(24, 144, 255, 0.3);
-  border-color: #1890ff;
-}
-
-.selection-mark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #1890ff;
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.ai-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-.ai-box {
-  position: absolute;
-  border: 2px solid #ff4d4f;
-  background: rgba(255, 77, 79, 0.1);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.ai-box:hover {
-  background: rgba(255, 77, 79, 0.2);
-}
-
-.ai-box.selected {
-  background: rgba(255, 77, 79, 0.3);
-  border-color: #ff4d4f;
-}
-
-.ai-box-name {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  background: #ff4d4f;
-  color: white;
-  padding: 2px 6px;
-  font-size: 12px;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-
-.cropper-actions {
-  padding: 16px 20px;
-  border-top: 1px solid;
-  text-align: center;
-}
-
-.cropper-results {
-  border-top: 1px solid;
-  padding: 20px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.cropper-results h4 {
-  margin: 0 0 16px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.results-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.result-item {
-  border: 2px solid;
-  border-radius: 8px;
-  padding: 8px;
-  transition: all 0.2s;
-}
-
-.result-item.selected {
-  border-color: #1890ff;
-}
-
-.result-image {
-  position: relative;
-  aspect-ratio: 1;
-  margin-bottom: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.result-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.result-checkbox {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: white;
-  border-radius: 4px;
-  padding: 2px;
-}
-
-.result-name {
-  width: 100%;
-}
-
-.results-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.selected-count {
-  font-size: 14px;
-}
-</style>
