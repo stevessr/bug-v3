@@ -3,10 +3,11 @@ import { ref, onMounted, watch } from 'vue'
 import { useEmojiStore } from '../stores/emojiStore'
 import type { Emoji } from '../types/type'
 
-export function usePopup() {
+export function usePopup(options?: { manageUrl?: boolean }) {
   const emojiStore = useEmojiStore()
   const localScale = ref(100)
   const showCopyToast = ref(false)
+  const manageUrl = options?.manageUrl ?? true
 
   onMounted(async () => {
     await emojiStore.loadData()
@@ -15,6 +16,7 @@ export function usePopup() {
 
   // After loading data, sync selection with URL or settings
   onMounted(() => {
+    if (!manageUrl) return
     try {
       const params = new URLSearchParams(window.location.search)
       const tabParam = params.get('tab') || params.get('tabs')
@@ -45,6 +47,7 @@ export function usePopup() {
   watch(
     () => emojiStore.activeGroupId,
     newId => {
+      if (!manageUrl) return
       try {
         if (!newId) return
         const g = emojiStore.groups.find(x => x.id === newId)
@@ -167,6 +170,15 @@ export function usePopup() {
         active: true,
         currentWindow: true
       })
+      if (!tab.id) throw new Error('No active tab found')
+
+      // Set sidepanel URL to our extension's sidebar page
+      await chrome.sidePanel.setOptions({
+        tabId: tab.id,
+        path: 'index.html?type=sidebar',
+        enabled: true
+      })
+      // Open the sidepanel
       return chrome.sidePanel.open({ windowId: tab.windowId })
     }
 

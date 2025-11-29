@@ -4,11 +4,12 @@ import { computed, onMounted, ref } from 'vue'
 // 使用静态导入，扩展不需要代码分割
 import Popup from './popup/Popup.vue'
 import Options from './options/Options.vue'
+import Sidebar from './sidebar/Sidebar.vue'
 
 import router from '@/options/router'
 
 // 检测当前是 popup 模式还是 options 模式
-const isPopupMode = ref(false)
+const mode = ref('popup')
 
 onMounted(() => {
   // 通过 URL 查询参数判断模式（格式：?type={options|popup|sidebar}&tabs={route 或分组名}）
@@ -31,10 +32,10 @@ onMounted(() => {
   // 3. 明确指定 type=popup -> Popup 模式
   // 4. 明确指定 type=sidebar -> Popup 模式
   // 5. 默认 -> Popup 模式
-  if (tabs && tabs.length > 0) {
+  if (tabs && tabs.length > 0 && type !== 'sidebar') {
     // 最高优先级：有路由 hash 或 tabs 参数，必须使用 Options 模式
     //console.log('[App.vue] 检测到路由 hash 或 tabs 参数，强制使用 Options 模式（Popup 不支持路由）')
-    isPopupMode.value = false
+    mode.value = 'options'
 
     // 如果有 tabs 参数，尝试导航到对应的路由（使用 hash 导航以兼容现有 router）
     // 支持传入路由名（如 groups）或分组名称，优先将其作为路由路径使用
@@ -66,44 +67,45 @@ onMounted(() => {
       //console.log('[App.vue] 已清理 URL 为：', newUrl)
     }
   } else if (type === 'options') {
-    // 优先级 2: URL 明确指定 options 模式
-    //console.log('[App.vue] URL 明确指定 options 模式')
-    isPopupMode.value = false
+    mode.value = 'options'
   } else if (type === 'popup') {
-    // 优先级 3: URL 明确指定 popup 模式
-    //console.log('[App.vue] URL 明确指定 popup 模式')
-    isPopupMode.value = true
+    mode.value = 'popup'
   } else if (type === 'sidebar') {
-    // 优先级 4: URL 明确指定 sidebar 模式，使用 Popup 模式
-    console.log('[App.vue] URL 明确指定 sidebar 模式，使用 Popup 模式')
-    isPopupMode.value = true
+    mode.value = 'sidebar'
   } else {
-    // 优先级 5: 默认使用 popup 模式
-    //console.log('[App.vue] 无明确参数，默认使用 Popup 模式')
-    isPopupMode.value = true
+    mode.value = 'popup'
   }
 
-  //console.log('[App.vue] 最终模式：', isPopupMode.value ? 'Popup' : 'Options')
-
   // 根据模式为 body 添加对应的 class，以应用不同的样式
-  if (isPopupMode.value) {
-    document.body.classList.add('popup-mode')
-    document.body.classList.remove('options-mode')
-    if (type === 'sidebar') {
-      document.body.classList.add('sidebar-mode') // Add sidebar mode for special dimensions
-    } else {
+  document.body.classList.remove('options-mode')
+  document.body.classList.remove('popup-mode')
       document.body.classList.remove('sidebar-mode')
-    }
-  } else {
-    document.body.classList.add('options-mode')
-    document.body.classList.remove('popup-mode')
-    document.body.classList.remove('sidebar-mode')
+  switch (mode.value) {
+    case 'options':
+      document.body.classList.add('options-mode')
+      break
+    case 'popup':
+      document.body.classList.add('popup-mode')
+      
+      break
+    case 'sidebar':
+      document.body.classList.add('sidebar-mode')
+      break
   }
 })
 
 // 动态组件
 const currentComponent = computed(() => {
-  return isPopupMode.value ? Popup : Options
+  switch (mode.value) {
+    case 'options':
+      return Options
+    case 'popup':
+      return Popup
+    case 'sidebar':
+      return Sidebar
+    default:
+      return Options
+  }
 })
 </script>
 
@@ -144,14 +146,14 @@ body.options-mode #app {
 
 /* Sidebar 模式：适配侧边栏尺寸 */
 body.sidebar-mode {
-  width: 400px;
-  height: 600px;
-  min-height: unset;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
   overflow-y: auto;
 }
 
 body.sidebar-mode #app {
   width: 100%;
-  min-height: unset;
+  min-height: 100vh;
 }
 </style>
