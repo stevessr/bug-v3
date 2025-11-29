@@ -43,7 +43,6 @@
     {
       "matches": ["<all_urls>"],
       "js": ["js/live2d-widget.js"],
-      "css": ["assets/live2d-widget.css"],
       "type": "module",
       "run_at": "document_idle"
     }
@@ -61,7 +60,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/*", "js/*", "*.html"],
+      "resources": ["assets/*", "js/*", "*.html", "img/*"],
       "matches": ["<all_urls>"]
     }
   ]

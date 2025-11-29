@@ -18,7 +18,6 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
-        live2drender: fileURLToPath(new URL('./lib/Live2dRender/src', import.meta.url))
       }
     },
     define: {
