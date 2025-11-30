@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
-import { QuestionCircleOutlined, DownOutlined, ScissorOutlined } from '@ant-design/icons-vue'
+import {
+  QuestionCircleOutlined,
+  DownOutlined,
+  ScissorOutlined,
+  InboxOutlined
+} from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
 import ImageCropper from '../components/ImageCropper.vue'
@@ -14,7 +19,6 @@ const { emojiStore, openEditEmoji } = options
 // State
 const uploadService = ref<'linux.do' | 'idcflare.com'>('linux.do')
 const selectedFiles = ref<{ file: File; url: string; width?: number; height?: number }[]>([])
-const isDragging = ref(false)
 const isUploading = ref(false)
 const uploadProgress = ref<
   Array<{
@@ -25,7 +29,6 @@ const uploadProgress = ref<
     waitStart?: number
   }>
 >([])
-const fileInput = ref<HTMLInputElement>()
 
 // 图片切割相关状态
 const showImageCropper = ref(false)
@@ -105,27 +108,9 @@ const getWaitProgress = (progressItem: any) => {
   return { percent: 100 - percent, remaining: Math.ceil(remaining) }
 }
 
-const handleDragOver = () => {
-  isDragging.value = true
-}
-
-const handleDragLeave = () => {
-  isDragging.value = false
-}
-
-const handleDrop = (event: DragEvent) => {
-  isDragging.value = false
-  const files = Array.from(event.dataTransfer?.files || [])
-  addFiles(files)
-}
-
-const triggerFileInput = () => {
-  fileInput.value?.click()
-}
-
-const handleFileChange = (event: Event) => {
-  const files = Array.from((event.target as HTMLInputElement).files || [])
-  addFiles(files)
+const beforeUpload = (_file: File, fileList: File[]) => {
+  addFiles(fileList)
+  return false // 阻止 antdv 的默认上传行为
 }
 
 const addFiles = (files: File[]) => {
@@ -497,7 +482,11 @@ const uploadFiles = async () => {
     // After the loop, write any remaining emojis.
     await writeNewEmojis()
 
-    selectedFiles.value = []
+    // Keep failed files in the list for retry
+    selectedFiles.value = selectedFiles.value.filter(
+      (_, i) => uploadProgress.value[i].error
+    )
+
     setTimeout(() => {
       uploadProgress.value = []
     }, 3000)
@@ -564,31 +553,19 @@ onBeforeUnmount(() => {
     <!-- File Upload Area -->
     <div class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
       <h3 class="text-lg font-semibold dark:text-white mb-4">上传图片</h3>
-      <div
-        class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer"
-        @dragover.prevent="handleDragOver"
-        @dragleave.prevent="handleDragLeave"
-        @drop.prevent="handleDrop"
-        @click="triggerFileInput"
+      <a-upload-dragger
+        name="file"
+        multiple
+        accept="image/*"
+        :before-upload="beforeUpload"
+        :show-upload-list="false"
       >
-        <input
-          ref="fileInput"
-          type="file"
-          multiple
-          accept="image/*"
-          class="hidden"
-          @change="handleFileChange"
-        />
-        <div v-if="!isDragging">
-          <p class="text-gray-600 dark:text-gray-400">拖拽文件到此处或点击选择文件</p>
-          <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
-            支持批量选择，会自动过滤已存在的文件
-          </p>
-        </div>
-        <div v-else>
-          <p class="text-blue-600 dark:text-blue-400">松开以上传文件</p>
-        </div>
-      </div>
+        <p class="ant-upload-drag-icon">
+          <InboxOutlined />
+        </p>
+        <p class="ant-upload-text">拖拽文件到此处或点击选择文件</p>
+        <p class="ant-upload-hint">支持批量选择，会自动过滤已存在的文件</p>
+      </a-upload-dragger>
 
       <!-- File List -->
       <div v-if="selectedFiles.length > 0" class="mt-4">
