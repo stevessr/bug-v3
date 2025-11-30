@@ -24,12 +24,6 @@ const processedEmojis = ref(0)
 const groupTotal = ref(0)
 const groupProcessed = ref(0)
 
-interface DuplicateGroup {
-  emoji: Emoji
-  groupId: string
-  groupName: string
-}
-
 const filteredDuplicateGroups = computed(() => {
   if (!filterQuery.value) {
     return duplicateGroups.value

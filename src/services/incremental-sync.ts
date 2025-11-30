@@ -3,22 +3,13 @@
  * 管理增量同步、冲突检测和解决的核心逻辑
  */
 
-import { changeTracker } from './change-tracker'
 import { conflictResolver } from './conflict-resolver'
 import { offlineQueue } from './offline-queue'
 
 import { syncDb } from '@/utils/sync-db'
 import { cloudflareSyncService } from '@/utils/cloudflareSync'
-import { newStorageHelpers } from '@/utils/newStorage'
 import { getDeviceId } from '@/utils/device'
-import type {
-  SyncOptions,
-  SyncResult,
-  SyncVersion,
-  DeltaRecord,
-  ConflictInfo,
-  SyncState
-} from '@/types/sync'
+import type { SyncOptions, SyncResult, SyncVersion, DeltaRecord, SyncState } from '@/types/sync'
 
 export class IncrementalSyncService {
   private syncInProgress = false
@@ -64,7 +55,7 @@ export class IncrementalSyncService {
       const localDeltas = await this.getLocalDeltas(remoteVersion.remote)
 
       this.updateSyncState('syncing', 40, 'Fetching remote changes...')
-      const remoteDeltas = await this.getRemoteDeltas(options.provider, localVersion.local)
+      const remoteDeltas = await this.getRemoteDeltas(options.provider)
 
       console.log('[IncrementalSync] Deltas:', {
         local: localDeltas.length,
@@ -225,7 +216,7 @@ export class IncrementalSyncService {
   /**
    * 获取远程增量变更
    */
-  private async getRemoteDeltas(provider: string, sinceVersion: number): Promise<DeltaRecord[]> {
+  private async getRemoteDeltas(provider: string): Promise<DeltaRecord[]> {
     try {
       if (provider === 'cloudflare') {
         // 从 Cloudflare 获取增量变更

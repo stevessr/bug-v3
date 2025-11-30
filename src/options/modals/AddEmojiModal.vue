@@ -6,8 +6,6 @@ import { useEmojiStore } from '../../stores/emojiStore'
 
 import GeminiNamingModal from './GeminiNamingModal.vue'
 
-import type { ImageAnalysisResult } from '@/utils/geminiService'
-
 const props = defineProps<{ show: boolean; groups: unknown[]; defaultGroupId?: string }>()
 
 // expose props as refs for template and internal use
@@ -466,7 +464,7 @@ const openGeminiNaming = () => {
   showGeminiModal.value = true
 }
 
-const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisResult) => {
+const handleGeminiNameSelected = (selectedName: string) => {
   name.value = selectedName
   showGeminiModal.value = false
 }

@@ -5,14 +5,7 @@
 
 import { nanoid } from 'nanoid'
 
-import type {
-  DeltaRecord,
-  ConflictInfo,
-  ConflictStrategy,
-  MergeResult,
-  MergeBase,
-  EntityType
-} from '@/types/sync'
+import type { DeltaRecord, ConflictInfo, ConflictStrategy, MergeResult } from '@/types/sync'
 import { syncDb } from '@/utils/sync-db'
 
 export class ConflictResolver {
@@ -311,12 +304,7 @@ export class ConflictResolver {
    * 三方合并（带基础版本）
    * 比较 base、local、remote 三个版本，智能合并
    */
-  async threeWayMerge<T = any>(
-    base: T,
-    local: T,
-    remote: T,
-    entityType: EntityType
-  ): Promise<MergeResult<T>> {
+  async threeWayMerge<T = any>(base: T, local: T, remote: T): Promise<MergeResult<T>> {
     try {
       // 检测变更
       const localChanges = this.diff(base, local)

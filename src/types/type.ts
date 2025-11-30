@@ -41,6 +41,8 @@ export interface AppSettings {
   // parsed item's displayUrl to the selected variant URL. When false, the
   // displayUrl will only be populated if it was previously empty.
   syncVariantToDisplayUrl?: boolean
+  highContrastMode?: boolean
+  reduceMotion?: boolean
 }
 
 export interface EmojiGroup {

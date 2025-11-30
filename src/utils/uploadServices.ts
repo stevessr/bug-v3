@@ -190,10 +190,7 @@ class ImgbedUploadService implements UploadService {
     return 'imgbed'
   }
 
-  async uploadFile(
-    file: File,
-    onProgress?: (percent: number) => void
-  ): Promise<string> {
+  async uploadFile(file: File, onProgress?: (percent: number) => void): Promise<string> {
     const { useEmojiStore } = await import('@/stores/emojiStore')
     const emojiStore = useEmojiStore()
     const token = emojiStore.settings.imgbedToken
@@ -227,9 +224,7 @@ class ImgbedUploadService implements UploadService {
       throw new Error('Invalid response from imgbed')
     } else {
       const errorData = await response.text().catch(() => 'Unknown error')
-      throw new Error(
-        `Upload failed: ${response.status} ${errorData}`
-      )
+      throw new Error(`Upload failed: ${response.status} ${errorData}`)
     }
   }
 }

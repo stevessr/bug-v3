@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, computed, type PropType, onMounted, onUnmounted } from 'vue'
+import { ref, watch, computed, type PropType } from 'vue'
 
-import type { Emoji } from '@/types/emoji'
+import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { generateBatchNamesStreaming } from '@/utils/geminiService'
 import VirtualList from '@/options/components/VirtualList.vue'
@@ -24,11 +24,15 @@ const prompt = ref('')
 const newNames = ref<Record<string, string>>({})
 const isLoading = ref(false)
 const error = ref<string | null>(null)
-const progress = ref({ current: 0, total: 0, groupIndex: 0 })
+const progress = ref<{ current: number; total: number; groupIndex?: number }>({
+  current: 0,
+  total: 0,
+  groupIndex: 0
+})
 const enableGroupedStreaming = ref(true)
 
 // Virtual list ref
-const virtualListRef = ref<InstanceType<typeof VirtualList> | null>(null)
+const virtualListRef = ref<InstanceType<typeof VirtualList> | null>(null) as any
 
 // Computed list for rendering
 interface EmojiRenderItem {
@@ -99,7 +103,7 @@ const handleGenerateNames = async () => {
     await generateBatchNamesStreaming(
       props.selectedEmojis,
       prompt.value,
-      config,
+      config as any,
       (results, progressInfo) => {
         // Update names in real-time
         newNames.value = { ...results }

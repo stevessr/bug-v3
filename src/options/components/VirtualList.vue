@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onUnmounted, watch, nextTick } from 'vue'
 
 interface Props {
   items: T[]
@@ -26,8 +26,6 @@ const scrollTop = ref(0)
 const itemsPerRow = computed(() => {
   return props.itemsPerRow > 0 ? props.itemsPerRow : 1
 })
-
-const visibleCountPerRow = computed(() => Math.ceil(props.containerHeight / props.itemHeight))
 
 // 计算需要显示的行数
 const totalRows = computed(() => Math.ceil(props.items.length / itemsPerRow.value))
@@ -134,7 +132,7 @@ onUnmounted(() => {
     <div :style="{ height: `${totalRows * itemHeight}px`, position: 'relative' }">
       <div :style="{ transform: `translateY(${offsetY}px)` }">
         <div
-          v-for="(item, idx) in visibleItems"
+          v-for="item in visibleItems"
           :key="item.index"
           :style="{
             display: 'inline-block',

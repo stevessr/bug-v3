@@ -7,7 +7,6 @@
 // 3. Users should only use this feature on trusted devices
 // 4. Strong, unique passwords should be used
 // 5. For S3, consider using IAM roles with minimal permissions
-import { createEl } from '../utils/createEl'
 import { userscriptState } from '../state'
 import { saveDataToLocalStorage } from '../userscript-storage'
 import { createModalElement } from '../utils/editorUtils'
@@ -260,7 +259,7 @@ export function showSyncConfigModal() {
   modal.querySelector('#testConnection')?.addEventListener('click', async () => {
     const config = getCurrentConfigFromModal(modal)
     if (!config) {
-      showTemporaryMessage('请填写完整的配置信息', 'error')
+      showTemporaryMessage('请填写完整的配置信息')
       return
     }
     const btn = modal.querySelector('#testConnection') as HTMLButtonElement
@@ -269,9 +268,9 @@ export function showSyncConfigModal() {
     try {
       const target = createSyncTarget(config)
       const result = await target.test()
-      showTemporaryMessage(result.message, result.success ? 'success' : 'error')
+      showTemporaryMessage(result.message)
     } catch (error) {
-      showTemporaryMessage(`测试失败: ${error}`, 'error')
+      showTemporaryMessage(`测试失败: ${error}`)
     } finally {
       btn.disabled = false
       btn.textContent = '测试连接'
@@ -282,11 +281,11 @@ export function showSyncConfigModal() {
   modal.querySelector('#saveConfig')?.addEventListener('click', () => {
     const config = getCurrentConfigFromModal(modal)
     if (!config) {
-      showTemporaryMessage('请填写完整的配置信息', 'error')
+      showTemporaryMessage('请填写完整的配置信息')
       return
     }
     saveSyncConfig(config)
-    showTemporaryMessage('配置已保存', 'success')
+    showTemporaryMessage('配置已保存')
     modal.remove()
   })
 }
@@ -408,7 +407,7 @@ function showPullPreviewModal(data: SyncData, config: SyncTargetConfig, onConfir
     applySyncDataToState(data) // This now merges instead of overwriting
     config.lastSyncTime = Date.now()
     saveSyncConfig(config)
-    showTemporaryMessage('数据合并成功，页面将刷新', 'success')
+    showTemporaryMessage('数据合并成功，页面将刷新')
     modal.remove()
     onConfirm() // This will close the parent modal
     setTimeout(() => {
@@ -426,7 +425,7 @@ export function showSyncOperationsModal() {
   const config = loadSyncConfig()
 
   if (!config) {
-    showTemporaryMessage('请先配置同步设置', 'error')
+    showTemporaryMessage('请先配置同步设置')
     showSyncConfigModal()
     return
   }
@@ -518,13 +517,13 @@ export function showSyncOperationsModal() {
       if (result.success) {
         config.lastSyncTime = Date.now()
         saveSyncConfig(config)
-        showTemporaryMessage('数据推送成功', 'success')
+        showTemporaryMessage('数据推送成功')
         modal.remove()
       } else {
-        showTemporaryMessage(`推送失败: ${result.message}`, 'error')
+        showTemporaryMessage(`推送失败: ${result.message}`)
       }
     } catch (error) {
-      showTemporaryMessage(`推送错误: ${error}`, 'error')
+      showTemporaryMessage(`推送错误: ${error}`)
     } finally {
       pushBtn.disabled = false
       pullBtn.disabled = false
@@ -547,10 +546,10 @@ export function showSyncOperationsModal() {
       if (result.success && result.data) {
         showPullPreviewModal(result.data, config, () => modal.remove())
       } else {
-        showTemporaryMessage(`拉取失败: ${result.message}`, 'error')
+        showTemporaryMessage(`拉取失败: ${result.message}`)
       }
     } catch (error) {
-      showTemporaryMessage(`拉取错误: ${error}`, 'error')
+      showTemporaryMessage(`拉取错误: ${error}`)
     } finally {
       pullBtn.disabled = false
       pushBtn.disabled = false

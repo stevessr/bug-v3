@@ -22,8 +22,8 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  close: []
-  upload: [emojis: CroppedEmoji[]]
+  (e: 'close'): void
+  (e: 'upload', emojis: CroppedEmoji[]): void
 }>()
 
 // Component Refs needed by composable

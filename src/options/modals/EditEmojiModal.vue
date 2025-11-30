@@ -8,8 +8,6 @@ import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 
 import GeminiNamingModal from './GeminiNamingModal.vue'
 
-import type { ImageAnalysisResult } from '@/utils/geminiService'
-
 const props = defineProps<{
   show: boolean
   emoji?: Emoji
@@ -37,7 +35,7 @@ const openGeminiNaming = () => {
   showGeminiModal.value = true
 }
 
-const handleGeminiNameSelected = (selectedName: string, analysis: ImageAnalysisResult) => {
+const handleGeminiNameSelected = (selectedName: string) => {
   if (localEmoji.value) {
     localEmoji.value.name = selectedName
   }

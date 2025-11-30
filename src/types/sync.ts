@@ -3,8 +3,6 @@
  * 定义变更跟踪、版本管理、冲突处理等核心类型
  */
 
-import type { Emoji, EmojiGroup, AppSettings } from './type'
-
 /** 操作类型枚举 */
 export enum OperationType {
   CREATE = 'create',

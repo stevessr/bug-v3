@@ -11,8 +11,8 @@ export class ContentStorageAdapter {
         if (value !== null && value !== undefined) {
           console.log(`[Content Storage] Found ${key} in extension storage`)
           // Handle both new storage format (with .data) and legacy format
-          if (value && typeof value === 'object' && value.data !== undefined) {
-            return value.data
+          if (value && typeof value === 'object' && (value as { data: any }).data !== undefined) {
+            return (value as { data: any }).data
           }
           return value
         }
@@ -30,8 +30,12 @@ export class ContentStorageAdapter {
           if (parsed !== null && parsed !== undefined) {
             console.log(`[Content Storage] Found ${key} in localStorage`)
             // Handle both new storage format (with .data) and legacy format
-            if (parsed && typeof parsed === 'object' && parsed.data !== undefined) {
-              return parsed.data
+            if (
+              parsed &&
+              typeof parsed === 'object' &&
+              (parsed as { data: any }).data !== undefined
+            ) {
+              return (parsed as { data: any }).data
             }
             return parsed
           }
@@ -50,8 +54,12 @@ export class ContentStorageAdapter {
           if (parsed !== null && parsed !== undefined) {
             console.log(`[Content Storage] Found ${key} in sessionStorage`)
             // Handle both new storage format (with .data) and legacy format
-            if (parsed && typeof parsed === 'object' && parsed.data !== undefined) {
-              return parsed.data
+            if (
+              parsed &&
+              typeof parsed === 'object' &&
+              (parsed as { data: any }).data !== undefined
+            ) {
+              return (parsed as { data: any }).data
             }
             return parsed
           }

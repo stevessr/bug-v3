@@ -1,4 +1,4 @@
-import type { DefaultEmojiData, EmojiGroup, Emoji } from '../types/type'
+import type { EmojiGroup, Emoji } from '../types/type'
 
 // This is a userscript-specific loader for default emoji groups.
 // It fetches the default emoji groups and filters them based on the hostname.

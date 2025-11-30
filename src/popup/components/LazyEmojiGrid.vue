@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, toRefs, onMounted, onUnmounted } from 'vue'
+import { defineProps, toRefs } from 'vue'
 
 import type { Emoji } from '@/types/type'
 
@@ -21,8 +21,6 @@ const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton, 
 
 // 键盘导航功能
 const handleKeyNavigation = (event: KeyboardEvent, index: number) => {
-  const target = event.target as HTMLElement
-
   switch (event.key) {
     case 'Enter':
     case ' ':

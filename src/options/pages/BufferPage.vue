@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
+import { encode } from 'libavif-wasm'
 import {
   QuestionCircleOutlined,
   DownOutlined,
@@ -18,6 +19,7 @@ const { emojiStore, openEditEmoji } = options
 
 // State
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
+const convertToAvif = ref(false)
 const selectedFiles = ref<{ file: File; url: string; width?: number; height?: number }[]>([])
 const isUploading = ref(false)
 const uploadProgress = ref<
@@ -108,13 +110,57 @@ const getWaitProgress = (progressItem: any) => {
   return { percent: 100 - percent, remaining: Math.ceil(remaining) }
 }
 
+const convertImageToAvif = async (file: File): Promise<File> => {
+  try {
+    const imageBitmap = await createImageBitmap(file)
+
+    if (imageBitmap.width === 0 || imageBitmap.height === 0) {
+      throw new Error('Image has zero dimensions, skipping AVIF conversion.')
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = imageBitmap.width
+    canvas.height = imageBitmap.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Could not get canvas context')
+
+    ctx.drawImage(imageBitmap, 0, 0)
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+    const avifBuffer = await encode(
+      new Uint8Array(imageData.data),
+      imageData.width,
+      imageData.height,
+      4
+    )
+    if (!avifBuffer) throw new Error('AVIF encoding failed')
+
+    const avifBlob = new Blob([avifBuffer.slice().buffer], { type: 'image/avif' })
+    const newFileName = file.name.substring(0, file.name.lastIndexOf('.')) + '.avif'
+    return new File([avifBlob], newFileName, { type: 'image/avif' })
+  } catch (error) {
+    console.error('Failed to convert image to AVIF:', error)
+    // Return original file if conversion fails
+    return file
+  }
+}
+
 const beforeUpload = (_file: File, fileList: File[]) => {
   addFiles(fileList)
   return false // 阻止 antdv 的默认上传行为
 }
 
-const addFiles = (files: File[]) => {
-  const imageFiles = files.filter(file => file.type.startsWith('image/'))
+const addFiles = async (files: File[]) => {
+  let imageFiles = files.filter(file => file.type.startsWith('image/'))
+
+  if (convertToAvif.value) {
+    try {
+      imageFiles = await Promise.all(imageFiles.map(file => convertImageToAvif(file)))
+    } catch (error) {
+      console.error('An error occurred during AVIF conversion:', error)
+      // Fallback to original files if conversion fails
+    }
+  }
 
   // Filter out existing files
   const existingNames = bufferGroup.value?.emojis.map(e => e.name) || []
@@ -447,6 +493,18 @@ const uploadFiles = async () => {
       const { file, width, height } = selectedFiles.value[i]
 
       try {
+        let fileToUpload = file
+        if (convertToAvif.value) {
+          try {
+            fileToUpload = await convertImageToAvif(file)
+          } catch (conversionError) {
+            console.error(
+              `Failed to convert ${file.name} to AVIF, uploading original file.`,
+              conversionError
+            )
+          }
+        }
+
         const updateProgress = (percent: number) => {
           uploadProgress.value[i].percent = percent
           if (uploadProgress.value[i].waitingFor) {
@@ -462,10 +520,10 @@ const uploadFiles = async () => {
           uploadProgress.value[i].waitStart = Date.now()
         }
 
-        const uploadUrl = await service.uploadFile(file, updateProgress, onRateLimitWait)
+        const uploadUrl = await service.uploadFile(fileToUpload, updateProgress, onRateLimitWait)
 
         newEmojis.push({
-          name: file.name,
+          name: fileToUpload.name,
           url: uploadUrl,
           displayUrl: uploadUrl,
           packet: 0,
@@ -483,9 +541,7 @@ const uploadFiles = async () => {
     await writeNewEmojis()
 
     // Keep failed files in the list for retry
-    selectedFiles.value = selectedFiles.value.filter(
-      (_, i) => uploadProgress.value[i].error
-    )
+    selectedFiles.value = selectedFiles.value.filter((_, i) => uploadProgress.value[i].error)
 
     setTimeout(() => {
       uploadProgress.value = []
@@ -567,6 +623,14 @@ onBeforeUnmount(() => {
         <p class="ant-upload-text">拖拽文件到此处或点击选择文件</p>
         <p class="ant-upload-hint">支持批量选择，会自动过滤已存在的文件</p>
       </a-upload-dragger>
+
+      <!-- AVIF Conversion Switch -->
+      <div class="mt-4 flex items-center justify-end">
+        <label for="avif-switch" class="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+          转换为AVIF格式
+        </label>
+        <a-switch id="avif-switch" v-model:checked="convertToAvif" />
+      </div>
 
       <!-- File List -->
       <div v-if="selectedFiles.length > 0" class="mt-4">

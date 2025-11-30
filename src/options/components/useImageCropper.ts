@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import type { Ref } from 'vue'
 
 import type { AppSettings } from '@/types/type'
@@ -18,7 +18,10 @@ export function useImageCropper(
     imageFile: Ref<File | undefined>
     aiSettings: Ref<AppSettings | undefined>
   },
-  emit: (event: 'upload' | 'close', ...args: any[]) => void,
+  emit: {
+    (e: 'close'): void
+    (e: 'upload', emojis: CroppedEmoji[]): void
+  },
   refs: {
     canvasRef: Ref<HTMLCanvasElement | undefined>
     containerRef: Ref<HTMLDivElement | undefined>
@@ -608,7 +611,8 @@ export function useImageCropper(
 
       let response
       try {
-        const baseUrl = props.aiSettings.value.geminiApiUrl || 'https://generativelanguage.googleapis.com'
+        const baseUrl =
+          props.aiSettings.value.geminiApiUrl || 'https://generativelanguage.googleapis.com'
         const cleanBaseUrl = baseUrl.replace(/\/$/, '')
 
         response = await fetch(

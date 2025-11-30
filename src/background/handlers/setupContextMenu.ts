@@ -1,5 +1,13 @@
 import { getChromeAPI } from '../utils/main.ts'
 
+interface StoredSettings {
+  data: {
+    forceMobileMode?: boolean
+    [key: string]: any
+  }
+  timestamp: number
+}
+
 export function setupContextMenu() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onInstalled && chromeAPI.contextMenus) {
@@ -7,12 +15,9 @@ export function setupContextMenu() {
       chrome.storage.local.get('appSettings', result => {
         // 解析存储格式（仅支持新格式 { data: {...}, timestamp: ... }）来获取 forceMobileMode
         let forceMobileMode = false
-        if (
-          result.appSettings &&
-          result.appSettings.data &&
-          typeof result.appSettings.data === 'object'
-        ) {
-          forceMobileMode = !!result.appSettings.data.forceMobileMode
+        const settings = result.appSettings as StoredSettings
+        if (settings && typeof settings === 'object' && settings.data) {
+          forceMobileMode = !!settings.data.forceMobileMode
         }
 
         if (chromeAPI.contextMenus && chromeAPI.contextMenus.create) {
@@ -47,12 +52,9 @@ export function setupContextMenu() {
           chrome.storage.local.get('appSettings', result => {
             // 仅从新格式读取当前设置（{ data: {...}, timestamp })，否则使用空对象
             let currentSettings = {}
-            if (
-              result.appSettings &&
-              result.appSettings.data &&
-              typeof result.appSettings.data === 'object'
-            ) {
-              currentSettings = result.appSettings.data
+            const settings = result.appSettings as StoredSettings
+            if (settings && typeof settings === 'object' && settings.data) {
+              currentSettings = settings.data
             }
 
             // 更新设置并保存为新格式

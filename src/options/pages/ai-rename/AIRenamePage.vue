@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
+import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
 import VirtualList from '@/options/components/VirtualList.vue'
 import BatchActionsBar from '@/options/components/BatchActionsBar.vue'

@@ -246,8 +246,6 @@ export class S3SyncTarget implements ISyncTarget {
   }
 
   private async signRequest(
-    method: string,
-    url: string,
     body?: string
   ): Promise<Record<string, string>> {
     // Simple AWS Signature V4 implementation

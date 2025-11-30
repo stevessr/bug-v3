@@ -18,7 +18,8 @@ import {
 import { showImportExportModal } from './importExport'
 import { loadAndFilterDefaultEmojiGroups } from '../default-emoji-loader'
 import { showGroupEditorModal } from './groupEditor'
-import { customAlert } from '../utils'
+import { customConfirm, customAlert } from '../utils/dialog'
+import { EMOJI_PICKER_ID, MANAGER_ID, $, $$ } from '../utils/dom'
 
 // Emoji injection configuration (inspired by magnific-popup.ts)
 interface EmojiInjectionConfig {
