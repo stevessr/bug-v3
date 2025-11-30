@@ -166,7 +166,7 @@ const closeImageCropper = () => {
 
 const handleCroppedEmojis = async (croppedEmojis: any[]) => {
   try {
-    const newFilesWithUrls = []
+    const newFilesWithUrls: any[] = []
     for (const croppedEmoji of croppedEmojis) {
       // Convert base64 to Blob
       const response = await fetch(croppedEmoji.imageUrl)
