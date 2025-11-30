@@ -37,7 +37,9 @@ const {
   updateUseCustomOpenAI,
   updateCustomOpenAIEndpoint,
   updateCustomOpenAIKey,
-  updateCustomOpenAIModel
+  updateCustomOpenAIModel,
+  updateImdbedToken,
+  updateImdbedApiUrl
 } = options
 
 const activeTab = ref('theme')
@@ -119,6 +121,8 @@ const activeTab = ref('theme')
               @update:customOpenAIEndpoint="updateCustomOpenAIEndpoint"
               @update:customOpenAIKey="updateCustomOpenAIKey"
               @update:customOpenAIModel="updateCustomOpenAIModel"
+              @update:imgbedToken="updateImdbedToken"
+              @update:imgbedApiUrl="updateImdbedApiUrl"
             />
           </div>
         </a-tab-pane>

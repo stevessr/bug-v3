@@ -14,7 +14,9 @@ const emit = defineEmits([
   'update:useCustomOpenAI',
   'update:customOpenAIEndpoint',
   'update:customOpenAIKey',
-  'update:customOpenAIModel'
+  'update:customOpenAIModel',
+  'update:imgbedToken',
+  'update:imgbedApiUrl'
 ])
 
 // Helper function to get setting value
@@ -36,6 +38,8 @@ const localUseCustomOpenAI = ref<boolean>(getSetting('useCustomOpenAI', false))
 const localCustomOpenAIEndpoint = ref<string>(getSetting('customOpenAIEndpoint', ''))
 const localCustomOpenAIKey = ref<string>(getSetting('customOpenAIKey', ''))
 const localCustomOpenAIModel = ref<string>(getSetting('customOpenAIModel', ''))
+const localImgbedToken = ref<string>(getSetting('imgbedToken', ''))
+const localImgbedApiUrl = ref<string>(getSetting('imgbedApiUrl', ''))
 
 // Watch for external changes
 watch(
@@ -94,6 +98,20 @@ watch(
   }
 )
 
+watch(
+  () => getSetting('imgbedToken', ''),
+  (val: string) => {
+    localImgbedToken.value = val
+  }
+)
+
+watch(
+  () => getSetting('imgbedApiUrl', ''),
+  (val: string) => {
+    localImgbedApiUrl.value = val
+  }
+)
+
 // Update handlers
 const handleGeminiApiKeyChange = () => {
   emit('update:geminiApiKey', localGeminiApiKey.value)
@@ -128,6 +146,14 @@ const handleCustomOpenAIKeyChange = () => {
 
 const handleCustomOpenAIModelChange = () => {
   emit('update:customOpenAIModel', localCustomOpenAIModel.value)
+}
+
+const handleImgbedTokenChange = () => {
+  emit('update:imgbedToken', localImgbedToken.value)
+}
+
+const handleImgbedApiUrlChange = () => {
+  emit('update:imgbedApiUrl', localImgbedApiUrl.value)
 }
 </script>
 
@@ -265,6 +291,32 @@ const handleCustomOpenAIModelChange = () => {
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
               例如：gpt-4o-mini, gpt-4, gpt-3.5-turbo
             </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Imgbed Configuration -->
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+        <h3 class="text-md font-medium dark:text-white">Imgbed API</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">API URL:</label>
+            <a-input
+              v-model:value="localImgbedApiUrl"
+              placeholder="Enter your Imgbed API URL"
+              @change="handleImgbedApiUrlChange"
+              class="w-full"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">Token:</label>
+            <a-input
+              v-model:value="localImgbedToken"
+              type="password"
+              placeholder="Enter your Imgbed token"
+              @change="handleImgbedTokenChange"
+              class="w-full"
+            />
           </div>
         </div>
       </div>

@@ -377,6 +377,14 @@ export default function useOptions() {
     emojiStore.updateSettings({ customOpenAIModel: model })
   }
 
+  const updateImdbedToken = (token: string) => {
+    emojiStore.updateSettings({ imgbedToken: token })
+  }
+
+  const updateImdbedApiUrl = (url: string) => {
+    emojiStore.updateSettings({ imgbedApiUrl: url })
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -1000,6 +1008,8 @@ export default function useOptions() {
     updateCustomOpenAIEndpoint,
     updateCustomOpenAIKey,
     updateCustomOpenAIModel,
+    updateImdbedToken,
+    updateImdbedApiUrl,
     // drag/drop
     handleDragStart,
     handleDrop,

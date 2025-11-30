@@ -17,7 +17,7 @@ const options = inject<OptionsInject>('options')!
 const { emojiStore, openEditEmoji } = options
 
 // State
-const uploadService = ref<'linux.do' | 'idcflare.com'>('linux.do')
+const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
 const selectedFiles = ref<{ file: File; url: string; width?: number; height?: number }[]>([])
 const isUploading = ref(false)
 const uploadProgress = ref<
@@ -546,6 +546,7 @@ onBeforeUnmount(() => {
         <a-radio-group v-model:value="uploadService">
           <a-radio-button value="linux.do">linux.do</a-radio-button>
           <a-radio-button value="idcflare.com">idcflare.com</a-radio-button>
+          <a-radio-button value="imgbed">imgbed</a-radio-button>
         </a-radio-group>
       </div>
     </div>

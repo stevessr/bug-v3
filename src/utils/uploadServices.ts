@@ -185,8 +185,59 @@ class DiscourseUploadService implements UploadService {
   }
 }
 
+class ImgbedUploadService implements UploadService {
+  get name() {
+    return 'imgbed'
+  }
+
+  async uploadFile(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<string> {
+    const { useEmojiStore } = await import('@/stores/emojiStore')
+    const emojiStore = useEmojiStore()
+    const token = emojiStore.settings.imgbedToken
+    const apiUrl = emojiStore.settings.imgbedApiUrl
+
+    if (!token) {
+      throw new Error('Imgbed token is not set in settings')
+    }
+    if (!apiUrl) {
+      throw new Error('Imgbed API URL is not set in settings')
+    }
+
+    const form = new FormData()
+    form.append('file', file)
+
+    onProgress?.(50)
+
+    const response = await fetch(`${apiUrl}/upload?authCode=${token}`, {
+      method: 'POST',
+      body: form
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      if (Array.isArray(data) && data[0] && data[0].src) {
+        onProgress?.(100)
+        // src does not contain domain, so we need to prepend it
+        const url = new URL(apiUrl)
+        return `${url.origin}${data[0].src}`
+      }
+      throw new Error('Invalid response from imgbed')
+    } else {
+      const errorData = await response.text().catch(() => 'Unknown error')
+      throw new Error(
+        `Upload failed: ${response.status} ${errorData}`
+      )
+    }
+  }
+}
+
 // Create upload services using the unified DiscourseUploadService
-export const uploadServices: Record<string, UploadService> = {}
+export const uploadServices: Record<string, UploadService> = {
+  imgbed: new ImgbedUploadService()
+}
 for (const [key, config] of Object.entries(DISCOURSE_UPLOAD_CONFIGS)) {
   uploadServices[key] = new DiscourseUploadService(config.domain, config.clientId)
 }

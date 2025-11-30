@@ -15,6 +15,8 @@ export interface AppSettings {
   // Optional API key fields for third-party services
   tenorApiKey?: string
   geminiApiKey?: string
+  imgbedToken?: string
+  imgbedApiUrl?: string
   geminiApiUrl?: string
   geminiLanguage?: 'English' | 'Chinese'
   geminiModel?: string
