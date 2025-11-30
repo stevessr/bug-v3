@@ -313,13 +313,13 @@ const copySelectedAsMarkdown = async () => {
   const lines = Array.from(selectedEmojis.value)
     .map(idx => {
       const e = bufferGroup.value!.emojis[idx]
-      return e && e.url ? `![](${e.url})` : null
+      return e && e.url ? `![${e.name}|${e.height}x${e.width}](${e.url})` : null
     })
     .filter((v): v is string => !!v)
 
   if (lines.length === 0) return
 
-  const markdown = lines.join('\n')
+  const markdown = '>[!summary]-\n>[grid]\n>' + lines.join('\n>') + '\n>[/grid]'
 
   try {
     if (navigator && navigator.clipboard && navigator.clipboard.writeText) {

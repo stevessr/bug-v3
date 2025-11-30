@@ -532,7 +532,7 @@ export function useImageCropper(
           if (croppedImageUrl) {
             results.push({
               id,
-              name: `表情_${row + 1}_${col + 1}`,
+              name: `表情_${row + 1}_${col + 1}_${Date.now()}`,
               imageUrl: croppedImageUrl,
               x: position.x,
               y: position.y,
