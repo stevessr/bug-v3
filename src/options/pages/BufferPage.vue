@@ -10,6 +10,7 @@ import {
 import type { OptionsInject } from '../types'
 import ImageCropper from '../components/ImageCropper.vue'
 import FileUploader from '../components/FileUploader.vue'
+import FileListDisplay from '../components/FileListDisplay.vue'
 
 import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
@@ -19,7 +20,19 @@ const { emojiStore, openEditEmoji } = options
 
 // State
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
-const selectedFiles = ref<{ file: File; url: string; width?: number; height?: number }[]>([])
+const selectedFiles = ref<
+  Array<{
+    id: string
+    file: File
+    previewUrl: string
+    cropData?: {
+      x: number
+      y: number
+      width: number
+      height: number
+    }
+  }>
+>([])
 const isUploading = ref(false)
 const uploadProgress = ref<
   Array<{
@@ -168,13 +181,19 @@ const addFiles = async (files: File[]) => {
     })
     .map(file => {
       const url = URL.createObjectURL(file)
-      const newFileEntry = { file, url, width: 0, height: 0 }
+      const newFileEntry = {
+        id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        previewUrl: url,
+        cropData: undefined as undefined
+      }
 
-      // Get image dimensions
+      // Get image dimensions (optional, can be added to cropData if needed)
       const img = new Image()
       img.onload = () => {
-        newFileEntry.width = img.width
-        newFileEntry.height = img.height
+        // Store dimensions if needed for cropping
+        // newFileEntry.width = img.width
+        // newFileEntry.height = img.height
       }
       img.src = url
 
@@ -192,9 +211,12 @@ const addFiles = async (files: File[]) => {
 }
 
 // 图片切割相关方法
-const openImageCropper = (file: File) => {
-  cropImageFile.value = file
-  showImageCropper.value = true
+const openImageCropper = (id: string) => {
+  const fileItem = selectedFiles.value.find(f => f.id === id)
+  if (fileItem) {
+    cropImageFile.value = fileItem.file
+    showImageCropper.value = true
+  }
 }
 
 const closeImageCropper = () => {
@@ -231,7 +253,12 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
       // Get image dimensions
       const img = new Image()
       img.onload = () => {
-        newFilesWithUrls.push({ file, url, width: img.width, height: img.height })
+        newFilesWithUrls.push({
+          id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file,
+          previewUrl: url,
+          cropData: undefined
+        })
       }
       img.src = url
     }
@@ -247,7 +274,7 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
     if (originalFile) {
       const indexToRemove = selectedFiles.value.findIndex(item => item.file === originalFile)
       if (indexToRemove > -1) {
-        URL.revokeObjectURL(selectedFiles.value[indexToRemove].url)
+        URL.revokeObjectURL(selectedFiles.value[indexToRemove].previewUrl)
         selectedFiles.value.splice(indexToRemove, 1)
       }
     }
@@ -263,12 +290,13 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
   }
 }
 
-const removeFile = (index: number) => {
-  const fileToRemove = selectedFiles.value[index]
-  if (fileToRemove) {
-    URL.revokeObjectURL(fileToRemove.url)
+const removeFile = (id: string) => {
+  const fileIndex = selectedFiles.value.findIndex(f => f.id === id)
+  if (fileIndex !== -1) {
+    const fileToRemove = selectedFiles.value[fileIndex]
+    URL.revokeObjectURL(fileToRemove.previewUrl)
+    selectedFiles.value.splice(fileIndex, 1)
   }
-  selectedFiles.value.splice(index, 1)
 }
 
 const removeEmoji = (index: number) => {
@@ -427,58 +455,6 @@ const cancelCreateGroup = () => {
   newGroupName.value = ''
   newGroupIcon.value = ''
   targetGroupId.value = ''
-}
-
-// 重复检测相关方法
-const checkDuplicatesAgainstFilters = async () => {
-  if (!enableFilter.value || selectedFilterGroups.value.length === 0) return
-
-  isCheckingDuplicates.value = true
-  duplicateCheckResults.value = []
-  showDuplicateResults.value = false
-
-  try {
-    // 收集所有过滤器分组中的表情名称（小写化并去除扩展名）
-    const filterEmojiNames = new Set<string>()
-    const nameToGroupsMap = new Map<string, string[]>() // 名称到分组的映射
-
-    for (const filterGroup of selectedFilterGroups.value) {
-      for (const emojiName of filterGroup.emojiNames) {
-        const normalizedName = emojiName.toLowerCase().replace(/\.[^/.]+$/, '')
-        filterEmojiNames.add(normalizedName)
-
-        if (!nameToGroupsMap.has(normalizedName)) {
-          nameToGroupsMap.set(normalizedName, [])
-        }
-        nameToGroupsMap.get(normalizedName)!.push(filterGroup.name)
-      }
-    }
-
-    // 检查缓冲区表情与过滤器表情的名称重复
-    const duplicates: Array<{ name: string; existingGroups: string[] }> = []
-    if (bufferGroup.value) {
-      for (const emoji of bufferGroup.value.emojis) {
-        const normalizedName = emoji.name.toLowerCase().replace(/\.[^/.]+$/, '')
-        if (filterEmojiNames.has(normalizedName)) {
-          duplicates.push({
-            name: emoji.name,
-            existingGroups: nameToGroupsMap.get(normalizedName) || []
-          })
-        }
-      }
-    }
-
-    duplicateCheckResults.value = duplicates
-    showDuplicateResults.value = true
-
-    if (duplicates.length > 0) {
-      console.log(`[BufferPage] Found ${duplicates.length} duplicate names against filter groups`)
-    }
-  } catch (error) {
-    console.error('[BufferPage] Failed to check duplicates:', error)
-  } finally {
-    isCheckingDuplicates.value = false
-  }
 }
 
 // 过滤已选文件中的重复项
@@ -730,7 +706,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  selectedFiles.value.forEach(item => URL.revokeObjectURL(item.url))
+  selectedFiles.value.forEach(item => URL.revokeObjectURL(item.previewUrl))
   if (progressInterval) {
     clearInterval(progressInterval)
   }
@@ -886,25 +862,6 @@ onBeforeUnmount(() => {
               </a-select>
             </div>
           </a-modal>
-
-          <!-- 手动检测重复项按钮 -->
-          <div class="flex items-center gap-2">
-            <a-button
-              type="default"
-              size="small"
-              :loading="isCheckingDuplicates"
-              :disabled="selectedFilterGroups.length === 0"
-              @click="checkDuplicatesAgainstFilters"
-            >
-              {{ isCheckingDuplicates ? '检测中...' : '检测重复项' }}
-            </a-button>
-            <span
-              v-if="duplicateCheckResults.length > 0"
-              class="text-sm text-gray-600 dark:text-gray-400"
-            >
-              找到 {{ duplicateCheckResults.length }} 个重复名称
-            </span>
-          </div>
         </div>
       </div>
 
@@ -930,29 +887,13 @@ onBeforeUnmount(() => {
             </a-button>
           </div>
         </div>
-        <ul class="space-y-2">
-          <li
-            v-for="(item, index) in selectedFiles"
-            :key="index"
-            class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
-          >
-            <div class="flex items-center space-x-2">
-              <a-image :src="item.url" width="32px" height="32px" style="object-fit: cover" />
-              <span class="text-sm dark:text-gray-300">{{ item.file.name }}</span>
-            </div>
-            <div class="flex items-center space-x-2">
-              <a-button
-                type="text"
-                size="small"
-                @click="openImageCropper(item.file)"
-                title="切割图片"
-              >
-                <template #icon><ScissorOutlined /></template>
-              </a-button>
-              <a-button type="text" size="small" danger @click="removeFile(index)">移除</a-button>
-            </div>
-          </li>
-        </ul>
+
+        <FileListDisplay
+          :files="selectedFiles"
+          :loading="isCheckingDuplicates"
+          @removeFile="removeFile"
+          @cropImage="openImageCropper"
+        />
       </div>
 
       <!-- Upload Button -->
@@ -1007,33 +948,6 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- 重复检测结果 -->
-    <div
-      v-if="showDuplicateResults && duplicateCheckResults.length > 0"
-      class="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow border border-yellow-200 dark:border-yellow-800"
-    >
-      <h3 class="text-lg font-semibold dark:text-white mb-4">重复名称检测</h3>
-      <div class="space-y-2 max-h-64 overflow-y-auto">
-        <div
-          v-for="(duplicate, index) in duplicateCheckResults"
-          :key="index"
-          class="flex items-center justify-between p-2 bg-yellow-100 dark:bg-yellow-900/40 rounded border border-yellow-300 dark:border-yellow-700"
-        >
-          <div class="flex items-center space-x-2">
-            <span class="text-sm font-medium text-gray-700 dark:text-white">
-              {{ duplicate.name }}
-            </span>
-            <span class="text-xs text-gray-500 dark:text-gray-400">
-              已存在于：{{ duplicate.existingGroups.join(', ') }}
-            </span>
-          </div>
-        </div>
-      </div>
-      <p class="text-xs text-gray-600 dark:text-gray-400 mt-3">
-        以上是缓冲区中与过滤器分组重复的表情名称。新上传的相同名称文件将被自动过滤。
-      </p>
     </div>
 
     <!-- Buffer Group Emojis -->
@@ -1242,14 +1156,3 @@ onBeforeUnmount(() => {
     />
   </div>
 </template>
-
-<style scoped>
-.buffer-page {
-  max-width: 4xl;
-  margin: 0 auto;
-}
-
-.emoji-item {
-  width: 80px;
-}
-</style>
