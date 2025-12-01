@@ -20,6 +20,8 @@ const { emojiStore, openEditEmoji } = options
 // State
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
 const convertToAvif = ref(false)
+const avifQuality = ref(50)
+const avifSpeed = ref(6)
 const selectedFiles = ref<{ file: File; url: string; width?: number; height?: number }[]>([])
 const isUploading = ref(false)
 const uploadProgress = ref<
@@ -100,6 +102,24 @@ watch(
 )
 
 // Methods
+const hasAlpha = (data: Uint8ClampedArray) => {
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 255) return true
+  }
+  return false
+}
+
+const removeAlphaChannel = (data: Uint8ClampedArray) => {
+  const newData = new Uint8Array((data.length / 4) * 3)
+  let j = 0
+  for (let i = 0; i < data.length; i += 4) {
+    newData[j++] = data[i]
+    newData[j++] = data[i + 1]
+    newData[j++] = data[i + 2]
+  }
+  return newData
+}
+
 const getWaitProgress = (progressItem: any) => {
   if (!progressItem.waitingFor || !progressItem.waitStart) {
     return { percent: 0, remaining: 0 }
@@ -121,17 +141,81 @@ const convertImageToAvif = async (file: File): Promise<File> => {
     const canvas = document.createElement('canvas')
     canvas.width = imageBitmap.width
     canvas.height = imageBitmap.height
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext('2d', { colorSpace: 'srgb' })
     if (!ctx) throw new Error('Could not get canvas context')
 
     ctx.drawImage(imageBitmap, 0, 0)
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
 
+    const isTransparent = hasAlpha(imageData.data)
+
+    console.log('[AVIF Conversion]', {
+      name: file.name,
+      width: imageData.width,
+      height: imageData.height,
+      hasAlpha: isTransparent
+    })
+
+    // 1. Try native browser AVIF encoding first (much faster and more stable)
+    try {
+      const nativeBlob = await new Promise<Blob | null>(resolve => {
+        canvas.toBlob(
+          blob => {
+            if (blob && blob.type === 'image/avif') {
+              resolve(blob)
+            } else {
+              resolve(null) // Browser doesn't support AVIF encoding
+            }
+          },
+          'image/avif',
+          avifQuality.value / 100
+        )
+      })
+
+      if (nativeBlob) {
+        console.log('[AVIF Conversion] Used native browser encoder')
+        const newFileName = file.name.substring(0, file.name.lastIndexOf('.')) + '.avif'
+        return new File([nativeBlob], newFileName, { type: 'image/avif' })
+      }
+    } catch (e) {
+      console.warn('[AVIF Conversion] Native encoding failed, falling back to WASM', e)
+    }
+
+    // 2. Fallback to libavif-wasm
+    console.log('[AVIF Conversion] Falling back to WASM encoder')
+    let encodeData: Uint8Array
+    let channels: number
+
+    if (isTransparent) {
+      encodeData = new Uint8Array(imageData.data)
+      channels = 4
+    } else {
+      encodeData = removeAlphaChannel(imageData.data)
+      channels = 3
+    }
+
+    // Map 0-100 quality to 63-0 quantizer (approximate)
+    // 100 -> 0 (Lossless/High)
+    // 0 -> 63 (Low quality)
+    const targetQuantizer = Math.round(63 * (1 - avifQuality.value / 100))
+    // Create a small range around the target
+    const minQ = Math.max(0, targetQuantizer - 5)
+    const maxQ = Math.min(63, targetQuantizer + 5)
+
     const avifBuffer = await encode(
-      new Uint8Array(imageData.data),
+      encodeData,
       imageData.width,
       imageData.height,
-      4
+      channels,
+      {
+        maxThreads: 1,
+        speed: avifSpeed.value,
+        avifPixelFormat: 3, // YUV420
+        minQuantizer: minQ,
+        maxQuantizer: maxQ,
+        minQuantizerAlpha: minQ,
+        maxQuantizerAlpha: maxQ
+      }
     )
     if (!avifBuffer) throw new Error('AVIF encoding failed')
 
@@ -625,11 +709,47 @@ onBeforeUnmount(() => {
       </a-upload-dragger>
 
       <!-- AVIF Conversion Switch -->
-      <div class="mt-4 flex items-center justify-end">
-        <label for="avif-switch" class="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-          转换为AVIF格式
-        </label>
-        <a-switch id="avif-switch" v-model:checked="convertToAvif" />
+      <div class="mt-4 flex flex-col items-end">
+        <div class="flex items-center">
+          <label for="avif-switch" class="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+            转换为 AVIF 格式
+          </label>
+          <a-switch id="avif-switch" v-model:checked="convertToAvif" />
+        </div>
+
+        <!-- AVIF Settings -->
+        <div
+          v-if="convertToAvif"
+          class="mt-4 w-full p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 transition-all duration-300"
+        >
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Quality Control -->
+            <div>
+              <div class="flex justify-between mb-2">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  压缩质量 ({{ avifQuality }}%)
+                </label>
+              </div>
+              <a-slider v-model:value="avifQuality" :min="1" :max="100" />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                值越小文件越小。推荐 30-50 以获得比 JPEG 更好的压缩率。
+              </p>
+            </div>
+
+            <!-- Speed Control -->
+            <div>
+              <div class="flex justify-between mb-2">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  编码速度 ({{ avifSpeed }})
+                </label>
+              </div>
+              <a-slider v-model:value="avifSpeed" :min="0" :max="10" />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                0 (最慢/最小) - 10 (最快/最大)。推荐 6 平衡速度与体积。
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- File List -->
