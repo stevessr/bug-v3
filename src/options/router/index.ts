@@ -8,7 +8,6 @@ import GroupsPage from '../pages/GroupsPage.vue'
 import UngroupedPage from '../pages/UngroupedPage.vue'
 import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
-import DuplicateDetectionPage from '../pages/DuplicateDetectionPage.vue'
 import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
 import SyncSettingsPage from '../pages/SyncSettingsPage.vue'
 import BufferPage from '../pages/BufferPage.vue'
@@ -52,14 +51,6 @@ const routes: RouteRecordRaw[] = [
     component: StatsPage,
     meta: {
       title: '统计'
-    }
-  },
-  {
-    path: '/duplicates',
-    name: 'duplicates',
-    component: DuplicateDetectionPage,
-    meta: {
-      title: '重复检测'
     }
   },
   {
