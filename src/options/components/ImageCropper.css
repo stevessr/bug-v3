@@ -9,6 +9,11 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.image-cropper-overlay.closing {
+  animation: fadeOut 0.2s ease-in;
 }
 
 .image-cropper-modal {
@@ -20,6 +25,51 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: modalZoomIn 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.image-cropper-modal.closing {
+  animation: modalZoomOut 0.2s cubic-bezier(0.755, 0.05, 0.855, 0.06);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modalZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modalZoomOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8) translateY(-20px);
+  }
 }
 
 .cropper-header {

@@ -846,24 +846,6 @@ onBeforeUnmount(() => {
 
       <!-- File List -->
       <div v-if="selectedFiles.length > 0" class="mt-4">
-        <div class="flex justify-between items-center mb-2">
-          <h4 class="font-medium dark:text-white">待上传文件：</h4>
-          <div
-            v-if="enableFilter && selectedFilterGroups.length > 0"
-            class="flex items-center gap-2"
-          >
-            <a-button
-              type="default"
-              size="small"
-              :loading="isCheckingDuplicates"
-              @click="filterDuplicateFiles"
-              title="过滤重复文件"
-            >
-              {{ isCheckingDuplicates ? '过滤中...' : '过滤重复文件' }}
-            </a-button>
-          </div>
-        </div>
-
         <FileListDisplay
           :files="selectedFiles"
           :loading="isCheckingDuplicates"

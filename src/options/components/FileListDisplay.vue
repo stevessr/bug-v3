@@ -65,12 +65,12 @@ const formatFileSize = (bytes: number): string => {
       >
         <!-- 图片预览区域 -->
         <template #cover>
-          <div class="relative h-24 overflow-hidden bg-gray-50 dark:bg-gray-800">
+          <div class="relative overflow-hidden bg-gray-50 dark:bg-gray-800">
             <a-image
               :src="fileItem.previewUrl"
               :alt="fileItem.file.name"
               class="w-full h-full object-cover"
-              :preview="false"
+              :preview="true"
             />
 
             <!-- 裁剪标记 -->

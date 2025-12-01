@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, toRefs } from 'vue'
+import { ref, toRefs, computed } from 'vue'
 import {
   CloseOutlined,
   CheckOutlined,
@@ -32,6 +32,9 @@ const containerRef = ref<HTMLDivElement>()
 const imageElement = ref<HTMLImageElement>()
 
 const { imageFile, aiSettings } = toRefs(props)
+
+// Animation state
+const isClosing = ref(false)
 
 // Use the composable
 const {
@@ -67,21 +70,40 @@ const {
   startMove
 } = useImageCropper({ imageFile, aiSettings }, emit, { canvasRef, containerRef, imageElement })
 
+// Close with animation
+const handleClose = () => {
+  isClosing.value = true
+  setTimeout(() => {
+    close()
+  }, 200)
+}
+
 // Theme
 const { useToken } = theme
 const { token } = useToken()
+
+// Animation classes
+const overlayClass = computed(() => ({
+  'image-cropper-overlay': true,
+  'closing': isClosing.value
+}))
+
+const modalClass = computed(() => ({
+  'image-cropper-modal': true,
+  'closing': isClosing.value
+}))
 </script>
 
 <template>
-  <div class="image-cropper-overlay">
+  <div :class="overlayClass">
     <div
-      class="image-cropper-modal"
+      :class="modalClass"
       :style="{ background: token.colorBgContainer, color: token.colorText }"
     >
       <!-- 头部 -->
       <div class="cropper-header" :style="{ borderColor: token.colorBorderSecondary }">
         <h3 :style="{ color: token.colorTextHeading }">图片切割</h3>
-        <a-button type="text" @click="close">
+        <a-button type="text" @click="handleClose">
           <CloseOutlined />
         </a-button>
       </div>
