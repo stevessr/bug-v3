@@ -1083,6 +1083,43 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     return result
   }
 
+  const previewCloudData = async (
+    onProgress?: (progress: {
+      current: number
+      total: number
+      action: string
+      message?: string
+    }) => void
+  ) => {
+    const result = await cloudflareSyncService.previewCloudData(onProgress)
+    return result
+  }
+
+  const previewCloudConfig = async (
+    onProgress?: (progress: {
+      current: number
+      total: number
+      action: string
+      message?: string
+    }) => void
+  ) => {
+    const result = await cloudflareSyncService.previewCloudConfig(onProgress)
+    return result
+  }
+
+  const loadGroupDetails = async (
+    groupName: string,
+    onProgress?: (progress: {
+      current: number
+      total: number
+      action: string
+      message?: string
+    }) => void
+  ) => {
+    const result = await cloudflareSyncService.loadGroupDetails(groupName, onProgress)
+    return result
+  }
+
   const pushToCloudflare = async () => {
     return await cloudflareSyncService.pushData()
   }
@@ -1480,6 +1517,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     loadSyncConfig,
     testSyncConnection,
     syncToCloudflare,
+    previewCloudData,
+    previewCloudConfig,
+    loadGroupDetails,
     pushToCloudflare,
     pullFromCloudflare,
     isSyncConfigured

@@ -5,6 +5,7 @@ import { message } from 'ant-design-vue'
 
 import type { OptionsInject } from '../types'
 import EmojiStats from '../components/EmojiStats.vue'
+
 import type { Emoji } from '@/types/type'
 
 const options = inject<OptionsInject>('options')!
@@ -185,7 +186,9 @@ const getTotalDuplicates = () => {
 
         <!-- Action Selection -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">处理方式</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+            处理方式
+          </label>
           <a-radio-group v-model:value="selectedAction">
             <a-radio value="reference">
               <LinkOutlined />
@@ -214,7 +217,12 @@ const getTotalDuplicates = () => {
             {{ isScanning ? '扫描中...' : '开始扫描' }}
           </a-button>
 
-          <a-button v-if="duplicateGroups.length > 0" type="default" danger @click="removeDuplicates">
+          <a-button
+            v-if="duplicateGroups.length > 0"
+            type="default"
+            danger
+            @click="removeDuplicates"
+          >
             处理重复项 ({{ getTotalDuplicates() }})
           </a-button>
 
@@ -233,7 +241,9 @@ const getTotalDuplicates = () => {
                 总进度：{{ processedEmojis }} / {{ totalEmojisCount }}
               </p>
               <p class="text-sm text-gray-600 dark:text-gray-400">当前分组：{{ currentGroup }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">正在处理：{{ currentEmojiName }}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                正在处理：{{ currentEmojiName }}
+              </p>
               <a-progress
                 :percent="groupTotal > 0 ? (groupProcessed / groupTotal) * 100 : 0"
                 :stroke-width="6"
@@ -259,7 +269,12 @@ const getTotalDuplicates = () => {
             <p class="text-sm text-blue-800">
               找到 {{ duplicateGroups.length }} 组重复表情，共 {{ getTotalDuplicates() }} 个重复项
             </p>
-            <a-input v-model:value="filterQuery" placeholder="过滤结果..." class="w-48" allow-clear />
+            <a-input
+              v-model:value="filterQuery"
+              placeholder="过滤结果..."
+              class="w-48"
+              allow-clear
+            />
           </div>
 
           <!-- Duplicate Groups -->

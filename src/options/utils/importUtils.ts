@@ -137,4 +137,3 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
     await store.endBatch()
   }
 }
-

@@ -70,7 +70,7 @@ const formatFileSize = (bytes: number): string => {
               :src="fileItem.previewUrl"
               :alt="fileItem.file.name"
               class="w-full h-full object-cover"
-              :preview="true"
+              preview
             />
 
             <!-- 裁剪标记 -->

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
@@ -30,6 +30,16 @@ const renderedDetail = computed(() => {
   }
 })
 
+const detailContainer = ref<HTMLElement | null>(null)
+
+watchEffect(() => {
+  const el = detailContainer.value
+  if (!el) {
+    return
+  }
+  el.innerHTML = renderedDetail.value
+})
+
 const close = () => {
   emits('update:show', false)
 }
@@ -58,8 +68,8 @@ const close = () => {
 
       <!-- Markdown rendered content with prose styling -->
       <div
+        ref="detailContainer"
         class="prose prose-sm dark:prose-invert max-w-none markdown-content"
-        v-html="renderedDetail"
       ></div>
 
       <div class="flex justify-end mt-6">

@@ -65,6 +65,13 @@ export interface ISyncTarget {
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }>
   test(): Promise<SyncResult> // Test connection
+  preview(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> // Preview metadata only
+  getGroupDetails(
+    groupId: string,
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; group?: any; error?: any; message: string }>
 }
 
 // WebDAV implementation
@@ -174,13 +181,13 @@ export class WebDAVSyncTarget implements ISyncTarget {
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
     try {
-      onProgress?.({ 
-        current: 0, 
-        total: 1, 
+      onProgress?.({
+        current: 0,
+        total: 1,
         action: 'pull',
         message: '正在从 WebDAV 拉取数据...'
       })
-      
+
       const url = this.getFullUrl()
       const response = await fetch(url, {
         method: 'GET',
@@ -194,14 +201,14 @@ export class WebDAVSyncTarget implements ISyncTarget {
         const data = await response.json()
         const dataSizeKB = (JSON.stringify(data).length / 1024).toFixed(2)
         const itemCount = 1 + (data.emojiGroups?.length || 0)
-        
-        onProgress?.({ 
-          current: 1, 
-          total: 1, 
+
+        onProgress?.({
+          current: 1,
+          total: 1,
           action: 'pull',
           message: `✓ 已拉取所有数据 (${itemCount} 项，${dataSizeKB} KB)`
         })
-        
+
         return {
           success: true,
           data,
@@ -229,6 +236,24 @@ export class WebDAVSyncTarget implements ISyncTarget {
         error
       }
     }
+  }
+
+  async getGroupDetails(
+    groupId: string,
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; group?: any; error?: any; message: string }> {
+    // WebDAV does not support fetching individual groups, so we pull all data and filter
+    onProgress?.({ current: 0, total: 1, action: 'pull', message: 'Fetching all data to get group details...' })
+    const result = await this.pull(onProgress)
+    if (result.success && result.data) {
+      const group = result.data.emojiGroups.find(g => g.id === groupId)
+      if (group) {
+        return { success: true, group, message: 'Group details extracted' }
+      } else {
+        return { success: false, message: 'Group not found', error: 'Group not found' }
+      }
+    }
+    return { success: false, message: 'Failed to get group details', error: result.error }
   }
 }
 
@@ -367,13 +392,13 @@ export class S3SyncTarget implements ISyncTarget {
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
     try {
-      onProgress?.({ 
-        current: 0, 
-        total: 1, 
+      onProgress?.({
+        current: 0,
+        total: 1,
         action: 'pull',
         message: '正在从 S3 拉取数据...'
       })
-      
+
       const url = this.getS3Url()
       const headers = await this.signRequest('GET', url)
 
@@ -381,19 +406,19 @@ export class S3SyncTarget implements ISyncTarget {
         method: 'GET',
         headers
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         const dataSizeKB = (JSON.stringify(data).length / 1024).toFixed(2)
         const itemCount = 1 + (data.emojiGroups?.length || 0)
-        
-        onProgress?.({ 
-          current: 1, 
-          total: 1, 
+
+        onProgress?.({
+          current: 1,
+          total: 1,
           action: 'pull',
           message: `✓ 已拉取所有数据 (${itemCount} 项，${dataSizeKB} KB)`
         })
-        
+
         return {
           success: true,
           data,
@@ -421,6 +446,24 @@ export class S3SyncTarget implements ISyncTarget {
         error
       }
     }
+  }
+
+  async getGroupDetails(
+    groupId: string,
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; group?: any; error?: any; message: string }> {
+    // S3 does not support fetching individual groups, so we pull all data and filter
+    onProgress?.({ current: 0, total: 1, action: 'pull', message: 'Fetching all data to get group details...' })
+    const result = await this.pull(onProgress)
+    if (result.success && result.data) {
+      const group = result.data.emojiGroups.find(g => g.id === groupId)
+      if (group) {
+        return { success: true, group, message: 'Group details extracted' }
+      } else {
+        return { success: false, message: 'Group not found', error: 'Group not found' }
+      }
+    }
+    return { success: false, message: 'Failed to get group details', error: result.error }
   }
 }
 
@@ -591,6 +634,123 @@ export class CloudflareSyncTarget implements ISyncTarget {
     }
   }
 
+  // Only fetch metadata (group list without emoji details)
+  async preview(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+    try {
+      const baseUrl = this.getUrl()
+      const headers = this.getReadAuthHeader()
+
+      onProgress?.({ current: 0, total: 2, action: 'test', message: '正在测试连接...' })
+
+      // 1. Test connection and get list of keys
+      const listResponse = await fetch(`${baseUrl}/`, { method: 'GET', headers })
+      if (!listResponse.ok) {
+        throw new Error(`Failed to list keys: ${listResponse.statusText}`)
+      }
+      const keys: { name: string }[] = await listResponse.json()
+
+      onProgress?.({ current: 1, total: 2, action: 'pull', message: '正在获取分组列表...' })
+
+      // 2. Fetch only settings and group metadata (not full emoji data)
+      const pulledItems: { key: string; data: any }[] = []
+      const emojiGroupMetadata: any[] = []
+
+      // Separate settings and group keys
+      const settingsKey = keys.find(key => key.name === 'settings')
+      const groupKeys = keys.filter(key => key.name !== 'settings' && !key.name.startsWith('emoji-'))
+
+      // Fetch settings first
+      let settingsData: any = {}
+      if (settingsKey) {
+        const res = await fetch(`${baseUrl}/${settingsKey.name}`, { method: 'GET', headers })
+        if (res.ok) {
+          settingsData = await res.json()
+          pulledItems.push({ key: settingsKey.name, data: settingsData })
+        }
+      }
+
+      // Prepare group metadata without fetching emojis
+      for (const key of groupKeys) {
+        // Here we assume key.name is the group name, we need to construct metadata without fetching
+        // This is a limitation of the current worker implementation, ideally worker would have a metadata endpoint
+        const groupName = decodeURIComponent(key.name)
+        emojiGroupMetadata.push({
+          id: `group_${groupName}`, // This might not be the real ID, it's a placeholder
+          name: groupName,
+          // We don't know the emoji count without fetching, so we mark it as unknown
+          emojiCount: '?',
+          _hasEmojis: true, // Assume it has emojis
+          _isLazy: true // a flag to indicate this is a lazy-loaded group
+        })
+      }
+
+      // 3. Reconstruct preview data
+      const pulledData: Partial<SyncData> = {
+        emojiGroups: emojiGroupMetadata
+      }
+      let version = '1.0'
+      let timestamp = Date.now()
+
+      for (const item of pulledItems) {
+        if (item.key === 'settings') {
+          pulledData.settings = item.data
+        }
+      }
+
+      if (pulledData.settings?.version) version = pulledData.settings.version
+      if (pulledData.settings?.timestamp) timestamp = pulledData.settings.timestamp
+
+      const finalData: SyncData = {
+        settings: pulledData.settings || {},
+        emojiGroups: pulledData.emojiGroups || [],
+        version,
+        timestamp
+      }
+
+      return {
+        success: true,
+        data: finalData,
+        message: 'Preview data loaded successfully'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Preview failed: ${error}`,
+        error
+      }
+    }
+  }
+
+  async getGroupDetails(
+    groupName: string, // assuming groupName is used as key
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; group?: any; error?: any; message: string }> {
+    try {
+      onProgress?.({ current: 0, total: 1, action: 'pull', message: `Fetching details for group ${groupName}...` })
+      const baseUrl = this.getUrl()
+      const headers = this.getReadAuthHeader()
+      const res = await fetch(`${baseUrl}/${encodeURIComponent(groupName)}`, { method: 'GET', headers })
+      if (res.ok) {
+        const groupData = await res.json()
+        onProgress?.({ current: 1, total: 1, action: 'pull', message: `Details for group ${groupName} fetched.` })
+        return {
+          success: true,
+          group: groupData,
+          message: 'Group details fetched successfully'
+        }
+      } else {
+        throw new Error(`Failed to fetch group details: ${res.statusText}`)
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to fetch group details for ${groupName}: ${error}`,
+        error
+      }
+    }
+  }
   async pull(
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
@@ -598,25 +758,25 @@ export class CloudflareSyncTarget implements ISyncTarget {
       const baseUrl = this.getUrl()
       // Pull is a read operation
       const headers = this.getReadAuthHeader()
-      
+
       // 初始进度（暂时不知道总请求数）
       onProgress?.({ current: 0, total: 1, action: 'pull', message: '正在获取云端数据列表...' })
-      
+
       // 1. Get list of all keys (第 1 个请求)
       const listResponse = await fetch(`${baseUrl}/`, { method: 'GET', headers })
       if (!listResponse.ok) {
         throw new Error(`Failed to list keys: ${listResponse.statusText}`)
       }
       const keys: { name: string }[] = await listResponse.json()
-      
+
       // 计算总请求次数：1 个列表请求 + N 个数据请求
       const totalRequests = 1 + keys.length
       let completedRequests = 1  // 列表请求已完成
-      
-      onProgress?.({ 
-        current: completedRequests, 
-        total: totalRequests, 
-        action: 'pull', 
+
+      onProgress?.({
+        current: completedRequests,
+        total: totalRequests,
+        action: 'pull',
         message: `找到 ${keys.length} 个数据项，需要 ${totalRequests} 个请求`
       })
 
@@ -624,18 +784,18 @@ export class CloudflareSyncTarget implements ISyncTarget {
       const pulledItems: { key: string; data: any }[] = []
       for (const key of keys) {
         const displayName = key.name === 'settings' ? '设置配置' : `表情组：${decodeURIComponent(key.name)}`
-        
+
         // 开始处理这个项目，增加计数器（进度条立即前进）
         completedRequests++
-        
+
         // 显示正在拉取的项目
-        onProgress?.({ 
-          current: completedRequests, 
-          total: totalRequests, 
-          action: 'pull', 
+        onProgress?.({
+          current: completedRequests,
+          total: totalRequests,
+          action: 'pull',
           message: `正在拉取 ${displayName}...`
         })
-        
+
         const res = await fetch(`${baseUrl}/${key.name}`, { method: 'GET', headers })
         if (!res.ok) {
           console.warn(`Failed to fetch key ${key.name}, skipping.`)
@@ -644,24 +804,24 @@ export class CloudflareSyncTarget implements ISyncTarget {
         const data = await res.json()
         const dataSizeKB = (JSON.stringify(data).length / 1024).toFixed(2)
         pulledItems.push({ key: key.name, data })
-        
+
         // 报告完成（保持同样的计数，只更新消息）
-        onProgress?.({ 
-          current: completedRequests, 
-          total: totalRequests, 
-          action: 'pull', 
+        onProgress?.({
+          current: completedRequests,
+          total: totalRequests,
+          action: 'pull',
           message: `✓ 已拉取 ${displayName} (${dataSizeKB} KB)`
         })
       }
 
       // 3. Reconstruct the data
-      onProgress?.({ 
-        current: completedRequests, 
-        total: totalRequests, 
-        action: 'pull', 
+      onProgress?.({
+        current: completedRequests,
+        total: totalRequests,
+        action: 'pull',
         message: '正在整合数据...'
       })
-      
+
       const pulledData: Partial<SyncData> = {
         emojiGroups: []
       }

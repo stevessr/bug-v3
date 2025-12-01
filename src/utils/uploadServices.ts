@@ -107,41 +107,37 @@ class DiscourseUploadService implements UploadService {
 
       const uploadUrl = `https://${this.domain}/uploads.json?client_id=${this.clientId}`
 
-      try {
-        const response = await fetch(uploadUrl, {
-          method: 'POST',
-          headers,
-          body: form
-        })
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers,
+        body: form
+      })
 
-        if (response.ok) {
-          const data = await response.json()
-          if (data && data.url) {
-            if (onProgress) onProgress(100)
-            return data.url
-          }
-          throw new Error(`Invalid response from ${this.domain}: missing URL`)
-        } else {
-          const errorData = await response.json().catch(() => null)
-          if (response.status === 429 && errorData?.extras?.wait_seconds) {
-            const waitTime = errorData.extras.wait_seconds * 1000
-            const rateLimitError = new Error(
-              `Upload failed: 429 Too Many Requests. Please wait ${
-                errorData.extras.wait_seconds
-              } seconds.`
-            ) as any
-            rateLimitError.isRateLimitError = true
-            rateLimitError.waitTime = waitTime
-            throw rateLimitError
-          }
-          throw new Error(
-            `Upload failed: ${response.status} ${
-              errorData?.message || errorData?.errors?.join(', ') || 'Unknown error'
-            }`
-          )
+      if (response.ok) {
+        const data = await response.json()
+        if (data && data.url) {
+          if (onProgress) onProgress(100)
+          return data.url
         }
-      } catch (fetchError) {
-        throw fetchError
+        throw new Error(`Invalid response from ${this.domain}: missing URL`)
+      } else {
+        const errorData = await response.json().catch(() => null)
+        if (response.status === 429 && errorData?.extras?.wait_seconds) {
+          const waitTime = errorData.extras.wait_seconds * 1000
+          const rateLimitError = new Error(
+            `Upload failed: 429 Too Many Requests. Please wait ${
+              errorData.extras.wait_seconds
+            } seconds.`
+          ) as any
+          rateLimitError.isRateLimitError = true
+          rateLimitError.waitTime = waitTime
+          throw rateLimitError
+        }
+        throw new Error(
+          `Upload failed: ${response.status} ${
+            errorData?.message || errorData?.errors?.join(', ') || 'Unknown error'
+          }`
+        )
       }
     } catch (error) {
       console.error(`${this.domain} upload failed:`, error)

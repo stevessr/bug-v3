@@ -137,7 +137,7 @@ export class ConflictResolver {
               conflict.localChange.timestamp > conflict.remoteChange.timestamp ? 'local' : 'remote'
             break
 
-          case 'auto':
+          case 'auto': {
             // 尝试智能合并
             const mergeResult = await this.smartMerge(conflict)
             if (mergeResult.success) {
@@ -150,6 +150,7 @@ export class ConflictResolver {
                   : 'remote'
             }
             break
+          }
 
           default:
             resolution = 'local'

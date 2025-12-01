@@ -104,7 +104,7 @@ const filterOption = (input: string, option: any) => {
             :emptyMessage="'该分组还没有表情'"
             showAddButton
             :groupId="activeGroup.id"
-            :isActive="true"
+            isActive
             @select="selectEmoji"
             @openOptions="openOptions"
           />

@@ -85,12 +85,12 @@ const { token } = useToken()
 // Animation classes
 const overlayClass = computed(() => ({
   'image-cropper-overlay': true,
-  'closing': isClosing.value
+  closing: isClosing.value
 }))
 
 const modalClass = computed(() => ({
   'image-cropper-modal': true,
-  'closing': isClosing.value
+  closing: isClosing.value
 }))
 </script>
 

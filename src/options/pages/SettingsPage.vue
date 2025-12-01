@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { inject, ref, reactive, computed, onMounted, watch } from 'vue'
-import { UploadOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons-vue'
+import {
+  UploadOutlined,
+  DownloadOutlined,
+  SwapOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined
+} from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
 import type {
@@ -90,9 +96,11 @@ const s3Config = reactive({
 const isSaving = ref(false)
 const isTesting = ref(false)
 const isSyncing = ref(false)
+const isPreviewing = ref(false)
 const syncDirection = ref<'push' | 'pull' | 'both' | null>(null)
 const testResult = ref<SyncResult | null>(null)
 const syncResult = ref<{ success: boolean; message: string } | null>(null)
+const previewResult = ref<{ success: boolean; data?: any; message: string } | null>(null)
 const syncProgress = ref<SyncProgress>({
   current: 0,
   total: 1,
@@ -103,6 +111,10 @@ const lastSyncTime = ref<number | null>(null)
 const lastPushTime = ref<number | null>(null)
 const lastPullTime = ref<number | null>(null)
 const configSaved = ref(false) // Track if config has been saved
+
+// Preview data state
+const cloudData = ref<any>(null)
+const showPreviewDialog = ref(false)
 
 // Computed properties
 const isValidConfig = computed(() => {
@@ -135,6 +147,10 @@ const syncProgressPercent = computed(() => {
 
 const syncInProgress = computed(() => {
   return isSyncing.value && syncProgress.value.total > 0
+})
+
+const previewInProgress = computed(() => {
+  return isPreviewing.value && syncProgress.value.total > 0
 })
 
 // Load existing config on component mount
@@ -346,6 +362,160 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
       return '同步'
   }
 }
+
+// State for group details modal
+const showGroupDetailsModal = ref(false)
+const selectedGroup = ref<any>(null)
+const groupDetails = ref<any>(null)
+const isLoadingGroupDetails = ref(false)
+
+// Preview cloud data
+const previewCloudData = async () => {
+  if (!isConfigured.value) {
+    options.showError('请先配置同步参数')
+    return
+  }
+
+  isPreviewing.value = true
+  previewResult.value = null
+  cloudData.value = null
+
+  // 初始化进度
+  syncProgress.value = {
+    current: 0,
+    total: 1,
+    action: 'test',
+    message: '准备预览云端配置...'
+  }
+
+  try {
+    // 传递进度回调函数
+    const result = await emojiStore.previewCloudConfig(progress => {
+      // 更新进度状态
+      syncProgress.value = {
+        current: progress.current,
+        total: progress.total,
+        action: progress.action || 'test',
+        message: progress.message || ''
+      }
+      console.log('[SettingsPage] Preview progress update:', progress)
+    })
+
+    previewResult.value = result
+
+    if (result.success && result.config) {
+      console.log('[SettingsPage] Preview config data:', result.config)
+      cloudData.value = result.config
+      showPreviewDialog.value = true
+      options.showSuccess('云端配置预览成功')
+    } else {
+      console.error('[SettingsPage] Preview failed:', result)
+      options.showError('预览云端配置失败：' + result.message)
+    }
+  } catch (error) {
+    const errorMessage = `预览失败：${(error as Error).message}`
+    previewResult.value = { success: false, message: errorMessage }
+    options.showError(errorMessage)
+  } finally {
+    isPreviewing.value = false
+  }
+}
+
+// Load group details (lazy loading)
+const loadGroupDetails = async (group: any) => {
+  if (!group || !group.name) {
+    options.showError('无效的分组信息')
+    return
+  }
+
+  // If group details are already loaded, just show them
+  if (group.emojis) {
+    selectedGroup.value = group
+    groupDetails.value = group
+    showGroupDetailsModal.value = true
+    return
+  }
+
+  selectedGroup.value = group
+  isLoadingGroupDetails.value = true
+  groupDetails.value = null
+
+  try {
+    const result = await emojiStore.loadGroupDetails(group.name, progress => {
+      console.log('[SettingsPage] Loading group details progress:', progress)
+    })
+
+    if (result.success && result.group) {
+      // Update the group in cloudData with the full details
+      const groupIndex = cloudData.value.emojiGroups.findIndex((g: any) => g.name === group.name)
+      if (groupIndex !== -1) {
+        cloudData.value.emojiGroups[groupIndex] = { ...group, ...result.group }
+      }
+      groupDetails.value = result.group
+      showGroupDetailsModal.value = true
+    } else {
+      options.showError('加载分组详情失败：' + result.message)
+    }
+  } catch (error) {
+    const errorMessage = `加载分组详情失败：${(error as Error).message}`
+    options.showError(errorMessage)
+  } finally {
+    isLoadingGroupDetails.value = false
+  }
+}
+
+// Close group details modal
+const closeGroupDetailsModal = () => {
+  showGroupDetailsModal.value = false
+  selectedGroup.value = null
+  groupDetails.value = null
+}
+
+// Close preview dialog
+const closePreviewDialog = () => {
+  showPreviewDialog.value = false
+  cloudData.value = null
+  previewResult.value = null
+}
+
+// Utility functions for preview modal
+const getTotalEmojis = (data: any): number => {
+  if (!data.emojiGroups) return 0
+  return data.emojiGroups.reduce((total: number, group: any) => {
+    return total + (group.emojis?.length || 0)
+  }, 0)
+}
+
+const formatDate = (timestamp: number | string | undefined): string => {
+  if (!timestamp) return 'N/A'
+
+  // 处理对象类型的情况
+  if (typeof timestamp === 'object') {
+    console.warn('[SettingsPage] formatDate received object:', timestamp)
+    return 'Invalid Date'
+  }
+
+  try {
+    const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp)
+
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      console.warn('[SettingsPage] Invalid date created from timestamp:', timestamp)
+      return 'Invalid Date'
+    }
+
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    console.error('[SettingsPage] Error formatting date:', error, 'timestamp:', timestamp)
+    return 'N/A'
+  }
+}
 </script>
 
 <template>
@@ -471,11 +641,16 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
                     placeholder="输入读写权限的认证令牌"
                     :disabled="isSyncing"
                   />
-                  <p class="text-xs text-gray-500 dark:text-white mt-1">用于写入和删除操作的认证令牌</p>
+                  <p class="text-xs text-gray-500 dark:text-white mt-1">
+                    用于写入和删除操作的认证令牌
+                  </p>
                 </div>
 
                 <div>
-                  <label for="cfAuthTokenReadonly" class="block text-sm font-medium dark:text-white mb-1">
+                  <label
+                    for="cfAuthTokenReadonly"
+                    class="block text-sm font-medium dark:text-white mb-1"
+                  >
                     只读认证令牌 (可选)
                   </label>
                   <a-input-password
@@ -539,7 +714,9 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
                     placeholder="emoji-data.json"
                     :disabled="isSyncing"
                   />
-                  <p class="text-xs text-gray-500 dark:text-white mt-1">在服务器上存储数据的文件名</p>
+                  <p class="text-xs text-gray-500 dark:text-white mt-1">
+                    在服务器上存储数据的文件名
+                  </p>
                 </div>
               </div>
 
@@ -595,7 +772,10 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
                 </div>
 
                 <div>
-                  <label for="s3SecretAccessKey" class="block text-sm font-medium dark:text-white mb-1">
+                  <label
+                    for="s3SecretAccessKey"
+                    class="block text-sm font-medium dark:text-white mb-1"
+                  >
                     Secret Access Key
                   </label>
                   <a-input-password
@@ -637,13 +817,23 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
                 >
                   {{ isTesting ? '测试中...' : '测试连接' }}
                 </a-button>
+
+                <a-button
+                  @click="previewCloudData"
+                  :loading="isPreviewing"
+                  :disabled="!isConfigured || isSyncing || isPreviewing"
+                >
+                  {{ isPreviewing ? '预览中...' : '预览云端数据' }}
+                </a-button>
               </div>
 
               <!-- Status messages -->
               <div
                 v-if="testResult"
                 class="p-3 rounded border"
-                :class="testResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'"
+                :class="
+                  testResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                "
               >
                 <p class="text-sm" :class="testResult.success ? 'text-green-700' : 'text-red-700'">
                   {{ testResult.message }}
@@ -652,7 +842,10 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
             </div>
 
             <!-- Sync Operations -->
-            <div v-if="isConfigured" class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+            <div
+              v-if="isConfigured"
+              class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6"
+            >
               <h3 class="text-md font-medium dark:text-white mb-4">同步操作</h3>
 
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -741,7 +934,9 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
               <div
                 v-if="syncResult"
                 class="mt-3 p-3 rounded border"
-                :class="syncResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'"
+                :class="
+                  syncResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                "
               >
                 <p class="text-sm" :class="syncResult.success ? 'text-green-700' : 'text-red-700'">
                   {{ syncResult.message }}
@@ -762,5 +957,197 @@ const getDirectionText = (direction: 'push' | 'pull' | 'both') => {
         </a-tab-pane>
       </a-tabs>
     </div>
+
+    <!-- Cloud Data Preview Modal -->
+    <a-modal v-model:open="showPreviewDialog" title="云端配置预览" width="800px">
+      <template #footer>
+        <a-button @click="showPreviewDialog = false">关闭</a-button>
+      </template>
+      <div v-if="previewResult && cloudData" class="space-y-6">
+        <!-- Preview Status -->
+        <div
+          class="p-4 rounded-lg border"
+          :class="
+            previewResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+          "
+        >
+          <div class="flex items-center space-x-2">
+            <CheckCircleOutlined v-if="previewResult.success" class="text-green-600" />
+            <ExclamationCircleOutlined v-else class="text-red-600" />
+            <span
+              class="font-medium"
+              :class="previewResult.success ? 'text-green-700' : 'text-red-700'"
+            >
+              {{ previewResult.success ? '云端配置获取成功' : '云端配置获取失败' }}
+            </span>
+          </div>
+          <p class="text-sm text-gray-600 mt-1">{{ previewResult.message }}</p>
+        </div>
+
+        <!-- Cloud Data Statistics -->
+        <div v-if="previewResult.success && cloudData" class="space-y-4">
+          <h4 class="text-lg font-semibold text-gray-800 dark:text-white">配置概览</h4>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div
+              class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800"
+            >
+              <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <CheckCircleOutlined
+                  v-if="typeof cloudData.connectionTest === 'boolean' && cloudData.connectionTest"
+                />
+                <ExclamationCircleOutlined v-else />
+              </div>
+              <div class="text-sm text-blue-700 dark:text-blue-300">连接状态</div>
+            </div>
+
+            <div
+              class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800"
+            >
+              <div class="text-2xl font-bold text-green-600 dark:text-green-400">
+                {{ cloudData.metadata?.totalGroups || 0 }}
+              </div>
+              <div class="text-sm text-green-700 dark:text-green-300">分组数量</div>
+            </div>
+
+            <div
+              class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800"
+            >
+              <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                {{ cloudData.metadata?.totalEmojis || 0 }}
+              </div>
+              <div class="text-sm text-purple-700 dark:text-purple-300">表情总数</div>
+            </div>
+
+            <div
+              class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800"
+            >
+              <div class="text-lg font-bold text-orange-600 dark:text-orange-400">
+                {{
+                  typeof cloudData.timestamp === 'object'
+                    ? 'Invalid Date'
+                    : formatDate(cloudData.timestamp)
+                }}
+              </div>
+              <div class="text-sm text-orange-700 dark:text-orange-300">检查时间</div>
+            </div>
+          </div>
+
+          <!-- Settings/Metadata Info -->
+          <div v-if="cloudData.settings && Object.keys(cloudData.settings).length > 0">
+            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">设置信息</h5>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div class="text-gray-500 dark:text-gray-400">版本</div>
+                <div class="font-medium text-gray-800 dark:text-white">
+                  {{ typeof cloudData.version === 'object' ? 'N/A' : cloudData.version || 'N/A' }}
+                </div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div class="text-gray-500 dark:text-gray-400">收藏数量</div>
+                <div class="font-medium text-gray-800 dark:text-white">
+                  {{ cloudData.metadata?.favoritesCount || 0 }}
+                </div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div class="text-gray-500 dark:text-gray-400">最后修改</div>
+                <div class="font-medium text-gray-800 dark:text-white">
+                  {{
+                    cloudData.metadata?.lastModified
+                      ? formatDate(cloudData.metadata.lastModified)
+                      : 'N/A'
+                  }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Emoji Groups Details -->
+          <div v-if="cloudData.emojiGroups && cloudData.emojiGroups.length > 0">
+            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">表情分组</h5>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+              <div
+                v-for="group in cloudData.emojiGroups"
+                :key="group.id"
+                class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                @click="loadGroupDetails(group)"
+              >
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                  >
+                    {{ group.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-800 dark:text-white">{{ group.name }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ group.emojiCount || 0 }} 个表情
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <div class="text-xs text-gray-400">
+                    {{ formatDate(group.lastModified || group.createdAt) }}
+                  </div>
+                  <div class="text-blue-500 dark:text-blue-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5l7 7-7 7"
+                      ></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+              点击分组查看详细信息
+            </div>
+          </div>
+
+          <!-- Connection Info -->
+          <div>
+            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">连接信息</h5>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div class="text-gray-500 dark:text-gray-400">数据可用性</div>
+                <div class="font-medium text-gray-800 dark:text-white">
+                  {{
+                    typeof cloudData.hasData === 'boolean'
+                      ? cloudData.hasData
+                        ? '可用'
+                        : '无数据'
+                      : '未知'
+                  }}
+                </div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div class="text-gray-500 dark:text-gray-400">同步服务</div>
+                <div class="font-medium text-gray-800 dark:text-white">
+                  {{
+                    syncType === 'cloudflare'
+                      ? 'Cloudflare'
+                      : syncType === 'webdav'
+                        ? 'WebDAV'
+                        : syncType === 's3'
+                          ? 'S3'
+                          : '未知'
+                  }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="isPreviewing" class="flex items-center justify-center py-8">
+        <a-spin size="large" />
+        <span class="ml-3 text-gray-600 dark:text-gray-400">正在检查云端配置...</span>
+      </div>
+
+      <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">暂无配置可预览</div>
+    </a-modal>
   </div>
 </template>

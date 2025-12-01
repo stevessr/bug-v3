@@ -442,6 +442,236 @@ export class CloudflareSyncService {
   public isConfigured(): boolean {
     return !!this.config && this.config.enabled
   }
+
+  // Preview cloud data without merging
+  public async previewCloudData(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+    if (!this.config) {
+      return {
+        success: false,
+        message: 'No Cloudflare configuration available',
+        error: 'Missing configuration'
+      }
+    }
+
+    try {
+      onProgress?.({ current: 0, total: 1, action: 'pull', message: 'Fetching cloud data...' })
+
+      return await this.executeWithRetry(
+        async () => {
+          const target = createSyncTarget(this.config!)
+          const result = await target.pull(progress => {
+            onProgress?.({
+              current: progress.current,
+              total: progress.total,
+              action: 'pull',
+              message: `Previewing cloud data (${progress.current}/${progress.total})...`
+            })
+          })
+
+          if (result.success && result.data) {
+            result.message = `Cloud data previewed successfully. ${result.message}`
+          }
+
+          return result
+        },
+        3,
+        2000
+      )
+    } catch (error) {
+      return {
+        success: false,
+        message: `Preview failed: ${error}`,
+        error
+      }
+    }
+  }
+
+  // Preview cloud config only (get group list without detailed emoji data)
+  public async previewCloudConfig(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; config?: any; error?: any; message: string }> {
+    if (!this.config) {
+      return {
+        success: false,
+        message: 'No Cloudflare configuration available',
+        error: 'Missing configuration'
+      }
+    }
+
+    try {
+      onProgress?.({ current: 0, total: 1, action: 'test', message: 'Fetching cloud config...' })
+
+      return await this.executeWithRetry(
+        async () => {
+          const target = createSyncTarget(this.config!)
+
+          // First test connection
+          const testResult = await target.test(progress => {
+            onProgress?.({
+              current: progress.current,
+              total: progress.total,
+              action: 'test',
+              message: `Checking cloud config (${progress.current}/${progress.total})...`
+            })
+          })
+
+          if (!testResult.success) {
+            return {
+              success: false,
+              message: `Cloud config check failed: ${testResult.message}`,
+              error: testResult.error
+            }
+          }
+
+          // If connection test passes, try to fetch group list only
+          onProgress?.({ current: 1, total: 2, action: 'pull', message: 'Fetching group list...' })
+
+          try {
+            const previewResult = await target.preview(progress => {
+              onProgress?.({
+                current: progress.current + 1,
+                total: progress.total + 1,
+                action: 'pull',
+                message: `Fetching cloud data (${progress.current + 1}/${progress.total + 1})...`
+              })
+            })
+
+            if (previewResult.success && previewResult.data) {
+              const data = previewResult.data
+
+              // Extract group list without emoji details for faster loading
+              const groupList = (data.emojiGroups || []).map((group: any) => ({
+                id: group.id,
+                name: group.name,
+                createdAt: group.createdAt,
+                lastModified: group.lastModified,
+                emojiCount: group.emojiCount || 0,
+                // Don't include the actual emojis array for preview
+                _hasEmojis: (group.emojiCount || 0) > 0
+              }))
+
+              return {
+                success: true,
+                config: {
+                  timestamp: data.timestamp || Date.now(),
+                  version: data.version || '1.0',
+                  hasData: true,
+                  connectionTest: true,
+                  // Include settings and group list only
+                  settings: data.settings || {},
+                  emojiGroups: groupList,
+                  metadata: {
+                    totalGroups: groupList.length,
+                    totalEmojis: groupList.reduce(
+                      (total: number, group: any) => total + group.emojiCount,
+                      0
+                    ),
+                    favoritesCount: data.settings?.favorites?.length || 0,
+                    lastModified: data.settings?.lastModified || data.timestamp,
+                    // Flag to indicate this is preview data (no emoji details)
+                    isPreview: true
+                  }
+                },
+                message: 'Cloud configuration previewed successfully'
+              }
+            } else {
+              // Connection successful but no data available
+              return {
+                success: true,
+                config: {
+                  timestamp: Date.now(),
+                  version: '1.0',
+                  hasData: false,
+                  connectionTest: true,
+                  settings: {},
+                  emojiGroups: [],
+                  metadata: {
+                    totalGroups: 0,
+                    totalEmojis: 0,
+                    favoritesCount: 0,
+                    lastModified: null,
+                    isPreview: true
+                  }
+                },
+                message: 'Cloud configuration accessible but no data available'
+              }
+            }
+          } catch (pullError) {
+            // Connection test passed but data fetch failed
+            return {
+              success: true,
+              config: {
+                timestamp: Date.now(),
+                version: '1.0',
+                hasData: false,
+                connectionTest: true,
+                error: 'Data fetch failed',
+                settings: {},
+                emojiGroups: [],
+                metadata: {
+                  totalGroups: 0,
+                  totalEmojis: 0,
+                  favoritesCount: 0,
+                  lastModified: null,
+                  isPreview: true
+                }
+              },
+              message: 'Cloud configuration accessible but could not fetch data'
+            }
+          }
+        },
+        3,
+        2000
+      )
+    } catch (error) {
+      return {
+        success: false,
+        message: `Config preview failed: ${error}`,
+        error
+      }
+    }
+  }
+
+  // Load specific group details (lazy loading)
+  public async loadGroupDetails(
+    groupName: string,
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; group?: any; error?: any; message: string }> {
+    if (!this.config) {
+      return {
+        success: false,
+        message: 'No Cloudflare configuration available',
+        error: 'Missing configuration'
+      }
+    }
+
+    try {
+      return await this.executeWithRetry(
+        async () => {
+          const target = createSyncTarget(this.config!)
+          if (target.getGroupDetails) {
+            return await target.getGroupDetails(groupName, onProgress)
+          } else {
+            return {
+              success: false,
+              message: 'Sync target does not support loading group details',
+              error: 'Not implemented'
+            }
+          }
+        },
+        3,
+        2000
+      )
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to load group details for ${groupName}: ${error}`,
+        error
+      }
+    }
+  }
 }
 
 // Key for storing sync configuration in extension storage
