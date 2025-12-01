@@ -144,13 +144,13 @@ const addFiles = async (files: File[]) => {
 
   // Filter out existing files from current selection (remove extension for comparison)
   const existingFileNames = new Set(
-    selectedFiles.value.map(item => item.file.name.replace(/\.[^/.]+$/, '').toLowerCase())
+    selectedFiles.value.map(item => item.file.name.toLowerCase().replace(/\.[^/.]+$/, ''))
   )
 
   const newFiles = imageFiles
     .filter(file => {
       const fileName = file.name
-      const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, '')
+      const fileNameWithoutExt = fileName.toLowerCase().replace(/\.[^/.]+$/, '')
 
       // Check if file already exists in buffer group
       if (existingNames.includes(fileName)) {
@@ -159,7 +159,7 @@ const addFiles = async (files: File[]) => {
       }
 
       // Check if file already exists in current selection
-      if (existingFileNames.has(fileNameWithoutExt.toLowerCase())) {
+      if (existingFileNames.has(fileNameWithoutExt)) {
         console.log(`[BufferPage] Skipped ${fileName}: duplicate in current selection`)
         return false
       }
@@ -208,7 +208,7 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
 
     // Get existing names from current selection (remove extension for comparison)
     const existingFileNames = new Set(
-      selectedFiles.value.map(item => item.file.name.replace(/\.[^/.]+$/, '').toLowerCase())
+      selectedFiles.value.map(item => item.file.name.toLowerCase().replace(/\.[^/.]+$/, ''))
     )
 
     for (const croppedEmoji of croppedEmojis) {
@@ -218,7 +218,7 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
       const file = new File([blob], `${croppedEmoji.name}.png`, { type: 'image/png' })
 
       // Check if cropped file already exists in current selection
-      const fileNameWithoutExt = croppedEmoji.name.toLowerCase()
+      const fileNameWithoutExt = croppedEmoji.name.toLowerCase().replace(/\.[^/.]+$/, '')
       if (existingFileNames.has(fileNameWithoutExt)) {
         console.log(
           `[BufferPage] Skipped cropped file ${croppedEmoji.name}: duplicate in current selection`
@@ -438,13 +438,13 @@ const checkDuplicatesAgainstFilters = async () => {
   showDuplicateResults.value = false
 
   try {
-    // 收集所有过滤器分组中的表情名称（小写化以进行不区分大小写的比较）
+    // 收集所有过滤器分组中的表情名称（小写化并去除扩展名）
     const filterEmojiNames = new Set<string>()
     const nameToGroupsMap = new Map<string, string[]>() // 名称到分组的映射
 
     for (const filterGroup of selectedFilterGroups.value) {
       for (const emojiName of filterGroup.emojiNames) {
-        const normalizedName = emojiName.toLowerCase()
+        const normalizedName = emojiName.toLowerCase().replace(/\.[^/.]+$/, '')
         filterEmojiNames.add(normalizedName)
 
         if (!nameToGroupsMap.has(normalizedName)) {
@@ -458,7 +458,7 @@ const checkDuplicatesAgainstFilters = async () => {
     const duplicates: Array<{ name: string; existingGroups: string[] }> = []
     if (bufferGroup.value) {
       for (const emoji of bufferGroup.value.emojis) {
-        const normalizedName = emoji.name.toLowerCase()
+        const normalizedName = emoji.name.toLowerCase().replace(/\.[^/.]+$/, '')
         if (filterEmojiNames.has(normalizedName)) {
           duplicates.push({
             name: emoji.name,
@@ -494,16 +494,18 @@ const filterDuplicateFiles = async () => {
   isCheckingDuplicates.value = true
 
   try {
-    // 收集所有过滤器分组中的表情名称（小写化以进行不区分大小写的比较）
+    // 收集所有过滤器分组中的表情名称（小写化并去除扩展名）
     const filterEmojiNames = new Set<string>()
     for (const filterGroup of selectedFilterGroups.value) {
       for (const emojiName of filterGroup.emojiNames) {
-        filterEmojiNames.add(emojiName.toLowerCase())
+        const normalizedName = emojiName.toLowerCase().replace(/\.[^/.]+$/, '')
+        filterEmojiNames.add(normalizedName)
       }
     }
 
     // 过滤重复文件
     const filteredFiles: typeof selectedFiles.value = []
+    const originalLength = selectedFiles.value.length
 
     for (const fileItem of selectedFiles.value) {
       const fileName = fileItem.file.name.toLowerCase()
@@ -520,7 +522,7 @@ const filterDuplicateFiles = async () => {
 
     selectedFiles.value = filteredFiles
 
-    const filteredCount = selectedFiles.value.length - filteredFiles.length
+    const filteredCount = originalLength - filteredFiles.length
     if (filteredCount > 0) {
       console.log(`[BufferPage] Filtered out ${filteredCount} duplicate files`)
     }
