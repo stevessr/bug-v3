@@ -93,9 +93,8 @@ export default defineConfig(({ mode }) => {
             // Split options page into more granular chunks
             if (id.includes('src/options')) {
               if (id.includes('tabs/')) {
-                if (id.includes('tabs/BilibiliImport')) return 'options-bilibili'
                 if (id.includes('tabs/Upload')) return 'options-upload'
-                if (id.includes('tabs/Settings')) return 'options-settings'  
+                if (id.includes('tabs/Settings')) return 'options-settings'
                 if (id.includes('tabs/ImportExport')) return 'options-import-export'
                 return 'options-tabs'
               }

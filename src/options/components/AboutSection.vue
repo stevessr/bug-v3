@@ -90,7 +90,6 @@ const supportedSites = ref([
   'Twitter/X',
   'Pixiv',
   'Linux.do',
-  'Bilibili',
   '小红书',
   'Discourse 论坛',
   '以及更多网站...'
