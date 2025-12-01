@@ -115,12 +115,7 @@ const formatFileSize = (bytes: number): string => {
                 cancel-text="取消"
                 @confirm="confirmRemove(fileItem.id)"
               >
-                <a-button
-                  type="primary"
-                  danger
-                  size="small"
-                  title="删除文件"
-                >
+                <a-button type="primary" danger size="small" title="删除文件">
                   <DeleteOutlined />
                 </a-button>
               </a-popconfirm>

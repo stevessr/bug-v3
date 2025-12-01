@@ -6,6 +6,8 @@ import type { EmojiGroup, Emoji } from '../../types/type'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 
+import GroupSelector from './GroupSelector.vue'
+
 defineEmits(['remove', 'edit', 'addEmoji'])
 
 // use store instance directly
@@ -361,21 +363,17 @@ const cancelCreateGroup = () => {
               <span class="text-sm text-gray-600 dark:text-white">
                 已选择 {{ selectedEmojis.size }} 个
               </span>
-              <a-dropdown>
-                <template #overlay>
-                  <a-menu @click="onTargetGroupSelect">
-                    <a-menu-item key="">选择目标分组</a-menu-item>
-                    <a-menu-item v-for="group in availableGroups" :key="group.id" :value="group.id">
-                      {{ group.name }}
-                    </a-menu-item>
-                    <a-menu-item key="__create_new__">+ 创建新分组</a-menu-item>
-                  </a-menu>
-                </template>
-                <a-button title="选择目标分组">
-                  {{ targetGroupId || '选择目标分组' }}
-                  <DownOutlined />
+              <div class="flex items-center gap-2">
+                <GroupSelector
+                  v-model="targetGroupId"
+                  :groups="availableGroups"
+                  placeholder="选择目标分组"
+                  class="flex-1"
+                />
+                <a-button @click="showCreateGroupDialog = true" size="small" title="创建新分组">
+                  + 新建
                 </a-button>
-              </a-dropdown>
+              </div>
               <a-button
                 @click="moveSelectedEmojis"
                 :disabled="!targetGroupId"

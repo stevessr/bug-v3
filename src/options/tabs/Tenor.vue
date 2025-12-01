@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { DownOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
+import GroupSelector from '../components/GroupSelector.vue'
 
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 import { newStorageHelpers } from '@/utils/newStorage'
@@ -479,27 +480,12 @@ const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
           <div>
             <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">选择目标分组</h3>
 
-            <div class="space-y-2 max-h-60 overflow-y-auto">
-              <label
-                v-for="group in availableGroups"
-                :key="group.id"
-                class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-              >
-                <input
-                  type="radio"
-                  :value="group.id"
-                  v-model="selectedGroupId"
-                  class="mr-3"
-                  :title="group.name"
-                />
-                <div class="flex items-center gap-2">
-                  <span class="text-lg">{{ group.icon }}</span>
-                  <span class="font-medium">{{ group.name }}</span>
-                  <span class="text-sm text-gray-500">
-                    ({{ group.emojis?.length || 0 }} 个表情)
-                  </span>
-                </div>
-              </label>
+            <div class="mb-6">
+              <GroupSelector
+                v-model="selectedGroupId"
+                :groups="availableGroups"
+                placeholder="选择目标分组"
+              />
             </div>
 
             <div class="mt-6 flex gap-3">

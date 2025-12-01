@@ -11,6 +11,7 @@ import type { OptionsInject } from '../types'
 import ImageCropper from '../components/ImageCropper.vue'
 import FileUploader from '../components/FileUploader.vue'
 import FileListDisplay from '../components/FileListDisplay.vue'
+import GroupSelector from '../components/GroupSelector.vue'
 
 import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
@@ -835,31 +836,11 @@ onBeforeUnmount(() => {
             :ok-button-props="{ disabled: !selectedGroupIdForFilter }"
           >
             <div class="py-2">
-              <a-select
-                v-model:value="selectedGroupIdForFilter"
-                showSearch
+              <GroupSelector
+                v-model="selectedGroupIdForFilter"
+                :groups="filterableGroups"
                 placeholder="搜索并选择分组"
-                class="w-full"
-                :filterOption="filterOption"
-              >
-                <a-select-option
-                  v-for="g in filterableGroups"
-                  :key="g.id"
-                  :value="g.id"
-                  :label="g.name"
-                >
-                  <div class="flex items-center">
-                    <img
-                      v-if="g.icon && (g.icon.startsWith('http') || g.icon.startsWith('data:'))"
-                      :src="g.icon"
-                      class="w-4 h-4 inline-block mr-2"
-                    />
-                    <span v-else class="inline-block mr-2">{{ g.icon || '📁' }}</span>
-                    {{ g.name }}
-                    <span class="ml-2 text-xs text-gray-500">({{ g.emojis.length }} 个表情)</span>
-                  </div>
-                </a-select-option>
-              </a-select>
+              />
             </div>
           </a-modal>
         </div>
@@ -975,29 +956,12 @@ onBeforeUnmount(() => {
                 <span class="text-sm text-gray-600 dark:text-white">
                   已选择 {{ selectedEmojis.size }} 个
                 </span>
-                <a-dropdown>
-                  <template #overlay>
-                    <a-menu @click="onTargetGroupSelect">
-                      <a-menu-item key="">选择目标分组</a-menu-item>
-                      <a-menu-item
-                        v-for="group in availableGroups"
-                        :key="group.id"
-                        :value="group.id"
-                      >
-                        {{ group.name }}
-                      </a-menu-item>
-                      <a-menu-item key="__create_new__">+ 创建新分组</a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button>
-                    {{
-                      targetGroupId
-                        ? availableGroups.find(g => g.id === targetGroupId)?.name || '选择目标分组'
-                        : '选择目标分组'
-                    }}
-                    <DownOutlined />
-                  </a-button>
-                </a-dropdown>
+                <GroupSelector
+                  v-model="targetGroupId"
+                  :groups="availableGroups"
+                  placeholder="选择目标分组"
+                  class="flex-1"
+                />
                 <a-button
                   type="primary"
                   @click="moveSelectedEmojis"
@@ -1006,6 +970,13 @@ onBeforeUnmount(() => {
                   title="移动选中的表情到目标分组"
                 >
                   移动
+                </a-button>
+                <a-button
+                  @click="showCreateGroupDialog = true"
+                  size="small"
+                  title="创建新分组"
+                >
+                  + 新建
                 </a-button>
                 <a-button
                   type="default"

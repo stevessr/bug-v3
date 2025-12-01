@@ -15,6 +15,7 @@ import {
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { importConfigurationToStore, importEmojisToStore } from '../utils/importUtils'
+import GroupSelector from '../components/GroupSelector.vue'
 
 const emojiStore = useEmojiStore()
 
@@ -386,20 +387,17 @@ const pullFromCloudSync = async () => {
         <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
           导入表情到哪个分组？
         </label>
-        <a-dropdown>
-          <template #overlay>
-            <a-menu @click="onSelectedTargetGroup">
-              <a-menu-item key="">自动创建分组</a-menu-item>
-              <a-menu-item v-for="group in emojiStore.groups" :key="group.id" :value="group.id">
-                {{ group.name }}
-              </a-menu-item>
-            </a-menu>
-          </template>
-          <a-button class="w-full" title="选择导入表情的目标分组">
-            {{ selectedTargetGroup || '自动创建分组' }}
-            <DownOutlined />
-          </a-button>
-        </a-dropdown>
+        <div class="flex items-center gap-2">
+          <GroupSelector
+            v-model="selectedTargetGroup"
+            :groups="emojiStore.groups"
+            placeholder="自动创建分组"
+            class="flex-1"
+          />
+          <a-checkbox v-model:checked="autoCreateGroup" @change="onAutoCreateGroupChange">
+            自动创建分组
+          </a-checkbox>
+        </div>
       </div>
     </a-modal>
 
