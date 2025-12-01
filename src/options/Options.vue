@@ -134,7 +134,6 @@ const menuItems = computed(() => {
     { key: 'buffer', label: '缓冲区', route: '/buffer' },
     { key: 'stats', label: '统计', route: '/stats' },
     { key: 'ai-rename', label: 'AI 批量重命名', route: '/ai-rename' },
-    { key: 'sync', label: '云同步', route: '/sync' },
     { key: 'about', label: '关于', route: '/about' }
   ]
 
@@ -176,7 +175,6 @@ const handleMenuSelect = (info: any) => {
     buffer: '/buffer',
     stats: '/stats',
     'ai-rename': '/ai-rename',
-    sync: '/sync',
     about: '/about'
   }
 
@@ -256,7 +254,6 @@ onMounted(() => {
         buffer: '/buffer',
         stats: '/stats',
         'ai-rename': '/ai-rename',
-        sync: '/sync',
         about: '/about'
       }
       const targetRoute = routeMap[queryTabs]
