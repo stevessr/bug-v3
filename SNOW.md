@@ -129,7 +129,6 @@ bug-v3/
 - **Smart Organization**: Group emojis by category with drag-and-drop reordering
 - **Quick Search**: Fast emoji search and filtering across all groups
 - **Favorites System**: Mark frequently used emojis for quick access
-- **Multiple Import Modes**: Single emoji, batch import, URL import from Tenor
 
 ### 🤖 AI-Powered Features
 - **Automatic Naming**: Uses Google Gemini API to intelligently name emojis

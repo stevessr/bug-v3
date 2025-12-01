@@ -6,7 +6,6 @@ A modern, feature-rich browser extension for managing and using custom emojis ac
 
 ### 🎯 Core Functionality
 - **Universal Emoji Picker**: Insert custom emojis on any website with a single click
-- **Multiple Input Modes**: Support for single emoji, batch import, URL import from Tenor
 - **Smart Organization**: Group emojis by category with drag-and-drop reordering
 - **Quick Search**: Fast emoji search across all groups
 - **Favorites System**: Mark frequently used emojis for quick access

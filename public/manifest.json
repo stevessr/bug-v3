@@ -3,7 +3,7 @@
   "name": "Emoji Extension - 表情管理扩展",
   "short_name": "表情扩展",
   "version": "1.0.0",
-  "description": "一个功能强大的表情管理扩展，支持自定义表情分组、收藏夹、多平台导入（Tenor），以及在各大网站（Discord、Reddit、X、小红书等）快速插入表情。",
+  "description": "一个功能强大的表情管理扩展，支持自定义表情分组、收藏夹，以及在各大网站（Discord、Reddit、X、小红书等）快速插入表情。",
   "author": "stevessr",
   "homepage_url": "https://github.com/stevessr/bug-v3",
   "permissions": ["storage", "activeTab", "scripting", "downloads", "sidePanel"],

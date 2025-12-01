@@ -11,9 +11,8 @@ export interface AppSettings {
   enableLinuxDoInjection?: boolean // 控制是否在 linux.do 注入脚本
   enableXcomExtraSelectors?: boolean // 控制是否在 X.com 启用额外选择器
   enableCalloutSuggestions?: boolean // 在编辑器中启用 callout suggestions（'[' 触发）
-  enableBatchParseImages?: boolean // 控制是否显示“一键解析并添加所有图片”按钮
+  enableBatchParseImages?: boolean // 控制是否显示"一键解析并添加所有图片"按钮
   // Optional API key fields for third-party services
-  tenorApiKey?: string
   geminiApiKey?: string
   imgbedToken?: string
   imgbedApiUrl?: string

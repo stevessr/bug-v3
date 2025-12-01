@@ -6,7 +6,6 @@ import SettingsPage from '../pages/SettingsPage.vue'
 import FavoritesPage from '../pages/FavoritesPage.vue'
 import GroupsPage from '../pages/GroupsPage.vue'
 import UngroupedPage from '../pages/UngroupedPage.vue'
-import TenorPage from '../pages/TenorPage.vue'
 import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
 import DuplicateDetectionPage from '../pages/DuplicateDetectionPage.vue'
@@ -45,14 +44,6 @@ const routes: RouteRecordRaw[] = [
     component: UngroupedPage,
     meta: {
       title: '未分组'
-    }
-  },
-  {
-    path: '/tenor',
-    name: 'tenor',
-    component: TenorPage,
-    meta: {
-      title: 'Tenor GIF'
     }
   },
   {
