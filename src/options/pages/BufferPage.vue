@@ -202,21 +202,15 @@ const convertImageToAvif = async (file: File): Promise<File> => {
     const minQ = Math.max(0, targetQuantizer - 5)
     const maxQ = Math.min(63, targetQuantizer + 5)
 
-    const avifBuffer = await encode(
-      encodeData,
-      imageData.width,
-      imageData.height,
-      channels,
-      {
-        maxThreads: 1,
-        speed: avifSpeed.value,
-        avifPixelFormat: 3, // YUV420
-        minQuantizer: minQ,
-        maxQuantizer: maxQ,
-        minQuantizerAlpha: minQ,
-        maxQuantizerAlpha: maxQ
-      }
-    )
+    const avifBuffer = await encode(encodeData, imageData.width, imageData.height, channels, {
+      maxThreads: 1,
+      speed: avifSpeed.value,
+      avifPixelFormat: 3, // YUV420
+      minQuantizer: minQ,
+      maxQuantizer: maxQ,
+      minQuantizerAlpha: minQ,
+      maxQuantizerAlpha: maxQ
+    })
     if (!avifBuffer) throw new Error('AVIF encoding failed')
 
     const avifBlob = new Blob([avifBuffer.slice().buffer], { type: 'image/avif' })
@@ -711,7 +705,10 @@ onBeforeUnmount(() => {
       <!-- AVIF Conversion Switch -->
       <div class="mt-4 flex flex-col items-end">
         <div class="flex items-center">
-          <label for="avif-switch" class="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+          <label
+            for="avif-switch"
+            class="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+          >
             转换为 AVIF 格式
           </label>
           <a-switch id="avif-switch" v-model:checked="convertToAvif" />

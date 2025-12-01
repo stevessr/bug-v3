@@ -4,17 +4,14 @@ import { ref, isRef, type Ref } from 'vue'
 import type { AppSettings } from '../../types/type'
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
-const settings = props.settings as AppSettings | Ref<AppSettings>
-
 const emit = defineEmits(['update:customCss'])
 
 const showCustomCssEditor = ref(false)
 const localCustomCss = ref('')
 
 const openCustomCssEditor = () => {
-  localCustomCss.value = isRef(settings)
-    ? (settings.value as any).customCss || ''
-    : (settings as AppSettings).customCss || ''
+  const currentSettings = isRef(props.settings) ? props.settings.value : props.settings
+  localCustomCss.value = (currentSettings as any).customCss || ''
   showCustomCssEditor.value = true
 }
 
@@ -24,9 +21,8 @@ const saveCustomCss = () => {
 }
 
 const cancelCustomCss = () => {
-  localCustomCss.value = isRef(settings)
-    ? (settings.value as any).customCss || ''
-    : (settings as AppSettings).customCss || ''
+  const currentSettings = isRef(props.settings) ? props.settings.value : props.settings
+  localCustomCss.value = (currentSettings as any).customCss || ''
   showCustomCssEditor.value = false
 }
 </script>
