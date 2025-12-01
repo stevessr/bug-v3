@@ -8,7 +8,6 @@ import GroupsPage from '../pages/GroupsPage.vue'
 import UngroupedPage from '../pages/UngroupedPage.vue'
 import BilibiliPage from '../pages/BilibiliPage.vue'
 import TenorPage from '../pages/TenorPage.vue'
-import WalinePage from '../pages/WalinePage.vue'
 import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
 import DuplicateDetectionPage from '../pages/DuplicateDetectionPage.vue'
@@ -63,14 +62,6 @@ const routes: RouteRecordRaw[] = [
     component: TenorPage,
     meta: {
       title: 'Tenor GIF'
-    }
-  },
-  {
-    path: '/waline',
-    name: 'waline',
-    component: WalinePage,
-    meta: {
-      title: 'Waline 导入'
     }
   },
   {

@@ -92,7 +92,6 @@ const supportedSites = ref([
   'Linux.do',
   'Bilibili',
   '小红书',
-  'Waline 评论系统',
   'Discourse 论坛',
   '以及更多网站...'
 ])

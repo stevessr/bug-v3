@@ -64,7 +64,6 @@ bug-v3/
 │   │   ├── components/          # Reusable UI components
 │   │   ├── composables/         # Vue composables
 │   │   ├── tenor/               # Tenor API integration
-│   │   ├── waline/              # Waline integration
 │   │   ├── utils/               # Options-specific utilities
 │   │   └── types.ts             # Type definitions
 │   │
@@ -130,7 +129,7 @@ bug-v3/
 - **Smart Organization**: Group emojis by category with drag-and-drop reordering
 - **Quick Search**: Fast emoji search and filtering across all groups
 - **Favorites System**: Mark frequently used emojis for quick access
-- **Multiple Import Modes**: Single emoji, batch import, URL import from Bilibili/Tenor/Waline
+- **Multiple Import Modes**: Single emoji, batch import, URL import from Bilibili/Tenor
 
 ### 🤖 AI-Powered Features
 - **Automatic Naming**: Uses Google Gemini API to intelligently name emojis
