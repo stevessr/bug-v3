@@ -95,12 +95,12 @@ try {
   const configPath = path.resolve(process.cwd(), 'src/config/default.json')
   const configContent = fs.readFileSync(configPath, 'utf-8')
   const configData = JSON.parse(configContent)
-  
+
   if (configData) {
     // Create assets/json directory
     const jsonDir = path.resolve(process.cwd(), 'scripts', 'cfworker', 'public', 'assets', 'json')
     fs.mkdirSync(jsonDir, { recursive: true })
-    
+
     // Write settings.json
     if (configData.settings) {
       const settingsOut = path.resolve(jsonDir, 'settings.json')
@@ -108,15 +108,15 @@ try {
       fs.writeFileSync(settingsOut, settingsJsonString, 'utf-8')
       console.log(`ℹ️ Wrote runtime settings JSON to ${settingsOut}`)
     }
-    
+
     // Prepare group index for manifest
     const groupIndex = []
-    
+
     // Write individual emoji group JSON files
     if (configData.groups && Array.isArray(configData.groups)) {
       for (const group of configData.groups) {
         const groupOut = path.resolve(jsonDir, `${group.id}.json`)
-        const groupJsonString = JSON.stringify({ 
+        const groupJsonString = JSON.stringify({
           emojis: group.emojis,
           icon: group.icon,
           id: group.id,
@@ -124,24 +124,31 @@ try {
           order: group.order
         })
         fs.writeFileSync(groupOut, groupJsonString, 'utf-8')
-        
+
         // Add to group index for manifest
         groupIndex.push({
           id: group.id,
-          order: group.order || 0
+          name: group.name,
+          order: group.order || 0,
+          icon: group.icon || '',
+          emojiCount: Array.isArray(group.emojis) ? group.emojis.length : 0
         })
       }
       console.log(`ℹ️ Wrote ${configData.groups.length} emoji group JSON files to ${jsonDir}`)
     }
-    
-    // Write manifest file with group index
+
     const manifestOut = path.resolve(jsonDir, 'manifest.json')
-    const manifestJsonString = JSON.stringify({
-      groups: groupIndex,
-      version: configData.version,
-      exportDate: configData.exportDate
-    })
+    const manifestJsonString = JSON.stringify(
+      {
+        groups: groupIndex,
+        version: configData.version,
+        exportDate: configData.exportDate
+      },
+      null,
+      2
+    )
     fs.writeFileSync(manifestOut, manifestJsonString, 'utf-8')
+
     console.log(`ℹ️ Wrote runtime manifest JSON to ${manifestOut}`)
   }
 } catch (e) {

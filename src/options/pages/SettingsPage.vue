@@ -428,15 +428,16 @@ const loadGroupDetails = async (group: any) => {
     return
   }
 
-  // If group details are already loaded, just show them
   if (group.emojis) {
     selectedGroup.value = group
     groupDetails.value = group
     showGroupDetailsModal.value = true
+    isLoadingGroupDetails.value = false
     return
   }
 
   selectedGroup.value = group
+  showGroupDetailsModal.value = true
   isLoadingGroupDetails.value = true
   groupDetails.value = null
 
@@ -896,8 +897,8 @@ const formatDate = (timestamp: number | string | undefined): string => {
                       syncDirection === 'push'
                         ? '⬆️ 推送中'
                         : syncDirection === 'pull'
-                          ? '⬇️ 拉取中'
-                          : '🔄 同步中'
+                        ? '⬇️ 拉取中'
+                        : '🔄 同步中'
                     }}
                   </span>
                   <span class="text-sm font-semibold dark:text-white">
@@ -986,11 +987,11 @@ const formatDate = (timestamp: number | string | undefined): string => {
 
         <!-- Cloud Data Statistics -->
         <div v-if="previewResult.success && cloudData" class="space-y-4">
-          <h4 class="text-lg font-semibold text-gray-800 dark:text-white">配置概览</h4>
+          <h4 class="text-lg font-semibold text-gray-800 dark:text白">配置概览</h4>
 
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div
-              class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800"
+              class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800"
             >
               <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 <CheckCircleOutlined
@@ -1002,7 +1003,7 @@ const formatDate = (timestamp: number | string | undefined): string => {
             </div>
 
             <div
-              class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800"
+              class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800"
             >
               <div class="text-2xl font-bold text-green-600 dark:text-green-400">
                 {{ cloudData.metadata?.totalGroups || 0 }}
@@ -1011,16 +1012,7 @@ const formatDate = (timestamp: number | string | undefined): string => {
             </div>
 
             <div
-              class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800"
-            >
-              <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {{ cloudData.metadata?.totalEmojis || 0 }}
-              </div>
-              <div class="text-sm text-purple-700 dark:text-purple-300">表情总数</div>
-            </div>
-
-            <div
-              class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800"
+              class="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800"
             >
               <div class="text-lg font-bold text-orange-600 dark:text-orange-400">
                 {{
@@ -1035,23 +1027,23 @@ const formatDate = (timestamp: number | string | undefined): string => {
 
           <!-- Settings/Metadata Info -->
           <div v-if="cloudData.settings && Object.keys(cloudData.settings).length > 0">
-            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">设置信息</h5>
+            <h5 class="text-md font-semibold text灰色-700 dark:text白 mb-3">设置信息</h5>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                 <div class="text-gray-500 dark:text-gray-400">版本</div>
-                <div class="font-medium text-gray-800 dark:text-white">
+                <div class="font-medium text-gray-800 dark:text白">
                   {{ typeof cloudData.version === 'object' ? 'N/A' : cloudData.version || 'N/A' }}
                 </div>
               </div>
               <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                <div class="text-gray-500 dark:text-gray-400">收藏数量</div>
-                <div class="font-medium text-gray-800 dark:text-white">
+                <div class="text-gray-500 dark:text灰色-400">收藏数量</div>
+                <div class="font-medium text-gray-800 dark:text白">
                   {{ cloudData.metadata?.favoritesCount || 0 }}
                 </div>
               </div>
               <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                <div class="text-gray-500 dark:text-gray-400">最后修改</div>
-                <div class="font-medium text-gray-800 dark:text-white">
+                <div class="text-gray-500 dark:text灰色-400">最后修改</div>
+                <div class="font-medium text-gray-800 dark:text白">
                   {{
                     cloudData.metadata?.lastModified
                       ? formatDate(cloudData.metadata.lastModified)
@@ -1064,7 +1056,7 @@ const formatDate = (timestamp: number | string | undefined): string => {
 
           <!-- Emoji Groups Details -->
           <div v-if="cloudData.emojiGroups && cloudData.emojiGroups.length > 0">
-            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">表情分组</h5>
+            <h5 class="text-md font-semibold text灰色-700 dark:text白 mb-3">表情分组</h5>
             <div class="space-y-2 max-h-60 overflow-y-auto">
               <div
                 v-for="group in cloudData.emojiGroups"
@@ -1074,21 +1066,13 @@ const formatDate = (timestamp: number | string | undefined): string => {
               >
                 <div class="flex items-center space-x-3">
                   <div
-                    class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                    class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text白 text-xs font-bold"
                   >
                     {{ group.name.charAt(0).toUpperCase() }}
                   </div>
-                  <div>
-                    <div class="font-medium text-gray-800 dark:text-white">{{ group.name }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ group.emojiCount || 0 }} 个表情
-                    </div>
-                  </div>
+                    <div class="font-medium text-gray-800 dark:text白">{{ group.name }}</div>
                 </div>
                 <div class="flex items-center space-x-2">
-                  <div class="text-xs text-gray-400">
-                    {{ formatDate(group.lastModified || group.createdAt) }}
-                  </div>
                   <div class="text-blue-500 dark:text-blue-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -1102,18 +1086,18 @@ const formatDate = (timestamp: number | string | undefined): string => {
                 </div>
               </div>
             </div>
-            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+            <div class="mt-2 text-xs text-gray-500 dark:text灰色-400 text-center">
               点击分组查看详细信息
             </div>
           </div>
 
           <!-- Connection Info -->
           <div>
-            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">连接信息</h5>
+            <h5 class="text-md font-semibold text灰色-700 dark:text白 mb-3">连接信息</h5>
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                <div class="text-gray-500 dark:text-gray-400">数据可用性</div>
-                <div class="font-medium text-gray-800 dark:text-white">
+                <div class="text-gray-500 dark:text灰色-400">数据可用性</div>
+                <div class="font-medium text-gray-800 dark:text白">
                   {{
                     typeof cloudData.hasData === 'boolean'
                       ? cloudData.hasData
@@ -1124,16 +1108,16 @@ const formatDate = (timestamp: number | string | undefined): string => {
                 </div>
               </div>
               <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                <div class="text-gray-500 dark:text-gray-400">同步服务</div>
-                <div class="font-medium text-gray-800 dark:text-white">
+                <div class="text-gray-500 dark:text灰色-400">同步服务</div>
+                <div class="font-medium text-gray-800 dark:text白">
                   {{
                     syncType === 'cloudflare'
                       ? 'Cloudflare'
                       : syncType === 'webdav'
-                        ? 'WebDAV'
-                        : syncType === 's3'
-                          ? 'S3'
-                          : '未知'
+                      ? 'WebDAV'
+                      : syncType === 's3'
+                      ? 'S3'
+                      : '未知'
                   }}
                 </div>
               </div>
@@ -1144,10 +1128,88 @@ const formatDate = (timestamp: number | string | undefined): string => {
 
       <div v-else-if="isPreviewing" class="flex items-center justify-center py-8">
         <a-spin size="large" />
-        <span class="ml-3 text-gray-600 dark:text-gray-400">正在检查云端配置...</span>
+        <span class="ml-3 text-gray-600 dark:text灰色-400">正在检查云端配置...</span>
       </div>
 
-      <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">暂无配置可预览</div>
+      <div v-else class="text-center py-8 text-gray-500 dark:text灰色-400">暂无配置可预览</div>
+    </a-modal>
+
+    <!-- Group Details Modal -->
+    <a-modal
+      v-model:open="showGroupDetailsModal"
+      :title="selectedGroup?.name ? `分组详情：${selectedGroup.name}` : '分组详情'"
+      width="720px"
+      @cancel="closeGroupDetailsModal"
+    >
+      <template #footer>
+        <a-button @click="closeGroupDetailsModal">关闭</a-button>
+      </template>
+
+      <div v-if="isLoadingGroupDetails" class="flex items-center justify-center py-8">
+        <a-spin size="large" />
+        <span class="ml-3 text-gray-600 dark:text-gray-400">正在加载分组详情...</span>
+      </div>
+
+      <div v-else-if="groupDetails" class="space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+            <div class="text-gray-500 dark:text-gray-400">表情数量</div>
+            <div class="text-xl font-semibold text-gray-800 dark:text-white">
+              {{ groupDetails.emojis?.length || 0 }}
+            </div>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+            <div class="text-gray-500 dark:text-gray-400">更新时间</div>
+            <div class="font-medium text-gray-800 dark:text-white">
+              {{ formatDate(groupDetails.lastModified || groupDetails.createdAt) }}
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-if="groupDetails.description"
+          class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800"
+        >
+          <div class="text-sm text-gray-600 dark:text-gray-300">分组备注</div>
+          <p class="mt-1 text-gray-800 dark:text-white whitespace-pre-line">
+            {{ groupDetails.description }}
+          </p>
+        </div>
+
+        <div v-if="groupDetails.emojis?.length" class="space-y-4">
+          <h5 class="text-md font-semibold text-gray-700 dark:text-white">表情列表</h5>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto">
+            <div
+              v-for="(emoji, index) in groupDetails.emojis"
+              :key="emoji.id || emoji.name || index"
+              class="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg"
+            >
+              <div
+                class="w-12 h-12 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden"
+              >
+                <img
+                  v-if="emoji.displayUrl || emoji.url"
+                  :src="emoji.displayUrl || emoji.url"
+                  :alt="emoji.name || `emoji-${index}`"
+                  class="w-full h-full object-contain"
+                />
+                <span v-else class="text-xs text-gray-400">无预览</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-gray-800 dark:text-white truncate">
+                  {{ emoji.name || `表情 ${index + 1}` }}
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 break-all">
+                  {{ emoji.url || emoji.displayUrl || '无 URL' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400">该分组暂无表情</div>
+      </div>
+
+      <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">暂无分组详情可展示</div>
     </a-modal>
   </div>
 </template>

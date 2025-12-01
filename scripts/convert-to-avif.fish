@@ -49,33 +49,39 @@ function convert_to_avif --description '将图片和视频转换为 AVIF 格式'
     mkdir -p $output_dir
 
     # 支持的文件扩展名
-    set -l image_extensions png jpg jpeg jpeg2000 jp2 jpx tiff tif bmp gif
+    set -l image_extensions png jpg jpeg jpeg2000 jp2 jpx tiff tif bmp gif webp
     set -l video_extensions mp4 avi mov mkv webm flv wmv
 
     function convert_single_file --description '转换单个文件'
+        # 传入全局变量
         set -l input_file $argv[1]
+        set -l output_dir_param $argv[2]
+        set -l quality_param $argv[3]
+
         set -l filename (basename $input_file)
-        set -l extension (echo $filename | sed 's/.*\.//')
+        set -l extension (echo $filename | sed 's/.*\.//' | tr '[:upper:]' '[:lower:]')
         set -l basename (echo $filename | sed 's/\.[^.]*$//')
-        set -l output_file "$output_dir/$basename.avif"
+        set -l output_file "$output_dir_param/$basename.avif"
+        echo "  输出文件路径: $output_file"
+
+        # 支持的文件扩展名（在函数内部重新定义）
+        set -l img_extensions png jpg jpeg jpeg2000 jp2 jpx tiff tif bmp gif webp
+        set -l vid_extensions mp4 avi mov mkv webm flv wmv
 
         echo "正在转换: $input_file -> $output_file"
+        echo "  检测到文件扩展名: $extension"
 
-        if contains $extension $image_extensions
+        if contains $extension $img_extensions
             # 获取原始图片信息
             set -l width (magick identify -format "%w" $input_file 2>/dev/null)
             set -l height (magick identify -format "%h" $input_file 2>/dev/null)
             
             if test -n "$width" -a -n "$height"
-                echo "  原始尺寸: ${width}x${height}"
+                echo "  原始尺寸: $widthx$height"
                 
                 # 转换图片，保持原始尺寸
-                magick convert $input_file \
-                    -quality $quality \
-                    -define heif:speed=4 \
-                    -define heif:chroma=444 \
-                    -resize "${width}x${height}!" \
-                    $output_file
+                # 使用传入的质量参数
+                magick $input_file -quality $quality_param $output_file
                 
                 if test $status -eq 0
                     echo "  ✓ 转换成功"
@@ -93,7 +99,7 @@ function convert_to_avif --description '将图片和视频转换为 AVIF 格式'
                 echo "  ✗ 无法获取图片尺寸信息"
             end
 
-        else if contains $extension $video_extensions
+        else if contains $extension $vid_extensions
             # 获取视频信息
             set -l video_info (ffprobe -v quiet -print_format json -show_streams $input_file 2>/dev/null)
             set -l width (echo $video_info | jq -r '.streams[0].width' 2>/dev/null)
@@ -102,7 +108,7 @@ function convert_to_avif --description '将图片和视频转换为 AVIF 格式'
             set -l bitrate (echo $video_info | jq -r '.streams[0].bit_rate' 2>/dev/null)
 
             if test -n "$width" -a -n "$height"
-                echo "  原始尺寸: ${width}x${height}"
+                echo "  原始尺寸: $widthx$height"
                 test -n "$fps"; and echo "  帧率: $fps"
                 test -n "$bitrate"; and echo "  比特率: $bitrate"
                 
@@ -118,7 +124,7 @@ function convert_to_avif --description '将图片和视频转换为 AVIF 格式'
                     -b:v $bitrate \
                     -pix_fmt yuv420p \
                     -movflags +faststart \
-                    -vf "scale=${width}:${height}" \
+                    -vf "scale=$width:$height" \
                     -r (echo $fps | cut -d'/' -f1) \
                     -y $output_file 2>/dev/null
 
@@ -144,19 +150,25 @@ function convert_to_avif --description '将图片和视频转换为 AVIF 格式'
 
     function process_directory --description '处理目录'
         set -l dir $argv[1]
-        
+        set -l output_dir_param $argv[2]
+        set -l quality_param $argv[3]
+
         if test "$recursive" = "true"
             # 递归处理
-            find $dir -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.mp4" -o -name "*.avi" -o -name "*.mov" -o -name "*.mkv" -o -name "*.webm" \) | while read -l file
-                convert_single_file "$file"
+            find $dir -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" -o -name "*.mp4" -o -name "*.avi" -o -name "*.mov" -o -name "*.mkv" -o -name "*.webm" \) | while read -l file
+                convert_single_file "$file" "$output_dir_param" "$quality_param"
             end
         else
             # 只处理当前目录
             for file in $dir/*
                 if test -f "$file"
-                    set -l extension (echo $file | sed 's/.*\./' | tr '[:upper:]' '[:lower:]')
-                    if contains $extension $image_extensions $video_extensions
-                        convert_single_file "$file"
+                    set -l filename (basename "$file")
+                    set -l extension (echo $filename | sed 's/.*\.//' | tr '[:upper:]' '[:lower:]')
+                    # 支持的文件扩展名（在函数内部重新定义）
+                    set -l img_extensions png jpg jpeg jpeg2000 jp2 jpx tiff tif bmp gif webp
+                    set -l vid_extensions mp4 avi mov mkv webm flv wmv
+                    if contains $extension $img_extensions $vid_extensions
+                        convert_single_file "$file" "$output_dir_param" "$quality_param"
                     end
                 end
             end
@@ -166,9 +178,9 @@ function convert_to_avif --description '将图片和视频转换为 AVIF 格式'
     # 处理输入参数
     for input in $argv
         if test -f "$input"
-            convert_single_file "$input"
+            convert_single_file "$input" "$output_dir" "$quality"
         else if test -d "$input"
-            process_directory "$input"
+            process_directory "$input" "$output_dir" "$quality"
         else
             echo "警告: 跳过不存在的文件或目录: $input"
         end
