@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
-import { encode } from 'libavif-wasm'
 import {
   QuestionCircleOutlined,
   DownOutlined,
@@ -10,6 +9,7 @@ import {
 
 import type { OptionsInject } from '../types'
 import ImageCropper from '../components/ImageCropper.vue'
+import FileUploader from '../components/FileUploader.vue'
 
 import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
@@ -19,9 +19,6 @@ const { emojiStore, openEditEmoji } = options
 
 // State
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
-const convertToAvif = ref(false)
-const avifQuality = ref(50)
-const avifSpeed = ref(6)
 const selectedFiles = ref<{ file: File; url: string; width?: number; height?: number }[]>([])
 const isUploading = ref(false)
 const uploadProgress = ref<
@@ -45,6 +42,17 @@ const targetGroupId = ref('')
 const showCreateGroupDialog = ref(false)
 const newGroupName = ref('')
 const newGroupIcon = ref('')
+
+// 过滤器相关状态
+const enableFilter = ref(false)
+const selectedFilterGroups = ref<
+  Array<{ id: string; name: string; icon: string; emojiNames: Set<string> }>
+>([])
+const duplicateCheckResults = ref<Array<{ name: string; existingGroups: string[] }>>([])
+const showDuplicateResults = ref(false)
+const isCheckingDuplicates = ref(false)
+const selectedGroupIdForFilter = ref('')
+const showGroupSelector = ref(false)
 // Computed
 const bufferGroup = computed(() =>
   emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
@@ -54,6 +62,22 @@ const bufferGroup = computed(() =>
 const availableGroups = computed(
   () => emojiStore.groups.filter((g: EmojiGroup) => g.id !== 'buffer') || []
 )
+
+// 可用于过滤的分组列表
+const filterableGroups = computed(() => {
+  return emojiStore.groups.filter(
+    g =>
+      g.id !== 'buffer' &&
+      g.id !== 'favorites' &&
+      g.emojis.length > 0 &&
+      !selectedFilterGroups.value.some(fg => fg.id === g.id)
+  )
+})
+
+// 分组选择器的过滤选项
+const filterOption = (input: string, option: any) => {
+  return option.label.toLowerCase().includes(input.toLowerCase())
+}
 
 // 全选状态
 const totalCount = computed(() => bufferGroup.value?.emojis?.length || 0)
@@ -102,24 +126,6 @@ watch(
 )
 
 // Methods
-const hasAlpha = (data: Uint8ClampedArray) => {
-  for (let i = 3; i < data.length; i += 4) {
-    if (data[i] < 255) return true
-  }
-  return false
-}
-
-const removeAlphaChannel = (data: Uint8ClampedArray) => {
-  const newData = new Uint8Array((data.length / 4) * 3)
-  let j = 0
-  for (let i = 0; i < data.length; i += 4) {
-    newData[j++] = data[i]
-    newData[j++] = data[i + 1]
-    newData[j++] = data[i + 2]
-  }
-  return newData
-}
-
 const getWaitProgress = (progressItem: any) => {
   if (!progressItem.waitingFor || !progressItem.waitStart) {
     return { percent: 0, remaining: 0 }
@@ -130,120 +136,36 @@ const getWaitProgress = (progressItem: any) => {
   return { percent: 100 - percent, remaining: Math.ceil(remaining) }
 }
 
-const convertImageToAvif = async (file: File): Promise<File> => {
-  try {
-    const imageBitmap = await createImageBitmap(file)
-
-    if (imageBitmap.width === 0 || imageBitmap.height === 0) {
-      throw new Error('Image has zero dimensions, skipping AVIF conversion.')
-    }
-
-    const canvas = document.createElement('canvas')
-    canvas.width = imageBitmap.width
-    canvas.height = imageBitmap.height
-    const ctx = canvas.getContext('2d', { colorSpace: 'srgb' })
-    if (!ctx) throw new Error('Could not get canvas context')
-
-    ctx.drawImage(imageBitmap, 0, 0)
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-
-    const isTransparent = hasAlpha(imageData.data)
-
-    console.log('[AVIF Conversion]', {
-      name: file.name,
-      width: imageData.width,
-      height: imageData.height,
-      hasAlpha: isTransparent
-    })
-
-    // 1. Try native browser AVIF encoding first (much faster and more stable)
-    try {
-      const nativeBlob = await new Promise<Blob | null>(resolve => {
-        canvas.toBlob(
-          blob => {
-            if (blob && blob.type === 'image/avif') {
-              resolve(blob)
-            } else {
-              resolve(null) // Browser doesn't support AVIF encoding
-            }
-          },
-          'image/avif',
-          avifQuality.value / 100
-        )
-      })
-
-      if (nativeBlob) {
-        console.log('[AVIF Conversion] Used native browser encoder')
-        const newFileName = file.name.substring(0, file.name.lastIndexOf('.')) + '.avif'
-        return new File([nativeBlob], newFileName, { type: 'image/avif' })
-      }
-    } catch (e) {
-      console.warn('[AVIF Conversion] Native encoding failed, falling back to WASM', e)
-    }
-
-    // 2. Fallback to libavif-wasm
-    console.log('[AVIF Conversion] Falling back to WASM encoder')
-    let encodeData: Uint8Array
-    let channels: number
-
-    if (isTransparent) {
-      encodeData = new Uint8Array(imageData.data)
-      channels = 4
-    } else {
-      encodeData = removeAlphaChannel(imageData.data)
-      channels = 3
-    }
-
-    // Map 0-100 quality to 63-0 quantizer (approximate)
-    // 100 -> 0 (Lossless/High)
-    // 0 -> 63 (Low quality)
-    const targetQuantizer = Math.round(63 * (1 - avifQuality.value / 100))
-    // Create a small range around the target
-    const minQ = Math.max(0, targetQuantizer - 5)
-    const maxQ = Math.min(63, targetQuantizer + 5)
-
-    const avifBuffer = await encode(encodeData, imageData.width, imageData.height, channels, {
-      maxThreads: 1,
-      speed: avifSpeed.value,
-      avifPixelFormat: 3, // YUV420
-      minQuantizer: minQ,
-      maxQuantizer: maxQ,
-      minQuantizerAlpha: minQ,
-      maxQuantizerAlpha: maxQ
-    })
-    if (!avifBuffer) throw new Error('AVIF encoding failed')
-
-    const avifBlob = new Blob([avifBuffer.slice().buffer], { type: 'image/avif' })
-    const newFileName = file.name.substring(0, file.name.lastIndexOf('.')) + '.avif'
-    return new File([avifBlob], newFileName, { type: 'image/avif' })
-  } catch (error) {
-    console.error('Failed to convert image to AVIF:', error)
-    // Return original file if conversion fails
-    return file
-  }
-}
-
-const beforeUpload = (_file: File, fileList: File[]) => {
-  addFiles(fileList)
-  return false // 阻止 antdv 的默认上传行为
-}
-
 const addFiles = async (files: File[]) => {
-  let imageFiles = files.filter(file => file.type.startsWith('image/'))
+  const imageFiles = files.filter(file => file.type.startsWith('image/'))
 
-  if (convertToAvif.value) {
-    try {
-      imageFiles = await Promise.all(imageFiles.map(file => convertImageToAvif(file)))
-    } catch (error) {
-      console.error('An error occurred during AVIF conversion:', error)
-      // Fallback to original files if conversion fails
-    }
-  }
-
-  // Filter out existing files
+  // Filter out existing files from buffer group
   const existingNames = bufferGroup.value?.emojis.map(e => e.name) || []
+
+  // Filter out existing files from current selection (remove extension for comparison)
+  const existingFileNames = new Set(
+    selectedFiles.value.map(item => item.file.name.replace(/\.[^/.]+$/, '').toLowerCase())
+  )
+
   const newFiles = imageFiles
-    .filter(file => !existingNames.includes(file.name))
+    .filter(file => {
+      const fileName = file.name
+      const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, '')
+
+      // Check if file already exists in buffer group
+      if (existingNames.includes(fileName)) {
+        console.log(`[BufferPage] Skipped ${fileName}: already exists in buffer group`)
+        return false
+      }
+
+      // Check if file already exists in current selection
+      if (existingFileNames.has(fileNameWithoutExt.toLowerCase())) {
+        console.log(`[BufferPage] Skipped ${fileName}: duplicate in current selection`)
+        return false
+      }
+
+      return true
+    })
     .map(file => {
       const url = URL.createObjectURL(file)
       const newFileEntry = { file, url, width: 0, height: 0 }
@@ -260,6 +182,13 @@ const addFiles = async (files: File[]) => {
     })
 
   selectedFiles.value = [...selectedFiles.value, ...newFiles]
+
+  // 如果启用了过滤器，自动检测重复项
+  if (enableFilter.value && selectedFilterGroups.value.length > 0) {
+    setTimeout(() => {
+      filterDuplicateFiles()
+    }, 1000) // 延迟执行，确保图片加载完成
+  }
 }
 
 // 图片切割相关方法
@@ -276,11 +205,27 @@ const closeImageCropper = () => {
 const handleCroppedEmojis = async (croppedEmojis: any[]) => {
   try {
     const newFilesWithUrls: any[] = []
+
+    // Get existing names from current selection (remove extension for comparison)
+    const existingFileNames = new Set(
+      selectedFiles.value.map(item => item.file.name.replace(/\.[^/.]+$/, '').toLowerCase())
+    )
+
     for (const croppedEmoji of croppedEmojis) {
       // Convert base64 to Blob
       const response = await fetch(croppedEmoji.imageUrl)
       const blob = await response.blob()
       const file = new File([blob], `${croppedEmoji.name}.png`, { type: 'image/png' })
+
+      // Check if cropped file already exists in current selection
+      const fileNameWithoutExt = croppedEmoji.name.toLowerCase()
+      if (existingFileNames.has(fileNameWithoutExt)) {
+        console.log(
+          `[BufferPage] Skipped cropped file ${croppedEmoji.name}: duplicate in current selection`
+        )
+        continue
+      }
+
       const url = URL.createObjectURL(file)
 
       // Get image dimensions
@@ -484,6 +429,144 @@ const cancelCreateGroup = () => {
   targetGroupId.value = ''
 }
 
+// 重复检测相关方法
+const checkDuplicatesAgainstFilters = async () => {
+  if (!enableFilter.value || selectedFilterGroups.value.length === 0) return
+
+  isCheckingDuplicates.value = true
+  duplicateCheckResults.value = []
+  showDuplicateResults.value = false
+
+  try {
+    // 收集所有过滤器分组中的表情名称（小写化以进行不区分大小写的比较）
+    const filterEmojiNames = new Set<string>()
+    const nameToGroupsMap = new Map<string, string[]>() // 名称到分组的映射
+
+    for (const filterGroup of selectedFilterGroups.value) {
+      for (const emojiName of filterGroup.emojiNames) {
+        const normalizedName = emojiName.toLowerCase()
+        filterEmojiNames.add(normalizedName)
+
+        if (!nameToGroupsMap.has(normalizedName)) {
+          nameToGroupsMap.set(normalizedName, [])
+        }
+        nameToGroupsMap.get(normalizedName)!.push(filterGroup.name)
+      }
+    }
+
+    // 检查缓冲区表情与过滤器表情的名称重复
+    const duplicates: Array<{ name: string; existingGroups: string[] }> = []
+    if (bufferGroup.value) {
+      for (const emoji of bufferGroup.value.emojis) {
+        const normalizedName = emoji.name.toLowerCase()
+        if (filterEmojiNames.has(normalizedName)) {
+          duplicates.push({
+            name: emoji.name,
+            existingGroups: nameToGroupsMap.get(normalizedName) || []
+          })
+        }
+      }
+    }
+
+    duplicateCheckResults.value = duplicates
+    showDuplicateResults.value = true
+
+    if (duplicates.length > 0) {
+      console.log(`[BufferPage] Found ${duplicates.length} duplicate names against filter groups`)
+    }
+  } catch (error) {
+    console.error('[BufferPage] Failed to check duplicates:', error)
+  } finally {
+    isCheckingDuplicates.value = false
+  }
+}
+
+// 过滤已选文件中的重复项
+const filterDuplicateFiles = async () => {
+  if (
+    !enableFilter.value ||
+    selectedFilterGroups.value.length === 0 ||
+    selectedFiles.value.length === 0
+  ) {
+    return
+  }
+
+  isCheckingDuplicates.value = true
+
+  try {
+    // 收集所有过滤器分组中的表情名称（小写化以进行不区分大小写的比较）
+    const filterEmojiNames = new Set<string>()
+    for (const filterGroup of selectedFilterGroups.value) {
+      for (const emojiName of filterGroup.emojiNames) {
+        filterEmojiNames.add(emojiName.toLowerCase())
+      }
+    }
+
+    // 过滤重复文件
+    const filteredFiles: typeof selectedFiles.value = []
+
+    for (const fileItem of selectedFiles.value) {
+      const fileName = fileItem.file.name.toLowerCase()
+      // 移除文件扩展名进行比较
+      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '')
+
+      if (!filterEmojiNames.has(nameWithoutExt)) {
+        filteredFiles.push(fileItem)
+      } else {
+        console.log(`[BufferPage] Filtered out duplicate file: ${fileItem.file.name}`)
+        URL.revokeObjectURL(fileItem.url) // 清理重复项的 URL
+      }
+    }
+
+    selectedFiles.value = filteredFiles
+
+    const filteredCount = selectedFiles.value.length - filteredFiles.length
+    if (filteredCount > 0) {
+      console.log(`[BufferPage] Filtered out ${filteredCount} duplicate files`)
+    }
+  } catch (error) {
+    console.error('[BufferPage] Failed to filter duplicate files:', error)
+  } finally {
+    isCheckingDuplicates.value = false
+  }
+}
+
+// 添加分组到过滤器
+const addGroupToFilter = () => {
+  if (!selectedGroupIdForFilter.value) return
+
+  const group = emojiStore.groups.find(g => g.id === selectedGroupIdForFilter.value)
+  if (!group) return
+
+  // 创建表情名称集合
+  const emojiNames = new Set<string>()
+  for (const emoji of group.emojis) {
+    emojiNames.add(emoji.name)
+  }
+
+  selectedFilterGroups.value.push({
+    id: group.id,
+    name: group.name,
+    icon: group.icon || '📁',
+    emojiNames
+  })
+
+  selectedGroupIdForFilter.value = ''
+  showGroupSelector.value = false
+
+  console.log(`[BufferPage] Added group "${group.name}" to filter with ${emojiNames.size} emojis`)
+}
+
+// 从过滤器中移除分组
+const removeGroupFromFilter = (groupId: string) => {
+  const index = selectedFilterGroups.value.findIndex(fg => fg.id === groupId)
+  if (index > -1) {
+    const removedGroup = selectedFilterGroups.value[index]
+    selectedFilterGroups.value.splice(index, 1)
+    console.log(`[BufferPage] Removed group "${removedGroup.name}" from filter`)
+  }
+}
+
 // 移动所有表情到未分组
 const moveAllToUngrouped = async () => {
   if (!bufferGroup.value || bufferGroup.value.emojis.length === 0) return
@@ -571,18 +654,6 @@ const uploadFiles = async () => {
       const { file, width, height } = selectedFiles.value[i]
 
       try {
-        let fileToUpload = file
-        if (convertToAvif.value) {
-          try {
-            fileToUpload = await convertImageToAvif(file)
-          } catch (conversionError) {
-            console.error(
-              `Failed to convert ${file.name} to AVIF, uploading original file.`,
-              conversionError
-            )
-          }
-        }
-
         const updateProgress = (percent: number) => {
           uploadProgress.value[i].percent = percent
           if (uploadProgress.value[i].waitingFor) {
@@ -598,10 +669,10 @@ const uploadFiles = async () => {
           uploadProgress.value[i].waitStart = Date.now()
         }
 
-        const uploadUrl = await service.uploadFile(fileToUpload, updateProgress, onRateLimitWait)
+        const uploadUrl = await service.uploadFile(file, updateProgress, onRateLimitWait)
 
         newEmojis.push({
-          name: fileToUpload.name,
+          name: file.name,
           url: uploadUrl,
           displayUrl: uploadUrl,
           packet: 0,
@@ -688,70 +759,175 @@ onBeforeUnmount(() => {
     <!-- File Upload Area -->
     <div class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
       <h3 class="text-lg font-semibold dark:text-white mb-4">上传图片</h3>
-      <a-upload-dragger
-        name="file"
-        multiple
-        accept="image/*"
-        :before-upload="beforeUpload"
-        :show-upload-list="false"
-      >
-        <p class="ant-upload-drag-icon">
-          <InboxOutlined />
-        </p>
-        <p class="ant-upload-text">拖拽文件到此处或点击选择文件</p>
-        <p class="ant-upload-hint">支持批量选择，会自动过滤已存在的文件</p>
-      </a-upload-dragger>
 
-      <!-- AVIF Conversion Switch -->
-      <div class="mt-4 flex flex-col items-end">
-        <div class="flex items-center">
-          <label
-            for="avif-switch"
-            class="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-          >
-            转换为 AVIF 格式
-          </label>
-          <a-switch id="avif-switch" v-model:checked="convertToAvif" />
+      <!-- 重复过滤器设置 -->
+      <div
+        class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+      >
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center">
+            <a-checkbox v-model:checked="enableFilter" class="mr-2">
+              <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
+                启用重复过滤器
+              </span>
+            </a-checkbox>
+            <a-tooltip title="选择表情分组作为过滤器，按名称过滤重复的图片">
+              <QuestionCircleOutlined class="text-gray-400" />
+            </a-tooltip>
+          </div>
         </div>
 
-        <!-- AVIF Settings -->
-        <div
-          v-if="convertToAvif"
-          class="mt-4 w-full p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 transition-all duration-300"
-        >
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Quality Control -->
-            <div>
-              <div class="flex justify-between mb-2">
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  压缩质量 ({{ avifQuality }}%)
-                </label>
+        <div v-if="enableFilter" class="space-y-3">
+          <!-- 已选择的过滤器分组 -->
+          <div v-if="selectedFilterGroups.length > 0">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              过滤器分组
+            </label>
+            <div class="space-y-2">
+              <div
+                v-for="filterGroup in selectedFilterGroups"
+                :key="filterGroup.id"
+                class="flex items-center justify-between p-2 bg-white dark:bg-gray-600 rounded border border-gray-200 dark:border-gray-500"
+              >
+                <div class="flex items-center">
+                  <img
+                    v-if="
+                      filterGroup.icon &&
+                      (filterGroup.icon.startsWith('http') || filterGroup.icon.startsWith('data:'))
+                    "
+                    :src="filterGroup.icon"
+                    class="w-4 h-4 mr-2"
+                  />
+                  <span v-else class="mr-2">{{ filterGroup.icon }}</span>
+                  <span class="text-sm font-medium">{{ filterGroup.name }}</span>
+                  <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                    ({{ filterGroup.emojiNames.size }} 个表情)
+                  </span>
+                </div>
+                <a-button
+                  type="text"
+                  size="small"
+                  danger
+                  @click="removeGroupFromFilter(filterGroup.id)"
+                  title="移除分组"
+                >
+                  移除
+                </a-button>
               </div>
-              <a-slider v-model:value="avifQuality" :min="1" :max="100" />
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                值越小文件越小。推荐 30-50 以获得比 JPEG 更好的压缩率。
-              </p>
             </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              共 {{ selectedFilterGroups.length }} 个分组，{{
+                selectedFilterGroups.reduce((sum, g) => sum + g.emojiNames.size, 0)
+              }}
+              个表情
+            </p>
+          </div>
 
-            <!-- Speed Control -->
-            <div>
-              <div class="flex justify-between mb-2">
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  编码速度 ({{ avifSpeed }})
-                </label>
-              </div>
-              <a-slider v-model:value="avifSpeed" :min="0" :max="10" />
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                0 (最慢/最小) - 10 (最快/最大)。推荐 6 平衡速度与体积。
-              </p>
+          <!-- 添加分组按钮 -->
+          <div class="flex items-center gap-2">
+            <a-button
+              type="dashed"
+              size="small"
+              @click="showGroupSelector = true"
+              :disabled="filterableGroups.length === 0"
+            >
+              <template #icon>
+                <span>+</span>
+              </template>
+              添加分组到过滤器
+            </a-button>
+            <span v-if="filterableGroups.length === 0" class="text-xs text-gray-500">
+              没有可用的分组
+            </span>
+          </div>
+
+          <!-- 分组选择器模态框 -->
+          <a-modal
+            v-model:open="showGroupSelector"
+            title="选择要添加到过滤器的分组"
+            @ok="addGroupToFilter"
+            @cancel="
+              () => {
+                showGroupSelector = false
+                selectedGroupIdForFilter = ''
+              }
+            "
+            ok-text="添加"
+            cancel-text="取消"
+            :ok-button-props="{ disabled: !selectedGroupIdForFilter }"
+          >
+            <div class="py-2">
+              <a-select
+                v-model:value="selectedGroupIdForFilter"
+                showSearch
+                placeholder="搜索并选择分组"
+                class="w-full"
+                :filterOption="filterOption"
+              >
+                <a-select-option
+                  v-for="g in filterableGroups"
+                  :key="g.id"
+                  :value="g.id"
+                  :label="g.name"
+                >
+                  <div class="flex items-center">
+                    <img
+                      v-if="g.icon && (g.icon.startsWith('http') || g.icon.startsWith('data:'))"
+                      :src="g.icon"
+                      class="w-4 h-4 inline-block mr-2"
+                    />
+                    <span v-else class="inline-block mr-2">{{ g.icon || '📁' }}</span>
+                    {{ g.name }}
+                    <span class="ml-2 text-xs text-gray-500">({{ g.emojis.length }} 个表情)</span>
+                  </div>
+                </a-select-option>
+              </a-select>
             </div>
+          </a-modal>
+
+          <!-- 手动检测重复项按钮 -->
+          <div class="flex items-center gap-2">
+            <a-button
+              type="default"
+              size="small"
+              :loading="isCheckingDuplicates"
+              :disabled="selectedFilterGroups.length === 0"
+              @click="checkDuplicatesAgainstFilters"
+            >
+              {{ isCheckingDuplicates ? '检测中...' : '检测重复项' }}
+            </a-button>
+            <span
+              v-if="duplicateCheckResults.length > 0"
+              class="text-sm text-gray-600 dark:text-gray-400"
+            >
+              找到 {{ duplicateCheckResults.length }} 个重复名称
+            </span>
           </div>
         </div>
       </div>
 
+      <!-- 自定义文件上传区域 -->
+      <FileUploader @filesSelected="addFiles" />
+
       <!-- File List -->
       <div v-if="selectedFiles.length > 0" class="mt-4">
-        <h4 class="font-medium dark:text-white mb-2">待上传文件：</h4>
+        <div class="flex justify-between items-center mb-2">
+          <h4 class="font-medium dark:text-white">待上传文件：</h4>
+          <div
+            v-if="enableFilter && selectedFilterGroups.length > 0"
+            class="flex items-center gap-2"
+          >
+            <a-button
+              type="default"
+              size="small"
+              :loading="isCheckingDuplicates"
+              @click="filterDuplicateFiles"
+              title="过滤重复文件"
+            >
+              {{ isCheckingDuplicates ? '过滤中...' : '过滤重复文件' }}
+            </a-button>
+          </div>
+        </div>
         <ul class="space-y-2">
           <li
             v-for="(item, index) in selectedFiles"
@@ -782,7 +958,7 @@ onBeforeUnmount(() => {
         <a-button
           type="primary"
           @click="uploadFiles"
-          :disabled="selectedFiles.length === 0 || isUploading"
+          :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates"
           :loading="isUploading"
         >
           {{ isUploading ? '上传中...' : `上传 ${selectedFiles.length} 个文件` }}
@@ -829,6 +1005,33 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 重复检测结果 -->
+    <div
+      v-if="showDuplicateResults && duplicateCheckResults.length > 0"
+      class="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow border border-yellow-200 dark:border-yellow-800"
+    >
+      <h3 class="text-lg font-semibold dark:text-white mb-4">重复名称检测</h3>
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+        <div
+          v-for="(duplicate, index) in duplicateCheckResults"
+          :key="index"
+          class="flex items-center justify-between p-2 bg-yellow-100 dark:bg-yellow-900/40 rounded border border-yellow-300 dark:border-yellow-700"
+        >
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-medium text-gray-700 dark:text-white">
+              {{ duplicate.name }}
+            </span>
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+              已存在于：{{ duplicate.existingGroups.join(', ') }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <p class="text-xs text-gray-600 dark:text-gray-400 mt-3">
+        以上是缓冲区中与过滤器分组重复的表情名称。新上传的相同名称文件将被自动过滤。
+      </p>
     </div>
 
     <!-- Buffer Group Emojis -->
