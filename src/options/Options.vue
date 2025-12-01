@@ -6,12 +6,12 @@ import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
 
 import ImportConfigModal from './modals/ImportConfigModal.vue'
 import ImportEmojisModal from './modals/ImportEmojisModal.vue'
-import CreateGroupModal from './modals/CreateGroupModal.vue'
+import CreateGroupModal from './components/CreateGroupModal.vue'
 import AddEmojiModal from './modals/AddEmojiModal.vue'
 import ConfirmGenericModal from './modals/ConfirmGenericModal.vue'
 import NotificationToasts from './components/NotificationToasts.vue'
 import EditEmojiModal from './modals/EditEmojiModal.vue'
-import EditGroupModal from './modals/EditGroupModal.vue'
+import EditGroupModal from './components/EditGroupModal.vue'
 // composable
 import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
@@ -395,7 +395,7 @@ const handleSaveGroup = (
       </main>
 
       <!-- Create Group and Add Emoji modals extracted into components -->
-      <CreateGroupModal v-model:show="showCreateGroupModal" @created="onGroupCreated" />
+      <CreateGroupModal v-model:visible="showCreateGroupModal" @create="onGroupCreated" />
 
       <AddEmojiModal
         v-model:show="showAddEmojiModal"
@@ -405,14 +405,12 @@ const handleSaveGroup = (
       />
 
       <EditGroupModal
-        v-model:show="showEditGroupModal"
-        :editingGroupId="editingGroupId"
-        :initialName="editGroupName"
-        :initialIcon="editGroupIcon"
-        :initialDetail="editGroupDetail"
-        :isImageUrl="options.isImageUrl"
+        v-model:visible="showEditGroupModal"
+        :group-id="editingGroupId"
+        :initial-name="editGroupName"
+        :initial-icon="editGroupIcon"
+        :initial-detail="editGroupDetail"
         @save="handleSaveGroup"
-        @imageError="handleImageError"
       />
 
       <!-- Import modals (components) -->

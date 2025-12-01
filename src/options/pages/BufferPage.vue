@@ -12,6 +12,7 @@ import ImageCropper from '../components/ImageCropper.vue'
 import FileUploader from '../components/FileUploader.vue'
 import FileListDisplay from '../components/FileListDisplay.vue'
 import GroupSelector from '../components/GroupSelector.vue'
+import CreateGroupModal from '../components/CreateGroupModal.vue'
 
 import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
@@ -54,8 +55,6 @@ const isMultiSelectMode = ref(false)
 const selectedEmojis = ref(new Set<number>())
 const targetGroupId = ref('')
 const showCreateGroupDialog = ref(false)
-const newGroupName = ref('')
-const newGroupIcon = ref('')
 
 // 过滤器相关状态
 const enableFilter = ref(false)
@@ -428,20 +427,19 @@ const copySelectedAsMarkdown = async () => {
 }
 
 // 确认创建新分组
-const confirmCreateGroup = async () => {
-  if (!newGroupName.value.trim()) return
-
+const handleCreateGroup = async (data: { name: string; icon: string; detail: string }) => {
   try {
     // 创建新分组
-    const newGroup = emojiStore.createGroup(newGroupName.value.trim(), newGroupIcon.value || '📁')
+    const newGroup = emojiStore.createGroup(data.name, data.icon)
 
-    // 设置目标分组 ID 并关闭对话框
+    // 如果有详细信息，可以在这里保存（需要扩展 emojiStore 的 createGroup 方法）
+    if (data.detail) {
+      // TODO: 保存详细信息到分组
+      console.log('Group detail:', data.detail)
+    }
+
+    // 设置目标分组 ID
     targetGroupId.value = newGroup.id
-    showCreateGroupDialog.value = false
-
-    // 重置表单
-    newGroupName.value = ''
-    newGroupIcon.value = ''
 
     // 立即执行移动操作
     await moveSelectedEmojis()
@@ -453,9 +451,6 @@ const confirmCreateGroup = async () => {
 // 取消创建分组
 const cancelCreateGroup = () => {
   showCreateGroupDialog.value = false
-  newGroupName.value = ''
-  newGroupIcon.value = ''
-  targetGroupId.value = ''
 }
 
 // 过滤已选文件中的重复项
@@ -971,11 +966,7 @@ onBeforeUnmount(() => {
                 >
                   移动
                 </a-button>
-                <a-button
-                  @click="showCreateGroupDialog = true"
-                  size="small"
-                  title="创建新分组"
-                >
+                <a-button @click="showCreateGroupDialog = true" size="small" title="创建新分组">
                   + 新建
                 </a-button>
                 <a-button
@@ -1088,34 +1079,7 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- 创建新分组对话框 -->
-    <a-modal
-      v-model:open="showCreateGroupDialog"
-      title="创建新分组"
-      @ok="confirmCreateGroup"
-      @cancel="cancelCreateGroup"
-      :ok-button-props="{ disabled: !newGroupName.trim() }"
-      cancel-text="取消"
-      ok-text="创建"
-    >
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-            分组名称
-          </label>
-          <AInput
-            v-model:value="newGroupName"
-            placeholder="输入分组名称"
-            @press-enter="confirmCreateGroup"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-            分组图标
-          </label>
-          <AInput v-model:value="newGroupIcon" placeholder="输入图标 URL 或 emoji" />
-        </div>
-      </div>
-    </a-modal>
+    <CreateGroupModal v-model:visible="showCreateGroupDialog" @create="handleCreateGroup" />
 
     <!-- 图片切割器 -->
     <ImageCropper

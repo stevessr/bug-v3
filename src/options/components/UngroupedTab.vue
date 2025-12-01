@@ -7,6 +7,7 @@ import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 
 import GroupSelector from './GroupSelector.vue'
+import CreateGroupModal from './CreateGroupModal.vue'
 
 defineEmits(['remove', 'edit', 'addEmoji'])
 
@@ -54,8 +55,6 @@ const onTargetGroupSelect = (info: { key: string | number }) => {
   targetGroupId.value = String(info.key)
 }
 const showCreateGroupDialog = ref(false)
-const newGroupName = ref('')
-const newGroupIcon = ref('')
 const copyButtonLabel = ref('复制为 markdown')
 
 const ungroup = computed(() => emojiStore.groups.find((g: EmojiGroup) => g.id === 'ungrouped'))
@@ -310,20 +309,19 @@ const copySelectedAsMarkdown = async () => {
 void copySelectedAsMarkdown
 
 // 确认创建新分组
-const confirmCreateGroup = async () => {
-  if (!newGroupName.value.trim()) return
-
+const handleCreateGroup = async (data: { name: string; icon: string; detail: string }) => {
   try {
     // 创建新分组
-    const newGroup = emojiStore.createGroup(newGroupName.value.trim(), newGroupIcon.value || '📁')
+    const newGroup = emojiStore.createGroup(data.name, data.icon)
 
-    // 设置目标分组 ID 并关闭对话框
+    // 如果有详细信息，可以在这里保存（需要扩展 emojiStore 的 createGroup 方法）
+    if (data.detail) {
+      // TODO: 保存详细信息到分组
+      console.log('Group detail:', data.detail)
+    }
+
+    // 设置目标分组 ID
     targetGroupId.value = newGroup.id
-    showCreateGroupDialog.value = false
-
-    // 重置表单
-    newGroupName.value = ''
-    newGroupIcon.value = ''
 
     // 立即执行移动操作
     await moveSelectedEmojis()
@@ -335,9 +333,6 @@ const confirmCreateGroup = async () => {
 // 取消创建分组
 const cancelCreateGroup = () => {
   showCreateGroupDialog.value = false
-  newGroupName.value = ''
-  newGroupIcon.value = ''
-  targetGroupId.value = ''
 }
 </script>
 
@@ -512,58 +507,7 @@ const cancelCreateGroup = () => {
     </div>
 
     <!-- 创建新分组对话框 -->
-    <div
-      v-if="showCreateGroupDialog"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    >
-      <div class="bg-white rounded-lg p-6 w-96">
-        <h3 class="text-lg font-semibold mb-4 dark:text-white">创建新分组</h3>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-              分组名称
-            </label>
-            <input
-              v-model="newGroupName"
-              type="text"
-              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-              placeholder="输入分组名称"
-              title="新分组名称"
-              @keyup.enter="confirmCreateGroup"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-              分组图标
-            </label>
-            <input
-              v-model="newGroupIcon"
-              type="text"
-              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-              placeholder="输入图标 URL 或 emoji"
-              title="新分组图标 URL 或 emoji"
-            />
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 mt-6">
-          <a-button
-            @click="cancelCreateGroup"
-            class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-            title="取消创建新分组"
-          >
-            取消
-          </a-button>
-          <a-button
-            @click="confirmCreateGroup"
-            :disabled="!newGroupName.trim()"
-            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            title="确认创建新分组"
-          >
-            创建
-          </a-button>
-        </div>
-      </div>
-    </div>
+    <CreateGroupModal v-model:visible="showCreateGroupDialog" @create="handleCreateGroup" />
   </div>
 </template>
 

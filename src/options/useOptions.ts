@@ -863,10 +863,11 @@ export default function useOptions() {
       'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCI...'
   }
 
-  const onGroupCreated = () => {
+  const onGroupCreated = (data: { name: string; icon: string; detail: string }) => {
     showSuccess('分组创建成功')
-    if (emojiStore.groups.length > 0) {
-      // debug: group created
+    if (data.detail) {
+      // TODO: 保存详细信息到分组
+      console.log('Group detail created:', data.detail)
     }
   }
 
