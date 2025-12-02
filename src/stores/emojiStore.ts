@@ -578,9 +578,6 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const { optimizedHashService } = await import('@/utils/optimizedHashService')
       await optimizedHashService.initializeWorkers()
 
-      // Import similarity check function from legacy service
-      const { areSimilarImages } = await import('@/utils/legacyHashService')
-
       // Collect all emojis with their URLs
       const allEmojis: Array<{ emoji: Emoji; groupId: string; groupName: string }> = []
       const emojiUrls: string[] = []
@@ -606,30 +603,27 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       if (emojiUrls.length > 0) {
         console.log(`[EmojiStore] Calculating hashes for ${emojiUrls.length} emojis...`)
 
-        const hashResults = await optimizedHashService.calculateBatchHashes(
-          emojiUrls,
-          {
-            useCache: true,
-            batchSize: 20,
-            quality: 'medium',
-            onProgress: (processed, total) => {
-              // Map progress back to the original progress callback format
-              const processedEmoji = allEmojis.find(e => e.emoji.url === emojiUrls[processed - 1])
-              if (processedEmoji && onProgress) {
-                const group = groups.value.find(g => g.id === processedEmoji.groupId)
-                const groupTotal = group ? group.emojis.length : 0
-                onProgress({
-                  total: totalEmojis,
-                  processed: processed, // This is hash calculation progress
-                  group: processedEmoji.groupName,
-                  emojiName: processedEmoji.emoji.name,
-                  groupTotal,
-                  groupProcessed: group.emojis.findIndex(e => e.id === processedEmoji.emoji.id) + 1
-                })
-              }
+        const hashResults = await optimizedHashService.calculateBatchHashes(emojiUrls, {
+          useCache: true,
+          batchSize: 20,
+          quality: 'medium',
+          onProgress: (processed, total) => {
+            // Map progress back to the original progress callback format
+            const processedEmoji = allEmojis.find(e => e.emoji.url === emojiUrls[processed - 1])
+            if (processedEmoji && onProgress) {
+              const group = groups.value.find(g => g.id === processedEmoji.groupId)
+              const groupTotal = group ? group.emojis.length : 0
+              onProgress({
+                total: totalEmojis,
+                processed: processed, // This is hash calculation progress
+                group: processedEmoji.groupName,
+                emojiName: processedEmoji.emoji.name,
+                groupTotal,
+                groupProcessed: group.emojis.findIndex(e => e.id === processedEmoji.emoji.id) + 1
+              })
             }
           }
-        )
+        })
 
         // Update emojis with calculated hashes
         for (const result of hashResults) {
@@ -660,14 +654,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         const duplicates: Array<(typeof allEmojis)[0]> = [item1]
         processed.add(item1.emoji.id)
 
-        // Compare with remaining items
+        // Compare with remaining items using Hamming distance
         for (let j = i + 1; j < allHashes.length; j++) {
           const { item: item2, hash: hash2 } = allHashes[j]
           if (processed.has(item2.emoji.id)) continue
 
           if (
             item1.emoji.id !== item2.emoji.id &&
-            areSimilarImages(hash1, hash2, similarityThreshold)
+            optimizedHashService.hammingDistance(hash1, hash2) <= similarityThreshold
           ) {
             duplicates.push(item2)
             processed.add(item2.emoji.id)

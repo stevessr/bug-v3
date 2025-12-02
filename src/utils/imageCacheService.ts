@@ -51,7 +51,7 @@ export class ImageCacheService {
         resolve()
       }
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = event => {
         const db = (event.target as IDBOpenDBRequest).result
 
         if (!db.objectStoreNames.contains(this.STORE_NAME)) {

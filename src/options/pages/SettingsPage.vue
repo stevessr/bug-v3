@@ -897,8 +897,8 @@ const formatDate = (timestamp: number | string | undefined): string => {
                       syncDirection === 'push'
                         ? '⬆️ 推送中'
                         : syncDirection === 'pull'
-                        ? '⬇️ 拉取中'
-                        : '🔄 同步中'
+                          ? '⬇️ 拉取中'
+                          : '🔄 同步中'
                     }}
                   </span>
                   <span class="text-sm font-semibold dark:text-white">
@@ -1070,7 +1070,7 @@ const formatDate = (timestamp: number | string | undefined): string => {
                   >
                     {{ group.name.charAt(0).toUpperCase() }}
                   </div>
-                    <div class="font-medium text-gray-800 dark:text白">{{ group.name }}</div>
+                  <div class="font-medium text-gray-800 dark:text白">{{ group.name }}</div>
                 </div>
                 <div class="flex items-center space-x-2">
                   <div class="text-blue-500 dark:text-blue-400">
@@ -1114,10 +1114,10 @@ const formatDate = (timestamp: number | string | undefined): string => {
                     syncType === 'cloudflare'
                       ? 'Cloudflare'
                       : syncType === 'webdav'
-                      ? 'WebDAV'
-                      : syncType === 's3'
-                      ? 'S3'
-                      : '未知'
+                        ? 'WebDAV'
+                        : syncType === 's3'
+                          ? 'S3'
+                          : '未知'
                   }}
                 </div>
               </div>

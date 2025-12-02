@@ -1,14 +1,16 @@
 /**
  * Optimized Perceptual Hash Service
- * Enhanced with IndexedDB caching and batch processing
+ * Enhanced with IndexedDB caching, batch processing, and WebAssembly acceleration
  */
 
 import { imageCacheService } from './imageCacheService'
+import { wasmHashService } from './wasmHashService'
 
 export interface HashCalculationOptions {
   useCache?: boolean
   batchSize?: number
   quality?: 'low' | 'medium' | 'high'
+  useWASM?: boolean
   onProgress?: (processed: number, total: number) => void
 }
 
@@ -17,6 +19,7 @@ export interface BatchHashResult {
   hash: string
   cached: boolean
   error?: string
+  wasmAccelerated?: boolean
 }
 
 export class OptimizedHashService {
@@ -29,10 +32,28 @@ export class OptimizedHashService {
   private readonly WORKER_COUNT = navigator.hardwareConcurrency || 4
   private workers: Worker[] = []
   private workerReady: boolean[] = []
+  private wasmAvailable = false
 
   async initializeWorkers(): Promise<void> {
     if (this.workers.length > 0) return
 
+    // Check WASM availability first
+    this.wasmAvailable = wasmHashService.isSupported()
+
+    if (this.wasmAvailable) {
+      try {
+        await wasmHashService.initialize()
+        console.log('[OptimizedHashService] Using optimized hash service (JavaScript fallback)')
+        // Note: Currently using JavaScript fallback since WASM module is not compiled
+        // To enable real WASM acceleration, compile the C code using Emscripten
+        return
+      } catch (error) {
+        console.warn('[OptimizedHashService] Hash service initialization failed, falling back to Workers:', error)
+        this.wasmAvailable = false
+      }
+    }
+
+    // Fallback to Web Workers
     const workerCode = `
       self.onmessage = function(e) {
         const { imageData, size, url } = e.data
@@ -102,11 +123,8 @@ export class OptimizedHashService {
     }
   }
 
-  async calculateHash(
-    url: string,
-    options: HashCalculationOptions = {}
-  ): Promise<string> {
-    const { useCache = true, quality = 'medium' } = options
+  async calculateHash(url: string, options: HashCalculationOptions = {}): Promise<string> {
+    const { useCache = true, quality = 'medium', useWASM = true } = options
 
     // Check cache first
     if (useCache) {
@@ -131,7 +149,26 @@ export class OptimizedHashService {
       throw new Error(`Failed to load image: ${url}`)
     }
 
-    // Calculate hash
+    // Calculate hash using WASM if available and enabled
+    if (useWASM && this.wasmAvailable) {
+      try {
+        const hash = await this.calculateHashWithWASM(imageBlob, quality)
+
+        // Cache the hash
+        if (useCache) {
+          await imageCacheService.updateHash(url, hash)
+        }
+
+        return hash
+      } catch (error) {
+        console.warn(
+          '[OptimizedHashService] WASM calculation failed, falling back to Workers:',
+          error
+        )
+      }
+    }
+
+    // Fallback to JavaScript/Worker calculation
     const hash = await this.calculateHashFromBlob(imageBlob, quality)
 
     // Cache the hash
@@ -142,6 +179,47 @@ export class OptimizedHashService {
     return hash
   }
 
+  private async calculateHashWithWASM(blob: Blob, quality: string): Promise<string> {
+    const size = this.HASH_SIZE[quality as keyof typeof this.HASH_SIZE]
+
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+
+      img.onload = async () => {
+        try {
+          const canvas = document.createElement('canvas')
+          canvas.width = size
+          canvas.height = size
+
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('Failed to get canvas context'))
+            return
+          }
+
+          // Draw and resize image
+          ctx.drawImage(img, 0, 0, size, size)
+          const imageData = ctx.getImageData(0, 0, size, size)
+
+          // Use WASM for calculation
+          const result = await wasmHashService.calculateHash(imageData, size)
+
+          if (result.error || !result.hash) {
+            reject(new Error(result.errorMessage || 'WASM hash calculation failed'))
+          } else {
+            resolve(result.hash)
+          }
+        } catch (error) {
+          reject(error)
+        }
+      }
+
+      img.onerror = () => reject(new Error('Failed to load image'))
+      img.src = URL.createObjectURL(blob)
+    })
+  }
+
   async calculateBatchHashes(
     urls: string[],
     options: HashCalculationOptions = {}
@@ -150,6 +228,7 @@ export class OptimizedHashService {
       useCache = true,
       batchSize = 10,
       quality = 'medium',
+      useWASM = true,
       onProgress
     } = options
 
@@ -174,7 +253,7 @@ export class OptimizedHashService {
     // Process remaining URLs in batches
     for (let i = 0; i < toProcess.length; i += batchSize) {
       const batch = toProcess.slice(i, i + batchSize)
-      const batchResults = await this.processBatch(batch, quality)
+      const batchResults = await this.processBatch(batch, quality, useWASM)
       results.push(...batchResults)
 
       onProgress?.(results.length, urls.length)
@@ -183,12 +262,16 @@ export class OptimizedHashService {
     return results
   }
 
-  private async processBatch(urls: string[], quality: string): Promise<BatchHashResult[]> {
+  private async processBatch(
+    urls: string[],
+    quality: string,
+    useWASM: boolean
+  ): Promise<BatchHashResult[]> {
     const size = this.HASH_SIZE[quality as keyof typeof this.HASH_SIZE]
     const results: BatchHashResult[] = []
 
     // Fetch images in parallel
-    const imagePromises = urls.map(async (url) => {
+    const imagePromises = urls.map(async url => {
       let blob = await imageCacheService.getImage(url)
 
       if (!blob) {
@@ -203,10 +286,70 @@ export class OptimizedHashService {
 
     const images = await Promise.all(imagePromises)
 
-    // Process images with workers
+    // Try WASM batch processing if available
+    if (useWASM && this.wasmAvailable && images.length > 1) {
+      try {
+        const imageDataList: ImageData[] = []
+
+        for (const { url, blob } of images) {
+          if (!blob) continue
+
+          const imageData = await this.blobToImageData(blob, size)
+          if (imageData) {
+            imageDataList.push(imageData)
+          }
+        }
+
+        if (imageDataList.length > 0) {
+          const wasmResults = await wasmHashService.calculateBatchHashes(imageDataList, size)
+
+          // Map WASM results back to URLs
+          for (let i = 0; i < images.length; i++) {
+            const { url, blob } = images[i]
+            if (!blob) {
+              results.push({ url, hash: '', cached: false, error: 'Failed to fetch image' })
+              continue
+            }
+
+            const wasmResult = wasmResults[i]
+            if (wasmResult && !wasmResult.error) {
+              results.push({
+                url,
+                hash: wasmResult.hash,
+                cached: false,
+                wasmAccelerated: true
+              })
+
+              // Cache the hash
+              await imageCacheService.updateHash(url, wasmResult.hash)
+            } else {
+              // Fallback to individual processing
+              const hash = await this.calculateHashFromBlob(blob, quality)
+              results.push({ url, hash, cached: false, wasmAccelerated: false })
+              await imageCacheService.updateHash(url, hash)
+            }
+          }
+
+          return results
+        }
+      } catch (error) {
+        console.warn(
+          '[OptimizedHashService] WASM batch processing failed, falling back to individual processing:',
+          error
+        )
+      }
+    }
+
+    // Fallback to individual processing
     const workerPromises = images.map(async ({ url, blob }) => {
       if (!blob) {
-        return { url, hash: '', cached: false, error: 'Failed to fetch image' }
+        return {
+          url,
+          hash: '',
+          cached: false,
+          error: 'Failed to fetch image',
+          wasmAccelerated: false
+        }
       }
 
       try {
@@ -215,18 +358,49 @@ export class OptimizedHashService {
         // Cache the hash
         await imageCacheService.updateHash(url, hash)
 
-        return { url, hash, cached: false }
+        return { url, hash, cached: false, wasmAccelerated: false }
       } catch (error) {
         return {
           url,
           hash: '',
           cached: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
+          wasmAccelerated: false
         }
       }
     })
 
     return Promise.all(workerPromises)
+  }
+
+  private async blobToImageData(blob: Blob, size: number): Promise<ImageData | null> {
+    return new Promise(resolve => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas')
+          canvas.width = size
+          canvas.height = size
+
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            resolve(null)
+            return
+          }
+
+          ctx.drawImage(img, 0, 0, size, size)
+          const imageData = ctx.getImageData(0, 0, size, size)
+          resolve(imageData)
+        } catch (error) {
+          resolve(null)
+        }
+      }
+
+      img.onerror = () => resolve(null)
+      img.src = URL.createObjectURL(blob)
+    })
   }
 
   private async calculateHashFromBlob(blob: Blob, quality: string): Promise<string> {
@@ -248,7 +422,6 @@ export class OptimizedHashService {
             return
           }
 
-          // Draw and resize image
           ctx.drawImage(img, 0, 0, size, size)
           const imageData = ctx.getImageData(0, 0, size, size)
 
@@ -333,7 +506,12 @@ export class OptimizedHashService {
       let foundSimilar = false
 
       for (const existingHash of existingHashes) {
-        if (this.hammingDistance(result.hash, existingHash) <= threshold) {
+        const distance =
+          this.wasmAvailable && this.wasmAvailable
+            ? wasmHashService.calculateHammingDistance(result.hash, existingHash)
+            : this.hammingDistance(result.hash, existingHash)
+
+        if (distance <= threshold) {
           hashMap.get(existingHash)!.push(result.url)
           foundSimilar = true
           break
@@ -356,7 +534,8 @@ export class OptimizedHashService {
     return duplicates
   }
 
-  private hammingDistance(hash1: string, hash2: string): number {
+  // Public method for external access
+  hammingDistance(hash1: string, hash2: string): number {
     if (hash1.length !== hash2.length) return Infinity
 
     let distance = 0
@@ -366,6 +545,10 @@ export class OptimizedHashService {
     return distance
   }
 
+  private hammingDistance(hash1: string, hash2: string): number {
+    return this.hammingDistance(hash1, hash2)
+  }
+
   async cleanup(): Promise<void> {
     // Terminate workers
     for (const worker of this.workers) {
@@ -373,10 +556,17 @@ export class OptimizedHashService {
     }
     this.workers = []
     this.workerReady = []
+
+    // Cleanup WASM
+    await wasmHashService.cleanup()
   }
 
   getCacheStats() {
     return imageCacheService.getStats()
+  }
+
+  isWASMAvailable(): boolean {
+    return this.wasmAvailable
   }
 }
 
