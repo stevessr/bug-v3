@@ -836,67 +836,17 @@ Generate a new name for this emoji in ${language}. Return only the name, nothing
 }
 
 /**
- * Calculate perceptual hash for an image (simplified version)
- * This is a placeholder - for production, use a library like pHash
+ * Calculate perceptual hash for an image
+ * @deprecated Use legacyHashService.calculatePerceptualHash() or optimizedHashService.calculateHash() instead
  */
 export async function calculatePerceptualHash(imageUrl: string): Promise<string> {
   try {
-    // Create an image element
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-
-    await new Promise((resolve, reject) => {
-      img.onload = resolve
-      img.onerror = reject
-      img.src = imageUrl
-    })
-
-    // Create canvas and get image data
-    const canvas = document.createElement('canvas')
-    const size = 32 // Small size for hash
-    canvas.width = size
-    canvas.height = size
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      throw new Error('Failed to get canvas context')
-    }
-
-    ctx.drawImage(img, 0, 0, size, size)
-    const imageData = ctx.getImageData(0, 0, size, size)
-
-    // Calculate average pixel value
-    let sum = 0
-    for (let i = 0; i < imageData.data.length; i += 4) {
-      const r = imageData.data[i]
-      const g = imageData.data[i + 1]
-      const b = imageData.data[i + 2]
-      sum += (r + g + b) / 3
-    }
-    const average = sum / (size * size)
-
-    // Create hash based on whether pixels are above or below average
-    let hash = ''
-    for (let i = 0; i < imageData.data.length; i += 4) {
-      const r = imageData.data[i]
-      const g = imageData.data[i + 1]
-      const b = imageData.data[i + 2]
-      const value = (r + g + b) / 3
-      hash += value > average ? '1' : '0'
-    }
-
-    // Convert binary to hex
-    let hexHash = ''
-    for (let i = 0; i < hash.length; i += 4) {
-      const chunk = hash.slice(i, i + 4)
-      hexHash += parseInt(chunk, 2).toString(16)
-    }
-
-    return hexHash
+    // Import the legacy service which redirects to optimized service
+    const { calculatePerceptualHash: legacyCalculateHash } = await import('./legacyHashService')
+    return await legacyCalculateHash(imageUrl)
   } catch (error) {
-    console.error('Error calculating perceptual hash:', error)
-    // Return a simple hash based on URL as fallback
-    return simpleStringHash(imageUrl)
+    console.error('Error in deprecated calculatePerceptualHash:', error)
+    throw error
   }
 }
 
@@ -915,6 +865,7 @@ function simpleStringHash(str: string): string {
 
 /**
  * Calculate Hamming distance between two hash strings
+ * @deprecated Use legacyHashService.hammingDistance() instead
  */
 export function hammingDistance(hash1: string, hash2: string): number {
   if (hash1.length !== hash2.length) {
@@ -936,6 +887,7 @@ export function hammingDistance(hash1: string, hash2: string): number {
  * @param hash2 Second image hash
  * @param threshold Maximum hamming distance to consider images similar (default: 10)
  * @returns true if images are similar
+ * @deprecated Use legacyHashService.areSimilarImages() instead
  */
 export function areSimilarImages(hash1: string, hash2: string, threshold = 10): boolean {
   const distance = hammingDistance(hash1, hash2)

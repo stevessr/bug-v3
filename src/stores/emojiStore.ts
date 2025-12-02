@@ -574,11 +574,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }) => void
   ) => {
     try {
-      const { areSimilarImages, calculatePerceptualHash } = await import('@/utils/geminiService')
+      // Initialize the optimized hash service for better performance
+      const { optimizedHashService } = await import('@/utils/optimizedHashService')
+      await optimizedHashService.initializeWorkers()
 
-      // Calculate hashes for all emojis that don't have one
+      // Import similarity check function from legacy service
+      const { areSimilarImages } = await import('@/utils/legacyHashService')
+
+      // Collect all emojis with their URLs
       const allEmojis: Array<{ emoji: Emoji; groupId: string; groupName: string }> = []
-      let totalEmojis = 0
+      const emojiUrls: string[] = []
+
       for (const group of groups.value) {
         if (group.id === 'favorites') continue // Ignore favorites group
         for (const emoji of group.emojis) {
@@ -587,70 +593,81 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
             groupId: group.id,
             groupName: group.name
           })
-          totalEmojis++
-        }
-      }
-
-      // Calculate missing hashes
-      console.log('[EmojiStore] Calculating perceptual hashes for emojis...')
-      let processedCount = 0
-      let groupProcessedCount = 0
-      let currentProcessingGroup = ''
-
-      for (const item of allEmojis) {
-        processedCount++
-
-        if (item.groupName !== currentProcessingGroup) {
-          currentProcessingGroup = item.groupName
-          groupProcessedCount = 0
-        }
-        groupProcessedCount++
-
-        if (onProgress) {
-          const group = groups.value.find(g => g.id === item.groupId)
-          const groupTotal = group ? group.emojis.length : 0
-          onProgress({
-            total: totalEmojis,
-            processed: processedCount,
-            group: item.groupName,
-            emojiName: item.emoji.name,
-            groupTotal,
-            groupProcessed: groupProcessedCount
-          })
-        }
-
-        if (!item.emoji.perceptualHash && item.emoji.url) {
-          try {
-            const hash = await calculatePerceptualHash(item.emoji.url)
-            item.emoji.perceptualHash = hash
-          } catch (err) {
-            console.error('[EmojiStore] Failed to calculate hash for', item.emoji.id, err)
+          if (emoji.url && !emoji.perceptualHash) {
+            emojiUrls.push(emoji.url)
           }
         }
       }
 
-      // Find duplicates based on similarity
+      const totalEmojis = allEmojis.length
+      console.log(`[EmojiStore] Processing ${totalEmojis} emojis for duplicate detection...`)
+
+      // Batch calculate missing hashes using the optimized service
+      if (emojiUrls.length > 0) {
+        console.log(`[EmojiStore] Calculating hashes for ${emojiUrls.length} emojis...`)
+
+        const hashResults = await optimizedHashService.calculateBatchHashes(
+          emojiUrls,
+          {
+            useCache: true,
+            batchSize: 20,
+            quality: 'medium',
+            onProgress: (processed, total) => {
+              // Map progress back to the original progress callback format
+              const processedEmoji = allEmojis.find(e => e.emoji.url === emojiUrls[processed - 1])
+              if (processedEmoji && onProgress) {
+                const group = groups.value.find(g => g.id === processedEmoji.groupId)
+                const groupTotal = group ? group.emojis.length : 0
+                onProgress({
+                  total: totalEmojis,
+                  processed: processed, // This is hash calculation progress
+                  group: processedEmoji.groupName,
+                  emojiName: processedEmoji.emoji.name,
+                  groupTotal,
+                  groupProcessed: group.emojis.findIndex(e => e.id === processedEmoji.emoji.id) + 1
+                })
+              }
+            }
+          }
+        )
+
+        // Update emojis with calculated hashes
+        for (const result of hashResults) {
+          const emoji = allEmojis.find(e => e.emoji.url === result.url)
+          if (emoji && result.hash && !result.error) {
+            emoji.emoji.perceptualHash = result.hash
+          }
+        }
+      }
+
+      // Find duplicates using optimized batch processing
+      console.log('[EmojiStore] Finding duplicates...')
+      const allHashes = allEmojis
+        .filter(item => item.emoji.perceptualHash)
+        .map(item => ({
+          item,
+          hash: item.emoji.perceptualHash!
+        }))
+
       const duplicateGroups: Array<Array<(typeof allEmojis)[0]>> = []
       const processed = new Set<string>()
 
-      for (let i = 0; i < allEmojis.length; i++) {
-        const item1 = allEmojis[i]
-        if (processed.has(item1.emoji.id) || !item1.emoji.perceptualHash) continue
+      // Use optimized comparison for better performance
+      for (let i = 0; i < allHashes.length; i++) {
+        const { item: item1, hash: hash1 } = allHashes[i]
+        if (processed.has(item1.emoji.id)) continue
 
         const duplicates: Array<(typeof allEmojis)[0]> = [item1]
         processed.add(item1.emoji.id)
 
-        for (let j = i + 1; j < allEmojis.length; j++) {
-          const item2 = allEmojis[j]
-          if (processed.has(item2.emoji.id) || !item2.emoji.perceptualHash) continue
+        // Compare with remaining items
+        for (let j = i + 1; j < allHashes.length; j++) {
+          const { item: item2, hash: hash2 } = allHashes[j]
+          if (processed.has(item2.emoji.id)) continue
 
           if (
             item1.emoji.id !== item2.emoji.id &&
-            areSimilarImages(
-              item1.emoji.perceptualHash,
-              item2.emoji.perceptualHash,
-              similarityThreshold
-            )
+            areSimilarImages(hash1, hash2, similarityThreshold)
           ) {
             duplicates.push(item2)
             processed.add(item2.emoji.id)
@@ -662,7 +679,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         }
       }
 
-      console.log('[EmojiStore] Found', duplicateGroups.length, 'groups of duplicates')
+      console.log(`[EmojiStore] Found ${duplicateGroups.length} groups of duplicates`)
+
+      // Log cache statistics
+      const cacheStats = optimizedHashService.getCacheStats()
+      console.log('[EmojiStore] Cache stats:', cacheStats)
+
       return duplicateGroups
     } catch (err) {
       console.error('[EmojiStore] findDuplicatesAcrossGroups error', err)
