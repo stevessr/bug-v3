@@ -7,7 +7,6 @@ export interface CachedImage {
   id: string
   url: string
   blob: Blob
-  dataUrl?: string
   hash?: string
   timestamp: number
   size: number
@@ -135,14 +134,10 @@ export class ImageCacheService {
     const id = this.generateId(url)
     const now = Date.now()
 
-    // Convert blob to data URL for potential canvas usage
-    const dataUrl = await this.blobToDataUrl(blob)
-
     const cachedImage: CachedImage = {
       id,
       url,
       blob,
-      dataUrl,
       hash,
       timestamp: now,
       size: blob.size,
@@ -293,15 +288,6 @@ export class ImageCacheService {
         store.delete(id)
       }
     }
-  }
-
-  private async blobToDataUrl(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
   }
 
   async clearCache(): Promise<void> {

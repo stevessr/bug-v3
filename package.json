@@ -25,7 +25,8 @@
     "format:check": "prettier --check .",
     "type-check": "vue-tsc --noEmit",
     "update:data": "cd scripts/cfworker && wrangler pages deploy",
-    "update:push": "git push"
+    "update:push": "git push",
+    "update:wasm": "bash ./src/wasm/build.sh"
   },
   "dependencies": {
     "ant-design-vue": "^4.2.6",
@@ -76,14 +77,6 @@
     "vue-eslint-parser": "^10.2.0",
     "vue-tsc": "^3.1.5"
   },
-  "devDependenciesExtra": {},
-  "dependenciesMeta": {},
-  "devDependenciesAdditions": {},
-  "devDependencies2": {},
-  "peerDependenciesMeta": {},
-  "bundledDependencies": [],
-  "overrides": {},
-  "engines": {},
   "pnpm": {
     "overrides": {
       "vite": "npm:rolldown-vite@latest"

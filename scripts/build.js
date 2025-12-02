@@ -248,6 +248,37 @@ if (isUserscript) {
 
   child.on('exit', code => {
     if (code === 0 && buildType !== 'dev') {
+      // Copy WASM files
+      const wasmSource = path.resolve(process.cwd(), 'src', 'wasm')
+      const wasmDest = path.resolve(process.cwd(), 'dist', 'wasm')
+
+      try {
+        if (fs.existsSync(wasmSource)) {
+          if (!fs.existsSync(wasmDest)) {
+            fs.mkdirSync(wasmDest, { recursive: true })
+          }
+
+          const files = ['perceptual_hash.js', 'perceptual_hash.wasm']
+          let copiedCount = 0
+
+          files.forEach(file => {
+            const srcPath = path.join(wasmSource, file)
+            const destPath = path.join(wasmDest, file)
+
+            if (fs.existsSync(srcPath)) {
+              fs.copyFileSync(srcPath, destPath)
+              copiedCount++
+            }
+          })
+
+          if (copiedCount > 0) {
+            console.log(`✨ Copied ${copiedCount} WASM files to dist/wasm/`)
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to copy WASM files:', e)
+      }
+
       // For non-userscript builds, just exit
       console.log('✅ Build completed!')
     }

@@ -43,9 +43,7 @@ export class OptimizedHashService {
     if (this.wasmAvailable) {
       try {
         await wasmHashService.initialize()
-        console.log('[OptimizedHashService] Using optimized hash service (JavaScript fallback)')
-        // Note: Currently using JavaScript fallback since WASM module is not compiled
-        // To enable real WASM acceleration, compile the C code using Emscripten
+        console.log('[OptimizedHashService] Using optimized hash service (WASM)')
         return
       } catch (error) {
         console.warn('[OptimizedHashService] Hash service initialization failed, falling back to Workers:', error)
@@ -506,10 +504,7 @@ export class OptimizedHashService {
       let foundSimilar = false
 
       for (const existingHash of existingHashes) {
-        const distance =
-          this.wasmAvailable && this.wasmAvailable
-            ? wasmHashService.calculateHammingDistance(result.hash, existingHash)
-            : this.hammingDistance(result.hash, existingHash)
+        const distance = this.hammingDistance(result.hash, existingHash)
 
         if (distance <= threshold) {
           hashMap.get(existingHash)!.push(result.url)
@@ -536,6 +531,11 @@ export class OptimizedHashService {
 
   // Public method for external access
   hammingDistance(hash1: string, hash2: string): number {
+    // Use WASM if available
+    if (this.wasmAvailable) {
+      return wasmHashService.calculateHammingDistance(hash1, hash2)
+    }
+
     if (hash1.length !== hash2.length) return Infinity
 
     let distance = 0
@@ -543,10 +543,6 @@ export class OptimizedHashService {
       if (hash1[i] !== hash2[i]) distance++
     }
     return distance
-  }
-
-  private hammingDistance(hash1: string, hash2: string): number {
-    return this.hammingDistance(hash1, hash2)
   }
 
   async cleanup(): Promise<void> {
