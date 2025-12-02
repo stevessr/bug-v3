@@ -173,3 +173,5 @@ test-mobile.html
 public/assets/json/*.json
 .snow/codebase/embeddings.db
 scripts/avif_output
+scripts/wasm/perceptual_hash.js
+scripts/wasm/perceptual_hash.wasm

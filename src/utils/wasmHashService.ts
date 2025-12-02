@@ -36,6 +36,15 @@ class WASMHashService {
   private _free_hash_result: any = null
   private _free_batch_results: any = null
 
+  private getWasmPath(filename: string): string {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
+      return chrome.runtime.getURL(`wasm/${filename}`)
+    }
+    // Fallback for standard web environment (e.g. localhost)
+    // Files in public/wasm/ are served at /wasm/
+    return `/wasm/${filename}`
+  }
+
   async initialize(): Promise<void> {
     if (this.isInitialized) return
 
@@ -53,7 +62,7 @@ class WASMHashService {
 
       // Initialize the module
       if (typeof window.PerceptualHashModule === 'function') {
-        const wasmUrl = chrome.runtime.getURL('dist/wasm/perceptual_hash.wasm')
+        const wasmUrl = this.getWasmPath('perceptual_hash.wasm')
 
         this.module = await window.PerceptualHashModule({
           locateFile: (path: string) => {
@@ -92,7 +101,7 @@ class WASMHashService {
       }
 
       const script = document.createElement('script')
-      script.src = chrome.runtime.getURL('dist/wasm/perceptual_hash.js')
+      script.src = this.getWasmPath('perceptual_hash.js')
       script.onload = () => resolve()
       script.onerror = (e) => reject(new Error(`Failed to load WASM script: ${e}`))
       document.head.appendChild(script)

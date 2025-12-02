@@ -165,6 +165,38 @@ Object.entries(config).forEach(([key, value]) => {
 // 检查命令行参数是否包含 --no-eslint
 const skipEslint = args.includes('--no-eslint')
 
+// Copy WASM files to public/wasm before build/dev starts
+// This ensures they are available for both dev server and production build
+try {
+  const wasmSource = path.resolve(process.cwd(), 'scripts', 'wasm')
+  const wasmPublicDest = path.resolve(process.cwd(), 'public', 'wasm')
+
+  if (fs.existsSync(wasmSource)) {
+    if (!fs.existsSync(wasmPublicDest)) {
+      fs.mkdirSync(wasmPublicDest, { recursive: true })
+    }
+
+    const files = ['perceptual_hash.js', 'perceptual_hash.wasm']
+    let copiedCount = 0
+
+    files.forEach(file => {
+      const srcPath = path.join(wasmSource, file)
+      const destPath = path.join(wasmPublicDest, file)
+
+      if (fs.existsSync(srcPath)) {
+        fs.copyFileSync(srcPath, destPath)
+        copiedCount++
+      }
+    })
+
+    if (copiedCount > 0) {
+      console.log(`✨ Pre-copied ${copiedCount} WASM files to public/wasm/`)
+    }
+  }
+} catch (e) {
+  console.warn('⚠️ Failed to pre-copy WASM files:', e)
+}
+
 // 执行 vite（开发或构建）
 const isUserscript = buildType.startsWith('build:userscript')
 
@@ -248,37 +280,6 @@ if (isUserscript) {
 
   child.on('exit', code => {
     if (code === 0 && buildType !== 'dev') {
-      // Copy WASM files
-      const wasmSource = path.resolve(process.cwd(), 'src', 'wasm')
-      const wasmDest = path.resolve(process.cwd(), 'dist', 'wasm')
-
-      try {
-        if (fs.existsSync(wasmSource)) {
-          if (!fs.existsSync(wasmDest)) {
-            fs.mkdirSync(wasmDest, { recursive: true })
-          }
-
-          const files = ['perceptual_hash.js', 'perceptual_hash.wasm']
-          let copiedCount = 0
-
-          files.forEach(file => {
-            const srcPath = path.join(wasmSource, file)
-            const destPath = path.join(wasmDest, file)
-
-            if (fs.existsSync(srcPath)) {
-              fs.copyFileSync(srcPath, destPath)
-              copiedCount++
-            }
-          })
-
-          if (copiedCount > 0) {
-            console.log(`✨ Copied ${copiedCount} WASM files to dist/wasm/`)
-          }
-        }
-      } catch (e) {
-        console.warn('⚠️ Failed to copy WASM files:', e)
-      }
-
       // For non-userscript builds, just exit
       console.log('✅ Build completed!')
     }
