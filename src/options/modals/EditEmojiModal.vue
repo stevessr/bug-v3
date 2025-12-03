@@ -5,6 +5,7 @@ import { DownOutlined, RobotOutlined } from '@ant-design/icons-vue'
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/type'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
+import { getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
 
 import GeminiNamingModal from './GeminiNamingModal.vue'
 
@@ -441,7 +442,7 @@ const handleSubmit = () => {
                   <a-image
                     v-if="(localEmoji.displayUrl || localEmoji.url) && !imageLoadError"
                     :preview="{ visible: false }"
-                    :src="localEmoji.displayUrl || localEmoji.url"
+                    :src="getEmojiImageUrlSync(localEmoji as Emoji)"
                     class="object-contain w-full h-full max-h-96 rounded-lg border cursor-pointer"
                     style="max-width: 500px"
                     @load="handleImageLoad"
@@ -481,7 +482,7 @@ const handleSubmit = () => {
       <a-image-preview-group
         :preview="{ visible, onVisibleChange: (vis: boolean) => (visible = vis) }"
       >
-        <a-image :src="localEmoji.displayUrl || localEmoji.url" />
+        <a-image :src="getEmojiImageUrlSync(localEmoji as Emoji)" />
       </a-image-preview-group>
     </div>
 

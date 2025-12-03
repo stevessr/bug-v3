@@ -3,6 +3,7 @@ import { ref, watch, toRefs, reactive, computed } from 'vue'
 import { DownOutlined, DeleteOutlined, RobotOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
+import { getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
 
 import GeminiNamingModal from './GeminiNamingModal.vue'
 
@@ -698,7 +699,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                   <!-- 有 URL 且未出错时显示图片 -->
                   <a-image
                     v-if="(displayUrl || url) && !imageLoadError"
-                    :src="displayUrl || url"
+                    :src="getEmojiImageUrlSync({ displayUrl: displayUrl.value, url: url.value })"
                     class="object-contain w-full h-full max-h-96 rounded-lg border"
                     style="max-width: 500px"
                     @load="handleImageLoad"
@@ -758,7 +759,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                       <!-- Image on top -->
                       <div class="flex items-center justify-center pb-2">
                         <a-image
-                          :src="item.displayUrl || item.url"
+                          :src="getEmojiImageUrlSync(item)"
                           :alt="item.name"
                           class="w-full h-32 object-contain rounded border"
                           @error="handleParsedImageError"

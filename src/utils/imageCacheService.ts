@@ -65,8 +65,8 @@ export class ImageCacheService {
   }
 
   private generateId(url: string): string {
-    // Create a consistent ID from URL
-    return btoa(url).slice(0, 16)
+    // Use the URL directly as the key - no hashing needed
+    return url
   }
 
   private async updateStats(): Promise<void> {

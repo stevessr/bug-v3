@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { inject, ref, computed } from 'vue'
-import { LoadingOutlined, DeleteOutlined, LinkOutlined, ClearOutlined } from '@ant-design/icons-vue'
+import { LoadingOutlined, DeleteOutlined, LinkOutlined, ClearOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import type { OptionsInject } from '../types'
 import EmojiStats from '../components/EmojiStats.vue'
 
 import type { Emoji } from '@/types/type'
+import { cacheImage, getCachedImage, imageCache } from '@/utils/imageCache'
+import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 
 const options = inject<OptionsInject>('options')!
 const { emojiStore, totalEmojis } = options
@@ -18,6 +20,15 @@ const selectedAction = ref<'delete' | 'reference'>('reference')
 const similarityThreshold = ref(10)
 const scanError = ref('')
 const filterQuery = ref('')
+
+// Cache all images state
+const isCaching = ref(false)
+const cacheProgress = ref(0)
+const cacheError = ref('')
+const cachedCount = ref(0)
+const totalCount = ref(0)
+const currentCacheGroup = ref('')
+const currentCacheEmoji = ref('')
 
 // Progress indicators
 const progress = ref(0)
@@ -40,6 +51,20 @@ const filteredDuplicateGroups = computed(() => {
         item.groupName.toLowerCase().includes(query)
     )
   })
+})
+
+// Calculate cache statistics
+const cacheStats = computed(() => {
+  let total = 0
+  let cached = 0
+
+  for (const group of emojiStore.groups) {
+    for (const emoji of group.emojis || []) {
+      total++
+    }
+  }
+
+  return { total, cached }
 })
 
 const setAsOriginal = (groupIndex: number, itemIndex: number) => {
@@ -140,6 +165,81 @@ const clearHashes = async () => {
 const getTotalDuplicates = () => {
   return duplicateGroups.value.reduce((sum, group) => sum + (group.length - 1), 0)
 }
+
+// Cache all images functionality
+const cacheAllImages = async () => {
+  isCaching.value = true
+  cacheError.value = ''
+  cacheProgress.value = 0
+  cachedCount.value = 0
+  totalCount.value = 0
+  currentCacheGroup.value = ''
+  currentCacheEmoji.value = ''
+
+  try {
+    // Initialize image cache
+    await imageCache.init()
+
+    // Count total emojis
+    let total = 0
+    for (const group of emojiStore.groups) {
+      for (const emoji of group.emojis || []) {
+        total++
+      }
+    }
+    totalCount.value = total
+
+    let processed = 0
+
+    // Process each group
+    for (const group of emojiStore.groups) {
+      currentCacheGroup.value = group.name
+
+      for (const emoji of group.emojis || []) {
+        const url = emoji.displayUrl || emoji.url
+        currentCacheEmoji.value = emoji.name
+
+        try {
+          // Check if already cached
+          const isCached = await getCachedImage(url)
+          if (!isCached) {
+            // Cache the image
+            await cacheImage(url)
+          }
+          cachedCount.value++
+        } catch (error) {
+          console.warn(`Failed to cache image for ${emoji.name}:`, error)
+        }
+
+        processed++
+        cacheProgress.value = total > 0 ? (processed / total) * 100 : 0
+
+        // Add small delay to prevent overwhelming the browser
+        if (processed % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+      }
+    }
+
+    message.success(`已缓存 ${cachedCount.value} 个表情图片`)
+  } catch (error: any) {
+    cacheError.value = error.message || '缓存失败'
+    message.error('缓存表情图片失败')
+    console.error('Cache all images error:', error)
+  } finally {
+    isCaching.value = false
+  }
+}
+
+const clearImageCache = async () => {
+  try {
+    await imageCache.clearCache()
+    message.success('已清空图片缓存')
+  } catch (error) {
+    message.error('清空图片缓存失败')
+    console.error('Clear image cache error:', error)
+  }
+}
 </script>
 
 <template>
@@ -150,6 +250,88 @@ const getTotalDuplicates = () => {
       :totalEmojis="totalEmojis"
       :favoritesCount="emojiStore.favorites.size"
     />
+
+    <!-- Image Cache Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-lg font-semibold dark:text-white">图片缓存</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          缓存所有表情图片到本地IndexedDB，提升加载速度和离线访问能力
+        </p>
+      </div>
+
+      <div class="p-6 space-y-6">
+        <!-- Cache Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-gray-50 dark:bg-gray-700 rounded p-4">
+            <h3 class="text-sm font-medium text-gray-700 dark:text-white mb-1">总表情数</h3>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ cacheStats.total }}</p>
+          </div>
+          <div class="bg-blue-50 dark:bg-blue-900 rounded p-4">
+            <h3 class="text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">已缓存</h3>
+            <p class="text-2xl font-bold text-blue-900 dark:text-blue-100">{{ cacheStats.cached }}</p>
+          </div>
+          <div class="bg-green-50 dark:bg-green-900 rounded p-4">
+            <h3 class="text-sm font-medium text-green-700 dark:text-green-300 mb-1">缓存率</h3>
+            <p class="text-2xl font-bold text-green-900 dark:text-green-100">
+              {{ cacheStats.total > 0 ? Math.round((cacheStats.cached / cacheStats.total) * 100) : 0 }}%
+            </p>
+          </div>
+        </div>
+
+        <!-- Cache Controls -->
+        <div class="flex gap-3">
+          <a-button
+            type="primary"
+            :loading="isCaching"
+            :disabled="isCaching"
+            @click="cacheAllImages"
+          >
+            <DownloadOutlined v-if="!isCaching" />
+            {{ isCaching ? '缓存中...' : '一键缓存所有表情' }}
+          </a-button>
+
+          <a-button @click="clearImageCache" :disabled="isCaching">
+            <ClearOutlined />
+            清空缓存
+          </a-button>
+        </div>
+
+        <!-- Cache Progress Indicator -->
+        <div v-if="isCaching" class="space-y-3">
+          <div class="flex items-center gap-4">
+            <a-progress type="circle" :percent="cacheProgress" :width="80" />
+            <div class="flex-1 space-y-1">
+              <p class="text-sm font-medium dark:text-white">
+                总进度：{{ cachedCount }} / {{ totalCount }}
+              </p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">当前分组：{{ currentCacheGroup }}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                正在处理：{{ currentCacheEmoji }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cache Error Message -->
+        <div v-if="cacheError" class="bg-yellow-50 border border-yellow-200 rounded p-3">
+          <p class="text-sm text-yellow-800">{{ cacheError }}</p>
+        </div>
+
+        <!-- Help Text -->
+        <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+          <p>
+            <strong>说明：</strong>
+          </p>
+          <ul class="list-disc list-inside space-y-1 ml-2">
+            <li>缓存将图片存储到浏览器IndexedDB，提升后续访问速度</li>
+            <li>已缓存的图片在离线状态下也能正常显示</li>
+            <li>缓存会占用一定的浏览器存储空间</li>
+            <li>建议在网络状况良好时执行一键缓存操作</li>
+          </ul>
+        </div>
+      </div>
+    </div>
 
     <!-- Duplicate Detection Section -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
@@ -210,7 +392,7 @@ const getTotalDuplicates = () => {
           <a-button
             type="primary"
             :loading="isScanning"
-            :disabled="isScanning"
+            :disabled="isScanning || isCaching"
             @click="scanForDuplicates"
           >
             <LoadingOutlined v-if="isScanning" />
@@ -226,7 +408,7 @@ const getTotalDuplicates = () => {
             处理重复项 ({{ getTotalDuplicates() }})
           </a-button>
 
-          <a-button @click="clearHashes">
+          <a-button @click="clearHashes" :disabled="isCaching">
             <ClearOutlined />
             清空哈希值
           </a-button>
@@ -310,7 +492,7 @@ const getTotalDuplicates = () => {
                 >
                   <div class="relative">
                     <img
-                      :src="item.emoji.displayUrl || item.emoji.url"
+                      :src="getEmojiImageUrlSync(item.emoji)"
                       :alt="item.emoji.name"
                       class="w-full h-24 object-contain rounded"
                       loading="lazy"

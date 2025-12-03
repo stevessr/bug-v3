@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
+import { getEmojiImageUrlWithLoading, preloadImages } from '../../utils/imageUrlHelper'
 
 defineEmits(['remove', 'edit'])
 
 const emojiStore = useEmojiStore()
+const imageSources = ref<Map<string, string>>(new Map())
+const loadingStates = ref<Map<string, boolean>>(new Map())
 
 const favoritesGroup = computed(() => {
   return emojiStore.sortedGroups.find(g => g.id === 'favorites')
@@ -17,6 +20,72 @@ const handleClearAllFavorites = () => {
   emojiStore.clearAllFavorites()
   message.success('已清空所有常用表情')
 }
+
+// Initialize image sources with caching
+const initializeImageSources = async () => {
+  if (!favoritesGroup.value?.emojis) return
+
+  console.log('[FavoritesTab] Initializing image sources for favorites:', favoritesGroup.value.emojis.length)
+  console.log('[FavoritesTab] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
+
+  const newSources = new Map<string, string>()
+  const newLoadingStates = new Map<string, boolean>()
+
+  for (const emoji of favoritesGroup.value.emojis) {
+    try {
+      if (emojiStore.settings.useIndexedDBForImages) {
+        // Use the new loading function in cache mode
+        const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
+        newSources.set(emoji.id, result.url)
+        newLoadingStates.set(emoji.id, result.isLoading)
+        console.log(`[FavoritesTab] Image source for ${emoji.name}:`, result.url, 'from cache:', result.isFromCache)
+      } else {
+        // Direct URL mode
+        const fallbackSrc = emoji.displayUrl || emoji.url
+        newSources.set(emoji.id, fallbackSrc)
+        console.log(`[FavoritesTab] Direct URL for ${emoji.name}:`, fallbackSrc)
+      }
+    } catch (error) {
+      console.warn(`[FavoritesTab] Failed to get image source for ${emoji.name}:`, error)
+      // Fallback to direct URL
+      const fallbackSrc = emoji.displayUrl || emoji.url
+      newSources.set(emoji.id, fallbackSrc)
+    }
+  }
+
+  imageSources.value = newSources
+  loadingStates.value = newLoadingStates
+  console.log('[FavoritesTab] Image sources initialized:', imageSources.value.size)
+}
+
+// Preload favorite images for better performance
+const preloadFavoriteImages = async () => {
+  if (!favoritesGroup.value?.emojis || !emojiStore.settings.useIndexedDBForImages) {
+    console.log('[FavoritesTab] Skipping preload - cache disabled or no emojis')
+    return
+  }
+
+  try {
+    console.log('[FavoritesTab] Starting preload for', favoritesGroup.value.emojis.length, 'emojis')
+    await preloadImages(favoritesGroup.value.emojis, { batchSize: 3, delay: 50 })
+    console.log('[FavoritesTab] Preload completed')
+  } catch (error) {
+    console.warn('[FavoritesTab] Failed to preload favorite images:', error)
+  }
+}
+
+// Watch for changes in favorites
+watch(() => favoritesGroup.value?.emojis, () => {
+  console.log('[FavoritesTab] Favorites changed, reinitializing image sources')
+  initializeImageSources()
+}, { deep: true })
+
+// Initialize on mount
+onMounted(() => {
+  console.log('[FavoritesTab] Component mounted')
+  initializeImageSources()
+  preloadFavoriteImages()
+})
 </script>
 
 <template>
@@ -68,7 +137,7 @@ const handleClearAllFavorites = () => {
               </template>
               <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
                 <img
-                  :src="emoji.displayUrl || emoji.url"
+                  :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
                   :alt="emoji.name"
                   class="w-full h-full object-cover"
                 />

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, toRefs, watch } from 'vue'
 import { useEmojiStore } from '@/stores/emojiStore'
-import { getCachedImage, cacheImage } from '@/utils/imageCache'
+import { getEmojiImageUrl, preloadImages } from '@/utils/imageUrlHelper'
 
 import type { Emoji } from '@/types/type'
 
@@ -29,29 +29,12 @@ const useCachedImages = computed(() => emojiStore.settings.useIndexedDBForImages
 
 // Method to get image source with caching support
 const getImageSrc = async (emoji: Emoji): Promise<string> => {
-  if (!useCachedImages.value) {
-    return emoji.displayUrl || emoji.url
-  }
+  return getEmojiImageUrl(emoji, { preferCache: useCachedImages.value })
+}
 
-  try {
-    // Try to get cached image first
-    const cachedUrl = await getCachedImage(emoji.displayUrl || emoji.url)
-    if (cachedUrl) {
-      return cachedUrl
-    }
-
-    // If not cached, cache the image and return blob URL
-    const blobUrl = await cacheImage(emoji.displayUrl || emoji.url)
-    if (blobUrl) {
-      blobUrls.value.add(blobUrl)
-      return blobUrl
-    }
-  } catch (error) {
-    console.warn('Failed to get cached image for', emoji.name, error)
-  }
-
-  // Fallback to original URL
-  return emoji.displayUrl || emoji.url
+// Synchronous version for immediate rendering
+const getImageSrcSync = (emoji: Emoji): string => {
+  return getEmojiImageUrlSync(emoji, { preferCache: useCachedImages.value })
 }
 
 // Reactive image sources for emojis
@@ -87,6 +70,17 @@ const updateImageSources = async () => {
   imageSources.value = newSources
 }
 
+// Preload images for better performance
+const preloadEmojis = async () => {
+  if (useCachedImages.value && props.isActive) {
+    try {
+      await preloadImages(props.emojis, { batchSize: 3, delay: 50 })
+    } catch (error) {
+      console.warn('Failed to preload images:', error)
+    }
+  }
+}
+
 // Clean up blob URLs when component is unmounted
 onUnmounted(() => {
   for (const blobUrl of blobUrls.value) {
@@ -104,6 +98,13 @@ initializeImageSources()
 
 // Watch for emoji changes and update image sources
 watch(() => props.emojis, updateImageSources, { deep: true })
+
+// Preload when component becomes active
+watch(() => props.isActive, (isActive) => {
+  if (isActive) {
+    preloadEmojis()
+  }
+}, { immediate: true })
 
 // 键盘导航功能
 const handleKeyNavigation = (event: KeyboardEvent, index: number) => {

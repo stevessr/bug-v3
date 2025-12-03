@@ -5,6 +5,7 @@ import { DownOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 import type { EmojiGroup, Emoji } from '../../types/type'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
+import { getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
 
 import GroupSelector from './GroupSelector.vue'
 import CreateGroupModal from './CreateGroupModal.vue'
@@ -461,7 +462,7 @@ const cancelCreateGroup = () => {
               }"
               @click="handleEmojiClick(idx)"
             >
-              <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" />
+              <img :src="getEmojiImageUrlSync(emoji)" :alt="emoji.name" class="w-full h-full object-cover" />
             </div>
 
             <!-- 多选模式下的选择框 -->

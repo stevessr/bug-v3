@@ -133,15 +133,11 @@ export class ImageCache {
   }
 
   /**
-   * Generate a consistent ID from URL
+   * Generate a consistent ID from URL - use URL directly as key
    */
   private generateId(url: string): string {
-    // Create a hash-like ID from URL
-    const encoder = new TextEncoder()
-    const data = encoder.encode(url)
-    const hashArray = Array.from(data)
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-    return hashHex.slice(0, 32)
+    // Use the URL directly as the key - no hashing needed
+    return url
   }
 
   /**
