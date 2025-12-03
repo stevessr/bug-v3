@@ -4,6 +4,7 @@
  */
 
 import { getCachedImage, cacheImage } from './imageCache'
+
 import { useEmojiStore } from '@/stores/emojiStore'
 
 export interface ImageUrlOptions {
@@ -25,11 +26,16 @@ export async function getEmojiImageUrl(
   const primaryUrl = emoji.displayUrl || emoji.url
   const finalFallbackUrl = fallbackUrl || emoji.url
 
-  console.log(`[ImageUrlHelper] Getting image URL for ${emoji.name}, preferCache: ${preferCache}, cacheEnabled: ${emojiStore.settings.useIndexedDBForImages}`)
+  console.log(
+    `[ImageUrlHelper] Getting image URL for ${emoji.name}, preferCache: ${preferCache}, cacheEnabled: ${emojiStore.settings.useIndexedDBForImages}`
+  )
 
   // If caching is disabled or not preferred, return the direct URL
   if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
-    console.log(`[ImageUrlHelper] Cache disabled for ${emoji.name}, returning direct URL:`, primaryUrl)
+    console.log(
+      `[ImageUrlHelper] Cache disabled for ${emoji.name}, returning direct URL:`,
+      primaryUrl
+    )
     return primaryUrl
   }
 
@@ -47,11 +53,16 @@ export async function getEmojiImageUrl(
     // If not cached, try to cache the image and return blob URL
     const blobUrl = await cacheImage(primaryUrl)
     if (blobUrl) {
-      console.log(`[ImageUrlHelper] Successfully cached and created blob URL for ${emoji.name}:`, blobUrl)
+      console.log(
+        `[ImageUrlHelper] Successfully cached and created blob URL for ${emoji.name}:`,
+        blobUrl
+      )
       return blobUrl
     }
 
-    console.log(`[ImageUrlHelper] Failed to create blob URL for ${emoji.name}, but caching may be in progress`)
+    console.log(
+      `[ImageUrlHelper] Failed to create blob URL for ${emoji.name}, but caching may be in progress`
+    )
   } catch (error) {
     console.warn(`[ImageUrlHelper] Failed to get cached image for ${emoji.name}:`, error)
   }
@@ -65,7 +76,10 @@ export async function getEmojiImageUrl(
       await new Promise(resolve => setTimeout(resolve, 500)) // Wait 500ms
       const cachedUrl = await getCachedImage(primaryUrl)
       if (cachedUrl) {
-        console.log(`[ImageUrlHelper] Retrieved cached URL after attempt ${attempt + 1} for ${emoji.name}:`, cachedUrl)
+        console.log(
+          `[ImageUrlHelper] Retrieved cached URL after attempt ${attempt + 1} for ${emoji.name}:`,
+          cachedUrl
+        )
         return cachedUrl
       }
     } catch (error) {
@@ -74,7 +88,10 @@ export async function getEmojiImageUrl(
   }
 
   // Final fallback - only if all cache attempts fail
-  console.warn(`[ImageUrlHelper] All cache attempts failed for ${emoji.name}, falling back to direct URL:`, finalFallbackUrl)
+  console.warn(
+    `[ImageUrlHelper] All cache attempts failed for ${emoji.name}, falling back to direct URL:`,
+    finalFallbackUrl
+  )
   return finalFallbackUrl
 }
 
@@ -93,11 +110,16 @@ export function getEmojiImageUrlSync(
   const primaryUrl = emoji.displayUrl || emoji.url
   const finalFallbackUrl = fallbackUrl || emoji.url
 
-  console.log(`[ImageUrlHelper] Sync get image URL for ${emoji.name}, preferCache: ${preferCache}, cacheEnabled: ${emojiStore.settings.useIndexedDBForImages}`)
+  console.log(
+    `[ImageUrlHelper] Sync get image URL for ${emoji.name}, preferCache: ${preferCache}, cacheEnabled: ${emojiStore.settings.useIndexedDBForImages}`
+  )
 
   // If caching is disabled or not preferred, return the direct URL
   if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
-    console.log(`[ImageUrlHelper] Cache disabled for ${emoji.name}, returning direct URL:`, primaryUrl)
+    console.log(
+      `[ImageUrlHelper] Cache disabled for ${emoji.name}, returning direct URL:`,
+      primaryUrl
+    )
     return primaryUrl
   }
 
@@ -112,7 +134,9 @@ export function getEmojiImageUrlSync(
       console.warn('[ImageUrlHelper] Background caching failed for', emoji.name, error)
     })
 
-    console.log(`[ImageUrlHelper] Triggered background cache for ${emoji.name}, returning original URL temporarily`)
+    console.log(
+      `[ImageUrlHelper] Triggered background cache for ${emoji.name}, returning original URL temporarily`
+    )
 
     // Return original URL for now, but the component should handle the async update
     // This is a limitation of sync calls - they can't wait for async operations
@@ -161,7 +185,10 @@ export async function getEmojiImageUrlWithLoading(
     // Wait for caching to complete
     const blobUrl = await cachePromise
     if (blobUrl) {
-      console.log(`[ImageUrlHelper] Successfully cached and created blob URL for ${emoji.name}:`, blobUrl)
+      console.log(
+        `[ImageUrlHelper] Successfully cached and created blob URL for ${emoji.name}:`,
+        blobUrl
+      )
       return { url: blobUrl, isLoading: false, isFromCache: true }
     }
 
@@ -170,7 +197,10 @@ export async function getEmojiImageUrlWithLoading(
       await new Promise(resolve => setTimeout(resolve, 300))
       const cachedUrl = await getCachedImage(primaryUrl)
       if (cachedUrl) {
-        console.log(`[ImageUrlHelper] Retrieved cached URL after attempt ${attempt + 1} for ${emoji.name}:`, cachedUrl)
+        console.log(
+          `[ImageUrlHelper] Retrieved cached URL after attempt ${attempt + 1} for ${emoji.name}:`,
+          cachedUrl
+        )
         return { url: cachedUrl, isLoading: false, isFromCache: true }
       }
     }
@@ -202,9 +232,7 @@ async function triggerBackgroundCache(url: string): Promise<void> {
 /**
  * Check if an image is cached
  */
-export async function isImageCached(
-  emoji: { displayUrl?: string; url: string }
-): Promise<boolean> {
+export async function isImageCached(emoji: { displayUrl?: string; url: string }): Promise<boolean> {
   const primaryUrl = emoji.displayUrl || emoji.url
   const { isImageCached } = await import('./imageCache')
   return isImageCached(primaryUrl)
@@ -228,7 +256,7 @@ export async function preloadImages(
     const batch = emojis.slice(i, i + batchSize)
 
     await Promise.allSettled(
-      batch.map(async (emoji) => {
+      batch.map(async emoji => {
         const url = emoji.displayUrl || emoji.url
         try {
           const isCached = await getCachedImage(url)

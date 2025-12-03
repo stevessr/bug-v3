@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { inject, ref, computed } from 'vue'
-import { LoadingOutlined, DeleteOutlined, LinkOutlined, ClearOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import {
+  LoadingOutlined,
+  DeleteOutlined,
+  LinkOutlined,
+  ClearOutlined,
+  DownloadOutlined
+} from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import type { OptionsInject } from '../types'
@@ -56,7 +62,7 @@ const filteredDuplicateGroups = computed(() => {
 // Calculate cache statistics
 const cacheStats = computed(() => {
   let total = 0
-  let cached = 0
+  const cached = 0
 
   for (const group of emojiStore.groups) {
     for (const emoji of group.emojis || []) {
@@ -269,12 +275,16 @@ const clearImageCache = async () => {
           </div>
           <div class="bg-blue-50 dark:bg-blue-900 rounded p-4">
             <h3 class="text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">已缓存</h3>
-            <p class="text-2xl font-bold text-blue-900 dark:text-blue-100">{{ cacheStats.cached }}</p>
+            <p class="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {{ cacheStats.cached }}
+            </p>
           </div>
           <div class="bg-green-50 dark:bg-green-900 rounded p-4">
             <h3 class="text-sm font-medium text-green-700 dark:text-green-300 mb-1">缓存率</h3>
             <p class="text-2xl font-bold text-green-900 dark:text-green-100">
-              {{ cacheStats.total > 0 ? Math.round((cacheStats.cached / cacheStats.total) * 100) : 0 }}%
+              {{
+                cacheStats.total > 0 ? Math.round((cacheStats.cached / cacheStats.total) * 100) : 0
+              }}%
             </p>
           </div>
         </div>
@@ -305,7 +315,9 @@ const clearImageCache = async () => {
               <p class="text-sm font-medium dark:text-white">
                 总进度：{{ cachedCount }} / {{ totalCount }}
               </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">当前分组：{{ currentCacheGroup }}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                当前分组：{{ currentCacheGroup }}
+              </p>
               <p class="text-sm text-gray-600 dark:text-gray-400">
                 正在处理：{{ currentCacheEmoji }}
               </p>

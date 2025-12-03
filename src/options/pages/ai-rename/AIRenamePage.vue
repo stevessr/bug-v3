@@ -44,7 +44,12 @@ const initializeImageSources = async () => {
         const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
         newSources.set(emoji.id, result.url)
         newLoadingStates.set(emoji.id, result.isLoading)
-        console.log(`[AIRenamePage] Image source for ${emoji.name}:`, result.url, 'from cache:', result.isFromCache)
+        console.log(
+          `[AIRenamePage] Image source for ${emoji.name}:`,
+          result.url,
+          'from cache:',
+          result.isFromCache
+        )
       } else {
         // 直接 URL 模式
         const fallbackSrc = emoji.displayUrl || emoji.url
@@ -65,17 +70,20 @@ const initializeImageSources = async () => {
 }
 
 // 监听表情数据变化
-watch(() => allEmojis.value, () => {
-  console.log('[AIRenamePage] Emojis changed, reinitializing image sources')
-  initializeImageSources()
-}, { deep: true })
+watch(
+  () => allEmojis.value,
+  () => {
+    console.log('[AIRenamePage] Emojis changed, reinitializing image sources')
+    initializeImageSources()
+  },
+  { deep: true }
+)
 
 // 组件挂载时初始化
 onMounted(() => {
   console.log('[AIRenamePage] Component mounted')
   initializeImageSources()
 })
-
 
 const toggleSelection = (emojiId: string) => {
   if (selectedEmojis.value.has(emojiId)) {
@@ -183,7 +191,7 @@ const containerHeight = 600
               -->
               <div class="h-24 w-full flex items-center justify-center overflow-hidden">
                 <a-image
-                  :src="imageSources.get(emoji.id) || (emoji.displayUrl || emoji.url)"
+                  :src="imageSources.get(emoji.id) || emoji.displayUrl || emoji.url"
                   :alt="emoji.name"
                   loading="lazy"
                 />

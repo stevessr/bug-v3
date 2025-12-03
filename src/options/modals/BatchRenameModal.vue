@@ -370,7 +370,9 @@ onUnmounted(() => {
               <div class="flex-shrink-0">
                 <img
                   :data-src="getEmojiImageUrlSync(emoji)"
-                  :src="loadedImages.has(getEmojiImageUrlSync(emoji)) ? getEmojiImageUrlSync(emoji) : ''"
+                  :src="
+                    loadedImages.has(getEmojiImageUrlSync(emoji)) ? getEmojiImageUrlSync(emoji) : ''
+                  "
                   class="w-12 h-12 object-contain bg-white rounded"
                   loading="lazy"
                   :ref="observeImage"

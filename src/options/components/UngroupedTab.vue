@@ -26,7 +26,10 @@ const loadingStates = ref<Map<string, boolean>>(new Map())
 const initializeImageSources = async () => {
   if (!ungroup.value?.emojis) return
 
-  console.log('[UngroupedTab] Initializing image sources for ungrouped:', ungroup.value.emojis.length)
+  console.log(
+    '[UngroupedTab] Initializing image sources for ungrouped:',
+    ungroup.value.emojis.length
+  )
   console.log('[UngroupedTab] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
 
   const newSources = new Map<string, string>()
@@ -39,7 +42,12 @@ const initializeImageSources = async () => {
         const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
         newSources.set(emoji.id, result.url)
         newLoadingStates.set(emoji.id, result.isLoading)
-        console.log(`[UngroupedTab] Image source for ${emoji.name}:`, result.url, 'from cache:', result.isFromCache)
+        console.log(
+          `[UngroupedTab] Image source for ${emoji.name}:`,
+          result.url,
+          'from cache:',
+          result.isFromCache
+        )
       } else {
         // 直接 URL 模式
         const fallbackSrc = emoji.displayUrl || emoji.url
@@ -60,10 +68,14 @@ const initializeImageSources = async () => {
 }
 
 // 监听未分组表情变化
-watch(() => ungroup.value?.emojis, () => {
-  console.log('[UngroupedTab] Ungrouped emojis changed, reinitializing image sources')
-  initializeImageSources()
-}, { deep: true })
+watch(
+  () => ungroup.value?.emojis,
+  () => {
+    console.log('[UngroupedTab] Ungrouped emojis changed, reinitializing image sources')
+    initializeImageSources()
+  },
+  { deep: true }
+)
 
 // 组件挂载时初始化
 onMounted(() => {

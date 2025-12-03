@@ -16,7 +16,6 @@ import type {
   S3Config,
   CloudflareConfig
 } from '../../userscript/plugins/syncTargets'
-import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import ThemeSettings from '../components/ThemeSettings.vue'
 import UISettings from '../components/UISettings.vue'
@@ -24,6 +23,8 @@ import FeatureSwitchSettings from '../components/FeatureSwitchSettings.vue'
 import MenuBarSettings from '../components/MenuBarSettings.vue'
 import CustomCSSSettings from '../components/CustomCSSSettings.vue'
 import AISettings from '../components/AISettings.vue'
+
+import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 
 // TypeScript interface for sync progress
 interface SyncProgress {

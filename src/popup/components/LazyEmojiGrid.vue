@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, toRefs, watch } from 'vue'
+
 import { useEmojiStore } from '@/stores/emojiStore'
 import { getEmojiImageUrl, getEmojiImageUrlSync, preloadImages } from '@/utils/imageUrlHelper'
-
 import type { Emoji } from '@/types/type'
 
 const props = defineProps<{
@@ -100,11 +100,15 @@ initializeImageSources()
 watch(() => props.emojis, updateImageSources, { deep: true })
 
 // Preload when component becomes active
-watch(() => props.isActive, (isActive) => {
-  if (isActive) {
-    preloadEmojis()
-  }
-}, { immediate: true })
+watch(
+  () => props.isActive,
+  isActive => {
+    if (isActive) {
+      preloadEmojis()
+    }
+  },
+  { immediate: true }
+)
 
 // 键盘导航功能
 const handleKeyNavigation = (event: KeyboardEvent, index: number) => {

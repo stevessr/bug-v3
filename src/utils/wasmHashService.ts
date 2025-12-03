@@ -49,7 +49,8 @@ class WASMHashService {
     if (this.isInitialized) return
 
     // Check if WASM is supported
-    this.wasmAvailable = typeof WebAssembly === 'object' && typeof WebAssembly.validate === 'function'
+    this.wasmAvailable =
+      typeof WebAssembly === 'object' && typeof WebAssembly.validate === 'function'
 
     if (!this.wasmAvailable) {
       console.warn('[WASMHashService] WASM not supported')
@@ -74,11 +75,29 @@ class WASMHashService {
         })
 
         // Bind functions
-        this._calculate_perceptual_hash = this.module.cwrap('calculate_perceptual_hash', 'number', ['number', 'number', 'number', 'number'])
-        this._calculate_batch_hashes = this.module.cwrap('calculate_batch_hashes', 'number', ['number', 'number', 'number', 'number', 'number'])
-        this._calculate_hamming_distance = this.module.cwrap('calculate_hamming_distance', 'number', ['string', 'string'])
+        this._calculate_perceptual_hash = this.module.cwrap('calculate_perceptual_hash', 'number', [
+          'number',
+          'number',
+          'number',
+          'number'
+        ])
+        this._calculate_batch_hashes = this.module.cwrap('calculate_batch_hashes', 'number', [
+          'number',
+          'number',
+          'number',
+          'number',
+          'number'
+        ])
+        this._calculate_hamming_distance = this.module.cwrap(
+          'calculate_hamming_distance',
+          'number',
+          ['string', 'string']
+        )
         this._free_hash_result = this.module.cwrap('free_hash_result', 'void', ['number'])
-        this._free_batch_results = this.module.cwrap('free_batch_results', 'void', ['number', 'number'])
+        this._free_batch_results = this.module.cwrap('free_batch_results', 'void', [
+          'number',
+          'number'
+        ])
 
         console.log('[WASMHashService] WASM module initialized successfully')
         this.isInitialized = true
@@ -103,7 +122,7 @@ class WASMHashService {
       const script = document.createElement('script')
       script.src = this.getWasmPath('perceptual_hash.js')
       script.onload = () => resolve()
-      script.onerror = (e) => reject(new Error(`Failed to load WASM script: ${e}`))
+      script.onerror = e => reject(new Error(`Failed to load WASM script: ${e}`))
       document.head.appendChild(script)
     })
   }
@@ -219,7 +238,7 @@ class WASMHashService {
 
       for (let i = 0; i < numImages; i++) {
         // HashResult struct size is 12 bytes (3 * 4 bytes for 32-bit WASM)
-        const resultBase = resultsPtr + (i * 12)
+        const resultBase = resultsPtr + i * 12
         const hashPtr = this.module.HEAP32[resultBase / 4]
         const error = this.module.HEAP32[resultBase / 4 + 1]
         const errorMsgPtr = this.module.HEAP32[resultBase / 4 + 2]

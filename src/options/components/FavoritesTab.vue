@@ -4,7 +4,11 @@ import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
-import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync, preloadImages } from '../../utils/imageUrlHelper'
+import {
+  getEmojiImageUrlWithLoading,
+  getEmojiImageUrlSync,
+  preloadImages
+} from '../../utils/imageUrlHelper'
 
 defineEmits(['remove', 'edit'])
 
@@ -25,7 +29,10 @@ const handleClearAllFavorites = () => {
 const initializeImageSources = async () => {
   if (!favoritesGroup.value?.emojis) return
 
-  console.log('[FavoritesTab] Initializing image sources for favorites:', favoritesGroup.value.emojis.length)
+  console.log(
+    '[FavoritesTab] Initializing image sources for favorites:',
+    favoritesGroup.value.emojis.length
+  )
   console.log('[FavoritesTab] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
 
   const newSources = new Map<string, string>()
@@ -38,7 +45,12 @@ const initializeImageSources = async () => {
         const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
         newSources.set(emoji.id, result.url)
         newLoadingStates.set(emoji.id, result.isLoading)
-        console.log(`[FavoritesTab] Image source for ${emoji.name}:`, result.url, 'from cache:', result.isFromCache)
+        console.log(
+          `[FavoritesTab] Image source for ${emoji.name}:`,
+          result.url,
+          'from cache:',
+          result.isFromCache
+        )
       } else {
         // Direct URL mode
         const fallbackSrc = emoji.displayUrl || emoji.url
@@ -75,10 +87,14 @@ const preloadFavoriteImages = async () => {
 }
 
 // Watch for changes in favorites
-watch(() => favoritesGroup.value?.emojis, () => {
-  console.log('[FavoritesTab] Favorites changed, reinitializing image sources')
-  initializeImageSources()
-}, { deep: true })
+watch(
+  () => favoritesGroup.value?.emojis,
+  () => {
+    console.log('[FavoritesTab] Favorites changed, reinitializing image sources')
+    initializeImageSources()
+  },
+  { deep: true }
+)
 
 // Initialize on mount
 onMounted(() => {

@@ -52,7 +52,12 @@ const initializeImageSources = async () => {
         const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
         newSources.set(emoji.id, result.url)
         newLoadingStates.set(emoji.id, result.isLoading)
-        console.log(`[BufferPage] Image source for ${emoji.name}:`, result.url, 'from cache:', result.isFromCache)
+        console.log(
+          `[BufferPage] Image source for ${emoji.name}:`,
+          result.url,
+          'from cache:',
+          result.isFromCache
+        )
       } else {
         // 直接URL模式
         const fallbackSrc = emoji.displayUrl || emoji.url
@@ -73,10 +78,14 @@ const initializeImageSources = async () => {
 }
 
 // 监听缓冲区表情变化
-watch(() => bufferEmojis.value, () => {
-  console.log('[BufferPage] Buffer emojis changed, reinitializing image sources')
-  initializeImageSources()
-}, { deep: true })
+watch(
+  () => bufferEmojis.value,
+  () => {
+    console.log('[BufferPage] Buffer emojis changed, reinitializing image sources')
+    initializeImageSources()
+  },
+  { deep: true }
+)
 
 // 组件挂载时初始化
 onMounted(() => {

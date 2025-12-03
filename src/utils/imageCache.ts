@@ -28,17 +28,21 @@ export interface CacheEntry {
  * Environment detection utility
  */
 function isExtensionContext(): boolean {
-  return typeof chrome !== 'undefined' &&
-         (chrome.runtime || chrome.extension) &&
-         typeof chrome.storage !== 'undefined'
+  return (
+    typeof chrome !== 'undefined' &&
+    (chrome.runtime || chrome.extension) &&
+    typeof chrome.storage !== 'undefined'
+  )
 }
 
 function isUserscriptContext(): boolean {
-  return typeof (globalThis as any).GM_info !== 'undefined' ||
-         typeof (globalThis as any).unsafeWindow !== 'undefined' ||
-         (typeof window !== 'undefined' &&
-          (window.location.protocol === 'http:' || window.location.protocol === 'https:') &&
-          !isExtensionContext())
+  return (
+    typeof (globalThis as any).GM_info !== 'undefined' ||
+    typeof (globalThis as any).unsafeWindow !== 'undefined' ||
+    (typeof window !== 'undefined' &&
+      (window.location.protocol === 'http:' || window.location.protocol === 'https:') &&
+      !isExtensionContext())
+  )
 }
 
 /**
@@ -105,15 +109,17 @@ export class ImageCache {
         this.isInitialized = true
 
         // Handle database errors
-        this.db.onerror = (event) => {
+        this.db.onerror = event => {
           console.error(`[ImageCache] Database error:`, event)
         }
 
-        console.log(`[ImageCache] Database initialized (${isExtensionContext() ? 'extension' : 'userscript'} context)`)
+        console.log(
+          `[ImageCache] Database initialized (${isExtensionContext() ? 'extension' : 'userscript'} context)`
+        )
         resolve()
       }
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = event => {
         const db = (event.target as IDBOpenDBRequest).result
 
         // Create object store if it doesn't exist
@@ -161,7 +167,7 @@ export class ImageCache {
       const transaction = this.db.transaction([this.options.storeName], 'readonly')
       const store = transaction.objectStore(this.options.storeName)
 
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         const request = store.get(id)
 
         request.onsuccess = () => {
@@ -173,7 +179,7 @@ export class ImageCache {
 
           // Check if entry is too old
           const now = Date.now()
-          const isExpired = (now - entry.timestamp) > this.options.maxAge
+          const isExpired = now - entry.timestamp > this.options.maxAge
 
           if (isExpired) {
             // Remove expired entry
@@ -207,7 +213,7 @@ export class ImageCache {
       const transaction = this.db.transaction([this.options.storeName], 'readwrite')
       const store = transaction.objectStore(this.options.storeName)
 
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         const request = store.get(id)
 
         request.onsuccess = () => {
@@ -220,7 +226,7 @@ export class ImageCache {
 
           // Check if entry is expired
           const now = Date.now()
-          const isExpired = (now - entry.timestamp) > this.options.maxAge
+          const isExpired = now - entry.timestamp > this.options.maxAge
 
           if (isExpired) {
             // Remove expired entry
@@ -276,7 +282,7 @@ export class ImageCache {
         mode: 'cors',
         credentials: 'omit',
         headers: {
-          'Accept': 'image/*'
+          Accept: 'image/*'
         }
       })
 
@@ -339,7 +345,7 @@ export class ImageCache {
     const transaction = this.db.transaction([this.options.storeName], 'readwrite')
     const store = transaction.objectStore(this.options.storeName)
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const request = store.delete(id)
       request.onsuccess = () => resolve()
       request.onerror = () => console.error(`[ImageCache] Error removing entry:`, request.error)
@@ -362,8 +368,7 @@ export class ImageCache {
 
       const totalSize = entries.reduce((sum, entry) => sum + entry.size, 0)
       const needsCleanup =
-        entries.length > this.options.maxCacheEntries ||
-        totalSize > this.options.maxCacheSize
+        entries.length > this.options.maxCacheEntries || totalSize > this.options.maxCacheSize
 
       if (needsCleanup) {
         await this.cleanupCache(entries, totalSize)
@@ -463,15 +468,18 @@ export class ImageCache {
         return {
           totalEntries: 0,
           totalSize: 0,
-          context: (isExtensionContext() ? 'extension' as const :
-                   isUserscriptContext() ? 'userscript' as const : 'unknown' as const)
+          context: isExtensionContext()
+            ? ('extension' as const)
+            : isUserscriptContext()
+              ? ('userscript' as const)
+              : ('unknown' as const)
         }
       }
 
       const transaction = this.db.transaction([this.options.storeName], 'readonly')
       const store = transaction.objectStore(this.options.storeName)
 
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         const getAllRequest = store.getAll()
 
         getAllRequest.onsuccess = () => {
@@ -480,10 +488,15 @@ export class ImageCache {
           const stats = {
             totalEntries: entries.length,
             totalSize: entries.reduce((sum, entry) => sum + entry.size, 0),
-            oldestEntry: entries.length > 0 ? Math.min(...entries.map(e => e.timestamp)) : undefined,
-            newestEntry: entries.length > 0 ? Math.max(...entries.map(e => e.timestamp)) : undefined,
-            context: (isExtensionContext() ? 'extension' as const :
-                     isUserscriptContext() ? 'userscript' as const : 'unknown' as const)
+            oldestEntry:
+              entries.length > 0 ? Math.min(...entries.map(e => e.timestamp)) : undefined,
+            newestEntry:
+              entries.length > 0 ? Math.max(...entries.map(e => e.timestamp)) : undefined,
+            context: isExtensionContext()
+              ? ('extension' as const)
+              : isUserscriptContext()
+                ? ('userscript' as const)
+                : ('unknown' as const)
           }
 
           resolve(stats)
@@ -494,8 +507,11 @@ export class ImageCache {
           resolve({
             totalEntries: 0,
             totalSize: 0,
-            context: (isExtensionContext() ? 'extension' as const :
-                     isUserscriptContext() ? 'userscript' as const : 'unknown' as const)
+            context: isExtensionContext()
+              ? ('extension' as const)
+              : isUserscriptContext()
+                ? ('userscript' as const)
+                : ('unknown' as const)
           })
         }
       })
@@ -504,8 +520,11 @@ export class ImageCache {
       return {
         totalEntries: 0,
         totalSize: 0,
-        context: (isExtensionContext() ? 'extension' as const :
-                 isUserscriptContext() ? 'userscript' as const : 'unknown' as const)
+        context: isExtensionContext()
+          ? ('extension' as const)
+          : isUserscriptContext()
+            ? ('userscript' as const)
+            : ('unknown' as const)
       }
     }
   }

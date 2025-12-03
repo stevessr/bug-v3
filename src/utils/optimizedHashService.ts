@@ -46,7 +46,10 @@ export class OptimizedHashService {
         console.log('[OptimizedHashService] Using optimized hash service (WASM)')
         return
       } catch (error) {
-        console.warn('[OptimizedHashService] Hash service initialization failed, falling back to Workers:', error)
+        console.warn(
+          '[OptimizedHashService] Hash service initialization failed, falling back to Workers:',
+          error
+        )
         this.wasmAvailable = false
       }
     }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+
 import { useEmojiStore } from '@/stores/emojiStore'
 import { getEmojiImageUrl, getEmojiImageUrlSync, preloadImages } from '@/utils/imageUrlHelper'
-
 import type { Emoji } from '@/types/type'
 
 interface Props {
