@@ -4,6 +4,7 @@ import { ref, watch, computed, type PropType } from 'vue'
 import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { generateBatchNamesStreaming } from '@/utils/geminiService'
+import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import VirtualList from '@/options/components/VirtualList.vue'
 
 const props = defineProps({
@@ -201,7 +202,7 @@ const progressPercentage = computed(() => {
           <template #default="{ item }">
             <div class="px-4 py-2 border-b dark:border-gray-600 flex items-center gap-3">
               <img
-                :src="item.emoji.url"
+                :src="getEmojiImageUrlSync(item.emoji)"
                 class="w-12 h-12 object-contain bg-gray-100 rounded"
                 loading="lazy"
                 alt="emoji"

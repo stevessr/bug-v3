@@ -16,9 +16,73 @@ import CreateGroupModal from '../components/CreateGroupModal.vue'
 
 import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
+import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 
 const options = inject<OptionsInject>('options')!
 const { emojiStore, openEditEmoji } = options
+
+// 图片缓存状态管理
+const imageSources = ref<Map<string, string>>(new Map())
+const loadingStates = ref<Map<string, boolean>>(new Map())
+
+// Computed
+const bufferGroup = computed(() =>
+  emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
+)
+
+// 获取缓冲区表情
+const bufferEmojis = computed(() => {
+  return bufferGroup.value?.emojis || []
+})
+
+// 初始化图片缓存
+const initializeImageSources = async () => {
+  if (!bufferEmojis.value.length) return
+
+  console.log('[BufferPage] Initializing image sources for buffer:', bufferEmojis.value.length)
+  console.log('[BufferPage] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
+
+  const newSources = new Map<string, string>()
+  const newLoadingStates = new Map<string, boolean>()
+
+  for (const emoji of bufferEmojis.value) {
+    try {
+      if (emojiStore.settings.useIndexedDBForImages) {
+        // 使用缓存优先的加载函数
+        const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
+        newSources.set(emoji.id, result.url)
+        newLoadingStates.set(emoji.id, result.isLoading)
+        console.log(`[BufferPage] Image source for ${emoji.name}:`, result.url, 'from cache:', result.isFromCache)
+      } else {
+        // 直接URL模式
+        const fallbackSrc = emoji.displayUrl || emoji.url
+        newSources.set(emoji.id, fallbackSrc)
+        console.log(`[BufferPage] Direct URL for ${emoji.name}:`, fallbackSrc)
+      }
+    } catch (error) {
+      console.warn(`[BufferPage] Failed to get image source for ${emoji.name}:`, error)
+      // 回退到直接URL
+      const fallbackSrc = emoji.displayUrl || emoji.url
+      newSources.set(emoji.id, fallbackSrc)
+    }
+  }
+
+  imageSources.value = newSources
+  loadingStates.value = newLoadingStates
+  console.log('[BufferPage] Image sources initialized:', imageSources.value.size)
+}
+
+// 监听缓冲区表情变化
+watch(() => bufferEmojis.value, () => {
+  console.log('[BufferPage] Buffer emojis changed, reinitializing image sources')
+  initializeImageSources()
+}, { deep: true })
+
+// 组件挂载时初始化
+onMounted(() => {
+  console.log('[BufferPage] Component mounted')
+  initializeImageSources()
+})
 
 // State
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
@@ -66,10 +130,6 @@ const showDuplicateResults = ref(false)
 const isCheckingDuplicates = ref(false)
 const selectedGroupIdForFilter = ref('')
 const showGroupSelector = ref(false)
-// Computed
-const bufferGroup = computed(() =>
-  emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
-)
 
 // 可用的分组列表（排除缓冲区）
 const availableGroups = computed(
@@ -999,14 +1059,24 @@ onBeforeUnmount(() => {
               class="emoji-item relative"
             >
               <div
-                class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700"
+                class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700 relative"
                 :class="{
                   'cursor-pointer': isMultiSelectMode,
                   'ring-2 ring-blue-500': isMultiSelectMode && selectedEmojis.has(idx)
                 }"
                 @click="handleEmojiClick(idx)"
               >
-                <img :src="emoji.url" :alt="emoji.name" class="w-full h-full object-cover" />
+                <img
+                  :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
+                  :alt="emoji.name"
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  v-if="loadingStates.get(emoji.id)"
+                  class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
+                >
+                  <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                </div>
               </div>
 
               <!-- 多选模式下的选择框 -->

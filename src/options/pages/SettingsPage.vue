@@ -16,6 +16,7 @@ import type {
   S3Config,
   CloudflareConfig
 } from '../../userscript/plugins/syncTargets'
+import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
 import ThemeSettings from '../components/ThemeSettings.vue'
 import UISettings from '../components/UISettings.vue'
@@ -1191,7 +1192,7 @@ const formatDate = (timestamp: number | string | undefined): string => {
               >
                 <img
                   v-if="emoji.displayUrl || emoji.url"
-                  :src="emoji.displayUrl || emoji.url"
+                  :src="getEmojiImageUrlSync(emoji)"
                   :alt="emoji.name || `emoji-${index}`"
                   class="w-full h-full object-contain"
                 />

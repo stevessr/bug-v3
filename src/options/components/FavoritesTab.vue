@@ -4,7 +4,7 @@ import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
-import { getEmojiImageUrlWithLoading, preloadImages } from '../../utils/imageUrlHelper'
+import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync, preloadImages } from '../../utils/imageUrlHelper'
 
 defineEmits(['remove', 'edit'])
 

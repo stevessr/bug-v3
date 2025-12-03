@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { useEmojiStore } from '@/stores/emojiStore'
-import { getEmojiImageUrl, preloadImages } from '@/utils/imageUrlHelper'
+import { getEmojiImageUrl, getEmojiImageUrlSync, preloadImages } from '@/utils/imageUrlHelper'
 
 import type { Emoji } from '@/types/type'
 
@@ -139,7 +139,7 @@ const addEmojiTouchEvents = (_element: HTMLElement, _emoji: Emoji, _index: numbe
           class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
         >
           <img
-            :src="imageSources.get(emoji.id) || emoji.url"
+            :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
             :alt="emoji.name"
             class="w-full h-full object-cover"
             loading="lazy"

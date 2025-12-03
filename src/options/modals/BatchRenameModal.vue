@@ -5,6 +5,7 @@ import { CheckOutlined, CloseOutlined, ReloadOutlined } from '@ant-design/icons-
 import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { generateBatchNames } from '@/utils/geminiService'
+import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 
 const props = defineProps({
   visible: {
@@ -368,8 +369,8 @@ onUnmounted(() => {
               <!-- Emoji Preview -->
               <div class="flex-shrink-0">
                 <img
-                  :data-src="emoji.url"
-                  :src="loadedImages.has(emoji.url) ? emoji.url : ''"
+                  :data-src="getEmojiImageUrlSync(emoji)"
+                  :src="loadedImages.has(getEmojiImageUrlSync(emoji)) ? getEmojiImageUrlSync(emoji) : ''"
                   class="w-12 h-12 object-contain bg-white rounded"
                   loading="lazy"
                   :ref="observeImage"

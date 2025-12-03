@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, toRefs, watch } from 'vue'
 import { useEmojiStore } from '@/stores/emojiStore'
-import { getEmojiImageUrl, preloadImages } from '@/utils/imageUrlHelper'
+import { getEmojiImageUrl, getEmojiImageUrlSync, preloadImages } from '@/utils/imageUrlHelper'
 
 import type { Emoji } from '@/types/type'
 
@@ -204,7 +204,7 @@ const focusLastEmoji = () => {
           tabindex="0"
         >
           <a-image
-            :src="imageSources.get(emoji.id) || (emoji.displayUrl || emoji.url)"
+            :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
             :alt="emoji.name"
             class="w-full h-full object-cover"
             loading="lazy"

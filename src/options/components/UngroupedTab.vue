@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { DownOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 
 import type { EmojiGroup, Emoji } from '../../types/type'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
-import { getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
+import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
 
 import GroupSelector from './GroupSelector.vue'
 import CreateGroupModal from './CreateGroupModal.vue'
@@ -14,6 +14,62 @@ defineEmits(['remove', 'edit', 'addEmoji'])
 
 // use store instance directly
 const emojiStore = useEmojiStore()
+
+// 获取未分组
+const ungroup = computed(() => emojiStore.groups.find((g: EmojiGroup) => g.id === 'ungrouped'))
+
+// 图片缓存状态管理
+const imageSources = ref<Map<string, string>>(new Map())
+const loadingStates = ref<Map<string, boolean>>(new Map())
+
+// 初始化图片缓存
+const initializeImageSources = async () => {
+  if (!ungroup.value?.emojis) return
+
+  console.log('[UngroupedTab] Initializing image sources for ungrouped:', ungroup.value.emojis.length)
+  console.log('[UngroupedTab] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
+
+  const newSources = new Map<string, string>()
+  const newLoadingStates = new Map<string, boolean>()
+
+  for (const emoji of ungroup.value.emojis) {
+    try {
+      if (emojiStore.settings.useIndexedDBForImages) {
+        // 使用缓存优先的加载函数
+        const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
+        newSources.set(emoji.id, result.url)
+        newLoadingStates.set(emoji.id, result.isLoading)
+        console.log(`[UngroupedTab] Image source for ${emoji.name}:`, result.url, 'from cache:', result.isFromCache)
+      } else {
+        // 直接 URL 模式
+        const fallbackSrc = emoji.displayUrl || emoji.url
+        newSources.set(emoji.id, fallbackSrc)
+        console.log(`[UngroupedTab] Direct URL for ${emoji.name}:`, fallbackSrc)
+      }
+    } catch (error) {
+      console.warn(`[UngroupedTab] Failed to get image source for ${emoji.name}:`, error)
+      // 回退到直接 URL
+      const fallbackSrc = emoji.displayUrl || emoji.url
+      newSources.set(emoji.id, fallbackSrc)
+    }
+  }
+
+  imageSources.value = newSources
+  loadingStates.value = newLoadingStates
+  console.log('[UngroupedTab] Image sources initialized:', imageSources.value.size)
+}
+
+// 监听未分组表情变化
+watch(() => ungroup.value?.emojis, () => {
+  console.log('[UngroupedTab] Ungrouped emojis changed, reinitializing image sources')
+  initializeImageSources()
+}, { deep: true })
+
+// 组件挂载时初始化
+onMounted(() => {
+  console.log('[UngroupedTab] Component mounted')
+  initializeImageSources()
+})
 
 // 多选功能相关状态
 const isMultiSelectMode = ref(false)
@@ -57,8 +113,6 @@ const onTargetGroupSelect = (info: { key: string | number }) => {
 }
 const showCreateGroupDialog = ref(false)
 const copyButtonLabel = ref('复制为 markdown')
-
-const ungroup = computed(() => emojiStore.groups.find((g: EmojiGroup) => g.id === 'ungrouped'))
 
 // 可用的分组列表（排除未分组）
 const availableGroups = computed(
@@ -455,14 +509,24 @@ const cancelCreateGroup = () => {
             class="emoji-item relative"
           >
             <div
-              class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700"
+              class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700 relative"
               :class="{
                 'cursor-pointer': isMultiSelectMode,
                 'ring-2 ring-blue-500': isMultiSelectMode && selectedEmojis.has(idx)
               }"
               @click="handleEmojiClick(idx)"
             >
-              <img :src="getEmojiImageUrlSync(emoji)" :alt="emoji.name" class="w-full h-full object-cover" />
+              <img
+                :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
+                :alt="emoji.name"
+                class="w-full h-full object-cover"
+              />
+              <div
+                v-if="loadingStates.get(emoji.id)"
+                class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
+              >
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              </div>
             </div>
 
             <!-- 多选模式下的选择框 -->

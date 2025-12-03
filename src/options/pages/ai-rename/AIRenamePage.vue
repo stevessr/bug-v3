@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
+import { getEmojiImageUrlWithLoading } from '@/utils/imageUrlHelper'
 import VirtualList from '@/options/components/VirtualList.vue'
 import BatchActionsBar from '@/options/components/BatchActionsBar.vue'
 import BatchRenameModalOptimized from '@/options/modals/BatchRenameModalOptimized.vue'
@@ -21,6 +22,60 @@ const allEmojis = computed(() => {
 })
 
 const selectedEmojis = ref(new Set<string>())
+
+// 图片缓存状态管理
+const imageSources = ref<Map<string, string>>(new Map())
+const loadingStates = ref<Map<string, boolean>>(new Map())
+
+// 初始化图片缓存
+const initializeImageSources = async () => {
+  if (!allEmojis.value.length) return
+
+  console.log('[AIRenamePage] Initializing image sources for', allEmojis.value.length, 'emojis')
+  console.log('[AIRenamePage] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
+
+  const newSources = new Map<string, string>()
+  const newLoadingStates = new Map<string, boolean>()
+
+  for (const emoji of allEmojis.value) {
+    try {
+      if (emojiStore.settings.useIndexedDBForImages) {
+        // 使用缓存优先的加载函数
+        const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
+        newSources.set(emoji.id, result.url)
+        newLoadingStates.set(emoji.id, result.isLoading)
+        console.log(`[AIRenamePage] Image source for ${emoji.name}:`, result.url, 'from cache:', result.isFromCache)
+      } else {
+        // 直接 URL 模式
+        const fallbackSrc = emoji.displayUrl || emoji.url
+        newSources.set(emoji.id, fallbackSrc)
+        console.log(`[AIRenamePage] Direct URL for ${emoji.name}:`, fallbackSrc)
+      }
+    } catch (error) {
+      console.warn(`[AIRenamePage] Failed to get image source for ${emoji.name}:`, error)
+      // 回退到直接 URL
+      const fallbackSrc = emoji.displayUrl || emoji.url
+      newSources.set(emoji.id, fallbackSrc)
+    }
+  }
+
+  imageSources.value = newSources
+  loadingStates.value = newLoadingStates
+  console.log('[AIRenamePage] Image sources initialized:', imageSources.value.size)
+}
+
+// 监听表情数据变化
+watch(() => allEmojis.value, () => {
+  console.log('[AIRenamePage] Emojis changed, reinitializing image sources')
+  initializeImageSources()
+}, { deep: true })
+
+// 组件挂载时初始化
+onMounted(() => {
+  console.log('[AIRenamePage] Component mounted')
+  initializeImageSources()
+})
+
 
 const toggleSelection = (emojiId: string) => {
   if (selectedEmojis.value.has(emojiId)) {
@@ -127,7 +182,17 @@ const containerHeight = 600
                 - 在这个视窗上应用 overflow-hidden 来裁剪放大后的图片。
               -->
               <div class="h-24 w-full flex items-center justify-center overflow-hidden">
-                <a-image :src="emoji.url" :alt="emoji.name" loading="lazy" />
+                <a-image
+                  :src="imageSources.get(emoji.id) || (emoji.displayUrl || emoji.url)"
+                  :alt="emoji.name"
+                  loading="lazy"
+                />
+                <div
+                  v-if="loadingStates.get(emoji.id)"
+                  class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
+                >
+                  <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                </div>
               </div>
 
               <!-- 将文字和复选框组合在一起，位于卡片底部 -->
