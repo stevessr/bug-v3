@@ -20,8 +20,13 @@ const allEmojis = computed(() => {
     return group.emojis.map(emoji => ({ ...emoji, groupId: group.id }))
   })
 
-  console.log('[AIRenamePage] Computed grouped emojis:', groupedEmojis.length, 'emojis from',
-    emojiStore.sortedGroups.filter(g => g.id !== 'favorites' && g.id !== 'ungrouped').length, 'groups')
+  console.log(
+    '[AIRenamePage] Computed grouped emojis:',
+    groupedEmojis.length,
+    'emojis from',
+    emojiStore.sortedGroups.filter(g => g.id !== 'favorites' && g.id !== 'ungrouped').length,
+    'groups'
+  )
 
   return groupedEmojis
 })
@@ -196,7 +201,9 @@ const containerHeight = 600
               -->
               <div class="h-24 w-full flex items-center justify-center overflow-hidden relative">
                 <a-image
-                  :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
+                  :src="
+                    imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji, { preferCache: true })
+                  "
                   :alt="emoji.name"
                   loading="lazy"
                 />

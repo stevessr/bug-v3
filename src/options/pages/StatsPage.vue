@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, ref, computed } from 'vue'
+import { inject, ref, computed, onMounted } from 'vue'
 import {
   LoadingOutlined,
   DeleteOutlined,
@@ -13,8 +13,8 @@ import type { OptionsInject } from '../types'
 import EmojiStats from '../components/EmojiStats.vue'
 
 import type { Emoji } from '@/types/type'
-import { cacheImage, getCachedImage, imageCache } from '@/utils/imageCache'
-import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
+import { cacheImage, imageCache } from '@/utils/imageCache'
+import { getEmojiImageUrlSync, addCacheBustingParam, isImageCached } from '@/utils/imageUrlHelper'
 
 const options = inject<OptionsInject>('options')!
 const { emojiStore, totalEmojis } = options
@@ -32,6 +32,7 @@ const isCaching = ref(false)
 const cacheProgress = ref(0)
 const cacheError = ref('')
 const cachedCount = ref(0)
+const realCachedCount = ref(0)
 const totalCount = ref(0)
 const currentCacheGroup = ref('')
 const currentCacheEmoji = ref('')
@@ -62,7 +63,7 @@ const filteredDuplicateGroups = computed(() => {
 // Calculate cache statistics
 const cacheStats = computed(() => {
   let total = 0
-  const cached = 0
+  const cached = realCachedCount.value
 
   for (const group of emojiStore.groups) {
     for (const emoji of group.emojis || []) {
@@ -71,6 +72,19 @@ const cacheStats = computed(() => {
   }
 
   return { total, cached }
+})
+
+const refreshCacheStats = async () => {
+  try {
+    const stats = await imageCache.getCacheStats()
+    realCachedCount.value = stats.totalEntries
+  } catch (error) {
+    console.error('Failed to get cache stats:', error)
+  }
+}
+
+onMounted(() => {
+  refreshCacheStats()
 })
 
 const setAsOriginal = (groupIndex: number, itemIndex: number) => {
@@ -178,6 +192,7 @@ const cacheAllImages = async () => {
   cacheError.value = ''
   cacheProgress.value = 0
   cachedCount.value = 0
+  realCachedCount.value = 0
   totalCount.value = 0
   currentCacheGroup.value = ''
   currentCacheEmoji.value = ''
@@ -186,7 +201,7 @@ const cacheAllImages = async () => {
     // Initialize image cache
     await imageCache.init()
 
-    // Count total emojis
+    // Count total emojis first
     let total = 0
     for (const group of emojiStore.groups) {
       for (const emoji of group.emojis || []) {
@@ -202,12 +217,12 @@ const cacheAllImages = async () => {
       currentCacheGroup.value = group.name
 
       for (const emoji of group.emojis || []) {
-        const url = emoji.displayUrl || emoji.url
+        const url = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
         currentCacheEmoji.value = emoji.name
 
         try {
           // Check if already cached
-          const isCached = await getCachedImage(url)
+          const isCached = await isImageCached(emoji)
           if (!isCached) {
             // Cache the image
             await cacheImage(url)
@@ -218,7 +233,7 @@ const cacheAllImages = async () => {
         }
 
         processed++
-        cacheProgress.value = total > 0 ? (processed / total) * 100 : 0
+        cacheProgress.value = totalCount.value > 0 ? (processed / totalCount.value) * 100 : 0
 
         // Add small delay to prevent overwhelming the browser
         if (processed % 10 === 0) {
@@ -228,6 +243,7 @@ const cacheAllImages = async () => {
     }
 
     message.success(`已缓存 ${cachedCount.value} 个表情图片`)
+    await refreshCacheStats()
   } catch (error: any) {
     cacheError.value = error.message || '缓存失败'
     message.error('缓存表情图片失败')
@@ -241,6 +257,7 @@ const clearImageCache = async () => {
   try {
     await imageCache.clearCache()
     message.success('已清空图片缓存')
+    await refreshCacheStats()
   } catch (error) {
     message.error('清空图片缓存失败')
     console.error('Clear image cache error:', error)
@@ -262,7 +279,7 @@ const clearImageCache = async () => {
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <h2 class="text-lg font-semibold dark:text-white">图片缓存</h2>
         <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          缓存所有表情图片到本地IndexedDB，提升加载速度和离线访问能力
+          缓存所有表情图片到本地 IndexedDB，提升加载速度和离线访问能力
         </p>
       </div>
 
@@ -336,7 +353,7 @@ const clearImageCache = async () => {
             <strong>说明：</strong>
           </p>
           <ul class="list-disc list-inside space-y-1 ml-2">
-            <li>缓存将图片存储到浏览器IndexedDB，提升后续访问速度</li>
+            <li>缓存将图片存储到浏览器 IndexedDB，提升后续访问速度</li>
             <li>已缓存的图片在离线状态下也能正常显示</li>
             <li>缓存会占用一定的浏览器存储空间</li>
             <li>建议在网络状况良好时执行一键缓存操作</li>

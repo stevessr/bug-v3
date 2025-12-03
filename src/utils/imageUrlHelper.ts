@@ -13,18 +13,31 @@ export interface ImageUrlOptions {
 }
 
 /**
+ * Add cache-busting parameter to URL to force refresh when emoji is updated
+ */
+export function addCacheBustingParam(url: string, emoji: { id: string; packet?: number }): string {
+  if (!url) return url
+
+  // Use packet number as version indicator, fallback to id hash if not available
+  const version = emoji.packet || emoji.id.substring(0, 8)
+  const separator = url.includes('?') ? '&' : '?'
+
+  return `${url}${separator}v=${version}`
+}
+
+/**
  * Get the appropriate image URL for an emoji, respecting cache settings
  */
 export async function getEmojiImageUrl(
-  emoji: { displayUrl?: string; url: string; name?: string },
+  emoji: { id: string; displayUrl?: string; url: string; name?: string; packet?: number },
   options: ImageUrlOptions = {}
 ): Promise<string> {
   const { preferCache = true, fallbackUrl } = options
   const emojiStore = useEmojiStore()
 
-  // Determine the primary URL to use
-  const primaryUrl = emoji.displayUrl || emoji.url
-  const finalFallbackUrl = fallbackUrl || emoji.url
+  // Determine the primary URL to use with cache-busting
+  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
+  const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url, emoji)
 
   console.log(
     `[ImageUrlHelper] Getting image URL for ${emoji.name}, preferCache: ${preferCache}, cacheEnabled: ${emojiStore.settings.useIndexedDBForImages}`
@@ -100,21 +113,20 @@ export async function getEmojiImageUrl(
  * In cache mode, this will wait for cache or return a loading indicator
  */
 export function getEmojiImageUrlSync(
-  emoji: { displayUrl?: string; url: string; name?: string },
+  emoji: { id: string; displayUrl?: string; url: string; name?: string; packet?: number },
   options: ImageUrlOptions = {}
 ): string {
-  const { preferCache = true, fallbackUrl } = options
+  const { preferCache = true } = options
   const emojiStore = useEmojiStore()
 
-  // Determine the primary URL to use
-  const primaryUrl = emoji.displayUrl || emoji.url
-  const finalFallbackUrl = fallbackUrl || emoji.url
+  // Determine the primary URL to use with cache-busting
+  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
 
   console.log(
     `[ImageUrlHelper] Sync get image URL for ${emoji.name}, preferCache: ${preferCache}, cacheEnabled: ${emojiStore.settings.useIndexedDBForImages}`
   )
 
-  // If caching is disabled or not preferred, return the direct URL
+  // If caching is disabled or not preferred, return the direct URL with cache-busting
   if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
     console.log(
       `[ImageUrlHelper] Cache disabled for ${emoji.name}, returning direct URL:`,
@@ -151,19 +163,19 @@ export function getEmojiImageUrlSync(
  * Get image URL with loading state - returns cached URL if available, otherwise loads and caches
  */
 export async function getEmojiImageUrlWithLoading(
-  emoji: { displayUrl?: string; url: string; name?: string },
+  emoji: { id: string; displayUrl?: string; url: string; name?: string; packet?: number },
   options: ImageUrlOptions = {}
 ): Promise<{ url: string; isLoading: boolean; isFromCache: boolean }> {
   const { preferCache = true, fallbackUrl } = options
   const emojiStore = useEmojiStore()
 
-  // Determine the primary URL to use
-  const primaryUrl = emoji.displayUrl || emoji.url
-  const finalFallbackUrl = fallbackUrl || emoji.url
+  // Determine the primary URL to use with cache-busting
+  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
+  const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url, emoji)
 
   console.log(`[ImageUrlHelper] Getting image URL with loading for ${emoji.name}`)
 
-  // If caching is disabled or not preferred, return direct URL
+  // If caching is disabled or not preferred, return direct URL with cache-busting
   if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
     return { url: primaryUrl, isLoading: false, isFromCache: false }
   }
@@ -232,8 +244,13 @@ async function triggerBackgroundCache(url: string): Promise<void> {
 /**
  * Check if an image is cached
  */
-export async function isImageCached(emoji: { displayUrl?: string; url: string }): Promise<boolean> {
-  const primaryUrl = emoji.displayUrl || emoji.url
+export async function isImageCached(emoji: {
+  id: string
+  displayUrl?: string
+  url: string
+  packet?: number
+}): Promise<boolean> {
+  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
   const { isImageCached } = await import('./imageCache')
   return isImageCached(primaryUrl)
 }
@@ -242,7 +259,7 @@ export async function isImageCached(emoji: { displayUrl?: string; url: string })
  * Preload multiple images into cache
  */
 export async function preloadImages(
-  emojis: Array<{ displayUrl?: string; url: string; name?: string }>,
+  emojis: Array<{ id: string; displayUrl?: string; url: string; name?: string; packet?: number }>,
   options: { batchSize?: number; delay?: number } = {}
 ): Promise<void> {
   const { batchSize = 5, delay = 100 } = options
@@ -257,7 +274,7 @@ export async function preloadImages(
 
     await Promise.allSettled(
       batch.map(async emoji => {
-        const url = emoji.displayUrl || emoji.url
+        const url = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
         try {
           const isCached = await getCachedImage(url)
           if (!isCached) {

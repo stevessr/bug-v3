@@ -9,7 +9,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(touch:*)",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(npm run type-check)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:fix)"
     ],
     "deny": [],
     "ask": []
