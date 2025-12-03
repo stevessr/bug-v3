@@ -12,13 +12,18 @@ const emojiStore = useEmojiStore()
 
 // 只显示分组中的表情，排除常用和未分组的表情
 const allEmojis = computed(() => {
-  return emojiStore.sortedGroups.flatMap(group => {
+  const groupedEmojis = emojiStore.sortedGroups.flatMap(group => {
     // 排除常用分组和未分组的表情
     if (group.id === 'favorites' || group.id === 'ungrouped') {
       return []
     }
     return group.emojis.map(emoji => ({ ...emoji, groupId: group.id }))
   })
+
+  console.log('[AIRenamePage] Computed grouped emojis:', groupedEmojis.length, 'emojis from',
+    emojiStore.sortedGroups.filter(g => g.id !== 'favorites' && g.id !== 'ungrouped').length, 'groups')
+
+  return groupedEmojis
 })
 
 const selectedEmojis = ref(new Set<string>())
@@ -189,7 +194,7 @@ const containerHeight = 600
                 - 给它一个固定的高度 (例如 h-24)，这个高度决定了图片显示区域的大小。
                 - 在这个视窗上应用 overflow-hidden 来裁剪放大后的图片。
               -->
-              <div class="h-24 w-full flex items-center justify-center overflow-hidden">
+              <div class="h-24 w-full flex items-center justify-center overflow-hidden relative">
                 <a-image
                   :src="imageSources.get(emoji.id) || emoji.displayUrl || emoji.url"
                   :alt="emoji.name"

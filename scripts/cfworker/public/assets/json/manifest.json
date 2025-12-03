@@ -166,7 +166,7 @@
       "name": "未分组",
       "order": 23,
       "icon": "📦",
-      "emojiCount": 6
+      "emojiCount": 5
     },
     {
       "id": "group-1760528756665",
@@ -675,11 +675,18 @@
     {
       "id": "group-1764592283419",
       "name": "steve 的 OC 表情包",
-      "order": 97,
+      "order": 96,
       "icon": "https://linux.do/uploads/default/original/4X/7/a/e/7ae79c2cc6c90287f2ffcdfb26578b4ce95c1ec0.jpeg",
       "emojiCount": 54
+    },
+    {
+      "id": "group-1764738272674",
+      "name": "X 第九弹",
+      "order": 97,
+      "icon": "https://linux.do/uploads/default/original/4X/9/4/b/94b6c1aff0ff7498d5d7f5ff1311b7ddabfc9ec1.avif",
+      "emojiCount": 732
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-12-01T12:31:51.154Z"
+  "exportDate": "2025-12-03T06:36:32.687Z"
 }
