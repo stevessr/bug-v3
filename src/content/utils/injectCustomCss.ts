@@ -6,8 +6,8 @@ const STYLE_ID = 'emoji-extension-custom-css'
 
 export function applyCustomCssFromCache() {
   try {
-    const css = cachedState.settings && (cachedState.settings as any).customCss
-    if (css && typeof css === 'string' && css.trim().length > 0) {
+    const css = getCombinedCustomCssFromCache()
+    if (css && css.trim().length > 0) {
       ESI(STYLE_ID, css)
       console.log('[Emoji Extension] 应用自定义 css')
       console.log('[Emoji Extension] css\n', css)
@@ -19,6 +19,33 @@ export function applyCustomCssFromCache() {
     }
   } catch (e) {
     console.warn('[Emoji Extension] Failed to apply custom CSS', e)
+  }
+}
+
+// Get combined CSS from blocks in cache
+function getCombinedCustomCssFromCache(): string {
+  try {
+    const settings = cachedState.settings as any
+    if (!settings) return ''
+
+    // Check if new block system is available
+    if (settings.customCssBlocks && Array.isArray(settings.customCssBlocks)) {
+      return settings.customCssBlocks
+        .filter((block: any) => block.enabled)
+        .map((block: any) => block.content || '')
+        .join('\n\n')
+        .trim()
+    }
+
+    // Fallback to legacy customCss
+    if (settings.customCss && typeof settings.customCss === 'string') {
+      return settings.customCss.trim()
+    }
+
+    return ''
+  } catch (e) {
+    console.warn('[Emoji Extension] Failed to get combined CSS from cache', e)
+    return ''
   }
 }
 

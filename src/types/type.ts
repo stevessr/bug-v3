@@ -29,7 +29,8 @@ export interface AppSettings {
   customPrimaryColor?: string // 主题主色
   customColorScheme?: 'default' | 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'custom'
   // Custom CSS injected into pages (managed in Options)
-  customCss?: string
+  customCss?: string // @deprecated - use customCssBlocks instead
+  customCssBlocks?: CustomCssBlock[] // Array of CSS blocks with toggle functionality
   // Optional UI config for content-script upload menu (auto items, iframe modals, side iframes)
   uploadMenuItems?: {
     autoItems?: Array<[string, string, string]>
@@ -77,4 +78,14 @@ export interface Emoji {
 export interface DefaultEmojiData {
   groups: EmojiGroup[]
   settings: AppSettings
+}
+
+// Custom CSS block interface
+export interface CustomCssBlock {
+  id: string
+  name: string
+  content: string
+  enabled: boolean
+  createdAt: number
+  updatedAt: number
 }

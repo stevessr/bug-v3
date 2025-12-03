@@ -21,7 +21,7 @@ import ThemeSettings from '../components/ThemeSettings.vue'
 import UISettings from '../components/UISettings.vue'
 import FeatureSwitchSettings from '../components/FeatureSwitchSettings.vue'
 import MenuBarSettings from '../components/MenuBarSettings.vue'
-import CustomCSSSettings from '../components/CustomCSSSettings.vue'
+import CustomCSSBlockSettings from '../components/CustomCSSBlockSettings.vue'
 import AISettings from '../components/AISettings.vue'
 
 import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
@@ -54,6 +54,7 @@ const {
   updateCustomPrimaryColor,
   updateCustomColorScheme,
   updateCustomCss,
+  updateCustomCssBlocks,
   updateUploadMenuItems,
   updateGeminiApiKey,
   updateGeminiApiUrl,
@@ -580,9 +581,10 @@ const formatDate = (timestamp: number | string | undefined): string => {
 
         <a-tab-pane key="css" tab="自定义CSS">
           <div class="py-4">
-            <CustomCSSSettings
+            <CustomCSSBlockSettings
               :settings="emojiStore.settings"
               @update:customCss="updateCustomCss"
+              @update:customCssBlocks="updateCustomCssBlocks"
             />
           </div>
         </a-tab-pane>

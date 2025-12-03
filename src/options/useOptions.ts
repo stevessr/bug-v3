@@ -338,6 +338,16 @@ export default function useOptions() {
     emojiStore.updateSettings({ customCss: css })
   }
 
+  const updateCustomCssBlocks = (blockOrAction: any) => {
+    if (blockOrAction.type === 'delete') {
+      emojiStore.deleteCustomCssBlock(blockOrAction.id)
+      showSuccess('CSS 块已删除')
+    } else if (blockOrAction && typeof blockOrAction === 'object' && blockOrAction.id) {
+      emojiStore.saveCustomCssBlock(blockOrAction)
+      showSuccess(blockOrAction.createdAt === blockOrAction.updatedAt ? 'CSS 块已创建' : 'CSS 块已更新')
+    }
+  }
+
   const updateUploadMenuItems = (payload: any) => {
     try {
       // store the structure under settings so it will be read by content scripts
@@ -1002,6 +1012,7 @@ export default function useOptions() {
     updateCustomPrimaryColor,
     updateCustomColorScheme,
     updateCustomCss,
+    updateCustomCssBlocks,
     updateSyncVariantToDisplayUrl,
     updateUseIndexedDBForImages,
     updateEnableHoverPreview,

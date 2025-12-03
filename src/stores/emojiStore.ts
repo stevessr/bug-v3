@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 
-import type { Emoji, EmojiGroup, AppSettings } from '../types/type'
+import type { Emoji, EmojiGroup, AppSettings, CustomCssBlock } from '../types/type'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
 import { cloudflareSyncService } from '../utils/cloudflareSync'
@@ -180,6 +180,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         // Local settings exist - just merge with static defaults (no network request)
         settings.value = { ...defaultSettings, ...settingsData }
       }
+
+      // Migrate legacy customCss to customCssBlocks if needed
+      migrateLegacyCustomCss(settingsData)
 
       favorites.value = new Set(favoritesData || [])
 
@@ -950,6 +953,92 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
+  // --- CSS Block Management ---
+
+  // Migrate legacy customCss string to customCssBlocks array
+  const migrateLegacyCustomCss = (loadedSettings: any) => {
+    if (!loadedSettings) return
+
+    // If customCssBlocks already exist, skip migration
+    if (loadedSettings.customCssBlocks && Array.isArray(loadedSettings.customCssBlocks)) {
+      return
+    }
+
+    // If there's legacy customCss content, migrate it to a default block
+    if (loadedSettings.customCss && typeof loadedSettings.customCss === 'string' && loadedSettings.customCss.trim()) {
+      const legacyBlock: CustomCssBlock = {
+        id: 'legacy-migrated-css',
+        name: '迁移的 CSS',
+        content: loadedSettings.customCss,
+        enabled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }
+
+      settings.value.customCssBlocks = [legacyBlock]
+      settings.value.customCss = '' // Clear the legacy field
+
+      console.log('[EmojiStore] Migrated legacy customCss to customCssBlocks')
+      maybeSave()
+    }
+  }
+
+  // Get all CSS blocks
+  const getCustomCssBlocks = (): CustomCssBlock[] => {
+    return settings.value.customCssBlocks || []
+  }
+
+  // Add or update a CSS block
+  const saveCustomCssBlock = (block: CustomCssBlock) => {
+    const blocks = getCustomCssBlocks()
+    const existingIndex = blocks.findIndex(b => b.id === block.id)
+
+    if (existingIndex >= 0) {
+      // Update existing block
+      blocks[existingIndex] = { ...block, updatedAt: Date.now() }
+    } else {
+      // Add new block
+      blocks.push({ ...block, createdAt: Date.now(), updatedAt: Date.now() })
+    }
+
+    updateSettings({ customCssBlocks: [...blocks] })
+    console.log('[EmojiStore] saveCustomCssBlock', { blockId: block.id, name: block.name })
+  }
+
+  // Delete a CSS block
+  const deleteCustomCssBlock = (blockId: string) => {
+    const blocks = getCustomCssBlocks()
+    const filteredBlocks = blocks.filter(b => b.id !== blockId)
+
+    if (filteredBlocks.length !== blocks.length) {
+      updateSettings({ customCssBlocks: filteredBlocks })
+      console.log('[EmojiStore] deleteCustomCssBlock', { blockId })
+    }
+  }
+
+  // Toggle CSS block enabled status
+  const toggleCustomCssBlock = (blockId: string) => {
+    const blocks = getCustomCssBlocks()
+    const block = blocks.find(b => b.id === blockId)
+
+    if (block) {
+      block.enabled = !block.enabled
+      block.updatedAt = Date.now()
+      updateSettings({ customCssBlocks: [...blocks] })
+      console.log('[EmojiStore] toggleCustomCssBlock', { blockId, enabled: block.enabled })
+    }
+  }
+
+  // Get combined CSS from all enabled blocks
+  const getCombinedCustomCss = (): string => {
+    const blocks = getCustomCssBlocks()
+    return blocks
+      .filter(block => block.enabled)
+      .map(block => block.content)
+      .join('\n\n')
+      .trim()
+  }
+
   // --- Import/Export ---
   const exportConfiguration = () => {
     return {
@@ -1547,7 +1636,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     loadGroupDetails,
     pushToCloudflare,
     pullFromCloudflare,
-    isSyncConfigured
+    isSyncConfigured,
+    // CSS Block Management
+    getCustomCssBlocks,
+    saveCustomCssBlock,
+    deleteCustomCssBlock,
+    toggleCustomCssBlock,
+    getCombinedCustomCss
     // (lazy-load removed)
   }
 })
