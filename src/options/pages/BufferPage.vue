@@ -100,6 +100,8 @@ const selectedFiles = ref<
     id: string
     file: File
     previewUrl: string
+    width?: number
+    height?: number
     cropData?: {
       x: number
       y: number
@@ -254,15 +256,16 @@ const addFiles = async (files: File[]) => {
         id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         file,
         previewUrl: url,
-        cropData: undefined as undefined
+        cropData: undefined as undefined,
+        width: undefined as number | undefined,
+        height: undefined as number | undefined
       }
 
-      // Get image dimensions (optional, can be added to cropData if needed)
+      // Get image dimensions
       const img = new Image()
       img.onload = () => {
-        // Store dimensions if needed for cropping
-        // newFileEntry.width = img.width
-        // newFileEntry.height = img.height
+        newFileEntry.width = img.width
+        newFileEntry.height = img.height
       }
       img.src = url
 
@@ -319,14 +322,16 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
 
       const url = URL.createObjectURL(file)
 
-      // Get image dimensions
+      // Get image dimensions and add to array after loading
       const img = new Image()
       img.onload = () => {
         newFilesWithUrls.push({
           id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           file,
           previewUrl: url,
-          cropData: undefined
+          cropData: undefined,
+          width: img.width,
+          height: img.height
         })
       }
       img.src = url

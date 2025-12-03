@@ -152,7 +152,7 @@ const progressPercentage = computed(() => {
       <a-alert v-if="error" :message="error" type="error" show-icon />
 
       <div>
-        <p class="font-semibold">命名提示:</p>
+        <p class="font-semibold">命名提示：</p>
         <a-textarea
           v-model:value="prompt"
           placeholder="例如：给这些表情加上'搞笑'前缀，或者'根据图片内容生成描述性名称'"

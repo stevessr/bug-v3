@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 
 import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
-import { getEmojiImageUrlWithLoading } from '@/utils/imageUrlHelper'
+import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import VirtualList from '@/options/components/VirtualList.vue'
 import BatchActionsBar from '@/options/components/BatchActionsBar.vue'
 import BatchRenameModalOptimized from '@/options/modals/BatchRenameModalOptimized.vue'
@@ -196,7 +196,7 @@ const containerHeight = 600
               -->
               <div class="h-24 w-full flex items-center justify-center overflow-hidden relative">
                 <a-image
-                  :src="imageSources.get(emoji.id) || emoji.displayUrl || emoji.url"
+                  :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
                   :alt="emoji.name"
                   loading="lazy"
                 />
