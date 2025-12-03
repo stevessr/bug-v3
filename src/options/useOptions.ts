@@ -274,6 +274,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ syncVariantToDisplayUrl: value })
   }
 
+  const updateUseIndexedDBForImages = (value: boolean) => {
+    emojiStore.updateSettings({ useIndexedDBForImages: value })
+  }
+
   const updateTheme = (theme: 'system' | 'light' | 'dark') => {
     emojiStore.updateSettings({ theme })
     localStorage.setItem('theme', theme)
@@ -999,6 +1003,7 @@ export default function useOptions() {
     updateCustomColorScheme,
     updateCustomCss,
     updateSyncVariantToDisplayUrl,
+    updateUseIndexedDBForImages,
     updateEnableHoverPreview,
     updateUploadMenuItems,
     updateGeminiApiKey,

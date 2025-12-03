@@ -15,7 +15,8 @@ const emit = defineEmits([
   'update:enableLinuxDoInjection',
   'update:enableXcomExtraSelectors',
   'update:enableCalloutSuggestions',
-  'update:enableBatchParseImages'
+  'update:enableBatchParseImages',
+  'update:useIndexedDBForImages'
 ])
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
@@ -117,6 +118,13 @@ const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
         @update:model-value="handleSettingUpdate('enableBatchParseImages', $event)"
         label="启用一键解析全部图片"
         description="控制前端是否注入'一键解析并添加所有图片'按钮"
+      />
+
+      <SettingSwitch
+        :model-value="getSetting('useIndexedDBForImages', false)"
+        @update:model-value="handleSettingUpdate('useIndexedDBForImages', $event)"
+        label="启用 IndexedDB 缓存图片"
+        description="将图片缓存在 IndexedDB 中以加快加载速度并支持离线访问"
       />
     </div>
   </div>

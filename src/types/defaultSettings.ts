@@ -40,5 +40,6 @@ export const defaultSettings: AppSettings = {
   // Default: keep legacy conservative behavior for backward compatibility
   // (set to true if you prefer selected variant to always override displayUrl)
   syncVariantToDisplayUrl: true,
+  useIndexedDBForImages: false,
   uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS
 }

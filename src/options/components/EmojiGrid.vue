@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { useEmojiStore } from '@/stores/emojiStore'
+import { getCachedImage, cacheImage } from '@/utils/imageCache'
 
 import type { Emoji } from '@/types/type'
 
@@ -17,6 +20,90 @@ const emit = defineEmits<{
   emojiDragStart: [emoji: Emoji, groupId: string, index: number, event: DragEvent]
   emojiDrop: [groupId: string, index: number, event: DragEvent]
 }>()
+
+const emojiStore = useEmojiStore()
+const blobUrls = ref<Set<string>>(new Set())
+
+// Computed property to check if image caching is enabled
+const useCachedImages = computed(() => emojiStore.settings.useIndexedDBForImages)
+
+// Method to get image source with caching support
+const getImageSrc = async (emoji: Emoji): Promise<string> => {
+  if (!useCachedImages.value) {
+    return emoji.url
+  }
+
+  try {
+    // Try to get cached image first
+    const cachedUrl = await getCachedImage(emoji.url)
+    if (cachedUrl) {
+      return cachedUrl
+    }
+
+    // If not cached, cache the image and return blob URL
+    const blobUrl = await cacheImage(emoji.url)
+    if (blobUrl) {
+      blobUrls.value.add(blobUrl)
+      return blobUrl
+    }
+  } catch (error) {
+    console.warn('Failed to get cached image for', emoji.name, error)
+  }
+
+  // Fallback to original URL
+  return emoji.url
+}
+
+// Reactive image sources for emojis
+const imageSources = ref<Map<string, string>>(new Map())
+
+// Initialize image sources
+const initializeImageSources = async () => {
+  for (const emoji of props.emojis) {
+    const src = await getImageSrc(emoji)
+    imageSources.value.set(emoji.id, src)
+  }
+}
+
+// Watch for emoji changes and update image sources
+const updateImageSources = async () => {
+  const newSources = new Map<string, string>()
+
+  // Clean up old blob URLs that are no longer needed
+  const currentEmojiIds = new Set(props.emojis.map(e => e.id))
+  for (const [emojiId, blobUrl] of imageSources.value) {
+    if (!currentEmojiIds.has(emojiId) && blobUrl.startsWith('blob:')) {
+      blobUrls.value.delete(blobUrl)
+      URL.revokeObjectURL(blobUrl)
+    }
+  }
+
+  // Get new image sources
+  for (const emoji of props.emojis) {
+    const src = await getImageSrc(emoji)
+    newSources.set(emoji.id, src)
+  }
+
+  imageSources.value = newSources
+}
+
+// Clean up blob URLs when component is unmounted
+onUnmounted(() => {
+  for (const blobUrl of blobUrls.value) {
+    try {
+      URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      console.warn('Failed to revoke blob URL:', blobUrl, error)
+    }
+  }
+  blobUrls.value.clear()
+})
+
+// Initialize image sources when component is created
+initializeImageSources()
+
+// Watch for emoji changes and update image sources
+watch(() => props.emojis, updateImageSources, { deep: true })
 
 // 拖拽处理
 const handleEmojiDragStart = (emoji: Emoji, index: number, event: DragEvent) => {
@@ -55,7 +142,7 @@ const addEmojiTouchEvents = (_element: HTMLElement, _emoji: Emoji, _index: numbe
           class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
         >
           <img
-            :src="emoji.url"
+            :src="imageSources.get(emoji.id) || emoji.url"
             :alt="emoji.name"
             class="w-full h-full object-cover"
             loading="lazy"

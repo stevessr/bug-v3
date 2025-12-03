@@ -942,6 +942,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
+  // Specific setting update functions
+  const updateUseIndexedDBForImages = (value: boolean) => {
+    if (settings.value.useIndexedDBForImages !== value) {
+      updateSettings({ useIndexedDBForImages: value })
+      console.log('[EmojiStore] updateUseIndexedDBForImages', { value })
+    }
+  }
+
   // --- Import/Export ---
   const exportConfiguration = () => {
     return {
@@ -1510,6 +1518,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     clearAllFavorites,
     findEmojiById,
     updateSettings,
+    updateUseIndexedDBForImages,
     exportConfiguration,
     importConfiguration,
     resetToDefaults,

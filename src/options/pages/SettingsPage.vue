@@ -47,6 +47,7 @@ const {
   updateEnableBatchParseImages,
   updateEnableHoverPreview,
   updateSyncVariantToDisplayUrl,
+  updateUseIndexedDBForImages,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -561,6 +562,7 @@ const formatDate = (timestamp: number | string | undefined): string => {
               @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
               @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
               @update:enableBatchParseImages="updateEnableBatchParseImages"
+              @update:useIndexedDBForImages="updateUseIndexedDBForImages"
             />
           </div>
         </a-tab-pane>

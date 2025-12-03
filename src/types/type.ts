@@ -42,6 +42,7 @@ export interface AppSettings {
   syncVariantToDisplayUrl?: boolean
   highContrastMode?: boolean
   reduceMotion?: boolean
+  useIndexedDBForImages?: boolean // 允许使用 IndexedDB 缓存图片显示
 }
 
 export interface EmojiGroup {
