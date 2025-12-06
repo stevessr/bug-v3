@@ -9,11 +9,7 @@ import {
   resetPhotoSwipeState
 } from './bilibili-preview'
 import getSelectorsForCurrentUrl from './selectors-by-url'
-import {
-  createFloatingButton,
-  createControlButton,
-  createBatchParseButton
-} from './bilibili-buttons'
+import { createFloatingButton, createControlButton } from './bilibili-buttons'
 
 import { DQS, DQSA } from '@/content/utils/createEl'
 /**
@@ -155,20 +151,6 @@ function addButtonToPicture(pictureEl: Element) {
 }
 
 /**
- * 添加批量解析按钮到相册容器
- */
-function addBatchParseButtonToAlbum(container: Element) {
-  if ((container as Element).querySelector('.bili-emoji-batch-parse')) return
-
-  const btn = createBatchParseButton(container)
-
-  // insert at top of album container
-  const first = container.firstChild
-  if (first) container.insertBefore(btn, first)
-  else container.appendChild(btn)
-}
-
-/**
  * 扫描页面并注入按钮
  */
 export function scanAndInject() {
@@ -190,12 +172,6 @@ export function scanAndInject() {
   const controlSections = DQSA('.bili-album__watch__control')
   controlSections.forEach(controlSection => {
     addButtonToControlSection(controlSection)
-  })
-
-  // Add batch parse button for full album container
-  const albumContainers = DQSA('.bili-album')
-  albumContainers.forEach(container => {
-    addBatchParseButtonToAlbum(container)
   })
 }
 
