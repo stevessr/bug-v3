@@ -670,7 +670,7 @@
       "name": "缓冲区",
       "order": 95,
       "icon": "📦",
-      "emojiCount": 0
+      "emojiCount": 2
     },
     {
       "id": "group-1764592283419",
@@ -685,8 +685,22 @@
       "order": 97,
       "icon": "https://linux.do/uploads/default/original/4X/9/4/b/94b6c1aff0ff7498d5d7f5ff1311b7ddabfc9ec1.avif",
       "emojiCount": 732
+    },
+    {
+      "id": "group-1764980488364",
+      "name": "魔法少女的魔女审判 by 绮纪",
+      "order": 98,
+      "icon": "https://linux.do/uploads/default/original/4X/b/5/0/b506a1d289f260374437e310870e0fa91e11dca8.jpeg",
+      "emojiCount": 14
+    },
+    {
+      "id": "group-1765008889810",
+      "name": "X 第十弹",
+      "order": 99,
+      "icon": "https://linux.do/uploads/default/original/4X/5/9/1/591224a2ceb7e449a15ecbe19c26b4945550dbc4.jpeg",
+      "emojiCount": 1016
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-12-03T06:36:32.687Z"
+  "exportDate": "2025-12-06T09:05:32.333Z"
 }
