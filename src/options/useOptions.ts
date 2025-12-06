@@ -344,7 +344,9 @@ export default function useOptions() {
       showSuccess('CSS 块已删除')
     } else if (blockOrAction && typeof blockOrAction === 'object' && blockOrAction.id) {
       emojiStore.saveCustomCssBlock(blockOrAction)
-      showSuccess(blockOrAction.createdAt === blockOrAction.updatedAt ? 'CSS 块已创建' : 'CSS 块已更新')
+      showSuccess(
+        blockOrAction.createdAt === blockOrAction.updatedAt ? 'CSS 块已创建' : 'CSS 块已更新'
+      )
     }
   }
 
@@ -397,14 +399,6 @@ export default function useOptions() {
 
   const updateImdbedApiUrl = (url: string) => {
     emojiStore.updateSettings({ imgbedApiUrl: url })
-  }
-
-  const updateEnableAutoDownload = (enabled: boolean) => {
-    emojiStore.updateSettings({ enableAutoDownload: enabled })
-  }
-
-  const updateAutoDownloadSuffixes = (suffixes: string[]) => {
-    emojiStore.updateSettings({ autoDownloadSuffixes: suffixes })
   }
 
   const openEditGroup = (group: EmojiGroup) => {
@@ -1035,8 +1029,6 @@ export default function useOptions() {
     updateCustomOpenAIModel,
     updateImdbedToken,
     updateImdbedApiUrl,
-    updateEnableAutoDownload,
-    updateAutoDownloadSuffixes,
     // drag/drop
     handleDragStart,
     handleDrop,

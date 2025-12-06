@@ -44,9 +44,6 @@ export interface AppSettings {
   highContrastMode?: boolean
   reduceMotion?: boolean
   useIndexedDBForImages?: boolean // 允许使用 IndexedDB 缓存图片显示
-  // Auto download settings for images
-  enableAutoDownload?: boolean // 启用自动下载功能
-  autoDownloadSuffixes?: string[] // 自动下载的 URL 后缀列表（如 'name=large', 'name=orig'）
 }
 
 export interface EmojiGroup {

@@ -121,7 +121,7 @@ function createDownloadBtn(data: AddEmojiButtonData) {
     z-index: 9999;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     backdrop-filter: blur(4px);
-    pointerEvents: auto;  
+    pointerEvents: auto;
   `,
     on: {
       mouseenter: () => {
@@ -183,6 +183,13 @@ function createDownloadBtn(data: AddEmojiButtonData) {
   wrapper.style.color = 'rgb(255, 255, 255)'
   wrapper.appendChild(svg)
   btn.appendChild(wrapper)
+
+  // 在按钮初始化后触发一次自动下载
+  console.log('[XCarousel] Triggering auto-download for image:', data.url)
+  autoDownloadManager.triggerAutoDownload(data.url).catch(err => {
+    console.error('[XCarousel] Auto-download trigger failed:', err)
+  })
+
   return btn
 }
 
@@ -470,11 +477,6 @@ function addCarouselButtonToEl(el: Element) {
       console.log('[XCarousel] Skipping filtered image:', url)
       return
     }
-
-    // 尝试触发自动下载
-    autoDownloadManager.triggerAutoDownload(url).catch(err => {
-      console.error('[XCarousel] Auto-download trigger failed:', err)
-    })
 
     if (isInjected(targetContainer)) {
       markInjected(el, targetContainer)

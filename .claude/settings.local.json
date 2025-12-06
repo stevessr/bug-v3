@@ -12,7 +12,10 @@
       "Bash(npm run build)",
       "Bash(npm run type-check)",
       "Bash(pnpm lint)",
-      "Bash(pnpm lint:fix)"
+      "Bash(pnpm lint:fix)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(npm run lint)"
     ],
     "deny": [],
     "ask": []
