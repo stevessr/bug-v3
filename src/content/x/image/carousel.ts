@@ -9,8 +9,6 @@ import {
 import { isImageInjectionEnabled, ImageType } from '../xConfig'
 import { DOA, DQSA, createE } from '../../utils/createEl'
 
-import { autoDownloadManager } from '@/utils/autoDownloadManager'
-
 const carouselOverlayMap = new WeakMap<Element, { btn: HTMLElement; raf?: number }>()
 const processedElements = new WeakSet<Element>()
 
@@ -184,12 +182,6 @@ function createDownloadBtn(data: AddEmojiButtonData) {
   wrapper.appendChild(svg)
   btn.appendChild(wrapper)
 
-  // 在按钮初始化后触发一次自动下载
-  console.log('[XCarousel] Triggering auto-download for image:', data.url)
-  autoDownloadManager.triggerAutoDownload(data.url).catch(err => {
-    console.error('[XCarousel] Auto-download trigger failed:', err)
-  })
-
   return btn
 }
 
@@ -344,6 +336,8 @@ function shouldFilterImageUrl(url: string): boolean {
 
   // 过滤 120x120 图片（通常是头像缩略图）
   if (url.includes('name=120x120')) return true
+
+  if (url.includes('amplify_video_thumb')) return true
 
   return false
 }
