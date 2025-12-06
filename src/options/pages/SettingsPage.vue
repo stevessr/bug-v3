@@ -24,6 +24,8 @@ import MenuBarSettings from '../components/MenuBarSettings.vue'
 import CustomCSSBlockSettings from '../components/CustomCSSBlockSettings.vue'
 import AISettings from '../components/AISettings.vue'
 
+import { formatDate } from './utils/settings'
+
 import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 
 // TypeScript interface for sync progress
@@ -151,10 +153,6 @@ const syncProgressPercent = computed(() => {
 
 const syncInProgress = computed(() => {
   return isSyncing.value && syncProgress.value.total > 0
-})
-
-const previewInProgress = computed(() => {
-  return isPreviewing.value && syncProgress.value.total > 0
 })
 
 // Load existing config on component mount
@@ -474,52 +472,6 @@ const closeGroupDetailsModal = () => {
   showGroupDetailsModal.value = false
   selectedGroup.value = null
   groupDetails.value = null
-}
-
-// Close preview dialog
-const closePreviewDialog = () => {
-  showPreviewDialog.value = false
-  cloudData.value = null
-  previewResult.value = null
-}
-
-// Utility functions for preview modal
-const getTotalEmojis = (data: any): number => {
-  if (!data.emojiGroups) return 0
-  return data.emojiGroups.reduce((total: number, group: any) => {
-    return total + (group.emojis?.length || 0)
-  }, 0)
-}
-
-const formatDate = (timestamp: number | string | undefined): string => {
-  if (!timestamp) return 'N/A'
-
-  // 处理对象类型的情况
-  if (typeof timestamp === 'object') {
-    console.warn('[SettingsPage] formatDate received object:', timestamp)
-    return 'Invalid Date'
-  }
-
-  try {
-    const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp)
-
-    // 检查日期是否有效
-    if (isNaN(date.getTime())) {
-      console.warn('[SettingsPage] Invalid date created from timestamp:', timestamp)
-      return 'Invalid Date'
-    }
-
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch (error) {
-    console.error('[SettingsPage] Error formatting date:', error, 'timestamp:', timestamp)
-    return 'N/A'
-  }
 }
 </script>
 
