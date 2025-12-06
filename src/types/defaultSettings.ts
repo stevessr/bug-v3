@@ -41,5 +41,8 @@ export const defaultSettings: AppSettings = {
   // (set to true if you prefer selected variant to always override displayUrl)
   syncVariantToDisplayUrl: true,
   useIndexedDBForImages: false,
-  uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS
+  uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS,
+  // Auto download settings
+  enableAutoDownload: false, // 默认禁用自动下载
+  autoDownloadSuffixes: ['name=large', 'name=orig'] // 默认监控这些后缀
 }

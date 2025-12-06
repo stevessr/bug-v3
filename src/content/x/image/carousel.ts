@@ -9,6 +9,8 @@ import {
 import { isImageInjectionEnabled, ImageType } from '../xConfig'
 import { DOA, DQSA, createE } from '../../utils/createEl'
 
+import { autoDownloadManager } from '@/utils/autoDownloadManager'
+
 const carouselOverlayMap = new WeakMap<Element, { btn: HTMLElement; raf?: number }>()
 const processedElements = new WeakSet<Element>()
 
@@ -324,6 +326,22 @@ function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
 }
 
 /**
+ * 检查图片 URL 是否应该被过滤
+ */
+function shouldFilterImageUrl(url: string): boolean {
+  // 过滤头像图片
+  if (url.includes('profile_images')) return true
+
+  // 过滤商品图片
+  if (url.includes('commerce_product_img')) return true
+
+  // 过滤 120x120 图片（通常是头像缩略图）
+  if (url.includes('name=120x120')) return true
+
+  return false
+}
+
+/**
  * 检测元素所属的图片类型
  */
 function detectImageType(el: Element): ImageType | null {
@@ -446,19 +464,22 @@ function addCarouselButtonToEl(el: Element) {
     }
 
     if (!targetContainer || !url) return
-    if (url.includes('profile_images')) return
 
-    // Filter out commerce product images
-    if (url.includes('commerce_product_img')) {
-      console.log('[XCarousel] Skipping commerce product image:', url)
+    // 使用统一的过滤器检查 URL
+    if (shouldFilterImageUrl(url)) {
+      console.log('[XCarousel] Skipping filtered image:', url)
       return
     }
+
+    // 尝试触发自动下载
+    autoDownloadManager.triggerAutoDownload(url).catch(err => {
+      console.error('[XCarousel] Auto-download trigger failed:', err)
+    })
 
     if (isInjected(targetContainer)) {
       markInjected(el, targetContainer)
       return
     }
-
     const name = extractNameFromUrl(url)
 
     try {
@@ -646,9 +667,9 @@ function tryInjectTwitterMedia(
     const host = parsed.hostname.toLowerCase()
     const pathname = parsed.pathname.toLowerCase()
 
-    // Filter out commerce product images
-    if (pathname.includes('commerce_product_img')) {
-      console.log('[TwitterMedia] Skipping commerce product image:', url)
+    // 使用统一的过滤器检查 URL
+    if (shouldFilterImageUrl(url)) {
+      console.log('[TwitterMedia] Skipping filtered image:', url)
       return false
     }
 

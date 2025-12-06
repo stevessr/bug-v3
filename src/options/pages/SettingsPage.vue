@@ -22,6 +22,7 @@ import UISettings from '../components/UISettings.vue'
 import FeatureSwitchSettings from '../components/FeatureSwitchSettings.vue'
 import MenuBarSettings from '../components/MenuBarSettings.vue'
 import CustomCSSBlockSettings from '../components/CustomCSSBlockSettings.vue'
+import AutoDownloadSettings from '../components/AutoDownloadSettings.vue'
 import AISettings from '../components/AISettings.vue'
 
 import { formatDate } from './utils/settings'
@@ -67,7 +68,9 @@ const {
   updateCustomOpenAIKey,
   updateCustomOpenAIModel,
   updateImdbedToken,
-  updateImdbedApiUrl
+  updateImdbedApiUrl,
+  updateEnableAutoDownload,
+  updateAutoDownloadSuffixes
 } = options
 
 const activeTab = ref('theme')
@@ -555,6 +558,16 @@ const closeGroupDetailsModal = () => {
               @update:customOpenAIModel="updateCustomOpenAIModel"
               @update:imgbedToken="updateImdbedToken"
               @update:imgbedApiUrl="updateImdbedApiUrl"
+            />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="autodownload" tab="自动下载">
+          <div class="py-4">
+            <AutoDownloadSettings
+              :settings="emojiStore.settings"
+              @update:enableAutoDownload="updateEnableAutoDownload"
+              @update:autoDownloadSuffixes="updateAutoDownloadSuffixes"
             />
           </div>
         </a-tab-pane>
