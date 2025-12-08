@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { QuestionCircleOutlined, TagOutlined } from '@ant-design/icons-vue'
 
 import EmojiTags from './EmojiTags.vue'
+import QuickTagEditor from './QuickTagEditor.vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 import { getEmojiImageUrl, getEmojiImageUrlSync, preloadImages } from '@/utils/imageUrlHelper'
@@ -22,6 +23,22 @@ const emit = defineEmits<{
   emojiDragStart: [emoji: Emoji, groupId: string, index: number, event: DragEvent]
   emojiDrop: [groupId: string, index: number, event: DragEvent]
 }>()
+
+// 快速標籤編輯器狀態
+const showQuickTagEditor = ref(false)
+const editingEmoji = ref<Emoji | null>(null)
+
+// 打開快速標籤編輯器
+const openQuickTagEditor = (emoji: Emoji) => {
+  editingEmoji.value = emoji
+  showQuickTagEditor.value = true
+}
+
+// 關閉快速標籤編輯器
+const closeQuickTagEditor = () => {
+  showQuickTagEditor.value = false
+  editingEmoji.value = null
+}
 
 const emojiStore = useEmojiStore()
 const blobUrls = ref<Set<string>>(new Set())
@@ -173,6 +190,15 @@ const addEmojiTouchEvents = (_element: HTMLElement, _emoji: Emoji, _index: numbe
         </a-popconfirm>
       </div>
     </div>
+
+    <!-- 快速標籤編輯器模態框 -->
+    <QuickTagEditor
+      v-if="editingEmoji"
+      :show="showQuickTagEditor"
+      :emoji="editingEmoji"
+      @update:show="showQuickTagEditor = $event"
+      @close="closeQuickTagEditor"
+    />
   </div>
 </template>
 

@@ -88,9 +88,27 @@ const generateAISuggestions = async () => {
     '情感', '心情', '反應', '日常', '網路'
   ]
 
-  // 隨機選擇5個標籤作為AI建議
-  const shuffled = mockAISuggestions.sort(() => 0.5 - Math.random())
-  aiSuggestions.value = shuffled.slice(0, 5).filter(tag => !currentTags.value.includes(tag))
+  // 根據表情名稱生成相關標籤
+  const emojiName = props.emoji.name.toLowerCase()
+  const contextualTags = []
+
+  if (emojiName.includes('cat') || emojiName.includes('貓')) contextualTags.push('貓', '動物')
+  if (emojiName.includes('dog') || emojiName.includes('狗')) contextualTags.push('狗', '動物')
+  if (emojiName.includes('happy') || emojiName.includes('開心')) contextualTags.push('開心', '快樂')
+  if (emojiName.includes('sad') || emojiName.includes('難過')) contextualTags.push('難過', '情緒')
+  if (emojiName.includes('angry') || emojiName.includes('生氣')) contextualTags.push('生氣', '憤怒')
+  if (emojiName.includes('love') || emojiName.includes('愛')) contextualTags.push('愛', '心')
+  if (emojiName.includes('lol') || emojiName.includes('笑')) contextualTags.push('笑', '搞笑')
+
+  // 合併建議標籤
+  const allSuggestions = [...contextualTags, ...mockAISuggestions]
+  const filtered = allSuggestions.filter(tag => !currentTags.value.includes(tag))
+  const shuffled = filtered.sort(() => 0.5 - Math.random())
+
+  // 模擬異步延遲
+  setTimeout(() => {
+    aiSuggestions.value = shuffled.slice(0, 5)
+  }, 500)
 }
 
 // 添加AI建議標籤
