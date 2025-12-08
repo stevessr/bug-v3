@@ -17,13 +17,19 @@
 - **搜索方式**:
   - 按表情名稱搜索（模糊匹配）
   - 按標籤搜索（支持部分匹配）
-- **搜索結果**: 顯示匹配的表情
+- **搜索結果**: 顯示匹配的表情，包含：
+  - 表情預覽圖
+  - 表情名稱
+  - 所屬分組
+  - 標籤列表（最多顯示2個）
+  - 標籤數量提示
 
 ### 3. UI 交互
 - 在分組選擇器中顯示虛擬分組
 - 選中虛擬分組時顯示所有表情
 - 支持搜索功能，輸入即搜索
 - 虛擬分組不會顯示添加按鈕
+- 搜索結果統計和清除功能
 
 ## 實現細節
 
@@ -39,6 +45,40 @@ const virtualGroups = computed(() => [
 ])
 ```
 
+### 搜索邏輯
+```typescript
+// 過濾後的表情（支持按名稱和標籤搜索）
+const filteredEmojis = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return []
+  }
+
+  const query = searchQuery.value.toLowerCase()
+  const allEmojis: Array<any> = []
+
+  // 收集所有表情
+  emojiStore.sortedGroups.forEach(group => {
+    group.emojis?.forEach(emoji => {
+      // 按名稱搜索
+      const nameMatch = emoji.name.toLowerCase().includes(query)
+      // 按標籤搜索
+      const tagMatch = emoji.tags?.some((tag: string) =>
+        tag.toLowerCase().includes(query)
+      )
+
+      if (nameMatch || tagMatch) {
+        allEmojis.push({
+          ...emoji,
+          groupName: group.name
+        })
+      }
+    })
+  })
+
+  return allEmojis
+})
+```
+
 ### 獲取所有表情
 ```typescript
 const getCurrentGroupEmojis = (groupId: string) => {
@@ -46,11 +86,14 @@ const getCurrentGroupEmojis = (groupId: string) => {
     // 返回所有表情
     const allEmojis = []
     for (const group of emojiStore.sortedGroups) {
-      allEmojis.push(...(group.emojis || []))
+      if (group.emojis) {
+        allEmojis.push(...group.emojis)
+      }
     }
     return allEmojis
   }
-  // ... 其他邏輯
+  const group = emojiStore.sortedGroups.find(g => g.id === groupId)
+  return group ? group.emojis || [] : []
 }
 ```
 
@@ -60,6 +103,7 @@ const getCurrentGroupEmojis = (groupId: string) => {
 2. 在分組選擇器中點擊「所有表情」
 3. 查看所有分組的表情
 4. 使用搜索框按名稱或標籤搜索表情
+5. 點擊清除按鈕（✕）清空搜索
 
 ## 技術優勢
 
@@ -67,6 +111,7 @@ const getCurrentGroupEmojis = (groupId: string) => {
 - **性能優化**: 使用 computed 屬性實現響應式更新
 - **用戶友好**: 提供直觀的全局視圖和搜索功能
 - **擴展性強**: 易於添加更多虛擬分組類型
+- **實時搜索**: 輸入即搜索，無需點擊按鈕
 
 ## 後續優化方向
 
