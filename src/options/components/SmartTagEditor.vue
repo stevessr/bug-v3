@@ -34,7 +34,7 @@ const suggestedTags = computed(() => {
 // 監聽emoji變化
 watch(
   () => props.emoji,
-  (newEmoji) => {
+  newEmoji => {
     if (newEmoji) {
       currentTags.value = [...(newEmoji.tags || [])]
     }
@@ -83,9 +83,21 @@ const generateAISuggestions = async () => {
 
   // 模擬AI生成標籤（實際應用中可以調用AI API）
   const mockAISuggestions = [
-    '表情', '可愛', '有趣', '搞笑', '萌',
-    '動漫', '卡通', '人物', '動物', '食物',
-    '情感', '心情', '反應', '日常', '網路'
+    '表情',
+    '可愛',
+    '有趣',
+    '搞笑',
+    '萌',
+    '動漫',
+    '卡通',
+    '人物',
+    '動物',
+    '食物',
+    '情感',
+    '心情',
+    '反應',
+    '日常',
+    '網路'
   ]
 
   // 根據表情名稱生成相關標籤
@@ -137,12 +149,7 @@ watch(
 </script>
 
 <template>
-  <div
-    v-if="show"
-    class="fixed inset-0 z-50 overflow-y-auto"
-    role="dialog"
-    aria-modal="true"
-  >
+  <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
     <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="closeEditor"></div>
 
     <div class="flex items-center justify-center min-h-screen p-4">
@@ -175,9 +182,7 @@ watch(
               </button>
             </span>
           </div>
-          <div v-else class="text-gray-500 dark:text-gray-400 text-sm">
-            暫無標籤
-          </div>
+          <div v-else class="text-gray-500 dark:text-gray-400 text-sm">暫無標籤</div>
         </div>
 
         <!-- 添加新標籤 -->
@@ -193,7 +198,7 @@ watch(
                 class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                 placeholder="輸入新標籤..."
                 @focus="showTagSuggestions = true"
-                @blur="() => setTimeout(() => showTagSuggestions = false, 200)"
+                @blur="() => setTimeout(() => (showTagSuggestions = false), 200)"
                 @keydown.enter="handleTagInputEnter"
               />
               <button
@@ -232,9 +237,7 @@ watch(
         <!-- AI 智能建議 -->
         <div class="mb-6">
           <div class="flex items-center justify-between mb-2">
-            <label class="text-sm font-medium text-gray-700 dark:text-white">
-              AI 智能建議
-            </label>
+            <label class="text-sm font-medium text-gray-700 dark:text-white">AI 智能建議</label>
             <button
               type="button"
               @click="generateAISuggestions"

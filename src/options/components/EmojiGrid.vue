@@ -167,8 +167,18 @@ const addEmojiTouchEvents = (_element: HTMLElement, _emoji: Emoji, _index: numbe
         <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
           {{ emoji.name }}
         </div>
-        <!-- 标签显示 -->
+        <!-- 標籤顯示 -->
         <EmojiTags :tags="emoji.tags || []" :max-display="2" />
+
+        <!-- 快速標籤編輯按鈕 -->
+        <button
+          @click="openQuickTagEditor(emoji)"
+          class="absolute bottom-1 left-1 w-6 h-6 bg-green-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-green-600"
+          title="快速編輯標籤"
+        >
+          <TagOutlined class="text-xs" />
+        </button>
+
         <!-- Edit button -->
         <a-button
           @click="$emit('editEmoji', emoji, groupId, index)"

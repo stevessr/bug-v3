@@ -445,7 +445,7 @@ const handleSubmit = () => {
                         class="flex-1 mt-1 block border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                         placeholder="輸入新標籤..."
                         @focus="showTagSuggestions = true"
-                        @blur="() => setTimeout(() => showTagSuggestions = false, 200)"
+                        @blur="() => setTimeout(() => (showTagSuggestions = false), 200)"
                         @keydown.enter="handleTagInputEnter"
                       />
                       <button

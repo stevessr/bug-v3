@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { TagOutlined, DeleteOutlined, EditOutlined, SearchOutlined, PlusOutlined } from '@ant-design/icons-vue'
+import {
+  TagOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  SearchOutlined,
+  PlusOutlined
+} from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -236,9 +242,7 @@ const handleTagClick = (tagName: string) => {
               >
                 {{ tag.name }}
               </span>
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                ({{ tag.count }} 次)
-              </span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">({{ tag.count }} 次)</span>
             </div>
           </div>
 
@@ -263,9 +267,7 @@ const handleTagClick = (tagName: string) => {
 
         <!-- 使用該標籤的表情預覽 -->
         <div class="mt-3">
-          <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            使用此標籤的表情：
-          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">使用此標籤的表情：</div>
           <div class="flex flex-wrap gap-1">
             <div
               v-for="(item, index) in getTagEmojis(tag.name).slice(0, 6)"
@@ -317,9 +319,7 @@ const handleTagClick = (tagName: string) => {
 
       <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            創建新標籤
-          </h3>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">創建新標籤</h3>
 
           <input
             v-model="newTagNameCreate"

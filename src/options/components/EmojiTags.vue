@@ -47,11 +47,7 @@ const handleTagClick = (tag: string) => {
       >
         {{ tag }}
       </span>
-      <span
-        v-if="hiddenCount > 0"
-        class="tag-more"
-        :title="`还有 ${hiddenCount} 个标签`"
-      >
+      <span v-if="hiddenCount > 0" class="tag-more" :title="`还有 ${hiddenCount} 个标签`">
         +{{ hiddenCount }}
       </span>
     </div>
