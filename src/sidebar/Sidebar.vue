@@ -30,10 +30,7 @@ const virtualGroups = computed(() => [
 ])
 
 // 組合所有分組（虛擬 + 真實）
-const allGroups = computed(() => [
-  ...virtualGroups.value,
-  ...emojiStore.sortedGroups
-])
+const allGroups = computed(() => [...virtualGroups.value, ...emojiStore.sortedGroups])
 
 // 搜索功能
 const searchQuery = computed({
@@ -58,9 +55,7 @@ const filteredEmojis = computed(() => {
       // 按名稱搜索
       const nameMatch = emoji.name.toLowerCase().includes(query)
       // 按標籤搜索
-      const tagMatch = emoji.tags?.some((tag: string) =>
-        tag.toLowerCase().includes(query)
-      )
+      const tagMatch = emoji.tags?.some((tag: string) => tag.toLowerCase().includes(query))
 
       if (nameMatch || tagMatch) {
         allEmojis.push({
@@ -126,15 +121,28 @@ const clearSearch = () => {
       <!-- 搜索和分组选择 -->
       <div class="p-2 border-b border-gray-100 dark:border-gray-700 space-y-2">
         <!-- 表情搜索 -->
-        <div v-if="emojiStore.settings.showSearchBar" class="relative">
+        <div
+          v-if="emojiStore.settings.showSearchBar || emojiStore.activeGroupId === 'all-emojis'"
+          class="relative"
+        >
           <a-input
-            v-model:value="emojiStore.searchQuery"
+            v-model:value="searchQuery"
             type="text"
-            placeholder="搜索表情..."
-            title="搜索表情"
+            placeholder="搜索表情名稱或標籤..."
+            title="搜索表情名稱或標籤"
             class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+            @input="handleSearch"
           />
+          <button
+            v-if="searchQuery"
+            @click="clearSearch"
+            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            title="清除搜索"
+          >
+            ✕
+          </button>
           <svg
+            v-else
             class="absolute right-2 top-1.5 w-4 h-4 text-gray-400"
             fill="none"
             stroke="currentColor"
@@ -158,12 +166,7 @@ const clearSearch = () => {
           @change="setActiveHandler"
         >
           <!-- 虛擬分組 -->
-          <a-select-option
-            v-for="g in virtualGroups"
-            :key="g.id"
-            :value="g.id"
-            :label="g.name"
-          >
+          <a-select-option v-for="g in virtualGroups" :key="g.id" :value="g.id" :label="g.name">
             <span class="inline-block mr-2">{{ g.icon }}</span>
             {{ g.name }}
             <span class="text-xs text-gray-400 ml-2">（虛擬分組）</span>
@@ -199,7 +202,13 @@ const clearSearch = () => {
               <div class="text-2xl mb-2">🔍</div>
               <div class="text-gray-500 dark:text-gray-400">未找到匹配的表情</div>
             </div>
-            <div v-else class="grid gap-2" :style="{ gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns || 6}, minmax(0, 1fr))` }">
+            <div
+              v-else
+              class="grid gap-2"
+              :style="{
+                gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns || 6}, minmax(0, 1fr))`
+              }"
+            >
               <div
                 v-for="emoji in filteredEmojis"
                 :key="emoji.id"
