@@ -18,6 +18,46 @@ const activeGroup = computed(() => {
 const filterOption = (input: string, option: any) => {
   return option.label.toLowerCase().includes(input.toLowerCase())
 }
+
+// 虛擬分組配置
+const virtualGroups = computed(() => [
+  {
+    id: 'all-emojis',
+    name: '所有表情',
+    icon: '🔍',
+    isVirtual: true
+  }
+])
+
+// 組合所有分組（虛擬 + 真實）
+const allGroups = computed(() => [
+  ...virtualGroups.value,
+  ...emojiStore.sortedGroups
+])
+
+// 判斷是否為虛擬分組
+const isVirtualGroup = (groupId: string) => {
+  return virtualGroups.value.some(g => g.id === groupId)
+}
+
+// 獲取當前分組的表情
+const getCurrentGroupEmojis = (groupId: string) => {
+  if (groupId === 'all-emojis') {
+    // 返回所有表情
+    const allEmojis = []
+    for (const group of emojiStore.sortedGroups) {
+      allEmojis.push(...(group.emojis || []))
+    }
+    return allEmojis
+  }
+  const group = emojiStore.sortedGroups.find(g => g.id === groupId)
+  return group ? group.emojis || [] : []
+}
+
+// 處理表情點擊
+const handleEmojiClick = (emoji: any) => {
+  selectEmoji(emoji)
+}
 </script>
 
 <template>
@@ -61,6 +101,19 @@ const filterOption = (input: string, option: any) => {
           :filterOption="filterOption"
           @change="setActiveHandler"
         >
+          <!-- 虛擬分組 -->
+          <a-select-option
+            v-for="g in virtualGroups"
+            :key="g.id"
+            :value="g.id"
+            :label="g.name"
+          >
+            <span class="inline-block mr-2">{{ g.icon }}</span>
+            {{ g.name }}
+            <span class="text-xs text-gray-400 ml-2">（虛擬分組）</span>
+          </a-select-option>
+
+          <!-- 真實分組 -->
           <a-select-option
             v-for="g in emojiStore.sortedGroups"
             :key="g.id"
@@ -80,6 +133,7 @@ const filterOption = (input: string, option: any) => {
 
       <!-- 表情网格 -->
       <div class="sidebar-body">
+        <!-- 搜索模式 -->
         <template v-if="emojiStore.searchQuery">
           <LazyEmojiGrid
             :emojis="emojiStore.filteredEmojis"
@@ -94,6 +148,29 @@ const filterOption = (input: string, option: any) => {
             @openOptions="openOptions"
           />
         </template>
+
+        <!-- 虛擬分組 - 所有表情 -->
+        <template v-else-if="emojiStore.activeGroupId === 'all-emojis'">
+          <div class="p-3">
+            <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              🔍 展示所有分組的表情，支持按名稱或標籤搜索
+            </div>
+            <LazyEmojiGrid
+              :emojis="getCurrentGroupEmojis('all-emojis')"
+              :isLoading="emojiStore.isLoading"
+              :favorites="emojiStore.favorites"
+              :gridColumns="emojiStore.settings.gridColumns"
+              :emptyMessage="'暫無表情'"
+              :showAddButton="false"
+              groupId="all-emojis"
+              isActive
+              @select="selectEmoji"
+              @openOptions="openOptions"
+            />
+          </div>
+        </template>
+
+        <!-- 普通分組 -->
         <template v-else-if="activeGroup">
           <LazyEmojiGrid
             :key="activeGroup.id"
