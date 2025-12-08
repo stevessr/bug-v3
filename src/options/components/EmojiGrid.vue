@@ -2,6 +2,8 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 
+import EmojiTags from './EmojiTags.vue'
+
 import { useEmojiStore } from '@/stores/emojiStore'
 import { getEmojiImageUrl, getEmojiImageUrlSync, preloadImages } from '@/utils/imageUrlHelper'
 import type { Emoji } from '@/types/type'
@@ -148,6 +150,8 @@ const addEmojiTouchEvents = (_element: HTMLElement, _emoji: Emoji, _index: numbe
         <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
           {{ emoji.name }}
         </div>
+        <!-- 标签显示 -->
+        <EmojiTags :tags="emoji.tags || []" :max-display="2" />
         <!-- Edit button -->
         <a-button
           @click="$emit('editEmoji', emoji, groupId, index)"

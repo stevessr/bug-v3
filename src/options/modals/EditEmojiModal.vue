@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { DownOutlined, RobotOutlined } from '@ant-design/icons-vue'
+import {
+  DownOutlined,
+  RobotOutlined,
+  TagOutlined,
+  PlusOutlined,
+  CloseOutlined
+} from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/type'
@@ -24,10 +30,63 @@ const localEmoji = ref<Partial<Emoji>>({
   name: '',
   url: '',
   displayUrl: '',
-  customOutput: ''
+  customOutput: '',
+  tags: []
 })
 
 const showGeminiModal = ref(false)
+
+// 標籤編輯相關
+const newTag = ref('')
+const showTagSuggestions = ref(false)
+
+// 獲取當前表情的標籤
+const currentTags = computed(() => {
+  return localEmoji.value.tags || []
+})
+
+// 獲取建議標籤（來自熱門標籤但不在當前標籤中）
+const suggestedTags = computed(() => {
+  const popularTags = emojiStore.allTags.map(t => t.name).slice(0, 10)
+  return popularTags.filter(tag => !currentTags.value.includes(tag))
+})
+
+// 添加新標籤
+const addTag = () => {
+  const trimmedTag = newTag.value.trim()
+  if (trimmedTag && !currentTags.value.includes(trimmedTag)) {
+    if (!localEmoji.value.tags) {
+      localEmoji.value.tags = []
+    }
+    localEmoji.value.tags.push(trimmedTag)
+    newTag.value = ''
+    showTagSuggestions.value = false
+  }
+}
+
+// 添加建議標籤
+const addSuggestedTag = (tag: string) => {
+  if (!localEmoji.value.tags) {
+    localEmoji.value.tags = []
+  }
+  localEmoji.value.tags.push(tag)
+}
+
+// 移除標籤
+const removeTag = (tag: string) => {
+  if (localEmoji.value.tags) {
+    const index = localEmoji.value.tags.indexOf(tag)
+    if (index !== -1) {
+      localEmoji.value.tags.splice(index, 1)
+    }
+  }
+}
+
+// 處理標籤輸入框回車
+const handleTagInputEnter = (e: KeyboardEvent) => {
+  e.preventDefault()
+  addTag()
+}
 
 const openGeminiNaming = () => {
   if (!localEmoji.value.url?.trim()) {
@@ -172,7 +231,8 @@ const handleSubmit = () => {
       height: localEmoji.value.height,
       usageCount: localEmoji.value.usageCount,
       lastUsed: localEmoji.value.lastUsed,
-      addedAt: localEmoji.value.addedAt
+      addedAt: localEmoji.value.addedAt,
+      tags: localEmoji.value.tags || [] // 确保包含标签字段
     }
 
     emit('save', {
@@ -348,6 +408,81 @@ const handleSubmit = () => {
                       title="表情高度 (像素)"
                     />
                   </div>
+                </div>
+
+                <!-- 標籤編輯 -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                    <TagOutlined class="mr-1" />
+                    表情標籤
+                  </label>
+
+                  <!-- 當前標籤顯示 -->
+                  <div v-if="currentTags.length > 0" class="flex flex-wrap gap-2 mb-3">
+                    <span
+                      v-for="tag in currentTags"
+                      :key="tag"
+                      class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                    >
+                      {{ tag }}
+                      <button
+                        type="button"
+                        @click="removeTag(tag)"
+                        class="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
+                        title="移除標籤"
+                      >
+                        <CloseOutlined class="text-xs" />
+                      </button>
+                    </span>
+                  </div>
+
+                  <!-- 添加新標籤 -->
+                  <div class="relative">
+                    <div class="flex gap-2">
+                      <input
+                        v-model="newTag"
+                        type="text"
+                        class="flex-1 mt-1 block border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
+                        placeholder="輸入新標籤..."
+                        @focus="showTagSuggestions = true"
+                        @blur="() => setTimeout(() => showTagSuggestions = false, 200)"
+                        @keydown.enter="handleTagInputEnter"
+                      />
+                      <button
+                        type="button"
+                        @click="addTag"
+                        :disabled="!newTag.trim()"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <PlusOutlined />
+                      </button>
+                    </div>
+
+                    <!-- 建議標籤下拉 -->
+                    <div
+                      v-if="showTagSuggestions && suggestedTags.length > 0"
+                      class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-40 overflow-y-auto"
+                    >
+                      <div class="p-2">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">建議標籤：</div>
+                        <div class="flex flex-wrap gap-2">
+                          <button
+                            v-for="tag in suggestedTags"
+                            :key="tag"
+                            type="button"
+                            @click="addSuggestedTag(tag)"
+                            class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                          >
+                            {{ tag }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    添加標籤以更好地組織和搜索你的表情
+                  </p>
                 </div>
 
                 <!-- Group Selection -->

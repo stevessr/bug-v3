@@ -15,4 +15,3 @@ export function initXImages() {
     console.error('[XImages] init failed', err)
   }
 }
-

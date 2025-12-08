@@ -25,6 +25,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const favorites = ref<Set<string>>(new Set())
   const activeGroupId = ref<string>('nachoneko')
   const searchQuery = ref<string>(' ')
+  const selectedTags = ref<string[]>([]) // 当前选中的标签
   const isLoading = ref(true)
   const isSaving = ref(false)
 
@@ -41,14 +42,47 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
     let emojis = activeGroup.value.emojis
 
+    // 标签筛选
+    if (selectedTags.value.length > 0) {
+      emojis = emojis.filter(emoji =>
+        selectedTags.value.some(tag => emoji.tags && emoji.tags.includes(tag))
+      )
+    }
+
+    // 搜索筛选
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase().trim()
       if (query) {
-        emojis = emojis.filter(emoji => emoji.name.toLowerCase().includes(query))
+        emojis = emojis.filter(emoji => {
+          // 搜索名称
+          const nameMatch = emoji.name.toLowerCase().includes(query)
+          // 搜索标签
+          const tagsMatch = emoji.tags && emoji.tags.some(tag => tag.toLowerCase().includes(query))
+          return nameMatch || tagsMatch
+        })
       }
     }
 
     return emojis
+  })
+
+  // 获取所有标签及其使用次数
+  const allTags = computed(() => {
+    const tagMap = new Map<string, number>()
+
+    groups.value.forEach(group => {
+      group.emojis.forEach(emoji => {
+        if (emoji.tags) {
+          emoji.tags.forEach(tag => {
+            tagMap.set(tag, (tagMap.get(tag) || 0) + 1)
+          })
+        }
+      })
+    })
+
+    return Array.from(tagMap.entries())
+      .map(([name, count]) => ({ name, count: Number(count) }))
+      .sort((a, b) => b.count - a.count)
   })
 
   const sortedGroups = computed(() => {
@@ -388,7 +422,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const newEmoji: Emoji = {
         ...emoji,
         id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        groupId
+        groupId,
+        tags: emoji.tags || [] // 确保新表情有空标签数组
       }
       group.emojis.push(newEmoji)
       console.log('[EmojiStore] addEmoji', { id: newEmoji.id, groupId })
@@ -403,7 +438,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const newEmoji: Emoji = {
         ...emoji,
         id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        groupId
+        groupId,
+        tags: emoji.tags || [] // 确保新表情有空标签数组
       }
       group.emojis.push(newEmoji)
       console.log('[EmojiStore] addEmojiWithoutSave', { id: newEmoji.id, groupId })
@@ -834,7 +870,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         groupId: 'favorites',
         usageCount: 1,
         lastUsed: now,
-        addedAt: now
+        addedAt: now,
+        tags: emoji.tags || [] // 确保新表情有空标签数组
       }
 
       favoritesGroup.emojis.push(favoriteEmoji) // Add new emoji
@@ -896,7 +933,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         packet: Date.now(),
         name: emojiData.name,
         url: emojiData.url,
-        groupId: 'ungrouped'
+        groupId: 'ungrouped',
+        tags: [] // 确保新表情有空标签数组
       }
       ungroupedGroup.emojis.push(newEmoji)
       console.log('[EmojiStore] addEmojiFromWeb', { id: newEmoji.id, name: newEmoji.name })
@@ -965,7 +1003,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
 
     // If there's legacy customCss content, migrate it to a default block
-    if (loadedSettings.customCss && typeof loadedSettings.customCss === 'string' && loadedSettings.customCss.trim()) {
+    if (
+      loadedSettings.customCss &&
+      typeof loadedSettings.customCss === 'string' &&
+      loadedSettings.customCss.trim()
+    ) {
       const legacyBlock: CustomCssBlock = {
         id: 'legacy-migrated-css',
         name: '迁移的 CSS',
@@ -1037,6 +1079,154 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       .map(block => block.content)
       .join('\n\n')
       .trim()
+  }
+
+  // --- Tag Management ---
+
+  // 为表情添加标签
+  const addTagToEmoji = (emojiId: string, tag: string) => {
+    const cleanTag = tag.trim().toLowerCase()
+    if (!cleanTag) return false
+
+    for (const group of groups.value) {
+      const emoji = group.emojis.find(e => e.id === emojiId)
+      if (emoji) {
+        if (!emoji.tags) {
+          emoji.tags = []
+        }
+        if (!emoji.tags.includes(cleanTag)) {
+          emoji.tags.push(cleanTag)
+          console.log('[EmojiStore] addTagToEmoji', { emojiId, tag: cleanTag })
+          maybeSave()
+          return true
+        }
+        break
+      }
+    }
+    return false
+  }
+
+  // 移除表情的标签
+  const removeTagFromEmoji = (emojiId: string, tag: string) => {
+    const cleanTag = tag.trim().toLowerCase()
+
+    for (const group of groups.value) {
+      const emoji = group.emojis.find(e => e.id === emojiId)
+      if (emoji && emoji.tags) {
+        const index = emoji.tags.indexOf(cleanTag)
+        if (index !== -1) {
+          emoji.tags.splice(index, 1)
+          console.log('[EmojiStore] removeTagFromEmoji', { emojiId, tag: cleanTag })
+          maybeSave()
+          return true
+        }
+        break
+      }
+    }
+    return false
+  }
+
+  // 设置表情的所有标签
+  const setEmojiTags = (emojiId: string, tags: string[]) => {
+    const cleanTags = tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag)
+
+    for (const group of groups.value) {
+      const emoji = group.emojis.find(e => e.id === emojiId)
+      if (emoji) {
+        emoji.tags = cleanTags
+        console.log('[EmojiStore] setEmojiTags', { emojiId, tags: cleanTags })
+        maybeSave()
+        return true
+      }
+    }
+    return false
+  }
+
+  // 批量添加标签到多个表情
+  const addTagToMultipleEmojis = (emojiIds: string[], tag: string) => {
+    const cleanTag = tag.trim().toLowerCase()
+    if (!cleanTag) return false
+
+    beginBatch()
+    try {
+      let changedCount = 0
+      for (const emojiId of emojiIds) {
+        if (addTagToEmoji(emojiId, cleanTag)) {
+          changedCount++
+        }
+      }
+      console.log('[EmojiStore] addTagToMultipleEmojis', { tag: cleanTag, count: changedCount })
+      return changedCount
+    } finally {
+      endBatch()
+    }
+  }
+
+  // 批量移除多个表情的标签
+  const removeTagFromMultipleEmojis = (emojiIds: string[], tag: string) => {
+    const cleanTag = tag.trim().toLowerCase()
+
+    beginBatch()
+    try {
+      let changedCount = 0
+      for (const emojiId of emojiIds) {
+        if (removeTagFromEmoji(emojiId, cleanTag)) {
+          changedCount++
+        }
+      }
+      console.log('[EmojiStore] removeTagFromMultipleEmojis', {
+        tag: cleanTag,
+        count: changedCount
+      })
+      return changedCount
+    } finally {
+      endBatch()
+    }
+  }
+
+  // 获取表情的所有标签
+  const getEmojiTags = (emojiId: string): string[] => {
+    for (const group of groups.value) {
+      const emoji = group.emojis.find(e => e.id === emojiId)
+      if (emoji) {
+        return emoji.tags || []
+      }
+    }
+    return []
+  }
+
+  // 搜索包含特定标签的表情
+  const findEmojisByTag = (tag: string): Emoji[] => {
+    const cleanTag = tag.trim().toLowerCase()
+    const result: Emoji[] = []
+
+    groups.value.forEach(group => {
+      group.emojis.forEach(emoji => {
+        if (emoji.tags && emoji.tags.includes(cleanTag)) {
+          result.push(emoji)
+        }
+      })
+    })
+
+    return result
+  }
+
+  // 标签筛选控制
+  const setSelectedTags = (tags: string[]) => {
+    selectedTags.value = tags
+  }
+
+  const toggleTagFilter = (tag: string) => {
+    const index = selectedTags.value.indexOf(tag)
+    if (index === -1) {
+      selectedTags.value.push(tag)
+    } else {
+      selectedTags.value.splice(index, 1)
+    }
+  }
+
+  const clearTagFilters = () => {
+    selectedTags.value = []
   }
 
   // --- Import/Export ---
@@ -1642,7 +1832,21 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     saveCustomCssBlock,
     deleteCustomCssBlock,
     toggleCustomCssBlock,
-    getCombinedCustomCss
+    getCombinedCustomCss,
+
+    // Tag Management
+    allTags,
+    selectedTags,
+    addTagToEmoji,
+    removeTagFromEmoji,
+    setEmojiTags,
+    addTagToMultipleEmojis,
+    removeTagFromMultipleEmojis,
+    getEmojiTags,
+    findEmojisByTag,
+    setSelectedTags,
+    toggleTagFilter,
+    clearTagFilters
     // (lazy-load removed)
   }
 })

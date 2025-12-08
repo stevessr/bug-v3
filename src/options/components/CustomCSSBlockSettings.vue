@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, isRef, type Ref, h } from 'vue'
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons-vue'
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined
+} from '@ant-design/icons-vue'
 
 import type { AppSettings, CustomCssBlock } from '../../types/type'
 
@@ -19,7 +25,9 @@ const localBlockEnabled = ref(true)
 const modalMode = ref<'create' | 'edit'>('create')
 
 // Computed
-const currentSettings = computed(() => isRef(props.settings) ? props.settings.value : props.settings)
+const currentSettings = computed(() =>
+  isRef(props.settings) ? props.settings.value : props.settings
+)
 const cssBlocks = computed(() => currentSettings.value.customCssBlocks || [])
 
 // Methods
@@ -125,8 +133,13 @@ const formatDate = (timestamp: number) => {
       <!-- Combined CSS Preview -->
       <div v-if="getCombinedCss()">
         <label class="text-sm font-medium text-gray-900 dark:text-white">当前生效的 CSS</label>
-        <div class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
-          <pre class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">{{ getCombinedCss() }}</pre>
+        <div
+          class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700"
+        >
+          <pre
+            class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto"
+            >{{ getCombinedCss() }}</pre
+          >
         </div>
       </div>
 
@@ -137,8 +150,12 @@ const formatDate = (timestamp: number) => {
           @click="closeBlockManager"
           title="点击关闭"
         ></div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-4xl max-h-[80vh] flex flex-col relative z-10">
-          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-4xl max-h-[80vh] flex flex-col relative z-10"
+        >
+          <div
+            class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
+          >
             <h3 class="text-lg font-semibold dark:text-white">CSS 块管理</h3>
             <a-button @click="closeBlockManager" size="small">关闭</a-button>
           </div>
@@ -151,7 +168,10 @@ const formatDate = (timestamp: number) => {
                 </a-button>
               </div>
 
-              <div v-if="cssBlocks.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div
+                v-if="cssBlocks.length === 0"
+                class="text-center py-8 text-gray-500 dark:text-gray-400"
+              >
                 暂无 CSS 块，点击上方按钮创建
               </div>
 
@@ -181,7 +201,12 @@ const formatDate = (timestamp: number) => {
                       <a-button size="small" @click="editBlock(block)" :icon="h(EditOutlined)">
                         编辑
                       </a-button>
-                      <a-button size="small" danger @click="deleteBlock(block)" :icon="h(DeleteOutlined)">
+                      <a-button
+                        size="small"
+                        danger
+                        @click="deleteBlock(block)"
+                        :icon="h(DeleteOutlined)"
+                      >
                         删除
                       </a-button>
                     </div>
@@ -233,7 +258,9 @@ const formatDate = (timestamp: number) => {
             </div>
 
             <div>
-              <label class="flex items-center space-x-2 text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label
+                class="flex items-center space-x-2 text-sm font-medium text-gray-900 dark:text-white mb-1"
+              >
                 <input
                   type="checkbox"
                   v-model="localBlockEnabled"
@@ -256,7 +283,9 @@ const formatDate = (timestamp: number) => {
             </div>
           </div>
 
-          <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-2">
+          <div
+            class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-2"
+          >
             <a-button @click="closeBlockEditor">取消</a-button>
             <a-button type="primary" @click="saveBlock" :disabled="!localBlockName.trim()">
               {{ modalMode === 'create' ? '创建' : '保存' }}

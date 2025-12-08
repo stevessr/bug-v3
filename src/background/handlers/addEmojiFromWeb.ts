@@ -88,7 +88,8 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
       name: emojiData.name,
       url: finalUrl,
       groupId: 'ungrouped',
-      addedAt: Date.now()
+      addedAt: Date.now(),
+      tags: [] // 确保新表情有空标签数组
     }
 
     ungroupedGroup.emojis.push(newEmoji)

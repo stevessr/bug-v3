@@ -73,6 +73,7 @@ export interface Emoji {
   referenceId?: string // If set, this emoji references another emoji by ID
   perceptualHash?: string // Perceptual hash for similarity detection
   customOutput?: string // Custom string to insert/copy when clicking emoji (overrides markdown/html format)
+  tags: string[] // 标签数组
 }
 
 export interface DefaultEmojiData {
@@ -88,4 +89,13 @@ export interface CustomCssBlock {
   enabled: boolean
   createdAt: number
   updatedAt: number
+}
+
+// Tag interface
+export interface Tag {
+  id: string
+  name: string
+  color?: string // 标签颜色
+  createdAt: number
+  usageCount?: number // 标签使用次数
 }

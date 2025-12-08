@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
-import {
-  UploadOutlined,
-  DownloadOutlined,
-  SwapOutlined
-} from '@ant-design/icons-vue'
+import { UploadOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
 import type {
@@ -30,9 +26,7 @@ const props = defineProps<{
   isConfigured: boolean
 }>()
 
-const {
-  emojiStore
-} = props.options
+const { emojiStore } = props.options
 
 // Sync type selection
 const syncType = ref<'cloudflare' | 'webdav' | 's3'>('cloudflare')
@@ -370,16 +364,11 @@ defineExpose({
             placeholder="输入读写权限的认证令牌"
             :disabled="isSyncing"
           />
-          <p class="text-xs text-gray-500 dark:text-white mt-1">
-            用于写入和删除操作的认证令牌
-          </p>
+          <p class="text-xs text-gray-500 dark:text-white mt-1">用于写入和删除操作的认证令牌</p>
         </div>
 
         <div>
-          <label
-            for="cfAuthTokenReadonly"
-            class="block text-sm font-medium dark:text-white mb-1"
-          >
+          <label for="cfAuthTokenReadonly" class="block text-sm font-medium dark:text-white mb-1">
             只读认证令牌 (可选)
           </label>
           <a-input-password
@@ -443,9 +432,7 @@ defineExpose({
             placeholder="emoji-data.json"
             :disabled="isSyncing"
           />
-          <p class="text-xs text-gray-500 dark:text-white mt-1">
-            在服务器上存储数据的文件名
-          </p>
+          <p class="text-xs text-gray-500 dark:text-white mt-1">在服务器上存储数据的文件名</p>
         </div>
       </div>
 
@@ -465,9 +452,7 @@ defineExpose({
         </div>
 
         <div>
-          <label for="s3Region" class="block text-sm font-medium dark:text-white mb-1">
-            区域
-          </label>
+          <label for="s3Region" class="block text-sm font-medium dark:text-white mb-1">区域</label>
           <a-input
             id="s3Region"
             v-model:value="s3Config.region"
@@ -501,10 +486,7 @@ defineExpose({
         </div>
 
         <div>
-          <label
-            for="s3SecretAccessKey"
-            class="block text-sm font-medium dark:text-white mb-1"
-          >
+          <label for="s3SecretAccessKey" class="block text-sm font-medium dark:text-white mb-1">
             Secret Access Key
           </label>
           <a-input-password
@@ -552,9 +534,7 @@ defineExpose({
       <div
         v-if="testResult"
         class="p-3 rounded border"
-        :class="
-          testResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-        "
+        :class="testResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'"
       >
         <p class="text-sm" :class="testResult.success ? 'text-green-700' : 'text-red-700'">
           {{ testResult.message }}
@@ -563,10 +543,7 @@ defineExpose({
     </div>
 
     <!-- Sync Operations -->
-    <div
-      v-if="isConfigured"
-      class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6"
-    >
+    <div v-if="isConfigured" class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
       <h3 class="text-md font-medium dark:text-white mb-4">同步操作</h3>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -655,9 +632,7 @@ defineExpose({
       <div
         v-if="syncResult"
         class="mt-3 p-3 rounded border"
-        :class="
-          syncResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-        "
+        :class="syncResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'"
       >
         <p class="text-sm" :class="syncResult.success ? 'text-green-700' : 'text-red-700'">
           {{ syncResult.message }}
