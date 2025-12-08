@@ -35,6 +35,45 @@ const allGroups = computed(() => [
   ...emojiStore.sortedGroups
 ])
 
+// 搜索功能
+const searchQuery = computed({
+  get: () => emojiStore.searchQuery,
+  set: (value: string) => {
+    emojiStore.searchQuery = value
+  }
+})
+
+// 過濾後的表情（支持按名稱和標籤搜索）
+const filteredEmojis = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return []
+  }
+
+  const query = searchQuery.value.toLowerCase()
+  const allEmojis: Array<any> = []
+
+  // 收集所有表情
+  emojiStore.sortedGroups.forEach(group => {
+    group.emojis?.forEach(emoji => {
+      // 按名稱搜索
+      const nameMatch = emoji.name.toLowerCase().includes(query)
+      // 按標籤搜索
+      const tagMatch = emoji.tags?.some((tag: string) =>
+        tag.toLowerCase().includes(query)
+      )
+
+      if (nameMatch || tagMatch) {
+        allEmojis.push({
+          ...emoji,
+          groupName: group.name
+        })
+      }
+    })
+  })
+
+  return allEmojis
+})
+
 // 判斷是否為虛擬分組
 const isVirtualGroup = (groupId: string) => {
   return virtualGroups.value.some(g => g.id === groupId)
@@ -46,7 +85,9 @@ const getCurrentGroupEmojis = (groupId: string) => {
     // 返回所有表情
     const allEmojis = []
     for (const group of emojiStore.sortedGroups) {
-      allEmojis.push(...(group.emojis || []))
+      if (group.emojis) {
+        allEmojis.push(...group.emojis)
+      }
     }
     return allEmojis
   }
@@ -57,6 +98,21 @@ const getCurrentGroupEmojis = (groupId: string) => {
 // 處理表情點擊
 const handleEmojiClick = (emoji: any) => {
   selectEmoji(emoji)
+}
+
+// 清空搜索
+const clearSearch = () => {
+  emojiStore.searchQuery = ''
+}
+
+// 處理搜索輸入
+const handleSearch = () => {
+  // 搜索邏輯已經由 computed 屬性處理
+}
+
+// 清空搜索
+const clearSearch = () => {
+  emojiStore.searchQuery = ''
 }
 </script>
 
@@ -133,27 +189,60 @@ const handleEmojiClick = (emoji: any) => {
 
       <!-- 表情网格 -->
       <div class="sidebar-body">
-        <!-- 搜索模式 -->
-        <template v-if="emojiStore.searchQuery">
-          <LazyEmojiGrid
-            :emojis="emojiStore.filteredEmojis"
-            :isLoading="emojiStore.isLoading"
-            :favorites="emojiStore.favorites"
-            :gridColumns="emojiStore.settings.gridColumns"
-            :emptyMessage="'没有找到匹配的表情'"
-            :showAddButton="false"
-            groupId="search"
-            isActive
-            @select="selectEmoji"
-            @openOptions="openOptions"
-          />
+        <!-- 搜索模式 - 顯示搜索結果 -->
+        <template v-if="searchQuery">
+          <div class="p-3">
+            <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              🔍 搜索 "{{ searchQuery }}" 找到 {{ filteredEmojis.length }} 個結果
+            </div>
+            <div v-if="filteredEmojis.length === 0" class="text-center py-8">
+              <div class="text-2xl mb-2">🔍</div>
+              <div class="text-gray-500 dark:text-gray-400">未找到匹配的表情</div>
+            </div>
+            <div v-else class="grid gap-2" :style="{ gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns || 6}, minmax(0, 1fr))` }">
+              <div
+                v-for="emoji in filteredEmojis"
+                :key="emoji.id"
+                @click="handleEmojiClick(emoji)"
+                class="relative group cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                :title="`${emoji.name} (${emoji.groupName})\n標籤: ${emoji.tags?.join(', ') || '無'}`"
+              >
+                <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
+                  <img
+                    :src="emoji.displayUrl || emoji.url"
+                    :alt="emoji.name"
+                    class="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+                <div class="text-xs text-center text-gray-600 dark:text-white mt-1 truncate">
+                  {{ emoji.name }}
+                </div>
+                <!-- 標籤顯示 -->
+                <div v-if="emoji.tags && emoji.tags.length > 0" class="mt-1">
+                  <div class="flex flex-wrap gap-1">
+                    <span
+                      v-for="tag in emoji.tags.slice(0, 2)"
+                      :key="tag"
+                      class="inline-block px-1 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded"
+                    >
+                      {{ tag }}
+                    </span>
+                    <span v-if="emoji.tags.length > 2" class="text-xs text-gray-400">
+                      +{{ emoji.tags.length - 2 }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </template>
 
         <!-- 虛擬分組 - 所有表情 -->
         <template v-else-if="emojiStore.activeGroupId === 'all-emojis'">
           <div class="p-3">
             <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              🔍 展示所有分組的表情，支持按名稱或標籤搜索
+              🔍 展示所有分組的表情，共 {{ getCurrentGroupEmojis('all-emojis').length }} 個表情
             </div>
             <LazyEmojiGrid
               :emojis="getCurrentGroupEmojis('all-emojis')"
