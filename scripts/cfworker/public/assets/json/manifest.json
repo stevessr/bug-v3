@@ -166,7 +166,7 @@
       "name": "未分组",
       "order": 23,
       "icon": "📦",
-      "emojiCount": 5
+      "emojiCount": 6
     },
     {
       "id": "group-1760528756665",
@@ -649,7 +649,7 @@
       "name": "demo",
       "order": 92,
       "icon": "📁",
-      "emojiCount": 2
+      "emojiCount": 4
     },
     {
       "id": "group-1764340960340",
@@ -670,7 +670,7 @@
       "name": "缓冲区",
       "order": 95,
       "icon": "📦",
-      "emojiCount": 2
+      "emojiCount": 0
     },
     {
       "id": "group-1764592283419",
@@ -699,8 +699,15 @@
       "order": 99,
       "icon": "https://linux.do/uploads/default/original/4X/5/9/1/591224a2ceb7e449a15ecbe19c26b4945550dbc4.jpeg",
       "emojiCount": 1016
+    },
+    {
+      "id": "group-1765284902642",
+      "name": "X 第11弹",
+      "order": 100,
+      "icon": "https://linux.do/uploads/default/original/4X/c/0/6/c06f67e3d6ecdbfbd54eacc472eb605532e98f4e.avif",
+      "emojiCount": 887
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-12-06T09:05:32.333Z"
+  "exportDate": "2025-12-10T05:20:59.651Z"
 }

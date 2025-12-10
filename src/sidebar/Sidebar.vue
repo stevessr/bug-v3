@@ -104,11 +104,6 @@ const clearSearch = () => {
 const handleSearch = () => {
   // 搜索邏輯已經由 computed 屬性處理
 }
-
-// 清空搜索
-const clearSearch = () => {
-  emojiStore.searchQuery = ''
-}
 </script>
 
 <template>
