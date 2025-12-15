@@ -14,6 +14,8 @@ import FileListDisplay from '../components/FileListDisplay.vue'
 import GroupSelector from '../components/GroupSelector.vue'
 import CreateGroupModal from '../components/CreateGroupModal.vue'
 
+import { processTelegramStickers, getTelegramBotToken, setTelegramBotToken } from '@/utils/telegramResolver'
+import { message } from 'ant-design-vue'
 import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
@@ -141,6 +143,11 @@ const showDuplicateResults = ref(false)
 const isCheckingDuplicates = ref(false)
 const selectedGroupIdForFilter = ref('')
 const showGroupSelector = ref(false)
+const telegramBotToken = ref(getTelegramBotToken() || '')
+const showTelegramModal = ref(false)
+const telegramInput = ref('')
+const isProcessingTelegram = ref(false)
+const telegramProgress = ref({ processed: 0, total: 0, message: '' })
 
 // 可用的分组列表（排除缓冲区）
 const availableGroups = computed(
@@ -579,6 +586,50 @@ const filterDuplicateFiles = async () => {
   }
 }
 
+const saveBotToken = () => {
+  setTelegramBotToken(telegramBotToken.value)
+  message.success('Telegram Bot Token 已保存')
+}
+
+const handleTelegramImport = async () => {
+  if (!telegramBotToken.value) {
+    message.error('请先设置 Telegram Bot Token')
+    return
+  }
+
+  if (!telegramInput.value) {
+    message.error('请输入贴纸包链接或名称')
+    return
+  }
+
+  isProcessingTelegram.value = true
+  telegramProgress.value = { processed: 0, total: 0, message: '开始解析...' }
+
+  try {
+    const files = await processTelegramStickers(
+      telegramInput.value,
+      telegramBotToken.value,
+      (processed, total, msg) => {
+        telegramProgress.value = { processed, total, message: msg }
+      }
+    )
+
+    if (files.length > 0) {
+      await addFiles(files)
+      message.success(`成功解析并添加 ${files.length} 个表情`)
+      showTelegramModal.value = false
+      telegramInput.value = ''
+    } else {
+      message.warning('未能找到符合条件的表情（可能跳过了不支持的格式）')
+    }
+  } catch (error: any) {
+    console.error('Telegram import failed:', error)
+    message.error(`导入失败: ${error.message}`)
+  } finally {
+    isProcessingTelegram.value = false
+  }
+}
+
 // 添加分组到过滤器
 const addGroupToFilter = () => {
   if (!selectedGroupIdForFilter.value) return
@@ -794,7 +845,15 @@ onBeforeUnmount(() => {
 
     <!-- Upload Service Selection -->
     <div class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-      <h3 class="text-lg font-semibold dark:text-white mb-4">选择上传服务</h3>
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold dark:text-white mb-0">选择上传服务</h3>
+        <a-button type="primary" ghost size="small" @click="showTelegramModal = true">
+          <template #icon>
+            <span class="mr-1">✈️</span>
+          </template>
+          Telegram 贴纸导入
+        </a-button>
+      </div>
       <div class="flex space-x-4">
         <a-radio-group v-model:value="uploadService">
           <a-radio-button value="linux.do">linux.do</a-radio-button>
@@ -1155,5 +1214,69 @@ onBeforeUnmount(() => {
       @close="closeImageCropper"
       @upload="handleCroppedEmojis"
     />
+
+    <!-- Telegram 导入模态框 -->
+    <a-modal
+      v-model:open="showTelegramModal"
+      title="从 Telegram 导入贴纸"
+      :confirm-loading="isProcessingTelegram"
+      @ok="handleTelegramImport"
+    >
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Telegram Bot Token
+            <a-tooltip title="需要一个 Bot Token 来访问 Telegram API。请向 @BotFather 申请。">
+              <QuestionCircleOutlined class="text-gray-400" />
+            </a-tooltip>
+          </label>
+          <div class="flex gap-2">
+            <a-input-password
+              v-model:value="telegramBotToken"
+              placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+            />
+            <a-button @click="saveBotToken">保存</a-button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            贴纸包链接或名称
+          </label>
+          <a-input
+            v-model:value="telegramInput"
+            placeholder="https://t.me/addstickers/MyStickerSet 或 MyStickerSet"
+            @pressEnter="handleTelegramImport"
+          />
+        </div>
+
+        <div v-if="isProcessingTelegram" class="bg-blue-50 dark:bg-blue-900 p-3 rounded text-sm">
+          <div class="flex justify-between mb-1">
+            <span>{{ telegramProgress.message }}</span>
+            <span v-if="telegramProgress.total > 0">
+              {{ Math.round((telegramProgress.processed / telegramProgress.total) * 100) }}%
+            </span>
+          </div>
+          <a-progress
+            :percent="
+              telegramProgress.total > 0
+                ? Math.round((telegramProgress.processed / telegramProgress.total) * 100)
+                : 0
+            "
+            status="active"
+            :show-info="false"
+          />
+        </div>
+
+        <div class="text-xs text-gray-500 dark:text-gray-400">
+          <p>提示：</p>
+          <ul class="list-disc pl-4 space-y-1">
+            <li>仅支持静态图片贴纸和部分 WebP 贴纸</li>
+            <li>会自动跳过视频 (WebM) 和动态贴纸</li>
+            <li>导入后的图片将自动添加到缓冲区，您可以继续上传到图床</li>
+          </ul>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>

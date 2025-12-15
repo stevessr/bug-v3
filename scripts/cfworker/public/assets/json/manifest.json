@@ -706,8 +706,29 @@
       "order": 100,
       "icon": "https://linux.do/uploads/default/original/4X/c/0/6/c06f67e3d6ecdbfbd54eacc472eb605532e98f4e.avif",
       "emojiCount": 887
+    },
+    {
+      "id": "group-1765462664131",
+      "name": "亚托莉花嫁",
+      "order": 101,
+      "icon": "https://linux.do/uploads/default/original/4X/1/6/6/16644686465bfa67925239a4626d0cf7de505ffe.gif",
+      "emojiCount": 25
+    },
+    {
+      "id": "group-1765771538157",
+      "name": "超天酱超可爱花卤鸭牌",
+      "order": 102,
+      "icon": "https://linux.do/uploads/default/original/4X/8/a/8/8a8b06c4b8bf534b7edd2f40136543859d2c1c68.gif",
+      "emojiCount": 32
+    },
+    {
+      "id": "group-1765806805581",
+      "name": "X 第12弹",
+      "order": 103,
+      "icon": "https://linux.do/uploads/default/original/4X/8/5/c/85c46c959d4a0b729575260af51ee62733ca736d.avif",
+      "emojiCount": 1245
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-12-10T05:20:59.651Z"
+  "exportDate": "2025-12-15T16:15:06.382Z"
 }
