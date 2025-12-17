@@ -61,9 +61,11 @@ export interface TelegramStickerSet {
  */
 export const isTelegramStickerUrl = (url: string): boolean => {
   if (!url) return false
-  return url.startsWith('https://t.me/addstickers/') ||
-         url.startsWith('https://telegram.me/addstickers/') ||
-         url.startsWith('tg://addstickers?set=')
+  return (
+    url.startsWith('https://t.me/addstickers/') ||
+    url.startsWith('https://telegram.me/addstickers/') ||
+    url.startsWith('tg://addstickers?set=')
+  )
 }
 
 /**
@@ -115,7 +117,10 @@ export const getFile = async (fileId: string, botToken: string): Promise<Telegra
 /**
  * Gets a sticker set from Telegram API
  */
-export const getStickerSet = async (name: string, botToken: string): Promise<TelegramStickerSet> => {
+export const getStickerSet = async (
+  name: string,
+  botToken: string
+): Promise<TelegramStickerSet> => {
   try {
     const response = await fetch(
       `https://api.telegram.org/bot${botToken}/getStickerSet?name=${name}`
@@ -144,7 +149,7 @@ export const createFileUrl = (filePath: string, botToken: string): string => {
  * Creates a proxied download URL for a file path to avoid CORS issues
  */
 export const createProxyUrl = (filePath: string, botToken: string): string => {
-  return `/api/proxy/telegram-file?token=${encodeURIComponent(botToken)}&path=${encodeURIComponent(filePath)}`
+  return `https://api.telegram.org/file/bot${botToken}/${filePath}`
 }
 
 /**
@@ -185,7 +190,8 @@ export const processTelegramStickers = async (
     // Skip video stickers (webm) or animated if needed
     // The requirement says "skip webm", which are usually video stickers or animated ones
     if (sticker.is_video) {
-      if (onProgress) onProgress(processed, total, `Skipping video sticker ${processed}/${total}...`)
+      if (onProgress)
+        onProgress(processed, total, `Skipping video sticker ${processed}/${total}...`)
       continue
     }
 
@@ -196,28 +202,49 @@ export const processTelegramStickers = async (
     try {
       if (onProgress) onProgress(processed, total, `Processing sticker ${processed}/${total}...`)
 
+      console.log(`[TelegramResolver] Getting file info for sticker ${sticker.file_id}`)
       const fileInfo = await getFile(sticker.file_id, botToken)
-      if (!fileInfo.file_path) continue
+      console.log(`[TelegramResolver] File info:`, fileInfo)
+
+      if (!fileInfo.file_path) {
+        console.warn(`[TelegramResolver] No file_path for sticker ${sticker.file_id}`)
+        continue
+      }
 
       const extension = fileInfo.file_path.split('.').pop()?.toLowerCase() || ''
+      console.log(`[TelegramResolver] File extension: ${extension}`)
 
       // Skip webm explicitly as requested
       if (extension === 'webm') {
+        console.log(`[TelegramResolver] Skipping webm sticker`)
         continue
       }
 
       // Construct proxy URL to download
       const proxyUrl = createProxyUrl(fileInfo.file_path, botToken)
+      console.log(`[TelegramResolver] Downloading from: ${proxyUrl}`)
       const blob = await downloadFileAsBlob(proxyUrl)
+      console.log(`[TelegramResolver] Downloaded blob size: ${blob.size} bytes, type: ${blob.type}`)
 
-      // Create file object
+      // Determine correct MIME type based on extension
+      let mimeType = blob.type
+      if (!mimeType || mimeType === 'application/octet-stream') {
+        if (extension === 'webp') mimeType = 'image/webp'
+        else if (extension === 'png') mimeType = 'image/png'
+        else if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg'
+        else if (extension === 'gif') mimeType = 'image/gif'
+        else if (extension === 'tgs') mimeType = 'application/json' // Lottie animation
+        else mimeType = 'image/webp' // default for stickers
+      }
+
+      // Create file object with correct MIME type
       const filename = `${sticker.file_id}.${extension}`
-      const file = new File([blob], filename, { type: blob.type })
+      const file = new File([blob], filename, { type: mimeType })
+      console.log(`[TelegramResolver] Created file: ${filename}, type: ${mimeType}`)
 
       resultFiles.push(file)
-
     } catch (err) {
-      console.error(`Failed to process sticker ${sticker.file_id}:`, err)
+      console.error(`[TelegramResolver] Failed to process sticker ${sticker.file_id}:`, err)
     }
   }
 

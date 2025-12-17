@@ -727,8 +727,50 @@
       "order": 103,
       "icon": "https://linux.do/uploads/default/original/4X/8/5/c/85c46c959d4a0b729575260af51ee62733ca736d.avif",
       "emojiCount": 1245
+    },
+    {
+      "id": "group-1765895444745",
+      "name": "妹红 · 上官绯樱",
+      "order": 104,
+      "icon": "https://linux.do/uploads/default/original/4X/0/f/6/0f64b7be701d1cd06fe53641f93116d5482a9c5b.avif",
+      "emojiCount": 1057
+    },
+    {
+      "id": "group-1765972558970",
+      "name": "铃牙茶茶",
+      "order": 105,
+      "icon": "https://linux.do/uploads/default/original/4X/7/e/0/7e04eae53d11673e12c356073dff50bb6242067d.webp",
+      "emojiCount": 81
+    },
+    {
+      "id": "group-1765973308075",
+      "name": "系敷敷",
+      "order": 106,
+      "icon": "https://linux.do/uploads/default/original/4X/d/4/e/d4e5072592d8967ee9f45f21b29fc06b1f76f0f0.webp",
+      "emojiCount": 92
+    },
+    {
+      "id": "group-1765973766413",
+      "name": "软件工程师",
+      "order": 107,
+      "icon": "https://linux.do/uploads/default/original/4X/4/6/e/46ec175aaafc2ea5ce77aa0f3fd4d0b5be124fd2.webp",
+      "emojiCount": 48
+    },
+    {
+      "id": "group-1765974153699",
+      "name": "丸山彩表情包 | 素素祥祥子",
+      "order": 108,
+      "icon": "https://linux.do/uploads/default/original/4X/b/6/c/b6c8f427fa5d0f0cc0d4ec3d1f8ebf58c61f8c29.gif",
+      "emojiCount": 25
+    },
+    {
+      "id": "group-1765977432564",
+      "name": "X 第13🥚",
+      "order": 109,
+      "icon": "https://linux.do/uploads/default/original/4X/5/f/1/5f186ef099b920418391ec4792117d7adfbf8563.avif",
+      "emojiCount": 720
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-12-15T16:15:06.382Z"
+  "exportDate": "2025-12-17T14:20:40.992Z"
 }

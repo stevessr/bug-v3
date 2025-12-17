@@ -1,6 +1,6 @@
 {
   "name": "emoji-extension",
-  "version": "1.2.7-patch-7",
+  "version": "1.2.8",
   "private": true,
   "type": "module",
   "scripts": {

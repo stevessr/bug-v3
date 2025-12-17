@@ -6,6 +6,7 @@ import {
   ScissorOutlined,
   InboxOutlined
 } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
 
 import type { OptionsInject } from '../types'
 import ImageCropper from '../components/ImageCropper.vue'
@@ -14,8 +15,11 @@ import FileListDisplay from '../components/FileListDisplay.vue'
 import GroupSelector from '../components/GroupSelector.vue'
 import CreateGroupModal from '../components/CreateGroupModal.vue'
 
-import { processTelegramStickers, getTelegramBotToken, setTelegramBotToken } from '@/utils/telegramResolver'
-import { message } from 'ant-design-vue'
+import {
+  processTelegramStickers,
+  getTelegramBotToken,
+  setTelegramBotToken
+} from '@/utils/telegramResolver'
 import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
@@ -113,6 +117,96 @@ const selectedFiles = ref<
   }>
 >([])
 const isUploading = ref(false)
+
+// 持久化相关函数
+const STORAGE_KEY = 'buffer-selected-files'
+
+// 将 File 转换为可序列化的对象
+const fileToSerializable = async (fileItem: (typeof selectedFiles.value)[0]) => {
+  return new Promise(resolve => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      resolve({
+        id: fileItem.id,
+        fileName: fileItem.file.name,
+        fileType: fileItem.file.type,
+        fileData: reader.result as string, // base64
+        width: fileItem.width,
+        height: fileItem.height,
+        cropData: fileItem.cropData
+      })
+    }
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(fileItem.file)
+  })
+}
+
+// 从序列化对象恢复 File
+const serializableToFile = async (data: any) => {
+  try {
+    const response = await fetch(data.fileData)
+    const blob = await response.blob()
+    const file = new File([blob], data.fileName, { type: data.fileType })
+    const previewUrl = URL.createObjectURL(file)
+
+    return {
+      id: data.id,
+      file,
+      previewUrl,
+      width: data.width,
+      height: data.height,
+      cropData: data.cropData
+    }
+  } catch (error) {
+    console.error('[BufferPage] Failed to restore file:', error)
+    return null
+  }
+}
+
+// 保存 selectedFiles 到 localStorage
+const saveSelectedFiles = async () => {
+  try {
+    const serialized = await Promise.all(selectedFiles.value.map(item => fileToSerializable(item)))
+    const filtered = serialized.filter(item => item !== null)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
+    console.log(`[BufferPage] Saved ${filtered.length} files to storage`)
+  } catch (error) {
+    console.error('[BufferPage] Failed to save selected files:', error)
+  }
+}
+
+// 从 localStorage 恢复 selectedFiles
+const loadSelectedFiles = async () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return
+
+    const data = JSON.parse(stored)
+    console.log(`[BufferPage] Loading ${data.length} files from storage`)
+
+    const restored = await Promise.all(data.map((item: any) => serializableToFile(item)))
+    const filtered = restored.filter(item => item !== null) as typeof selectedFiles.value
+    selectedFiles.value = filtered
+    console.log(`[BufferPage] Restored ${filtered.length} files`)
+  } catch (error) {
+    console.error('[BufferPage] Failed to load selected files:', error)
+  }
+}
+
+// 清除持久化数据
+const clearPersistedFiles = () => {
+  localStorage.removeItem(STORAGE_KEY)
+  console.log('[BufferPage] Cleared persisted files')
+}
+
+// 监听 selectedFiles 变化并自动保存
+watch(
+  selectedFiles,
+  () => {
+    saveSelectedFiles()
+  },
+  { deep: true }
+)
 const uploadProgress = ref<
   Array<{
     fileName: string
@@ -592,6 +686,8 @@ const saveBotToken = () => {
 }
 
 const handleTelegramImport = async () => {
+  console.log('[BufferPage] handleTelegramImport called')
+
   if (!telegramBotToken.value) {
     message.error('请先设置 Telegram Bot Token')
     return
@@ -602,34 +698,39 @@ const handleTelegramImport = async () => {
     return
   }
 
+  console.log('[BufferPage] Starting Telegram import:', telegramInput.value)
   isProcessingTelegram.value = true
   telegramProgress.value = { processed: 0, total: 0, message: '开始解析...' }
 
   try {
+    console.log('[BufferPage] Calling processTelegramStickers...')
     const files = await processTelegramStickers(
       telegramInput.value,
       telegramBotToken.value,
       (processed, total, msg) => {
+        console.log(`[BufferPage] Progress: ${processed}/${total} - ${msg}`)
         telegramProgress.value = { processed, total, message: msg }
       }
     )
 
+    console.log(`[BufferPage] processTelegramStickers returned ${files.length} files`)
+
     if (files.length > 0) {
+      console.log(`[BufferPage] Adding ${files.length} files to selectedFiles`)
       await addFiles(files)
-      message.success(`成功解析并添加 ${files.length} 个表情`)
+      message.success(`成功添加 ${files.length} 个贴纸文件，请点击上传按钮`)
       showTelegramModal.value = false
       telegramInput.value = ''
     } else {
       message.warning('未能找到符合条件的表情（可能跳过了不支持的格式）')
     }
   } catch (error: any) {
-    console.error('Telegram import failed:', error)
+    console.error('[BufferPage] Telegram import failed:', error)
     message.error(`导入失败: ${error.message}`)
   } finally {
     isProcessingTelegram.value = false
   }
 }
-
 // 添加分组到过滤器
 const addGroupToFilter = () => {
   if (!selectedGroupIdForFilter.value) return
@@ -791,6 +892,11 @@ const uploadFiles = async () => {
     // Keep failed files in the list for retry
     selectedFiles.value = selectedFiles.value.filter((_, i) => uploadProgress.value[i].error)
 
+    // 如果所有文件都上传成功，清除持久化数据
+    if (selectedFiles.value.length === 0) {
+      clearPersistedFiles()
+    }
+
     setTimeout(() => {
       uploadProgress.value = []
     }, 3000)
@@ -824,6 +930,9 @@ onMounted(() => {
       uploadProgress.value = [...uploadProgress.value]
     }
   }, 1000)
+
+  // 加载持久化的文件
+  loadSelectedFiles()
 })
 
 onBeforeUnmount(() => {
