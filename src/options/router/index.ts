@@ -10,6 +10,7 @@ import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
 import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
 import BufferPage from '../pages/BufferPage.vue'
+import BilibiliImportPage from '../pages/BilibiliImportPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -66,6 +67,14 @@ const routes: RouteRecordRaw[] = [
     component: BufferPage,
     meta: {
       title: '缓冲区'
+    }
+  },
+  {
+    path: '/bilibili-import',
+    name: 'bilibili-import',
+    component: BilibiliImportPage,
+    meta: {
+      title: 'Bilibili导入'
     }
   },
   {

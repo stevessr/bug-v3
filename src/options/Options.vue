@@ -132,6 +132,7 @@ const menuItems = computed(() => {
     { key: 'groups', label: '分组管理', route: '/groups' },
     { key: 'ungrouped', label: '未分组', route: '/ungrouped' },
     { key: 'buffer', label: '缓冲区', route: '/buffer' },
+    { key: 'bilibili-import', label: 'Bilibili导入', route: '/bilibili-import' },
     { key: 'stats', label: '统计', route: '/stats' },
     { key: 'ai-rename', label: 'AI 批量重命名', route: '/ai-rename' },
     { key: 'about', label: '关于', route: '/about' }
@@ -173,6 +174,7 @@ const handleMenuSelect = (info: any) => {
     ungrouped: '/ungrouped',
     import: '/import',
     buffer: '/buffer',
+    'bilibili-import': '/bilibili-import',
     stats: '/stats',
     'ai-rename': '/ai-rename',
     about: '/about'
@@ -252,6 +254,7 @@ onMounted(() => {
         ungrouped: '/ungrouped',
         import: '/import',
         buffer: '/buffer',
+        'bilibili-import': '/bilibili-import',
         stats: '/stats',
         'ai-rename': '/ai-rename',
         about: '/about'
