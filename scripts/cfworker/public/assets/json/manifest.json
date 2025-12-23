@@ -769,8 +769,36 @@
       "order": 109,
       "icon": "https://linux.do/uploads/default/original/4X/5/f/1/5f186ef099b920418391ec4792117d7adfbf8563.avif",
       "emojiCount": 720
+    },
+    {
+      "id": "group-1766196297035",
+      "name": "偷吃",
+      "order": 110,
+      "icon": "https://linux.do/uploads/default/original/4X/6/4/4/644e4799e7b2c83a71cb1e3fb4c63e25c7f9a786.webp",
+      "emojiCount": 32
+    },
+    {
+      "id": "group-1766412592583",
+      "name": "archlinuxmx",
+      "order": 111,
+      "icon": "https://linux.do/uploads/default/original/4X/8/3/1/8316332bbcfb25c94042cf63080819f1433f85f6.webp",
+      "emojiCount": 116
+    },
+    {
+      "id": "group-1766479646538",
+      "name": "阿米娅",
+      "order": 112,
+      "icon": "https://linux.do/uploads/default/original/4X/f/f/9/ff94fddd15b87e0fd97aa543b757a7f2d632a378.avif",
+      "emojiCount": 10
+    },
+    {
+      "id": "group-1766486669577",
+      "name": "X 第十四弹",
+      "order": 113,
+      "icon": "https://linux.do/uploads/default/original/4X/c/4/a/c4a7756a7c660327405b1a4a54c1996cd03a73be.avif",
+      "emojiCount": 1490
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-12-17T14:20:40.992Z"
+  "exportDate": "2025-12-23T15:02:57.598Z"
 }
