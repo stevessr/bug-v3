@@ -84,6 +84,8 @@ export class CollaborativeUploadClient {
   // 用于主控端等待会话完成
   private sessionCompleteResolve: ((results: UploadResult[]) => void) | null = null
   private sessionResults: UploadResult[] = []
+  private localUploadResults: UploadResult[] = [] // 本地上传结果
+  private totalExpected: number = 0 // 期望完成的总数
 
   constructor(config: CollaborativeUploadConfig) {
     this.config = config
@@ -240,31 +242,50 @@ export class CollaborativeUploadClient {
           break
 
         case 'TASK_COMPLETED':
-          // 主控端收到任务完成通知
+          // 主控端收到任务完成通知（来自远程工作者）
           this.sessionResults.push({
             filename: data.filename,
             success: true,
             url: data.resultUrl
           })
-          this.config.onProgress?.(data.progress)
+          this.config.onProgress?.({
+            completed:
+              this.sessionResults.filter(r => r.success).length +
+              this.localUploadResults.filter(r => r.success).length,
+            failed:
+              this.sessionResults.filter(r => !r.success).length +
+              this.localUploadResults.filter(r => !r.success).length,
+            total: this.totalExpected,
+            currentFile: data.filename
+          })
+          this.checkAllComplete()
           break
 
         case 'TASK_FAILED':
-          // 主控端收到任务失败通知
+          // 主控端收到任务失败通知（来自远程工作者）
           this.sessionResults.push({
             filename: data.filename,
             success: false,
             error: data.error
           })
-          this.config.onProgress?.(data.progress)
+          this.config.onProgress?.({
+            completed:
+              this.sessionResults.filter(r => r.success).length +
+              this.localUploadResults.filter(r => r.success).length,
+            failed:
+              this.sessionResults.filter(r => !r.success).length +
+              this.localUploadResults.filter(r => !r.success).length,
+            total: this.totalExpected,
+            currentFile: data.filename
+          })
+          this.checkAllComplete()
           break
 
         case 'SESSION_COMPLETED':
-          console.log('[CollaborativeUpload] Session completed:', data.stats)
-          if (this.sessionCompleteResolve) {
-            this.sessionCompleteResolve(this.sessionResults)
-            this.sessionCompleteResolve = null
-          }
+          // 服务器通知会话完成（仅远程任务）
+          console.log('[CollaborativeUpload] Remote session completed:', data.stats)
+          // 不在这里 resolve，由 checkAllComplete 统一处理
+          this.checkAllComplete()
           break
 
         case 'STATS_UPDATE':
@@ -339,14 +360,73 @@ export class CollaborativeUploadClient {
 
   /**
    * 主控端提交上传任务
+   * 主机本身也参与上传，实现真正的并行
    */
   async submitTasks(files: File[]): Promise<UploadResult[]> {
     if (!this._sessionId) {
       throw new Error('Session not created')
     }
 
-    // 准备任务数据
-    const tasks: UploadTask[] = await Promise.all(
+    const masterAlsoUploads = this.config.masterAlsoUploads !== false // 默认 true
+
+    // 重置结果
+    this.sessionResults = []
+    this.localUploadResults = []
+    this.totalExpected = files.length
+
+    if (!masterAlsoUploads || files.length === 0) {
+      // 如果主机不参与上传，全部交给工作者
+      const tasks = await this.prepareTasksData(files)
+      this.send({
+        type: 'SUBMIT_TASKS',
+        sessionId: this._sessionId,
+        tasks
+      })
+
+      return new Promise(resolve => {
+        this.sessionCompleteResolve = resolve
+      })
+    }
+
+    // 主机也参与上传：分配一部分任务给自己
+    // 策略：主机处理一半（向上取整），其余分发给工作者
+    const localCount = Math.ceil(files.length / 2)
+    const localFiles = files.slice(0, localCount)
+    const remoteFiles = files.slice(localCount)
+
+    console.log(
+      `[CollaborativeUpload] Split tasks: ${localCount} local, ${remoteFiles.length} remote`
+    )
+
+    // 启动本地上传（异步）
+    this.uploadLocalFiles(localFiles)
+
+    // 如果有远程任务，提交给服务器
+    if (remoteFiles.length > 0) {
+      const tasks = await this.prepareTasksData(remoteFiles)
+      this.send({
+        type: 'SUBMIT_TASKS',
+        sessionId: this._sessionId,
+        tasks
+      })
+    }
+
+    // 等待所有任务完成（本地 + 远程）
+    return new Promise(resolve => {
+      this.sessionCompleteResolve = resolve
+
+      // 如果没有远程任务，需要自己触发完成检查
+      if (remoteFiles.length === 0) {
+        // 本地任务完成后会调用 checkAllComplete
+      }
+    })
+  }
+
+  /**
+   * 准备任务数据
+   */
+  private async prepareTasksData(files: File[]): Promise<UploadTask[]> {
+    return Promise.all(
       files.map(async file => {
         const arrayBuffer = await file.arrayBuffer()
         const bytes = new Uint8Array(arrayBuffer)
@@ -364,21 +444,61 @@ export class CollaborativeUploadClient {
         }
       })
     )
+  }
 
-    // 重置结果
-    this.sessionResults = []
+  /**
+   * 本地上传文件
+   */
+  private async uploadLocalFiles(files: File[]): Promise<void> {
+    for (const file of files) {
+      try {
+        console.log(`[CollaborativeUpload] Local upload: ${file.name}`)
+        const resultUrl = await uploadServices['linux.do'].uploadFile(file)
 
-    // 提交任务
-    this.send({
-      type: 'SUBMIT_TASKS',
-      sessionId: this._sessionId,
-      tasks
-    })
+        this.localUploadResults.push({
+          filename: file.name,
+          success: true,
+          url: resultUrl
+        })
 
-    // 等待所有任务完成
-    return new Promise(resolve => {
-      this.sessionCompleteResolve = resolve
-    })
+        // 回调通知
+        this.config.onLocalUploadComplete?.(file.name, resultUrl)
+
+        // 更新进度
+        this.config.onProgress?.({
+          completed:
+            this.sessionResults.filter(r => r.success).length +
+            this.localUploadResults.filter(r => r.success).length,
+          failed:
+            this.sessionResults.filter(r => !r.success).length +
+            this.localUploadResults.filter(r => !r.success).length,
+          total: this.totalExpected,
+          currentFile: file.name
+        })
+      } catch (error) {
+        console.error(`[CollaborativeUpload] Local upload failed: ${file.name}`, error)
+        this.localUploadResults.push({
+          filename: file.name,
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+
+      // 检查是否全部完成
+      this.checkAllComplete()
+    }
+  }
+
+  /**
+   * 检查是否所有任务都完成了
+   */
+  private checkAllComplete(): void {
+    const totalCompleted = this.sessionResults.length + this.localUploadResults.length
+    if (totalCompleted >= this.totalExpected && this.sessionCompleteResolve) {
+      const allResults = [...this.localUploadResults, ...this.sessionResults]
+      this.sessionCompleteResolve(allResults)
+      this.sessionCompleteResolve = null
+    }
   }
 
   /**

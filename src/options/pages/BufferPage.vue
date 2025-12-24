@@ -23,6 +23,11 @@ import {
 import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
+import {
+  CollaborativeUploadClient,
+  type UploadProgress as CollabUploadProgress,
+  type UploadResult
+} from '@/utils/collaborativeUpload'
 
 const options = inject<OptionsInject>('options')!
 const { emojiStore, openEditEmoji } = options
@@ -117,6 +122,14 @@ const selectedFiles = ref<
   }>
 >([])
 const isUploading = ref(false)
+
+// 联动上传相关状态
+const enableCollaborativeUpload = ref(false)
+const collaborativeServerUrl = ref(localStorage.getItem('collaborative-upload-server') || 'ws://localhost:9527')
+const collaborativeClient = ref<CollaborativeUploadClient | null>(null)
+const isCollaborativeConnected = ref(false)
+const collaborativeProgress = ref<CollabUploadProgress | null>(null)
+const collaborativeResults = ref<UploadResult[]>([])
 
 // 持久化相关函数
 const STORAGE_KEY = 'buffer-selected-files'
@@ -807,6 +820,131 @@ const moveAllToUngrouped = async () => {
   }
 }
 
+// ==================== 联动上传相关函数 ====================
+
+const saveCollaborativeServerUrl = () => {
+  localStorage.setItem('collaborative-upload-server', collaborativeServerUrl.value)
+  message.success('服务器地址已保存')
+}
+
+const connectCollaborativeServer = async () => {
+  if (collaborativeClient.value) {
+    collaborativeClient.value.disconnect()
+    collaborativeClient.value = null
+    isCollaborativeConnected.value = false
+    return
+  }
+
+  try {
+    collaborativeClient.value = new CollaborativeUploadClient({
+      serverUrl: collaborativeServerUrl.value,
+      role: 'master',
+      masterAlsoUploads: true,
+      onStatusChange: status => {
+        isCollaborativeConnected.value = status.connected
+      },
+      onProgress: progress => {
+        collaborativeProgress.value = progress
+      },
+      onLocalUploadComplete: (filename, url) => {
+        // 本地上传完成，立即添加到缓冲区
+        addEmojiToBuffer(filename, url)
+      }
+    })
+
+    await collaborativeClient.value.connect()
+    message.success('已连接到协调服务器')
+  } catch (error) {
+    console.error('Failed to connect to collaborative server:', error)
+    message.error('连接服务器失败: ' + (error instanceof Error ? error.message : String(error)))
+  }
+}
+
+const addEmojiToBuffer = (filename: string, url: string) => {
+  // 确保缓冲区存在
+  let group = bufferGroup.value
+  if (!group) {
+    emojiStore.createGroup('缓冲区', '📦')
+    group = emojiStore.groups.find(g => g.name === '缓冲区')
+    if (group) {
+      group.id = 'buffer'
+    }
+  }
+
+  if (!group) return
+
+  // 查找对应的文件信息获取宽高
+  const fileItem = selectedFiles.value.find(f => f.file.name === filename)
+
+  const newEmoji = {
+    name: filename,
+    url: url,
+    displayUrl: url,
+    packet: 0,
+    width: fileItem?.width,
+    height: fileItem?.height
+  }
+
+  emojiStore.addEmojiWithoutSave(group.id || 'buffer', newEmoji)
+  emojiStore.maybeSave()
+
+  console.log(`[BufferPage] Added emoji to buffer: ${filename}`)
+}
+
+const uploadFilesCollaboratively = async () => {
+  if (selectedFiles.value.length === 0) return
+
+  if (!collaborativeClient.value || !isCollaborativeConnected.value) {
+    message.error('请先连接到协调服务器')
+    return
+  }
+
+  isUploading.value = true
+  collaborativeProgress.value = { completed: 0, failed: 0, total: selectedFiles.value.length }
+  collaborativeResults.value = []
+
+  try {
+    const files = selectedFiles.value.map(item => item.file)
+    const results = await collaborativeClient.value.submitTasks(files)
+
+    collaborativeResults.value = results
+
+    // 处理远程上传的结果（本地上传已在 onLocalUploadComplete 中处理）
+    for (const result of results) {
+      if (result.success && result.url) {
+        // 检查是否已经添加过（本地上传的已添加）
+        const alreadyAdded = bufferGroup.value?.emojis.some(
+          e => e.url === result.url || e.name === result.filename
+        )
+        if (!alreadyAdded) {
+          addEmojiToBuffer(result.filename, result.url)
+        }
+      }
+    }
+
+    // 清理已成功上传的文件
+    const successfulFiles = new Set(results.filter(r => r.success).map(r => r.filename))
+    selectedFiles.value = selectedFiles.value.filter(
+      item => !successfulFiles.has(item.file.name)
+    )
+
+    if (selectedFiles.value.length === 0) {
+      clearPersistedFiles()
+    }
+
+    const successCount = results.filter(r => r.success).length
+    const failCount = results.filter(r => !r.success).length
+    message.success(`联动上传完成: ${successCount} 成功, ${failCount} 失败`)
+  } catch (error) {
+    console.error('Collaborative upload failed:', error)
+    message.error('联动上传失败: ' + (error instanceof Error ? error.message : String(error)))
+  } finally {
+    isUploading.value = false
+  }
+}
+
+// ==================== 原有上传函数 ====================
+
 const uploadFiles = async () => {
   if (selectedFiles.value.length === 0) return
 
@@ -1096,16 +1234,91 @@ onBeforeUnmount(() => {
         />
       </div>
 
+      <!-- 联动上传设置 -->
+      <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <a-checkbox v-model:checked="enableCollaborativeUpload">
+              <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
+                🔗 启用联动上传
+              </span>
+            </a-checkbox>
+            <a-tooltip title="连接到本地协调服务器，与其他用户并行上传，突破单账户速率限制。主机本身也会参与上传。">
+              <QuestionCircleOutlined class="text-gray-400" />
+            </a-tooltip>
+          </div>
+          <span v-if="enableCollaborativeUpload" class="text-xs" :class="isCollaborativeConnected ? 'text-green-600' : 'text-gray-500'">
+            {{ isCollaborativeConnected ? '✓ 已连接' : '未连接' }}
+          </span>
+        </div>
+
+        <div v-if="enableCollaborativeUpload" class="space-y-2">
+          <div class="flex items-center gap-2">
+            <a-input
+              v-model:value="collaborativeServerUrl"
+              placeholder="ws://localhost:9527"
+              size="small"
+              style="width: 200px"
+              :disabled="isCollaborativeConnected"
+              @blur="saveCollaborativeServerUrl"
+            />
+            <a-button
+              size="small"
+              :type="isCollaborativeConnected ? 'default' : 'primary'"
+              :danger="isCollaborativeConnected"
+              @click="connectCollaborativeServer"
+            >
+              {{ isCollaborativeConnected ? '断开' : '连接' }}
+            </a-button>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            运行协调服务器：<code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">cd scripts/collaborative-upload-server && npm start</code>
+          </p>
+        </div>
+      </div>
+
       <!-- Upload Button -->
       <div class="mt-4 flex justify-end space-x-2">
+        <!-- 联动上传按钮 -->
         <a-button
+          v-if="enableCollaborativeUpload"
           type="primary"
+          @click="uploadFilesCollaboratively"
+          :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates || !isCollaborativeConnected"
+          :loading="isUploading"
+          class="bg-gradient-to-r from-blue-500 to-purple-500 border-0"
+        >
+          {{ isUploading ? '联动上传中...' : `🔗 联动上传 ${selectedFiles.length} 个文件` }}
+        </a-button>
+        <!-- 普通上传按钮 -->
+        <a-button
+          :type="enableCollaborativeUpload ? 'default' : 'primary'"
           @click="uploadFiles"
           :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates"
-          :loading="isUploading"
+          :loading="isUploading && !enableCollaborativeUpload"
         >
-          {{ isUploading ? '上传中...' : `上传 ${selectedFiles.length} 个文件` }}
+          {{ isUploading && !enableCollaborativeUpload ? '上传中...' : `上传 ${selectedFiles.length} 个文件` }}
         </a-button>
+      </div>
+
+      <!-- 联动上传进度 -->
+      <div
+        v-if="collaborativeProgress && enableCollaborativeUpload"
+        class="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded"
+      >
+        <div class="flex justify-between text-sm mb-2">
+          <span class="dark:text-white">联动上传进度</span>
+          <span class="dark:text-gray-300">
+            {{ collaborativeProgress.completed + collaborativeProgress.failed }} / {{ collaborativeProgress.total }}
+          </span>
+        </div>
+        <a-progress
+          :percent="Math.round(((collaborativeProgress.completed + collaborativeProgress.failed) / collaborativeProgress.total) * 100)"
+          :status="collaborativeProgress.failed > 0 ? 'exception' : 'active'"
+        />
+        <div v-if="collaborativeProgress.currentFile" class="text-xs text-gray-500 mt-1">
+          当前: {{ collaborativeProgress.currentFile }}
+        </div>
       </div>
     </div>
 

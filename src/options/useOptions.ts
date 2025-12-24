@@ -935,10 +935,11 @@ export default function useOptions() {
 
     // Emit a deterministic storage write a little after mount so tests that attach
     // console listeners after initial load will observe a storage success log.
+    // NOTE: This test helper should NOT clear favorites - just read to trigger logs
     try {
       const emitInjectedSuccess = () => {
         void newStorageHelpers
-          .setFavorites([])
+          .getFavorites()
           .then(() => {
             /* intentionally silent for test harness */
           })
