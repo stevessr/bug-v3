@@ -195,6 +195,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const pendingSave = ref(false)
   let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null
   const SAVE_DEBOUNCE_MS = 300 // 300ms 防抖，合并快速连续的保存请求
+  let hasPendingDebounce = false // Track if there's a debounced save waiting
 
   const beginBatch = () => {
     batchDepth++
@@ -204,6 +205,18 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     if (batchDepth > 0) batchDepth--
     if (batchDepth === 0 && pendingSave.value && !isSaving.value && !isLoading.value) {
       pendingSave.value = false
+      await saveData()
+    }
+  }
+
+  // Flush any pending debounced save immediately (used on page unload)
+  const flushPendingSave = async () => {
+    if (saveDebounceTimer) {
+      clearTimeout(saveDebounceTimer)
+      saveDebounceTimer = null
+    }
+    if (hasPendingDebounce && !isReadOnlyMode.value && !isSaving.value) {
+      hasPendingDebounce = false
       await saveData()
     }
   }
@@ -223,11 +236,56 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     if (saveDebounceTimer) {
       clearTimeout(saveDebounceTimer)
     }
+    hasPendingDebounce = true
     saveDebounceTimer = setTimeout(() => {
       saveDebounceTimer = null
+      hasPendingDebounce = false
       // fire-and-forget; outer callers need not await persistence
       void saveData()
     }, SAVE_DEBOUNCE_MS)
+  }
+
+  // Register beforeunload handler to flush pending saves when page is about to close
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', () => {
+      // Use synchronous approach since beforeunload doesn't wait for async
+      if (hasPendingDebounce && saveDebounceTimer) {
+        clearTimeout(saveDebounceTimer)
+        saveDebounceTimer = null
+        hasPendingDebounce = false
+        // Can't use async here, but we can at least write to localStorage synchronously
+        // which will be picked up on next load
+        try {
+          const groupsData = JSON.parse(JSON.stringify(groups.value))
+          const settingsData = JSON.parse(JSON.stringify(settings.value))
+          const favoritesData = Array.from(favorites.value)
+
+          // Write critical data to localStorage synchronously
+          const timestamp = Date.now()
+          localStorage.setItem('emojiGroupIndex', JSON.stringify({
+            data: groupsData.map((g: any, i: number) => ({ id: g.id, order: i })),
+            timestamp
+          }))
+          groupsData.forEach((group: any) => {
+            localStorage.setItem(`emojiGroup_${group.id}`, JSON.stringify({
+              data: group,
+              timestamp
+            }))
+          })
+          localStorage.setItem('appSettings', JSON.stringify({
+            data: { ...settingsData, lastModified: timestamp },
+            timestamp
+          }))
+          localStorage.setItem('favorites', JSON.stringify({
+            data: favoritesData,
+            timestamp
+          }))
+          console.log('[EmojiStore] Flushed pending save to localStorage on beforeunload')
+        } catch (e) {
+          console.error('[EmojiStore] Failed to flush pending save on beforeunload:', e)
+        }
+      }
+    })
   }
 
   // --- Actions ---

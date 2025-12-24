@@ -880,11 +880,16 @@ export default function useOptions() {
   }
 
   const onGroupCreated = (data: { name: string; icon: string; detail: string }) => {
-    showSuccess('分组创建成功')
-    if (data.detail) {
-      // TODO: 保存详细信息到分组
-      console.log('Group detail created:', data.detail)
+    // Actually create the group in the store
+    const newGroup = emojiStore.createGroup(data.name, data.icon)
+    console.log('[useOptions] onGroupCreated', { id: newGroup.id, name: newGroup.name })
+
+    // If there's detail info, update the group with it
+    if (data.detail && newGroup.id) {
+      emojiStore.updateGroup(newGroup.id, { detail: data.detail } as any)
     }
+
+    showSuccess('分组创建成功')
   }
 
   const onEmojiAdded = () => {
