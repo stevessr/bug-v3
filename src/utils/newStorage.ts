@@ -65,17 +65,13 @@ function ensureSerializable<T>(data: T): T {
     return JSON.parse(JSON.stringify(data))
   } catch (error) {
     logStorage('SERIALIZE_CLEAN', 'data', undefined, error)
-    // Fallback: create a clean version
+    // Fallback: create a clean version by recursively processing each property
     if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
       const cleaned: any = {}
       for (const [key, value] of Object.entries(data)) {
+        // Recursively clean each property instead of just testing and skipping
         try {
-          if (typeof structuredClone === 'function') {
-            structuredClone(value)
-          } else {
-            JSON.stringify(value)
-          }
-          cleaned[key] = value
+          cleaned[key] = ensureSerializable(value)
         } catch {
           logStorage('SERIALIZE_CLEAN', `skipped property: ${key}`, undefined, 'unserializable')
         }
@@ -329,7 +325,10 @@ class NewStorageManager {
       timestamp: timestamp || Date.now()
     }
 
-    logStorage('SYNC_SET_START', key, finalValue)
+    console.log('[NewStorageManager] setSync called:', {
+      key,
+      valuePreview: JSON.stringify(finalValue).substring(0, 200)
+    })
 
     // Clear any existing timer for this key
     if (this.writeTimers.has(key)) {
@@ -339,11 +338,26 @@ class NewStorageManager {
 
     try {
       // Write to all layers in parallel and wait for all to complete
-      await Promise.all([
+      const results = await Promise.allSettled([
         this.localStorage.set(key, finalValue),
         this.sessionStorage.set(key, finalValue),
         this.extensionStorage.set(key, finalValue)
       ])
+
+      console.log('[NewStorageManager] setSync results:', {
+        key,
+        localStorage: results[0].status,
+        sessionStorage: results[1].status,
+        extensionStorage: results[2].status
+      })
+
+      // Check if extensionStorage failed
+      if (results[2].status === 'rejected') {
+        console.error(
+          '[NewStorageManager] extensionStorage.set failed:',
+          (results[2] as PromiseRejectedResult).reason
+        )
+      }
 
       logStorage('SYNC_SET_SUCCESS', key, finalValue)
     } catch (error) {
@@ -452,16 +466,45 @@ export const newStorageHelpers = {
     try {
       const stored = await this.getEmojiGroup(groupId)
 
-      const currentEmojis = Array.isArray(group.emojis) ? group.emojis : []
-
-      const merged = {
-        ...(stored || {}),
-        ...group,
-        emojis: currentEmojis
+      // Deep clone emojis array using JSON to strip Vue reactive proxies
+      // This is necessary because structuredClone can fail on Vue Proxy objects
+      let plainEmojis: any[] = []
+      if (Array.isArray(group.emojis) && group.emojis.length > 0) {
+        try {
+          plainEmojis = JSON.parse(JSON.stringify(group.emojis))
+        } catch {
+          // If JSON fails, manually extract plain objects
+          plainEmojis = group.emojis.map(e => ({
+            id: e.id,
+            name: e.name,
+            url: e.url,
+            width: e.width,
+            height: e.height,
+            customOutput: e.customOutput,
+            tags: e.tags ? [...e.tags] : undefined,
+            hash: e.hash
+          }))
+        }
       }
 
-      const clean = ensureSerializable(merged)
-      await storageManager.setSync(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
+      // Build merged object with explicit properties
+      const merged = {
+        id: group.id || groupId,
+        name: group.name || stored?.name || '',
+        icon: group.icon || stored?.icon || '',
+        order: group.order ?? stored?.order ?? 0,
+        emojis: plainEmojis
+      }
+
+      console.log('[newStorageHelpers] setEmojiGroupSync - saving:', {
+        id: merged.id,
+        emojisCount: merged.emojis.length,
+        firstEmoji: merged.emojis[0]
+          ? { id: merged.emojis[0].id, name: merged.emojis[0].name }
+          : null
+      })
+
+      await storageManager.setSync(STORAGE_KEYS.GROUP_PREFIX + groupId, merged)
     } catch (e) {
       logStorage('IDB_SET', `${STORAGE_KEYS.GROUP_PREFIX}${groupId}`, undefined, e)
       throw e
@@ -480,8 +523,11 @@ export const newStorageHelpers = {
 
   async getAllEmojiGroups(): Promise<EmojiGroup[]> {
     const index = await this.getEmojiGroupIndex()
+    console.log('[newStorageHelpers] getAllEmojiGroups - index:', index)
+
     if (!index.length) {
       // Try runtime loader for packaged JSON first, fallback to generated module
+      console.log('[newStorageHelpers] getAllEmojiGroups - no index, loading defaults')
       try {
         const runtime = await loadDefaultEmojiGroups()
         if (runtime && runtime.length) return runtime
@@ -494,6 +540,12 @@ export const newStorageHelpers = {
     const groups = await Promise.all(
       index.map(async groupInfo => {
         const group = await this.getEmojiGroup(groupInfo.id)
+        console.log(
+          '[newStorageHelpers] getAllEmojiGroups - loaded group:',
+          groupInfo.id,
+          'emojis:',
+          group?.emojis?.length ?? 'null'
+        )
         return group ? { ...group, order: groupInfo.order } : null
       })
     )

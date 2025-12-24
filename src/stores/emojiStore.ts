@@ -1044,6 +1044,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       // First, ensure the favorites group is in the group index
       // This is critical - without the index entry, the group won't be loaded next time
       const currentIndex = await newStorageHelpers.getEmojiGroupIndex()
+      console.log('[EmojiStore] Current group index:', currentIndex)
+
       const favoritesInIndex = currentIndex.some(entry => entry.id === 'favorites')
       if (!favoritesInIndex) {
         // Add favorites to the beginning of the index
@@ -1053,14 +1055,27 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         ]
         // Use sync version to ensure index is persisted immediately
         await newStorageHelpers.setEmojiGroupIndexSync(newIndex)
-        console.log('[EmojiStore] Added favorites to group index')
+        console.log('[EmojiStore] Added favorites to group index:', newIndex)
       }
 
       // Use sync versions to ensure data is persisted to extensionStorage immediately
       // This is critical for popup/sidebar which may close at any time
+      console.log('[EmojiStore] About to save favorites group:', {
+        id: favoritesGroup.id,
+        emojisCount: favoritesGroup.emojis.length,
+        emojis: favoritesGroup.emojis.map(e => ({
+          id: e.id,
+          name: e.name,
+          url: e.url?.substring(0, 50)
+        }))
+      })
       await newStorageHelpers.setEmojiGroupSync(favoritesGroup.id, favoritesGroup)
-      await newStorageHelpers.setFavoritesSync(Array.from(favorites.value))
-      console.log('[EmojiStore] Favorites saved successfully')
+
+      // Derive favorites IDs from the actual emojis in the favorites group
+      // This ensures consistency between the group and the favorites set
+      const favoriteIds = favoritesGroup.emojis.map(e => e.id).filter(Boolean)
+      await newStorageHelpers.setFavoritesSync(favoriteIds)
+      console.log('[EmojiStore] Favorites saved successfully, ids:', favoriteIds.length)
     } catch (error) {
       console.error('[EmojiStore] Failed to save favorites:', error)
     }
@@ -1817,6 +1832,15 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // when unrelated keys or older events are received.
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
+      console.log('[EmojiStore] Storage change detected:', {
+        areaName,
+        keys: Object.keys(changes || {}),
+        isSaving: isSaving.value,
+        isLoading: isLoading.value,
+        isUpdatingFromStorage,
+        isProcessingRuntimeMessage
+      })
+
       if (
         isSaving.value ||
         isLoading.value ||
@@ -1981,11 +2005,42 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
               }
 
               // Group index (order) changed - refresh index and apply order
+              // Also load any newly added groups
               else if (k === STORAGE_KEYS.GROUP_INDEX) {
                 try {
                   const index = await newStorageHelpers.getEmojiGroupIndex()
+                  console.log('[EmojiStore] Processing GROUP_INDEX change:', index)
+
                   if (Array.isArray(index) && index.length) {
-                    // Map order by id
+                    // Check for new groups that need to be loaded
+                    const existingIds = new Set(groups.value.map(g => g.id))
+                    const newGroupIds = index.filter(entry => !existingIds.has(entry.id))
+
+                    // Load any new groups
+                    if (newGroupIds.length > 0) {
+                      console.log(
+                        '[EmojiStore] Loading new groups from index:',
+                        newGroupIds.map(e => e.id)
+                      )
+                      for (const entry of newGroupIds) {
+                        try {
+                          const newGroup = await newStorageHelpers.getEmojiGroup(entry.id)
+                          if (newGroup) {
+                            groups.value.push({ ...newGroup, order: entry.order })
+                            console.log(
+                              '[EmojiStore] Loaded new group:',
+                              entry.id,
+                              'emojis:',
+                              newGroup.emojis?.length ?? 0
+                            )
+                          }
+                        } catch {
+                          console.warn('[EmojiStore] Failed to load new group:', entry.id)
+                        }
+                      }
+                    }
+
+                    // Map order by id and reorder
                     const orderMap = new Map(index.map((i: any) => [i.id, i.order]))
                     const reordered = [...groups.value].sort((a, b) => {
                       const oa = orderMap.has(a.id) ? orderMap.get(a.id) : (a.order ?? 0)
