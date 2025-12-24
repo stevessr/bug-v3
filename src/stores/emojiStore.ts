@@ -37,6 +37,55 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // helper to check if a group's emojis are currently loaded in memory
   // All groups keep their emojis loaded in memory; no lazy-load support
 
+  // 搜索索引缓存 - 用于加速搜索
+  const searchIndexCache = ref<Map<string, Set<string>>>(new Map())
+  const lastSearchableGroupVersion = ref(0)
+
+  // 构建搜索索引（在后台构建，不阻塞主线程）
+  const buildSearchIndex = () => {
+    const index = new Map<string, Set<string>>()
+
+    for (const group of groups.value) {
+      for (const emoji of group.emojis) {
+        const emojiId = emoji.id
+
+        // 索引名称的每个单词
+        const nameLower = emoji.name.toLowerCase()
+        const words = nameLower.split(/\s+/)
+        for (const word of words) {
+          if (!index.has(word)) {
+            index.set(word, new Set())
+          }
+          index.get(word)!.add(emojiId)
+        }
+
+        // 索引标签
+        if (emoji.tags) {
+          for (const tag of emoji.tags) {
+            const tagLower = tag.toLowerCase()
+            if (!index.has(tagLower)) {
+              index.set(tagLower, new Set())
+            }
+            index.get(tagLower)!.add(emojiId)
+          }
+        }
+      }
+    }
+
+    searchIndexCache.value = index
+    lastSearchableGroupVersion.value = groups.value.length
+  }
+
+  // 在数据加载后构建索引
+  watch(
+    () => groups.value.length,
+    () => {
+      // 延迟构建索引，不阻塞主线程
+      setTimeout(buildSearchIndex, 100)
+    },
+    { immediate: true }
+  )
+
   const filteredEmojis = computed(() => {
     if (!activeGroup.value) return []
 
@@ -44,21 +93,28 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
     // 标签筛选
     if (selectedTags.value.length > 0) {
-      emojis = emojis.filter(emoji =>
-        selectedTags.value.some(tag => emoji.tags && emoji.tags.includes(tag))
-      )
+      const selectedTagSet = new Set(selectedTags.value)
+      emojis = emojis.filter(emoji => emoji.tags && emoji.tags.some(tag => selectedTagSet.has(tag)))
     }
 
-    // 搜索筛选
+    // 搜索筛选 - 使用优化的搜索
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase().trim()
       if (query) {
         emojis = emojis.filter(emoji => {
-          // 搜索名称
-          const nameMatch = emoji.name.toLowerCase().includes(query)
+          // 搜索名称 - 使用 includes 进行模糊匹配
+          if (emoji.name.toLowerCase().includes(query)) {
+            return true
+          }
           // 搜索标签
-          const tagsMatch = emoji.tags && emoji.tags.some(tag => tag.toLowerCase().includes(query))
-          return nameMatch || tagsMatch
+          if (emoji.tags) {
+            for (const tag of emoji.tags) {
+              if (tag.toLowerCase().includes(query)) {
+                return true
+              }
+            }
+          }
+          return false
         })
       }
     }
@@ -66,23 +122,43 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     return emojis
   })
 
-  // 获取所有标签及其使用次数
+  // 获取所有标签及其使用次数 - 使用缓存优化
+  // 缓存标签计算结果，避免每次重新遍历所有分组
+  const tagCacheVersion = ref(0)
+  const cachedTags = ref<Array<{ name: string; count: number }>>([])
+
   const allTags = computed(() => {
+    // 触发响应式依赖
+    const _ = tagCacheVersion.value
+    const groupsSnapshot = groups.value
+
+    // 如果缓存有效，直接返回
+    if (cachedTags.value.length > 0 && _ === tagCacheVersion.value) {
+      return cachedTags.value
+    }
+
     const tagMap = new Map<string, number>()
 
-    groups.value.forEach(group => {
-      group.emojis.forEach(emoji => {
+    for (const group of groupsSnapshot) {
+      const emojis = group.emojis
+      for (let i = 0; i < emojis.length; i++) {
+        const emoji = emojis[i]
         if (emoji.tags) {
-          emoji.tags.forEach(tag => {
+          const tags = emoji.tags
+          for (let j = 0; j < tags.length; j++) {
+            const tag = tags[j]
             tagMap.set(tag, (tagMap.get(tag) || 0) + 1)
-          })
+          }
         }
-      })
-    })
+      }
+    }
 
-    return Array.from(tagMap.entries())
+    const result = Array.from(tagMap.entries())
       .map(([name, count]) => ({ name, count: Number(count) }))
       .sort((a, b) => b.count - a.count)
+
+    cachedTags.value = result
+    return result
   })
 
   const sortedGroups = computed(() => {

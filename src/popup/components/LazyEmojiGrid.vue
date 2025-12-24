@@ -42,32 +42,48 @@ const imageSources = ref<Map<string, string>>(new Map())
 
 // Initialize image sources
 const initializeImageSources = async () => {
-  for (const emoji of props.emojis) {
-    const src = await getImageSrc(emoji)
-    imageSources.value.set(emoji.id, src)
-  }
+  // 使用 Promise.all 批量获取，而不是逐个 await
+  const entries = await Promise.all(
+    props.emojis.map(async emoji => {
+      const src = await getImageSrc(emoji)
+      return [emoji.id, src] as const
+    })
+  )
+  imageSources.value = new Map(entries)
 }
 
 // Watch for emoji changes and update image sources
+// 优化：防抖并使用批量更新
+let updateDebounceTimer: ReturnType<typeof setTimeout> | null = null
 const updateImageSources = async () => {
-  const newSources = new Map<string, string>()
+  if (updateDebounceTimer) {
+    clearTimeout(updateDebounceTimer)
+  }
+  updateDebounceTimer = setTimeout(async () => {
+    const currentEmojiIds = new Set(props.emojis.map(e => e.id))
 
-  // Clean up old blob URLs that are no longer needed
-  const currentEmojiIds = new Set(props.emojis.map(e => e.id))
-  for (const [emojiId, blobUrl] of imageSources.value) {
-    if (!currentEmojiIds.has(emojiId) && blobUrl.startsWith('blob:')) {
-      blobUrls.value.delete(blobUrl)
-      URL.revokeObjectURL(blobUrl)
+    // Clean up old blob URLs that are no longer needed
+    for (const [emojiId, blobUrl] of imageSources.value) {
+      if (!currentEmojiIds.has(emojiId) && blobUrl.startsWith('blob:')) {
+        blobUrls.value.delete(blobUrl)
+        URL.revokeObjectURL(blobUrl)
+      }
     }
-  }
 
-  // Get new image sources
-  for (const emoji of props.emojis) {
-    const src = await getImageSrc(emoji)
-    newSources.set(emoji.id, src)
-  }
+    // 批量获取新的图片源，复用已有的非 blob URL
+    const entries = await Promise.all(
+      props.emojis.map(async emoji => {
+        const existing = imageSources.value.get(emoji.id)
+        if (existing && !existing.startsWith('blob:')) {
+          return [emoji.id, existing] as const
+        }
+        const src = await getImageSrc(emoji)
+        return [emoji.id, src] as const
+      })
+    )
 
-  imageSources.value = newSources
+    imageSources.value = new Map(entries)
+  }, 100)
 }
 
 // Preload images for better performance
@@ -83,6 +99,10 @@ const preloadEmojis = async () => {
 
 // Clean up blob URLs when component is unmounted
 onUnmounted(() => {
+  // 清理防抖定时器
+  if (updateDebounceTimer) {
+    clearTimeout(updateDebounceTimer)
+  }
   for (const blobUrl of blobUrls.value) {
     try {
       URL.revokeObjectURL(blobUrl)
@@ -97,7 +117,12 @@ onUnmounted(() => {
 initializeImageSources()
 
 // Watch for emoji changes and update image sources
-watch(() => props.emojis, updateImageSources, { deep: true })
+// 优化：使用浅比较 length 变化 + 数组引用变化，减少深度监听开销
+watch(
+  () => props.emojis.length,
+  () => updateImageSources()
+)
+watch(() => props.emojis, updateImageSources)
 
 // Preload when component becomes active
 watch(

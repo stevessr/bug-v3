@@ -60,15 +60,15 @@ const handleScroll = (e: Event) => {
 // Auto scroll to bottom when new items are added (for streaming)
 const autoScroll = ref(false)
 
-// 使用防抖优化滚动性能
-let scrollTimer: number | null = null
+// 使用 requestAnimationFrame 优化滚动性能（比 setTimeout 更流畅）
+let scrollRafId: number | null = null
 const handleScrollDebounced = (e: Event) => {
-  if (scrollTimer) {
-    window.clearTimeout(scrollTimer)
+  if (scrollRafId) {
+    cancelAnimationFrame(scrollRafId)
   }
-  scrollTimer = window.setTimeout(() => {
+  scrollRafId = requestAnimationFrame(() => {
     handleScroll(e)
-  }, 16) // 约 60fps
+  })
 }
 
 watch(
@@ -116,8 +116,8 @@ defineExpose({
 
 // 清理定时器
 onUnmounted(() => {
-  if (scrollTimer) {
-    window.clearTimeout(scrollTimer)
+  if (scrollRafId) {
+    cancelAnimationFrame(scrollRafId)
   }
 })
 </script>

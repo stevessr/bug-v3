@@ -46,9 +46,22 @@ function logStorage(_operation: string, _key: string, _data?: any, _error?: any)
 // --- Storage Layer Implementations ---
 
 // Helper function to ensure data is serializable
+// 优化：使用 structuredClone 替代 JSON.parse(JSON.stringify()) 提升性能
 function ensureSerializable<T>(data: T): T {
+  if (data === null || data === undefined) return data
+
+  // 基础类型直接返回
+  const type = typeof data
+  if (type === 'string' || type === 'number' || type === 'boolean') {
+    return data
+  }
+
   try {
-    // Test serialization and clean the data
+    // 优先使用 structuredClone（更快且支持更多类型）
+    if (typeof structuredClone === 'function') {
+      return structuredClone(data)
+    }
+    // 回退到 JSON 方式
     return JSON.parse(JSON.stringify(data))
   } catch (error) {
     logStorage('SERIALIZE_CLEAN', 'data', undefined, error)
@@ -57,7 +70,11 @@ function ensureSerializable<T>(data: T): T {
       const cleaned: any = {}
       for (const [key, value] of Object.entries(data)) {
         try {
-          JSON.stringify(value)
+          if (typeof structuredClone === 'function') {
+            structuredClone(value)
+          } else {
+            JSON.stringify(value)
+          }
           cleaned[key] = value
         } catch {
           logStorage('SERIALIZE_CLEAN', `skipped property: ${key}`, undefined, 'unserializable')

@@ -12,7 +12,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     css: {
-      postcss: './postcss.config.js'
+      postcss: './postcss.config.js',
+      // 优化：启用 CSS 代码分割
+      devSourcemap: isDev
     },
     // resolve alias so imports using @/xxx map to src/xxx
     resolve: {
@@ -25,16 +27,37 @@ export default defineConfig(({ mode }) => {
       __ENABLE_LOGGING__: enableLogging
     },
     plugins: [
-      vue(),
+      vue({
+        // 优化：启用 Vue 的响应式转换优化
+        script: {
+          defineModel: true,
+          propsDestructure: true
+        }
+      }),
       Components({
         resolvers: [AntDesignVueResolver({ importStyle: 'less' })]
       })
     ],
+    // 优化：预构建依赖
+    optimizeDeps: {
+      include: [
+        'vue',
+        'pinia',
+        'ant-design-vue',
+        '@ant-design/icons-vue'
+      ],
+      // 排除不需要预构建的模块
+      exclude: []
+    },
     build: {
       sourcemap: process.env.BUILD_SOURCEMAP === 'true',
       manifest: process.env.BUILD_MANIFEST === 'true',
       minify: process.env.BUILD_MINIFIED === 'false' ? false : 'terser',
       chunkSizeWarningLimit: 1000, // Increase limit to 1000 kB since this is a feature-rich extension
+      // 优化：目标现代浏览器
+      target: 'esnext',
+      // 优化：启用 CSS 代码分割
+      cssCodeSplit: true,
       terserOptions:
         process.env.BUILD_MINIFIED === 'false'
           ? undefined
@@ -42,10 +65,18 @@ export default defineConfig(({ mode }) => {
               compress: {
                 drop_console: !enableLogging, // 根据日志开关决定是否移除 console
                 drop_debugger: !isDev, // 生产环境移除 debugger
-                passes: 3 // More aggressive compression
+                passes: 3, // More aggressive compression
+                // 优化：更激进的压缩
+                pure_funcs: !enableLogging ? ['console.log', 'console.info', 'console.debug'] : [],
+                dead_code: true,
+                unused: true
               },
               format: {
                 comments: false // Remove all comments in production
+              },
+              // 优化：启用 mangle
+              mangle: {
+                safari10: true
               }
             },
       rollupOptions: {
@@ -61,6 +92,8 @@ export default defineConfig(({ mode }) => {
           chunkFileNames: 'js/[name].js',
           assetFileNames: 'assets/[name].[ext]',
           inlineDynamicImports: false, // Disable inline dynamic imports for better chunking
+          // 优化：启用 tree-shaking 友好的格式
+          format: 'es',
           manualChunks: (id) => {
             if (id.includes('node_modules')) {
               if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router')) {
@@ -119,6 +152,11 @@ export default defineConfig(({ mode }) => {
               return 'options-main'
             }
           }
+        },
+        // 优化：tree-shaking 优化
+        treeshake: {
+          moduleSideEffects: 'no-external',
+          propertyReadSideEffects: false
         },
         external: id => {
           return false // Don't externalize anything
