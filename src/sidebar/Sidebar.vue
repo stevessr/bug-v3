@@ -8,7 +8,8 @@ const { emojiStore, showCopyToast, selectEmoji, openOptions } = usePopup({ manag
 
 const setActiveHandler = (id: string) => {
   emojiStore.activeGroupId = id
-  emojiStore.updateSettings({ defaultGroup: id })
+  // Note: In read-only mode (sidebar/popup), we don't persist settings changes
+  // This prevents accidental data corruption
 }
 
 const activeGroup = computed(() => {

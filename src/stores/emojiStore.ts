@@ -31,6 +31,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Flag to track if initial data has been loaded successfully at least once
   // This prevents accidental saves of empty data during initialization
   const hasLoadedOnce = ref(false)
+  // Read-only mode: when true, only favorites updates are allowed
+  // Used by popup/sidebar to prevent accidental data corruption
+  const isReadOnlyMode = ref(false)
+
+  // Enable or disable read-only mode
+  // Call setReadOnlyMode(true) in popup/sidebar before loading data
+  const setReadOnlyMode = (value: boolean) => {
+    isReadOnlyMode.value = value
+    console.log('[EmojiStore] Read-only mode:', value ? 'enabled' : 'disabled')
+  }
 
   // --- Computed ---
   const activeGroup = computed(
@@ -199,6 +209,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   }
 
   const maybeSave = () => {
+    // In read-only mode, only saveFavoritesOnly is allowed, not full saves
+    if (isReadOnlyMode.value) {
+      console.log('[EmojiStore] maybeSave blocked - read-only mode active')
+      return
+    }
     if (isLoading.value || isSaving.value || batchDepth > 0) {
       pendingSave.value = true
       return
@@ -384,6 +399,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // No lazy-load helpers; all groups remain fully loaded
 
   const saveData = async () => {
+    // In read-only mode, block full saves entirely
+    if (isReadOnlyMode.value) {
+      console.log('[EmojiStore] SaveData blocked - read-only mode active')
+      return
+    }
+
     if (isLoading.value || isSaving.value || batchDepth > 0) {
       console.log(
         '[EmojiStore] SaveData deferred - loading:',
@@ -972,6 +993,38 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   }
 
   // --- Favorites Management ---
+
+  // Save only the favorites group - used in read-only mode (popup/sidebar)
+  // This prevents accidental corruption of other groups while still allowing favorites updates
+  const saveFavoritesOnly = async () => {
+    // CRITICAL: Don't save if data hasn't been loaded yet
+    // This prevents overwriting favorites with empty data during initialization
+    if (!hasLoadedOnce.value) {
+      console.warn('[EmojiStore] saveFavoritesOnly blocked - data not loaded yet')
+      return
+    }
+
+    if (isLoading.value) {
+      console.warn('[EmojiStore] saveFavoritesOnly blocked - still loading')
+      return
+    }
+
+    const favoritesGroup = groups.value.find(g => g.id === 'favorites')
+    if (!favoritesGroup) {
+      console.warn('[EmojiStore] saveFavoritesOnly - favorites group not found')
+      return
+    }
+
+    try {
+      console.log('[EmojiStore] Saving favorites group only (read-only mode)')
+      await newStorageHelpers.setEmojiGroup(favoritesGroup.id, favoritesGroup)
+      await newStorageHelpers.setFavorites(Array.from(favorites.value))
+      console.log('[EmojiStore] Favorites saved successfully')
+    } catch (error) {
+      console.error('[EmojiStore] Failed to save favorites:', error)
+    }
+  }
+
   const addToFavorites = async (emoji: Emoji) => {
     // Check if emoji already exists in favorites group
     const favoritesGroup = groups.value.find(g => g.id === 'favorites')
@@ -1035,7 +1088,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // Sort favorites by lastUsed timestamp (most recent first)
     favoritesGroup.emojis.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0))
 
-    maybeSave()
+    // In read-only mode, only save favorites group; otherwise use full save
+    if (isReadOnlyMode.value) {
+      await saveFavoritesOnly()
+    } else {
+      maybeSave()
+    }
   }
 
   const toggleFavorite = (emojiId: string) => {
@@ -1936,6 +1994,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     isLoading,
     isSaving,
     favorites,
+    isReadOnlyMode,
 
     // Computed
     activeGroup,
@@ -1945,6 +2004,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // Actions
     loadData,
     saveData,
+    setReadOnlyMode,
     createGroup,
     createGroupWithoutSave,
     updateGroup,

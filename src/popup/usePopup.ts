@@ -10,6 +10,11 @@ export function usePopup(options?: { manageUrl?: boolean }) {
   const manageUrl = options?.manageUrl ?? true
 
   onMounted(async () => {
+    // CRITICAL: Enable read-only mode BEFORE loading data
+    // This prevents popup from accidentally overwriting all emoji data
+    // In read-only mode, only favorites updates are allowed
+    emojiStore.setReadOnlyMode(true)
+
     await emojiStore.loadData()
     localScale.value = emojiStore.settings.imageScale
   })
@@ -43,7 +48,7 @@ export function usePopup(options?: { manageUrl?: boolean }) {
     }
   })
 
-  // When active group changes, persist to settings and update URL
+  // When active group changes, update URL (but don't save settings in popup - read-only mode)
   watch(
     () => emojiStore.activeGroupId,
     newId => {
@@ -52,8 +57,8 @@ export function usePopup(options?: { manageUrl?: boolean }) {
         if (!newId) return
         const g = emojiStore.groups.find(x => x.id === newId)
         if (g) {
-          // Persist selection
-          emojiStore.updateSettings({ defaultGroup: newId })
+          // In read-only mode (popup/sidebar), we don't persist settings changes
+          // Just update the URL for user convenience
           const qs = `?type=popup&tab=${encodeURIComponent(g.name)}`
           window.history.replaceState({}, '', window.location.pathname + qs)
         }
