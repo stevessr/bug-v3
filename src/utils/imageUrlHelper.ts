@@ -293,4 +293,3 @@ export async function getEmojiImageUrls(
 
   return results
 }
-

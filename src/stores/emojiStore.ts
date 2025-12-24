@@ -28,6 +28,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const selectedTags = ref<string[]>([]) // 当前选中的标签
   const isLoading = ref(true)
   const isSaving = ref(false)
+  // Flag to track if initial data has been loaded successfully at least once
+  // This prevents accidental saves of empty data during initialization
+  const hasLoadedOnce = ref(false)
 
   // --- Computed ---
   const activeGroup = computed(
@@ -46,11 +49,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const index = new Map<string, Set<string>>()
 
     for (const group of groups.value) {
-      for (const emoji of group.emojis) {
+      const emojis = group.emojis || []
+      for (const emoji of emojis) {
+        if (!emoji) continue
         const emojiId = emoji.id
 
         // 索引名称的每个单词
-        const nameLower = emoji.name.toLowerCase()
+        const nameLower = (emoji.name || '').toLowerCase()
         const words = nameLower.split(/\s+/)
         for (const word of words) {
           if (!index.has(word)) {
@@ -89,12 +94,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const filteredEmojis = computed(() => {
     if (!activeGroup.value) return []
 
-    let emojis = activeGroup.value.emojis
+    let emojis = activeGroup.value.emojis || []
 
     // 标签筛选
     if (selectedTags.value.length > 0) {
       const selectedTagSet = new Set(selectedTags.value)
-      emojis = emojis.filter(emoji => emoji.tags && emoji.tags.some(tag => selectedTagSet.has(tag)))
+      emojis = emojis.filter(
+        emoji => emoji && emoji.tags && emoji.tags.some(tag => selectedTagSet.has(tag))
+      )
     }
 
     // 搜索筛选 - 使用优化的搜索
@@ -102,8 +109,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const query = searchQuery.value.toLowerCase().trim()
       if (query) {
         emojis = emojis.filter(emoji => {
+          if (!emoji) return false
           // 搜索名称 - 使用 includes 进行模糊匹配
-          if (emoji.name.toLowerCase().includes(query)) {
+          if (emoji.name && emoji.name.toLowerCase().includes(query)) {
             return true
           }
           // 搜索标签
@@ -140,10 +148,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const tagMap = new Map<string, number>()
 
     for (const group of groupsSnapshot) {
-      const emojis = group.emojis
+      const emojis = group.emojis || []
       for (let i = 0; i < emojis.length; i++) {
         const emoji = emojis[i]
-        if (emoji.tags) {
+        if (emoji && emoji.tags) {
           const tags = emoji.tags
           for (let j = 0; j < tags.length; j++) {
             const tag = tags[j]
@@ -267,19 +275,23 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         }
       }
       // Normalize any stored image URL-like values for safe rendering
+      // Also ensure every group has an emojis array to prevent runtime errors
       try {
         for (const g of groups.value) {
-          if (g && typeof g.icon === 'string') {
+          if (!g) continue
+          // Ensure emojis array exists
+          if (!Array.isArray(g.emojis)) {
+            g.emojis = []
+          }
+          if (typeof g.icon === 'string') {
             g.icon = normalizeImageUrl(g.icon) || g.icon
           }
-          if (Array.isArray(g.emojis)) {
-            for (const e of g.emojis) {
-              if (e && typeof e.url === 'string') {
-                e.url = normalizeImageUrl(e.url) || e.url
-              }
-              if (e && typeof e.displayUrl === 'string') {
-                e.displayUrl = normalizeImageUrl(e.displayUrl) || e.displayUrl
-              }
+          for (const e of g.emojis) {
+            if (e && typeof e.url === 'string') {
+              e.url = normalizeImageUrl(e.url) || e.url
+            }
+            if (e && typeof e.displayUrl === 'string') {
+              e.displayUrl = normalizeImageUrl(e.displayUrl) || e.displayUrl
             }
           }
         }
@@ -340,6 +352,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       // After initial load, keep all groups' emojis loaded in memory
 
+      // Mark that we have successfully loaded data at least once
+      // This is checked by saveData to prevent saving empty data during initialization
+      if (groups.value.length > 0) {
+        hasLoadedOnce.value = true
+      }
+
       console.log('[EmojiStore] LoadData completed successfully')
     } catch (error) {
       const e: any = error
@@ -376,6 +394,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         batchDepth
       )
       pendingSave.value = true
+      return
+    }
+
+    // CRITICAL: Prevent saving empty groups if we haven't loaded data successfully yet
+    // This protects against accidental data loss during initialization or load failures
+    if (groups.value.length === 0 && !hasLoadedOnce.value) {
+      console.warn(
+        '[EmojiStore] SaveData blocked - groups array is empty and no successful load has occurred yet.',
+        'This is likely an initialization race condition. Skipping save to prevent data loss.'
+      )
       return
     }
 
@@ -505,6 +533,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const addEmoji = (groupId: string, emoji: Omit<Emoji, 'id' | 'groupId'>) => {
     const group = groups.value.find(g => g.id === groupId)
     if (group) {
+      // Ensure emojis array exists
+      if (!Array.isArray(group.emojis)) {
+        group.emojis = []
+      }
       const newEmoji: Emoji = {
         ...emoji,
         id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -521,6 +553,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const addEmojiWithoutSave = (groupId: string, emoji: Omit<Emoji, 'id' | 'groupId'>) => {
     const group = groups.value.find(g => g.id === groupId)
     if (group) {
+      // Ensure emojis array exists
+      if (!Array.isArray(group.emojis)) {
+        group.emojis = []
+      }
       const newEmoji: Emoji = {
         ...emoji,
         id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -535,9 +571,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   const updateEmoji = (emojiId: string, updates: Partial<Emoji>) => {
     for (const group of groups.value) {
-      const index = group.emojis.findIndex(e => e.id === emojiId)
+      const emojis = group.emojis || []
+      const index = emojis.findIndex(e => e && e.id === emojiId)
       if (index !== -1) {
-        group.emojis[index] = { ...group.emojis[index], ...updates }
+        emojis[index] = { ...emojis[index], ...updates }
         console.log('[EmojiStore] updateEmoji', { id: emojiId, updates })
         maybeSave()
         break
@@ -549,8 +586,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     beginBatch()
     try {
       for (const group of groups.value) {
-        for (const emoji of group.emojis) {
-          if (nameUpdates[emoji.id]) {
+        const emojis = group.emojis || []
+        for (const emoji of emojis) {
+          if (emoji && nameUpdates[emoji.id]) {
             emoji.name = nameUpdates[emoji.id]
           }
         }
@@ -563,6 +601,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   const deleteEmoji = (emojiId: string) => {
     for (const group of groups.value) {
+      if (!group.emojis) continue
       group.emojis = group.emojis.filter(e => e.id !== emojiId)
     }
     favorites.value.delete(emojiId)
@@ -601,9 +640,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   const removeEmojiFromGroup = (groupId: string, index: number) => {
     const group = groups.value.find(g => g.id === groupId)
-    if (group && index >= 0 && index < group.emojis.length) {
-      const emoji = group.emojis[index]
-      group.emojis.splice(index, 1)
+    const emojis = group?.emojis || []
+    if (group && index >= 0 && index < emojis.length) {
+      const emoji = emojis[index]
+      if (!emoji) return
+      emojis.splice(index, 1)
       favorites.value.delete(emoji.id)
       console.log('[EmojiStore] removeEmojiFromGroup', { groupId, index, id: emoji.id })
       maybeSave()
@@ -615,14 +656,21 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const group = groups.value.find(g => g.id === groupId)
     if (!group) return 0
 
+    // Ensure emojis array exists
+    if (!Array.isArray(group.emojis)) {
+      group.emojis = []
+      return 0
+    }
+
     try {
       const seen = new Set<string>()
       const originalLength = group.emojis.length
       const kept: typeof group.emojis = []
 
       for (const e of group.emojis) {
+        if (!e) continue
         const url =
-          e && typeof (e as any).url === 'string'
+          typeof (e as any).url === 'string'
             ? normalizeImageUrl((e as any).url) || (e as any).url
             : ''
         if (!url) {
@@ -654,14 +702,20 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const group = groups.value.find(g => g.id === groupId)
     if (!group) return 0
 
+    // Ensure emojis array exists
+    if (!Array.isArray(group.emojis)) {
+      group.emojis = []
+      return 0
+    }
+
     try {
       const seen = new Set<string>()
       const originalLength = group.emojis.length
       const kept: typeof group.emojis = []
 
       for (const e of group.emojis) {
-        const name =
-          e && typeof (e as any).name === 'string' ? (e as any).name.trim().toLowerCase() : ''
+        if (!e) continue
+        const name = typeof (e as any).name === 'string' ? (e as any).name.trim().toLowerCase() : ''
         if (!name) {
           // keep items without name
           kept.push(e)
@@ -709,7 +763,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       for (const group of groups.value) {
         if (group.id === 'favorites') continue // Ignore favorites group
-        for (const emoji of group.emojis) {
+        const emojis = group.emojis || []
+        for (const emoji of emojis) {
+          if (!emoji) continue
           allEmojis.push({
             emoji,
             groupId: group.id,
@@ -737,14 +793,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
             const processedEmoji = allEmojis.find(e => e.emoji.url === emojiUrls[processed - 1])
             if (processedEmoji && onProgress) {
               const group = groups.value.find(g => g.id === processedEmoji.groupId)
-              const groupTotal = group ? group.emojis.length : 0
+              const groupEmojis = group?.emojis || []
+              const groupTotal = groupEmojis.length
               onProgress({
                 total: totalEmojis,
                 processed: processed, // This is hash calculation progress
                 group: processedEmoji.groupName,
                 emojiName: processedEmoji.emoji.name,
                 groupTotal,
-                groupProcessed: group.emojis.findIndex(e => e.id === processedEmoji.emoji.id) + 1
+                groupProcessed:
+                  groupEmojis.findIndex(e => e && e.id === processedEmoji.emoji.id) + 1
               })
             }
           }
@@ -816,8 +874,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     try {
       beginBatch()
       for (const group of groups.value) {
-        for (const emoji of group.emojis) {
-          if (emoji.perceptualHash) {
+        const emojis = group.emojis || []
+        for (const emoji of emojis) {
+          if (emoji && emoji.perceptualHash) {
             delete emoji.perceptualHash
           }
         }
@@ -846,19 +905,20 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           const group = groups.value.find(g => g.id === duplicate.groupId)
           if (!group) continue
 
-          const index = group.emojis.findIndex(e => e.id === duplicate.emoji.id)
+          const emojis = group.emojis || []
+          const index = emojis.findIndex(e => e && e.id === duplicate.emoji.id)
           if (index === -1) continue
 
           if (createReferences) {
             // Replace with a reference instead of deleting
-            group.emojis[index] = {
+            emojis[index] = {
               ...duplicate.emoji,
               referenceId: original.emoji.id,
               url: original.emoji.url
             }
           } else {
             // Delete the duplicate
-            group.emojis.splice(index, 1)
+            emojis.splice(index, 1)
             totalRemoved++
           }
         }
@@ -878,11 +938,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   // Get the actual emoji for a reference (resolves referenceId)
   const resolveEmojiReference = (emoji: Emoji): Emoji | undefined => {
-    if (!emoji.referenceId) return emoji
+    if (!emoji || !emoji.referenceId) return emoji
 
     // Find the referenced emoji
     for (const group of groups.value) {
-      const referenced = group.emojis.find(e => e.id === emoji.referenceId)
+      const emojis = group.emojis || []
+      const referenced = emojis.find(e => e && e.id === emoji.referenceId)
       if (referenced) {
         // Return a merged object with reference's URL but current emoji's other properties
         return {
@@ -899,10 +960,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   const updateEmojiInGroup = (groupId: string, index: number, updatedEmoji: Partial<Emoji>) => {
     const group = groups.value.find(g => g.id === groupId)
-    if (group && index >= 0 && index < group.emojis.length) {
-      const currentEmoji = group.emojis[index]
+    const emojis = group?.emojis || []
+    if (group && index >= 0 && index < emojis.length) {
+      const currentEmoji = emojis[index]
+      if (!currentEmoji) return
       // Update the emoji while preserving the id and other metadata
-      group.emojis[index] = { ...currentEmoji, ...updatedEmoji }
+      emojis[index] = { ...currentEmoji, ...updatedEmoji }
       console.log('[EmojiStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id })
       maybeSave()
     }
@@ -917,8 +980,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       return
     }
 
+    // Ensure emojis array exists
+    if (!Array.isArray(favoritesGroup.emojis)) {
+      favoritesGroup.emojis = []
+    }
+
     const now = Date.now()
-    const existingEmojiIndex = favoritesGroup.emojis.findIndex(e => e.url === emoji.url)
+    const existingEmojiIndex = favoritesGroup.emojis.findIndex(e => e && e.url === emoji.url)
 
     if (existingEmojiIndex !== -1) {
       // Emoji already exists in favorites, update usage tracking
@@ -1004,7 +1072,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   const findEmojiById = (emojiId: string): Emoji | undefined => {
     for (const group of groups.value) {
-      const emoji = group.emojis.find(e => e.id === emojiId)
+      const emojis = group.emojis || []
+      const emoji = emojis.find(e => e && e.id === emojiId)
       if (emoji) return emoji
     }
     return undefined
@@ -1014,6 +1083,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const addEmojiFromWeb = (emojiData: { name: string; url: string }) => {
     const ungroupedGroup = groups.value.find(g => g.id === 'ungrouped')
     if (ungroupedGroup) {
+      // Ensure emojis array exists
+      if (!Array.isArray(ungroupedGroup.emojis)) {
+        ungroupedGroup.emojis = []
+      }
       const newEmoji: Emoji = {
         id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         packet: Date.now(),
@@ -1175,7 +1248,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     if (!cleanTag) return false
 
     for (const group of groups.value) {
-      const emoji = group.emojis.find(e => e.id === emojiId)
+      const emojis = group.emojis || []
+      const emoji = emojis.find(e => e && e.id === emojiId)
       if (emoji) {
         if (!emoji.tags) {
           emoji.tags = []
@@ -1197,7 +1271,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const cleanTag = tag.trim().toLowerCase()
 
     for (const group of groups.value) {
-      const emoji = group.emojis.find(e => e.id === emojiId)
+      const emojis = group.emojis || []
+      const emoji = emojis.find(e => e && e.id === emojiId)
       if (emoji && emoji.tags) {
         const index = emoji.tags.indexOf(cleanTag)
         if (index !== -1) {
@@ -1217,7 +1292,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const cleanTags = tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag)
 
     for (const group of groups.value) {
-      const emoji = group.emojis.find(e => e.id === emojiId)
+      const emojis = group.emojis || []
+      const emoji = emojis.find(e => e && e.id === emojiId)
       if (emoji) {
         emoji.tags = cleanTags
         console.log('[EmojiStore] setEmojiTags', { emojiId, tags: cleanTags })
@@ -1273,7 +1349,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // 获取表情的所有标签
   const getEmojiTags = (emojiId: string): string[] => {
     for (const group of groups.value) {
-      const emoji = group.emojis.find(e => e.id === emojiId)
+      const emojis = group.emojis || []
+      const emoji = emojis.find(e => e && e.id === emojiId)
       if (emoji) {
         return emoji.tags || []
       }
@@ -1287,8 +1364,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const result: Emoji[] = []
 
     groups.value.forEach(group => {
-      group.emojis.forEach(emoji => {
-        if (emoji.tags && emoji.tags.includes(cleanTag)) {
+      const emojis = group.emojis || []
+      emojis.forEach(emoji => {
+        if (emoji && emoji.tags && emoji.tags.includes(cleanTag)) {
           result.push(emoji)
         }
       })
@@ -1530,7 +1608,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   watch(
     [groups, settings, favorites],
     () => {
-      if (!isLoading.value && !isUpdatingFromStorage && !isSaving.value) {
+      // Don't trigger saves until we've successfully loaded data at least once
+      // This prevents accidental saves of empty data during initialization
+      if (!isLoading.value && !isUpdatingFromStorage && !isSaving.value && hasLoadedOnce.value) {
         // Clear existing timeout
         if (saveTimeout) {
           clearTimeout(saveTimeout)

@@ -233,7 +233,8 @@ export const processTelegramStickers = async (
         else if (extension === 'png') mimeType = 'image/png'
         else if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg'
         else if (extension === 'gif') mimeType = 'image/gif'
-        else if (extension === 'tgs') mimeType = 'application/json' // Lottie animation
+        else if (extension === 'tgs')
+          mimeType = 'application/json' // Lottie animation
         else mimeType = 'image/webp' // default for stickers
       }
 

@@ -11,6 +11,7 @@ import CustomCSSBlockSettings from '../components/CustomCSSBlockSettings.vue'
 import AISettings from '../components/AISettings.vue'
 import SyncSettings from '../components/SyncSettings.vue'
 import CloudDataPreview from '../components/CloudDataPreview.vue'
+import CollaborativeUploadSettings from '../components/CollaborativeUploadSettings.vue'
 
 const options = inject<OptionsInject>('options')!
 
@@ -172,6 +173,12 @@ onMounted(async () => {
                 </a-button>
               </div>
             </div>
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="collaborative" tab="联动上传">
+          <div class="py-4">
+            <CollaborativeUploadSettings />
           </div>
         </a-tab-pane>
       </a-tabs>

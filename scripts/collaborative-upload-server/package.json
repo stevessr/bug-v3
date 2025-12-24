@@ -1,0 +1,17 @@
+{
+  "name": "collaborative-upload-server",
+  "version": "1.0.0",
+  "description": "本地协调服务器，用于多用户联动上传",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
