@@ -153,17 +153,36 @@ function assignTaskToWorker(task, worker) {
   })
 }
 
+function getAllIdleWorkers() {
+  const idleWorkers = []
+  for (const worker of workers.values()) {
+    if (worker.status === 'idle') {
+      idleWorkers.push(worker)
+    }
+  }
+  return idleWorkers
+}
+
 function scheduleNextTask() {
   if (pendingTasks.size === 0) return
 
-  const worker = getIdleWorker()
-  if (!worker) return
+  // 获取所有空闲的工作者
+  const idleWorkers = getAllIdleWorkers()
+  if (idleWorkers.length === 0) return
 
-  // 获取最早的待处理任务
-  const task = pendingTasks.values().next().value
-  if (task) {
+  // 获取待处理任务的迭代器
+  const taskIterator = pendingTasks.values()
+
+  // 为每个空闲工作者分配一个任务
+  for (const worker of idleWorkers) {
+    const taskResult = taskIterator.next()
+    if (taskResult.done) break // 没有更多任务了
+
+    const task = taskResult.value
     assignTaskToWorker(task, worker)
   }
+
+  log(`Scheduled tasks: ${idleWorkers.length} workers, ${pendingTasks.size} remaining`)
 }
 
 function handleTaskComplete(workerId, taskId, resultUrl) {
@@ -410,6 +429,27 @@ function handleMessage(ws, clientId, message) {
       // 工作者报告任务失败
       case 'TASK_FAILED': {
         handleTaskFailed(clientId, data.taskId, data.error)
+        break
+      }
+
+      // 工作者报告等待中（429 rate limit）
+      case 'TASK_WAITING': {
+        const task = activeTasks.get(data.taskId)
+        if (task) {
+          const session = sessions.get(task.sessionId)
+          if (session) {
+            // 转发等待通知给主控端
+            sendToClient(session.ws, {
+              type: 'TASK_WAITING',
+              taskId: data.taskId,
+              filename: data.filename,
+              waitTime: data.waitTime,
+              waitStart: data.waitStart,
+              workerId: clientId
+            })
+            log(`Worker ${clientId} waiting on task ${data.taskId}: ${data.waitTime}s`)
+          }
+        }
         break
       }
 
