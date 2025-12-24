@@ -29,6 +29,9 @@ export interface UploadProgress {
   failed: number
   total: number
   currentFile?: string
+  // 429 rate limit waiting state
+  waitingFor?: number // seconds to wait
+  waitStart?: number // timestamp when waiting started
 }
 
 export interface WorkerStats {
@@ -242,6 +245,25 @@ export class CollaborativeUploadClient {
           this.handleTaskAssigned(data.task)
           break
 
+        case 'TASK_WAITING':
+          // 主控端收到工作者等待通知（429 rate limit）
+          console.log(
+            `[CollaborativeUpload] Worker waiting on ${data.filename}: ${data.waitTime}s`
+          )
+          this.config.onProgress?.({
+            completed:
+              this.sessionResults.filter(r => r.success).length +
+              this.localUploadResults.filter(r => r.success).length,
+            failed:
+              this.sessionResults.filter(r => !r.success).length +
+              this.localUploadResults.filter(r => !r.success).length,
+            total: this.totalExpected,
+            currentFile: data.filename,
+            waitingFor: data.waitTime,
+            waitStart: data.waitStart
+          })
+          break
+
         case 'TASK_COMPLETED':
           // 主控端收到任务完成通知（来自远程工作者）
           this.sessionResults.push({
@@ -331,8 +353,24 @@ export class CollaborativeUploadClient {
       const blob = new Blob([bytes], { type: task.mimeType })
       const file = new File([blob], task.filename, { type: task.mimeType })
 
+      // Rate limit wait callback - notify master when waiting
+      const onRateLimitWait = async (waitTime: number): Promise<void> => {
+        console.log(`[CollaborativeUpload] Worker rate limited, waiting ${waitTime / 1000}s...`)
+        this.send({
+          type: 'TASK_WAITING',
+          taskId: task.id,
+          filename: task.filename,
+          waitTime: waitTime / 1000,
+          waitStart: Date.now()
+        })
+      }
+
       // 执行上传
-      const resultUrl = await uploadServices['linux.do'].uploadFile(file)
+      const resultUrl = await uploadServices['linux.do'].uploadFile(
+        file,
+        undefined,
+        onRateLimitWait
+      )
 
       // 报告成功
       this.send({
@@ -454,8 +492,31 @@ export class CollaborativeUploadClient {
     for (const file of files) {
       try {
         console.log(`[CollaborativeUpload] Local upload: ${file.name}`)
-        const resultUrl = await uploadServices['linux.do'].uploadFile(file)
 
+        // Rate limit wait callback
+        const onRateLimitWait = async (waitTime: number): Promise<void> => {
+          console.log(`[CollaborativeUpload] Rate limited, waiting ${waitTime / 1000}s...`)
+          this.config.onProgress?.({
+            completed:
+              this.sessionResults.filter(r => r.success).length +
+              this.localUploadResults.filter(r => r.success).length,
+            failed:
+              this.sessionResults.filter(r => !r.success).length +
+              this.localUploadResults.filter(r => !r.success).length,
+            total: this.totalExpected,
+            currentFile: file.name,
+            waitingFor: waitTime / 1000,
+            waitStart: Date.now()
+          })
+        }
+
+        const resultUrl = await uploadServices['linux.do'].uploadFile(
+          file,
+          undefined,
+          onRateLimitWait
+        )
+
+        // Clear waiting state after successful upload
         this.localUploadResults.push({
           filename: file.name,
           success: true,

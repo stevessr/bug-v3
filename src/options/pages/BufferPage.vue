@@ -1322,8 +1322,27 @@ onBeforeUnmount(() => {
           "
           :status="collaborativeProgress.failed > 0 ? 'exception' : 'active'"
         />
-        <div v-if="collaborativeProgress.currentFile" class="text-xs text-gray-500 mt-1">
-          当前：{{ collaborativeProgress.currentFile }}
+        <div class="flex items-center justify-between mt-2">
+          <div v-if="collaborativeProgress.currentFile" class="text-xs text-gray-500">
+            当前：{{ collaborativeProgress.currentFile }}
+          </div>
+          <!-- 429 等待进度条 -->
+          <div
+            v-if="collaborativeProgress.waitingFor && collaborativeProgress.waitStart"
+            class="flex items-center space-x-2"
+          >
+            <span class="text-xs text-orange-500">⏳ 等待限流</span>
+            <a-progress
+              type="circle"
+              :width="28"
+              :percent="getWaitProgress(collaborativeProgress).percent"
+              :stroke-color="'#f97316'"
+            >
+              <template #format>
+                <span class="text-xs">{{ getWaitProgress(collaborativeProgress).remaining }}s</span>
+              </template>
+            </a-progress>
+          </div>
         </div>
       </div>
     </div>
