@@ -586,6 +586,41 @@ export const newStorageHelpers = {
     )
   },
 
+  // Sync version - ensures all writes complete to extensionStorage before returning
+  // Use this when data must persist before page navigation/refresh
+  async setAllEmojiGroupsSync(groups: EmojiGroup[]): Promise<void> {
+    // Update index
+    const index = groups.map((group, order) => ({ id: group.id, order }))
+    const existingIndex = await this.getEmojiGroupIndex()
+    const existingIds = new Set(existingIndex.map(entry => entry.id))
+    const incomingIds = new Set(groups.map(group => group.id))
+
+    const removedIds: string[] = []
+    existingIds.forEach(id => {
+      if (!incomingIds.has(id)) removedIds.push(id)
+    })
+
+    if (removedIds.length) {
+      await Promise.allSettled(
+        removedIds.map(id => storageManager.remove(STORAGE_KEYS.GROUP_PREFIX + id))
+      )
+    }
+
+    // Use sync version of setEmojiGroupIndex
+    await this.setEmojiGroupIndexSync(index)
+
+    // Use sync version for each group to ensure all writes complete
+    await Promise.all(
+      groups.map(async group => {
+        try {
+          await this.setEmojiGroupSync(group.id, group)
+        } catch (e) {
+          logStorage('SET_GROUP_FAILED', `${STORAGE_KEYS.GROUP_PREFIX}${group.id}`, undefined, e)
+        }
+      })
+    )
+  },
+
   // Settings management
   async getSettings(): Promise<AppSettings> {
     const settings = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
@@ -609,6 +644,14 @@ export const newStorageHelpers = {
     const mergedSettings = { ...(stored || {}), ...settings }
     const updatedSettings = { ...defaultSettings, ...mergedSettings, lastModified: Date.now() }
     await storageManager.set(STORAGE_KEYS.SETTINGS, updatedSettings)
+  },
+
+  // Sync version - ensures all writes complete to extensionStorage before returning
+  async setSettingsSync(settings: AppSettings): Promise<void> {
+    const stored = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
+    const mergedSettings = { ...(stored || {}), ...settings }
+    const updatedSettings = { ...defaultSettings, ...mergedSettings, lastModified: Date.now() }
+    await storageManager.setSync(STORAGE_KEYS.SETTINGS, updatedSettings)
   },
 
   // Favorites management

@@ -444,16 +444,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         favoritesCount: favorites.value.size
       })
 
-      // Use new storage system with progressive writes and better error handling
+      // Use sync versions to ensure data is fully persisted to extensionStorage before returning
+      // This prevents data loss when the page is immediately refreshed after save
       const savePromises = [
-        newStorageHelpers.setAllEmojiGroups(groups.value).catch(error => {
+        newStorageHelpers.setAllEmojiGroupsSync(groups.value).catch(error => {
           console.error('[EmojiStore] Failed to save groups:', error)
           // Don't throw, just log - partial saves are better than complete failure
         }),
-        newStorageHelpers.setSettings(updatedSettings).catch(error => {
+        newStorageHelpers.setSettingsSync(updatedSettings).catch(error => {
           console.error('[EmojiStore] Failed to save settings:', error)
         }),
-        newStorageHelpers.setFavorites(Array.from(favorites.value)).catch(error => {
+        newStorageHelpers.setFavoritesSync(Array.from(favorites.value)).catch(error => {
           console.error('[EmojiStore] Failed to save favorites:', error)
         })
       ]
