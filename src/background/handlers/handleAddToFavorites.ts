@@ -7,21 +7,23 @@ export async function handleAddToFavorites(emoji: any, sendResponse: any) {
   try {
     // Use the unified newStorageHelpers to read/update groups for consistency
     const groups = await newStorageHelpers.getAllEmojiGroups()
-    const favoritesGroup = groups.find((g: any) => g.id === 'favorites')
+    let favoritesGroup = groups.find((g: any) => g.id === 'favorites')
     if (!favoritesGroup) {
       console.warn('Favorites group not found - creating one')
-      const newFavorites = { id: 'favorites', name: 'Favorites', icon: '⭐', order: 0, emojis: [] }
-      groups.unshift(newFavorites)
+      favoritesGroup = { id: 'favorites', name: '常用表情', icon: '⭐', order: 0, emojis: [] }
+      groups.unshift(favoritesGroup)
     }
 
-    const finalGroups = groups
-    const favGroup = finalGroups.find((g: any) => g.id === 'favorites') as any
+    // Ensure emojis array exists
+    if (!Array.isArray(favoritesGroup.emojis)) {
+      favoritesGroup.emojis = []
+    }
 
     const now = Date.now()
-    const existingEmojiIndex = favGroup.emojis.findIndex((e: any) => e.url === emoji.url)
+    const existingEmojiIndex = favoritesGroup.emojis.findIndex((e: any) => e.url === emoji.url)
 
     if (existingEmojiIndex !== -1) {
-      const existingEmoji = favGroup.emojis[existingEmojiIndex]
+      const existingEmoji = favoritesGroup.emojis[existingEmojiIndex]
       const lastUsed = existingEmoji.lastUsed || 0
       const timeDiff = now - lastUsed
       const twelveHours = 12 * 60 * 60 * 1000
@@ -42,20 +44,20 @@ export async function handleAddToFavorites(emoji: any, sendResponse: any) {
         lastUsed: now,
         addedAt: now
       }
-      favGroup.emojis.push(favoriteEmoji)
+      favoritesGroup.emojis.push(favoriteEmoji)
     }
 
-    favGroup.emojis.sort((a: any, b: any) => (b.lastUsed || 0) - (a.lastUsed || 0))
+    favoritesGroup.emojis.sort((a: any, b: any) => (b.lastUsed || 0) - (a.lastUsed || 0))
 
     // Persist via newStorageHelpers which updates group index and individual groups
-    await newStorageHelpers.setAllEmojiGroups(finalGroups)
+    await newStorageHelpers.setAllEmojiGroups(groups)
 
     // Notify content scripts by updating chrome.storage (legacy compatibility)
     const chromeAPI = getChromeAPI()
     if (chromeAPI && chromeAPI.storage && chromeAPI.storage.local) {
       try {
         await new Promise<void>((resolve, reject) => {
-          chromeAPI.storage.local.set({ emojiGroups: finalGroups }, () => {
+          chromeAPI.storage.local.set({ emojiGroups: groups }, () => {
             if (chromeAPI.runtime.lastError) reject(chromeAPI.runtime.lastError)
             else resolve()
           })

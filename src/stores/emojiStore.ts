@@ -1000,7 +1000,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // CRITICAL: Don't save if data hasn't been loaded yet
     // This prevents overwriting favorites with empty data during initialization
     if (!hasLoadedOnce.value) {
-      console.warn('[EmojiStore] saveFavoritesOnly blocked - data not loaded yet')
+      console.warn(
+        '[EmojiStore] saveFavoritesOnly blocked - data not loaded yet. hasLoadedOnce:',
+        hasLoadedOnce.value,
+        'groups count:',
+        groups.value.length
+      )
       return
     }
 
@@ -1009,14 +1014,31 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       return
     }
 
-    const favoritesGroup = groups.value.find(g => g.id === 'favorites')
+    let favoritesGroup = groups.value.find(g => g.id === 'favorites')
+
+    // Create favorites group if it doesn't exist
     if (!favoritesGroup) {
-      console.warn('[EmojiStore] saveFavoritesOnly - favorites group not found')
-      return
+      console.log('[EmojiStore] saveFavoritesOnly - creating favorites group')
+      favoritesGroup = {
+        id: 'favorites',
+        name: '常用表情',
+        icon: '⭐',
+        order: 0,
+        emojis: []
+      } as EmojiGroup
+      groups.value.unshift(favoritesGroup)
+    }
+
+    // Ensure emojis array exists
+    if (!Array.isArray(favoritesGroup.emojis)) {
+      favoritesGroup.emojis = []
     }
 
     try {
-      console.log('[EmojiStore] Saving favorites group only (read-only mode)')
+      console.log(
+        '[EmojiStore] Saving favorites group only (read-only mode), emojis count:',
+        favoritesGroup.emojis.length
+      )
       await newStorageHelpers.setEmojiGroup(favoritesGroup.id, favoritesGroup)
       await newStorageHelpers.setFavorites(Array.from(favorites.value))
       console.log('[EmojiStore] Favorites saved successfully')
@@ -1026,11 +1048,31 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   }
 
   const addToFavorites = async (emoji: Emoji) => {
-    // Check if emoji already exists in favorites group
-    const favoritesGroup = groups.value.find(g => g.id === 'favorites')
-    if (!favoritesGroup) {
-      console.warn('[EmojiStore] Favorites group not found')
+    // Don't modify favorites if data hasn't loaded yet
+    if (!hasLoadedOnce.value || isLoading.value) {
+      console.warn(
+        '[EmojiStore] addToFavorites blocked - data not ready. hasLoadedOnce:',
+        hasLoadedOnce.value,
+        'isLoading:',
+        isLoading.value
+      )
       return
+    }
+
+    // Check if emoji already exists in favorites group
+    let favoritesGroup = groups.value.find(g => g.id === 'favorites')
+
+    // Create favorites group if it doesn't exist
+    if (!favoritesGroup) {
+      console.log('[EmojiStore] addToFavorites - creating favorites group')
+      favoritesGroup = {
+        id: 'favorites',
+        name: '常用表情',
+        icon: '⭐',
+        order: 0,
+        emojis: []
+      } as EmojiGroup
+      groups.value.unshift(favoritesGroup)
     }
 
     // Ensure emojis array exists

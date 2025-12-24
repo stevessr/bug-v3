@@ -1,6 +1,7 @@
 /**
  * 联动上传客户端
  * 用于连接本地协调服务器，支持作为主控端或工作者
+ * 主机本身也参与上传，实现真正的并行
  */
 
 import { uploadServices } from './uploadServices'
@@ -8,9 +9,11 @@ import { uploadServices } from './uploadServices'
 export interface CollaborativeUploadConfig {
   serverUrl: string // WebSocket 服务器地址，如 ws://localhost:9527
   role: 'master' | 'worker' // 主控端或工作者
+  masterAlsoUploads?: boolean // 主机是否也参与上传（默认 true）
   onStatusChange?: (status: ConnectionStatus) => void
   onProgress?: (progress: UploadProgress) => void
   onWorkerStats?: (stats: WorkerStats) => void
+  onLocalUploadComplete?: (filename: string, url: string) => void // 本地上传完成回调
 }
 
 export interface ConnectionStatus {
