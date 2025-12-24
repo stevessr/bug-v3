@@ -1,19 +1,21 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 
-import type { Emoji, EmojiGroup, AppSettings, CustomCssBlock } from '../types/type'
+import type { Emoji, EmojiGroup, AppSettings } from '../types/type'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
 import { normalizeImageUrl } from '../utils/isImageUrl'
-import { cloudflareSyncService } from '../utils/cloudflareSync'
-import {
-  saveSyncConfig as saveSyncConfigToStorage,
-  loadSyncConfig as loadSyncConfigFromStorage
-} from '../utils/syncConfigStorage'
-import { createSyncTarget } from '../userscript/plugins/syncTargets'
-import type { SyncTargetConfig } from '../userscript/plugins/syncTargets'
 
 import { defaultSettings } from '@/types/defaultSettings'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
+
+// Import sub-stores for delegation
+import { useGroupStore } from './groupStore'
+import { useEmojiCrudStore } from './emojiCrudStore'
+import { useFavoritesStore } from './favoritesStore'
+import { useTagStore } from './tagStore'
+import { useSyncStore } from './syncStore'
+import { useCssStore } from './cssStore'
+import type { SaveControl } from './core/types'
 
 // Global flag to ensure runtime message listener is only registered once across all store instances
 let runtimeMessageListenerRegistered = false
@@ -222,14 +224,67 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     void saveData()
   }
 
+  // --- SaveControl for sub-stores ---
+  // Forward reference container - saveData is assigned after its definition
+  let _saveData: (() => Promise<void>) | null = null
+  const saveControl: SaveControl = {
+    maybeSave,
+    beginBatch,
+    endBatch,
+    saveData: async () => {
+      if (_saveData) await _saveData()
+    }
+  }
+
+  // --- Initialize Sub-stores ---
+  // These provide modular functionality while sharing the core state
+
+  const groupStore = useGroupStore({
+    groups,
+    activeGroupId,
+    saveControl
+  })
+
+  const emojiCrudStore = useEmojiCrudStore({
+    groups,
+    favorites,
+    saveControl
+  })
+
+  const favoritesStore = useFavoritesStore({
+    groups,
+    favorites,
+    isLoading,
+    hasLoadedOnce,
+    isReadOnlyMode,
+    saveControl
+  })
+
+  const tagStore = useTagStore({
+    groups,
+    selectedTags,
+    saveControl
+  })
+
+  const syncStore = useSyncStore({
+    groups,
+    settings,
+    favorites
+  })
+
+  const cssStore = useCssStore({
+    settings,
+    saveControl
+  })
+
   // --- Actions ---
 
   const loadData = async () => {
     console.log('[EmojiStore] Starting loadData with new storage system')
     isLoading.value = true
     try {
-      // Initialize sync service first
-      await initializeSync()
+      // Initialize sync service first (delegated to syncStore)
+      await syncStore.initializeSync()
 
       // Load data using new storage system with conflict resolution
       console.log('[EmojiStore] Loading data from new storage system')
@@ -320,8 +375,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         settings.value = { ...defaultSettings, ...settingsData }
       }
 
-      // Migrate legacy customCss to customCssBlocks if needed
-      migrateLegacyCustomCss(settingsData)
+      // Migrate legacy customCss to customCssBlocks if needed (delegated to cssStore)
+      cssStore.migrateLegacyCustomCss()
 
       favorites.value = new Set(favoritesData || [])
 
@@ -466,136 +521,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
-  // --- Group Management ---
-  const createGroup = (name: string, icon: string) => {
-    const newGroup: EmojiGroup = {
-      id: `group-${Date.now()}`,
-      name,
-      icon,
-      order: groups.value.length,
-      emojis: []
-    }
-    groups.value.push(newGroup)
-    console.log('[EmojiStore] createGroup', { id: newGroup.id, name: newGroup.name })
-    maybeSave()
-    return newGroup
-  }
+  // Assign saveData to forward reference for sub-stores
+  _saveData = saveData
 
-  const createGroupWithoutSave = (name: string, icon: string) => {
-    const newGroup: EmojiGroup = {
-      id: `group-${Date.now()}`,
-      name,
-      icon,
-      order: groups.value.length,
-      emojis: []
-    }
-    groups.value.push(newGroup)
-    console.log('[EmojiStore] createGroupWithoutSave', { id: newGroup.id, name: newGroup.name })
-    return newGroup
-  }
+  // Note: Group Management is now delegated to groupStore
+  // Note: addEmoji, addEmojiWithoutSave, updateEmoji are delegated to emojiCrudStore
 
-  const updateGroup = (groupId: string, updates: Partial<EmojiGroup>) => {
-    const index = groups.value.findIndex(g => g.id === groupId)
-    if (index !== -1) {
-      groups.value[index] = { ...groups.value[index], ...updates }
-      console.log('[EmojiStore] updateGroup', { id: groupId, updates })
-      maybeSave()
-    }
-  }
-
-  const deleteGroup = (groupId: string) => {
-    if (groupId === 'favorites') {
-      console.warn('Cannot delete system groups')
-      return
-    }
-
-    // Remove from new storage system
-    newStorageHelpers
-      .removeEmojiGroup(groupId)
-      .catch(error => console.error('[EmojiStore] Failed to delete group from storage:', error))
-
-    groups.value = groups.value.filter(g => g.id !== groupId)
-    console.log('[EmojiStore] deleteGroup', { id: groupId })
-    if (activeGroupId.value === groupId) {
-      activeGroupId.value = groups.value[0]?.id || 'nachoneko'
-    }
-    maybeSave()
-  }
-
-  const reorderGroups = async (sourceGroupId: string, targetGroupId: string) => {
-    // Prevent reordering if either source or target is favorites
-    if (sourceGroupId === 'favorites' || targetGroupId === 'favorites') {
-      console.warn('[EmojiStore] Cannot reorder favorites group')
-      return
-    }
-
-    const sourceIndex = groups.value.findIndex(g => g.id === sourceGroupId)
-    const targetIndex = groups.value.findIndex(g => g.id === targetGroupId)
-
-    if (sourceIndex !== -1 && targetIndex !== -1) {
-      const [removed] = groups.value.splice(sourceIndex, 1)
-      groups.value.splice(targetIndex, 0, removed)
-      groups.value.forEach((group, index) => {
-        group.order = index
-      })
-      console.log('[EmojiStore] reorderGroups', { from: sourceGroupId, to: targetGroupId })
-      await saveData()
-    }
-  }
-
-  // --- Emoji Management ---
-  const addEmoji = (groupId: string, emoji: Omit<Emoji, 'id' | 'groupId'>) => {
-    const group = groups.value.find(g => g.id === groupId)
-    if (group) {
-      // Ensure emojis array exists
-      if (!Array.isArray(group.emojis)) {
-        group.emojis = []
-      }
-      const newEmoji: Emoji = {
-        ...emoji,
-        id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        groupId,
-        tags: emoji.tags || [] // 确保新表情有空标签数组
-      }
-      group.emojis.push(newEmoji)
-      console.log('[EmojiStore] addEmoji', { id: newEmoji.id, groupId })
-      maybeSave()
-      return newEmoji
-    }
-  }
-
-  const addEmojiWithoutSave = (groupId: string, emoji: Omit<Emoji, 'id' | 'groupId'>) => {
-    const group = groups.value.find(g => g.id === groupId)
-    if (group) {
-      // Ensure emojis array exists
-      if (!Array.isArray(group.emojis)) {
-        group.emojis = []
-      }
-      const newEmoji: Emoji = {
-        ...emoji,
-        id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        groupId,
-        tags: emoji.tags || [] // 确保新表情有空标签数组
-      }
-      group.emojis.push(newEmoji)
-      console.log('[EmojiStore] addEmojiWithoutSave', { id: newEmoji.id, groupId })
-      return newEmoji
-    }
-  }
-
-  const updateEmoji = (emojiId: string, updates: Partial<Emoji>) => {
-    for (const group of groups.value) {
-      const emojis = group.emojis || []
-      const index = emojis.findIndex(e => e && e.id === emojiId)
-      if (index !== -1) {
-        emojis[index] = { ...emojis[index], ...updates }
-        console.log('[EmojiStore] updateEmoji', { id: emojiId, updates })
-        maybeSave()
-        break
-      }
-    }
-  }
-
+  // --- Local Emoji Operations (not delegated) ---
   const updateEmojiNames = (nameUpdates: Record<string, string>) => {
     beginBatch()
     try {
@@ -613,44 +545,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
-  const deleteEmoji = (emojiId: string) => {
-    for (const group of groups.value) {
-      if (!group.emojis) continue
-      group.emojis = group.emojis.filter(e => e.id !== emojiId)
-    }
-    favorites.value.delete(emojiId)
-    console.log('[EmojiStore] deleteEmoji', { id: emojiId })
-    maybeSave()
-  }
-
-  const moveEmoji = (
-    sourceGroupId: string,
-    sourceIndex: number,
-    targetGroupId: string,
-    targetIndex: number
-  ) => {
-    const sourceGroup = groups.value.find(g => g.id === sourceGroupId)
-    const targetGroup = groups.value.find(g => g.id === targetGroupId)
-
-    if (sourceGroup && targetGroup && sourceIndex >= 0 && sourceIndex < sourceGroup.emojis.length) {
-      const [emoji] = sourceGroup.emojis.splice(sourceIndex, 1)
-      emoji.groupId = targetGroupId
-
-      if (targetIndex >= 0 && targetIndex <= targetGroup.emojis.length) {
-        targetGroup.emojis.splice(targetIndex, 0, emoji)
-      } else {
-        targetGroup.emojis.push(emoji)
-      }
-
-      maybeSave()
-      console.log('[EmojiStore] moveEmoji', {
-        from: sourceGroupId,
-        to: targetGroupId,
-        sourceIndex,
-        targetIndex
-      })
-    }
-  }
+  // Note: deleteEmoji, moveEmoji are delegated to emojiCrudStore
 
   const removeEmojiFromGroup = (groupId: string, index: number) => {
     const group = groups.value.find(g => g.id === groupId)
@@ -665,94 +560,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
-  // Remove duplicate emojis within a group based on normalized URL
-  const dedupeGroup = (groupId: string) => {
-    const group = groups.value.find(g => g.id === groupId)
-    if (!group) return 0
-
-    // Ensure emojis array exists
-    if (!Array.isArray(group.emojis)) {
-      group.emojis = []
-      return 0
-    }
-
-    try {
-      const seen = new Set<string>()
-      const originalLength = group.emojis.length
-      const kept: typeof group.emojis = []
-
-      for (const e of group.emojis) {
-        if (!e) continue
-        const url =
-          typeof (e as any).url === 'string'
-            ? normalizeImageUrl((e as any).url) || (e as any).url
-            : ''
-        if (!url) {
-          // keep items without url (can't dedupe reliably)
-          kept.push(e)
-          continue
-        }
-        if (!seen.has(url)) {
-          seen.add(url)
-          kept.push(e)
-        }
-      }
-
-      group.emojis = kept
-      const removed = originalLength - group.emojis.length
-      if (removed > 0) {
-        console.log('[EmojiStore] dedupeGroup', { groupId, removed })
-        maybeSave()
-      }
-      return removed
-    } catch (err) {
-      console.error('[EmojiStore] dedupeGroup error', err)
-      return 0
-    }
-  }
-
-  // Remove duplicate emojis within a group based on emoji name (case-insensitive)
-  const dedupeGroupByName = (groupId: string) => {
-    const group = groups.value.find(g => g.id === groupId)
-    if (!group) return 0
-
-    // Ensure emojis array exists
-    if (!Array.isArray(group.emojis)) {
-      group.emojis = []
-      return 0
-    }
-
-    try {
-      const seen = new Set<string>()
-      const originalLength = group.emojis.length
-      const kept: typeof group.emojis = []
-
-      for (const e of group.emojis) {
-        if (!e) continue
-        const name = typeof (e as any).name === 'string' ? (e as any).name.trim().toLowerCase() : ''
-        if (!name) {
-          // keep items without name
-          kept.push(e)
-          continue
-        }
-        if (!seen.has(name)) {
-          seen.add(name)
-          kept.push(e)
-        }
-      }
-
-      group.emojis = kept
-      const removed = originalLength - group.emojis.length
-      if (removed > 0) {
-        console.log('[EmojiStore] dedupeGroupByName', { groupId, removed })
-        maybeSave()
-      }
-      return removed
-    } catch (err) {
-      console.error('[EmojiStore] dedupeGroupByName error', err)
-      return 0
-    }
-  }
+  // Note: dedupeGroup, dedupeGroupByName are delegated to emojiCrudStore
 
   // Find duplicate emojis across all groups based on perceptual hash
   const findDuplicatesAcrossGroups = async (
@@ -802,7 +610,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           useCache: true,
           batchSize: 20,
           quality: 'medium',
-          onProgress: (processed, total) => {
+          onProgress: (processed, _total) => {
             // Map progress back to the original progress callback format
             const processedEmoji = allEmojis.find(e => e.emoji.url === emojiUrls[processed - 1])
             if (processedEmoji && onProgress) {
@@ -883,94 +691,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
-  // Remove all perceptual hashes from all emojis
-  const clearAllPerceptualHashes = async () => {
-    try {
-      beginBatch()
-      for (const group of groups.value) {
-        const emojis = group.emojis || []
-        for (const emoji of emojis) {
-          if (emoji && emoji.perceptualHash) {
-            delete emoji.perceptualHash
-          }
-        }
-      }
-      console.log('[EmojiStore] Cleared all perceptual hashes')
-    } finally {
-      await endBatch()
-    }
-  }
-
-  // Remove duplicate emojis across groups and optionally create references
-  const removeDuplicatesAcrossGroups = async (
-    duplicates: Array<Array<{ emoji: Emoji; groupId: string; groupName: string }>>,
-    createReferences = true
-  ) => {
-    try {
-      let totalRemoved = 0
-
-      for (const duplicateSet of duplicates) {
-        if (duplicateSet.length < 2) continue
-
-        // Keep the first emoji (original), remove others
-        const [original, ...duplicatesToRemove] = duplicateSet
-
-        for (const duplicate of duplicatesToRemove) {
-          const group = groups.value.find(g => g.id === duplicate.groupId)
-          if (!group) continue
-
-          const emojis = group.emojis || []
-          const index = emojis.findIndex(e => e && e.id === duplicate.emoji.id)
-          if (index === -1) continue
-
-          if (createReferences) {
-            // Replace with a reference instead of deleting
-            emojis[index] = {
-              ...duplicate.emoji,
-              referenceId: original.emoji.id,
-              url: original.emoji.url
-            }
-          } else {
-            // Delete the duplicate
-            emojis.splice(index, 1)
-            totalRemoved++
-          }
-        }
-      }
-
-      if (totalRemoved > 0) {
-        console.log('[EmojiStore] Removed', totalRemoved, 'duplicate emojis')
-        maybeSave()
-      }
-
-      return totalRemoved
-    } catch (err) {
-      console.error('[EmojiStore] removeDuplicatesAcrossGroups error', err)
-      return 0
-    }
-  }
-
-  // Get the actual emoji for a reference (resolves referenceId)
-  const resolveEmojiReference = (emoji: Emoji): Emoji | undefined => {
-    if (!emoji || !emoji.referenceId) return emoji
-
-    // Find the referenced emoji
-    for (const group of groups.value) {
-      const emojis = group.emojis || []
-      const referenced = emojis.find(e => e && e.id === emoji.referenceId)
-      if (referenced) {
-        // Return a merged object with reference's URL but current emoji's other properties
-        return {
-          ...emoji,
-          url: referenced.url,
-          displayUrl: referenced.displayUrl || referenced.url
-        }
-      }
-    }
-
-    // If reference not found, return original
-    return emoji
-  }
+  // Note: clearAllPerceptualHashes is delegated to emojiCrudStore
+  // Note: removeDuplicatesAcrossGroups is delegated to emojiCrudStore
+  // Note: resolveEmojiReference is delegated to emojiCrudStore
 
   const updateEmojiInGroup = (groupId: string, index: number, updatedEmoji: Partial<Emoji>) => {
     const group = groups.value.find(g => g.id === groupId)
@@ -985,226 +708,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
-  // --- Favorites Management ---
-
-  // Save only the favorites group - used in read-only mode (popup/sidebar)
-  // This prevents accidental corruption of other groups while still allowing favorites updates
-  // Uses sync storage methods to ensure data is persisted before page closes
-  const saveFavoritesOnly = async () => {
-    // CRITICAL: Don't save if data hasn't been loaded yet
-    // This prevents overwriting favorites with empty data during initialization
-    if (!hasLoadedOnce.value) {
-      console.warn(
-        '[EmojiStore] saveFavoritesOnly blocked - data not loaded yet. hasLoadedOnce:',
-        hasLoadedOnce.value,
-        'groups count:',
-        groups.value.length
-      )
-      return
-    }
-
-    if (isLoading.value) {
-      console.warn('[EmojiStore] saveFavoritesOnly blocked - still loading')
-      return
-    }
-
-    let favoritesGroup = groups.value.find(g => g.id === 'favorites')
-
-    // Create favorites group if it doesn't exist
-    if (!favoritesGroup) {
-      console.log('[EmojiStore] saveFavoritesOnly - creating favorites group')
-      favoritesGroup = {
-        id: 'favorites',
-        name: '常用表情',
-        icon: '⭐',
-        order: 0,
-        emojis: []
-      } as EmojiGroup
-      groups.value.unshift(favoritesGroup)
-    }
-
-    // Ensure emojis array exists
-    if (!Array.isArray(favoritesGroup.emojis)) {
-      favoritesGroup.emojis = []
-    }
-
-    try {
-      console.log(
-        '[EmojiStore] Saving favorites group only (read-only mode), emojis count:',
-        favoritesGroup.emojis.length
-      )
-
-      // First, ensure the favorites group is in the group index
-      // This is critical - without the index entry, the group won't be loaded next time
-      const currentIndex = await newStorageHelpers.getEmojiGroupIndex()
-      console.log('[EmojiStore] Current group index:', currentIndex)
-
-      const favoritesInIndex = currentIndex.some(entry => entry.id === 'favorites')
-      if (!favoritesInIndex) {
-        // Add favorites to the beginning of the index
-        const newIndex = [
-          { id: 'favorites', order: 0 },
-          ...currentIndex.map((e, i) => ({ ...e, order: i + 1 }))
-        ]
-        // Use sync version to ensure index is persisted immediately
-        await newStorageHelpers.setEmojiGroupIndexSync(newIndex)
-        console.log('[EmojiStore] Added favorites to group index:', newIndex)
-      }
-
-      // Use sync versions to ensure data is persisted to extensionStorage immediately
-      // This is critical for popup/sidebar which may close at any time
-      console.log('[EmojiStore] About to save favorites group:', {
-        id: favoritesGroup.id,
-        emojisCount: favoritesGroup.emojis.length,
-        emojis: favoritesGroup.emojis.map(e => ({
-          id: e.id,
-          name: e.name,
-          url: e.url?.substring(0, 50)
-        }))
-      })
-      await newStorageHelpers.setEmojiGroupSync(favoritesGroup.id, favoritesGroup)
-
-      // Derive favorites IDs from the actual emojis in the favorites group
-      // This ensures consistency between the group and the favorites set
-      const favoriteIds = favoritesGroup.emojis.map(e => e.id).filter(Boolean)
-      await newStorageHelpers.setFavoritesSync(favoriteIds)
-      console.log('[EmojiStore] Favorites saved successfully, ids:', favoriteIds.length)
-    } catch (error) {
-      console.error('[EmojiStore] Failed to save favorites:', error)
-    }
-  }
-
-  const addToFavorites = async (emoji: Emoji) => {
-    // Don't modify favorites if data hasn't loaded yet
-    if (!hasLoadedOnce.value || isLoading.value) {
-      console.warn(
-        '[EmojiStore] addToFavorites blocked - data not ready. hasLoadedOnce:',
-        hasLoadedOnce.value,
-        'isLoading:',
-        isLoading.value
-      )
-      return
-    }
-
-    // Check if emoji already exists in favorites group
-    let favoritesGroup = groups.value.find(g => g.id === 'favorites')
-
-    // Create favorites group if it doesn't exist
-    if (!favoritesGroup) {
-      console.log('[EmojiStore] addToFavorites - creating favorites group')
-      favoritesGroup = {
-        id: 'favorites',
-        name: '常用表情',
-        icon: '⭐',
-        order: 0,
-        emojis: []
-      } as EmojiGroup
-      groups.value.unshift(favoritesGroup)
-    }
-
-    // Ensure emojis array exists
-    if (!Array.isArray(favoritesGroup.emojis)) {
-      favoritesGroup.emojis = []
-    }
-
-    const now = Date.now()
-    const existingEmojiIndex = favoritesGroup.emojis.findIndex(e => e && e.url === emoji.url)
-
-    if (existingEmojiIndex !== -1) {
-      // Emoji already exists in favorites, update usage tracking
-      const existingEmoji = favoritesGroup.emojis[existingEmojiIndex]
-      const lastUsed = existingEmoji.lastUsed || 0
-      const timeDiff = now - lastUsed
-      const twelveHours = 12 * 60 * 60 * 1000 // 12 hours in milliseconds
-
-      if (timeDiff < twelveHours) {
-        // Less than 12 hours, only increment count
-        existingEmoji.usageCount = (existingEmoji.usageCount || 0) + 1
-        console.log(
-          '[EmojiStore] Updated usage count for existing emoji:',
-          emoji.name,
-          'count:',
-          existingEmoji.usageCount
-        )
-      } else {
-        // More than 12 hours, apply decay and update timestamp
-        const currentCount = existingEmoji.usageCount || 1
-        existingEmoji.usageCount = Math.floor(currentCount * 0.8) + 1
-        existingEmoji.lastUsed = now
-        console.log(
-          '[EmojiStore] Applied usage decay and updated timestamp for emoji:',
-          emoji.name,
-          'new count:',
-          existingEmoji.usageCount
-        )
-      }
-    } else {
-      // Add emoji to favorites group with initial usage tracking
-      const favoriteEmoji: Emoji = {
-        ...emoji,
-        id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        groupId: 'favorites',
-        usageCount: 1,
-        lastUsed: now,
-        addedAt: now,
-        tags: emoji.tags || [] // 确保新表情有空标签数组
-      }
-
-      favoritesGroup.emojis.push(favoriteEmoji) // Add new emoji
-      console.log('[EmojiStore] Added new emoji to favorites:', emoji.name)
-    }
-
-    // Sort favorites by lastUsed timestamp (most recent first)
-    favoritesGroup.emojis.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0))
-
-    // In read-only mode, only save favorites group; otherwise use full save
-    if (isReadOnlyMode.value) {
-      await saveFavoritesOnly()
-    } else {
-      maybeSave()
-    }
-  }
-
-  const toggleFavorite = (emojiId: string) => {
-    if (favorites.value.has(emojiId)) {
-      favorites.value.delete(emojiId)
-    } else {
-      favorites.value.add(emojiId)
-    }
-    console.log('[EmojiStore] toggleFavorite', { id: emojiId, now: favorites.value.has(emojiId) })
-    maybeSave()
-  }
-
-  const clearAllFavorites = () => {
-    const favoritesGroup = groups.value.find(g => g.id === 'favorites')
-    if (!favoritesGroup) {
-      console.warn('[EmojiStore] Favorites group not found')
-      return
-    }
-
-    // Clear all emojis from favorites group
-    favoritesGroup.emojis = []
-    // Also clear favorites index/set so persistence reflects the cleared state
-    try {
-      favorites.value.clear()
-    } catch {
-      favorites.value = new Set()
-    }
-
-    console.log(
-      '[EmojiStore] clearAllFavorites - cleared all favorite emojis and cleared favorites index'
-    )
-    maybeSave()
-  }
-
-  const findEmojiById = (emojiId: string): Emoji | undefined => {
-    for (const group of groups.value) {
-      const emojis = group.emojis || []
-      const emoji = emojis.find(e => e && e.id === emojiId)
-      if (emoji) return emoji
-    }
-    return undefined
-  }
+  // Note: Favorites Management is delegated to favoritesStore
 
   // --- One-click Add Emoji from Web ---
   const addEmojiFromWeb = (emojiData: { name: string; url: string }) => {
@@ -1277,248 +781,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   }
 
-  // --- CSS Block Management ---
+  // Note: CSS Block Management is delegated to cssStore
 
-  // Migrate legacy customCss string to customCssBlocks array
-  const migrateLegacyCustomCss = (loadedSettings: any) => {
-    if (!loadedSettings) return
-
-    // If customCssBlocks already exist, skip migration
-    if (loadedSettings.customCssBlocks && Array.isArray(loadedSettings.customCssBlocks)) {
-      return
-    }
-
-    // If there's legacy customCss content, migrate it to a default block
-    if (
-      loadedSettings.customCss &&
-      typeof loadedSettings.customCss === 'string' &&
-      loadedSettings.customCss.trim()
-    ) {
-      const legacyBlock: CustomCssBlock = {
-        id: 'legacy-migrated-css',
-        name: '迁移的 CSS',
-        content: loadedSettings.customCss,
-        enabled: true,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }
-
-      settings.value.customCssBlocks = [legacyBlock]
-      settings.value.customCss = '' // Clear the legacy field
-
-      console.log('[EmojiStore] Migrated legacy customCss to customCssBlocks')
-      maybeSave()
-    }
-  }
-
-  // Get all CSS blocks
-  const getCustomCssBlocks = (): CustomCssBlock[] => {
-    return settings.value.customCssBlocks || []
-  }
-
-  // Add or update a CSS block
-  const saveCustomCssBlock = (block: CustomCssBlock) => {
-    const blocks = getCustomCssBlocks()
-    const existingIndex = blocks.findIndex(b => b.id === block.id)
-
-    if (existingIndex >= 0) {
-      // Update existing block
-      blocks[existingIndex] = { ...block, updatedAt: Date.now() }
-    } else {
-      // Add new block
-      blocks.push({ ...block, createdAt: Date.now(), updatedAt: Date.now() })
-    }
-
-    updateSettings({ customCssBlocks: [...blocks] })
-    console.log('[EmojiStore] saveCustomCssBlock', { blockId: block.id, name: block.name })
-  }
-
-  // Delete a CSS block
-  const deleteCustomCssBlock = (blockId: string) => {
-    const blocks = getCustomCssBlocks()
-    const filteredBlocks = blocks.filter(b => b.id !== blockId)
-
-    if (filteredBlocks.length !== blocks.length) {
-      updateSettings({ customCssBlocks: filteredBlocks })
-      console.log('[EmojiStore] deleteCustomCssBlock', { blockId })
-    }
-  }
-
-  // Toggle CSS block enabled status
-  const toggleCustomCssBlock = (blockId: string) => {
-    const blocks = getCustomCssBlocks()
-    const block = blocks.find(b => b.id === blockId)
-
-    if (block) {
-      block.enabled = !block.enabled
-      block.updatedAt = Date.now()
-      updateSettings({ customCssBlocks: [...blocks] })
-      console.log('[EmojiStore] toggleCustomCssBlock', { blockId, enabled: block.enabled })
-    }
-  }
-
-  // Get combined CSS from all enabled blocks
-  const getCombinedCustomCss = (): string => {
-    const blocks = getCustomCssBlocks()
-    return blocks
-      .filter(block => block.enabled)
-      .map(block => block.content)
-      .join('\n\n')
-      .trim()
-  }
-
-  // --- Tag Management ---
-
-  // 为表情添加标签
-  const addTagToEmoji = (emojiId: string, tag: string) => {
-    const cleanTag = tag.trim().toLowerCase()
-    if (!cleanTag) return false
-
-    for (const group of groups.value) {
-      const emojis = group.emojis || []
-      const emoji = emojis.find(e => e && e.id === emojiId)
-      if (emoji) {
-        if (!emoji.tags) {
-          emoji.tags = []
-        }
-        if (!emoji.tags.includes(cleanTag)) {
-          emoji.tags.push(cleanTag)
-          console.log('[EmojiStore] addTagToEmoji', { emojiId, tag: cleanTag })
-          maybeSave()
-          return true
-        }
-        break
-      }
-    }
-    return false
-  }
-
-  // 移除表情的标签
-  const removeTagFromEmoji = (emojiId: string, tag: string) => {
-    const cleanTag = tag.trim().toLowerCase()
-
-    for (const group of groups.value) {
-      const emojis = group.emojis || []
-      const emoji = emojis.find(e => e && e.id === emojiId)
-      if (emoji && emoji.tags) {
-        const index = emoji.tags.indexOf(cleanTag)
-        if (index !== -1) {
-          emoji.tags.splice(index, 1)
-          console.log('[EmojiStore] removeTagFromEmoji', { emojiId, tag: cleanTag })
-          maybeSave()
-          return true
-        }
-        break
-      }
-    }
-    return false
-  }
-
-  // 设置表情的所有标签
-  const setEmojiTags = (emojiId: string, tags: string[]) => {
-    const cleanTags = tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag)
-
-    for (const group of groups.value) {
-      const emojis = group.emojis || []
-      const emoji = emojis.find(e => e && e.id === emojiId)
-      if (emoji) {
-        emoji.tags = cleanTags
-        console.log('[EmojiStore] setEmojiTags', { emojiId, tags: cleanTags })
-        maybeSave()
-        return true
-      }
-    }
-    return false
-  }
-
-  // 批量添加标签到多个表情
-  const addTagToMultipleEmojis = (emojiIds: string[], tag: string) => {
-    const cleanTag = tag.trim().toLowerCase()
-    if (!cleanTag) return false
-
-    beginBatch()
-    try {
-      let changedCount = 0
-      for (const emojiId of emojiIds) {
-        if (addTagToEmoji(emojiId, cleanTag)) {
-          changedCount++
-        }
-      }
-      console.log('[EmojiStore] addTagToMultipleEmojis', { tag: cleanTag, count: changedCount })
-      return changedCount
-    } finally {
-      endBatch()
-    }
-  }
-
-  // 批量移除多个表情的标签
-  const removeTagFromMultipleEmojis = (emojiIds: string[], tag: string) => {
-    const cleanTag = tag.trim().toLowerCase()
-
-    beginBatch()
-    try {
-      let changedCount = 0
-      for (const emojiId of emojiIds) {
-        if (removeTagFromEmoji(emojiId, cleanTag)) {
-          changedCount++
-        }
-      }
-      console.log('[EmojiStore] removeTagFromMultipleEmojis', {
-        tag: cleanTag,
-        count: changedCount
-      })
-      return changedCount
-    } finally {
-      endBatch()
-    }
-  }
-
-  // 获取表情的所有标签
-  const getEmojiTags = (emojiId: string): string[] => {
-    for (const group of groups.value) {
-      const emojis = group.emojis || []
-      const emoji = emojis.find(e => e && e.id === emojiId)
-      if (emoji) {
-        return emoji.tags || []
-      }
-    }
-    return []
-  }
-
-  // 搜索包含特定标签的表情
-  const findEmojisByTag = (tag: string): Emoji[] => {
-    const cleanTag = tag.trim().toLowerCase()
-    const result: Emoji[] = []
-
-    groups.value.forEach(group => {
-      const emojis = group.emojis || []
-      emojis.forEach(emoji => {
-        if (emoji && emoji.tags && emoji.tags.includes(cleanTag)) {
-          result.push(emoji)
-        }
-      })
-    })
-
-    return result
-  }
-
-  // 标签筛选控制
-  const setSelectedTags = (tags: string[]) => {
-    selectedTags.value = tags
-  }
-
-  const toggleTagFilter = (tag: string) => {
-    const index = selectedTags.value.indexOf(tag)
-    if (index === -1) {
-      selectedTags.value.push(tag)
-    } else {
-      selectedTags.value.splice(index, 1)
-    }
-  }
-
-  const clearTagFilters = () => {
-    selectedTags.value = []
-  }
+  // Note: Tag Management (add, remove, set, getEmojiTags, findEmojisByTag, etc.)
+  // is delegated to tagStore. Local allTags is kept for optimized {name, count} format.
 
   // --- Import/Export ---
   const exportConfiguration = () => {
@@ -1621,109 +887,6 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       console.error('Failed to sync to chrome:', error)
       return false
     }
-  }
-
-  // --- Cloudflare Sync Methods ---
-  const initializeSync = async () => {
-    // Try to load sync configuration
-    await cloudflareSyncService.initialize()
-  }
-
-  const saveSyncConfig = async (config: SyncTargetConfig) => {
-    // Save to general storage
-    await saveSyncConfigToStorage(config)
-    // Also update cloudflare service if it's a cloudflare config
-    if (config.type === 'cloudflare') {
-      await cloudflareSyncService.saveConfig(config)
-    }
-  }
-
-  const loadSyncConfig = async () => {
-    // Load from general storage (supports all sync types)
-    return await loadSyncConfigFromStorage()
-  }
-
-  const testSyncConnection = async () => {
-    const config = await loadSyncConfig()
-    if (!config) {
-      return {
-        success: false,
-        message: 'No sync configuration found',
-        error: 'Missing configuration'
-      }
-    }
-    try {
-      const target = createSyncTarget(config)
-      return await target.test()
-    } catch (error) {
-      return {
-        success: false,
-        message: `Connection test failed: ${error}`,
-        error
-      }
-    }
-  }
-
-  const syncToCloudflare = async (
-    direction: 'push' | 'pull' | 'both' = 'both',
-    onProgress?: (progress: {
-      current: number
-      total: number
-      action: string
-      message?: string
-    }) => void
-  ) => {
-    const result = await cloudflareSyncService.sync(direction, onProgress)
-    return result
-  }
-
-  const previewCloudData = async (
-    onProgress?: (progress: {
-      current: number
-      total: number
-      action: string
-      message?: string
-    }) => void
-  ) => {
-    const result = await cloudflareSyncService.previewCloudData(onProgress)
-    return result
-  }
-
-  const previewCloudConfig = async (
-    onProgress?: (progress: {
-      current: number
-      total: number
-      action: string
-      message?: string
-    }) => void
-  ) => {
-    const result = await cloudflareSyncService.previewCloudConfig(onProgress)
-    return result
-  }
-
-  const loadGroupDetails = async (
-    groupName: string,
-    onProgress?: (progress: {
-      current: number
-      total: number
-      action: string
-      message?: string
-    }) => void
-  ) => {
-    const result = await cloudflareSyncService.loadGroupDetails(groupName, onProgress)
-    return result
-  }
-
-  const pushToCloudflare = async () => {
-    return await cloudflareSyncService.pushData()
-  }
-
-  const pullFromCloudflare = async () => {
-    return await cloudflareSyncService.pullData()
-  }
-
-  const isSyncConfigured = (): boolean => {
-    return cloudflareSyncService.isConfigured()
   }
 
   // --- Synchronization and Persistence ---
@@ -2096,82 +1259,85 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     isReadOnlyMode,
 
     // Computed
-    activeGroup,
+    activeGroup: groupStore.activeGroup,
     filteredEmojis,
-    sortedGroups,
+    sortedGroups, // Keep local version
 
     // Actions
     loadData,
     saveData,
     setReadOnlyMode,
-    createGroup,
-    createGroupWithoutSave,
-    updateGroup,
-    deleteGroup,
-    reorderGroups,
-    addEmoji,
-    addEmojiWithoutSave,
-    updateEmoji,
+    // Group operations (delegated to groupStore)
+    createGroup: groupStore.createGroup,
+    createGroupWithoutSave: groupStore.createGroupWithoutSave,
+    updateGroup: groupStore.updateGroup,
+    deleteGroup: groupStore.deleteGroup,
+    reorderGroups: groupStore.reorderGroups,
+    // Emoji operations (delegated to emojiCrudStore)
+    addEmoji: emojiCrudStore.addEmoji,
+    addEmojiWithoutSave: emojiCrudStore.addEmojiWithoutSave,
+    updateEmoji: emojiCrudStore.updateEmoji,
     updateEmojiNames,
-    deleteEmoji,
-    moveEmoji,
+    deleteEmoji: emojiCrudStore.deleteEmoji,
+    moveEmoji: emojiCrudStore.moveEmoji,
     removeEmojiFromGroup,
     updateEmojiInGroup,
-    addToFavorites,
-    toggleFavorite,
-    clearAllFavorites,
-    findEmojiById,
+    // Favorites (delegated to favoritesStore)
+    addToFavorites: favoritesStore.addToFavorites,
+    toggleFavorite: favoritesStore.toggleFavorite,
+    clearAllFavorites: favoritesStore.clearAllFavorites,
+    findEmojiById: emojiCrudStore.findEmoji,
     updateSettings,
     updateUseIndexedDBForImages,
     exportConfiguration,
     importConfiguration,
     resetToDefaults,
     forceSync,
-    dedupeGroup,
-    dedupeGroupByName,
-    // Cross-group duplicate detection
+    // Dedupe operations (delegated to emojiCrudStore)
+    dedupeGroup: emojiCrudStore.dedupeGroup,
+    dedupeGroupByName: emojiCrudStore.dedupeGroupByName,
+    // Cross-group duplicate detection (kept in main store for now - complex logic)
     findDuplicatesAcrossGroups,
-    removeDuplicatesAcrossGroups,
-    clearAllPerceptualHashes,
-    resolveEmojiReference,
+    removeDuplicatesAcrossGroups: emojiCrudStore.removeDuplicatesAcrossGroups,
+    clearAllPerceptualHashes: emojiCrudStore.clearAllPerceptualHashes,
+    resolveEmojiReference: emojiCrudStore.resolveEmojiReference,
     // expose batching helpers for bulk operations
     beginBatch,
     endBatch,
     maybeSave,
     // one-click add from web
     addEmojiFromWeb,
-    // Cloudflare sync methods
-    initializeSync,
-    saveSyncConfig,
-    loadSyncConfig,
-    testSyncConnection,
-    syncToCloudflare,
-    previewCloudData,
-    previewCloudConfig,
-    loadGroupDetails,
-    pushToCloudflare,
-    pullFromCloudflare,
-    isSyncConfigured,
-    // CSS Block Management
-    getCustomCssBlocks,
-    saveCustomCssBlock,
-    deleteCustomCssBlock,
-    toggleCustomCssBlock,
-    getCombinedCustomCss,
+    // Cloudflare sync methods (delegated to syncStore)
+    initializeSync: syncStore.initializeSync,
+    saveSyncConfig: syncStore.saveSyncConfig,
+    loadSyncConfig: syncStore.loadSyncConfig,
+    testSyncConnection: syncStore.testSyncConnection,
+    syncToCloudflare: syncStore.syncToCloudflare,
+    previewCloudData: syncStore.previewCloudData,
+    previewCloudConfig: syncStore.previewCloudConfig,
+    loadGroupDetails: syncStore.loadGroupDetails,
+    pushToCloudflare: syncStore.pushToCloudflare,
+    pullFromCloudflare: syncStore.pullFromCloudflare,
+    isSyncConfigured: syncStore.isSyncConfigured,
+    // CSS Block Management (delegated to cssStore)
+    getCustomCssBlocks: cssStore.getCustomCssBlocks,
+    saveCustomCssBlock: cssStore.saveCustomCssBlock,
+    deleteCustomCssBlock: cssStore.deleteCustomCssBlock,
+    toggleCustomCssBlock: cssStore.toggleCustomCssBlock,
+    getCombinedCustomCss: cssStore.getCombinedCustomCss,
 
-    // Tag Management
-    allTags,
+    // Tag Management (delegated to tagStore, except allTags which uses local optimized version)
+    allTags, // Keep local version with {name, count} format
     selectedTags,
-    addTagToEmoji,
-    removeTagFromEmoji,
-    setEmojiTags,
-    addTagToMultipleEmojis,
-    removeTagFromMultipleEmojis,
-    getEmojiTags,
-    findEmojisByTag,
-    setSelectedTags,
-    toggleTagFilter,
-    clearTagFilters
-    // (lazy-load removed)
+    addTagToEmoji: tagStore.addTagToEmoji,
+    removeTagFromEmoji: tagStore.removeTagFromEmoji,
+    setEmojiTags: tagStore.setEmojiTags,
+    addTagToMultipleEmojis: tagStore.addTagToMultipleEmojis,
+    removeTagFromMultipleEmojis: tagStore.removeTagFromMultipleEmojis,
+    getEmojiTags: tagStore.getEmojiTags,
+    findEmojisByTag: tagStore.findEmojisByTag,
+    setSelectedTags: tagStore.setSelectedTags,
+    toggleTagFilter: tagStore.toggleTagFilter,
+    clearTagFilters: tagStore.clearTagFilters
   }
 })
