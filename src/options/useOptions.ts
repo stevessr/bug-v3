@@ -913,6 +913,10 @@ export default function useOptions() {
   }
 
   onMounted(async () => {
+    // CRITICAL: Disable read-only mode for options page
+    // Options page needs full write access, unlike popup/sidebar which are read-only
+    emojiStore.setReadOnlyMode(false)
+
     await emojiStore.loadData()
 
     if (emojiStore.groups.length > 0) {

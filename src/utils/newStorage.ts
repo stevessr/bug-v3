@@ -1,6 +1,5 @@
 import type { EmojiGroup, AppSettings } from '../types/type'
 
-import { formatPreview } from '@/options/utils/formatUtils'
 import { defaultSettings } from '@/types/defaultSettings'
 import { loadDefaultEmojiGroups, loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
@@ -36,17 +35,7 @@ function getChromeAPI() {
   return null
 }
 
-// --- Logging Helper ---
-// Logging disabled - parameters prefixed with _ to indicate intentionally unused
-function logStorage(_operation: string, _key: string, _data?: any, _error?: any) {
-  // Function intentionally does nothing
-  return
-}
-
-// --- Storage Layer Implementations ---
-
-// Helper function to ensure data is serializable
-// 优化：使用 structuredClone 替代 JSON.parse(JSON.stringify()) 提升性能
+// --- Helper function to ensure data is serializable ---
 function ensureSerializable<T>(data: T): T {
   if (data === null || data === undefined) return data
 
@@ -57,23 +46,17 @@ function ensureSerializable<T>(data: T): T {
   }
 
   try {
-    // 优先使用 structuredClone（更快且支持更多类型）
-    if (typeof structuredClone === 'function') {
-      return structuredClone(data)
-    }
-    // 回退到 JSON 方式
+    // 使用 JSON 方式确保数据可序列化并移除 Vue reactive proxies
     return JSON.parse(JSON.stringify(data))
   } catch (error) {
-    logStorage('SERIALIZE_CLEAN', 'data', undefined, error)
     // Fallback: create a clean version by recursively processing each property
     if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
       const cleaned: any = {}
       for (const [key, value] of Object.entries(data)) {
-        // Recursively clean each property instead of just testing and skipping
         try {
           cleaned[key] = ensureSerializable(value)
         } catch {
-          logStorage('SERIALIZE_CLEAN', `skipped property: ${key}`, undefined, 'unserializable')
+          // Skip unserializable properties
         }
       }
       return cleaned as T
@@ -84,343 +67,139 @@ function ensureSerializable<T>(data: T): T {
   }
 }
 
-class LocalStorageLayer {
+// --- Simple Storage Manager ---
+// 直接写入 localStorage，异步写入 extension storage
+class SimpleStorageManager {
+  // 直接读取 - 优先 localStorage，回退到 extension storage
   async get(key: string): Promise<any> {
+    // 先尝试 localStorage
     try {
-      if (typeof localStorage === 'undefined') return null
-      const value = localStorage.getItem(key)
-      return value ? JSON.parse(value) : null
-    } catch (error) {
-      logStorage('LOCAL_GET', key, undefined, error)
-      return null
-    }
-  }
-
-  async set(key: string, value: any): Promise<void> {
-    try {
-      if (typeof localStorage === 'undefined') return
-      localStorage.setItem(key, JSON.stringify(value))
-      logStorage('LOCAL_SET', key, value)
-    } catch (error) {
-      logStorage('LOCAL_SET', key, undefined, error)
-      throw error
-    }
-  }
-
-  async remove(key: string): Promise<void> {
-    try {
-      if (typeof localStorage === 'undefined') return
-      localStorage.removeItem(key)
-      logStorage('LOCAL_REMOVE', key)
-    } catch (error) {
-      logStorage('LOCAL_REMOVE', key, undefined, error)
-    }
-  }
-}
-
-class SessionStorageLayer {
-  async get(key: string): Promise<any> {
-    try {
-      if (typeof sessionStorage === 'undefined') return null
-      const value = sessionStorage.getItem(key)
-      return value ? JSON.parse(value) : null
-    } catch (error) {
-      logStorage('SESSION_GET', key, undefined, error)
-      return null
-    }
-  }
-
-  async set(key: string, value: any): Promise<void> {
-    try {
-      if (typeof sessionStorage === 'undefined') return
-      sessionStorage.setItem(key, JSON.stringify(value))
-      logStorage('SESSION_SET', key, value)
-    } catch (error) {
-      logStorage('SESSION_SET', key, undefined, error)
-      throw error
-    }
-  }
-
-  async remove(key: string): Promise<void> {
-    try {
-      if (typeof sessionStorage === 'undefined') return
-      sessionStorage.removeItem(key)
-      logStorage('SESSION_REMOVE', key)
-    } catch (error) {
-      logStorage('SESSION_REMOVE', key, undefined, error)
-    }
-  }
-}
-
-class ExtensionStorageLayer {
-  async get(key: string): Promise<any> {
-    const chromeAPI = getChromeAPI()
-    if (!chromeAPI?.storage?.local) {
-      logStorage('EXT_GET', key, { available: false, reason: 'Chrome Storage API not available' })
-      return null
-    }
-
-    return new Promise(resolve => {
-      try {
-        chromeAPI.storage.local.get({ [key]: null }, (result: any) => {
-          if (chromeAPI.runtime.lastError) {
-            logStorage('EXT_GET', key, undefined, chromeAPI.runtime.lastError)
-            resolve(null)
-          } else {
-            const value = result[key]
-            logStorage('EXT_GET', key, value)
-            resolve(value)
-          }
-        })
-      } catch (error) {
-        logStorage('EXT_GET', key, undefined, error)
-        resolve(null)
+      if (typeof localStorage !== 'undefined') {
+        const value = localStorage.getItem(key)
+        if (value !== null) {
+          const parsed = JSON.parse(value)
+          return parsed?.data ?? parsed
+        }
       }
-    })
-  }
+    } catch {
+      // ignore localStorage errors
+    }
 
-  async set(key: string, value: any): Promise<void> {
+    // 回退到 extension storage
     const chromeAPI = getChromeAPI()
-    if (!chromeAPI?.storage?.local) {
-      logStorage('EXT_SET', key, { available: false, reason: 'Chrome Storage API not available' })
-      return
-    }
-
-    return new Promise((resolve, reject) => {
-      try {
-        chromeAPI.storage.local.set({ [key]: value }, () => {
-          if (chromeAPI.runtime.lastError) {
-            logStorage('EXT_SET', key, undefined, chromeAPI.runtime.lastError)
-            reject(chromeAPI.runtime.lastError)
-          } else {
-            logStorage('EXT_SET', key, value)
-            resolve()
-          }
-        })
-      } catch (error) {
-        logStorage('EXT_SET', key, undefined, error)
-        reject(error)
-      }
-    })
-  }
-
-  async remove(key: string): Promise<void> {
-    const chromeAPI = getChromeAPI()
-    if (!chromeAPI?.storage?.local) {
-      logStorage('EXT_REMOVE', key, {
-        available: false,
-        reason: 'Chrome Storage API not available'
-      })
-      return
-    }
-
-    return new Promise(resolve => {
-      try {
-        chromeAPI.storage.local.remove([key], () => {
-          if (chromeAPI.runtime.lastError) {
-            logStorage('EXT_REMOVE', key, undefined, chromeAPI.runtime.lastError)
-          } else {
-            logStorage('EXT_REMOVE', key)
-          }
-          resolve()
-        })
-      } catch (error) {
-        logStorage('EXT_REMOVE', key, undefined, error)
-        resolve()
-      }
-    })
-  }
-}
-
-// --- New Storage Manager ---
-class NewStorageManager {
-  private localStorage = new LocalStorageLayer()
-  private sessionStorage = new SessionStorageLayer()
-  private extensionStorage = new ExtensionStorageLayer()
-
-  private writeTimers = new Map<string, NodeJS.Timeout>()
-
-  // Read with priority: Local → Session → Extension → IndexedDB
-  async get(key: string): Promise<any> {
-    logStorage('MULTI_GET_START', key)
-
-    // Try local storage first
-    let value = await this.localStorage.get(key)
-    if (value !== null && value !== undefined) {
-      logStorage('MULTI_GET_SUCCESS', key, { source: 'localStorage', value })
-      return value
-    }
-
-    // Try session storage
-    value = await this.sessionStorage.get(key)
-    if (value !== null && value !== undefined) {
-      logStorage('MULTI_GET_SUCCESS', key, { source: 'sessionStorage', value })
-      return value
-    }
-
-    // Try extension storage
-    value = await this.extensionStorage.get(key)
-    if (value !== null && value !== undefined) {
-      logStorage('MULTI_GET_SUCCESS', key, { source: 'extensionStorage', value })
-      return value
-    }
-
-    logStorage('MULTI_GET_FAILED', key)
-    return null
-  }
-
-  // Write with progressive timers across all layers
-  async set(key: string, value: any, timestamp?: number): Promise<void> {
-    // Ensure the value is serializable before storage
-    const cleanValue = ensureSerializable(value)
-
-    const finalValue = {
-      data: cleanValue,
-      timestamp: timestamp || Date.now()
-    }
-
-    logStorage('MULTI_SET_START', key, finalValue)
-
-    // Clear any existing timer for this key
-    if (this.writeTimers.has(key)) {
-      const t = this.writeTimers.get(key)
-      if (t) clearTimeout(t)
-    }
-
-    try {
-      // Immediate write to local storage
-      await this.localStorage.set(key, finalValue)
-
-      // Progressive writes with timers
-      setTimeout(async () => {
+    if (chromeAPI?.storage?.local) {
+      return new Promise(resolve => {
         try {
-          await this.sessionStorage.set(key, finalValue)
-        } catch (error) {
-          logStorage('MULTI_SET_SESSION_FAILED', key, undefined, error)
+          chromeAPI.storage.local.get({ [key]: null }, (result: any) => {
+            if (chromeAPI.runtime.lastError) {
+              resolve(null)
+            } else {
+              const value = result[key]
+              resolve(value?.data ?? value)
+            }
+          })
+        } catch {
+          resolve(null)
         }
-      }, 100)
-
-      setTimeout(async () => {
-        try {
-          await this.extensionStorage.set(key, finalValue)
-        } catch (error) {
-          logStorage('MULTI_SET_EXTENSION_FAILED', key, undefined, error)
-        }
-      }, 500)
-
-      logStorage('MULTI_SET_SUCCESS', key, finalValue)
-    } catch (error) {
-      logStorage('MULTI_SET_FAILED', key, undefined, error)
-      throw error
-    }
-  }
-
-  // Synchronous write to all layers - waits for extensionStorage to complete
-  // Use this in popup/sidebar where the page may close at any time
-  async setSync(key: string, value: any, timestamp?: number): Promise<void> {
-    const cleanValue = ensureSerializable(value)
-
-    const finalValue = {
-      data: cleanValue,
-      timestamp: timestamp || Date.now()
-    }
-
-    console.log('[NewStorageManager] setSync called:', {
-      key,
-      valuePreview: JSON.stringify(finalValue).substring(0, 200)
-    })
-
-    // Clear any existing timer for this key
-    if (this.writeTimers.has(key)) {
-      const t = this.writeTimers.get(key)
-      if (t) clearTimeout(t)
-    }
-
-    try {
-      // Write to all layers in parallel and wait for all to complete
-      const results = await Promise.allSettled([
-        this.localStorage.set(key, finalValue),
-        this.sessionStorage.set(key, finalValue),
-        this.extensionStorage.set(key, finalValue)
-      ])
-
-      console.log('[NewStorageManager] setSync results:', {
-        key,
-        localStorage: results[0].status,
-        sessionStorage: results[1].status,
-        extensionStorage: results[2].status
       })
-
-      // Check if extensionStorage failed
-      if (results[2].status === 'rejected') {
-        console.error(
-          '[NewStorageManager] extensionStorage.set failed:',
-          (results[2] as PromiseRejectedResult).reason
-        )
-      }
-
-      logStorage('SYNC_SET_SUCCESS', key, finalValue)
-    } catch (error) {
-      logStorage('SYNC_SET_FAILED', key, undefined, error)
-      throw error
-    }
-  }
-
-  // Remove from all layers
-  async remove(key: string): Promise<void> {
-    logStorage('MULTI_REMOVE', key)
-
-    // Clear any pending timer
-    if (this.writeTimers.has(key)) {
-      const t = this.writeTimers.get(key)
-      if (t) clearTimeout(t)
-      this.writeTimers.delete(key)
-    }
-
-    await Promise.allSettled([
-      this.localStorage.remove(key),
-      this.sessionStorage.remove(key),
-      this.extensionStorage.remove(key)
-    ])
-  }
-
-  // Conflict resolution: newer timestamp wins
-  async getWithConflictResolution(key: string): Promise<any> {
-    const values = await Promise.allSettled([
-      this.localStorage.get(key),
-      this.sessionStorage.get(key),
-      this.extensionStorage.get(key)
-    ])
-
-    let newestValue = null
-    let newestTimestamp = 0
-
-    values.forEach(result => {
-      if (result.status === 'fulfilled' && result.value) {
-        const timestamp = result.value.timestamp || 0
-        if (timestamp > newestTimestamp) {
-          newestTimestamp = timestamp
-          newestValue = result.value.data
-        }
-      }
-    })
-
-    if (newestValue !== null) {
-      logStorage('CONFLICT_RESOLUTION', key, { timestamp: newestTimestamp, value: newestValue })
-      return newestValue
     }
 
     return null
   }
+
+  // 直接写入 localStorage，异步写入 extension storage
+  async set(key: string, value: any): Promise<void> {
+    const cleanValue = ensureSerializable(value)
+    const finalValue = {
+      data: cleanValue,
+      timestamp: Date.now()
+    }
+
+    // 直接写入 localStorage（同步）
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, JSON.stringify(finalValue))
+      }
+    } catch (error) {
+      console.error('[Storage] localStorage.set failed:', key, error)
+    }
+
+    // 异步写入 extension storage（不等待）
+    const chromeAPI = getChromeAPI()
+    if (chromeAPI?.storage?.local) {
+      chromeAPI.storage.local.set({ [key]: finalValue }, () => {
+        if (chromeAPI.runtime.lastError) {
+          console.error('[Storage] extensionStorage.set failed:', key, chromeAPI.runtime.lastError)
+        }
+      })
+    }
+  }
+
+  // 同步写入所有存储层（等待 extension storage 完成）
+  async setSync(key: string, value: any): Promise<void> {
+    const cleanValue = ensureSerializable(value)
+    const finalValue = {
+      data: cleanValue,
+      timestamp: Date.now()
+    }
+
+    // 写入 localStorage
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, JSON.stringify(finalValue))
+      }
+    } catch (error) {
+      console.error('[Storage] localStorage.set failed:', key, error)
+    }
+
+    // 同步等待 extension storage 完成
+    const chromeAPI = getChromeAPI()
+    if (chromeAPI?.storage?.local) {
+      return new Promise((resolve, reject) => {
+        try {
+          chromeAPI.storage.local.set({ [key]: finalValue }, () => {
+            if (chromeAPI.runtime.lastError) {
+              console.error('[Storage] extensionStorage.set failed:', key, chromeAPI.runtime.lastError)
+              reject(chromeAPI.runtime.lastError)
+            } else {
+              resolve()
+            }
+          })
+        } catch (error) {
+          reject(error)
+        }
+      })
+    }
+  }
+
+  // 从所有存储层删除
+  async remove(key: string): Promise<void> {
+    // 删除 localStorage
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key)
+      }
+    } catch {
+      // ignore
+    }
+
+    // 异步删除 extension storage
+    const chromeAPI = getChromeAPI()
+    if (chromeAPI?.storage?.local) {
+      chromeAPI.storage.local.remove([key], () => {
+        // ignore errors
+      })
+    }
+  }
 }
 
-// --- Public API using new storage manager ---
-const storageManager = new NewStorageManager()
+// --- Public API ---
+const storageManager = new SimpleStorageManager()
 
 export const newStorageHelpers = {
-  // Group management with split storage
+  // Group management
   async getEmojiGroupIndex(): Promise<Array<{ id: string; order: number }>> {
-    const index = await storageManager.getWithConflictResolution(STORAGE_KEYS.GROUP_INDEX)
+    const index = await storageManager.get(STORAGE_KEYS.GROUP_INDEX)
     return index || []
   },
 
@@ -428,87 +207,36 @@ export const newStorageHelpers = {
     await storageManager.set(STORAGE_KEYS.GROUP_INDEX, index)
   },
 
-  // Sync version - waits for extensionStorage to complete
   async setEmojiGroupIndexSync(index: Array<{ id: string; order: number }>): Promise<void> {
     await storageManager.setSync(STORAGE_KEYS.GROUP_INDEX, index)
   },
 
   async getEmojiGroup(groupId: string): Promise<EmojiGroup | null> {
-    const group = await storageManager.getWithConflictResolution(
-      STORAGE_KEYS.GROUP_PREFIX + groupId
-    )
-    return group
+    return await storageManager.get(STORAGE_KEYS.GROUP_PREFIX + groupId)
   },
 
   async setEmojiGroup(groupId: string, group: EmojiGroup): Promise<void> {
-    try {
-      const stored = await this.getEmojiGroup(groupId)
-
-      const currentEmojis = Array.isArray(group.emojis) ? group.emojis : []
-
-      const merged = {
-        ...(stored || {}),
-        ...group,
-        emojis: currentEmojis // Always use the (potentially empty) array
-      }
-
-      const clean = ensureSerializable(merged)
-      await storageManager.set(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
-    } catch (e) {
-      logStorage('IDB_SET', `${STORAGE_KEYS.GROUP_PREFIX}${groupId}`, undefined, e)
-      throw e
-    }
+    const clean = ensureSerializable({
+      id: group.id || groupId,
+      name: group.name || '',
+      icon: group.icon || '',
+      order: group.order ?? 0,
+      emojis: Array.isArray(group.emojis) ? group.emojis : [],
+      detail: group.detail
+    })
+    await storageManager.set(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
   },
 
-  // Sync version - waits for extensionStorage to complete
-  // Use this in popup/sidebar where the page may close at any time
   async setEmojiGroupSync(groupId: string, group: EmojiGroup): Promise<void> {
-    try {
-      const stored = await this.getEmojiGroup(groupId)
-
-      // Deep clone emojis array using JSON to strip Vue reactive proxies
-      // This is necessary because structuredClone can fail on Vue Proxy objects
-      let plainEmojis: any[] = []
-      if (Array.isArray(group.emojis) && group.emojis.length > 0) {
-        try {
-          plainEmojis = JSON.parse(JSON.stringify(group.emojis))
-        } catch {
-          // If JSON fails, manually extract plain objects
-          plainEmojis = group.emojis.map(e => ({
-            id: e.id,
-            name: e.name,
-            url: e.url,
-            width: e.width,
-            height: e.height,
-            customOutput: e.customOutput,
-            tags: e.tags ? [...e.tags] : undefined,
-            hash: e.hash
-          }))
-        }
-      }
-
-      // Build merged object with explicit properties
-      const merged = {
-        id: group.id || groupId,
-        name: group.name || stored?.name || '',
-        icon: group.icon || stored?.icon || '',
-        order: group.order ?? stored?.order ?? 0,
-        emojis: plainEmojis
-      }
-
-      console.log('[newStorageHelpers] setEmojiGroupSync - saving:', {
-        id: merged.id,
-        emojisCount: merged.emojis.length,
-        firstEmoji: merged.emojis[0]
-          ? { id: merged.emojis[0].id, name: merged.emojis[0].name }
-          : null
-      })
-
-      await storageManager.setSync(STORAGE_KEYS.GROUP_PREFIX + groupId, merged)
-    } catch (e) {
-      logStorage('IDB_SET', `${STORAGE_KEYS.GROUP_PREFIX}${groupId}`, undefined, e)
-      throw e
-    }
+    const clean = ensureSerializable({
+      id: group.id || groupId,
+      name: group.name || '',
+      icon: group.icon || '',
+      order: group.order ?? 0,
+      emojis: Array.isArray(group.emojis) ? group.emojis : [],
+      detail: group.detail
+    })
+    await storageManager.setSync(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
   },
 
   async removeEmojiGroup(groupId: string): Promise<void> {
@@ -523,16 +251,14 @@ export const newStorageHelpers = {
 
   async getAllEmojiGroups(): Promise<EmojiGroup[]> {
     const index = await this.getEmojiGroupIndex()
-    console.log('[newStorageHelpers] getAllEmojiGroups - index:', index)
 
     if (!index.length) {
-      // Try runtime loader for packaged JSON first, fallback to generated module
-      console.log('[newStorageHelpers] getAllEmojiGroups - no index, loading defaults')
+      // Try runtime loader for packaged JSON first
       try {
         const runtime = await loadDefaultEmojiGroups()
         if (runtime && runtime.length) return runtime
       } catch {
-        // ignore loader errors and fallback to empty list
+        // ignore loader errors
       }
       return []
     }
@@ -540,12 +266,6 @@ export const newStorageHelpers = {
     const groups = await Promise.all(
       index.map(async groupInfo => {
         const group = await this.getEmojiGroup(groupInfo.id)
-        console.log(
-          '[newStorageHelpers] getAllEmojiGroups - loaded group:',
-          groupInfo.id,
-          'emojis:',
-          group?.emojis?.length ?? 'null'
-        )
         return group ? { ...group, order: groupInfo.order } : null
       })
     )
@@ -556,12 +276,12 @@ export const newStorageHelpers = {
   },
 
   async setAllEmojiGroups(groups: EmojiGroup[]): Promise<void> {
-    // Update index
     const index = groups.map((group, order) => ({ id: group.id, order }))
     const existingIndex = await this.getEmojiGroupIndex()
     const existingIds = new Set(existingIndex.map(entry => entry.id))
     const incomingIds = new Set(groups.map(group => group.id))
 
+    // Remove deleted groups
     const removedIds: string[] = []
     existingIds.forEach(id => {
       if (!incomingIds.has(id)) removedIds.push(id)
@@ -574,22 +294,10 @@ export const newStorageHelpers = {
     }
 
     await this.setEmojiGroupIndex(index)
-
-    await Promise.all(
-      groups.map(async group => {
-        try {
-          await this.setEmojiGroup(group.id, group)
-        } catch (e) {
-          logStorage('SET_GROUP_FAILED', `${STORAGE_KEYS.GROUP_PREFIX}${group.id}`, undefined, e)
-        }
-      })
-    )
+    await Promise.all(groups.map(group => this.setEmojiGroup(group.id, group)))
   },
 
-  // Sync version - ensures all writes complete to extensionStorage before returning
-  // Use this when data must persist before page navigation/refresh
   async setAllEmojiGroupsSync(groups: EmojiGroup[]): Promise<void> {
-    // Update index
     const index = groups.map((group, order) => ({ id: group.id, order }))
     const existingIndex = await this.getEmojiGroupIndex()
     const existingIds = new Set(existingIndex.map(entry => entry.id))
@@ -606,30 +314,19 @@ export const newStorageHelpers = {
       )
     }
 
-    // Use sync version of setEmojiGroupIndex
     await this.setEmojiGroupIndexSync(index)
-
-    // Use sync version for each group to ensure all writes complete
-    await Promise.all(
-      groups.map(async group => {
-        try {
-          await this.setEmojiGroupSync(group.id, group)
-        } catch (e) {
-          logStorage('SET_GROUP_FAILED', `${STORAGE_KEYS.GROUP_PREFIX}${group.id}`, undefined, e)
-        }
-      })
-    )
+    await Promise.all(groups.map(group => this.setEmojiGroupSync(group.id, group)))
   },
 
   // Settings management
   async getSettings(): Promise<AppSettings> {
-    const settings = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
+    const settings = await storageManager.get(STORAGE_KEYS.SETTINGS)
     if (settings && typeof settings === 'object') return { ...defaultSettings, ...settings }
 
     // No persisted settings: prefer packaged defaults
     try {
       const packaged = await loadPackagedDefaults()
-      if (packaged && packaged.settings && Object.keys(packaged.settings).length > 0) {
+      if (packaged?.settings && Object.keys(packaged.settings).length > 0) {
         return { ...defaultSettings, ...packaged.settings }
       }
     } catch {
@@ -640,65 +337,32 @@ export const newStorageHelpers = {
   },
 
   async setSettings(settings: AppSettings): Promise<void> {
-    const stored = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
-    const mergedSettings = { ...(stored || {}), ...settings }
-    const updatedSettings = { ...defaultSettings, ...mergedSettings, lastModified: Date.now() }
+    const updatedSettings = { ...defaultSettings, ...settings, lastModified: Date.now() }
     await storageManager.set(STORAGE_KEYS.SETTINGS, updatedSettings)
   },
 
-  // Sync version - ensures all writes complete to extensionStorage before returning
   async setSettingsSync(settings: AppSettings): Promise<void> {
-    const stored = await storageManager.getWithConflictResolution(STORAGE_KEYS.SETTINGS)
-    const mergedSettings = { ...(stored || {}), ...settings }
-    const updatedSettings = { ...defaultSettings, ...mergedSettings, lastModified: Date.now() }
+    const updatedSettings = { ...defaultSettings, ...settings, lastModified: Date.now() }
     await storageManager.setSync(STORAGE_KEYS.SETTINGS, updatedSettings)
   },
 
   // Favorites management
   async getFavorites(): Promise<string[]> {
-    const favorites = await storageManager.getWithConflictResolution(STORAGE_KEYS.FAVORITES)
+    const favorites = await storageManager.get(STORAGE_KEYS.FAVORITES)
     return favorites || []
   },
 
   async setFavorites(favorites: string[]): Promise<void> {
-    const stored = (await storageManager.getWithConflictResolution(STORAGE_KEYS.FAVORITES)) || []
-    const existingSet = new Set(stored as string[])
-    const incomingSet = new Set(favorites)
-
-    // Add new favorites
-    incomingSet.forEach(id => existingSet.add(id))
-
-    // Remove favorites explicitly excluded in payload
-    Array.from(existingSet).forEach(id => {
-      if (!incomingSet.has(id) && (stored as string[]).includes(id)) {
-        existingSet.delete(id)
-      }
-    })
-
-    await storageManager.set(STORAGE_KEYS.FAVORITES, Array.from(existingSet))
+    await storageManager.set(STORAGE_KEYS.FAVORITES, favorites)
   },
 
-  // Sync version - waits for extensionStorage to complete
   async setFavoritesSync(favorites: string[]): Promise<void> {
-    const stored = (await storageManager.getWithConflictResolution(STORAGE_KEYS.FAVORITES)) || []
-    const existingSet = new Set(stored as string[])
-    const incomingSet = new Set(favorites)
-
-    incomingSet.forEach(id => existingSet.add(id))
-
-    Array.from(existingSet).forEach(id => {
-      if (!incomingSet.has(id) && (stored as string[]).includes(id)) {
-        existingSet.delete(id)
-      }
-    })
-
-    await storageManager.setSync(STORAGE_KEYS.FAVORITES, Array.from(existingSet))
+    await storageManager.setSync(STORAGE_KEYS.FAVORITES, favorites)
   },
 
   // Discourse domains management
-  // Each entry: { domain: string, enabledGroups: string[] }
   async getDiscourseDomains(): Promise<Array<{ domain: string; enabledGroups: string[] }>> {
-    const domains = await storageManager.getWithConflictResolution(STORAGE_KEYS.DISCOURSE_DOMAINS)
+    const domains = await storageManager.get(STORAGE_KEYS.DISCOURSE_DOMAINS)
     return Array.isArray(domains) ? domains : []
   },
 
@@ -706,8 +370,7 @@ export const newStorageHelpers = {
     domain: string
   ): Promise<{ domain: string; enabledGroups: string[] } | null> {
     const domains = await this.getDiscourseDomains()
-    const found = domains.find(d => d.domain === domain)
-    return found || null
+    return domains.find(d => d.domain === domain) || null
   },
 
   async setDiscourseDomains(
@@ -731,17 +394,12 @@ export const newStorageHelpers = {
     await this.setDiscourseDomains(filtered)
   },
 
-  /**
-   * Ensure a domain entry exists. If missing, create with all current group ids enabled.
-   * Returns the domain entry.
-   */
   async ensureDiscourseDomainExists(
     domain: string
   ): Promise<{ domain: string; enabledGroups: string[] }> {
     const existing = await this.getDiscourseDomain(domain)
     if (existing) return existing
 
-    // Default: no groups enabled
     const entry = { domain, enabledGroups: [] }
     const domains = await this.getDiscourseDomains()
     domains.push(entry)
@@ -757,32 +415,26 @@ export const newStorageHelpers = {
   ): Promise<void> {
     const chromeAPI = getChromeAPI()
     if (!chromeAPI?.storage?.sync) {
-      logStorage('SYNC_BACKUP', 'failed', undefined, 'Chrome Sync Storage API not available')
       throw new Error('Chrome Sync Storage API not available')
     }
 
-    const CHUNK_SIZE = 6000 // 6KB per chunk, leaving buffer for metadata
+    const CHUNK_SIZE = 6000
     const timestamp = Date.now()
     const version = '3.0'
 
     try {
-      // 清理旧的分块数据
       await this.clearSyncBackupChunks()
 
-      // 分块存储数据
       const chunks: { [key: string]: any } = {}
 
-      // Helper function to split data into chunks
       const createChunks = (data: any[], prefix: string) => {
         const dataStr = JSON.stringify(data)
         const totalSize = new Blob([dataStr]).size
 
         if (totalSize <= CHUNK_SIZE) {
-          // Single chunk
           chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}`] = data
           return { chunkCount: 1, totalItems: data.length }
         } else {
-          // Multiple chunks needed
           const estimatedChunks = Math.ceil(totalSize / CHUNK_SIZE)
           const itemsPerChunk = Math.ceil(data.length / estimatedChunks)
           let actualChunks = 0
@@ -796,7 +448,6 @@ export const newStorageHelpers = {
               chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${actualChunks}`] = chunkData
               actualChunks++
             } else {
-              // If still too large, split further
               const smallerChunks = Math.ceil(chunkData.length / 2)
               for (let j = 0; j < chunkData.length; j += smallerChunks) {
                 chunks[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${actualChunks}`] = chunkData.slice(
@@ -812,19 +463,16 @@ export const newStorageHelpers = {
         }
       }
 
-      // 处理分组数据
       let groupsMeta = null
       if (groups.length > 0) {
         groupsMeta = createChunks(groups, 'groups')
       }
 
-      // 处理收藏数据
       let favoritesMeta = null
       if (favorites.length > 0) {
         favoritesMeta = createChunks(favorites, 'favorites')
       }
 
-      // 存储元数据（包含分块信息）
       chunks[`${SYNC_STORAGE_KEYS.BACKUP}_meta`] = {
         timestamp,
         version,
@@ -833,32 +481,20 @@ export const newStorageHelpers = {
         settings
       }
 
-      // 批量存储所有分块
       return new Promise((resolve, reject) => {
         chromeAPI.storage.sync.set(chunks, () => {
           if (chromeAPI.runtime.lastError) {
-            const error = chromeAPI.runtime.lastError
-            logStorage('SYNC_BACKUP', 'failed', undefined, error)
-            reject(new Error(`Chrome sync failed: ${error.message || 'Unknown error'}`))
+            reject(new Error(`Chrome sync failed: ${chromeAPI.runtime.lastError.message || 'Unknown error'}`))
           } else {
-            const chunkCount = Object.keys(chunks).length
-            logStorage('SYNC_BACKUP', 'success', {
-              chunks: chunkCount,
-              timestamp,
-              groupChunks: groupsMeta?.chunkCount || 0,
-              favoriteChunks: favoritesMeta?.chunkCount || 0
-            })
             resolve()
           }
         })
       })
     } catch (error) {
-      logStorage('SYNC_BACKUP', 'failed', undefined, error)
       throw error
     }
   },
 
-  // Helper method to clear old backup chunks
   async clearSyncBackupChunks(): Promise<void> {
     const chromeAPI = getChromeAPI()
     if (!chromeAPI?.storage?.sync) return
@@ -866,7 +502,6 @@ export const newStorageHelpers = {
     return new Promise(resolve => {
       chromeAPI.storage.sync.get(null, (allData: any) => {
         if (chromeAPI.runtime.lastError) {
-          logStorage('SYNC_CLEANUP', 'failed', undefined, chromeAPI.runtime.lastError)
           resolve()
           return
         }
@@ -877,11 +512,6 @@ export const newStorageHelpers = {
 
         if (keysToRemove.length > 0) {
           chromeAPI.storage.sync.remove(keysToRemove, () => {
-            if (chromeAPI.runtime.lastError) {
-              logStorage('SYNC_CLEANUP', 'failed', undefined, chromeAPI.runtime.lastError)
-            } else {
-              logStorage('SYNC_CLEANUP', 'success', { removedKeys: keysToRemove.length })
-            }
             resolve()
           })
         } else {
@@ -899,37 +529,30 @@ export const newStorageHelpers = {
   } | null> {
     const chromeAPI = getChromeAPI()
     if (!chromeAPI?.storage?.sync) {
-      logStorage('SYNC_RESTORE', 'failed', undefined, 'Chrome Sync Storage API not available')
       return null
     }
 
     return new Promise(resolve => {
       try {
-        // 首先尝试获取新格式的分块数据元信息
         chromeAPI.storage.sync.get(`${SYNC_STORAGE_KEYS.BACKUP}_meta`, async (metaResult: any) => {
           if (chromeAPI.runtime.lastError) {
-            logStorage('SYNC_RESTORE', 'failed', undefined, chromeAPI.runtime.lastError)
             resolve(null)
             return
           }
 
           const meta = metaResult[`${SYNC_STORAGE_KEYS.BACKUP}_meta`]
           if (!meta) {
-            // 尝试旧格式的单块存储
+            // Try old format
             chromeAPI.storage.sync.get(
               { [SYNC_STORAGE_KEYS.BACKUP]: null },
               async (oldResult: any) => {
                 if (chromeAPI.runtime.lastError) {
-                  logStorage('SYNC_RESTORE', 'failed', undefined, chromeAPI.runtime.lastError)
                   resolve(null)
                   return
                 }
 
                 const backup = oldResult[SYNC_STORAGE_KEYS.BACKUP]
-                if (backup && backup.groups) {
-                  logStorage('SYNC_RESTORE', 'found legacy backup', { timestamp: backup.timestamp })
-
-                  // Restore data using the new storage system
+                if (backup?.groups) {
                   await this.setAllEmojiGroups(backup.groups)
                   await this.setSettings(backup.settings || defaultSettings)
                   await this.setFavorites(backup.favorites || [])
@@ -941,7 +564,6 @@ export const newStorageHelpers = {
                     timestamp: backup.timestamp || 0
                   })
                 } else {
-                  logStorage('SYNC_RESTORE', 'no backup found')
                   resolve(null)
                 }
               }
@@ -949,58 +571,39 @@ export const newStorageHelpers = {
             return
           }
 
-          // 新格式分块数据恢复
-          logStorage('SYNC_RESTORE', 'found chunked backup meta', {
-            timestamp: meta.timestamp,
-            hasGroups: !!meta.groups,
-            hasFavorites: !!meta.favorites
-          })
-
           try {
-            // 恢复分块数据
             const restoredData: any = {
               timestamp: meta.timestamp,
               settings: meta.settings || defaultSettings
             }
 
-            // 恢复分组数据
             if (meta.groups) {
               restoredData.groups = await this.restoreChunkedData('groups', meta.groups)
             } else {
               restoredData.groups = []
             }
 
-            // 恢复收藏数据
             if (meta.favorites) {
               restoredData.favorites = await this.restoreChunkedData('favorites', meta.favorites)
             } else {
               restoredData.favorites = []
             }
 
-            // 恢复数据到存储系统
             await this.setAllEmojiGroups(restoredData.groups)
             await this.setSettings(restoredData.settings)
             await this.setFavorites(restoredData.favorites)
 
-            logStorage('SYNC_RESTORE', 'restored chunked data', {
-              groupCount: restoredData.groups?.length || 0,
-              favoriteCount: restoredData.favorites?.length || 0
-            })
-
             resolve(restoredData)
-          } catch (error) {
-            logStorage('SYNC_RESTORE', 'failed to restore chunks', undefined, error)
+          } catch {
             resolve(null)
           }
         })
-      } catch (error) {
-        logStorage('SYNC_RESTORE', 'failed', undefined, error)
+      } catch {
         resolve(null)
       }
     })
   },
 
-  // Helper method to restore chunked data
   async restoreChunkedData(
     prefix: string,
     meta: { chunkCount: number; totalItems: number }
@@ -1012,17 +615,14 @@ export const newStorageHelpers = {
 
     return new Promise((resolve, reject) => {
       if (meta.chunkCount === 1) {
-        // Single chunk
         chromeAPI.storage.sync.get(`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}`, (result: any) => {
           if (chromeAPI.runtime.lastError) {
             reject(chromeAPI.runtime.lastError)
           } else {
-            const data = result[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}`] || []
-            resolve(data)
+            resolve(result[`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}`] || [])
           }
         })
       } else {
-        // Multiple chunks
         const chunkKeys = []
         for (let i = 0; i < meta.chunkCount; i++) {
           chunkKeys.push(`${SYNC_STORAGE_KEYS.BACKUP}_${prefix}_${i}`)
@@ -1044,28 +644,17 @@ export const newStorageHelpers = {
     })
   },
 
-  // Reset to defaults
   async resetToDefaults(): Promise<void> {
-    logStorage('RESET_DEFAULTS', 'start')
-
     try {
-      // Prefer runtime JSON loader if available
-      try {
-        const packaged = await loadPackagedDefaults()
-        await this.setAllEmojiGroups(
-          packaged && packaged.groups && packaged.groups.length ? packaged.groups : []
-        )
-      } catch {
-        await this.setAllEmojiGroups([])
-      }
-      await this.setSettings(defaultSettings)
-      await this.setFavorites([])
-
-      logStorage('RESET_DEFAULTS', 'success')
-    } catch (error) {
-      logStorage('RESET_DEFAULTS', 'failed', undefined, error)
-      throw error
+      const packaged = await loadPackagedDefaults()
+      await this.setAllEmojiGroups(
+        packaged?.groups?.length ? packaged.groups : []
+      )
+    } catch {
+      await this.setAllEmojiGroups([])
     }
+    await this.setSettings(defaultSettings)
+    await this.setFavorites([])
   }
 }
 
