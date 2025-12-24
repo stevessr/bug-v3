@@ -37,15 +37,30 @@ export type SyncTargetConfig = WebDAVConfig | S3Config | CloudflareConfig
 export interface SyncResult {
   success: boolean
   message: string
-  error?: any
+  error?: unknown
   timestamp?: number
 }
 
 export interface SyncData {
-  emojiGroups: any[]
-  settings: any
+  emojiGroups: unknown[]
+  settings: unknown
   timestamp: number
   version: string
+}
+
+// Helper type for accessing group properties
+interface GroupLike {
+  id?: string
+  name?: string
+  emojis?: unknown[]
+  [key: string]: unknown
+}
+
+// Helper type for settings
+interface SettingsLike {
+  version?: string
+  timestamp?: number
+  [key: string]: unknown
 }
 
 export interface Progress {
@@ -63,15 +78,15 @@ export interface ISyncTarget {
   push(data: SyncData, onProgress?: ProgressCallback): Promise<SyncResult>
   pull(
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }>
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }>
   test(): Promise<SyncResult> // Test connection
   preview(
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> // Preview metadata only
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> // Preview metadata only
   getGroupDetails(
     groupId: string,
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; group?: any; error?: any; message: string }>
+  ): Promise<{ success: boolean; group?: unknown; error?: unknown; message: string }>
 }
 
 // WebDAV implementation
@@ -241,12 +256,13 @@ export class WebDAVSyncTarget implements ISyncTarget {
   async getGroupDetails(
     groupId: string,
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; group?: any; error?: any; message: string }> {
+  ): Promise<{ success: boolean; group?: unknown; error?: unknown; message: string }> {
     // WebDAV does not support fetching individual groups, so we pull all data and filter
     onProgress?.({ current: 0, total: 1, action: 'pull', message: 'Fetching all data to get group details...' })
     const result = await this.pull(onProgress)
     if (result.success && result.data) {
-      const group = result.data.emojiGroups.find(g => g.id === groupId)
+      const groups = result.data.emojiGroups as GroupLike[]
+      const group = groups.find(g => g.id === groupId)
       if (group) {
         return { success: true, group, message: 'Group details extracted' }
       } else {
@@ -254,6 +270,13 @@ export class WebDAVSyncTarget implements ISyncTarget {
       }
     }
     return { success: false, message: 'Failed to get group details', error: result.error }
+  }
+
+  async preview(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
+    // WebDAV doesn't support partial fetch, so preview is same as pull
+    return this.pull(onProgress)
   }
 }
 
@@ -271,12 +294,14 @@ export class S3SyncTarget implements ISyncTarget {
   }
 
   private async signRequest(
+    _method?: string,
+    _url?: string,
     body?: string
   ): Promise<Record<string, string>> {
     // Simple AWS Signature V4 implementation
     // For production, consider using a proper AWS SDK or library
     const date = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '')
-    const dateStamp = date.substring(0, 8)
+    // Note: dateStamp would be used for full AWS V4 signature: date.substring(0, 8)
 
     const headers: Record<string, string> = {
       'x-amz-date': date,
@@ -451,12 +476,13 @@ export class S3SyncTarget implements ISyncTarget {
   async getGroupDetails(
     groupId: string,
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; group?: any; error?: any; message: string }> {
+  ): Promise<{ success: boolean; group?: unknown; error?: unknown; message: string }> {
     // S3 does not support fetching individual groups, so we pull all data and filter
     onProgress?.({ current: 0, total: 1, action: 'pull', message: 'Fetching all data to get group details...' })
     const result = await this.pull(onProgress)
     if (result.success && result.data) {
-      const group = result.data.emojiGroups.find(g => g.id === groupId)
+      const groups = result.data.emojiGroups as GroupLike[]
+      const group = groups.find(g => g.id === groupId)
       if (group) {
         return { success: true, group, message: 'Group details extracted' }
       } else {
@@ -464,6 +490,13 @@ export class S3SyncTarget implements ISyncTarget {
       }
     }
     return { success: false, message: 'Failed to get group details', error: result.error }
+  }
+
+  async preview(
+    onProgress?: ProgressCallback
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
+    // S3 doesn't support partial fetch, so preview is same as pull
+    return this.pull(onProgress)
   }
 }
 
@@ -550,10 +583,10 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
       const itemsToPush = [
         { key: 'settings', data: data.settings, displayName: '设置配置' },
-        ...data.emojiGroups.map(g => ({ 
-          key: encodeURIComponent(g.name), 
+        ...(data.emojiGroups as GroupLike[]).map(g => ({
+          key: encodeURIComponent(g.name ?? ''),
           data: g,
-          displayName: `表情组：${g.name}`
+          displayName: `表情组：${g.name ?? ''}`
         }))
       ]
       
@@ -699,8 +732,9 @@ export class CloudflareSyncTarget implements ISyncTarget {
         }
       }
 
-      if (pulledData.settings?.version) version = pulledData.settings.version
-      if (pulledData.settings?.timestamp) timestamp = pulledData.settings.timestamp
+      const settings = pulledData.settings as SettingsLike | undefined
+      if (settings?.version && typeof settings.version === 'string') version = settings.version
+      if (settings?.timestamp && typeof settings.timestamp === 'number') timestamp = settings.timestamp
 
       const finalData: SyncData = {
         settings: pulledData.settings || {},
@@ -837,8 +871,9 @@ export class CloudflareSyncTarget implements ISyncTarget {
       }
 
       // Try to get top level version/timestamp if it was set
-      if (pulledData.settings?.version) version = pulledData.settings.version
-      if (pulledData.settings?.timestamp) timestamp = pulledData.settings.timestamp
+      const settings = pulledData.settings as SettingsLike | undefined
+      if (settings?.version && typeof settings.version === 'string') version = settings.version
+      if (settings?.timestamp && typeof settings.timestamp === 'number') timestamp = settings.timestamp
 
       const finalData: SyncData = {
         settings: pulledData.settings || {},

@@ -4,9 +4,11 @@
  */
 
 import type { Ref } from 'vue'
+
+import type { SaveControl } from './core/types'
+
 import type { Emoji, EmojiGroup } from '@/types/type'
 import { newStorageHelpers } from '@/utils/newStorage'
-import type { SaveControl } from './core/types'
 
 export interface FavoritesStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -158,7 +160,10 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
     } else {
       favorites.value.add(emojiId)
     }
-    console.log('[FavoritesStore] toggleFavorite', { id: emojiId, isFavorite: favorites.value.has(emojiId) })
+    console.log('[FavoritesStore] toggleFavorite', {
+      id: emojiId,
+      isFavorite: favorites.value.has(emojiId)
+    })
     saveControl.maybeSave()
   }
 

@@ -4,9 +4,11 @@
  */
 
 import type { Ref } from 'vue'
+
+import type { SaveControl, DuplicateGroup } from './core/types'
+
 import type { Emoji, EmojiGroup } from '@/types/type'
 import { normalizeImageUrl } from '@/utils/isImageUrl'
-import type { SaveControl, DuplicateGroup } from './core/types'
 
 export interface EmojiCrudStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -124,7 +126,11 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
   /**
    * Update an emoji at a specific index in a group
    */
-  const updateEmojiInGroup = (groupId: string, index: number, updatedEmoji: Partial<Emoji>): void => {
+  const updateEmojiInGroup = (
+    groupId: string,
+    index: number,
+    updatedEmoji: Partial<Emoji>
+  ): void => {
     const group = groups.value.find(g => g.id === groupId)
     const emojis = group?.emojis || []
     if (group && index >= 0 && index < emojis.length) {
@@ -253,7 +259,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
 
       for (const e of group.emojis) {
         if (!e) continue
-        const name = typeof (e as Emoji).name === 'string' ? (e as Emoji).name.trim().toLowerCase() : ''
+        const name =
+          typeof (e as Emoji).name === 'string' ? (e as Emoji).name.trim().toLowerCase() : ''
         if (!name) {
           kept.push(e)
           continue

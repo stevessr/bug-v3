@@ -5,8 +5,10 @@
 
 import type { Ref } from 'vue'
 import { computed } from 'vue'
-import type { AppSettings, CustomCssBlock } from '@/types/type'
+
 import type { SaveControl } from './core/types'
+
+import type { AppSettings, CustomCssBlock } from '@/types/type'
 
 export interface CssStoreOptions {
   settings: Ref<AppSettings>
@@ -132,7 +134,11 @@ export function useCssStore(options: CssStoreOptions) {
   /**
    * Create a new CSS block
    */
-  const createCssBlock = (name: string, content: string = '', enabled: boolean = true): CustomCssBlock => {
+  const createCssBlock = (
+    name: string,
+    content: string = '',
+    enabled: boolean = true
+  ): CustomCssBlock => {
     const block: CustomCssBlock = {
       id: `css-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name,

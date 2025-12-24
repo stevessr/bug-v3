@@ -1,9 +1,11 @@
-import { type AppSettings } from '../types/type'
+import { type AppSettings, type EmojiGroup } from '../types/type'
 import {
   createSyncTarget,
   type CloudflareConfig,
   type SyncData,
-  type SyncResult
+  type SyncResult,
+  type ProgressCallback as SyncProgressCallback,
+  type Progress
 } from '../userscript/plugins/syncTargets'
 
 import { newStorageHelpers } from './newStorage'
@@ -16,7 +18,8 @@ export interface ExtendedCloudflareConfig extends CloudflareConfig {
 }
 
 // Extend the SyncData interface to include favorites explicitly
-export interface ExtendedSyncData extends SyncData {
+export interface ExtendedSyncData extends Omit<SyncData, 'settings' | 'emojiGroups'> {
+  emojiGroups: EmojiGroup[]
   settings: AppSettings & {
     favorites?: string[]
   }
@@ -355,28 +358,30 @@ export class CloudflareSyncService {
         newStorageHelpers.getFavorites()
       ])
 
+      // Cast remote data to typed structure for easier access
+      const remoteGroups = remoteData.emojiGroups as EmojiGroup[]
+      const remoteSettings = remoteData.settings as AppSettings | null
+
       // Merge groups: prefer remote groups but preserve local-only groups if needed
-      const remoteGroupIds = new Set(remoteData.emojiGroups.map(g => g.id))
+      const remoteGroupIds = new Set(remoteGroups.map(g => g.id))
       const localOnlyGroups = localGroups.filter(g => !remoteGroupIds.has(g.id))
 
       // For overlapping groups, prefer remote data (more recent sync)
       const mergedGroups = [
         ...localOnlyGroups, // Keep local-only groups
-        ...remoteData.emojiGroups // Add remote groups (potentially overwriting local)
+        ...remoteGroups // Add remote groups (potentially overwriting local)
       ]
 
       // Merge settings: prefer remote settings but preserve local-only settings
-      const mergedSettings = { ...localSettings, ...remoteData.settings }
+      const mergedSettings = { ...localSettings, ...remoteSettings }
       // Ensure lastModified is updated to avoid sync conflicts
       mergedSettings.lastModified = Date.now()
 
       // Get favorites from remote data (they might be in settings or separate)
       let remoteFavorites: string[] = []
-      if (
-        (remoteData as ExtendedSyncData).settings &&
-        Array.isArray((remoteData as ExtendedSyncData).settings.favorites)
-      ) {
-        remoteFavorites = (remoteData as ExtendedSyncData).settings.favorites as string[]
+      const extendedSettings = remoteSettings as (AppSettings & { favorites?: string[] }) | null
+      if (extendedSettings && Array.isArray(extendedSettings.favorites)) {
+        remoteFavorites = extendedSettings.favorites
       }
 
       // Merge favorites: combine both sets
@@ -508,13 +513,12 @@ export class CloudflareSyncService {
           const target = createSyncTarget(this.config!)
 
           // First test connection
-          const testResult = await target.test(progress => {
-            onProgress?.({
-              current: progress.current,
-              total: progress.total,
-              action: 'test',
-              message: `Checking cloud config (${progress.current}/${progress.total})...`
-            })
+          const testResult = await target.test()
+          onProgress?.({
+            current: 1,
+            total: 2,
+            action: 'test',
+            message: 'Connection test completed'
           })
 
           if (!testResult.success) {
@@ -562,17 +566,23 @@ export class CloudflareSyncService {
                   // Include settings and group list only
                   settings: data.settings || {},
                   emojiGroups: groupList,
-                  metadata: {
-                    totalGroups: groupList.length,
-                    totalEmojis: groupList.reduce(
-                      (total: number, group: any) => total + group.emojiCount,
-                      0
-                    ),
-                    favoritesCount: data.settings?.favorites?.length || 0,
-                    lastModified: data.settings?.lastModified || data.timestamp,
-                    // Flag to indicate this is preview data (no emoji details)
-                    isPreview: true
-                  }
+                  metadata: (() => {
+                    const settings = data.settings as
+                      | (AppSettings & { favorites?: string[] })
+                      | null
+                    return {
+                      totalGroups: groupList.length,
+                      totalEmojis: groupList.reduce(
+                        (total: number, group: { emojiCount?: number }) =>
+                          total + (group.emojiCount || 0),
+                        0
+                      ),
+                      favoritesCount: settings?.favorites?.length || 0,
+                      lastModified: settings?.lastModified || data.timestamp,
+                      // Flag to indicate this is preview data (no emoji details)
+                      isPreview: true
+                    }
+                  })()
                 },
                 message: 'Cloud configuration previewed successfully'
               }
@@ -652,7 +662,11 @@ export class CloudflareSyncService {
         async () => {
           const target = createSyncTarget(this.config!)
           if (target.getGroupDetails) {
-            return await target.getGroupDetails(groupName, onProgress)
+            // Wrap onProgress to convert from local ProgressCallback to SyncProgressCallback
+            const wrappedProgress: SyncProgressCallback | undefined = onProgress
+              ? (p: Progress) => onProgress({ ...p, message: p.message || '' })
+              : undefined
+            return await target.getGroupDetails(groupName, wrappedProgress)
           } else {
             return {
               success: false,

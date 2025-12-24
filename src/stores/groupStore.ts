@@ -5,9 +5,11 @@
 
 import { computed } from 'vue'
 import type { Ref } from 'vue'
+
+import type { SaveControl } from './core/types'
+
 import type { EmojiGroup } from '@/types/type'
 import { newStorageHelpers } from '@/utils/newStorage'
-import type { SaveControl } from './core/types'
 
 export interface GroupStoreOptions {
   groups: Ref<EmojiGroup[]>

@@ -1,13 +1,18 @@
-import { newStorageHelpers } from '../../utils/newStorage'
 import { getChromeAPI } from '../utils/main.ts'
 
-export async function handleAddToFavorites(emoji: any, sendResponse: any) {
+import { newStorageHelpers } from '@/utils/newStorage'
+import type { Emoji, EmojiGroup } from '@/types/type'
+
+export async function handleAddToFavorites(
+  emoji: Partial<Emoji>,
+  sendResponse: (response: { success: boolean; message?: string; error?: string }) => void
+) {
   // mark callback as referenced to avoid unused-var lint
   void sendResponse
   try {
     // Use the unified newStorageHelpers to read/update groups for consistency
     const groups = await newStorageHelpers.getAllEmojiGroups()
-    let favoritesGroup = groups.find((g: any) => g.id === 'favorites')
+    let favoritesGroup = groups.find((g: EmojiGroup) => g.id === 'favorites')
     if (!favoritesGroup) {
       console.warn('Favorites group not found - creating one')
       favoritesGroup = { id: 'favorites', name: '常用表情', icon: '⭐', order: 0, emojis: [] }
@@ -20,7 +25,7 @@ export async function handleAddToFavorites(emoji: any, sendResponse: any) {
     }
 
     const now = Date.now()
-    const existingEmojiIndex = favoritesGroup.emojis.findIndex((e: any) => e.url === emoji.url)
+    const existingEmojiIndex = favoritesGroup.emojis.findIndex((e: Emoji) => e.url === emoji.url)
 
     if (existingEmojiIndex !== -1) {
       const existingEmoji = favoritesGroup.emojis[existingEmojiIndex]
@@ -36,10 +41,14 @@ export async function handleAddToFavorites(emoji: any, sendResponse: any) {
         existingEmoji.lastUsed = now
       }
     } else {
-      const favoriteEmoji = {
+      const favoriteEmoji: Emoji = {
         ...emoji,
         id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        packet: emoji.packet ?? 0,
+        name: emoji.name ?? '',
+        url: emoji.url ?? '',
         groupId: 'favorites',
+        tags: emoji.tags ?? [],
         usageCount: 1,
         lastUsed: now,
         addedAt: now
@@ -47,7 +56,7 @@ export async function handleAddToFavorites(emoji: any, sendResponse: any) {
       favoritesGroup.emojis.push(favoriteEmoji)
     }
 
-    favoritesGroup.emojis.sort((a: any, b: any) => (b.lastUsed || 0) - (a.lastUsed || 0))
+    favoritesGroup.emojis.sort((a: Emoji, b: Emoji) => (b.lastUsed || 0) - (a.lastUsed || 0))
 
     // Persist via newStorageHelpers which updates group index and individual groups
     await newStorageHelpers.setAllEmojiGroups(groups)

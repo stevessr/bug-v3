@@ -5,8 +5,10 @@
 
 import type { Ref, ComputedRef } from 'vue'
 import { computed } from 'vue'
-import type { Emoji, EmojiGroup } from '@/types/type'
+
 import type { SaveControl } from './core/types'
+
+import type { Emoji, EmojiGroup } from '@/types/type'
 
 export interface TagStoreOptions {
   groups: Ref<EmojiGroup[]>

@@ -1,5 +1,6 @@
 import { cachedState } from '../data/state'
 
+import type { AppSettings, CustomCssBlock } from '@/types/type'
 import { createE, DOA, DEBI } from '@/content/utils/createEl'
 
 const STYLE_ID = 'emoji-extension-custom-css'
@@ -25,14 +26,14 @@ export function applyCustomCssFromCache() {
 // Get combined CSS from blocks in cache
 function getCombinedCustomCssFromCache(): string {
   try {
-    const settings = cachedState.settings as any
+    const settings = cachedState.settings as AppSettings | null
     if (!settings) return ''
 
     // Check if new block system is available
     if (settings.customCssBlocks && Array.isArray(settings.customCssBlocks)) {
       return settings.customCssBlocks
-        .filter((block: any) => block.enabled)
-        .map((block: any) => block.content || '')
+        .filter((block: CustomCssBlock) => block.enabled)
+        .map((block: CustomCssBlock) => block.content || '')
         .join('\n\n')
         .trim()
     }

@@ -21,6 +21,20 @@ import {
   type ProgressCallback
 } from '../plugins/syncTargets'
 
+import type { UserscriptStorage } from '../userscript-storage'
+
+// Type aliases for clarity
+type UserscriptSettings = UserscriptStorage['settings']
+type UserscriptEmojiGroup = UserscriptStorage['emojiGroups'][number]
+
+// Internal typed sync data for userscript
+interface TypedSyncData {
+  emojiGroups: UserscriptEmojiGroup[]
+  settings: UserscriptSettings
+  timestamp: number
+  version: string
+}
+
 const SYNC_CONFIG_KEY = 'emoji_extension_sync_config'
 
 // Load sync configuration from localStorage
@@ -47,7 +61,7 @@ function saveSyncConfig(config: SyncTargetConfig): void {
 }
 
 // Create sync data from current state
-function createSyncDataFromState(): SyncData {
+function createSyncDataFromState(): TypedSyncData {
   return {
     emojiGroups: userscriptState.emojiGroups,
     settings: userscriptState.settings,
@@ -59,7 +73,14 @@ function createSyncDataFromState(): SyncData {
 // Apply sync data to current state by merging
 function applySyncDataToState(data: SyncData): void {
   const localData = createSyncDataFromState()
-  const mergedData = mergeSyncData(localData, data)
+  // Cast remote data to typed structure
+  const typedRemote: TypedSyncData = {
+    emojiGroups: data.emojiGroups as UserscriptEmojiGroup[],
+    settings: data.settings as UserscriptSettings,
+    timestamp: data.timestamp,
+    version: data.version
+  }
+  const mergedData = mergeSyncData(localData, typedRemote)
   userscriptState.emojiGroups = mergedData.emojiGroups
   userscriptState.settings = mergedData.settings
   saveDataToLocalStorage({
@@ -69,7 +90,7 @@ function applySyncDataToState(data: SyncData): void {
 }
 
 // Merge remote data into local data
-function mergeSyncData(local: SyncData, remote: SyncData): SyncData {
+function mergeSyncData(local: TypedSyncData, remote: TypedSyncData): TypedSyncData {
   // Settings: Remote settings overwrite local settings
   const mergedSettings = { ...local.settings, ...remote.settings }
 
@@ -81,8 +102,10 @@ function mergeSyncData(local: SyncData, remote: SyncData): SyncData {
     const localGroup = localGroupsMap.get(remoteGroup.name)
     if (localGroup) {
       // Group exists, merge emojis within it
-      const localEmojisMap = new Map((localGroup.emojis || []).map((e: any) => [e.name, e]))
-      for (const remoteEmoji of remoteGroup.emojis || []) {
+      const localEmojis = (localGroup.emojis || []) as Array<{ name?: string; [key: string]: unknown }>
+      const localEmojisMap = new Map(localEmojis.map((e) => [e.name, e]))
+      const remoteEmojis = (remoteGroup.emojis || []) as Array<{ name?: string; [key: string]: unknown }>
+      for (const remoteEmoji of remoteEmojis) {
         // If emoji exists, remote overwrites local. If not, it's added.
         localEmojisMap.set(remoteEmoji.name, remoteEmoji)
       }
@@ -363,10 +386,11 @@ function getCurrentConfigFromModal(modal: HTMLElement): SyncTargetConfig | null 
 }
 
 function showPullPreviewModal(data: SyncData, config: SyncTargetConfig, onConfirm: () => void) {
+  const groups = data.emojiGroups as Array<{ name?: string }>
   const groupListHTML =
-    data.emojiGroups.length > 0
-      ? `<ul>${data.emojiGroups
-          .map(g => `<li style="color: var(--emoji-modal-text);">${g.name}</li>`)
+    groups.length > 0
+      ? `<ul>${groups
+          .map(g => `<li style="color: var(--emoji-modal-text);">${g.name ?? ''}</li>`)
           .join('')}</ul>`
       : '<p style="color: var(--emoji-modal-text);">没有表情分组</p>'
 
@@ -378,7 +402,7 @@ function showPullPreviewModal(data: SyncData, config: SyncTargetConfig, onConfir
           <strong>备份时间:</strong> ${new Date(data.timestamp).toLocaleString()}
         </div>
         <div style="color: var(--emoji-modal-text); margin-bottom: 8px;">
-          <strong>表情分组数量:</strong> ${data.emojiGroups.length}
+          <strong>表情分组数量:</strong> ${groups.length}
         </div>
         <div>
           <strong style="color: var(--emoji-modal-text);">分组列表:</strong>

@@ -1,7 +1,7 @@
 import { ref, onMounted, watch } from 'vue'
 
-import { useEmojiStore } from '../stores/emojiStore'
-import type { Emoji } from '../types/type'
+import { useEmojiStore } from '@/stores/emojiStore'
+import type { Emoji } from '@/types/type'
 
 export function usePopup(options?: { manageUrl?: boolean }) {
   const emojiStore = useEmojiStore()

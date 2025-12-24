@@ -1,9 +1,11 @@
-import { newStorageHelpers } from '../../utils/newStorage'
 import { getChromeAPI } from '../utils/main.ts'
 
+import { newStorageHelpers } from '@/utils/newStorage'
+import type { EmojiGroup, AppSettings } from '@/types/type'
+
 // 缓存机制：减少重复存储读取
-let cachedGroups: any[] | null = null
-let cachedSettings: any | null = null
+let cachedGroups: EmojiGroup[] | null = null
+let cachedSettings: AppSettings | null = null
 let cachedFavorites: string[] | null = null
 let cacheTimestamp = 0
 const CACHE_TTL = 5000 // 5 秒缓存有效期
@@ -37,7 +39,25 @@ export function invalidateCache() {
   cacheTimestamp = 0
 }
 
-export async function handleGetEmojiData(message: any, _sendResponse: (_resp: any) => void) {
+interface GetEmojiDataMessage {
+  sourceDomain?: string
+}
+
+interface ResponsePayload {
+  success: boolean
+  data?: {
+    groups: EmojiGroup[]
+    settings: AppSettings
+    favorites: string[] | null
+    value?: unknown
+  }
+  error?: string
+}
+
+export async function handleGetEmojiData(
+  message: GetEmojiDataMessage,
+  _sendResponse: (resp: ResponsePayload) => void
+) {
   // mark callback as referenced
   void _sendResponse
 
@@ -61,12 +81,12 @@ export async function handleGetEmojiData(message: any, _sendResponse: (_resp: an
         }
 
         if (entry && Array.isArray(entry.enabledGroups)) {
-          const allowed = new Set(entry.enabledGroups.map((k: any) => String(k)))
+          const allowed = new Set(entry.enabledGroups.map((k: string) => String(k)))
           finalGroups = groups.filter(g => g && allowed.has(String(g.id)))
           // Ensure favorites group is always included in returned groups
-          const hasFavorites = finalGroups.some((g: any) => String(g.id) === 'favorites')
+          const hasFavorites = finalGroups.some((g: EmojiGroup) => String(g.id) === 'favorites')
           if (!hasFavorites) {
-            const favFromAll = groups.find((g: any) => String(g.id) === 'favorites')
+            const favFromAll = groups.find((g: EmojiGroup) => String(g.id) === 'favorites')
             if (favFromAll) {
               finalGroups.unshift(favFromAll)
             } else {
@@ -95,7 +115,7 @@ export async function handleGetEmojiData(message: any, _sendResponse: (_resp: an
         favorites
       }
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to get emoji data via newStorageHelpers:', error)
     _sendResponse({
       success: false,
@@ -104,16 +124,19 @@ export async function handleGetEmojiData(message: any, _sendResponse: (_resp: an
   }
 }
 
-export async function handleGetEmojiSetting(key: string, _sendResponse: (_resp: any) => void) {
+export async function handleGetEmojiSetting(
+  key: keyof AppSettings,
+  _sendResponse: (resp: { success: boolean; data?: { value: unknown }; error?: string }) => void
+) {
   void _sendResponse
   try {
     const settings = await newStorageHelpers.getSettings()
     if (settings && Object.prototype.hasOwnProperty.call(settings, key)) {
-      _sendResponse({ success: true, data: { value: (settings as any)[key] } })
+      _sendResponse({ success: true, data: { value: settings[key] } })
     } else {
       _sendResponse({ success: true, data: { value: null } })
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to get emoji setting:', key, error)
     _sendResponse({
       success: false,
@@ -122,7 +145,10 @@ export async function handleGetEmojiSetting(key: string, _sendResponse: (_resp: 
   }
 }
 
-export async function handleSaveEmojiData(data: any, _sendResponse: (_resp: any) => void) {
+export async function handleSaveEmojiData(
+  data: Record<string, unknown>,
+  _sendResponse: (resp: { success: boolean; error?: string }) => void
+) {
   // mark callback as referenced
   void _sendResponse
   // no additional args expected here
@@ -137,7 +163,7 @@ export async function handleSaveEmojiData(data: any, _sendResponse: (_resp: any)
     // 清除缓存以确保下次读取获取最新数据
     invalidateCache()
     _sendResponse({ success: true })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to save emoji data:', error)
     _sendResponse({
       success: false,
@@ -149,10 +175,12 @@ export async function handleSaveEmojiData(data: any, _sendResponse: (_resp: any)
 export function setupStorageChangeListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.storage && chromeAPI.storage.onChanged) {
-    chromeAPI.storage.onChanged.addListener((changes: any, namespace: any) => {
-      console.log('Storage changed:', changes, namespace)
-      // Placeholder for cloud sync or other reactions
-    })
+    chromeAPI.storage.onChanged.addListener(
+      (changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => {
+        console.log('Storage changed:', changes, namespace)
+        // Placeholder for cloud sync or other reactions
+      }
+    )
   }
 }
 
