@@ -6,6 +6,7 @@
 import { nanoid } from 'nanoid'
 
 import { syncDb } from '@/utils/sync-db'
+import { cloudflareSyncService } from '@/utils/cloudflareSync'
 import type { DeltaRecord, QueueItem } from '@/types/sync'
 
 export class OfflineQueue {
@@ -131,23 +132,34 @@ export class OfflineQueue {
 
   /**
    * 同步单个队列项
-   * 这里需要实际的同步逻辑，暂时返回成功
+   * 使用 Cloudflare 同步服务推送变更到远程
    */
   private async syncItem(item: QueueItem): Promise<boolean> {
     try {
-      // TODO: 实现实际的同步逻辑
-      // 这里需要调用 IncrementalSyncService 来推送变更
-
       console.log('[OfflineQueue] Syncing item:', {
         id: item.id,
         operation: item.delta.operation,
         entityType: item.delta.entityType
       })
 
-      // 模拟网络延迟
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // 检查 Cloudflare 同步服务是否已配置
+      const isConfigured = await cloudflareSyncService.initialize()
+      if (!isConfigured) {
+        console.warn('[OfflineQueue] Cloudflare sync not configured, skipping item')
+        // 返回 true 以移除该项，因为没有可用的同步服务
+        return true
+      }
 
-      return true
+      // 使用 Cloudflare 同步服务推送数据
+      const result = await cloudflareSyncService.pushData()
+
+      if (result.success) {
+        console.log('[OfflineQueue] Successfully synced item:', item.id)
+        return true
+      } else {
+        console.error('[OfflineQueue] Failed to sync item:', result.message)
+        return false
+      }
     } catch (error) {
       console.error('[OfflineQueue] Failed to sync item:', error)
       return false

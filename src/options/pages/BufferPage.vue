@@ -617,10 +617,9 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
     // 创建新分组
     const newGroup = emojiStore.createGroup(data.name, data.icon)
 
-    // 如果有详细信息，可以在这里保存（需要扩展 emojiStore 的 createGroup 方法）
+    // 如果有详细信息，保存到分组
     if (data.detail) {
-      // TODO: 保存详细信息到分组
-      console.log('Group detail:', data.detail)
+      emojiStore.updateGroup(newGroup.id, { detail: data.detail })
     }
 
     // 设置目标分组 ID
