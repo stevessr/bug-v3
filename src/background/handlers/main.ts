@@ -8,5 +8,6 @@ export {
   handleGetEmojiSetting,
   handleSaveEmojiData,
   setupStorageChangeListener,
-  setupPeriodicCleanup
+  setupPeriodicCleanup,
+  invalidateCache
 } from './handlersImpl'

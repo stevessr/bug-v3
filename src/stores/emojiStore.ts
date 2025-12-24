@@ -175,6 +175,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- Save control (batching) ---
   let batchDepth = 0
   const pendingSave = ref(false)
+  let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  const SAVE_DEBOUNCE_MS = 300 // 300ms 防抖，合并快速连续的保存请求
 
   const beginBatch = () => {
     batchDepth++
@@ -193,8 +195,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       pendingSave.value = true
       return
     }
-    // fire-and-forget; outer callers need not await persistence
-    void saveData()
+
+    // 使用防抖合并快速连续的保存请求
+    if (saveDebounceTimer) {
+      clearTimeout(saveDebounceTimer)
+    }
+    saveDebounceTimer = setTimeout(() => {
+      saveDebounceTimer = null
+      // fire-and-forget; outer callers need not await persistence
+      void saveData()
+    }, SAVE_DEBOUNCE_MS)
   }
 
   // --- Actions ---

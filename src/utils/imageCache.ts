@@ -1,9 +1,10 @@
 /**
- * Image Cache Utility using IndexedDB
- * Environment-aware utility for browser extension and userscript contexts
+ * Image Cache Utility using IndexedDB with Memory Cache Layer
+ * 优化版本：添加内存缓存层、批量操作、更智能的预加载
  */
 
 declare const chrome: any
+declare const __ENABLE_LOGGING__: boolean
 
 export interface ImageCacheOptions {
   dbName?: string
@@ -12,6 +13,7 @@ export interface ImageCacheOptions {
   maxCacheSize?: number // in bytes
   maxCacheEntries?: number
   maxAge?: number // in milliseconds
+  memoryBudget?: number // 内存缓存预算 (bytes)
 }
 
 export interface CacheEntry {
@@ -19,6 +21,14 @@ export interface CacheEntry {
   url: string
   blob: Blob
   timestamp: number
+  size: number
+  lastAccessed: number
+  accessCount: number
+}
+
+// 内存缓存条目
+interface MemoryCacheEntry {
+  blobUrl: string
   size: number
   lastAccessed: number
   accessCount: number
@@ -53,7 +63,6 @@ function getIndexedDB(): IDBFactory | null {
     return indexedDB
   }
 
-  // Fallback for different environments
   if (typeof window !== 'undefined' && (window as any).indexedDB) {
     return (window as any).indexedDB
   }
@@ -65,23 +74,168 @@ function getIndexedDB(): IDBFactory | null {
   return null
 }
 
+// 日志工具函数
+function logCache(message: string, ...args: any[]) {
+  if (typeof __ENABLE_LOGGING__ !== 'undefined' && __ENABLE_LOGGING__) {
+    console.log(`[ImageCache] ${message}`, ...args)
+  }
+}
+
+function warnCache(message: string, ...args: any[]) {
+  console.warn(`[ImageCache] ${message}`, ...args)
+}
+
+function errorCache(message: string, ...args: any[]) {
+  console.error(`[ImageCache] ${message}`, ...args)
+}
+
 /**
- * Image Cache class with IndexedDB backend
+ * LRU 内存缓存
+ */
+class LRUMemoryCache {
+  private cache = new Map<string, MemoryCacheEntry>()
+  private currentSize = 0
+  private readonly maxSize: number
+
+  constructor(maxSize: number) {
+    this.maxSize = maxSize
+  }
+
+  get(url: string): string | null {
+    const entry = this.cache.get(url)
+    if (!entry) return null
+
+    // 更新访问信息并移到末尾（最近访问）
+    entry.lastAccessed = Date.now()
+    entry.accessCount++
+    this.cache.delete(url)
+    this.cache.set(url, entry)
+
+    return entry.blobUrl
+  }
+
+  set(url: string, blobUrl: string, size: number): void {
+    // 如果已存在，先移除旧的
+    if (this.cache.has(url)) {
+      const old = this.cache.get(url)!
+      this.currentSize -= old.size
+      // 不释放旧的 blobUrl，因为可能还在使用
+      this.cache.delete(url)
+    }
+
+    // 确保有足够空间
+    while (this.currentSize + size > this.maxSize && this.cache.size > 0) {
+      this.evictOne()
+    }
+
+    // 如果单个条目太大，直接返回不缓存
+    if (size > this.maxSize) {
+      return
+    }
+
+    this.cache.set(url, {
+      blobUrl,
+      size,
+      lastAccessed: Date.now(),
+      accessCount: 1
+    })
+    this.currentSize += size
+  }
+
+  has(url: string): boolean {
+    return this.cache.has(url)
+  }
+
+  delete(url: string): void {
+    const entry = this.cache.get(url)
+    if (entry) {
+      this.currentSize -= entry.size
+      try {
+        URL.revokeObjectURL(entry.blobUrl)
+      } catch {
+        // 忽略释放失败
+      }
+      this.cache.delete(url)
+    }
+  }
+
+  private evictOne(): void {
+    // Map 的第一个元素是最旧的（LRU）
+    const firstKey = this.cache.keys().next().value
+    if (firstKey) {
+      this.delete(firstKey)
+    }
+  }
+
+  clear(): void {
+    for (const entry of this.cache.values()) {
+      try {
+        URL.revokeObjectURL(entry.blobUrl)
+      } catch {
+        // 忽略释放失败
+      }
+    }
+    this.cache.clear()
+    this.currentSize = 0
+  }
+
+  getStats(): { entries: number; size: number; maxSize: number } {
+    return {
+      entries: this.cache.size,
+      size: this.currentSize,
+      maxSize: this.maxSize
+    }
+  }
+}
+
+/**
+ * 正在进行的请求追踪器（避免重复请求）
+ */
+class RequestTracker {
+  private pending = new Map<string, Promise<string>>()
+
+  track<T extends string>(url: string, request: () => Promise<T>): Promise<T> {
+    const existing = this.pending.get(url)
+    if (existing) {
+      return existing as Promise<T>
+    }
+
+    const promise = request().finally(() => {
+      this.pending.delete(url)
+    })
+
+    this.pending.set(url, promise as Promise<string>)
+    return promise
+  }
+
+  isPending(url: string): boolean {
+    return this.pending.has(url)
+  }
+}
+
+/**
+ * Image Cache class with IndexedDB backend and Memory Cache Layer
  */
 export class ImageCache {
   private db: IDBDatabase | null = null
   private readonly options: Required<ImageCacheOptions>
   private isInitialized = false
+  private initPromise: Promise<void> | null = null
+  private memoryCache: LRUMemoryCache
+  private requestTracker = new RequestTracker()
 
   constructor(options: ImageCacheOptions = {}) {
     this.options = {
       dbName: options.dbName || 'ImageCacheDB',
       storeName: options.storeName || 'images',
       version: options.version || 1,
-      maxCacheSize: options.maxCacheSize || 50 * 1024 * 1024, // 50MB
-      maxCacheEntries: options.maxCacheEntries || 1000,
-      maxAge: options.maxAge || 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxCacheSize: options.maxCacheSize || 100 * 1024 * 1024, // 100MB
+      maxCacheEntries: options.maxCacheEntries || 2000,
+      maxAge: options.maxAge || 14 * 24 * 60 * 60 * 1000, // 14 days
+      memoryBudget: options.memoryBudget || 20 * 1024 * 1024 // 20MB 内存缓存
     }
+
+    this.memoryCache = new LRUMemoryCache(this.options.memoryBudget)
   }
 
   /**
@@ -89,7 +243,13 @@ export class ImageCache {
    */
   async init(): Promise<void> {
     if (this.isInitialized) return
+    if (this.initPromise) return this.initPromise
 
+    this.initPromise = this._doInit()
+    return this.initPromise
+  }
+
+  private async _doInit(): Promise<void> {
     const indexedDB = getIndexedDB()
     if (!indexedDB) {
       throw new Error('IndexedDB is not available in this environment')
@@ -100,7 +260,7 @@ export class ImageCache {
 
       request.onerror = () => {
         const error = request.error
-        console.error(`[ImageCache] Failed to open database:`, error)
+        errorCache(`Failed to open database:`, error)
         reject(new Error(`Failed to open IndexedDB: ${error?.message || 'Unknown error'}`))
       }
 
@@ -108,13 +268,12 @@ export class ImageCache {
         this.db = request.result
         this.isInitialized = true
 
-        // Handle database errors
         this.db.onerror = event => {
-          console.error(`[ImageCache] Database error:`, event)
+          errorCache(`Database error:`, event)
         }
 
-        console.log(
-          `[ImageCache] Database initialized (${isExtensionContext() ? 'extension' : 'userscript'} context)`
+        logCache(
+          `Database initialized (${isExtensionContext() ? 'extension' : 'userscript'} context)`
         )
         resolve()
       }
@@ -122,27 +281,22 @@ export class ImageCache {
       request.onupgradeneeded = event => {
         const db = (event.target as IDBOpenDBRequest).result
 
-        // Create object store if it doesn't exist
         if (!db.objectStoreNames.contains(this.options.storeName)) {
           const store = db.createObjectStore(this.options.storeName, { keyPath: 'id' })
-
-          // Create indexes for efficient queries
           store.createIndex('url', 'url', { unique: true })
           store.createIndex('timestamp', 'timestamp', { unique: false })
           store.createIndex('lastAccessed', 'lastAccessed', { unique: false })
           store.createIndex('size', 'size', { unique: false })
-
-          console.log(`[ImageCache] Created object store and indexes`)
+          logCache(`Created object store and indexes`)
         }
       }
     })
   }
 
   /**
-   * Generate a consistent ID from URL - use URL directly as key
+   * Generate a consistent ID from URL
    */
   private generateId(url: string): string {
-    // Use the URL directly as the key - no hashing needed
     return url
   }
 
@@ -156,9 +310,14 @@ export class ImageCache {
   }
 
   /**
-   * Check if an image is cached
+   * Check if an image is cached (内存或 IndexedDB)
    */
   async isImageCached(url: string): Promise<boolean> {
+    // 首先检查内存缓存
+    if (this.memoryCache.has(url)) {
+      return true
+    }
+
     try {
       await this.ensureInitialized()
       if (!this.db) return false
@@ -177,13 +336,11 @@ export class ImageCache {
             return
           }
 
-          // Check if entry is too old
           const now = Date.now()
           const isExpired = now - entry.timestamp > this.options.maxAge
 
           if (isExpired) {
-            // Remove expired entry
-            this.removeEntry(id).catch(console.error)
+            this.removeEntry(id).catch(() => {})
             resolve(false)
           } else {
             resolve(true)
@@ -191,20 +348,25 @@ export class ImageCache {
         }
 
         request.onerror = () => {
-          console.error(`[ImageCache] Error checking cache for ${url}:`, request.error)
           resolve(false)
         }
       })
-    } catch (error) {
-      console.error(`[ImageCache] Error in isImageCached:`, error)
+    } catch {
       return false
     }
   }
 
   /**
-   * Get cached image as blob URL
+   * Get cached image as blob URL (优先内存缓存)
    */
   async getCachedImage(url: string): Promise<string | null> {
+    // 1. 首先检查内存缓存
+    const memoryHit = this.memoryCache.get(url)
+    if (memoryHit) {
+      return memoryHit
+    }
+
+    // 2. 检查 IndexedDB
     try {
       await this.ensureInitialized()
       if (!this.db) return null
@@ -224,60 +386,62 @@ export class ImageCache {
             return
           }
 
-          // Check if entry is expired
           const now = Date.now()
           const isExpired = now - entry.timestamp > this.options.maxAge
 
           if (isExpired) {
-            // Remove expired entry
-            this.removeEntry(id).catch(console.error)
+            this.removeEntry(id).catch(() => {})
             resolve(null)
             return
           }
 
-          // Update access statistics
+          // 更新访问统计
           entry.lastAccessed = now
           entry.accessCount++
           store.put(entry)
 
-          // Create and return blob URL
+          // 创建 blob URL 并加入内存缓存
           try {
             const blobUrl = URL.createObjectURL(entry.blob)
+            this.memoryCache.set(url, blobUrl, entry.size)
             resolve(blobUrl)
           } catch (error) {
-            console.error(`[ImageCache] Error creating blob URL:`, error)
+            errorCache(`Error creating blob URL:`, error)
             resolve(null)
           }
         }
 
         request.onerror = () => {
-          console.error(`[ImageCache] Error getting cached image for ${url}:`, request.error)
           resolve(null)
         }
       })
-    } catch (error) {
-      console.error(`[ImageCache] Error in getCachedImage:`, error)
+    } catch {
       return null
     }
   }
 
   /**
-   * Cache an image from URL
+   * Cache an image from URL (带请求去重)
    */
   async cacheImage(url: string): Promise<string> {
+    // 使用请求追踪器避免重复请求
+    return this.requestTracker.track(url, () => this._doCacheImage(url))
+  }
+
+  private async _doCacheImage(url: string): Promise<string> {
     try {
       await this.ensureInitialized()
       if (!this.db) {
         throw new Error('Database not initialized')
       }
 
-      // Check if already cached
+      // 检查是否已缓存
       const cached = await this.getCachedImage(url)
       if (cached) {
         return cached
       }
 
-      // Fetch the image
+      // 获取图片
       const response = await fetch(url, {
         mode: 'cors',
         credentials: 'omit',
@@ -292,10 +456,10 @@ export class ImageCache {
 
       const blob = await response.blob()
 
-      // Check cache size limits before adding
+      // 检查缓存限制
       await this.ensureCacheLimits()
 
-      // Store in database
+      // 存储到 IndexedDB
       const id = this.generateId(url)
       const now = Date.now()
 
@@ -316,10 +480,11 @@ export class ImageCache {
         const request = store.put(entry)
 
         request.onsuccess = () => {
-          // Create and return blob URL
           try {
             const blobUrl = URL.createObjectURL(blob)
-            console.log(`[ImageCache] Cached image: ${url} (${(blob.size / 1024).toFixed(2)} KB)`)
+            // 同时加入内存缓存
+            this.memoryCache.set(url, blobUrl, blob.size)
+            logCache(`Cached image: ${url} (${(blob.size / 1024).toFixed(2)} KB)`)
             resolve(blobUrl)
           } catch (error) {
             reject(new Error(`Failed to create blob URL: ${error}`))
@@ -331,15 +496,80 @@ export class ImageCache {
         }
       })
     } catch (error) {
-      console.error(`[ImageCache] Error caching image ${url}:`, error)
+      errorCache(`Error caching image ${url}:`, error)
       throw error
     }
+  }
+
+  /**
+   * 批量缓存图片（优化并发）
+   */
+  async cacheImages(
+    urls: string[],
+    options: {
+      concurrency?: number
+      onProgress?: (completed: number, total: number) => void
+    } = {}
+  ): Promise<Map<string, string | Error>> {
+    const { concurrency = 4, onProgress } = options
+    const results = new Map<string, string | Error>()
+    let completed = 0
+
+    // 分批处理
+    for (let i = 0; i < urls.length; i += concurrency) {
+      const batch = urls.slice(i, i + concurrency)
+      const batchResults = await Promise.allSettled(
+        batch.map(async url => {
+          const blobUrl = await this.cacheImage(url)
+          return { url, blobUrl }
+        })
+      )
+
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          results.set(result.value.url, result.value.blobUrl)
+        } else {
+          const url = batch[batchResults.indexOf(result)]
+          results.set(url, result.reason)
+        }
+        completed++
+        onProgress?.(completed, urls.length)
+      }
+    }
+
+    return results
+  }
+
+  /**
+   * 预加载图片到内存缓存
+   */
+  async preloadToMemory(urls: string[]): Promise<number> {
+    let loaded = 0
+
+    for (const url of urls) {
+      // 如果已在内存缓存中，跳过
+      if (this.memoryCache.has(url)) {
+        loaded++
+        continue
+      }
+
+      // 尝试从 IndexedDB 加载到内存
+      const blobUrl = await this.getCachedImage(url)
+      if (blobUrl) {
+        loaded++
+      }
+    }
+
+    return loaded
   }
 
   /**
    * Remove a cache entry
    */
   private async removeEntry(id: string): Promise<void> {
+    // 从内存缓存移除
+    this.memoryCache.delete(id)
+
     if (!this.db) return
 
     const transaction = this.db.transaction([this.options.storeName], 'readwrite')
@@ -348,7 +578,10 @@ export class ImageCache {
     return new Promise(resolve => {
       const request = store.delete(id)
       request.onsuccess = () => resolve()
-      request.onerror = () => console.error(`[ImageCache] Error removing entry:`, request.error)
+      request.onerror = () => {
+        warnCache(`Error removing entry:`, request.error)
+        resolve()
+      }
     })
   }
 
@@ -361,19 +594,24 @@ export class ImageCache {
     const transaction = this.db.transaction([this.options.storeName], 'readonly')
     const store = transaction.objectStore(this.options.storeName)
 
-    const getAllRequest = store.getAll()
+    return new Promise(resolve => {
+      const getAllRequest = store.getAll()
 
-    getAllRequest.onsuccess = async () => {
-      const entries = getAllRequest.result as CacheEntry[]
+      getAllRequest.onsuccess = async () => {
+        const entries = getAllRequest.result as CacheEntry[]
 
-      const totalSize = entries.reduce((sum, entry) => sum + entry.size, 0)
-      const needsCleanup =
-        entries.length > this.options.maxCacheEntries || totalSize > this.options.maxCacheSize
+        const totalSize = entries.reduce((sum, entry) => sum + entry.size, 0)
+        const needsCleanup =
+          entries.length > this.options.maxCacheEntries || totalSize > this.options.maxCacheSize
 
-      if (needsCleanup) {
-        await this.cleanupCache(entries, totalSize)
+        if (needsCleanup) {
+          await this.cleanupCache(entries, totalSize)
+        }
+        resolve()
       }
-    }
+
+      getAllRequest.onerror = () => resolve()
+    })
   }
 
   /**
@@ -382,26 +620,29 @@ export class ImageCache {
   private async cleanupCache(entries: CacheEntry[], currentSize: number): Promise<void> {
     if (!this.db) return
 
-    // Sort by last accessed time (LRU) and age
+    // 按 LRU 排序
     const sortedEntries = entries.sort((a, b) => {
       const aAge = Date.now() - a.timestamp
       const bAge = Date.now() - b.timestamp
 
-      // Prioritize removing very old entries
+      // 优先移除过期条目
       if (aAge > this.options.maxAge && bAge <= this.options.maxAge) return -1
       if (bAge > this.options.maxAge && aAge <= this.options.maxAge) return 1
 
-      // Then sort by last accessed (LRU)
+      // 然后按访问时间排序 (LRU)
       return a.lastAccessed - b.lastAccessed
     })
 
-    // Remove entries until within limits
     const toRemove: string[] = []
     let size = currentSize
     let count = entries.length
 
+    // 目标：减少到 80% 容量
+    const targetSize = this.options.maxCacheSize * 0.8
+    const targetCount = this.options.maxCacheEntries * 0.8
+
     for (const entry of sortedEntries) {
-      if (count <= this.options.maxCacheEntries && size <= this.options.maxCacheSize) {
+      if (count <= targetCount && size <= targetSize) {
         break
       }
 
@@ -410,16 +651,16 @@ export class ImageCache {
       count--
     }
 
-    // Remove entries from database
     if (toRemove.length > 0) {
       const transaction = this.db.transaction([this.options.storeName], 'readwrite')
       const store = transaction.objectStore(this.options.storeName)
 
       for (const id of toRemove) {
         store.delete(id)
+        this.memoryCache.delete(id)
       }
 
-      console.log(`[ImageCache] Cleaned up ${toRemove.length} cache entries`)
+      logCache(`Cleaned up ${toRemove.length} cache entries`)
     }
   }
 
@@ -427,6 +668,9 @@ export class ImageCache {
    * Clear all cached images
    */
   async clearCache(): Promise<void> {
+    // 清除内存缓存
+    this.memoryCache.clear()
+
     try {
       await this.ensureInitialized()
       if (!this.db) return
@@ -438,7 +682,7 @@ export class ImageCache {
         const request = store.clear()
 
         request.onsuccess = () => {
-          console.log(`[ImageCache] Cache cleared`)
+          logCache(`Cache cleared`)
           resolve()
         }
 
@@ -447,32 +691,83 @@ export class ImageCache {
         }
       })
     } catch (error) {
-      console.error(`[ImageCache] Error clearing cache:`, error)
+      errorCache(`Error clearing cache:`, error)
       throw error
     }
   }
 
   /**
-   * Get cache statistics
+   * 清除过期缓存
+   */
+  async cleanupExpired(): Promise<number> {
+    try {
+      await this.ensureInitialized()
+      if (!this.db) return 0
+
+      const transaction = this.db.transaction([this.options.storeName], 'readwrite')
+      const store = transaction.objectStore(this.options.storeName)
+      const now = Date.now()
+      let removed = 0
+
+      return new Promise(resolve => {
+        const request = store.openCursor()
+
+        request.onsuccess = event => {
+          const cursor = (event.target as IDBRequest).result as IDBCursorWithValue | null
+
+          if (cursor) {
+            const entry = cursor.value as CacheEntry
+            if (now - entry.timestamp > this.options.maxAge) {
+              cursor.delete()
+              this.memoryCache.delete(entry.url)
+              removed++
+            }
+            cursor.continue()
+          } else {
+            if (removed > 0) {
+              logCache(`Removed ${removed} expired entries`)
+            }
+            resolve(removed)
+          }
+        }
+
+        request.onerror = () => resolve(0)
+      })
+    } catch {
+      return 0
+    }
+  }
+
+  /**
+   * Get cache statistics (包括内存缓存)
    */
   async getCacheStats(): Promise<{
     totalEntries: number
     totalSize: number
+    memoryEntries: number
+    memorySize: number
+    memoryMaxSize: number
     oldestEntry?: number
     newestEntry?: number
     context: 'extension' | 'userscript' | 'unknown'
   }> {
+    const memStats = this.memoryCache.getStats()
+    const context = isExtensionContext()
+      ? ('extension' as const)
+      : isUserscriptContext()
+        ? ('userscript' as const)
+        : ('unknown' as const)
+
     try {
       await this.ensureInitialized()
       if (!this.db) {
         return {
           totalEntries: 0,
           totalSize: 0,
-          context: isExtensionContext()
-            ? ('extension' as const)
-            : isUserscriptContext()
-              ? ('userscript' as const)
-              : ('unknown' as const)
+          memoryEntries: memStats.entries,
+          memorySize: memStats.size,
+          memoryMaxSize: memStats.maxSize,
+          context
         }
       }
 
@@ -485,53 +780,58 @@ export class ImageCache {
         getAllRequest.onsuccess = () => {
           const entries = getAllRequest.result as CacheEntry[]
 
-          const stats = {
+          resolve({
             totalEntries: entries.length,
             totalSize: entries.reduce((sum, entry) => sum + entry.size, 0),
+            memoryEntries: memStats.entries,
+            memorySize: memStats.size,
+            memoryMaxSize: memStats.maxSize,
             oldestEntry:
               entries.length > 0 ? Math.min(...entries.map(e => e.timestamp)) : undefined,
             newestEntry:
               entries.length > 0 ? Math.max(...entries.map(e => e.timestamp)) : undefined,
-            context: isExtensionContext()
-              ? ('extension' as const)
-              : isUserscriptContext()
-                ? ('userscript' as const)
-                : ('unknown' as const)
-          }
-
-          resolve(stats)
+            context
+          })
         }
 
         getAllRequest.onerror = () => {
-          console.error(`[ImageCache] Error getting cache stats:`, getAllRequest.error)
           resolve({
             totalEntries: 0,
             totalSize: 0,
-            context: isExtensionContext()
-              ? ('extension' as const)
-              : isUserscriptContext()
-                ? ('userscript' as const)
-                : ('unknown' as const)
+            memoryEntries: memStats.entries,
+            memorySize: memStats.size,
+            memoryMaxSize: memStats.maxSize,
+            context
           })
         }
       })
-    } catch (error) {
-      console.error(`[ImageCache] Error getting cache stats:`, error)
+    } catch {
       return {
         totalEntries: 0,
         totalSize: 0,
-        context: isExtensionContext()
-          ? ('extension' as const)
-          : isUserscriptContext()
-            ? ('userscript' as const)
-            : ('unknown' as const)
+        memoryEntries: memStats.entries,
+        memorySize: memStats.size,
+        memoryMaxSize: memStats.maxSize,
+        context
       }
     }
   }
+
+  /**
+   * 获取内存缓存命中率统计
+   */
+  getMemoryStats() {
+    return this.memoryCache.getStats()
+  }
 }
 
-// Default cache instance
-export const imageCache = new ImageCache()
+// Default cache instance with optimized settings
+export const imageCache = new ImageCache({
+  maxCacheSize: 100 * 1024 * 1024, // 100MB IndexedDB
+  maxCacheEntries: 2000,
+  maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
+  memoryBudget: 20 * 1024 * 1024 // 20MB memory cache
+})
 
 // Convenience functions that match the requested API
 export async function cacheImage(url: string): Promise<string> {
@@ -544,4 +844,28 @@ export async function getCachedImage(url: string): Promise<string | null> {
 
 export async function isImageCached(url: string): Promise<boolean> {
   return imageCache.isImageCached(url)
+}
+
+// 新增便捷函数
+export async function cacheImages(
+  urls: string[],
+  options?: { concurrency?: number; onProgress?: (completed: number, total: number) => void }
+): Promise<Map<string, string | Error>> {
+  return imageCache.cacheImages(urls, options)
+}
+
+export async function preloadToMemory(urls: string[]): Promise<number> {
+  return imageCache.preloadToMemory(urls)
+}
+
+export async function cleanupExpired(): Promise<number> {
+  return imageCache.cleanupExpired()
+}
+
+export async function getCacheStats() {
+  return imageCache.getCacheStats()
+}
+
+export async function clearCache(): Promise<void> {
+  return imageCache.clearCache()
 }

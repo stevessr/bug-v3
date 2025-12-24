@@ -1,54 +1,75 @@
 import { newStorageHelpers } from '../../utils/newStorage'
 import { getChromeAPI } from '../utils/main.ts'
 
+// 缓存机制：减少重复存储读取
+let cachedGroups: any[] | null = null
+let cachedSettings: any | null = null
+let cachedFavorites: string[] | null = null
+let cacheTimestamp = 0
+const CACHE_TTL = 5000 // 5 秒缓存有效期
+
+async function getCachedData() {
+  const now = Date.now()
+  if (cachedGroups && cachedSettings && now - cacheTimestamp < CACHE_TTL) {
+    return { groups: cachedGroups, settings: cachedSettings, favorites: cachedFavorites }
+  }
+
+  // 并行加载数据
+  const [groups, settings, favorites] = await Promise.all([
+    newStorageHelpers.getAllEmojiGroups(),
+    newStorageHelpers.getSettings(),
+    newStorageHelpers.getFavorites()
+  ])
+
+  cachedGroups = groups || []
+  cachedSettings = settings || {}
+  cachedFavorites = favorites || []
+  cacheTimestamp = now
+
+  return { groups: cachedGroups, settings: cachedSettings, favorites: cachedFavorites }
+}
+
+// 清除缓存（在数据更新时调用）
+export function invalidateCache() {
+  cachedGroups = null
+  cachedSettings = null
+  cachedFavorites = null
+  cacheTimestamp = 0
+}
+
 export async function handleGetEmojiData(message: any, _sendResponse: (_resp: any) => void) {
   // mark callback as referenced
   void _sendResponse
 
   try {
-    // Use newStorageHelpers which understands the migrated storage layout
-    const groups = (await newStorageHelpers.getAllEmojiGroups()) || []
-    const settings = (await newStorageHelpers.getSettings()) || {}
-    const favorites = (await newStorageHelpers.getFavorites()) || []
+    // Use cached data to reduce storage reads
+    const { groups, settings, favorites } = await getCachedData()
 
     let finalGroups = groups
 
     try {
       const src = message && message.sourceDomain ? String(message.sourceDomain).trim() : ''
-      console.log('[Background] handleGetEmojiData received sourceDomain:', src)
       if (src) {
         // lookup domain config; if missing, create default entry that enables all current groups
         let entry = await newStorageHelpers.getDiscourseDomain(src)
-        console.log('[Background] existing discourse entry for', src, 'is', entry)
         if (!entry) {
           try {
             entry = await newStorageHelpers.ensureDiscourseDomainExists(src)
-            console.log('[Background] Created default discourse domain entry for', src, '->', entry)
           } catch (e) {
             console.warn('[Background] ensureDiscourseDomainExists failed for', src, e)
           }
         }
 
         if (entry && Array.isArray(entry.enabledGroups)) {
-          console.log(
-            '[Background] Filtering groups using enabledGroups for',
-            src,
-            entry.enabledGroups.length
-          )
           const allowed = new Set(entry.enabledGroups.map((k: any) => String(k)))
           finalGroups = groups.filter(g => g && allowed.has(String(g.id)))
-          console.log('[Background] finalGroups count after filter:', finalGroups.length)
           // Ensure favorites group is always included in returned groups
           const hasFavorites = finalGroups.some((g: any) => String(g.id) === 'favorites')
           if (!hasFavorites) {
             const favFromAll = groups.find((g: any) => String(g.id) === 'favorites')
             if (favFromAll) {
-              console.log('[Background] adding existing favorites group to finalGroups')
               finalGroups.unshift(favFromAll)
             } else {
-              console.log(
-                '[Background] favorites group not present in all groups - creating minimal favorites group'
-              )
               const minimalFav = {
                 id: 'favorites',
                 name: 'Favorites',
@@ -59,8 +80,6 @@ export async function handleGetEmojiData(message: any, _sendResponse: (_resp: an
               finalGroups.unshift(minimalFav)
             }
           }
-        } else {
-          console.log('[Background] No enabledGroups config for', src, ', returning all groups')
         }
       }
     } catch (e) {
@@ -115,6 +134,8 @@ export async function handleSaveEmojiData(data: any, _sendResponse: (_resp: any)
 
   try {
     await chromeAPI.storage.local.set(data)
+    // 清除缓存以确保下次读取获取最新数据
+    invalidateCache()
     _sendResponse({ success: true })
   } catch (error: any) {
     console.error('Failed to save emoji data:', error)

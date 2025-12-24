@@ -1,32 +1,62 @@
 /**
  * Unified Image URL Handler
  * Provides consistent image URL handling with caching support across all components
+ * 优化版本：利用增强的图片缓存系统
  */
 
-import { getCachedImage, cacheImage } from './imageCache'
+import { getCachedImage, cacheImage, preloadToMemory } from './imageCache'
 
 import { useEmojiStore } from '@/stores/emojiStore'
+
+declare const __ENABLE_LOGGING__: boolean
 
 export interface ImageUrlOptions {
   preferCache?: boolean
   fallbackUrl?: string
 }
 
+// 内存缓存：避免重复计算 cache-busting 参数
+const urlCache = new Map<string, string>()
+const URL_CACHE_MAX_SIZE = 2000
+
 /**
  * Add cache-busting parameter to URL to force refresh when emoji is updated
+ * 优化：使用内存缓存避免重复计算
  */
 export function addCacheBustingParam(url: string, emoji: { id: string; packet?: number }): string {
   if (!url) return url
 
+  // 检查缓存
+  const cacheKey = `${url}|${emoji.id}|${emoji.packet || ''}`
+  const cached = urlCache.get(cacheKey)
+  if (cached) return cached
+
   // Use packet number as version indicator, fallback to id hash if not available
   const version = emoji.packet || emoji.id.substring(0, 8)
   const separator = url.includes('?') ? '&' : '?'
+  const result = `${url}${separator}v=${version}`
 
-  return `${url}${separator}v=${version}`
+  // 存入缓存，限制大小
+  if (urlCache.size >= URL_CACHE_MAX_SIZE) {
+    // 清除最早的一半条目
+    const keysToDelete = Array.from(urlCache.keys()).slice(0, URL_CACHE_MAX_SIZE / 2)
+    keysToDelete.forEach(k => urlCache.delete(k))
+  }
+  urlCache.set(cacheKey, result)
+
+  return result
+}
+
+// 日志工具
+function log(message: string, ...args: any[]) {
+  if (typeof __ENABLE_LOGGING__ !== 'undefined' && __ENABLE_LOGGING__) {
+    console.log(`[ImageUrlHelper] ${message}`, ...args)
+  }
 }
 
 /**
  * Get the appropriate image URL for an emoji, respecting cache settings
+ * 优化：减少日志输出，使用更智能的重试策略
  */
 export async function getEmojiImageUrl(
   emoji: { id: string; displayUrl?: string; url: string; name?: string; packet?: number },
@@ -39,78 +69,35 @@ export async function getEmojiImageUrl(
   const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
   const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url, emoji)
 
-  console.log(
-    `[ImageUrlHelper] Getting image URL for ${emoji.name}, preferCache: ${preferCache}, cacheEnabled: ${emojiStore.settings.useIndexedDBForImages}`
-  )
-
   // If caching is disabled or not preferred, return the direct URL
   if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
-    console.log(
-      `[ImageUrlHelper] Cache disabled for ${emoji.name}, returning direct URL:`,
-      primaryUrl
-    )
     return primaryUrl
   }
 
   try {
-    // Try to get cached image first
-    console.log(`[ImageUrlHelper] Checking cache for ${emoji.name}, URL:`, primaryUrl)
+    // Try to get cached image first (now includes memory cache layer)
     const cachedUrl = await getCachedImage(primaryUrl)
     if (cachedUrl) {
-      console.log(`[ImageUrlHelper] Found cached URL for ${emoji.name}:`, cachedUrl)
       return cachedUrl
     }
-
-    console.log(`[ImageUrlHelper] No cached URL found for ${emoji.name}, attempting to cache...`)
 
     // If not cached, try to cache the image and return blob URL
     const blobUrl = await cacheImage(primaryUrl)
     if (blobUrl) {
-      console.log(
-        `[ImageUrlHelper] Successfully cached and created blob URL for ${emoji.name}:`,
-        blobUrl
-      )
       return blobUrl
     }
-
-    console.log(
-      `[ImageUrlHelper] Failed to create blob URL for ${emoji.name}, but caching may be in progress`
-    )
   } catch (error) {
-    console.warn(`[ImageUrlHelper] Failed to get cached image for ${emoji.name}:`, error)
+    // 静默失败，仅在开发模式下记录
+    log(`Failed to get cached image for ${emoji.name}:`, error)
   }
 
-  // Instead of returning original URL, try to wait for cache to complete
-  console.log(`[ImageUrlHelper] Attempting to wait for cache completion for ${emoji.name}`)
-
-  // Try multiple times to get the cached image with delays
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500)) // Wait 500ms
-      const cachedUrl = await getCachedImage(primaryUrl)
-      if (cachedUrl) {
-        console.log(
-          `[ImageUrlHelper] Retrieved cached URL after attempt ${attempt + 1} for ${emoji.name}:`,
-          cachedUrl
-        )
-        return cachedUrl
-      }
-    } catch (error) {
-      console.warn(`[ImageUrlHelper] Cache attempt ${attempt + 1} failed for ${emoji.name}:`, error)
-    }
-  }
-
-  // Final fallback - only if all cache attempts fail
-  console.warn(
-    `[ImageUrlHelper] All cache attempts failed for ${emoji.name}, falling back to direct URL:`,
-    finalFallbackUrl
-  )
   return finalFallbackUrl
 }
 
 /**
  * Get image URL synchronously (for cases where async is not possible)
  * In cache mode, this will wait for cache or return a loading indicator
+ * 优化：减少日志输出
  */
 export function getEmojiImageUrlSync(
   emoji: { id: string; displayUrl?: string; url: string; name?: string; packet?: number },
@@ -122,45 +109,25 @@ export function getEmojiImageUrlSync(
   // Determine the primary URL to use with cache-busting
   const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
 
-  console.log(
-    `[ImageUrlHelper] Sync get image URL for ${emoji.name}, preferCache: ${preferCache}, cacheEnabled: ${emojiStore.settings.useIndexedDBForImages}`
-  )
-
   // If caching is disabled or not preferred, return the direct URL with cache-busting
   if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
-    console.log(
-      `[ImageUrlHelper] Cache disabled for ${emoji.name}, returning direct URL:`,
-      primaryUrl
-    )
     return primaryUrl
   }
 
-  // In cache mode, check if image is already cached synchronously
+  // In cache mode, trigger background cache and return original URL
   try {
-    // Try to get cached image synchronously (if available)
-    console.log(`[ImageUrlHelper] Checking sync cache for ${emoji.name}, URL:`, primaryUrl)
-
-    // Since we can't do async here, we'll trigger background cache and return a placeholder
-    // The component should handle the async loading properly
-    triggerBackgroundCache(primaryUrl).catch(error => {
-      console.warn('[ImageUrlHelper] Background caching failed for', emoji.name, error)
+    triggerBackgroundCache(primaryUrl).catch(() => {
+      // 静默失败
     })
-
-    console.log(
-      `[ImageUrlHelper] Triggered background cache for ${emoji.name}, returning original URL temporarily`
-    )
-
-    // Return original URL for now, but the component should handle the async update
-    // This is a limitation of sync calls - they can't wait for async operations
     return primaryUrl
-  } catch (error) {
-    console.warn('[ImageUrlHelper] Sync cache check failed for', emoji.name, error)
+  } catch {
     return primaryUrl
   }
 }
 
 /**
  * Get image URL with loading state - returns cached URL if available, otherwise loads and caches
+ * 优化：减少日志和重试次数
  */
 export async function getEmojiImageUrlWithLoading(
   emoji: { id: string; displayUrl?: string; url: string; name?: string; packet?: number },
@@ -173,71 +140,54 @@ export async function getEmojiImageUrlWithLoading(
   const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
   const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url, emoji)
 
-  console.log(`[ImageUrlHelper] Getting image URL with loading for ${emoji.name}`)
-
   // If caching is disabled or not preferred, return direct URL with cache-busting
   if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
     return { url: primaryUrl, isLoading: false, isFromCache: false }
   }
 
   try {
-    // Try to get cached image first
+    // Try to get cached image first (now includes memory cache)
     const cachedUrl = await getCachedImage(primaryUrl)
     if (cachedUrl) {
-      console.log(`[ImageUrlHelper] Found cached URL for ${emoji.name}:`, cachedUrl)
       return { url: cachedUrl, isLoading: false, isFromCache: true }
     }
 
     // If not cached, we need to load and cache it
-    console.log(`[ImageUrlHelper] No cached URL found for ${emoji.name}, loading and caching...`)
-
-    // Start caching process
-    const cachePromise = cacheImage(primaryUrl)
-
-    // Wait for caching to complete
-    const blobUrl = await cachePromise
+    const blobUrl = await cacheImage(primaryUrl)
     if (blobUrl) {
-      console.log(
-        `[ImageUrlHelper] Successfully cached and created blob URL for ${emoji.name}:`,
-        blobUrl
-      )
       return { url: blobUrl, isLoading: false, isFromCache: true }
     }
 
-    // If caching failed, try a few more times with delays
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 300))
-      const cachedUrl = await getCachedImage(primaryUrl)
-      if (cachedUrl) {
-        console.log(
-          `[ImageUrlHelper] Retrieved cached URL after attempt ${attempt + 1} for ${emoji.name}:`,
-          cachedUrl
-        )
-        return { url: cachedUrl, isLoading: false, isFromCache: true }
-      }
-    }
-
-    console.warn(`[ImageUrlHelper] All cache attempts failed for ${emoji.name}`)
     return { url: finalFallbackUrl, isLoading: false, isFromCache: false }
-  } catch (error) {
-    console.error(`[ImageUrlHelper] Error loading image for ${emoji.name}:`, error)
+  } catch {
     return { url: finalFallbackUrl, isLoading: false, isFromCache: false }
   }
 }
+
 /**
  * Trigger background caching for an image URL
+ * 优化：使用内存缓存避免重复触发
  */
+const backgroundCacheInProgress = new Set<string>()
+
 async function triggerBackgroundCache(url: string): Promise<void> {
+  // 避免重复触发同一 URL 的缓存
+  if (backgroundCacheInProgress.has(url)) {
+    return
+  }
+
+  backgroundCacheInProgress.add(url)
+
   try {
     const isCached = await getCachedImage(url)
     if (!isCached) {
       await cacheImage(url)
-      console.log(`[ImageUrlHelper] Background cache completed for URL:`, url)
-    } else {
-      console.log(`[ImageUrlHelper] URL already cached:`, url)
     }
-  } catch (error) {
-    console.warn('[ImageUrlHelper] Background cache failed for URL:', url, error)
+  } finally {
+    // 延迟移除，避免短时间内重复触发
+    setTimeout(() => {
+      backgroundCacheInProgress.delete(url)
+    }, 5000)
   }
 }
 
@@ -257,38 +207,90 @@ export async function isImageCached(emoji: {
 
 /**
  * Preload multiple images into cache
+ * 优化：使用新的批量预加载 API
  */
 export async function preloadImages(
   emojis: Array<{ id: string; displayUrl?: string; url: string; name?: string; packet?: number }>,
-  options: { batchSize?: number; delay?: number } = {}
+  options: { batchSize?: number; delay?: number; toMemory?: boolean } = {}
 ): Promise<void> {
-  const { batchSize = 5, delay = 100 } = options
+  const { batchSize = 6, delay = 50, toMemory = true } = options
   const emojiStore = useEmojiStore()
 
   if (!emojiStore.settings.useIndexedDBForImages) {
     return // Skip if caching is disabled
   }
 
-  for (let i = 0; i < emojis.length; i += batchSize) {
-    const batch = emojis.slice(i, i + batchSize)
+  // 构建 URL 列表
+  const urls = emojis.map(emoji => addCacheBustingParam(emoji.displayUrl || emoji.url, emoji))
+
+  // 如果只需要加载到内存，使用更快的方法
+  if (toMemory) {
+    await preloadToMemory(urls)
+    return
+  }
+
+  // 批量缓存
+  for (let i = 0; i < urls.length; i += batchSize) {
+    const batch = urls.slice(i, i + batchSize)
 
     await Promise.allSettled(
-      batch.map(async emoji => {
-        const url = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
+      batch.map(async url => {
         try {
           const isCached = await getCachedImage(url)
           if (!isCached) {
             await cacheImage(url)
           }
-        } catch (error) {
-          console.warn(`Failed to preload image for ${emoji.name || 'unknown'}:`, error)
+        } catch {
+          // 静默失败
         }
       })
     )
 
     // Add delay between batches to prevent overwhelming the browser
-    if (i + batchSize < emojis.length) {
+    if (i + batchSize < urls.length && delay > 0) {
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
 }
+
+/**
+ * 批量获取图片 URL（优化版）
+ */
+export async function getEmojiImageUrls(
+  emojis: Array<{ id: string; displayUrl?: string; url: string; name?: string; packet?: number }>,
+  options: ImageUrlOptions = {}
+): Promise<Map<string, string>> {
+  const { preferCache = true } = options
+  const emojiStore = useEmojiStore()
+  const results = new Map<string, string>()
+
+  // If caching is disabled, just return direct URLs
+  if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
+    for (const emoji of emojis) {
+      const url = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
+      results.set(emoji.id, url)
+    }
+    return results
+  }
+
+  // 批量处理
+  const { cacheImages } = await import('./imageCache')
+  const urls = emojis.map(emoji => addCacheBustingParam(emoji.displayUrl || emoji.url, emoji))
+
+  const cacheResults = await cacheImages(urls, { concurrency: 4 })
+
+  for (let i = 0; i < emojis.length; i++) {
+    const emoji = emojis[i]
+    const url = urls[i]
+    const cachedUrl = cacheResults.get(url)
+
+    if (cachedUrl && typeof cachedUrl === 'string') {
+      results.set(emoji.id, cachedUrl)
+    } else {
+      results.set(emoji.id, addCacheBustingParam(emoji.displayUrl || emoji.url, emoji))
+    }
+  }
+
+  return results
+}
+
