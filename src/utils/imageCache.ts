@@ -230,8 +230,8 @@ export class ImageCache {
       storeName: options.storeName || 'images',
       version: options.version || 1,
       maxCacheSize: options.maxCacheSize || 100 * 1024 * 1024, // 100MB
-      maxCacheEntries: options.maxCacheEntries || 2000,
-      maxAge: options.maxAge || 14 * 24 * 60 * 60 * 1000, // 14 days
+      maxCacheEntries: options.maxCacheEntries || 5000, // 增加条目限制
+      maxAge: options.maxAge || Infinity, // 永久缓存（S3 URL 唯一）
       memoryBudget: options.memoryBudget || 20 * 1024 * 1024 // 20MB 内存缓存
     }
 
@@ -331,20 +331,7 @@ export class ImageCache {
 
         request.onsuccess = () => {
           const entry = request.result as CacheEntry | undefined
-          if (!entry) {
-            resolve(false)
-            return
-          }
-
-          const now = Date.now()
-          const isExpired = now - entry.timestamp > this.options.maxAge
-
-          if (isExpired) {
-            this.removeEntry(id).catch(() => {})
-            resolve(false)
-          } else {
-            resolve(true)
-          }
+          resolve(!!entry)
         }
 
         request.onerror = () => {
@@ -386,16 +373,8 @@ export class ImageCache {
             return
           }
 
-          const now = Date.now()
-          const isExpired = now - entry.timestamp > this.options.maxAge
-
-          if (isExpired) {
-            this.removeEntry(id).catch(() => {})
-            resolve(null)
-            return
-          }
-
           // 更新访问统计
+          const now = Date.now()
           entry.lastAccessed = now
           entry.accessCount++
           store.put(entry)
@@ -616,22 +595,13 @@ export class ImageCache {
 
   /**
    * Clean up cache by removing least recently used entries
+   * 仅基于 LRU 策略，不考虑过期时间（S3 URL 永久有效）
    */
   private async cleanupCache(entries: CacheEntry[], currentSize: number): Promise<void> {
     if (!this.db) return
 
-    // 按 LRU 排序
-    const sortedEntries = entries.sort((a, b) => {
-      const aAge = Date.now() - a.timestamp
-      const bAge = Date.now() - b.timestamp
-
-      // 优先移除过期条目
-      if (aAge > this.options.maxAge && bAge <= this.options.maxAge) return -1
-      if (bAge > this.options.maxAge && aAge <= this.options.maxAge) return 1
-
-      // 然后按访问时间排序 (LRU)
-      return a.lastAccessed - b.lastAccessed
-    })
+    // 按 LRU 排序（最少访问的排前面）
+    const sortedEntries = entries.sort((a, b) => a.lastAccessed - b.lastAccessed)
 
     const toRemove: string[] = []
     let size = currentSize
@@ -660,7 +630,7 @@ export class ImageCache {
         this.memoryCache.delete(id)
       }
 
-      logCache(`Cleaned up ${toRemove.length} cache entries`)
+      logCache(`Cleaned up ${toRemove.length} cache entries (LRU)`)
     }
   }
 
@@ -697,41 +667,45 @@ export class ImageCache {
   }
 
   /**
-   * 清除过期缓存
+   * 手动清理缓存（基于 LRU，用于用户主动清理）
    */
-  async cleanupExpired(): Promise<number> {
+  async cleanupLRU(targetPercentage: number = 0.5): Promise<number> {
     try {
       await this.ensureInitialized()
       if (!this.db) return 0
 
       const transaction = this.db.transaction([this.options.storeName], 'readwrite')
       const store = transaction.objectStore(this.options.storeName)
-      const now = Date.now()
-      let removed = 0
 
       return new Promise(resolve => {
-        const request = store.openCursor()
+        const getAllRequest = store.getAll()
 
-        request.onsuccess = event => {
-          const cursor = (event.target as IDBRequest).result as IDBCursorWithValue | null
-
-          if (cursor) {
-            const entry = cursor.value as CacheEntry
-            if (now - entry.timestamp > this.options.maxAge) {
-              cursor.delete()
-              this.memoryCache.delete(entry.url)
-              removed++
-            }
-            cursor.continue()
-          } else {
-            if (removed > 0) {
-              logCache(`Removed ${removed} expired entries`)
-            }
-            resolve(removed)
+        getAllRequest.onsuccess = async () => {
+          const entries = getAllRequest.result as CacheEntry[]
+          if (entries.length === 0) {
+            resolve(0)
+            return
           }
+
+          // 按 LRU 排序
+          const sortedEntries = entries.sort((a, b) => a.lastAccessed - b.lastAccessed)
+          const targetCount = Math.floor(entries.length * targetPercentage)
+
+          const toRemove = sortedEntries.slice(0, targetCount)
+
+          const deleteTransaction = this.db!.transaction([this.options.storeName], 'readwrite')
+          const deleteStore = deleteTransaction.objectStore(this.options.storeName)
+
+          for (const entry of toRemove) {
+            deleteStore.delete(entry.id)
+            this.memoryCache.delete(entry.url)
+          }
+
+          logCache(`Manually cleaned up ${toRemove.length} cache entries`)
+          resolve(toRemove.length)
         }
 
-        request.onerror = () => resolve(0)
+        getAllRequest.onerror = () => resolve(0)
       })
     } catch {
       return 0
@@ -826,11 +800,12 @@ export class ImageCache {
 }
 
 // Default cache instance with optimized settings
+// S3 为不同文件分配不同 URL，因此无需过期策略，仅使用 LRU 基于容量清理
 export const imageCache = new ImageCache({
-  maxCacheSize: 100 * 1024 * 1024, // 100MB IndexedDB
-  maxCacheEntries: 2000,
-  maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
-  memoryBudget: 20 * 1024 * 1024 // 20MB memory cache
+  maxCacheSize: 200 * 1024 * 1024, // 200MB IndexedDB（增大容量）
+  maxCacheEntries: 5000,
+  maxAge: Infinity, // 永久缓存
+  memoryBudget: 30 * 1024 * 1024 // 30MB memory cache（增大内存缓存）
 })
 
 // Convenience functions that match the requested API
@@ -858,8 +833,8 @@ export async function preloadToMemory(urls: string[]): Promise<number> {
   return imageCache.preloadToMemory(urls)
 }
 
-export async function cleanupExpired(): Promise<number> {
-  return imageCache.cleanupExpired()
+export async function cleanupLRU(targetPercentage?: number): Promise<number> {
+  return imageCache.cleanupLRU(targetPercentage)
 }
 
 export async function getCacheStats() {
