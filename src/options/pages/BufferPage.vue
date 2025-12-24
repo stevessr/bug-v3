@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
-import {
-  QuestionCircleOutlined,
-  DownOutlined,
-  ScissorOutlined,
-  InboxOutlined
-} from '@ant-design/icons-vue'
+import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import type { OptionsInject } from '../types'
@@ -70,14 +65,14 @@ const initializeImageSources = async () => {
           result.isFromCache
         )
       } else {
-        // 直接URL模式
+        // 直接 URL 模式
         const fallbackSrc = emoji.displayUrl || emoji.url
         newSources.set(emoji.id, fallbackSrc)
         console.log(`[BufferPage] Direct URL for ${emoji.name}:`, fallbackSrc)
       }
     } catch (error) {
       console.warn(`[BufferPage] Failed to get image source for ${emoji.name}:`, error)
-      // 回退到直接URL
+      // 回退到直接 URL
       const fallbackSrc = emoji.displayUrl || emoji.url
       newSources.set(emoji.id, fallbackSrc)
     }
@@ -125,7 +120,9 @@ const isUploading = ref(false)
 
 // 联动上传相关状态
 const enableCollaborativeUpload = ref(false)
-const collaborativeServerUrl = ref(localStorage.getItem('collaborative-upload-server') || 'ws://localhost:9527')
+const collaborativeServerUrl = ref(
+  localStorage.getItem('collaborative-upload-server') || 'ws://localhost:9527'
+)
 const collaborativeClient = ref<CollaborativeUploadClient | null>(null)
 const isCollaborativeConnected = ref(false)
 const collaborativeProgress = ref<CollabUploadProgress | null>(null)
@@ -676,7 +673,7 @@ const filterDuplicateFiles = async () => {
         filteredFiles.push(fileItem)
       } else {
         console.log(`[BufferPage] Filtered out duplicate file: ${fileItem.file.name}`)
-        URL.revokeObjectURL(fileItem.url) // 清理重复项的 URL
+        URL.revokeObjectURL(fileItem.previewUrl) // 清理重复项的 URL
       }
     }
 
@@ -739,7 +736,7 @@ const handleTelegramImport = async () => {
     }
   } catch (error: any) {
     console.error('[BufferPage] Telegram import failed:', error)
-    message.error(`导入失败: ${error.message}`)
+    message.error(`导入失败：${error.message}`)
   } finally {
     isProcessingTelegram.value = false
   }
@@ -856,7 +853,7 @@ const connectCollaborativeServer = async () => {
     message.success('已连接到协调服务器')
   } catch (error) {
     console.error('Failed to connect to collaborative server:', error)
-    message.error('连接服务器失败: ' + (error instanceof Error ? error.message : String(error)))
+    message.error('连接服务器失败：' + (error instanceof Error ? error.message : String(error)))
   }
 }
 
@@ -881,6 +878,7 @@ const addEmojiToBuffer = (filename: string, url: string) => {
     url: url,
     displayUrl: url,
     packet: 0,
+    tags: [] as string[],
     width: fileItem?.width,
     height: fileItem?.height
   }
@@ -924,9 +922,7 @@ const uploadFilesCollaboratively = async () => {
 
     // 清理已成功上传的文件
     const successfulFiles = new Set(results.filter(r => r.success).map(r => r.filename))
-    selectedFiles.value = selectedFiles.value.filter(
-      item => !successfulFiles.has(item.file.name)
-    )
+    selectedFiles.value = selectedFiles.value.filter(item => !successfulFiles.has(item.file.name))
 
     if (selectedFiles.value.length === 0) {
       clearPersistedFiles()
@@ -934,10 +930,10 @@ const uploadFilesCollaboratively = async () => {
 
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`联动上传完成: ${successCount} 成功, ${failCount} 失败`)
+    message.success(`联动上传完成：${successCount} 成功，${failCount} 失败`)
   } catch (error) {
     console.error('Collaborative upload failed:', error)
-    message.error('联动上传失败: ' + (error instanceof Error ? error.message : String(error)))
+    message.error('联动上传失败：' + (error instanceof Error ? error.message : String(error)))
   } finally {
     isUploading.value = false
   }
@@ -1235,7 +1231,9 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- 联动上传设置 -->
-      <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+      <div
+        class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800"
+      >
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
             <a-checkbox v-model:checked="enableCollaborativeUpload">
@@ -1243,11 +1241,17 @@ onBeforeUnmount(() => {
                 🔗 启用联动上传
               </span>
             </a-checkbox>
-            <a-tooltip title="连接到本地协调服务器，与其他用户并行上传，突破单账户速率限制。主机本身也会参与上传。">
+            <a-tooltip
+              title="连接到本地协调服务器，与其他用户并行上传，突破单账户速率限制。主机本身也会参与上传。"
+            >
               <QuestionCircleOutlined class="text-gray-400" />
             </a-tooltip>
           </div>
-          <span v-if="enableCollaborativeUpload" class="text-xs" :class="isCollaborativeConnected ? 'text-green-600' : 'text-gray-500'">
+          <span
+            v-if="enableCollaborativeUpload"
+            class="text-xs"
+            :class="isCollaborativeConnected ? 'text-green-600' : 'text-gray-500'"
+          >
             {{ isCollaborativeConnected ? '✓ 已连接' : '未连接' }}
           </span>
         </div>
@@ -1272,7 +1276,10 @@ onBeforeUnmount(() => {
             </a-button>
           </div>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            运行协调服务器：<code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">cd scripts/collaborative-upload-server && npm start</code>
+            运行协调服务器：
+            <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+              cd scripts/collaborative-upload-server && npm start
+            </code>
           </p>
         </div>
       </div>
@@ -1284,7 +1291,12 @@ onBeforeUnmount(() => {
           v-if="enableCollaborativeUpload"
           type="primary"
           @click="uploadFilesCollaboratively"
-          :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates || !isCollaborativeConnected"
+          :disabled="
+            selectedFiles.length === 0 ||
+            isUploading ||
+            isCheckingDuplicates ||
+            !isCollaborativeConnected
+          "
           :loading="isUploading"
           class="bg-gradient-to-r from-blue-500 to-purple-500 border-0"
         >
@@ -1297,7 +1309,11 @@ onBeforeUnmount(() => {
           :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates"
           :loading="isUploading && !enableCollaborativeUpload"
         >
-          {{ isUploading && !enableCollaborativeUpload ? '上传中...' : `上传 ${selectedFiles.length} 个文件` }}
+          {{
+            isUploading && !enableCollaborativeUpload
+              ? '上传中...'
+              : `上传 ${selectedFiles.length} 个文件`
+          }}
         </a-button>
       </div>
 
@@ -1309,15 +1325,22 @@ onBeforeUnmount(() => {
         <div class="flex justify-between text-sm mb-2">
           <span class="dark:text-white">联动上传进度</span>
           <span class="dark:text-gray-300">
-            {{ collaborativeProgress.completed + collaborativeProgress.failed }} / {{ collaborativeProgress.total }}
+            {{ collaborativeProgress.completed + collaborativeProgress.failed }} /
+            {{ collaborativeProgress.total }}
           </span>
         </div>
         <a-progress
-          :percent="Math.round(((collaborativeProgress.completed + collaborativeProgress.failed) / collaborativeProgress.total) * 100)"
+          :percent="
+            Math.round(
+              ((collaborativeProgress.completed + collaborativeProgress.failed) /
+                collaborativeProgress.total) *
+                100
+            )
+          "
           :status="collaborativeProgress.failed > 0 ? 'exception' : 'active'"
         />
         <div v-if="collaborativeProgress.currentFile" class="text-xs text-gray-500 mt-1">
-          当前: {{ collaborativeProgress.currentFile }}
+          当前：{{ collaborativeProgress.currentFile }}
         </div>
       </div>
     </div>

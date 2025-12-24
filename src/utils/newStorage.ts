@@ -319,6 +319,39 @@ class NewStorageManager {
     }
   }
 
+  // Synchronous write to all layers - waits for extensionStorage to complete
+  // Use this in popup/sidebar where the page may close at any time
+  async setSync(key: string, value: any, timestamp?: number): Promise<void> {
+    const cleanValue = ensureSerializable(value)
+
+    const finalValue = {
+      data: cleanValue,
+      timestamp: timestamp || Date.now()
+    }
+
+    logStorage('SYNC_SET_START', key, finalValue)
+
+    // Clear any existing timer for this key
+    if (this.writeTimers.has(key)) {
+      const t = this.writeTimers.get(key)
+      if (t) clearTimeout(t)
+    }
+
+    try {
+      // Write to all layers in parallel and wait for all to complete
+      await Promise.all([
+        this.localStorage.set(key, finalValue),
+        this.sessionStorage.set(key, finalValue),
+        this.extensionStorage.set(key, finalValue)
+      ])
+
+      logStorage('SYNC_SET_SUCCESS', key, finalValue)
+    } catch (error) {
+      logStorage('SYNC_SET_FAILED', key, undefined, error)
+      throw error
+    }
+  }
+
   // Remove from all layers
   async remove(key: string): Promise<void> {
     logStorage('MULTI_REMOVE', key)
@@ -381,6 +414,11 @@ export const newStorageHelpers = {
     await storageManager.set(STORAGE_KEYS.GROUP_INDEX, index)
   },
 
+  // Sync version - waits for extensionStorage to complete
+  async setEmojiGroupIndexSync(index: Array<{ id: string; order: number }>): Promise<void> {
+    await storageManager.setSync(STORAGE_KEYS.GROUP_INDEX, index)
+  },
+
   async getEmojiGroup(groupId: string): Promise<EmojiGroup | null> {
     const group = await storageManager.getWithConflictResolution(
       STORAGE_KEYS.GROUP_PREFIX + groupId
@@ -402,6 +440,28 @@ export const newStorageHelpers = {
 
       const clean = ensureSerializable(merged)
       await storageManager.set(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
+    } catch (e) {
+      logStorage('IDB_SET', `${STORAGE_KEYS.GROUP_PREFIX}${groupId}`, undefined, e)
+      throw e
+    }
+  },
+
+  // Sync version - waits for extensionStorage to complete
+  // Use this in popup/sidebar where the page may close at any time
+  async setEmojiGroupSync(groupId: string, group: EmojiGroup): Promise<void> {
+    try {
+      const stored = await this.getEmojiGroup(groupId)
+
+      const currentEmojis = Array.isArray(group.emojis) ? group.emojis : []
+
+      const merged = {
+        ...(stored || {}),
+        ...group,
+        emojis: currentEmojis
+      }
+
+      const clean = ensureSerializable(merged)
+      await storageManager.setSync(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
     } catch (e) {
       logStorage('IDB_SET', `${STORAGE_KEYS.GROUP_PREFIX}${groupId}`, undefined, e)
       throw e
@@ -521,6 +581,23 @@ export const newStorageHelpers = {
     })
 
     await storageManager.set(STORAGE_KEYS.FAVORITES, Array.from(existingSet))
+  },
+
+  // Sync version - waits for extensionStorage to complete
+  async setFavoritesSync(favorites: string[]): Promise<void> {
+    const stored = (await storageManager.getWithConflictResolution(STORAGE_KEYS.FAVORITES)) || []
+    const existingSet = new Set(stored as string[])
+    const incomingSet = new Set(favorites)
+
+    incomingSet.forEach(id => existingSet.add(id))
+
+    Array.from(existingSet).forEach(id => {
+      if (!incomingSet.has(id) && (stored as string[]).includes(id)) {
+        existingSet.delete(id)
+      }
+    })
+
+    await storageManager.setSync(STORAGE_KEYS.FAVORITES, Array.from(existingSet))
   },
 
   // Discourse domains management

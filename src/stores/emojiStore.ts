@@ -996,6 +996,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   // Save only the favorites group - used in read-only mode (popup/sidebar)
   // This prevents accidental corruption of other groups while still allowing favorites updates
+  // Uses sync storage methods to ensure data is persisted before page closes
   const saveFavoritesOnly = async () => {
     // CRITICAL: Don't save if data hasn't been loaded yet
     // This prevents overwriting favorites with empty data during initialization
@@ -1039,8 +1040,26 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         '[EmojiStore] Saving favorites group only (read-only mode), emojis count:',
         favoritesGroup.emojis.length
       )
-      await newStorageHelpers.setEmojiGroup(favoritesGroup.id, favoritesGroup)
-      await newStorageHelpers.setFavorites(Array.from(favorites.value))
+
+      // First, ensure the favorites group is in the group index
+      // This is critical - without the index entry, the group won't be loaded next time
+      const currentIndex = await newStorageHelpers.getEmojiGroupIndex()
+      const favoritesInIndex = currentIndex.some(entry => entry.id === 'favorites')
+      if (!favoritesInIndex) {
+        // Add favorites to the beginning of the index
+        const newIndex = [
+          { id: 'favorites', order: 0 },
+          ...currentIndex.map((e, i) => ({ ...e, order: i + 1 }))
+        ]
+        // Use sync version to ensure index is persisted immediately
+        await newStorageHelpers.setEmojiGroupIndexSync(newIndex)
+        console.log('[EmojiStore] Added favorites to group index')
+      }
+
+      // Use sync versions to ensure data is persisted to extensionStorage immediately
+      // This is critical for popup/sidebar which may close at any time
+      await newStorageHelpers.setEmojiGroupSync(favoritesGroup.id, favoritesGroup)
+      await newStorageHelpers.setFavoritesSync(Array.from(favorites.value))
       console.log('[EmojiStore] Favorites saved successfully')
     } catch (error) {
       console.error('[EmojiStore] Failed to save favorites:', error)
