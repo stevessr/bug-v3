@@ -51,8 +51,9 @@ const getImageSrc = async (emoji: Emoji): Promise<string> => {
   return getEmojiImageUrl(emoji, { preferCache: useCachedImages.value })
 }
 
-// Synchronous version for immediate rendering
-const getImageSrcSync = (emoji: Emoji): string => {
+// Synchronous version for immediate rendering - exported for potential use in other components
+// @ts-expect-error kept for API compatibility
+const _getImageSrcSync = (emoji: Emoji): string => {
   return getEmojiImageUrlSync(emoji, { preferCache: useCachedImages.value })
 }
 

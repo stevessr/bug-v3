@@ -242,8 +242,6 @@ const enableFilter = ref(false)
 const selectedFilterGroups = ref<
   Array<{ id: string; name: string; icon: string; emojiNames: Set<string> }>
 >([])
-const duplicateCheckResults = ref<Array<{ name: string; existingGroups: string[] }>>([])
-const showDuplicateResults = ref(false)
 const isCheckingDuplicates = ref(false)
 const selectedGroupIdForFilter = ref('')
 const showGroupSelector = ref(false)
@@ -268,11 +266,6 @@ const filterableGroups = computed(() => {
       !selectedFilterGroups.value.some(fg => fg.id === g.id)
   )
 })
-
-// 分组选择器的过滤选项
-const filterOption = (input: string, option: any) => {
-  return option.label.toLowerCase().includes(input.toLowerCase())
-}
 
 // 全选状态
 const totalCount = computed(() => bufferGroup.value?.emojis?.length || 0)
@@ -530,10 +523,6 @@ const clearSelection = () => {
   targetGroupId.value = ''
 }
 
-const onTargetGroupSelect = (info: { key: string | number }) => {
-  targetGroupId.value = String(info.key)
-}
-
 // 移动选中的表情到目标分组
 const moveSelectedEmojis = async () => {
   if (!targetGroupId.value || selectedEmojis.value.size === 0) return
@@ -630,11 +619,6 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
   } catch {
     // ignore errors during group creation
   }
-}
-
-// 取消创建分组
-const cancelCreateGroup = () => {
-  showCreateGroupDialog.value = false
 }
 
 // 过滤已选文件中的重复项

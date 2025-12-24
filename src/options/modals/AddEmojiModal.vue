@@ -411,6 +411,7 @@ const add = () => {
     packet: Date.now(),
     name: name.value.trim(),
     url: url.value.trim(),
+    tags: [] as string[],
     ...(displayUrl.value.trim() && { displayUrl: displayUrl.value.trim() })
   }
   emojiStore.addEmoji(targetGroupId, emojiData)
@@ -699,7 +700,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                   <!-- 有 URL 且未出错时显示图片 -->
                   <a-image
                     v-if="(displayUrl || url) && !imageLoadError"
-                    :src="getEmojiImageUrlSync({ displayUrl: displayUrl.value, url: url.value })"
+                    :src="getEmojiImageUrlSync({ id: 'preview', displayUrl: displayUrl, url: url })"
                     class="object-contain w-full h-full max-h-96 rounded-lg border"
                     style="max-width: 500px"
                     @load="handleImageLoad"
@@ -759,7 +760,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                       <!-- Image on top -->
                       <div class="flex items-center justify-center pb-2">
                         <a-image
-                          :src="getEmojiImageUrlSync(item)"
+                          :src="getEmojiImageUrlSync({ id: `parsed-${index}`, ...item })"
                           :alt="item.name"
                           class="w-full h-32 object-contain rounded border"
                           @error="handleParsedImageError"

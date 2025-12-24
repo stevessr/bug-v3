@@ -66,7 +66,7 @@ const cacheStats = computed(() => {
   const cached = realCachedCount.value
 
   for (const group of emojiStore.groups) {
-    for (const emoji of group.emojis || []) {
+    for (const _emoji of group.emojis || []) {
       total++
     }
   }
@@ -204,7 +204,7 @@ const cacheAllImages = async () => {
     // Count total emojis first
     let total = 0
     for (const group of emojiStore.groups) {
-      for (const emoji of group.emojis || []) {
+      for (const _emoji of group.emojis || []) {
         total++
       }
     }

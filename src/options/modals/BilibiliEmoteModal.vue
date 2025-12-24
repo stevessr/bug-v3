@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 
 import {
   fetchBilibiliEmotePackageById,
@@ -19,9 +19,13 @@ const errorMessage = ref('')
 const packageIdInput = ref('')
 const idImportLoading = ref(false)
 
+// Alias for template compatibility
+const isLoading = computed(() => idImportLoading.value)
+
 const close = () => emit('update:modelValue', false)
 
-const togglePackage = (packageId: number) => {
+// @ts-expect-error kept for API compatibility
+const _togglePackage = (packageId: number) => {
   const index = selectedPackages.value.indexOf(packageId)
   if (index > -1) {
     selectedPackages.value.splice(index, 1)

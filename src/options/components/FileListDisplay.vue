@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { DeleteOutlined, ScissorOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 
 interface FileItem {
   id: string
@@ -25,7 +23,7 @@ interface Emits {
   (e: 'cropImage', id: string): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   loading: false
 })
 

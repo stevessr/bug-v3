@@ -11,7 +11,7 @@ interface Emits {
   (e: 'create', data: { name: string; icon: string; detail: string }): void
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const groupName = ref('')

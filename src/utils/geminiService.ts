@@ -329,7 +329,7 @@ export async function generateBatchNamesStreaming(
     }
 
     let groupIndex = 0
-    for (const [groupId, groupEmojis] of groupedEmojis.entries()) {
+    for (const [_groupId, groupEmojis] of groupedEmojis.entries()) {
       const chunkSize = 10
       const chunks: Array<typeof groupEmojis> = []
       for (let i = 0; i < groupEmojis.length; i += chunkSize) {
@@ -688,7 +688,7 @@ async function generateBatchNamesWithOpenAIStreaming(
     }
 
     let groupIndex = 0
-    for (const [groupId, groupEmojis] of groupedEmojis.entries()) {
+    for (const [_groupId, groupEmojis] of groupedEmojis.entries()) {
       const processingQueue: Promise<void>[] = []
       let activeRequests = 0
 

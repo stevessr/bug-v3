@@ -5,7 +5,6 @@ import type { OptionsInject } from '../types'
 import BilibiliEmoteModal from '../modals/BilibiliEmoteModal.vue'
 
 const options = inject<OptionsInject>('options')!
-const { emojiStore } = options
 
 const showBilibiliModal = ref(false)
 const isLoading = ref(false)

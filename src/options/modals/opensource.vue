@@ -41,18 +41,21 @@ const emojiFileInput = ref<HTMLInputElement>()
 const showTargetGroupSelector = ref(false)
 const showMarkdownDialog = ref(false)
 const selectedTargetGroup = ref('')
+const autoCreateGroup = ref(false)
 const selectedTargetGroupForMarkdown = ref('')
 const markdownText = ref('')
 const isImporting = ref(false)
 const importStatus = ref('')
 const importResults = ref<{ success: boolean; message: string; details?: string } | null>(null)
 
-const onSelectedTargetGroup = (info: { key: string | number }) => {
-  selectedTargetGroup.value = String(info.key)
-}
-
 const onSelectedTargetGroupForMarkdown = (info: { key: string | number }) => {
   selectedTargetGroupForMarkdown.value = String(info.key)
+}
+
+const onAutoCreateGroupChange = () => {
+  if (autoCreateGroup.value) {
+    selectedTargetGroup.value = ''
+  }
 }
 
 // Import config file

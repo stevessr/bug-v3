@@ -292,7 +292,7 @@ export class OptimizedHashService {
       try {
         const imageDataList: ImageData[] = []
 
-        for (const { url, blob } of images) {
+        for (const { url: _url, blob } of images) {
           if (!blob) continue
 
           const imageData = await this.blobToImageData(blob, size)

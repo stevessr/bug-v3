@@ -3,7 +3,6 @@
  */
 
 import type { AddEmojiButtonData } from './bilibili-helper'
-import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
 
 import { createE } from '@/content/utils/createEl'
 // Import utility functions dynamically to avoid circular dependencies

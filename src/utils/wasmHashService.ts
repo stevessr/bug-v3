@@ -20,7 +20,7 @@ interface EmscriptenModule {
 
 declare global {
   interface Window {
-    PerceptualHashModule: (config: any) => Promise<EmscriptenModule>
+    PerceptualHashModule?: (config: any) => Promise<EmscriptenModule>
   }
 }
 
@@ -374,4 +374,3 @@ class WASMHashService {
 }
 
 export const wasmHashService = new WASMHashService()
-export type { WASMHashResult }

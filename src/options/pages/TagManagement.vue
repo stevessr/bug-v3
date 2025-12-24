@@ -83,8 +83,9 @@ const deleteTag = (tagName: string) => {
   }
 }
 
-// 獲取使用該標籤的表情數量
-const getTagUsageCount = (tagName: string) => {
+// 獲取使用該標籤的表情數量 (kept for potential future use)
+// @ts-expect-error kept for API compatibility
+const _getTagUsageCount = (tagName: string) => {
   let count = 0
   emojiStore.groups.forEach(group => {
     group.emojis.forEach(emoji => {

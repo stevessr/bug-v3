@@ -87,7 +87,8 @@ const createNewTag = async () => {
   const tempEmoji = {
     name: `temp-${Date.now()}`,
     url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
-    tags: [tagName]
+    tags: [tagName],
+    packet: Date.now()
   }
 
   const addedEmoji = emojiStore.addEmoji(tempGroupId, tempEmoji)
@@ -132,8 +133,9 @@ const deleteTag = (tagName: string) => {
   }
 }
 
-// 獲取使用該標籤的表情數量
-const getTagUsageCount = (tagName: string) => {
+// 獲取使用該標籤的表情數量 (kept for potential future use)
+// @ts-expect-error kept for API compatibility
+const _getTagUsageCount = (tagName: string) => {
   let count = 0
   emojiStore.groups.forEach(group => {
     group.emojis.forEach(emoji => {

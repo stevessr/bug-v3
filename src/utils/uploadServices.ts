@@ -304,7 +304,8 @@ export async function uploadAndAddEmoji(
       url: finalUrl,
       displayUrl: finalUrl,
       originUrl: originUrl || undefined,
-      addedAt: Date.now()
+      addedAt: Date.now(),
+      tags: [] as string[]
     }
 
     emojiStore.addEmojiWithoutSave(targetGroupId, newEmoji)

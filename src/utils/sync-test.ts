@@ -118,7 +118,7 @@ export class SyncTestHelper {
       count: 20
     }
 
-    const result = await conflictResolver.threeWayMerge(base, local, remote, 'emoji')
+    const result = await conflictResolver.threeWayMerge(base, local, remote)
 
     console.log('[SyncTest] Three-way merge result:', result)
     return result
@@ -335,7 +335,7 @@ export class SyncTestHelper {
 export const syncTestHelper = new SyncTestHelper()
 
 // 在开发环境下挂载到 window 对象方便调试
-if (import.meta.env.DEV) {
+if ((import.meta as any).env?.DEV) {
   ;(window as any).syncTestHelper = syncTestHelper
   console.log('[SyncTest] Test helper available at window.syncTestHelper')
 }

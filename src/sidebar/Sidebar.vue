@@ -30,8 +30,9 @@ const virtualGroups = computed(() => [
   }
 ])
 
-// 組合所有分組（虛擬 + 真實）
-const allGroups = computed(() => [...virtualGroups.value, ...emojiStore.sortedGroups])
+// 組合所有分組（虛擬 + 真實）- kept for potential future use
+// @ts-expect-error kept for API compatibility
+const _allGroups = computed(() => [...virtualGroups.value, ...emojiStore.sortedGroups])
 
 // 搜索功能
 const searchQuery = computed({
@@ -70,8 +71,9 @@ const filteredEmojis = computed(() => {
   return allEmojis
 })
 
-// 判斷是否為虛擬分組
-const isVirtualGroup = (groupId: string) => {
+// 判斷是否為虛擬分組 - kept for potential future use
+// @ts-expect-error kept for API compatibility
+const _isVirtualGroup = (groupId: string) => {
   return virtualGroups.value.some(g => g.id === groupId)
 }
 

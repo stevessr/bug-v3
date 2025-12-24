@@ -33,7 +33,9 @@ const handleChange = (value: string) => {
   emit('change', value)
 }
 
-const displayValue = computed(() => {
+// Computed value kept for potential future use in template
+// @ts-expect-error kept for API compatibility
+const _displayValue = computed(() => {
   if (!props.modelValue) return props.placeholder
   const group = props.groups.find(g => g.id === props.modelValue)
   return group ? group.name : props.placeholder

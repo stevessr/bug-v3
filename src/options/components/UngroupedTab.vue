@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
-import { DownOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 
 import type { EmojiGroup, Emoji } from '../../types/type'
 import { useEmojiStore } from '../../stores/emojiStore'
@@ -120,9 +120,6 @@ const onCheckAllChange = (e: any) => {
 // Upload functionality
 const uploadingEmojiIds = ref(new Set<number>())
 
-const onTargetGroupSelect = (info: { key: string | number }) => {
-  targetGroupId.value = String(info.key)
-}
 const showCreateGroupDialog = ref(false)
 const copyButtonLabel = ref('复制为 markdown')
 
@@ -394,11 +391,6 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
   } catch {
     // ignore errors during group creation
   }
-}
-
-// 取消创建分组
-const cancelCreateGroup = () => {
-  showCreateGroupDialog.value = false
 }
 </script>
 

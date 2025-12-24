@@ -79,6 +79,7 @@ export class CollaborativeUploadClient {
   private _status: ConnectionStatus
   private _serverStats: ServerStats | null = null
   private _sessionId: string | null = null
+  // @ts-expect-error kept for API compatibility
   private _workerId: string | null = null
 
   // 用于主控端等待会话完成

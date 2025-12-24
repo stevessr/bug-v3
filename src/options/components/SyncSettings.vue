@@ -11,8 +11,6 @@ import type {
   CloudflareConfig
 } from '../../userscript/plugins/syncTargets'
 
-import { formatDate } from './utils/settings'
-
 // TypeScript interface for sync progress
 interface SyncProgress {
   current: number

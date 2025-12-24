@@ -1,5 +1,4 @@
 // Helper to interact with Telegram API
-import { normalizeImageUrl } from './isImageUrl'
 
 // We need a persistent storage for the bot token
 export const getTelegramBotToken = (): string | null => {

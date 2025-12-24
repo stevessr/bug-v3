@@ -32,8 +32,8 @@ const progress = ref<{ current: number; total: number; groupIndex?: number }>({
 })
 const enableGroupedStreaming = ref(true)
 
-// Virtual list ref
-const virtualListRef = ref<InstanceType<typeof VirtualList> | null>(null) as any
+// Virtual list ref - use any to avoid vue-tsc generic inference issues
+const virtualListRef = ref<any>(null)
 
 // Computed list for rendering
 interface EmojiRenderItem {

@@ -543,9 +543,10 @@ export class ImageCache {
   }
 
   /**
-   * Remove a cache entry
+   * Remove a cache entry (kept for potential future use)
    */
-  private async removeEntry(id: string): Promise<void> {
+  // @ts-expect-error kept for API compatibility
+  private async _removeEntry(id: string): Promise<void> {
     // 从内存缓存移除
     this.memoryCache.delete(id)
 

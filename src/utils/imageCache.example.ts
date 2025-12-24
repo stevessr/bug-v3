@@ -14,11 +14,14 @@ export async function exampleImageCaching(imageUrl: string) {
     const isCached = await isImageCached(imageUrl)
     console.log(`Image already cached: ${isCached}`)
 
-    let blobUrl: string
+    let blobUrl: string | null
 
     if (isCached) {
       // Get from cache
       blobUrl = await getCachedImage(imageUrl)
+      if (!blobUrl) {
+        throw new Error('Failed to retrieve cached image')
+      }
       console.log('Retrieved image from cache')
     } else {
       // Cache the image
