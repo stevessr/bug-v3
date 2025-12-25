@@ -127,6 +127,10 @@ const collaborativeClient = ref<CollaborativeUploadClient | null>(null)
 const isCollaborativeConnected = ref(false)
 const collaborativeProgress = ref<CollabUploadProgress | null>(null)
 const collaborativeResults = ref<UploadResult[]>([])
+const disconnectedDuringUpload = ref(false) // 上传过程中断线标记
+const failedByDisconnect = ref<string[]>([]) // 因断线失败的文件
+const pendingRemoteUploads = ref<Array<{ filename: string; url: string }>>([]) // 待保存的远程上传结果
+let incrementalSaveTimer: ReturnType<typeof setInterval> | null = null // 增量保存定时器
 
 // 持久化相关函数
 const STORAGE_KEY = 'buffer-selected-files'
@@ -820,8 +824,13 @@ const connectCollaborativeServer = async () => {
       serverUrl: collaborativeServerUrl.value,
       role: 'master',
       masterAlsoUploads: true,
+      taskTimeout: 120000, // 2分钟超时
       onStatusChange: status => {
         isCollaborativeConnected.value = status.connected
+        // 如果断线且不在上传中，显示提示
+        if (!status.connected && !isUploading.value) {
+          message.warning('与协调服务器的连接已断开')
+        }
       },
       onProgress: progress => {
         collaborativeProgress.value = progress
@@ -829,10 +838,26 @@ const connectCollaborativeServer = async () => {
       onLocalUploadComplete: (filename, url) => {
         // 本地上传完成，立即添加到缓冲区
         addEmojiToBuffer(filename, url)
+        // 从选中文件中移除
+        selectedFiles.value = selectedFiles.value.filter(item => item.file.name !== filename)
+      },
+      onRemoteUploadComplete: (filename, url) => {
+        // 远程上传完成，添加到待保存列表
+        pendingRemoteUploads.value.push({ filename, url })
+        console.log(`[BufferPage] Remote upload complete: ${filename}, pending save`)
+      },
+      onDisconnect: pendingTasks => {
+        // 上传过程中断线
+        console.log('[BufferPage] Disconnected during upload, pending tasks:', pendingTasks)
+        disconnectedDuringUpload.value = true
+        failedByDisconnect.value = pendingTasks
+        message.error(`服务器连接断开，${pendingTasks.length} 个远程任务失败`)
       }
     })
 
     await collaborativeClient.value.connect()
+    disconnectedDuringUpload.value = false
+    failedByDisconnect.value = []
     message.success('已连接到协调服务器')
   } catch (error) {
     console.error('Failed to connect to collaborative server:', error)
@@ -872,6 +897,50 @@ const addEmojiToBuffer = (filename: string, url: string) => {
   console.log(`[BufferPage] Added emoji to buffer: ${filename}`)
 }
 
+// 增量保存：将已完成的远程上传添加到缓冲区并从任务列表移除
+const saveIncrementalProgress = () => {
+  if (pendingRemoteUploads.value.length === 0) return
+
+  console.log(
+    `[BufferPage] Saving incremental progress: ${pendingRemoteUploads.value.length} files`
+  )
+
+  // 添加到缓冲区
+  for (const { filename, url } of pendingRemoteUploads.value) {
+    const alreadyAdded = bufferGroup.value?.emojis.some(e => e.url === url || e.name === filename)
+    if (!alreadyAdded) {
+      addEmojiToBuffer(filename, url)
+    }
+  }
+
+  // 从选中文件中移除
+  const savedFilenames = new Set(pendingRemoteUploads.value.map(p => p.filename))
+  selectedFiles.value = selectedFiles.value.filter(item => !savedFilenames.has(item.file.name))
+
+  // 清空待保存列表
+  pendingRemoteUploads.value = []
+
+  console.log('[BufferPage] Incremental save completed')
+}
+
+// 启动增量保存定时器
+const startIncrementalSaveTimer = () => {
+  if (incrementalSaveTimer) return
+  incrementalSaveTimer = setInterval(() => {
+    saveIncrementalProgress()
+  }, 60000) // 每分钟保存一次
+  console.log('[BufferPage] Incremental save timer started')
+}
+
+// 停止增量保存定时器
+const stopIncrementalSaveTimer = () => {
+  if (incrementalSaveTimer) {
+    clearInterval(incrementalSaveTimer)
+    incrementalSaveTimer = null
+    console.log('[BufferPage] Incremental save timer stopped')
+  }
+}
+
 const uploadFilesCollaboratively = async () => {
   if (selectedFiles.value.length === 0) return
 
@@ -880,9 +949,17 @@ const uploadFilesCollaboratively = async () => {
     return
   }
 
+  // 重置断线状态
+  disconnectedDuringUpload.value = false
+  failedByDisconnect.value = []
+  pendingRemoteUploads.value = [] // 重置待保存列表
+
   isUploading.value = true
   collaborativeProgress.value = { completed: 0, failed: 0, total: selectedFiles.value.length }
   collaborativeResults.value = []
+
+  // 启动增量保存定时器
+  startIncrementalSaveTimer()
 
   try {
     const files = selectedFiles.value.map(item => item.file)
@@ -903,7 +980,7 @@ const uploadFilesCollaboratively = async () => {
       }
     }
 
-    // 清理已成功上传的文件
+    // 清理已成功上传的文件，保留失败的文件以便重试
     const successfulFiles = new Set(results.filter(r => r.success).map(r => r.filename))
     selectedFiles.value = selectedFiles.value.filter(item => !successfulFiles.has(item.file.name))
 
@@ -913,11 +990,28 @@ const uploadFilesCollaboratively = async () => {
 
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`联动上传完成：${successCount} 成功，${failCount} 失败`)
+
+    // 检查是否有因断线失败的任务
+    const disconnectErrors = results.filter(
+      r => !r.success && (r.error === '服务器连接断开' || r.error === '上传超时')
+    )
+    if (disconnectErrors.length > 0) {
+      message.warning(
+        `联动上传完成：${successCount} 成功，${failCount} 失败（${disconnectErrors.length} 个因断线/超时失败，可重试）`
+      )
+    } else if (failCount > 0) {
+      message.warning(`联动上传完成：${successCount} 成功，${failCount} 失败`)
+    } else {
+      message.success(`联动上传完成：${successCount} 成功`)
+    }
   } catch (error) {
     console.error('Collaborative upload failed:', error)
     message.error('联动上传失败：' + (error instanceof Error ? error.message : String(error)))
   } finally {
+    // 停止增量保存定时器
+    stopIncrementalSaveTimer()
+    // 保存剩余的待保存上传
+    saveIncrementalProgress()
     isUploading.value = false
   }
 }
@@ -1057,6 +1151,8 @@ onBeforeUnmount(() => {
   if (progressInterval) {
     clearInterval(progressInterval)
   }
+  // 清理增量保存定时器
+  stopIncrementalSaveTimer()
 })
 </script>
 

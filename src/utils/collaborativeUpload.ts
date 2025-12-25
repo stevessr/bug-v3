@@ -10,10 +10,15 @@ export interface CollaborativeUploadConfig {
   serverUrl: string // WebSocket 服务器地址，如 ws://localhost:9527
   role: 'master' | 'worker' // 主控端或工作者
   masterAlsoUploads?: boolean // 主机是否也参与上传（默认 true）
+  autoReconnect?: boolean // 是否自动重连（默认 true）
+  reconnectDelay?: number // 重连延迟（毫秒，默认 5000）
+  taskTimeout?: number // 任务超时时间（毫秒，默认 60000）
   onStatusChange?: (status: ConnectionStatus) => void
   onProgress?: (progress: UploadProgress) => void
   onWorkerStats?: (stats: WorkerStats) => void
   onLocalUploadComplete?: (filename: string, url: string) => void // 本地上传完成回调
+  onRemoteUploadComplete?: (filename: string, url: string) => void // 远程上传完成回调（来自工作者）
+  onDisconnect?: (pendingTasks: string[]) => void // 断线时回调，返回未完成的远程任务文件名
 }
 
 export interface ConnectionStatus {
@@ -87,9 +92,14 @@ export class CollaborativeUploadClient {
 
   // 用于主控端等待会话完成
   private sessionCompleteResolve: ((results: UploadResult[]) => void) | null = null
+  // @ts-expect-error kept for potential future use (reject on fatal errors)
+  private sessionReject: ((error: Error) => void) | null = null // 用于断线时 reject
   private sessionResults: UploadResult[] = []
   private localUploadResults: UploadResult[] = [] // 本地上传结果
   private totalExpected: number = 0 // 期望完成的总数
+  private pendingRemoteFiles: string[] = [] // 正在等待远程上传的文件名
+  private taskTimeoutTimer: ReturnType<typeof setTimeout> | null = null // 任务超时定时器
+  private isUploading: boolean = false // 是否正在上传中
 
   constructor(config: CollaborativeUploadConfig) {
     this.config = config
@@ -146,12 +156,17 @@ export class CollaborativeUploadClient {
           this.stopHeartbeat()
           this.config.onStatusChange?.(this._status)
 
-          // 自动重连
-          if (!this.reconnectTimer) {
+          // 处理断线时的任务失败
+          this.handleDisconnectDuringUpload()
+
+          // 自动重连（仅在配置允许时）
+          const autoReconnect = this.config.autoReconnect !== false
+          if (autoReconnect && !this.reconnectTimer) {
+            const delay = this.config.reconnectDelay || 5000
             this.reconnectTimer = setTimeout(() => {
               this.reconnectTimer = null
               this.connect().catch(console.error)
-            }, 5000)
+            }, delay)
           }
         }
 
@@ -213,6 +228,104 @@ export class CollaborativeUploadClient {
   }
 
   /**
+   * 处理上传过程中的断线
+   * 将未完成的远程任务标记为失败，并通知调用方
+   */
+  private handleDisconnectDuringUpload(): void {
+    if (!this.isUploading) return
+
+    console.log(
+      '[CollaborativeUpload] Disconnected during upload, pending remote files:',
+      this.pendingRemoteFiles
+    )
+
+    // 清除超时定时器
+    if (this.taskTimeoutTimer) {
+      clearTimeout(this.taskTimeoutTimer)
+      this.taskTimeoutTimer = null
+    }
+
+    // 通知调用方有未完成的任务
+    if (this.pendingRemoteFiles.length > 0) {
+      this.config.onDisconnect?.(this.pendingRemoteFiles)
+
+      // 将未完成的远程任务标记为失败
+      for (const filename of this.pendingRemoteFiles) {
+        // 检查是否已经有这个文件的结果
+        const hasResult = this.sessionResults.some(r => r.filename === filename)
+        if (!hasResult) {
+          this.sessionResults.push({
+            filename,
+            success: false,
+            error: '服务器连接断开'
+          })
+        }
+      }
+      this.pendingRemoteFiles = []
+    }
+
+    // 更新进度显示
+    this.config.onProgress?.({
+      completed:
+        this.sessionResults.filter(r => r.success).length +
+        this.localUploadResults.filter(r => r.success).length,
+      failed:
+        this.sessionResults.filter(r => !r.success).length +
+        this.localUploadResults.filter(r => !r.success).length,
+      total: this.totalExpected
+    })
+
+    // 如果还有 Promise 在等待，resolve 它（返回当前结果，包含失败的任务）
+    if (this.sessionCompleteResolve) {
+      const allResults = [...this.localUploadResults, ...this.sessionResults]
+      this.sessionCompleteResolve(allResults)
+      this.sessionCompleteResolve = null
+      this.sessionReject = null
+      this.isUploading = false
+    }
+  }
+
+  /**
+   * 启动任务超时定时器
+   */
+  private startTaskTimeout(): void {
+    if (this.taskTimeoutTimer) {
+      clearTimeout(this.taskTimeoutTimer)
+    }
+
+    const timeout = this.config.taskTimeout || 60000 // 默认 60 秒
+
+    this.taskTimeoutTimer = setTimeout(() => {
+      console.log('[CollaborativeUpload] Task timeout reached')
+
+      // 将未完成的远程任务标记为超时
+      for (const filename of this.pendingRemoteFiles) {
+        const hasResult = this.sessionResults.some(r => r.filename === filename)
+        if (!hasResult) {
+          this.sessionResults.push({
+            filename,
+            success: false,
+            error: '上传超时'
+          })
+        }
+      }
+      this.pendingRemoteFiles = []
+
+      // 触发完成检查
+      this.checkAllComplete()
+    }, timeout)
+  }
+
+  /**
+   * 重置任务超时（当有进展时调用）
+   */
+  private resetTaskTimeout(): void {
+    if (this.taskTimeoutTimer && this.pendingRemoteFiles.length > 0) {
+      this.startTaskTimeout()
+    }
+  }
+
+  /**
    * 处理服务器消息
    */
   private handleMessage(rawData: string): void {
@@ -247,9 +360,7 @@ export class CollaborativeUploadClient {
 
         case 'TASK_WAITING':
           // 主控端收到工作者等待通知（429 rate limit）
-          console.log(
-            `[CollaborativeUpload] Worker waiting on ${data.filename}: ${data.waitTime}s`
-          )
+          console.log(`[CollaborativeUpload] Worker waiting on ${data.filename}: ${data.waitTime}s`)
           this.config.onProgress?.({
             completed:
               this.sessionResults.filter(r => r.success).length +
@@ -271,6 +382,12 @@ export class CollaborativeUploadClient {
             success: true,
             url: data.resultUrl
           })
+          // 从待处理列表中移除
+          this.pendingRemoteFiles = this.pendingRemoteFiles.filter(f => f !== data.filename)
+          // 重置超时（有进展时）
+          this.resetTaskTimeout()
+          // 回调通知远程上传完成
+          this.config.onRemoteUploadComplete?.(data.filename, data.resultUrl)
           this.config.onProgress?.({
             completed:
               this.sessionResults.filter(r => r.success).length +
@@ -291,6 +408,10 @@ export class CollaborativeUploadClient {
             success: false,
             error: data.error
           })
+          // 从待处理列表中移除
+          this.pendingRemoteFiles = this.pendingRemoteFiles.filter(f => f !== data.filename)
+          // 重置超时（有进展时）
+          this.resetTaskTimeout()
           this.config.onProgress?.({
             completed:
               this.sessionResults.filter(r => r.success).length +
@@ -412,9 +533,12 @@ export class CollaborativeUploadClient {
     this.sessionResults = []
     this.localUploadResults = []
     this.totalExpected = files.length
+    this.pendingRemoteFiles = []
+    this.isUploading = true
 
     if (!masterAlsoUploads || files.length === 0) {
       // 如果主机不参与上传，全部交给工作者
+      this.pendingRemoteFiles = files.map(f => f.name)
       const tasks = await this.prepareTasksData(files)
       this.send({
         type: 'SUBMIT_TASKS',
@@ -422,8 +546,14 @@ export class CollaborativeUploadClient {
         tasks
       })
 
-      return new Promise(resolve => {
+      // 启动超时定时器
+      if (files.length > 0) {
+        this.startTaskTimeout()
+      }
+
+      return new Promise((resolve, reject) => {
         this.sessionCompleteResolve = resolve
+        this.sessionReject = reject
       })
     }
 
@@ -432,6 +562,9 @@ export class CollaborativeUploadClient {
     const localCount = Math.ceil(files.length / 2)
     const localFiles = files.slice(0, localCount)
     const remoteFiles = files.slice(localCount)
+
+    // 记录远程文件名
+    this.pendingRemoteFiles = remoteFiles.map(f => f.name)
 
     console.log(
       `[CollaborativeUpload] Split tasks: ${localCount} local, ${remoteFiles.length} remote`
@@ -448,11 +581,15 @@ export class CollaborativeUploadClient {
         sessionId: this._sessionId,
         tasks
       })
+
+      // 启动超时定时器
+      this.startTaskTimeout()
     }
 
     // 等待所有任务完成（本地 + 远程）
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       this.sessionCompleteResolve = resolve
+      this.sessionReject = reject
 
       // 如果没有远程任务，需要自己触发完成检查
       if (remoteFiles.length === 0) {
@@ -557,9 +694,20 @@ export class CollaborativeUploadClient {
   private checkAllComplete(): void {
     const totalCompleted = this.sessionResults.length + this.localUploadResults.length
     if (totalCompleted >= this.totalExpected && this.sessionCompleteResolve) {
+      // 清理超时定时器
+      if (this.taskTimeoutTimer) {
+        clearTimeout(this.taskTimeoutTimer)
+        this.taskTimeoutTimer = null
+      }
+
+      // 重置上传状态
+      this.isUploading = false
+      this.pendingRemoteFiles = []
+
       const allResults = [...this.localUploadResults, ...this.sessionResults]
       this.sessionCompleteResolve(allResults)
       this.sessionCompleteResolve = null
+      this.sessionReject = null
     }
   }
 
