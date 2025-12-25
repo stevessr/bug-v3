@@ -141,24 +141,18 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     return emojis
   })
 
-  // 获取所有标签及其使用次数 - 使用缓存优化
-  // 缓存标签计算结果，避免每次重新遍历所有分组
-  const tagCacheVersion = ref(0)
-  const cachedTags = ref<Array<{ name: string; count: number }>>([])
+  // 获取所有标签及其使用次数 - 使用增量更新的 Map
+  // 维护一个响应式的标签计数 Map，在 CRUD 操作时增量更新
+  const tagCountMap = ref<Map<string, number>>(new Map())
+  const tagCacheValid = ref(false)
+  // 用于触发 allTags 重新计算的版本号
+  const tagMapVersion = ref(0)
 
-  const allTags = computed(() => {
-    // 触发响应式依赖
-    const _ = tagCacheVersion.value
-    const groupsSnapshot = groups.value
+  // 重建标签计数（仅在首次或需要完全重建时调用）
+  const rebuildTagCounts = () => {
+    const newMap = new Map<string, number>()
 
-    // 如果缓存有效，直接返回
-    if (cachedTags.value.length > 0 && _ === tagCacheVersion.value) {
-      return cachedTags.value
-    }
-
-    const tagMap = new Map<string, number>()
-
-    for (const group of groupsSnapshot) {
+    for (const group of groups.value) {
       const emojis = group.emojis || []
       for (let i = 0; i < emojis.length; i++) {
         const emoji = emojis[i]
@@ -166,17 +160,82 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           const tags = emoji.tags
           for (let j = 0; j < tags.length; j++) {
             const tag = tags[j]
-            tagMap.set(tag, (tagMap.get(tag) || 0) + 1)
+            newMap.set(tag, (newMap.get(tag) || 0) + 1)
           }
         }
       }
     }
 
-    const result = Array.from(tagMap.entries())
-      .map(([name, count]) => ({ name, count: Number(count) }))
+    tagCountMap.value = newMap
+    tagCacheValid.value = true
+    tagMapVersion.value++
+  }
+
+  // 增量更新标签计数（添加表情时调用）
+  const incrementTagCounts = (tags: string[] | undefined) => {
+    if (!tags || tags.length === 0) return
+    // 如果缓存无效，先重建
+    if (!tagCacheValid.value) {
+      rebuildTagCounts()
+      return
+    }
+
+    const map = tagCountMap.value
+    for (const tag of tags) {
+      map.set(tag, (map.get(tag) || 0) + 1)
+    }
+    // 触发 computed 重新计算
+    tagMapVersion.value++
+  }
+
+  // 增量更新标签计数（删除表情时调用）
+  const decrementTagCounts = (tags: string[] | undefined) => {
+    if (!tags || tags.length === 0) return
+    // 如果缓存无效，先重建
+    if (!tagCacheValid.value) {
+      rebuildTagCounts()
+      return
+    }
+
+    const map = tagCountMap.value
+    for (const tag of tags) {
+      const count = map.get(tag) || 0
+      if (count <= 1) {
+        map.delete(tag)
+      } else {
+        map.set(tag, count - 1)
+      }
+    }
+    // 触发 computed 重新计算
+    tagMapVersion.value++
+  }
+
+  // 使缓存失效（在批量操作或数据加载时调用）
+  const invalidateTagCache = () => {
+    tagCacheValid.value = false
+  }
+
+  const allTags = computed(() => {
+    // 依赖版本号以确保响应式更新（通过 void 使用避免 unused 警告）
+    void tagMapVersion.value
+
+    // 如果缓存无效，需要重建（此时通过 tagMapVersion 依赖触发）
+    if (!tagCacheValid.value) {
+      // 延迟到下一个微任务执行重建，避免在 computed 中修改状态
+      queueMicrotask(() => {
+        if (!tagCacheValid.value) {
+          rebuildTagCounts()
+        }
+      })
+      // 返回空数组，等待重建完成后通过 tagMapVersion 触发更新
+      return []
+    }
+
+    // 从 Map 转换为排序后的数组
+    const result = Array.from(tagCountMap.value.entries())
+      .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
 
-    cachedTags.value = result
     return result
   })
 
@@ -232,7 +291,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     endBatch,
     saveData: async () => {
       if (_saveData) await _saveData()
-    }
+    },
+    // Tag count callbacks for incremental updates
+    onTagsAdded: incrementTagCounts,
+    onTagsRemoved: decrementTagCounts,
+    invalidateTagCache
   }
 
   // --- Initialize Sub-stores ---

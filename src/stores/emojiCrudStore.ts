@@ -45,6 +45,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       }
       group.emojis.push(newEmoji)
       console.log('[EmojiCrudStore] addEmoji', { id: newEmoji.id, groupId })
+      // Update tag counts incrementally
+      saveControl.onTagsAdded?.(newEmoji.tags)
       saveControl.maybeSave()
       return newEmoji
     }
@@ -70,6 +72,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       }
       group.emojis.push(newEmoji)
       console.log('[EmojiCrudStore] addEmojiWithoutSave', { id: newEmoji.id, groupId })
+      // For batch operations, invalidate cache instead of incremental update
+      saveControl.invalidateTagCache?.()
       return newEmoji
     }
   }
@@ -82,6 +86,12 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       const emojis = group.emojis || []
       const index = emojis.findIndex(e => e && e.id === emojiId)
       if (index !== -1) {
+        const oldEmoji = emojis[index]
+        // Handle tag changes incrementally
+        if (updates.tags !== undefined && oldEmoji.tags !== updates.tags) {
+          saveControl.onTagsRemoved?.(oldEmoji.tags)
+          saveControl.onTagsAdded?.(updates.tags)
+        }
         emojis[index] = { ...emojis[index], ...updates }
         console.log('[EmojiCrudStore] updateEmoji', { id: emojiId, updates })
         saveControl.maybeSave()
@@ -116,7 +126,13 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
   const deleteEmoji = (emojiId: string): void => {
     for (const group of groups.value) {
       if (!group.emojis) continue
-      group.emojis = group.emojis.filter(e => e.id !== emojiId)
+      const emojiIndex = group.emojis.findIndex(e => e?.id === emojiId)
+      if (emojiIndex !== -1) {
+        const emoji = group.emojis[emojiIndex]
+        // Decrement tag counts before removal
+        saveControl.onTagsRemoved?.(emoji?.tags)
+        group.emojis.splice(emojiIndex, 1)
+      }
     }
     favorites.value.delete(emojiId)
     console.log('[EmojiCrudStore] deleteEmoji', { id: emojiId })
@@ -136,6 +152,11 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
     if (group && index >= 0 && index < emojis.length) {
       const currentEmoji = emojis[index]
       if (!currentEmoji) return
+      // Handle tag changes incrementally
+      if (updatedEmoji.tags !== undefined && currentEmoji.tags !== updatedEmoji.tags) {
+        saveControl.onTagsRemoved?.(currentEmoji.tags)
+        saveControl.onTagsAdded?.(updatedEmoji.tags)
+      }
       emojis[index] = { ...currentEmoji, ...updatedEmoji }
       console.log('[EmojiCrudStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id })
       saveControl.maybeSave()
@@ -151,6 +172,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
     if (group && index >= 0 && index < emojis.length) {
       const emoji = emojis[index]
       if (!emoji) return
+      // Decrement tag counts before removal
+      saveControl.onTagsRemoved?.(emoji.tags)
       emojis.splice(index, 1)
       favorites.value.delete(emoji.id)
       console.log('[EmojiCrudStore] removeEmojiFromGroup', { groupId, index, id: emoji.id })
@@ -231,6 +254,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       const removed = originalLength - group.emojis.length
       if (removed > 0) {
         console.log('[EmojiCrudStore] dedupeGroup', { groupId, removed })
+        // Invalidate tag cache since we removed emojis
+        saveControl.invalidateTagCache?.()
         saveControl.maybeSave()
       }
       return removed
@@ -275,6 +300,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       const removed = originalLength - group.emojis.length
       if (removed > 0) {
         console.log('[EmojiCrudStore] dedupeGroupByName', { groupId, removed })
+        // Invalidate tag cache since we removed emojis
+        saveControl.invalidateTagCache?.()
         saveControl.maybeSave()
       }
       return removed
@@ -377,6 +404,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
 
       if (totalRemoved > 0) {
         console.log('[EmojiCrudStore] Removed', totalRemoved, 'duplicate emojis')
+        // Invalidate tag cache since we removed emojis
+        saveControl.invalidateTagCache?.()
         saveControl.maybeSave()
       }
 

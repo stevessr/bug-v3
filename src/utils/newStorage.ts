@@ -1,3 +1,5 @@
+import { toRaw } from 'vue'
+
 import type { EmojiGroup, AppSettings } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
 import { loadDefaultEmojiGroups, loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
@@ -35,6 +37,7 @@ function getChromeAPI(): typeof chrome | null {
 }
 
 // --- Helper function to ensure data is serializable ---
+// Use toRaw() to strip Vue reactive proxy, then recursively process
 function ensureSerializable<T>(data: T): T {
   if (data === null || data === undefined) return data
 
@@ -45,24 +48,44 @@ function ensureSerializable<T>(data: T): T {
   }
 
   try {
-    // 使用 JSON 方式确保数据可序列化并移除 Vue reactive proxies
-    return JSON.parse(JSON.stringify(data))
-  } catch (error) {
-    // Fallback: create a clean version by recursively processing each property
-    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-      const cleaned: Record<string, unknown> = {}
-      for (const [key, value] of Object.entries(data)) {
-        try {
-          cleaned[key] = ensureSerializable(value)
-        } catch {
-          // Skip unserializable properties
-        }
-      }
-      return cleaned as T
-    } else if (Array.isArray(data)) {
-      return data.map(item => ensureSerializable(item)) as T
+    // Strip Vue reactive proxy first
+    const raw = toRaw(data)
+
+    // Handle Set - convert to array
+    if (raw instanceof Set) {
+      return Array.from(raw).map(item => ensureSerializable(item)) as T
     }
-    return data
+
+    // Handle Map - convert to array of [key, value] pairs
+    if (raw instanceof Map) {
+      return Array.from(raw.entries()).map(([k, v]) => [
+        ensureSerializable(k),
+        ensureSerializable(v)
+      ]) as T
+    }
+
+    // For arrays with reactive elements, we need to process recursively
+    if (Array.isArray(raw)) {
+      return raw.map(item => ensureSerializable(item)) as T
+    }
+
+    // For plain objects, recursively process to handle nested reactivity
+    if (typeof raw === 'object' && raw !== null) {
+      const result: Record<string, unknown> = {}
+      for (const key of Object.keys(raw)) {
+        result[key] = ensureSerializable((raw as Record<string, unknown>)[key])
+      }
+      return result as T
+    }
+
+    return raw as T
+  } catch (error) {
+    // Fallback to JSON method if toRaw fails
+    try {
+      return JSON.parse(JSON.stringify(data))
+    } catch {
+      return data
+    }
   }
 }
 

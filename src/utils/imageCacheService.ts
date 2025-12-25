@@ -75,15 +75,34 @@ export class ImageCacheService {
     const transaction = this.db.transaction([this.STORE_NAME], 'readonly')
     const store = transaction.objectStore(this.STORE_NAME)
 
-    const getAllRequest = store.getAll()
-    getAllRequest.onsuccess = () => {
-      const images = getAllRequest.result as CachedImage[]
-      this.stats.totalImages = images.length
-      this.stats.totalSize = images.reduce((sum, img) => sum + img.size, 0)
+    // Use cursor iteration instead of getAll() to avoid memory bloat
+    let totalImages = 0
+    let totalSize = 0
+    let oldestEntry: number | undefined
+    let newestEntry: number | undefined
 
-      if (images.length > 0) {
-        this.stats.oldestEntry = Math.min(...images.map(img => img.timestamp))
-        this.stats.newestEntry = Math.max(...images.map(img => img.timestamp))
+    const cursorRequest = store.openCursor()
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result
+      if (cursor) {
+        const img = cursor.value as CachedImage
+        totalImages++
+        totalSize += img.size
+
+        if (oldestEntry === undefined || img.timestamp < oldestEntry) {
+          oldestEntry = img.timestamp
+        }
+        if (newestEntry === undefined || img.timestamp > newestEntry) {
+          newestEntry = img.timestamp
+        }
+
+        cursor.continue()
+      } else {
+        // Cursor finished - update stats
+        this.stats.totalImages = totalImages
+        this.stats.totalSize = totalSize
+        this.stats.oldestEntry = oldestEntry
+        this.stats.newestEntry = newestEntry
       }
     }
   }
@@ -227,54 +246,86 @@ export class ImageCacheService {
   private async ensureCacheLimit(): Promise<void> {
     if (!this.db) return
 
-    // Check current cache size
+    // Use count() first to check if cleanup is needed
     const transaction = this.db.transaction([this.STORE_NAME], 'readonly')
     const store = transaction.objectStore(this.STORE_NAME)
 
-    const getAllRequest = store.getAll()
-    getAllRequest.onsuccess = async () => {
-      const images = getAllRequest.result as CachedImage[]
+    const countRequest = store.count()
+    countRequest.onsuccess = async () => {
+      const count = countRequest.result
 
-      // Check if we need to clean up
-      const needsCleanup =
-        images.length > this.MAX_CACHE_ENTRIES ||
-        images.reduce((sum, img) => sum + img.size, 0) > this.MAX_CACHE_SIZE
+      // Quick check: if count is within limits and we haven't exceeded size recently, skip
+      if (count <= this.MAX_CACHE_ENTRIES * 0.9 && this.stats.totalSize <= this.MAX_CACHE_SIZE * 0.9) {
+        return
+      }
 
-      if (needsCleanup) {
-        await this.cleanupCache(images)
+      // Need to collect entries for cleanup - use cursor with minimal data
+      const cleanupTransaction = this.db!.transaction([this.STORE_NAME], 'readonly')
+      const cleanupStore = cleanupTransaction.objectStore(this.STORE_NAME)
+
+      const entries: Array<{ id: string; size: number; lastAccessed: number; accessCount: number }> = []
+      let totalSize = 0
+
+      const cursorRequest = cleanupStore.openCursor()
+      cursorRequest.onsuccess = async () => {
+        const cursor = cursorRequest.result
+        if (cursor) {
+          const img = cursor.value as CachedImage
+          entries.push({
+            id: img.id,
+            size: img.size,
+            lastAccessed: img.lastAccessed,
+            accessCount: img.accessCount
+          })
+          totalSize += img.size
+          cursor.continue()
+        } else {
+          // Cursor finished - check if cleanup needed
+          const needsCleanup =
+            entries.length > this.MAX_CACHE_ENTRIES || totalSize > this.MAX_CACHE_SIZE
+
+          if (needsCleanup) {
+            await this.cleanupCacheFromEntries(entries, totalSize, entries.length)
+          }
+        }
       }
     }
   }
 
-  private async cleanupCache(images: CachedImage[]): Promise<void> {
+  private async cleanupCacheFromEntries(
+    entries: Array<{ id: string; size: number; lastAccessed: number; accessCount: number }>,
+    totalSize: number,
+    totalCount: number
+  ): Promise<void> {
     if (!this.db) return
 
-    // Sort by least recently used (LRU) and oldest
-    const sortedImages = images.sort((a, b) => {
-      // First, remove very old entries
-      const now = Date.now()
+    const now = Date.now()
+
+    // Sort by LRU (least recently used first)
+    entries.sort((a, b) => {
       const aAge = now - a.lastAccessed
       const bAge = now - b.lastAccessed
 
+      // First, prioritize very old entries
       if (aAge > this.MAX_AGE && bAge <= this.MAX_AGE) return -1
       if (bAge > this.MAX_AGE && aAge <= this.MAX_AGE) return 1
 
-      // Then sort by last accessed time (LRU)
+      // Then sort by last accessed time
       return a.lastAccessed - b.lastAccessed
     })
 
-    // Remove images that are too old or least recently used
+    // Determine which entries to remove
     const toRemove: string[] = []
-    let currentSize = images.reduce((sum, img) => sum + img.size, 0)
-    let currentCount = images.length
+    let currentSize = totalSize
+    let currentCount = totalCount
 
-    for (const image of sortedImages) {
+    for (const entry of entries) {
       if (
-        image.accessCount <= 1 && // Rarely accessed
+        entry.accessCount <= 1 &&
         (currentCount > this.MAX_CACHE_ENTRIES || currentSize > this.MAX_CACHE_SIZE)
       ) {
-        toRemove.push(image.id)
-        currentSize -= image.size
+        toRemove.push(entry.id)
+        currentSize -= entry.size
         currentCount--
       }
     }

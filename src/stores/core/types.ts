@@ -27,6 +27,10 @@ export interface SaveControl {
   endBatch: () => Promise<void>
   maybeSave: () => void
   saveData: () => Promise<void>
+  // Optional tag count callbacks for incremental updates
+  onTagsAdded?: (tags: string[] | undefined) => void
+  onTagsRemoved?: (tags: string[] | undefined) => void
+  invalidateTagCache?: () => void
 }
 
 /**
