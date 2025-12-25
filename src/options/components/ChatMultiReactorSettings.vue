@@ -20,7 +20,6 @@ interface DiscourseEmojisResponse {
 }
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
-const settings = props.settings as AppSettings | Ref<AppSettings>
 
 const emit = defineEmits(['update:enableChatMultiReactor', 'update:chatMultiReactorEmojis'])
 
@@ -59,8 +58,9 @@ const errorMessage = ref('')
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value[key]) ?? defaultValue
-    return (settings && (settings as AppSettings)[key]) ?? defaultValue
+    const s = props.settings
+    if (isRef(s)) return (s.value && s.value[key]) ?? defaultValue
+    return (s && (s as AppSettings)[key]) ?? defaultValue
   } catch {
     return defaultValue
   }
