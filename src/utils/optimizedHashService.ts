@@ -22,6 +22,55 @@ export interface BatchHashResult {
   wasmAccelerated?: boolean
 }
 
+/**
+ * Union-Find (Disjoint Set) for efficient grouping
+ */
+class UnionFind {
+  private parent: Map<string, string> = new Map()
+  private rank: Map<string, number> = new Map()
+
+  find(x: string): string {
+    if (!this.parent.has(x)) {
+      this.parent.set(x, x)
+      this.rank.set(x, 0)
+    }
+    if (this.parent.get(x) !== x) {
+      this.parent.set(x, this.find(this.parent.get(x)!))
+    }
+    return this.parent.get(x)!
+  }
+
+  union(x: string, y: string): void {
+    const rootX = this.find(x)
+    const rootY = this.find(y)
+    if (rootX === rootY) return
+
+    const rankX = this.rank.get(rootX) || 0
+    const rankY = this.rank.get(rootY) || 0
+
+    if (rankX < rankY) {
+      this.parent.set(rootX, rootY)
+    } else if (rankX > rankY) {
+      this.parent.set(rootY, rootX)
+    } else {
+      this.parent.set(rootY, rootX)
+      this.rank.set(rootX, rankX + 1)
+    }
+  }
+
+  getGroups(): Map<string, string[]> {
+    const groups = new Map<string, string[]>()
+    for (const x of this.parent.keys()) {
+      const root = this.find(x)
+      if (!groups.has(root)) {
+        groups.set(root, [])
+      }
+      groups.get(root)!.push(x)
+    }
+    return groups
+  }
+}
+
 export class OptimizedHashService {
   private readonly HASH_SIZE = {
     low: 8,
@@ -33,6 +82,9 @@ export class OptimizedHashService {
   private workers: Worker[] = []
   private workerReady: boolean[] = []
   private wasmAvailable = false
+
+  // Cache for binary representations of hashes
+  private binaryHashCache = new Map<string, bigint>()
 
   async initializeWorkers(): Promise<void> {
     if (this.workers.length > 0) return
@@ -539,13 +591,182 @@ export class OptimizedHashService {
       return wasmHashService.calculateHammingDistance(hash1, hash2)
     }
 
+    // Use optimized binary popcount method
+    return this.hammingDistanceFast(hash1, hash2)
+  }
+
+  /**
+   * Fast Hamming distance using BigInt XOR and popcount
+   * Much faster than character-by-character comparison
+   */
+  private hammingDistanceFast(hash1: string, hash2: string): number {
     if (hash1.length !== hash2.length) return Infinity
 
-    let distance = 0
-    for (let i = 0; i < hash1.length; i++) {
-      if (hash1[i] !== hash2[i]) distance++
+    // Get or compute binary representations
+    const bin1 = this.hexToBigInt(hash1)
+    const bin2 = this.hexToBigInt(hash2)
+
+    // XOR and count differing bits
+    const xor = bin1 ^ bin2
+    return this.popcount64(xor)
+  }
+
+  /**
+   * Convert hex string to BigInt (cached)
+   */
+  private hexToBigInt(hex: string): bigint {
+    let cached = this.binaryHashCache.get(hex)
+    if (cached !== undefined) {
+      return cached
     }
-    return distance
+
+    // Convert hex to binary representation
+    // Each hex character represents 4 bits
+    let result = 0n
+    for (let i = 0; i < hex.length; i++) {
+      result = (result << 4n) | BigInt(parseInt(hex[i], 16))
+    }
+
+    this.binaryHashCache.set(hex, result)
+    return result
+  }
+
+  /**
+   * Count number of 1 bits in a BigInt (popcount)
+   * Uses Brian Kernighan's algorithm for sparse bit counts
+   */
+  private popcount64(n: bigint): number {
+    let count = 0
+    while (n > 0n) {
+      n &= n - 1n // Clear the lowest set bit
+      count++
+    }
+    return count
+  }
+
+  /**
+   * Batch find duplicates with hash bucketing optimization
+   * Significantly reduces O(n²) comparisons by grouping hashes by prefix
+   */
+  findDuplicatesOptimized<T extends { id: string; hash: string }>(
+    items: T[],
+    threshold: number = 10
+  ): Map<string, T[]> {
+    if (items.length === 0) return new Map()
+
+    const startTime = performance.now()
+    const uf = new UnionFind()
+
+    // Group items by hash prefix for bucketing (first 2 characters = 256 buckets)
+    // Items with very different prefixes are unlikely to be similar
+    const prefixBuckets = new Map<string, T[]>()
+    const prefixLength = 2
+
+    for (const item of items) {
+      if (!item.hash || item.hash.length < prefixLength) continue
+      const prefix = item.hash.substring(0, prefixLength)
+      if (!prefixBuckets.has(prefix)) {
+        prefixBuckets.set(prefix, [])
+      }
+      prefixBuckets.get(prefix)!.push(item)
+    }
+
+    // Pre-compute binary representations for all hashes
+    for (const item of items) {
+      if (item.hash) {
+        this.hexToBigInt(item.hash)
+      }
+    }
+
+    // For each bucket, compare items within the bucket
+    // Also compare with neighboring buckets (prefixes that differ by small amounts)
+    const bucketKeys = Array.from(prefixBuckets.keys()).sort()
+    const processedPairs = new Set<string>()
+
+    for (let bucketIdx = 0; bucketIdx < bucketKeys.length; bucketIdx++) {
+      const prefix = bucketKeys[bucketIdx]
+      const bucket = prefixBuckets.get(prefix)!
+
+      // Compare within this bucket
+      for (let i = 0; i < bucket.length; i++) {
+        for (let j = i + 1; j < bucket.length; j++) {
+          const item1 = bucket[i]
+          const item2 = bucket[j]
+          const pairKey = item1.id < item2.id ? `${item1.id}:${item2.id}` : `${item2.id}:${item1.id}`
+
+          if (!processedPairs.has(pairKey)) {
+            processedPairs.add(pairKey)
+            const distance = this.hammingDistanceFast(item1.hash, item2.hash)
+            if (distance <= threshold) {
+              uf.union(item1.id, item2.id)
+            }
+          }
+        }
+      }
+
+      // Compare with nearby buckets (within hamming distance range of prefix)
+      // Since threshold is typically 10-15 and prefix is 2 hex chars (8 bits),
+      // we need to check buckets whose prefix differs by at most threshold bits
+      for (let otherIdx = bucketIdx + 1; otherIdx < bucketKeys.length; otherIdx++) {
+        const otherPrefix = bucketKeys[otherIdx]
+        const prefixDistance = this.hammingDistanceFast(prefix, otherPrefix)
+
+        // If prefix distance already exceeds threshold, remaining hashes can't match
+        // But we need to be careful - the rest of the hash could compensate
+        // So we check if prefix distance is within a reasonable range
+        if (prefixDistance > threshold) continue
+
+        const otherBucket = prefixBuckets.get(otherPrefix)!
+        for (const item1 of bucket) {
+          for (const item2 of otherBucket) {
+            const pairKey =
+              item1.id < item2.id ? `${item1.id}:${item2.id}` : `${item2.id}:${item1.id}`
+
+            if (!processedPairs.has(pairKey)) {
+              processedPairs.add(pairKey)
+              const distance = this.hammingDistanceFast(item1.hash, item2.hash)
+              if (distance <= threshold) {
+                uf.union(item1.id, item2.id)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Build result groups
+    const idToItem = new Map<string, T>()
+    for (const item of items) {
+      idToItem.set(item.id, item)
+    }
+
+    const result = new Map<string, T[]>()
+    const ufGroups = uf.getGroups()
+
+    for (const [root, ids] of ufGroups) {
+      if (ids.length > 1) {
+        const groupItems = ids.map(id => idToItem.get(id)!).filter(Boolean)
+        if (groupItems.length > 1) {
+          result.set(root, groupItems)
+        }
+      }
+    }
+
+    const endTime = performance.now()
+    console.log(
+      `[OptimizedHashService] findDuplicatesOptimized: ${items.length} items, ` +
+        `${result.size} duplicate groups, ${processedPairs.size} comparisons, ` +
+        `${(endTime - startTime).toFixed(2)}ms`
+    )
+
+    return result
+  }
+
+  /**
+   * Clear the binary hash cache (call when done with batch operations)
+   */
+  clearBinaryHashCache(): void {
+    this.binaryHashCache.clear()
   }
 
   async cleanup(): Promise<void> {

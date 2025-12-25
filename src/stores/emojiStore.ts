@@ -820,44 +820,32 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         }
       }
 
-      // Find duplicates using optimized batch processing
-      console.log('[EmojiStore] Finding duplicates...')
-      const allHashes = allEmojis
+      // Find duplicates using optimized batch processing with hash bucketing
+      console.log('[EmojiStore] Finding duplicates using optimized algorithm...')
+
+      // Prepare items for optimized comparison
+      const hashItems = allEmojis
         .filter(item => item.emoji.perceptualHash)
         .map(item => ({
-          item,
-          hash: item.emoji.perceptualHash!
+          id: item.emoji.id,
+          hash: item.emoji.perceptualHash,
+          item
         }))
 
+      // Use optimized duplicate finding with hash bucketing and Union-Find
+      const duplicateMap = optimizedHashService.findDuplicatesOptimized(
+        hashItems,
+        similarityThreshold
+      )
+
+      // Convert Map result to array format expected by the rest of the code
       const duplicateGroups: Array<Array<(typeof allEmojis)[0]>> = []
-      const processed = new Set<string>()
-
-      // Use optimized comparison for better performance
-      for (let i = 0; i < allHashes.length; i++) {
-        const { item: item1, hash: hash1 } = allHashes[i]
-        if (processed.has(item1.emoji.id)) continue
-
-        const duplicates: Array<(typeof allEmojis)[0]> = [item1]
-        processed.add(item1.emoji.id)
-
-        // Compare with remaining items using Hamming distance
-        for (let j = i + 1; j < allHashes.length; j++) {
-          const { item: item2, hash: hash2 } = allHashes[j]
-          if (processed.has(item2.emoji.id)) continue
-
-          if (
-            item1.emoji.id !== item2.emoji.id &&
-            optimizedHashService.hammingDistance(hash1, hash2) <= similarityThreshold
-          ) {
-            duplicates.push(item2)
-            processed.add(item2.emoji.id)
-          }
-        }
-
-        if (duplicates.length > 1) {
-          duplicateGroups.push(duplicates)
-        }
+      for (const [_root, groupItems] of duplicateMap) {
+        duplicateGroups.push(groupItems.map(gi => gi.item))
       }
+
+      // Clear the binary hash cache after processing
+      optimizedHashService.clearBinaryHashCache()
 
       console.log(`[EmojiStore] Found ${duplicateGroups.length} groups of duplicates`)
 
