@@ -90,11 +90,11 @@ function ensureSerializable<T>(data: T): T {
 }
 
 // --- Simple Storage Manager ---
-// 直接写入 localStorage，异步写入 extension storage
+// 优先写入 extension storage，localStorage 作为缓存加速读取
 class SimpleStorageManager {
-  // 直接读取 - 优先 localStorage，回退到 extension storage
+  // 读取 - 优先 localStorage，回退到 extension storage
   async get(key: string): Promise<unknown> {
-    // 先尝试 localStorage
+    // 先尝试 localStorage（快速缓存）
     try {
       if (typeof localStorage !== 'undefined') {
         const value = localStorage.getItem(key)
@@ -129,7 +129,7 @@ class SimpleStorageManager {
     return null
   }
 
-  // 直接写入 localStorage，异步写入 extension storage
+  // 写入 - 主要写入 extension storage，localStorage 作为可选缓存
   async set(key: string, value: unknown): Promise<void> {
     const cleanValue = ensureSerializable(value)
     const finalValue = {
@@ -137,55 +137,23 @@ class SimpleStorageManager {
       timestamp: Date.now()
     }
 
-    // 直接写入 localStorage（同步）
+    // 尝试写入 localStorage（可选缓存，失败不影响）
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(key, JSON.stringify(finalValue))
       }
-    } catch (error) {
-      console.error('[Storage] localStorage.set failed:', key, error)
+    } catch {
+      // localStorage 满了或不可用，忽略
     }
 
-    // 异步写入 extension storage（不等待）
-    const chromeAPI = getChromeAPI()
-    if (chromeAPI?.storage?.local) {
-      chromeAPI.storage.local.set({ [key]: finalValue }, () => {
-        if (chromeAPI.runtime.lastError) {
-          console.error('[Storage] extensionStorage.set failed:', key, chromeAPI.runtime.lastError)
-        }
-      })
-    }
-  }
-
-  // 同步写入所有存储层（等待 extension storage 完成）
-  async setSync(key: string, value: unknown): Promise<void> {
-    const cleanValue = ensureSerializable(value)
-    const finalValue = {
-      data: cleanValue,
-      timestamp: Date.now()
-    }
-
-    // 写入 localStorage
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(key, JSON.stringify(finalValue))
-      }
-    } catch (error) {
-      console.error('[Storage] localStorage.set failed:', key, error)
-    }
-
-    // 同步等待 extension storage 完成
+    // 写入 extension storage（必须成功）
     const chromeAPI = getChromeAPI()
     if (chromeAPI?.storage?.local) {
       return new Promise((resolve, reject) => {
         try {
           chromeAPI.storage.local.set({ [key]: finalValue }, () => {
             if (chromeAPI.runtime.lastError) {
-              console.error(
-                '[Storage] extensionStorage.set failed:',
-                key,
-                chromeAPI.runtime.lastError
-              )
+              console.error('[Storage] extensionStorage.set failed:', key, chromeAPI.runtime.lastError)
               reject(chromeAPI.runtime.lastError)
             } else {
               resolve()
@@ -196,6 +164,11 @@ class SimpleStorageManager {
         }
       })
     }
+  }
+
+  // setSync 现在等同于 set
+  async setSync(key: string, value: unknown): Promise<void> {
+    return this.set(key, value)
   }
 
   // 从所有存储层删除
@@ -209,16 +182,18 @@ class SimpleStorageManager {
       // ignore
     }
 
-    // 异步删除 extension storage
+    // 删除 extension storage
     const chromeAPI = getChromeAPI()
     if (chromeAPI?.storage?.local) {
-      chromeAPI.storage.local.remove([key], () => {
-        // ignore errors
+      return new Promise(resolve => {
+        chromeAPI.storage.local.remove([key], () => {
+          resolve()
+        })
       })
     }
   }
 
-  // 批量同步写入（减少 storage.onChanged 事件次数）
+  // 批量写入
   async setBatchSync(items: Record<string, unknown>): Promise<void> {
     const timestamp = Date.now()
     const finalItems: Record<string, { data: unknown; timestamp: number }> = {}
@@ -228,28 +203,29 @@ class SimpleStorageManager {
       finalItems[key] = { data: cleanValue, timestamp }
     }
 
-    // 写入 localStorage（逐个，但这是同步的，不会触发事件）
+    // 尝试写入 localStorage（可选缓存）
     try {
       if (typeof localStorage !== 'undefined') {
         for (const key of Object.keys(finalItems)) {
-          localStorage.setItem(key, JSON.stringify(finalItems[key]))
+          try {
+            localStorage.setItem(key, JSON.stringify(finalItems[key]))
+          } catch {
+            // 单个 key 写入失败，继续其他
+          }
         }
       }
-    } catch (error) {
-      console.error('[Storage] localStorage.setBatch failed:', error)
+    } catch {
+      // ignore
     }
 
-    // 批量写入 extension storage（单次调用，只触发一次 onChanged）
+    // 写入 extension storage
     const chromeAPI = getChromeAPI()
     if (chromeAPI?.storage?.local) {
       return new Promise((resolve, reject) => {
         try {
           chromeAPI.storage.local.set(finalItems, () => {
             if (chromeAPI.runtime.lastError) {
-              console.error(
-                '[Storage] extensionStorage.setBatch failed:',
-                chromeAPI.runtime.lastError
-              )
+              console.error('[Storage] extensionStorage.setBatch failed:', chromeAPI.runtime.lastError)
               reject(chromeAPI.runtime.lastError)
             } else {
               resolve()
@@ -427,6 +403,7 @@ export const newStorageHelpers = {
   },
 
   // 批量保存所有数据（groups, settings, favorites）到一次 storage.set 调用
+  // 同时清理已删除的分组
   async saveAllBatchSync(options: {
     groups?: EmojiGroup[]
     settings?: AppSettings
@@ -436,6 +413,23 @@ export const newStorageHelpers = {
 
     // 添加 groups
     if (options.groups && options.groups.length > 0) {
+      // 先获取现有索引，检查是否有需要删除的分组
+      const existingIndex = await this.getEmojiGroupIndex()
+      const existingIds = new Set(existingIndex.map(entry => entry.id))
+      const incomingIds = new Set(options.groups.map(group => group.id))
+
+      // 删除不再存在的分组
+      const removedIds: string[] = []
+      existingIds.forEach(id => {
+        if (!incomingIds.has(id)) removedIds.push(id)
+      })
+
+      if (removedIds.length > 0) {
+        await Promise.allSettled(
+          removedIds.map(id => storageManager.remove(STORAGE_KEYS.GROUP_PREFIX + id))
+        )
+      }
+
       // 更新 group index
       const index = options.groups.map((group, order) => ({ id: group.id, order }))
       batchItems[STORAGE_KEYS.GROUP_INDEX] = index

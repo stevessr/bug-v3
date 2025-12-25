@@ -36,34 +36,42 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Used by popup/sidebar to prevent accidental data corruption
   const isReadOnlyMode = ref(false)
 
-  // --- Dirty Tracking ---
-  // 追踪哪些数据需要保存，以实现增量更新
-  const dirtyGroups = ref<Set<string>>(new Set()) // 需要保存的 group IDs
-  const dirtySettings = ref(false) // settings 是否需要保存
-  const dirtyFavorites = ref(false) // favorites 是否需要保存
-  const deletedGroupIds = ref<Set<string>>(new Set()) // 被删除的 group IDs
+  // --- 直接保存 ---
+  // 直接保存指定分组（异步，不阻塞）
+  const saveGroup = (groupId: string) => {
+    const group = groups.value.find(g => g.id === groupId)
+    if (group) {
+      newStorageHelpers.setEmojiGroup(groupId, group).catch(err => {
+        console.error('[EmojiStore] Failed to save group:', groupId, err)
+      })
+    }
+  }
 
-  // 标记 group 为脏
+  // 直接保存 settings
+  const saveSettings = () => {
+    newStorageHelpers.setSettings(settings.value).catch(err => {
+      console.error('[EmojiStore] Failed to save settings:', err)
+    })
+  }
+
+  // 直接保存 favorites
+  const saveFavorites = () => {
+    newStorageHelpers.setFavorites(Array.from(favorites.value)).catch(err => {
+      console.error('[EmojiStore] Failed to save favorites:', err)
+    })
+  }
+
+  // 兼容旧 API
   const markGroupDirty = (groupId: string) => {
-    dirtyGroups.value.add(groupId)
+    saveGroup(groupId)
   }
 
-  // 标记 settings 为脏
   const markSettingsDirty = () => {
-    dirtySettings.value = true
+    saveSettings()
   }
 
-  // 标记 favorites 为脏
   const markFavoritesDirty = () => {
-    dirtyFavorites.value = true
-  }
-
-  // 清除所有脏标记
-  const clearDirtyFlags = () => {
-    dirtyGroups.value.clear()
-    dirtySettings.value = false
-    dirtyFavorites.value = false
-    deletedGroupIds.value.clear()
+    saveFavorites()
   }
 
   // Enable or disable read-only mode
@@ -316,11 +324,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Forward reference container - saveData is assigned after its definition
   let _saveData: (() => Promise<void>) | null = null
 
-  // 标记 group 删除
+  // 删除分组时直接从存储删除
   const markGroupDeleted = (groupId: string) => {
-    deletedGroupIds.value.add(groupId)
-    // 同时从脏 groups 中移除（因为已经被删除了）
-    dirtyGroups.value.delete(groupId)
+    newStorageHelpers.removeEmojiGroup(groupId).catch(err => {
+      console.error('[EmojiStore] Failed to remove group:', groupId, err)
+    })
   }
 
   const saveControl: SaveControl = {
@@ -334,7 +342,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     onTagsAdded: incrementTagCounts,
     onTagsRemoved: decrementTagCounts,
     invalidateTagCache,
-    // Dirty tracking callbacks for incremental saves
+    // 直接保存回调
     markGroupDirty,
     markSettingsDirty,
     markFavoritesDirty,
@@ -571,124 +579,40 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
 
     // CRITICAL: Prevent saving empty groups if we haven't loaded data successfully yet
-    // This protects against accidental data loss during initialization or load failures
     if (groups.value.length === 0 && !hasLoadedOnce.value) {
       console.warn(
-        '[EmojiStore] SaveData blocked - groups array is empty and no successful load has occurred yet.',
-        'This is likely an initialization race condition. Skipping save to prevent data loss.'
+        '[EmojiStore] SaveData blocked - groups array is empty and no successful load has occurred yet.'
       )
       return
     }
 
-    // 检查是否有需要保存的数据
-    const hasDirtyData =
-      dirtyGroups.value.size > 0 ||
-      dirtySettings.value ||
-      dirtyFavorites.value ||
-      deletedGroupIds.value.size > 0
-
-    if (!hasDirtyData) {
-      console.log('[EmojiStore] SaveData skipped - no dirty data')
-      return
-    }
-
-    console.log('[EmojiStore] Starting incremental saveData', {
-      dirtyGroupsCount: dirtyGroups.value.size,
-      dirtySettings: dirtySettings.value,
-      dirtyFavorites: dirtyFavorites.value,
-      deletedGroups: deletedGroupIds.value.size
-    })
+    console.log('[EmojiStore] Starting saveData - saving all groups')
 
     isSaving.value = true
     try {
       await nextTick()
 
-      // 收集需要保存的数据
-      const saveOptions: {
-        groups?: EmojiGroup[]
-        settings?: AppSettings
-        favorites?: string[]
-      } = {}
+      // 保存所有分组和索引
+      const index = groups.value.map((g, order) => ({ id: g.id, order }))
+      await newStorageHelpers.setEmojiGroupIndex(index)
 
-      // 只收集脏 groups
-      if (dirtyGroups.value.size > 0) {
-        const dirtyGroupsList = groups.value.filter(g => dirtyGroups.value.has(g.id))
-        if (dirtyGroupsList.length > 0) {
-          saveOptions.groups = dirtyGroupsList
-        }
-      }
+      await Promise.all(
+        groups.value.map(group => newStorageHelpers.setEmojiGroup(group.id, group))
+      )
 
-      // 处理 settings
-      if (dirtySettings.value) {
-        const updatedSettings = { ...settings.value, lastModified: Date.now() }
-        settings.value = updatedSettings
-        saveOptions.settings = updatedSettings
-      }
+      // 保存 settings 和 favorites
+      await newStorageHelpers.setSettings({ ...settings.value, lastModified: Date.now() })
+      await newStorageHelpers.setFavorites(Array.from(favorites.value))
 
-      // 处理 favorites
-      if (dirtyFavorites.value) {
-        saveOptions.favorites = Array.from(favorites.value)
-      }
-
-      // 先处理删除的 groups
-      if (deletedGroupIds.value.size > 0) {
-        const deletePromises = Array.from(deletedGroupIds.value).map(id =>
-          newStorageHelpers.removeEmojiGroup(id).catch(error => {
-            console.error('[EmojiStore] Failed to delete group:', id, error)
-          })
-        )
-        await Promise.allSettled(deletePromises)
-      }
-
-      // 使用批量保存（如果有 groups，需要更新 index）
-      if (saveOptions.groups && saveOptions.groups.length > 0) {
-        // 检查是否需要更新索引：删除操作或有新分组
-        // 通过比较当前索引和脏分组列表来检测新分组
-        const currentIndex = await newStorageHelpers.getEmojiGroupIndex()
-        const existingIds = new Set(currentIndex.map(entry => entry.id))
-        const hasNewGroups = saveOptions.groups.some(g => !existingIds.has(g.id))
-        const indexUpdateNeeded = deletedGroupIds.value.size > 0 || hasNewGroups
-
-        if (indexUpdateNeeded) {
-          // 有删除操作或新分组，需要更新 index
-          await newStorageHelpers.setEmojiGroupIndexSync(
-            groups.value.map((g, order) => ({ id: g.id, order }))
-          )
-        }
-
-        // 批量保存脏 groups
-        await newStorageHelpers.setEmojiGroupsBatchSync(saveOptions.groups).catch(error => {
-          console.error('[EmojiStore] Failed to save groups:', error)
-        })
-      }
-
-      // 保存 settings
-      if (saveOptions.settings) {
-        await newStorageHelpers.setSettingsSync(saveOptions.settings).catch(error => {
-          console.error('[EmojiStore] Failed to save settings:', error)
-        })
-      }
-
-      // 保存 favorites
-      if (saveOptions.favorites) {
-        await newStorageHelpers.setFavoritesSync(saveOptions.favorites).catch(error => {
-          console.error('[EmojiStore] Failed to save favorites:', error)
-        })
-      }
-
-      // 清除脏标记
-      clearDirtyFlags()
-
-      console.log('[EmojiStore] SaveData completed successfully (incremental)')
+      console.log('[EmojiStore] SaveData completed successfully')
     } catch (error) {
       const e = error as Error
       console.error('[EmojiStore] Failed to save data:', e?.stack || e)
     } finally {
       isSaving.value = false
-      // Check if there's a pending save that was deferred
       if (pendingSave.value) {
         pendingSave.value = false
-        setTimeout(() => saveData(), 100) // Retry after a short delay
+        setTimeout(() => saveData(), 100)
       }
     }
   }
