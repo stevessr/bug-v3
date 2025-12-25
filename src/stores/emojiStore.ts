@@ -642,12 +642,15 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       // 使用批量保存（如果有 groups，需要更新 index）
       if (saveOptions.groups && saveOptions.groups.length > 0) {
-        // 需要更新整个 group index（因为可能有删除操作）
-        // 但只保存脏 groups 的数据
-        const indexUpdateNeeded = deletedGroupIds.value.size > 0
+        // 检查是否需要更新索引：删除操作或有新分组
+        // 通过比较当前索引和脏分组列表来检测新分组
+        const currentIndex = await newStorageHelpers.getEmojiGroupIndex()
+        const existingIds = new Set(currentIndex.map(entry => entry.id))
+        const hasNewGroups = saveOptions.groups.some(g => !existingIds.has(g.id))
+        const indexUpdateNeeded = deletedGroupIds.value.size > 0 || hasNewGroups
 
         if (indexUpdateNeeded) {
-          // 有删除操作，需要更新 index
+          // 有删除操作或新分组，需要更新 index
           await newStorageHelpers.setEmojiGroupIndexSync(
             groups.value.map((g, order) => ({ id: g.id, order }))
           )
@@ -825,8 +828,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       // Prepare items for optimized comparison
       const hashItems = allEmojis
-        .filter((item): item is typeof item & { emoji: { perceptualHash: string } } =>
-          !!item.emoji.perceptualHash
+        .filter(
+          (item): item is typeof item & { emoji: { perceptualHash: string } } =>
+            !!item.emoji.perceptualHash
         )
         .map(item => ({
           id: item.emoji.id,

@@ -82,6 +82,41 @@ function log(message, ...args) {
   console.log(`[${timestamp}] ${message}`, ...args)
 }
 
+function isValidBase64(str) {
+  try {
+    return btoa(atob(str)) === str
+  } catch (e) {
+    return false
+  }
+}
+
+function validateTaskData(taskData) {
+  if (!taskData.filename || typeof taskData.filename !== 'string') {
+    return { valid: false, error: 'Invalid filename' }
+  }
+  
+  if (!taskData.mimeType || typeof taskData.mimeType !== 'string') {
+    return { valid: false, error: 'Invalid mimeType' }
+  }
+  
+  // 支持两种数据格式：Base64 字符串或二进制数据
+  if (taskData.dataBase64 && typeof taskData.dataBase64 === 'string') {
+    // Base64 格式数据
+    if (!isValidBase64(taskData.dataBase64)) {
+      return { valid: false, error: 'Invalid Base64 encoding' }
+    }
+  } else if (taskData.binaryData && Buffer.isBuffer(taskData.binaryData)) {
+    // 二进制格式数据 - 无需 Base64 验证
+    if (taskData.binaryData.length === 0) {
+      return { valid: false, error: 'Empty binary data' }
+    }
+  } else {
+    return { valid: false, error: 'Missing or invalid data (expected dataBase64 string or binaryData buffer)' }
+  }
+  
+  return { valid: true }
+}
+
 function broadcast(message, excludeWs = null) {
   const data = JSON.stringify(message)
   for (const worker of workers.values()) {
@@ -141,22 +176,50 @@ function assignTaskToWorker(task, worker) {
 
   log(`Task ${task.id} assigned to worker ${worker.id}`)
 
-  sendToClient(worker.ws, {
-    type: 'TASK_ASSIGNED',
-    task: {
-      id: task.id,
-      filename: task.filename,
-      mimeType: task.mimeType,
-      dataBase64: task.dataBase64,
-      size: task.size
+  // 根据数据类型选择传输方式
+  let taskPayload = {
+    id: task.id,
+    filename: task.filename,
+    mimeType: task.mimeType,
+    size: task.size
+  }
+
+  if (task.binaryData) {
+    // 服务器端存储的二进制数据（来自服务器协议）
+    taskPayload.binaryData = task.binaryData
+    sendToClient(worker.ws, {
+      type: 'TASK_ASSIGNED',
+      task: taskPayload
+    })
+  } else {
+    // Base64 数据或来自客户端的二进制模式
+    if (task.dataBase64) {
+      // 传统 Base64 模式
+      taskPayload.dataBase64 = task.dataBase64
+      sendToClient(worker.ws, {
+        type: 'TASK_ASSIGNED',
+        task: taskPayload
+      })
+    } else {
+      // 客户端二进制模式：先发送元数据，等待二进制帧
+      taskPayload.taskId = task.id // 客户端需要 taskId 来关联二进制数据
+      sendToClient(worker.ws, {
+        type: 'TASK_ASSIGNED',
+        task: taskPayload,
+        binaryMode: true // 通知客户端将接收二进制数据
+      })
     }
-  })
+  }
 }
 
 function getAllIdleWorkers() {
   const idleWorkers = []
+  const now = Date.now()
+  
   for (const worker of workers.values()) {
-    if (worker.status === 'idle') {
+    if (worker.status === 'idle' && 
+        worker.healthStatus !== 'unhealthy' &&
+        (!worker.cooldownUntil || now >= worker.cooldownUntil)) {
       idleWorkers.push(worker)
     }
   }
@@ -166,23 +229,67 @@ function getAllIdleWorkers() {
 function scheduleNextTask() {
   if (pendingTasks.size === 0) return
 
-  // 获取所有空闲的工作者
+  // 获取所有空闲的工作者，按成功率排序
   const idleWorkers = getAllIdleWorkers()
   if (idleWorkers.length === 0) return
 
-  // 获取待处理任务的迭代器
-  const taskIterator = pendingTasks.values()
+  // 按成功率排序工作者（成功率高的优先）
+  idleWorkers.sort((a, b) => {
+    const aSuccessRate = a.stats.completed + a.stats.failed > 0 
+      ? a.stats.completed / (a.stats.completed + a.stats.failed) 
+      : 1
+    const bSuccessRate = b.stats.completed + b.stats.failed > 0 
+      ? b.stats.completed / (b.stats.completed + b.stats.failed) 
+      : 1
+    return bSuccessRate - aSuccessRate
+  })
 
-  // 为每个空闲工作者分配一个任务
+  // 将待处理任务按优先级排序：考虑重试延迟
+  const now = Date.now()
+  const availableTasks = Array.from(pendingTasks.values()).filter(task => 
+    !task.retryAfter || now >= task.retryAfter
+  )
+  
+  const sortedTasks = availableTasks.sort((a, b) => {
+    // 重试任务优先，但考虑延迟
+    if (a.retryCount > 0 && b.retryCount === 0) return -1
+    if (a.retryCount === 0 && b.retryCount > 0) return 1
+    if (a.retryCount !== b.retryCount) return b.retryCount - a.retryCount
+    
+    // 相同重试次数按创建时间排序（早的优先）
+    return a.createdAt - b.createdAt
+  })
+
+  // 为每个空闲工作者分配最合适的任务
+  let taskIndex = 0
   for (const worker of idleWorkers) {
-    const taskResult = taskIterator.next()
-    if (taskResult.done) break // 没有更多任务了
-
-    const task = taskResult.value
-    assignTaskToWorker(task, worker)
+    if (taskIndex >= sortedTasks.length) break
+    
+    const task = sortedTasks[taskIndex]
+    
+    // 检查工作者是否适合处理这个任务（避免重复分配给之前失败的工作者）
+    if (task.lastFailedWorker === worker.id && sortedTasks.length > idleWorkers.length) {
+      // 尝试找下一个任务
+      let nextIndex = taskIndex + 1
+      while (nextIndex < sortedTasks.length && nextIndex < taskIndex + idleWorkers.length) {
+        if (sortedTasks[nextIndex].lastFailedWorker !== worker.id) {
+          assignTaskToWorker(sortedTasks[nextIndex], worker)
+          break
+        }
+        nextIndex++
+      }
+      if (nextIndex >= sortedTasks.length || nextIndex >= taskIndex + idleWorkers.length) {
+        // 没有其他合适的任务，还是分配这个
+        assignTaskToWorker(task, worker)
+      }
+    } else {
+      assignTaskToWorker(task, worker)
+    }
+    
+    taskIndex++
   }
 
-  log(`Scheduled tasks: ${idleWorkers.length} workers, ${pendingTasks.size} remaining`)
+  log(`Scheduled tasks: ${idleWorkers.length} workers, ${pendingTasks.size} remaining (retry tasks: ${Array.from(pendingTasks.values()).filter(t => t.retryCount > 0).length})`)
 }
 
 function handleTaskComplete(workerId, taskId, resultUrl) {
@@ -198,6 +305,13 @@ function handleTaskComplete(workerId, taskId, resultUrl) {
     worker.currentTaskId = null
     worker.stats.completed++
     worker.stats.totalBytes += task.size
+    
+    // 恢复工作者健康状态
+    if (worker.consecutiveFailures > 0) {
+      worker.consecutiveFailures = 0
+      worker.healthStatus = 'healthy'
+      log(`Worker ${workerId} health restored after successful task`)
+    }
   }
 
   task.status = 'completed'
@@ -252,19 +366,44 @@ function handleTaskFailed(workerId, taskId, error) {
     worker.status = 'idle'
     worker.currentTaskId = null
     worker.stats.failed++
+    
+    // 更新工作者健康状态
+    worker.consecutiveFailures = (worker.consecutiveFailures || 0) + 1
+    worker.lastFailureTime = Date.now()
+    
+    // 如果工作者连续失败太多，暂时降低其优先级
+    if (worker.consecutiveFailures >= 3) {
+      worker.healthStatus = 'unhealthy'
+      worker.cooldownUntil = Date.now() + (worker.consecutiveFailures * 10000) // 10 秒 * 连续失败次数
+      log(`Worker ${workerId} marked as unhealthy, cooldown until ${new Date(worker.cooldownUntil)}`)
+    }
   }
 
   task.retryCount++
+  task.lastFailedWorker = workerId
+  task.lastFailureTime = Date.now()
 
-  log(`Task ${taskId} failed (attempt ${task.retryCount}): ${error}`)
+  log(`Task ${taskId} failed (attempt ${task.retryCount}) by worker ${workerId}: ${error}`)
 
-  // 重试逻辑
-  if (task.retryCount < 3) {
+  // 智能重试逻辑
+  const maxRetries = Math.min(3 + Math.floor(task.retryCount / 2), 8) // 动态调整最大重试次数
+  
+  if (task.retryCount < maxRetries) {
     task.status = 'pending'
     task.assignedWorker = null
     activeTasks.delete(taskId)
     pendingTasks.set(taskId, task)
-    log(`Task ${taskId} queued for retry`)
+    
+    // 根据错误类型调整重试延迟
+    let retryDelay = 1000 // 基础延迟1秒
+    if (error.includes('429') || error.includes('rate limit')) {
+      retryDelay = 5000 * task.retryCount // 速率限制错误，延迟更长
+    } else if (error.includes('timeout') || error.includes('network')) {
+      retryDelay = 2000 * task.retryCount // 网络错误
+    }
+    
+    task.retryAfter = Date.now() + retryDelay
+    log(`Task ${taskId} queued for retry #${task.retryCount}, delay ${retryDelay}ms`)
   } else {
     task.status = 'failed'
     task.error = error
@@ -279,6 +418,7 @@ function handleTaskFailed(workerId, taskId, error) {
         taskId: task.id,
         filename: task.filename,
         error: error,
+        attempts: task.retryCount,
         progress: {
           completed: session.completedTasks,
           failed: session.failedTasks,
@@ -307,20 +447,200 @@ function handleTaskFailed(workerId, taskId, error) {
 
 // ==================== 消息处理 ====================
 
+function handleBinaryMessage(ws, clientId, buffer) {
+  try {
+    // 支持两种二进制协议：
+    // 1. 客户端协议：[4 字节 taskId 长度][taskId 字符串][文件数据]
+    // 2. 服务器协议：[类型 (1 字节)][会话 ID(UUID)][任务 ID(UUID)][文件名长度 (2 字节)][文件名][MIME 类型长度 (2 字节)][MIME 类型][文件数据]
+    
+    if (buffer.length < 4) {
+      log(`Binary message too short from ${clientId}`)
+      return
+    }
+
+    // 检测协议类型（通过前4字节判断）
+    const view = new DataView(buffer)
+    const potentialTaskIdLength = view.getUint32(0, false) // 大端序
+    
+    // 如果是合理的taskId长度（通常小于100），使用客户端协议
+    if (potentialTaskIdLength > 0 && potentialTaskIdLength < 100 && buffer.length >= 4 + potentialTaskIdLength) {
+      handleClientBinaryFrame(ws, clientId, buffer)
+    } else {
+      // 尝试服务器协议
+      handleServerBinaryFrame(ws, clientId, buffer)
+    }
+  } catch (error) {
+    log(`Error handling binary message from ${clientId}: ${error.message}`)
+  }
+}
+
+function handleClientBinaryFrame(ws, clientId, buffer) {
+  // 客户端协议：[4 字节 taskId 长度][taskId 字符串][文件数据]
+  const view = new DataView(buffer)
+  const taskIdLength = view.getUint32(0, false) // 大端序
+
+  const decoder = new TextDecoder()
+  const taskIdBytes = new Uint8Array(buffer, 4, taskIdLength)
+  const taskId = decoder.decode(taskIdBytes)
+
+  const fileData = buffer.slice(4 + taskIdLength)
+
+  log(`Received client binary frame: taskId=${taskId}, size=${fileData.byteLength}`)
+
+  // 查找对应的任务元数据（应该已经通过 JSON 消息发送）
+  // 这里我们需要一个临时存储来关联 taskId 和任务信息
+  // 实际上，客户端会先发送 TASK_ASSIGNED 消息，然后发送二进制数据
+  // 所以我们需要在某个地方存储这个映射
+  
+  // 暂时先存储二进制数据，等待 TASK_ASSIGNED 消息
+  if (!ws.pendingBinaryData) {
+    ws.pendingBinaryData = new Map()
+  }
+  ws.pendingBinaryData.set(taskId, fileData)
+}
+
+function handleServerBinaryFrame(ws, clientId, buffer) {
+  // 服务器协议：[类型 (1 字节)][会话 ID(UUID)][任务 ID(UUID)][文件名长度 (2 字节)][文件名][MIME 类型长度 (2 字节)][MIME 类型][文件数据]
+  
+  if (buffer.length < 1 + 32 + 32 + 2 + 2) {
+    log(`Binary message too short for server protocol from ${clientId}`)
+    return
+  }
+
+  const messageType = buffer.readUInt8(0)
+  const sessionId = buffer.subarray(1, 33).toString('hex')
+  const taskId = buffer.subarray(33, 65).toString('hex')
+  
+  let offset = 65
+  const filenameLength = buffer.readUInt16BE(offset)
+  offset += 2
+  
+  if (buffer.length < offset + filenameLength) {
+    log(`Invalid filename length in binary message from ${clientId}`)
+    return
+  }
+  
+  const filename = buffer.subarray(offset, offset + filenameLength).toString('utf8')
+  offset += filenameLength
+  
+  const mimeTypeLength = buffer.readUInt16BE(offset)
+  offset += 2
+  
+  if (buffer.length < offset + mimeTypeLength) {
+    log(`Invalid MIME type length in binary message from ${clientId}`)
+    return
+  }
+  
+  const mimeType = buffer.subarray(offset, offset + mimeTypeLength).toString('utf8')
+  offset += mimeTypeLength
+  
+  const binaryData = buffer.subarray(offset)
+
+  // 处理二进制任务提交
+  if (messageType === 0x01) { // 任务提交
+    const session = sessions.get(sessionId)
+    if (!session) {
+      log(`Session ${sessionId} not found for binary task from ${clientId}`)
+      return
+    }
+
+    const taskData = {
+      filename,
+      mimeType,
+      binaryData,
+      size: binaryData.length
+    }
+
+    const validation = validateTaskData(taskData)
+    if (!validation.valid) {
+      log(`Invalid binary task data: ${validation.error}`)
+      return
+    }
+
+    const task = {
+      id: taskId,
+      sessionId: sessionId,
+      filename: filename,
+      mimeType: mimeType,
+      dataBase64: null,
+      binaryData: binaryData,
+      size: binaryData.length,
+      status: 'pending',
+      assignedWorker: null,
+      resultUrl: null,
+      error: null,
+      retryCount: 0,
+      createdAt: Date.now()
+    }
+
+    pendingTasks.set(task.id, task)
+    session.taskIds.push(task.id)
+    session.totalTasks++
+
+    log(`Binary task submitted: ${filename} (${binaryData.length} bytes)`)
+    
+    // 通知主控端任务已提交
+    sendToClient(session.ws, {
+      type: 'TASK_SUBMITTED',
+      taskId: task.id,
+      filename: task.filename,
+      size: task.size
+    })
+
+    // 开始调度
+    scheduleNextTask()
+  }
+}
+
 function handleMessage(ws, clientId, message) {
   try {
-    const data = JSON.parse(message)
+    // Check if message is valid JSON string
+    if (typeof message !== 'string') {
+      log(`Invalid message type from ${clientId}: expected string, got ${typeof message}`)
+      return
+    }
+
+    // Trim whitespace and check if empty
+    const trimmedMessage = message.trim()
+    if (!trimmedMessage) {
+      log(`Empty message received from ${clientId}`)
+      return
+    }
+
+    // Check for common JSON format issues
+    if (!trimmedMessage.startsWith('{') || !trimmedMessage.endsWith('}')) {
+      log(`Malformed JSON from ${clientId}: ${trimmedMessage.substring(0, 50)}...`)
+      return
+    }
+
+    const data = JSON.parse(trimmedMessage)
+
+    // Validate message structure
+    if (!data || typeof data !== 'object') {
+      log(`Invalid message structure from ${clientId}: not an object`)
+      return
+    }
+
+    if (!data.type || typeof data.type !== 'string') {
+      log(`Missing or invalid message type from ${clientId}`)
+      return
+    }
 
     switch (data.type) {
       // 工作者注册
       case 'WORKER_REGISTER': {
+        ws.clientType = 'worker'
         const worker = {
           id: clientId,
           ws,
           status: 'idle',
           lastHeartbeat: Date.now(),
           currentTaskId: null,
-          stats: { completed: 0, failed: 0, totalBytes: 0 }
+          stats: { completed: 0, failed: 0, totalBytes: 0 },
+          healthStatus: 'healthy',
+          consecutiveFailures: 0,
+          lastFailureTime: null,
+          cooldownUntil: null
         }
         workers.set(clientId, worker)
         log(`Worker registered: ${clientId}`)
@@ -341,17 +661,9 @@ function handleMessage(ws, clientId, message) {
         break
       }
 
-      // 工作者心跳
-      case 'WORKER_HEARTBEAT': {
-        const worker = workers.get(clientId)
-        if (worker) {
-          worker.lastHeartbeat = Date.now()
-        }
-        break
-      }
-
       // 主控端创建上传会话
       case 'CREATE_SESSION': {
+        ws.clientType = 'master'
         const sessionId = randomUUID()
         const session = {
           id: sessionId,
@@ -373,6 +685,17 @@ function handleMessage(ws, clientId, message) {
         break
       }
 
+      // 工作者心跳
+      case 'WORKER_HEARTBEAT': {
+        const worker = workers.get(clientId)
+        if (worker) {
+          worker.lastHeartbeat = Date.now()
+        }
+        break
+      }
+
+      
+
       // 主控端提交上传任务
       case 'SUBMIT_TASKS': {
         const session = sessions.get(data.sessionId)
@@ -385,14 +708,38 @@ function handleMessage(ws, clientId, message) {
         }
 
         const tasks = data.tasks || []
+        let validTasks = 0
+        let invalidTasks = 0
+
         for (const taskData of tasks) {
+          const validation = validateTaskData(taskData)
+          if (!validation.valid) {
+            log(`Invalid task data: ${validation.error}`)
+            invalidTasks++
+            
+            // 通知主控端任务无效
+            sendToClient(ws, {
+              type: 'TASK_FAILED',
+              taskId: 'invalid',
+              filename: taskData.filename || 'unknown',
+              error: validation.error,
+              progress: {
+                completed: session.completedTasks,
+                failed: session.failedTasks + invalidTasks,
+                total: session.totalTasks + validTasks + invalidTasks
+              }
+            })
+            continue
+          }
+
           const task = {
-            id: randomUUID(),
+            id: taskData.taskId || randomUUID(), // 客户端可能提供taskId
             sessionId: data.sessionId,
             filename: taskData.filename,
             mimeType: taskData.mimeType,
-            dataBase64: taskData.dataBase64,
-            size: taskData.size || 0,
+            dataBase64: taskData.dataBase64 || null,
+            binaryData: taskData.binaryData || null,
+            size: taskData.size || (taskData.binaryData ? taskData.binaryData.length : 0),
             status: 'pending',
             assignedWorker: null,
             resultUrl: null,
@@ -404,6 +751,7 @@ function handleMessage(ws, clientId, message) {
           pendingTasks.set(task.id, task)
           session.taskIds.push(task.id)
           session.totalTasks++
+          validTasks++
         }
 
         log(`Session ${data.sessionId}: ${tasks.length} tasks submitted`)
@@ -466,11 +814,53 @@ function handleMessage(ws, clientId, message) {
         log(`Unknown message type: ${data.type}`)
     }
   } catch (error) {
-    log(`Error handling message: ${error.message}`)
+    if (error instanceof SyntaxError) {
+      log(`JSON parsing error from ${clientId}: ${error.message}`)
+      log(`Problematic message: ${message.toString().substring(0, 200)}...`)
+      
+      // Send error feedback to client
+      sendToClient(ws, {
+        type: 'ERROR',
+        message: 'Invalid JSON format',
+        code: 'JSON_PARSE_ERROR'
+      })
+    } else {
+      log(`Error handling message from ${clientId}: ${error.message}`)
+      log(`Stack trace: ${error.stack}`)
+      
+      // Send generic error to client
+      sendToClient(ws, {
+        type: 'ERROR',
+        message: 'Internal server error',
+        code: 'INTERNAL_ERROR'
+      })
+    }
   }
 }
 
 function handleDisconnect(clientId) {
+  // 查找对应的WebSocket连接
+  let ws = null
+  let clientType = 'unknown'
+  
+  for (const worker of workers.values()) {
+    if (worker.id === clientId) {
+      ws = worker.ws
+      clientType = 'worker'
+      break
+    }
+  }
+  
+  if (!ws) {
+    for (const session of sessions.values()) {
+      if (session.ws.clientId === clientId) {
+        ws = session.ws
+        clientType = 'master'
+        break
+      }
+    }
+  }
+
   const worker = workers.get(clientId)
   if (worker) {
     workers.delete(clientId)
@@ -508,6 +898,12 @@ function handleDisconnect(clientId) {
       }
       break
     }
+  }
+
+  // 清理WebSocket相关数据
+  if (ws) {
+    ws.pendingBinaryData?.clear()
+    ws.clientType = 'unknown'
   }
 }
 
@@ -575,11 +971,24 @@ const wss = new WebSocketServer({ server })
 wss.on('connection', (ws) => {
   const clientId = randomUUID()
   ws.clientId = clientId
+  ws.clientType = 'unknown' // 将在首次消息时确定
+  ws.pendingBinaryData = new Map() // 用于存储待处理的二进制数据
 
   log(`Client connected: ${clientId}`)
 
   ws.on('message', (message) => {
-    handleMessage(ws, clientId, message.toString())
+    try {
+      if (Buffer.isBuffer(message)) {
+        // 二进制消息 - 可能包含文件数据
+        handleBinaryMessage(ws, clientId, message)
+      } else {
+        // 文本消息 - JSON 格式
+        const messageStr = message.toString()
+        handleMessage(ws, clientId, messageStr)
+      }
+    } catch (error) {
+      log(`Error processing message from ${clientId}: ${error.message}`)
+    }
   })
 
   ws.on('close', () => {
@@ -602,6 +1011,13 @@ setInterval(() => {
       worker.ws.terminate()
       handleDisconnect(id)
     }
+    
+    // 恢复冷却期的工作者
+    if (worker.healthStatus === 'unhealthy' && worker.cooldownUntil && now >= worker.cooldownUntil) {
+      worker.healthStatus = 'healthy'
+      worker.cooldownUntil = null
+      log(`Worker ${id} cooldown ended, health restored`)
+    }
   }
 
   // 检查超时任务 (5 分钟)
@@ -610,6 +1026,19 @@ setInterval(() => {
       log(`Task ${id} timeout`)
       handleTaskFailed(task.assignedWorker, id, 'Task timeout')
     }
+  }
+  
+  // 检查是否有延迟的重试任务可以调度
+  let hasDelayedTasks = false
+  for (const [id, task] of pendingTasks.entries()) {
+    if (task.retryAfter && now >= task.retryAfter) {
+      hasDelayedTasks = true
+      break
+    }
+  }
+  
+  if (hasDelayedTasks) {
+    scheduleNextTask()
   }
 }, 10000)
 

@@ -412,7 +412,9 @@ export class CollaborativeUploadClient {
               mimeType: data.task.mimeType,
               size: data.task.size
             })
-            console.log(`[CollaborativeUpload] Task metadata stored for binary: ${data.task.taskId}`)
+            console.log(
+              `[CollaborativeUpload] Task metadata stored for binary: ${data.task.taskId}`
+            )
           } else {
             // 兼容旧的 Base64 模式
             this.handleTaskAssigned(data.task)
@@ -528,7 +530,9 @@ export class CollaborativeUploadClient {
 
       const fileData = data.slice(4 + taskIdLength)
 
-      console.log(`[CollaborativeUpload] Received binary frame: taskId=${taskId}, size=${fileData.byteLength}`)
+      console.log(
+        `[CollaborativeUpload] Received binary frame: taskId=${taskId}, size=${fileData.byteLength}`
+      )
 
       // 查找对应的任务元数据
       const taskMeta = this.pendingTaskMeta.get(taskId)

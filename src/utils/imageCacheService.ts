@@ -255,7 +255,10 @@ export class ImageCacheService {
       const count = countRequest.result
 
       // Quick check: if count is within limits and we haven't exceeded size recently, skip
-      if (count <= this.MAX_CACHE_ENTRIES * 0.9 && this.stats.totalSize <= this.MAX_CACHE_SIZE * 0.9) {
+      if (
+        count <= this.MAX_CACHE_ENTRIES * 0.9 &&
+        this.stats.totalSize <= this.MAX_CACHE_SIZE * 0.9
+      ) {
         return
       }
 
@@ -263,7 +266,12 @@ export class ImageCacheService {
       const cleanupTransaction = this.db!.transaction([this.STORE_NAME], 'readonly')
       const cleanupStore = cleanupTransaction.objectStore(this.STORE_NAME)
 
-      const entries: Array<{ id: string; size: number; lastAccessed: number; accessCount: number }> = []
+      const entries: Array<{
+        id: string
+        size: number
+        lastAccessed: number
+        accessCount: number
+      }> = []
       let totalSize = 0
 
       const cursorRequest = cleanupStore.openCursor()

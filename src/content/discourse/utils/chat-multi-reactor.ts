@@ -314,7 +314,9 @@ export function initChatMultiReactor(customEmojis?: string[]): void {
           if (element.classList?.contains('chat-message-container')) {
             processContainer(element)
           } else if (element.querySelectorAll) {
-            element.querySelectorAll<HTMLElement>('.chat-message-container').forEach(processContainer)
+            element
+              .querySelectorAll<HTMLElement>('.chat-message-container')
+              .forEach(processContainer)
           }
         }
       })

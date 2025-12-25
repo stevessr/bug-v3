@@ -615,7 +615,7 @@ export class OptimizedHashService {
    * Convert hex string to BigInt (cached)
    */
   private hexToBigInt(hex: string): bigint {
-    let cached = this.binaryHashCache.get(hex)
+    const cached = this.binaryHashCache.get(hex)
     if (cached !== undefined) {
       return cached
     }
