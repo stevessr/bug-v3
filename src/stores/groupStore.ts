@@ -9,7 +9,6 @@ import type { Ref } from 'vue'
 import type { SaveControl } from './core/types'
 
 import type { EmojiGroup } from '@/types/type'
-import { newStorageHelpers } from '@/utils/newStorage'
 
 export interface GroupStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -47,6 +46,8 @@ export function useGroupStore(options: GroupStoreOptions) {
     }
     groups.value.push(newGroup)
     console.log('[GroupStore] createGroup', { id: newGroup.id, name: newGroup.name })
+    // Mark the new group as dirty for incremental save
+    saveControl.markGroupDirty?.(newGroup.id)
     saveControl.maybeSave()
     return newGroup
   }
@@ -67,6 +68,8 @@ export function useGroupStore(options: GroupStoreOptions) {
     }
     groups.value.push(newGroup)
     console.log('[GroupStore] createGroupWithoutSave', { id: newGroup.id, name: newGroup.name })
+    // Mark the new group as dirty for incremental save (will be saved when batch ends)
+    saveControl.markGroupDirty?.(newGroup.id)
     return newGroup
   }
 
@@ -78,6 +81,8 @@ export function useGroupStore(options: GroupStoreOptions) {
     if (index !== -1) {
       groups.value[index] = { ...groups.value[index], ...updates }
       console.log('[GroupStore] updateGroup', { id: groupId, updates })
+      // Mark the group as dirty for incremental save
+      saveControl.markGroupDirty?.(groupId)
       saveControl.maybeSave()
     }
   }
@@ -91,10 +96,8 @@ export function useGroupStore(options: GroupStoreOptions) {
       return
     }
 
-    // Remove from new storage system
-    newStorageHelpers
-      .removeEmojiGroup(groupId)
-      .catch(error => console.error('[GroupStore] Failed to delete group from storage:', error))
+    // Mark the group as deleted for incremental save (will be deleted from storage)
+    saveControl.markGroupDeleted?.(groupId)
 
     groups.value = groups.value.filter(g => g.id !== groupId)
     console.log('[GroupStore] deleteGroup', { id: groupId })
@@ -123,6 +126,8 @@ export function useGroupStore(options: GroupStoreOptions) {
       groups.value.splice(targetIndex, 0, removed)
       groups.value.forEach((group, index) => {
         group.order = index
+        // Mark all reordered groups as dirty (order changed)
+        saveControl.markGroupDirty?.(group.id)
       })
       console.log('[GroupStore] reorderGroups', { from: sourceGroupId, to: targetGroupId })
       await saveControl.saveData()

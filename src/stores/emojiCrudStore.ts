@@ -47,6 +47,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       console.log('[EmojiCrudStore] addEmoji', { id: newEmoji.id, groupId })
       // Update tag counts incrementally
       saveControl.onTagsAdded?.(newEmoji.tags)
+      // Mark the group as dirty for incremental save
+      saveControl.markGroupDirty?.(groupId)
       saveControl.maybeSave()
       return newEmoji
     }
@@ -74,6 +76,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       console.log('[EmojiCrudStore] addEmojiWithoutSave', { id: newEmoji.id, groupId })
       // For batch operations, invalidate cache instead of incremental update
       saveControl.invalidateTagCache?.()
+      // Mark the group as dirty for incremental save (will be saved when batch ends)
+      saveControl.markGroupDirty?.(groupId)
       return newEmoji
     }
   }
@@ -94,6 +98,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         }
         emojis[index] = { ...emojis[index], ...updates }
         console.log('[EmojiCrudStore] updateEmoji', { id: emojiId, updates })
+        // Mark the group as dirty for incremental save
+        saveControl.markGroupDirty?.(group.id)
         saveControl.maybeSave()
         break
       }
@@ -108,10 +114,16 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
     try {
       for (const group of groups.value) {
         const emojis = group.emojis || []
+        let groupModified = false
         for (const emoji of emojis) {
           if (emoji && nameUpdates[emoji.id]) {
             emoji.name = nameUpdates[emoji.id]
+            groupModified = true
           }
+        }
+        // Mark the group as dirty if any emoji was modified
+        if (groupModified) {
+          saveControl.markGroupDirty?.(group.id)
         }
       }
       console.log('[EmojiCrudStore] updateEmojiNames', { count: Object.keys(nameUpdates).length })
@@ -132,6 +144,12 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         // Decrement tag counts before removal
         saveControl.onTagsRemoved?.(emoji?.tags)
         group.emojis.splice(emojiIndex, 1)
+        // Mark the group as dirty for incremental save
+        saveControl.markGroupDirty?.(group.id)
+        // Also mark favorites as dirty if the emoji was a favorite
+        if (favorites.value.has(emojiId)) {
+          saveControl.markFavoritesDirty?.()
+        }
       }
     }
     favorites.value.delete(emojiId)
@@ -159,6 +177,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       }
       emojis[index] = { ...currentEmoji, ...updatedEmoji }
       console.log('[EmojiCrudStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id })
+      // Mark the group as dirty for incremental save
+      saveControl.markGroupDirty?.(groupId)
       saveControl.maybeSave()
     }
   }
@@ -175,6 +195,12 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       // Decrement tag counts before removal
       saveControl.onTagsRemoved?.(emoji.tags)
       emojis.splice(index, 1)
+      // Mark the group as dirty for incremental save
+      saveControl.markGroupDirty?.(groupId)
+      // Also mark favorites as dirty if the emoji was a favorite
+      if (favorites.value.has(emoji.id)) {
+        saveControl.markFavoritesDirty?.()
+      }
       favorites.value.delete(emoji.id)
       console.log('[EmojiCrudStore] removeEmojiFromGroup', { groupId, index, id: emoji.id })
       saveControl.maybeSave()
@@ -205,6 +231,9 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         targetGroup.emojis.push(emoji)
       }
 
+      // Mark both source and target groups as dirty for incremental save
+      saveControl.markGroupDirty?.(sourceGroupId)
+      saveControl.markGroupDirty?.(targetGroupId)
       saveControl.maybeSave()
       console.log('[EmojiCrudStore] moveEmoji', {
         from: sourceGroupId,
@@ -256,6 +285,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         console.log('[EmojiCrudStore] dedupeGroup', { groupId, removed })
         // Invalidate tag cache since we removed emojis
         saveControl.invalidateTagCache?.()
+        // Mark the group as dirty for incremental save
+        saveControl.markGroupDirty?.(groupId)
         saveControl.maybeSave()
       }
       return removed
@@ -302,6 +333,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         console.log('[EmojiCrudStore] dedupeGroupByName', { groupId, removed })
         // Invalidate tag cache since we removed emojis
         saveControl.invalidateTagCache?.()
+        // Mark the group as dirty for incremental save
+        saveControl.markGroupDirty?.(groupId)
         saveControl.maybeSave()
       }
       return removed
@@ -395,8 +428,12 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
               referenceId: original.emoji.id,
               url: original.emoji.url
             }
+            // Mark the group as dirty for incremental save
+            saveControl.markGroupDirty?.(duplicate.groupId)
           } else {
             emojis.splice(index, 1)
+            // Mark the group as dirty for incremental save
+            saveControl.markGroupDirty?.(duplicate.groupId)
             totalRemoved++
           }
         }
@@ -424,10 +461,16 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       saveControl.beginBatch()
       for (const group of groups.value) {
         const emojis = group.emojis || []
+        let groupModified = false
         for (const emoji of emojis) {
           if (emoji && emoji.perceptualHash) {
             delete emoji.perceptualHash
+            groupModified = true
           }
+        }
+        // Mark the group as dirty if any emoji was modified
+        if (groupModified) {
+          saveControl.markGroupDirty?.(group.id)
         }
       }
       console.log('[EmojiCrudStore] Cleared all perceptual hashes')

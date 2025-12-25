@@ -36,6 +36,36 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Used by popup/sidebar to prevent accidental data corruption
   const isReadOnlyMode = ref(false)
 
+  // --- Dirty Tracking ---
+  // 追踪哪些数据需要保存，以实现增量更新
+  const dirtyGroups = ref<Set<string>>(new Set()) // 需要保存的 group IDs
+  const dirtySettings = ref(false) // settings 是否需要保存
+  const dirtyFavorites = ref(false) // favorites 是否需要保存
+  const deletedGroupIds = ref<Set<string>>(new Set()) // 被删除的 group IDs
+
+  // 标记 group 为脏
+  const markGroupDirty = (groupId: string) => {
+    dirtyGroups.value.add(groupId)
+  }
+
+  // 标记 settings 为脏
+  const markSettingsDirty = () => {
+    dirtySettings.value = true
+  }
+
+  // 标记 favorites 为脏
+  const markFavoritesDirty = () => {
+    dirtyFavorites.value = true
+  }
+
+  // 清除所有脏标记
+  const clearDirtyFlags = () => {
+    dirtyGroups.value.clear()
+    dirtySettings.value = false
+    dirtyFavorites.value = false
+    deletedGroupIds.value.clear()
+  }
+
   // Enable or disable read-only mode
   // Call setReadOnlyMode(true) in popup/sidebar before loading data
   const setReadOnlyMode = (value: boolean) => {
@@ -285,6 +315,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- SaveControl for sub-stores ---
   // Forward reference container - saveData is assigned after its definition
   let _saveData: (() => Promise<void>) | null = null
+
+  // 标记 group 删除
+  const markGroupDeleted = (groupId: string) => {
+    deletedGroupIds.value.add(groupId)
+    // 同时从脏 groups 中移除（因为已经被删除了）
+    dirtyGroups.value.delete(groupId)
+  }
+
   const saveControl: SaveControl = {
     maybeSave,
     beginBatch,
@@ -295,7 +333,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // Tag count callbacks for incremental updates
     onTagsAdded: incrementTagCounts,
     onTagsRemoved: decrementTagCounts,
-    invalidateTagCache
+    invalidateTagCache,
+    // Dirty tracking callbacks for incremental saves
+    markGroupDirty,
+    markSettingsDirty,
+    markFavoritesDirty,
+    markGroupDeleted
   }
 
   // --- Initialize Sub-stores ---
@@ -537,39 +580,103 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       return
     }
 
-    console.log('[EmojiStore] Starting saveData with new storage system')
+    // 检查是否有需要保存的数据
+    const hasDirtyData =
+      dirtyGroups.value.size > 0 ||
+      dirtySettings.value ||
+      dirtyFavorites.value ||
+      deletedGroupIds.value.size > 0
+
+    if (!hasDirtyData) {
+      console.log('[EmojiStore] SaveData skipped - no dirty data')
+      return
+    }
+
+    console.log('[EmojiStore] Starting incremental saveData', {
+      dirtyGroupsCount: dirtyGroups.value.size,
+      dirtySettings: dirtySettings.value,
+      dirtyFavorites: dirtyFavorites.value,
+      deletedGroups: deletedGroupIds.value.size
+    })
+
     isSaving.value = true
     try {
       await nextTick()
 
-      // Update timestamp for sync comparison
-      const updatedSettings = { ...settings.value, lastModified: Date.now() }
-      settings.value = updatedSettings
+      // 收集需要保存的数据
+      const saveOptions: {
+        groups?: EmojiGroup[]
+        settings?: AppSettings
+        favorites?: string[]
+      } = {}
 
-      // Avoid dumping whole data; show a concise summary
-      console.log('[EmojiStore] Saving data summary:', {
-        groupsCount: groups.value.length,
-        settingsLastModified: updatedSettings.lastModified,
-        favoritesCount: favorites.value.size
-      })
+      // 只收集脏 groups
+      if (dirtyGroups.value.size > 0) {
+        const dirtyGroupsList = groups.value.filter(g => dirtyGroups.value.has(g.id))
+        if (dirtyGroupsList.length > 0) {
+          saveOptions.groups = dirtyGroupsList
+        }
+      }
 
-      // Use sync versions to ensure data is fully persisted to extensionStorage before returning
-      // This prevents data loss when the page is immediately refreshed after save
-      const savePromises = [
-        newStorageHelpers.setAllEmojiGroupsSync(groups.value).catch(error => {
+      // 处理 settings
+      if (dirtySettings.value) {
+        const updatedSettings = { ...settings.value, lastModified: Date.now() }
+        settings.value = updatedSettings
+        saveOptions.settings = updatedSettings
+      }
+
+      // 处理 favorites
+      if (dirtyFavorites.value) {
+        saveOptions.favorites = Array.from(favorites.value)
+      }
+
+      // 先处理删除的 groups
+      if (deletedGroupIds.value.size > 0) {
+        const deletePromises = Array.from(deletedGroupIds.value).map(id =>
+          newStorageHelpers.removeEmojiGroup(id).catch(error => {
+            console.error('[EmojiStore] Failed to delete group:', id, error)
+          })
+        )
+        await Promise.allSettled(deletePromises)
+      }
+
+      // 使用批量保存（如果有 groups，需要更新 index）
+      if (saveOptions.groups && saveOptions.groups.length > 0) {
+        // 需要更新整个 group index（因为可能有删除操作）
+        // 但只保存脏 groups 的数据
+        const indexUpdateNeeded = deletedGroupIds.value.size > 0
+
+        if (indexUpdateNeeded) {
+          // 有删除操作，需要更新 index
+          await newStorageHelpers.setEmojiGroupIndexSync(
+            groups.value.map((g, order) => ({ id: g.id, order }))
+          )
+        }
+
+        // 批量保存脏 groups
+        await newStorageHelpers.setEmojiGroupsBatchSync(saveOptions.groups).catch(error => {
           console.error('[EmojiStore] Failed to save groups:', error)
-          // Don't throw, just log - partial saves are better than complete failure
-        }),
-        newStorageHelpers.setSettingsSync(updatedSettings).catch(error => {
+        })
+      }
+
+      // 保存 settings
+      if (saveOptions.settings) {
+        await newStorageHelpers.setSettingsSync(saveOptions.settings).catch(error => {
           console.error('[EmojiStore] Failed to save settings:', error)
-        }),
-        newStorageHelpers.setFavoritesSync(Array.from(favorites.value)).catch(error => {
+        })
+      }
+
+      // 保存 favorites
+      if (saveOptions.favorites) {
+        await newStorageHelpers.setFavoritesSync(saveOptions.favorites).catch(error => {
           console.error('[EmojiStore] Failed to save favorites:', error)
         })
-      ]
+      }
 
-      await Promise.allSettled(savePromises)
-      console.log('[EmojiStore] SaveData completed successfully')
+      // 清除脏标记
+      clearDirtyFlags()
+
+      console.log('[EmojiStore] SaveData completed successfully (incremental)')
     } catch (error) {
       const e = error as Error
       console.error('[EmojiStore] Failed to save data:', e?.stack || e)
@@ -595,10 +702,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     try {
       for (const group of groups.value) {
         const emojis = group.emojis || []
+        let groupModified = false
         for (const emoji of emojis) {
           if (emoji && nameUpdates[emoji.id]) {
             emoji.name = nameUpdates[emoji.id]
+            groupModified = true
           }
+        }
+        // Mark the group as dirty if any emoji was modified
+        if (groupModified) {
+          markGroupDirty(group.id)
         }
       }
       console.log('[EmojiStore] updateEmojiNames', { count: Object.keys(nameUpdates).length })
@@ -616,6 +729,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const emoji = emojis[index]
       if (!emoji) return
       emojis.splice(index, 1)
+      // Mark the group as dirty for incremental save
+      markGroupDirty(groupId)
+      // Also mark favorites as dirty if the emoji was a favorite
+      if (favorites.value.has(emoji.id)) {
+        markFavoritesDirty()
+      }
       favorites.value.delete(emoji.id)
       console.log('[EmojiStore] removeEmojiFromGroup', { groupId, index, id: emoji.id })
       maybeSave()
@@ -766,6 +885,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       // Update the emoji while preserving the id and other metadata
       emojis[index] = { ...currentEmoji, ...updatedEmoji }
       console.log('[EmojiStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id })
+      // Mark the group as dirty for incremental save
+      markGroupDirty(groupId)
       maybeSave()
     }
   }
@@ -790,6 +911,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       }
       ungroupedGroup.emojis.push(newEmoji)
       console.log('[EmojiStore] addEmojiFromWeb', { id: newEmoji.id, name: newEmoji.name })
+      // Mark the ungrouped group as dirty for incremental save
+      markGroupDirty('ungrouped')
       maybeSave()
       return newEmoji
     }
@@ -816,6 +939,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
     settings.value = { ...settings.value, ...newSettings }
     console.log('[EmojiStore] updateSettings', { updates: newSettings })
+    // Mark settings as dirty for incremental save
+    markSettingsDirty()
     // Don't call maybeSave() here - let the watch handle all saves with debouncing
     // This prevents duplicate saves when updating settings
     // attempt to notify background to sync to content scripts
@@ -913,6 +1038,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
               }))
             })
           }
+          // Mark the imported/merged group as dirty
+          markGroupDirty(targetId)
         }
 
         // Append any remaining existing groups not touched by import
@@ -923,11 +1050,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       if (config?.settings && typeof config.settings === 'object') {
         settings.value = { ...settings.value, ...config.settings }
+        markSettingsDirty()
       }
 
       if (Array.isArray(config?.favorites)) {
         const mergedFavorites = new Set([...favorites.value, ...config.favorites])
         favorites.value = mergedFavorites
+        markFavoritesDirty()
       }
 
       console.log('[EmojiStore] importConfiguration merged', {
@@ -1009,6 +1138,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         emojis: []
       }
       groups.value.push(targetGroup)
+      // Mark the new group as dirty for incremental save
+      markGroupDirty(targetGroupId)
     }
 
     const exists = targetGroup.emojis.some(
@@ -1016,9 +1147,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     )
     if (!exists) {
       targetGroup.emojis.push(payload.emoji)
+      // Mark the target group as dirty for incremental save
+      markGroupDirty(targetGroupId)
       // maintain consistency of favorites if necessary
       if (payload.emoji.groupId === 'favorites') {
         favorites.value.add(payload.emoji.id)
+        markFavoritesDirty()
       }
       console.log('[EmojiStore] Applied emoji addition:', payload.emoji.id || payload.emoji.name)
       // Only save if not already saving or loading

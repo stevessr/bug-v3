@@ -144,6 +144,11 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
     // Sort by lastUsed (most recent first)
     favoritesGroup.emojis.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0))
 
+    // Mark favorites as dirty for incremental save
+    saveControl.markFavoritesDirty?.()
+    // Also mark the favorites group as dirty since we modified it
+    saveControl.markGroupDirty?.('favorites')
+
     if (isReadOnlyMode.value) {
       await saveFavoritesOnly()
     } else {
@@ -164,6 +169,8 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
       id: emojiId,
       isFavorite: favorites.value.has(emojiId)
     })
+    // Mark favorites as dirty for incremental save
+    saveControl.markFavoritesDirty?.()
     saveControl.maybeSave()
   }
 
@@ -179,6 +186,10 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
       favoritesGroup.emojis.splice(index, 1)
       favorites.value.delete(emojiId)
       console.log('[FavoritesStore] Removed from favorites:', emojiId)
+      // Mark favorites as dirty for incremental save
+      saveControl.markFavoritesDirty?.()
+      // Also mark the favorites group as dirty since we modified it
+      saveControl.markGroupDirty?.('favorites')
       saveControl.maybeSave()
     }
   }
@@ -201,6 +212,10 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
     }
 
     console.log('[FavoritesStore] Cleared all favorites')
+    // Mark favorites as dirty for incremental save
+    saveControl.markFavoritesDirty?.()
+    // Also mark the favorites group as dirty since we modified it
+    saveControl.markGroupDirty?.('favorites')
     saveControl.maybeSave()
   }
 

@@ -31,6 +31,11 @@ export interface SaveControl {
   onTagsAdded?: (tags: string[] | undefined) => void
   onTagsRemoved?: (tags: string[] | undefined) => void
   invalidateTagCache?: () => void
+  // Dirty tracking callbacks for incremental saves
+  markGroupDirty?: (groupId: string) => void
+  markSettingsDirty?: () => void
+  markFavoritesDirty?: () => void
+  markGroupDeleted?: (groupId: string) => void
 }
 
 /**

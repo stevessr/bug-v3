@@ -5,7 +5,7 @@
       "name": "常用",
       "order": 0,
       "icon": "⭐",
-      "emojiCount": 0
+      "emojiCount": 1
     },
     {
       "id": "group-1758073408523",
@@ -786,10 +786,10 @@
     },
     {
       "id": "group-1766479646538",
-      "name": "阿米娅",
+      "name": "春也Haruya",
       "order": 112,
       "icon": "https://linux.do/uploads/default/original/4X/f/f/9/ff94fddd15b87e0fd97aa543b757a7f2d632a378.avif",
-      "emojiCount": 10
+      "emojiCount": 25
     },
     {
       "id": "group-1766486669577",
@@ -797,8 +797,22 @@
       "order": 113,
       "icon": "https://linux.do/uploads/default/original/4X/c/4/a/c4a7756a7c660327405b1a4a54c1996cd03a73be.avif",
       "emojiCount": 1490
+    },
+    {
+      "id": "group-1766586968469",
+      "name": "X 第15弹",
+      "order": 114,
+      "icon": "https://linux.do/uploads/default/original/4X/b/b/8/bb88f5fdfa6dd8e294f433ee1a44bd57a134a3c0.avif",
+      "emojiCount": 336
+    },
+    {
+      "id": "group-1766638440016",
+      "name": "大猫一加一",
+      "order": 115,
+      "icon": "https://linux.do/uploads/default/original/4X/3/4/9/349d3583c2bbc5fb9ce637c224c51a4dcc3c51b4.webp",
+      "emojiCount": 78
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-12-23T15:02:57.598Z"
+  "exportDate": "2025-12-25T04:54:11.140Z"
 }

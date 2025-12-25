@@ -217,6 +217,50 @@ class SimpleStorageManager {
       })
     }
   }
+
+  // 批量同步写入（减少 storage.onChanged 事件次数）
+  async setBatchSync(items: Record<string, unknown>): Promise<void> {
+    const timestamp = Date.now()
+    const finalItems: Record<string, { data: unknown; timestamp: number }> = {}
+
+    for (const key of Object.keys(items)) {
+      const cleanValue = ensureSerializable(items[key])
+      finalItems[key] = { data: cleanValue, timestamp }
+    }
+
+    // 写入 localStorage（逐个，但这是同步的，不会触发事件）
+    try {
+      if (typeof localStorage !== 'undefined') {
+        for (const key of Object.keys(finalItems)) {
+          localStorage.setItem(key, JSON.stringify(finalItems[key]))
+        }
+      }
+    } catch (error) {
+      console.error('[Storage] localStorage.setBatch failed:', error)
+    }
+
+    // 批量写入 extension storage（单次调用，只触发一次 onChanged）
+    const chromeAPI = getChromeAPI()
+    if (chromeAPI?.storage?.local) {
+      return new Promise((resolve, reject) => {
+        try {
+          chromeAPI.storage.local.set(finalItems, () => {
+            if (chromeAPI.runtime.lastError) {
+              console.error(
+                '[Storage] extensionStorage.setBatch failed:',
+                chromeAPI.runtime.lastError
+              )
+              reject(chromeAPI.runtime.lastError)
+            } else {
+              resolve()
+            }
+          })
+        } catch (error) {
+          reject(error)
+        }
+      })
+    }
+  }
 }
 
 // --- Public API ---
@@ -341,8 +385,90 @@ export const newStorageHelpers = {
       )
     }
 
-    await this.setEmojiGroupIndexSync(index)
-    await Promise.all(groups.map(group => this.setEmojiGroupSync(group.id, group)))
+    // 使用批量写入，减少 storage.onChanged 事件次数
+    const batchItems: Record<string, unknown> = {
+      [STORAGE_KEYS.GROUP_INDEX]: index
+    }
+
+    for (const group of groups) {
+      const clean = {
+        id: group.id,
+        name: group.name || '',
+        icon: group.icon || '',
+        order: group.order ?? 0,
+        emojis: Array.isArray(group.emojis) ? group.emojis : [],
+        detail: group.detail
+      }
+      batchItems[STORAGE_KEYS.GROUP_PREFIX + group.id] = clean
+    }
+
+    await storageManager.setBatchSync(batchItems)
+  },
+
+  // 增量保存：只保存指定的 groups（用于部分更新）
+  async setEmojiGroupsBatchSync(groups: EmojiGroup[]): Promise<void> {
+    if (groups.length === 0) return
+
+    const batchItems: Record<string, unknown> = {}
+
+    for (const group of groups) {
+      const clean = {
+        id: group.id,
+        name: group.name || '',
+        icon: group.icon || '',
+        order: group.order ?? 0,
+        emojis: Array.isArray(group.emojis) ? group.emojis : [],
+        detail: group.detail
+      }
+      batchItems[STORAGE_KEYS.GROUP_PREFIX + group.id] = clean
+    }
+
+    await storageManager.setBatchSync(batchItems)
+  },
+
+  // 批量保存所有数据（groups, settings, favorites）到一次 storage.set 调用
+  async saveAllBatchSync(options: {
+    groups?: EmojiGroup[]
+    settings?: AppSettings
+    favorites?: string[]
+  }): Promise<void> {
+    const batchItems: Record<string, unknown> = {}
+
+    // 添加 groups
+    if (options.groups && options.groups.length > 0) {
+      // 更新 group index
+      const index = options.groups.map((group, order) => ({ id: group.id, order }))
+      batchItems[STORAGE_KEYS.GROUP_INDEX] = index
+
+      // 添加每个 group
+      for (const group of options.groups) {
+        const clean = {
+          id: group.id,
+          name: group.name || '',
+          icon: group.icon || '',
+          order: group.order ?? 0,
+          emojis: Array.isArray(group.emojis) ? group.emojis : [],
+          detail: group.detail
+        }
+        batchItems[STORAGE_KEYS.GROUP_PREFIX + group.id] = clean
+      }
+    }
+
+    // 添加 settings
+    if (options.settings) {
+      const updatedSettings = { ...defaultSettings, ...options.settings, lastModified: Date.now() }
+      batchItems[STORAGE_KEYS.SETTINGS] = updatedSettings
+    }
+
+    // 添加 favorites
+    if (options.favorites) {
+      batchItems[STORAGE_KEYS.FAVORITES] = options.favorites
+    }
+
+    // 只有在有数据时才执行批量写入
+    if (Object.keys(batchItems).length > 0) {
+      await storageManager.setBatchSync(batchItems)
+    }
   },
 
   // Settings management
