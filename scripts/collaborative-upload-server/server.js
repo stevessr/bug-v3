@@ -90,16 +90,25 @@ function isValidBase64(str) {
   }
 }
 
-function validateTaskData(taskData) {
+function validateTaskData(taskData, binaryMode = false) {
   if (!taskData.filename || typeof taskData.filename !== 'string') {
     return { valid: false, error: 'Invalid filename' }
   }
-  
+
   if (!taskData.mimeType || typeof taskData.mimeType !== 'string') {
     return { valid: false, error: 'Invalid mimeType' }
   }
-  
-  // 支持两种数据格式：Base64 字符串或二进制数据
+
+  // 二进制模式：数据将通过单独的二进制帧发送，元数据中不需要包含数据
+  if (binaryMode) {
+    // 只需要 taskId 来关联后续的二进制数据
+    if (!taskData.taskId || typeof taskData.taskId !== 'string') {
+      return { valid: false, error: 'Binary mode requires taskId' }
+    }
+    return { valid: true }
+  }
+
+  // 非二进制模式：支持两种数据格式：Base64 字符串或二进制数据
   if (taskData.dataBase64 && typeof taskData.dataBase64 === 'string') {
     // Base64 格式数据
     if (!isValidBase64(taskData.dataBase64)) {
@@ -113,7 +122,7 @@ function validateTaskData(taskData) {
   } else {
     return { valid: false, error: 'Missing or invalid data (expected dataBase64 string or binaryData buffer)' }
   }
-  
+
   return { valid: true }
 }
 
@@ -176,8 +185,8 @@ function assignTaskToWorker(task, worker) {
 
   log(`Task ${task.id} assigned to worker ${worker.id}`)
 
-  // 根据数据类型选择传输方式
-  let taskPayload = {
+  // 构建任务元数据
+  const taskPayload = {
     id: task.id,
     filename: task.filename,
     mimeType: task.mimeType,
@@ -185,30 +194,38 @@ function assignTaskToWorker(task, worker) {
   }
 
   if (task.binaryData) {
-    // 服务器端存储的二进制数据（来自服务器协议）
-    taskPayload.binaryData = task.binaryData
+    // 有二进制数据：先发送元数据 JSON，再发送二进制帧
+    sendToClient(worker.ws, {
+      type: 'TASK_ASSIGNED',
+      task: taskPayload
+    })
+
+    // 发送二进制帧给 worker
+    // 帧格式：[4 字节 taskId 长度][taskId 字符串][二进制数据]
+    const taskIdBuffer = Buffer.from(task.id, 'utf8')
+    const lengthBuffer = Buffer.alloc(4)
+    lengthBuffer.writeUInt32BE(taskIdBuffer.length, 0)
+
+    const frame = Buffer.concat([lengthBuffer, taskIdBuffer, task.binaryData])
+    if (worker.ws.readyState === WebSocket.OPEN) {
+      worker.ws.send(frame)
+      log(`Sent binary data for task ${task.id} to worker ${worker.id} (${task.binaryData.length} bytes)`)
+    }
+  } else if (task.dataBase64) {
+    // Base64 模式
+    taskPayload.dataBase64 = task.dataBase64
     sendToClient(worker.ws, {
       type: 'TASK_ASSIGNED',
       task: taskPayload
     })
   } else {
-    // Base64 数据或来自客户端的二进制模式
-    if (task.dataBase64) {
-      // 传统 Base64 模式
-      taskPayload.dataBase64 = task.dataBase64
-      sendToClient(worker.ws, {
-        type: 'TASK_ASSIGNED',
-        task: taskPayload
-      })
-    } else {
-      // 客户端二进制模式：先发送元数据，等待二进制帧
-      taskPayload.taskId = task.id // 客户端需要 taskId 来关联二进制数据
-      sendToClient(worker.ws, {
-        type: 'TASK_ASSIGNED',
-        task: taskPayload,
-        binaryMode: true // 通知客户端将接收二进制数据
-      })
-    }
+    // 没有数据（不应该发生）
+    log(`Warning: Task ${task.id} has no data`)
+    sendToClient(worker.ws, {
+      type: 'TASK_ASSIGNED',
+      task: taskPayload,
+      error: 'No data available'
+    })
   }
 }
 
@@ -244,10 +261,10 @@ function scheduleNextTask() {
     return bSuccessRate - aSuccessRate
   })
 
-  // 将待处理任务按优先级排序：考虑重试延迟
+  // 将待处理任务按优先级排序：考虑重试延迟，只选择状态为 'pending' 的任务
   const now = Date.now()
-  const availableTasks = Array.from(pendingTasks.values()).filter(task => 
-    !task.retryAfter || now >= task.retryAfter
+  const availableTasks = Array.from(pendingTasks.values()).filter(task =>
+    task.status === 'pending' && (!task.retryAfter || now >= task.retryAfter)
   )
   
   const sortedTasks = availableTasks.sort((a, b) => {
@@ -452,22 +469,24 @@ function handleBinaryMessage(ws, clientId, buffer) {
     // 支持两种二进制协议：
     // 1. 客户端协议：[4 字节 taskId 长度][taskId 字符串][文件数据]
     // 2. 服务器协议：[类型 (1 字节)][会话 ID(UUID)][任务 ID(UUID)][文件名长度 (2 字节)][文件名][MIME 类型长度 (2 字节)][MIME 类型][文件数据]
-    
-    if (buffer.length < 4) {
+
+    // 确保我们有一个 Buffer 对象（ws 库可能传递 Buffer 或 ArrayBuffer）
+    const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer)
+
+    if (buf.length < 4) {
       log(`Binary message too short from ${clientId}`)
       return
     }
 
-    // 检测协议类型（通过前4字节判断）
-    const view = new DataView(buffer)
-    const potentialTaskIdLength = view.getUint32(0, false) // 大端序
+    // 使用 Buffer 的 readUInt32BE 方法读取前4字节（大端序）
+    const potentialTaskIdLength = buf.readUInt32BE(0)
     
     // 如果是合理的taskId长度（通常小于100），使用客户端协议
-    if (potentialTaskIdLength > 0 && potentialTaskIdLength < 100 && buffer.length >= 4 + potentialTaskIdLength) {
-      handleClientBinaryFrame(ws, clientId, buffer)
+    if (potentialTaskIdLength > 0 && potentialTaskIdLength < 100 && buf.length >= 4 + potentialTaskIdLength) {
+      handleClientBinaryFrame(ws, clientId, buf)
     } else {
       // 尝试服务器协议
-      handleServerBinaryFrame(ws, clientId, buffer)
+      handleServerBinaryFrame(ws, clientId, buf)
     }
   } catch (error) {
     log(`Error handling binary message from ${clientId}: ${error.message}`)
@@ -476,65 +495,77 @@ function handleBinaryMessage(ws, clientId, buffer) {
 
 function handleClientBinaryFrame(ws, clientId, buffer) {
   // 客户端协议：[4 字节 taskId 长度][taskId 字符串][文件数据]
-  const view = new DataView(buffer)
-  const taskIdLength = view.getUint32(0, false) // 大端序
+  // 确保是 Buffer 类型
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer)
+  const taskIdLength = buf.readUInt32BE(0)
 
-  const decoder = new TextDecoder()
-  const taskIdBytes = new Uint8Array(buffer, 4, taskIdLength)
-  const taskId = decoder.decode(taskIdBytes)
+  const taskId = buf.subarray(4, 4 + taskIdLength).toString('utf8')
 
-  const fileData = buffer.slice(4 + taskIdLength)
+  const fileData = buf.subarray(4 + taskIdLength)
 
-  log(`Received client binary frame: taskId=${taskId}, size=${fileData.byteLength}`)
+  log(`Received client binary frame: taskId=${taskId}, size=${fileData.length}`)
 
-  // 查找对应的任务元数据（应该已经通过 JSON 消息发送）
-  // 这里我们需要一个临时存储来关联 taskId 和任务信息
-  // 实际上，客户端会先发送 TASK_ASSIGNED 消息，然后发送二进制数据
-  // 所以我们需要在某个地方存储这个映射
-  
-  // 暂时先存储二进制数据，等待 TASK_ASSIGNED 消息
-  if (!ws.pendingBinaryData) {
-    ws.pendingBinaryData = new Map()
+  // 查找等待二进制数据的任务
+  const task = pendingTasks.get(taskId)
+  if (task && task.status === 'waiting_binary') {
+    // 将二进制数据附加到任务
+    task.binaryData = fileData
+    task.size = fileData.length
+    task.status = 'pending' // 现在可以调度了
+    log(`Task ${taskId} received binary data, ready for scheduling`)
+
+    // 触发调度
+    scheduleNextTask()
+  } else if (task) {
+    log(`Task ${taskId} already has data or is in wrong state: ${task.status}`)
+  } else {
+    // 任务还没创建，先缓存二进制数据
+    if (!ws.pendingBinaryData) {
+      ws.pendingBinaryData = new Map()
+    }
+    ws.pendingBinaryData.set(taskId, fileData)
+    log(`Task ${taskId} not found, caching binary data`)
   }
-  ws.pendingBinaryData.set(taskId, fileData)
 }
 
 function handleServerBinaryFrame(ws, clientId, buffer) {
   // 服务器协议：[类型 (1 字节)][会话 ID(UUID)][任务 ID(UUID)][文件名长度 (2 字节)][文件名][MIME 类型长度 (2 字节)][MIME 类型][文件数据]
-  
-  if (buffer.length < 1 + 32 + 32 + 2 + 2) {
+  // 确保是 Buffer 类型
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer)
+
+  if (buf.length < 1 + 32 + 32 + 2 + 2) {
     log(`Binary message too short for server protocol from ${clientId}`)
     return
   }
 
-  const messageType = buffer.readUInt8(0)
-  const sessionId = buffer.subarray(1, 33).toString('hex')
-  const taskId = buffer.subarray(33, 65).toString('hex')
-  
+  const messageType = buf.readUInt8(0)
+  const sessionId = buf.subarray(1, 33).toString('hex')
+  const taskId = buf.subarray(33, 65).toString('hex')
+
   let offset = 65
-  const filenameLength = buffer.readUInt16BE(offset)
+  const filenameLength = buf.readUInt16BE(offset)
   offset += 2
-  
-  if (buffer.length < offset + filenameLength) {
+
+  if (buf.length < offset + filenameLength) {
     log(`Invalid filename length in binary message from ${clientId}`)
     return
   }
-  
-  const filename = buffer.subarray(offset, offset + filenameLength).toString('utf8')
+
+  const filename = buf.subarray(offset, offset + filenameLength).toString('utf8')
   offset += filenameLength
-  
-  const mimeTypeLength = buffer.readUInt16BE(offset)
+
+  const mimeTypeLength = buf.readUInt16BE(offset)
   offset += 2
-  
-  if (buffer.length < offset + mimeTypeLength) {
+
+  if (buf.length < offset + mimeTypeLength) {
     log(`Invalid MIME type length in binary message from ${clientId}`)
     return
   }
-  
-  const mimeType = buffer.subarray(offset, offset + mimeTypeLength).toString('utf8')
+
+  const mimeType = buf.subarray(offset, offset + mimeTypeLength).toString('utf8')
   offset += mimeTypeLength
-  
-  const binaryData = buffer.subarray(offset)
+
+  const binaryData = buf.subarray(offset)
 
   // 处理二进制任务提交
   if (messageType === 0x01) { // 任务提交
@@ -708,15 +739,16 @@ function handleMessage(ws, clientId, message) {
         }
 
         const tasks = data.tasks || []
+        const binaryMode = data.binaryMode === true // 是否使用二进制模式
         let validTasks = 0
         let invalidTasks = 0
 
         for (const taskData of tasks) {
-          const validation = validateTaskData(taskData)
+          const validation = validateTaskData(taskData, binaryMode)
           if (!validation.valid) {
             log(`Invalid task data: ${validation.error}`)
             invalidTasks++
-            
+
             // 通知主控端任务无效
             sendToClient(ws, {
               type: 'TASK_FAILED',
@@ -740,12 +772,13 @@ function handleMessage(ws, clientId, message) {
             dataBase64: taskData.dataBase64 || null,
             binaryData: taskData.binaryData || null,
             size: taskData.size || (taskData.binaryData ? taskData.binaryData.length : 0),
-            status: 'pending',
+            status: binaryMode ? 'waiting_binary' : 'pending', // 二进制模式需要等待数据
             assignedWorker: null,
             resultUrl: null,
             error: null,
             retryCount: 0,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            binaryMode: binaryMode // 标记是否为二进制模式
           }
 
           pendingTasks.set(task.id, task)
@@ -754,17 +787,20 @@ function handleMessage(ws, clientId, message) {
           validTasks++
         }
 
-        log(`Session ${data.sessionId}: ${tasks.length} tasks submitted`)
+        log(`Session ${data.sessionId}: ${tasks.length} tasks submitted (binaryMode: ${binaryMode})`)
 
         sendToClient(ws, {
           type: 'TASKS_SUBMITTED',
           sessionId: data.sessionId,
           taskCount: tasks.length,
-          totalPending: pendingTasks.size
+          totalPending: pendingTasks.size,
+          binaryMode: binaryMode
         })
 
-        // 开始调度
-        scheduleNextTask()
+        // 非二进制模式立即开始调度
+        if (!binaryMode) {
+          scheduleNextTask()
+        }
         break
       }
 
@@ -976,9 +1012,9 @@ wss.on('connection', (ws) => {
 
   log(`Client connected: ${clientId}`)
 
-  ws.on('message', (message) => {
+  ws.on('message', (message, isBinary) => {
     try {
-      if (Buffer.isBuffer(message)) {
+      if (isBinary) {
         // 二进制消息 - 可能包含文件数据
         handleBinaryMessage(ws, clientId, message)
       } else {

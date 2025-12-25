@@ -921,7 +921,6 @@ const connectCollaborativeServer = async () => {
     collaborativeClient.value = new CollaborativeUploadClient({
       serverUrl: collaborativeServerUrl.value,
       role: 'master',
-      masterAlsoUploads: true,
       taskTimeout: 120000, // 2分钟超时
       onStatusChange: status => {
         isCollaborativeConnected.value = status.connected
@@ -933,13 +932,7 @@ const connectCollaborativeServer = async () => {
       onProgress: progress => {
         collaborativeProgress.value = progress
       },
-      onLocalUploadComplete: (filename, url) => {
-        // 本地上传完成，立即添加到缓冲区
-        addEmojiToBuffer(filename, url)
-        // 从选中文件中移除
-        selectedFiles.value = selectedFiles.value.filter(item => item.file.name !== filename)
-      },
-      onRemoteUploadComplete: (filename, url) => {
+      onRemoteUploadComplete: (filename: string, url: string) => {
         // 远程上传完成，添加到待保存列表
         pendingRemoteUploads.value.push({ filename, url })
         console.log(`[BufferPage] Remote upload complete: ${filename}, pending save`)
@@ -963,7 +956,7 @@ const connectCollaborativeServer = async () => {
   }
 }
 
-const addEmojiToBuffer = (filename: string, url: string) => {
+const addEmojiToBuffer = (filename: string, url: string, skipSave = false) => {
   // 确保缓冲区存在
   let group = bufferGroup.value
   if (!group) {
@@ -990,25 +983,33 @@ const addEmojiToBuffer = (filename: string, url: string) => {
   }
 
   emojiStore.addEmojiWithoutSave(group.id || 'buffer', newEmoji)
-  emojiStore.maybeSave()
+  // 只在非批量模式下触发保存
+  if (!skipSave) {
+    emojiStore.maybeSave()
+  }
 
   console.log(`[BufferPage] Added emoji to buffer: ${filename}`)
 }
 
 // 增量保存：将已完成的远程上传添加到缓冲区并从任务列表移除
-const saveIncrementalProgress = () => {
+const saveIncrementalProgress = async () => {
   if (pendingRemoteUploads.value.length === 0) return
 
   console.log(
     `[BufferPage] Saving incremental progress: ${pendingRemoteUploads.value.length} files`
   )
 
-  // 添加到缓冲区
-  for (const { filename, url } of pendingRemoteUploads.value) {
-    const alreadyAdded = bufferGroup.value?.emojis.some(e => e.url === url || e.name === filename)
-    if (!alreadyAdded) {
-      addEmojiToBuffer(filename, url)
+  // 使用批量模式添加到缓冲区，避免每个表情都触发保存
+  emojiStore.beginBatch()
+  try {
+    for (const { filename, url } of pendingRemoteUploads.value) {
+      const alreadyAdded = bufferGroup.value?.emojis.some(e => e.url === url || e.name === filename)
+      if (!alreadyAdded) {
+        addEmojiToBuffer(filename, url, true) // skipSave = true
+      }
     }
+  } finally {
+    await emojiStore.endBatch()
   }
 
   // 从选中文件中移除
@@ -1066,16 +1067,22 @@ const uploadFilesCollaboratively = async () => {
     collaborativeResults.value = results
 
     // 处理远程上传的结果（本地上传已在 onLocalUploadComplete 中处理）
-    for (const result of results) {
-      if (result.success && result.url) {
-        // 检查是否已经添加过（本地上传的已添加）
-        const alreadyAdded = bufferGroup.value?.emojis.some(
-          e => e.url === result.url || e.name === result.filename
-        )
-        if (!alreadyAdded) {
-          addEmojiToBuffer(result.filename, result.url)
+    // 使用批量模式添加到缓冲区，避免竞争条件导致数据回档
+    emojiStore.beginBatch()
+    try {
+      for (const result of results) {
+        if (result.success && result.url) {
+          // 检查是否已经添加过（本地上传的已添加）
+          const alreadyAdded = bufferGroup.value?.emojis.some(
+            e => e.url === result.url || e.name === result.filename
+          )
+          if (!alreadyAdded) {
+            addEmojiToBuffer(result.filename, result.url, true) // skipSave = true
+          }
         }
       }
+    } finally {
+      await emojiStore.endBatch()
     }
 
     // 清理已成功上传的文件，保留失败的文件以便重试
@@ -1109,7 +1116,7 @@ const uploadFilesCollaboratively = async () => {
     // 停止增量保存定时器
     stopIncrementalSaveTimer()
     // 保存剩余的待保存上传
-    saveIncrementalProgress()
+    await saveIncrementalProgress()
     isUploading.value = false
   }
 }

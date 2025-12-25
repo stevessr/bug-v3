@@ -9,14 +9,12 @@ import { uploadServices } from './uploadServices'
 export interface CollaborativeUploadConfig {
   serverUrl: string // WebSocket 服务器地址，如 ws://localhost:9527
   role: 'master' | 'worker' // 主控端或工作者
-  masterAlsoUploads?: boolean // 主机是否也参与上传（默认 true）
   autoReconnect?: boolean // 是否自动重连（默认 true）
   reconnectDelay?: number // 重连延迟（毫秒，默认 5000）
   taskTimeout?: number // 任务超时时间（毫秒，默认 60000）
   onStatusChange?: (status: ConnectionStatus) => void
   onProgress?: (progress: UploadProgress) => void
   onWorkerStats?: (stats: WorkerStats) => void
-  onLocalUploadComplete?: (filename: string, url: string) => void // 本地上传完成回调
   onRemoteUploadComplete?: (filename: string, url: string) => void // 远程上传完成回调（来自工作者）
   onDisconnect?: (pendingTasks: string[]) => void // 断线时回调，返回未完成的远程任务文件名
 }
@@ -37,6 +35,7 @@ export interface UploadProgress {
   // 429 rate limit waiting state
   waitingFor?: number // seconds to wait
   waitStart?: number // timestamp when waiting started
+  waitingWorkerId?: string // which worker is waiting (for 429)
 }
 
 export interface WorkerStats {
@@ -423,7 +422,9 @@ export class CollaborativeUploadClient {
 
         case 'TASK_WAITING':
           // 主控端收到工作者等待通知（429 rate limit）
-          console.log(`[CollaborativeUpload] Worker waiting on ${data.filename}: ${data.waitTime}s`)
+          console.log(
+            `[CollaborativeUpload] Worker ${data.workerId} waiting on ${data.filename}: ${data.waitTime}s`
+          )
           this.config.onProgress?.({
             completed:
               this.sessionResults.filter(r => r.success).length +
@@ -434,7 +435,8 @@ export class CollaborativeUploadClient {
             total: this.totalExpected,
             currentFile: data.filename,
             waitingFor: data.waitTime,
-            waitStart: data.waitStart
+            waitStart: data.waitStart,
+            waitingWorkerId: data.workerId
           })
           break
 
@@ -682,14 +684,12 @@ export class CollaborativeUploadClient {
 
   /**
    * 主控端提交上传任务
-   * 主机本身也参与上传，实现真正的并行
+   * 主机不参与上传，所有任务都交给工作者处理
    */
   async submitTasks(files: File[]): Promise<UploadResult[]> {
     if (!this._sessionId) {
       throw new Error('Session not created')
     }
-
-    const masterAlsoUploads = this.config.masterAlsoUploads !== false // 默认 true
 
     // 重置结果
     this.sessionResults = []
@@ -698,63 +698,21 @@ export class CollaborativeUploadClient {
     this.pendingRemoteFiles = []
     this.isUploading = true
 
-    if (!masterAlsoUploads || files.length === 0) {
-      // 如果主机不参与上传，全部交给工作者（二进制模式）
-      this.pendingRemoteFiles = files.map(f => f.name)
-      const tasks = this.prepareTasksMeta(files)
-      await this.submitRemoteTasks(files, tasks)
-
-      // 启动超时定时器
-      if (files.length > 0) {
-        this.startTaskTimeout()
-      }
-
-      return new Promise((resolve, reject) => {
-        this.sessionCompleteResolve = resolve
-        this.sessionReject = reject
-      })
+    if (files.length === 0) {
+      return []
     }
 
-    // 主机也参与上传：根据工作者数量动态分配任务
-    // 策略：主机算作 1 个节点，与所有工作者平均分配任务
-    const workerCount = this._serverStats?.workerCount ?? 0
-    const totalNodes = 1 + workerCount // 主机 + 工作者
-    const localCount = Math.ceil(files.length / totalNodes)
-    const localFiles = files.slice(0, localCount)
-    const remoteFiles = files.slice(localCount)
+    // 母鸡不参与上传，全部交给工作者（二进制模式）
+    this.pendingRemoteFiles = files.map(f => f.name)
+    const tasks = this.prepareTasksMeta(files)
+    await this.submitRemoteTasks(files, tasks)
 
-    console.log(
-      `[CollaborativeUpload] Dynamic load balancing: ${totalNodes} nodes (1 master + ${workerCount} workers)`
-    )
+    // 启动超时定时器
+    this.startTaskTimeout()
 
-    // 记录远程文件名
-    this.pendingRemoteFiles = remoteFiles.map(f => f.name)
-
-    console.log(
-      `[CollaborativeUpload] Task split: ${localCount} local, ${remoteFiles.length} remote`
-    )
-
-    // 启动本地上传（异步）
-    this.uploadLocalFiles(localFiles)
-
-    // 如果有远程任务，使用二进制模式提交给服务器
-    if (remoteFiles.length > 0) {
-      const tasks = this.prepareTasksMeta(remoteFiles)
-      await this.submitRemoteTasks(remoteFiles, tasks)
-
-      // 启动超时定时器
-      this.startTaskTimeout()
-    }
-
-    // 等待所有任务完成（本地 + 远程）
     return new Promise((resolve, reject) => {
       this.sessionCompleteResolve = resolve
       this.sessionReject = reject
-
-      // 如果没有远程任务，需要自己触发完成检查
-      if (remoteFiles.length === 0) {
-        // 本地任务完成后会调用 checkAllComplete
-      }
     })
   }
 
@@ -834,96 +792,6 @@ export class CollaborativeUploadClient {
           this.sendBinaryFrame(taskId, data)
         })
       )
-    }
-  }
-
-  /**
-   * 本地上传文件（并行处理，带并发控制）
-   * @param files - 要上传的文件数组
-   * @param concurrency - 并发数限制，默认为 3
-   */
-  private async uploadLocalFiles(files: File[], concurrency: number = 3): Promise<void> {
-    // Helper function to upload a single file
-    const uploadSingleFile = async (file: File): Promise<void> => {
-      try {
-        console.log(`[CollaborativeUpload] Local upload: ${file.name}`)
-
-        // Rate limit wait callback
-        const onRateLimitWait = async (waitTime: number): Promise<void> => {
-          console.log(`[CollaborativeUpload] Rate limited, waiting ${waitTime / 1000}s...`)
-          this.config.onProgress?.({
-            completed:
-              this.sessionResults.filter(r => r.success).length +
-              this.localUploadResults.filter(r => r.success).length,
-            failed:
-              this.sessionResults.filter(r => !r.success).length +
-              this.localUploadResults.filter(r => !r.success).length,
-            total: this.totalExpected,
-            currentFile: file.name,
-            waitingFor: waitTime / 1000,
-            waitStart: Date.now()
-          })
-        }
-
-        const resultUrl = await uploadServices['linux.do'].uploadFile(
-          file,
-          undefined,
-          onRateLimitWait
-        )
-
-        // Clear waiting state after successful upload
-        this.localUploadResults.push({
-          filename: file.name,
-          success: true,
-          url: resultUrl
-        })
-
-        // 回调通知
-        this.config.onLocalUploadComplete?.(file.name, resultUrl)
-
-        // 更新进度
-        this.config.onProgress?.({
-          completed:
-            this.sessionResults.filter(r => r.success).length +
-            this.localUploadResults.filter(r => r.success).length,
-          failed:
-            this.sessionResults.filter(r => !r.success).length +
-            this.localUploadResults.filter(r => !r.success).length,
-          total: this.totalExpected,
-          currentFile: file.name
-        })
-      } catch (error) {
-        console.error(`[CollaborativeUpload] Local upload failed: ${file.name}`, error)
-        this.localUploadResults.push({
-          filename: file.name,
-          success: false,
-          error: error instanceof Error ? error.message : String(error)
-        })
-      }
-
-      // 检查是否全部完成
-      this.checkAllComplete()
-    }
-
-    // Process files with concurrency control
-    const queue = [...files]
-    const executing: Promise<void>[] = []
-
-    while (queue.length > 0 || executing.length > 0) {
-      // Fill up to concurrency limit
-      while (queue.length > 0 && executing.length < concurrency) {
-        const file = queue.shift()!
-        const promise = uploadSingleFile(file).then(() => {
-          // Remove from executing when done
-          executing.splice(executing.indexOf(promise), 1)
-        })
-        executing.push(promise)
-      }
-
-      // Wait for at least one to complete if we're at the limit
-      if (executing.length >= concurrency || (queue.length === 0 && executing.length > 0)) {
-        await Promise.race(executing)
-      }
     }
   }
 
