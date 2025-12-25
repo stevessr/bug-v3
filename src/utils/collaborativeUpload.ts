@@ -61,8 +61,12 @@ export interface ServerStats {
 export interface UploadTask {
   filename: string
   mimeType: string
-  dataBase64: string
   size: number
+  taskId?: string // 用于二进制传输时关联数据
+}
+
+export interface UploadTaskWithData extends UploadTask {
+  data: ArrayBuffer // 二进制数据
 }
 
 export interface UploadResult {
@@ -107,6 +111,9 @@ export class CollaborativeUploadClient {
 
   // Worker mode local statistics
   private workerStats: WorkerStats = { completed: 0, failed: 0, totalBytes: 0 }
+
+  // 待处理任务元数据（工作者用于关联二进制数据）
+  private pendingTaskMeta: Map<string, UploadTask> = new Map()
 
   constructor(config: CollaborativeUploadConfig) {
     this.config = config
@@ -350,9 +357,15 @@ export class CollaborativeUploadClient {
   }
 
   /**
-   * 处理服务器消息
+   * 处理服务器消息（支持 JSON 和二进制）
    */
-  private handleMessage(rawData: string): void {
+  private handleMessage(rawData: string | ArrayBuffer): void {
+    // 处理二进制帧（工作者接收任务数据）
+    if (rawData instanceof ArrayBuffer) {
+      this.handleBinaryFrame(rawData)
+      return
+    }
+
     try {
       const data = JSON.parse(rawData)
 
@@ -391,7 +404,19 @@ export class CollaborativeUploadClient {
 
         case 'TASK_ASSIGNED':
           // 工作者收到任务
-          this.handleTaskAssigned(data.task)
+          if (data.binaryMode && data.task.taskId) {
+            // 二进制模式：先存储元数据，等待二进制帧
+            this.pendingTaskMeta.set(data.task.taskId, {
+              taskId: data.task.taskId,
+              filename: data.task.filename,
+              mimeType: data.task.mimeType,
+              size: data.task.size
+            })
+            console.log(`[CollaborativeUpload] Task metadata stored for binary: ${data.task.taskId}`)
+          } else {
+            // 兼容旧的 Base64 模式
+            this.handleTaskAssigned(data.task)
+          }
           break
 
         case 'TASK_WAITING':
@@ -489,6 +514,101 @@ export class CollaborativeUploadClient {
   }
 
   /**
+   * 处理二进制帧（工作者接收任务数据）
+   * 帧格式：[4 字节 taskId 长度][taskId 字符串][二进制数据]
+   */
+  private handleBinaryFrame(data: ArrayBuffer): void {
+    try {
+      const view = new DataView(data)
+      const taskIdLength = view.getUint32(0, false) // 大端序
+
+      const decoder = new TextDecoder()
+      const taskIdBytes = new Uint8Array(data, 4, taskIdLength)
+      const taskId = decoder.decode(taskIdBytes)
+
+      const fileData = data.slice(4 + taskIdLength)
+
+      console.log(`[CollaborativeUpload] Received binary frame: taskId=${taskId}, size=${fileData.byteLength}`)
+
+      // 查找对应的任务元数据
+      const taskMeta = this.pendingTaskMeta.get(taskId)
+      if (!taskMeta) {
+        console.error(`[CollaborativeUpload] No metadata found for task: ${taskId}`)
+        return
+      }
+
+      // 移除元数据
+      this.pendingTaskMeta.delete(taskId)
+
+      // 处理任务
+      this.handleTaskWithBinaryData(taskId, taskMeta, fileData)
+    } catch (error) {
+      console.error('[CollaborativeUpload] Error parsing binary frame:', error)
+    }
+  }
+
+  /**
+   * 工作者处理分配的任务（二进制数据）
+   */
+  private async handleTaskWithBinaryData(
+    taskId: string,
+    meta: UploadTask,
+    data: ArrayBuffer
+  ): Promise<void> {
+    console.log('[CollaborativeUpload] Processing binary task:', taskId, meta.filename)
+
+    try {
+      // 直接从 ArrayBuffer 创建 File
+      const blob = new Blob([data], { type: meta.mimeType })
+      const file = new File([blob], meta.filename, { type: meta.mimeType })
+
+      // Rate limit wait callback - notify master when waiting
+      const onRateLimitWait = async (waitTime: number): Promise<void> => {
+        console.log(`[CollaborativeUpload] Worker rate limited, waiting ${waitTime / 1000}s...`)
+        this.send({
+          type: 'TASK_WAITING',
+          taskId,
+          filename: meta.filename,
+          waitTime: waitTime / 1000,
+          waitStart: Date.now()
+        })
+      }
+
+      // 执行上传
+      const resultUrl = await uploadServices['linux.do'].uploadFile(
+        file,
+        undefined,
+        onRateLimitWait
+      )
+
+      // 报告成功
+      this.send({
+        type: 'TASK_COMPLETED',
+        taskId,
+        resultUrl
+      })
+
+      // 更新本地统计
+      this.workerStats.completed++
+      this.workerStats.totalBytes += meta.size
+      this.config.onWorkerStats?.(this.workerStats)
+    } catch (error) {
+      console.error('[CollaborativeUpload] Binary task failed:', error)
+
+      // 报告失败
+      this.send({
+        type: 'TASK_FAILED',
+        taskId,
+        error: error instanceof Error ? error.message : String(error)
+      })
+
+      // 更新本地统计
+      this.workerStats.failed++
+      this.config.onWorkerStats?.(this.workerStats)
+    }
+  }
+
+  /**
    * 工作者处理分配的任务
    */
   private async handleTaskAssigned(task: {
@@ -575,14 +695,10 @@ export class CollaborativeUploadClient {
     this.isUploading = true
 
     if (!masterAlsoUploads || files.length === 0) {
-      // 如果主机不参与上传，全部交给工作者
+      // 如果主机不参与上传，全部交给工作者（二进制模式）
       this.pendingRemoteFiles = files.map(f => f.name)
-      const tasks = await this.prepareTasksData(files)
-      this.send({
-        type: 'SUBMIT_TASKS',
-        sessionId: this._sessionId,
-        tasks
-      })
+      const tasks = this.prepareTasksMeta(files)
+      await this.submitRemoteTasks(files, tasks)
 
       // 启动超时定时器
       if (files.length > 0) {
@@ -617,14 +733,10 @@ export class CollaborativeUploadClient {
     // 启动本地上传（异步）
     this.uploadLocalFiles(localFiles)
 
-    // 如果有远程任务，提交给服务器
+    // 如果有远程任务，使用二进制模式提交给服务器
     if (remoteFiles.length > 0) {
-      const tasks = await this.prepareTasksData(remoteFiles)
-      this.send({
-        type: 'SUBMIT_TASKS',
-        sessionId: this._sessionId,
-        tasks
-      })
+      const tasks = this.prepareTasksMeta(remoteFiles)
+      await this.submitRemoteTasks(remoteFiles, tasks)
 
       // 启动超时定时器
       this.startTaskTimeout()
@@ -643,44 +755,82 @@ export class CollaborativeUploadClient {
   }
 
   /**
-   * 准备任务数据
-   * 使用批量处理避免同时加载所有文件到内存
+   * 准备任务元数据（不包含文件数据）
    * @param files - 要处理的文件列表
-   * @param batchSize - 每批处理的文件数量（默认 5）
+   * @returns 任务元数据数组
    */
-  private async prepareTasksData(files: File[], batchSize: number = 5): Promise<UploadTask[]> {
-    const results: UploadTask[] = []
+  private prepareTasksMeta(files: File[]): UploadTask[] {
+    return files.map(file => ({
+      taskId: `task-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      filename: file.name,
+      mimeType: file.type,
+      size: file.size
+    }))
+  }
 
-    // Process files in batches to prevent memory exhaustion
-    for (let i = 0; i < files.length; i += batchSize) {
-      const batch = files.slice(i, i + batchSize)
-      const batchResults = await Promise.all(
-        batch.map(async file => {
-          const arrayBuffer = await file.arrayBuffer()
-          const bytes = new Uint8Array(arrayBuffer)
-
-          // Use chunked approach for efficient Base64 conversion
-          // Process in 32KB chunks to avoid stack overflow and reduce memory fragmentation
-          const CHUNK_SIZE = 32768
-          const chunks: string[] = []
-          for (let j = 0; j < bytes.length; j += CHUNK_SIZE) {
-            const chunk = bytes.subarray(j, Math.min(j + CHUNK_SIZE, bytes.length))
-            chunks.push(String.fromCharCode.apply(null, chunk as unknown as number[]))
-          }
-          const dataBase64 = btoa(chunks.join(''))
-
-          return {
-            filename: file.name,
-            mimeType: file.type,
-            dataBase64,
-            size: file.size
-          }
-        })
-      )
-      results.push(...batchResults)
+  /**
+   * 发送二进制帧
+   * 帧格式：[4 字节 taskId 长度][taskId 字符串][二进制数据]
+   * @param taskId - 任务 ID
+   * @param data - 文件二进制数据
+   */
+  private sendBinaryFrame(taskId: string, data: ArrayBuffer): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.error('[CollaborativeUpload] Cannot send binary: WebSocket not open')
+      return
     }
 
-    return results
+    const encoder = new TextEncoder()
+    const taskIdBytes = encoder.encode(taskId)
+    const taskIdLength = taskIdBytes.length
+
+    // 创建帧：[4 字节长度][taskId][数据]
+    const frame = new ArrayBuffer(4 + taskIdLength + data.byteLength)
+    const view = new DataView(frame)
+
+    // 写入 taskId 长度（4 字节，大端序）
+    view.setUint32(0, taskIdLength, false)
+
+    // 写入 taskId
+    const frameBytes = new Uint8Array(frame)
+    frameBytes.set(taskIdBytes, 4)
+
+    // 写入文件数据
+    frameBytes.set(new Uint8Array(data), 4 + taskIdLength)
+
+    this.ws.send(frame)
+  }
+
+  /**
+   * 提交远程任务（二进制传输）
+   * 1. 先发送元数据 JSON
+   * 2. 再逐个发送二进制帧
+   * @param files - 文件数组
+   * @param tasks - 任务元数据
+   */
+  private async submitRemoteTasks(files: File[], tasks: UploadTask[]): Promise<void> {
+    // 1. 发送元数据
+    this.send({
+      type: 'SUBMIT_TASKS',
+      sessionId: this._sessionId,
+      tasks,
+      binaryMode: true // 通知服务器将接收二进制数据
+    })
+
+    // 2. 批量发送二进制数据（避免内存耗尽）
+    const BATCH_SIZE = 5
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      const batch = files.slice(i, i + BATCH_SIZE)
+      const batchTasks = tasks.slice(i, i + BATCH_SIZE)
+
+      await Promise.all(
+        batch.map(async (file, idx) => {
+          const taskId = batchTasks[idx].taskId!
+          const data = await file.arrayBuffer()
+          this.sendBinaryFrame(taskId, data)
+        })
+      )
+    }
   }
 
   /**
