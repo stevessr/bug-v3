@@ -12,6 +12,7 @@ import AboutPage from '../pages/AboutPage.vue'
 import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
 import BufferPage from '../pages/BufferPage.vue'
 import BilibiliImportPage from '../pages/BilibiliImportPage.vue'
+import ExportPage from '../pages/ExportPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -84,6 +85,14 @@ const routes: RouteRecordRaw[] = [
     component: BilibiliImportPage,
     meta: {
       title: 'Bilibili 导入'
+    }
+  },
+  {
+    path: '/export',
+    name: 'export',
+    component: ExportPage,
+    meta: {
+      title: '导出表情'
     }
   },
   {
