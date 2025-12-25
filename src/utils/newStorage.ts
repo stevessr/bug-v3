@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   FAVORITES: 'favorites',
   GROUP_INDEX: 'emojiGroupIndex', // For group order and metadata
   GROUP_PREFIX: 'emojiGroup_', // For individual group storage
+  ARCHIVED_GROUPS: 'archivedGroupIds', // 已归档分组 ID 列表
   // Discourse domain configuration: stores array of { domain: string, enabledGroups: string[] }
   DISCOURSE_DOMAINS: 'discourseDomains'
 } as const
@@ -20,6 +21,37 @@ export const STORAGE_KEYS = {
 export const SYNC_STORAGE_KEYS = {
   BACKUP: 'emojiExtensionBackup'
 } as const
+
+// --- IndexedDB for Archived Groups ---
+const ARCHIVE_DB_NAME = 'emojiArchive'
+const ARCHIVE_DB_VERSION = 1
+const ARCHIVE_STORE_NAME = 'archivedGroups'
+
+let archiveDb: IDBDatabase | null = null
+
+async function getArchiveDb(): Promise<IDBDatabase> {
+  if (archiveDb) return archiveDb
+
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(ARCHIVE_DB_NAME, ARCHIVE_DB_VERSION)
+
+    request.onerror = () => {
+      reject(new Error('Failed to open archive database'))
+    }
+
+    request.onsuccess = () => {
+      archiveDb = request.result
+      resolve(archiveDb)
+    }
+
+    request.onupgradeneeded = event => {
+      const db = (event.target as IDBOpenDBRequest).result
+      if (!db.objectStoreNames.contains(ARCHIVE_STORE_NAME)) {
+        db.createObjectStore(ARCHIVE_STORE_NAME, { keyPath: 'id' })
+      }
+    }
+  })
+}
 
 // --- Chrome API Helper ---
 function getChromeAPI(): typeof chrome | null {
@@ -153,7 +185,11 @@ class SimpleStorageManager {
         try {
           chromeAPI.storage.local.set({ [key]: finalValue }, () => {
             if (chromeAPI.runtime.lastError) {
-              console.error('[Storage] extensionStorage.set failed:', key, chromeAPI.runtime.lastError)
+              console.error(
+                '[Storage] extensionStorage.set failed:',
+                key,
+                chromeAPI.runtime.lastError
+              )
               reject(chromeAPI.runtime.lastError)
             } else {
               resolve()
@@ -225,7 +261,10 @@ class SimpleStorageManager {
         try {
           chromeAPI.storage.local.set(finalItems, () => {
             if (chromeAPI.runtime.lastError) {
-              console.error('[Storage] extensionStorage.setBatch failed:', chromeAPI.runtime.lastError)
+              console.error(
+                '[Storage] extensionStorage.setBatch failed:',
+                chromeAPI.runtime.lastError
+              )
               reject(chromeAPI.runtime.lastError)
             } else {
               resolve()
@@ -838,6 +877,152 @@ export const newStorageHelpers = {
     }
     await this.setSettings(defaultSettings)
     await this.setFavorites([])
+  },
+
+  // --- 归档相关方法 ---
+
+  // 获取已归档分组 ID 列表
+  async getArchivedGroupIds(): Promise<string[]> {
+    const ids = await storageManager.get(STORAGE_KEYS.ARCHIVED_GROUPS)
+    return Array.isArray(ids) ? ids : []
+  },
+
+  // 设置已归档分组 ID 列表
+  async setArchivedGroupIds(ids: string[]): Promise<void> {
+    await storageManager.set(STORAGE_KEYS.ARCHIVED_GROUPS, ids)
+  },
+
+  // 归档分组：将分组移动到 IndexedDB
+  async archiveGroup(group: EmojiGroup): Promise<void> {
+    const db = await getArchiveDb()
+    const cleanGroup = ensureSerializable(group)
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readwrite')
+      const store = transaction.objectStore(ARCHIVE_STORE_NAME)
+      const request = store.put(cleanGroup)
+
+      request.onsuccess = async () => {
+        // 添加到归档列表
+        const archivedIds = await this.getArchivedGroupIds()
+        if (!archivedIds.includes(group.id)) {
+          archivedIds.push(group.id)
+          await this.setArchivedGroupIds(archivedIds)
+        }
+        // 从主存储删除
+        await this.removeEmojiGroup(group.id)
+        resolve()
+      }
+
+      request.onerror = () => {
+        reject(new Error('Failed to archive group'))
+      }
+    })
+  },
+
+  // 取消归档：将分组从 IndexedDB 恢复到主存储
+  async unarchiveGroup(groupId: string): Promise<EmojiGroup | null> {
+    const db = await getArchiveDb()
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readwrite')
+      const store = transaction.objectStore(ARCHIVE_STORE_NAME)
+      const getRequest = store.get(groupId)
+
+      getRequest.onsuccess = async () => {
+        const group = getRequest.result as EmojiGroup | undefined
+        if (!group) {
+          resolve(null)
+          return
+        }
+
+        // 从 IndexedDB 删除
+        const deleteRequest = store.delete(groupId)
+        deleteRequest.onsuccess = async () => {
+          // 从归档列表移除
+          const archivedIds = await this.getArchivedGroupIds()
+          const newIds = archivedIds.filter(id => id !== groupId)
+          await this.setArchivedGroupIds(newIds)
+
+          // 添加到主存储
+          const index = await this.getEmojiGroupIndex()
+          index.push({ id: group.id, order: index.length })
+          await this.setEmojiGroupIndex(index)
+          await this.setEmojiGroup(group.id, group)
+
+          resolve(group)
+        }
+
+        deleteRequest.onerror = () => {
+          reject(new Error('Failed to delete from archive'))
+        }
+      }
+
+      getRequest.onerror = () => {
+        reject(new Error('Failed to get archived group'))
+      }
+    })
+  },
+
+  // 获取单个归档分组
+  async getArchivedGroup(groupId: string): Promise<EmojiGroup | null> {
+    const db = await getArchiveDb()
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readonly')
+      const store = transaction.objectStore(ARCHIVE_STORE_NAME)
+      const request = store.get(groupId)
+
+      request.onsuccess = () => {
+        resolve(request.result as EmojiGroup | null)
+      }
+
+      request.onerror = () => {
+        reject(new Error('Failed to get archived group'))
+      }
+    })
+  },
+
+  // 获取所有归档分组
+  async getAllArchivedGroups(): Promise<EmojiGroup[]> {
+    const db = await getArchiveDb()
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readonly')
+      const store = transaction.objectStore(ARCHIVE_STORE_NAME)
+      const request = store.getAll()
+
+      request.onsuccess = () => {
+        resolve(request.result as EmojiGroup[])
+      }
+
+      request.onerror = () => {
+        reject(new Error('Failed to get all archived groups'))
+      }
+    })
+  },
+
+  // 删除归档分组
+  async deleteArchivedGroup(groupId: string): Promise<void> {
+    const db = await getArchiveDb()
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readwrite')
+      const store = transaction.objectStore(ARCHIVE_STORE_NAME)
+      const request = store.delete(groupId)
+
+      request.onsuccess = async () => {
+        // 从归档列表移除
+        const archivedIds = await this.getArchivedGroupIds()
+        const newIds = archivedIds.filter(id => id !== groupId)
+        await this.setArchivedGroupIds(newIds)
+        resolve()
+      }
+
+      request.onerror = () => {
+        reject(new Error('Failed to delete archived group'))
+      }
+    })
   }
 }
 

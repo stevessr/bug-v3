@@ -6,6 +6,7 @@ import SettingsPage from '../pages/SettingsPage.vue'
 import FavoritesPage from '../pages/FavoritesPage.vue'
 import GroupsPage from '../pages/GroupsPage.vue'
 import UngroupedPage from '../pages/UngroupedPage.vue'
+import ArchivedPage from '../pages/ArchivedPage.vue'
 import StatsPage from '../pages/StatsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
 import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
@@ -46,6 +47,14 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/archived',
+    name: 'archived',
+    component: ArchivedPage,
+    meta: {
+      title: '已归档'
+    }
+  },
+  {
     path: '/stats',
     name: 'stats',
     component: StatsPage,
@@ -74,7 +83,7 @@ const routes: RouteRecordRaw[] = [
     name: 'bilibili-import',
     component: BilibiliImportPage,
     meta: {
-      title: 'Bilibili导入'
+      title: 'Bilibili 导入'
     }
   },
   {

@@ -22,6 +22,7 @@ let runtimeMessageListenerRegistered = false
 export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- State ---
   const groups = ref<EmojiGroup[]>([])
+  const archivedGroups = ref<EmojiGroup[]>([]) // 已归档的分组
   const settings = ref<AppSettings>(defaultSettings)
   const favorites = ref<Set<string>>(new Set())
   const activeGroupId = ref<string>('nachoneko')
@@ -533,6 +534,15 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         hasLoadedOnce.value = true
       }
 
+      // 加载归档分组
+      try {
+        archivedGroups.value = await newStorageHelpers.getAllArchivedGroups()
+        console.log('[EmojiStore] Loaded archived groups:', archivedGroups.value.length)
+      } catch (err) {
+        console.error('[EmojiStore] Failed to load archived groups:', err)
+        archivedGroups.value = []
+      }
+
       console.log('[EmojiStore] LoadData completed successfully')
     } catch (error) {
       const e = error as Error
@@ -596,9 +606,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const index = groups.value.map((g, order) => ({ id: g.id, order }))
       await newStorageHelpers.setEmojiGroupIndex(index)
 
-      await Promise.all(
-        groups.value.map(group => newStorageHelpers.setEmojiGroup(group.id, group))
-      )
+      await Promise.all(groups.value.map(group => newStorageHelpers.setEmojiGroup(group.id, group)))
 
       // 保存 settings 和 favorites
       await newStorageHelpers.setSettings({ ...settings.value, lastModified: Date.now() })
@@ -1391,9 +1399,67 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     console.log('[EmojiStore] Runtime message listener already registered, skipping')
   }
 
+  // --- 归档功能 ---
+  // 归档分组
+  const archiveGroup = async (groupId: string) => {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) {
+      console.error('[EmojiStore] archiveGroup: group not found', groupId)
+      return
+    }
+
+    try {
+      await newStorageHelpers.archiveGroup(group)
+      // 从主列表移除
+      groups.value = groups.value.filter(g => g.id !== groupId)
+      // 添加到归档列表
+      archivedGroups.value.push(group)
+      console.log('[EmojiStore] Group archived:', groupId)
+    } catch (err) {
+      console.error('[EmojiStore] Failed to archive group:', err)
+    }
+  }
+
+  // 取消归档
+  const unarchiveGroup = async (groupId: string) => {
+    try {
+      const group = await newStorageHelpers.unarchiveGroup(groupId)
+      if (group) {
+        // 从归档列表移除
+        archivedGroups.value = archivedGroups.value.filter(g => g.id !== groupId)
+        // 添加到主列表
+        groups.value.push(group)
+        console.log('[EmojiStore] Group unarchived:', groupId)
+      }
+    } catch (err) {
+      console.error('[EmojiStore] Failed to unarchive group:', err)
+    }
+  }
+
+  // 删除归档分组
+  const deleteArchivedGroup = async (groupId: string) => {
+    try {
+      await newStorageHelpers.deleteArchivedGroup(groupId)
+      archivedGroups.value = archivedGroups.value.filter(g => g.id !== groupId)
+      console.log('[EmojiStore] Archived group deleted:', groupId)
+    } catch (err) {
+      console.error('[EmojiStore] Failed to delete archived group:', err)
+    }
+  }
+
+  // 刷新归档分组列表
+  const refreshArchivedGroups = async () => {
+    try {
+      archivedGroups.value = await newStorageHelpers.getAllArchivedGroups()
+    } catch (err) {
+      console.error('[EmojiStore] Failed to refresh archived groups:', err)
+    }
+  }
+
   return {
     // State
     groups,
+    archivedGroups,
     settings,
     activeGroupId,
     searchQuery,
@@ -1482,6 +1548,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     findEmojisByTag: tagStore.findEmojisByTag,
     setSelectedTags: tagStore.setSelectedTags,
     toggleTagFilter: tagStore.toggleTagFilter,
-    clearTagFilters: tagStore.clearTagFilters
+    clearTagFilters: tagStore.clearTagFilters,
+
+    // Archive Management
+    archiveGroup,
+    unarchiveGroup,
+    deleteArchivedGroup,
+    refreshArchivedGroups
   }
 })
