@@ -48,7 +48,7 @@ export async function handleAddToFavorites(
         name: emoji.name ?? '',
         url: emoji.url ?? '',
         groupId: 'favorites',
-        tags: emoji.tags ?? [],
+        ...(emoji.tags && emoji.tags.length > 0 ? { tags: emoji.tags } : {}),
         usageCount: 1,
         lastUsed: now,
         addedAt: now

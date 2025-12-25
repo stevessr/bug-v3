@@ -3,11 +3,12 @@ import { inject } from 'vue'
 
 import type { OptionsInject } from '../types'
 import GroupsTab from '../components/GroupsTab.vue'
+import { useEmojiStore } from '@/stores/emojiStore'
 
 const options = inject<OptionsInject>('options')!
+const emojiStore = useEmojiStore()
 
 const {
-  emojiStore,
   expandedGroups,
   isImageUrl,
   exportProgress,
@@ -27,6 +28,12 @@ const {
   handleImageError,
   showCreateGroupModal
 } = options
+
+const handleArchiveGroup = async (group: any) => {
+  if (group && group.id) {
+    await emojiStore.archiveGroup(group.id)
+  }
+}
 </script>
 
 <template>
@@ -50,5 +57,6 @@ const {
     @removeEmoji="removeEmojiFromGroup"
     @editEmoji="openEditEmoji"
     @imageError="handleImageError"
+    @archiveGroup="handleArchiveGroup"
   />
 </template>

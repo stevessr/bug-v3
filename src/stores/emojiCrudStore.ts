@@ -41,7 +41,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         ...emoji,
         id: generateEmojiId(),
         groupId,
-        tags: emoji.tags || []
+        ...(emoji.tags && emoji.tags.length > 0 ? { tags: emoji.tags } : {})
       }
       group.emojis.push(newEmoji)
       console.log('[EmojiCrudStore] addEmoji', { id: newEmoji.id, groupId })
@@ -70,7 +70,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         ...emoji,
         id: generateEmojiId(),
         groupId,
-        tags: emoji.tags || []
+        ...(emoji.tags && emoji.tags.length > 0 ? { tags: emoji.tags } : {})
       }
       group.emojis.push(newEmoji)
       console.log('[EmojiCrudStore] addEmojiWithoutSave', { id: newEmoji.id, groupId })

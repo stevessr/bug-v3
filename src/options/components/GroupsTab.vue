@@ -84,7 +84,8 @@ const emit = defineEmits([
   'imageError',
   'editEmoji',
   'batchUpdateSizeStreaming',
-  'exportGroupStreaming'
+  'exportGroupStreaming',
+  'archiveGroup'
 ])
 // props: only expandedGroups / isImageUrl / activeTab are expected from parent
 
@@ -280,6 +281,11 @@ const performDedupeChoice = (groupId: string | null, mode: 'name' | 'url') => {
 const onDelete = (group: any) => {
   closeMenu()
   emit('confirmDeleteGroup', group)
+}
+
+const onArchive = (group: any) => {
+  closeMenu()
+  emit('archiveGroup', group)
 }
 
 // --- View Detail Modal ---
@@ -509,6 +515,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                         @aiRename="onAIRename"
                         @confirmDelete="onDelete"
                         @batchUpdateSize="openBatchModal"
+                        @archive="onArchive"
                       />
                     </div>
                     <div

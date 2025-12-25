@@ -75,7 +75,7 @@ export interface Emoji {
   referenceId?: string // If set, this emoji references another emoji by ID
   perceptualHash?: string // Perceptual hash for similarity detection
   customOutput?: string // Custom string to insert/copy when clicking emoji (overrides markdown/html format)
-  tags: string[] // 标签数组
+  tags?: string[] // 标签数组（可选，为空时不存储）
 }
 
 export interface DefaultEmojiData {

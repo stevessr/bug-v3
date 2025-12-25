@@ -15,7 +15,8 @@ const emit = defineEmits([
   'confirmDelete',
   'batchUpdateSize',
   'viewDetail',
-  'aiRename'
+  'aiRename',
+  'archive'
 ])
 
 const onEdit = () => emit('edit', props.group)
@@ -26,6 +27,7 @@ const onConfirmDelete = () => emit('confirmDelete', props.group)
 const onBatchUpdateSize = () => emit('batchUpdateSize', props.group)
 const onViewDetail = () => emit('viewDetail', props.group)
 const onAIRename = () => emit('aiRename', props.group)
+const onArchive = () => emit('archive', props.group)
 </script>
 
 <template>
@@ -53,6 +55,15 @@ const onAIRename = () => emit('aiRename', props.group)
             <a-menu-item>打包下载</a-menu-item>
           </a-popconfirm>
           <a-menu-item @click.prevent="onDedupe">去重</a-menu-item>
+          <a-popconfirm
+            placement="top"
+            title="确认要归档此分组吗？归档后将不在日常页面显示"
+            ok-text="确定"
+            cancel-text="取消"
+            @confirm="onArchive"
+          >
+            <a-menu-item>归档</a-menu-item>
+          </a-popconfirm>
           <a-menu-item @click.prevent="onConfirmDelete">
             <span style="color: #e11d48">删除</span>
           </a-menu-item>

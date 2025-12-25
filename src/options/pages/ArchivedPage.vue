@@ -1,10 +1,24 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+
 import { useEmojiStore } from '@/stores/emojiStore'
+import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
+import ViewGroupDetailModal from '@/options/modals/ViewGroupDetailModal.vue'
 
 const emojiStore = useEmojiStore()
 
 const loading = ref(false)
+
+// 详情模态框状态
+const showDetailModal = ref(false)
+const detailGroupName = ref('')
+const detailContent = ref('')
+
+const handleViewDetail = (group: { name: string; detail?: string }) => {
+  detailGroupName.value = group.name
+  detailContent.value = group.detail || ''
+  showDetailModal.value = true
+}
 
 const handleUnarchive = async (groupId: string) => {
   loading.value = true
@@ -55,7 +69,14 @@ onMounted(async () => {
         >
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
-              <span class="text-2xl">{{ group.icon || '📁' }}</span>
+              <template v-if="isImageUrl(normalizeImageUrl(group.icon))">
+                <img
+                  :src="normalizeImageUrl(group.icon)"
+                  alt="group icon"
+                  class="w-8 h-8 object-contain rounded"
+                />
+              </template>
+              <span v-else class="text-2xl">{{ group.icon || '📁' }}</span>
               <span class="font-medium dark:text-white">{{ group.name }}</span>
             </div>
             <span class="text-sm text-gray-500">{{ group.emojis?.length || 0 }} 个表情</span>
@@ -78,6 +99,7 @@ onMounted(async () => {
           </div>
 
           <div class="flex gap-2">
+            <a-button size="small" @click="handleViewDetail(group)">详情</a-button>
             <a-button type="primary" size="small" @click="handleUnarchive(group.id)">恢复</a-button>
             <a-popconfirm
               title="确定永久删除此分组？"
@@ -91,5 +113,12 @@ onMounted(async () => {
         </div>
       </div>
     </a-spin>
+
+    <!-- 详情模态框 -->
+    <ViewGroupDetailModal
+      v-model:show="showDetailModal"
+      :group-name="detailGroupName"
+      :detail="detailContent"
+    />
   </div>
 </template>

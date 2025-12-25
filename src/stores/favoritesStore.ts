@@ -135,7 +135,7 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
         usageCount: 1,
         lastUsed: now,
         addedAt: now,
-        tags: emoji.tags || []
+        ...(emoji.tags && emoji.tags.length > 0 ? { tags: emoji.tags } : {})
       }
       favoritesGroup.emojis.push(favoriteEmoji)
       console.log('[FavoritesStore] Added to favorites:', emoji.name)

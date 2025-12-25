@@ -832,8 +832,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         packet: Date.now(),
         name: emojiData.name,
         url: emojiData.url,
-        groupId: 'ungrouped',
-        tags: [] // 确保新表情有空标签数组
+        groupId: 'ungrouped'
       }
       ungroupedGroup.emojis.push(newEmoji)
       console.log('[EmojiStore] addEmojiFromWeb', { id: newEmoji.id, name: newEmoji.name })

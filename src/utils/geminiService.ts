@@ -269,8 +269,7 @@ function parseGeminiResponse(text: string): any {
     // Return a fallback structure
     return {
       names: [],
-      description: text,
-      tags: []
+      description: text
     }
   }
 }

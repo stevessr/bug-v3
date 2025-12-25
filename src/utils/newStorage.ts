@@ -121,6 +121,27 @@ function ensureSerializable<T>(data: T): T {
   }
 }
 
+// --- Helper function to clean emoji data before saving ---
+// Remove empty tags array and other empty optional fields
+function cleanEmojiForStorage(emoji: Record<string, unknown>): Record<string, unknown> {
+  const cleaned = { ...emoji }
+  // Remove empty tags array
+  if (Array.isArray(cleaned.tags) && cleaned.tags.length === 0) {
+    delete cleaned.tags
+  }
+  return cleaned
+}
+
+// --- Helper function to clean emojis in a group ---
+function cleanGroupEmojis(emojis: unknown[]): unknown[] {
+  return emojis.map(emoji => {
+    if (emoji && typeof emoji === 'object') {
+      return cleanEmojiForStorage(emoji as Record<string, unknown>)
+    }
+    return emoji
+  })
+}
+
 // --- Simple Storage Manager ---
 // 优先写入 extension storage，localStorage 作为缓存加速读取
 class SimpleStorageManager {
@@ -307,7 +328,7 @@ export const newStorageHelpers = {
       name: group.name || '',
       icon: group.icon || '',
       order: group.order ?? 0,
-      emojis: Array.isArray(group.emojis) ? group.emojis : [],
+      emojis: cleanGroupEmojis(Array.isArray(group.emojis) ? group.emojis : []),
       detail: group.detail
     })
     await storageManager.set(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
@@ -319,7 +340,7 @@ export const newStorageHelpers = {
       name: group.name || '',
       icon: group.icon || '',
       order: group.order ?? 0,
-      emojis: Array.isArray(group.emojis) ? group.emojis : [],
+      emojis: cleanGroupEmojis(Array.isArray(group.emojis) ? group.emojis : []),
       detail: group.detail
     })
     await storageManager.setSync(STORAGE_KEYS.GROUP_PREFIX + groupId, clean)
@@ -411,7 +432,7 @@ export const newStorageHelpers = {
         name: group.name || '',
         icon: group.icon || '',
         order: group.order ?? 0,
-        emojis: Array.isArray(group.emojis) ? group.emojis : [],
+        emojis: cleanGroupEmojis(Array.isArray(group.emojis) ? group.emojis : []),
         detail: group.detail
       }
       batchItems[STORAGE_KEYS.GROUP_PREFIX + group.id] = clean
@@ -432,7 +453,7 @@ export const newStorageHelpers = {
         name: group.name || '',
         icon: group.icon || '',
         order: group.order ?? 0,
-        emojis: Array.isArray(group.emojis) ? group.emojis : [],
+        emojis: cleanGroupEmojis(Array.isArray(group.emojis) ? group.emojis : []),
         detail: group.detail
       }
       batchItems[STORAGE_KEYS.GROUP_PREFIX + group.id] = clean
@@ -480,7 +501,7 @@ export const newStorageHelpers = {
           name: group.name || '',
           icon: group.icon || '',
           order: group.order ?? 0,
-          emojis: Array.isArray(group.emojis) ? group.emojis : [],
+          emojis: cleanGroupEmojis(Array.isArray(group.emojis) ? group.emojis : []),
           detail: group.detail
         }
         batchItems[STORAGE_KEYS.GROUP_PREFIX + group.id] = clean
