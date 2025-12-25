@@ -188,6 +188,7 @@ function assignTaskToWorker(task, worker) {
   // 构建任务元数据
   const taskPayload = {
     id: task.id,
+    taskId: task.id,  // 冗余字段，用于二进制模式识别
     filename: task.filename,
     mimeType: task.mimeType,
     size: task.size
@@ -197,6 +198,7 @@ function assignTaskToWorker(task, worker) {
     // 有二进制数据：先发送元数据 JSON，再发送二进制帧
     sendToClient(worker.ws, {
       type: 'TASK_ASSIGNED',
+      binaryMode: true,
       task: taskPayload
     })
 

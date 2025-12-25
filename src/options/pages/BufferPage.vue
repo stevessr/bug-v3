@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { QuestionCircleOutlined, SyncOutlined, CheckCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import type { OptionsInject } from '../types'
@@ -1260,7 +1260,16 @@ onBeforeUnmount(() => {
 <template>
   <div class="buffer-page">
     <div class="page-header">
-      <h2 class="text-xl font-bold dark:text-white">缓冲区</h2>
+      <div class="flex items-center gap-2">
+        <h2 class="text-xl font-bold dark:text-white">缓冲区</h2>
+        <!-- 保存状态指示器 -->
+        <a-tooltip v-if="emojiStore.isSaving" title="正在保存...">
+          <SyncOutlined spin class="text-blue-500" />
+        </a-tooltip>
+        <a-tooltip v-else title="已保存">
+          <CheckCircleOutlined class="text-green-500" />
+        </a-tooltip>
+      </div>
       <p class="text-gray-600 dark:text-gray-400">
         上传图片到 linux.do 或 idcflare.com，并自动添加到此分组
       </p>

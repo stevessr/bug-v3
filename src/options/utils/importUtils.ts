@@ -55,11 +55,28 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
         }
       }
 
-      const name =
-        alt.split('|')[0].trim() || decodeURIComponent((url.split('/').pop() || '').split('?')[0])
+      // 解析名称和尺寸：支持格式 "filename|WIDTHxHEIGHT" 如 "image.avif|2000x2000"
+      const altParts = alt.split('|')
+      const rawName = altParts[0].trim()
+      let width: number | undefined
+      let height: number | undefined
+
+      if (altParts.length > 1) {
+        const sizeMatch = altParts[1].trim().match(/^(\d+)x(\d+)$/)
+        if (sizeMatch) {
+          width = parseInt(sizeMatch[1], 10)
+          height = parseInt(sizeMatch[2], 10)
+        }
+      }
+
+      const name = rawName || decodeURIComponent((url.split('/').pop() || '').split('?')[0])
       const emojiData: any = { name, url }
       if (displayUrl) {
         emojiData.displayUrl = displayUrl
+      }
+      if (width && height) {
+        emojiData.width = width
+        emojiData.height = height
       }
       mdItems.push(emojiData)
     }
@@ -95,7 +112,9 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
             : Date.now() + Math.floor(Math.random() * 1000),
           name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
-          ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
+          ...(emoji.displayUrl && { displayUrl: emoji.displayUrl }),
+          ...(emoji.width && { width: emoji.width }),
+          ...(emoji.height && { height: emoji.height })
         }
         store.addEmojiWithoutSave(targetGroupId, emojiData)
       })
@@ -126,7 +145,9 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
             : Date.now() + Math.floor(Math.random() * 1000),
           name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
-          ...(emoji.displayUrl && { displayUrl: emoji.displayUrl })
+          ...(emoji.displayUrl && { displayUrl: emoji.displayUrl }),
+          ...(emoji.width && { width: emoji.width }),
+          ...(emoji.height && { height: emoji.height })
         }
         if (targetId) store.addEmojiWithoutSave(targetId, emojiData)
       })

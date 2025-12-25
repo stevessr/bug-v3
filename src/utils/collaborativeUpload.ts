@@ -144,6 +144,8 @@ export class CollaborativeUploadClient {
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(this.config.serverUrl)
+        // 设置二进制类型为 ArrayBuffer，以便正确接收二进制帧
+        this.ws.binaryType = 'arraybuffer'
 
         // Store resolve/reject for later use when response is received
         this.connectResolve = resolve
