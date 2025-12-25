@@ -1,4 +1,4 @@
-import type { SyncTargetConfig } from '../userscript/plugins/syncTargets'
+import type { SyncTargetConfig } from '@/utils/syncTargets'
 
 // Key for storing sync configuration
 const SYNC_CONFIG_KEY = 'emoji_extension_sync_config'

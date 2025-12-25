@@ -74,7 +74,6 @@ A modern, feature-rich browser extension for managing and using custom emojis ac
 - **[Sync Documentation](./SYNC_DOCUMENTATION.md)** - WebDAV and S3 sync setup guide
 - **[AI Features Guide](./GEMINI_FEATURES.md)** - Gemini API integration and AI features
 - **[Build Flags](./scripts/docs/BUILD_FLAGS.md)** - Compile-time optimization options
-- **[Userscript Guide](./scripts/docs/USERSCRIPT_GUIDE.md)** - Using as a userscript with Tampermonkey
 - **[Documentation Index](./docs/README.md)** - Complete documentation index
 
 ## 🛠️ Development
@@ -119,22 +118,7 @@ npm run build:no-indexeddb
 
 # Minimal build (no logging, no IndexedDB - smallest bundle)
 npm run build:minimal
-
-# Userscript builds (for Tampermonkey/Violentmonkey)
-npm run build:userscript      # Build emoji picker and manager userscripts
-npm run build:userscript:min  # Build minified userscripts
 ```
-
-### Userscript Builds
-
-The project includes two userscript targets:
-
-1. **emoji-picker-core.user.js** - Core emoji picker functionality for Discourse sites
-2. **emoji-manager.user.js** - Management interface with WebDAV/S3 sync support
-
-Both scripts can be installed via Tampermonkey or Violentmonkey and work on Discourse forums.
-
-For detailed information about WebDAV and S3 synchronization, see [SYNC_DOCUMENTATION.md](./SYNC_DOCUMENTATION.md).
 
 ### Bundle Size Comparison
 
@@ -146,8 +130,6 @@ Different build configurations offer different trade-offs:
 | Standard         | ✅      | ✅        | General production use          |
 | Production       | ❌      | ✅        | Production with smaller size    |
 | Minimal          | ❌      | ❌        | Smallest bundle, basic features |
-| Userscript       | ✅      | ❌        | Tampermonkey/Violentmonkey      |
-| Userscript (Min) | ❌      | ❌        | Minified userscript             |
 
 **Size Reduction**: Minimal build is approximately 15-40% smaller than standard build.
 
@@ -183,7 +165,6 @@ src/
 ├── shared/           # Shared utilities
 │   ├── storage/      # Multi-layer storage system
 │   └── stores/       # Pinia state stores
-├── userscript/       # Userscript-specific code
 ├── utils/            # Utility functions
 └── assets/           # Static assets
 ```

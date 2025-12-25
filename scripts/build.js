@@ -42,16 +42,6 @@ const configs = {
     ENABLE_LOGGING: 'false',
     NODE_ENV: 'production'
   },
-  'build:userscript': {
-    ENABLE_LOGGING: 'true',
-    NODE_ENV: 'production',
-    BUILD_MINIFIED: 'false'
-  },
-  'build:userscript:min': {
-    ENABLE_LOGGING: 'true',
-    NODE_ENV: 'production',
-    BUILD_MINIFIED: 'true'
-  },
   // 新增：仅编译、不混淆（调试用）
   'build:debug': {
     ENABLE_LOGGING: 'true',
@@ -198,91 +188,18 @@ try {
 }
 
 // 执行 vite（开发或构建）
-const isUserscript = buildType.startsWith('build:userscript')
+// 构建时传递给 `vite` 的参数数组。dev 模式不传额外参数（等价于 `pnpm exec vite`）。
+const viteArgs = buildType === 'dev' ? [] : ['build']
 
-// For userscript builds, we need to build two separate scripts
-if (isUserscript) {
-  // Build core script first
-  console.log('📦 Building core emoji picker script...')
-  const coreEnv = {
-    ...process.env,
-    SCRIPT_TARGET: 'core',
-    SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT
+const child = spawn(PKG_MANAGER, ['exec', 'vite', ...viteArgs], {
+  stdio: 'inherit',
+  env: { ...process.env, SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT },
+  shell: false
+})
+
+child.on('exit', code => {
+  if (code === 0 && buildType !== 'dev') {
+    console.log('✅ Build completed!')
   }
-  const viteArgs = ['build', '--config', 'vite.config.userscript.ts']
-
-  const coreChild = spawn(PKG_MANAGER, ['exec', 'vite', ...viteArgs], {
-    stdio: 'inherit',
-    env: coreEnv,
-    shell: false
-  })
-
-  coreChild.on('exit', coreCode => {
-    if (coreCode !== 0) {
-      console.error('❌ Core script build failed')
-      process.exit(coreCode)
-    }
-
-    // Build manager script
-    console.log('📦 Building emoji manager script...')
-    const managerEnv = {
-      ...process.env,
-      SCRIPT_TARGET: 'manager',
-      SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT
-    }
-
-    const managerChild = spawn(PKG_MANAGER, ['exec', 'vite', ...viteArgs], {
-      stdio: 'inherit',
-      env: managerEnv,
-      shell: false
-    })
-
-    managerChild.on('exit', managerCode => {
-      if (managerCode !== 0) {
-        console.error('❌ Manager script build failed')
-        process.exit(managerCode)
-      }
-
-      // Post-process both scripts
-      console.log('🔧 Post-processing userscripts...')
-      const postProcessEnv = {
-        ...process.env,
-        SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT
-      }
-      const postProcessChild = spawn('node', ['./scripts/post-process-userscript.js', buildType], {
-        stdio: 'inherit',
-        env: postProcessEnv,
-        shell: false
-      })
-
-      postProcessChild.on('exit', postCode => {
-        if (postCode === 0) {
-          console.log('✅ Userscript build completed!')
-        } else {
-          console.error('❌ Userscript post-processing failed')
-        }
-        process.exit(postCode)
-      })
-    })
-  })
-} else {
-  // 构建时传递给 `vite` 的参数数组。dev 模式不传额外参数（等价于 `pnpm exec vite`）。
-  const viteArgs = buildType === 'dev' ? [] : ['build']
-  // Variant flag functionality removed - development variant no longer supported
-  const publicDir = path.resolve(process.cwd(), 'public')
-  const distDir = path.resolve(process.cwd(), 'dist')
-
-  const child = spawn(PKG_MANAGER, ['exec', 'vite', ...viteArgs], {
-    stdio: 'inherit',
-    env: { ...process.env, SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT },
-    shell: false
-  })
-
-  child.on('exit', code => {
-    if (code === 0 && buildType !== 'dev') {
-      // For non-userscript builds, just exit
-      console.log('✅ Build completed!')
-    }
-    process.exit(code)
-  })
-}
+  process.exit(code)
+})

@@ -28,7 +28,6 @@ export default [
       'playwright-report/**',
       'test-results/**',
       'scripts/**',
-      'src/userscript/**',
       // buildFlags shims removed - no longer ignored
       'server/**',
       '*.config.*s',
@@ -238,22 +237,11 @@ export default [
     }
   },
 
-  // Temporarily allow console in backend, userscript and utility code to reduce noise
-  // Note: we no longer globally allow console; instead prefer migrating to logger
-
-  // Allow alert in userscript files
-  {
-    files: ['src/userscript/**'],
-    rules: {
-      'no-alert': 'off'
-    }
-  },
-
   // (No special-case rules for buildFlags files; console usage is allowed generally where needed)
 
   // Temporarily relax @typescript-eslint/no-explicit-any for backend and utilities
   {
-    files: ['src/background/**', 'src/utils/**', 'src/content/**', 'src/userscript/**'],
+    files: ['src/background/**', 'src/utils/**', 'src/content/**'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off'
     }

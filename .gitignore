@@ -162,7 +162,6 @@ public/assets/defaultEmojiGroups.json
 src/content/data/default.local.ts
 .eslint-output.json
 *.crx
-dist-userscript
 docs/*.png
 dist-firefox
 

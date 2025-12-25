@@ -45,16 +45,6 @@ function isExtensionContext(): boolean {
   )
 }
 
-function isUserscriptContext(): boolean {
-  return (
-    typeof (globalThis as any).GM_info !== 'undefined' ||
-    typeof (globalThis as any).unsafeWindow !== 'undefined' ||
-    (typeof window !== 'undefined' &&
-      (window.location.protocol === 'http:' || window.location.protocol === 'https:') &&
-      !isExtensionContext())
-  )
-}
-
 /**
  * Safe IndexedDB access with environment checks
  */
@@ -272,9 +262,7 @@ export class ImageCache {
           errorCache(`Database error:`, event)
         }
 
-        logCache(
-          `Database initialized (${isExtensionContext() ? 'extension' : 'userscript'} context)`
-        )
+        logCache(`Database initialized (${isExtensionContext() ? 'extension' : 'web'} context)`)
         resolve()
       }
 
@@ -727,11 +715,7 @@ export class ImageCache {
     context: 'extension' | 'userscript' | 'unknown'
   }> {
     const memStats = this.memoryCache.getStats()
-    const context = isExtensionContext()
-      ? ('extension' as const)
-      : isUserscriptContext()
-        ? ('userscript' as const)
-        : ('unknown' as const)
+    const context = isExtensionContext() ? ('extension' as const) : ('unknown' as const)
 
     try {
       await this.ensureInitialized()

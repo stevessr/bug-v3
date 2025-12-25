@@ -13,8 +13,8 @@ import {
   saveSyncConfig as saveSyncConfigToStorage,
   loadSyncConfig as loadSyncConfigFromStorage
 } from '@/utils/syncConfigStorage'
-import { createSyncTarget } from '@/userscript/plugins/syncTargets'
-import type { SyncTargetConfig } from '@/userscript/plugins/syncTargets'
+import { createSyncTarget } from '@/utils/syncTargets'
+import type { SyncTargetConfig } from '@/utils/syncTargets'
 
 export interface SyncStoreOptions {
   groups: Ref<EmojiGroup[]>

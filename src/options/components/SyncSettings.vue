@@ -9,7 +9,7 @@ import type {
   WebDAVConfig,
   S3Config,
   CloudflareConfig
-} from '../../userscript/plugins/syncTargets'
+} from '../../utils/syncTargets'
 
 // TypeScript interface for sync progress
 interface SyncProgress {

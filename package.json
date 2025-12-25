@@ -9,8 +9,6 @@
     "build": "node scripts/build.js build",
     "build:prod": "node scripts/build.js build:prod",
     "build:minimal": "node scripts/build.js build:minimal",
-    "build:userscript": "node scripts/build.js build:userscript",
-    "build:userscript:min": "node scripts/build.js build:userscript:min",
     "build:debug": "node scripts/build.js build:debug",
     "serve": "vite preview",
     "test": "playwright test",

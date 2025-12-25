@@ -67,7 +67,7 @@ export interface Progress {
   current: number
   total: number
   action: 'push' | 'pull' | 'test'
-  message?: string  // 可选的详细消息
+  message?: string // 可选的详细消息
 }
 
 export type ProgressCallback = (progress: Progress) => void
@@ -145,14 +145,14 @@ export class WebDAVSyncTarget implements ISyncTarget {
       const dataStr = JSON.stringify(data, null, 2)
       const dataSizeKB = (dataStr.length / 1024).toFixed(2)
       const itemCount = 1 + (data.emojiGroups?.length || 0)
-      
-      onProgress?.({ 
-        current: 0, 
-        total: 1, 
+
+      onProgress?.({
+        current: 0,
+        total: 1,
         action: 'push',
         message: `正在推送数据到 WebDAV (${itemCount} 项，${dataSizeKB} KB)...`
       })
-      
+
       const url = this.getFullUrl()
       const response = await fetch(url, {
         method: 'PUT',
@@ -163,9 +163,9 @@ export class WebDAVSyncTarget implements ISyncTarget {
         body: dataStr
       })
 
-      onProgress?.({ 
-        current: 1, 
-        total: 1, 
+      onProgress?.({
+        current: 1,
+        total: 1,
         action: 'push',
         message: `✓ 已推送所有数据 (${dataSizeKB} KB)`
       })
@@ -258,7 +258,12 @@ export class WebDAVSyncTarget implements ISyncTarget {
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; group?: unknown; error?: unknown; message: string }> {
     // WebDAV does not support fetching individual groups, so we pull all data and filter
-    onProgress?.({ current: 0, total: 1, action: 'pull', message: 'Fetching all data to get group details...' })
+    onProgress?.({
+      current: 0,
+      total: 1,
+      action: 'pull',
+      message: 'Fetching all data to get group details...'
+    })
     const result = await this.pull(onProgress)
     if (result.success && result.data) {
       const groups = result.data.emojiGroups as GroupLike[]
@@ -367,14 +372,14 @@ export class S3SyncTarget implements ISyncTarget {
       const body = JSON.stringify(data, null, 2)
       const dataSizeKB = (body.length / 1024).toFixed(2)
       const itemCount = 1 + (data.emojiGroups?.length || 0)
-      
-      onProgress?.({ 
-        current: 0, 
-        total: 1, 
+
+      onProgress?.({
+        current: 0,
+        total: 1,
         action: 'push',
         message: `正在推送数据到 S3 (${itemCount} 项，${dataSizeKB} KB)...`
       })
-      
+
       const url = this.getS3Url()
       const headers = await this.signRequest('PUT', url, body)
 
@@ -383,10 +388,10 @@ export class S3SyncTarget implements ISyncTarget {
         headers,
         body
       })
-      
-      onProgress?.({ 
-        current: 1, 
-        total: 1, 
+
+      onProgress?.({
+        current: 1,
+        total: 1,
         action: 'push',
         message: `✓ 已推送所有数据 (${dataSizeKB} KB)`
       })
@@ -478,7 +483,12 @@ export class S3SyncTarget implements ISyncTarget {
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; group?: unknown; error?: unknown; message: string }> {
     // S3 does not support fetching individual groups, so we pull all data and filter
-    onProgress?.({ current: 0, total: 1, action: 'pull', message: 'Fetching all data to get group details...' })
+    onProgress?.({
+      current: 0,
+      total: 1,
+      action: 'pull',
+      message: 'Fetching all data to get group details...'
+    })
     const result = await this.pull(onProgress)
     if (result.success && result.data) {
       const groups = result.data.emojiGroups as GroupLike[]
@@ -589,15 +599,15 @@ export class CloudflareSyncTarget implements ISyncTarget {
           displayName: `表情组：${g.name ?? ''}`
         }))
       ]
-      
+
       // 计算总请求次数：每个项目需要 1 个 POST 请求
       const totalRequests = itemsToPush.length
       let completedRequests = 0
-      
+
       // 初始进度
-      onProgress?.({ 
-        current: completedRequests, 
-        total: totalRequests, 
+      onProgress?.({
+        current: completedRequests,
+        total: totalRequests,
         action: 'push',
         message: `准备推送 ${totalRequests} 个数据项...`
       })
@@ -607,18 +617,18 @@ export class CloudflareSyncTarget implements ISyncTarget {
           const jsonData = JSON.stringify(item.data)
           const sizeKB = (jsonData.length / 1024).toFixed(2)
           console.log(`[CloudflareSync] Pushing ${item.key}, size: ${jsonData.length} bytes`)
-          
+
           // 开始处理这个项目，增加计数器（进度条立即前进）
           completedRequests++
-          
+
           // 显示正在推送的项目
-          onProgress?.({ 
-            current: completedRequests, 
-            total: totalRequests, 
+          onProgress?.({
+            current: completedRequests,
+            total: totalRequests,
             action: 'push',
             message: `正在推送 ${item.displayName} (${sizeKB} KB)...`
           })
-          
+
           const response = await fetch(`${baseUrl}/${item.key}`, {
             method: 'POST',
             headers,
@@ -639,11 +649,11 @@ export class CloudflareSyncTarget implements ISyncTarget {
             console.error(`[CloudflareSync] Failed to push ${item.key}:`, errorDetail)
             throw new Error(`Failed to push item ${item.key}: ${errorDetail}`)
           }
-          
+
           // 报告完成（保持同样的计数，只更新消息）
-          onProgress?.({ 
-            current: completedRequests, 
-            total: totalRequests, 
+          onProgress?.({
+            current: completedRequests,
+            total: totalRequests,
             action: 'push',
             message: `✓ 已推送 ${item.displayName}`
           })
@@ -692,7 +702,9 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
       // Separate settings and group keys
       const settingsKey = keys.find(key => key.name === 'settings')
-      const groupKeys = keys.filter(key => key.name !== 'settings' && !key.name.startsWith('emoji-'))
+      const groupKeys = keys.filter(
+        key => key.name !== 'settings' && !key.name.startsWith('emoji-')
+      )
 
       // Fetch settings first
       let settingsData: any = {}
@@ -734,7 +746,8 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
       const settings = pulledData.settings as SettingsLike | undefined
       if (settings?.version && typeof settings.version === 'string') version = settings.version
-      if (settings?.timestamp && typeof settings.timestamp === 'number') timestamp = settings.timestamp
+      if (settings?.timestamp && typeof settings.timestamp === 'number')
+        timestamp = settings.timestamp
 
       const finalData: SyncData = {
         settings: pulledData.settings || {},
@@ -762,13 +775,26 @@ export class CloudflareSyncTarget implements ISyncTarget {
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; group?: any; error?: any; message: string }> {
     try {
-      onProgress?.({ current: 0, total: 1, action: 'pull', message: `Fetching details for group ${groupName}...` })
+      onProgress?.({
+        current: 0,
+        total: 1,
+        action: 'pull',
+        message: `Fetching details for group ${groupName}...`
+      })
       const baseUrl = this.getUrl()
       const headers = this.getReadAuthHeader()
-      const res = await fetch(`${baseUrl}/${encodeURIComponent(groupName)}`, { method: 'GET', headers })
+      const res = await fetch(`${baseUrl}/${encodeURIComponent(groupName)}`, {
+        method: 'GET',
+        headers
+      })
       if (res.ok) {
         const groupData = await res.json()
-        onProgress?.({ current: 1, total: 1, action: 'pull', message: `Details for group ${groupName} fetched.` })
+        onProgress?.({
+          current: 1,
+          total: 1,
+          action: 'pull',
+          message: `Details for group ${groupName} fetched.`
+        })
         return {
           success: true,
           group: groupData,
@@ -805,7 +831,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
       // 计算总请求次数：1 个列表请求 + N 个数据请求
       const totalRequests = 1 + keys.length
-      let completedRequests = 1  // 列表请求已完成
+      let completedRequests = 1 // 列表请求已完成
 
       onProgress?.({
         current: completedRequests,
@@ -817,7 +843,8 @@ export class CloudflareSyncTarget implements ISyncTarget {
       // 2. Fetch all keys sequentially to report progress
       const pulledItems: { key: string; data: any }[] = []
       for (const key of keys) {
-        const displayName = key.name === 'settings' ? '设置配置' : `表情组：${decodeURIComponent(key.name)}`
+        const displayName =
+          key.name === 'settings' ? '设置配置' : `表情组：${decodeURIComponent(key.name)}`
 
         // 开始处理这个项目，增加计数器（进度条立即前进）
         completedRequests++
@@ -873,7 +900,8 @@ export class CloudflareSyncTarget implements ISyncTarget {
       // Try to get top level version/timestamp if it was set
       const settings = pulledData.settings as SettingsLike | undefined
       if (settings?.version && typeof settings.version === 'string') version = settings.version
-      if (settings?.timestamp && typeof settings.timestamp === 'number') timestamp = settings.timestamp
+      if (settings?.timestamp && typeof settings.timestamp === 'number')
+        timestamp = settings.timestamp
 
       const finalData: SyncData = {
         settings: pulledData.settings || {},

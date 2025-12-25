@@ -16,7 +16,6 @@ npm run build             # Standard production build
 npm run build:prod        # Production without logging (smaller bundle)
 npm run build:minimal     # No logging + no IndexedDB (smallest bundle)
 npm run build:debug       # No minification (for debugging)
-npm run build:userscript  # Userscript for Tampermonkey/Violentmonkey
 npm run lint              # Check linting
 npm run lint:fix          # Auto-fix lint issues
 npm run format            # Format with Prettier
@@ -47,7 +46,6 @@ Always use `newStorageHelpers` for data access. Timestamp-based conflict resolut
 | Popup | `src/popup/` | Quick emoji access with search/favorites |
 | Options | `src/options/` | Main management UI. Pages in `src/options/pages/` |
 | Sidebar | `src/sidebar/` | Sidebar quick access |
-| Userscript | `src/userscript/` | Standalone userscript (`manager/`, `modules/`, `plugins/`) |
 
 ### State Management
 - **Pinia** store at `src/stores/emojiStore.ts` manages emoji groups, settings, and favorites.

@@ -1,4 +1,4 @@
-import { type AppSettings, type EmojiGroup } from '../types/type'
+import { type AppSettings, type EmojiGroup } from '@/types/type'
 import {
   createSyncTarget,
   type CloudflareConfig,
@@ -6,9 +6,8 @@ import {
   type SyncResult,
   type ProgressCallback as SyncProgressCallback,
   type Progress
-} from '../userscript/plugins/syncTargets'
-
-import { newStorageHelpers } from './newStorage'
+} from '@/utils/syncTargets'
+import { newStorageHelpers } from '@/utils/newStorage'
 
 // Use the CloudflareConfig from syncTargets and extend it with sync times
 export interface ExtendedCloudflareConfig extends CloudflareConfig {
