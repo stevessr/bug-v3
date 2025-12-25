@@ -6,6 +6,7 @@ import { scanForCookedContent, observeCookedContent } from './utils/cooked-conte
 import { isDiscoursePage } from './utils/page-detection'
 import { setupDiscourseUploadHandler } from './utils/upload-handler'
 import { initCalloutSuggestions } from './callout-suggestions'
+import { initChatMultiReactor } from './utils/chat-multi-reactor'
 
 export async function initDiscourse() {
   try {
@@ -51,6 +52,19 @@ export async function initDiscourse() {
         e
       )
       initCalloutSuggestions()
+    }
+
+    // 集成聊天多表情反应功能
+    try {
+      const enableChatMultiReactor = await requestSettingFromBackground('enableChatMultiReactor')
+      if (enableChatMultiReactor === true) {
+        // 获取自定义表情列表
+        const customEmojis = await requestSettingFromBackground('chatMultiReactorEmojis')
+        initChatMultiReactor(Array.isArray(customEmojis) ? customEmojis : undefined)
+        console.log('[DiscourseOneClick] chat multi-reactor enabled')
+      }
+    } catch (e) {
+      console.warn('[DiscourseOneClick] failed to get enableChatMultiReactor setting', e)
     }
 
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages

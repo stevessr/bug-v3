@@ -12,6 +12,7 @@ import AISettings from '../components/AISettings.vue'
 import SyncSettings from '../components/SyncSettings.vue'
 import CloudDataPreview from '../components/CloudDataPreview.vue'
 import CollaborativeUploadSettings from '../components/CollaborativeUploadSettings.vue'
+import ChatMultiReactorSettings from '../components/ChatMultiReactorSettings.vue'
 
 const options = inject<OptionsInject>('options')!
 
@@ -26,6 +27,8 @@ const {
   updateEnableXcomExtraSelectors,
   updateEnableCalloutSuggestions,
   updateEnableBatchParseImages,
+  updateEnableChatMultiReactor,
+  updateChatMultiReactorEmojis,
   updateEnableHoverPreview,
   updateSyncVariantToDisplayUrl,
   updateUseIndexedDBForImages,
@@ -179,6 +182,16 @@ onMounted(async () => {
         <a-tab-pane key="collaborative" tab="联动上传">
           <div class="py-4">
             <CollaborativeUploadSettings />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="chat-reactor" tab="多表情反应">
+          <div class="py-4">
+            <ChatMultiReactorSettings
+              :settings="emojiStore.settings"
+              @update:enableChatMultiReactor="updateEnableChatMultiReactor"
+              @update:chatMultiReactorEmojis="updateChatMultiReactorEmojis"
+            />
           </div>
         </a-tab-pane>
       </a-tabs>

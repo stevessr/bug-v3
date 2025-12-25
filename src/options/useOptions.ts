@@ -270,6 +270,14 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableBatchParseImages: value })
   }
 
+  const updateEnableChatMultiReactor = (value: boolean) => {
+    emojiStore.updateSettings({ enableChatMultiReactor: value })
+  }
+
+  const updateChatMultiReactorEmojis = (emojis: string[]) => {
+    emojiStore.updateSettings({ chatMultiReactorEmojis: emojis })
+  }
+
   const updateSyncVariantToDisplayUrl = (value: boolean) => {
     emojiStore.updateSettings({ syncVariantToDisplayUrl: value })
   }
@@ -1020,6 +1028,8 @@ export default function useOptions() {
     updateEnableXcomExtraSelectors,
     updateEnableCalloutSuggestions,
     updateEnableBatchParseImages,
+    updateEnableChatMultiReactor,
+    updateChatMultiReactorEmojis,
     updateTheme,
     updateCustomPrimaryColor,
     updateCustomColorScheme,
