@@ -90,6 +90,10 @@ export class CollaborativeUploadClient {
   // @ts-expect-error kept for API compatibility
   private _workerId: string | null = null
 
+  // 用于连接完成时的回调（等待 SESSION_CREATED 或 WORKER_REGISTERED）
+  private connectResolve: (() => void) | null = null
+  private connectReject: ((error: Error) => void) | null = null
+
   // 用于主控端等待会话完成
   private sessionCompleteResolve: ((results: UploadResult[]) => void) | null = null
   // @ts-expect-error kept for potential future use (reject on fatal errors)
@@ -100,6 +104,9 @@ export class CollaborativeUploadClient {
   private pendingRemoteFiles: string[] = [] // 正在等待远程上传的文件名
   private taskTimeoutTimer: ReturnType<typeof setTimeout> | null = null // 任务超时定时器
   private isUploading: boolean = false // 是否正在上传中
+
+  // Worker mode local statistics
+  private workerStats: WorkerStats = { completed: 0, failed: 0, totalBytes: 0 }
 
   constructor(config: CollaborativeUploadConfig) {
     this.config = config
@@ -124,11 +131,17 @@ export class CollaborativeUploadClient {
 
   /**
    * 连接到协调服务器
+   * 对于 master 角色，会等待 SESSION_CREATED 消息后才 resolve
+   * 对于 worker 角色，会等待 WORKER_REGISTERED 消息后才 resolve
    */
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(this.config.serverUrl)
+
+        // Store resolve/reject for later use when response is received
+        this.connectResolve = resolve
+        this.connectReject = reject
 
         this.ws.onopen = () => {
           console.log('[CollaborativeUpload] Connected to server')
@@ -143,7 +156,7 @@ export class CollaborativeUploadClient {
           }
 
           this.config.onStatusChange?.(this._status)
-          resolve()
+          // Note: resolve() is now called in handleMessage when SESSION_CREATED or WORKER_REGISTERED is received
         }
 
         this.ws.onmessage = event => {
@@ -155,6 +168,13 @@ export class CollaborativeUploadClient {
           this._status.connected = false
           this.stopHeartbeat()
           this.config.onStatusChange?.(this._status)
+
+          // If we were still waiting for connection to complete, reject
+          if (this.connectReject) {
+            this.connectReject(new Error('Connection closed before initialization complete'))
+            this.connectResolve = null
+            this.connectReject = null
+          }
 
           // 处理断线时的任务失败
           this.handleDisconnectDuringUpload()
@@ -172,7 +192,11 @@ export class CollaborativeUploadClient {
 
         this.ws.onerror = error => {
           console.error('[CollaborativeUpload] WebSocket error:', error)
-          reject(error)
+          if (this.connectReject) {
+            this.connectReject(error instanceof Error ? error : new Error('WebSocket error'))
+            this.connectResolve = null
+            this.connectReject = null
+          }
         }
       } catch (error) {
         reject(error)
@@ -339,6 +363,12 @@ export class CollaborativeUploadClient {
           this._serverStats = data.serverStats
           console.log('[CollaborativeUpload] Registered as worker:', data.workerId)
           this.config.onStatusChange?.(this._status)
+          // Resolve connection promise - worker is now fully registered
+          if (this.connectResolve) {
+            this.connectResolve()
+            this.connectResolve = null
+            this.connectReject = null
+          }
           break
 
         case 'SESSION_CREATED':
@@ -347,6 +377,12 @@ export class CollaborativeUploadClient {
           this._serverStats = data.serverStats
           console.log('[CollaborativeUpload] Session created:', data.sessionId)
           this.config.onStatusChange?.(this._status)
+          // Resolve connection promise - master session is now ready
+          if (this.connectResolve) {
+            this.connectResolve()
+            this.connectResolve = null
+            this.connectReject = null
+          }
           break
 
         case 'TASKS_SUBMITTED':
@@ -501,11 +537,9 @@ export class CollaborativeUploadClient {
       })
 
       // 更新本地统计
-      this.config.onWorkerStats?.({
-        completed: (this.config.onWorkerStats as any)?.completed + 1 || 1,
-        failed: (this.config.onWorkerStats as any)?.failed || 0,
-        totalBytes: (this.config.onWorkerStats as any)?.totalBytes + task.size || task.size
-      })
+      this.workerStats.completed++
+      this.workerStats.totalBytes += task.size
+      this.config.onWorkerStats?.(this.workerStats)
     } catch (error) {
       console.error('[CollaborativeUpload] Task failed:', error)
 
@@ -515,6 +549,10 @@ export class CollaborativeUploadClient {
         taskId: task.id,
         error: error instanceof Error ? error.message : String(error)
       })
+
+      // 更新本地统计
+      this.workerStats.failed++
+      this.config.onWorkerStats?.(this.workerStats)
     }
   }
 
@@ -557,17 +595,23 @@ export class CollaborativeUploadClient {
       })
     }
 
-    // 主机也参与上传：分配一部分任务给自己
-    // 策略：主机处理一半（向上取整），其余分发给工作者
-    const localCount = Math.ceil(files.length / 2)
+    // 主机也参与上传：根据工作者数量动态分配任务
+    // 策略：主机算作 1 个节点，与所有工作者平均分配任务
+    const workerCount = this._serverStats?.workerCount ?? 0
+    const totalNodes = 1 + workerCount // 主机 + 工作者
+    const localCount = Math.ceil(files.length / totalNodes)
     const localFiles = files.slice(0, localCount)
     const remoteFiles = files.slice(localCount)
+
+    console.log(
+      `[CollaborativeUpload] Dynamic load balancing: ${totalNodes} nodes (1 master + ${workerCount} workers)`
+    )
 
     // 记录远程文件名
     this.pendingRemoteFiles = remoteFiles.map(f => f.name)
 
     console.log(
-      `[CollaborativeUpload] Split tasks: ${localCount} local, ${remoteFiles.length} remote`
+      `[CollaborativeUpload] Task split: ${localCount} local, ${remoteFiles.length} remote`
     )
 
     // 启动本地上传（异步）
@@ -600,33 +644,53 @@ export class CollaborativeUploadClient {
 
   /**
    * 准备任务数据
+   * 使用批量处理避免同时加载所有文件到内存
+   * @param files - 要处理的文件列表
+   * @param batchSize - 每批处理的文件数量（默认 5）
    */
-  private async prepareTasksData(files: File[]): Promise<UploadTask[]> {
-    return Promise.all(
-      files.map(async file => {
-        const arrayBuffer = await file.arrayBuffer()
-        const bytes = new Uint8Array(arrayBuffer)
-        let binary = ''
-        for (let i = 0; i < bytes.length; i++) {
-          binary += String.fromCharCode(bytes[i])
-        }
-        const dataBase64 = btoa(binary)
+  private async prepareTasksData(files: File[], batchSize: number = 5): Promise<UploadTask[]> {
+    const results: UploadTask[] = []
 
-        return {
-          filename: file.name,
-          mimeType: file.type,
-          dataBase64,
-          size: file.size
-        }
-      })
-    )
+    // Process files in batches to prevent memory exhaustion
+    for (let i = 0; i < files.length; i += batchSize) {
+      const batch = files.slice(i, i + batchSize)
+      const batchResults = await Promise.all(
+        batch.map(async file => {
+          const arrayBuffer = await file.arrayBuffer()
+          const bytes = new Uint8Array(arrayBuffer)
+
+          // Use chunked approach for efficient Base64 conversion
+          // Process in 32KB chunks to avoid stack overflow and reduce memory fragmentation
+          const CHUNK_SIZE = 32768
+          const chunks: string[] = []
+          for (let j = 0; j < bytes.length; j += CHUNK_SIZE) {
+            const chunk = bytes.subarray(j, Math.min(j + CHUNK_SIZE, bytes.length))
+            chunks.push(String.fromCharCode.apply(null, chunk as unknown as number[]))
+          }
+          const dataBase64 = btoa(chunks.join(''))
+
+          return {
+            filename: file.name,
+            mimeType: file.type,
+            dataBase64,
+            size: file.size
+          }
+        })
+      )
+      results.push(...batchResults)
+    }
+
+    return results
   }
 
   /**
-   * 本地上传文件
+   * 本地上传文件（并行处理，带并发控制）
+   * @param files - 要上传的文件数组
+   * @param concurrency - 并发数限制，默认为 3
    */
-  private async uploadLocalFiles(files: File[]): Promise<void> {
-    for (const file of files) {
+  private async uploadLocalFiles(files: File[], concurrency: number = 3): Promise<void> {
+    // Helper function to upload a single file
+    const uploadSingleFile = async (file: File): Promise<void> => {
       try {
         console.log(`[CollaborativeUpload] Local upload: ${file.name}`)
 
@@ -685,6 +749,27 @@ export class CollaborativeUploadClient {
 
       // 检查是否全部完成
       this.checkAllComplete()
+    }
+
+    // Process files with concurrency control
+    const queue = [...files]
+    const executing: Promise<void>[] = []
+
+    while (queue.length > 0 || executing.length > 0) {
+      // Fill up to concurrency limit
+      while (queue.length > 0 && executing.length < concurrency) {
+        const file = queue.shift()!
+        const promise = uploadSingleFile(file).then(() => {
+          // Remove from executing when done
+          executing.splice(executing.indexOf(promise), 1)
+        })
+        executing.push(promise)
+      }
+
+      // Wait for at least one to complete if we're at the limit
+      if (executing.length >= concurrency || (queue.length === 0 && executing.length > 0)) {
+        await Promise.race(executing)
+      }
     }
   }
 

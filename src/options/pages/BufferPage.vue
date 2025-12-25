@@ -30,6 +30,8 @@ const { emojiStore, openEditEmoji } = options
 // 图片缓存状态管理
 const imageSources = ref<Map<string, string>>(new Map())
 const loadingStates = ref<Map<string, boolean>>(new Map())
+let imageSourcesInitId = 0 // 用于取消过时的初始化
+let isInitializingImageSources = false // 防止并发初始化
 
 // Computed
 const bufferGroup = computed(() =>
@@ -41,9 +43,20 @@ const bufferEmojis = computed(() => {
   return bufferGroup.value?.emojis || []
 })
 
-// 初始化图片缓存
+// 初始化图片缓存（带并发控制）
 const initializeImageSources = async () => {
   if (!bufferEmojis.value.length) return
+
+  // 如果正在初始化，增加 ID 以取消当前初始化
+  const currentInitId = ++imageSourcesInitId
+
+  // 如果已经在初始化中，直接返回
+  if (isInitializingImageSources) {
+    console.log('[BufferPage] Image sources initialization already in progress, will restart')
+    return
+  }
+
+  isInitializingImageSources = true
 
   console.log('[BufferPage] Initializing image sources for buffer:', bufferEmojis.value.length)
   console.log('[BufferPage] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
@@ -51,44 +64,57 @@ const initializeImageSources = async () => {
   const newSources = new Map<string, string>()
   const newLoadingStates = new Map<string, boolean>()
 
-  for (const emoji of bufferEmojis.value) {
-    try {
-      if (emojiStore.settings.useIndexedDBForImages) {
-        // 使用缓存优先的加载函数
-        const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
-        newSources.set(emoji.id, result.url)
-        newLoadingStates.set(emoji.id, result.isLoading)
-        console.log(
-          `[BufferPage] Image source for ${emoji.name}:`,
-          result.url,
-          'from cache:',
-          result.isFromCache
-        )
-      } else {
-        // 直接 URL 模式
+  try {
+    for (const emoji of bufferEmojis.value) {
+      // 检查是否已被取消
+      if (currentInitId !== imageSourcesInitId) {
+        console.log('[BufferPage] Image sources initialization cancelled')
+        return
+      }
+
+      try {
+        if (emojiStore.settings.useIndexedDBForImages) {
+          // 使用缓存优先的加载函数
+          const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
+          newSources.set(emoji.id, result.url)
+          newLoadingStates.set(emoji.id, result.isLoading)
+        } else {
+          // 直接 URL 模式
+          const fallbackSrc = emoji.displayUrl || emoji.url
+          newSources.set(emoji.id, fallbackSrc)
+        }
+      } catch (error) {
+        console.warn(`[BufferPage] Failed to get image source for ${emoji.name}:`, error)
+        // 回退到直接 URL
         const fallbackSrc = emoji.displayUrl || emoji.url
         newSources.set(emoji.id, fallbackSrc)
-        console.log(`[BufferPage] Direct URL for ${emoji.name}:`, fallbackSrc)
       }
-    } catch (error) {
-      console.warn(`[BufferPage] Failed to get image source for ${emoji.name}:`, error)
-      // 回退到直接 URL
-      const fallbackSrc = emoji.displayUrl || emoji.url
-      newSources.set(emoji.id, fallbackSrc)
     }
-  }
 
-  imageSources.value = newSources
-  loadingStates.value = newLoadingStates
-  console.log('[BufferPage] Image sources initialized:', imageSources.value.size)
+    // 最后一次检查是否被取消
+    if (currentInitId === imageSourcesInitId) {
+      imageSources.value = newSources
+      loadingStates.value = newLoadingStates
+      console.log('[BufferPage] Image sources initialized:', imageSources.value.size)
+    }
+  } finally {
+    isInitializingImageSources = false
+  }
 }
 
-// 监听缓冲区表情变化
+// 监听缓冲区表情变化（使用防抖）
+let initDebounceTimer: ReturnType<typeof setTimeout> | null = null
 watch(
   () => bufferEmojis.value,
   () => {
-    console.log('[BufferPage] Buffer emojis changed, reinitializing image sources')
-    initializeImageSources()
+    // 防抖：快速变化时只执行最后一次
+    if (initDebounceTimer) {
+      clearTimeout(initDebounceTimer)
+    }
+    initDebounceTimer = setTimeout(() => {
+      console.log('[BufferPage] Buffer emojis changed, reinitializing image sources')
+      initializeImageSources()
+    }, 100)
   },
   { deep: true }
 )
@@ -132,34 +158,56 @@ const failedByDisconnect = ref<string[]>([]) // 因断线失败的文件
 const pendingRemoteUploads = ref<Array<{ filename: string; url: string }>>([]) // 待保存的远程上传结果
 let incrementalSaveTimer: ReturnType<typeof setInterval> | null = null // 增量保存定时器
 
-// 持久化相关函数
-const STORAGE_KEY = 'buffer-selected-files'
+// 持久化相关函数 - 使用 IndexedDB 存储文件避免 localStorage 配额限制
+const DB_NAME = 'buffer-files-db'
+const DB_VERSION = 1
+const STORE_NAME = 'selected-files'
 
-// 将 File 转换为可序列化的对象
-const fileToSerializable = async (fileItem: (typeof selectedFiles.value)[0]) => {
-  return new Promise(resolve => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      resolve({
-        id: fileItem.id,
-        fileName: fileItem.file.name,
-        fileType: fileItem.file.type,
-        fileData: reader.result as string, // base64
-        width: fileItem.width,
-        height: fileItem.height,
-        cropData: fileItem.cropData
-      })
+// 打开 IndexedDB 数据库
+const openDatabase = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION)
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve(request.result)
+    request.onupgradeneeded = event => {
+      const db = (event.target as IDBOpenDBRequest).result
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' })
+      }
     }
-    reader.onerror = () => resolve(null)
-    reader.readAsDataURL(fileItem.file)
   })
 }
 
-// 从序列化对象恢复 File
-const serializableToFile = async (data: any) => {
+// 将 File 转换为可序列化的对象（使用 ArrayBuffer 而非 base64）
+const fileToSerializable = async (fileItem: (typeof selectedFiles.value)[0]) => {
   try {
-    const response = await fetch(data.fileData)
-    const blob = await response.blob()
+    const arrayBuffer = await fileItem.file.arrayBuffer()
+    return {
+      id: fileItem.id,
+      fileName: fileItem.file.name,
+      fileType: fileItem.file.type,
+      fileData: arrayBuffer, // 直接存储 ArrayBuffer
+      width: fileItem.width,
+      height: fileItem.height,
+      cropData: fileItem.cropData
+    }
+  } catch {
+    return null
+  }
+}
+
+// 从序列化对象恢复 File
+const serializableToFile = async (data: {
+  id: string
+  fileName: string
+  fileType: string
+  fileData: ArrayBuffer
+  width?: number
+  height?: number
+  cropData?: { x: number; y: number; width: number; height: number }
+}) => {
+  try {
+    const blob = new Blob([data.fileData], { type: data.fileType })
     const file = new File([blob], data.fileName, { type: data.fileType })
     const previewUrl = URL.createObjectURL(file)
 
@@ -177,40 +225,80 @@ const serializableToFile = async (data: any) => {
   }
 }
 
-// 保存 selectedFiles 到 localStorage
+// 保存 selectedFiles 到 IndexedDB
 const saveSelectedFiles = async () => {
   try {
-    const serialized = await Promise.all(selectedFiles.value.map(item => fileToSerializable(item)))
-    const filtered = serialized.filter(item => item !== null)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
-    console.log(`[BufferPage] Saved ${filtered.length} files to storage`)
+    const db = await openDatabase()
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    const store = tx.objectStore(STORE_NAME)
+
+    // 清空旧数据
+    store.clear()
+
+    // 保存新数据
+    for (const item of selectedFiles.value) {
+      const serialized = await fileToSerializable(item)
+      if (serialized) {
+        store.put(serialized)
+      }
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+
+    console.log(`[BufferPage] Saved ${selectedFiles.value.length} files to IndexedDB`)
+    db.close()
   } catch (error) {
     console.error('[BufferPage] Failed to save selected files:', error)
   }
 }
 
-// 从 localStorage 恢复 selectedFiles
+// 从 IndexedDB 恢复 selectedFiles
 const loadSelectedFiles = async () => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) return
+    const db = await openDatabase()
+    const tx = db.transaction(STORE_NAME, 'readonly')
+    const store = tx.objectStore(STORE_NAME)
 
-    const data = JSON.parse(stored)
-    console.log(`[BufferPage] Loading ${data.length} files from storage`)
+    const allData = await new Promise<typeof selectedFiles.value>((resolve, reject) => {
+      const request = store.getAll()
+      request.onsuccess = async () => {
+        const data = request.result
+        console.log(`[BufferPage] Loading ${data.length} files from IndexedDB`)
 
-    const restored = await Promise.all(data.map((item: any) => serializableToFile(item)))
-    const filtered = restored.filter(item => item !== null) as typeof selectedFiles.value
-    selectedFiles.value = filtered
-    console.log(`[BufferPage] Restored ${filtered.length} files`)
+        const restored = await Promise.all(data.map(item => serializableToFile(item)))
+        const filtered = restored.filter(item => item !== null) as typeof selectedFiles.value
+        resolve(filtered)
+      }
+      request.onerror = () => reject(request.error)
+    })
+
+    selectedFiles.value = allData
+    console.log(`[BufferPage] Restored ${allData.length} files`)
+    db.close()
   } catch (error) {
     console.error('[BufferPage] Failed to load selected files:', error)
   }
 }
 
 // 清除持久化数据
-const clearPersistedFiles = () => {
-  localStorage.removeItem(STORAGE_KEY)
-  console.log('[BufferPage] Cleared persisted files')
+const clearPersistedFiles = async () => {
+  try {
+    const db = await openDatabase()
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    const store = tx.objectStore(STORE_NAME)
+    store.clear()
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+    console.log('[BufferPage] Cleared persisted files from IndexedDB')
+    db.close()
+  } catch (error) {
+    console.error('[BufferPage] Failed to clear persisted files:', error)
+  }
 }
 
 // 监听 selectedFiles 变化并自动保存
@@ -406,50 +494,59 @@ const closeImageCropper = () => {
 
 const handleCroppedEmojis = async (croppedEmojis: any[]) => {
   try {
-    const newFilesWithUrls: any[] = []
-
     // Get existing names from current selection (remove extension for comparison)
     const existingFileNames = new Set(
       selectedFiles.value.map(item => item.file.name.toLowerCase().replace(/\.[^/.]+$/, ''))
     )
 
-    for (const croppedEmoji of croppedEmojis) {
-      // Convert base64 to Blob
-      const response = await fetch(croppedEmoji.imageUrl)
-      const blob = await response.blob()
-      const file = new File([blob], `${croppedEmoji.name}.png`, { type: 'image/png' })
+    // 使用 Promise.all 等待所有图片加载完成
+    const loadImagePromises = croppedEmojis
+      .filter(croppedEmoji => {
+        const fileNameWithoutExt = croppedEmoji.name.toLowerCase().replace(/\.[^/.]+$/, '')
+        if (existingFileNames.has(fileNameWithoutExt)) {
+          console.log(
+            `[BufferPage] Skipped cropped file ${croppedEmoji.name}: duplicate in current selection`
+          )
+          return false
+        }
+        return true
+      })
+      .map(async croppedEmoji => {
+        // Convert base64 to Blob
+        const response = await fetch(croppedEmoji.imageUrl)
+        const blob = await response.blob()
+        const file = new File([blob], `${croppedEmoji.name}.png`, { type: 'image/png' })
+        const url = URL.createObjectURL(file)
 
-      // Check if cropped file already exists in current selection
-      const fileNameWithoutExt = croppedEmoji.name.toLowerCase().replace(/\.[^/.]+$/, '')
-      if (existingFileNames.has(fileNameWithoutExt)) {
-        console.log(
-          `[BufferPage] Skipped cropped file ${croppedEmoji.name}: duplicate in current selection`
-        )
-        continue
-      }
-
-      const url = URL.createObjectURL(file)
-
-      // Get image dimensions and add to array after loading
-      const img = new Image()
-      img.onload = () => {
-        newFilesWithUrls.push({
-          id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          file,
-          previewUrl: url,
-          cropData: undefined,
-          width: img.width,
-          height: img.height
+        // 使用 Promise 等待图片加载
+        return new Promise<{
+          id: string
+          file: File
+          previewUrl: string
+          cropData: undefined
+          width: number
+          height: number
+        }>((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => {
+            resolve({
+              id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              file,
+              previewUrl: url,
+              cropData: undefined,
+              width: img.width,
+              height: img.height
+            })
+          }
+          img.onerror = () => {
+            URL.revokeObjectURL(url)
+            reject(new Error(`Failed to load image: ${croppedEmoji.name}`))
+          }
+          img.src = url
         })
-      }
-      img.src = url
-    }
+      })
 
-    // This is now an async loop, so we need to wait for all images to load.
-    // A simple approach is to use a Promise.all, but that complicates the loop.
-    // Awaiting a small delay is a pragmatic alternative to ensure dimensions are likely set.
-    // A more robust solution might involve a different async pattern if this proves unreliable.
-    await new Promise(resolve => setTimeout(resolve, 100)) // Wait for image loading
+    const newFilesWithUrls = await Promise.all(loadImagePromises)
 
     // Remove the original file that was cropped
     const originalFile = cropImageFile.value
@@ -468,7 +565,7 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
     closeImageCropper()
   } catch (error) {
     console.error('Failed to process cropped emojis:', error)
-    // You can add user-facing error notifications here
+    message.error('处理裁剪图片失败')
   }
 }
 
@@ -592,15 +689,16 @@ const copySelectedAsMarkdown = async () => {
       ta.style.left = '-9999px'
       document.body.appendChild(ta)
       ta.select()
-      try {
-        document.execCommand('copy')
-      } catch (e) {
-        // ignore
-      }
+      const success = document.execCommand('copy')
       document.body.removeChild(ta)
+      if (!success) {
+        throw new Error('execCommand copy failed')
+      }
     }
+    message.success('Markdown 已复制到剪贴板')
   } catch (err) {
     console.error('Failed to copy markdown to clipboard', err)
+    message.error('复制到剪贴板失败')
   }
 }
 
@@ -1030,11 +1128,7 @@ const uploadFiles = async () => {
   // Ensure buffer group exists
   let group = bufferGroup.value
   if (!group) {
-    emojiStore.createGroup('缓冲区', '📦')
-    group = emojiStore.groups.find(g => g.name === '缓冲区')
-    if (group) {
-      group.id = 'buffer'
-    }
+    group = emojiStore.createGroup('缓冲区', '📦', 'buffer')
   }
 
   if (!group) {

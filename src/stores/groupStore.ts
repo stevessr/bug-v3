@@ -33,10 +33,13 @@ export function useGroupStore(options: GroupStoreOptions) {
 
   /**
    * Create a new group and save
+   * @param name - Group name
+   * @param icon - Group icon
+   * @param customId - Optional custom ID (defaults to generated timestamp-based ID)
    */
-  const createGroup = (name: string, icon: string): EmojiGroup => {
+  const createGroup = (name: string, icon: string, customId?: string): EmojiGroup => {
     const newGroup: EmojiGroup = {
-      id: `group-${Date.now()}`,
+      id: customId || `group-${Date.now()}`,
       name,
       icon,
       order: groups.value.length,
@@ -50,10 +53,13 @@ export function useGroupStore(options: GroupStoreOptions) {
 
   /**
    * Create a new group without triggering save (for batch operations)
+   * @param name - Group name
+   * @param icon - Group icon
+   * @param customId - Optional custom ID (defaults to generated timestamp-based ID)
    */
-  const createGroupWithoutSave = (name: string, icon: string): EmojiGroup => {
+  const createGroupWithoutSave = (name: string, icon: string, customId?: string): EmojiGroup => {
     const newGroup: EmojiGroup = {
-      id: `group-${Date.now()}`,
+      id: customId || `group-${Date.now()}`,
       name,
       icon,
       order: groups.value.length,
