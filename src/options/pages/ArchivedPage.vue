@@ -9,6 +9,17 @@ const emojiStore = useEmojiStore()
 
 const loading = ref(false)
 
+// 展开状态
+const expandedGroups = ref<Set<string>>(new Set())
+
+const toggleExpand = (groupId: string) => {
+  if (expandedGroups.value.has(groupId)) {
+    expandedGroups.value.delete(groupId)
+  } else {
+    expandedGroups.value.add(groupId)
+  }
+}
+
 // 详情模态框状态
 const showDetailModal = ref(false)
 const detailGroupName = ref('')
@@ -80,10 +91,14 @@ onMounted(async () => {
               <span class="font-medium dark:text-white">{{ group.name }}</span>
             </div>
             <span class="text-sm text-gray-500">{{ group.emojis?.length || 0 }} 个表情</span>
+            <a-button size="small" @click="toggleExpand(group.id)">
+              {{ expandedGroups.has(group.id) ? '收起' : '展开' }}
+            </a-button>
           </div>
 
+          <!-- 收起状态：预览前 12 个表情 -->
           <div
-            v-if="group.emojis && group.emojis.length > 0"
+            v-if="!expandedGroups.has(group.id) && group.emojis && group.emojis.length > 0"
             class="flex flex-wrap gap-1 mb-3 max-h-24 overflow-hidden"
           >
             <img
@@ -96,6 +111,45 @@ onMounted(async () => {
             <span v-if="group.emojis.length > 12" class="text-sm text-gray-400 self-center ml-1">
               +{{ group.emojis.length - 12 }}
             </span>
+          </div>
+
+          <!-- 展开状态：显示所有表情 -->
+          <div
+            v-if="expandedGroups.has(group.id) && group.emojis && group.emojis.length > 0"
+            class="mb-3 border-t border-gray-100 dark:border-gray-700 pt-3"
+          >
+            <div
+              class="grid gap-2"
+              :style="{
+                gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns || 6}, minmax(0, 1fr))`
+              }"
+            >
+              <div
+                v-for="emoji in group.emojis"
+                :key="emoji.id"
+                class="relative group/emoji aspect-square"
+              >
+                <img
+                  :src="emoji.displayUrl || emoji.url"
+                  :alt="emoji.name"
+                  :title="emoji.name"
+                  class="w-full h-full object-contain rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700"
+                />
+                <div
+                  class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 truncate opacity-0 group-hover/emoji:opacity-100 transition-opacity"
+                >
+                  {{ emoji.name }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 无表情提示 -->
+          <div
+            v-if="expandedGroups.has(group.id) && (!group.emojis || group.emojis.length === 0)"
+            class="mb-3 text-center text-gray-400 py-4"
+          >
+            此分组没有表情
           </div>
 
           <div class="flex gap-2">
