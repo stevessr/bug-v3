@@ -32,8 +32,8 @@ echo "🔧 Building development version..."
 emcc perceptual_hash.c \
     -g \
     -s WASM=1 \
-    -s EXPORTED_FUNCTIONS='_calculate_perceptual_hash,_calculate_batch_hashes,_calculate_hamming_distance,_free_hash_result,_free_batch_results' \
-    -s EXPORTED_RUNTIME_METHODS='cwrap' \
+    -s EXPORTED_FUNCTIONS='_calculate_perceptual_hash,_calculate_batch_hashes,_calculate_hamming_distance,_calculate_batch_hamming_distances,_find_similar_pairs,_find_similar_pairs_bucketed,_free_hash_result,_free_batch_results,_free_batch_distance_result,_free_pairs,_has_simd_support,_malloc,_free' \
+    -s EXPORTED_RUNTIME_METHODS='cwrap,ccall,getValue,setValue,stringToUTF8,UTF8ToString,lengthBytesUTF8' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s MODULARIZE=1 \
     -s EXPORT_NAME='PerceptualHashModule' \
@@ -44,8 +44,8 @@ emcc perceptual_hash.c \
     -O3 \
     -flto \
     -s WASM=1 \
-    -s EXPORTED_FUNCTIONS='_calculate_perceptual_hash,_calculate_batch_hashes,_calculate_hamming_distance,_free_hash_result,_free_batch_results' \
-    -s EXPORTED_RUNTIME_METHODS='cwrap' \
+    -s EXPORTED_FUNCTIONS='_calculate_perceptual_hash,_calculate_batch_hashes,_calculate_hamming_distance,_calculate_batch_hamming_distances,_find_similar_pairs,_find_similar_pairs_bucketed,_free_hash_result,_free_batch_results,_free_batch_distance_result,_free_pairs,_has_simd_support,_malloc,_free' \
+    -s EXPORTED_RUNTIME_METHODS='cwrap,ccall,getValue,setValue,stringToUTF8,UTF8ToString,lengthBytesUTF8' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s MODULARIZE=1 \
     -s EXPORT_NAME='PerceptualHashModule' \

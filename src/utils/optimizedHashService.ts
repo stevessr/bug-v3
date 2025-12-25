@@ -645,10 +645,183 @@ export class OptimizedHashService {
   }
 
   /**
+   * Batch find duplicates with WASM acceleration
+   * Uses native WASM batch comparison for maximum performance
+   */
+  async findDuplicatesWithWASM<T extends { id: string; hash: string }>(
+    items: T[],
+    threshold: number = 10
+  ): Promise<Map<string, T[]>> {
+    if (items.length === 0) return new Map()
+
+    const startTime = performance.now()
+
+    // Filter valid items and extract hashes
+    const validItems = items.filter(item => item.hash && item.hash.length > 0)
+    const hashes = validItems.map(item => item.hash)
+
+    // Use WASM to find similar pairs
+    const pairs = await wasmHashService.findSimilarPairs(hashes, threshold)
+
+    // Build groups using Union-Find
+    const uf = new UnionFind()
+    for (const pair of pairs) {
+      uf.union(validItems[pair.index1].id, validItems[pair.index2].id)
+    }
+
+    // Build result groups
+    const idToItem = new Map<string, T>()
+    for (const item of validItems) {
+      idToItem.set(item.id, item)
+    }
+
+    const result = new Map<string, T[]>()
+    const ufGroups = uf.getGroups()
+
+    for (const [root, ids] of ufGroups) {
+      if (ids.length > 1) {
+        const groupItems = ids.map(id => idToItem.get(id)!).filter(Boolean)
+        if (groupItems.length > 1) {
+          result.set(root, groupItems)
+        }
+      }
+    }
+
+    const endTime = performance.now()
+    console.log(
+      `[OptimizedHashService] findDuplicatesWithWASM: ${items.length} items, ` +
+        `${result.size} duplicate groups, ${pairs.length} similar pairs, ` +
+        `${(endTime - startTime).toFixed(2)}ms`
+    )
+
+    return result
+  }
+
+  /**
+   * Batch find duplicates with WASM bucketed acceleration
+   * Pre-sorts by prefix for optimal bucket-based comparison
+   */
+  async findDuplicatesWithWASMBucketed<T extends { id: string; hash: string }>(
+    items: T[],
+    threshold: number = 10
+  ): Promise<Map<string, T[]>> {
+    if (items.length === 0) return new Map()
+
+    const startTime = performance.now()
+
+    // Filter valid items
+    const validItems = items.filter(item => item.hash && item.hash.length >= 2)
+
+    // Sort by hash prefix and build bucket info
+    const prefixLength = 2
+    const sortedItems = [...validItems].sort((a, b) => {
+      const prefixA = a.hash.substring(0, prefixLength)
+      const prefixB = b.hash.substring(0, prefixLength)
+      return prefixA.localeCompare(prefixB)
+    })
+
+    const hashes = sortedItems.map(item => item.hash)
+
+    // Build bucket starts and sizes
+    const bucketStarts: number[] = []
+    const bucketSizes: number[] = []
+    let currentPrefix = ''
+    let currentStart = 0
+
+    for (let i = 0; i < sortedItems.length; i++) {
+      const prefix = sortedItems[i].hash.substring(0, prefixLength)
+      if (prefix !== currentPrefix) {
+        if (currentPrefix !== '') {
+          bucketSizes.push(i - currentStart)
+        }
+        bucketStarts.push(i)
+        currentPrefix = prefix
+        currentStart = i
+      }
+    }
+    // Add last bucket
+    if (sortedItems.length > 0) {
+      bucketSizes.push(sortedItems.length - currentStart)
+    }
+
+    // Use WASM bucketed comparison
+    const pairs = await wasmHashService.findSimilarPairsBucketed(
+      hashes,
+      bucketStarts,
+      bucketSizes,
+      threshold
+    )
+
+    // Build groups using Union-Find
+    const uf = new UnionFind()
+    for (const pair of pairs) {
+      uf.union(sortedItems[pair.index1].id, sortedItems[pair.index2].id)
+    }
+
+    // Build result groups
+    const idToItem = new Map<string, T>()
+    for (const item of sortedItems) {
+      idToItem.set(item.id, item)
+    }
+
+    const result = new Map<string, T[]>()
+    const ufGroups = uf.getGroups()
+
+    for (const [root, ids] of ufGroups) {
+      if (ids.length > 1) {
+        const groupItems = ids.map(id => idToItem.get(id)!).filter(Boolean)
+        if (groupItems.length > 1) {
+          result.set(root, groupItems)
+        }
+      }
+    }
+
+    const endTime = performance.now()
+    console.log(
+      `[OptimizedHashService] findDuplicatesWithWASMBucketed: ${items.length} items, ` +
+        `${bucketStarts.length} buckets, ${result.size} duplicate groups, ` +
+        `${pairs.length} similar pairs, ${(endTime - startTime).toFixed(2)}ms`
+    )
+
+    return result
+  }
+
+  /**
    * Batch find duplicates with hash bucketing optimization
    * Significantly reduces O(n²) comparisons by grouping hashes by prefix
+   * Falls back to JS implementation if WASM is unavailable
    */
-  findDuplicatesOptimized<T extends { id: string; hash: string }>(
+  async findDuplicatesOptimized<T extends { id: string; hash: string }>(
+    items: T[],
+    threshold: number = 10
+  ): Promise<Map<string, T[]>> {
+    if (items.length === 0) return new Map()
+
+    // Try WASM first for better performance
+    if (this.wasmAvailable) {
+      try {
+        // Use bucketed WASM for large datasets, simple WASM for smaller ones
+        if (items.length > 100) {
+          return await this.findDuplicatesWithWASMBucketed(items, threshold)
+        } else {
+          return await this.findDuplicatesWithWASM(items, threshold)
+        }
+      } catch (error) {
+        console.warn(
+          '[OptimizedHashService] WASM duplicate detection failed, falling back to JS:',
+          error
+        )
+      }
+    }
+
+    // Fallback to JS implementation
+    return this.findDuplicatesOptimizedJS(items, threshold)
+  }
+
+  /**
+   * JavaScript fallback for duplicate detection
+   */
+  private findDuplicatesOptimizedJS<T extends { id: string; hash: string }>(
     items: T[],
     threshold: number = 10
   ): Map<string, T[]> {
@@ -692,7 +865,8 @@ export class OptimizedHashService {
         for (let j = i + 1; j < bucket.length; j++) {
           const item1 = bucket[i]
           const item2 = bucket[j]
-          const pairKey = item1.id < item2.id ? `${item1.id}:${item2.id}` : `${item2.id}:${item1.id}`
+          const pairKey =
+            item1.id < item2.id ? `${item1.id}:${item2.id}` : `${item2.id}:${item1.id}`
 
           if (!processedPairs.has(pairKey)) {
             processedPairs.add(pairKey)
@@ -754,7 +928,7 @@ export class OptimizedHashService {
 
     const endTime = performance.now()
     console.log(
-      `[OptimizedHashService] findDuplicatesOptimized: ${items.length} items, ` +
+      `[OptimizedHashService] findDuplicatesOptimizedJS: ${items.length} items, ` +
         `${result.size} duplicate groups, ${processedPairs.size} comparisons, ` +
         `${(endTime - startTime).toFixed(2)}ms`
     )

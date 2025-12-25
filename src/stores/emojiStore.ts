@@ -825,7 +825,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       // Prepare items for optimized comparison
       const hashItems = allEmojis
-        .filter(item => item.emoji.perceptualHash)
+        .filter((item): item is typeof item & { emoji: { perceptualHash: string } } =>
+          !!item.emoji.perceptualHash
+        )
         .map(item => ({
           id: item.emoji.id,
           hash: item.emoji.perceptualHash,
@@ -833,7 +835,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         }))
 
       // Use optimized duplicate finding with hash bucketing and Union-Find
-      const duplicateMap = optimizedHashService.findDuplicatesOptimized(
+      const duplicateMap = await optimizedHashService.findDuplicatesOptimized(
         hashItems,
         similarityThreshold
       )
