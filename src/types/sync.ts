@@ -18,13 +18,25 @@ export type EntityType = 'emoji' | 'group' | 'settings' | 'favorites'
 /** 具体变更内容 */
 export interface DeltaChange {
   field: string // 字段名
-  oldValue: any // 旧值
-  newValue: any // 新值
+  oldValue: DeltaValue // 旧值
+  newValue: DeltaValue // 新值
   path?: string[] // 嵌套路径（如 ['tags', '0']）
 }
 
+/** 可接受的变更值类型 */
+export type DeltaValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | string[]
+  | number[]
+  | boolean[]
+  | { [key: string]: DeltaValue }
+
 /** 变更记录 */
-export interface DeltaRecord {
+export interface DeltaRecord extends Record<string, unknown> {
   id: string // 变更记录唯一 ID
   timestamp: number // 时间戳（毫秒）
   version: number // 版本号（单调递增）
@@ -62,8 +74,8 @@ export interface ConflictInfo {
   id: string
   entityType: EntityType
   entityId: string
-  localChange: DeltaRecord
-  remoteChange: DeltaRecord
+  localChange: DeltaRecord | Record<string, unknown>
+  remoteChange: DeltaRecord | Record<string, unknown>
   timestamp: number
   resolved: boolean
   resolution?: 'local' | 'remote' | 'merged' | 'manual'
@@ -72,12 +84,20 @@ export interface ConflictInfo {
 /** 冲突解决策略 */
 export type ConflictStrategy = 'auto' | 'manual' | 'local-first' | 'remote-first' | 'newest-wins'
 
+/** 同步错误类型 */
+export interface SyncError {
+  code?: string
+  message: string
+  details?: unknown
+  originalError?: Error
+}
+
 /** 同步结果 */
 export interface SyncResult {
   success: boolean
   syncedChanges?: number
   conflicts?: ConflictInfo[]
-  error?: any
+  error?: SyncError
   message?: string
 }
 
@@ -96,9 +116,9 @@ export interface ConflictRecord {
   resolved: boolean
   entityType: EntityType
   entityId: string
-  localData: any
-  remoteData: any
-  mergedData?: any
+  localData: Record<string, unknown>
+  remoteData: Record<string, unknown>
+  mergedData?: Record<string, unknown>
   resolution: 'local' | 'remote' | 'merged' | 'manual'
   resolvedAt?: number
 }
@@ -125,20 +145,23 @@ export interface DeviceInfo {
 /** 三方合并基础数据 */
 export interface MergeBase {
   baseVersion: number
-  baseData: any
+  baseData: Record<string, unknown>
   timestamp: number
 }
 
+/** 合并冲突字段 */
+export interface MergeConflict {
+  field: string
+  localValue: DeltaValue
+  remoteValue: DeltaValue
+  baseValue?: DeltaValue
+}
+
 /** 合并结果 */
-export interface MergeResult<T = any> {
+export interface MergeResult<T = unknown> {
   success: boolean
   data?: T
-  conflicts?: Array<{
-    field: string
-    localValue: any
-    remoteValue: any
-    baseValue?: any
-  }>
+  conflicts?: MergeConflict[]
   autoResolved: boolean
   strategy: string
 }

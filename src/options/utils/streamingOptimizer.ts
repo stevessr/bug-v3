@@ -196,8 +196,10 @@ export class StreamingOptimizer {
       throw new Error('CompressionStream not supported')
     }
 
-    // @ts-ignore - CompressionStream may not be in TS lib
-    return inputStream.pipeThrough(new CompressionStream(format))
+    // Type assertion needed because CompressionStream uses BufferSource which is broader than Uint8Array
+    return inputStream.pipeThrough(
+      new CompressionStream(format) as ReadableWritablePair<Uint8Array, Uint8Array>
+    )
   }
 
   /**

@@ -103,11 +103,8 @@ if (DISCOURSE_DOMAINS.some(domain => window.location.hostname.includes(domain)))
 try {
   if (DISCOURSE_DOMAINS.some(domain => window.location.hostname.includes(domain))) {
     // Directly bind the statically imported postTimings
-
-    // @ts-ignore
     window.postTimings = postTimings
     // expose autoReadAllv2 for page scripts
-    // @ts-ignore
     window.autoReadAllRepliesV2 = autoReadAllv2
   }
 } catch (e) {

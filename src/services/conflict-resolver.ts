@@ -5,8 +5,36 @@
 
 import { nanoid } from 'nanoid'
 
-import type { DeltaRecord, ConflictInfo, ConflictStrategy, MergeResult } from '@/types/sync'
+import type { DeltaRecord, ConflictInfo, ConflictStrategy, MergeResult, MergeConflict } from '@/types/sync'
 import { syncDb } from '@/utils/sync-db'
+
+/**
+ * Type guard to check if a value is a DeltaRecord
+ */
+function isDeltaRecord(value: unknown): value is DeltaRecord {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'timestamp' in value &&
+    'version' in value &&
+    'operation' in value &&
+    'changes' in value &&
+    Array.isArray((value as DeltaRecord).changes)
+  )
+}
+
+/**
+ * Extract timestamp from a DeltaRecord or data object
+ */
+function extractTimestamp(value: DeltaRecord | Record<string, unknown>): number {
+  if (isDeltaRecord(value)) {
+    return value.timestamp
+  }
+  // For data objects, try to find a timestamp property
+  const timestamp = (value as { timestamp?: number }).timestamp
+  return typeof timestamp === 'number' ? timestamp : Date.now()
+}
 
 export class ConflictResolver {
   /**
@@ -134,7 +162,9 @@ export class ConflictResolver {
           case 'newest-wins':
             // 比较时间戳，选择最新的
             resolution =
-              conflict.localChange.timestamp > conflict.remoteChange.timestamp ? 'local' : 'remote'
+              extractTimestamp(conflict.localChange) > extractTimestamp(conflict.remoteChange)
+                ? 'local'
+                : 'remote'
             break
 
           case 'auto': {
@@ -145,7 +175,7 @@ export class ConflictResolver {
             } else {
               // 合并失败，使用最新的
               resolution =
-                conflict.localChange.timestamp > conflict.remoteChange.timestamp
+                extractTimestamp(conflict.localChange) > extractTimestamp(conflict.remoteChange)
                   ? 'local'
                   : 'remote'
             }
@@ -191,13 +221,23 @@ export class ConflictResolver {
     const { localChange, remoteChange } = conflict
 
     try {
+      // Smart merge only works when both changes are DeltaRecords
+      if (!isDeltaRecord(localChange) || !isDeltaRecord(remoteChange)) {
+        return {
+          success: false,
+          conflicts: [],
+          autoResolved: false,
+          strategy: 'smart-merge-not-available'
+        }
+      }
+
       // 收集所有变更的字段
       const localFields = new Map(localChange.changes.map(c => [c.field, c.newValue]))
       const remoteFields = new Map(remoteChange.changes.map(c => [c.field, c.newValue]))
 
       const allFields = new Set([...localFields.keys(), ...remoteFields.keys()])
-      const mergedData: any = {}
-      const fieldConflicts: Array<{ field: string; localValue: any; remoteValue: any }> = []
+      const mergedData: Record<string, unknown> = {}
+      const fieldConflicts: MergeConflict[] = []
 
       for (const field of allFields) {
         const hasLocal = localFields.has(field)
@@ -205,8 +245,8 @@ export class ConflictResolver {
 
         if (hasLocal && hasRemote) {
           // 字段在两边都被修改
-          const localValue = localFields.get(field)
-          const remoteValue = remoteFields.get(field)
+          const localValue = localFields.get(field)!
+          const remoteValue = remoteFields.get(field)!
 
           if (JSON.stringify(localValue) === JSON.stringify(remoteValue)) {
             // 修改后的值相同，不是真正的冲突
@@ -251,7 +291,7 @@ export class ConflictResolver {
 
   /**
    * 手动解决冲突
-   * @param conflictId 冲突ID
+   * @param conflictId 冲突 ID
    * @param resolution 解决方案（local/remote/merged）
    * @param mergedData 如果是合并，提供合并后的数据
    */

@@ -180,7 +180,6 @@ async function exportGroupZipStreaming(
   onProgress?.(75)
 
   // Compress stream with gzip
-  // @ts-ignore - CompressionStream may not exist in TS lib
   const compressionStream = new CompressionStream('gzip')
   const compressedStream = tarStream.pipeThrough(compressionStream)
 
@@ -276,9 +275,8 @@ async function exportGroupZipLegacy(
   onProgress?.(75)
   const tarBlob = new Blob(parts as BlobPart[], { type: 'application/x-tar' })
 
-  if (typeof (window as any).CompressionStream === 'function') {
+  if (typeof CompressionStream === 'function') {
     try {
-      // @ts-ignore
       const cs = new CompressionStream('gzip')
       onProgress?.(80)
       const compressedStream = tarBlob.stream().pipeThrough(cs)

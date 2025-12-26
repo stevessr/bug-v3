@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-import type { ConflictInfo, EntityType } from '@/types/sync'
+import type { ConflictInfo, EntityType, DeltaRecord } from '@/types/sync'
 import { conflictResolver } from '@/services/conflict-resolver'
 
 interface Props {
@@ -20,6 +20,43 @@ const resolvedConflicts = ref<Set<string>>(new Set())
 const allResolved = computed(() => {
   return props.conflicts.every(c => resolvedConflicts.value.has(c.id))
 })
+
+/**
+ * Type guard to check if a value is a DeltaRecord
+ */
+function isDeltaRecord(value: unknown): value is DeltaRecord {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'timestamp' in value &&
+    'version' in value &&
+    'operation' in value &&
+    'changes' in value &&
+    Array.isArray((value as DeltaRecord).changes)
+  )
+}
+
+/**
+ * Extract timestamp from a DeltaRecord or data object
+ */
+function extractTimestamp(value: DeltaRecord | Record<string, unknown>): number {
+  if (isDeltaRecord(value)) {
+    return value.timestamp
+  }
+  const timestamp = (value as { timestamp?: number }).timestamp
+  return typeof timestamp === 'number' ? timestamp : Date.now()
+}
+
+/**
+ * Extract changes from a DeltaRecord or return undefined
+ */
+function extractChanges(value: DeltaRecord | Record<string, unknown>) {
+  if (isDeltaRecord(value)) {
+    return value.changes
+  }
+  return undefined
+}
 
 function getEntityTypeLabel(type: EntityType): string {
   const labels: Record<EntityType, string> = {
@@ -127,24 +164,27 @@ async function autoResolveAll() {
           <div class="version-panel local">
             <div class="version-header">
               <h4>📱 本地版本</h4>
-              <span class="timestamp">{{ formatTimestamp(conflict.localChange.timestamp) }}</span>
+              <span class="timestamp">{{ formatTimestamp(extractTimestamp(conflict.localChange)) }}</span>
             </div>
             <div class="version-content">
-              <div
-                v-for="change in conflict.localChange.changes"
-                :key="change.field"
-                class="change-item"
-              >
-                <div class="field-name">{{ change.field }}</div>
-                <div class="field-value">
-                  <span class="value-label">旧值:</span>
-                  <code>{{ formatValue(change.oldValue) }}</code>
+              <template v-if="extractChanges(conflict.localChange)">
+                <div
+                  v-for="change in extractChanges(conflict.localChange)"
+                  :key="change.field"
+                  class="change-item"
+                >
+                  <div class="field-name">{{ change.field }}</div>
+                  <div class="field-value">
+                    <span class="value-label">旧值：</span>
+                    <code>{{ formatValue(change.oldValue) }}</code>
+                  </div>
+                  <div class="field-value new">
+                    <span class="value-label">新值：</span>
+                    <code>{{ formatValue(change.newValue) }}</code>
+                  </div>
                 </div>
-                <div class="field-value new">
-                  <span class="value-label">新值:</span>
-                  <code>{{ formatValue(change.newValue) }}</code>
-                </div>
-              </div>
+              </template>
+              <div v-else class="no-changes">无可用的变更详情</div>
             </div>
           </div>
 
@@ -152,24 +192,26 @@ async function autoResolveAll() {
           <div class="version-panel remote">
             <div class="version-header">
               <h4>☁️ 远程版本</h4>
-              <span class="timestamp">{{ formatTimestamp(conflict.remoteChange.timestamp) }}</span>
+              <span class="timestamp">{{ formatTimestamp(extractTimestamp(conflict.remoteChange)) }}</span>
             </div>
             <div class="version-content">
-              <div
-                v-for="change in conflict.remoteChange.changes"
-                :key="change.field"
-                class="change-item"
-              >
-                <div class="field-name">{{ change.field }}</div>
-                <div class="field-value">
-                  <span class="value-label">旧值:</span>
-                  <code>{{ formatValue(change.oldValue) }}</code>
-                </div>
-                <div class="field-value new">
-                  <span class="value-label">新值:</span>
+              <template v-if="extractChanges(conflict.remoteChange)">
+                <div
+                  v-for="change in extractChanges(conflict.remoteChange)"
+                  :key="change.field"
+                  class="change-item"
+                >
+                  <div class="field-name">{{ change.field }}</div>
+                  <div class="field-value">
+                    <span class="value-label">旧值：</span>
+                    <code>{{ formatValue(change.oldValue) }}</code>
+                  </div>
+                  <div class="field-value new">
+                    <span class="value-label">新值：</span>
                   <code>{{ formatValue(change.newValue) }}</code>
                 </div>
-              </div>
+              </template>
+              <div v-else class="no-changes">无可用的变更详情</div>
             </div>
           </div>
         </div>

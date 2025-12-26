@@ -7,7 +7,7 @@ import type { AddEmojiButtonData } from './bilibili-helper'
 import { createE } from '@/content/utils/createEl'
 // Import utility functions dynamically to avoid circular dependencies
 
-declare const chrome: any
+declare const chrome: typeof globalThis.chrome
 
 /**
  * 设置按钮点击处理器
@@ -16,22 +16,22 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
   button.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
-    const originalContent = button.innerHTML
+    const originalContent = button.textContent
     const originalStyle = button.style.cssText
     try {
       await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
-      button.innerHTML = '已添加'
+      button.textContent = '已添加'
       button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
       setTimeout(() => {
-        button.innerHTML = originalContent
+        button.textContent = originalContent || ''
         button.style.cssText = originalStyle
       }, 1500)
     } catch (error) {
       console.error('[BiliOneClick] 添加表情失败：', error)
-      button.innerHTML = '失败'
+      button.textContent = '失败'
       button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
       setTimeout(() => {
-        button.innerHTML = originalContent
+        button.textContent = originalContent || ''
         button.style.cssText = originalStyle
       }, 1500)
     }
@@ -70,9 +70,14 @@ export function createControlButton(data: AddEmojiButtonData): HTMLElement {
   icon.setAttribute('height', '14')
   icon.setAttribute('viewBox', '0 0 14 14')
   icon.setAttribute('fill', 'currentColor')
-  icon.innerHTML = `
-    <path d="M7 0C3.134 0 0 3.134 0 7s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7zM5.5 4.5c.552 0 1 .448 1 1s-.448 1-1 1-1-.448-1-1 .448-1 1-1zm3 0c.552 0 1 .448 1 1s-.448 1-1 1-1-.448-1-1 .448-1 1-1zM7 11c-1.657 0-3-1.343-3-3h6c0 1.657-1.343 3-3 3z"/>
-  `
+
+  // Create path element and set attribute
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  path.setAttribute(
+    'd',
+    'M7 0C3.134 0 0 3.134 0 7s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7zM5.5 4.5c.552 0 1 .448 1 1s-.448 1-1 1-1-.448-1-1 .448-1 1-1zm3 0c.552 0 1 .448 1 1s-.448 1-1 1-1-.448-1-1 .448-1 1-1zM7 11c-1.657 0-3-1.343-3-3h6c0 1.657-1.343 3-3 3z'
+  )
+  icon.appendChild(path)
 
   // Create the text label
   const text = createE('span', {
@@ -106,7 +111,7 @@ export function createPhotoSwipeButton(data: AddEmojiButtonData): HTMLElement {
         background: none;
         border: none;
         cursor: pointer;
-        overflow: visible;  
+        overflow: visible;
         appearance: none;
         box-shadow: none;
         opacity: 0.75;

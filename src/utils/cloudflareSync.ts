@@ -5,7 +5,8 @@ import {
   type SyncData,
   type SyncResult,
   type ProgressCallback as SyncProgressCallback,
-  type Progress
+  type Progress,
+  type GroupLike
 } from '@/utils/syncTargets'
 import { newStorageHelpers } from '@/utils/newStorage'
 
@@ -112,10 +113,10 @@ export class CloudflareSyncService {
 
       if (chromeAPI?.storage?.local) {
         // Use Chrome storage in extension context
-        const config = await new Promise<any>(resolve => {
-          chromeAPI.storage.local.get([SYNC_CONFIG_KEY], (result: any) => {
+        const config = await new Promise<ExtendedCloudflareConfig | null>(resolve => {
+          chromeAPI.storage.local.get([SYNC_CONFIG_KEY], (result: Record<string, unknown>) => {
             console.log('[CloudflareSync] Chrome storage result:', result)
-            resolve(result[SYNC_CONFIG_KEY] || null)
+            resolve((result[SYNC_CONFIG_KEY] as ExtendedCloudflareConfig | null) || null)
           })
         })
 
@@ -167,7 +168,7 @@ export class CloudflareSyncService {
     delay: number = 1000,
     exponentialBackoff: boolean = true
   ): Promise<T> {
-    let lastError: any = null
+    let lastError: Error | unknown = null
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -256,11 +257,11 @@ export class CloudflareSyncService {
       } catch (e) {
         console.error('[CloudflareSync] Settings contains non-serializable data:', e)
         // Try to salvage what we can
-        const cleanSettings: any = {}
+        const cleanSettings: Record<string, unknown> = {}
         for (const key in syncSettings) {
           try {
-            JSON.stringify((syncSettings as any)[key])
-            cleanSettings[key] = (syncSettings as any)[key]
+            JSON.stringify((syncSettings as unknown as Record<string, unknown>)[key])
+            cleanSettings[key] = (syncSettings as unknown as Record<string, unknown>)[key]
           } catch {
             console.warn(`[CloudflareSync] Skipping non-serializable setting: ${key}`)
           }
@@ -303,7 +304,7 @@ export class CloudflareSyncService {
 
   public async pullData(
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
     if (!this.config) {
       return {
         success: false,
@@ -454,7 +455,7 @@ export class CloudflareSyncService {
   // Preview cloud data without merging
   public async previewCloudData(
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
     if (!this.config) {
       return {
         success: false,
@@ -499,7 +500,7 @@ export class CloudflareSyncService {
   // Preview cloud config only (get group list without detailed emoji data)
   public async previewCloudConfig(
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; config?: any; error?: any; message: string }> {
+  ): Promise<{ success: boolean; config?: SyncData; error?: unknown; message: string }> {
     if (!this.config) {
       return {
         success: false,
@@ -549,15 +550,29 @@ export class CloudflareSyncService {
               const data = previewResult.data
 
               // Extract group list without emoji details for faster loading
-              const groupList = (data.emojiGroups || []).map((group: any) => ({
-                id: group.id,
-                name: group.name,
-                createdAt: group.createdAt,
-                lastModified: group.lastModified,
-                emojiCount: group.emojiCount || 0,
-                // Don't include the actual emojis array for preview
-                _hasEmojis: (group.emojiCount || 0) > 0
-              }))
+              const groupList = (data.emojiGroups || []).map(
+                (
+                  group: unknown
+                ): {
+                  id: string | undefined
+                  name: string | undefined
+                  createdAt: unknown
+                  lastModified: unknown
+                  emojiCount: number
+                  _hasEmojis: boolean
+                } => {
+                  const g = group as GroupLike
+                  const emojiCount = typeof g.emojiCount === 'number' ? g.emojiCount : 0
+                  return {
+                    id: g.id,
+                    name: g.name,
+                    createdAt: g.createdAt,
+                    lastModified: g.lastModified,
+                    emojiCount,
+                    _hasEmojis: emojiCount > 0
+                  }
+                }
+              )
 
               return {
                 success: true,
@@ -576,8 +591,7 @@ export class CloudflareSyncService {
                     return {
                       totalGroups: groupList.length,
                       totalEmojis: groupList.reduce(
-                        (total: number, group: { emojiCount?: number }) =>
-                          total + (group.emojiCount || 0),
+                        (total: number, group) => total + (group.emojiCount || 0),
                         0
                       ),
                       favoritesCount: settings?.favorites?.length || 0,
@@ -651,7 +665,7 @@ export class CloudflareSyncService {
   public async loadGroupDetails(
     groupName: string,
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; group?: any; error?: any; message: string }> {
+  ): Promise<{ success: boolean; group?: GroupLike; error?: unknown; message: string }> {
     if (!this.config) {
       return {
         success: false,
@@ -669,7 +683,12 @@ export class CloudflareSyncService {
             const wrappedProgress: SyncProgressCallback | undefined = onProgress
               ? (p: Progress) => onProgress({ ...p, message: p.message || '' })
               : undefined
-            return await target.getGroupDetails(groupName, wrappedProgress)
+            const result = await target.getGroupDetails(groupName, wrappedProgress)
+            // Cast the group to GroupLike if it exists
+            return {
+              ...result,
+              group: result.group as GroupLike | undefined
+            }
           } else {
             return {
               success: false,

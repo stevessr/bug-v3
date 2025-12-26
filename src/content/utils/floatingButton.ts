@@ -70,7 +70,7 @@ function createFloatingButton(): HTMLElement {
   const button = document.createElement('button')
   button.className = 'emoji-extension-floating-button'
   button.title = '手动注入表情按钮 (Manual Emoji Injection)'
-  button.innerHTML = '🐈‍⬛'
+  button.textContent = '🐈‍⬛'
 
   // Click handler for manual injection
   button.addEventListener('click', async e => {
@@ -79,7 +79,7 @@ function createFloatingButton(): HTMLElement {
 
     // Visual feedback
     button.style.transform = 'scale(0.9)'
-    button.innerHTML = '⏳'
+    button.textContent = '⏳'
 
     try {
       // Attempt manual injection
@@ -99,11 +99,11 @@ function createFloatingButton(): HTMLElement {
 
       if (injectedCount > 0 || toolbars.length > 0) {
         // Success feedback
-        button.innerHTML = '✅'
+        button.textContent = '✅'
         button.style.background = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)'
 
         setTimeout(() => {
-          button.innerHTML = '🐈‍⬛'
+          button.textContent = '🐈‍⬛'
           button.style.background = 'transparent'
           button.style.transform = 'scale(1)'
         }, 1500)
@@ -113,11 +113,11 @@ function createFloatingButton(): HTMLElement {
         )
       } else {
         // No toolbars found feedback
-        button.innerHTML = '❌'
+        button.textContent = '❌'
         button.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%)'
 
         setTimeout(() => {
-          button.innerHTML = '🐈‍⬛'
+          button.textContent = '🐈‍⬛'
           button.style.background = 'transparent'
           button.style.transform = 'scale(1)'
         }, 1500)
@@ -126,11 +126,11 @@ function createFloatingButton(): HTMLElement {
       }
     } catch (error) {
       // Error feedback
-      button.innerHTML = '⚠️'
+      button.textContent = '⚠️'
       button.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%)'
 
       setTimeout(() => {
-        button.innerHTML = '🐈‍⬛'
+        button.textContent = '🐈‍⬛'
         button.style.background = 'transparent'
         button.style.transform = 'scale(1)'
       }, 1500)

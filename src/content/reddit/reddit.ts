@@ -7,7 +7,7 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
   btn.className = 'reddit-emoji-add-btn'
   btn.type = 'button'
   btn.title = '添加到未分组表情'
-  btn.innerHTML = '➕'
+  btn.textContent = '➕'
   btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
 
   const handler = async (ev: Event) => {
@@ -19,27 +19,28 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
     }
 
     try {
-      const chromeAPI = (window as any).chrome
+      const chromeAPI = (window as { chrome?: typeof chrome }).chrome
       if (!chromeAPI || !chromeAPI.runtime || !chromeAPI.runtime.sendMessage) {
         console.error('[RedditAddEmoji] Chrome runtime not available')
         return
       }
 
       // send direct URL to background to avoid converting to base64 in content
-      chromeAPI.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data }, (resp: any) => {
+      chromeAPI.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data }, (resp: unknown) => {
         try {
-          if (resp && resp.success) {
-            btn.innerHTML = '已添加'
+          const response = resp as { success?: boolean }
+          if (response && response.success) {
+            btn.textContent = '已添加'
             btn.style.background = 'linear-gradient(135deg, #10b981, #059669)'
             setTimeout(() => {
-              btn.innerHTML = '➕'
+              btn.textContent = '➕'
               btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
             }, 1500)
           } else {
-            btn.innerHTML = '失败'
+            btn.textContent = '失败'
             btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
             setTimeout(() => {
-              btn.innerHTML = '➕'
+              btn.textContent = '➕'
               btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
             }, 1500)
           }

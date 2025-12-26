@@ -9,7 +9,14 @@ import { offlineQueue } from './offline-queue'
 import { syncDb } from '@/utils/sync-db'
 import { cloudflareSyncService } from '@/utils/cloudflareSync'
 import { getDeviceId } from '@/utils/device'
-import type { SyncOptions, SyncResult, SyncVersion, DeltaRecord, SyncState } from '@/types/sync'
+import type {
+  SyncOptions,
+  SyncResult,
+  SyncVersion,
+  DeltaRecord,
+  SyncState,
+  DeltaValue
+} from '@/types/sync'
 
 export class IncrementalSyncService {
   private syncInProgress = false
@@ -27,7 +34,7 @@ export class IncrementalSyncService {
       return {
         success: false,
         message: 'Sync already in progress',
-        error: 'SYNC_IN_PROGRESS'
+        error: { code: 'SYNC_IN_PROGRESS', message: 'Sync already in progress' }
       }
     }
 
@@ -114,11 +121,12 @@ export class IncrementalSyncService {
       }
     } catch (error) {
       console.error('[IncrementalSync] Sync failed:', error)
-      this.updateSyncState('error', 0, error instanceof Error ? error.message : 'Unknown error')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      this.updateSyncState('error', 0, errorMessage)
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: { message: errorMessage },
         message: 'Sync failed'
       }
     } finally {
@@ -195,7 +203,7 @@ export class IncrementalSyncService {
         }
 
         // 这里应该从远程读取版本文件
-        // 暂时返回0，表示需要全量同步
+        // 暂时返回 0，表示需要全量同步
         return { remote: 0 }
       }
 
@@ -296,14 +304,14 @@ export class IncrementalSyncService {
     switch (delta.operation) {
       case 'create': {
         const emojiData = delta.changes.find(c => c.field === 'emojis')?.newValue
-        if (emojiData) {
+        if (emojiData && typeof emojiData === 'object' && 'groupId' in emojiData) {
           store.addEmojiWithoutSave(emojiData.groupId, emojiData)
         }
         break
       }
 
       case 'update': {
-        const updates: any = {}
+        const updates: Record<string, DeltaValue> = {}
         for (const change of delta.changes) {
           updates[change.field] = change.newValue
         }
@@ -322,8 +330,16 @@ export class IncrementalSyncService {
           // 找到 emoji 并移动
           const emoji = store.findEmojiById(delta.entityId)
           if (emoji) {
-            const sourceGroup = store.groups.find((g: any) => g.id === moveData.oldValue)
-            const targetGroup = store.groups.find((g: any) => g.id === moveData.newValue)
+            const sourceGroupId =
+              typeof moveData.oldValue === 'string' ? moveData.oldValue : undefined
+            const targetGroupId =
+              typeof moveData.newValue === 'string' ? moveData.newValue : undefined
+            const sourceGroup = sourceGroupId
+              ? store.groups.find((g: any) => g.id === sourceGroupId)
+              : undefined
+            const targetGroup = targetGroupId
+              ? store.groups.find((g: any) => g.id === targetGroupId)
+              : undefined
             if (sourceGroup && targetGroup) {
               const sourceIndex = sourceGroup.emojis.findIndex((e: any) => e.id === delta.entityId)
               if (sourceIndex !== -1) {
@@ -344,14 +360,20 @@ export class IncrementalSyncService {
     switch (delta.operation) {
       case 'create': {
         const groupData = delta.changes.find(c => c.field === 'groups')?.newValue
-        if (groupData) {
-          store.createGroupWithoutSave(groupData.name, groupData.icon)
+        if (groupData && typeof groupData === 'object') {
+          const name =
+            'name' in groupData && typeof groupData.name === 'string' ? groupData.name : undefined
+          const icon =
+            'icon' in groupData && typeof groupData.icon === 'string' ? groupData.icon : undefined
+          if (name && icon) {
+            store.createGroupWithoutSave(name, icon)
+          }
         }
         break
       }
 
       case 'update': {
-        const updates: any = {}
+        const updates: Record<string, DeltaValue> = {}
         for (const change of delta.changes) {
           updates[change.field] = change.newValue
         }
@@ -370,7 +392,7 @@ export class IncrementalSyncService {
    * 应用设置变更
    */
   private async applySettingsDelta(delta: DeltaRecord, store: any): Promise<void> {
-    const updates: any = {}
+    const updates: Record<string, DeltaValue> = {}
     for (const change of delta.changes) {
       updates[change.field] = change.newValue
     }

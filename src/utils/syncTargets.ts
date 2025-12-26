@@ -49,7 +49,7 @@ export interface SyncData {
 }
 
 // Helper type for accessing group properties
-interface GroupLike {
+export interface GroupLike {
   id?: string
   name?: string
   emojis?: unknown[]
@@ -194,7 +194,7 @@ export class WebDAVSyncTarget implements ISyncTarget {
 
   async pull(
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
     try {
       onProgress?.({
         current: 0,
@@ -420,7 +420,7 @@ export class S3SyncTarget implements ISyncTarget {
 
   async pull(
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
     try {
       onProgress?.({
         current: 0,
@@ -680,7 +680,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
   // Only fetch metadata (group list without emoji details)
   async preview(
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
     try {
       const baseUrl = this.getUrl()
       const headers = this.getReadAuthHeader()
@@ -697,8 +697,8 @@ export class CloudflareSyncTarget implements ISyncTarget {
       onProgress?.({ current: 1, total: 2, action: 'pull', message: '正在获取分组列表...' })
 
       // 2. Fetch only settings and group metadata (not full emoji data)
-      const pulledItems: { key: string; data: any }[] = []
-      const emojiGroupMetadata: any[] = []
+      const pulledItems: { key: string; data: Record<string, unknown> }[] = []
+      const emojiGroupMetadata: GroupLike[] = []
 
       // Separate settings and group keys
       const settingsKey = keys.find(key => key.name === 'settings')
@@ -707,7 +707,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
       )
 
       // Fetch settings first
-      let settingsData: any = {}
+      let settingsData: Record<string, unknown> = {}
       if (settingsKey) {
         const res = await fetch(`${baseUrl}/${settingsKey.name}`, { method: 'GET', headers })
         if (res.ok) {
@@ -773,7 +773,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
   async getGroupDetails(
     groupName: string, // assuming groupName is used as key
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; group?: any; error?: any; message: string }> {
+  ): Promise<{ success: boolean; group?: GroupLike; error?: unknown; message: string }> {
     try {
       onProgress?.({
         current: 0,
@@ -813,7 +813,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
   }
   async pull(
     onProgress?: ProgressCallback
-  ): Promise<{ success: boolean; data?: SyncData; error?: any; message: string }> {
+  ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
     try {
       const baseUrl = this.getUrl()
       // Pull is a read operation
@@ -841,7 +841,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
       })
 
       // 2. Fetch all keys sequentially to report progress
-      const pulledItems: { key: string; data: any }[] = []
+      const pulledItems: { key: string; data: Record<string, unknown> }[] = []
       for (const key of keys) {
         const displayName =
           key.name === 'settings' ? '设置配置' : `表情组：${decodeURIComponent(key.name)}`

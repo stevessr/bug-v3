@@ -208,11 +208,9 @@ async function autoReadAllv2(topicId?: number) {
 
 // expose to window for manual triggering
 
-// @ts-ignore
 window.autoReadAllReplies = autoReadAll
 
 // expose v2 for manual triggers
-// @ts-ignore
 window.autoReadAllRepliesV2 = autoReadAllv2
 
 export { autoReadAll, autoReadAllv2 }
