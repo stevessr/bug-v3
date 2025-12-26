@@ -4,7 +4,7 @@ A modern, feature-rich browser extension for managing and using custom emojis ac
 
 ## Overview
 
-The **Emoji Extension** is a comprehensive browser extension that enables users to manage, organize, and insert custom emojis across virtually any website. Built with modern web technologies (Vue 3, Vite, TypeScript), the extension features a sophisticated progressive multi-layer storage system, AI-powered naming capabilities, and advanced synchronization options across devices. The project supports multiple deployment targets including Chrome/Edge extensions, Firefox add-ons, and userscripts for Tampermonkey/Violentmonkey.
+The **Emoji Extension** is a comprehensive browser extension that enables users to manage, organize, and insert custom emojis across virtually any website. Built with modern web technologies (Vue 3, Vite, TypeScript), the extension features a sophisticated progressive multi-layer storage system, AI-powered naming capabilities, and advanced synchronization options across devices. The project supports multiple deployment targets including Chrome/Edge extensions and Firefox add-ons.
 
 The extension specializes in intelligent emoji management with features like duplicate detection using perceptual hashing, batch operations with AI assistance, and seamless synchronization across multiple devices via WebDAV or S3-compatible storage providers.
 
@@ -67,9 +67,6 @@ bug-v3/
 │   │   ├── utils/               # Options-specific utilities
 │   │   └── types.ts             # Type definitions
 │   │
-│   ├── userscript/              # Userscript-specific code
-│   │   └── [userscript builds]  # Tampermonkey/Violentmonkey targets
-│   │
 │   ├── stores/                  # Pinia state management
 │   │   └── useEmojiStore        # Main emoji store managing groups, settings, favorites
 │   │
@@ -98,7 +95,6 @@ bug-v3/
 ├── popup.html                   # Popup HTML
 ├── options.html                 # Options page HTML
 ├── vite.config.ts               # Vite configuration
-├── vite.config.userscript.ts    # Vite config for userscript builds
 ├── playwright.config.ts         # Playwright configuration
 ├── playwright.extension.config.ts # Extension-specific test config
 ├── tsconfig.json                # TypeScript configuration
@@ -205,8 +201,6 @@ npm run dev
 | `npm run build:prod` | Production build without console logging (smaller bundle) |
 | `npm run build:minimal` | Minimal build without logging or IndexedDB (smallest bundle) |
 | `npm run build:debug` | Debug build with source maps |
-| `npm run build:userscript` | Build userscripts for Tampermonkey |
-| `npm run build:userscript:min` | Build minified userscripts |
 | `npm run serve` | Preview production build |
 | `npm run test` | Run all Playwright tests |
 | `npm run test:debug` | Run tests in debug mode |
@@ -259,7 +253,6 @@ The project supports multiple build configurations optimized for different scena
 | Standard | ✅ | ✅ | ~2-3MB | General production |
 | Production | ❌ | ✅ | ~1.5-2MB | Smaller bundle size |
 | Minimal | ❌ | ❌ | ~1-1.5MB | Restricted environments |
-| Userscript | ✅ | ❌ | ~1-1.5MB | Tampermonkey/Violentmonkey |
 
 See [BUILD_FLAGS.md](./scripts/docs/BUILD_FLAGS.md) for compile-time optimization flags.
 
@@ -464,7 +457,6 @@ Complete documentation is available:
 - **[GEMINI_FEATURES.md](./GEMINI_FEATURES.md)** - AI features and Gemini API
 - **[CLAUDE.md](./CLAUDE.md)** - Guidance for Claude Code assistant
 - **[BUILD_FLAGS.md](./scripts/docs/BUILD_FLAGS.md)** - Compile-time options
-- **[USERSCRIPT_GUIDE.md](./scripts/docs/USERSCRIPT_GUIDE.md)** - Userscript deployment
 - **[docs/README.md](./docs/README.md)** - Complete documentation index
 
 ## License

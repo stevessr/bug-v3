@@ -94,15 +94,8 @@ pnpm run build:no-indexeddb
 # Minimal build (no logging, no IndexedDB - smallest bundle)
 pnpm run build:minimal
 
-# Userscript builds (for Tampermonkey/Violentmonkey)
-pnpm run build:userscript      # Build emoji picker and manager userscripts
-pnpm run build:userscript:min  # Build minified userscripts
 ```
 
-### Userscript Builds
-The project includes two userscript targets:
-1. **emoji-picker-core.user.js** - Core emoji picker functionality for Discourse sites
-2. **emoji-manager.user.js** - Management interface with WebDAV/S3 sync support
 
 ## Development Conventions
 

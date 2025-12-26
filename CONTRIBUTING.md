@@ -247,7 +247,6 @@ src/
 ├── shared/           # Shared code
 │   ├── storage/      # Storage system
 │   └── stores/       # Pinia state stores
-├── userscript/       # Userscript-specific code
 ├── utils/            # Utility functions
 └── assets/           # Static assets
 ```
@@ -260,7 +259,6 @@ The project supports multiple build configurations:
 - `npm run build` - Standard production build
 - `npm run build:prod` - Production without logging
 - `npm run build:minimal` - Minimal build
-- `npm run build:userscript` - Userscript build
 
 See [BUILD_FLAGS.md](./scripts/docs/BUILD_FLAGS.md) for details.
 

@@ -82,15 +82,13 @@ export async function cleanupCacheExample() {
  */
 export async function environmentSpecificExample() {
   // The utility automatically detects the environment
-  // and works in both browser extension and userscript contexts
+  // and works in browser extension contexts
 
   const stats = await imageCache.getCacheStats()
   console.log(`Running in: ${stats.context} context`)
 
   if (stats.context === 'extension') {
     console.log('Chrome extension features available')
-  } else if (stats.context === 'userscript') {
-    console.log('Userscript features available')
   }
 
   return stats.context

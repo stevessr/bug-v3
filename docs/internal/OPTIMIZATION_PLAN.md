@@ -28,9 +28,7 @@ This document outlines the optimization opportunities identified in the emoji ex
 - **Solution**: Consolidate into single, shared utility files
 
 ## 6. Unused Code Removal
-- **Issue**: Commented-out code sections like:
-  - `// import { initCalloutSuggestionsUserscript } from './modules/calloutSuggestions'` (in userscript-main.ts)
-  - Similar commented imports indicate unused functionality
+- **Issue**: Commented-out code sections indicate unused functionality
 - **Action**: Remove dead/commented code to reduce bundle size
 
 ## 7. Build Scripts Optimization

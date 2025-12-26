@@ -40,6 +40,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Microsoft Edge Store integration
 - Modern UI with Vue 3, Ant Design Vue, and Tailwind CSS
 - Compile-time optimization flags for logging and IndexedDB
-- Userscript builds for Tampermonkey/Violentmonkey
 - Drag-and-drop support with mobile optimization
 - Chrome sync storage support for configuration backup

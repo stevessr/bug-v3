@@ -712,7 +712,7 @@ export class ImageCache {
     memoryMaxSize: number
     oldestEntry?: number
     newestEntry?: number
-    context: 'extension' | 'userscript' | 'unknown'
+    context: 'extension' | 'unknown'
   }> {
     const memStats = this.memoryCache.getStats()
     const context = isExtensionContext() ? ('extension' as const) : ('unknown' as const)

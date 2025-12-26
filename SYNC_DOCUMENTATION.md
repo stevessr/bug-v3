@@ -12,19 +12,17 @@
 
 ## 使用方法
 
-### 1. 安装管理器脚本
+### 1. 安装扩展
 
-首先需要安装 emoji-manager 用户脚本：
+首先需要构建并安装扩展：
 
-1. 构建管理器脚本：
+1. 构建扩展：
 
    ```bash
-   npm run build:userscript
+   npm run build
    ```
 
-2. 在 `dist/` 目录下找到 `emoji-manager.user.js`
-
-3. 使用 Tampermonkey 或 Violentmonkey 安装该脚本
+2. 加载扩展到浏览器
 
 ### 2. 配置同步
 
@@ -171,7 +169,7 @@ Secret Access Key: your-secret-access-key
 ### 架构设计
 
 ```
-src/userscript/
+src/content/
 ├── plugins/
 │   └── syncTargets.ts      # 同步插件接口和实现
 └── modules/

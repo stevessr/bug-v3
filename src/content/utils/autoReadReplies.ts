@@ -211,7 +211,7 @@ async function autoReadAllv2(topicId?: number) {
 // @ts-ignore
 window.autoReadAllReplies = autoReadAll
 
-// expose v2 for userscripts / manual triggers
+// expose v2 for manual triggers
 // @ts-ignore
 window.autoReadAllRepliesV2 = autoReadAllv2
 

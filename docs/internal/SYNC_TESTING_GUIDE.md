@@ -6,10 +6,9 @@
 
 ### 前提条件
 
-1. 已构建管理器脚本：`npm run build:userscript`
-2. 已在浏览器中安装 Tampermonkey 或 Violentmonkey
-3. 已安装 `dist/emoji-manager.user.js`
-4. 访问任何 Discourse 论坛网站
+1. 已构建扩展：`npm run build`
+2. 已在浏览器中安装扩展
+3. 访问任何 Discourse 论坛网站
 
 ### 测试步骤
 
@@ -198,7 +197,7 @@ mc anonymous set public local/emoji-data
 console.log(JSON.parse(localStorage.getItem('emoji_extension_sync_config')))
 
 // 查看表情数据
-console.log(JSON.parse(localStorage.getItem('emoji_extension_userscript_data')))
+console.log(JSON.parse(localStorage.getItem('emoji_extension_data')))
 ```
 
 ### 4. 清除配置

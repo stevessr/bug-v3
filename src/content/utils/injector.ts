@@ -50,7 +50,7 @@ async function injectDesktopPicker(button: HTMLElement) {
   const pickerElement = currentPicker
   if (pickerElement) DOA(pickerElement)
 
-  // Use similar logic as userscript toolbar: adaptive positioning to keep picker inside viewport
+  // Use adaptive positioning to keep picker inside viewport
   pickerElement.style.position = 'fixed'
   const margin = 8
   const vpWidth = window.innerWidth

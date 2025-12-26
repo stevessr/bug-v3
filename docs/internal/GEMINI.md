@@ -2,7 +2,7 @@
 
 This is a browser extension for managing and using emojis. It's built with Vue 3, Vite, and TypeScript. The extension features a multi-layered storage system, real-time synchronization across different parts of the extension (popup, options page, content scripts), and a modern UI using Ant Design Vue and Tailwind CSS. It also supports cloud sync via Chrome sync, WebDAV, and S3-compatible storage.
 
-The project includes different build configurations to optimize for production, including options to disable logging and IndexedDB for smaller bundle sizes. It can also be built as a userscript for use with Tampermonkey or Violentmonkey.
+The project includes different build configurations to optimize for production, including options to disable logging and IndexedDB for smaller bundle sizes.
 
 ## Building and Running
 
@@ -37,8 +37,6 @@ pnpm run build:prod
 # Minimal build (no logging, no IndexedDB)
 pnpm run build:minimal
 
-# Build userscripts
-pnpm run build:userscript
 ```
 
 ### Testing
@@ -70,7 +68,6 @@ The `src` directory is organized as follows:
 - `src/options/`: The extension's options page.
 - `src/storage/`: The multi-layered storage system.
 - `src/stores/`: Pinia stores for state management.
-- `src/userscript/`: Code specific to the userscript builds.
 
 ### Build Process
 

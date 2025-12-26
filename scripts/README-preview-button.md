@@ -127,7 +127,7 @@ scripts/preview-button.user.js
 
 ## 与主脚本的关系
 
-此脚本原本是 `emoji-extension` 主脚本的一部分（`src/userscript/modules/rawPreview.ts`），现已分离为独立脚本：
+此脚本原本是 `emoji-extension` 主脚本的一部分（`src/content/modules/rawPreview.ts`），现已分离为独立脚本：
 
 - **优点**:
   - 按需安装，减少主脚本体积

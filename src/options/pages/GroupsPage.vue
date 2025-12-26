@@ -3,6 +3,7 @@ import { inject } from 'vue'
 
 import type { OptionsInject } from '../types'
 import GroupsTab from '../components/GroupsTab.vue'
+
 import { useEmojiStore } from '@/stores/emojiStore'
 
 const options = inject<OptionsInject>('options')!

@@ -106,7 +106,7 @@ try {
 
     // @ts-ignore
     window.postTimings = postTimings
-    // expose autoReadAllv2 for userscripts / page scripts
+    // expose autoReadAllv2 for page scripts
     // @ts-ignore
     window.autoReadAllRepliesV2 = autoReadAllv2
   }

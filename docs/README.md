@@ -15,8 +15,6 @@ This directory contains additional documentation for the Emoji Extension project
 
 ### Build & Development
 - **[BUILD_FLAGS.md](../scripts/docs/BUILD_FLAGS.md)** - Compile-time optimization flags
-- **[USERSCRIPT_GUIDE.md](../scripts/docs/USERSCRIPT_GUIDE.md)** - Userscript development guide
-- **[USERSCRIPT_README.md](../scripts/docs/USERSCRIPT_README.md)** - Userscript usage documentation
 
 ### Internal Documentation
 - **[OPTIMIZATION_PLAN.md](./internal/OPTIMIZATION_PLAN.md)** - Code optimization notes
