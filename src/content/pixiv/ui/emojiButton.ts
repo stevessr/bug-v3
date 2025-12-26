@@ -8,6 +8,12 @@ import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
   添加表情按钮实现（独立文件）
 */
 
+/** 存储所有 setTimeout ID 以便清理 */
+const timeoutIds = new Set<ReturnType<typeof setTimeout>>()
+
+/** 常量定义 */
+const FEEDBACK_DISPLAY_MS = 3000
+
 // DOMPurify configuration for SVG icons
 const purifyConfig = {
   ALLOWED_TAGS: ['svg', 'path', 'style'],
@@ -146,13 +152,14 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
         throw new Error(String(errorMessage))
       }
 
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         console.debug('[pixiv][button] restoring original button state (success path)')
         button.innerHTML = originalContent
         button.style.cssText = originalStyle
         button.style.pointerEvents = prevPointerEvents
         running = false
-      }, 3000)
+      }, FEEDBACK_DISPLAY_MS)
+      timeoutIds.add(timeoutId)
     } catch (error) {
       console.error('[pixiv][button] add emoji failed', error)
       const errorHtml = `
@@ -166,13 +173,14 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
       button.style.border = '2px solid #ffffff'
       button.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)'
 
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         console.debug('[pixiv][button] restoring original button state (failure path)')
         button.innerHTML = originalContent
         button.style.cssText = originalStyle
         button.style.pointerEvents = prevPointerEvents
         running = false
-      }, 3000)
+      }, FEEDBACK_DISPLAY_MS)
+      timeoutIds.add(timeoutId)
     }
   }
 
@@ -217,4 +225,12 @@ export function createPixivEmojiButton(data: AddEmojiButtonData): HTMLElement {
   }
   setupButtonClickHandler(button, data)
   return button
+}
+
+/**
+ * 清理函数 - 清理所有定时器
+ */
+export function cleanupPixivEmojiButton(): void {
+  timeoutIds.forEach(id => clearTimeout(id))
+  timeoutIds.clear()
 }

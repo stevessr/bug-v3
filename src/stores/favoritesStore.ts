@@ -26,7 +26,6 @@ function ensureFavoritesGroup(groups: Ref<EmojiGroup[]>): EmojiGroup {
   let favoritesGroup = groups.value.find(g => g.id === 'favorites')
 
   if (!favoritesGroup) {
-    console.log('[FavoritesStore] Creating favorites group')
     favoritesGroup = {
       id: 'favorites',
       name: '常用表情',
@@ -66,11 +65,6 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
     const favoritesGroup = ensureFavoritesGroup(groups)
 
     try {
-      console.log(
-        '[FavoritesStore] Saving favorites group only, emojis count:',
-        favoritesGroup.emojis.length
-      )
-
       // Ensure favorites group is in the index
       const currentIndex = await newStorageHelpers.getEmojiGroupIndex()
       const favoritesInIndex = currentIndex.some(entry => entry.id === 'favorites')
@@ -81,14 +75,12 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
           ...currentIndex.map((e, i) => ({ ...e, order: i + 1 }))
         ]
         await newStorageHelpers.setEmojiGroupIndexSync(newIndex)
-        console.log('[FavoritesStore] Added favorites to group index')
       }
 
       await newStorageHelpers.setEmojiGroupSync(favoritesGroup.id, favoritesGroup)
 
       const favoriteIds = favoritesGroup.emojis.map(e => e.id).filter(Boolean)
       await newStorageHelpers.setFavoritesSync(favoriteIds)
-      console.log('[FavoritesStore] Favorites saved successfully, ids:', favoriteIds.length)
     } catch (error) {
       console.error('[FavoritesStore] Failed to save favorites:', error)
     }
@@ -118,13 +110,11 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
 
       if (timeDiff < twelveHours) {
         existingEmoji.usageCount = (existingEmoji.usageCount || 0) + 1
-        console.log('[FavoritesStore] Updated usage count:', emoji.name, existingEmoji.usageCount)
       } else {
         // Apply decay for old usage
         const currentCount = existingEmoji.usageCount || 1
         existingEmoji.usageCount = Math.floor(currentCount * 0.8) + 1
         existingEmoji.lastUsed = now
-        console.log('[FavoritesStore] Applied decay:', emoji.name, existingEmoji.usageCount)
       }
     } else {
       // Add new emoji to favorites
@@ -138,7 +128,6 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
         ...(emoji.tags && emoji.tags.length > 0 ? { tags: emoji.tags } : {})
       }
       favoritesGroup.emojis.push(favoriteEmoji)
-      console.log('[FavoritesStore] Added to favorites:', emoji.name)
     }
 
     // Sort by lastUsed (most recent first)
@@ -165,10 +154,6 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
     } else {
       favorites.value.add(emojiId)
     }
-    console.log('[FavoritesStore] toggleFavorite', {
-      id: emojiId,
-      isFavorite: favorites.value.has(emojiId)
-    })
     // Mark favorites as dirty for incremental save
     saveControl.markFavoritesDirty?.()
     saveControl.maybeSave()
@@ -185,7 +170,6 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
     if (index !== -1) {
       favoritesGroup.emojis.splice(index, 1)
       favorites.value.delete(emojiId)
-      console.log('[FavoritesStore] Removed from favorites:', emojiId)
       // Mark favorites as dirty for incremental save
       saveControl.markFavoritesDirty?.()
       // Also mark the favorites group as dirty since we modified it
@@ -211,7 +195,6 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
       favorites.value = new Set()
     }
 
-    console.log('[FavoritesStore] Cleared all favorites')
     // Mark favorites as dirty for incremental save
     saveControl.markFavoritesDirty?.()
     // Also mark the favorites group as dirty since we modified it

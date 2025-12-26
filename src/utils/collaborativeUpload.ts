@@ -6,12 +6,17 @@
 
 import { uploadServices } from './uploadServices'
 
+/** 常量定义 - 默认配置值（毫秒） */
+const DEFAULT_RECONNECT_DELAY_MS = 5000
+const DEFAULT_TASK_TIMEOUT_MS = 60000
+const HEARTBEAT_INTERVAL_MS = 30000
+
 export interface CollaborativeUploadConfig {
   serverUrl: string // WebSocket 服务器地址，如 ws://localhost:9527
   role: 'master' | 'worker' // 主控端或工作者
   autoReconnect?: boolean // 是否自动重连（默认 true）
-  reconnectDelay?: number // 重连延迟（毫秒，默认 5000）
-  taskTimeout?: number // 任务超时时间（毫秒，默认 60000）
+  reconnectDelay?: number // 重连延迟（毫秒，默认 DEFAULT_RECONNECT_DELAY_MS）
+  taskTimeout?: number // 任务超时时间（毫秒，默认 DEFAULT_TASK_TIMEOUT_MS）
   onStatusChange?: (status: ConnectionStatus) => void
   onProgress?: (progress: UploadProgress) => void
   onWorkerStats?: (stats: WorkerStats) => void

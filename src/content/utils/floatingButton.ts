@@ -9,6 +9,18 @@ import { ESI } from '@/content/utils/injectCustomCss'
 let floatingButton: HTMLElement | null = null
 let isButtonVisible = false
 
+/** 存储所有 setTimeout ID 以便清理 */
+const timeoutIds = new Set<ReturnType<typeof setTimeout>>()
+
+/** 常量定义 */
+const FEEDBACK_DISPLAY_MS = 1500
+const HIDE_ANIMATION_MS = 300
+const AUTO_SHOW_DELAY_MS = 2000
+
+const BUTTON_STYLE_SUCCESS = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)'
+const BUTTON_STYLE_ERROR = 'linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%)'
+const BUTTON_TRANSPARENT = 'transparent'
+
 // Styles for floating button
 const FLOATING_BUTTON_STYLES = `
 .emoji-extension-floating-button {
@@ -65,6 +77,28 @@ function injectStyles() {
   ESI('emoji-extension-floating-button-styles', FLOATING_BUTTON_STYLES)
 }
 
+/**
+ * 设置按钮反馈样式
+ */
+function setButtonFeedback(
+  button: HTMLElement,
+  icon: string,
+  background: string,
+  transform: string = 'scale(1)'
+): void {
+  button.textContent = icon
+  button.style.background = background
+  button.style.transform = transform
+
+  const timeoutId = setTimeout(() => {
+    button.textContent = '🐈‍⬛'
+    button.style.background = BUTTON_TRANSPARENT
+    button.style.transform = 'scale(1)'
+  }, FEEDBACK_DISPLAY_MS)
+
+  timeoutIds.add(timeoutId)
+}
+
 // Create floating button element
 function createFloatingButton(): HTMLElement {
   const button = document.createElement('button')
@@ -73,9 +107,9 @@ function createFloatingButton(): HTMLElement {
   button.textContent = '🐈‍⬛'
 
   // Click handler for manual injection
-  button.addEventListener('click', async e => {
-    e.stopPropagation()
-    e.preventDefault()
+  const clickHandler = async (e: Event) => {
+    ;(e as MouseEvent).stopPropagation()
+    ;(e as Event).preventDefault()
 
     // Visual feedback
     button.style.transform = 'scale(0.9)'
@@ -99,45 +133,37 @@ function createFloatingButton(): HTMLElement {
 
       if (injectedCount > 0 || toolbars.length > 0) {
         // Success feedback
-        button.textContent = '✅'
-        button.style.background = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)'
-
-        setTimeout(() => {
-          button.textContent = '🐈‍⬛'
-          button.style.background = 'transparent'
-          button.style.transform = 'scale(1)'
-        }, 1500)
+        setButtonFeedback(button, '✅', BUTTON_STYLE_SUCCESS)
 
         console.log(
           `[Emoji Extension] Manual injection successful: ${injectedCount} buttons injected into ${toolbars.length} toolbars`
         )
       } else {
         // No toolbars found feedback
-        button.textContent = '❌'
-        button.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%)'
-
-        setTimeout(() => {
-          button.textContent = '🐈‍⬛'
-          button.style.background = 'transparent'
-          button.style.transform = 'scale(1)'
-        }, 1500)
+        setButtonFeedback(button, '❌', BUTTON_STYLE_ERROR)
 
         console.log('[Emoji Extension] Manual injection failed: No compatible toolbars found')
       }
     } catch (error) {
       // Error feedback
-      button.textContent = '⚠️'
-      button.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%)'
-
-      setTimeout(() => {
-        button.textContent = '🐈‍⬛'
-        button.style.background = 'transparent'
-        button.style.transform = 'scale(1)'
-      }, 1500)
+      setButtonFeedback(button, '⚠️', BUTTON_STYLE_ERROR)
 
       console.error('[Emoji Extension] Manual injection error:', error)
     }
-  })
+  }
+
+  button.addEventListener('click', clickHandler)
+
+  // 存储 cleanup 函数
+  timeoutIds.add(
+    setTimeout(() => {
+      // 延迟存储 cleanup，确保组件销毁时能正确清理
+      const cleanup = () => {
+        button.removeEventListener('click', clickHandler)
+      }
+      button.addEventListener('remove', () => cleanup(), { once: true })
+    }, 0)
+  )
 
   return button
 }
@@ -161,13 +187,15 @@ function hideFloatingButton() {
   if (floatingButton) {
     floatingButton.classList.add('hidden')
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (floatingButton) {
         floatingButton.remove()
         floatingButton = null
         isButtonVisible = false
       }
-    }, 300)
+    }, HIDE_ANIMATION_MS)
+
+    timeoutIds.add(timeoutId)
 
     console.log('[Emoji Extension] Floating manual injection button hidden')
   }
@@ -188,10 +216,27 @@ export function checkAndShowFloatingButton() {
   const existingButtons = DQSA('.emoji-extension-button, .image-upload-button')
 
   if (existingButtons.length === 0 && !isButtonVisible) {
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       autoShowFloatingButton()
-    }, 2000) // Show after 2 seconds if still no buttons
+    }, AUTO_SHOW_DELAY_MS)
+    timeoutIds.add(timeoutId)
   } else if (existingButtons.length > 0 && isButtonVisible) {
     hideFloatingButton() // Hide if buttons are now available
+  }
+}
+
+/**
+ * 清理函数 - 清理所有定时器和事件监听器
+ */
+export function cleanupFloatingButton(): void {
+  // 清理所有 setTimeout
+  timeoutIds.forEach(id => clearTimeout(id))
+  timeoutIds.clear()
+
+  // 移除浮动按钮
+  if (floatingButton) {
+    floatingButton.remove()
+    floatingButton = null
+    isButtonVisible = false
   }
 }

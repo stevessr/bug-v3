@@ -1,6 +1,35 @@
 import type { AddEmojiButtonData } from '../pixiv/types'
 import { DQSA } from '../utils/createEl'
 
+/** 常量定义 */
+const FEEDBACK_DISPLAY_MS = 1500
+const BUTTON_DEFAULT_STYLE = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
+const BUTTON_SUCCESS_STYLE = 'linear-gradient(135deg, #10b981, #059669)'
+const BUTTON_ERROR_STYLE = 'linear-gradient(135deg, #ef4444, #dc2626)'
+
+/** 存储所有创建的按钮及其清理函数 */
+const buttonCleanupFns = new Set<() => void>()
+
+/**
+ * 设置按钮反馈样式（成功/失败）
+ */
+function setButtonFeedback(
+  btn: HTMLElement,
+  type: 'success' | 'error',
+  originalStyle: string
+): void {
+  btn.textContent = type === 'success' ? '已添加' : '失败'
+  btn.style.background = type === 'success' ? BUTTON_SUCCESS_STYLE : BUTTON_ERROR_STYLE
+
+  const timeoutId = setTimeout(() => {
+    btn.textContent = '➕'
+    btn.style.cssText = originalStyle
+  }, FEEDBACK_DISPLAY_MS)
+
+  // 存储 cleanup 函数以防止内存泄漏
+  buttonCleanupFns.add(() => clearTimeout(timeoutId))
+}
+
 // create a minimal floating button that sends the direct URL to background
 function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
   const btn = document.createElement('button')
@@ -8,7 +37,7 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
   btn.type = 'button'
   btn.title = '添加到未分组表情'
   btn.textContent = '➕'
-  btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
+  btn.style.cssText = BUTTON_DEFAULT_STYLE
 
   const handler = async (ev: Event) => {
     try {
@@ -30,19 +59,9 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
         try {
           const response = resp as { success?: boolean }
           if (response && response.success) {
-            btn.textContent = '已添加'
-            btn.style.background = 'linear-gradient(135deg, #10b981, #059669)'
-            setTimeout(() => {
-              btn.textContent = '➕'
-              btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
-            }, 1500)
+            setButtonFeedback(btn, 'success', BUTTON_DEFAULT_STYLE)
           } else {
-            btn.textContent = '失败'
-            btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
-            setTimeout(() => {
-              btn.textContent = '➕'
-              btn.style.cssText = `position:absolute;right:8px;top:8px;z-index:100000;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;`
-            }, 1500)
+            setButtonFeedback(btn, 'error', BUTTON_DEFAULT_STYLE)
           }
         } catch (_e) {
           void _e
@@ -55,6 +74,14 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
 
   btn.addEventListener('click', handler)
   btn.addEventListener('pointerdown', handler)
+
+  // 存储 cleanup 函数
+  const cleanup = () => {
+    btn.removeEventListener('click', handler)
+    btn.removeEventListener('pointerdown', handler)
+  }
+  buttonCleanupFns.add(cleanup)
+
   return btn
 }
 
@@ -161,8 +188,15 @@ function scanForRedditImages() {
   }
 }
 
+/** MutationObserver 引用，用于清理 */
+let redditObserver: MutationObserver | null = null
+
+/** 常量定义 */
+const SCAN_DELAY_MS = 120
+const INIT_DELAY_MS = 200
+
 function observeReddit() {
-  const observer = new MutationObserver(ms => {
+  redditObserver = new MutationObserver(ms => {
     let shouldScan = false
     ms.forEach(m => {
       if (m.type === 'childList') {
@@ -175,18 +209,33 @@ function observeReddit() {
       }
     })
     if (shouldScan) {
-      setTimeout(scanForRedditImages, 120)
+      setTimeout(scanForRedditImages, SCAN_DELAY_MS)
     }
   })
 
-  observer.observe(document.body, { childList: true, subtree: true })
+  redditObserver.observe(document.body, { childList: true, subtree: true })
+}
+
+/**
+ * 清理函数 - 移除所有事件监听器和观察者
+ */
+export function cleanupReddit(): void {
+  // 断开 MutationObserver
+  if (redditObserver) {
+    redditObserver.disconnect()
+    redditObserver = null
+  }
+
+  // 清理所有按钮的事件监听器
+  buttonCleanupFns.forEach(cleanup => cleanup())
+  buttonCleanupFns.clear()
 }
 
 export function initReddit() {
   try {
     const host = window.location.hostname.toLowerCase()
     if (!host.includes('reddit.com') && !host.includes('redd.it')) return
-    setTimeout(scanForRedditImages, 200)
+    setTimeout(scanForRedditImages, INIT_DELAY_MS)
     observeReddit()
     console.log('[RedditAddEmoji] initialized')
   } catch (e) {

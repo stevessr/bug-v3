@@ -8,11 +8,17 @@ let cachedGroups: EmojiGroup[] | null = null
 let cachedSettings: AppSettings | null = null
 let cachedFavorites: string[] | null = null
 let cacheTimestamp = 0
-const CACHE_TTL = 5000 // 5 秒缓存有效期
+
+/** 常量定义 */
+const CACHE_TTL_MS = 5000 // 5 秒缓存有效期
+const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000 // 24 小时
+
+/** 存储定时器 ID 以便清理 */
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null
 
 async function getCachedData() {
   const now = Date.now()
-  if (cachedGroups && cachedSettings && now - cacheTimestamp < CACHE_TTL) {
+  if (cachedGroups && cachedSettings && now - cacheTimestamp < CACHE_TTL_MS) {
     return { groups: cachedGroups, settings: cachedSettings, favorites: cachedFavorites }
   }
 
@@ -185,20 +191,34 @@ export function setupStorageChangeListener() {
 }
 
 export function setupPeriodicCleanup() {
-  setInterval(
-    async () => {
-      const chromeAPI = getChromeAPI()
-      if (!chromeAPI || !chromeAPI.storage) return
+  // 避免重复设置
+  if (cleanupIntervalId !== null) {
+    console.warn('[PeriodicCleanup] Already set up, skipping')
+    return
+  }
 
-      try {
-        const data = await chromeAPI.storage.local.get(['emojiGroups'])
-        if (data.emojiGroups) {
-          console.log('Storage cleanup check completed')
-        }
-      } catch (error) {
-        console.error('Storage cleanup error:', error)
+  cleanupIntervalId = setInterval(async () => {
+    const chromeAPI = getChromeAPI()
+    if (!chromeAPI || !chromeAPI.storage) return
+
+    try {
+      const data = await chromeAPI.storage.local.get(['emojiGroups'])
+      if (data.emojiGroups) {
+        console.log('Storage cleanup check completed')
       }
-    },
-    24 * 60 * 60 * 1000
-  )
+    } catch (error) {
+      console.error('Storage cleanup error:', error)
+    }
+  }, CLEANUP_INTERVAL_MS)
+}
+
+/**
+ * 清理函数 - 停止定时清理任务
+ */
+export function cleanupPeriodicCleanup(): void {
+  if (cleanupIntervalId !== null) {
+    clearInterval(cleanupIntervalId)
+    cleanupIntervalId = null
+    console.log('[PeriodicCleanup] Cleanup task stopped')
+  }
 }

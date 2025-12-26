@@ -3,7 +3,6 @@ import type { AddEmojiButtonData } from '../types'
 // Duplicate minimal helpers here to avoid circular imports when used from UI
 export function extractNameFromUrl(url: string): string {
   try {
-    console.debug('[pixiv][helpers] extractNameFromUrl input', url)
     const urlObj = new URL(url)
     const pathname = urlObj.pathname
     const filename = pathname.split('/').pop() || ''
@@ -24,7 +23,6 @@ export async function tryGetImageViaCanvas(
   url: string
 ): Promise<{ success: true; blob: Blob } | { success: false; error: any }> {
   return new Promise(resolve => {
-    console.debug('[pixiv][helpers] tryGetImageViaCanvas start', url)
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = async () => {
@@ -39,7 +37,6 @@ export async function tryGetImageViaCanvas(
         try {
           canvas.toBlob(b => {
             if (b) {
-              console.debug('[pixiv][helpers] tryGetImageViaCanvas produced blob', b)
               resolve({ success: true, blob: b })
             } else {
               console.warn('[pixiv][helpers] tryGetImageViaCanvas no blob produced')
@@ -75,12 +72,6 @@ export async function sendEmojiToBackground(
   originUrl?: string
 ) {
   try {
-    console.debug('[pixiv][helpers] sendEmojiToBackground start', {
-      emojiName,
-      filename,
-      size: blob.size,
-      type: blob.type
-    })
     const chromeAPI = (window as any).chrome
 
     if (!chromeAPI || !chromeAPI.runtime || !chromeAPI.runtime.sendMessage) {
@@ -113,7 +104,6 @@ export async function sendEmojiToBackground(
       }
     })
 
-    console.debug('[pixiv][helpers] sendEmojiToBackground background response', bgResp)
     if (bgResp && bgResp.success) {
       return {
         success: true,
@@ -141,15 +131,12 @@ export async function sendEmojiToBackground(
 }
 
 export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
-  console.debug('[pixiv][helpers] performPixivAddEmojiFlow start', data)
   try {
     const baseName = data.name && data.name.length > 0 ? data.name : extractNameFromUrl(data.url)
     const filename = baseName.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || 'image'
 
     try {
-      console.debug('[pixiv][helpers] attempting tryGetImageViaCanvas', data.url)
       const canvasResult = await tryGetImageViaCanvas(data.url)
-      console.debug('[pixiv][helpers] tryGetImageViaCanvas result', canvasResult)
       if (canvasResult.success) {
         return await sendEmojiToBackground(canvasResult.blob, baseName, filename, data.url)
       }
@@ -159,7 +146,6 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
     }
 
     try {
-      console.debug('[pixiv][helpers] attempting fetch of image URL', data.url)
       const response = await fetch(data.url, {
         method: 'GET',
         headers: {
@@ -169,13 +155,8 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
         credentials: 'omit'
       })
 
-      console.debug('[pixiv][helpers] fetch response', { ok: response.ok, status: response.status })
       if (response.ok) {
         const blob = await response.blob()
-        console.debug('[pixiv][helpers] fetched blob size/type', {
-          size: blob.size,
-          type: blob.type
-        })
         return await sendEmojiToBackground(blob, baseName, filename, data.url)
       }
     } catch (e) {
@@ -184,7 +165,6 @@ export async function performPixivAddEmojiFlow(data: AddEmojiButtonData) {
     }
 
     try {
-      console.debug('[pixiv][helpers] opening image URL in new tab as fallback', data.url)
       window.open(data.url, '_blank')
       return {
         success: true,

@@ -9,6 +9,12 @@ import { createE } from '@/content/utils/createEl'
 
 declare const chrome: typeof globalThis.chrome
 
+/** 存储所有 setTimeout ID 以便清理 */
+const timeoutIds = new Set<ReturnType<typeof setTimeout>>()
+
+/** 常量定义 */
+const FEEDBACK_DISPLAY_MS = 1500
+
 /**
  * 设置按钮点击处理器
  */
@@ -22,18 +28,20 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
       await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
       button.textContent = '已添加'
       button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         button.textContent = originalContent || ''
         button.style.cssText = originalStyle
-      }, 1500)
+      }, FEEDBACK_DISPLAY_MS)
+      timeoutIds.add(timeoutId)
     } catch (error) {
       console.error('[BiliOneClick] 添加表情失败：', error)
       button.textContent = '失败'
       button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         button.textContent = originalContent || ''
         button.style.cssText = originalStyle
-      }, 1500)
+      }, FEEDBACK_DISPLAY_MS)
+      timeoutIds.add(timeoutId)
     }
   })
 }
@@ -133,4 +141,12 @@ export function createPhotoSwipeButton(data: AddEmojiButtonData): HTMLElement {
 
   setupButtonClickHandler(btn, data)
   return btn
+}
+
+/**
+ * 清理函数 - 清理所有定时器
+ */
+export function cleanupBilibiliButtons(): void {
+  timeoutIds.forEach(id => clearTimeout(id))
+  timeoutIds.clear()
 }

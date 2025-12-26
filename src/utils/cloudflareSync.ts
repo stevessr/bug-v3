@@ -10,6 +10,11 @@ import {
 } from '@/utils/syncTargets'
 import { newStorageHelpers } from '@/utils/newStorage'
 
+/** 常量定义 */
+const RETRY_BASE_DELAY_MS = 1000
+const RETRY_MAX_DELAY_MS = 2000
+const DEFAULT_MAX_RETRIES = 3
+
 // Use the CloudflareConfig from syncTargets and extend it with sync times
 export interface ExtendedCloudflareConfig extends CloudflareConfig {
   lastSyncTime?: number
@@ -164,8 +169,8 @@ export class CloudflareSyncService {
    */
   private async executeWithRetry<T>(
     operation: () => Promise<T>,
-    maxRetries: number = 3,
-    delay: number = 1000,
+    maxRetries: number = DEFAULT_MAX_RETRIES,
+    delay: number = RETRY_BASE_DELAY_MS,
     exponentialBackoff: boolean = true
   ): Promise<T> {
     let lastError: Error | unknown = null
@@ -180,8 +185,10 @@ export class CloudflareSyncService {
           break
         }
 
-        // Calculate delay with exponential backoff
-        const currentDelay = exponentialBackoff ? delay * Math.pow(2, attempt) : delay
+        // Calculate delay with exponential backoff, capped at RETRY_MAX_DELAY_MS
+        const currentDelay = exponentialBackoff
+          ? Math.min(delay * Math.pow(2, attempt), RETRY_MAX_DELAY_MS)
+          : delay
         console.warn(
           `[CloudflareSync] Attempt ${attempt + 1} failed, retrying in ${currentDelay}ms...`,
           error

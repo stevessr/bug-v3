@@ -3,6 +3,12 @@ export interface AddEmojiButtonData {
   url: string
 }
 
+/** 存储所有 setTimeout ID 以便清理 */
+const timeoutIds = new Set<ReturnType<typeof setTimeout>>()
+
+/** 常量定义 */
+const FEEDBACK_DISPLAY_MS = 1500
+
 export function isXMainHost(): boolean {
   try {
     const host = window.location.hostname.toLowerCase()
@@ -97,18 +103,28 @@ export function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) 
       await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
       button.textContent = '已添加'
       button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         button.textContent = orig
         button.style.cssText = origStyle
-      }, 1500)
+      }, FEEDBACK_DISPLAY_MS)
+      timeoutIds.add(timeoutId)
     } catch (err) {
       console.error('[XUtils] 添加失败', err)
       button.textContent = '失败'
       button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         button.textContent = orig
         button.style.cssText = origStyle
-      }, 1500)
+      }, FEEDBACK_DISPLAY_MS)
+      timeoutIds.add(timeoutId)
     }
   })
+}
+
+/**
+ * 清理函数 - 清理所有定时器
+ */
+export function cleanupXUtils(): void {
+  timeoutIds.forEach(id => clearTimeout(id))
+  timeoutIds.clear()
 }

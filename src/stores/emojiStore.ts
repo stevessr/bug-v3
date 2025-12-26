@@ -19,6 +19,11 @@ import { defaultSettings } from '@/types/defaultSettings'
 // Global flag to ensure runtime message listener is only registered once across all store instances
 let runtimeMessageListenerRegistered = false
 
+/** 常量定义 - 延迟时间（毫秒） */
+const SEARCH_INDEX_DEBOUNCE_MS = 100
+const SAVE_DEBOUNCE_MS = 100
+const FEEDBACK_DISPLAY_MS = 1500
+
 export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- State ---
   const groups = ref<EmojiGroup[]>([])
@@ -200,7 +205,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     () => {
       // 索引失效后，延迟构建索引
       if (!searchIndexValid.value) {
-        setTimeout(buildSearchIndex, 100)
+        setTimeout(buildSearchIndex, SEARCH_INDEX_DEBOUNCE_MS)
       }
     },
     { immediate: true }
@@ -619,13 +624,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         const packaged = await loadPackagedDefaults()
         groups.value =
           packaged && packaged.groups && packaged.groups.length > 0 ? packaged.groups : []
-      } catch {
-        groups.value = []
-      }
-      try {
-        const packaged = await loadPackagedDefaults()
         settings.value = { ...defaultSettings, ...(packaged?.settings || {}) }
       } catch {
+        groups.value = []
         settings.value = { ...defaultSettings }
       }
       favorites.value = new Set()
@@ -669,15 +670,15 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     try {
       await nextTick()
 
-      // 保存所有分组和索引
+      // 并行保存所有数据：索引、分组、设置和收藏
       const index = groups.value.map((g, order) => ({ id: g.id, order }))
-      await newStorageHelpers.setEmojiGroupIndex(index)
 
-      await Promise.all(groups.value.map(group => newStorageHelpers.setEmojiGroup(group.id, group)))
-
-      // 保存 settings 和 favorites
-      await newStorageHelpers.setSettings({ ...settings.value, lastModified: Date.now() })
-      await newStorageHelpers.setFavorites(Array.from(favorites.value))
+      await Promise.all([
+        newStorageHelpers.setEmojiGroupIndex(index),
+        ...groups.value.map(group => newStorageHelpers.setEmojiGroup(group.id, group)),
+        newStorageHelpers.setSettings({ ...settings.value, lastModified: Date.now() }),
+        newStorageHelpers.setFavorites(Array.from(favorites.value))
+      ])
 
       console.log('[EmojiStore] SaveData completed successfully')
     } catch (error) {
@@ -687,7 +688,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       isSaving.value = false
       if (pendingSave.value) {
         pendingSave.value = false
-        setTimeout(() => saveData(), 100)
+        setTimeout(() => saveData(), SAVE_DEBOUNCE_MS)
       }
     }
   }

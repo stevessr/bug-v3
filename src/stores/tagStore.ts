@@ -54,7 +54,6 @@ export function useTagStore(options: TagStoreOptions) {
 
     if (!emoji.tags.includes(cleaned)) {
       emoji.tags.push(cleaned)
-      console.log('[TagStore] addTagToEmoji', { emojiId, tag: cleaned })
       saveControl.maybeSave()
       return true
     }
@@ -72,7 +71,6 @@ export function useTagStore(options: TagStoreOptions) {
       const index = emoji.tags.indexOf(cleaned)
       if (index !== -1) {
         emoji.tags.splice(index, 1)
-        console.log('[TagStore] removeTagFromEmoji', { emojiId, tag: cleaned })
         saveControl.maybeSave()
         return true
       }
@@ -89,7 +87,6 @@ export function useTagStore(options: TagStoreOptions) {
 
     if (emoji) {
       emoji.tags = cleanedTags
-      console.log('[TagStore] setEmojiTags', { emojiId, tags: cleanedTags })
       saveControl.maybeSave()
       return true
     }
@@ -111,7 +108,6 @@ export function useTagStore(options: TagStoreOptions) {
           changedCount++
         }
       }
-      console.log('[TagStore] addTagToMultipleEmojis', { tag: cleaned, count: changedCount })
       return changedCount
     } finally {
       saveControl.endBatch()
@@ -132,7 +128,6 @@ export function useTagStore(options: TagStoreOptions) {
           changedCount++
         }
       }
-      console.log('[TagStore] removeTagFromMultipleEmojis', { tag: cleaned, count: changedCount })
       return changedCount
     } finally {
       saveControl.endBatch()
