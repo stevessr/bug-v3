@@ -18,6 +18,7 @@ pnpm lint              # Check linting
 pnpm lint:fix          # Auto-fix lint issues
 pnpm format            # Format with Prettier
 pnpm type-check        # TypeScript type checking
+pnpm update:data       # deploy scripts/cfworker
 ```
 
 ### Testing (Playwright)

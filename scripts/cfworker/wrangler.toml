@@ -26,8 +26,8 @@ preview_id = "904b460f0be14709ba1d28930329064f"
   # Production uses secrets (set via: wrangler pages secret put)
   # These vars are placeholders and should be overridden by secrets
   [env.production.vars]
-  AUTH_SECRET = "REPLACE_WITH_SECRET"
-  AUTH_SECRET_READONLY = "REPLACE_WITH_SECRET"
+  AUTH_SECRET = "dev-secret-password"
+  AUTH_SECRET_READONLY = "dev-secret-password-readonly"
 
   # Production KV namespace (same as dev for now)
   [[env.production.kv_namespaces]]

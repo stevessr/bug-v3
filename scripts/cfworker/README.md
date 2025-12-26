@@ -10,6 +10,9 @@
 ### 2. 表情包备份 API（Cloudflare Function）
 基于 Cloudflare KV 的表情包备份服务 API
 
+### 3. 随机图片 API（Cloudflare Function）
+从表情包市场随机返回图片的 API
+
 ## ✨ 特性
 
 ### 视频转 GIF
@@ -26,6 +29,12 @@
 - ✅ 支持读写权限分离
 - ✅ CORS 支持
 - ✅ RESTful API 设计
+
+### 随机图片 API
+- ✅ 从 78 个表情包分组中随机返回图片
+- ✅ 支持按分组筛选
+- ✅ 支持批量获取（最多 10 张）
+- ✅ 支持 JSON 和重定向两种格式
 
 ## 🚀 快速部署
 
@@ -70,6 +79,7 @@ scripts/cfworker/
 │   └── api/
 │       ├── backup/
 │       │   └── [[key]].ts  # 表情包备份 API (原 backup-worker)
+│       ├── random-image.ts # 随机图片 API
 │       ├── proxy/
 │       │   └── telegram-file.js
 │       └── video/
@@ -140,6 +150,92 @@ curl -X DELETE \
 **浏览器扩展配置**：在扩展的同步设置中，Worker URL 应设置为：
 ```
 https://your-project.pages.dev/api/backup
+```
+
+### 随机图片 API
+
+#### 1. 获取一张随机图片（JSON 格式）
+```bash
+curl https://your-project.pages.dev/api/random-image
+```
+
+返回示例：
+```json
+{
+  "id": "emoji-1758073408523-ggg1vh",
+  "name": "哭泣",
+  "url": "https://linux.do/uploads/default/original/4X/5/d/9/5d932c05a642396335f632a370bd8d45463cf2e2.jpeg",
+  "groupId": "group-1758073408523",
+  "width": 1000,
+  "height": 993,
+  "packet": 2
+}
+```
+
+#### 2. 直接重定向到图片 URL
+```bash
+curl -L https://your-project.pages.dev/api/random-image?format=redirect
+
+# 在浏览器中直接访问会显示随机图片
+# 可以用作随机头像、随机背景等
+```
+
+#### 3. 从指定分组获取随机图片
+```bash
+# 获取 Nachoneko 表情包的随机图片
+curl https://your-project.pages.dev/api/random-image?group=group-1758073408523
+
+# 获取仙狐小姐表情包的随机图片
+curl https://your-project.pages.dev/api/random-image?group=group-1755970088527
+```
+
+#### 4. 获取多张随机图片（最多 10 张）
+```bash
+# 获取 3 张随机图片
+curl https://your-project.pages.dev/api/random-image?count=3
+
+# 从指定分组获取 5 张随机图片
+curl "https://your-project.pages.dev/api/random-image?group=group-1758073408523&count=5"
+```
+
+#### 5. 查询参数说明
+- `group`: (可选) 分组 ID，从 manifest.json 中获取
+- `count`: (可选) 返回图片数量，1-10 之间，默认为 1
+- `format`: (可选) 返回格式
+  - `json` (默认): 返回图片元数据
+  - `redirect`: HTTP 302 重定向到图片 URL（仅在 count=1 时有效）
+
+#### 6. 使用场景示例
+
+**作为随机头像 API**:
+```html
+<img src="https://your-project.pages.dev/api/random-image?format=redirect" alt="Random Avatar">
+```
+
+**每次刷新显示不同图片**:
+```html
+<img id="randomEmoji" alt="Random Emoji">
+<button onclick="loadRandomEmoji()">换一张</button>
+
+<script>
+function loadRandomEmoji() {
+  fetch('https://your-project.pages.dev/api/random-image')
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('randomEmoji').src = data.url
+      document.getElementById('randomEmoji').alt = data.name
+    })
+}
+loadRandomEmoji()
+</script>
+```
+
+**获取特定风格的随机表情包**:
+```javascript
+// 获取猫猫表情包
+fetch('https://your-project.pages.dev/api/random-image?group=group-1758073408523')
+  .then(res => res.json())
+  .then(data => console.log('随机猫猫:', data.name, data.url))
 ```
 
 ## 🎯 使用说明
