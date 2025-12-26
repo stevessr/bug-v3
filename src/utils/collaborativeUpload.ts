@@ -17,6 +17,7 @@ export interface CollaborativeUploadConfig {
   onWorkerStats?: (stats: WorkerStats) => void
   onRemoteUploadComplete?: (filename: string, url: string) => void // 远程上传完成回调（来自工作者）
   onDisconnect?: (pendingTasks: string[]) => void // 断线时回调，返回未完成的远程任务文件名
+  onCurrentTask?: (task: { filename: string; status: string } | null) => void // Worker 当前任务回调
 }
 
 export interface ConnectionStatus {
@@ -25,6 +26,7 @@ export interface ConnectionStatus {
   role: 'master' | 'worker'
   workerId?: string
   sessionId?: string
+  uuid?: string // 当前节点的 UUID
 }
 
 export interface UploadProgress {
@@ -36,6 +38,11 @@ export interface UploadProgress {
   waitingFor?: number // seconds to wait
   waitStart?: number // timestamp when waiting started
   waitingWorkerId?: string // which worker is waiting (for 429)
+  // Node file distribution (worker ID -> list of files)
+  nodeFiles?: Record<string, string[]> // e.g., { "worker-1": ["file1.png", "file2.png"], "master": ["file3.png"] }
+  // UUID information
+  masterUuid?: string // Master 节点的 UUID
+  currentUuid?: string // 当前节点的 UUID
 }
 
 export interface WorkerStats {
@@ -114,13 +121,34 @@ export class CollaborativeUploadClient {
   // 待处理任务元数据（工作者用于关联二进制数据）
   private pendingTaskMeta: Map<string, UploadTask> = new Map()
 
+  // 追踪每个节点正在处理的文件（主控端使用）
+  private nodeFileMap: Map<string, Set<string>> = new Map() // workerId -> Set<filename>
+
+  // UUID for this instance
+  private uuid: string
+  // Master UUID (worker 端使用)
+  private masterUuid: string | null = null
+
   constructor(config: CollaborativeUploadConfig) {
     this.config = config
+    this.uuid = this.generateUuid()
     this._status = {
       connected: false,
       serverUrl: config.serverUrl,
-      role: config.role
+      role: config.role,
+      uuid: this.uuid
     }
+  }
+
+  /**
+   * 生成 UUID v4
+   */
+  private generateUuid(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0
+      const v = c === 'x' ? r : (r & 0x3) | 0x8
+      return v.toString(16)
+    })
   }
 
   get status(): ConnectionStatus {
@@ -152,15 +180,15 @@ export class CollaborativeUploadClient {
         this.connectReject = reject
 
         this.ws.onopen = () => {
-          console.log('[CollaborativeUpload] Connected to server')
+          console.log('[CollaborativeUpload] Connected to server, UUID:', this.uuid)
           this._status.connected = true
 
           // 根据角色注册
           if (this.config.role === 'worker') {
-            this.send({ type: 'WORKER_REGISTER' })
+            this.send({ type: 'WORKER_REGISTER', uuid: this.uuid })
             this.startHeartbeat()
           } else {
-            this.send({ type: 'CREATE_SESSION' })
+            this.send({ type: 'CREATE_SESSION', uuid: this.uuid })
           }
 
           this.config.onStatusChange?.(this._status)
@@ -270,15 +298,55 @@ export class CollaborativeUploadClient {
     }
 
     // 通知进度更新
-    this.config.onProgress?.({
+    this.config.onProgress?.(this.buildProgressInfo())
+  }
+
+  /**
+   * 将文件分配给节点
+   */
+  private assignFileToNode(workerId: string, filename: string): void {
+    if (!this.nodeFileMap.has(workerId)) {
+      this.nodeFileMap.set(workerId, new Set())
+    }
+    this.nodeFileMap.get(workerId)!.add(filename)
+    console.log(`[CollaborativeUpload] Assigned ${filename} to ${workerId}`)
+  }
+
+  /**
+   * 从节点移除文件
+   */
+  private removeFileFromNode(workerId: string, filename: string): void {
+    const files = this.nodeFileMap.get(workerId)
+    if (files) {
+      files.delete(filename)
+      if (files.size === 0) {
+        this.nodeFileMap.delete(workerId)
+      }
+    }
+  }
+
+  /**
+   * 构建进度信息（包含节点文件分配）
+   */
+  private buildProgressInfo(): UploadProgress {
+    const nodeFiles: Record<string, string[]> = {}
+    this.nodeFileMap.forEach((files, workerId) => {
+      nodeFiles[workerId] = Array.from(files)
+    })
+
+    return {
       completed:
         this.sessionResults.filter(r => r.success).length +
         this.localUploadResults.filter(r => r.success).length,
       failed:
         this.sessionResults.filter(r => !r.success).length +
         this.localUploadResults.filter(r => !r.success).length,
-      total: this.totalExpected
-    })
+      total: this.totalExpected,
+      currentFile: undefined,
+      nodeFiles,
+      masterUuid: this.config.role === 'master' ? this.uuid : undefined,
+      currentUuid: this.uuid
+    }
   }
 
   /**
@@ -451,6 +519,11 @@ export class CollaborativeUploadClient {
 
         case 'TASKS_SUBMITTED':
           console.log('[CollaborativeUpload] Tasks submitted:', data.taskCount)
+          // 保存 master UUID（worker 端）
+          if (data.masterUuid) {
+            this.masterUuid = data.masterUuid
+            console.log('[CollaborativeUpload] Master UUID:', this.masterUuid)
+          }
           break
 
         case 'TASK_ASSIGNED':
@@ -464,7 +537,7 @@ export class CollaborativeUploadClient {
               size: data.task.size
             })
             console.log(
-              `[CollaborativeUpload] Task metadata stored for binary: ${data.task.taskId}`
+              `[CollaborativeUpload] Task metadata stored for binary: ${data.task.taskId}, Master UUID: ${this.masterUuid || 'unknown'}`
             )
           } else {
             // 兼容旧的 Base64 模式
@@ -477,6 +550,8 @@ export class CollaborativeUploadClient {
           console.log(
             `[CollaborativeUpload] Worker ${data.workerId} waiting on ${data.filename}: ${data.waitTime}s`
           )
+          // 记录文件分配给节点
+          this.assignFileToNode(data.workerId, data.filename)
           this.config.onProgress?.({
             completed:
               this.sessionResults.filter(r => r.success).length +
@@ -488,7 +563,8 @@ export class CollaborativeUploadClient {
             currentFile: data.filename,
             waitingFor: data.waitTime,
             waitStart: data.waitStart,
-            waitingWorkerId: data.workerId
+            waitingWorkerId: data.workerId,
+            nodeFiles: this.buildProgressInfo().nodeFiles
           })
           break
 
@@ -501,6 +577,10 @@ export class CollaborativeUploadClient {
           })
           // 从待处理列表中移除
           this.pendingRemoteFiles = this.pendingRemoteFiles.filter(f => f !== data.filename)
+          // 从节点文件映射中移除（如果有 workerId）
+          if (data.workerId) {
+            this.removeFileFromNode(data.workerId, data.filename)
+          }
           // 重置超时（有进展时）
           this.resetTaskTimeout()
           // 回调通知远程上传完成
@@ -513,7 +593,8 @@ export class CollaborativeUploadClient {
               this.sessionResults.filter(r => !r.success).length +
               this.localUploadResults.filter(r => !r.success).length,
             total: this.totalExpected,
-            currentFile: data.filename
+            currentFile: data.filename,
+            nodeFiles: this.buildProgressInfo().nodeFiles
           })
           this.checkAllComplete()
           break
@@ -527,6 +608,10 @@ export class CollaborativeUploadClient {
           })
           // 从待处理列表中移除
           this.pendingRemoteFiles = this.pendingRemoteFiles.filter(f => f !== data.filename)
+          // 从节点文件映射中移除（如果有 workerId）
+          if (data.workerId) {
+            this.removeFileFromNode(data.workerId, data.filename)
+          }
           // 重置超时（有进展时）
           this.resetTaskTimeout()
           this.config.onProgress?.({
@@ -537,7 +622,8 @@ export class CollaborativeUploadClient {
               this.sessionResults.filter(r => !r.success).length +
               this.localUploadResults.filter(r => !r.success).length,
             total: this.totalExpected,
-            currentFile: data.filename
+            currentFile: data.filename,
+            nodeFiles: this.buildProgressInfo().nodeFiles
           })
           this.checkAllComplete()
           break
@@ -613,7 +699,16 @@ export class CollaborativeUploadClient {
     meta: UploadTask,
     data: ArrayBuffer
   ): Promise<void> {
-    console.log('[CollaborativeUpload] Processing binary task:', taskId, meta.filename)
+    console.log(
+      '[CollaborativeUpload] Processing binary task:',
+      taskId,
+      meta.filename,
+      'Worker UUID:',
+      this.uuid
+    )
+
+    // 通知开始处理任务
+    this.config.onCurrentTask?.({ filename: meta.filename, status: 'processing' })
 
     try {
       // 直接从 ArrayBuffer 创建 File
@@ -623,12 +718,16 @@ export class CollaborativeUploadClient {
       // Rate limit wait callback - notify master when waiting
       const onRateLimitWait = async (waitTime: number): Promise<void> => {
         console.log(`[CollaborativeUpload] Worker rate limited, waiting ${waitTime / 1000}s...`)
+        // 通知正在等待
+        this.config.onCurrentTask?.({ filename: meta.filename, status: 'waiting' })
         this.send({
           type: 'TASK_WAITING',
           taskId,
           filename: meta.filename,
           waitTime: waitTime / 1000,
-          waitStart: Date.now()
+          waitStart: Date.now(),
+          workerId: this._status.workerId, // 工作者 ID
+          workerUuid: this.uuid // 工作者 UUID
         })
       }
 
@@ -639,30 +738,42 @@ export class CollaborativeUploadClient {
         onRateLimitWait
       )
 
-      // 报告成功
+      // 报告成功（包含 worker 信息）
       this.send({
         type: 'TASK_COMPLETED',
         taskId,
-        resultUrl
+        resultUrl,
+        filename: meta.filename,
+        workerId: this._status.workerId, // 工作者 ID
+        workerUuid: this.uuid // 工作者 UUID
       })
 
       // 更新本地统计
       this.workerStats.completed++
       this.workerStats.totalBytes += meta.size
       this.config.onWorkerStats?.(this.workerStats)
+
+      // 通知任务完成
+      this.config.onCurrentTask?.({ filename: meta.filename, status: 'completed' })
     } catch (error) {
       console.error('[CollaborativeUpload] Binary task failed:', error)
 
-      // 报告失败
+      // 报告失败（包含 worker 信息）
       this.send({
         type: 'TASK_FAILED',
         taskId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
+        filename: meta.filename,
+        workerId: this._status.workerId, // 工作者 ID
+        workerUuid: this.uuid // 工作者 UUID
       })
 
       // 更新本地统计
       this.workerStats.failed++
       this.config.onWorkerStats?.(this.workerStats)
+
+      // 通知任务失败
+      this.config.onCurrentTask?.({ filename: meta.filename, status: 'failed' })
     }
   }
 
@@ -823,12 +934,13 @@ export class CollaborativeUploadClient {
    * @param tasks - 任务元数据
    */
   private async submitRemoteTasks(files: File[], tasks: UploadTask[]): Promise<void> {
-    // 1. 发送元数据
+    // 1. 发送元数据（包含 master UUID）
     this.send({
       type: 'SUBMIT_TASKS',
       sessionId: this._sessionId,
       tasks,
-      binaryMode: true // 通知服务器将接收二进制数据
+      binaryMode: true, // 通知服务器将接收二进制数据
+      masterUuid: this.uuid // 广播 master 的 UUID
     })
 
     // 2. 批量发送二进制数据（避免内存耗尽）
@@ -910,7 +1022,9 @@ let workerClient: CollaborativeUploadClient | null = null
  */
 export async function startWorkerMode(
   serverUrl: string,
-  onStatusChange?: (status: ConnectionStatus) => void
+  onStatusChange?: (status: ConnectionStatus) => void,
+  onWorkerStats?: (stats: WorkerStats) => void,
+  onCurrentTask?: (task: { filename: string; status: string } | null) => void
 ): Promise<CollaborativeUploadClient> {
   if (workerClient) {
     workerClient.disconnect()
@@ -919,7 +1033,9 @@ export async function startWorkerMode(
   workerClient = new CollaborativeUploadClient({
     serverUrl,
     role: 'worker',
-    onStatusChange
+    onStatusChange,
+    onWorkerStats,
+    onCurrentTask
   })
 
   await workerClient.connect()

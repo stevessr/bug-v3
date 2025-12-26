@@ -19,6 +19,7 @@ const connectionStatus = ref<ConnectionStatus | null>(null)
 const serverStats = ref<ServerStats | null>(null)
 const workerStats = ref({ completed: 0, failed: 0, totalBytes: 0 })
 const uploadProgress = ref<UploadProgress | null>(null)
+const currentTask = ref<{ filename: string; status: string } | null>(null)
 
 // 主控端状态
 const isMasterMode = ref(false)
@@ -42,7 +43,7 @@ const statusText = computed(() => {
   if (connectionStatus.value.role === 'worker') {
     return `工作者模式 (ID: ${connectionStatus.value.workerId?.slice(0, 8)}...)`
   }
-  return `主控模式 (会话: ${connectionStatus.value.sessionId?.slice(0, 8)}...)`
+  return `主控模式 (会话：${connectionStatus.value.sessionId?.slice(0, 8)}...)`
 })
 
 const formatBytes = (bytes: number) => {
@@ -50,6 +51,38 @@ const formatBytes = (bytes: number) => {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
 }
+
+const taskStatusText = computed(() => {
+  if (!currentTask.value) return ''
+  switch (currentTask.value.status) {
+    case 'processing':
+      return '处理中'
+    case 'waiting':
+      return '等待中'
+    case 'completed':
+      return '已完成'
+    case 'failed':
+      return '失败'
+    default:
+      return ''
+  }
+})
+
+const taskStatusColor = computed(() => {
+  if (!currentTask.value) return ''
+  switch (currentTask.value.status) {
+    case 'processing':
+      return 'text-blue-600'
+    case 'waiting':
+      return 'text-orange-600'
+    case 'completed':
+      return 'text-green-600'
+    case 'failed':
+      return 'text-red-600'
+    default:
+      return 'text-gray-600'
+  }
+})
 
 // ==================== 工作者模式 ====================
 
@@ -60,20 +93,38 @@ async function toggleWorkerMode() {
     isWorkerMode.value = false
     connectionStatus.value = null
     serverStats.value = null
+    currentTask.value = null
     stopStatsRefresh()
   } else {
     // 启动工作者模式
     try {
-      await startWorkerMode(serverUrl.value, status => {
-        connectionStatus.value = status
-      })
+      await startWorkerMode(
+        serverUrl.value,
+        status => {
+          connectionStatus.value = status
+        },
+        stats => {
+          workerStats.value = stats
+        },
+        task => {
+          currentTask.value = task
+          // 2 秒后清除任务状态（如果已完成/失败）
+          if (task && (task.status === 'completed' || task.status === 'failed')) {
+            setTimeout(() => {
+              if (currentTask.value?.filename === task.filename) {
+                currentTask.value = null
+              }
+            }, 2000)
+          }
+        }
+      )
       isWorkerMode.value = true
 
       // 开始定时刷新状态
       startStatsRefresh()
     } catch (error) {
       console.error('Failed to start worker mode:', error)
-      alert('连接服务器失败: ' + (error instanceof Error ? error.message : String(error)))
+      alert('连接服务器失败：' + (error instanceof Error ? error.message : String(error)))
     }
   }
 }
@@ -123,7 +174,7 @@ async function startMasterMode() {
     serverStats.value = masterClient.value.serverStats
   } catch (error) {
     console.error('Failed to start master mode:', error)
-    alert('连接服务器失败: ' + (error instanceof Error ? error.message : String(error)))
+    alert('连接服务器失败：' + (error instanceof Error ? error.message : String(error)))
   }
 }
 
@@ -146,7 +197,7 @@ async function startCollaborativeUpload() {
     uploadResults.value = results
   } catch (error) {
     console.error('Collaborative upload failed:', error)
-    alert('上传失败: ' + (error instanceof Error ? error.message : String(error)))
+    alert('上传失败：' + (error instanceof Error ? error.message : String(error)))
   } finally {
     isUploading.value = false
   }
@@ -232,18 +283,31 @@ function saveServerUrl() {
         >
           <div class="grid grid-cols-3 gap-2 text-sm">
             <div>
-              <span class="text-gray-500 dark:text-gray-400">完成:</span>
+              <span class="text-gray-500 dark:text-gray-400">完成：</span>
               <span class="ml-1 font-medium dark:text-white">{{ workerStats.completed }}</span>
             </div>
             <div>
-              <span class="text-gray-500 dark:text-gray-400">失败:</span>
+              <span class="text-gray-500 dark:text-gray-400">失败：</span>
               <span class="ml-1 font-medium dark:text-white">{{ workerStats.failed }}</span>
             </div>
             <div>
-              <span class="text-gray-500 dark:text-gray-400">流量:</span>
+              <span class="text-gray-500 dark:text-gray-400">流量：</span>
               <span class="ml-1 font-medium dark:text-white">
                 {{ formatBytes(workerStats.totalBytes) }}
               </span>
+            </div>
+          </div>
+
+          <!-- 当前任务 -->
+          <div v-if="currentTask" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+            <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">当前任务</div>
+            <div class="flex items-center justify-between">
+              <div class="text-sm font-medium dark:text-white truncate flex-1 mr-2">
+                {{ currentTask.filename }}
+              </div>
+              <div class="text-xs font-medium" :class="taskStatusColor">
+                {{ taskStatusText }}
+              </div>
             </div>
           </div>
         </div>
@@ -360,7 +424,7 @@ function saveServerUrl() {
               <span class="font-mono dark:text-white">{{ worker.id.slice(0, 8) }}...</span>
             </div>
             <div class="text-gray-500 dark:text-gray-400">
-              完成: {{ worker.stats.completed }} | 失败: {{ worker.stats.failed }}
+              完成：{{ worker.stats.completed }} | 失败：{{ worker.stats.failed }}
             </div>
           </div>
         </div>

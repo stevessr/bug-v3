@@ -416,6 +416,21 @@ const getWaitProgress = (progressItem: any) => {
   return { percent: 100 - percent, remaining: Math.ceil(remaining) }
 }
 
+// 格式化节点 ID，使其更友好
+const formatNodeId = (nodeId: string) => {
+  // 如果是 worker-xxx 格式，提取数字并显示为 "节点 #xxx"
+  const match = nodeId.match(/worker[-_]?(\d+)/i)
+  if (match) {
+    return `节点 #${match[1]}`
+  }
+  // 如果是 "master"，显示为 "主机"
+  if (nodeId.toLowerCase() === 'master') {
+    return '主机'
+  }
+  // 否则返回原始 ID，但截断过长的 ID
+  return nodeId.length > 15 ? nodeId.slice(0, 12) + '...' : nodeId
+}
+
 const addFiles = async (files: File[]) => {
   const imageFiles = files.filter(file => file.type.startsWith('image/'))
 
@@ -921,7 +936,7 @@ const connectCollaborativeServer = async () => {
     collaborativeClient.value = new CollaborativeUploadClient({
       serverUrl: collaborativeServerUrl.value,
       role: 'master',
-      taskTimeout: 120000, // 2分钟超时
+      taskTimeout: 120000, // 2 分钟超时
       onStatusChange: status => {
         isCollaborativeConnected.value = status.connected
         // 如果断线且不在上传中，显示提示
@@ -1550,6 +1565,32 @@ onBeforeUnmount(() => {
           "
           :status="collaborativeProgress.failed > 0 ? 'exception' : 'active'"
         />
+
+        <!-- UUID 信息显示 -->
+        <div
+          v-if="collaborativeProgress.masterUuid || collaborativeProgress.currentUuid"
+          class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800"
+        >
+          <div class="text-xs space-y-1">
+            <div v-if="collaborativeProgress.masterUuid" class="flex items-center gap-2">
+              <span class="font-medium text-gray-700 dark:text-gray-300">主机 UUID:</span>
+              <code
+                class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-900 dark:text-gray-100"
+              >
+                {{ collaborativeProgress.masterUuid }}
+              </code>
+            </div>
+            <div v-if="collaborativeProgress.currentUuid" class="flex items-center gap-2">
+              <span class="font-medium text-gray-700 dark:text-gray-300">当前节点 UUID:</span>
+              <code
+                class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-900 dark:text-gray-100"
+              >
+                {{ collaborativeProgress.currentUuid }}
+              </code>
+            </div>
+          </div>
+        </div>
+
         <div class="flex items-center justify-between mt-2">
           <div v-if="collaborativeProgress.currentFile" class="text-xs text-gray-500">
             当前：{{ collaborativeProgress.currentFile }}
@@ -1570,6 +1611,36 @@ onBeforeUnmount(() => {
                 <span class="text-xs">{{ getWaitProgress(collaborativeProgress).remaining }}s</span>
               </template>
             </a-progress>
+          </div>
+        </div>
+
+        <!-- 节点文件分配 -->
+        <div
+          v-if="
+            collaborativeProgress.nodeFiles &&
+            Object.keys(collaborativeProgress.nodeFiles).length > 0
+          "
+          class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600"
+        >
+          <div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">节点文件分配</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div
+              v-for="(files, nodeId) in collaborativeProgress.nodeFiles"
+              :key="nodeId"
+              class="p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-medium text-gray-900 dark:text-white">
+                  {{ formatNodeId(nodeId) }}
+                </span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ files.length }} 个文件
+                </span>
+              </div>
+              <div class="text-xs text-gray-600 dark:text-gray-400 max-h-20 overflow-y-auto">
+                {{ files.join(', ') }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
