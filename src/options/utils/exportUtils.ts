@@ -481,9 +481,11 @@ function createTarHelpers(encoder: TextEncoder) {
 export async function exportToCloudMarket(
   groups: any[],
   archivedGroups: any[],
-  includeArchived: boolean = true
+  includeArchived: boolean = true,
+  onProgress?: (current: number, total: number, groupName: string) => void
 ) {
   const allGroups = includeArchived ? [...groups, ...archivedGroups] : groups
+  const total = allGroups.length + 1 // +1 for metadata
 
   // 生成 metadata
   const metadata = {
@@ -503,6 +505,7 @@ export async function exportToCloudMarket(
   }
 
   // 下载 metadata.json
+  onProgress?.(1, total, 'metadata.json')
   downloadJson('metadata.json', metadata)
 
   // 等待一小段时间，避免浏览器阻止多个下载
@@ -535,6 +538,7 @@ export async function exportToCloudMarket(
       }))
     }
 
+    onProgress?.(i + 2, total, group.name)
     downloadJson(`group-${group.id}.json`, groupData)
   }
 }

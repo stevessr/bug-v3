@@ -1,0 +1,71 @@
+{
+  "id": "group-1758720673759",
+  "name": "fu师傅🍜",
+  "icon": "https://linux.do/uploads/default/original/4X/3/2/1/321359362aaa44d55185e02dc56f3381c7137b34.jpeg",
+  "order": 35,
+  "emojis": [
+    {
+      "id": "emoji-1758720653788-3t58r8",
+      "packet": 1758720653788,
+      "name": "红烧牛肉面",
+      "url": "https://linux.do/uploads/default/original/4X/3/2/1/321359362aaa44d55185e02dc56f3381c7137b34.jpeg",
+      "groupId": "group-1758720673759"
+    },
+    {
+      "id": "emoji-1758720650368-591tsg",
+      "packet": 1758720650368,
+      "name": "香葱",
+      "url": "https://linux.do/uploads/default/original/4X/1/b/7/1b7c34b1d3402683a059396539777ca3152be75f.jpeg",
+      "groupId": "group-1758720673759"
+    },
+    {
+      "id": "emoji-1758720643083-amlk76",
+      "packet": 1758720643083,
+      "name": "鸡蛋牛肉面",
+      "url": "https://linux.do/uploads/default/original/4X/9/1/f/91f128ff4e26fc7713d453c96e145d787702c553.jpeg",
+      "groupId": "group-1758720673759"
+    },
+    {
+      "id": "emoji-1758720638631-e8g900",
+      "packet": 1758720638631,
+      "name": "酸菜牛肉面",
+      "url": "https://linux.do/uploads/default/original/4X/a/6/1/a61970df319c61c0ee7b1686ef4b94344cff2df6.jpeg",
+      "groupId": "group-1758720673759"
+    },
+    {
+      "id": "emoji-1758720628995-d8fmye",
+      "packet": 1758720628995,
+      "name": "香菇炖鸡",
+      "url": "https://linux.do/uploads/default/original/4X/3/e/1/3e1c49792f427ec7fd5fba1cae54981c06c1e7d4.jpeg",
+      "groupId": "group-1758720673759"
+    },
+    {
+      "id": "emoji-1758720562675-hk8m3q",
+      "packet": 1758720562675,
+      "name": "干脆面",
+      "url": "https://linux.do/uploads/default/original/4X/7/3/6/7369b7e663a4e3de1f4ef339cf38a5a121ec7d23.jpeg",
+      "groupId": "group-1758720673759"
+    },
+    {
+      "id": "emoji-1758720535275-78927u",
+      "packet": 1758720535275,
+      "name": "葱油拌面",
+      "url": "https://linux.do/uploads/default/original/4X/0/f/e/0feadd3167af16e723bba26e7e9ad521c845cce2.jpeg",
+      "groupId": "group-1758720673759"
+    },
+    {
+      "id": "emoji-1758720526720-077wgl",
+      "packet": 1758720526720,
+      "name": "金汤肥牛",
+      "url": "https://linux.do/uploads/default/original/4X/7/2/2/72261fd3e9b009417ad428f36dc277d7299f6e44.jpeg",
+      "groupId": "group-1758720673759"
+    },
+    {
+      "id": "emoji-1758720516340-0sw3sx",
+      "packet": 1758720516340,
+      "name": "鲜虾",
+      "url": "https://linux.do/uploads/default/original/4X/f/a/f/fafaf61270f2a8501130ed7ba5e99ac550248687.jpeg",
+      "groupId": "group-1758720673759"
+    }
+  ]
+}

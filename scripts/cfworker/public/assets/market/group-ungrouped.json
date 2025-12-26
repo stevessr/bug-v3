@@ -1,0 +1,50 @@
+{
+  "id": "ungrouped",
+  "name": "未分组",
+  "icon": "📦",
+  "order": 21,
+  "emojis": [
+    {
+      "id": "emoji-1762324063844-b6jl9j",
+      "packet": 1762324063844,
+      "name": "不要再说",
+      "url": "https://linux.do/uploads/default/original/4X/4/1/6/41600181b1092ea5c6a6ac07941a31eba92dd9e3.jpeg",
+      "groupId": "ungrouped"
+    },
+    {
+      "id": "emoji-1762770159327-0hi9bs",
+      "packet": 1762770159327,
+      "name": "为什么要扣我",
+      "url": "https://linux.do/uploads/default/original/4X/5/7/c/57c8ead3bc487e72711269330856cd86475391b6.webp",
+      "groupId": "ungrouped"
+    },
+    {
+      "id": "emoji-1763016519943-hxd2my",
+      "packet": 1763016519943,
+      "name": "呜呜呜",
+      "url": "https://linux.do/uploads/default/original/4X/2/8/0/2809af7ee9951beaee7866323a87281820f2dd7d.jpeg",
+      "groupId": "ungrouped"
+    },
+    {
+      "id": "emoji-1763038851714-1wt9ih",
+      "packet": 1763038851714,
+      "name": "吹气球",
+      "url": "https://linux.do/uploads/default/original/4X/f/7/3/f7343ac0b34f1737cbedb7e72286f3afe1281161.jpeg",
+      "groupId": "ungrouped"
+    },
+    {
+      "id": "emoji-1763557369682-em3uqh",
+      "packet": 1763557369682,
+      "name": "甜美回眸",
+      "url": "https://linux.do/uploads/default/original/4X/6/7/4/674d83a53e52d74e545cecaf780491c2ab522315.jpeg",
+      "groupId": "ungrouped"
+    },
+    {
+      "id": "emoji-1765096060679-7gr1jy",
+      "packet": 1765096060679,
+      "name": "我不想🦌了，我想被🦌",
+      "url": "https://linux.do/uploads/default/original/4X/b/f/7/bf73a190d1aba9d91fb5e58c8f44271781bd2d2d.jpeg",
+      "groupId": "ungrouped"
+    }
+  ]
+}

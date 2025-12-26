@@ -1,0 +1,42 @@
+{
+  "id": "group-1763969927132",
+  "name": "demo",
+  "icon": "📁",
+  "order": 92,
+  "emojis": [
+    {
+      "id": "emoji-1763969965553-62xzax",
+      "packet": 1763969965553,
+      "name": "无奈",
+      "url": "https://linux.do/uploads/default/original/4X/9/6/4/964f653347d3c7d21cb9aba5566df126466f8e29.png",
+      "width": 120,
+      "height": 120,
+      "groupId": "group-1763969927132"
+    },
+    {
+      "id": "emoji-1763971976253-2dqn6n",
+      "packet": 1763971976253,
+      "name": "头像",
+      "url": "https://linux.do/user_avatar/linux.do/stevessr/999/1169032_2.png",
+      "groupId": "group-1763969927132"
+    },
+    {
+      "id": "emoji-1764745630144-t2jvw9",
+      "packet": 0,
+      "name": "G7OT7vibgAEPgAF.jpeg",
+      "url": "https://linux.do/uploads/default/original/4X/c/9/3/c93f855156a989e03a192e9aae29ae248b05857a.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/9/3/c93f855156a989e03a192e9aae29ae248b05857a.jpeg",
+      "groupId": "group-1763969927132"
+    },
+    {
+      "id": "emoji-1764746258297-1hb19d",
+      "packet": 0,
+      "name": "G7NubvabgAAo6gO.jpeg",
+      "url": "https://linux.do/uploads/default/original/4X/f/c/b/fcb7784799024e20f76fbf037bcaca112f7d55c8.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/c/b/fcb7784799024e20f76fbf037bcaca112f7d55c8.jpeg",
+      "width": 2894,
+      "height": 4093,
+      "groupId": "group-1763969927132"
+    }
+  ]
+}

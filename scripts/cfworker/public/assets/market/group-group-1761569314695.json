@@ -1,0 +1,1088 @@
+{
+  "id": "group-1761569314695",
+  "name": "雪风",
+  "icon": "https://linux.do/uploads/default/original/4X/e/f/9/ef93745624313add1dc703cf16c024517832f713.webp",
+  "order": 54,
+  "emojis": [
+    {
+      "id": "emoji-1761569324107-errt57",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7tsyYTKDb089iG3Urb0X-IeAAIPDAACEtE5VZiKhauBlHaxNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/a/5/fa54f1e4c8666fd32a6bed0fea81d4b2be8928ec.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-bgsavp",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7utvjQ5VFE3PxV28T5TaqJiAAICDwACX2TgV9bCDS0QTBGQNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/7/4/27460000222e1f85064b372c51f6a8623d2c05f4.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-utn6kq",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7vrG1HxJlV2H0ZRrDkCYZ_LAAIBCwACvSM5VdJwoUkal-B4NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/f/9/ef93745624313add1dc703cf16c024517832f713.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-sgumpc",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7s0Lai9-zgccs46Qy4wNQL0AAKODgAClVLpV9f0ERogz7X4NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/9/0/1907508d360b51b43554c1e4942bd1b0b5965ec8.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-hjmor9",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7s0M6h3-_rvwFL4eUrUiyG4AAJYDwACkp3hV0RYioMJ5xUWNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/b/0/fb048134eca0447a6e1cf8174bebd8496aa50a90.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-96fned",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7s5EN0gzjqRPMZ6CXjjChwvAALDEQACXC7BVNunGp360mv-NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/7/2/7722b3df7a9cf1380cd7096ec0055f6aba870179.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-juj0s8",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7s8ROXLmYNJUaF5YUrZjdvCAAJgEAACc13oVxttOumdO93PNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/7/7/e771435c1fb56fd0db42b8432430de0a7d73ab18.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-4n8989",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7s-FEfIOWJ0bhD3K_mB0aIRAAJcDAACZFegVp-BiePTIIgeNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/d/a/6/da6004dc9a1af4e0779269cc4fd8293457efb9de.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-cnbv5r",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sAAVjG8mHvp90PdSj760GdogACOQ8AApDW4FecWNPU3bQZaDYE.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/d/4/fd4207cf481d8973e746f110e381c11c4412e9ca.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-ue78y8",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sEUi4kqWQS-4M2U5VRkMBLAAI-DQACHiPYVu-E3GzGUfwNNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/8/2/f/82fe5038883e54e61d47ee69188addcf6a9508b9.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-27yg7j",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sFKIlNigaRHh3SUUbyoa5cAAIPEAACeMbJVSLH_ki-dgQVNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/9/d/19d4cd2fb53226e7fc52c8e19db917843c8aec82.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-or2upb",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sFuV7Ma_e8rvL7YPQWuZODAALqDgACYfbJVaoCEicEBSjhNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/2/a/22a28fb2e755bc54352ed6de6fd2f4dd2bae99ef.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-mpa4gt",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sHTp48hWbzEEdtiek6vsjcAAJtDgACTQzJVB2_BKaa5BMCNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/d/6/f/d6ff0f9be4b4058aae417559f0dd9f7d8fd3d520.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-ibz9tq",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sLznUnNTrLvkQMp9ipPoXOAAKtDAAC3as5VXe0b04j5OHpNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/b/6/7b68ff6e0b22836e440dad2882692de9ef22b680.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-z5y01b",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sOo6P5IU-SJkRSAAFHaKYYrAAC2gwAAkFqoFapV65IG9ix4jYE.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/6/2/f62442fd3342bd79e6b7f8a324d0bac940fd8325.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-etb9z0",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sUSGxKOKtp_KBihA3j_lB_AAKzDAACbZM4Vc_XGHdTZfoZNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/1/a/11ae9768c5d9afa8ab53cf3f2c9ce598999f6c3c.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-2bicrr",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sW85MzG3FQsZ39popkdCyIAAILDwACnGvoV8O_1GW9IQ6MNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/5/2/b/52ba50023c3ad97099b0395783e077d9f75a4627.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-qlbkhw",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sXXkz5pqcph9mTp3NQtQs_AAJLEAACrj4xVUZ-fgR_AQ4PNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/7/f/07ffddef3f10beeeb36442959cfcdf1b934ce830.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-t85tng",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7s_4fSP7BBt8FlEKTmlAAE12QACDAsAApy7OVX8ifiZw_AW1zYE.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/3/9/e39248b89f1467eba25a6e4ff61c4f3fb652fbf6.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-ugrvpw",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7scEh4rWRrKKCOBGFX2toowAAKSCwACVhMwVYqMzVOCsXRzNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/3/f/33fcbb759bb70c98ab1537bc78979c83fdb45576.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-gb5jqk",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sc_tuL9jxLHebfaIgrgGaSAAJ-CgAC1Mg4VbgzpZsXlOdkNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/9/b/b9b586f971fe5353d25bb2774857b8a9130f07e3.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-twjaaw",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7scyfKDnn8rgIQh3NcRlWEiAAKnDgACqrwwVU3GRgtVBn4eNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/8/3/183679619dcc03b6a8c05b024974971949ecba6f.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-oyiezw",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sdfR9cWiDRPnCSdCxNH1x1AALEDwACVjTYVskS4-_-Gos1NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/5/9/3594af0e3a2170b730ea6ecba2bd20bf66618f92.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-ejc2kq",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sf2dNoYlnr69GoOfITySIjAAKCEAAC8_bIVTyaF0pjYZ5zNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/f/2/4f27efc228ac400aa41db185e20b9ef34ce1161a.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-cs135d",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sjvrf1RFajvrqEP7PHz39YAAKYEAAC4J7IVWfrLUQwxGRgNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/b/9/7b9dee214bb329aafe920a13ab9963a68b9a96b2.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-n3ywfl",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7skJfBbF7TnB1Q-WU4cU0JkAAKsDAACfKGhVgeHp5p05YouNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/e/9/0e9420abb704ff83eabb74526457e9b624354f17.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-vsaggp",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7slqvrLBBifx6cXyiQ-LNz2AAKTDwACUIcxVcAzsy8AAUkuHzYE.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/8/5/1852395cb51c839afd7c556bcca56a356dbe1503.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-rshixy",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7smh6_jZJByLVTdc9EBrj8jAAJwEAACxdzZVjQ1UNLLCAVuNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/0/0/f0012685bb5d4730acfc83031e2fb48e66b06e9e.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-c59a1h",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sorIyGju9frKFzY8H0o_xYAAJjCwACjew4VTXc5Be4IqpJNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/d/d/6ddfb70a887b334bcbece35f2d920aa0799e8b01.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-inzo33",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7sqkgENy3hbaJz227yspPwlAAL1CwACa405VS3icnWeQpHlNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/b/0/7b0ebe3c7f2ea4e00353e0ae734668914681ec0b.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-43fko2",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7ssCAir8VldygvqOKQwN5q-AAJ4DQACBgE5VRMAAWQ-qwABEBA2BA.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/4/7/44785a459e2e83bd552e2527ba7b46323f78c4a1.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-ed1b5z",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7suPQyb26rTrHHLydBF7epcAALlDAACxg44VSprrqc62D6mNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/0/8/60877dd1883cbe9131b84ef40bd7cf69224a5633.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-2zv1r2",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7suig3nVSXkGt68Hwxxht62AAI_DQACZWLJVPCkD5Lv_s8WNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/8/0/b80b1a55fc16d171292ebbf571ee4bd9bf2c3a75.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-rgzirm",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7t2OaYDoeW-pqODLxvFSiqDAAJMEAACpv0wVVc8jw_HbOQnNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/d/9/6d9580801445da06a83bc4f134532ef23f8d9512.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-ibyncn",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7t8P49BUHi2SSYGF2tKHLZXAAJvDQACH6HIVGE0pz37HW42NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/1/f/c1f2481bd0fae9a8d5ed47ee166902acc7a0cd35.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-vee2nc",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7t8oXbg8qFf5XSQKVZcoiMLAAIsFQAClczYVoA0uGeFHfEdNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/b/7/0b741967634133c6a50737f3ab8d2005fb606013.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-5gsacd",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7t-99Y-Y0FUNT5Yvdk90HdcAAInCwADcKBWRRET3XEUwdY2BA.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/9/4/1943a76df9bf9c10ff3c21238b2110d1a173c13a.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-4q4u24",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7t-EUb3Ye1u3oaJVsaSit4wAAKHEAACYeCgVgZlU1EBF95-NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/9/5/2/952ca1d0a5019c01bc6f5fdf66873c29dab8342a.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-4r80pl",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7tARxrqgebOObOpLOZk2Vo1AAKeDQACs2TAVPdHKfCbn-DdNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/9/3/3/933603dd1c39956be5036e55f5efbb32e94fe8be.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-uwl4gy",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7tBUCHNXiicx__D2bGOgrcOAAJxEQACDBDBVBBE57zSh29LNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/6/1/161bbb5c864aedf70bb47b2b03f56ec90f6f9d70.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324107-sgvhbq",
+      "packet": 1761569324107,
+      "name": "CAACAgUAAxUAAWj_U7tC7iTccUtCTnGySzGtf8KWAAJIDAACLJc5VTA1qGELt5JnNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/4/f/64f4a293b516919db1d758c0c9c32525895c10fa.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-28koeg",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tCHdE5mD99hRE0CtlUsOeTAAIlDgACSlIxVYz1Bt1hRPVBNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/4/d/14da8e326ee485d949554daa0d05b9da1db71888.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-ozetl4",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tGRdaZxDB-JXNab0AyN-KCAAK1DAACvMc5VXu1B_1LjR6iNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/8/2/782e911757f0452fcb815a09a7cdb05b41d3b7cb.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-06o9pd",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tQneCVVRZZHC0n-cc5j4l5AAInEAACiJ_JVOQKqjNL3STpNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/4/5/e454849e5ce9b5da59e7a1784cca567bf8c9c882.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-llecs0",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tT8UdOg-6wNUILTEk67wpLAALoDgACJtExVXoubInQpkY_NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/6/0/f60a01904bc62000ada7098dd66dce399a9908ec.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-t998mr",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tVMW1ERODLeeOCr1WP_5eRAALLEgACVajgV42Gi4qSr7sHNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/5/4/1/5418ac5ef565fe618532460b5bb6047bcb473620.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-26p437",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tXdQbhIAgUfuHcYzEhDgEiAAKDDQACLm3hV4pHHobiaf_7NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/d/5/b/d5b43458e0cc7f6adad2f231bae0dbaa9270f545.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-0mq0dw",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tbiTtaM4pRTjV7FkPPRgGEAAL-DQACPoQ5VTsk4MVv1UT5NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/f/9/7f94605a92edd07acb1cdc72d56ef697a31b8bc4.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-b110eg",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tdYyML7plY3P9zM0GonE9VAALNCgACYBXJVF0AATiwAS95fjYE.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/9/5/395f3d59d0eda50756e9fce9ebc315450a64207e.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-pnp2zo",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7teC0tBMEYjXDvAWf2zoTSPAAKJDgACDH_JVJSFISqjlac7NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/4/a/04ad4130b1a4865b76e514a709cd0acf1eb3082f.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-pt6ev9",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tmMRor10OUQVKclBZuRvL_AALqDQACGFTYVlAUbSJ4__g3NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/a/a/3aa8dc5abea6246d5407c615157b8834c446fdbb.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-0q8dcj",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tn-ZdvSPS-vjck_uhtU4zNAAJRDQACV4HYVhtASTssOZQQNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/1/6/61686249c1ce0deeecb84de0cf651c780f2b9648.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-phynm9",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tnt5-mNvWcHsa_Z5yfVHJ0AALKDQACrLXZViClQjbTeSTaNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/6/7/e674984583b2f263bc0f76adc1ae6417f71a52bb.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-3g4cyo",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tpyuHFZPlKPAg59n7fCY2UAALtDgACFarYVuduek3hGk2xNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/5/c/d/5cdb7a0116a98b25f4405997016f89a9d81ed352.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-zd2xke",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tq-EzRo1kBmS1ZlfqPGFgVAAJKDgACpJKgVrQY2CcCzZ3fNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/3/8/63860da7c5227bc42f478559de40772e82d39e8e.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-o2zzrw",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tsHOcj1kInBAZDPnwWfpeGAAKhDQACA4OhVj0WfU-hCvFZNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/d/9/cd9afab8cd86a47606f3c9d214d020b75d32a19d.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-6b2ptj",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tsSaAeh1TufgAByO6yd0b-zgAC1wsAAmTpoFaHMq6Xi5cWcTYE.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/1/1/c11c5b1ec1da7c566208270268e5435455439bb2.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-62zp1h",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7ttN4w7WkL1z5T8NI8peCIMAAJ2DgACQYQ4VdqI7S6SYmfDNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/8/f/38fbd2342404597344feb5d099ba25eec8d7b664.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-rh14g5",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7ttyrlmkUxXCk00QAOtb9UEAAKQEQACDTbgVyVq-m41uKzmNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/0/d/c0dd7c5d18662fcebe3c7fc3df6246c8dd0067fe.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-hmpsas",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tw5hKh879TR_9UcdxCIF1DAALsDgACpAMxVfz89sTo9QTbNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/1/9/01934872d744985eb9de531a18ce087d0a2887e8.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-hvcwkd",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7tz7EZcYamytnbcRx33ND6FAAKgDgACv1MwVXtSxwkWL1H4NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/6/1/b617f3ff2d61d079f31721d3f399d338161b8795.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-2rebb0",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7u0TWbgCol9apT53NDAqNudAAJEDgACih04VdTS9X9MLi6KNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/9/c/49c9a72370cfc37749e38d42c6afde7a4f62ae1f.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-rzbfk2",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7u61ZPYHT0MvJHv0eYPyBXQAAITDgAC7ckwVZQAASZbQ025DzYE.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/8/6/4866d7124c5bd5eee8ca07ac22604361dc5a6239.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-8busaj",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uCEaCkatNOVbxpEJV4VZ3WAAK0DgAC0dXAVBN4Fcix_ovSNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/d/5/2d5fea75cd6c114fbd5316db0800cd00ff71933a.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-rya9rf",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uCL4GRmiUfow0sc1BQrfDoAAKbDAACfdXgV3X5HvZguBHoNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/7/e/f7e4778a0330efcdd5e2b134638f80c053e736e6.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-3i6z8n",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uE3wGGFs1Cu7hqvZP6WtTUAAINEAACUMjhVyllZOcjQStONgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/5/a/9/5a9ab66c97cea3821f2bbcd1ed6f38d3a1bc88ce.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-ml25rs",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uM0yqZGuNNejODBXHhDqxcAAInCwACxyQ5VfIDa1daK9cdNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/5/c/25c28623df32a23be8b0761c0aa5b5244730edb4.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-1r1rp8",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uP0EuLeY8aIHs61No_J3u7AAJdDQACbNTJVUxHKMLeq80FNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/4/3/04391964a96c19e12018b239c9bc475ff181dd02.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-9297vr",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uQDreMVuYZIegeRAqARUcsAAKODgACTGI4VX1V0NtotaFcNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/6/a/06a9627cbd8f825ba5bb256c87e7ea6a96404fda.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-8370qm",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uSH1Kkc0Ryr0aj3p94hwlkAALYEAACUfbpV9Zen8rFaf5nNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/7/9/77976e63934c6dd87132c50980a0eebb05bc86bf.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-pdtpbo",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uVrtxZsPyV0ohDFZjapj5cAAIwDgACsJ3YVv_SMAGUr6vdNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/d/3/6d3f4eb27bb9da004349c5f9cb0ad3e8d6bcbfbe.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-zsahme",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uXLlhHvQrRk4zq3L0__Ug1AALmDAACfasxVZuf8rhtClenNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/a/1/1a1bc7010cf19bc94cbd6ec5b14e3cb93ab2639f.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-3s9l8w",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uYBxee4dWWDj4HOIWWjY0-AALFDQACt2Y5VfAp8JrJSEcMNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/3/e/23ec95e27ddfddc10365546ea30644bac8b18762.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-h71cdz",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7udJnsEjnJsuHT9qXPXCZDBAAIdDwACpVowVdiSldRiim5ZNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/5/2/05251b8cb39b5aa9d3929373c585ed407ed1ac50.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-qzsjkb",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7udeiMENf4y3a7PtYHc78geAAKzEAACRSjIVB9j0DNNW4z4NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/f/5/cf5a6e2dd039fdf0f3d04a30a7e88fddf6f51737.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-5e9con",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uh0CE5PgbTjI3HtDC94Y0RAALTDAACqUGgVuwa_BxPebMzNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/8/4/1/841fa01f8a042eb659706ef45216fb27c98ff5b5.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-jqmkcz",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7uiP3Pds2lP88hHENQkLPDQAAJaEQACOdbJVRDQmR63P__3NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/8/d/4/8d4719bbb06841176196287d10bfc74b03a92a2b.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-rz2bjf",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7ulGvOgwWpzLQxhQ9XU1wXuAAJBDwACvX84VaQIJ6UZ9YGKNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/7/a/07af166fb741ff958fe5d844479ea0051d7a2fe8.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-4m50j7",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7un2qET3Gp8PMO-bqOZccIUAAIwDQACJ_kxVVklsDXRBzGNNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/7/0/070b6a493f48523ee4dff22af4fccd149a67f682.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-wvjcmf",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7unPL8uYgRQoOjrlsXiqH94AAIbDwACUW-pVrSJBcElO6rlNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/d/f/bdf13f7d23994e3ac19a890f650c11ec5cb20ca0.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-cwbw1e",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7v2-P9LpDks20Hvcf9d0KV9AAIVEAACSc05VQ4Lu2LEzUCmNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/a/1/8/a1849d6391830f25dda2176291c38c788b9c899d.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-cphjpc",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7v2QJDKSVkHWHvXnuq5-Og7AAJZEQACC3PJVQlQoqNDU5jQNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/2/0/12027735114f782f5a0f5718608e1a5f93373fa0.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-jgawk8",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7v7rC622wZoz_2C5hr16rS6AAJ2DAACZnw4VXmcNXVMwh8PNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/7/e/07e790ae089fe7bfc14ebedf129e637d83c8f77d.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-aryi0f",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vJKEqEIqAoKki91MCcfB73AAKPDQACtuI5VeKJZCy9tjcxNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/a/d/0ad0cdc458448645b1bb81970ad63a4697aab77d.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-2m5k6z",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vLGe7q7_QKsTjUQkeqhGBaAAIbDQAC0YXZVjA2mW6kF-87NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/5/f/15f8e0bbe85ba50d258408c731d85381f5a3d526.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-1q4yw5",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vPiGox5QrCDK0JI2Bsey6-AAKgDgACUFnIVKVj-XkQzVZDNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/2/e/b2e9f486aa1c142e766f8b86a8351cb7a0dd1ba1.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-tsf8ya",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vPtBbBTKhrBFJOy016DWudAAKaCwAC6e6hVuB0NT7P5EuVNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/9/0/e90e8fc5c5502e800254a2afec7c89c3c119c182.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-sawg6a",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vSAv8GFg9eOM8DpukwIbXNAAI4EgAC6u3YVi1Q2NSwXiD7NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/c/b/ccbfcc80236ea22847ddbcfcf292050bd6c66231.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-bepv7u",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vXyjhL-aNXWiGJ9kgsdJ76AALFDgACcc84VXmJFB81SyHfNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/c/1/1c10e1bf77929685d1504980bc9dec0dd1cacd6d.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-pynnu9",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7v_yjwMw5yZBRnxYaEKzsDlAAKnCwACv6U5VQZJbQue5pHzNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/b/3/6b31fc887e0f6f61792b8d102dc1fc8873836995.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-ropejq",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vbQfdE1y7egDOzQw8WaXYiAAIkDwAC3f4wVQ6768qO_9oNNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/4/3/743c98101c3e65633759346d526e1e8cd422d779.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-i63f3u",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vcdWyJUsWOHBM56pX-LUG6AAJBDwAC87HoV7s_mgZJXWCNNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/9/9/e99079da9681ccad73de2d182c742bc3434537f4.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-8uc8mf",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vdneIyys2oS7aLagjT-hYnAAJZDQACAiagVg_UfnUe8PSLNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/e/b/4ebac2ffc9522b7ba94986c7573d19a8c356c996.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-b5mcg4",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vh885oJkoCuhKwapx18zosAALUDQACSP45VWZgE0NGNIfWNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/a/d/c/adc46f05e67c496e419bea47babb5c6e19f59817.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-trg2af",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vihVZQ7HpkRnqZK2pCiVJTAAICDQACMKM5VaJNbSwhy_m7NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/d/b/3/db30c084a3d7d7b7a3fa1c42383a92b7c400ae02.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-l1hlum",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vj0b4JfCmizIEqaY3kH9_NAAKsDQACR88xVdkttXWAl6NLNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/8/8/e886ff5fb6923c17afe2cff8c82f9e26ac05ecfa.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-c6qlqa",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vjOZmDUeoaek2DRWCIoy1lAAJhDgACxR2gVmqx48NqgxZnNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/3/c/23cad935d6937405307a9892428c36f8f2c833de.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-vu7uoo",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vlkj4NiW0zoy9aSH56RRQqAAJKCwACato5VeUqqNPtKwMWNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/d/e/7de47d8603f09928953ec6f472c6b9e7776ef3d1.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324108-oao45c",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7vm-pl8EZrLvDhC4SoVSMDvAAKHDQAC59gxVe6hAAFwOvQRXjYE.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/2/d/e2d32eb95a05c1f07a70fe6d1efffbae3a4f49f2.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-hjyqee",
+      "packet": 1761569324108,
+      "name": "CAACAgUAAxUAAWj_U7voNGHTtzsMabIq2uedteuxAAKsDQACxxPAVR2Hp8bVRZY3NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/a/e/6ae5aee131bab29c781107e732965286b859b192.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-5si2yv",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7vrlPVY2lu-2zBYRzbxHPx1AAIeDQACRZcxVbfoODcq83TjNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/9/a/b9a5d52ffec2551da034d3cdbc7b8e98cb91d0e6.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-wis4wj",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7vzrwsMxSpoRhGgdCRyqLmFAAJIDAACJYigVlYcbLYU6maBNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/e/b/4eb2207407415d13b5ae2ff36598e70a24912937.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-pbgh76",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7sJa29BcprmjHb8PioZJTfVAAKEEQACoq7hV9x7BuPLmRq6NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/9/e/f9e0d6022229839adc9dfb0a2a45f679f1e640f5.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-wdfca0",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7sdltDdOONqIzo7egSMbxDqAALzDAACTGigVnmDBXmVZAhNNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/8/6/6/866bac0880cb4a2ddc12e5e77cabdb712e65110d.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-gwe5c6",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7sqSCO-co-KzS4FATO-ffMiAAJuDAACmZI5Vet5JvzlhGbeNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/a/7/4/a746fa1def98499e77e3f541bf9cb9d988111434.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-d10lq6",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7swsbkiTRhKwFYAAT8DcjNsLwACYgwAAkQqOVVCKiOMsw408jYE.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/4/7/2478a0e5bf767d6fcf4ea2b1bd316a048b3aa35c.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-2g52oh",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7tNKlcvsnPEFoiGzoY5TQdEAAJsEAAC93HBVC4myub0wDCDNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/8/5/3/853fa4188bc4c1cd2e7a800abac45d05dfed468e.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-th5p8w",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7tojbyEFhnrdqPfrvMxIZnWAALTDgACUqugVtzCzlWyKrUENgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/d/7/a/d7afaf20da3ef9e05c12247681920fc2b292b143.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-srimgd",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7tx1smrTulfXowRX-zS31mmAAK4DQACyn_YVtdMbMH1Se22NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/5/e/c/5ecae4b8a6868fd41cd9d08937292d6df78245af.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-bc5bgm",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7u-BFKiZK3oIQwahC3w0ebtAAICDgACOtrIVPl3KkZaOATlNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/4/9/049809b8b0a05742182f74a2b9abadf1745c232a.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-nnxmxr",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7uTbYW7E8UrVD8V_I3krvwGAAIwDgACLxPoV-93xB6cxa_xNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/7/4/f7455d816aaf7247806b8d6a97f2eb7bd58c1f64.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-l7sixy",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7ubHkO5NfvQmtxHG-oSt8YMAAJQEQACD5bBVGjWzVblbrYINgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/0/7/b07cc050b290189585107608ccbb40b97f7cc1e8.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-t4z63w",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7ul-TBQBBI0oDHuSVL6FI8iAAJyDgAC6dQwVY4hKA6htjcSNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/8/4/a/84a8f839e6773aaf1a38ea3af55d67ae27bdc034.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-dhx3hi",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7vFWOY5_4lH7N6GZ0qigJn2AAIIEwAC_lLZVvxJ5KHA3GAFNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/b/3/3b398ebf065ce6e600b08400f8c3473ffec10541.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-lev1sq",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7vX99YQGGKjgyCHWnE4TCMQAAJ-CwACkc_gVu86ZmkM6JgZNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/0/7/f07092f5be64e0728a64f224e94089148ecee2b3.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-zatbu0",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7vapxcPiGXK2IJmEWbewZnZAAI2DQACkg7YVlhQiaBu7Dk5NgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/4/8/248ca59812a14ac24a07ed5f1d90a2d358d16109.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-jdk8tv",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7vez6OhsqOEpLihA_vwTsDqAAIHEAACRDnBVNFmwMkt8yyzNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/0/c/60c1e01bb5714679144dad4c18b15b2ecd7f5728.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-wjt2s4",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7vlnMDqRY7BH41GobMIZfCHAALZLgACRJgwVdZ8k1ExxrkPNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/6/d/e6d183ed0104b2a812948985ca1736e93b19214f.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-symz6j",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7sbMWWZrRdnHu6__xQBE7MnAAKqDwACsqjhV6Vj-gxPplSvNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/6/0/c601ffedff95df946bd9108cd745a559e336cb19.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    },
+    {
+      "id": "emoji-1761569324109-oulbrs",
+      "packet": 1761569324109,
+      "name": "CAACAgUAAxUAAWj_U7uOGsowYaWO1UTvHPE1J_4uAAKmDAACV2bZVn1qsYup-U3CNgQ.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/1/a/41a91e5255b558f1ad384ea1f93f106ea2c02a6c.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1761569314695"
+    }
+  ]
+}

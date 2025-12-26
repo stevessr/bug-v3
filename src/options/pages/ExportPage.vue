@@ -95,14 +95,34 @@ const clearSelection = () => {
   selectedEmojis.value.clear()
 }
 
+// 导出进度状态
+const exportProgress = ref({
+  visible: false,
+  current: 0,
+  total: 0,
+  currentGroupName: ''
+})
+
 // 导出活跃分组到云端市场（不包括归档）
 const isExportingActiveGroups = ref(false)
 const exportActiveGroupsToMarket = async () => {
   try {
     isExportingActiveGroups.value = true
-    message.info('正在导出活跃分组到云端市场格式，请稍候...')
+    exportProgress.value.visible = true
+    exportProgress.value.current = 0
+    exportProgress.value.total = 0
+    exportProgress.value.currentGroupName = ''
 
-    await exportToCloudMarket(emojiStore.groups, emojiStore.archivedGroups, false)
+    await exportToCloudMarket(
+      emojiStore.groups,
+      emojiStore.archivedGroups,
+      false,
+      (current, total, groupName) => {
+        exportProgress.value.current = current
+        exportProgress.value.total = total
+        exportProgress.value.currentGroupName = groupName
+      }
+    )
 
     message.success(`导出完成！共导出 ${emojiStore.groups.length} 个活跃分组`)
   } catch (error) {
@@ -110,6 +130,9 @@ const exportActiveGroupsToMarket = async () => {
     message.error('导出失败，请查看控制台了解详情')
   } finally {
     isExportingActiveGroups.value = false
+    setTimeout(() => {
+      exportProgress.value.visible = false
+    }, 500)
   }
 }
 
@@ -118,9 +141,21 @@ const isExportingAllGroups = ref(false)
 const exportAllGroupsToMarket = async () => {
   try {
     isExportingAllGroups.value = true
-    message.info('正在导出所有分组到云端市场格式，请稍候...')
+    exportProgress.value.visible = true
+    exportProgress.value.current = 0
+    exportProgress.value.total = 0
+    exportProgress.value.currentGroupName = ''
 
-    await exportToCloudMarket(emojiStore.groups, emojiStore.archivedGroups, true)
+    await exportToCloudMarket(
+      emojiStore.groups,
+      emojiStore.archivedGroups,
+      true,
+      (current, total, groupName) => {
+        exportProgress.value.current = current
+        exportProgress.value.total = total
+        exportProgress.value.currentGroupName = groupName
+      }
+    )
 
     message.success(
       `导出完成！共导出 ${emojiStore.groups.length + emojiStore.archivedGroups.length} 个分组`
@@ -130,6 +165,9 @@ const exportAllGroupsToMarket = async () => {
     message.error('导出失败，请查看控制台了解详情')
   } finally {
     isExportingAllGroups.value = false
+    setTimeout(() => {
+      exportProgress.value.visible = false
+    }, 500)
   }
 }
 
@@ -394,6 +432,35 @@ onMounted(async () => {
         </div>
       </div>
     </a-spin>
+
+    <!-- 导出进度弹窗 -->
+    <a-modal
+      v-model:open="exportProgress.visible"
+      title="导出进度"
+      :footer="null"
+      :closable="false"
+      :maskClosable="false"
+    >
+      <div class="py-4">
+        <a-progress
+          :percent="
+            exportProgress.total > 0
+              ? Math.round((exportProgress.current / exportProgress.total) * 100)
+              : 0
+          "
+          :status="exportProgress.current === exportProgress.total ? 'success' : 'active'"
+        />
+        <div class="mt-3 text-center text-gray-600 dark:text-gray-300">
+          <div class="text-sm">
+            正在导出：
+            <span class="font-medium">{{ exportProgress.currentGroupName }}</span>
+          </div>
+          <div class="text-xs mt-1 text-gray-400">
+            {{ exportProgress.current }} / {{ exportProgress.total }}
+          </div>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 

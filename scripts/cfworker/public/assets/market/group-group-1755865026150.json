@@ -1,0 +1,99 @@
+{
+  "id": "group-1755865026150",
+  "name": "扒手手",
+  "icon": "https://linux.do/uploads/default/original/4X/e/2/9/e29f21239357f9879fd83c2238974e76001eba56.gif",
+  "order": 10,
+  "emojis": [
+    {
+      "id": "emoji-1755865035090-mfvg3r",
+      "packet": 1755865035090,
+      "name": "fgo妖兰猫猫",
+      "url": "https://linux.do/uploads/default/original/4X/5/1/8/518113704cd499d15c20e1fae11fa2c8d46c1e6a.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865044232-etqayg",
+      "packet": 1755865044232,
+      "name": "fgo呆毛王猫猫",
+      "url": "https://linux.do/uploads/default/original/4X/e/2/9/e29f21239357f9879fd83c2238974e76001eba56.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865050772-4mxgz1",
+      "packet": 1755865050772,
+      "name": "22",
+      "url": "https://linux.do/uploads/default/original/4X/4/f/0/4f0a9bd11f9ecb4ca9d098a18efa47c085c1bfcf.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865056495-w1kfc2",
+      "packet": 1755865056495,
+      "name": "33",
+      "url": "https://linux.do/uploads/default/original/4X/f/d/4/fd41473293b074942e8326ca3359725bed804614.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865062404-zt540u",
+      "packet": 1755865062404,
+      "name": "哔咔猫猫",
+      "url": "https://linux.do/uploads/default/original/4X/c/c/c/cccde007cfd76d7e3aa64ce0e7c80637a2468195.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865069784-gpj9kc",
+      "packet": 1755865069784,
+      "name": "鲸鱼娘咔姬噜",
+      "url": "https://linux.do/uploads/default/original/4X/6/3/6/63689f2dedc99f26fe9f96cefbd90f763f6bf0d8.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865076871-a2k8bv",
+      "packet": 1755865076871,
+      "name": "爱莉希雅",
+      "url": "https://linux.do/uploads/default/original/4X/d/f/7/df77c03bde07142e45bb41e028d7f0d0c0487867.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865118489-ucr3or",
+      "packet": 1755865118489,
+      "name": "@果宝",
+      "url": "https://linux.do/uploads/default/original/4X/f/6/a/f6a4158c75ef1a3bd0c7c6e5e818a6eef8a4d071.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865134021-rowuvq",
+      "packet": 1755865134021,
+      "name": "1",
+      "url": "https://linux.do/uploads/default/original/4X/0/1/0/01076ab5cddaab54927b8660d189877fd92c975f.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865140136-5dm5nk",
+      "packet": 1755865140136,
+      "name": "2",
+      "url": "https://linux.do/uploads/default/original/4X/9/5/e/95e3a63c3445621c7d40c33de5886dbeed77410f.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865143891-pwrpxd",
+      "packet": 1755865143891,
+      "name": "3",
+      "url": "https://linux.do/uploads/default/original/4X/e/b/c/ebc7b536032fad50015cded9713361377a5ffff9.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865147588-vy184v",
+      "packet": 1755865147588,
+      "name": "4",
+      "url": "https://linux.do/uploads/default/original/4X/2/3/d/23dee4dc59af1de90b57bab15f19d60bea939a7b.gif",
+      "groupId": "group-1755865026150"
+    },
+    {
+      "id": "emoji-1755865151886-08lcty",
+      "packet": 1755865151886,
+      "name": "5",
+      "url": "https://linux.do/uploads/default/original/4X/a/e/b/aeb3831d1b284eef28d84fbe7e3f75acec7d646f.gif",
+      "groupId": "group-1755865026150"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "id": "group-1759062077224",
+  "name": "アマカノ3",
+  "icon": "https://linux.do/uploads/default/original/4X/2/2/5/225bc59a2d35425c04432861990ddf6d7d65b547.jpeg",
+  "order": 36,
+  "emojis": [
+    {
+      "id": "emoji-1759062117821-wi0kkn",
+      "packet": 1759062117821,
+      "name": "橙发少女的微笑",
+      "url": "https://linux.do/uploads/default/original/4X/9/1/5/915f76f23958c8208ef909a63fe441fb65f13932.jpeg",
+      "width": 442,
+      "height": 468,
+      "groupId": "group-1759062077224"
+    },
+    {
+      "id": "emoji-1759062109582-osgavq",
+      "packet": 1759062109582,
+      "name": "双马尾蓝眼女孩合十",
+      "url": "https://linux.do/uploads/default/original/4X/2/2/5/225bc59a2d35425c04432861990ddf6d7d65b547.jpeg",
+      "width": 434,
+      "height": 462,
+      "groupId": "group-1759062077224"
+    },
+    {
+      "id": "emoji-1759062100179-jjlmb9",
+      "packet": 1759062100179,
+      "name": "棕发少女的沉思",
+      "url": "https://linux.do/uploads/default/original/4X/5/2/a/52a1c39cf06541188b92eb9b7c8c8eac4f461191.jpeg",
+      "width": 310,
+      "height": 476,
+      "groupId": "group-1759062077224"
+    },
+    {
+      "id": "emoji-1759062090833-u7u0bj",
+      "packet": 1759062090833,
+      "name": "银发少女的甜美",
+      "url": "https://linux.do/uploads/default/original/4X/8/9/b/89ba65b649dd9a890505087bc419d5e2c94e9df9.jpeg",
+      "width": 378,
+      "height": 508,
+      "groupId": "group-1759062077224"
+    }
+  ]
+}

@@ -1,0 +1,1757 @@
+{
+  "id": "group-1760528756665",
+  "name": "memes",
+  "icon": "😮",
+  "order": 22,
+  "emojis": [
+    {
+      "id": "emoji-1760528768199-fldp1j",
+      "packet": 1760528768199,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/f/8/4f84435ba02ed4e4b0ada15603fe05a8f3ff9cf4.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/4/f/8/4f84435ba02ed4e4b0ada15603fe05a8f3ff9cf4_2_500x500.jpeg",
+      "width": 1160,
+      "height": 1158,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528768199-71h93v",
+      "packet": 1760528768199,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/9/1/2/9125f8380e2947e4b68f50d8d6ddcedb5ebfe57d.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/9/1/2/9125f8380e2947e4b68f50d8d6ddcedb5ebfe57d_2_502x500.jpeg",
+      "width": 720,
+      "height": 716,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528768199-jjuh01",
+      "packet": 1760528768199,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/a/d/fad727e2a2c5688db7434c9fd45ae70cfdb7cd76.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/a/d/fad727e2a2c5688db7434c9fd45ae70cfdb7cd76.jpeg",
+      "width": 485,
+      "height": 431,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528768200-pvi56h",
+      "packet": 1760528768200,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/c/e/ece124fe44ec82c939fd0cb148bd91fcddfe03c6.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/e/c/e/ece124fe44ec82c939fd0cb148bd91fcddfe03c6_2_496x500.jpeg",
+      "width": 690,
+      "height": 695,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528768200-ggfm70",
+      "packet": 1760528768200,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/f/0/4f0964adff198a229dbc59964b7dfe109c558c5b.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/4/f/0/4f0964adff198a229dbc59964b7dfe109c558c5b_2_642x500.jpeg",
+      "width": 811,
+      "height": 631,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528768200-889r9e",
+      "packet": 1760528768200,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/c/5/dc5cc8110bcd946771722f09d6aea52bbe5d3732.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/d/c/5/dc5cc8110bcd946771722f09d6aea52bbe5d3732_2_499x499.jpeg",
+      "width": 714,
+      "height": 714,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528768201-uhlna2",
+      "packet": 1760528768201,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/9/6/7968e68a6f83391b8178a18b990be0b4d0fb9134.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/7/9/6/7968e68a6f83391b8178a18b990be0b4d0fb9134_2_218x500.jpeg",
+      "width": 560,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528850295-d2148a",
+      "packet": 1760528850295,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/5/b/b/5bb4bd69cfdbe9a5771cca56195a2fdf4a32d7a4.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/5/b/b/5bb4bd69cfdbe9a5771cca56195a2fdf4a32d7a4_2_225x500.jpeg",
+      "width": 576,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528850295-u0jk5p",
+      "packet": 1760528850295,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/4/6/246e0bc93a1bbd47f3648ed4dc3e9b7ed07545e8.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/2/4/6/246e0bc93a1bbd47f3648ed4dc3e9b7ed07545e8_2_358x500.jpeg",
+      "width": 1028,
+      "height": 1432,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528850295-drocq4",
+      "packet": 1760528850295,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/2/8/f28110e61240fe15444cb21bec5a59a8031e86ef.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/f/2/8/f28110e61240fe15444cb21bec5a59a8031e86ef_2_565x500.jpeg",
+      "width": 729,
+      "height": 645,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528960787-zu2zuz",
+      "packet": 1760528960787,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/9/2/b/92bc03404e928fc3dca014514f10ecad34a17ed1.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/2/b/92bc03404e928fc3dca014514f10ecad34a17ed1.jpeg",
+      "width": 680,
+      "height": 536,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528960787-ihcjkb",
+      "packet": 1760528960787,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/f/1/ef1768bfdf6655ad946f49377625d6f6f1b58a2c.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/e/f/1/ef1768bfdf6655ad946f49377625d6f6f1b58a2c_2_690x364.jpeg",
+      "width": 1280,
+      "height": 677,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528960787-ajsqsz",
+      "packet": 1760528960787,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/5/1/7/517e29d6cc750b03bf128ddb03c814430eadd11a.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/5/1/7/517e29d6cc750b03bf128ddb03c814430eadd11a_2_631x499.jpeg",
+      "width": 1000,
+      "height": 792,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528960787-t1ka4v",
+      "packet": 1760528960787,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/0/8/3/083da4cbc027a77a4c3a42238ae21b023104dd97.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/0/8/3/083da4cbc027a77a4c3a42238ae21b023104dd97_2_225x500.jpeg",
+      "width": 576,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760528960787-b13tmc",
+      "packet": 1760528960787,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/5/e/a/5eadcf65eb8085e9e80c89ef1bfdf6aff0d81888.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/5/e/a/5eadcf65eb8085e9e80c89ef1bfdf6aff0d81888_2_225x500.jpeg",
+      "width": 576,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529061119-t718zq",
+      "packet": 1760529061119,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/1/3/813d5b04449d92a8886b20bb096e2df5536b07c9.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/8/1/3/813d5b04449d92a8886b20bb096e2df5536b07c9_2_500x500.jpeg",
+      "width": 571,
+      "height": 570,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-mpc5eh",
+      "packet": 1760529110654,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/9/7/297667da281839ff148fe12378259728a33462a2.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/2/9/7/297667da281839ff148fe12378259728a33462a2_2_690x257.jpeg",
+      "width": 1080,
+      "height": 403,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-93rekg",
+      "packet": 1760529110655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/6/c/86cf9485a9b50ad28a5eade0c570864da929deaf.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/6/c/86cf9485a9b50ad28a5eade0c570864da929deaf.jpeg",
+      "width": 720,
+      "height": 540,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-kkwpp4",
+      "packet": 1760529110655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/0/b/a/0ba8b5143cbac1a410bec1d735c64955eb096bdf.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/b/a/0ba8b5143cbac1a410bec1d735c64955eb096bdf.jpeg",
+      "width": 1080,
+      "height": 765,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-mxw3in",
+      "packet": 1760529110655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/3/2/4/324353f3aecfe41b60212dad1cfefd9d570947fb.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/3/2/4/324353f3aecfe41b60212dad1cfefd9d570947fb_2_503x500.jpeg",
+      "width": 1000,
+      "height": 993,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-0edv9m",
+      "packet": 1760529110655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/c/c/2ccf753578e8a38229d4c364c0d50a4012283640.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/2/c/c/2ccf753578e8a38229d4c364c0d50a4012283640_2_380x500.jpeg",
+      "width": 973,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-7hqbe0",
+      "packet": 1760529110655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/3/7/4370aa3d97aee6df7c39fc069d266cf131da1353.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/4/3/7/4370aa3d97aee6df7c39fc069d266cf131da1353_2_565x500.jpeg",
+      "width": 1000,
+      "height": 884,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-fyhplu",
+      "packet": 1760529110655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/0/3/f/03f8ea526a9d6ae617ae6eb9e6bc222679ef9f74.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/0/3/f/03f8ea526a9d6ae617ae6eb9e6bc222679ef9f74_2_535x500.jpeg",
+      "width": 1000,
+      "height": 934,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-qh1v8p",
+      "packet": 1760529110655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/7/e/f7e09cfa56c7a5f24b4c9ef00c3da73b26171541.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/f/7/e/f7e09cfa56c7a5f24b4c9ef00c3da73b26171541_2_396x500.jpeg",
+      "width": 720,
+      "height": 907,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-ghcfyh",
+      "packet": 1760529110655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/3/b/c/3bc55bde7fcd2899145d3eaa2f58f8b07eb74cf1.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/b/c/3bc55bde7fcd2899145d3eaa2f58f8b07eb74cf1.jpeg",
+      "width": 598,
+      "height": 605,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529110655-s2xfpq",
+      "packet": 1760529110655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/e/b/feb20ffba5669031b8cdfc448a39d18fa5db40f2.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/f/e/b/feb20ffba5669031b8cdfc448a39d18fa5db40f2_2_522x500.jpeg",
+      "width": 1080,
+      "height": 1033,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529163098-q7z9uk",
+      "packet": 1760529163098,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/4/b/84b79c2dd46d7eeb799827a3fdd66d73769e5489.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/8/4/b/84b79c2dd46d7eeb799827a3fdd66d73769e5489_2_224x500.jpeg",
+      "width": 574,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529163098-655w5c",
+      "packet": 1760529163098,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/c/b/0/cb05c3b4d3b0bda91e8cf59f23379716db6d4629.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/c/b/0/cb05c3b4d3b0bda91e8cf59f23379716db6d4629_2_266x500.jpeg",
+      "width": 682,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529163099-xzdyxp",
+      "packet": 1760529163099,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/5/5/8553d86fa8ebc9f77a93f7d64e37fc18a2247d80.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/8/5/5/8553d86fa8ebc9f77a93f7d64e37fc18a2247d80_2_690x387.jpeg",
+      "width": 1174,
+      "height": 660,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529163099-u8jvs0",
+      "packet": 1760529163099,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/0/b/f0b1d69c4993c34ed9cd805a7eb02d6fa6501eaf.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/f/0/b/f0b1d69c4993c34ed9cd805a7eb02d6fa6501eaf_2_510x500.jpeg",
+      "width": 1054,
+      "height": 1033,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529163099-sc33vj",
+      "packet": 1760529163099,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/0/e/40e39a5edd70feebb819d8126c217eed78628402.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/4/0/e/40e39a5edd70feebb819d8126c217eed78628402_2_189x500.jpeg",
+      "width": 444,
+      "height": 1172,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529163099-ajrkkx",
+      "packet": 1760529163099,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/3/b/c/3bc10d202b780b4fcafbaa735d497f414c3551d7.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/3/b/c/3bc10d202b780b4fcafbaa735d497f414c3551d7_2_500x500.jpeg",
+      "width": 1119,
+      "height": 1119,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529176739-ys3wqf",
+      "packet": 1760529176739,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/f/3/df34e627c682789c9bbb1a35493374bc5f26ec1e.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/d/f/3/df34e627c682789c9bbb1a35493374bc5f26ec1e_2_495x500.jpeg",
+      "width": 1200,
+      "height": 1212,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529176739-1w6zuk",
+      "packet": 1760529176739,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/6/b/e6b7c4b0ee07d48cc1bfd28106a2ae77167370ba.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/e/6/b/e6b7c4b0ee07d48cc1bfd28106a2ae77167370ba_2_342x500.jpeg",
+      "width": 720,
+      "height": 1052,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529176739-o3bn3k",
+      "packet": 1760529176739,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/e/4/4e4e174a9bf3bf6105322933c038562ccf6cca6a.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/4/e/4/4e4e174a9bf3bf6105322933c038562ccf6cca6a_2_482x500.jpeg",
+      "width": 1236,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529176739-glnekb",
+      "packet": 1760529176739,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/0/5/7057a6ba27e31da894c33bdc76b85204c427a5f9.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/7/0/5/7057a6ba27e31da894c33bdc76b85204c427a5f9_2_267x500.jpeg",
+      "width": 684,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241585-0nurft",
+      "packet": 1760529241585,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/5/8/b/58b8204f059cb332076030ad8f8c8917d46254fd.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/5/8/b/58b8204f059cb332076030ad8f8c8917d46254fd_2_298x500.jpeg",
+      "width": 763,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241585-nntji1",
+      "packet": 1760529241585,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/7/d/d7d7decc6524a9e9545eb70eed6cf5c64e171fbc.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/d/7/d/d7d7decc6524a9e9545eb70eed6cf5c64e171fbc_2_284x500.jpeg",
+      "width": 728,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241585-kb4nyk",
+      "packet": 1760529241585,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/f/7/ff7fa52c4faba2bcd5e6d62c0c39b1082ba3ca8d.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/f/f/7/ff7fa52c4faba2bcd5e6d62c0c39b1082ba3ca8d_2_665x499.jpeg",
+      "width": 1280,
+      "height": 961,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241585-5hsmch",
+      "packet": 1760529241585,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/9/a/89aa69b8c1fbc62de215691cd0567410b6094a5b.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/8/9/a/89aa69b8c1fbc62de215691cd0567410b6094a5b_2_581x500.jpeg",
+      "width": 1080,
+      "height": 928,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241585-pinomo",
+      "packet": 1760529241585,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/5/9/0/5906543e0185e60534a581fa81f1676860ab0a25.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/5/9/0/5906543e0185e60534a581fa81f1676860ab0a25_2_298x500.jpeg",
+      "width": 640,
+      "height": 1071,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241585-2b96eb",
+      "packet": 1760529241585,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/6/b/7/6b7caebbf93601e57821f91320a9dd3bd515b959.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/b/7/6b7caebbf93601e57821f91320a9dd3bd515b959.jpeg",
+      "width": 320,
+      "height": 440,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241586-4dcpgc",
+      "packet": 1760529241586,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/0/f/e0f970c0be6b502033517d37bd42b69af1b0f64c.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/0/f/e0f970c0be6b502033517d37bd42b69af1b0f64c.jpeg",
+      "width": 320,
+      "height": 328,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241586-oygfmb",
+      "packet": 1760529241586,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/5/d/e/5de2832ba6323fc2891443010883c904f06b2da5.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/5/d/e/5de2832ba6323fc2891443010883c904f06b2da5_2_290x500.jpeg",
+      "width": 640,
+      "height": 1103,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241586-q3d2wu",
+      "packet": 1760529241586,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/9/d/c/9dcbf7061c1053d68deada88617bfb79f2877411.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/d/c/9dcbf7061c1053d68deada88617bfb79f2877411.jpeg",
+      "width": 320,
+      "height": 348,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529241586-n9awg0",
+      "packet": 1760529241586,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/1/2/2124cb350c5268af4ae3ff24739ef0c947b28e9e.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/2/1/2/2124cb350c5268af4ae3ff24739ef0c947b28e9e_2_572x500.jpeg",
+      "width": 1080,
+      "height": 943,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529256201-skpov9",
+      "packet": 1760529256201,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/3/8/a/38a356de3d4330448a718870934c21633fd741a4.png",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/8/a/38a356de3d4330448a718870934c21633fd741a4.png",
+      "width": 446,
+      "height": 495,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529256202-ccjc8k",
+      "packet": 1760529256202,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/c/f/7cf48c04de35b618c7acbd5a55459058c031db54.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/c/f/7cf48c04de35b618c7acbd5a55459058c031db54.jpeg",
+      "width": 320,
+      "height": 300,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529256202-6e51c9",
+      "packet": 1760529256202,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/a/e/2aeb9ce85cd6046d5ae36617a1878f509bbaabb7.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/a/e/2aeb9ce85cd6046d5ae36617a1878f509bbaabb7.jpeg",
+      "width": 640,
+      "height": 755,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529256202-5qp602",
+      "packet": 1760529256202,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/9/a/d9a6c5135eebfeab16d3dcd03fc1ba08101b3f18.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/d/9/a/d9a6c5135eebfeab16d3dcd03fc1ba08101b3f18_2_502x500.jpeg",
+      "width": 640,
+      "height": 637,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529256202-hgz67e",
+      "packet": 1760529256202,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/f/5/7f5e75cb2cd09c338359b62757bb1ec2766a17cf.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/7/f/5/7f5e75cb2cd09c338359b62757bb1ec2766a17cf_2_571x500.jpeg",
+      "width": 1280,
+      "height": 1120,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529304571-2nvj6p",
+      "packet": 1760529304571,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/b/e/dbed2b9d2b86aa639564d2c3e4c84b98083ac93a.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/b/e/dbed2b9d2b86aa639564d2c3e4c84b98083ac93a.jpeg",
+      "width": 518,
+      "height": 597,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529304571-n57sw7",
+      "packet": 1760529304571,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/9/2/7/9270188e1f30e5aeed124900b477fa2a151093ea.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/9/2/7/9270188e1f30e5aeed124900b477fa2a151093ea_2_353x500.jpeg",
+      "width": 904,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529304571-vg4fje",
+      "packet": 1760529304571,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/d/9/7d9b5221e344735e9de83ef0291575dec3096b74.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/d/9/7d9b5221e344735e9de83ef0291575dec3096b74.jpeg",
+      "width": 320,
+      "height": 295,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529304571-bg87ec",
+      "packet": 1760529304571,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/1/9/f/19f7c1df505995696306c0297861c1dd7ad82ad1.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/9/f/19f7c1df505995696306c0297861c1dd7ad82ad1.jpeg",
+      "width": 615,
+      "height": 502,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529304571-kwjjmt",
+      "packet": 1760529304571,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/f/1/4f1c72883ebc740d5dc2c569ba93eece7d877bf7.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/4/f/1/4f1c72883ebc740d5dc2c569ba93eece7d877bf7_2_690x456.jpeg",
+      "width": 1080,
+      "height": 714,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529304572-go7l32",
+      "packet": 1760529304572,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/b/1/3/b1329aca67bd3c91b980fad2f7d33520c3911521.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/b/1/3/b1329aca67bd3c91b980fad2f7d33520c3911521_2_474x500.jpeg",
+      "width": 1080,
+      "height": 1138,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529304572-zkb334",
+      "packet": 1760529304572,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/7/3/87395e7082aeea236bda3bbfd2827015bb6bd14c.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/7/3/87395e7082aeea236bda3bbfd2827015bb6bd14c.jpeg",
+      "width": 1080,
+      "height": 613,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760529304572-mpx20b",
+      "packet": 1760529304572,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/3/3/8/33876652ec80702b57b5e63d027ca23195ccf8af.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/3/8/33876652ec80702b57b5e63d027ca23195ccf8af.jpeg",
+      "width": 421,
+      "height": 393,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975112988-kramsu",
+      "packet": 1760975112988,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/6/2/f6217e90f4c5cebda3108dfdb0fe9f61b0528885.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/f/6/2/f6217e90f4c5cebda3108dfdb0fe9f61b0528885_2_609x500.jpeg",
+      "width": 1080,
+      "height": 886,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975112988-p52hxm",
+      "packet": 1760975112988,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/c/3/dc311ba7380e7b1a0bf5e9929c974274acb42559.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/d/c/3/dc311ba7380e7b1a0bf5e9929c974274acb42559_2_517x500.jpeg",
+      "width": 1080,
+      "height": 1044,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975112988-pqtgo9",
+      "packet": 1760975112988,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/6/9/0/6906d730730a20e9bf9d466ac6fd4c8f8d5a4fa6.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/6/9/0/6906d730730a20e9bf9d466ac6fd4c8f8d5a4fa6_2_690x391.jpeg",
+      "width": 966,
+      "height": 548,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975112988-zzvu0y",
+      "packet": 1760975112988,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/1/a/3/1a304e9e18d89c0ebfde4cd49518a09d16ec39d3.png",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/a/3/1a304e9e18d89c0ebfde4cd49518a09d16ec39d3.png",
+      "width": 336,
+      "height": 307,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975112988-qzrmni",
+      "packet": 1760975112988,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/4/7/4471509ac92928c88c3bd862d29d3bd679ec4cab.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/4/4/7/4471509ac92928c88c3bd862d29d3bd679ec4cab_2_544x500.jpeg",
+      "width": 1084,
+      "height": 996,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975112988-oynldm",
+      "packet": 1760975112988,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/b/b/b/bbb88e466454415a4b0e86e30c87e45dcb77d535.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/b/b/b/bbb88e466454415a4b0e86e30c87e45dcb77d535_2_332x500.jpeg",
+      "width": 851,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975112988-bfk8v7",
+      "packet": 1760975112988,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/c/a/2caeeb9a5b761da74ee3b6d994b5488b780d5fb7.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/c/a/2caeeb9a5b761da74ee3b6d994b5488b780d5fb7.jpeg",
+      "width": 780,
+      "height": 532,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975112988-ez2ia5",
+      "packet": 1760975112988,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/7/e/d7e0d43b828676a9588ea2692aa35c4bdd07faff.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/d/7/e/d7e0d43b828676a9588ea2692aa35c4bdd07faff_2_356x500.jpeg",
+      "width": 856,
+      "height": 1200,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975112988-59dz22",
+      "packet": 1760975112988,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/7/3/d73d911d3c1a5850be95c75f834e64d76a294955.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/d/7/3/d73d911d3c1a5850be95c75f834e64d76a294955_2_362x500.jpeg",
+      "width": 929,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975158609-efczjd",
+      "packet": 1760975158609,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/1/1/0/110bf1a0bd1e9cf9489d74bca7dcb6631961c353.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/1/1/0/110bf1a0bd1e9cf9489d74bca7dcb6631961c353_2_269x500.jpeg",
+      "width": 721,
+      "height": 1337,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975158609-sxa34d",
+      "packet": 1760975158609,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/9/0/5/905ccc84d2c33753ce104234449602956aeaa462.png",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/0/5/905ccc84d2c33753ce104234449602956aeaa462.png",
+      "width": 200,
+      "height": 200,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975158609-67yoa1",
+      "packet": 1760975158609,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/a/d/fadcaa39bb8802a915d9f9651109c657e7fb2fbc.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/f/a/d/fadcaa39bb8802a915d9f9651109c657e7fb2fbc_2_530x500.jpeg",
+      "width": 680,
+      "height": 641,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975172114-diusr2",
+      "packet": 1760975172114,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/f/7/4f7397bbc620c4f844ab48d8fe382d8aafc69cc8.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/4/f/7/4f7397bbc620c4f844ab48d8fe382d8aafc69cc8_2_424x499.jpeg",
+      "width": 960,
+      "height": 1132,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975172115-cbkt0f",
+      "packet": 1760975172115,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/9/8/a/98a073511b3590a95cb2f0a5dcac5817531e4d6d.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/8/a/98a073511b3590a95cb2f0a5dcac5817531e4d6d.jpeg",
+      "width": 720,
+      "height": 532,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975218292-xsa285",
+      "packet": 1760975218291,
+      "name": "日本偷袭",
+      "url": "https://linux.do/uploads/default/original/4X/b/2/2/b22f0cd801f2ed398bb4342eaeec74f6b722484b.jpeg",
+      "width": 1280,
+      "height": 1268,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975229484-hdypyn",
+      "packet": 1760975229484,
+      "name": "了老子里",
+      "url": "https://linux.do/uploads/default/original/4X/5/2/c/52c10622045f762d3f84694b3e1fb74787d6734a.jpeg",
+      "width": 890,
+      "height": 1072,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975272355-0nkrrw",
+      "packet": 1760975272355,
+      "name": "河移位",
+      "url": "https://linux.do/uploads/default/original/4X/a/d/d/addd97a36bbe086bcfcd1bcf24d618497196567a.jpeg",
+      "width": 467,
+      "height": 320,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975358323-iy8887",
+      "packet": 1760975358323,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/d/2/2d2fb723dc89f2a8dc1689179ed690699e5b68d8.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/2/d/2/2d2fb723dc89f2a8dc1689179ed690699e5b68d8_2_419x500.jpeg",
+      "width": 580,
+      "height": 692,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975358323-l7eli9",
+      "packet": 1760975358323,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/2/0/e203ab42052e520c6537d0bc67c8e23d84757b23.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/e/2/0/e203ab42052e520c6537d0bc67c8e23d84757b23_2_333x500.jpeg",
+      "width": 591,
+      "height": 885,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975358323-gvayax",
+      "packet": 1760975358323,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/7/0/87003ffedf2eb418660c52e9bb37f35977070263.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/8/7/0/87003ffedf2eb418660c52e9bb37f35977070263_2_449x500.jpeg",
+      "width": 795,
+      "height": 884,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975358323-6jr42c",
+      "packet": 1760975358323,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/a/b/4ab7acadda196fd83ce9712566e525b9d10e7a38.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/a/b/4ab7acadda196fd83ce9712566e525b9d10e7a38.jpeg",
+      "width": 502,
+      "height": 502,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975358323-2a8dnq",
+      "packet": 1760975358323,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/1/4/a/14a4c1fa0c04a222bd59119430719e38eae2b1eb.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/1/4/a/14a4c1fa0c04a222bd59119430719e38eae2b1eb_2_515x500.jpeg",
+      "width": 1080,
+      "height": 1047,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975358323-ewnfi5",
+      "packet": 1760975358323,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/0/7/c/07cfff668c0a3f784856ccb2b45fb1265f996566.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/7/c/07cfff668c0a3f784856ccb2b45fb1265f996566.jpeg",
+      "width": 299,
+      "height": 299,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975392349-t75kbc",
+      "packet": 1760975392349,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/8/d/78dc4d2f7648fdb745c5c39b04f587ea8dabe56c.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/7/8/d/78dc4d2f7648fdb745c5c39b04f587ea8dabe56c_2_375x500.jpeg",
+      "width": 960,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975392349-31cv99",
+      "packet": 1760975392349,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/0/1/701d17c8c8273631ac47a55e368e36f5312365b9.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/7/0/1/701d17c8c8273631ac47a55e368e36f5312365b9_2_528x500.jpeg",
+      "width": 1280,
+      "height": 1212,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760975392349-q43tno",
+      "packet": 1760975392349,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/1/d/21da9ec64e54118acf0eb329654e7e1c2c975d56.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/2/1/d/21da9ec64e54118acf0eb329654e7e1c2c975d56_2_690x439.jpeg",
+      "width": 1221,
+      "height": 778,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443929581-1kyww6",
+      "packet": 1761443929581,
+      "name": "IMG_20251024_220300_290",
+      "url": "https://linux.do/uploads/default/original/4X/b/b/5/bb5332a03bb0e1d9c5a7814d4c6633ea86d92d02.jpeg",
+      "width": 850,
+      "height": 1275,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443918033-srqvzv",
+      "packet": 1761443918033,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/8/5/d854fb28dffd7e1d57c4f44ffc92e38734f5961e.jpeg",
+      "width": 648,
+      "height": 790,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443916157-vcz86s",
+      "packet": 1761443916157,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/0/b/8/0b8d65fe8a8f36db7401f30eb853ebe3c693cf0c.jpeg",
+      "width": 850,
+      "height": 850,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443915079-13z4ll",
+      "packet": 1761443915079,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/3/7/f/37f51f21e0f03da961c316f783f9858ab22b7e6a.jpeg",
+      "width": 1080,
+      "height": 1080,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443913694-hfw69e",
+      "packet": 1761443913694,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/a/a/d/aadd4295fefa57b8a6ef0029db05bb3d56eaefc1.jpeg",
+      "width": 1280,
+      "height": 1180,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443909666-onj5m2",
+      "packet": 1761443909666,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/b/c/fbcaa0712800eaffd6240f1b032cacf3a0fca9db.jpeg",
+      "width": 704,
+      "height": 964,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443908582-kmpda0",
+      "packet": 1761443908582,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/c/0/fc07682f90da760d2ace16db1821032dcf4644f5.jpeg",
+      "width": 816,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443906133-byfrv1",
+      "packet": 1761443906133,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/c/d/0/cd091a4e090771d8acd6cc50599a920ac6d0edf0.jpeg",
+      "width": 1080,
+      "height": 1177,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443902218-sqdb5e",
+      "packet": 1761443902218,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/6/9/a/69a80178e4112e51368e785c51600cdd17c47239.jpeg",
+      "width": 1024,
+      "height": 941,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443893527-fdnd8x",
+      "packet": 1761443893527,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/f/9/7/f978b822539a7aa4757af5dce48d9860314895bf.jpeg",
+      "width": 1280,
+      "height": 782,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443884955-i1ulf7",
+      "packet": 1761443884955,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/6/7/8678c7845d1d4e1f449c3abc39c52eb2ec157461.jpeg",
+      "width": 1179,
+      "height": 1463,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443876366-8it7ui",
+      "packet": 1761443876366,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/b/1/3/b136f92c053a55582c7b9472adfc9e34eb972657.jpeg",
+      "width": 1280,
+      "height": 1053,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443874617-64v7do",
+      "packet": 1761443874617,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/0/8/5/085fdabee94982396a4c3aca52e2b58984df43e7.jpeg",
+      "width": 1080,
+      "height": 982,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443873094-sm3k3k",
+      "packet": 1761443873094,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/c/c/8ccfb1b4bf86303cf946537a11c5bb64e1b9165b.jpeg",
+      "width": 1280,
+      "height": 1920,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443871978-abh9hy",
+      "packet": 1761443871978,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/c/2/1/c2161decc8187bf9873483e683536580785c0a10.jpeg",
+      "width": 960,
+      "height": 874,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443868939-d56odl",
+      "packet": 1761443868939,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/a/1/6/a163b6109e727552885efeaace327ff5ac9aadcc.jpeg",
+      "width": 690,
+      "height": 684,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443865354-fqkw6m",
+      "packet": 1761443865354,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/1/9/8194c7daae4b4ce62c895cb68def8002fdb389d7.jpeg",
+      "width": 948,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443863879-q0m1yk",
+      "packet": 1761443863879,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/2/b/e2b7691d0a68f7fd61b72cbeae8ba254fedb109c.jpeg",
+      "width": 735,
+      "height": 783,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443862769-5zjy5l",
+      "packet": 1761443862769,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/a/8/4/a84e33e083d43d7f318ddc0e0cd6f044dc86a005.jpeg",
+      "width": 600,
+      "height": 761,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443861696-zgyr2k",
+      "packet": 1761443861696,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/1/b/d/1bd9781c2c80a1e9462dcac561d5ca43c7e96cca.jpeg",
+      "width": 1280,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443851803-j78k3v",
+      "packet": 1761443851803,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/a/3/8/a3885063361440af0c1bd7c1898c9d4b81c2a7a9.jpeg",
+      "width": 1920,
+      "height": 1920,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443843970-1wkhva",
+      "packet": 1761443843970,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/0/3/403910a50610ad7ae33a94a8b3163e07ddc6589c.jpeg",
+      "width": 807,
+      "height": 751,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761443177482-zkk4jz",
+      "packet": 1761443177482,
+      "name": "IMG_20251026_090603_633",
+      "url": "https://linux.do/uploads/default/original/4X/c/8/c/c8c91b8e8988bbd89c79b5fffbb360ff9d49ba2b.jpeg",
+      "width": 906,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569911094-ggqmly",
+      "packet": 1761569911094,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/3/b/f/3bfe4028d7263e19aca088bf9d405af521618873.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/3/b/f/3bfe4028d7263e19aca088bf9d405af521618873_2_685x500.jpeg",
+      "width": 1184,
+      "height": 864,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569911094-60tdx3",
+      "packet": 1761569911094,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/c/3/1/c315a8886bced16134f1806a176f4e6b6002728a.jpeg",
+      "displayUrl": "https://linux.do/uploads/default/optimized/4X/c/3/1/c315a8886bced16134f1806a176f4e6b6002728a_2_408x500.jpeg",
+      "width": 1581,
+      "height": 1937,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570170317-b2lzec",
+      "packet": 1761570170317,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/b/c/c/bcc2600a3a8b600a0f779bcccafbe2830988ecd1.jpeg",
+      "width": 825,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570159891-5a857v",
+      "packet": 1761570159891,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/6/a/2/6a24a117755f8a52a544d6c1f928108fa4231cdd.jpeg",
+      "width": 1280,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570159076-xz4p9m",
+      "packet": 1761570159077,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/7/4/e743951712e55e4a0bc812c72aa701e7775a8455.jpeg",
+      "width": 800,
+      "height": 1199,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570129408-3elx1q",
+      "packet": 1761570129408,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/3/3/e3330ca645b19673304e2cb6d0f1eb257b16d021.jpeg",
+      "width": 1242,
+      "height": 1228,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570127796-01qtrt",
+      "packet": 1761570127796,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/1/8/6/1867e7176d7294a5ebf2de5cc49a873982ecdc6e.jpeg",
+      "width": 1242,
+      "height": 1485,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570126052-8cg06q",
+      "packet": 1761570126052,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/b/1/7b1706ec472dfbad05bb46d8207f2366a24b51d0.jpeg",
+      "width": 772,
+      "height": 1009,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570123732-5htqzd",
+      "packet": 1761570123732,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/1/5/0/150c6356ce5a38f586473b52546bb3c4010a8b09.jpeg",
+      "width": 1280,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570121600-1n6bch",
+      "packet": 1761570121600,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/5/1/1/51185c444ec459bea02c6ff6349b6bdf8c8adc63.jpeg",
+      "width": 614,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570119666-8mynoz",
+      "packet": 1761570119666,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/a/5/1/a510ec62dfd7e1e4b120df5aca496d65c0c1253c.jpeg",
+      "width": 576,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570118674-17qafj",
+      "packet": 1761570118674,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/1/5/815cf8fb9c4af840d1a07133e390ee7d16da6a1b.jpeg",
+      "width": 1280,
+      "height": 572,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570117623-yhctkq",
+      "packet": 1761570117623,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/b/a/e/bae4a4376e1482cf0d340d0039788e08575eed8f.jpeg",
+      "width": 573,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570115763-fxk8ea",
+      "packet": 1761570115763,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/3/5/435fdf84d3e59a932a1560a117930aff370fdb1f.jpeg",
+      "width": 1080,
+      "height": 1204,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570094094-ebm5nf",
+      "packet": 1761570094094,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/0/5/3/053ba96c924ba3d0ae6c881ded05dfe851bd0cc6.jpeg",
+      "width": 720,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570084959-plohfl",
+      "packet": 1761570084959,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/3/2/d/32de1cd6c414297cc316218c181f6fca85df541c.jpeg",
+      "width": 930,
+      "height": 1354,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570082686-gsjtk2",
+      "packet": 1761570082686,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/b/8/e/b8e74e511cd06fed8ce5118adbc0812e876a232a.jpeg",
+      "width": 959,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570071548-st904p",
+      "packet": 1761570071548,
+      "name": "IMG_20251026_090613_471",
+      "url": "https://linux.do/uploads/default/original/4X/e/3/2/e32d2d72f8f995825e1e5e5c09d213fab818accb.jpeg",
+      "width": 731,
+      "height": 1013,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570067701-c1mji3",
+      "packet": 1761570067701,
+      "name": "IMG_20251026_090558_338",
+      "url": "https://linux.do/uploads/default/original/4X/0/e/e/0eee7c97e2868c0aa89f0f627af3fa402cafcfb3.jpeg",
+      "width": 849,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570067004-kh2nay",
+      "packet": 1761570067004,
+      "name": "IMG_20251026_090413_741",
+      "url": "https://linux.do/uploads/default/original/4X/5/3/d/53d8f52e06320593058fe6e4d827c6c0524400d4.jpeg",
+      "width": 724,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570061727-qbp079",
+      "packet": 1761570061727,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/5/0/1/501eb521d63800cbce6a8d314e6f1c793f8d0279.jpeg",
+      "width": 1238,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570056980-wdvx8f",
+      "packet": 1761570056980,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/0/7/d0724d2b79dc8d626807b1f43023da6bcc73f431.jpeg",
+      "width": 960,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570055487-zcwl7s",
+      "packet": 1761570055487,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/9/4/29453e289a82d43043c5cd4c36da847b7197eb8e.jpeg",
+      "width": 565,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570052871-0j76aq",
+      "packet": 1761570052871,
+      "name": "IMG",
+      "url": "https://linux.do/uploads/default/original/4X/c/0/8/c08e8db145fcaf70643d6426c25df4d07064d396.png",
+      "width": 794,
+      "height": 570,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570050817-5jceiu",
+      "packet": 1761570050817,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/c/a/4caa91b4e069e4973ff7bea0b2c4219d155bb5b9.jpeg",
+      "width": 960,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570049820-26x0yk",
+      "packet": 1761570049820,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/a/4/d/a4daec7605dccdf6f6e18ea651f98af11d20cc29.jpeg",
+      "width": 860,
+      "height": 1094,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570035470-i9d8t1",
+      "packet": 1761570035470,
+      "name": "IMG",
+      "url": "https://linux.do/uploads/default/original/4X/8/7/2/87290fab24393be5569f358386743edeab0e1a40.png",
+      "width": 936,
+      "height": 736,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570019412-gz079y",
+      "packet": 1761570019412,
+      "name": "IMG",
+      "url": "https://linux.do/uploads/default/original/4X/b/a/2/ba22ad930e6b1e6a53b5f76c0d5dc833603f5795.jpeg",
+      "width": 875,
+      "height": 801,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570016615-ob3non",
+      "packet": 1761570016615,
+      "name": "IMG",
+      "url": "https://linux.do/uploads/default/original/4X/f/3/9/f395ea73c506b6a3ba19f904677767f8580f66f1.jpeg",
+      "width": 960,
+      "height": 356,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761570014362-pukcnp",
+      "packet": 1761570014362,
+      "name": "IMG_20251027_081252_296",
+      "url": "https://linux.do/uploads/default/original/4X/8/8/5/885f237251279572fc247005c03850780c39196f.jpeg",
+      "width": 603,
+      "height": 804,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569989026-bo32m0",
+      "packet": 1761569989026,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/2/f/e2faa0be5067d785753dfae57efc6520ea982805.jpeg",
+      "width": 329,
+      "height": 329,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569955686-t6qyxt",
+      "packet": 1761569955686,
+      "name": "goodnight oomfies",
+      "url": "https://linux.do/uploads/default/original/4X/4/d/a/4da4739c81add8fee784bb0bf2045beae02f831a.jpeg",
+      "width": 545,
+      "height": 716,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569951263-7zwlok",
+      "packet": 1761569951263,
+      "name": "Never kill your self",
+      "url": "https://linux.do/uploads/default/original/4X/b/7/9/b79ce3d954736f01a2dcbd5af04e738be46f835d.jpeg",
+      "width": 1536,
+      "height": 2048,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569935800-gdzr36",
+      "packet": 1761569935800,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/1/9/219dcae12b5635e6b8b932f47a6bc1be9c0f5542.jpeg",
+      "width": 899,
+      "height": 1169,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569826102-qekp3z",
+      "packet": 1761569826102,
+      "name": "IMG_20251026_135849_343",
+      "url": "https://linux.do/uploads/default/original/4X/9/d/9/9d9f66dd944cf603c925c763a308075f20d04aa6.jpeg",
+      "width": 854,
+      "height": 985,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569824645-24bkda",
+      "packet": 1761569824645,
+      "name": "IMG_20251026_135752_075",
+      "url": "https://linux.do/uploads/default/original/4X/4/7/6/476904a0fb2add20d7aaa1378931155836716c76.jpeg",
+      "width": 1131,
+      "height": 1131,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569823636-l9c42d",
+      "packet": 1761569823636,
+      "name": "IMG_20251026_135749_244",
+      "url": "https://linux.do/uploads/default/original/4X/f/a/9/fa9e7958795ea529733b756c1005fbfcfa067140.jpeg",
+      "width": 1179,
+      "height": 853,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569822014-kpb7d2",
+      "packet": 1761569822014,
+      "name": "IMG_20251026_135733_141",
+      "url": "https://linux.do/uploads/default/original/4X/7/6/2/7626509299949467a819a285398b7467e50dba87.jpeg",
+      "width": 1280,
+      "height": 1920,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569817477-rzboty",
+      "packet": 1761569817477,
+      "name": "IMG_20251026_155054_000",
+      "url": "https://linux.do/uploads/default/original/4X/c/0/d/c0dd4223d38b768f14d5ece2415d20841021cd66.png",
+      "width": 512,
+      "height": 512,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569797504-yh7iuf",
+      "packet": 1761569797504,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/7/c/47cade128357da8db89df541f664439bcdcd5fdc.jpeg",
+      "width": 976,
+      "height": 1187,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569795845-18j1mn",
+      "packet": 1761569795845,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/8/0/4/804f8b815f89bc6150c70cf2c994489d0f150e2d.jpeg",
+      "width": 620,
+      "height": 516,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569793784-bfymtj",
+      "packet": 1761569793784,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/c/b/2/cb2e58d53069c459e3f50997b8757bb1ce06c0f9.jpeg",
+      "width": 501,
+      "height": 690,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569792222-x36az3",
+      "packet": 1761569792222,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/c/a/7cabb7f8aad808ad4a7f6c1bfcffa84675b588de.jpeg",
+      "width": 934,
+      "height": 754,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569790655-jy3mlh",
+      "packet": 1761569790655,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/5/3/453ca72793fb0a3d9c4a7376d862626d52b3a41f.jpeg",
+      "width": 729,
+      "height": 650,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569789221-egr12z",
+      "packet": 1761569789221,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/e/b/3/eb32562dcc2cce1fad78ba15a27c698ec508d423.jpeg",
+      "width": 1280,
+      "height": 822,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569787695-b8a50k",
+      "packet": 1761569787695,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/a/5/1/a51367a51b641fd76e478f7af050fc516235bdea.jpeg",
+      "width": 948,
+      "height": 1030,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569786466-9v6qd0",
+      "packet": 1761569786466,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/a/7/1/a71f07579d8fdb291d7cd76ac564a6cdb16c4382.jpeg",
+      "width": 1000,
+      "height": 1208,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569784270-d5jhcg",
+      "packet": 1761569784270,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/6/d/c/6dc38018f6c159ed42384b61260450d06855e563.jpeg",
+      "width": 1052,
+      "height": 592,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569783042-rnwwdt",
+      "packet": 1761569783043,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/4/6/c/46c68f5aa15859626df499aa6ab2ee78869a5419.jpeg",
+      "width": 915,
+      "height": 1280,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569781918-bbxk4z",
+      "packet": 1761569781918,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/7/8/0/780ada2798d4c91c1ad72b340a22546a59bb09b7.jpeg",
+      "width": 1080,
+      "height": 761,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569780344-ounl35",
+      "packet": 1761569780344,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/2/1/f/21ff2351b8aa67baab413dad4f808ff07ea6eb24.jpeg",
+      "width": 1280,
+      "height": 960,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569779678-mxy8jd",
+      "packet": 1761569779678,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/d/4/5/d4588be518312031f799d46848c3bd9776dd045d.jpeg",
+      "width": 1280,
+      "height": 638,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569778573-o3hysg",
+      "packet": 1761569778573,
+      "name": "image",
+      "url": "https://linux.do/uploads/default/original/4X/9/c/e/9cec60c8b5b0cdd619a1c60ae0a2797a76a7df1b.jpeg",
+      "width": 1280,
+      "height": 960,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569764040-cwn0xb",
+      "packet": 1761569764040,
+      "name": "20251027_130755",
+      "url": "https://linux.do/uploads/default/original/4X/f/3/c/f3c84c4eae7511f571f9dc7d32a51f761eddacca.jpeg",
+      "width": 1920,
+      "height": 1920,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569762773-r6ezo7",
+      "packet": 1761569762774,
+      "name": "IMG_20251027_131015_048",
+      "url": "https://linux.do/uploads/default/original/4X/a/d/e/ade2c72c3ad773fda94e72dd8653a8ec41d88852.jpeg",
+      "width": 828,
+      "height": 1101,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761569761075-5jexvg",
+      "packet": 1761569761075,
+      "name": "20251027_130714",
+      "url": "https://linux.do/uploads/default/original/4X/7/6/a/76a8077f8cda17aae459b3b318fbf12f53537fb6.jpeg",
+      "width": 1274,
+      "height": 1527,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442424644-ezcpst",
+      "packet": 1761442424644,
+      "name": "G2lhrpyaoAAOWD3",
+      "url": "https://linux.do/uploads/default/original/4X/9/4/9/9497a0ba9d3a2830135fdb91d5f518c5e02a6633.jpeg",
+      "width": 1575,
+      "height": 1575,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761451384528-ru8vjn",
+      "packet": 1761451384528,
+      "name": "G4IE6QBXAAA55Kl",
+      "url": "https://linux.do/uploads/default/original/4X/8/6/7/867e1a900a9f6b5da40f3f37790496d65461844f.jpeg",
+      "width": 1080,
+      "height": 1078,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761446680031-wqahyg",
+      "packet": 1761446680031,
+      "name": "G4GbZd2XEAAfkQR",
+      "url": "https://linux.do/uploads/default/original/4X/6/8/4/6848defd1275433d0549178967496d083e60ce01.jpeg",
+      "width": 2000,
+      "height": 2000,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761444521833-rw1erz",
+      "packet": 1761444521833,
+      "name": "G4JA46gXAAED7k3",
+      "url": "https://linux.do/uploads/default/original/4X/b/5/0/b506bab50e7e9c9b149ea29ab179fbb52eebf072.jpeg",
+      "width": 1378,
+      "height": 1687,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442500413-joryo9",
+      "packet": 1761442500413,
+      "name": "G2BUNfFawAA-1eX",
+      "url": "https://linux.do/uploads/default/original/4X/c/3/f/c3f54efd8c2f5c1d5fdda64df691778594fd95e2.jpeg",
+      "width": 1575,
+      "height": 1575,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442427001-myrrzg",
+      "packet": 1761442427001,
+      "name": "G2gDBwIbUAA-9oh",
+      "url": "https://linux.do/uploads/default/original/4X/1/9/7/197dfbecd8b7ad1ac80b3c4e15cf99aa1275b88d.jpeg",
+      "width": 1575,
+      "height": 1575,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442409516-khm82o",
+      "packet": 1761442409516,
+      "name": "G2vxS6TbgAAP3Jj",
+      "url": "https://linux.do/uploads/default/original/4X/8/4/c/84c253cc0b5789d8657e0f32a69d3f4d25115609.jpeg",
+      "width": 1575,
+      "height": 1575,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442405961-x3uyjr",
+      "packet": 1761442405961,
+      "name": "G2_JvYUa0AAw6sk",
+      "url": "https://linux.do/uploads/default/original/4X/1/c/5/1c50e421f72d52c944f616438fd368e20a7e5b1c.jpeg",
+      "width": 1575,
+      "height": 1575,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442403666-3irkfi",
+      "packet": 1761442403666,
+      "name": "G208Mh0bUAA2QEN",
+      "url": "https://linux.do/uploads/default/original/4X/d/d/8/dd8c8dd1302b8700b008f47c456db303e2e39b5e.jpeg",
+      "width": 1575,
+      "height": 1575,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442076639-aguujl",
+      "packet": 1761442076639,
+      "name": "G4IZALUW8AAcU9X",
+      "url": "https://linux.do/uploads/default/original/4X/1/3/8/138250a97d78cd53f25ebe323ca9382886c89225.jpeg",
+      "width": 3722,
+      "height": 4096,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442071320-l5b9j3",
+      "packet": 1761442071320,
+      "name": "G4HsEjQWcAEWz5t",
+      "url": "https://linux.do/uploads/default/original/4X/1/1/9/119600e93533c962fc751a5a01383a6ae90c5e65.jpeg",
+      "width": 808,
+      "height": 1077,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442067956-phx6cy",
+      "packet": 1761442067956,
+      "name": "G4HJ9JZW4AEOmcy",
+      "url": "https://linux.do/uploads/default/original/4X/e/0/9/e095058b999939fb4a82a43a51866339a044c6ca.jpeg",
+      "width": 1294,
+      "height": 1725,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442065641-dh6rct",
+      "packet": 1761442065641,
+      "name": "G4JarlGW0AAKuHM",
+      "url": "https://linux.do/uploads/default/original/4X/4/1/4/4141d7d44ac4b6c6f1c4343234f1c6034246c708.jpeg",
+      "width": 1400,
+      "height": 1400,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761442063969-vi0env",
+      "packet": 1761442063969,
+      "name": "G4JarlGXEAAOzBh",
+      "url": "https://linux.do/uploads/default/original/4X/7/5/b/75b85d4f35577e5962584d807a9aa28e62756cc2.jpeg",
+      "width": 1400,
+      "height": 1400,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761364524896-wnnyg5",
+      "packet": 1761364524896,
+      "name": "G4CusRSX0AASodO",
+      "url": "https://linux.do/uploads/default/original/4X/1/4/d/14d0667d4d950a0d2ee53bcd7c5ddad0b70c03d3.jpeg",
+      "width": 4000,
+      "height": 4000,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761364066119-7kq155",
+      "packet": 1761364066119,
+      "name": "G4BCoZvXUAA4-OS",
+      "url": "https://linux.do/uploads/default/original/4X/d/b/7/db7ad63a91efe25ca2e57f5c282b13b28a9310de.jpeg",
+      "width": 2048,
+      "height": 1417,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761363968976-mf68eu",
+      "packet": 1761363968976,
+      "name": "G4As7_UWwCEEag1",
+      "url": "https://linux.do/uploads/default/original/4X/7/3/2/73270fe09fb0081eef740674b74a181a9b05301d.png",
+      "width": 692,
+      "height": 357,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761363542090-4jzsna",
+      "packet": 1761363542090,
+      "name": "G365Fz_XYAE1KSQ",
+      "url": "https://linux.do/uploads/default/original/4X/6/d/e/6decca446cd3b88f1721ed46275d2d58af5393c7.jpeg",
+      "width": 1197,
+      "height": 1604,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761236934975-csa98i",
+      "packet": 1761236934975,
+      "name": "G38oQ3LW0AARhkn",
+      "url": "https://linux.do/uploads/default/original/4X/b/b/1/bb1959d923ab604efd942489688ed03cb46b0663.jpeg",
+      "width": 2048,
+      "height": 2048,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1761236909162-39x19o",
+      "packet": 1761236909162,
+      "name": "G37wz0PWEAA25AY",
+      "url": "https://linux.do/uploads/default/original/4X/c/d/c/cdc669cdfac2edb06253ef7468b38a2be0f1dcbb.jpeg",
+      "width": 1084,
+      "height": 1191,
+      "groupId": "group-1760528756665"
+    },
+    {
+      "id": "emoji-1760864457215-bdjdmq",
+      "packet": 1760864457215,
+      "name": "G3jJZNbXMAATIsb",
+      "url": "https://linux.do/uploads/default/original/4X/5/8/0/580ef641e19f461bc1dcfc25329cb0c7262d29b9.jpeg",
+      "width": 900,
+      "height": 799,
+      "groupId": "group-1760528756665"
+    }
+  ]
+}

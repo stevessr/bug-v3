@@ -1,0 +1,449 @@
+{
+  "id": "group-1763199195538",
+  "name": "该死的群友",
+  "icon": "🦀",
+  "order": 65,
+  "emojis": [
+    {
+      "id": "emoji-1763199205856-0wp5h7",
+      "packet": 1763199205856,
+      "name": "JavaScript",
+      "url": "https://linux.do/uploads/default/original/4X/c/f/7/cf70f31b13aa4c104c38d75f5112b3bce046bcf7.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-eqmens",
+      "packet": 1763199205857,
+      "name": "Java",
+      "url": "https://linux.do/uploads/default/original/4X/4/0/c/40cb405f91acf7c3e1ea08742f320acc5ed58686.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-kyvmmg",
+      "packet": 1763199205857,
+      "name": "C语言",
+      "url": "https://linux.do/uploads/default/original/4X/5/5/d/55d3fd060c9b3387368098dade62a376b0913fd2.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-2bzl5j",
+      "packet": 1763199205857,
+      "name": "Python",
+      "url": "https://linux.do/uploads/default/original/4X/e/4/4/e441ddf6748dce0233d69803b1bdb75d24b937bc.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-r6r5iy",
+      "packet": 1763199205857,
+      "name": "C++",
+      "url": "https://linux.do/uploads/default/original/4X/f/3/c/f3c7ca6a9e9f4794b251224230c86d2061031a25.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-yenxf5",
+      "packet": 1763199205857,
+      "name": "SQL",
+      "url": "https://linux.do/uploads/default/original/4X/9/e/c/9ec987e23858c23977745580a4c5655e6b2d2341.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-hhlw69",
+      "packet": 1763199205857,
+      "name": "该死的群友.NET基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/8/2/1/821559614a0b0a1c218c9a9672ffa85626b2c0fb.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-tsbybu",
+      "packet": 1763199205857,
+      "name": "该死的群友C#基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/3/a/e/3ae5c1696796a0a437b52860418e941c97ad4092.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-qvxuh8",
+      "packet": 1763199205857,
+      "name": "该死的群友Linux基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/1/c/5/1c58fa3e816b13e8fc148afec0900eb870123554.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-lpe76g",
+      "packet": 1763199205857,
+      "name": "Lua",
+      "url": "https://linux.do/uploads/default/original/4X/3/3/9/3390aa1a7a026f9b6efe6feeb572fb25de278b6d.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205857-kpo640",
+      "packet": 1763199205857,
+      "name": "Haskell",
+      "url": "https://linux.do/uploads/default/original/4X/c/7/4/c745a33fafc297e2350d8b7d824def5b6052f21e.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-llh0d7",
+      "packet": 1763199205858,
+      "name": "Ruby",
+      "url": "https://linux.do/uploads/default/original/4X/0/8/9/0892b4a64889ec8fbacbaf8f9a70ba2dc2683c63.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-icb0p0",
+      "packet": 1763199205858,
+      "name": "Nodejs",
+      "url": "https://linux.do/uploads/default/original/4X/b/6/e/b6e567b2f4af3951c42568f6fb7835b2a351e887.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-3gurb0",
+      "packet": 1763199205858,
+      "name": "Kotlin",
+      "url": "https://linux.do/uploads/default/original/4X/f/7/0/f70108f8a3c62eb2ef6a735044b53cf7fe798756.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-3ur3iq",
+      "packet": 1763199205858,
+      "name": "TS",
+      "url": "https://linux.do/uploads/default/original/4X/9/6/e/96e7a34217ee5140e36c1903ca4525d1c3a3ac2c.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-pu3rwg",
+      "packet": 1763199205858,
+      "name": "Vue基础扎实",
+      "url": "https://linux.do/uploads/default/original/4X/c/7/e/c7ef4241407b590588e9c28a1de1305e12a2778f.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-6ab7wm",
+      "packet": 1763199205858,
+      "name": "Angular基础扎实",
+      "url": "https://linux.do/uploads/default/original/4X/4/f/a/4fa884051b3d16eaa87fdf4820cf8b8d2e68dc95.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-8eqh8q",
+      "packet": 1763199205858,
+      "name": "SQL基础扎实",
+      "url": "https://linux.do/uploads/default/original/4X/9/e/c/9ec987e23858c23977745580a4c5655e6b2d2341.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-dwrb2c",
+      "packet": 1763199205858,
+      "name": "React基础扎实",
+      "url": "https://linux.do/uploads/default/original/4X/4/c/9/4c96ad7e2ac96cdfbf2e5bb60af904a245e70e37.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-ucn5gj",
+      "packet": 1763199205858,
+      "name": "Shell基础扎实",
+      "url": "https://linux.do/uploads/default/original/4X/3/5/7/3578e490b55bd71194bd37070b91462bba9d9977.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-pj564z",
+      "packet": 1763199205858,
+      "name": "算法基础扎实",
+      "url": "https://linux.do/uploads/default/original/4X/3/5/3/3534a1cf43ceaed982ccd95774932ad616e83ddb.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-zb97jt",
+      "packet": 1763199205858,
+      "name": "Dart",
+      "url": "https://linux.do/uploads/default/original/4X/b/6/1/b616f687a1b90a6ba0fc64cd6434c129cc4f64b8.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-3f94tx",
+      "packet": 1763199205858,
+      "name": "Haskell",
+      "url": "https://linux.do/uploads/default/original/4X/c/7/4/c745a33fafc297e2350d8b7d824def5b6052f21e.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-k98b0z",
+      "packet": 1763199205858,
+      "name": "Swift",
+      "url": "https://linux.do/uploads/default/original/4X/7/c/0/7c0f42eea8fee9a9dab52d990df3678e14c54771.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-sgk8a6",
+      "packet": 1763199205858,
+      "name": "Scheme",
+      "url": "https://linux.do/uploads/default/original/4X/a/0/5/a0598bb536be60cc3f61fdba30ed39b869e69ab6.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-e37a8o",
+      "packet": 1763199205858,
+      "name": "Erlang",
+      "url": "https://linux.do/uploads/default/original/4X/1/4/c/14c580e87f5e68dd022cfd02bc1430b6e7dc07ff.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-0jma0g",
+      "packet": 1763199205858,
+      "name": "Scala",
+      "url": "https://linux.do/uploads/default/original/4X/2/7/0/270c020b37bff9a3aa5c9072e5aa9b638c4bb2fa.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-gh1r39",
+      "packet": 1763199205858,
+      "name": "Clojure",
+      "url": "https://linux.do/uploads/default/original/4X/d/8/0/d80617a5adf0df4acd8221cf8ae436e51105fdab.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-r5ptwf",
+      "packet": 1763199205858,
+      "name": "Ocam",
+      "url": "https://linux.do/uploads/default/original/4X/2/6/7/26797a265f738b6ff4eb1e3f33392626a6b47b09.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-7mp6u6",
+      "packet": 1763199205858,
+      "name": "Groovy",
+      "url": "https://linux.do/uploads/default/original/4X/f/c/c/fccfa628911722c83a8243cf8b99993cbc53e433.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-nfl65s",
+      "packet": 1763199205858,
+      "name": "该死的群友 编译 基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/2/8/5/285b7f0f05d661a90da5a1cc47dfd45f6775435e.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-llzo7v",
+      "packet": 1763199205858,
+      "name": "该死的群友 攻防 基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/d/b/5/db5de697bb92bccd41a3ca8a0fff4c5064980579.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205858-14bis4",
+      "packet": 1763199205858,
+      "name": "该死的群友 汇编 基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/5/f/3/5f35c96496b3e31c4be37c5dcce46132084ee92c.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-yiv20f",
+      "packet": 1763199205859,
+      "name": "Elixir基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/5/3/2/532a065e93fe9f9e6361658dca93d491a0351c95.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-2irc8r",
+      "packet": 1763199205859,
+      "name": "打包基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/6/f/3/6f3222862f43fbb18678e5fd4a5b8ebd135dfdc0.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-z4usp5",
+      "packet": 1763199205859,
+      "name": "密码学基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/c/6/a/c6a87434b2163ebe5cb96dc3095fb497842d4718.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-trbt1c",
+      "packet": 1763199205859,
+      "name": "CSS",
+      "url": "https://linux.do/uploads/default/original/4X/7/d/2/7d220d56feadd6743823dc4f0c7b96ad0718c642.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-cy1bie",
+      "packet": 1763199205859,
+      "name": "Lisp",
+      "url": "https://linux.do/uploads/default/original/4X/2/f/d/2fdc66c7460df8871869c08163ed4a9abe62aa7b.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-ch4lvd",
+      "packet": 1763199205859,
+      "name": "Golang",
+      "url": "https://linux.do/uploads/default/original/4X/7/f/7/7f7b0ce2351fb9c4ee3bdbb4aad0d83cd5bf713f.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-h7tkwr",
+      "packet": 1763199205859,
+      "name": "Rust",
+      "url": "https://linux.do/uploads/default/original/4X/2/0/5/2059a2ad8155ceae7ee0d2b56635d39f34003138.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-uoh4mz",
+      "packet": 1763199205859,
+      "name": "ASM",
+      "url": "https://linux.do/uploads/default/original/4X/4/6/0/4609c1bd2624fb362188aabf5aae84bb268cbfc4.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-hngv97",
+      "packet": 1763199205859,
+      "name": "测试",
+      "url": "https://linux.do/uploads/default/original/4X/7/b/f/7bf891452d7f23c637fcbd1ff5b2e099ec4e480a.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-c294r0",
+      "packet": 1763199205859,
+      "name": "吹逼基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/3/1/7/317cd87aff90d736e3592a1afba36dc3933af7af.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-kvelhx",
+      "packet": 1763199205859,
+      "name": "逆向基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/b/7/0/b70f04fbd02404b1585a752c5fe7792640e0651b.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-7gjqqh",
+      "packet": 1763199205859,
+      "name": "Perl基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/1/1/5/115e4af2f91280367c91bb3773a057500caec4f1.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-v27a07",
+      "packet": 1763199205859,
+      "name": "该死的群友二进制基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/c/e/6/ce6dd664d30f832af135bf359e1f6d4ff51fd5bd.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-ihwygy",
+      "packet": 1763199205859,
+      "name": "该死的群友网络基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/5/4/9/54975f76de643bb3861b67015f85c403eb45c7bb.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-6e9whl",
+      "packet": 1763199205859,
+      "name": "该死的群友PHP基础竟如此扎实",
+      "url": "https://linux.do/uploads/default/original/4X/5/0/0/50034ea81c5aa696a32e5a74c2f8b9ece227b2e5.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    },
+    {
+      "id": "emoji-1763199205859-ewdnlg",
+      "packet": 1763199205859,
+      "name": "渗透基础",
+      "url": "https://linux.do/uploads/default/original/4X/b/0/7/b07e47de73a14dd3af196d9b37fa751c08c1a40d.webp",
+      "width": 391,
+      "height": 512,
+      "groupId": "group-1763199195538"
+    }
+  ]
+}
