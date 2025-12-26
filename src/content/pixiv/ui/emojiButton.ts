@@ -1,5 +1,3 @@
-import DOMPurify from 'dompurify'
-
 import type { AddEmojiButtonData } from '../types'
 import { performPixivAddEmojiFlow } from '../core/helpers'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
@@ -13,24 +11,6 @@ const timeoutIds = new Set<ReturnType<typeof setTimeout>>()
 
 /** 常量定义 */
 const FEEDBACK_DISPLAY_MS = 3000
-
-// DOMPurify configuration for SVG icons
-const purifyConfig = {
-  ALLOWED_TAGS: ['svg', 'path', 'style'],
-  ALLOWED_ATTR: [
-    'width',
-    'height',
-    'viewBox',
-    'fill',
-    'aria-hidden',
-    'xmlns',
-    'style',
-    'd',
-    'class'
-  ],
-  ALLOWED_URI_REGEXP:
-    /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i
-}
 
 export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) {
   let running = false
@@ -112,7 +92,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
       </svg>
       添加中...
     `
-    button.innerHTML = DOMPurify.sanitize(loadingHtml, purifyConfig)
+    button.innerHTML = loadingHtml
     button.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'
 
     console.debug('[pixiv][button] starting performPixivAddEmojiFlow', { data })
@@ -127,7 +107,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
             <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
           </svg>已添加
         `
-        button.innerHTML = DOMPurify.sanitize(successHtml, purifyConfig)
+        button.innerHTML = successHtml
         button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
         button.style.color = '#ffffff'
         button.style.border = '2px solid #ffffff'
@@ -139,7 +119,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
               <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
             </svg>已打开
           `
-          button.innerHTML = DOMPurify.sanitize(openedHtml, purifyConfig)
+          button.innerHTML = openedHtml
           button.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)'
         }
         console.log('[pixiv][button] add emoji success', { name: data.name, url: data.url, resp })
@@ -167,7 +147,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>失败
       `
-      button.innerHTML = DOMPurify.sanitize(errorHtml, purifyConfig)
+      button.innerHTML = errorHtml
       button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
       button.style.color = '#ffffff'
       button.style.border = '2px solid #ffffff'

@@ -1,8 +1,6 @@
 // 移植自 docs/referense/2mix.js — 将用户脚本逻辑封装为一个可初始化的模块
 // 功能：在 textarea 输入 `[!` 时显示候选 Callout（英文），支持键盘和点击完成
 
-import DOMPurify from 'dompurify'
-
 import { ESI } from '@/content/utils/injectCustomCss'
 import { createE, DOA, DEBI, DAEL } from '@/content/utils/createEl'
 import { ICONS, calloutKeywords } from '@/content/data/callout'
@@ -263,20 +261,7 @@ function updateSuggestionBox(element: HTMLTextAreaElement | HTMLElement, matches
     })
     .join('')
 
-  suggestionBox.innerHTML = DOMPurify.sanitize(htmlContent, {
-    ALLOWED_TAGS: ['div', 'svg', 'path', 'span'],
-    ALLOWED_ATTR: [
-      'class',
-      'data-index',
-      'data-key',
-      'style',
-      'xmlns',
-      'viewBox',
-      'fill',
-      'd',
-      'color'
-    ]
-  })
+  suggestionBox.innerHTML = htmlContent
 
   suggestionBox.querySelectorAll('.suggestion-item-en').forEach(item => {
     item.addEventListener('mousedown', e => {

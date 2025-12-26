@@ -1,7 +1,5 @@
 import { createE, DOA, DAEL } from './createEl'
 
-import { safeLocalStorage } from '@/utils/safeStorage'
-
 /**
  * Create and show a draggable iframe modal.
  *
@@ -551,12 +549,17 @@ export function createAndShowSideIframeModal(
 
   // Persist floating button top position
   const saveFloatingPos = (top: number) => {
-    safeLocalStorage.set(FLOAT_POS_KEY, Math.round(top))
+    try {
+      localStorage.setItem(FLOAT_POS_KEY, String(Math.round(top)))
+    } catch {
+      /* ignore */
+    }
   }
 
   const restoreFloatingPos = () => {
     try {
-      const top = safeLocalStorage.get<number>(FLOAT_POS_KEY, -1)
+      const stored = localStorage.getItem(FLOAT_POS_KEY)
+      const top = stored ? parseInt(stored, 10) : -1
       if (top >= 0 && floatingBtn) {
         const btnH = floatingBtn.offsetHeight
         const minTop = 8
