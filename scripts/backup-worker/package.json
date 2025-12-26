@@ -1,7 +1,7 @@
 {
   "name": "emoji-backup-worker",
   "version": "1.0.0",
-  "description": "Cloudflare Worker for userscript backup with password protection.",
+  "description": "Cloudflare Worker for emoji extension backup with password protection.",
   "type": "module",
   "scripts": {
     "deploy": "wrangler deploy"

@@ -1,6 +1,6 @@
-# Cloudflare Worker for Userscript Backup
+# Cloudflare Worker for Emoji Extension Backup
 
-This worker provides a secure backup and restore service for the emoji extension's userscript version. It uses Cloudflare KV for storage and requires a secret token for authorization. It supports both a read-write and a read-only token for enhanced security.
+This worker provides a secure backup and restore service for the emoji extension. It uses Cloudflare KV for storage and requires a secret token for authorization. It supports both a read-write and a read-only token for enhanced security.
 
 ## API Endpoints
 
@@ -59,6 +59,6 @@ This worker provides a secure backup and restore service for the emoji extension
     pnpm run deploy
     ```
 
-## Usage in Userscript
+## Usage
 
 You must include the `Authorization` header in your requests. Use the read-write token for push operations and the read-only token (if configured) for pull operations.

@@ -31,7 +31,7 @@
 
 ### ⚙️ 设置集成
 
-- **全局设置**: 读取 `emoji_extension_userscript_settings` 中的配置
+- **全局设置**: 读取 `emoji_extension_settings` 中的配置
 - **强制移动模式**: 遵从全局 `forceMobileMode` 设置
 - **独立运行**: 不依赖主表情脚本，可单独安装使用
 
@@ -142,7 +142,7 @@ https://github.com/stevessr/bug-v3/releases/latest/download/callout-suggestions.
 
 ```javascript
 // 读取设置
-const SETTINGS_KEY = 'emoji_extension_userscript_settings'
+const SETTINGS_KEY = 'emoji_extension_settings'
 const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY))
 
 // 检查强制移动模式
