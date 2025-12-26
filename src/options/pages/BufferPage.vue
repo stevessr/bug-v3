@@ -451,46 +451,60 @@ const addFiles = async (files: File[]) => {
     selectedFiles.value.map(item => item.file.name.toLowerCase().replace(/\.[^/.]+$/, ''))
   )
 
-  const newFiles = imageFiles
-    .filter(file => {
-      const fileName = file.name
-      const fileNameWithoutExt = fileName.toLowerCase().replace(/\.[^/.]+$/, '')
+  const newFiles = await Promise.all(
+    imageFiles
+      .filter(file => {
+        const fileName = file.name
+        const fileNameWithoutExt = fileName.toLowerCase().replace(/\.[^/.]+$/, '')
 
-      // Check if file already exists in buffer group
-      if (existingNames.includes(fileName)) {
-        console.log(`[BufferPage] Skipped ${fileName}: already exists in buffer group`)
-        return false
-      }
+        // Check if file already exists in buffer group
+        if (existingNames.includes(fileName)) {
+          console.log(`[BufferPage] Skipped ${fileName}: already exists in buffer group`)
+          return false
+        }
 
-      // Check if file already exists in current selection
-      if (existingFileNames.has(fileNameWithoutExt)) {
-        console.log(`[BufferPage] Skipped ${fileName}: duplicate in current selection`)
-        return false
-      }
+        // Check if file already exists in current selection
+        if (existingFileNames.has(fileNameWithoutExt)) {
+          console.log(`[BufferPage] Skipped ${fileName}: duplicate in current selection`)
+          return false
+        }
 
-      return true
-    })
-    .map(file => {
-      const url = URL.createObjectURL(file)
-      const newFileEntry = {
-        id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        file,
-        previewUrl: url,
-        cropData: undefined as undefined,
-        width: undefined as number | undefined,
-        height: undefined as number | undefined
-      }
+        return true
+      })
+      .map(async file => {
+        // 立即读取文件内容到内存，防止源文件被删除导致 "File not found"
+        // 将原始 File 转换为基于内存 Blob 的 File
+        const arrayBuffer = await file.arrayBuffer()
+        const blob = new Blob([arrayBuffer], { type: file.type })
+        const memoryFile = new File([blob], file.name, {
+          type: file.type,
+          lastModified: file.lastModified
+        })
 
-      // Get image dimensions
-      const img = new Image()
-      img.onload = () => {
-        newFileEntry.width = img.width
-        newFileEntry.height = img.height
-      }
-      img.src = url
+        const url = URL.createObjectURL(memoryFile)
 
-      return newFileEntry
-    })
+        const newFileEntry = {
+          id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file: memoryFile, // 使用内存文件替换原始文件引用
+          previewUrl: url,
+          cropData: undefined as undefined,
+          width: undefined as number | undefined,
+          height: undefined as number | undefined
+        }
+
+        // Get image dimensions
+        // 使用 Promise 包装图片加载，虽然 addFiles 原本没等待它，但为了逻辑完整性保持原样结构
+        // 这里的图片加载是异步的，不阻塞返回，宽高会在加载完成后更新
+        const img = new Image()
+        img.onload = () => {
+          newFileEntry.width = img.width
+          newFileEntry.height = img.height
+        }
+        img.src = url
+
+        return newFileEntry
+      })
+  )
 
   selectedFiles.value = [...selectedFiles.value, ...newFiles]
 
