@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
+import { exportToCloudMarket } from '@/options/utils/exportUtils'
 import type { Emoji, EmojiGroup } from '@/types/type'
 
 const emojiStore = useEmojiStore()
@@ -93,6 +95,44 @@ const clearSelection = () => {
   selectedEmojis.value.clear()
 }
 
+// 导出活跃分组到云端市场（不包括归档）
+const isExportingActiveGroups = ref(false)
+const exportActiveGroupsToMarket = async () => {
+  try {
+    isExportingActiveGroups.value = true
+    message.info('正在导出活跃分组到云端市场格式，请稍候...')
+
+    await exportToCloudMarket(emojiStore.groups, emojiStore.archivedGroups, false)
+
+    message.success(`导出完成！共导出 ${emojiStore.groups.length} 个活跃分组`)
+  } catch (error) {
+    console.error('导出活跃分组到云端市场失败：', error)
+    message.error('导出失败，请查看控制台了解详情')
+  } finally {
+    isExportingActiveGroups.value = false
+  }
+}
+
+// 导出所有分组到云端市场（包括归档）
+const isExportingAllGroups = ref(false)
+const exportAllGroupsToMarket = async () => {
+  try {
+    isExportingAllGroups.value = true
+    message.info('正在导出所有分组到云端市场格式，请稍候...')
+
+    await exportToCloudMarket(emojiStore.groups, emojiStore.archivedGroups, true)
+
+    message.success(
+      `导出完成！共导出 ${emojiStore.groups.length + emojiStore.archivedGroups.length} 个分组`
+    )
+  } catch (error) {
+    console.error('导出所有分组到云端市场失败：', error)
+    message.error('导出失败，请查看控制台了解详情')
+  } finally {
+    isExportingAllGroups.value = false
+  }
+}
+
 // 导出 JSON
 const exportSelectedAsJson = () => {
   const exportData: {
@@ -167,6 +207,22 @@ onMounted(async () => {
     <div class="mb-4 flex items-center justify-between">
       <h2 class="text-xl font-semibold dark:text-white">导出表情</h2>
       <div class="flex items-center gap-2">
+        <a-button
+          type="primary"
+          :loading="isExportingActiveGroups"
+          @click="exportActiveGroupsToMarket"
+          title="导出所有活跃分组（不包括归档）到云端市场格式"
+        >
+          一键以云端格式导出活跃分组
+        </a-button>
+        <a-button
+          type="default"
+          :loading="isExportingAllGroups"
+          @click="exportAllGroupsToMarket"
+          title="导出所有分组（包括归档）到云端市场格式"
+        >
+          一键以云端格式导出所有分组
+        </a-button>
         <template v-if="selectedCount > 0">
           <span class="text-sm text-gray-500">已选 {{ selectedCount }} 个表情</span>
           <a-button type="primary" @click="exportSelectedAsJson">导出 JSON</a-button>

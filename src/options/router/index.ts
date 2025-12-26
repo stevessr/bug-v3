@@ -13,6 +13,7 @@ import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
 import BufferPage from '../pages/BufferPage.vue'
 import BilibiliImportPage from '../pages/BilibiliImportPage.vue'
 import ExportPage from '../pages/ExportPage.vue'
+import MarketPage from '../pages/MarketPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -96,6 +97,14 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/market',
+    name: 'market',
+    component: MarketPage,
+    meta: {
+      title: '云端市场'
+    }
+  },
+  {
     path: '/about',
     name: 'about',
     component: AboutPage,
@@ -112,3 +121,4 @@ const router = createRouter({
 })
 
 export default router
+

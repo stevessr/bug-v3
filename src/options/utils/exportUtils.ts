@@ -471,3 +471,70 @@ function createTarHelpers(encoder: TextEncoder) {
     generateSafeFilename
   }
 }
+
+/**
+ * 导出分组到云端市场格式
+ * 生成多个文件：
+ * 1. metadata.json - 包含所有分组的元信息
+ * 2. group-{id}.json - 每个分组的详细数据
+ */
+export async function exportToCloudMarket(
+  groups: any[],
+  archivedGroups: any[],
+  includeArchived: boolean = true
+) {
+  const allGroups = includeArchived ? [...groups, ...archivedGroups] : groups
+
+  // 生成 metadata
+  const metadata = {
+    version: '1.0',
+    exportDate: new Date().toISOString(),
+    totalGroups: allGroups.length,
+    includeArchived,
+    groups: allGroups.map(g => ({
+      id: g.id,
+      name: g.name,
+      icon: g.icon,
+      detail: g.detail,
+      order: g.order,
+      emojiCount: (g.emojis || []).length,
+      isArchived: archivedGroups.some(ag => ag.id === g.id)
+    }))
+  }
+
+  // 下载 metadata.json
+  downloadJson('metadata.json', metadata)
+
+  // 等待一小段时间，避免浏览器阻止多个下载
+  await new Promise(resolve => setTimeout(resolve, 300))
+
+  // 导出每个分组的详细数据
+  for (let i = 0; i < allGroups.length; i++) {
+    const group = allGroups[i]
+
+    // 等待一小段时间,避免浏览器阻止多个下载
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
+
+    const groupData = {
+      id: group.id,
+      name: group.name,
+      icon: group.icon,
+      detail: group.detail,
+      order: group.order,
+      emojis: (group.emojis || []).map((e: any) => ({
+        id: e.id,
+        packet: e.packet,
+        name: e.name,
+        url: e.url,
+        displayUrl: e.displayUrl,
+        width: e.width,
+        height: e.height,
+        groupId: group.id
+      }))
+    }
+
+    downloadJson(`group-${group.id}.json`, groupData)
+  }
+}
