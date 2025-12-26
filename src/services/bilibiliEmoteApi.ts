@@ -1,16 +1,16 @@
 // Bilibili Emote API Service
-// 获取bilibili表情包列表和表情数据
+// 获取 bilibili 表情包列表和表情数据
 
 export interface BilibiliEmote {
   id: number
   text: string // 表情名称，如 "[微笑]"
-  url: string // 表情图片URL
+  url: string // 表情图片 URL
 }
 
 export interface BilibiliEmotePackage {
   id: number
   text: string // 表情包名称，如 "小黄脸"
-  url: string // 表情包图标URL
+  url: string // 表情包图标 URL
   emote: BilibiliEmote[] // 表情列表
 }
 
@@ -23,8 +23,8 @@ export interface BilibiliEmoteResponse {
 }
 
 /**
- * 获取bilibili用户表情包列表
- * @param business 业务场景，reply为评论区，dynamic为动态
+ * 获取 bilibili 用户表情包列表
+ * @param business 业务场景，reply 为评论区，dynamic 为动态
  * @returns Promise<BilibiliEmotePackage[]>
  */
 export async function fetchBilibiliEmotePackages(
@@ -35,7 +35,7 @@ export async function fetchBilibiliEmotePackages(
       `https://api.bilibili.com/x/emote/user/panel/web?business=${business}`,
       {
         method: 'GET',
-        credentials: 'include', // 需要包含cookie以获取用户表情
+        credentials: 'include', // 需要包含 cookie 以获取用户表情
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json'
@@ -55,13 +55,13 @@ export async function fetchBilibiliEmotePackages(
 
     return data.data.packages
   } catch (error) {
-    console.error('[Bilibili API] 获取表情包失败:', error)
+    console.error('[Bilibili API] 获取表情包失败：', error)
     throw error
   }
 }
 
 /**
- * 获取bilibili所有表情包
+ * 获取 bilibili 所有表情包
  * @returns Promise<BilibiliEmotePackage[]>
  */
 export async function fetchAllBilibiliEmotePackages(): Promise<BilibiliEmotePackage[]> {
@@ -69,9 +69,9 @@ export async function fetchAllBilibiliEmotePackages(): Promise<BilibiliEmotePack
 }
 
 /**
- * 将bilibili表情包转换为插件表情格式
- * @param packages bilibili表情包数组
- * @param targetGroupId 目标分组ID
+ * 将 bilibili 表情包转换为插件表情格式
+ * @param packages bilibili 表情包数组
+ * @param targetGroupId 目标分组 ID
  * @returns 转换后的表情数组
  */
 export function convertBilibiliEmotesToPluginFormat(
@@ -94,8 +94,8 @@ export function convertBilibiliEmotesToPluginFormat(
 }
 
 /**
- * 通过表情包ID获取指定的表情包
- * @param packageId 表情包ID
+ * 通过表情包 ID 获取指定的表情包
+ * @param packageId 表情包 ID
  * @returns Promise<BilibiliEmotePackage>
  */
 export async function fetchBilibiliEmotePackageById(
@@ -124,7 +124,7 @@ export async function fetchBilibiliEmotePackageById(
       throw new Error(`API error: ${data.message}`)
     }
 
-    // 转换API响应格式为标准格式
+    // 转换 API 响应格式为标准格式
     const packageData = data.data.packages[0]
     if (!packageData) {
       throw new Error('未找到指定的表情包')
@@ -141,7 +141,65 @@ export async function fetchBilibiliEmotePackageById(
       }))
     }
   } catch (error) {
-    console.error('[Bilibili API] 获取指定表情包失败:', error)
+    console.error('[Bilibili API] 获取指定表情包失败：', error)
     throw error
   }
+}
+
+/**
+ * 简单的 Bilibili 表情包索引项
+ */
+export interface BilibiliEmoteIndexItem {
+  id: number
+  text: string
+  url: string
+}
+
+let bilibiliIndexCache: BilibiliEmoteIndexItem[] | null = null
+
+/**
+ * 从云端加载 Bilibili 表情包索引
+ * @param customDomain 自定义域名
+ */
+export async function loadBilibiliIndex(customDomain?: string): Promise<BilibiliEmoteIndexItem[]> {
+  if (bilibiliIndexCache) {
+    return bilibiliIndexCache
+  }
+
+  try {
+    const domain = customDomain || 'video2gif-pages.pages.dev'
+    const response = await fetch(`https://${domain}/assets/bilibili/index.json`)
+
+    if (!response.ok) {
+      throw new Error(`Failed to load index: ${response.status}`)
+    }
+
+    const data = await response.json()
+    bilibiliIndexCache = data
+    return data
+  } catch (error) {
+    console.error('[Bilibili API] Failed to load index:', error)
+    return []
+  }
+}
+
+/**
+ * 搜索 Bilibili 表情包
+ * @param query 搜索关键词
+ * @param customDomain 自定义域名
+ */
+export async function searchBilibiliPackages(
+  query: string,
+  customDomain?: string
+): Promise<BilibiliEmoteIndexItem[]> {
+  const index = await loadBilibiliIndex(customDomain)
+
+  if (!query || !query.trim()) {
+    return []
+  }
+
+  const lowerQuery = query.toLowerCase().trim()
+  return index.filter(
+    item => item.text.toLowerCase().includes(lowerQuery) || String(item.id).includes(lowerQuery)
+  )
 }
