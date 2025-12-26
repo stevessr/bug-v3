@@ -11,23 +11,21 @@ A browser extension for managing and using custom emojis across the web. Built w
 ### Common Commands
 ```bash
 pnpm install              # Install dependencies
-npm run dev               # Dev server (full features, logging enabled)
-npm run build             # Standard production build
-npm run build:prod        # Production without logging (smaller bundle)
-npm run build:minimal     # No logging + no IndexedDB (smallest bundle)
-npm run build:debug       # No minification (for debugging)
-npm run lint              # Check linting
-npm run lint:fix          # Auto-fix lint issues
-npm run format            # Format with Prettier
-npm run type-check        # TypeScript type checking
+pnpm dev               # Dev server (full features, logging enabled)
+pnpm build             # Standard production build
+pnpm build:debug       # No minification (for debugging)
+pnpm lint              # Check linting
+pnpm lint:fix          # Auto-fix lint issues
+pnpm format            # Format with Prettier
+pnpm type-check        # TypeScript type checking
 ```
 
 ### Testing (Playwright)
 ```bash
-npm run test                    # Run all tests
-npm run test:debug              # Debug mode
-npm run test:extension          # Extension-specific tests
-npm run test:extension:debug    # Debug extension tests
+pnpm test                    # Run all tests
+pnpm test:debug              # Debug mode
+pnpm test:extension          # Extension-specific tests
+pnpm test:extension:debug    # Debug extension tests
 ```
 
 ## Architecture

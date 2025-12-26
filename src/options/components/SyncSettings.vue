@@ -227,8 +227,50 @@ const testConnection = async () => {
   testResult.value = null
 
   try {
-    // Temporarily create config to test with
-    const result = await emojiStore.testSyncConnection()
+    // Create temporary config from current form values to test
+    let tempConfig: SyncTargetConfig
+
+    switch (syncType.value) {
+      case 'cloudflare':
+        tempConfig = {
+          type: 'cloudflare',
+          enabled: true,
+          url: cloudflareConfig.url,
+          authToken: cloudflareConfig.authToken,
+          authTokenReadonly:
+            cloudflareConfig.authTokenReadonly && cloudflareConfig.authTokenReadonly.trim()
+              ? cloudflareConfig.authTokenReadonly
+              : undefined
+        } as CloudflareConfig
+        break
+      case 'webdav':
+        tempConfig = {
+          type: 'webdav',
+          enabled: true,
+          url: webdavConfig.url,
+          username: webdavConfig.username,
+          password: webdavConfig.password,
+          path: webdavConfig.path || undefined
+        } as WebDAVConfig
+        break
+      case 's3':
+        tempConfig = {
+          type: 's3',
+          enabled: true,
+          endpoint: s3Config.endpoint,
+          region: s3Config.region,
+          bucket: s3Config.bucket,
+          accessKeyId: s3Config.accessKeyId,
+          secretAccessKey: s3Config.secretAccessKey,
+          path: s3Config.path || undefined
+        } as S3Config
+        break
+      default:
+        throw new Error('Invalid sync type')
+    }
+
+    // Test with temporary config (don't save yet)
+    const result = await emojiStore.testSyncConnection(tempConfig)
     testResult.value = result
 
     if (result.success) {

@@ -9,11 +9,13 @@ backup-worker 已合并到 cfworker 项目中，API 路径已变更。
 ### 如果你之前配置了 Cloudflare Worker 同步：
 
 **旧的 URL 格式**（不再工作）:
+
 ```
 https://your-worker.your-account.workers.dev
 ```
 
 **新的 URL 格式**（必须包含 `/api/backup`）:
+
 ```
 https://your-pages-project.pages.dev/api/backup
 ```
@@ -41,13 +43,32 @@ npx wrangler pages secret put AUTH_SECRET_READONLY --project-name=your-project
 
 ### 2. 更新浏览器扩展中的配置
 
-1. 打开扩展设置页面 → 同步设置
-2. 在 "Worker URL" 字段中更新 URL：
-   - **删除旧的**: `https://your-worker.workers.dev`
-   - **输入新的**: `https://your-project.pages.dev/api/backup`
-   - ⚠️ **重要**: 必须包含 `/api/backup` 路径！
-3. 点击 "测试连接" 验证配置
-4. 如果测试成功，点击 "保存配置"
+**重要提示**：现在可以先测试连接，再保存配置！
+
+1. **重新加载扩展**（使用新构建的版本）:
+
+   ```bash
+   npm run build  # 如果还没构建
+   ```
+
+   然后在浏览器扩展管理页面重新加载扩展
+
+2. **配置 Worker URL**:
+   - 打开扩展设置页面 → 同步设置
+   - 选择 "☁️ Cloudflare Worker"
+   - 在 "Worker URL" 字段中输入：`https://your-project.pages.dev/api/backup`
+   - ⚠️ **必须包含 `/api/backup` 路径！**
+   - 输入 "认证令牌"（读写权限）
+   - 可选：输入 "只读认证令牌"
+
+3. **测试连接**:
+   - 点击 "测试连接" 按钮
+   - **现在不需要先保存配置**，可以直接测试表单中的配置
+   - 应该显示 "连接测试成功"
+
+4. **保存配置**:
+   - 测试成功后，点击 "保存配置"
+   - 配置会被保存到扩展存储中
 
 ### 3. （可选）删除旧的 Worker 部署
 
@@ -76,6 +97,18 @@ curl -H "Authorization: Bearer YOUR_READONLY_TOKEN" \
 1. 扩展设置 → 同步设置 → 点击 "测试连接"
 2. 应该显示 "连接测试成功"
 3. 尝试推送或拉取数据
+
+## ✅ 已修复的问题
+
+### 问题 1: "SyntaxError: Unexpected token '<'"
+
+**原因**: API 路径从 `/` 改为 `/api/backup`，旧代码访问错误路径返回 HTML
+**修复**: 更新 `src/utils/syncTargets.ts` 中所有 API 调用路径
+
+### 问题 2: "Unauthorized: Invalid token"
+
+**原因**: 测试连接使用已保存的配置，而不是表单中当前填写的配置
+**修复**: 修改 `testSyncConnection` 方法支持临时配置参数，现在可以在保存前测试配置
 
 ## ❓ 常见问题
 

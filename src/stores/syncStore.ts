@@ -60,9 +60,10 @@ export function useSyncStore(_options: SyncStoreOptions) {
 
   /**
    * Test sync connection
+   * @param tempConfig - Optional temporary configuration to test (uses saved config if not provided)
    */
-  const testSyncConnection = async (): Promise<SyncResult> => {
-    const config = await loadSyncConfig()
+  const testSyncConnection = async (tempConfig?: SyncTargetConfig): Promise<SyncResult> => {
+    const config = tempConfig || (await loadSyncConfig())
     if (!config) {
       return {
         success: false,
