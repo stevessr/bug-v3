@@ -82,7 +82,13 @@ export function useTagStore(options: TagStoreOptions) {
    * Set all tags for an emoji
    */
   const setEmojiTags = (emojiId: string, tags: string[]): boolean => {
-    const cleanedTags = tags.map(cleanTag).filter(t => t)
+    // 优化：使用 reduce 单次遍历替代 .map().filter()
+    const cleanedTags = tags.reduce((acc, tag) => {
+      const cleaned = cleanTag(tag)
+      if (cleaned) acc.push(cleaned)
+      return acc
+    }, [] as string[])
+
     const emoji = findEmojiInGroups(emojiId)
 
     if (emoji) {
@@ -191,44 +197,72 @@ export function useTagStore(options: TagStoreOptions) {
 
   // --- Computed ---
 
+  // 优化：缓存 allTags 计算结果
+  let cachedAllTags: string[] = []
+  let cachedAllTagsSnapshot = 0
+
   /**
    * Get all unique tags across all emojis
    */
   const allTags: ComputedRef<string[]> = computed(() => {
-    const tagSet = new Set<string>()
+    // 计算当前快照（分组数量 + 总表情数量）
+    const currentSnapshot =
+      groups.value.length + groups.value.reduce((sum, g) => sum + (g.emojis?.length || 0), 0)
 
-    for (const group of groups.value) {
-      const emojis = group.emojis || []
-      for (const emoji of emojis) {
-        if (emoji?.tags) {
-          for (const tag of emoji.tags) {
-            tagSet.add(tag)
+    // 只有当数据变化时才重新计算
+    if (currentSnapshot !== cachedAllTagsSnapshot) {
+      const tagSet = new Set<string>()
+
+      for (const group of groups.value) {
+        const emojis = group.emojis || []
+        for (const emoji of emojis) {
+          if (emoji?.tags) {
+            for (const tag of emoji.tags) {
+              tagSet.add(tag)
+            }
           }
         }
       }
+
+      cachedAllTags = Array.from(tagSet).sort()
+      cachedAllTagsSnapshot = currentSnapshot
     }
 
-    return Array.from(tagSet).sort()
+    return cachedAllTags
   })
+
+  // 优化：缓存 tagUsageCounts 计算结果
+  let cachedTagUsageCounts: Record<string, number> = {}
+  let cachedTagUsageSnapshot = 0
 
   /**
    * Get tag usage counts
    */
   const tagUsageCounts: ComputedRef<Record<string, number>> = computed(() => {
-    const counts: Record<string, number> = {}
+    // 计算当前快照（分组数量 + 总表情数量）
+    const currentSnapshot =
+      groups.value.length + groups.value.reduce((sum, g) => sum + (g.emojis?.length || 0), 0)
 
-    for (const group of groups.value) {
-      const emojis = group.emojis || []
-      for (const emoji of emojis) {
-        if (emoji?.tags) {
-          for (const tag of emoji.tags) {
-            counts[tag] = (counts[tag] || 0) + 1
+    // 只有当数据变化时才重新计算
+    if (currentSnapshot !== cachedTagUsageSnapshot) {
+      const counts: Record<string, number> = {}
+
+      for (const group of groups.value) {
+        const emojis = group.emojis || []
+        for (const emoji of emojis) {
+          if (emoji?.tags) {
+            for (const tag of emoji.tags) {
+              counts[tag] = (counts[tag] || 0) + 1
+            }
           }
         }
       }
+
+      cachedTagUsageCounts = counts
+      cachedTagUsageSnapshot = currentSnapshot
     }
 
-    return counts
+    return cachedTagUsageCounts
   })
 
   return {

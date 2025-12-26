@@ -14,14 +14,29 @@ export interface StorageOptions {
 
 /**
  * SafeStorage 类 - 封装 localStorage 和 sessionStorage
+ * 兼容 Service Worker 环境（没有 localStorage/sessionStorage）
  */
 export class SafeStorage {
-  private storage: Storage
+  private storage: Storage | null
   private prefix: string
   private silentFail: boolean
+  private memoryStorage: Map<string, string> = new Map()
 
   constructor(type: StorageType = 'local', options: StorageOptions = {}) {
-    this.storage = type === 'local' ? localStorage : sessionStorage
+    // 在 Service Worker 或其他不支持 localStorage 的环境中，使用内存存储
+    try {
+      if (typeof localStorage !== 'undefined' && typeof sessionStorage !== 'undefined') {
+        this.storage = type === 'local' ? localStorage : sessionStorage
+      } else {
+        console.warn(
+          '[SafeStorage] localStorage/sessionStorage not available, using memory storage'
+        )
+        this.storage = null
+      }
+    } catch {
+      console.warn('[SafeStorage] Failed to access storage, using memory storage')
+      this.storage = null
+    }
     this.prefix = options.prefix || ''
     this.silentFail = options.silentFail !== false // 默认为 true
   }
@@ -42,6 +57,20 @@ export class SafeStorage {
   get<T>(key: string, defaultValue: T): T {
     try {
       const fullKey = this.getFullKey(key)
+
+      // 如果没有真实存储，使用内存存储
+      if (!this.storage) {
+        const value = this.memoryStorage.get(fullKey)
+        if (value === undefined) {
+          return defaultValue
+        }
+        try {
+          return JSON.parse(value) as T
+        } catch {
+          return value as unknown as T
+        }
+      }
+
       const value = this.storage.getItem(fullKey)
 
       if (value === null) {
@@ -74,6 +103,13 @@ export class SafeStorage {
     try {
       const fullKey = this.getFullKey(key)
       const serialized = JSON.stringify(value)
+
+      // 如果没有真实存储，使用内存存储
+      if (!this.storage) {
+        this.memoryStorage.set(fullKey, serialized)
+        return true
+      }
+
       this.storage.setItem(fullKey, serialized)
       return true
     } catch (error) {
@@ -94,6 +130,13 @@ export class SafeStorage {
   remove(key: string): boolean {
     try {
       const fullKey = this.getFullKey(key)
+
+      // 如果没有真实存储，使用内存存储
+      if (!this.storage) {
+        this.memoryStorage.delete(fullKey)
+        return true
+      }
+
       this.storage.removeItem(fullKey)
       return true
     } catch (error) {
@@ -112,6 +155,12 @@ export class SafeStorage {
   has(key: string): boolean {
     try {
       const fullKey = this.getFullKey(key)
+
+      // 如果没有真实存储，使用内存存储
+      if (!this.storage) {
+        return this.memoryStorage.has(fullKey)
+      }
+
       return this.storage.getItem(fullKey) !== null
     } catch (error) {
       console.warn(`[SafeStorage] Failed to check "${key}":`, error)
@@ -124,6 +173,23 @@ export class SafeStorage {
    */
   clear(): boolean {
     try {
+      // 如果没有真实存储，使用内存存储
+      if (!this.storage) {
+        if (!this.prefix) {
+          this.memoryStorage.clear()
+          return true
+        }
+
+        const keysToRemove: string[] = []
+        for (const key of this.memoryStorage.keys()) {
+          if (key.startsWith(`${this.prefix}:`)) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => this.memoryStorage.delete(key))
+        return true
+      }
+
       if (!this.prefix) {
         // 没有前缀，清空所有
         this.storage.clear()
@@ -139,7 +205,7 @@ export class SafeStorage {
         }
       }
 
-      keysToRemove.forEach(key => this.storage.removeItem(key))
+      keysToRemove.forEach(key => this.storage!.removeItem(key))
       return true
     } catch (error) {
       console.warn('[SafeStorage] Failed to clear storage:', error)
@@ -157,6 +223,20 @@ export class SafeStorage {
     try {
       const keys: string[] = []
       const prefixLength = this.prefix ? this.prefix.length + 1 : 0
+
+      // 如果没有真实存储，使用内存存储
+      if (!this.storage) {
+        for (const key of this.memoryStorage.keys()) {
+          if (this.prefix) {
+            if (key.startsWith(`${this.prefix}:`)) {
+              keys.push(key.substring(prefixLength))
+            }
+          } else {
+            keys.push(key)
+          }
+        }
+        return keys
+      }
 
       for (let i = 0; i < this.storage.length; i++) {
         const key = this.storage.key(i)
@@ -185,6 +265,15 @@ export class SafeStorage {
   getSize(): number {
     try {
       let size = 0
+
+      // 如果没有真实存储，使用内存存储
+      if (!this.storage) {
+        for (const [key, value] of this.memoryStorage.entries()) {
+          size += (key.length + value.length) * 2
+        }
+        return size
+      }
+
       for (let i = 0; i < this.storage.length; i++) {
         const key = this.storage.key(i)
         if (key) {

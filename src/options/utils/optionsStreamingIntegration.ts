@@ -214,26 +214,7 @@ export class OptionsStreamingIntegration {
         img.onerror = null
       }
 
-      img.onload = () => {
-        cleanup()
-        resolve({
-          width: img.naturalWidth,
-          height: img.naturalHeight
-        })
-      }
-
-      img.onerror = () => {
-        cleanup()
-        resolve(null)
-      }
-
-      // 超时处理
-      const timeout = setTimeout(() => {
-        cleanup()
-        resolve(null)
-      }, 5000)
-
-      img.onload = () => {
+      const handleLoad = () => {
         clearTimeout(timeout)
         cleanup()
         resolve({
@@ -241,6 +222,21 @@ export class OptionsStreamingIntegration {
           height: img.naturalHeight
         })
       }
+
+      const handleError = () => {
+        clearTimeout(timeout)
+        cleanup()
+        resolve(null)
+      }
+
+      img.onload = handleLoad
+      img.onerror = handleError
+
+      // 超时处理
+      const timeout = setTimeout(() => {
+        cleanup()
+        resolve(null)
+      }, 5000)
 
       if (signal) {
         signal.addEventListener('abort', () => {

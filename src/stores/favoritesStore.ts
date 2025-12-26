@@ -79,7 +79,11 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
 
       await newStorageHelpers.setEmojiGroupSync(favoritesGroup.id, favoritesGroup)
 
-      const favoriteIds = favoritesGroup.emojis.map(e => e.id).filter(Boolean)
+      // 优化：使用 reduce 单次遍历替代 .map().filter()
+      const favoriteIds = favoritesGroup.emojis.reduce((acc, e) => {
+        if (e.id) acc.push(e.id)
+        return acc
+      }, [] as string[])
       await newStorageHelpers.setFavoritesSync(favoriteIds)
     } catch (error) {
       console.error('[FavoritesStore] Failed to save favorites:', error)

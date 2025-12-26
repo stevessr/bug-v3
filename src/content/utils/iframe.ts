@@ -550,7 +550,9 @@ export function createAndShowSideIframeModal(
   // Persist floating button top position
   const saveFloatingPos = (top: number) => {
     try {
-      localStorage.setItem(FLOAT_POS_KEY, String(Math.round(top)))
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(FLOAT_POS_KEY, String(Math.round(top)))
+      }
     } catch {
       /* ignore */
     }
@@ -558,17 +560,19 @@ export function createAndShowSideIframeModal(
 
   const restoreFloatingPos = () => {
     try {
-      const stored = localStorage.getItem(FLOAT_POS_KEY)
-      const top = stored ? parseInt(stored, 10) : -1
-      if (top >= 0 && floatingBtn) {
-        const btnH = floatingBtn.offsetHeight
-        const minTop = 8
-        const maxTop = window.innerHeight - btnH - 8
-        let clamped = top
-        if (clamped < minTop) clamped = minTop
-        if (clamped > maxTop) clamped = maxTop
-        floatingBtn.style.top = `${clamped}px`
-        floatingBtn.style.transform = 'translateY(0)'
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem(FLOAT_POS_KEY)
+        const top = stored ? parseInt(stored, 10) : -1
+        if (top >= 0 && floatingBtn) {
+          const btnH = floatingBtn.offsetHeight
+          const minTop = 8
+          const maxTop = window.innerHeight - btnH - 8
+          let clamped = top
+          if (clamped < minTop) clamped = minTop
+          if (clamped > maxTop) clamped = maxTop
+          floatingBtn.style.top = `${clamped}px`
+          floatingBtn.style.transform = 'translateY(0)'
+        }
       }
     } catch {
       /* ignore */
