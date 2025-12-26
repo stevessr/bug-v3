@@ -57,6 +57,32 @@ const handleOutputFormatSelect = (key: string) => {
 const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
   handleOutputFormatSelect(String(info.key))
 }
+
+// 云端市场域名的本地状态
+const localCloudMarketDomain = ref<string>(
+  getSetting('cloudMarketDomain', 'video2gif-pages.pages.dev')
+)
+const isCloudMarketDomainSaving = ref(false)
+
+// 监听 settings 变化，同步到本地状态
+watch(
+  () => getSetting('cloudMarketDomain', 'video2gif-pages.pages.dev'),
+  val => {
+    localCloudMarketDomain.value = val
+  }
+)
+
+// 保存云端市场域名
+const saveCloudMarketDomain = async () => {
+  isCloudMarketDomainSaving.value = true
+  try {
+    emit('update:cloudMarketDomain', localCloudMarketDomain.value)
+    // 给用户一点反馈时间
+    await new Promise(resolve => setTimeout(resolve, 300))
+  } finally {
+    isCloudMarketDomainSaving.value = false
+  }
+}
 </script>
 
 <template>
@@ -120,24 +146,30 @@ const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
       />
 
       <!-- 云端市场域名配置 -->
-      <div
-        class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700"
-      >
-        <div>
-          <label class="text-sm font-medium dark:text-white">云端市场域名</label>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
-            配置云端表情包市场的域名（不包含 https://）
-          </p>
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex items-start justify-between">
+          <div>
+            <label class="text-sm font-medium dark:text-white">云端市场域名</label>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              配置云端表情包市场的域名（不包含 https://）
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="localCloudMarketDomain"
+              class="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 w-80 dark:bg-gray-700 dark:text-white"
+              placeholder="video2gif-pages.pages.dev"
+              title="云端市场域名"
+            />
+            <a-button
+              type="primary"
+              :loading="isCloudMarketDomainSaving"
+              @click="saveCloudMarketDomain"
+            >
+              保存
+            </a-button>
+          </div>
         </div>
-        <input
-          :value="getSetting('cloudMarketDomain', 'video2gif-pages.pages.dev')"
-          @input="
-            e => handleSettingUpdate('cloudMarketDomain', (e.target as HTMLInputElement).value)
-          "
-          class="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 w-80 dark:bg-gray-700 dark:text-white"
-          placeholder="video2gif-pages.pages.dev"
-          title="云端市场域名"
-        />
       </div>
     </div>
   </div>

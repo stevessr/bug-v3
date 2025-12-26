@@ -7,22 +7,29 @@ compatibility_date = "2024-01-01"
 
 # Functions can be added under ./functions directory
 
-# Add account_id to enable deployment
-[env.production]
-  # account_id = "YOUR_ACCOUNT_ID_HERE"
-  # Add any environment-specific configuration here
-
-# Optional: Environment variables
-# [vars]
-# API_KEY = "your-api-key"
-
-# KV Namespace binding for backups
-[[kv_namespaces]]
-binding = "EMOJI_BACKUP"
-id = "bc9aabd33d1948c08db86f9d23421847" # TODO: Replace with your production KV namespace ID
-preview_id = "904b460f0be14709ba1d28930329064f" # TODO: Replace with your preview KV namespace ID
-
+# Development environment (default)
 [vars]
 # These are fallbacks for local development (`wrangler dev`).
 AUTH_SECRET = "dev-secret-password"
 AUTH_SECRET_READONLY = "dev-secret-password-readonly"
+
+# KV Namespace binding for backups
+[[kv_namespaces]]
+binding = "EMOJI_BACKUP"
+id = "bc9aabd33d1948c08db86f9d23421847"
+preview_id = "904b460f0be14709ba1d28930329064f"
+
+# Production environment
+[env.production]
+  # account_id = "YOUR_ACCOUNT_ID_HERE"  # Optional
+
+  # Production uses secrets (set via: wrangler pages secret put)
+  # These vars are placeholders and should be overridden by secrets
+  [env.production.vars]
+  AUTH_SECRET = "REPLACE_WITH_SECRET"
+  AUTH_SECRET_READONLY = "REPLACE_WITH_SECRET"
+
+  # Production KV namespace (same as dev for now)
+  [[env.production.kv_namespaces]]
+  binding = "EMOJI_BACKUP"
+  id = "bc9aabd33d1948c08db86f9d23421847"
