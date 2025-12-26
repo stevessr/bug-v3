@@ -47,6 +47,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       console.log('[EmojiCrudStore] addEmoji', { id: newEmoji.id, groupId })
       // Update tag counts incrementally
       saveControl.onTagsAdded?.(newEmoji.tags)
+      // Update search index incrementally
+      saveControl.onEmojiAdded?.(newEmoji)
       // Mark the group as dirty for incremental save
       saveControl.markGroupDirty?.(groupId)
       saveControl.maybeSave()
@@ -76,6 +78,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       console.log('[EmojiCrudStore] addEmojiWithoutSave', { id: newEmoji.id, groupId })
       // For batch operations, invalidate cache instead of incremental update
       saveControl.invalidateTagCache?.()
+      saveControl.invalidateSearchIndex?.()
       // Mark the group as dirty for incremental save (will be saved when batch ends)
       saveControl.markGroupDirty?.(groupId)
       return newEmoji
@@ -96,7 +99,10 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
           saveControl.onTagsRemoved?.(oldEmoji.tags)
           saveControl.onTagsAdded?.(updates.tags)
         }
-        emojis[index] = { ...emojis[index], ...updates }
+        const newEmoji = { ...emojis[index], ...updates }
+        emojis[index] = newEmoji
+        // Update search index incrementally
+        saveControl.onEmojiUpdated?.(oldEmoji, newEmoji)
         console.log('[EmojiCrudStore] updateEmoji', { id: emojiId, updates })
         // Mark the group as dirty for incremental save
         saveControl.markGroupDirty?.(group.id)
@@ -143,6 +149,10 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         const emoji = group.emojis[emojiIndex]
         // Decrement tag counts before removal
         saveControl.onTagsRemoved?.(emoji?.tags)
+        // Update search index before removal
+        if (emoji) {
+          saveControl.onEmojiRemoved?.(emoji)
+        }
         group.emojis.splice(emojiIndex, 1)
         // Mark the group as dirty for incremental save
         saveControl.markGroupDirty?.(group.id)
@@ -175,7 +185,10 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         saveControl.onTagsRemoved?.(currentEmoji.tags)
         saveControl.onTagsAdded?.(updatedEmoji.tags)
       }
-      emojis[index] = { ...currentEmoji, ...updatedEmoji }
+      const newEmoji = { ...currentEmoji, ...updatedEmoji }
+      emojis[index] = newEmoji
+      // Update search index incrementally
+      saveControl.onEmojiUpdated?.(currentEmoji, newEmoji)
       console.log('[EmojiCrudStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id })
       // Mark the group as dirty for incremental save
       saveControl.markGroupDirty?.(groupId)

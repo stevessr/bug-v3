@@ -92,7 +92,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   // 搜索索引缓存 - 用于加速搜索
   const searchIndexCache = ref<Map<string, Set<string>>>(new Map())
-  const lastSearchableGroupVersion = ref(0)
+  const searchIndexValid = ref(false)
 
   // 构建搜索索引（在后台构建，不阻塞主线程）
   const buildSearchIndex = () => {
@@ -102,41 +102,106 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       const emojis = group.emojis || []
       for (const emoji of emojis) {
         if (!emoji) continue
-        const emojiId = emoji.id
-
-        // 索引名称的每个单词
-        const nameLower = (emoji.name || '').toLowerCase()
-        const words = nameLower.split(/\s+/)
-        for (const word of words) {
-          if (!index.has(word)) {
-            index.set(word, new Set())
-          }
-          index.get(word)!.add(emojiId)
-        }
-
-        // 索引标签
-        if (emoji.tags) {
-          for (const tag of emoji.tags) {
-            const tagLower = tag.toLowerCase()
-            if (!index.has(tagLower)) {
-              index.set(tagLower, new Set())
-            }
-            index.get(tagLower)!.add(emojiId)
-          }
-        }
+        addEmojiToSearchIndex(index, emoji)
       }
     }
 
     searchIndexCache.value = index
-    lastSearchableGroupVersion.value = groups.value.length
+    searchIndexValid.value = true
+  }
+
+  // 辅助函数：将 emoji 添加到索引
+  const addEmojiToSearchIndex = (index: Map<string, Set<string>>, emoji: Emoji) => {
+    if (!emoji) return
+    const emojiId = emoji.id
+
+    // 索引名称的每个单词
+    const nameLower = (emoji.name || '').toLowerCase()
+    const words = nameLower.split(/\s+/)
+    for (const word of words) {
+      if (!index.has(word)) {
+        index.set(word, new Set())
+      }
+      index.get(word)!.add(emojiId)
+    }
+
+    // 索引标签
+    if (emoji.tags) {
+      for (const tag of emoji.tags) {
+        const tagLower = tag.toLowerCase()
+        if (!index.has(tagLower)) {
+          index.set(tagLower, new Set())
+        }
+        index.get(tagLower)!.add(emojiId)
+      }
+    }
+  }
+
+  // 辅助函数：从索引中移除 emoji
+  const removeEmojiFromSearchIndex = (index: Map<string, Set<string>>, emoji: Emoji) => {
+    if (!emoji) return
+    const emojiId = emoji.id
+
+    // 移除名称索引
+    const nameLower = (emoji.name || '').toLowerCase()
+    const words = nameLower.split(/\s+/)
+    for (const word of words) {
+      const set = index.get(word)
+      if (set) {
+        set.delete(emojiId)
+        if (set.size === 0) {
+          index.delete(word)
+        }
+      }
+    }
+
+    // 移除标签索引
+    if (emoji.tags) {
+      for (const tag of emoji.tags) {
+        const tagLower = tag.toLowerCase()
+        const set = index.get(tagLower)
+        if (set) {
+          set.delete(emojiId)
+          if (set.size === 0) {
+            index.delete(tagLower)
+          }
+        }
+      }
+    }
+  }
+
+  // 增量更新索引：添加 emoji
+  const addEmojiToIndex = (emoji: Emoji) => {
+    if (!searchIndexValid.value) return // 索引未初始化，跳过
+    addEmojiToSearchIndex(searchIndexCache.value, emoji)
+  }
+
+  // 增量更新索引：移除 emoji
+  const removeEmojiFromIndex = (emoji: Emoji) => {
+    if (!searchIndexValid.value) return // 索引未初始化，跳过
+    removeEmojiFromSearchIndex(searchIndexCache.value, emoji)
+  }
+
+  // 增量更新索引：更新 emoji（先删除旧的，再添加新的）
+  const updateEmojiInIndex = (oldEmoji: Emoji, newEmoji: Emoji) => {
+    if (!searchIndexValid.value) return
+    removeEmojiFromSearchIndex(searchIndexCache.value, oldEmoji)
+    addEmojiToSearchIndex(searchIndexCache.value, newEmoji)
+  }
+
+  // 使索引失效（需要完全重建时调用）
+  const invalidateSearchIndex = () => {
+    searchIndexValid.value = false
   }
 
   // 在数据加载后构建索引
   watch(
     () => groups.value.length,
     () => {
-      // 延迟构建索引，不阻塞主线程
-      setTimeout(buildSearchIndex, 100)
+      // 索引失效后，延迟构建索引
+      if (!searchIndexValid.value) {
+        setTimeout(buildSearchIndex, 100)
+      }
     },
     { immediate: true }
   )
@@ -343,6 +408,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     onTagsAdded: incrementTagCounts,
     onTagsRemoved: decrementTagCounts,
     invalidateTagCache,
+    // Search index callbacks for incremental updates
+    onEmojiAdded: addEmojiToIndex,
+    onEmojiRemoved: removeEmojiFromIndex,
+    onEmojiUpdated: updateEmojiInIndex,
+    invalidateSearchIndex,
     // 直接保存回调
     markGroupDirty,
     markSettingsDirty,

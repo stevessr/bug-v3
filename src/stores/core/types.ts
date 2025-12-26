@@ -31,6 +31,11 @@ export interface SaveControl {
   onTagsAdded?: (tags: string[] | undefined) => void
   onTagsRemoved?: (tags: string[] | undefined) => void
   invalidateTagCache?: () => void
+  // Optional search index callbacks for incremental updates
+  onEmojiAdded?: (emoji: Emoji) => void
+  onEmojiRemoved?: (emoji: Emoji) => void
+  onEmojiUpdated?: (oldEmoji: Emoji, newEmoji: Emoji) => void
+  invalidateSearchIndex?: () => void
   // Dirty tracking callbacks for incremental saves
   markGroupDirty?: (groupId: string) => void
   markSettingsDirty?: () => void

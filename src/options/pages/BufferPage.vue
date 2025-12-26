@@ -65,34 +65,43 @@ const initializeImageSources = async () => {
   const newLoadingStates = new Map<string, boolean>()
 
   try {
-    for (const emoji of bufferEmojis.value) {
-      // 检查是否已被取消
-      if (currentInitId !== imageSourcesInitId) {
-        console.log('[BufferPage] Image sources initialization cancelled')
-        return
-      }
-
-      try {
-        if (emojiStore.settings.useIndexedDBForImages) {
-          // 使用缓存优先的加载函数
-          const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
-          newSources.set(emoji.id, result.url)
-          newLoadingStates.set(emoji.id, result.isLoading)
-        } else {
-          // 直接 URL 模式
-          const fallbackSrc = emoji.displayUrl || emoji.url
-          newSources.set(emoji.id, fallbackSrc)
+    // 优化：使用 Promise.all 并行处理，而不是串行 await
+    const results = await Promise.allSettled(
+      bufferEmojis.value.map(async emoji => {
+        // 检查是否已被取消
+        if (currentInitId !== imageSourcesInitId) {
+          return null
         }
-      } catch (error) {
-        console.warn(`[BufferPage] Failed to get image source for ${emoji.name}:`, error)
-        // 回退到直接 URL
-        const fallbackSrc = emoji.displayUrl || emoji.url
-        newSources.set(emoji.id, fallbackSrc)
-      }
-    }
+
+        try {
+          if (emojiStore.settings.useIndexedDBForImages) {
+            // 使用缓存优先的加载函数
+            const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
+            return { emojiId: emoji.id, url: result.url, isLoading: result.isLoading }
+          } else {
+            // 直接 URL 模式
+            const fallbackSrc = emoji.displayUrl || emoji.url
+            return { emojiId: emoji.id, url: fallbackSrc, isLoading: false }
+          }
+        } catch (error) {
+          console.warn(`[BufferPage] Failed to get image source for ${emoji.name}:`, error)
+          // 回退到直接 URL
+          const fallbackSrc = emoji.displayUrl || emoji.url
+          return { emojiId: emoji.id, url: fallbackSrc, isLoading: false }
+        }
+      })
+    )
 
     // 最后一次检查是否被取消
     if (currentInitId === imageSourcesInitId) {
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          const { emojiId, url, isLoading } = result.value
+          newSources.set(emojiId, url)
+          newLoadingStates.set(emojiId, isLoading)
+        }
+      }
+
       imageSources.value = newSources
       loadingStates.value = newLoadingStates
       console.log('[BufferPage] Image sources initialized:', imageSources.value.size)

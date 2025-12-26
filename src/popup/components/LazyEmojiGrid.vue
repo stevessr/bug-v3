@@ -118,8 +118,14 @@ onUnmounted(() => {
 initializeImageSources()
 
 // Watch for emoji changes and update image sources
-// 使用防抖的深度监听，平衡性能和数据一致性
-watch(() => props.emojis, updateImageSources, { deep: true })
+// 优化：监听数组长度和引用，避免深度监听带来的性能开销
+watch(
+  () => [props.emojis.length, props.emojis],
+  () => {
+    updateImageSources()
+  },
+  { flush: 'post' }
+)
 
 // Preload when component becomes active
 watch(

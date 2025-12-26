@@ -47,16 +47,27 @@ const handleBatchRename = () => {
   isBatchRenameModalVisible.value = true
 }
 
-const selectedEmojiObjects = computed(() => {
-  const emojis: any[] = []
-  const selected = selectedEmojis.value
-  if (selected.size === 0) return emojis
-
+// 使用 Map 缓存 emoji 对象，避免嵌套循环
+const emojiMap = computed(() => {
+  const map = new Map<string, any>()
   for (const group of displayGroups.value) {
     for (const emoji of group.emojis) {
-      if (selected.has(emoji.id)) {
-        emojis.push(emoji)
-      }
+      map.set(emoji.id, emoji)
+    }
+  }
+  return map
+})
+
+const selectedEmojiObjects = computed(() => {
+  if (selectedEmojis.value.size === 0) return []
+
+  const emojis: any[] = []
+  const map = emojiMap.value
+
+  for (const emojiId of selectedEmojis.value) {
+    const emoji = map.get(emojiId)
+    if (emoji) {
+      emojis.push(emoji)
     }
   }
   return emojis
