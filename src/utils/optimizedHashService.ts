@@ -65,7 +65,10 @@ class UnionFind {
       if (!groups.has(root)) {
         groups.set(root, [])
       }
-      groups.get(root)!.push(x)
+      const group = groups.get(root)
+      if (group) {
+        group.push(x)
+      }
     }
     return groups
   }
@@ -562,7 +565,10 @@ export class OptimizedHashService {
         const distance = this.hammingDistance(result.hash, existingHash)
 
         if (distance <= threshold) {
-          hashMap.get(existingHash)!.push(result.url)
+          const urls = hashMap.get(existingHash)
+          if (urls) {
+            urls.push(result.url)
+          }
           foundSimilar = true
           break
         }
@@ -841,7 +847,10 @@ export class OptimizedHashService {
       if (!prefixBuckets.has(prefix)) {
         prefixBuckets.set(prefix, [])
       }
-      prefixBuckets.get(prefix)!.push(item)
+      const bucket = prefixBuckets.get(prefix)
+      if (bucket) {
+        bucket.push(item)
+      }
     }
 
     // Pre-compute binary representations for all hashes

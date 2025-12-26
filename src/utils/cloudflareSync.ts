@@ -204,10 +204,12 @@ export class CloudflareSyncService {
       }
     }
 
+    const config = this.config
+
     try {
       return await this.executeWithRetry(
         async () => {
-          const target = createSyncTarget(this.config!)
+          const target = createSyncTarget(config)
           return await target.test()
         },
         3,
@@ -230,6 +232,8 @@ export class CloudflareSyncService {
         error: 'Missing configuration'
       }
     }
+
+    const config = this.config
 
     try {
       onProgress?.({ current: 0, total: 1, action: 'push', message: 'Preparing data...' })
@@ -275,7 +279,7 @@ export class CloudflareSyncService {
 
       return await this.executeWithRetry(
         async () => {
-          const target = createSyncTarget(this.config!)
+          const target = createSyncTarget(config)
           return await target.push(syncData, progress => {
             onProgress?.({
               current: progress.current,

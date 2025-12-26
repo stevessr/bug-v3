@@ -324,7 +324,10 @@ export async function generateBatchNamesStreaming(
       if (!groupedEmojis.has(groupId)) {
         groupedEmojis.set(groupId, [])
       }
-      groupedEmojis.get(groupId)!.push(emoji)
+      const group = groupedEmojis.get(groupId)
+      if (group) {
+        group.push(emoji)
+      }
     }
 
     let groupIndex = 0
@@ -668,8 +671,15 @@ async function generateBatchNamesWithOpenAIStreaming(
   concurrency: number = 5,
   groupByGroupId: boolean = false
 ): Promise<Record<string, string>> {
-  const endpoint = config.customOpenAIEndpoint!.replace(/\/$/, '')
-  const apiKey = config.customOpenAIKey!
+  if (!config.customOpenAIEndpoint) {
+    throw new Error('OpenAI endpoint is required')
+  }
+  if (!config.customOpenAIKey) {
+    throw new Error('OpenAI API key is required')
+  }
+
+  const endpoint = config.customOpenAIEndpoint.replace(/\/$/, '')
+  const apiKey = config.customOpenAIKey
   const model = config.customOpenAIModel || 'gpt-4o-mini'
   const language = config.language || 'Chinese'
 
@@ -683,7 +693,10 @@ async function generateBatchNamesWithOpenAIStreaming(
       if (!groupedEmojis.has(groupId)) {
         groupedEmojis.set(groupId, [])
       }
-      groupedEmojis.get(groupId)!.push(emoji)
+      const group = groupedEmojis.get(groupId)
+      if (group) {
+        group.push(emoji)
+      }
     }
 
     let groupIndex = 0

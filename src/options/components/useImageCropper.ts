@@ -197,9 +197,12 @@ export function useImageCropper(
     if (!refs.imageElement.value) {
       refs.imageElement.value = new Image()
       await new Promise((resolve, reject) => {
-        refs.imageElement.value!.onload = resolve
-        refs.imageElement.value!.onerror = reject
-        refs.imageElement.value!.src = uploadedImageUrl.value
+        const img = refs.imageElement.value
+        if (img) {
+          img.onload = resolve
+          img.onerror = reject
+          img.src = uploadedImageUrl.value
+        }
       })
     }
 
@@ -560,12 +563,15 @@ export function useImageCropper(
     isProcessing.value = true
 
     try {
+      const imageFile = props.imageFile.value
+      if (!imageFile) {
+        throw new Error('未选择图片文件')
+      }
+
       const base64Image = await new Promise<string>(resolve => {
         const reader = new FileReader()
         reader.onload = () => resolve(reader.result as string)
-        if (props.imageFile.value) {
-          reader.readAsDataURL(props.imageFile.value)
-        }
+        reader.readAsDataURL(imageFile)
       })
 
       const modelName = props.aiSettings.value.geminiModel
@@ -632,7 +638,7 @@ export function useImageCropper(
                     },
                     {
                       inline_data: {
-                        mime_type: props.imageFile.value!.type,
+                        mime_type: imageFile.type,
                         data: base64Image.split(',')[1]
                       }
                     }
