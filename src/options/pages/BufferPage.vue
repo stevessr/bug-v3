@@ -1237,9 +1237,13 @@ onMounted(() => {
   }
 
   progressInterval = setInterval(() => {
-    // Force re-render for countdown
+    // Force re-render for countdown (uploadProgress)
     if (uploadProgress.value.some(p => p.waitingFor)) {
       uploadProgress.value = [...uploadProgress.value]
+    }
+    // Force re-render for countdown (collaborativeProgress)
+    if (collaborativeProgress.value?.waitingFor) {
+      collaborativeProgress.value = { ...collaborativeProgress.value }
     }
   }, 1000)
 
