@@ -1064,6 +1064,12 @@ const uploadFilesCollaboratively = async () => {
     const files = selectedFiles.value.map(item => item.file)
     const results = await collaborativeClient.value.submitTasks(files)
 
+    // 检查是否被取消
+    if (results.some(r => r.error === '用户取消上传')) {
+      message.info('联动上传已取消')
+      return
+    }
+
     collaborativeResults.value = results
 
     // 处理远程上传的结果（本地上传已在 onLocalUploadComplete 中处理）
@@ -1118,6 +1124,15 @@ const uploadFilesCollaboratively = async () => {
     // 保存剩余的待保存上传
     await saveIncrementalProgress()
     isUploading.value = false
+  }
+}
+
+// 取消联动上传
+const cancelCollaborativeUpload = () => {
+  if (collaborativeClient.value) {
+    collaborativeClient.value.cancelUpload()
+    isUploading.value = false
+    message.info('正在取消上传...')
   }
 }
 
@@ -1480,21 +1495,24 @@ onBeforeUnmount(() => {
       <!-- Upload Button -->
       <div class="mt-4 flex justify-end space-x-2">
         <!-- 联动上传按钮 -->
-        <a-button
-          v-if="enableCollaborativeUpload"
-          type="primary"
-          @click="uploadFilesCollaboratively"
-          :disabled="
-            selectedFiles.length === 0 ||
-            isUploading ||
-            isCheckingDuplicates ||
-            !isCollaborativeConnected
-          "
-          :loading="isUploading"
-          class="bg-gradient-to-r from-blue-500 to-purple-500 border-0"
-        >
-          {{ isUploading ? '联动上传中...' : `🔗 联动上传 ${selectedFiles.length} 个文件` }}
-        </a-button>
+        <template v-if="enableCollaborativeUpload">
+          <!-- 取消按钮 -->
+          <a-button v-if="isUploading" danger @click="cancelCollaborativeUpload">取消上传</a-button>
+          <a-button
+            v-else
+            type="primary"
+            @click="uploadFilesCollaboratively"
+            :disabled="
+              selectedFiles.length === 0 ||
+              isUploading ||
+              isCheckingDuplicates ||
+              !isCollaborativeConnected
+            "
+            class="bg-gradient-to-r from-blue-500 to-purple-500 border-0"
+          >
+            🔗 联动上传 {{ selectedFiles.length }} 个文件
+          </a-button>
+        </template>
         <!-- 普通上传按钮 -->
         <a-button
           :type="enableCollaborativeUpload ? 'default' : 'primary'"

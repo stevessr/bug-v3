@@ -232,6 +232,56 @@ export class CollaborativeUploadClient {
   }
 
   /**
+   * 取消上传任务
+   */
+  cancelUpload(): void {
+    console.log('[CollaborativeUpload] Cancelling upload...')
+
+    // 清除超时定时器
+    if (this.taskTimeoutTimer) {
+      clearTimeout(this.taskTimeoutTimer)
+      this.taskTimeoutTimer = null
+    }
+
+    // 取消所有待处理的远程任务
+    if (this.pendingRemoteFiles.length > 0) {
+      for (const filename of this.pendingRemoteFiles) {
+        const hasResult = this.sessionResults.some(r => r.filename === filename)
+        if (!hasResult) {
+          this.sessionResults.push({
+            filename,
+            success: false,
+            error: '用户取消上传'
+          })
+        }
+      }
+      this.pendingRemoteFiles = []
+    }
+
+    // 重置上传状态
+    this.isUploading = false
+
+    // 如果有等待完成的 Promise，resolve 它
+    if (this.sessionCompleteResolve) {
+      const allResults = [...this.localUploadResults, ...this.sessionResults]
+      this.sessionCompleteResolve(allResults)
+      this.sessionCompleteResolve = null
+      this.sessionReject = null
+    }
+
+    // 通知进度更新
+    this.config.onProgress?.({
+      completed:
+        this.sessionResults.filter(r => r.success).length +
+        this.localUploadResults.filter(r => r.success).length,
+      failed:
+        this.sessionResults.filter(r => !r.success).length +
+        this.localUploadResults.filter(r => !r.success).length,
+      total: this.totalExpected
+    })
+  }
+
+  /**
    * 发送消息
    */
   private send(data: any): void {
