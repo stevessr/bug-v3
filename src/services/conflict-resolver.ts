@@ -5,7 +5,13 @@
 
 import { nanoid } from 'nanoid'
 
-import type { DeltaRecord, ConflictInfo, ConflictStrategy, MergeResult, MergeConflict } from '@/types/sync'
+import type {
+  DeltaRecord,
+  ConflictInfo,
+  ConflictStrategy,
+  MergeResult,
+  MergeConflict
+} from '@/types/sync'
 import { syncDb } from '@/utils/sync-db'
 
 /**

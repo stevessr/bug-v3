@@ -8,12 +8,14 @@ import {
   type BilibiliEmotePackage,
   type BilibiliEmoteIndexItem
 } from '@/services/bilibiliEmoteApi'
+import { useEmojiStore } from '@/stores/emojiStore'
 
 const props = defineProps<{ modelValue: boolean }>()
 // reference prop to satisfy TS/linter
 void props.modelValue
 const emit = defineEmits(['update:modelValue', 'imported'])
 
+const store = useEmojiStore()
 const packages = ref<BilibiliEmotePackage[]>([])
 const selectedPackages = ref<number[]>([])
 const targetGroupId = ref('')
@@ -128,7 +130,10 @@ const handleSearch = async () => {
   errorMessage.value = ''
 
   try {
-    const results = await searchBilibiliPackages(searchInput.value)
+    const results = await searchBilibiliPackages(
+      searchInput.value,
+      store.settings.cloudMarketDomain
+    )
     searchResults.value = results
 
     if (results.length === 0) {
@@ -151,225 +156,233 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
 
 <template>
   <div
-    class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-    @click.stop
+    v-if="modelValue"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    @click="close"
   >
-    <div class="flex-shrink-0 mb-4">
-      <h3 class="text-xl font-semibold mb-4 dark:text-white">导入 Bilibili 表情包</h3>
+    <div
+      class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+      @click.stop
+    >
+      <div class="flex-shrink-0 mb-4">
+        <h3 class="text-xl font-semibold mb-4 dark:text-white">导入 Bilibili 表情包</h3>
 
-      <!-- 错误信息 -->
-      <div
-        v-if="errorMessage"
-        class="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-md"
-      >
-        <p class="text-sm text-red-800 dark:text-red-200">{{ errorMessage }}</p>
-      </div>
-
-      <!-- 搜索与 ID 导入 Tab 区域 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- 搜索区域 -->
+        <!-- 错误信息 -->
         <div
-          class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md p-4"
+          v-if="errorMessage"
+          class="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-md"
         >
-          <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">搜索表情包</h4>
-          <div class="flex gap-2 mb-3">
-            <input
-              v-model="searchInput"
-              type="text"
-              placeholder="输入关键词搜索 (如: 小黄脸)"
-              class="flex-1 px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-md bg-white dark:bg-black text-purple-900 dark:text-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              @keyup.enter="handleSearch"
-            />
-            <button
-              @click="handleSearch"
-              :disabled="!searchInput || !searchInput.trim() || searchLoading"
-              class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          <p class="text-sm text-red-800 dark:text-red-200">{{ errorMessage }}</p>
+        </div>
+
+        <!-- 搜索与 ID 导入 Tab 区域 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 搜索区域 -->
+          <div
+            class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md p-4"
+          >
+            <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">搜索表情包</h4>
+            <div class="flex gap-2 mb-3">
+              <input
+                v-model="searchInput"
+                type="text"
+                placeholder="输入关键词搜索 (如: 小黄脸)"
+                class="flex-1 px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-md bg-white dark:bg-black text-purple-900 dark:text-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                @keyup.enter="handleSearch"
+              />
+              <button
+                @click="handleSearch"
+                :disabled="!searchInput || !searchInput.trim() || searchLoading"
+                class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span v-if="searchLoading">搜索中...</span>
+                <span v-else>搜索</span>
+              </button>
+            </div>
+
+            <!-- 搜索结果列表 -->
+            <div
+              v-if="searchResults.length > 0"
+              class="max-h-40 overflow-y-auto border border-purple-200 dark:border-purple-700 rounded bg-white dark:bg-black/20"
             >
-              <span v-if="searchLoading">搜索中...</span>
-              <span v-else>搜索</span>
-            </button>
+              <div
+                v-for="result in searchResults"
+                :key="result.id"
+                class="flex items-center gap-3 p-2 hover:bg-purple-100 dark:hover:bg-purple-900/40 cursor-pointer border-b last:border-b-0 border-purple-100 dark:border-purple-800"
+                @click="selectSearchResult(result)"
+              >
+                <img :src="result.url" class="w-8 h-8 rounded object-cover" />
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium text-sm truncate dark:text-gray-200">
+                    {{ result.text }}
+                  </div>
+                  <div class="text-xs text-gray-500">ID: {{ result.id }}</div>
+                </div>
+                <button
+                  class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-200 rounded"
+                >
+                  选择
+                </button>
+              </div>
+            </div>
+            <div
+              v-else-if="
+                searchInput &&
+                !searchLoading &&
+                searchResults.length === 0 &&
+                errorMessage === '未找到匹配的表情包'
+              "
+              class="text-center py-4 text-sm text-gray-500"
+            >
+              未找到相关表情包
+            </div>
           </div>
 
-          <!-- 搜索结果列表 -->
+          <!-- ID 导入区域 -->
           <div
-            v-if="searchResults.length > 0"
-            class="max-h-40 overflow-y-auto border border-purple-200 dark:border-purple-700 rounded bg-white dark:bg-black/20"
+            class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
           >
-            <div
-              v-for="result in searchResults"
-              :key="result.id"
-              class="flex items-center gap-3 p-2 hover:bg-purple-100 dark:hover:bg-purple-900/40 cursor-pointer border-b last:border-b-0 border-purple-100 dark:border-purple-800"
-              @click="selectSearchResult(result)"
-            >
-              <img :src="result.url" class="w-8 h-8 rounded object-cover" />
-              <div class="flex-1 min-w-0">
-                <div class="font-medium text-sm truncate dark:text-gray-200">{{ result.text }}</div>
-                <div class="text-xs text-gray-500">ID: {{ result.id }}</div>
-              </div>
+            <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">通过 ID 导入</h4>
+
+            <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+              直接输入 Bilibili 表情包 ID 导入。
+            </p>
+
+            <div class="flex gap-2">
+              <input
+                v-model="packageIdInput"
+                type="number"
+                placeholder="输入表情包ID (如: 237)"
+                class="flex-1 px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-black text-blue-900 dark:text-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                @keyup.enter="importPackageById"
+              />
+
               <button
-                class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-200 rounded"
+                @click="importPackageById"
+                :disabled="!packageIdInput || !String(packageIdInput).trim() || idImportLoading"
+                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                选择
+                <span v-if="idImportLoading">导入中...</span>
+
+                <span v-else>导入</span>
               </button>
             </div>
           </div>
-          <div
-            v-else-if="
-              searchInput &&
-              !searchLoading &&
-              searchResults.length === 0 &&
-              errorMessage === '未找到匹配的表情包'
-            "
-            class="text-center py-4 text-sm text-gray-500"
-          >
-            未找到相关表情包
-          </div>
         </div>
+      </div>
 
-        <!-- ID 导入区域 -->
-        <div
-          class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
-        >
-          <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">通过 ID 导入</h4>
+      <!-- 已导入的表情包列表 -->
+      <div class="flex-1 overflow-hidden flex flex-col min-h-0">
+        <div v-if="packages.length > 0" class="flex flex-col h-full">
+          <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <h4 class="font-medium text-gray-900 dark:text-white">已准备导入的表情包</h4>
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+              {{ packages.length }} 个表情包
+            </span>
+          </div>
 
-          <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
-            直接输入 Bilibili 表情包 ID 导入。
-          </p>
-
-          <div class="flex gap-2">
-            <input
-              v-model="packageIdInput"
-              type="number"
-              placeholder="输入表情包ID (如: 237)"
-              class="flex-1 px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-black text-blue-900 dark:text-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              @keyup.enter="importPackageById"
-            />
-
-            <button
-              @click="importPackageById"
-              :disabled="!packageIdInput || !String(packageIdInput).trim() || idImportLoading"
-              class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          <!-- 表情包网格 -->
+          <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto flex-1 p-1"
+          >
+            <div
+              v-for="pkg in packages"
+              :key="pkg.id"
+              class="border rounded-lg p-4 transition-all h-fit"
+              :class="
+                isPackageSelected(pkg.id)
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  : 'border-gray-300 dark:border-gray-600'
+              "
             >
-              <span v-if="idImportLoading">导入中...</span>
-
-              <span v-else>导入</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 已导入的表情包列表 -->
-    <div class="flex-1 overflow-hidden flex flex-col min-h-0">
-      <div v-if="packages.length > 0" class="flex flex-col h-full">
-        <div class="flex justify-between items-center mb-4 flex-shrink-0">
-          <h4 class="font-medium text-gray-900 dark:text-white">已准备导入的表情包</h4>
-          <span class="text-sm text-gray-600 dark:text-gray-400">
-            {{ packages.length }} 个表情包
-          </span>
-        </div>
-
-        <!-- 表情包网格 -->
-        <div
-          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto flex-1 p-1"
-        >
-          <div
-            v-for="pkg in packages"
-            :key="pkg.id"
-            class="border rounded-lg p-4 transition-all h-fit"
-            :class="
-              isPackageSelected(pkg.id)
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                : 'border-gray-300 dark:border-gray-600'
-            "
-          >
-            <div class="flex items-center space-x-3">
-              <img
-                :src="pkg.url"
-                :alt="pkg.text"
-                class="w-12 h-12 rounded object-cover"
-                @error="
-                  e => {
-                    ;(e.target as HTMLImageElement).src =
-                      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMxNi4yNjggMzIgMTAgMjUuNzMyIDEwIDE4QzEwIDEwLjI2OCAxNi4yNjggNCAyNCA0QzMxLjczMiA0IDM4IDEwLjI2OCAzOCAxOEMzOCAyNS43MzIgMzEuNzMyIDMyIDI0IDMyWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
-                  }
-                "
-              />
-              <div class="flex-1">
-                <h4 class="font-medium text-gray-900 dark:text-white">{{ pkg.text }}</h4>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ pkg.emote.length }} 个表情
-                </p>
-              </div>
-              <div
-                class="w-5 h-5 rounded border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"
-              >
+              <div class="flex items-center space-x-3">
+                <img
+                  :src="pkg.url"
+                  :alt="pkg.text"
+                  class="w-12 h-12 rounded object-cover"
+                  @error="
+                    e => {
+                      ;(e.target as HTMLImageElement).src =
+                        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMxNi4yNjggMzIgMTAgMjUuNzMyIDEwIDE4QzEwIDEwLjI2OCAxNi4yNjggNCAyNCA0QzMxLjczMiA0IDM4IDEwLjI2OCAzOCAxOEMzOCAyNS43MzIgMzEuNzMyIDMyIDI0IDMyWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
+                    }
+                  "
+                />
+                <div class="flex-1">
+                  <h4 class="font-medium text-gray-900 dark:text-white">{{ pkg.text }}</h4>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ pkg.emote.length }} 个表情
+                  </p>
+                </div>
                 <div
-                  v-if="isPackageSelected(pkg.id)"
-                  class="w-3 h-3 bg-blue-600 rounded-full"
-                ></div>
+                  class="w-5 h-5 rounded border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"
+                >
+                  <div
+                    v-if="isPackageSelected(pkg.id)"
+                    class="w-3 h-3 bg-blue-600 rounded-full"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- 表情预览 -->
+              <div class="mt-3 flex flex-wrap gap-1">
+                <img
+                  v-for="emote in pkg.emote.slice(0, 6)"
+                  :key="emote.id"
+                  :src="emote.url"
+                  :alt="emote.text"
+                  class="w-6 h-6 rounded object-cover"
+                  @error="
+                    e => {
+                      ;(e.target as HTMLImageElement).style.display = 'none'
+                    }
+                  "
+                />
+                <span
+                  v-if="pkg.emote.length > 6"
+                  class="text-xs text-gray-500 dark:text-gray-400 self-center"
+                >
+                  +{{ pkg.emote.length - 6 }}
+                </span>
               </div>
             </div>
+          </div>
 
-            <!-- 表情预览 -->
-            <div class="mt-3 flex flex-wrap gap-1">
-              <img
-                v-for="emote in pkg.emote.slice(0, 6)"
-                :key="emote.id"
-                :src="emote.url"
-                :alt="emote.text"
-                class="w-6 h-6 rounded object-cover"
-                @error="
-                  e => {
-                    ;(e.target as HTMLImageElement).style.display = 'none'
-                  }
-                "
-              />
-              <span
-                v-if="pkg.emote.length > 6"
-                class="text-xs text-gray-500 dark:text-gray-400 self-center"
-              >
-                +{{ pkg.emote.length - 6 }}
-              </span>
-            </div>
+          <!-- 目标分组输入 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
+              目标分组（可选）
+            </label>
+            <input
+              v-model="targetGroupId"
+              placeholder="留空按表情包名称创建分组"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
+              title="导入表情的目标分组 ID (可选)"
+            />
           </div>
         </div>
 
-        <!-- 目标分组输入 -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
-            目标分组（可选）
-          </label>
-          <input
-            v-model="targetGroupId"
-            placeholder="留空按表情包名称创建分组"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
-            title="导入表情的目标分组 ID (可选)"
-          />
+        <!-- 无表情包时的提示 -->
+        <div v-else class="text-center py-8">
+          <p class="text-gray-500 dark:text-gray-400">还没有导入任何表情包</p>
+          <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">在上方输入表情包 ID 开始导入</p>
         </div>
-      </div>
 
-      <!-- 无表情包时的提示 -->
-      <div v-else class="text-center py-8">
-        <p class="text-gray-500 dark:text-gray-400">还没有导入任何表情包</p>
-        <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">在上方输入表情包 ID 开始导入</p>
-      </div>
-
-      <!-- 底部按钮 -->
-      <div class="flex justify-end gap-3 mt-6">
-        <button
-          @click="close"
-          class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-        >
-          取消
-        </button>
-        <button
-          @click="doImport"
-          :disabled="selectedPackages.length === 0 || isLoading"
-          class="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          导入选中表情包 ({{ selectedPackages.length }})
-        </button>
+        <!-- 底部按钮 -->
+        <div class="flex justify-end gap-3 mt-6">
+          <button
+            @click="close"
+            class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+          >
+            取消
+          </button>
+          <button
+            @click="doImport"
+            :disabled="selectedPackages.length === 0 || isLoading"
+            class="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            导入选中表情包 ({{ selectedPackages.length }})
+          </button>
+        </div>
       </div>
     </div>
   </div>

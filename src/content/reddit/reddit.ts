@@ -55,18 +55,21 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
       }
 
       // send direct URL to background to avoid converting to base64 in content
-      chromeAPI.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data }, (resp: unknown) => {
-        try {
-          const response = resp as { success?: boolean }
-          if (response && response.success) {
-            setButtonFeedback(btn, 'success', BUTTON_DEFAULT_STYLE)
-          } else {
-            setButtonFeedback(btn, 'error', BUTTON_DEFAULT_STYLE)
+      chromeAPI.runtime.sendMessage(
+        { action: 'addEmojiFromWeb', emojiData: data },
+        (resp: unknown) => {
+          try {
+            const response = resp as { success?: boolean }
+            if (response && response.success) {
+              setButtonFeedback(btn, 'success', BUTTON_DEFAULT_STYLE)
+            } else {
+              setButtonFeedback(btn, 'error', BUTTON_DEFAULT_STYLE)
+            }
+          } catch (_e) {
+            void _e
           }
-        } catch (_e) {
-          void _e
         }
-      })
+      )
     } catch (e) {
       console.error('[RedditAddEmoji] sendMessage failed', e)
     }

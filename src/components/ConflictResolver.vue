@@ -164,7 +164,9 @@ async function autoResolveAll() {
           <div class="version-panel local">
             <div class="version-header">
               <h4>📱 本地版本</h4>
-              <span class="timestamp">{{ formatTimestamp(extractTimestamp(conflict.localChange)) }}</span>
+              <span class="timestamp">
+                {{ formatTimestamp(extractTimestamp(conflict.localChange)) }}
+              </span>
             </div>
             <div class="version-content">
               <template v-if="extractChanges(conflict.localChange)">
@@ -192,7 +194,9 @@ async function autoResolveAll() {
           <div class="version-panel remote">
             <div class="version-header">
               <h4>☁️ 远程版本</h4>
-              <span class="timestamp">{{ formatTimestamp(extractTimestamp(conflict.remoteChange)) }}</span>
+              <span class="timestamp">
+                {{ formatTimestamp(extractTimestamp(conflict.remoteChange)) }}
+              </span>
             </div>
             <div class="version-content">
               <template v-if="extractChanges(conflict.remoteChange)">
@@ -208,7 +212,8 @@ async function autoResolveAll() {
                   </div>
                   <div class="field-value new">
                     <span class="value-label">新值：</span>
-                  <code>{{ formatValue(change.newValue) }}</code>
+                    <code>{{ formatValue(change.newValue) }}</code>
+                  </div>
                 </div>
               </template>
               <div v-else class="no-changes">无可用的变更详情</div>

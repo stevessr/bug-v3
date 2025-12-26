@@ -118,11 +118,13 @@ export async function loadPackagedDefaults(customDomain?: string): Promise<Defau
   }
 }
 
-export async function loadGroup(groupId: string, customDomain?: string): Promise<EmojiGroup | null> {
+export async function loadGroup(
+  groupId: string,
+  customDomain?: string
+): Promise<EmojiGroup | null> {
   return await fetchGroup(groupId, customDomain)
 }
 
 export async function loadSettings(customDomain?: string): Promise<any | null> {
   return await fetchSettings(customDomain)
 }
-
