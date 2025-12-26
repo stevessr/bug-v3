@@ -170,7 +170,7 @@ import { ref } from 'vue'
 const conflicts = ref([])
 
 async function handleResolved(conflict, resolution) {
-  console.log(`冲突 ${conflict.id} 已解决: ${resolution}`)
+  console.log(`冲突 ${conflict.id} 已解决：${resolution}`)
 }
 </script>
 ```
@@ -183,16 +183,16 @@ async function handleResolved(conflict, resolution) {
 
 记录数据变更。
 
-**参数:**
+**参数：**
 - `operation`: 操作类型 (CREATE, UPDATE, DELETE, MOVE, REORDER)
 - `entityType`: 实体类型 (emoji, group, settings, favorites)
-- `entityId`: 实体ID
+- `entityId`: 实体 ID
 - `changes`: 变更内容数组
 - `immediate`: 是否立即写入 (可选，默认批量)
 
-**返回:** `Promise<void>`
+**返回：** `Promise<void>`
 
-**示例:**
+**示例：**
 ```typescript
 await changeTracker.trackChange({
   operation: OperationType.CREATE,
@@ -210,13 +210,13 @@ await changeTracker.trackChange({
 
 手动触发批量写入。
 
-**返回:** `Promise<void>`
+**返回：** `Promise<void>`
 
 #### getStats()
 
 获取统计信息。
 
-**返回:** `Promise<{ currentVersion, deviceId, totalRecords, pendingBatch }>`
+**返回：** `Promise<{ currentVersion, deviceId, totalRecords, pendingBatch }>`
 
 ### IncrementalSyncService
 
@@ -224,14 +224,14 @@ await changeTracker.trackChange({
 
 执行同步操作。
 
-**参数:**
+**参数：**
 - `provider`: 同步提供商 (cloudflare, chrome)
 - `fullSync`: 是否强制全量同步 (可选)
 - `conflictStrategy`: 冲突解决策略 (可选)
 
-**返回:** `Promise<SyncResult>`
+**返回：** `Promise<SyncResult>`
 
-**示例:**
+**示例：**
 ```typescript
 const result = await incrementalSyncService.sync({
   provider: 'cloudflare',
@@ -243,13 +243,13 @@ const result = await incrementalSyncService.sync({
 
 获取当前同步状态。
 
-**返回:** `SyncState`
+**返回：** `SyncState`
 
 #### getStats()
 
 获取同步统计信息。
 
-**返回:** `Promise<{ localVersion, remoteVersion, pendingChanges, unresolvedConflicts }>`
+**返回：** `Promise<{ localVersion, remoteVersion, pendingChanges, unresolvedConflicts }>`
 
 ### ConflictResolver
 
@@ -257,44 +257,44 @@ const result = await incrementalSyncService.sync({
 
 检测冲突。
 
-**参数:**
+**参数：**
 - `localDeltas`: 本地变更数组
 - `remoteDeltas`: 远程变更数组
 
-**返回:** `ConflictInfo[]`
+**返回：** `ConflictInfo[]`
 
 #### autoResolve(conflicts, strategy)
 
 自动解决冲突。
 
-**参数:**
+**参数：**
 - `conflicts`: 冲突数组
 - `strategy`: 解决策略 (auto, manual, local-first, remote-first, newest-wins)
 
-**返回:** `Promise<ConflictInfo[]>`
+**返回：** `Promise<ConflictInfo[]>`
 
 #### manualResolve(conflictId, resolution, mergedData?)
 
 手动解决冲突。
 
-**参数:**
-- `conflictId`: 冲突ID
+**参数：**
+- `conflictId`: 冲突 ID
 - `resolution`: 解决方案 (local, remote, merged)
 - `mergedData`: 合并后的数据 (可选)
 
-**返回:** `Promise<void>`
+**返回：** `Promise<void>`
 
 #### threeWayMerge(base, local, remote, entityType)
 
 三方合并。
 
-**参数:**
+**参数：**
 - `base`: 基础版本
 - `local`: 本地版本
 - `remote`: 远程版本
 - `entityType`: 实体类型
 
-**返回:** `Promise<MergeResult>`
+**返回：** `Promise<MergeResult>`
 
 ## 冲突解决策略
 
@@ -302,7 +302,7 @@ const result = await incrementalSyncService.sync({
 
 尝试智能合并，失败则使用最新的版本。
 
-**适用场景:**
+**适用场景：**
 - 大部分常规同步
 - 非关键数据
 
@@ -310,7 +310,7 @@ const result = await incrementalSyncService.sync({
 
 检测到冲突时暂停同步，等待用户手动解决。
 
-**适用场景:**
+**适用场景：**
 - 重要数据修改
 - 需要人工判断的情况
 
@@ -318,7 +318,7 @@ const result = await incrementalSyncService.sync({
 
 始终使用本地版本。
 
-**适用场景:**
+**适用场景：**
 - 离线编辑后的首次同步
 - 确信本地数据正确
 
@@ -326,7 +326,7 @@ const result = await incrementalSyncService.sync({
 
 始终使用远程版本。
 
-**适用场景:**
+**适用场景：**
 - 从云端恢复数据
 - 多设备间以服务器为准
 
@@ -334,7 +334,7 @@ const result = await incrementalSyncService.sync({
 
 比较时间戳，使用最新的版本。
 
-**适用场景:**
+**适用场景：**
 - 默认策略
 - 大部分场景的合理选择
 
@@ -402,7 +402,7 @@ if (status.queueLength > 0) {
 ```typescript
 import { changeTracker } from '@/services/change-tracker'
 
-// 每周清理一次超过30天的记录
+// 每周清理一次超过 30 天的记录
 setInterval(async () => {
   const removed = await changeTracker.cleanupOldRecords(30)
   console.log(`清理了 ${removed} 条旧记录`)
@@ -432,12 +432,12 @@ setInterval(async () => {
 
 ### 问题：同步失败
 
-**可能原因:**
+**可能原因：**
 1. 网络连接问题
 2. 远程存储配置错误
 3. 权限不足
 
-**解决方案:**
+**解决方案：**
 ```typescript
 const result = await incrementalSyncService.sync({
   provider: 'cloudflare',
@@ -445,7 +445,7 @@ const result = await incrementalSyncService.sync({
 })
 
 if (!result.success) {
-  console.error('同步失败:', result.error)
+  console.error('同步失败：', result.error)
   
   // 检查网络
   if (!navigator.onLine) {
@@ -462,11 +462,11 @@ if (!result.success) {
 
 ### 问题：冲突无法自动解决
 
-**可能原因:**
+**可能原因：**
 1. 相同字段被不同设备修改
 2. 冲突解决策略不适合
 
-**解决方案:**
+**解决方案：**
 ```typescript
 // 使用手动解决策略
 const result = await incrementalSyncService.sync({
@@ -482,18 +482,18 @@ if (result.conflicts && result.conflicts.length > 0) {
 
 ### 问题：IndexedDB 错误
 
-**可能原因:**
+**可能原因：**
 1. 浏览器不支持 IndexedDB
 2. 存储空间不足
 3. 隐私模式限制
 
-**解决方案:**
+**解决方案：**
 ```typescript
 try {
   const db = new SyncDatabase()
   await db.open()
 } catch (error) {
-  console.error('IndexedDB 初始化失败:', error)
+  console.error('IndexedDB 初始化失败：', error)
   
   // 降级到 localStorage
   // 或提示用户启用 IndexedDB
@@ -502,14 +502,14 @@ try {
 
 ### 问题：变更记录过多
 
-**可能原因:**
+**可能原因：**
 1. 长时间未清理
 2. 频繁的小变更
 
-**解决方案:**
+**解决方案：**
 ```typescript
 // 定期清理
-await changeTracker.cleanupOldRecords(7) // 只保留7天
+await changeTracker.cleanupOldRecords(7) // 只保留 7 天
 
 // 或手动清理
 const stats = await changeTracker.getStats()
@@ -574,14 +574,14 @@ class CustomSyncProvider {
 
 ### 1. 批量写入
 
-变更跟踪器默认使用100ms的批量延迟，可以根据需要调整：
+变更跟踪器默认使用 100ms 的批量延迟，可以根据需要调整：
 
 ```typescript
 // 在 change-tracker.ts 中
 private scheduleBatchWrite() {
   this.batchTimeout = window.setTimeout(async () => {
     await this.flushBatch()
-  }, 50) // 减少到50ms以提高响应速度
+  }, 50) // 减少到 50ms 以提高响应速度
 }
 ```
 

@@ -20,7 +20,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
         button.style.cssText = originalStyle
       }, 2000)
     } catch (error) {
-      console.error('[DiscourseOneClick] 添加表情失败:', error)
+      console.error('[DiscourseOneClick] 添加表情失败：', error)
       button.textContent = '失败'
       button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
       setTimeout(() => {

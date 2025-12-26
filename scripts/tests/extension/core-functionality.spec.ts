@@ -78,7 +78,7 @@ test.describe('Chrome Extension Core Functionality', () => {
     expect(pageContent).not.toContain('uploadSingleEmoji')
 
     // Should not contain upload buttons in the main interface
-    const uploadButtons = page.locator('button:has-text("上传到linux.do")')
+    const uploadButtons = page.locator('button:has-text("上传到 linux.do")')
     const uploadCount = await uploadButtons.count()
     expect(uploadCount).toBe(0)
 

@@ -2,7 +2,7 @@
 
 ## 完成时间
 
-2024年12月
+2024 年 12 月
 
 ## 问题
 
@@ -12,14 +12,14 @@ Options 页面虚拟滚动算法存在严重抖动问题，影响用户体验。
 
 完全移除虚拟滚动机制，改用懒加载：
 
-- 展开分组时才渲染DOM
-- 收起分组时卸载DOM
+- 展开分组时才渲染 DOM
+- 收起分组时卸载 DOM
 
 ## 核心改动
 
 ### 1. 新增组件
 
-- **src/options/components/EmojiGrid.vue** - 简单的表情网格组件（100行）
+- **src/options/components/EmojiGrid.vue** - 简单的表情网格组件（100 行）
   - 无虚拟滚动
   - 原生滚动，最大高度 600px
   - 图片懒加载 (loading="lazy")
@@ -47,7 +47,7 @@ Options 页面虚拟滚动算法存在严重抖动问题，影响用户体验。
 | 指标       | 虚拟滚动 | 懒加载       |
 | ---------- | -------- | ------------ |
 | 滚动流畅度 | 抖动     | 完全流畅     |
-| 代码复杂度 | 300行    | 100行        |
+| 代码复杂度 | 300 行    | 100 行        |
 | 内存占用   | 所有分组 | 仅展开的分组 |
 | 维护成本   | 高       | 低           |
 
@@ -98,14 +98,14 @@ mv VirtualGroupEmojis.vue.backup VirtualGroupEmojis.vue
 
 ### 旧虚拟滚动实现
 
-- VirtualEmojiGrid.vue: 11KB (约 300行)
-- VirtualGroupEmojis.vue: 5.8KB (约 180行)
-- **总计: 16.8KB (约 480行)**
+- VirtualEmojiGrid.vue: 11KB (约 300 行)
+- VirtualGroupEmojis.vue: 5.8KB (约 180 行)
+- **总计：16.8KB (约 480 行)**
 
 ### 新懒加载实现
 
-- EmojiGrid.vue: 3.7KB (约 150行)
-- **总计: 3.7KB (约 150行)**
+- EmojiGrid.vue: 3.7KB (约 150 行)
+- **总计：3.7KB (约 150 行)**
 
 ### 代码减少
 
@@ -151,7 +151,7 @@ Popup 页面切换标签时，每次都会完全重新渲染表情网格，导�
 
 #### 1. 新增组件
 
-- **src/popup/components/LazyEmojiGrid.vue** (100行)
+- **src/popup/components/LazyEmojiGrid.vue** (100 行)
   - 基于原 EmojiGrid，增加 `isActive` 属性
   - 使用 `v-show` 控制显示/隐藏
 
@@ -178,7 +178,7 @@ Popup 页面切换标签时，每次都会完全重新渲染表情网格，导�
 
 | 页面        | 交互方式  | 策略            | 原因                    |
 | ----------- | --------- | --------------- | ----------------------- |
-| **Options** | 展开/收起 | `v-if` (卸载)   | 分组多，通常只展开1-2个 |
+| **Options** | 展开/收起 | `v-if` (卸载)   | 分组多，通常只展开 1-2 个 |
 | **Popup**   | 标签切换  | `v-show` (缓存) | 分组少，频繁切换        |
 
 ### 文档

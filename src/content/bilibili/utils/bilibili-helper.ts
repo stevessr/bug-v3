@@ -1,5 +1,5 @@
 /**
- * Bilibili相关的工具函数
+ * Bilibili 相关的工具函数
  */
 
 export interface AddEmojiButtonData {
@@ -8,7 +8,7 @@ export interface AddEmojiButtonData {
 }
 
 /**
- * 检查是否为Bilibili Opus页面
+ * 检查是否为 Bilibili Opus 页面
  */
 export function isBilibiliOpusPage(): boolean {
   try {
@@ -24,7 +24,7 @@ export function isBilibiliOpusPage(): boolean {
 }
 
 /**
- * 规范化B站URL
+ * 规范化 B 站 URL
  */
 export function normalizeBiliUrl(raw: string): string | null {
   if (!raw) return null
@@ -52,10 +52,10 @@ export function normalizeBiliUrl(raw: string): string | null {
 }
 
 /**
- * 从图片容器中提取图片URL - 改进版本
+ * 从图片容器中提取图片 URL - 改进版本
  */
 export function extractImageUrlFromPicture(container: Element): string | null {
-  // 尝试多种方式获取图片URL
+  // 尝试多种方式获取图片 URL
   const urlSources: (() => string | null)[] = [
     // 1. 如果容器本身是 <img>
     () => {
@@ -144,7 +144,7 @@ export function extractImageUrlFromPicture(container: Element): string | null {
     }
   ]
 
-  // 尝试每种方法，返回第一个有效的URL
+  // 尝试每种方法，返回第一个有效的 URL
   for (const getUrl of urlSources) {
     try {
       const rawUrl = getUrl()
@@ -162,7 +162,7 @@ export function extractImageUrlFromPicture(container: Element): string | null {
 }
 
 /**
- * 从URL中提取文件名作为表情名称
+ * 从 URL 中提取文件名作为表情名称
  */
 export function extractNameFromUrl(url: string): string {
   try {

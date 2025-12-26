@@ -51,7 +51,7 @@ const closeEditor = () => {
   emit('close')
 }
 
-// 监听visible变化，清空输入
+// 监听 visible 变化，清空输入
 watch(
   () => props.visible,
   newVal => {
@@ -93,7 +93,7 @@ watch(
     <!-- 快速标签建议 -->
     <div class="tag-suggestions" v-if="suggestedTags.length > 0">
       <div class="suggestions-header">
-        <span class="text-xs text-gray-500">快速添加:</span>
+        <span class="text-xs text-gray-500">快速添加：</span>
       </div>
       <div class="suggestions-list">
         <span

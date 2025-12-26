@@ -5,7 +5,7 @@ import { useEmojiStore } from '@/stores/emojiStore'
 
 const emojiStore = useEmojiStore()
 
-// 获取热门标签（按使用次数排序，最多显示20个）
+// 获取热门标签（按使用次数排序，最多显示 20 个）
 const popularTags = computed(() => {
   return emojiStore.allTags.slice(0, 20)
 })
@@ -70,7 +70,7 @@ const clearAllTags = () => {
     <!-- 显示当前选中的标签 -->
     <div v-if="selectedTags.length > 0" class="selected-tags">
       <div class="selected-tags-header">
-        <span class="text-xs text-gray-500">已选择标签:</span>
+        <span class="text-xs text-gray-500">已选择标签：</span>
       </div>
       <div class="selected-tag-list">
         <span v-for="tag in selectedTags" :key="tag" class="selected-tag" @click="removeTag(tag)">

@@ -282,7 +282,7 @@ const handleTagClick = (tagName: string) => {
                 :alt="item.emoji.name"
                 class="w-8 h-8 object-cover rounded border border-gray-200 dark:border-gray-600"
               />
-              <!-- 超過6個時顯示更多指示器 -->
+              <!-- 超過 6 個時顯示更多指示器 -->
               <div
                 v-if="index === 5 && getTagEmojis(tag.name).length > 6"
                 class="absolute inset-0 bg-black bg-opacity-50 rounded flex items-center justify-center text-white text-xs"

@@ -14,27 +14,27 @@
 
 #### 2. 数据库层
 - `src/utils/sync-db.ts` - IndexedDB 数据库封装
-  - 5张表：deltaRecords, syncVersions, conflictHistory, offlineQueue, devices
-  - 完整的CRUD操作
+  - 5 张表：deltaRecords, syncVersions, conflictHistory, offlineQueue, devices
+  - 完整的 CRUD 操作
   - 查询优化和索引
 
 #### 3. 设备管理
 - `src/utils/device.ts` - 设备标识和信息管理
-  - 设备ID生成和持久化
+  - 设备 ID 生成和持久化
   - 设备信息检测
   - 跨存储支持（Chrome Storage + localStorage）
 
 #### 4. 变更跟踪
 - `src/services/change-tracker.ts` - 变更跟踪器
   - 自动记录所有数据变更
-  - 批量写入优化（100ms延迟）
+  - 批量写入优化（100ms 延迟）
   - 版本号管理
   - 统计信息
 
 #### 5. 冲突解决
 - `src/services/conflict-resolver.ts` - 冲突解决器
   - 智能冲突检测
-  - 5种解决策略（auto, manual, local-first, remote-first, newest-wins）
+  - 5 种解决策略（auto, manual, local-first, remote-first, newest-wins）
   - 三方合并算法
   - 冲突历史追踪
 
@@ -53,7 +53,7 @@
   - 远程同步协调
   - 状态管理
 
-#### 8. UI组件
+#### 8. UI 组件
 - `src/components/ConflictResolver.vue` - 冲突解决界面
   - 可视化冲突对比
   - 并排版本展示
@@ -69,7 +69,7 @@
 
 #### 10. 文档
 - `docs/INCREMENTAL_SYNC.md` - 完整使用文档
-  - API参考
+  - API 参考
   - 使用示例
   - 最佳实践
   - 故障排除
@@ -134,7 +134,7 @@
 ✅ **队列管理**
 - 失败变更自动入队
 - 网络恢复自动同步
-- 重试机制（最多3次）
+- 重试机制（最多 3 次）
 - 持久化队列
 
 ✅ **网络监听**
@@ -161,13 +161,13 @@
 ### DeltaRecord (变更记录)
 ```typescript
 {
-  id: string              // 唯一ID
+  id: string              // 唯一 ID
   timestamp: number       // 时间戳
   version: number         // 版本号
-  deviceId: string        // 设备ID
+  deviceId: string        // 设备 ID
   operation: OperationType // 操作类型
   entityType: EntityType  // 实体类型
-  entityId: string        // 实体ID
+  entityId: string        // 实体 ID
   changes: DeltaChange[]  // 变更内容
 }
 ```
@@ -192,7 +192,7 @@
   local: number           // 本地版本
   remote: number          // 远程版本
   lastSyncTime: number    // 最后同步时间
-  deviceId: string        // 设备ID
+  deviceId: string        // 设备 ID
   pendingChanges: number  // 待同步数量
 }
 ```
@@ -202,7 +202,7 @@
 - **前端框架**: Vue 3 + TypeScript
 - **状态管理**: Pinia
 - **数据库**: Dexie (IndexedDB)
-- **唯一ID**: nanoid
+- **唯一 ID**: nanoid
 - **同步后端**: Cloudflare R2 / Chrome Sync
 
 ## 📈 性能优化
@@ -210,8 +210,8 @@
 ### 已实现的优化
 
 1. **批量写入**
-   - 100ms延迟合并
-   - 减少IndexedDB操作
+   - 100ms 延迟合并
+   - 减少 IndexedDB 操作
    - 提升响应速度
 
 2. **索引优化**
@@ -226,7 +226,7 @@
 
 4. **内存缓存**
    - 版本号缓存
-   - 设备ID缓存
+   - 设备 ID 缓存
    - 减少存储读取
 
 ## 🧪 测试覆盖

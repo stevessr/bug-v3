@@ -210,5 +210,5 @@ MIT License - 与主项目保持一致
 
 ## 相关链接
 
-- 主项目: https://github.com/stevessr/bug-v3
-- 问题反馈: https://github.com/stevessr/bug-v3/issues
+- 主项目：https://github.com/stevessr/bug-v3
+- 问题反馈：https://github.com/stevessr/bug-v3/issues

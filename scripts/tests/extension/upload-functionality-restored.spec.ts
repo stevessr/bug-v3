@@ -53,7 +53,7 @@ test.describe('Upload Functionality Restored', () => {
     // Check that upload-related code is present (not removed)
     expect(pageContent).toContain('uploadSingleEmoji')
     expect(pageContent).toContain('shouldShowUploadButton')
-    expect(pageContent).toContain('上传到linux.do')
+    expect(pageContent).toContain('上传到 linux.do')
     console.log('✅ VERIFIED: Upload functionality code is present in the page')
 
     // VERIFICATION 4: Build files are correct
@@ -67,7 +67,7 @@ test.describe('Upload Functionality Restored', () => {
 
     // VERIFICATION 5: Upload functionality is conditionally available
     // Since we're not on linux.do, upload buttons should be visible
-    const uploadButtons = page.locator('button:has-text("上传到linux.do")')
+    const uploadButtons = page.locator('button:has-text("上传到 linux.do")')
 
     // Note: The upload button is in a modal, so it might not be visible in the main page
     // This is expected behavior - the button appears in the edit modal
@@ -100,7 +100,7 @@ test.describe('Upload Functionality Restored', () => {
     expect(modalContent).toContain('uploadSingleEmoji')
     expect(modalContent).toContain('shouldShowUploadButton')
     expect(modalContent).toContain('emojiPreviewUploader')
-    expect(modalContent).toContain('上传到linux.do')
+    expect(modalContent).toContain('上传到 linux.do')
     expect(modalContent).toContain('uploadingEmojiIds')
 
     console.log('✅ VERIFIED: EditEmojiModal.vue contains all upload functionality')

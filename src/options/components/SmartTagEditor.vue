@@ -36,7 +36,7 @@ const suggestedTags = computed(() => {
   return popularTags.filter(tag => !currentTags.value.includes(tag))
 })
 
-// 監聽emoji變化
+// 監聽 emoji 變化
 watch(
   () => props.emoji,
   newEmoji => {
@@ -86,7 +86,7 @@ const generateAISuggestions = async () => {
   showAISuggestions.value = true
   aiSuggestions.value = []
 
-  // 模擬AI生成標籤（實際應用中可以調用AI API）
+  // 模擬 AI 生成標籤（實際應用中可以調用 AI API）
   const mockAISuggestions = [
     '表情',
     '可愛',
@@ -128,7 +128,7 @@ const generateAISuggestions = async () => {
   }, 500)
 }
 
-// 添加AI建議標籤
+// 添加 AI 建議標籤
 const addAISuggestedTag = (tag: string) => {
   currentTags.value.push(tag)
   emojiStore.setEmojiTags(props.emoji.id, currentTags.value)
@@ -140,7 +140,7 @@ const closeEditor = () => {
   emit('update:show', false)
 }
 
-// 監聽visible變化，清空輸入
+// 監聽 visible 變化，清空輸入
 watch(
   () => props.show,
   newVal => {
@@ -266,7 +266,7 @@ watch(
             </button>
           </div>
           <div v-else-if="showAISuggestions" class="text-gray-500 dark:text-gray-400 text-sm">
-            正在生成AI建議...
+            正在生成 AI 建議...
           </div>
         </div>
 

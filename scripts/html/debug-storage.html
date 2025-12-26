@@ -88,7 +88,7 @@
                     <pre>${JSON.stringify(localData, null, 2)}</pre>
                 `
         } catch (error) {
-          result.innerHTML = `<div class="error">检查失败: ${error.message}</div>`
+          result.innerHTML = `<div class="error">检查失败：${error.message}</div>`
         }
       }
 
@@ -125,7 +125,7 @@
                     <pre>${JSON.stringify(data, null, 2)}</pre>
                 `
         } catch (error) {
-          result.innerHTML = `<div class="error">检查失败: ${error.message}</div>`
+          result.innerHTML = `<div class="error">检查失败：${error.message}</div>`
         }
       }
 
@@ -207,7 +207,7 @@
                     <p>已创建默认表情组 "${defaultGroup.name}" 包含 ${defaultGroup.emojis.length} 个表情</p>
                 `
         } catch (error) {
-          result.innerHTML = `<div class="error">初始化失败: ${error.message}</div>`
+          result.innerHTML = `<div class="error">初始化失败：${error.message}</div>`
         }
       }
 
@@ -374,18 +374,18 @@
 
           result.innerHTML = `
                     <div class="success">内容脚本测试完成</div>
-                    <h3>加载的数据:</h3>
-                    <p><strong>表情组数量:</strong> ${groups.length}</p>
-                    <p><strong>总表情数量:</strong> ${totalEmojis}</p>
-                    <p><strong>设置:</strong></p>
+                    <h3>加载的数据：</h3>
+                    <p><strong>表情组数量：</strong> ${groups.length}</p>
+                    <p><strong>总表情数量：</strong> ${totalEmojis}</p>
+                    <p><strong>设置：</strong></p>
                     <pre>${JSON.stringify(settings, null, 2)}</pre>
-                    <h3>表情组摘要:</h3>
+                    <h3>表情组摘要：</h3>
                     <pre>${JSON.stringify(groupSummary, null, 2)}</pre>
-                    <h3>详细的控制台日志:</h3>
+                    <h3>详细的控制台日志：</h3>
                     <p style="color: #666;">请查看浏览器控制台以获取详细的调试信息</p>
                 `
         } catch (error) {
-          result.innerHTML = `<div class="error">测试失败: ${error.message}</div>`
+          result.innerHTML = `<div class="error">测试失败：${error.message}</div>`
         }
       }
     </script>

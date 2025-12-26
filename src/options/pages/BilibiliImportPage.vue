@@ -15,14 +15,14 @@ const handleBilibiliImport = async (data: any) => {
     isLoading.value = true
     errorMessage.value = ''
 
-    // 调用composable中的导入方法
+    // 调用 composable 中的导入方法
     if (typeof options.handleEmojisImported === 'function') {
       await options.handleEmojisImported(data)
     }
 
     showBilibiliModal.value = false
   } catch (error) {
-    console.error('导入bilibili表情失败:', error)
+    console.error('导入 bilibili 表情失败：', error)
     errorMessage.value = error instanceof Error ? error.message : '导入失败'
   } finally {
     isLoading.value = false
@@ -36,7 +36,7 @@ const handleBilibiliImport = async (data: any) => {
       <!-- 页面标题 -->
       <div class="mb-6">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Bilibili 表情导入</h1>
-        <p class="text-gray-600 dark:text-gray-400">通过表情包ID从Bilibili导入表情包到插件中</p>
+        <p class="text-gray-600 dark:text-gray-400">通过表情包 ID 从 Bilibili 导入表情包到插件中</p>
       </div>
 
       <!-- 错误信息 -->
@@ -55,11 +55,11 @@ const handleBilibiliImport = async (data: any) => {
           <ul class="space-y-2 text-gray-600 dark:text-gray-400">
             <li class="flex items-start">
               <span class="text-pink-500 mr-2">•</span>
-              <span>通过表情包ID导入特定的Bilibili表情包</span>
+              <span>通过表情包 ID 导入特定的 Bilibili 表情包</span>
             </li>
             <li class="flex items-start">
               <span class="text-pink-500 mr-2">•</span>
-              <span>支持导入任意有效的Bilibili表情包</span>
+              <span>支持导入任意有效的 Bilibili 表情包</span>
             </li>
             <li class="flex items-start">
               <span class="text-pink-500 mr-2">•</span>
@@ -71,7 +71,7 @@ const handleBilibiliImport = async (data: any) => {
             </li>
             <li class="flex items-start">
               <span class="text-pink-500 mr-2">•</span>
-              <span>无需登录Bilibili账号即可使用</span>
+              <span>无需登录 Bilibili 账号即可使用</span>
             </li>
           </ul>
         </div>
@@ -100,7 +100,7 @@ const handleBilibiliImport = async (data: any) => {
           <h3 class="font-medium text-blue-900 dark:text-blue-100 mb-2">💡 使用提示</h3>
           <ul class="text-sm text-blue-800 dark:text-blue-200 space-y-1">
             <li>• 点击上方按钮打开 Bilibili 表情包导入界面</li>
-            <li>• 在输入框中输入要导入的表情包ID</li>
+            <li>• 在输入框中输入要导入的表情包 ID</li>
             <li>• 点击"导入"按钮或按回车键导入表情包</li>
             <li>• 可以连续导入多个表情包</li>
             <li>• 可以选择目标分组或创建新分组</li>
@@ -110,7 +110,7 @@ const handleBilibiliImport = async (data: any) => {
       </div>
     </div>
 
-    <!-- Bilibili表情导入模态框 -->
+    <!-- Bilibili 表情导入模态框 -->
     <BilibiliEmoteModal v-model="showBilibiliModal" @imported="handleBilibiliImport" />
   </div>
 </template>

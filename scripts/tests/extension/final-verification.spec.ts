@@ -53,7 +53,7 @@ test.describe('Final Verification - User Requirements Completed', () => {
     const pageContent = await page.content()
     expect(pageContent).not.toContain('emojiPreviewUploader')
 
-    const uploadButtons = page.locator('button:has-text("上传到linux.do")')
+    const uploadButtons = page.locator('button:has-text("上传到 linux.do")')
     const uploadCount = await uploadButtons.count()
     expect(uploadCount).toBe(0)
     console.log(

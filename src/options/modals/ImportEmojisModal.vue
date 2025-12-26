@@ -94,7 +94,7 @@ const fillExample = () => {
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
-            或粘贴表情JSON
+            或粘贴表情 JSON
           </label>
           <textarea
             v-model="text"

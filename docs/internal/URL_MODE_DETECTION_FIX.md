@@ -24,18 +24,18 @@ onMounted(() => {
   const mode = params.get('mode')
   const hasRouteHash = window.location.hash && window.location.hash.length > 1
 
-  // 优先级1: 如果有路由 hash（如 #/groups），强制使用 options 模式
+  // 优先级 1: 如果有路由 hash（如 #/groups），强制使用 options 模式
   // 因为 Popup 不支持路由，带路由的一定是 options 页面
   if (hasRouteHash) {
     isPopupMode.value = false
   } else if (mode === 'popup') {
-    // 优先级2: URL 明确指定 popup 模式
+    // 优先级 2: URL 明确指定 popup 模式
     isPopupMode.value = true
   } else if (mode === 'options') {
-    // 优先级3: URL 明确指定 options 模式
+    // 优先级 3: URL 明确指定 options 模式
     isPopupMode.value = false
   } else {
-    // 优先级4: 如果没有指定模式，通过窗口大小判断
+    // 优先级 4: 如果没有指定模式，通过窗口大小判断
     const isSmallWindow = window.innerWidth < 500 || window.innerHeight < 500
     isPopupMode.value = isSmallWindow
   }
@@ -74,7 +74,7 @@ index.html  (窗口 < 500px)
 
 ## 实际场景
 
-### 场景1: 用户在 Popup 中点击设置按钮
+### 场景 1: 用户在 Popup 中点击设置按钮
 
 ```
 跳转前: index.html?mode=popup
@@ -82,21 +82,21 @@ index.html  (窗口 < 500px)
 结果: ✅ 正确显示 Options 页面
 ```
 
-### 场景2: 扩展图标点击
+### 场景 2: 扩展图标点击
 
 ```
 URL: index.html?mode=popup
 结果: ✅ 显示 Popup 界面
 ```
 
-### 场景3: 右键 → 选项
+### 场景 3: 右键 → 选项
 
 ```
 URL: index.html?mode=options
 结果: ✅ 显示 Options 页面
 ```
 
-### 场景4: 直接访问带路由的 URL（问题场景）
+### 场景 4: 直接访问带路由的 URL（问题场景）
 
 ```
 URL: index.html?mode=popup#/groups

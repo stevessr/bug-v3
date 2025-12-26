@@ -235,7 +235,7 @@ loadRandomEmoji()
 // 获取猫猫表情包
 fetch('https://your-project.pages.dev/api/random-image?group=group-1758073408523')
   .then(res => res.json())
-  .then(data => console.log('随机猫猫:', data.name, data.url))
+  .then(data => console.log('随机猫猫：', data.name, data.url))
 ```
 
 ## 🎯 使用说明

@@ -86,7 +86,7 @@
 
     <div class="status info">
       <strong>说明：</strong>
-      这个页面用于手动测试图片上传和按钮注入功能。在实际的linux.do网站上，这些功能会自动注入到相应的工具栏中。
+      这个页面用于手动测试图片上传和按钮注入功能。在实际的 linux.do 网站上，这些功能会自动注入到相应的工具栏中。
     </div>
 
     <div class="test-section">
@@ -123,7 +123,7 @@
       <h2>3. 手动功能测试</h2>
       <div style="display: flex; gap: 10px; flex-wrap: wrap">
         <button class="btn" id="testUpload">📷 测试图片上传</button>
-        <button class="btn" id="testGenerator">🎨 打开AI生成器</button>
+        <button class="btn" id="testGenerator">🎨 打开 AI 生成器</button>
         <button class="btn" id="testInjection">🔄 重新注入按钮</button>
       </div>
       <div id="testStatus"></div>
@@ -184,20 +184,20 @@
             addResult('❌ 图片上传功能未加载', 'error')
           }
         } catch (error) {
-          addResult(`❌ 图片上传测试失败: ${error.message}`, 'error')
+          addResult(`❌ 图片上传测试失败：${error.message}`, 'error')
         }
         updateStatus('')
       })
 
-      // 测试AI生成器
+      // 测试 AI 生成器
       document.getElementById('testGenerator').addEventListener('click', () => {
-        updateStatus('正在打开AI图片生成器...', 'info')
+        updateStatus('正在打开 AI 图片生成器...', 'info')
         try {
           // image-generator page removed
           window.open(url, '_blank')
-          addResult('✅ AI图片生成器页面已打开', 'success')
+          addResult('✅ AI 图片生成器页面已打开', 'success')
         } catch (error) {
-          addResult(`❌ AI生成器打开失败: ${error.message}`, 'error')
+          addResult(`❌ AI 生成器打开失败：${error.message}`, 'error')
         }
         updateStatus('')
       })
@@ -221,7 +221,7 @@
             addResult('❌ 注入功能未加载', 'error')
           }
         } catch (error) {
-          addResult(`❌ 按钮注入测试失败: ${error.message}`, 'error')
+          addResult(`❌ 按钮注入测试失败：${error.message}`, 'error')
         }
         updateStatus('')
       })
