@@ -315,11 +315,10 @@ export class ImageCache {
       const store = transaction.objectStore(this.options.storeName)
 
       return new Promise(resolve => {
-        const request = store.get(id)
+        const request = store.count(id)
 
         request.onsuccess = () => {
-          const entry = request.result as CacheEntry | undefined
-          resolve(!!entry)
+          resolve(request.result > 0)
         }
 
         request.onerror = () => {
@@ -388,24 +387,79 @@ export class ImageCache {
   }
 
   /**
-   * Cache an image from URL (带请求去重)
+   * 批量获取缓存状态 (仅查询 IndexedDB)
    */
-  async cacheImage(url: string): Promise<string> {
-    // 使用请求追踪器避免重复请求
-    return this.requestTracker.track(url, () => this._doCacheImage(url))
+  private async _batchGetFromDb(urls: string[]): Promise<Map<string, CacheEntry>> {
+    try {
+      await this.ensureInitialized()
+      if (!this.db) return new Map()
+
+      const transaction = this.db.transaction([this.options.storeName], 'readwrite')
+      const store = transaction.objectStore(this.options.storeName)
+      const results = new Map<string, CacheEntry>()
+
+      return new Promise(resolve => {
+        let completed = 0
+        let hasError = false
+
+        if (urls.length === 0) {
+          resolve(results)
+          return
+        }
+
+        urls.forEach(url => {
+          const id = this.generateId(url)
+          const request = store.get(id)
+
+          request.onsuccess = () => {
+            const entry = request.result as CacheEntry | undefined
+            if (entry) {
+              results.set(url, entry)
+              // 批量操作时不立即更新 lastAccessed，避免写入风暴
+              // 只有在真正使用时才更新，或者可以在这里做一个轻量级更新（如果需要）
+            }
+            completed++
+            if (completed === urls.length && !hasError) resolve(results)
+          }
+
+          request.onerror = () => {
+            // 单个失败不影响整体
+            completed++
+            if (completed === urls.length && !hasError) resolve(results)
+          }
+        })
+
+        transaction.onerror = () => {
+          hasError = true
+          resolve(results)
+        }
+      })
+    } catch {
+      return new Map()
+    }
   }
 
-  private async _doCacheImage(url: string): Promise<string> {
+  /**
+   * Cache an image from URL (带请求去重)
+   */
+  async cacheImage(url: string, checkCache: boolean = true): Promise<string> {
+    // 使用请求追踪器避免重复请求
+    return this.requestTracker.track(url, () => this._doCacheImage(url, checkCache))
+  }
+
+  private async _doCacheImage(url: string, checkCache: boolean = true): Promise<string> {
     try {
       await this.ensureInitialized()
       if (!this.db) {
         throw new Error('Database not initialized')
       }
 
-      // 检查是否已缓存
-      const cached = await this.getCachedImage(url)
-      if (cached) {
-        return cached
+      if (checkCache) {
+        // 检查是否已缓存
+        const cached = await this.getCachedImage(url)
+        if (cached) {
+          return cached
+        }
       }
 
       // 获取图片
@@ -482,12 +536,73 @@ export class ImageCache {
     const results = new Map<string, string | Error>()
     let completed = 0
 
-    // 分批处理
-    for (let i = 0; i < urls.length; i += concurrency) {
-      const batch = urls.slice(i, i + concurrency)
+    // 1. 过滤掉已经在内存缓存中的
+    const uniqueUrls = [...new Set(urls)]
+    const pendingUrls: string[] = []
+
+    for (const url of uniqueUrls) {
+      if (this.memoryCache.has(url)) {
+        results.set(url, this.memoryCache.get(url)!)
+        completed++
+      } else {
+        pendingUrls.push(url)
+      }
+    }
+
+    if (onProgress && completed > 0) {
+      onProgress(completed, urls.length)
+    }
+
+    if (pendingUrls.length === 0) {
+      return results
+    }
+
+    // 2. 批量检查 IndexedDB
+    // 分批检查以避免事务过大
+    const checkBatchSize = 50 // 每次检查 50 个
+    const urlsToDownload: string[] = []
+
+    for (let i = 0; i < pendingUrls.length; i += checkBatchSize) {
+      const batch = pendingUrls.slice(i, i + checkBatchSize)
+      const cachedEntries = await this._batchGetFromDb(batch)
+
+      for (const url of batch) {
+        const entry = cachedEntries.get(url)
+        if (entry) {
+          try {
+            const blobUrl = URL.createObjectURL(entry.blob)
+            this.memoryCache.set(url, blobUrl, entry.size)
+            results.set(url, blobUrl)
+          } catch (error) {
+            // 如果创建 blob URL 失败，重新下载
+            urlsToDownload.push(url)
+          }
+        } else {
+          urlsToDownload.push(url)
+        }
+      }
+    }
+
+    // 更新进度（因为从 DB 加载也是一种完成）
+    completed = uniqueUrls.length - urlsToDownload.length
+    if (onProgress && completed > 0) {
+      onProgress(completed, uniqueUrls.length)
+    }
+
+    // 3. 下载未缓存的图片
+    if (urlsToDownload.length === 0) {
+      return results
+    }
+
+    // 分批处理下载
+    for (let i = 0; i < urlsToDownload.length; i += concurrency) {
+      const batch = urlsToDownload.slice(i, i + concurrency)
       const batchResults = await Promise.allSettled(
         batch.map(async url => {
-          const blobUrl = await this.cacheImage(url)
+          // 这里的 cacheImage 内部还是会 check 一次，但因为我们已经 check 过了且不在 cache 中
+          // 为了效率，我们可以传递一个 flag 告诉它跳过 check，或者 just rely on its check (double check is safe but slower)
+          // 鉴于 requestTracker 的存在，直接调用是安全的
+          const blobUrl = await this.cacheImage(url, false)
           return { url, blobUrl }
         })
       )
@@ -500,7 +615,7 @@ export class ImageCache {
           results.set(url, result.reason)
         }
         completed++
-        onProgress?.(completed, urls.length)
+        onProgress?.(completed, uniqueUrls.length)
       }
     }
 
@@ -529,15 +644,26 @@ export class ImageCache {
       return loaded
     }
 
-    // 分批并行加载
-    for (let i = 0; i < toLoad.length; i += concurrency) {
-      const batch = toLoad.slice(i, i + concurrency)
-      const results = await Promise.allSettled(batch.map(url => this.getCachedImage(url)))
+    // 使用 batchGetFromDb 批量检查 IDB
+    const checkBatchSize = 50
+    const urlsNotInDb: string[] = []
 
-      // 统计成功加载的数量
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value) {
-          loaded++
+    for (let i = 0; i < toLoad.length; i += checkBatchSize) {
+      const batch = toLoad.slice(i, i + checkBatchSize)
+      const cachedEntries = await this._batchGetFromDb(batch)
+
+      for (const url of batch) {
+        const entry = cachedEntries.get(url)
+        if (entry) {
+          try {
+            const blobUrl = URL.createObjectURL(entry.blob)
+            this.memoryCache.set(url, blobUrl, entry.size)
+            loaded++
+          } catch (error) {
+            urlsNotInDb.push(url)
+          }
+        } else {
+          urlsNotInDb.push(url)
         }
       }
     }
