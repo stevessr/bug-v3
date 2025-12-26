@@ -113,6 +113,8 @@ Authorization: Bearer <write-token>
 
 ### 示例
 
+**⚠️ 注意**：如果你之前使用独立的 backup-worker，现在 API 路径已改为 `/api/backup`。
+
 ```bash
 # 列出所有备份
 curl -H "Authorization: Bearer readonly-token" \
@@ -133,6 +135,11 @@ curl -X POST \
 curl -X DELETE \
   -H "Authorization: Bearer write-token" \
   https://your-project.pages.dev/api/backup/user123
+```
+
+**浏览器扩展配置**：在扩展的同步设置中，Worker URL 应设置为：
+```
+https://your-project.pages.dev/api/backup
 ```
 
 ## 🎯 使用说明

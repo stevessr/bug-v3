@@ -24,7 +24,8 @@ const emit = defineEmits([
   'update:customColorScheme',
   'update:enableHoverPreview',
   'update:syncVariantToDisplayUrl',
-  'update:uploadMenuItems'
+  'update:uploadMenuItems',
+  'update:cloudMarketDomain'
 ])
 
 const getCustomPrimaryColor = () => {
@@ -413,6 +414,23 @@ const removeSideItem = (i: number) => {
         label="启用一键解析全部图片"
         description="控制前端是否注入'一键解析并添加所有图片'按钮"
       />
+
+      <!-- 云端市场域名配置 -->
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium dark:text-white">云端市场域名</label>
+          <p class="text-sm dark:text-white">配置云端表情包市场的域名（不包含 https://）</p>
+        </div>
+        <input
+          :value="getSetting('cloudMarketDomain', 'video2gif-pages.pages.dev')"
+          @input="
+            e => handleSettingUpdate('cloudMarketDomain', (e.target as HTMLInputElement).value)
+          "
+          class="border rounded px-3 py-2 w-80 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          placeholder="video2gif-pages.pages.dev"
+          title="云端市场域名"
+        />
+      </div>
 
       <!-- Upload menu items editor -->
       <div class="pt-4 border-t">

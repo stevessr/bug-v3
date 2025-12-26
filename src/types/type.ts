@@ -44,6 +44,7 @@ export interface AppSettings {
   highContrastMode?: boolean
   reduceMotion?: boolean
   useIndexedDBForImages?: boolean // 允许使用 IndexedDB 缓存图片显示
+  cloudMarketDomain?: string // 云端市场域名配置（默认 video2gif-pages.pages.dev）
 }
 
 export interface EmojiGroup {

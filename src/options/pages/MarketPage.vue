@@ -8,6 +8,12 @@ import type { EmojiGroup } from '@/types/type'
 
 const emojiStore = useEmojiStore()
 
+// 获取云端市场基础 URL
+const getMarketBaseUrl = () => {
+  const domain = emojiStore.settings.cloudMarketDomain || 'video2gif-pages.pages.dev'
+  return `https://${domain}`
+}
+
 // 市场数据
 const loading = ref(false)
 const marketGroups = ref<
@@ -66,7 +72,8 @@ const loadMarketData = async () => {
     loading.value = true
 
     // 从云端加载 metadata.json
-    const metadataUrl = 'https://video2gif-pages.pages.dev/assets/market/metadata.json'
+    const baseUrl = getMarketBaseUrl()
+    const metadataUrl = `${baseUrl}/assets/market/metadata.json`
     const response = await fetch(metadataUrl)
 
     if (!response.ok) {
@@ -99,7 +106,8 @@ const loadGroupDetails = async (groupId: string): Promise<EmojiGroup | null> => 
 
   try {
     // 从云端加载分组详细数据
-    const groupUrl = `https://video2gif-pages.pages.dev/assets/market/group-${groupId}.json`
+    const baseUrl = getMarketBaseUrl()
+    const groupUrl = `${baseUrl}/assets/market/group-${groupId}.json`
     const response = await fetch(groupUrl)
 
     if (!response.ok) {

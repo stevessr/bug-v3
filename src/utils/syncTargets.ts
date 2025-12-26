@@ -551,7 +551,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
   async test(): Promise<SyncResult> {
     try {
-      const url = this.getUrl() + '/'
+      const url = this.getUrl()
       // Test uses GET, so read auth is sufficient
       const response = await fetch(url, {
         method: 'GET',
@@ -560,7 +560,8 @@ export class CloudflareSyncTarget implements ISyncTarget {
 
       // Expecting a JSON array of keys
       if (response.ok) {
-        await response.json() // Try to parse to ensure it's valid
+        const data = await response.json() // Try to parse to ensure it's valid
+        console.log('[CloudflareSync] Test successful, keys:', data)
         return {
           success: true,
           message: 'Cloudflare Worker connection successful',
@@ -568,10 +569,21 @@ export class CloudflareSyncTarget implements ISyncTarget {
         }
       }
 
+      // Try to get error details
+      let errorDetail = response.statusText
+      try {
+        const errorText = await response.text()
+        if (errorText && !errorText.startsWith('<!')) {
+          errorDetail = errorText
+        }
+      } catch (e) {
+        // Ignore parsing error
+      }
+
       return {
         success: false,
-        message: `Cloudflare Worker connection failed: ${response.statusText}`,
-        error: response.statusText
+        message: `Cloudflare Worker connection failed: ${errorDetail}`,
+        error: errorDetail
       }
     } catch (error) {
       return {
@@ -629,7 +641,9 @@ export class CloudflareSyncTarget implements ISyncTarget {
             message: `正在推送 ${item.displayName} (${sizeKB} KB)...`
           })
 
-          const response = await fetch(`${baseUrl}/${item.key}`, {
+          const url = `${baseUrl}/${item.key}`
+          console.log(`[CloudflareSync] Pushing to URL: ${url}`)
+          const response = await fetch(url, {
             method: 'POST',
             headers,
             body: jsonData
@@ -688,7 +702,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
       onProgress?.({ current: 0, total: 2, action: 'test', message: '正在测试连接...' })
 
       // 1. Test connection and get list of keys
-      const listResponse = await fetch(`${baseUrl}/`, { method: 'GET', headers })
+      const listResponse = await fetch(baseUrl, { method: 'GET', headers })
       if (!listResponse.ok) {
         throw new Error(`Failed to list keys: ${listResponse.statusText}`)
       }
@@ -823,7 +837,7 @@ export class CloudflareSyncTarget implements ISyncTarget {
       onProgress?.({ current: 0, total: 1, action: 'pull', message: '正在获取云端数据列表...' })
 
       // 1. Get list of all keys (第 1 个请求)
-      const listResponse = await fetch(`${baseUrl}/`, { method: 'GET', headers })
+      const listResponse = await fetch(baseUrl, { method: 'GET', headers })
       if (!listResponse.ok) {
         throw new Error(`Failed to list keys: ${listResponse.statusText}`)
       }

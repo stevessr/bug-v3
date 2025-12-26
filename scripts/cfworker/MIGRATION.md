@@ -32,8 +32,19 @@ The existing configuration already includes:
 
 ## Migration Details
 
+### ⚠️ API Path Change
+The API path has changed from the root to `/api/backup`:
+
+**Old (standalone worker)**:
+- `https://your-worker.workers.dev/` → List keys
+- `https://your-worker.workers.dev/user123` → Get/Set/Delete key
+
+**New (Pages Function)**:
+- `https://your-pages.pages.dev/api/backup` → List keys
+- `https://your-pages.pages.dev/api/backup/user123` → Get/Set/Delete key
+
 ### API Compatibility
-✅ **100% Backward Compatible** - All API endpoints work exactly the same:
+All API operations remain the same, only the base path changed:
 - `GET /api/backup` - List all backup keys
 - `GET /api/backup/:key` - Get specific backup
 - `POST /api/backup/:key` - Save backup (write token required)
@@ -89,11 +100,17 @@ The `scripts/backup-worker` directory can now be safely removed:
 rm -rf scripts/backup-worker
 ```
 
-### Update Production URLs
-If you have the backup-worker deployed as a standalone Worker, you can:
+### Update Extension Configuration
+If you were using the standalone backup-worker:
+
 1. Deploy the new Pages Function
-2. Update any client code to use the new URL: `https://your-pages-project.pages.dev/api/backup`
-3. Delete the old Worker deployment
+2. **Update the URL in your extension settings**:
+   - Old: `https://your-worker.workers.dev`
+   - New: `https://your-pages-project.pages.dev/api/backup`
+3. Test the connection in the extension's sync settings
+4. Delete the old Worker deployment (optional)
+
+**Important**: The client code in `src/utils/syncTargets.ts` has been updated to work with the new `/api/backup` path. After rebuilding the extension, users need to update their Worker URL to include `/api/backup`.
 
 ## Benefits of Migration
 

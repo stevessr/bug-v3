@@ -45,7 +45,8 @@ const {
   updateCustomOpenAIKey,
   updateCustomOpenAIModel,
   updateImdbedToken,
-  updateImdbedApiUrl
+  updateImdbedApiUrl,
+  updateCloudMarketDomain
 } = options
 
 const activeTab = ref('theme')
@@ -113,6 +114,7 @@ onMounted(async () => {
               @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
               @update:enableBatchParseImages="updateEnableBatchParseImages"
               @update:useIndexedDBForImages="updateUseIndexedDBForImages"
+              @update:cloudMarketDomain="updateCloudMarketDomain"
             />
           </div>
         </a-tab-pane>

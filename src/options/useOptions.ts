@@ -402,6 +402,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ imgbedApiUrl: url })
   }
 
+  const updateCloudMarketDomain = (domain: string) => {
+    emojiStore.updateSettings({ cloudMarketDomain: domain })
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -1036,6 +1040,7 @@ export default function useOptions() {
     updateCustomOpenAIModel,
     updateImdbedToken,
     updateImdbedApiUrl,
+    updateCloudMarketDomain,
     // drag/drop
     handleDragStart,
     handleDrop,

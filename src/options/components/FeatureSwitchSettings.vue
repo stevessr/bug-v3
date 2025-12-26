@@ -15,7 +15,8 @@ const emit = defineEmits([
   'update:enableXcomExtraSelectors',
   'update:enableCalloutSuggestions',
   'update:enableBatchParseImages',
-  'update:useIndexedDBForImages'
+  'update:useIndexedDBForImages',
+  'update:cloudMarketDomain'
 ])
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
@@ -117,6 +118,27 @@ const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
         label="启用 IndexedDB 缓存图片"
         description="将图片缓存在 IndexedDB 中以加快加载速度并支持离线访问"
       />
+
+      <!-- 云端市场域名配置 -->
+      <div
+        class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700"
+      >
+        <div>
+          <label class="text-sm font-medium dark:text-white">云端市场域名</label>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            配置云端表情包市场的域名（不包含 https://）
+          </p>
+        </div>
+        <input
+          :value="getSetting('cloudMarketDomain', 'video2gif-pages.pages.dev')"
+          @input="
+            e => handleSettingUpdate('cloudMarketDomain', (e.target as HTMLInputElement).value)
+          "
+          class="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 w-80 dark:bg-gray-700 dark:text-white"
+          placeholder="video2gif-pages.pages.dev"
+          title="云端市场域名"
+        />
+      </div>
     </div>
   </div>
 </template>

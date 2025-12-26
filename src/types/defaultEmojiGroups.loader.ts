@@ -3,10 +3,17 @@ import type { DefaultEmojiData, EmojiGroup } from './type'
 // Runtime loader: fetch runtime JSON from /assets/json/settings.json, manifest.json, and individual group JSONs
 // Returns empty defaults if fetch fails.
 
-async function fetchSettings(url?: string): Promise<any | null> {
+// 获取云端市场基础 URL（从设置中读取域名，或使用默认值）
+function getCloudMarketBaseUrl(customDomain?: string): string {
+  const domain = customDomain || 'video2gif-pages.pages.dev'
+  return `https://${domain}`
+}
+
+async function fetchSettings(customDomain?: string): Promise<any | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const res = await fetch(url || 'https://video2gif-pages.pages.dev/assets/json/settings.json', {
+    const baseUrl = getCloudMarketBaseUrl(customDomain)
+    const res = await fetch(`${baseUrl}/assets/json/settings.json`, {
       cache: 'no-cache'
     })
     if (!res.ok) return null
@@ -18,11 +25,12 @@ async function fetchSettings(url?: string): Promise<any | null> {
 }
 
 async function fetchManifest(
-  url?: string
+  customDomain?: string
 ): Promise<{ groups: Array<{ id: string; order: number }> } | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const res = await fetch(url || 'https://video2gif-pages.pages.dev/assets/json/manifest.json', {
+    const baseUrl = getCloudMarketBaseUrl(customDomain)
+    const res = await fetch(`${baseUrl}/assets/json/manifest.json`, {
       cache: 'no-cache'
     })
     if (!res.ok) return null
@@ -33,12 +41,11 @@ async function fetchManifest(
   }
 }
 
-async function fetchGroup(groupId: string, url?: string): Promise<EmojiGroup | null> {
+async function fetchGroup(groupId: string, customDomain?: string): Promise<EmojiGroup | null> {
   try {
     if (typeof fetch === 'undefined') return null
-    const fileName = url
-      ? `${url}/${groupId}.json`
-      : `https://video2gif-pages.pages.dev/assets/json/${groupId}.json`
+    const baseUrl = getCloudMarketBaseUrl(customDomain)
+    const fileName = `${baseUrl}/assets/json/${groupId}.json`
     const res = await fetch(fileName, { cache: 'no-cache' })
     if (!res.ok) return null
     const data = await res.json()
@@ -48,10 +55,10 @@ async function fetchGroup(groupId: string, url?: string): Promise<EmojiGroup | n
   }
 }
 
-export async function loadDefaultEmojiGroups(url?: string): Promise<EmojiGroup[]> {
+export async function loadDefaultEmojiGroups(customDomain?: string): Promise<EmojiGroup[]> {
   try {
     // Fetch the manifest to get the list of groups
-    const manifest = await fetchManifest(url)
+    const manifest = await fetchManifest(customDomain)
     if (!manifest || !Array.isArray(manifest.groups)) {
       return []
     }
@@ -59,7 +66,7 @@ export async function loadDefaultEmojiGroups(url?: string): Promise<EmojiGroup[]
     // Load each group based on the manifest
     const groups = await Promise.all(
       manifest.groups.map(async groupInfo => {
-        return await fetchGroup(groupInfo.id, url)
+        return await fetchGroup(groupInfo.id, customDomain)
       })
     )
 
@@ -72,9 +79,12 @@ export async function loadDefaultEmojiGroups(url?: string): Promise<EmojiGroup[]
   }
 }
 
-export async function loadPackagedDefaults(url?: string): Promise<DefaultEmojiData> {
+export async function loadPackagedDefaults(customDomain?: string): Promise<DefaultEmojiData> {
   try {
-    const [settings, groups] = await Promise.all([fetchSettings(url), loadDefaultEmojiGroups(url)])
+    const [settings, groups] = await Promise.all([
+      fetchSettings(customDomain),
+      loadDefaultEmojiGroups(customDomain)
+    ])
 
     return {
       groups,
@@ -108,10 +118,11 @@ export async function loadPackagedDefaults(url?: string): Promise<DefaultEmojiDa
   }
 }
 
-export async function loadGroup(groupId: string, url?: string): Promise<EmojiGroup | null> {
-  return await fetchGroup(groupId, url)
+export async function loadGroup(groupId: string, customDomain?: string): Promise<EmojiGroup | null> {
+  return await fetchGroup(groupId, customDomain)
 }
 
-export async function loadSettings(url?: string): Promise<any | null> {
-  return await fetchSettings(url)
+export async function loadSettings(customDomain?: string): Promise<any | null> {
+  return await fetchSettings(customDomain)
 }
+
