@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify'
+
 import type { AddEmojiButtonData } from '../types'
 import { performPixivAddEmojiFlow } from '../core/helpers'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
@@ -5,6 +7,24 @@ import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
 /*
   添加表情按钮实现（独立文件）
 */
+
+// DOMPurify configuration for SVG icons
+const purifyConfig = {
+  ALLOWED_TAGS: ['svg', 'path', 'style'],
+  ALLOWED_ATTR: [
+    'width',
+    'height',
+    'viewBox',
+    'fill',
+    'aria-hidden',
+    'xmlns',
+    'style',
+    'd',
+    'class'
+  ],
+  ALLOWED_URI_REGEXP:
+    /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i
+}
 
 export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButtonData) {
   let running = false
@@ -74,7 +94,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
     const originalContent = button.innerHTML
     const originalStyle = button.style.cssText
 
-    button.innerHTML = `
+    const loadingHtml = `
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="animation: spin 1s linear infinite;">
         <style>
           @keyframes spin {
@@ -86,6 +106,7 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
       </svg>
       添加中...
     `
+    button.innerHTML = DOMPurify.sanitize(loadingHtml, purifyConfig)
     button.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'
 
     console.debug('[pixiv][button] starting performPixivAddEmojiFlow', { data })
@@ -95,22 +116,24 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
       console.debug('[pixiv][button] performPixivAddEmojiFlow response', resp)
 
       if (resp && resp.success) {
-        button.innerHTML = `
+        const successHtml = `
           <svg class="fa d-icon d-icon-check svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
             <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
           </svg>已添加
         `
+        button.innerHTML = DOMPurify.sanitize(successHtml, purifyConfig)
         button.style.background = 'linear-gradient(135deg, #10b981, #059669)'
         button.style.color = '#ffffff'
         button.style.border = '2px solid #ffffff'
         button.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)'
 
         if (resp.source === 'opened') {
-          button.innerHTML = `
+          const openedHtml = `
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
             </svg>已打开
           `
+          button.innerHTML = DOMPurify.sanitize(openedHtml, purifyConfig)
           button.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)'
         }
         console.log('[pixiv][button] add emoji success', { name: data.name, url: data.url, resp })
@@ -132,11 +155,12 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
       }, 3000)
     } catch (error) {
       console.error('[pixiv][button] add emoji failed', error)
-      button.innerHTML = `
+      const errorHtml = `
         <svg class="fa d-icon d-icon-times svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 1em; height: 1em; fill: currentColor; margin-right: 4px;">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>失败
       `
+      button.innerHTML = DOMPurify.sanitize(errorHtml, purifyConfig)
       button.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'
       button.style.color = '#ffffff'
       button.style.border = '2px solid #ffffff'

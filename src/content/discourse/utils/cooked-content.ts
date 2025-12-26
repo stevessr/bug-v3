@@ -101,10 +101,10 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
       click: async (e: Event) => {
         e.preventDefault()
         e.stopPropagation()
-        const originalContent = button.innerHTML
+        const originalContent = button.textContent || '一键解析并添加所有图片'
         const originalStyle = button.style.cssText
         try {
-          button.innerHTML = '正在解析...'
+          button.textContent = '正在解析...'
           button.style.background = 'var(--tertiary)'
           button.disabled = true
           const lightboxWrappers = cookedElement.querySelectorAll('.lightbox-wrapper')
@@ -126,19 +126,19 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
               console.error('[DiscourseOneClick] 添加图片失败', emojiData.name, e)
             }
           }
-          button.innerHTML = `已处理 ${successCount}/${allEmojiData.length} 张图片`
+          button.textContent = `已处理 ${successCount}/${allEmojiData.length} 张图片`
           button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
           setTimeout(() => {
-            button.innerHTML = originalContent
+            button.textContent = originalContent
             button.style.cssText = originalStyle
             button.disabled = false
           }, 3000)
         } catch (error) {
           console.error('[DiscourseOneClick] 批量解析失败：', error)
-          button.innerHTML = '解析失败'
+          button.textContent = '解析失败'
           button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
           setTimeout(() => {
-            button.innerHTML = originalContent
+            button.textContent = originalContent
             button.style.cssText = originalStyle
             button.disabled = false
           }, 3000)

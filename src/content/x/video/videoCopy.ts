@@ -112,34 +112,34 @@ function setupCopyClick(btn: HTMLElement, url: string) {
   btn.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
-    const orig = btn.innerHTML
+    const orig = btn.textContent || '📋'
     const origStyle = btn.style.background
     try {
       if (url.startsWith('blob:')) {
-        btn.innerHTML = '下载中...'
+        btn.textContent = '下载中...'
         btn.style.background = 'linear-gradient(135deg,#3b82f6,#1d4ed8)'
         await downloadBlob(url)
-        btn.innerHTML = '已下载'
+        btn.textContent = '已下载'
         btn.style.background = 'linear-gradient(135deg,#10b981,#059669)'
         setTimeout(() => {
-          btn.innerHTML = orig
+          btn.textContent = orig
           btn.style.background = origStyle
         }, 1400)
       } else {
         await navigator.clipboard.writeText(url)
-        btn.innerHTML = '已复制'
+        btn.textContent = '已复制'
         btn.style.background = 'linear-gradient(135deg,#10b981,#059669)'
         setTimeout(() => {
-          btn.innerHTML = orig
+          btn.textContent = orig
           btn.style.background = origStyle
         }, 1400)
       }
     } catch (err) {
       console.error('[XVideoCopy] 操作失败', err)
-      btn.innerHTML = '失败'
+      btn.textContent = '失败'
       btn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
       setTimeout(() => {
-        btn.innerHTML = orig
+        btn.textContent = orig
         btn.style.background = origStyle
       }, 1400)
     }
@@ -150,24 +150,24 @@ function setupDownloadClick(btn: HTMLElement, url: string) {
   btn.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
-    const orig = btn.innerHTML
+    const orig = btn.textContent || '⬇️'
     const origStyle = btn.style.background
     try {
-      btn.innerHTML = '下载中...'
+      btn.textContent = '下载中...'
       btn.style.background = 'linear-gradient(135deg,#3b82f6,#1d4ed8)'
       await downloadBlob(url)
-      btn.innerHTML = '已下载'
+      btn.textContent = '已下载'
       btn.style.background = 'linear-gradient(135deg,#10b981,#059669)'
       setTimeout(() => {
-        btn.innerHTML = orig
+        btn.textContent = orig
         btn.style.background = origStyle
       }, 1400)
     } catch (err) {
       console.error('[XVideoCopy] 下载失败', err)
-      btn.innerHTML = '失败'
+      btn.textContent = '失败'
       btn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
       setTimeout(() => {
-        btn.innerHTML = orig
+        btn.textContent = orig
         btn.style.background = origStyle
       }, 1400)
     }
@@ -179,7 +179,7 @@ function createCopyBtn(url: string) {
   btn.className = 'x-video-copy-btn'
   btn.type = 'button'
   btn.title = url.startsWith('blob:') ? '下载视频' : '复制视频地址'
-  btn.innerHTML = '📋'
+  btn.textContent = '📋'
   btn.style.cssText =
     'position:absolute;right:6px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;'
   setupCopyClick(btn, url)
@@ -191,7 +191,7 @@ function createDownloadBtn(url: string) {
   btn.className = 'x-video-download-btn'
   btn.type = 'button'
   btn.title = '下载视频'
-  btn.innerHTML = '⬇️'
+  btn.textContent = '⬇️'
   btn.style.cssText =
     'position:absolute;right:40px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;'
   setupDownloadClick(btn, url)
@@ -203,7 +203,7 @@ function createInlineBtn(url: string) {
   btn.className = 'x-video-copy-inline-btn'
   btn.type = 'button'
   btn.title = url.startsWith('blob:') ? '下载视频' : '复制视频地址'
-  btn.innerHTML = '📋'
+  btn.textContent = '📋'
   btn.style.cssText =
     'display:inline-block;vertical-align:middle;margin-left:8px;cursor:pointer;border-radius:6px;padding:2px 6px;background:rgba(0,0,0,0.06);color:var(--text-color,#0f1419);border:1px solid rgba(0,0,0,0.08);font-weight:600;'
   setupCopyClick(btn, url)

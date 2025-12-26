@@ -91,22 +91,22 @@ export function setupButtonClick(button: HTMLElement, data: AddEmojiButtonData) 
   button.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
-    const orig = button.innerHTML
+    const orig = button.textContent || '➕'
     const origStyle = button.style.cssText
     try {
       await chrome.runtime.sendMessage({ action: 'addEmojiFromWeb', emojiData: data })
-      button.innerHTML = '已添加'
+      button.textContent = '已添加'
       button.style.background = 'linear-gradient(135deg,#10b981,#059669)'
       setTimeout(() => {
-        button.innerHTML = orig
+        button.textContent = orig
         button.style.cssText = origStyle
       }, 1500)
     } catch (err) {
       console.error('[XUtils] 添加失败', err)
-      button.innerHTML = '失败'
+      button.textContent = '失败'
       button.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
       setTimeout(() => {
-        button.innerHTML = orig
+        button.textContent = orig
         button.style.cssText = origStyle
       }, 1500)
     }
