@@ -23,6 +23,7 @@ const imageSources = ref<Map<string, string>>(new Map())
 const loadingStates = ref<Map<string, boolean>>(new Map())
 
 // 初始化图片缓存
+// 优化：改为并行处理，大幅提升加载速度
 const initializeImageSources = async () => {
   if (!ungroup.value?.emojis) return
 
@@ -35,30 +36,40 @@ const initializeImageSources = async () => {
   const newSources = new Map<string, string>()
   const newLoadingStates = new Map<string, boolean>()
 
-  for (const emoji of ungroup.value.emojis) {
-    try {
-      if (emojiStore.settings.useIndexedDBForImages) {
-        // 使用缓存优先的加载函数
-        const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
-        newSources.set(emoji.id, result.url)
-        newLoadingStates.set(emoji.id, result.isLoading)
-        console.log(
-          `[UngroupedTab] Image source for ${emoji.name}:`,
-          result.url,
-          'from cache:',
-          result.isFromCache
-        )
-      } else {
-        // 直接 URL 模式
+  // 并行处理所有表情
+  const results = await Promise.allSettled(
+    ungroup.value.emojis.map(async emoji => {
+      try {
+        if (emojiStore.settings.useIndexedDBForImages) {
+          // 使用缓存优先的加载函数
+          const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
+          console.log(
+            `[UngroupedTab] Image source for ${emoji.name}:`,
+            result.url,
+            'from cache:',
+            result.isFromCache
+          )
+          return { id: emoji.id, url: result.url, isLoading: result.isLoading, success: true }
+        } else {
+          // 直接 URL 模式
+          const fallbackSrc = emoji.displayUrl || emoji.url
+          console.log(`[UngroupedTab] Direct URL for ${emoji.name}:`, fallbackSrc)
+          return { id: emoji.id, url: fallbackSrc, isLoading: false, success: true }
+        }
+      } catch (error) {
+        console.warn(`[UngroupedTab] Failed to get image source for ${emoji.name}:`, error)
+        // 回退到直接 URL
         const fallbackSrc = emoji.displayUrl || emoji.url
-        newSources.set(emoji.id, fallbackSrc)
-        console.log(`[UngroupedTab] Direct URL for ${emoji.name}:`, fallbackSrc)
+        return { id: emoji.id, url: fallbackSrc, isLoading: false, success: true }
       }
-    } catch (error) {
-      console.warn(`[UngroupedTab] Failed to get image source for ${emoji.name}:`, error)
-      // 回退到直接 URL
-      const fallbackSrc = emoji.displayUrl || emoji.url
-      newSources.set(emoji.id, fallbackSrc)
+    })
+  )
+
+  // 处理结果
+  for (const result of results) {
+    if (result.status === 'fulfilled' && result.value.success) {
+      newSources.set(result.value.id, result.value.url)
+      newLoadingStates.set(result.value.id, result.value.isLoading)
     }
   }
 
@@ -68,13 +79,13 @@ const initializeImageSources = async () => {
 }
 
 // 监听未分组表情变化
+// 优化：改为浅监听，只监听数组引用和长度变化
 watch(
-  () => ungroup.value?.emojis,
+  () => [ungroup.value?.emojis, ungroup.value?.emojis?.length],
   () => {
     console.log('[UngroupedTab] Ungrouped emojis changed, reinitializing image sources')
     initializeImageSources()
-  },
-  { deep: true }
+  }
 )
 
 // 组件挂载时初始化

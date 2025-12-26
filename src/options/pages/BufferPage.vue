@@ -112,9 +112,10 @@ const initializeImageSources = async () => {
 }
 
 // 监听缓冲区表情变化（使用防抖）
+// 优化：改为浅监听，只监听数组引用和长度变化
 let initDebounceTimer: ReturnType<typeof setTimeout> | null = null
 watch(
-  () => bufferEmojis.value,
+  () => [bufferEmojis.value, bufferEmojis.value.length],
   () => {
     // 防抖：快速变化时只执行最后一次
     if (initDebounceTimer) {
@@ -124,8 +125,7 @@ watch(
       console.log('[BufferPage] Buffer emojis changed, reinitializing image sources')
       initializeImageSources()
     }, 100)
-  },
-  { deep: true }
+  }
 )
 
 // 组件挂载时初始化
@@ -311,12 +311,12 @@ const clearPersistedFiles = async () => {
 }
 
 // 监听 selectedFiles 变化并自动保存
+// 优化：改为浅监听，只监听数组长度变化
 watch(
-  selectedFiles,
+  () => selectedFiles.value.length,
   () => {
     saveSelectedFiles()
-  },
-  { deep: true }
+  }
 )
 const uploadProgress = ref<
   Array<{
@@ -388,20 +388,21 @@ const indeterminate = computed(
 )
 
 // Debug: Watch for changes
+// 优化：只监听 emojis 长度变化而非深度监听整个对象
 watch(
-  bufferGroup,
-  (newGroup, oldGroup) => {
+  () => bufferGroup.value?.emojis?.length,
+  (newLength, oldLength) => {
     console.log('[BufferPage] Buffer group changed:', {
-      oldCount: oldGroup?.emojis.length || 0,
-      newCount: newGroup?.emojis.length || 0,
-      groupId: newGroup?.id,
-      groupName: newGroup?.name
+      oldCount: oldLength || 0,
+      newCount: newLength || 0,
+      groupId: bufferGroup.value?.id,
+      groupName: bufferGroup.value?.name
     })
-  },
-  { deep: true }
+  }
 )
 
 // Debug: Watch all groups
+// 优化：只监听 groups 数组引用变化
 watch(
   () => emojiStore.groups,
   groups => {
@@ -410,8 +411,7 @@ watch(
       '[BufferPage] Groups updated, buffer group emoji count:',
       buffer?.emojis.length || 0
     )
-  },
-  { deep: true }
+  }
 )
 
 // Methods
@@ -1297,6 +1297,10 @@ onBeforeUnmount(() => {
   }
   // 清理增量保存定时器
   stopIncrementalSaveTimer()
+  // 清理防抖定时器
+  if (initDebounceTimer) {
+    clearTimeout(initDebounceTimer)
+  }
 })
 </script>
 

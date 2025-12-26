@@ -6,9 +6,22 @@ import { useEmojiStore } from '../../stores/emojiStore'
 const emojiStore = useEmojiStore()
 
 const groupCount = computed(() => emojiStore.sortedGroups.length)
-const totalEmojis = computed(() =>
-  emojiStore.sortedGroups.reduce((sum: number, g: any) => sum + (g.emojis?.length || 0), 0)
-)
+
+// 优化：缓存计算结果，避免每次都遍历
+let cachedTotal = 0
+let cachedGroupsLength = 0
+const totalEmojis = computed(() => {
+  // 只有当分组数量变化时才重新计算
+  if (emojiStore.sortedGroups.length !== cachedGroupsLength) {
+    cachedGroupsLength = emojiStore.sortedGroups.length
+    cachedTotal = emojiStore.sortedGroups.reduce(
+      (sum: number, g: any) => sum + (g.emojis?.length || 0),
+      0
+    )
+  }
+  return cachedTotal
+})
+
 const favoritesCount = computed(() => {
   const fav = emojiStore.sortedGroups.find(g => g.id === 'favorites')
   return fav?.emojis?.length || 0

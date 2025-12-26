@@ -142,8 +142,8 @@ initializeImageSources()
 preloadEmojis()
 
 // Watch for emoji changes and update image sources
-// 使用防抖的深度监听，平衡性能和数据一致性
-watch(() => props.emojis, updateImageSources, { deep: true })
+// 优化：改为浅监听，只监听数组引用和长度变化，避免深度遍历
+watch(() => [props.emojis, props.emojis.length], updateImageSources)
 
 // 拖拽处理
 const handleEmojiDragStart = (emoji: Emoji, index: number, event: DragEvent) => {

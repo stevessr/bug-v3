@@ -61,17 +61,9 @@ const filteredDuplicateGroups = computed(() => {
 })
 
 // Calculate cache statistics
+// 优化：直接使用 options 中已有的 totalEmojis，避免重复遍历
 const cacheStats = computed(() => {
-  let total = 0
-  const cached = realCachedCount.value
-
-  for (const group of emojiStore.groups) {
-    for (const _emoji of group.emojis || []) {
-      total++
-    }
-  }
-
-  return { total, cached }
+  return { total: totalEmojis.value, cached: realCachedCount.value }
 })
 
 const refreshCacheStats = async () => {
