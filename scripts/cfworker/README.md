@@ -1,11 +1,18 @@
-# Video to GIF - 视频转 GIF 纯静态应用
+# Cloudflare Pages - 多功能静态应用
 
-**完全在浏览器中运行的视频转 GIF 工具，无需后端服务**
+**包含视频转 GIF 工具和表情包备份 API**
 
-使用 ffmpeg.wasm 在浏览器中直接转码，可部署到 Cloudflare Pages、GitHub Pages、Vercel 等任意静态托管平台。
+## 📂 项目组成
+
+### 1. 视频转 GIF 工具（静态应用）
+完全在浏览器中运行的视频转 GIF 工具，无需后端服务
+
+### 2. 表情包备份 API（Cloudflare Function）
+基于 Cloudflare KV 的表情包备份服务 API
 
 ## ✨ 特性
 
+### 视频转 GIF
 - ✅ 纯前端，完全在浏览器中运行
 - ✅ 无需后端服务器或 API
 - ✅ 数据不上传，完全本地处理
@@ -14,22 +21,32 @@
 - ✅ 实时日志显示
 - ✅ 响应式设计
 
+### 表情包备份 API
+- ✅ 基于 Cloudflare KV 存储
+- ✅ 支持读写权限分离
+- ✅ CORS 支持
+- ✅ RESTful API 设计
+
 ## 🚀 快速部署
 
-### 方案一：Cloudflare Pages（推荐）
+### 部署到 Cloudflare Pages
 
 ```bash
 cd scripts/cfworker
-npm install -g wrangler
+
+# 首次部署
 npx wrangler pages deploy public
+
+# 配置 KV 命名空间
+npx wrangler kv:namespace create "EMOJI_BACKUP"
+npx wrangler kv:namespace create "EMOJI_BACKUP" --preview
+
+# 配置环境变量（Secrets）
+npx wrangler pages secret put AUTH_SECRET --project-name=your-project
+npx wrangler pages secret put AUTH_SECRET_READONLY --project-name=your-project
 ```
 
-### 方案二：GitHub Pages
-
-1. 将 `public/` 目录内容推送到 GitHub 仓库的 `gh-pages` 分支
-2. 在仓库设置中启用 GitHub Pages
-
-### 方案三：本地预览
+### 本地开发
 
 ```bash
 cd scripts/cfworker
@@ -43,17 +60,79 @@ npm run dev
 
 ```
 scripts/cfworker/
-├── public/
-│   ├── index.html           # 完整的单页应用
+├── public/                   # 静态文件
+│   ├── index.html           # 视频转 GIF 应用
+│   ├── webcodecs-check.html # WebCodecs 测试页面
 │   └── assets/
-│       └── ffmpeg/          # FFmpeg 核心文件（小文件本地化）
-│           ├── ffmpeg-core.js      # 核心 JS（112KB）
-│           ├── worker.js           # Web Worker（5KB）
-│           ├── const.js            # 常量定义（1KB）
-│           └── errors.js           # 错误定义（332B）
-│           # ffmpeg-core.wasm (32MB) 从 CDN 加载，避免 Pages 25MB 限制
-├── package.json             # 开发依赖（wrangler）
-└── README.md                # 本文档
+│       ├── json/            # 表情包数据
+│       └── js/              # JavaScript 资源
+├── functions/               # Cloudflare Functions (API 路由)
+│   └── api/
+│       ├── backup/
+│       │   └── [[key]].ts  # 表情包备份 API (原 backup-worker)
+│       ├── proxy/
+│       │   └── telegram-file.js
+│       └── video/
+│           └── proxy.js
+├── wrangler.toml           # Cloudflare 配置
+└── README.md               # 本文档
+```
+
+## 📡 API 文档
+
+### 表情包备份 API
+
+所有请求需要在 Header 中携带：`Authorization: Bearer <token>`
+
+#### 1. 列出所有备份键
+```bash
+GET /api/backup
+Authorization: Bearer <readonly-token>
+```
+
+#### 2. 获取指定备份
+```bash
+GET /api/backup/:key
+Authorization: Bearer <readonly-token>
+```
+
+#### 3. 保存备份
+```bash
+POST /api/backup/:key
+Authorization: Bearer <write-token>
+Content-Type: application/json
+
+{备份数据}
+```
+
+#### 4. 删除备份
+```bash
+DELETE /api/backup/:key
+Authorization: Bearer <write-token>
+```
+
+### 示例
+
+```bash
+# 列出所有备份
+curl -H "Authorization: Bearer readonly-token" \
+  https://your-project.pages.dev/api/backup
+
+# 获取备份
+curl -H "Authorization: Bearer readonly-token" \
+  https://your-project.pages.dev/api/backup/user123
+
+# 保存备份
+curl -X POST \
+  -H "Authorization: Bearer write-token" \
+  -H "Content-Type: application/json" \
+  -d '{"groups":[...]}' \
+  https://your-project.pages.dev/api/backup/user123
+
+# 删除备份
+curl -X DELETE \
+  -H "Authorization: Bearer write-token" \
+  https://your-project.pages.dev/api/backup/user123
 ```
 
 ## 🎯 使用说明

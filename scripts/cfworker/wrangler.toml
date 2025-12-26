@@ -15,3 +15,14 @@ compatibility_date = "2024-01-01"
 # Optional: Environment variables
 # [vars]
 # API_KEY = "your-api-key"
+
+# KV Namespace binding for backups
+[[kv_namespaces]]
+binding = "EMOJI_BACKUP"
+id = "bc9aabd33d1948c08db86f9d23421847" # TODO: Replace with your production KV namespace ID
+preview_id = "904b460f0be14709ba1d28930329064f" # TODO: Replace with your preview KV namespace ID
+
+[vars]
+# These are fallbacks for local development (`wrangler dev`).
+AUTH_SECRET = "dev-secret-password"
+AUTH_SECRET_READONLY = "dev-secret-password-readonly"
