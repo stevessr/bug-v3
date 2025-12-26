@@ -14,8 +14,22 @@ export class OfflineQueue {
   private isOnline = navigator.onLine
   private syncInProgress = false
   private eventListenersAdded = false
+  private onlineHandler: () => void
+  private offlineHandler: () => void
 
   constructor() {
+    // 将事件处理器绑定为实例方法，以便后续移除
+    this.onlineHandler = () => {
+      console.log('[OfflineQueue] Network online, starting sync')
+      this.isOnline = true
+      this.processPendingQueue()
+    }
+
+    this.offlineHandler = () => {
+      console.log('[OfflineQueue] Network offline')
+      this.isOnline = false
+    }
+
     this.setupNetworkListeners()
     this.loadQueue()
   }
@@ -24,18 +38,25 @@ export class OfflineQueue {
   private setupNetworkListeners() {
     if (this.eventListenersAdded) return
 
-    window.addEventListener('online', () => {
-      console.log('[OfflineQueue] Network online, starting sync')
-      this.isOnline = true
-      this.processPendingQueue()
-    })
-
-    window.addEventListener('offline', () => {
-      console.log('[OfflineQueue] Network offline')
-      this.isOnline = false
-    })
+    window.addEventListener('online', this.onlineHandler)
+    window.addEventListener('offline', this.offlineHandler)
 
     this.eventListenersAdded = true
+  }
+
+  /**
+   * 清理资源：移除事件监听器
+   * 当不再需要此队列时调用，防止内存泄漏
+   */
+  public destroy(): void {
+    if (this.eventListenersAdded) {
+      window.removeEventListener('online', this.onlineHandler)
+      window.removeEventListener('offline', this.offlineHandler)
+      this.eventListenersAdded = false
+    }
+    // 清空队列
+    this.queue = []
+    console.log('[OfflineQueue] Destroyed and cleaned up')
   }
 
   /** 从数据库加载队列 */

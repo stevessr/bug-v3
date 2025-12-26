@@ -28,7 +28,6 @@ export const defaultSettings: AppSettings = {
   outputFormat: 'markdown', // 默认使用 markdown 格式
   forceMobileMode: false, // 默认不强制移动模式
   enableHoverPreview: true, // 默认启用悬浮预览
-  enableLinuxDoInjection: true, // 默认启用 linux.do 注入
   enableXcomExtraSelectors: false, // 默认不启用 X.com 额外选择器
   enableCalloutSuggestions: true, // 默认启用 callout suggestions
   enableBatchParseImages: true, // 默认启用一键解析图片按钮

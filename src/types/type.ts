@@ -7,8 +7,7 @@ export interface AppSettings {
   forceMobileMode?: boolean // 强制移动模式
   lastModified?: number // timestamp for sync comparison
   enableHoverPreview?: boolean // 控制在弹出式选择器中鼠标悬浮是否显示大图预览
-  // New settings for linux.do injection and X.com selectors
-  enableLinuxDoInjection?: boolean // 控制是否在 linux.do 注入脚本
+  // New settings for X.com selectors
   enableXcomExtraSelectors?: boolean // 控制是否在 X.com 启用额外选择器
   enableCalloutSuggestions?: boolean // 在编辑器中启用 callout suggestions（'[' 触发）
   enableBatchParseImages?: boolean // 控制是否显示"一键解析并添加所有图片"按钮

@@ -508,22 +508,37 @@ export class ImageCache {
   }
 
   /**
-   * 预加载图片到内存缓存
+   * 预加载图片到内存缓存（优化为并行处理）
+   * @param urls 要预加载的 URL 列表
+   * @param concurrency 并发数，默认为 4
    */
-  async preloadToMemory(urls: string[]): Promise<number> {
+  async preloadToMemory(urls: string[], concurrency: number = 4): Promise<number> {
     let loaded = 0
 
-    for (const url of urls) {
-      // 如果已在内存缓存中，跳过
-      if (this.memoryCache.has(url)) {
-        loaded++
-        continue
-      }
+    // 过滤出需要加载的 URL（已在内存缓存中的跳过）
+    const toLoad = urls.filter(url => !this.memoryCache.has(url))
 
-      // 尝试从 IndexedDB 加载到内存
-      const blobUrl = await this.getCachedImage(url)
-      if (blobUrl) {
-        loaded++
+    // 已缓存的数量
+    const alreadyCached = urls.length - toLoad.length
+    if (alreadyCached > 0) {
+      loaded += alreadyCached
+    }
+
+    // 如果都已缓存，直接返回
+    if (toLoad.length === 0) {
+      return loaded
+    }
+
+    // 分批并行加载
+    for (let i = 0; i < toLoad.length; i += concurrency) {
+      const batch = toLoad.slice(i, i + concurrency)
+      const results = await Promise.allSettled(batch.map(url => this.getCachedImage(url)))
+
+      // 统计成功加载的数量
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          loaded++
+        }
       }
     }
 

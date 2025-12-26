@@ -16,7 +16,6 @@ const emit = defineEmits([
   'update:showSearchBar',
   'update:outputFormat',
   'update:forceMobileMode',
-  'update:enableLinuxDoInjection',
   'update:enableXcomExtraSelectors',
   'update:enableCalloutSuggestions',
   'update:enableBatchParseImages',
@@ -392,14 +391,6 @@ const removeSideItem = (i: number) => {
         @update:model-value="handleSettingUpdate('forceMobileMode', $event)"
         label="强制移动模式"
         description="在桌面端强制使用移动端样式"
-      />
-
-      <SettingSwitch
-        :model-value="getSetting('enableLinuxDoInjection', false)"
-        @update:model-value="handleSettingUpdate('enableLinuxDoInjection', $event)"
-        label="启用 Linux.do 脚本注入"
-        description="控制是否在 linux.do 注入表情功能脚本"
-        :visible="false"
       />
 
       <SettingSwitch

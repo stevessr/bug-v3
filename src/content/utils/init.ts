@@ -4,9 +4,18 @@ import { DAEL } from './createEl'
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'
 import { initOneClickAdd } from './oneClickAdd'
-import { showFloatingButton, checkAndShowFloatingButton } from './floatingButton'
+import {
+  showFloatingButton,
+  checkAndShowFloatingButton,
+  cleanupFloatingButton
+} from './floatingButton'
 import { startReadTracker } from './readTracker'
 import { applyCustomCssFromCache } from './injectCustomCss'
+
+// 页面卸载时清理资源，防止内存泄漏
+window.addEventListener('beforeunload', () => {
+  cleanupFloatingButton()
+})
 
 // Function to check and re-inject buttons if needed
 function checkAndReinjectButtons() {

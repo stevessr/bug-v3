@@ -100,6 +100,14 @@ const scrollToTop = () => {
   }
 }
 
+// 清理资源：取消待处理的 RAF
+onUnmounted(() => {
+  if (scrollRafId) {
+    cancelAnimationFrame(scrollRafId)
+    scrollRafId = null
+  }
+})
+
 // 优化的滚动到底部方法
 const scrollToBottom = () => {
   if (containerRef.value) {
