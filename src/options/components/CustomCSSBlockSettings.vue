@@ -11,7 +11,7 @@ import {
 import type { AppSettings, CustomCssBlock } from '../../types/type'
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
-const emit = defineEmits(['update:customCss', 'update:customCssBlocks'])
+const emit = defineEmits(['update:customCssBlocks'])
 
 // State
 const showBlockModal = ref(false)

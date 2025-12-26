@@ -35,7 +35,6 @@ const {
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
-  updateCustomCss,
   updateCustomCssBlocks,
   updateUploadMenuItems,
   updateGeminiApiKey,
@@ -133,7 +132,6 @@ onMounted(async () => {
           <div class="py-4">
             <CustomCSSBlockSettings
               :settings="emojiStore.settings"
-              @update:customCss="updateCustomCss"
               @update:customCssBlocks="updateCustomCssBlocks"
             />
           </div>

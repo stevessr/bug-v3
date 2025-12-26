@@ -25,7 +25,6 @@ const emit = defineEmits([
   'update:customColorScheme',
   'update:enableHoverPreview',
   'update:syncVariantToDisplayUrl',
-  'update:customCss',
   'update:uploadMenuItems'
 ])
 
@@ -165,42 +164,6 @@ const handleImageScaleChange = (value: number | number[]) => {
   const num = Array.isArray(value) ? value[0] : value
   // emit immediately so UI updates take effect while dragging
   setTimeout(() => emit('update:imageScale', num), 0)
-}
-
-// Custom CSS editor state
-const showCustomCssEditor = ref(false)
-const _initialCustomCss = (() => {
-  try {
-    if (isRef(settings)) return (settings.value && settings.value.customCss) || ''
-    return (settings && (settings as AppSettings).customCss) || ''
-  } catch {
-    return ''
-  }
-})()
-const localCustomCss = ref<string>(_initialCustomCss)
-
-watch(
-  () => (isRef(settings) ? (settings.value as any).customCss : (settings as AppSettings).customCss),
-  v => {
-    localCustomCss.value = v || ''
-  }
-)
-
-const openCustomCssEditor = () => {
-  showCustomCssEditor.value = true
-}
-
-const saveCustomCss = () => {
-  emit('update:customCss', localCustomCss.value || '')
-  showCustomCssEditor.value = false
-}
-
-const cancelCustomCss = () => {
-  // revert local copy
-  localCustomCss.value = isRef(settings)
-    ? (settings.value as any).customCss || ''
-    : (settings as AppSettings).customCss || ''
-  showCustomCssEditor.value = false
 }
 
 // --- uploadMenuItems editor ---
@@ -669,39 +632,6 @@ const removeSideItem = (i: number) => {
           >
             保存
           </a-button>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between">
-        <div>
-          <label class="text-sm font-medium text-gray-900 dark:text-white">自定义 CSS</label>
-          <p class="text-sm text-gray-500 dark:text-white">
-            向页面注入自定义 CSS（仅在支持的平台注入）
-          </p>
-        </div>
-        <div>
-          <a-button @click="openCustomCssEditor" title="打开自定义 CSS 编辑器">
-            管理自定义 CSS
-          </a-button>
-        </div>
-      </div>
-
-      <!-- Custom CSS editor modal (simple) -->
-      <div v-if="showCustomCssEditor" class="fixed inset-0 flex items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-3/4 max-w-3xl p-4">
-          <h3 class="text-lg font-semibold dark:text-white mb-2">编辑自定义 CSS</h3>
-          <textarea
-            v-model="localCustomCss"
-            rows="10"
-            class="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
-            title="自定义 CSS 内容"
-          ></textarea>
-          <div class="mt-3 flex justify-end gap-2">
-            <a-button @click="cancelCustomCss" title="取消自定义 CSS 更改">取消</a-button>
-            <a-button type="primary" @click="saveCustomCss" title="保存并注入自定义 CSS">
-              保存并注入
-            </a-button>
-          </div>
         </div>
       </div>
     </div>

@@ -489,9 +489,6 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         settings.value = { ...defaultSettings, ...settingsData }
       }
 
-      // Migrate legacy customCss to customCssBlocks if needed (delegated to cssStore)
-      cssStore.migrateLegacyCustomCss()
-
       favorites.value = new Set(favoritesData || [])
 
       console.log('[EmojiStore] Final groups after assignment:', {

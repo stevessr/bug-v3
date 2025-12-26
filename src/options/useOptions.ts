@@ -342,10 +342,6 @@ export default function useOptions() {
     emojiStore.updateSettings({ customColorScheme: scheme })
   }
 
-  const updateCustomCss = (css: string) => {
-    emojiStore.updateSettings({ customCss: css })
-  }
-
   const updateCustomCssBlocks = (blockOrAction: any) => {
     if (blockOrAction.type === 'delete') {
       emojiStore.deleteCustomCssBlock(blockOrAction.id)
@@ -1033,7 +1029,6 @@ export default function useOptions() {
     updateTheme,
     updateCustomPrimaryColor,
     updateCustomColorScheme,
-    updateCustomCss,
     updateCustomCssBlocks,
     updateSyncVariantToDisplayUrl,
     updateUseIndexedDBForImages,

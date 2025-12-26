@@ -98,40 +98,6 @@ export function useCssStore(options: CssStoreOptions) {
   const combinedCss = computed(() => getCombinedCustomCss())
 
   /**
-   * Migrate legacy customCss string to customCssBlocks array
-   */
-  const migrateLegacyCustomCss = (): void => {
-    const loadedSettings = settings.value
-
-    // If customCssBlocks already exist, skip migration
-    if (loadedSettings.customCssBlocks && Array.isArray(loadedSettings.customCssBlocks)) {
-      return
-    }
-
-    // If there's legacy customCss content, migrate it to a default block
-    if (
-      loadedSettings.customCss &&
-      typeof loadedSettings.customCss === 'string' &&
-      loadedSettings.customCss.trim()
-    ) {
-      const legacyBlock: CustomCssBlock = {
-        id: 'legacy-migrated-css',
-        name: '迁移的 CSS',
-        content: loadedSettings.customCss,
-        enabled: true,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }
-
-      settings.value.customCssBlocks = [legacyBlock]
-      settings.value.customCss = '' // Clear the legacy field
-
-      console.log('[CssStore] Migrated legacy customCss to customCssBlocks')
-      saveControl.maybeSave()
-    }
-  }
-
-  /**
    * Create a new CSS block
    */
   const createCssBlock = (
@@ -190,10 +156,7 @@ export function useCssStore(options: CssStoreOptions) {
     deleteCustomCssBlock,
     toggleCustomCssBlock,
     createCssBlock,
-    updateCssBlockContent,
-
-    // Migration
-    migrateLegacyCustomCss
+    updateCssBlockContent
   }
 }
 

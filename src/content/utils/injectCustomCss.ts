@@ -38,11 +38,6 @@ function getCombinedCustomCssFromCache(): string {
         .trim()
     }
 
-    // Fallback to legacy customCss
-    if (settings.customCss && typeof settings.customCss === 'string') {
-      return settings.customCss.trim()
-    }
-
     return ''
   } catch (e) {
     console.warn('[Emoji Extension] Failed to get combined CSS from cache', e)

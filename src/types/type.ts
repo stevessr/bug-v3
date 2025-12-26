@@ -31,7 +31,6 @@ export interface AppSettings {
   customPrimaryColor?: string // 主题主色
   customColorScheme?: 'default' | 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'custom'
   // Custom CSS injected into pages (managed in Options)
-  customCss?: string // @deprecated - use customCssBlocks instead
   customCssBlocks?: CustomCssBlock[] // Array of CSS blocks with toggle functionality
   // Optional UI config for content-script upload menu (auto items, iframe modals, side iframes)
   uploadMenuItems?: {

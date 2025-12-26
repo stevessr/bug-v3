@@ -38,7 +38,6 @@ export const defaultSettings: AppSettings = {
   geminiLanguage: 'Chinese', // 默认 AI 命名语言
   customColorScheme: 'default', // 默认配色方案
   customPrimaryColor: '#1890ff', // 默认主色（Ant Design 蓝色）
-  customCss: '',
   // Default: keep legacy conservative behavior for backward compatibility
   // (set to true if you prefer selected variant to always override displayUrl)
   syncVariantToDisplayUrl: true,
