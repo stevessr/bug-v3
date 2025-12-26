@@ -23,7 +23,6 @@ const {
   updateShowSearchBar,
   updateOutputFormat,
   updateForceMobileMode,
-  updateEnableLinuxDoInjection,
   updateEnableXcomExtraSelectors,
   updateEnableCalloutSuggestions,
   updateEnableBatchParseImages,
@@ -110,7 +109,6 @@ onMounted(async () => {
               :settings="emojiStore.settings"
               @update:outputFormat="updateOutputFormat"
               @update:forceMobileMode="updateForceMobileMode"
-              @update:enableLinuxDoInjection="updateEnableLinuxDoInjection"
               @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
               @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
               @update:enableBatchParseImages="updateEnableBatchParseImages"

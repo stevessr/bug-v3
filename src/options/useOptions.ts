@@ -2,6 +2,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
 import { newStorageHelpers, STORAGE_KEYS } from '../utils/newStorage'
+import { safeLocalStorage } from '../utils/safeStorage'
 import type { EmojiGroup, Emoji, AppSettings } from '../types/type'
 import { isImageUrl } from '../utils/isImageUrl'
 
@@ -250,10 +251,6 @@ export default function useOptions() {
     emojiStore.updateSettings({ forceMobileMode: value })
   }
 
-  const updateEnableLinuxDoInjection = (value: boolean) => {
-    emojiStore.updateSettings({ enableLinuxDoInjection: value })
-  }
-
   const updateEnableHoverPreview = (value: boolean) => {
     emojiStore.updateSettings({ enableHoverPreview: value })
   }
@@ -288,7 +285,7 @@ export default function useOptions() {
 
   const updateTheme = (theme: 'system' | 'light' | 'dark') => {
     emojiStore.updateSettings({ theme })
-    localStorage.setItem('theme', theme)
+    safeLocalStorage.set('theme', theme)
 
     // 应用主题类名
     if (theme === 'dark') {
@@ -332,7 +329,7 @@ export default function useOptions() {
       new CustomEvent('theme-changed', {
         detail: {
           mode: currentMode,
-          theme: localStorage.getItem('theme') || 'system'
+          theme: safeLocalStorage.get('theme', 'system')
         }
       })
     )
@@ -848,12 +845,8 @@ export default function useOptions() {
 
       const payload: Record<string, unknown> = {}
       keys.forEach(k => {
-        const raw = localStorage.getItem(k)
-        try {
-          payload[k] = raw ? JSON.parse(raw) : null
-        } catch {
-          payload[k] = raw
-        }
+        const raw = safeLocalStorage.get<any>(k, null)
+        payload[k] = raw
       })
 
       await new Promise<void>((resolve, reject) => {
@@ -1020,7 +1013,6 @@ export default function useOptions() {
     updateShowSearchBar,
     updateOutputFormat,
     updateForceMobileMode,
-    updateEnableLinuxDoInjection,
     updateEnableXcomExtraSelectors,
     updateEnableCalloutSuggestions,
     updateEnableBatchParseImages,

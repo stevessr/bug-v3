@@ -1,7 +1,9 @@
 import { getCurrentThemeMode } from './antdTheme'
 
+import { safeLocalStorage } from '@/utils/safeStorage'
+
 function applyTheme() {
-  const theme = localStorage.getItem('theme') || 'system'
+  const theme = safeLocalStorage.get('theme', 'system')
   const root = document.documentElement
 
   function apply(theme: string) {
@@ -35,7 +37,7 @@ function applyTheme() {
 
   // 监听系统主题变化
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    const currentTheme = localStorage.getItem('theme') || 'system'
+    const currentTheme = safeLocalStorage.get('theme', 'system')
     if (currentTheme === 'system') {
       apply('system')
     }

@@ -5,6 +5,8 @@
 
 import { nanoid } from 'nanoid'
 
+import { safeLocalStorage } from './safeStorage'
+
 const DEVICE_ID_KEY = 'emoji_extension_device_id'
 const DEVICE_INFO_KEY = 'emoji_extension_device_info'
 
@@ -27,7 +29,7 @@ export async function getDeviceId(): Promise<string> {
 
     // 尝试从 localStorage 获取
     if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem(DEVICE_ID_KEY)
+      const stored = safeLocalStorage.get(DEVICE_ID_KEY, null)
       if (stored) return stored
     }
 
@@ -42,7 +44,7 @@ export async function getDeviceId(): Promise<string> {
     }
 
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(DEVICE_ID_KEY, newId)
+      safeLocalStorage.set(DEVICE_ID_KEY, newId)
     }
 
     return newId
@@ -109,7 +111,7 @@ export async function saveDeviceInfo(info: any): Promise<void> {
     }
 
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(DEVICE_INFO_KEY, JSON.stringify(info))
+      safeLocalStorage.set(DEVICE_INFO_KEY, info)
     }
   } catch (error) {
     console.error('[Device] Failed to save device info:', error)
@@ -133,8 +135,8 @@ export async function loadDeviceInfo(): Promise<any> {
     }
 
     if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem(DEVICE_INFO_KEY)
-      if (stored) return JSON.parse(stored)
+      const stored = safeLocalStorage.get<any>(DEVICE_INFO_KEY, null)
+      if (stored) return stored
     }
 
     return null

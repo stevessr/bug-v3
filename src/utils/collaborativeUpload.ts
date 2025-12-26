@@ -9,7 +9,6 @@ import { uploadServices } from './uploadServices'
 /** 常量定义 - 默认配置值（毫秒） */
 const DEFAULT_RECONNECT_DELAY_MS = 5000
 const DEFAULT_TASK_TIMEOUT_MS = 60000
-const HEARTBEAT_INTERVAL_MS = 30000
 
 export interface CollaborativeUploadConfig {
   serverUrl: string // WebSocket 服务器地址，如 ws://localhost:9527
@@ -223,7 +222,7 @@ export class CollaborativeUploadClient {
           // 自动重连（仅在配置允许时）
           const autoReconnect = this.config.autoReconnect !== false
           if (autoReconnect && !this.reconnectTimer) {
-            const delay = this.config.reconnectDelay || 5000
+            const delay = this.config.reconnectDelay || DEFAULT_RECONNECT_DELAY_MS
             this.reconnectTimer = setTimeout(() => {
               this.reconnectTimer = null
               this.connect().catch(console.error)
@@ -448,7 +447,7 @@ export class CollaborativeUploadClient {
       clearTimeout(this.taskTimeoutTimer)
     }
 
-    const timeout = this.config.taskTimeout || 60000 // 默认 60 秒
+    const timeout = this.config.taskTimeout || DEFAULT_TASK_TIMEOUT_MS // 默认 60 秒
 
     this.taskTimeoutTimer = setTimeout(() => {
       console.log('[CollaborativeUpload] Task timeout reached')

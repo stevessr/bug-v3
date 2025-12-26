@@ -67,9 +67,11 @@ export function generateAntdTheme(
   }
 }
 
+import { safeLocalStorage } from '@/utils/safeStorage'
+
 // 获取当前主题模式
 export function getCurrentThemeMode(): 'light' | 'dark' {
-  const theme = localStorage.getItem('theme') || 'system'
+  const theme = safeLocalStorage.get('theme', 'system')
 
   if (theme === 'system') {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'

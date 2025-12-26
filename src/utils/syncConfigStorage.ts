@@ -1,3 +1,5 @@
+import { safeLocalStorage } from './safeStorage'
+
 import type { SyncTargetConfig } from '@/utils/syncTargets'
 
 // Key for storing sync configuration
@@ -22,12 +24,8 @@ export async function saveSyncConfig(config: SyncTargetConfig): Promise<void> {
   } else {
     // Fallback to localStorage in development/standalone mode
     console.log('[SyncConfig] Using localStorage fallback')
-    try {
-      localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config))
-      console.log('[SyncConfig] Config saved to localStorage')
-    } catch (e) {
-      console.error('[SyncConfig] Failed to save to localStorage:', e)
-    }
+    safeLocalStorage.set(SYNC_CONFIG_KEY, config)
+    console.log('[SyncConfig] Config saved to localStorage')
   }
 }
 
@@ -55,13 +53,10 @@ export async function loadSyncConfig(): Promise<SyncTargetConfig | null> {
     } else {
       // Fallback to localStorage in development/standalone mode
       console.log('[SyncConfig] Using localStorage fallback')
-      const stored = localStorage.getItem(SYNC_CONFIG_KEY)
-      if (stored) {
-        const config = JSON.parse(stored)
+      const config = safeLocalStorage.get<SyncTargetConfig | null>(SYNC_CONFIG_KEY, null)
+      if (config && typeof config === 'object' && config.type) {
         console.log('[SyncConfig] Loaded config from localStorage:', config)
-        if (config && typeof config === 'object' && config.type) {
-          return config
-        }
+        return config
       }
     }
   } catch (error) {
@@ -83,6 +78,6 @@ export async function clearSyncConfig(): Promise<void> {
     })
   } else {
     // Fallback to localStorage
-    localStorage.removeItem(SYNC_CONFIG_KEY)
+    safeLocalStorage.remove(SYNC_CONFIG_KEY)
   }
 }

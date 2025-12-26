@@ -22,7 +22,6 @@ let runtimeMessageListenerRegistered = false
 /** 常量定义 - 延迟时间（毫秒） */
 const SEARCH_INDEX_DEBOUNCE_MS = 100
 const SAVE_DEBOUNCE_MS = 100
-const FEEDBACK_DISPLAY_MS = 1500
 
 export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- State ---

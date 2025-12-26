@@ -9,6 +9,7 @@ import {
   type GroupLike
 } from '@/utils/syncTargets'
 import { newStorageHelpers } from '@/utils/newStorage'
+import { safeLocalStorage } from '@/utils/safeStorage'
 
 /** 常量定义 */
 const RETRY_BASE_DELAY_MS = 1000
@@ -98,12 +99,8 @@ export class CloudflareSyncService {
     } else {
       // Fallback to localStorage in development/standalone mode
       console.log('[CloudflareSync] Using localStorage fallback')
-      try {
-        localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config))
-        console.log('[CloudflareSync] Config saved to localStorage')
-      } catch (e) {
-        console.error('[CloudflareSync] Failed to save to localStorage:', e)
-      }
+      safeLocalStorage.set(SYNC_CONFIG_KEY, config)
+      console.log('[CloudflareSync] Config saved to localStorage')
     }
   }
 
@@ -133,14 +130,11 @@ export class CloudflareSyncService {
       } else {
         // Fallback to localStorage in development/standalone mode
         console.log('[CloudflareSync] Using localStorage fallback')
-        const stored = localStorage.getItem(SYNC_CONFIG_KEY)
-        if (stored) {
-          const config = JSON.parse(stored)
+        const config = safeLocalStorage.get<ExtendedCloudflareConfig | null>(SYNC_CONFIG_KEY, null)
+        if (config && typeof config === 'object' && config.type === 'cloudflare') {
           console.log('[CloudflareSync] Loaded config from localStorage:', config)
-          if (config && typeof config === 'object' && config.type === 'cloudflare') {
-            this.config = config
-            return config
-          }
+          this.config = config
+          return config
         }
       }
     } catch (error) {
@@ -160,7 +154,7 @@ export class CloudflareSyncService {
       })
     } else {
       // Fallback to localStorage
-      localStorage.removeItem(SYNC_CONFIG_KEY)
+      safeLocalStorage.remove(SYNC_CONFIG_KEY)
     }
   }
 
