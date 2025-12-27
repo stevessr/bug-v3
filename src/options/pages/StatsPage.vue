@@ -5,7 +5,8 @@ import {
   DeleteOutlined,
   LinkOutlined,
   ClearOutlined,
-  DownloadOutlined
+  DownloadOutlined,
+  StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
@@ -35,6 +36,7 @@ const realCachedCount = ref(0)
 const totalCount = ref(0)
 const currentCacheGroup = ref('')
 const currentCacheEmoji = ref('')
+const shouldStopCaching = ref(false)
 
 // 三个进度状态
 // 1. 总进度：基于总图片数量
@@ -197,6 +199,7 @@ const getTotalDuplicates = () => {
 // Cache all images functionality
 const cacheAllImages = async () => {
   isCaching.value = true
+  shouldStopCaching.value = false
   cacheError.value = ''
   cachedCount.value = 0
   realCachedCount.value = 0
@@ -236,12 +239,20 @@ const cacheAllImages = async () => {
 
     // Process each group
     for (const group of validGroups) {
+      // 检查是否需要中断
+      if (shouldStopCaching.value) {
+        break
+      }
       currentCacheGroup.value = group.name
       currentGroupImageCount.value = group.emojis.length
       currentGroupProcessedCount.value = 0
       currentGroupProgress.value = 0
 
       for (const emoji of group.emojis) {
+        // 检查是否需要中断
+        if (shouldStopCaching.value) {
+          break
+        }
         const url = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
         currentCacheEmoji.value = emoji.name
 
@@ -277,13 +288,20 @@ const cacheAllImages = async () => {
       }
 
       // 分组处理完成
-      processedGroups++
-      processedGroupCount.value = processedGroups
-      groupProgress.value =
-        totalGroupCount.value > 0 ? (processedGroups / totalGroupCount.value) * 100 : 0
+
+      if (!shouldStopCaching.value) {
+        processedGroups++
+        processedGroupCount.value = processedGroups
+        groupProgress.value =
+          totalGroupCount.value > 0 ? (processedGroups / totalGroupCount.value) * 100 : 0
+      }
     }
 
-    message.success(`已缓存 ${cachedCount.value} 个表情图片`)
+    if (shouldStopCaching.value) {
+      message.info(`缓存已中断，已缓存 ${cachedCount.value} 个表情图片`)
+    } else {
+      message.success(`已缓存 ${cachedCount.value} 个表情图片`)
+    }
     await refreshCacheStats()
   } catch (error: any) {
     cacheError.value = error.message || '缓存失败'
@@ -291,7 +309,13 @@ const cacheAllImages = async () => {
     console.error('Cache all images error:', error)
   } finally {
     isCaching.value = false
+    shouldStopCaching.value = false
   }
+}
+
+const stopCaching = () => {
+  shouldStopCaching.value = true
+  message.info('正在停止缓存进程...')
 }
 
 const clearImageCache = async () => {
@@ -360,6 +384,11 @@ const clearImageCache = async () => {
             {{ isCaching ? '缓存中...' : '一键缓存所有表情' }}
           </a-button>
 
+          <a-button v-if="isCaching" type="default" danger @click="stopCaching">
+            <StopOutlined />
+            停止缓存
+          </a-button>
+
           <a-button @click="clearImageCache" :disabled="isCaching">
             <ClearOutlined />
             清空缓存
@@ -368,41 +397,68 @@ const clearImageCache = async () => {
 
         <!-- Cache Progress Indicator -->
         <div v-if="isCaching" class="space-y-4">
-          <!-- 总进度（基于总图片数量） -->
-          <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-sm font-medium text-blue-700 dark:text-blue-300">
-                总进度（图片数量）
-              </h3>
-              <span class="text-sm text-blue-600 dark:text-blue-400">
-                {{ totalProcessedCount }} / {{ totalImageCount }}
-              </span>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- 总进度（基于总图片数量） -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+              <div class="flex flex-col items-center">
+                <a-progress
+                  type="circle"
+                  :percent="totalProgress"
+                  :stroke-color="'#1890ff'"
+                  :width="100"
+                  show-info
+                />
+                <h3 class="text-sm font-medium text-blue-700 dark:text-blue-300 mt-3">总进度</h3>
+                <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  {{ totalProcessedCount }} / {{ totalImageCount }} 张图片
+                </p>
+              </div>
             </div>
-            <a-progress :percent="totalProgress" :stroke-color="'#1890ff'" show-info />
+
+            <!-- 分组进度（基于分组数量） -->
+            <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+              <div class="flex flex-col items-center">
+                <a-progress
+                  type="circle"
+                  :percent="groupProgress"
+                  :stroke-color="'#52c41a'"
+                  :width="100"
+                  show-info
+                />
+                <h3 class="text-sm font-medium text-green-700 dark:text-green-300 mt-3">
+                  分组进度
+                </h3>
+                <p class="text-xs text-green-600 dark:text-green-400 mt-1">
+                  {{ processedGroupCount }} / {{ totalGroupCount }} 个分组
+                </p>
+              </div>
+            </div>
+
+            <!-- 当前分组进度（基于当前分组的图片数量） -->
+            <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
+              <div class="flex flex-col items-center">
+                <a-progress
+                  type="circle"
+                  :percent="currentGroupProgress"
+                  :stroke-color="'#fa8c16'"
+                  :width="100"
+                  show-info
+                />
+                <h3 class="text-sm font-medium text-orange-700 dark:text-orange-300 mt-3">
+                  当前分组
+                </h3>
+                <p class="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                  {{ currentGroupProcessedCount }} / {{ currentGroupImageCount }} 张
+                </p>
+              </div>
+            </div>
           </div>
 
-          <!-- 分组进度（基于分组数量） -->
-          <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-sm font-medium text-green-700 dark:text-green-300">分组进度</h3>
-              <span class="text-sm text-green-600 dark:text-green-400">
-                {{ processedGroupCount }} / {{ totalGroupCount }} 个分组
-              </span>
-            </div>
-            <a-progress :percent="groupProgress" :stroke-color="'#52c41a'" show-info />
-          </div>
-
-          <!-- 当前分组进度（基于当前分组的图片数量） -->
-          <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-sm font-medium text-orange-700 dark:text-orange-300">当前分组进度</h3>
-              <span class="text-sm text-orange-600 dark:text-orange-400">
-                {{ currentGroupProcessedCount }} / {{ currentGroupImageCount }}
-              </span>
-            </div>
-            <a-progress :percent="currentGroupProgress" :stroke-color="'#fa8c16'" show-info />
-            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              正在处理：{{ currentCacheGroup }} - {{ currentCacheEmoji }}
+          <!-- 当前处理信息 -->
+          <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+            <p class="text-sm text-gray-700 dark:text-gray-300 text-center">
+              <span class="font-medium">正在处理：</span>
+              {{ currentCacheGroup }} - {{ currentCacheEmoji }}
             </p>
           </div>
         </div>
