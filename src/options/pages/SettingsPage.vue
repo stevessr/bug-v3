@@ -33,6 +33,7 @@ const {
   updateSyncVariantToDisplayUrl,
   updateUseIndexedDBForImages,
   updateEnableContentImageCache,
+  updateEnableSubmenuInjector,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -117,6 +118,7 @@ onMounted(async () => {
               @update:enableBatchParseImages="updateEnableBatchParseImages"
               @update:useIndexedDBForImages="updateUseIndexedDBForImages"
               @update:enableContentImageCache="updateEnableContentImageCache"
+              @update:enableSubmenuInjector="updateEnableSubmenuInjector"
               @update:cloudMarketDomain="updateCloudMarketDomain"
             />
           </div>

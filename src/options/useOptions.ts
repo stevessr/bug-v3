@@ -287,6 +287,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableContentImageCache: value })
   }
 
+  const updateEnableSubmenuInjector = (value: boolean) => {
+    emojiStore.updateSettings({ enableSubmenuInjector: value })
+  }
+
   const updateTheme = (theme: 'system' | 'light' | 'dark') => {
     emojiStore.updateSettings({ theme })
     safeLocalStorage.set('theme', theme)
@@ -1034,6 +1038,7 @@ export default function useOptions() {
     updateSyncVariantToDisplayUrl,
     updateUseIndexedDBForImages,
     updateEnableContentImageCache,
+    updateEnableSubmenuInjector,
     updateEnableHoverPreview,
     updateUploadMenuItems,
     updateGeminiApiKey,

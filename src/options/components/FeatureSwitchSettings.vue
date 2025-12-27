@@ -17,6 +17,7 @@ const emit = defineEmits([
   'update:enableBatchParseImages',
   'update:useIndexedDBForImages',
   'update:enableContentImageCache',
+  'update:enableSubmenuInjector',
   'update:cloudMarketDomain'
 ])
 
@@ -151,6 +152,13 @@ const saveCloudMarketDomain = async () => {
         @update:model-value="handleSettingUpdate('enableContentImageCache', $event)"
         label="启用前端图片缓存 (试验性功能)"
         description="允许前端注入的content script使用本地缓存的图片显示，而不是直接请求表情的URL"
+      />
+
+      <SettingSwitch
+        :model-value="getSetting('enableSubmenuInjector', false)"
+        @update:model-value="handleSettingUpdate('enableSubmenuInjector', $event)"
+        label="启用子菜单注入 (试验性功能)"
+        description="将功能按钮注入到 Discourse 工具栏的下拉菜单中，而不是传统的菜单栏，可降低 CPU 消耗"
       />
 
       <!-- 云端市场域名配置 -->

@@ -45,6 +45,7 @@ export interface AppSettings {
   reduceMotion?: boolean
   useIndexedDBForImages?: boolean // 允许使用 IndexedDB 缓存图片显示
   enableContentImageCache?: boolean // 允许前端注入的 content script 使用本地缓存的图片显示
+  enableSubmenuInjector?: boolean // 将功能按钮注入到 Discourse 下拉菜单中（试验性功能）
   cloudMarketDomain?: string // 云端市场域名配置（默认 video2gif-pages.pages.dev）
 }
 
