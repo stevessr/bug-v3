@@ -32,8 +32,23 @@
     // 是否显示搜索栏
     showSearchBar: true,
     // 是否启用悬浮预览
-    enableHoverPreview: GM_getValue('enableHoverPreview', true)
+    enableHoverPreview: GM_getValue('enableHoverPreview', true),
+    // 视图模式：'auto', 'desktop', 'mobile'
+    viewMode: GM_getValue('viewMode', 'auto')
   };
+
+  // ============== 移动端检测 ==============
+  function isMobile() {
+    const userAgent = navigator.userAgent;
+    const mobileKeywords = ['Android', 'iPhone', 'iPad', 'iPod', 'Windows Phone'];
+    return mobileKeywords.some(keyword => userAgent.includes(keyword));
+  }
+
+  function shouldUseMobileView() {
+    if (CONFIG.viewMode === 'mobile') return true;
+    if (CONFIG.viewMode === 'desktop') return false;
+    return isMobile();
+  }
 
   // ============== 注册油猴菜单 ==============
   GM_registerMenuCommand('设置远程 JSON URL', () => {
@@ -69,6 +84,16 @@
     localStorage.removeItem('emoji_remote_cache');
     localStorage.removeItem('emoji_remote_cache_timestamp');
     alert('缓存已清除，请刷新页面');
+  });
+
+  GM_registerMenuCommand('切换视图模式', () => {
+    const modes = ['auto', 'desktop', 'mobile'];
+    const modeLabels = { auto: '自动', desktop: '桌面', mobile: '移动' };
+    const currentIndex = modes.indexOf(CONFIG.viewMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    GM_setValue('viewMode', nextMode);
+    CONFIG.viewMode = nextMode;
+    alert('视图模式已切换为：' + modeLabels[nextMode] + (nextMode === 'auto' ? ' (当前检测: ' + (isMobile() ? '移动' : '桌面') + ')' : ''));
   });
 
   // ============== 存储工具 ==============
@@ -361,6 +386,163 @@
       .remote-emoji-toolbar-btn:hover {
         background: var(--primary-very-low, #f0f0f0);
       }
+
+      /* ============== 移动端样式 ============== */
+      /* 移动端遮罩 */
+      .remote-emoji-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999998;
+      }
+      .remote-emoji-backdrop.backdrop-enter {
+        opacity: 0 !important;
+      }
+      .remote-emoji-backdrop.backdrop-enter-active {
+        opacity: 1 !important;
+        transition: opacity ${ANIMATION_DURATION}ms ease-out !important;
+      }
+      .remote-emoji-backdrop.backdrop-exit {
+        opacity: 1 !important;
+      }
+      .remote-emoji-backdrop.backdrop-exit-active {
+        opacity: 0 !important;
+        transition: opacity ${ANIMATION_DURATION}ms ease-in !important;
+      }
+
+      /* 移动端模态框 */
+      .remote-emoji-modal {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 999999;
+        background: var(--secondary, #fff);
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        max-height: 70vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .remote-emoji-modal.modal-enter {
+        opacity: 0 !important;
+        transform: translateY(100%) !important;
+      }
+      .remote-emoji-modal.modal-enter-active {
+        opacity: 1 !important;
+        transform: translateY(0) !important;
+        transition: opacity ${ANIMATION_DURATION}ms ease-out, transform ${ANIMATION_DURATION}ms ease-out !important;
+      }
+      .remote-emoji-modal.modal-exit {
+        opacity: 1 !important;
+        transform: translateY(0) !important;
+      }
+      .remote-emoji-modal.modal-exit-active {
+        opacity: 0 !important;
+        transform: translateY(100%) !important;
+        transition: opacity ${ANIMATION_DURATION}ms ease-in, transform ${ANIMATION_DURATION}ms ease-in !important;
+      }
+
+      /* 移动端头部 */
+      .remote-emoji-modal .modal-header {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--primary-low, #eee);
+        gap: 12px;
+      }
+      .remote-emoji-modal .modal-header input {
+        flex: 1;
+        padding: 10px 14px;
+        border: 1px solid var(--primary-low, #ddd);
+        border-radius: 8px;
+        font-size: 16px;
+        background: var(--secondary, #fff);
+        color: var(--primary, #333);
+      }
+      .remote-emoji-modal .modal-header .close-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: var(--primary, #666);
+        padding: 4px 8px;
+      }
+
+      /* 移动端分组导航 */
+      .remote-emoji-modal .group-nav {
+        display: flex;
+        gap: 4px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--primary-low, #eee);
+        overflow-x: auto;
+        flex-shrink: 0;
+        -webkit-overflow-scrolling: touch;
+      }
+      .remote-emoji-modal .group-nav button {
+        background: none;
+        border: none;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-radius: 8px;
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+      .remote-emoji-modal .group-nav button:hover,
+      .remote-emoji-modal .group-nav button:active {
+        background: var(--primary-very-low, #f0f0f0);
+      }
+      .remote-emoji-modal .group-nav button.active {
+        background: var(--tertiary, #007bff);
+        color: white;
+      }
+      .remote-emoji-modal .group-nav button img {
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+        vertical-align: middle;
+      }
+
+      /* 移动端内容区 */
+      .remote-emoji-modal .content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* 移动端分组区块 */
+      .remote-emoji-modal .group-section {
+        margin-bottom: 20px;
+      }
+      .remote-emoji-modal .group-section h3 {
+        font-size: 14px;
+        color: var(--primary-medium, #888);
+        margin: 0 0 10px 0;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--primary-very-low, #eee);
+      }
+      .remote-emoji-modal .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+      }
+      .remote-emoji-modal .emoji-grid img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: contain;
+        cursor: pointer;
+        border-radius: 8px;
+        padding: 4px;
+        transition: background 0.1s;
+      }
+      .remote-emoji-modal .emoji-grid img:active {
+        background: var(--primary-very-low, #f0f0f0);
+      }
     `;
 
     const style = document.createElement('style');
@@ -480,9 +662,60 @@
 
   // ============== 表情选择器 ==============
   let currentPicker = null;
+  let currentBackdrop = null;
   let isAnimating = false;
 
-  function closePicker(callback) {
+  // 关闭移动端模态框
+  function closeMobilePicker(callback) {
+    if (isAnimating) {
+      if (callback) callback();
+      return;
+    }
+
+    if (!currentPicker && !currentBackdrop) {
+      if (callback) callback();
+      return;
+    }
+
+    isAnimating = true;
+
+    // 隐藏悬浮预览
+    if (hoverPreview) {
+      hoverPreview.style.display = 'none';
+    }
+
+    // 遮罩退出动画
+    if (currentBackdrop) {
+      currentBackdrop.classList.add('backdrop-exit');
+      void currentBackdrop.offsetHeight;
+      currentBackdrop.classList.remove('backdrop-exit');
+      currentBackdrop.classList.add('backdrop-exit-active');
+    }
+
+    // 模态框退出动画
+    if (currentPicker) {
+      currentPicker.classList.add('modal-exit');
+      void currentPicker.offsetHeight;
+      currentPicker.classList.remove('modal-exit');
+      currentPicker.classList.add('modal-exit-active');
+    }
+
+    setTimeout(() => {
+      if (currentBackdrop) {
+        currentBackdrop.remove();
+        currentBackdrop = null;
+      }
+      if (currentPicker) {
+        currentPicker.remove();
+        currentPicker = null;
+      }
+      isAnimating = false;
+      if (callback) callback();
+    }, ANIMATION_DURATION);
+  }
+
+  // 关闭桌面端选择器
+  function closeDesktopPicker(callback) {
     if (!currentPicker || isAnimating) {
       if (callback) callback();
       return;
@@ -511,7 +744,141 @@
     }, ANIMATION_DURATION);
   }
 
-  function createPicker() {
+  // 统一关闭函数
+  function closePicker(callback) {
+    if (currentBackdrop) {
+      closeMobilePicker(callback);
+    } else {
+      closeDesktopPicker(callback);
+    }
+  }
+
+  // 创建移动端选择器
+  function createMobilePicker() {
+    if (emojiGroups.length === 0) {
+      alert('没有可用的表情数据，请先设置远程 URL');
+      return null;
+    }
+
+    // 创建遮罩
+    const backdrop = document.createElement('div');
+    backdrop.className = 'remote-emoji-backdrop backdrop-enter';
+    backdrop.onclick = () => closePicker();
+
+    // 创建模态框
+    const modal = document.createElement('div');
+    modal.className = 'remote-emoji-modal modal-enter';
+
+    // 头部（搜索栏 + 关闭按钮）
+    const header = document.createElement('div');
+    header.className = 'modal-header';
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = '搜索表情...';
+    header.appendChild(searchInput);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'close-btn';
+    closeBtn.textContent = '✕';
+    closeBtn.onclick = () => closePicker();
+    header.appendChild(closeBtn);
+
+    modal.appendChild(header);
+
+    // 分组导航
+    const groupNav = document.createElement('div');
+    groupNav.className = 'group-nav';
+
+    emojiGroups.forEach((group, index) => {
+      if (!group.emojis || group.emojis.length === 0) return;
+
+      const btn = document.createElement('button');
+      btn.title = group.name;
+      if (index === 0) btn.classList.add('active');
+
+      const icon = group.icon;
+      if (icon && (icon.startsWith('http') || icon.startsWith('data:'))) {
+        const img = document.createElement('img');
+        img.src = icon;
+        img.alt = group.name;
+        btn.appendChild(img);
+      } else {
+        btn.textContent = icon || '📁';
+      }
+
+      btn.onclick = () => {
+        groupNav.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const section = content.querySelector(`[data-group="${group.id}"]`);
+        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+
+      groupNav.appendChild(btn);
+    });
+
+    modal.appendChild(groupNav);
+
+    // 内容区
+    const content = document.createElement('div');
+    content.className = 'content';
+
+    emojiGroups.forEach(group => {
+      if (!group.emojis || group.emojis.length === 0) return;
+
+      const section = document.createElement('div');
+      section.className = 'group-section';
+      section.dataset.group = group.id;
+
+      const title = document.createElement('h3');
+      title.textContent = group.name;
+      section.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'emoji-grid';
+
+      group.emojis.forEach(emoji => {
+        if (!emoji.url || !emoji.name) return;
+
+        const img = document.createElement('img');
+        img.src = emoji.displayUrl || emoji.url;
+        img.alt = emoji.name;
+        img.title = emoji.name;
+        img.loading = 'lazy';
+        img.dataset.name = emoji.name.toLowerCase();
+
+        img.onclick = () => {
+          insertEmoji(emoji);
+          closePicker();
+        };
+
+        grid.appendChild(img);
+      });
+
+      section.appendChild(grid);
+      content.appendChild(section);
+    });
+
+    modal.appendChild(content);
+
+    // 搜索功能
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      content.querySelectorAll('.emoji-grid img').forEach(img => {
+        const name = img.dataset.name || '';
+        img.style.display = (query === '' || name.includes(query)) ? '' : 'none';
+      });
+      content.querySelectorAll('.group-section').forEach(section => {
+        const visibleEmojis = section.querySelectorAll('.emoji-grid img:not([style*="display: none"])');
+        section.style.display = visibleEmojis.length > 0 ? '' : 'none';
+      });
+    });
+
+    return { backdrop, modal };
+  }
+
+  // 创建桌面端选择器
+  function createDesktopPicker() {
     if (emojiGroups.length === 0) {
       alert('没有可用的表情数据，请先设置远程 URL');
       return null;
@@ -636,64 +1003,102 @@
     if (isAnimating) return;
 
     // 如果已有 picker，先关闭再打开
-    if (currentPicker) {
+    if (currentPicker || currentBackdrop) {
       closePicker(() => showPicker(anchorEl));
       return;
     }
 
-    currentPicker = createPicker();
-    if (!currentPicker) return;
+    const useMobile = shouldUseMobileView();
 
-    document.body.appendChild(currentPicker);
+    if (useMobile) {
+      // 移动端模式
+      const result = createMobilePicker();
+      if (!result) return;
 
-    // 定位
-    const rect = anchorEl.getBoundingClientRect();
-    const margin = 8;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+      currentBackdrop = result.backdrop;
+      currentPicker = result.modal;
 
-    let top = rect.bottom + margin;
-    let left = rect.left;
-
-    // 等待渲染后调整位置并触发进入动画
-    requestAnimationFrame(() => {
-      if (!currentPicker) return;
-
-      const pickerRect = currentPicker.getBoundingClientRect();
-
-      if (top + pickerRect.height > vh) {
-        top = Math.max(margin, rect.top - pickerRect.height - margin);
-      }
-      if (left + pickerRect.width > vw) {
-        left = Math.max(margin, vw - pickerRect.width - margin);
-      }
-
-      currentPicker.style.top = top + 'px';
-      currentPicker.style.left = left + 'px';
+      document.body.appendChild(currentBackdrop);
+      document.body.appendChild(currentPicker);
 
       // 触发进入动画
-      void currentPicker.offsetHeight;
-      currentPicker.classList.remove('picker-enter');
-      currentPicker.classList.add('picker-enter-active');
+      requestAnimationFrame(() => {
+        if (!currentBackdrop || !currentPicker) return;
 
-      // 动画完成后清理类
+        void currentBackdrop.offsetHeight;
+        currentBackdrop.classList.remove('backdrop-enter');
+        currentBackdrop.classList.add('backdrop-enter-active');
+
+        void currentPicker.offsetHeight;
+        currentPicker.classList.remove('modal-enter');
+        currentPicker.classList.add('modal-enter-active');
+
+        // 动画完成后清理类
+        setTimeout(() => {
+          if (currentBackdrop) {
+            currentBackdrop.classList.remove('backdrop-enter-active');
+          }
+          if (currentPicker) {
+            currentPicker.classList.remove('modal-enter-active');
+          }
+        }, ANIMATION_DURATION);
+      });
+    } else {
+      // 桌面端模式
+      currentPicker = createDesktopPicker();
+      if (!currentPicker) return;
+
+      document.body.appendChild(currentPicker);
+
+      // 定位
+      const rect = anchorEl.getBoundingClientRect();
+      const margin = 8;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      let top = rect.bottom + margin;
+      let left = rect.left;
+
+      // 等待渲染后调整位置并触发进入动画
+      requestAnimationFrame(() => {
+        if (!currentPicker) return;
+
+        const pickerRect = currentPicker.getBoundingClientRect();
+
+        if (top + pickerRect.height > vh) {
+          top = Math.max(margin, rect.top - pickerRect.height - margin);
+        }
+        if (left + pickerRect.width > vw) {
+          left = Math.max(margin, vw - pickerRect.width - margin);
+        }
+
+        currentPicker.style.top = top + 'px';
+        currentPicker.style.left = left + 'px';
+
+        // 触发进入动画
+        void currentPicker.offsetHeight;
+        currentPicker.classList.remove('picker-enter');
+        currentPicker.classList.add('picker-enter-active');
+
+        // 动画完成后清理类
+        setTimeout(() => {
+          if (currentPicker) {
+            currentPicker.classList.remove('picker-enter-active');
+          }
+        }, ANIMATION_DURATION);
+      });
+
+      // 点击外部关闭
       setTimeout(() => {
-        if (currentPicker) {
-          currentPicker.classList.remove('picker-enter-active');
-        }
-      }, ANIMATION_DURATION);
-    });
-
-    // 点击外部关闭
-    setTimeout(() => {
-      const handler = (e) => {
-        if (currentPicker && !currentPicker.contains(e.target) && e.target !== anchorEl && !isAnimating) {
-          document.removeEventListener('click', handler);
-          closePicker();
-        }
-      };
-      document.addEventListener('click', handler);
-    }, 100);
+        const handler = (e) => {
+          if (currentPicker && !currentPicker.contains(e.target) && e.target !== anchorEl && !isAnimating) {
+            document.removeEventListener('click', handler);
+            closePicker();
+          }
+        };
+        document.addEventListener('click', handler);
+      }, 100);
+    }
   }
 
   // ============== 工具栏注入 ==============
