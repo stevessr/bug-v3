@@ -55,6 +55,39 @@ const isPackageSelected = (packageId: number) => {
   return selectedPackages.value.includes(packageId)
 }
 
+// 切换表情包选择状态
+const togglePackage = (packageId: number) => {
+  const index = selectedPackages.value.indexOf(packageId)
+  if (index > -1) {
+    selectedPackages.value.splice(index, 1)
+  } else {
+    selectedPackages.value.push(packageId)
+  }
+}
+
+// 全选所有表情包
+const selectAllPackages = () => {
+  selectedPackages.value = packages.value.map(pkg => pkg.id)
+}
+
+// 取消选择所有表情包
+const deselectAllPackages = () => {
+  selectedPackages.value = []
+}
+
+// 移除单个表情包
+const removePackage = (packageId: number) => {
+  const index = packages.value.findIndex(pkg => pkg.id === packageId)
+  if (index > -1) {
+    packages.value.splice(index, 1)
+  }
+  // 同时从选中列表中移除
+  const selectedIndex = selectedPackages.value.indexOf(packageId)
+  if (selectedIndex > -1) {
+    selectedPackages.value.splice(selectedIndex, 1)
+  }
+}
+
 const doImport = () => {
   if (selectedPackages.value.length === 0) {
     errorMessage.value = '请至少导入一个表情包'
@@ -275,10 +308,33 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
       <div class="flex-1 overflow-hidden flex flex-col min-h-0">
         <div v-if="packages.length > 0" class="flex flex-col h-full">
           <div class="flex justify-between items-center mb-4 flex-shrink-0">
-            <h4 class="font-medium text-gray-900 dark:text-white">已准备导入的表情包</h4>
-            <span class="text-sm text-gray-600 dark:text-gray-400">
-              {{ packages.length }} 个表情包
-            </span>
+            <div class="flex items-center gap-4">
+              <h4 class="font-medium text-gray-900 dark:text-white">已准备导入的表情包</h4>
+              <div class="flex gap-2">
+                <button
+                  @click="selectAllPackages"
+                  :disabled="packages.length === 0"
+                  class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  全选
+                </button>
+                <button
+                  @click="deselectAllPackages"
+                  :disabled="selectedPackages.length === 0"
+                  class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  取消全选
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-600 dark:text-gray-400">
+                {{ packages.length }} 个表情包
+              </span>
+              <span class="text-sm text-blue-600 dark:text-blue-400">
+                (已选 {{ selectedPackages.length }})
+              </span>
+            </div>
           </div>
 
           <!-- 表情包网格 -->
@@ -288,12 +344,13 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
             <div
               v-for="pkg in packages"
               :key="pkg.id"
-              class="border rounded-lg p-4 transition-all h-fit"
+              class="border rounded-lg p-4 transition-all h-fit cursor-pointer"
               :class="
                 isPackageSelected(pkg.id)
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-300 dark:border-gray-600'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
               "
+              @click="togglePackage(pkg.id)"
             >
               <div class="flex items-center space-x-3">
                 <img
@@ -313,13 +370,33 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                     {{ pkg.emote.length }} 个表情
                   </p>
                 </div>
-                <div
-                  class="w-5 h-5 rounded border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"
-                >
+                <div class="flex items-center gap-2">
                   <div
-                    v-if="isPackageSelected(pkg.id)"
-                    class="w-3 h-3 bg-blue-600 rounded-full"
-                  ></div>
+                    class="w-5 h-5 rounded border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center transition-colors"
+                    :class="
+                      isPackageSelected(pkg.id)
+                        ? 'border-blue-500 bg-blue-500'
+                        : 'hover:border-blue-400'
+                    "
+                  >
+                    <div
+                      v-if="isPackageSelected(pkg.id)"
+                      class="w-3 h-3 bg-white rounded-full"
+                    ></div>
+                  </div>
+                  <button
+                    @click.stop="removePackage(pkg.id)"
+                    class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                    title="移除表情包"
+                  >
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  </button>
                 </div>
               </div>
 
@@ -380,7 +457,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
             :disabled="selectedPackages.length === 0 || isLoading"
             class="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            导入选中表情包 ({{ selectedPackages.length }})
+            导入选中的表情包 ({{ selectedPackages.length }})
           </button>
         </div>
       </div>
