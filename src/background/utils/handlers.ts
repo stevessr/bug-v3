@@ -57,6 +57,7 @@ export function setupMessageListener() {
             return true
 
           case 'downloadImage':
+          case 'DOWNLOAD_IMAGE':
             handleDownloadImage(message, sendResponse)
             return true
 
