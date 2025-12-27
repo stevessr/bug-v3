@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, toRefs, watch } from 'vue'
+import { toRefs, watch } from 'vue'
 
-import { useEmojiStore } from '@/stores/emojiStore'
-import { getEmojiImageUrl, getEmojiImageUrlSync, preloadImages } from '@/utils/imageUrlHelper'
+import { useEmojiImages } from '@/composables/useEmojiImages'
 import type { Emoji } from '@/types/type'
 
 const props = defineProps<{
@@ -21,119 +20,19 @@ const emit = defineEmits(['select', 'openOptions'])
 const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton, isActive } =
   toRefs(props)
 
-const emojiStore = useEmojiStore()
-const blobUrls = ref<Set<string>>(new Set())
-
-// Computed property to check if image caching is enabled
-const useCachedImages = computed(() => emojiStore.settings.useIndexedDBForImages)
-
-// Method to get image source with caching support
-const getImageSrc = async (emoji: Emoji): Promise<string> => {
-  return getEmojiImageUrl(emoji, { preferCache: useCachedImages.value })
-}
-
-// Synchronous version for immediate rendering (kept for potential future use)
-// @ts-expect-error kept for API compatibility
-const _getImageSrcSync = (emoji: Emoji): string => {
-  return getEmojiImageUrlSync(emoji, { preferCache: useCachedImages.value })
-}
-
-// Reactive image sources for emojis
-const imageSources = ref<Map<string, string>>(new Map())
-
-// Initialize image sources
-const initializeImageSources = async () => {
-  // 使用 Promise.all 批量获取，而不是逐个 await
-  const entries = await Promise.all(
-    props.emojis.map(async emoji => {
-      const src = await getImageSrc(emoji)
-      return [emoji.id, src] as const
-    })
-  )
-  imageSources.value = new Map(entries)
-}
-
-// Watch for emoji changes and update image sources
-// 优化：防抖并使用批量更新
-let updateDebounceTimer: ReturnType<typeof setTimeout> | null = null
-const updateImageSources = async () => {
-  if (updateDebounceTimer) {
-    clearTimeout(updateDebounceTimer)
-  }
-  updateDebounceTimer = setTimeout(async () => {
-    const currentEmojiIds = new Set(props.emojis.map(e => e.id))
-
-    // Clean up old blob URLs that are no longer needed
-    for (const [emojiId, blobUrl] of imageSources.value) {
-      if (!currentEmojiIds.has(emojiId) && blobUrl.startsWith('blob:')) {
-        blobUrls.value.delete(blobUrl)
-        URL.revokeObjectURL(blobUrl)
-      }
-    }
-
-    // 批量获取新的图片源，复用已有的非 blob URL
-    const entries = await Promise.all(
-      props.emojis.map(async emoji => {
-        const existing = imageSources.value.get(emoji.id)
-        if (existing && !existing.startsWith('blob:')) {
-          return [emoji.id, existing] as const
-        }
-        const src = await getImageSrc(emoji)
-        return [emoji.id, src] as const
-      })
-    )
-
-    imageSources.value = new Map(entries)
-  }, 100)
-}
-
-// Preload images for better performance
-const preloadEmojis = async () => {
-  if (useCachedImages.value && props.isActive) {
-    try {
-      await preloadImages(props.emojis, { batchSize: 3, delay: 50 })
-    } catch (error) {
-      console.warn('Failed to preload images:', error)
-    }
-  }
-}
-
-// Clean up blob URLs when component is unmounted
-onUnmounted(() => {
-  // 清理防抖定时器
-  if (updateDebounceTimer) {
-    clearTimeout(updateDebounceTimer)
-  }
-  for (const blobUrl of blobUrls.value) {
-    try {
-      URL.revokeObjectURL(blobUrl)
-    } catch (error) {
-      console.warn('Failed to revoke blob URL:', blobUrl, error)
-    }
-  }
-  blobUrls.value.clear()
+// Use emoji images composable for unified image management
+const { imageSources, getImageSrcSync, setActive } = useEmojiImages(() => props.emojis, {
+  preload: true,
+  preloadBatchSize: 3,
+  preloadDelay: 50,
+  preloadWhenActive: true
 })
 
-// Initialize image sources when component is created
-initializeImageSources()
-
-// Watch for emoji changes and update image sources
-// 优化：监听数组长度和引用，避免深度监听带来的性能开销
-watch(
-  () => [props.emojis.length, props.emojis],
-  () => {
-    updateImageSources()
-  },
-  { flush: 'post' }
-)
-
-// Preload when component becomes active
+// Watch for active state changes and notify composable
 watch(
   () => props.isActive,
   isActive => {
-    if (isActive) {
-      preloadEmojis()
-    }
+    setActive(isActive)
   },
   { immediate: true }
 )
@@ -236,7 +135,7 @@ const focusLastEmoji = () => {
           tabindex="0"
         >
           <a-image
-            :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
+            :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
             :alt="emoji.name"
             class="w-full h-full object-cover"
             loading="lazy"
