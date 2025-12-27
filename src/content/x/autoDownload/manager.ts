@@ -101,42 +101,73 @@ function normalizeUrl(raw: string): string | null {
 }
 
 /**
- * 显示 Toast 提示
+ * Toast 容器管理
+ */
+let toastContainer: HTMLElement | null = null
+
+function getToastContainer() {
+  if (!toastContainer) {
+    toastContainer = document.createElement('div')
+    toastContainer.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      gap: 10px;
+      z-index: 10000;
+      pointer-events: none;
+    `
+    document.body.appendChild(toastContainer)
+  }
+  return toastContainer
+}
+
+/**
+ * 显示 Toast 提示（支持多条堆叠）
  */
 function showToast(message: string, type: 'success' | 'error' = 'success') {
+  const container = getToastContainer()
   const toast = document.createElement('div')
   toast.textContent = message
   toast.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
     background: ${type === 'success' ? 'rgba(29, 155, 240, 0.9)' : 'rgba(244, 33, 46, 0.9)'};
     color: white;
     padding: 10px 20px;
     border-radius: 20px;
     font-size: 14px;
     font-weight: 500;
-    z-index: 10000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    pointer-events: none;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    max-width: 80vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
   `
-  document.body.appendChild(toast)
+
+  container.appendChild(toast)
 
   // 动画进入
   requestAnimationFrame(() => {
     toast.style.opacity = '1'
-    toast.style.transform = 'translateX(-50%) translateY(0)'
+    toast.style.transform = 'translateY(0)'
   })
 
   // 3 秒后消失
   setTimeout(() => {
     toast.style.opacity = '0'
-    toast.style.transform = 'translateX(-50%) translateY(10px)'
+    toast.style.transform = 'translateY(20px)'
     setTimeout(() => {
       toast.remove()
+      // 如果容器空了，清理容器
+      if (container.childNodes.length === 0) {
+        container.remove()
+        toastContainer = null
+      }
     }, 300)
   }, 3000)
 }
@@ -312,7 +343,17 @@ export class AutoDownloadManager {
 
     if (response?.success) {
       console.log(`[AutoDownloadManager] Download started: ${imageUrl}`)
-      showToast('Downloading image...', 'success')
+      // 提取文件名用于显示
+      let displayFilename = 'image'
+      try {
+        const u = new URL(imageUrl)
+        const pathname = u.pathname
+        const name = pathname.split('/').pop()
+        if (name) displayFilename = name
+      } catch {
+        /* ignore */
+      }
+      showToast(`Started: ${displayFilename}`, 'success')
     } else {
       console.error(`[AutoDownloadManager] Download failed: ${imageUrl}`, response?.error)
       showToast('Download failed', 'error')

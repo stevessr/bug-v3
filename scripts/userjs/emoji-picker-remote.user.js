@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Remote Emoji Picker for Linux.do
 // @namespace    https://linux.do/
-// @version      1.0.0
+// @version      1.0.1
 // @description  从远程 JSON 加载表情包并注入表情选择器到 Linux.do 论坛
-// @author       Emoji Extension
+// @author       stevessr
 // @match        https://linux.do/*
 // @match        https://*.linux.do/*
 // @icon         https://linux.do/uploads/default/optimized/3X/9/d/9dd49731091ce8656e94433a26a3ef76f9c0f8d9_2_32x32.png
@@ -22,7 +22,7 @@
   // ============== 配置 ==============
   const CONFIG = {
     // 远程 JSON URL - 可以通过油猴菜单修改
-    remoteUrl: GM_getValue('remoteUrl', ''),
+    remoteUrl: GM_getValue('remoteUrl', 'https://video2gif-pages.pages.dev/assets/defaultEmojiGroups.json'),
     // 缓存有效期（毫秒）- 默认 1 小时
     cacheDuration: 60 * 60 * 1000,
     // 图片输出缩放比例
@@ -93,7 +93,7 @@
     const nextMode = modes[(currentIndex + 1) % modes.length];
     GM_setValue('viewMode', nextMode);
     CONFIG.viewMode = nextMode;
-    alert('视图模式已切换为：' + modeLabels[nextMode] + (nextMode === 'auto' ? ' (当前检测: ' + (isMobile() ? '移动' : '桌面') + ')' : ''));
+    alert('视图模式已切换为：' + modeLabels[nextMode] + (nextMode === 'auto' ? ' (当前检测：' + (isMobile() ? '移动' : '桌面') + ')' : ''));
   });
 
   // ============== 存储工具 ==============
