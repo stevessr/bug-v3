@@ -184,6 +184,8 @@
   }
 
   // ============== 样式注入 ==============
+  const ANIMATION_DURATION = 200;
+
   function injectStyles() {
     if (document.getElementById('remote-emoji-picker-styles')) return;
 
@@ -230,6 +232,28 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+      }
+
+      /* 进入动画 */
+      .remote-emoji-picker.picker-enter {
+        opacity: 0 !important;
+        transform: scale(0.95) translateY(-8px) !important;
+      }
+      .remote-emoji-picker.picker-enter-active {
+        opacity: 1 !important;
+        transform: scale(1) translateY(0) !important;
+        transition: opacity ${ANIMATION_DURATION}ms ease-out, transform ${ANIMATION_DURATION}ms ease-out !important;
+      }
+
+      /* 退出动画 */
+      .remote-emoji-picker.picker-exit {
+        opacity: 1 !important;
+        transform: scale(1) translateY(0) !important;
+      }
+      .remote-emoji-picker.picker-exit-active {
+        opacity: 0 !important;
+        transform: scale(0.95) translateY(-8px) !important;
+        transition: opacity ${ANIMATION_DURATION}ms ease-in, transform ${ANIMATION_DURATION}ms ease-in !important;
       }
 
       /* 搜索栏 */
@@ -456,12 +480,30 @@
 
   // ============== 表情选择器 ==============
   let currentPicker = null;
+  let isAnimating = false;
 
-  function closePicker() {
-    if (currentPicker) {
-      currentPicker.remove();
-      currentPicker = null;
+  function closePicker(callback) {
+    if (!currentPicker || isAnimating) {
+      if (callback) callback();
+      return;
     }
+
+    isAnimating = true;
+
+    // 添加退出动画
+    currentPicker.classList.add('picker-exit');
+    void currentPicker.offsetHeight;
+    currentPicker.classList.remove('picker-exit');
+    currentPicker.classList.add('picker-exit-active');
+
+    setTimeout(() => {
+      if (currentPicker) {
+        currentPicker.remove();
+        currentPicker = null;
+      }
+      isAnimating = false;
+      if (callback) callback();
+    }, ANIMATION_DURATION);
   }
 
   function createPicker() {
@@ -471,7 +513,8 @@
     }
 
     const picker = document.createElement('div');
-    picker.className = 'remote-emoji-picker';
+    // 创建时带有进入动画初始类
+    picker.className = 'remote-emoji-picker picker-enter';
 
     // 搜索栏
     const searchBar = document.createElement('div');
@@ -485,7 +528,7 @@
     const closeBtn = document.createElement('button');
     closeBtn.className = 'close-btn';
     closeBtn.textContent = '✕';
-    closeBtn.onclick = closePicker;
+    closeBtn.onclick = () => closePicker();
     searchBar.appendChild(closeBtn);
 
     picker.appendChild(searchBar);
@@ -585,7 +628,13 @@
   }
 
   function showPicker(anchorEl) {
-    closePicker();
+    if (isAnimating) return;
+
+    // 如果已有 picker，先关闭再打开
+    if (currentPicker) {
+      closePicker(() => showPicker(anchorEl));
+      return;
+    }
 
     currentPicker = createPicker();
     if (!currentPicker) return;
@@ -601,8 +650,10 @@
     let top = rect.bottom + margin;
     let left = rect.left;
 
-    // 等待渲染后调整位置
+    // 等待渲染后调整位置并触发进入动画
     requestAnimationFrame(() => {
+      if (!currentPicker) return;
+
       const pickerRect = currentPicker.getBoundingClientRect();
 
       if (top + pickerRect.height > vh) {
@@ -614,16 +665,29 @@
 
       currentPicker.style.top = top + 'px';
       currentPicker.style.left = left + 'px';
+
+      // 触发进入动画
+      void currentPicker.offsetHeight;
+      currentPicker.classList.remove('picker-enter');
+      currentPicker.classList.add('picker-enter-active');
+
+      // 动画完成后清理类
+      setTimeout(() => {
+        if (currentPicker) {
+          currentPicker.classList.remove('picker-enter-active');
+        }
+      }, ANIMATION_DURATION);
     });
 
     // 点击外部关闭
     setTimeout(() => {
-      document.addEventListener('click', function handler(e) {
-        if (currentPicker && !currentPicker.contains(e.target) && e.target !== anchorEl) {
-          closePicker();
+      const handler = (e) => {
+        if (currentPicker && !currentPicker.contains(e.target) && e.target !== anchorEl && !isAnimating) {
           document.removeEventListener('click', handler);
+          closePicker();
         }
-      });
+      };
+      document.addEventListener('click', handler);
     }, 100);
   }
 
