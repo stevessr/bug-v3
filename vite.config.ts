@@ -114,8 +114,20 @@ export default defineConfig(({ mode }) => {
           assetFileNames: 'assets/[name].[ext]',
           format: 'es', // Use ES module format for better code splitting support
           inlineDynamicImports: false,
-          // ES format supports code splitting, so we can use manualChunks if needed
-          manualChunks: undefined
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              // UI 库单独打包，避免 content script 加载不需要的 UI 代码
+              if (id.includes('ant-design-vue') || id.includes('@ant-design')) {
+                return 'vendor-ui'
+              }
+              // 核心框架单独打包
+              if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router') || id.includes('@vueuse')) {
+                return 'vendor-core'
+              }
+              // 其他第三方依赖
+              return 'vendor-libs'
+            }
+          }
         },
         // 优化：tree-shaking 优化
         treeshake: {
