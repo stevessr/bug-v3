@@ -1,7 +1,7 @@
 import { isImageUrl } from '../../utils/isimage'
 import { createE } from '../../utils/createEl'
 import { getCachedImageUrl } from '../../utils/contentImageCache'
-import { animateExit } from '../../utils/animation'
+import { animateExit, ANIMATION_DURATION, injectAnimationStyles } from '../../utils/animation'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
@@ -27,17 +27,34 @@ async function replaceWithCachedImage(
 }
 
 export async function createMobileEmojiPicker(): Promise<HTMLElement> {
+  // Ensure animation styles are injected first
+  injectAnimationStyles()
+
   // Data is already loaded via loadDataFromStorage() in initializeEmojiFeature()
   const groupsToUse = cachedState.emojiGroups
 
+  // Create modal with initial animation class for slide-up effect
   const modal = createE('div', {
-    class: 'modal d-modal fk-d-menu-modal emoji-picker-content',
+    class: 'modal d-modal fk-d-menu-modal emoji-picker-content emoji-modal-enter',
     role: 'dialog',
     attrs: {
       'data-keyboard': 'false',
       'aria-modal': 'true',
       'data-controller': 'emoji-picker'
     }
+  })
+
+  // Schedule animation trigger after element is added to DOM
+  requestAnimationFrame(() => {
+    // Force reflow
+    void (modal as HTMLElement).offsetHeight
+    // Trigger animation
+    modal.classList.remove('emoji-modal-enter')
+    modal.classList.add('emoji-modal-enter-active')
+    // Clean up after animation
+    setTimeout(() => {
+      modal.classList.remove('emoji-modal-enter-active')
+    }, ANIMATION_DURATION)
   })
 
   const modalContainerDiv = createE('div', {

@@ -6,7 +6,7 @@ import { notify } from './notify'
 import { createE, DQSA, DQS, DOA, DAEL } from './createEl'
 import { showImageUploadDialog } from './uploader'
 import { createAndShowIframeModal, createAndShowSideIframeModal } from './iframe'
-import { animateEnter, animateExit, ANIMATION_DURATION, injectAnimationStyles } from './animation'
+import { animateEnter, animateExit, ANIMATION_DURATION } from './animation'
 
 import { ICONS } from '@/content/data/callout'
 
@@ -92,9 +92,7 @@ async function injectDesktopPicker(button: HTMLElement) {
 }
 
 async function injectMobilePicker() {
-  // Ensure animation styles are injected first
-  injectAnimationStyles()
-
+  // picker is created with animation already set up in mobile.ts
   const picker = await createEmojiPicker(true)
 
   let modalContainer = DQS('.modal-container')
@@ -105,7 +103,8 @@ async function injectMobilePicker() {
 
   modalContainer.innerHTML = '' // Clear any previous content
 
-  const backdrop = createE('div', { class: 'd-modal__backdrop' })
+  // Create backdrop with initial animation class
+  const backdrop = createE('div', { class: 'd-modal__backdrop emoji-backdrop-enter' })
   backdrop.addEventListener('click', () => {
     // Animate exit for both picker and backdrop
     animateExit(picker as HTMLElement, 'modal')
@@ -114,28 +113,18 @@ async function injectMobilePicker() {
     })
   })
 
-  // Set initial animation state BEFORE adding to DOM
-  ;(picker as HTMLElement).classList.add('emoji-modal-enter')
-  ;(backdrop as HTMLElement).classList.add('emoji-backdrop-enter')
-
   modalContainer.appendChild(picker)
   modalContainer.appendChild(backdrop)
 
-  // Force reflow then trigger animation
-  void (picker as HTMLElement).offsetHeight
-  void (backdrop as HTMLElement).offsetHeight
-
-  // Remove enter class and add active class to start animation
-  ;(picker as HTMLElement).classList.remove('emoji-modal-enter')
-  ;(picker as HTMLElement).classList.add('emoji-modal-enter-active')
-  ;(backdrop as HTMLElement).classList.remove('emoji-backdrop-enter')
-  ;(backdrop as HTMLElement).classList.add('emoji-backdrop-enter-active')
-
-  // Clean up animation classes after animation completes
-  setTimeout(() => {
-    ;(picker as HTMLElement).classList.remove('emoji-modal-enter-active')
-    ;(backdrop as HTMLElement).classList.remove('emoji-backdrop-enter-active')
-  }, ANIMATION_DURATION)
+  // Trigger backdrop animation
+  requestAnimationFrame(() => {
+    void (backdrop as HTMLElement).offsetHeight
+    backdrop.classList.remove('emoji-backdrop-enter')
+    backdrop.classList.add('emoji-backdrop-enter-active')
+    setTimeout(() => {
+      backdrop.classList.remove('emoji-backdrop-enter-active')
+    }, ANIMATION_DURATION)
+  })
 
   // Track the picker element itself so toggling will unmount only the picker
   currentPicker = picker as HTMLElement
