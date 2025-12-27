@@ -9,6 +9,7 @@ import FeatureSwitchSettings from '../components/FeatureSwitchSettings.vue'
 import MenuBarSettings from '../components/MenuBarSettings.vue'
 import CustomCSSBlockSettings from '../components/CustomCSSBlockSettings.vue'
 import AISettings from '../components/AISettings.vue'
+import ImgbedSettings from '../components/ImgbedSettings.vue'
 import SyncSettings from '../components/SyncSettings.vue'
 import CloudDataPreview from '../components/CloudDataPreview.vue'
 import CollaborativeUploadSettings from '../components/CollaborativeUploadSettings.vue'
@@ -149,6 +150,14 @@ onMounted(async () => {
               @update:customOpenAIEndpoint="updateCustomOpenAIEndpoint"
               @update:customOpenAIKey="updateCustomOpenAIKey"
               @update:customOpenAIModel="updateCustomOpenAIModel"
+            />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="imgbed" tab="图床 API">
+          <div class="py-4">
+            <ImgbedSettings
+              :settings="emojiStore.settings"
               @update:imgbedToken="updateImdbedToken"
               @update:imgbedApiUrl="updateImdbedApiUrl"
             />

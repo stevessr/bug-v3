@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch, isRef, type Ref } from 'vue'
+import { ref, watch, isRef, computed, type Ref } from 'vue'
+import { message } from 'ant-design-vue'
 
 import type { AppSettings } from '../../types/type'
 
@@ -14,9 +15,7 @@ const emit = defineEmits([
   'update:useCustomOpenAI',
   'update:customOpenAIEndpoint',
   'update:customOpenAIKey',
-  'update:customOpenAIModel',
-  'update:imgbedToken',
-  'update:imgbedApiUrl'
+  'update:customOpenAIModel'
 ])
 
 // Helper function to get setting value
@@ -38,122 +37,163 @@ const localUseCustomOpenAI = ref<boolean>(getSetting('useCustomOpenAI', false))
 const localCustomOpenAIEndpoint = ref<string>(getSetting('customOpenAIEndpoint', ''))
 const localCustomOpenAIKey = ref<string>(getSetting('customOpenAIKey', ''))
 const localCustomOpenAIModel = ref<string>(getSetting('customOpenAIModel', ''))
-const localImgbedToken = ref<string>(getSetting('imgbedToken', ''))
-const localImgbedApiUrl = ref<string>(getSetting('imgbedApiUrl', ''))
 
-// Watch for external changes
+// UI state
+const isSaving = ref(false)
+const hasChanges = ref(false)
+
+// Watch for external changes (only update if no unsaved changes)
 watch(
   () => getSetting('geminiApiKey', ''),
   (val: string) => {
-    localGeminiApiKey.value = val
+    if (!hasChanges.value) {
+      localGeminiApiKey.value = val
+    }
   }
 )
 
 watch(
   () => getSetting('geminiApiUrl', ''),
   (val: string) => {
-    localGeminiApiUrl.value = val
+    if (!hasChanges.value) {
+      localGeminiApiUrl.value = val
+    }
   }
 )
 
 watch(
   () => getSetting('geminiLanguage', 'Chinese'),
   (val: string) => {
-    localGeminiLanguage.value = val
+    if (!hasChanges.value) {
+      localGeminiLanguage.value = val
+    }
   }
 )
 
 watch(
   () => getSetting('geminiModel', 'gemini-flash-latest'),
   (val: string) => {
-    localGeminiModel.value = val
+    if (!hasChanges.value) {
+      localGeminiModel.value = val
+    }
   }
 )
 
 watch(
   () => getSetting('useCustomOpenAI', false),
   (val: boolean) => {
-    localUseCustomOpenAI.value = val
+    if (!hasChanges.value) {
+      localUseCustomOpenAI.value = val
+    }
   }
 )
 
 watch(
   () => getSetting('customOpenAIEndpoint', ''),
   (val: string) => {
-    localCustomOpenAIEndpoint.value = val
+    if (!hasChanges.value) {
+      localCustomOpenAIEndpoint.value = val
+    }
   }
 )
 
 watch(
   () => getSetting('customOpenAIKey', ''),
   (val: string) => {
-    localCustomOpenAIKey.value = val
+    if (!hasChanges.value) {
+      localCustomOpenAIKey.value = val
+    }
   }
 )
 
 watch(
   () => getSetting('customOpenAIModel', ''),
   (val: string) => {
-    localCustomOpenAIModel.value = val
+    if (!hasChanges.value) {
+      localCustomOpenAIModel.value = val
+    }
   }
 )
 
+// Watch for local changes to detect if form has been modified
 watch(
-  () => getSetting('imgbedToken', ''),
-  (val: string) => {
-    localImgbedToken.value = val
+  [
+    localGeminiApiKey,
+    localGeminiApiUrl,
+    localGeminiLanguage,
+    localGeminiModel,
+    localUseCustomOpenAI,
+    localCustomOpenAIEndpoint,
+    localCustomOpenAIKey,
+    localCustomOpenAIModel
+  ],
+  () => {
+    hasChanges.value =
+      localGeminiApiKey.value !== getSetting('geminiApiKey', '') ||
+      localGeminiApiUrl.value !== getSetting('geminiApiUrl', '') ||
+      localGeminiLanguage.value !== getSetting('geminiLanguage', 'Chinese') ||
+      localGeminiModel.value !== getSetting('geminiModel', 'gemini-flash-latest') ||
+      localUseCustomOpenAI.value !== getSetting('useCustomOpenAI', false) ||
+      localCustomOpenAIEndpoint.value !== getSetting('customOpenAIEndpoint', '') ||
+      localCustomOpenAIKey.value !== getSetting('customOpenAIKey', '') ||
+      localCustomOpenAIModel.value !== getSetting('customOpenAIModel', '')
   }
 )
 
-watch(
-  () => getSetting('imgbedApiUrl', ''),
-  (val: string) => {
-    localImgbedApiUrl.value = val
+// Validation
+const isValidConfig = computed(() => {
+  // If using custom OpenAI, validate those fields
+  if (localUseCustomOpenAI.value) {
+    const hasEndpoint = localCustomOpenAIEndpoint.value.trim().length > 0
+    const hasKey = localCustomOpenAIKey.value.trim().length > 0
+    const hasModel = localCustomOpenAIModel.value.trim().length > 0
+    // All three fields should be filled if using custom OpenAI
+    if (!hasEndpoint || !hasKey || !hasModel) {
+      return false
+    }
   }
-)
+  // Always valid for Gemini (fields are optional)
+  return true
+})
 
-// Update handlers
-const handleGeminiApiKeyChange = () => {
-  emit('update:geminiApiKey', localGeminiApiKey.value)
+// Save handler
+const handleSave = async () => {
+  if (!isValidConfig.value) {
+    message.error('使用自定义 OpenAI 时，请填写完整的端点、Key 和模型名称')
+    return
+  }
+
+  isSaving.value = true
+  try {
+    emit('update:geminiApiKey', localGeminiApiKey.value)
+    emit('update:geminiApiUrl', localGeminiApiUrl.value)
+    emit('update:geminiLanguage', localGeminiLanguage.value)
+    emit('update:geminiModel', localGeminiModel.value)
+    emit('update:useCustomOpenAI', localUseCustomOpenAI.value)
+    emit('update:customOpenAIEndpoint', localCustomOpenAIEndpoint.value)
+    emit('update:customOpenAIKey', localCustomOpenAIKey.value)
+    emit('update:customOpenAIModel', localCustomOpenAIModel.value)
+    hasChanges.value = false
+    message.success('AI 配置已保存')
+  } catch (error) {
+    console.error('Failed to save AI config:', error)
+    message.error('保存失败：' + (error as Error).message)
+  } finally {
+    isSaving.value = false
+  }
 }
 
-const handleGeminiApiUrlChange = () => {
-  emit('update:geminiApiUrl', localGeminiApiUrl.value)
-}
-
-const handleGeminiLanguageChange = (value: string) => {
-  localGeminiLanguage.value = value
-  emit('update:geminiLanguage', value)
-}
-
-const handleGeminiModelChange = (value: string) => {
-  localGeminiModel.value = value
-  emit('update:geminiModel', value)
-}
-
-const handleUseCustomOpenAIChange = (checked: boolean) => {
-  localUseCustomOpenAI.value = checked
-  emit('update:useCustomOpenAI', checked)
-}
-
-const handleCustomOpenAIEndpointChange = () => {
-  emit('update:customOpenAIEndpoint', localCustomOpenAIEndpoint.value)
-}
-
-const handleCustomOpenAIKeyChange = () => {
-  emit('update:customOpenAIKey', localCustomOpenAIKey.value)
-}
-
-const handleCustomOpenAIModelChange = () => {
-  emit('update:customOpenAIModel', localCustomOpenAIModel.value)
-}
-
-const handleImgbedTokenChange = () => {
-  emit('update:imgbedToken', localImgbedToken.value)
-}
-
-const handleImgbedApiUrlChange = () => {
-  emit('update:imgbedApiUrl', localImgbedApiUrl.value)
+// Reset handler
+const handleReset = () => {
+  localGeminiApiKey.value = getSetting('geminiApiKey', '')
+  localGeminiApiUrl.value = getSetting('geminiApiUrl', '')
+  localGeminiLanguage.value = getSetting('geminiLanguage', 'Chinese')
+  localGeminiModel.value = getSetting('geminiModel', 'gemini-flash-latest')
+  localUseCustomOpenAI.value = getSetting('useCustomOpenAI', false)
+  localCustomOpenAIEndpoint.value = getSetting('customOpenAIEndpoint', '')
+  localCustomOpenAIKey.value = getSetting('customOpenAIKey', '')
+  localCustomOpenAIModel.value = getSetting('customOpenAIModel', '')
+  hasChanges.value = false
 }
 </script>
 
@@ -178,7 +218,6 @@ const handleImgbedApiUrlChange = () => {
               v-model:value="localGeminiApiKey"
               type="password"
               placeholder="输入你的 Gemini API Key"
-              @change="handleGeminiApiKeyChange"
               class="w-full"
             />
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -200,7 +239,6 @@ const handleImgbedApiUrlChange = () => {
             <a-input
               v-model:value="localGeminiApiUrl"
               placeholder="https://generativelanguage.googleapis.com"
-              @change="handleGeminiApiUrlChange"
               class="w-full"
             />
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -210,11 +248,7 @@ const handleImgbedApiUrlChange = () => {
 
           <div>
             <label class="block text-sm font-medium dark:text-white mb-2">语言偏好：</label>
-            <a-select
-              v-model:value="localGeminiLanguage"
-              @change="handleGeminiLanguageChange"
-              class="w-full"
-            >
+            <a-select v-model:value="localGeminiLanguage" class="w-full">
               <a-select-option value="English">English</a-select-option>
               <a-select-option value="Chinese">中文</a-select-option>
             </a-select>
@@ -223,11 +257,7 @@ const handleImgbedApiUrlChange = () => {
 
           <div>
             <label class="block text-sm font-medium dark:text-white mb-2">模型选择：</label>
-            <a-select
-              v-model:value="localGeminiModel"
-              @change="handleGeminiModelChange"
-              class="w-full"
-            >
+            <a-select v-model:value="localGeminiModel" class="w-full">
               <a-select-option value="gemini-3-pro-preview">Gemini 3 Pro Preview</a-select-option>
               <a-select-option value="gemini-robotics-er-1.5-preview">
                 Gemini Robotics (对象检测)
@@ -254,7 +284,7 @@ const handleImgbedApiUrlChange = () => {
               使用兼容 OpenAI API 的第三方服务（如 OpenAI、Azure OpenAI、本地部署等）
             </p>
           </div>
-          <a-switch v-model:checked="localUseCustomOpenAI" @change="handleUseCustomOpenAIChange" />
+          <a-switch v-model:checked="localUseCustomOpenAI" />
         </div>
 
         <div v-if="localUseCustomOpenAI" class="space-y-3 pl-4 border-l-2 border-blue-200">
@@ -263,7 +293,6 @@ const handleImgbedApiUrlChange = () => {
             <a-input
               v-model:value="localCustomOpenAIEndpoint"
               placeholder="https://api.openai.com/v1"
-              @change="handleCustomOpenAIEndpointChange"
               class="w-full"
             />
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">OpenAI 兼容的 API 端点地址</p>
@@ -275,7 +304,6 @@ const handleImgbedApiUrlChange = () => {
               v-model:value="localCustomOpenAIKey"
               type="password"
               placeholder="输入 API Key"
-              @change="handleCustomOpenAIKeyChange"
               class="w-full"
             />
           </div>
@@ -285,7 +313,6 @@ const handleImgbedApiUrlChange = () => {
             <a-input
               v-model:value="localCustomOpenAIModel"
               placeholder="gpt-4o-mini"
-              @change="handleCustomOpenAIModelChange"
               class="w-full"
             />
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -295,30 +322,19 @@ const handleImgbedApiUrlChange = () => {
         </div>
       </div>
 
-      <!-- Imgbed Configuration -->
-      <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
-        <h3 class="text-md font-medium dark:text-white">Imgbed API</h3>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-sm font-medium dark:text-white mb-2">API URL:</label>
-            <a-input
-              v-model:value="localImgbedApiUrl"
-              placeholder="Enter your Imgbed API URL"
-              @change="handleImgbedApiUrlChange"
-              class="w-full"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium dark:text-white mb-2">Token:</label>
-            <a-input
-              v-model:value="localImgbedToken"
-              type="password"
-              placeholder="Enter your Imgbed token"
-              @change="handleImgbedTokenChange"
-              class="w-full"
-            />
-          </div>
-        </div>
+      <!-- Action Buttons -->
+      <div
+        class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700"
+      >
+        <a-button @click="handleReset" :disabled="!hasChanges || isSaving">重置</a-button>
+        <a-button
+          type="primary"
+          @click="handleSave"
+          :loading="isSaving"
+          :disabled="!hasChanges || !isValidConfig"
+        >
+          保存配置
+        </a-button>
       </div>
     </div>
   </div>
