@@ -300,8 +300,9 @@ const cacheAllImages = async () => {
           // Check if already cached
           const isCached = await isImageCached(url)
           if (!isCached) {
-            // Cache the image
-            await cacheImage(url)
+            // Cache the image without triggering cache cleanup
+            const { imageCache } = await import('@/utils/imageCache')
+            await imageCache.cacheImage(url, false) // false = 不检查缓存限制
           }
           cachedCount.value++
         } catch (error) {
@@ -341,6 +342,18 @@ const cacheAllImages = async () => {
       message.info(`缓存已中断，已缓存 ${cachedCount.value} 个表情图片`)
     } else {
       message.success(`已缓存 ${cachedCount.value} 个表情图片`)
+
+      // 缓存完成后，执行一次缓存清理以确保不超出限制
+      console.log('[StatsPage] 缓存完成，执行缓存清理...')
+      try {
+        const { imageCache } = await import('@/utils/imageCache')
+        const cleanedCount = await imageCache.cleanupLRU(0.8) // 清理到 80% 容量
+        if (cleanedCount > 0) {
+          console.log(`[StatsPage] 清理了 ${cleanedCount} 个旧缓存项`)
+        }
+      } catch (cleanupError) {
+        console.warn('[StatsPage] 缓存清理失败：', cleanupError)
+      }
     }
     await refreshCacheStats()
   } catch (error: any) {
@@ -914,6 +927,16 @@ const parseDatabaseFile = async (
             <li>缓存会占用一定的浏览器存储空间</li>
 
             <li>建议在网络状况良好时执行一键缓存操作</li>
+
+            <li>
+              <strong>保护旧缓存：</strong>
+              缓存过程中不会清除已存在的缓存，只会添加新图片
+            </li>
+
+            <li>
+              <strong>智能清理：</strong>
+              缓存完成后会自动清理超出限制的旧缓存项（保留 80% 容量）
+            </li>
 
             <li>
               <strong>导出功能：</strong>
