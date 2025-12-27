@@ -191,7 +191,7 @@ async function injectMobilePicker() {
 }
 
 // Quick inserts available globally (store as plain keys without [!])
-const QUICK_INSERTS: string[] = [
+export const QUICK_INSERTS: string[] = [
   'info',
   'tip',
   'faq',
@@ -212,7 +212,7 @@ const QUICK_INSERTS: string[] = [
  * Insert text into the active editor used by the emoji picker / site.
  * Tries several selectors used by the site to find the textarea/contenteditable.
  */
-function insertIntoEditor(text: string) {
+export function insertIntoEditor(text: string) {
   // Prefer the focused element if it's a text input or contenteditable
   const active = document.activeElement as HTMLElement | null
 
@@ -301,7 +301,7 @@ function insertIntoEditor(text: string) {
   }
 }
 
-function createQuickInsertMenu(): HTMLElement {
+export function createQuickInsertMenu(): HTMLElement {
   const forceMobileMode = (cachedState.settings as any)?.forceMobileMode || false
 
   const menu = createE('div', {

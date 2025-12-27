@@ -4,9 +4,6 @@ import { DAEL } from './createEl'
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'
 import { requestSettingFromBackground } from './requestSetting'
-
-// 缓存子菜单注入设置状态
-let cachedSubmenuInjectorEnabled: boolean | null = null
 import { initOneClickAdd } from './oneClickAdd'
 import {
   showFloatingButton,
@@ -16,6 +13,9 @@ import {
 import { startReadTracker } from './readTracker'
 import { applyCustomCssFromCache } from './injectCustomCss'
 import { contentImageCache } from './contentImageCache'
+
+// 缓存子菜单注入设置状态
+let cachedSubmenuInjectorEnabled: boolean | null = null
 
 // 页面卸载时清理资源，防止内存泄漏
 window.addEventListener('beforeunload', () => {
@@ -336,6 +336,8 @@ export async function initializeEmojiFeature(
 
   // Check if floating button should be shown periodically
   setInterval(() => {
+    // 如果启用了子菜单注入，则不要显示浮动按钮
+    if (cachedSubmenuInjectorEnabled === true) return
     checkAndShowFloatingButton()
   }, 5000)
 

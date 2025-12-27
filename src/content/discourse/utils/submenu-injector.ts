@@ -4,13 +4,14 @@
  * 这种方式比持续观察 DOM 更节省 CPU
  */
 
-import { createE, DQS, DOA } from '../../utils/createEl'
+import { createE, DQS, DOA, DAEL } from '../../utils/createEl'
 import { showImageUploadDialog } from '../../utils/uploader'
 import { animateEnter, animateExit, ANIMATION_DURATION } from '../../utils/animation'
 import { autoReadAll, autoReadAllv2 } from '../../utils/autoReadReplies'
 import { notify } from '../../utils/notify'
 import { createAndShowIframeModal, createAndShowSideIframeModal } from '../../utils/iframe'
 import { ICONS } from '../../data/callout'
+import { createQuickInsertMenu } from '../../utils/injector'
 
 import { insertEmojiIntoEditor } from './editor'
 import { cachedState } from './ensure'
@@ -45,7 +46,7 @@ let isSubmenuAnimating = false
 function createMenuItem(
   text: string,
   emoji: string,
-  onClick: () => void,
+  onClick: (e: MouseEvent) => void,
   isChat: boolean = false
 ): HTMLElement {
   const li = createE('li', {
@@ -71,7 +72,7 @@ function createMenuItem(
 
   btn.appendChild(emojiSpan)
   btn.appendChild(labelSpan)
-  btn.addEventListener('click', onClick)
+  btn.addEventListener('click', onClick as any)
 
   li.appendChild(btn)
   return li
@@ -244,22 +245,83 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
     ul.appendChild(autoReadItem2)
   }
 
-  // 添加快捷 callout 按钮
-  const quickInserts = ['info', 'tip', 'warning', 'danger', 'note']
-  quickInserts.forEach(item => {
-    const displayLabel = item.charAt(0).toUpperCase() + item.slice(1)
-    const icon = ICONS[item]?.icon || '✳️'
+  // 添加快捷输入按钮
+  const quickInsertItem = createMenuItem(
+    '快捷输入',
+    '⎘',
+    (e: MouseEvent) => {
+      e.stopPropagation()
 
-    const calloutItem = createMenuItem(
-      `插入 ${displayLabel}`,
-      icon,
-      () => {
-        insertCalloutIntoEditor(item)
-      },
-      isChat
-    )
-    ul.appendChild(calloutItem)
-  })
+      const targetBtn = e.currentTarget as HTMLElement
+      const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
+      const isMobile = forceMobile || isChat
+      const menu = createQuickInsertMenu()
+
+      if (isMobile) {
+        let modalPortal = DQS('.modal-container') as HTMLElement | null
+        if (!modalPortal) {
+          modalPortal = createE('div', { class: 'modal-container' }) as HTMLElement
+          DOA(modalPortal)
+        }
+
+        // Clear previous content
+        modalPortal.innerHTML = ''
+
+        const backdrop = createE('div', { class: 'd-modal__backdrop' })
+        backdrop.addEventListener('click', () => {
+          if (modalPortal) modalPortal.innerHTML = ''
+        })
+
+        modalPortal.appendChild(menu)
+        modalPortal.appendChild(backdrop)
+      } else {
+        let portal = DQS('#d-menu-portals') as HTMLElement | null
+        if (!portal) {
+          portal = createE('div', { id: 'd-menu-portals' }) as HTMLDivElement
+          DOA(portal)
+        }
+
+        portal.appendChild(menu)
+
+        // Position relative to the menu item
+        const rect = targetBtn.getBoundingClientRect()
+        menu.style.position = 'fixed'
+        menu.style.zIndex = '1000001'
+
+        // 尝试放在右侧
+        let left = rect.right + 5
+        let top = rect.top
+
+        // 如果右侧空间不足，放左侧
+        if (left + 300 > window.innerWidth) {
+          left = Math.max(8, rect.left - 300 - 5)
+        }
+
+        // 如果底部空间不足，向上调整
+        const menuRect = menu.getBoundingClientRect()
+        if (top + menuRect.height > window.innerHeight) {
+          top = Math.max(5, window.innerHeight - menuRect.height - 5)
+        }
+
+        menu.style.top = `${top}px`
+        menu.style.left = `${left}px`
+
+        // 点击外部关闭
+        const removeMenu = (evt: Event) => {
+          if (!menu.contains(evt.target as Node)) {
+            if (menu.parentElement) menu.parentElement.removeChild(menu)
+            document.removeEventListener('click', removeMenu)
+          }
+        }
+
+        setTimeout(() => {
+          document.addEventListener('click', removeMenu)
+        }, 100)
+      }
+    },
+    isChat
+  )
+  ul.appendChild(quickInsertItem)
 
   // 从后端配置加载额外菜单项
   const backendUploadConfig = (cachedState.settings as any)?.uploadMenuItems || {}
@@ -335,43 +397,6 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
       )
       ul.appendChild(iframeItem)
     })
-  }
-}
-
-/**
- * 插入 callout 到编辑器
- */
-function insertCalloutIntoEditor(type: string) {
-  const active = document.activeElement as HTMLElement | null
-  const text = `>[!${type}]+\n`
-
-  // 尝试找到编辑器
-  const selectors = [
-    '.d-editor-textarea-wrapper textarea',
-    '.d-editor-textarea textarea',
-    'textarea.d-editor-input',
-    '.chat-composer__input'
-  ]
-
-  for (const sel of selectors) {
-    const el = document.querySelector(sel) as HTMLTextAreaElement | null
-    if (!el) continue
-
-    const start = el.selectionStart ?? el.value.length
-    const end = el.selectionEnd ?? start
-    const value = el.value
-    el.value = value.slice(0, start) + text + value.slice(end)
-    const pos = start + text.length
-
-    try {
-      el.setSelectionRange(pos, pos)
-    } catch {
-      // ignore
-    }
-
-    el.focus()
-    el.dispatchEvent(new Event('input', { bubbles: true }))
-    return
   }
 }
 
