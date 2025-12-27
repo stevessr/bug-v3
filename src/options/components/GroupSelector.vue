@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import type { EmojiGroup } from '@/types/type'
+import CachedImage from '@/components/CachedImage.vue'
 
 interface Props {
   modelValue: string
@@ -54,7 +55,7 @@ const _displayValue = computed(() => {
   >
     <a-select-option v-for="g in groups" :key="g.id" :value="g.id" :label="g.name">
       <div class="flex items-center">
-        <img
+        <CachedImage
           v-if="g.icon && (g.icon.startsWith('http') || g.icon.startsWith('data:'))"
           :src="g.icon"
           class="w-4 h-4 inline-block mr-2"

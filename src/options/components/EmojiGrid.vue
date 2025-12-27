@@ -8,6 +8,7 @@ import VirtualList from './VirtualList.vue'
 
 import { useEmojiImages } from '@/composables/useEmojiImages'
 import type { Emoji } from '@/types/type'
+import CachedImage from '@/components/CachedImage.vue'
 
 interface Props {
   emojis: Emoji[]
@@ -110,7 +111,7 @@ const emojiRows = computed(() => {
             <div
               class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
             >
-              <img
+              <CachedImage
                 :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
                 :alt="emoji.name"
                 class="w-full h-full object-cover"

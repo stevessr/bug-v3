@@ -6,6 +6,7 @@ import type { EmojiGroup, Emoji } from '../../types/type'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
+import CachedImage from '../../components/CachedImage.vue'
 
 import GroupSelector from './GroupSelector.vue'
 import CreateGroupModal from './CreateGroupModal.vue'
@@ -530,7 +531,7 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
               }"
               @click="handleEmojiClick(idx)"
             >
-              <img
+              <CachedImage
                 :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
                 :alt="emoji.name"
                 class="w-full h-full object-cover"

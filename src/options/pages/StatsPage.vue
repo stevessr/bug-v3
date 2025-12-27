@@ -18,6 +18,7 @@ import EmojiStats from '../components/EmojiStats.vue'
 import type { Emoji } from '@/types/type'
 import { getEmojiImageUrlSync, addCacheBustingParam } from '@/utils/imageUrlHelper'
 import { isImageCached } from '@/utils/imageCache'
+import CachedImage from '@/components/CachedImage.vue'
 
 const options = inject<OptionsInject>('options')!
 const { emojiStore, totalEmojis } = options
@@ -1151,7 +1152,7 @@ const parseDatabaseFile = async (
                   @click="setAsOriginal(groupIndex, itemIndex)"
                 >
                   <div class="relative">
-                    <img
+                    <CachedImage
                       :src="getEmojiImageUrlSync(item.emoji)"
                       :alt="item.emoji.name"
                       class="w-full h-24 object-contain rounded"

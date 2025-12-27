@@ -6,6 +6,7 @@ import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { generateBatchNames } from '@/utils/geminiService'
 import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
+import CachedImage from '@/components/CachedImage.vue'
 
 const props = defineProps({
   visible: {
@@ -368,14 +369,10 @@ onUnmounted(() => {
             <div class="flex items-start gap-3">
               <!-- Emoji Preview -->
               <div class="flex-shrink-0">
-                <img
-                  :data-src="getEmojiImageUrlSync(emoji)"
-                  :src="
-                    loadedImages.has(getEmojiImageUrlSync(emoji)) ? getEmojiImageUrlSync(emoji) : ''
-                  "
+                <CachedImage
+                  :src="getEmojiImageUrlSync(emoji)"
                   class="w-12 h-12 object-contain bg-white rounded"
                   loading="lazy"
-                  :ref="observeImage"
                   alt="emoji"
                 />
               </div>

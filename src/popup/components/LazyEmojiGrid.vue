@@ -3,6 +3,7 @@ import { toRefs, watch } from 'vue'
 
 import { useEmojiImages } from '@/composables/useEmojiImages'
 import type { Emoji } from '@/types/type'
+import CachedImage from '@/components/CachedImage.vue'
 
 const props = defineProps<{
   emojis: Emoji[]
@@ -134,12 +135,11 @@ const focusLastEmoji = () => {
           role="gridcell"
           tabindex="0"
         >
-          <a-image
+          <CachedImage
             :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
             :alt="emoji.name"
             class="w-full h-full object-cover"
             loading="lazy"
-            :preview="false"
           />
           <!-- Activity indicator for favorites -->
           <div

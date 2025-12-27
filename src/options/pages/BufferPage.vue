@@ -18,6 +18,7 @@ import {
 import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
+import CachedImage from '@/components/CachedImage.vue'
 import {
   CollaborativeUploadClient,
   type UploadProgress as CollabUploadProgress,
@@ -1390,7 +1391,7 @@ onBeforeUnmount(() => {
                 class="flex items-center justify-between p-2 bg-white dark:bg-gray-600 rounded border border-gray-200 dark:border-gray-500"
               >
                 <div class="flex items-center">
-                  <img
+                  <CachedImage
                     v-if="
                       filterGroup.icon &&
                       (filterGroup.icon.startsWith('http') || filterGroup.icon.startsWith('data:'))
@@ -1812,7 +1813,7 @@ onBeforeUnmount(() => {
                 }"
                 @click="handleEmojiClick(idx)"
               >
-                <img
+                <CachedImage
                   :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
                   :alt="emoji.name"
                   class="w-full h-full object-cover"

@@ -4,6 +4,7 @@ import { DownOutlined, DeleteOutlined, RobotOutlined } from '@ant-design/icons-v
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
+import CachedImage from '../../components/CachedImage.vue'
 
 import GeminiNamingModal from './GeminiNamingModal.vue'
 
@@ -638,7 +639,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                         <a-menu-item key="ungrouped" value="ungrouped">📝 未分组表情</a-menu-item>
                         <a-menu-divider />
                         <a-menu-item v-for="g in groups" :key="g.id" :value="g.id" :title="g.id">
-                          <a-image
+                          <CachedImage
                             v-if="g.icon && g.icon.startsWith('https://')"
                             :src="g.icon"
                             class="inline-block mr-1"
@@ -650,7 +651,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                       </a-menu>
                     </template>
                     <a-button class="dark:text-white dark:bg-gray-800" title="选择表情所属分组">
-                      <a-image
+                      <CachedImage
                         v-if="selectedGroupIcon && selectedGroupIcon.startsWith('https://')"
                         :src="selectedGroupIcon"
                         class="inline-block mr-1"

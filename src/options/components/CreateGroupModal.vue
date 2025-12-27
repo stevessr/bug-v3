@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
 
+import CachedImage from '@/components/CachedImage.vue'
+
 interface Props {
   visible: boolean
 }
@@ -99,7 +101,7 @@ const imagePreviewUrl = computed(() => {
         <div v-if="groupIcon.trim()" class="mt-2 flex items-center gap-3">
           <div class="text-sm text-gray-600 dark:text-gray-400">预览：</div>
           <div class="flex items-center gap-2">
-            <img
+            <CachedImage
               v-if="isImageUrl(groupIcon)"
               :src="imagePreviewUrl"
               alt="图标预览"

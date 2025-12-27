@@ -9,6 +9,7 @@ import {
   getEmojiImageUrlSync,
   preloadImages
 } from '../../utils/imageUrlHelper'
+import CachedImage from '../../components/CachedImage.vue'
 
 defineEmits(['remove', 'edit'])
 
@@ -152,7 +153,7 @@ onMounted(() => {
                 <span class="favorite-star">⭐</span>
               </template>
               <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
-                <img
+                <CachedImage
                   :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
                   :alt="emoji.name"
                   class="w-full h-full object-cover"
