@@ -95,8 +95,11 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
 
   /**
    * Update image sources when emojis change
+   * 优化：添加 grace period 防止过早释放正在使用的 Blob URL
    */
   let updateDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  const pendingRevocations = new Map<string, ReturnType<typeof setTimeout>>()
+
   const updateImageSources = async () => {
     // Debounce to avoid frequent updates
     if (updateDebounceTimer) {
@@ -107,11 +110,28 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
       const emojiList = emojis()
       const currentEmojiIds = new Set(emojiList.map(e => e.id))
 
-      // Clean up old blob URLs that are no longer needed
+      // Schedule blob URL revocation with grace period (500ms)
+      // This prevents "broken image" icons during rapid filtering
       for (const [emojiId, blobUrl] of imageSources.value) {
         if (!currentEmojiIds.has(emojiId) && blobUrl.startsWith('blob:')) {
-          blobUrls.value.delete(blobUrl)
-          URL.revokeObjectURL(blobUrl)
+          // Cancel any existing pending revocation for this URL
+          const existing = pendingRevocations.get(blobUrl)
+          if (existing) {
+            clearTimeout(existing)
+          }
+
+          // Schedule revocation after grace period
+          const timer = setTimeout(() => {
+            try {
+              URL.revokeObjectURL(blobUrl)
+              blobUrls.value.delete(blobUrl)
+              pendingRevocations.delete(blobUrl)
+            } catch (error) {
+              console.warn('Failed to revoke blob URL:', blobUrl, error)
+            }
+          }, 500) // 500ms grace period
+
+          pendingRevocations.set(blobUrl, timer)
         }
       }
 
@@ -121,11 +141,23 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
           const existing = imageSources.value.get(emoji.id)
           // Reuse existing URL if it's not a blob URL
           if (existing && !existing.startsWith('blob:')) {
+            // Cancel pending revocation if emoji reappears
+            const pending = pendingRevocations.get(existing)
+            if (pending) {
+              clearTimeout(pending)
+              pendingRevocations.delete(existing)
+            }
             return [emoji.id, existing] as const
           }
           const src = await getImageSrc(emoji)
           if (src.startsWith('blob:')) {
             blobUrls.value.add(src)
+            // Cancel any pending revocation for this URL
+            const pending = pendingRevocations.get(src)
+            if (pending) {
+              clearTimeout(pending)
+              pendingRevocations.delete(src)
+            }
           }
           return [emoji.id, src] as const
         })
@@ -170,7 +202,13 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
       updateDebounceTimer = null
     }
 
-    // Revoke all blob URLs
+    // Clear all pending revocations
+    for (const timer of pendingRevocations.values()) {
+      clearTimeout(timer)
+    }
+    pendingRevocations.clear()
+
+    // Revoke all blob URLs immediately
     for (const blobUrl of blobUrls.value) {
       try {
         URL.revokeObjectURL(blobUrl)

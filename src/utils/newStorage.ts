@@ -70,12 +70,26 @@ function getChromeAPI(): typeof chrome | null {
 
 // --- Helper function to ensure data is serializable ---
 // Use toRaw() to strip Vue reactive proxy, then recursively process
-function ensureSerializable<T>(data: T): T {
+/**
+ * 优化：缓存已知安全的数据类型，避免重复序列化检查
+ */
+const SAFE_TYPES = new Set(['string', 'number', 'boolean', 'undefined'])
+
+/**
+ * 优化版本：减少递归深度，针对 EmojiGroup 结构优化
+ */
+function ensureSerializable<T>(data: T, depth = 0): T {
+  // 防止无限递归
+  if (depth > 10) {
+    console.warn('[ensureSerializable] Max depth reached, returning as-is')
+    return data
+  }
+
   if (data === null || data === undefined) return data
 
-  // 基础类型直接返回
+  // 基础类型直接返回（最常见的情况）
   const type = typeof data
-  if (type === 'string' || type === 'number' || type === 'boolean') {
+  if (SAFE_TYPES.has(type)) {
     return data
   }
 
@@ -85,27 +99,61 @@ function ensureSerializable<T>(data: T): T {
 
     // Handle Set - convert to array
     if (raw instanceof Set) {
-      return Array.from(raw).map(item => ensureSerializable(item)) as T
+      return Array.from(raw).map(item => ensureSerializable(item, depth + 1)) as T
     }
 
     // Handle Map - convert to array of [key, value] pairs
     if (raw instanceof Map) {
       return Array.from(raw.entries()).map(([k, v]) => [
-        ensureSerializable(k),
-        ensureSerializable(v)
+        ensureSerializable(k, depth + 1),
+        ensureSerializable(v, depth + 1)
       ]) as T
     }
 
-    // For arrays with reactive elements, we need to process recursively
+    // 优化：针对数组进行浅检查
+    // 如果数组中所有元素都是基本类型，直接返回
     if (Array.isArray(raw)) {
-      return raw.map(item => ensureSerializable(item)) as T
+      // 快速路径：检查第一个元素
+      if (raw.length > 0) {
+        const firstType = typeof raw[0]
+        if (SAFE_TYPES.has(firstType)) {
+          // 假设同质数组（常见于 tags 数组）
+          return raw as T
+        }
+      }
+      // 慢速路径：递归处理
+      return raw.map(item => ensureSerializable(item, depth + 1)) as T
     }
 
-    // For plain objects, recursively process to handle nested reactivity
+    // 优化：对于已知的 Emoji 对象结构，使用快速路径
     if (typeof raw === 'object' && raw !== null) {
+      const obj = raw as Record<string, unknown>
+
+      // 快速检测是否为 Emoji 对象（有 id 和 url 字段）
+      if ('id' in obj && 'url' in obj && depth <= 2) {
+        // 已知 Emoji 对象只有浅层嵌套，不需要深度递归
+        const result: Record<string, unknown> = {}
+        for (const key of Object.keys(obj)) {
+          const value = obj[key]
+          const valueType = typeof value
+          if (SAFE_TYPES.has(valueType) || value === null) {
+            result[key] = value
+          } else if (Array.isArray(value)) {
+            // tags 数组通常是字符串数组
+            result[key] = value.map(item =>
+              typeof item === 'string' ? item : ensureSerializable(item, depth + 1)
+            )
+          } else {
+            result[key] = ensureSerializable(value, depth + 1)
+          }
+        }
+        return result as T
+      }
+
+      // 通用对象处理
       const result: Record<string, unknown> = {}
-      for (const key of Object.keys(raw)) {
-        result[key] = ensureSerializable((raw as Record<string, unknown>)[key])
+      for (const key of Object.keys(obj)) {
+        result[key] = ensureSerializable(obj[key], depth + 1)
       }
       return result as T
     }

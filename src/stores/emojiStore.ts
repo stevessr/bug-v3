@@ -25,6 +25,8 @@ const SAVE_DEBOUNCE_MS = 100
 
 export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- State ---
+  // TODO: Consider using shallowRef for groups after thorough testing
+  // shallowRef would reduce memory overhead but requires careful reactivity management
   const groups = ref<EmojiGroup[]>([])
   const archivedGroups = ref<EmojiGroup[]>([]) // 已归档的分组
   const settings = ref<AppSettings>(defaultSettings)
@@ -215,7 +217,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
     let emojis = activeGroup.value.emojis || []
 
-    // 标签筛选
+    // 标签筛选 - 优化：使用 Set 交集
     if (selectedTags.value.length > 0) {
       const selectedTagSet = new Set(selectedTags.value)
       emojis = emojis.filter(
@@ -223,13 +225,31 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       )
     }
 
-    // 搜索筛选 - 使用优化的搜索
+    // 搜索筛选 - 优化：使用 searchIndexCache
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase().trim()
-      if (query) {
+      if (query && searchIndexValid.value) {
+        // 使用搜索索引快速查找
+        const matchingEmojiIds = searchIndexCache.value.get(query)
+        if (matchingEmojiIds) {
+          // 索引命中：直接使用 Set 进行 O(1) 查找
+          emojis = emojis.filter(emoji => emoji && matchingEmojiIds.has(emoji.id))
+        } else {
+          // 索引未命中：尝试部分匹配
+          // 收集所有包含查询字符串的键对应的 emoji IDs
+          const partialMatches = new Set<string>()
+          for (const [indexKey, emojiIds] of searchIndexCache.value) {
+            if (indexKey.includes(query)) {
+              emojiIds.forEach(id => partialMatches.add(id))
+            }
+          }
+          emojis = emojis.filter(emoji => emoji && partialMatches.has(emoji.id))
+        }
+      } else if (query) {
+        // 索引未准备好时的降级方案：使用原始过滤
         emojis = emojis.filter(emoji => {
           if (!emoji) return false
-          // 搜索名称 - 使用 includes 进行模糊匹配
+          // 搜索名称
           if (emoji.name && emoji.name.toLowerCase().includes(query)) {
             return true
           }
@@ -635,61 +655,73 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   }
   // No lazy-load helpers; all groups remain fully loaded
 
+  // 存储操作队列，确保顺序执行
+  let saveQueue: Promise<void> = Promise.resolve()
+  const enqueueSave = (operation: () => Promise<void>): Promise<void> => {
+    saveQueue = saveQueue.then(operation).catch(error => {
+      console.error('[EmojiStore] Queue operation failed:', error)
+    })
+    return saveQueue
+  }
+
   const saveData = async () => {
-    // In read-only mode, block full saves entirely
-    if (isReadOnlyMode.value) {
-      console.log('[EmojiStore] SaveData blocked - read-only mode active')
-      return
-    }
-
-    if (isLoading.value || isSaving.value || batchDepth > 0) {
-      console.log(
-        '[EmojiStore] SaveData deferred - loading:',
-        isLoading.value,
-        'saving:',
-        isSaving.value,
-        'batch:',
-        batchDepth
-      )
-      pendingSave.value = true
-      return
-    }
-
-    // CRITICAL: Prevent saving empty groups if we haven't loaded data successfully yet
-    if (groups.value.length === 0 && !hasLoadedOnce.value) {
-      console.warn(
-        '[EmojiStore] SaveData blocked - groups array is empty and no successful load has occurred yet.'
-      )
-      return
-    }
-
-    console.log('[EmojiStore] Starting saveData - saving all groups')
-
-    isSaving.value = true
-    try {
-      await nextTick()
-
-      // 并行保存所有数据：索引、分组、设置和收藏
-      const index = groups.value.map((g, order) => ({ id: g.id, order }))
-
-      await Promise.all([
-        newStorageHelpers.setEmojiGroupIndex(index),
-        ...groups.value.map(group => newStorageHelpers.setEmojiGroup(group.id, group)),
-        newStorageHelpers.setSettings({ ...settings.value, lastModified: Date.now() }),
-        newStorageHelpers.setFavorites(Array.from(favorites.value))
-      ])
-
-      console.log('[EmojiStore] SaveData completed successfully')
-    } catch (error) {
-      const e = error as Error
-      console.error('[EmojiStore] Failed to save data:', e?.stack || e)
-    } finally {
-      isSaving.value = false
-      if (pendingSave.value) {
-        pendingSave.value = false
-        setTimeout(() => saveData(), SAVE_DEBOUNCE_MS)
+    // 使用队列确保保存操作顺序执行
+    return enqueueSave(async () => {
+      // In read-only mode, block full saves entirely
+      if (isReadOnlyMode.value) {
+        console.log('[EmojiStore] SaveData blocked - read-only mode active')
+        return
       }
-    }
+
+      if (isLoading.value || isSaving.value || batchDepth > 0) {
+        console.log(
+          '[EmojiStore] SaveData deferred - loading:',
+          isLoading.value,
+          'saving:',
+          isSaving.value,
+          'batch:',
+          batchDepth
+        )
+        pendingSave.value = true
+        return
+      }
+
+      // CRITICAL: Prevent saving empty groups if we haven't loaded data successfully yet
+      if (groups.value.length === 0 && !hasLoadedOnce.value) {
+        console.warn(
+          '[EmojiStore] SaveData blocked - groups array is empty and no successful load has occurred yet.'
+        )
+        return
+      }
+
+      console.log('[EmojiStore] Starting saveData - saving all groups')
+
+      isSaving.value = true
+      try {
+        await nextTick()
+
+        // 并行保存所有数据：索引、分组、设置和收藏
+        const index = groups.value.map((g, order) => ({ id: g.id, order }))
+
+        await Promise.all([
+          newStorageHelpers.setEmojiGroupIndex(index),
+          ...groups.value.map(group => newStorageHelpers.setEmojiGroup(group.id, group)),
+          newStorageHelpers.setSettings({ ...settings.value, lastModified: Date.now() }),
+          newStorageHelpers.setFavorites(Array.from(favorites.value))
+        ])
+
+        console.log('[EmojiStore] SaveData completed successfully')
+      } catch (error) {
+        const e = error as Error
+        console.error('[EmojiStore] Failed to save data:', e?.stack || e)
+      } finally {
+        isSaving.value = false
+        if (pendingSave.value) {
+          pendingSave.value = false
+          setTimeout(() => saveData(), SAVE_DEBOUNCE_MS)
+        }
+      }
+    }) // 关闭 enqueueSave
   }
 
   // Assign saveData to forward reference for sub-stores
