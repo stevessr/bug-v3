@@ -1264,12 +1264,14 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         if (!changedKeys.length) return
 
         // Only consider changes to settings, favorites, group index or individual group keys
+        // Also check for legacy emojiGroups key for backward compatibility
         const isRelevant = changedKeys.some(
           k =>
             k === STORAGE_KEYS.SETTINGS ||
             k === STORAGE_KEYS.FAVORITES ||
             k === STORAGE_KEYS.GROUP_INDEX ||
-            k.startsWith(STORAGE_KEYS.GROUP_PREFIX)
+            k.startsWith(STORAGE_KEYS.GROUP_PREFIX) ||
+            k === 'emojiGroups' // Legacy support
         )
 
         if (!isRelevant) {
@@ -1318,9 +1320,37 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
               capturedKeys
             )
 
+            // Special handling for legacy emojiGroups key
+            if (capturedKeys.includes('emojiGroups')) {
+              const change = capturedChanges['emojiGroups']
+              const legacyGroups = change && change.newValue ? change.newValue : null
+              if (Array.isArray(legacyGroups)) {
+                console.log('[EmojiStore] Processing legacy emojiGroups change')
+                // Find favorites group from legacy data
+                const legacyFavorites = legacyGroups.find((g: any) => g.id === 'favorites')
+                if (legacyFavorites) {
+                  const idx = groups.value.findIndex(g => g.id === 'favorites')
+                  if (idx !== -1) {
+                    // Update existing favorites group
+                    const updatedGroups = [...groups.value]
+                    updatedGroups[idx] = legacyFavorites
+                    groups.value = updatedGroups
+                    console.log('[EmojiStore] Updated favorites group from legacy data')
+                  } else {
+                    // Add new favorites group
+                    groups.value = [...groups.value, legacyFavorites]
+                    console.log('[EmojiStore] Added favorites group from legacy data')
+                  }
+                }
+              }
+            }
+
             // Process each relevant key individually to avoid full reloads
             for (const k of capturedKeys) {
               try {
+                // Skip legacy key as it's handled above
+                if (k === 'emojiGroups') continue
+
                 // Group-level change
                 if (k.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
                   const groupId = k.replace(STORAGE_KEYS.GROUP_PREFIX, '')

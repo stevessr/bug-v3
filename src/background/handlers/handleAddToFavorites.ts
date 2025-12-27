@@ -61,6 +61,22 @@ export async function handleAddToFavorites(
     // Persist via newStorageHelpers which updates group index and individual groups
     await newStorageHelpers.setAllEmojiGroups(groups)
 
+    // 确保 localStorage 也被更新 - 直接操作 localStorage 作为备用
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(
+          'emojiGroups',
+          JSON.stringify({
+            data: groups,
+            timestamp: Date.now()
+          })
+        )
+        console.log('[handleAddToFavorites] localStorage updated directly')
+      }
+    } catch (e) {
+      console.warn('[handleAddToFavorites] Failed to update localStorage directly:', e)
+    }
+
     // Notify content scripts by updating chrome.storage (legacy compatibility)
     const chromeAPI = getChromeAPI()
     if (chromeAPI && chromeAPI.storage && chromeAPI.storage.local) {
@@ -71,9 +87,9 @@ export async function handleAddToFavorites(
             else resolve()
           })
         })
+        console.log('[handleAddToFavorites] chrome.storage.local updated')
       } catch (_e) {
-        // ignored intentionally
-        void _e
+        console.warn('[handleAddToFavorites] Failed to update chrome.storage.local:', _e)
       }
     }
 
