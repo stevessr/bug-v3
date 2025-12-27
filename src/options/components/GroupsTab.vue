@@ -3,6 +3,7 @@ import { computed, ref, reactive, onMounted, onUnmounted, inject, type PropType 
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { normalizeImageUrl } from '../../utils/isImageUrl'
+import CachedImage from '../../components/CachedImage.vue'
 import ViewGroupDetailModal from '../modals/ViewGroupDetailModal.vue'
 import BatchRenameModal from '../modals/BatchRenameModal.vue'
 
@@ -486,7 +487,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                     <div v-else class="w-6 text-yellow-500">⭐</div>
                     <div class="text-lg">
                       <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
-                        <img
+                        <CachedImage
                           :src="normalizeImageUrl(group.icon)"
                           alt="group icon"
                           class="w-6 h-6 object-contain rounded"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import CachedImage from '@/components/CachedImage.vue'
 import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -359,7 +360,7 @@ onMounted(() => {
                 :key="emoji.id"
                 class="relative group/emoji aspect-square"
               >
-                <img
+                <CachedImage
                   :src="emoji.displayUrl || emoji.url"
                   :alt="emoji.name"
                   :title="emoji.name"

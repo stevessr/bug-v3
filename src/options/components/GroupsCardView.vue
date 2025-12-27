@@ -3,6 +3,7 @@ import { computed, type PropType, ref } from 'vue'
 
 import { normalizeImageUrl } from '../../utils/isImageUrl'
 import { useEmojiStore } from '../../stores/emojiStore'
+import CachedImage from '../../components/CachedImage.vue'
 
 type Group = {
   id: string
@@ -303,7 +304,7 @@ const onTouchCancel = () => {
 
           <div class="flex items-center justify-center bg-gray-50 dark:bg-gray-700 h-20">
             <div class="w-full flex items-center justify-center p-2">
-              <a-image
+              <CachedImage
                 v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))"
                 :src="normalizeImageUrl(group.icon)"
                 alt="icon"

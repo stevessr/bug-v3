@@ -1,10 +1,57 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import LazyEmojiGrid from '../popup/components/LazyEmojiGrid.vue'
 import { usePopup } from '../popup/usePopup'
+import { useEmojiImages } from '../composables/useEmojiImages'
 
 const { emojiStore, showCopyToast, selectEmoji, openOptions } = usePopup({ manageUrl: false })
+
+// 使用 useEmojiImages 处理搜索结果的图片缓存
+const { imageSources: searchImageSources, getImageSrcSync } = useEmojiImages(
+  () => filteredEmojis.value,
+  { preload: true, preloadBatchSize: 5 }
+)
+
+// 分组图标缓存
+const groupIconSources = ref<Map<string, string>>(new Map())
+
+// 获取搜索结果中表情的图片 URL（优先使用缓存）
+const getSearchEmojiSrc = (emoji: any): string => {
+  return searchImageSources.value.get(emoji.id) || getImageSrcSync(emoji)
+}
+
+// 获取分组图标 URL（优先使用缓存）
+const getGroupIconSrc = (icon: string, groupId: string): string => {
+  return groupIconSources.value.get(groupId) || icon
+}
+
+// 异步加载分组图标缓存
+watch(
+  () => emojiStore.sortedGroups,
+  async (groups) => {
+    if (!emojiStore.settings.useIndexedDBForImages) return
+
+    const { getCachedImage } = await import('../utils/imageCache')
+    const newMap = new Map<string, string>()
+
+    for (const group of groups) {
+      if (group.icon && (group.icon.startsWith('http') || group.icon.startsWith('data:'))) {
+        try {
+          const cachedUrl = await getCachedImage(group.icon)
+          if (cachedUrl) {
+            newMap.set(group.id, cachedUrl)
+          }
+        } catch {
+          // 缓存获取失败，使用原始 URL
+        }
+      }
+    }
+
+    groupIconSources.value = newMap
+  },
+  { immediate: true }
+)
 
 const setActiveHandler = (id: string) => {
   emojiStore.activeGroupId = id
@@ -179,7 +226,7 @@ const handleSearch = () => {
           >
             <img
               v-if="g.icon.startsWith('http') || g.icon.startsWith('data:')"
-              :src="g.icon"
+              :src="getGroupIconSrc(g.icon, g.id)"
               class="w-4 h-4 inline-block mr-2"
             />
             <span v-else class="inline-block mr-2">{{ g.icon }}</span>
@@ -216,7 +263,7 @@ const handleSearch = () => {
               >
                 <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
                   <img
-                    :src="emoji.displayUrl || emoji.url"
+                    :src="getSearchEmojiSrc(emoji)"
                     :alt="emoji.name"
                     class="w-full h-full object-cover"
                     loading="lazy"

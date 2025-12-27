@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import ViewGroupDetailModal from '@/options/modals/ViewGroupDetailModal.vue'
+import CachedImage from '@/components/CachedImage.vue'
 
 const emojiStore = useEmojiStore()
 
@@ -81,7 +82,7 @@ onMounted(async () => {
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               <template v-if="isImageUrl(normalizeImageUrl(group.icon))">
-                <img
+                <CachedImage
                   :src="normalizeImageUrl(group.icon)"
                   alt="group icon"
                   class="w-8 h-8 object-contain rounded"
@@ -101,7 +102,7 @@ onMounted(async () => {
             v-if="!expandedGroups.has(group.id) && group.emojis && group.emojis.length > 0"
             class="flex flex-wrap gap-1 mb-3 max-h-24 overflow-hidden"
           >
-            <img
+            <CachedImage
               v-for="emoji in group.emojis.slice(0, 12)"
               :key="emoji.id"
               :src="emoji.displayUrl || emoji.url"
@@ -129,7 +130,7 @@ onMounted(async () => {
                 :key="emoji.id"
                 class="relative group/emoji aspect-square"
               >
-                <img
+                <CachedImage
                   :src="emoji.displayUrl || emoji.url"
                   :alt="emoji.name"
                   :title="emoji.name"

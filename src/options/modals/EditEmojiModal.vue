@@ -12,6 +12,7 @@ import { useEmojiStore } from '../../stores/emojiStore'
 import type { Emoji } from '../../types/type'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 import { getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
+import CachedImage from '../../components/CachedImage.vue'
 
 import GeminiNamingModal from './GeminiNamingModal.vue'
 
@@ -506,7 +507,7 @@ const handleSubmit = () => {
                           :key="group.id"
                           :value="group.id"
                         >
-                          <a-image
+                          <CachedImage
                             v-if="group.icon.startsWith('https://')"
                             :src="group.icon"
                             class="inline-block mr-1"
@@ -518,7 +519,7 @@ const handleSubmit = () => {
                       </a-menu>
                     </template>
                     <a-button class="dark:text-white dark:bg-gray-800" title="选择表情所属分组">
-                      <a-image
+                      <CachedImage
                         v-if="editSelectedGroupIcon.startsWith('https://')"
                         :src="editSelectedGroupIcon"
                         class="inline-block mr-1"

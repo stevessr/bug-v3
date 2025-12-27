@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { defineProps, toRefs, type Ref } from 'vue'
+import { defineProps, toRefs, type Ref, ref, watch } from 'vue'
 
 import type { EmojiGroup } from '@/types/type'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
+import { useEmojiStore } from '@/stores/emojiStore'
 
 const props = defineProps<{
   groups: EmojiGroup[]
@@ -16,6 +17,45 @@ const { groups, activeGroupId, setActive } = toRefs(props) as {
   activeGroupId: Ref<string | null>
   setActive: Ref<(id: string) => void>
 }
+
+const emojiStore = useEmojiStore()
+
+// 分组图标缓存
+const groupIconSources = ref<Map<string, string>>(new Map())
+
+// 获取分组图标 URL（优先使用缓存）
+const getGroupIconSrc = (icon: string, groupId: string): string => {
+  const normalizedIcon = normalizeImageUrl(icon)
+  return groupIconSources.value.get(groupId) || normalizedIcon
+}
+
+// 异步加载分组图标缓存
+watch(
+  () => props.groups,
+  async (groupList) => {
+    if (!emojiStore.settings.useIndexedDBForImages) return
+
+    const { getCachedImage } = await import('@/utils/imageCache')
+    const newMap = new Map<string, string>()
+
+    for (const group of groupList) {
+      const normalizedIcon = normalizeImageUrl(group.icon)
+      if (normalizedIcon && isImageUrl(normalizedIcon)) {
+        try {
+          const cachedUrl = await getCachedImage(normalizedIcon)
+          if (cachedUrl) {
+            newMap.set(group.id, cachedUrl)
+          }
+        } catch {
+          // 缓存获取失败，使用原始 URL
+        }
+      }
+    }
+
+    groupIconSources.value = newMap
+  },
+  { immediate: true }
+)
 
 // 键盘导航功能
 const handleKeyNavigation = (event: KeyboardEvent, index: number) => {
@@ -103,7 +143,7 @@ const focusLastTab = () => {
       <span class="mr-1">
         <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
           <img
-            :src="normalizeImageUrl(group.icon)"
+            :src="getGroupIconSrc(group.icon, group.id)"
             :alt="group.name ? `${group.name} 图标` : '分组图标'"
             class="w-4 h-4 mobile:w-5 mobile:h-5 object-contain inline-block"
           />

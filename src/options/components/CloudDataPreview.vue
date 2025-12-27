@@ -5,6 +5,8 @@ import { CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icon
 import type { OptionsInject } from '../types'
 import { formatDate } from '../pages/utils/settings'
 
+import CachedImage from '@/components/CachedImage.vue'
+
 const props = defineProps<{
   options: OptionsInject
   isConfigured: boolean
@@ -341,7 +343,7 @@ defineExpose({
               <div
                 class="w-12 h-12 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden"
               >
-                <img
+                <CachedImage
                   v-if="emoji.displayUrl || emoji.url"
                   :src="emoji.displayUrl || emoji.url"
                   :alt="emoji.name || `emoji-${index}`"
@@ -351,7 +353,7 @@ defineExpose({
               </div>
               <div class="flex-1 min-w-0">
                 <div class="font-medium text-gray-800 dark:text-white truncate">
-                  {{ emoji.name || `表情 ${index + 1}` }}
+                  {{ emoji.name || `表情 ${(index as number) + 1}` }}
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400 break-all">
                   {{ emoji.url || emoji.displayUrl || '无 URL' }}

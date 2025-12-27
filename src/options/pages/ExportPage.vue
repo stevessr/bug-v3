@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import CachedImage from '@/components/CachedImage.vue'
 import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -404,7 +405,7 @@ onMounted(async () => {
                     }"
                     @click="toggleEmojiSelection(group.id, emoji.id)"
                   >
-                    <img
+                    <CachedImage
                       :src="emoji.displayUrl || emoji.url"
                       :alt="emoji.name"
                       :title="emoji.name"

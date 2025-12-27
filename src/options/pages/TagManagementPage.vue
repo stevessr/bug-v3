@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import CachedImage from '@/components/CachedImage.vue'
 import {
   TagOutlined,
   DeleteOutlined,
@@ -277,7 +278,7 @@ const handleTagClick = (tagName: string) => {
               class="relative group"
               :title="`${item.emoji.name} (${item.group})`"
             >
-              <img
+              <CachedImage
                 :src="item.emoji.displayUrl || item.emoji.url"
                 :alt="item.emoji.name"
                 class="w-8 h-8 object-cover rounded border border-gray-200 dark:border-gray-600"

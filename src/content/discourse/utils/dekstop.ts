@@ -96,8 +96,13 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
           width: 18px;
           height: 18px;
           object-fit: contain;
-        `
+        `,
+        attrs: {
+          'data-original-url': iconVal
+        }
       }) as HTMLImageElement
+      // 异步替换为缓存版本
+      replaceWithCachedImage(img, iconVal)
       navButton.appendChild(img)
     } else {
       navButton.textContent = String(iconVal)
