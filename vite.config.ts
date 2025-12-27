@@ -103,7 +103,7 @@ export default defineConfig(({ mode }) => {
                 return 'antd'
               }
               if (id.includes('marked') || id.includes('dompurify')) {
-                return 'utils'
+                return 'markdown-utils'
               }
               if (id.includes('@ant-design/icons')) {
                 return 'antd-icons'
