@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "exportDate": "2025-12-27T15:18:27.967Z",
-  "totalGroups": 120,
+  "exportDate": "2025-12-27T15:26:38.368Z",
+  "totalGroups": 121,
   "includeArchived": true,
   "groups": [
     {
@@ -339,6 +339,14 @@
       "order": 34,
       "emojiCount": 532,
       "isArchived": true
+    },
+    {
+      "id": "group-1766849153193",
+      "name": "特蕾西娅",
+      "icon": "https://linux.do/uploads/default/original/4X/a/4/e/a4ee0bb5fead0af527c23ee6123f3f3d5b80fc16.webp",
+      "order": 34,
+      "emojiCount": 105,
+      "isArchived": false
     },
     {
       "id": "group-1758720673759",
