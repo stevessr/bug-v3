@@ -5,6 +5,7 @@ import { useEmojiStore } from '@/stores/emojiStore'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import ViewGroupDetailModal from '@/options/modals/ViewGroupDetailModal.vue'
 import CachedImage from '@/components/CachedImage.vue'
+import { exportGroupFile } from '@/options/utils/exportUtils'
 
 const emojiStore = useEmojiStore()
 
@@ -30,6 +31,10 @@ const handleViewDetail = (group: { name: string; detail?: string }) => {
   detailGroupName.value = group.name
   detailContent.value = group.detail || ''
   showDetailModal.value = true
+}
+
+const handleExport = (group: any) => {
+  exportGroupFile(group)
 }
 
 const handleUnarchive = async (groupId: string) => {
@@ -155,6 +160,7 @@ onMounted(async () => {
 
           <div class="flex gap-2">
             <a-button size="small" @click="handleViewDetail(group)">详情</a-button>
+            <a-button size="small" @click="handleExport(group)">导出</a-button>
             <a-button type="primary" size="small" @click="handleUnarchive(group.id)">恢复</a-button>
             <a-popconfirm
               title="确定永久删除此分组？"
