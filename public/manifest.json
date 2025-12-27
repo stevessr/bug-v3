@@ -36,8 +36,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["js/content.js"],
-      "type": "module",
+      "js": ["content-loader.js"],
       "run_at": "document_idle"
     }
   ],

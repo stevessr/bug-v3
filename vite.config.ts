@@ -109,35 +109,13 @@ export default defineConfig(({ mode }) => {
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
         },
         output: {
-          entryFileNames: chunkInfo => {
-            return 'js/[name].js'
-          },
+          entryFileNames: 'js/[name].js',
           chunkFileNames: 'js/[name].js',
           assetFileNames: 'assets/[name].[ext]',
-          inlineDynamicImports: false, // Disable inline dynamic imports for better chunking
-          // 优化：启用 tree-shaking 友好的格式
-          format: 'es',
-          manualChunks: (id) => {
-            if (id.includes('node_modules')) {
-              return 'vendor'
-            }
-            if (id.includes('src/stores')) {
-              return 'emoji-store'
-            }
-            if (id.includes('src/content')) {
-              return undefined
-            }
-            if (id.includes('src/background')) {
-              return undefined
-            }
-            if (id.includes('src/popup')) {
-              return 'popup'
-            }
-            // Split options page into more granular chunks
-            if (id.includes('src/options')) {
-              return 'options'
-            }
-          }
+          format: 'es', // Use ES module format for better code splitting support
+          inlineDynamicImports: false,
+          // ES format supports code splitting, so we can use manualChunks if needed
+          manualChunks: undefined
         },
         // 优化：tree-shaking 优化
         treeshake: {
