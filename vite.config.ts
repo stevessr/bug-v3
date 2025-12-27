@@ -96,19 +96,6 @@ export default defineConfig(({ mode }) => {
           format: 'es',
           manualChunks: (id) => {
             if (id.includes('node_modules')) {
-              if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router')) {
-                return 'vue-core'
-              }
-              if (id.includes('ant-design-vue')) {
-                return 'antd'
-              }
-              if (id.includes('marked') || id.includes('dompurify')) {
-                return 'markdown-utils'
-              }
-              if (id.includes('@ant-design/icons')) {
-                return 'antd-icons'
-              }
-              // Default vendor chunk for other node_modules
               return 'vendor'
             }
             if (id.includes('src/stores')) {
@@ -125,31 +112,7 @@ export default defineConfig(({ mode }) => {
             }
             // Split options page into more granular chunks
             if (id.includes('src/options')) {
-              if (id.includes('tabs/')) {
-                if (id.includes('tabs/Upload')) return 'options-upload'
-                if (id.includes('tabs/Settings')) return 'options-settings'
-                if (id.includes('tabs/ImportExport')) return 'options-import-export'
-                return 'options-tabs'
-              }
-              if (id.includes('modals/')) {
-                if (id.includes('modals/AddEmojiModal')) return 'options-modals-add-emoji'
-                if (id.includes('modals/ImportEmojisModal')) return 'options-modals-import'
-                return 'options-modals'
-              }
-              if (id.includes('pages/')) {
-                return 'options-pages'
-              }
-              if (id.includes('components/')) {
-                return 'options-components'
-              }
-              if (id.includes('router/')) {
-                return 'options-router'
-              }
-              if (id.includes('utils/')) {
-                return 'options-utils'
-              }
-              // Main options logic
-              return 'options-main'
+              return 'options'
             }
           }
         },
