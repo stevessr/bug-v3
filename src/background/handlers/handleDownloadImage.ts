@@ -9,9 +9,10 @@ export async function handleDownloadImage(message: any, sendResponse: (_resp: an
     return
   }
 
-  console.log(
-    `[DownloadImage] Processing download request for: ${url}, source: ${source || 'unknown'}`
-  )
+  if (__ENABLE_LOGGING__)
+    console.log(
+      `[DownloadImage] Processing download request for: ${url}, source: ${source || 'unknown'}`
+    )
 
   try {
     // 使用 Chrome downloads API 下载图片
@@ -54,7 +55,8 @@ export async function handleDownloadImage(message: any, sendResponse: (_resp: an
           console.error('[DownloadImage] Download failed:', chromeAPI.runtime.lastError)
           sendResponse({ success: false, error: chromeAPI.runtime.lastError.message })
         } else {
-          console.log(`[DownloadImage] Download started successfully, ID: ${downloadId}`)
+          if (__ENABLE_LOGGING__)
+            console.log(`[DownloadImage] Download started successfully, ID: ${downloadId}`)
           sendResponse({ success: true, downloadId })
         }
       }

@@ -3,6 +3,7 @@ import { fileURLToPath, URL } from 'url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
+import AutoImport from 'unplugin-auto-import/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig(({ mode }) => {
@@ -33,6 +34,12 @@ export default defineConfig(({ mode }) => {
           defineModel: true,
           propsDestructure: true
         }
+      }),
+      AutoImport({
+        imports: ['vue', 'vue-router', 'pinia'],
+        dts: 'src/auto-imports.d.ts',
+        dirs: ['src/stores', 'src/composables', 'src/utils'],
+        vueTemplate: true
       }),
       Components({
         resolvers: [AntDesignVueResolver({ importStyle: 'less' })]

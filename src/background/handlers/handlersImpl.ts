@@ -4,13 +4,14 @@ import { newStorageHelpers } from '@/utils/newStorage'
 import type { EmojiGroup, AppSettings } from '@/types/type'
 
 // 缓存机制：减少重复存储读取
+// 优化：将缓存时间从 5 秒增加到 30 秒，减少后台读取频率
 let cachedGroups: EmojiGroup[] | null = null
 let cachedSettings: AppSettings | null = null
 let cachedFavorites: string[] | null = null
 let cacheTimestamp = 0
 
 /** 常量定义 */
-const CACHE_TTL_MS = 5000 // 5 秒缓存有效期
+const CACHE_TTL_MS = 30000 // 30 秒缓存有效期
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000 // 24 小时
 
 /** 存储定时器 ID 以便清理 */
@@ -82,7 +83,8 @@ export async function handleGetEmojiData(
           try {
             entry = await newStorageHelpers.ensureDiscourseDomainExists(src)
           } catch (e) {
-            console.warn('[Background] ensureDiscourseDomainExists failed for', src, e)
+            if (__ENABLE_LOGGING__)
+              console.warn('[Background] ensureDiscourseDomainExists failed for', src, e)
           }
         }
 
@@ -110,7 +112,7 @@ export async function handleGetEmojiData(
       }
     } catch (e) {
       // if domain filtering fails, log and fall back to full groups
-      console.warn('[Background] domain-based group filtering failed', e)
+      if (__ENABLE_LOGGING__) console.warn('[Background] domain-based group filtering failed', e)
     }
 
     _sendResponse({
@@ -122,7 +124,7 @@ export async function handleGetEmojiData(
       }
     })
   } catch (error) {
-    console.error('Failed to get emoji data via newStorageHelpers:', error)
+    if (__ENABLE_LOGGING__) console.error('Failed to get emoji data via newStorageHelpers:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -143,7 +145,7 @@ export async function handleGetEmojiSetting(
       _sendResponse({ success: true, data: { value: null } })
     }
   } catch (error) {
-    console.error('Failed to get emoji setting:', key, error)
+    if (__ENABLE_LOGGING__) console.error('Failed to get emoji setting:', key, error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -170,7 +172,7 @@ export async function handleSaveEmojiData(
     invalidateCache()
     _sendResponse({ success: true })
   } catch (error) {
-    console.error('Failed to save emoji data:', error)
+    if (__ENABLE_LOGGING__) console.error('Failed to save emoji data:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -183,7 +185,7 @@ export function setupStorageChangeListener() {
   if (chromeAPI && chromeAPI.storage && chromeAPI.storage.onChanged) {
     chromeAPI.storage.onChanged.addListener(
       (changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => {
-        console.log('Storage changed:', changes, namespace)
+        if (__ENABLE_LOGGING__) console.log('Storage changed:', changes, namespace)
         // Placeholder for cloud sync or other reactions
       }
     )
@@ -193,7 +195,7 @@ export function setupStorageChangeListener() {
 export function setupPeriodicCleanup() {
   // 避免重复设置
   if (cleanupIntervalId !== null) {
-    console.warn('[PeriodicCleanup] Already set up, skipping')
+    if (__ENABLE_LOGGING__) console.warn('[PeriodicCleanup] Already set up, skipping')
     return
   }
 
@@ -204,10 +206,10 @@ export function setupPeriodicCleanup() {
     try {
       const data = await chromeAPI.storage.local.get(['emojiGroups'])
       if (data.emojiGroups) {
-        console.log('Storage cleanup check completed')
+        if (__ENABLE_LOGGING__) console.log('Storage cleanup check completed')
       }
     } catch (error) {
-      console.error('Storage cleanup error:', error)
+      if (__ENABLE_LOGGING__) console.error('Storage cleanup error:', error)
     }
   }, CLEANUP_INTERVAL_MS)
 }
@@ -219,6 +221,6 @@ export function cleanupPeriodicCleanup(): void {
   if (cleanupIntervalId !== null) {
     clearInterval(cleanupIntervalId)
     cleanupIntervalId = null
-    console.log('[PeriodicCleanup] Cleanup task stopped')
+    if (__ENABLE_LOGGING__) console.log('[PeriodicCleanup] Cleanup task stopped')
   }
 }

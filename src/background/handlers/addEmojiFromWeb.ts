@@ -116,7 +116,7 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
       console.warn('[Background] Failed to broadcast ungrouped emoji addition', broadcastError)
     }
 
-    console.log('[Background] 成功添加表情到未分组：', newEmoji.name)
+    if (__ENABLE_LOGGING__) console.log('[Background] 成功添加表情到未分组：', newEmoji.name)
     sendResponse({ success: true, message: '表情已添加到未分组' })
   } catch (error) {
     console.error('[Background] 添加表情失败：', error)

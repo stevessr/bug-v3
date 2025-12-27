@@ -883,7 +883,7 @@ export default function useOptions() {
   const onGroupCreated = (data: { name: string; icon: string; detail: string }) => {
     // Actually create the group in the store
     const newGroup = emojiStore.createGroup(data.name, data.icon)
-    console.log('[useOptions] onGroupCreated', { id: newGroup.id, name: newGroup.name })
+    if (__ENABLE_LOGGING__) console.log('[useOptions] onGroupCreated', { id: newGroup.id, name: newGroup.name })
 
     // If there's detail info, update the group with it
     if (data.detail && newGroup.id) {
