@@ -22,17 +22,25 @@ export function exportConfigurationFile(store: any) {
 }
 
 export function exportGroupFile(group: any) {
-  const emojis = (group.emojis || []).map((e: any) => ({
-    id: e.id,
-    packet: e.packet,
-    name: e.name,
-    url: e.url,
-    width: e.width,
-    height: e.height,
-    groupId: group.name || group.id
-  }))
+  const groupData = {
+    id: group.id,
+    name: group.name,
+    icon: group.icon,
+    detail: group.detail,
+    order: group.order,
+    emojis: (group.emojis || []).map((e: any) => ({
+      id: e.id,
+      packet: e.packet,
+      name: e.name,
+      url: e.url,
+      displayUrl: e.displayUrl,
+      width: e.width,
+      height: e.height,
+      groupId: group.id
+    }))
+  }
   const filename = `group-${group.id}.json`
-  downloadJson(filename, emojis)
+  downloadJson(filename, groupData)
 }
 
 // Streaming zip export with memory optimization
@@ -45,7 +53,7 @@ export async function exportGroupZip(
   const emojis = group.emojis || []
   if (!Array.isArray(emojis) || emojis.length === 0) {
     onProgress?.(100)
-    downloadJson(`group-${group.id}.json`, group.emojis || [])
+    exportGroupFile(group)
     return
   }
 
@@ -298,7 +306,7 @@ async function exportGroupZipLegacy(
     }
   }
 
-  downloadJson(`group-${group.id}-${group.name || 'group'}.json`, group.emojis || [])
+  exportGroupFile(group)
 }
 
 // Helper to process individual emoji files
