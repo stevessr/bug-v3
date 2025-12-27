@@ -67,13 +67,23 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   }) as HTMLInputElement
   filterInputContainer.appendChild(searchInput)
 
+  // Helper to close modal and also remove sibling backdrop
+  const closeModal = () => {
+    const parent = modal.parentElement
+    if (parent) {
+      const backdrop = parent.querySelector('.d-modal__backdrop')
+      if (backdrop) backdrop.remove()
+    }
+    modal.remove()
+  }
+
   const closeButton = createE('button', {
     class: 'btn no-text btn-icon btn-transparent emoji-picker__close-btn',
     type: 'button',
     in: `<svg class="fa d-icon d-icon-xmark svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#xmark"></use></svg>`,
     on: {
       click: () => {
-        modal.remove()
+        closeModal()
       }
     }
   }) as HTMLButtonElement
@@ -90,8 +100,7 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   })
 
   const scrollableContent = createE('div', {
-    class: 'emoji-picker__scrollable-content',
-    style: 'max-height: 60vh; overflow-y: auto; overflow-x: hidden;'
+    class: 'emoji-picker__scrollable-content'
   })
 
   const sections = createE('div', {
@@ -189,13 +198,13 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
         on: {
           click: () => {
             insertEmojiIntoEditor(emoji)
-            modal.remove()
+            closeModal()
           },
           keydown: (e: KeyboardEvent) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
               insertEmojiIntoEditor(emoji)
-              modal.remove()
+              closeModal()
             }
           }
         }

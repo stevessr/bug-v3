@@ -11,7 +11,7 @@ import { ICONS } from '@/content/data/callout'
 
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [
-  '.d-editor-button-bar[role="toolbar"]', // Standard editor toolbar
+  '.d-editor-button-bar', // Standard editor toolbar (no [role] constraint for mobile compatibility)
   '.chat-composer__inner-container' // Chat composer
 ]
 
