@@ -39,6 +39,7 @@ const totalCount = ref(0)
 const currentCacheGroup = ref('')
 const currentCacheEmoji = ref('')
 const shouldStopCaching = ref(false)
+const enableAutoCleanup = ref(false) // 默认关闭自动清理
 
 // Cache export/import state
 const isExporting = ref(false)
@@ -343,16 +344,38 @@ const cacheAllImages = async () => {
     } else {
       message.success(`已缓存 ${cachedCount.value} 个表情图片`)
 
-      // 缓存完成后，执行一次缓存清理以确保不超出限制
-      console.log('[StatsPage] 缓存完成，执行缓存清理...')
-      try {
-        const { imageCache } = await import('@/utils/imageCache')
-        const cleanedCount = await imageCache.cleanupLRU(0.8) // 清理到 80% 容量
-        if (cleanedCount > 0) {
-          console.log(`[StatsPage] 清理了 ${cleanedCount} 个旧缓存项`)
+      // 缓存完成后，根据用户设置决定是否进行清理
+      if (enableAutoCleanup.value) {
+        console.log('[StatsPage] 用户启用自动清理，检查缓存状态...')
+        try {
+          const { imageCache } = await import('@/utils/imageCache')
+          const stats = await imageCache.getCacheStats()
+          const maxSize = 2 * 1024 * 1024 * 1024 // 2GB
+          const maxEntries = 5000
+
+          // 只有在严重超出限制时才进行清理（超出 120%）
+          if (stats.totalSize > maxSize * 1.2 || stats.totalEntries > maxEntries * 1.2) {
+            console.log(
+              `[StatsPage] 缓存严重超出限制（大小：${(stats.totalSize / 1024 / 1024).toFixed(1)}MB, 条目：${stats.totalEntries}），进行保守清理`
+            )
+
+            // 只清理到 95% 容量，保留更多缓存
+            const cleanedCount = await imageCache.cleanupLRU(0.95)
+            if (cleanedCount > 0) {
+              console.warn(`[StatsPage] 保守清理了 ${cleanedCount} 个最旧的缓存项`)
+              message.warning(`缓存空间不足，已清理 ${cleanedCount} 个最旧的缓存项以释放空间`)
+            }
+          } else {
+            console.log(
+              `[StatsPage] 缓存空间充足（大小：${(stats.totalSize / 1024 / 1024).toFixed(1)}MB, 条目：${stats.totalEntries}），无需清理`
+            )
+          }
+        } catch (cleanupError) {
+          console.warn('[StatsPage] 缓存检查失败：', cleanupError)
         }
-      } catch (cleanupError) {
-        console.warn('[StatsPage] 缓存清理失败：', cleanupError)
+      } else {
+        console.log('[StatsPage] 用户未启用自动清理，保留所有缓存')
+        message.info('缓存完成，已保留所有现有缓存（未启用自动清理）')
       }
     }
     await refreshCacheStats()
@@ -834,6 +857,15 @@ const parseDatabaseFile = async (
           </a-button>
         </div>
 
+        <!-- Auto Cleanup Option -->
+        <div class="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <a-checkbox v-model:checked="enableAutoCleanup">
+            启用自动清理（仅在缓存空间严重不足时清理最旧的缓存项）
+          </a-checkbox>
+          <span class="text-xs text-blue-600 dark:text-blue-400">
+            ⚠️ 建议关闭以保护手动缓存的图片
+          </span>
+        </div>
         <!-- Cache Progress Indicator -->
         <div v-if="isCaching" class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -924,18 +956,23 @@ const parseDatabaseFile = async (
 
             <li>已缓存的图片在离线状态下也能正常显示</li>
 
-            <li>缓存会占用一定的浏览器存储空间</li>
+            <li>缓存会占用一定的浏览器存储空间（限制：100MB 或 5000 张图片）</li>
 
             <li>建议在网络状况良好时执行一键缓存操作</li>
 
             <li>
               <strong>保护旧缓存：</strong>
-              缓存过程中不会清除已存在的缓存，只会添加新图片
+              默认情况下缓存过程不会清除已存在的缓存，保护用户手动缓存的图片
             </li>
 
             <li>
-              <strong>智能清理：</strong>
-              缓存完成后会自动清理超出限制的旧缓存项（保留 80% 容量）
+              <strong>自动清理选项：</strong>
+              可选择启用自动清理，仅在缓存空间严重超出 120% 限制时清理最旧的缓存项
+            </li>
+
+            <li>
+              <strong>保守清理：</strong>
+              即使启用自动清理，也只会清理到 95% 容量，最大限度保护用户缓存
             </li>
 
             <li>
