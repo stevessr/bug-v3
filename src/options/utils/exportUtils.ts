@@ -31,7 +31,7 @@ export function exportGroupFile(group: any) {
     height: e.height,
     groupId: group.name || group.id
   }))
-  const filename = `emoji-group-${group.id}-${group.name || 'group'}.json`
+  const filename = `group-${group.id}.json`
   downloadJson(filename, emojis)
 }
 
@@ -45,7 +45,7 @@ export async function exportGroupZip(
   const emojis = group.emojis || []
   if (!Array.isArray(emojis) || emojis.length === 0) {
     onProgress?.(100)
-    downloadJson(`emoji-group-${group.id}-${group.name || 'group'}.json`, group.emojis || [])
+    downloadJson(`group-${group.id}.json`, group.emojis || [])
     return
   }
 
@@ -194,7 +194,7 @@ async function exportGroupZipStreaming(
   const url = URL.createObjectURL(compressedBlob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `emoji-group-${group.id}-${group.name || 'group'}.tar.gz`
+  a.download = `group-${group.id}-${group.name || 'group'}.tar.gz`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
@@ -287,7 +287,7 @@ async function exportGroupZipLegacy(
       const url = URL.createObjectURL(compressedBlob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `emoji-group-${group.id}-${group.name || 'group'}.tar.gz`
+      a.download = `group-${group.id}-${group.name || 'group'}.tar.gz`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -298,7 +298,7 @@ async function exportGroupZipLegacy(
     }
   }
 
-  downloadJson(`emoji-group-${group.id}-${group.name || 'group'}.json`, group.emojis || [])
+  downloadJson(`group-${group.id}-${group.name || 'group'}.json`, group.emojis || [])
 }
 
 // Helper to process individual emoji files

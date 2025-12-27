@@ -24,7 +24,9 @@
     "type-check": "vue-tsc --noEmit",
     "update:data": "cd scripts/cfworker && wrangler pages deploy",
     "update:push": "git push",
-    "update:wasm": "bash ./scripts/wasm/build.sh"
+    "update:wasm": "bash ./scripts/wasm/build.sh",
+    "server": "node ./scripts/collaborative-upload-server/server.js",
+    "server:stop": "kill $(lsof -t -i:9527) 2>/dev/null || echo 'Server not running'"
   },
   "dependencies": {
     "ant-design-vue": "^4.2.6",

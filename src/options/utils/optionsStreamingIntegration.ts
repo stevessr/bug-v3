@@ -174,7 +174,7 @@ export class OptionsStreamingIntegration {
 
       await this.optimizer.streamToFile(
         compressedStream,
-        `emoji-group-${group.id}-${group.name || 'group'}.tar.gz`,
+        `group-${group.id}-${group.name || 'group'}.tar.gz`,
         bytesWritten => {
           onProgress?.({
             current: bytesWritten,
