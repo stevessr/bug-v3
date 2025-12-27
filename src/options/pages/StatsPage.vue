@@ -13,7 +13,6 @@ import type { OptionsInject } from '../types'
 import EmojiStats from '../components/EmojiStats.vue'
 
 import type { Emoji } from '@/types/type'
-import { cacheImage, imageCache } from '@/utils/imageCache'
 import { getEmojiImageUrlSync, addCacheBustingParam, isImageCached } from '@/utils/imageUrlHelper'
 
 const options = inject<OptionsInject>('options')!
@@ -68,6 +67,7 @@ const cacheStats = computed(() => {
 
 const refreshCacheStats = async () => {
   try {
+    const { imageCache } = await import('@/utils/imageCache')
     const stats = await imageCache.getCacheStats()
     realCachedCount.value = stats.totalEntries
   } catch (error) {
@@ -190,6 +190,7 @@ const cacheAllImages = async () => {
   currentCacheEmoji.value = ''
 
   try {
+    const { imageCache, cacheImage } = await import('@/utils/imageCache')
     // Initialize image cache
     await imageCache.init()
 
@@ -247,6 +248,7 @@ const cacheAllImages = async () => {
 
 const clearImageCache = async () => {
   try {
+    const { imageCache } = await import('@/utils/imageCache')
     await imageCache.clearCache()
     message.success('已清空图片缓存')
     await refreshCacheStats()

@@ -4,8 +4,6 @@
  * 优化版本：利用增强的图片缓存系统
  */
 
-import { getCachedImage, cacheImage, preloadToMemory } from './imageCache'
-
 import { useEmojiStore } from '@/stores/emojiStore'
 
 declare const __ENABLE_LOGGING__: boolean
@@ -76,6 +74,7 @@ export async function getEmojiImageUrl(
 
   try {
     // Try to get cached image first (now includes memory cache layer)
+    const { getCachedImage, cacheImage } = await import('./imageCache')
     const cachedUrl = await getCachedImage(primaryUrl)
     if (cachedUrl) {
       return cachedUrl
@@ -147,6 +146,7 @@ export async function getEmojiImageUrlWithLoading(
 
   try {
     // Try to get cached image first (now includes memory cache)
+    const { getCachedImage, cacheImage } = await import('./imageCache')
     const cachedUrl = await getCachedImage(primaryUrl)
     if (cachedUrl) {
       return { url: cachedUrl, isLoading: false, isFromCache: true }
@@ -179,6 +179,7 @@ async function triggerBackgroundCache(url: string): Promise<void> {
   backgroundCacheInProgress.add(url)
 
   try {
+    const { getCachedImage, cacheImage } = await import('./imageCache')
     const isCached = await getCachedImage(url)
     if (!isCached) {
       await cacheImage(url)
@@ -225,6 +226,7 @@ export async function preloadImages(
 
   // 如果只需要加载到内存，使用更快的方法
   if (toMemory) {
+    const { preloadToMemory } = await import('./imageCache')
     await preloadToMemory(urls)
     return
   }
@@ -236,6 +238,7 @@ export async function preloadImages(
     await Promise.allSettled(
       batch.map(async url => {
         try {
+          const { getCachedImage, cacheImage } = await import('./imageCache')
           const isCached = await getCachedImage(url)
           if (!isCached) {
             await cacheImage(url)
