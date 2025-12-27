@@ -29,7 +29,7 @@ const getGroupIconSrc = (icon: string, groupId: string): string => {
 // 异步加载分组图标缓存
 watch(
   () => emojiStore.sortedGroups,
-  async (groups) => {
+  async groups => {
     if (!emojiStore.settings.useIndexedDBForImages) return
 
     const { getCachedImage } = await import('../utils/imageCache')

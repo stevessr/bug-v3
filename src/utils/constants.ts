@@ -93,5 +93,3 @@ export const SYNC = {
   RETRY_DELAY: 1000,
   TIMEOUT: 30000
 } as const
-
-

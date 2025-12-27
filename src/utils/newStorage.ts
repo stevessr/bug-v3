@@ -38,7 +38,6 @@ async function getArchiveDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(ARCHIVE_DB_NAME, ARCHIVE_DB_VERSION)
 
-
     request.onerror = () => {
       reject(new Error('Failed to open archive database'))
     }

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import CachedImage from '@/components/CachedImage.vue'
 import { message } from 'ant-design-vue'
 
+import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import { exportToCloudMarket } from '@/options/utils/exportUtils'

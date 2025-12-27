@@ -8,6 +8,7 @@ import { isDiscoursePage } from './utils/page-detection'
 import { setupDiscourseUploadHandler } from './utils/upload-handler'
 import { initCalloutSuggestions } from './callout-suggestions'
 import { initChatMultiReactor } from './utils/chat-multi-reactor'
+import { initSubmenuInjector } from './utils/submenu-injector'
 
 export async function initDiscourse() {
   try {
@@ -89,6 +90,18 @@ export async function initDiscourse() {
       }
     } catch (e) {
       console.warn('[DiscourseOneClick] failed to initialize content image cache:', e)
+    }
+
+    // 试验性功能：子菜单注入
+    // 将功能按钮注入到 Discourse 工具栏的下拉菜单中，而不是传统的菜单栏
+    try {
+      const enableSubmenuInjector = await requestSettingFromBackground('enableSubmenuInjector')
+      if (enableSubmenuInjector === true) {
+        initSubmenuInjector()
+        console.log('[DiscourseOneClick] submenu injector enabled (experimental)')
+      }
+    } catch (e) {
+      console.warn('[DiscourseOneClick] failed to get enableSubmenuInjector setting', e)
     }
 
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages

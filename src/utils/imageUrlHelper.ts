@@ -192,8 +192,6 @@ async function triggerBackgroundCache(url: string): Promise<void> {
   }
 }
 
-
-
 /**
  * Preload multiple images into cache
  * 优化：使用新的批量预加载 API
