@@ -58,6 +58,31 @@
     }
     .timer-item.success { background: rgba(82, 196, 26, 0.95); }
     .timer-item.error { background: rgba(255, 77, 79, 0.95); cursor: pointer; }
+
+    /* Picker Modal */
+    .timer-picker-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 2147483650;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .timer-picker-modal {
+        background: var(--d-bg-color, #fff); color: var(--d-primary, #333);
+        padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        width: 320px; font-family: system-ui, -apple-system, sans-serif;
+    }
+    .timer-picker-tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 15px; }
+    .timer-picker-tab { flex: 1; text-align: center; padding: 8px; cursor: pointer; color: #666; }
+    .timer-picker-tab.active { color: var(--tertiary, #0088cc); border-bottom: 2px solid var(--tertiary, #0088cc); font-weight: bold; }
+
+    .timer-picker-content { margin-bottom: 15px; }
+    .timer-field-group { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .timer-input { flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
+    .timer-label { width: 60px; font-size: 13px; }
+
+    .timer-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .timer-btn { padding: 6px 16px; border-radius: 4px; cursor: pointer; border: none; font-size: 13px; }
+    .timer-btn-cancel { background: #eee; color: #333; }
+    .timer-btn-confirm { background: var(--tertiary, #0088cc); color: #fff; }
     `
     const styleEl = document.createElement('style')
     styleEl.textContent = STYLES
@@ -72,6 +97,89 @@
             document.body.appendChild(timerContainer)
         }
         return timerContainer
+    }
+
+    function showTimePicker(onConfirm) {
+        const overlay = createEl('div', { className: 'timer-picker-overlay' })
+        const modal = createEl('div', { className: 'timer-picker-modal' })
+
+        // Tabs
+        const tabs = createEl('div', { className: 'timer-picker-tabs' })
+        const tabCountdown = createEl('div', { className: 'timer-picker-tab active', text: '倒计时' })
+        const tabSchedule = createEl('div', { className: 'timer-picker-tab', text: '定时发送' })
+        tabs.append(tabCountdown, tabSchedule)
+
+        // Content Container
+        const content = createEl('div', { className: 'timer-picker-content' })
+
+        // Countdown View
+        const viewCountdown = createEl('div', { className: 'timer-view-countdown' })
+        viewCountdown.innerHTML = `
+            <div class="timer-field-group">
+                <span class="timer-label">秒后:</span>
+                <input type="number" class="timer-input inp-sec" value="10" min="1">
+            </div>
+            <div class="timer-field-group">
+                <span class="timer-label">分钟后:</span>
+                <input type="number" class="timer-input inp-min" value="0" min="0">
+            </div>
+        `
+
+        // Schedule View (Hidden by default)
+        const viewSchedule = createEl('div', { className: 'timer-view-schedule', style: 'display:none' })
+        const now = new Date()
+        now.setMinutes(now.getMinutes() + 5) // Default 5 mins later
+        const defaultStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16)
+        viewSchedule.innerHTML = `
+            <div class="timer-field-group">
+                <span class="timer-label">时间:</span>
+                <input type="datetime-local" class="timer-input inp-datetime" value="${defaultStr}">
+            </div>
+            <div style="font-size:12px;color:#999;margin-top:4px">请选择将来的时间</div>
+        `
+
+        content.append(viewCountdown, viewSchedule)
+
+        // Tab Switching
+        tabCountdown.onclick = () => {
+            tabCountdown.classList.add('active'); tabSchedule.classList.remove('active')
+            viewCountdown.style.display = 'block'; viewSchedule.style.display = 'none'
+        }
+        tabSchedule.onclick = () => {
+            tabSchedule.classList.add('active'); tabCountdown.classList.remove('active')
+            viewSchedule.style.display = 'block'; viewCountdown.style.display = 'none'
+        }
+
+        // Actions
+        const actions = createEl('div', { className: 'timer-actions' })
+        const btnCancel = createEl('button', { className: 'timer-btn timer-btn-cancel', text: '取消' })
+        const btnConfirm = createEl('button', { className: 'timer-btn timer-btn-confirm', text: '确认' })
+
+        btnCancel.onclick = () => overlay.remove()
+        btnConfirm.onclick = () => {
+            let seconds = 0
+            if (tabCountdown.classList.contains('active')) {
+                const s = parseInt(viewCountdown.querySelector('.inp-sec').value || 0)
+                const m = parseInt(viewCountdown.querySelector('.inp-min').value || 0)
+                seconds = s + (m * 60)
+            } else {
+                const dtStr = viewSchedule.querySelector('.inp-datetime').value
+                if (!dtStr) return alert('请选择时间')
+                const target = new Date(dtStr)
+                const diff = target.getTime() - Date.now()
+                if (diff <= 0) return alert('请选择未来的时间')
+                seconds = Math.floor(diff / 1000)
+            }
+
+            if (seconds <= 0) return alert('无效的时间')
+            onConfirm(seconds)
+            overlay.remove()
+        }
+
+        actions.append(btnCancel, btnConfirm)
+        modal.append(tabs, content, actions)
+        overlay.appendChild(modal)
+        document.body.appendChild(overlay)
     }
 
     // Logic: Add Timer
@@ -210,7 +318,16 @@
 
             const raw = model.reply || model.replyText // standard property for content
             const topicId = model.topic ? model.topic.id : model.topicId
-            const replyToPostNumber = model.replyToPostNumber
+            // Try to get replyToPostNumber correctly from Ember model
+            // It might be 'replyToPostNumber' or inside 'action' or 'reply'
+            let replyToPostNumber = model.replyToPostNumber
+            if (!replyToPostNumber && model.get) {
+                replyToPostNumber = model.get('replyToPostNumber')
+            }
+            // Sometimes it's in model.action ('reply' vs 'replyToPost')
+            // If we are replying to a post, we need that ID.
+
+            console.log('Timer script: Model state:', { topicId, replyToPostNumber, raw: raw?.substring(0, 20) })
 
             if (!raw || !raw.trim()) {
                 alert('请输入回复内容')
@@ -221,15 +338,9 @@
                 return
             }
 
-            const secStr = prompt('请输入倒计时秒数：', '10')
-            if (!secStr) return
-            const seconds = parseInt(secStr, 10)
-            if (isNaN(seconds) || seconds <= 0) {
-                alert('无效的秒数')
-                return
-            }
-
-            addTimer(topicId, raw, seconds, replyToPostNumber)
+            showTimePicker((seconds) => {
+                addTimer(topicId, raw, seconds, replyToPostNumber)
+            })
 
             // Optional: Close composer or clear it?
             // Usually scheduled reply means "send later", so we might want to discard the current draft locally?
