@@ -1,5 +1,6 @@
 // 导入各个功能模块
 import { requestSettingFromBackground } from '../utils/requestSetting'
+import { contentImageCache, processEmojiImages } from '../utils/contentImageCache'
 
 import { scanForMagnificPopup, observeMagnificPopup } from './utils/magnific-popup'
 import { scanForCookedContent, observeCookedContent } from './utils/cooked-content'
@@ -65,6 +66,29 @@ export async function initDiscourse() {
       }
     } catch (e) {
       console.warn('[DiscourseOneClick] failed to get enableChatMultiReactor setting', e)
+    }
+
+    // 集成图片缓存功能
+    try {
+      const enableContentImageCache = await requestSettingFromBackground('enableContentImageCache')
+      if (enableContentImageCache !== false) {
+        // 初始化图片缓存服务
+        await contentImageCache.init()
+
+        // 延迟处理页面中的图片，避免影响页面加载
+        setTimeout(async () => {
+          try {
+            const processedCount = await processEmojiImages()
+            console.log(`[DiscourseOneClick] processed ${processedCount} images with cache`)
+          } catch (e) {
+            console.warn('[DiscourseOneClick] failed to process images with cache:', e)
+          }
+        }, 1000)
+
+        console.log('[DiscourseOneClick] content image cache enabled')
+      }
+    } catch (e) {
+      console.warn('[DiscourseOneClick] failed to initialize content image cache:', e)
     }
 
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages

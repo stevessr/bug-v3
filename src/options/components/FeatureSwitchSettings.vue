@@ -16,6 +16,7 @@ const emit = defineEmits([
   'update:enableCalloutSuggestions',
   'update:enableBatchParseImages',
   'update:useIndexedDBForImages',
+  'update:enableContentImageCache',
   'update:cloudMarketDomain'
 ])
 
@@ -143,6 +144,13 @@ const saveCloudMarketDomain = async () => {
         @update:model-value="handleSettingUpdate('useIndexedDBForImages', $event)"
         label="启用 IndexedDB 缓存图片"
         description="将图片缓存在 IndexedDB 中以加快加载速度并支持离线访问"
+      />
+
+      <SettingSwitch
+        :model-value="getSetting('enableContentImageCache', false)"
+        @update:model-value="handleSettingUpdate('enableContentImageCache', $event)"
+        label="启用前端图片缓存 (试验性功能)"
+        description="允许前端注入的content script使用本地缓存的图片显示，而不是直接请求表情的URL"
       />
 
       <!-- 云端市场域名配置 -->

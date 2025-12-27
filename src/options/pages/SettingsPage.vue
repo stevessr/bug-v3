@@ -32,6 +32,7 @@ const {
   updateEnableHoverPreview,
   updateSyncVariantToDisplayUrl,
   updateUseIndexedDBForImages,
+  updateEnableContentImageCache,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -115,6 +116,7 @@ onMounted(async () => {
               @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
               @update:enableBatchParseImages="updateEnableBatchParseImages"
               @update:useIndexedDBForImages="updateUseIndexedDBForImages"
+              @update:enableContentImageCache="updateEnableContentImageCache"
               @update:cloudMarketDomain="updateCloudMarketDomain"
             />
           </div>

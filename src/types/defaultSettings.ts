@@ -41,6 +41,7 @@ export const defaultSettings: AppSettings = {
   // (set to true if you prefer selected variant to always override displayUrl)
   syncVariantToDisplayUrl: true,
   useIndexedDBForImages: false,
+  enableContentImageCache: false, // 默认禁用前端图片缓存（试验性功能）
   uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS,
   cloudMarketDomain: 'video2gif-pages.pages.dev' // 云端市场默认域名
 }

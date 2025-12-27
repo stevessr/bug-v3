@@ -283,6 +283,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ useIndexedDBForImages: value })
   }
 
+  const updateEnableContentImageCache = (value: boolean) => {
+    emojiStore.updateSettings({ enableContentImageCache: value })
+  }
+
   const updateTheme = (theme: 'system' | 'light' | 'dark') => {
     emojiStore.updateSettings({ theme })
     safeLocalStorage.set('theme', theme)
@@ -1028,6 +1032,7 @@ export default function useOptions() {
     updateCustomCssBlocks,
     updateSyncVariantToDisplayUrl,
     updateUseIndexedDBForImages,
+    updateEnableContentImageCache,
     updateEnableHoverPreview,
     updateUploadMenuItems,
     updateGeminiApiKey,

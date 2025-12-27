@@ -11,6 +11,7 @@ import {
 } from './floatingButton'
 import { startReadTracker } from './readTracker'
 import { applyCustomCssFromCache } from './injectCustomCss'
+import { contentImageCache } from './contentImageCache'
 
 // 页面卸载时清理资源，防止内存泄漏
 window.addEventListener('beforeunload', () => {
@@ -144,6 +145,14 @@ export async function initializeEmojiFeature(
     applyCustomCssFromCache()
   } catch (_e) {
     void _e
+  }
+
+  // 初始化图片缓存功能
+  try {
+    await contentImageCache.init()
+    console.log('[Emoji Extension] Content image cache initialized')
+  } catch (e) {
+    console.warn('[Emoji Extension] Failed to initialize content image cache:', e)
   }
 
   // 初始化一键添加表情功能
