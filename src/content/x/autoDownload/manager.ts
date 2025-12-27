@@ -42,7 +42,7 @@ function sendMessageToBackground(message: any): Promise<any> {
 
 /**
  * 升级 URL 质量：将 medium 替换为 large
- * 例如: name=medium -> name=large
+ * 例如：name=medium -> name=large
  */
 function upgradeImageQuality(url: string): string {
   try {
@@ -98,6 +98,47 @@ function normalizeUrl(raw: string): string | null {
   raw = upgradeImageQuality(raw)
 
   return raw
+}
+
+/**
+ * 显示 Toast 提示
+ */
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  const toast = document.createElement('div')
+  toast.textContent = message
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: ${type === 'success' ? 'rgba(29, 155, 240, 0.9)' : 'rgba(244, 33, 46, 0.9)'};
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+  `
+  document.body.appendChild(toast)
+
+  // 动画进入
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1'
+    toast.style.transform = 'translateX(-50%) translateY(0)'
+  })
+
+  // 3 秒后消失
+  setTimeout(() => {
+    toast.style.opacity = '0'
+    toast.style.transform = 'translateX(-50%) translateY(10px)'
+    setTimeout(() => {
+      toast.remove()
+    }, 300)
+  }, 3000)
 }
 
 export class AutoDownloadManager {
@@ -271,8 +312,10 @@ export class AutoDownloadManager {
 
     if (response?.success) {
       console.log(`[AutoDownloadManager] Download started: ${imageUrl}`)
+      showToast('Downloading image...', 'success')
     } else {
       console.error(`[AutoDownloadManager] Download failed: ${imageUrl}`, response?.error)
+      showToast('Download failed', 'error')
     }
   }
 
