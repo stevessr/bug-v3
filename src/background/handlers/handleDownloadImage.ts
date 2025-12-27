@@ -43,6 +43,29 @@ export async function handleDownloadImage(message: any, sendResponse: (_resp: an
       console.warn('[DownloadImage] Failed to parse URL for filename:', e)
     }
 
+    // 尝试禁用下载栏以实现静默下载
+    try {
+      if (chromeAPI.downloads) {
+        // 优先使用 setUiOptions (推荐)
+        if (typeof chromeAPI.downloads.setUiOptions === 'function') {
+          chromeAPI.downloads.setUiOptions({ enabled: false })
+          setTimeout(() => {
+            chromeAPI.downloads.setUiOptions({ enabled: true })
+          }, 3000)
+        }
+        // 回退到 setShelfEnabled (已弃用但旧版本可能需要)
+        else if (typeof chromeAPI.downloads.setShelfEnabled === 'function') {
+          chromeAPI.downloads.setShelfEnabled(false)
+          setTimeout(() => {
+            chromeAPI.downloads.setShelfEnabled(true)
+          }, 3000)
+        }
+      }
+    } catch (e) {
+      // 忽略权限或其他错误
+      if (__ENABLE_LOGGING__) console.warn('[DownloadImage] Failed to disable download shelf:', e)
+    }
+
     // 开始下载
     chromeAPI.downloads.download(
       {
