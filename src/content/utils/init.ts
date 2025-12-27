@@ -74,6 +74,10 @@ function setupReplyButtonListeners() {
   })
 
   // Also listen for mutations in case buttons are added/removed dynamically
+  // 使用节流策略减少高负载页面的 CPU 占用
+  let mutationCheckTimeout: ReturnType<typeof setTimeout> | null = null
+  let pendingCheck = false
+
   const observer = new MutationObserver(mutations => {
     let shouldCheck = false
 
@@ -101,10 +105,23 @@ function setupReplyButtonListeners() {
     })
 
     if (shouldCheck) {
-      console.log('[Emoji Extension] Reply buttons detected in DOM changes, checking injection...')
-      setTimeout(() => {
-        checkAndReinjectButtons()
-      }, 500)
+      // 节流：500ms 内只执行一次检查
+      if (!pendingCheck) {
+        pendingCheck = true
+        console.log(
+          '[Emoji Extension] Reply buttons detected in DOM changes, checking injection...'
+        )
+
+        if (mutationCheckTimeout) {
+          clearTimeout(mutationCheckTimeout)
+        }
+
+        mutationCheckTimeout = setTimeout(() => {
+          checkAndReinjectButtons()
+          pendingCheck = false
+          mutationCheckTimeout = null
+        }, 500)
+      }
     }
   })
 

@@ -33,7 +33,8 @@ function ensureFavoritesGroup(groups: Ref<EmojiGroup[]>): EmojiGroup {
       order: 0,
       emojis: []
     } as EmojiGroup
-    groups.value.unshift(favoritesGroup)
+    // 使用数组替换以触发 shallowRef 响应式更新
+    groups.value = [favoritesGroup, ...groups.value]
   }
 
   if (!Array.isArray(favoritesGroup.emojis)) {

@@ -134,17 +134,17 @@ onUnmounted(() => {
   <div
     ref="containerRef"
     class="virtual-list-container"
-    :style="{ height: `${containerHeight}px`, overflow: 'auto' }"
+    :style="{ height: `${containerHeight}px` }"
     @scroll="handleScrollDebounced"
   >
-    <div :style="{ height: `${totalRows * itemHeight}px`, position: 'relative' }">
-      <div :style="{ transform: `translateY(${offsetY}px)` }">
+    <div class="virtual-list-spacer" :style="{ height: `${totalRows * itemHeight}px` }">
+      <div class="virtual-list-viewport" :style="{ transform: `translateY(${offsetY}px)` }">
         <div
           v-for="item in visibleItems"
           :key="item.index"
+          class="virtual-list-item"
           :style="{
-            display: 'inline-block',
-            width: `${100 / itemsPerRow}%`,
+            '--items-per-row': itemsPerRow,
             height: `${itemHeight}px`
           }"
         >
@@ -157,8 +157,25 @@ onUnmounted(() => {
 
 <style scoped>
 .virtual-list-container {
+  overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.virtual-list-spacer {
+  position: relative;
+}
+
+.virtual-list-viewport {
+  /* 使用 will-change 优化滚动性能 */
+  will-change: transform;
+}
+
+.virtual-list-item {
+  display: inline-block;
+  /* 使用 CSS 变量减少内联样式计算 */
+  width: calc(100% / var(--items-per-row));
+  box-sizing: border-box;
 }
 
 .virtual-list-container::-webkit-scrollbar {

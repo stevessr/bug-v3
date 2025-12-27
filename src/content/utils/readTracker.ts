@@ -17,6 +17,10 @@ let timings: Record<number, number> = {}
 let accumulatedTopicTime = 0
 let topicId = 0
 
+// 资源清理相关
+const cleanupHandlers: Array<() => void> = []
+let isTracking = false
+
 function readTopicId(): number {
   const m1 = window.location.pathname.match(/t\/topic\/(\d+)/)
   const m2 = window.location.pathname.match(/t\/(\d+)/)
@@ -67,15 +71,21 @@ async function flushIfNeeded() {
 }
 
 export function startReadTracker() {
+  if (isTracking) return // already running
+
   topicId = readTopicId()
   lastScrolled = Date.now()
   lastTick = Date.now()
+  isTracking = true
 
-  window.addEventListener('scroll', () => {
+  // 添加滚动监听器（需要保存引用以便清理）
+  const scrollHandler = () => {
     lastScrolled = Date.now()
-  })
+  }
+  window.addEventListener('scroll', scrollHandler)
 
-  setInterval(() => {
+  // 主计时器
+  const mainInterval = setInterval(() => {
     const now = Date.now()
     const delta = now - lastTick
     lastTick = now
@@ -103,9 +113,30 @@ export function startReadTracker() {
   }, TICK_INTERVAL)
 
   // Periodic flush
-  setInterval(() => {
+  const flushInterval = setInterval(() => {
     void flushIfNeeded()
   }, FLUSH_INTERVAL)
 
+  // 保存所有需要清理的资源
+  cleanupHandlers.push(
+    () => clearInterval(mainInterval),
+    () => clearInterval(flushInterval),
+    () => window.removeEventListener('scroll', scrollHandler)
+  )
+
   console.log('[readTracker] started')
+}
+
+/** Stop tracking and clean up resources */
+export function stopReadTracker() {
+  if (!isTracking) return // not running
+
+  // 执行所有清理函数
+  for (const cleanup of cleanupHandlers) {
+    cleanup()
+  }
+  cleanupHandlers.length = 0
+  isTracking = false
+
+  console.log('[readTracker] stopped')
 }

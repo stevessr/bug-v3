@@ -44,7 +44,8 @@ export function useGroupStore(options: GroupStoreOptions) {
       order: groups.value.length,
       emojis: []
     }
-    groups.value.push(newGroup)
+    // 使用数组替换以触发 shallowRef 响应式更新
+    groups.value = [...groups.value, newGroup]
     console.log('[GroupStore] createGroup', { id: newGroup.id, name: newGroup.name })
     // Mark the new group as dirty for incremental save
     saveControl.markGroupDirty?.(newGroup.id)
@@ -66,7 +67,8 @@ export function useGroupStore(options: GroupStoreOptions) {
       order: groups.value.length,
       emojis: []
     }
-    groups.value.push(newGroup)
+    // 使用数组替换以触发 shallowRef 响应式更新
+    groups.value = [...groups.value, newGroup]
     console.log('[GroupStore] createGroupWithoutSave', { id: newGroup.id, name: newGroup.name })
     // Mark the new group as dirty for incremental save (will be saved when batch ends)
     saveControl.markGroupDirty?.(newGroup.id)
@@ -79,7 +81,10 @@ export function useGroupStore(options: GroupStoreOptions) {
   const updateGroup = (groupId: string, updates: Partial<EmojiGroup>): void => {
     const index = groups.value.findIndex(g => g.id === groupId)
     if (index !== -1) {
-      groups.value[index] = { ...groups.value[index], ...updates }
+      // 使用数组替换以触发 shallowRef 响应式更新
+      const updatedGroups = [...groups.value]
+      updatedGroups[index] = { ...updatedGroups[index], ...updates }
+      groups.value = updatedGroups
       console.log('[GroupStore] updateGroup', { id: groupId, updates })
       // Mark the group as dirty for incremental save
       saveControl.markGroupDirty?.(groupId)
@@ -122,13 +127,16 @@ export function useGroupStore(options: GroupStoreOptions) {
     const targetIndex = groups.value.findIndex(g => g.id === targetGroupId)
 
     if (sourceIndex !== -1 && targetIndex !== -1) {
-      const [removed] = groups.value.splice(sourceIndex, 1)
-      groups.value.splice(targetIndex, 0, removed)
-      groups.value.forEach((group, index) => {
+      // 使用数组替换以触发 shallowRef 响应式更新
+      const reorderedGroups = [...groups.value]
+      const [removed] = reorderedGroups.splice(sourceIndex, 1)
+      reorderedGroups.splice(targetIndex, 0, removed)
+      reorderedGroups.forEach((group, index) => {
         group.order = index
         // Mark all reordered groups as dirty (order changed)
         saveControl.markGroupDirty?.(group.id)
       })
+      groups.value = reorderedGroups
       console.log('[GroupStore] reorderGroups', { from: sourceGroupId, to: targetGroupId })
       await saveControl.saveData()
     }
