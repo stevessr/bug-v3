@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse 官方回复框定时发送按钮
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.0.0
+// @version      1.0.2
 // @description  在 Discourse 官方回复按钮旁边添加定时发送功能
 // @author       stevessr
 // @match        https://linux.do/*
@@ -207,7 +207,7 @@
     }
 
     // Logic: Add Timer
-    function addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId) {
+    function addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId, tags) {
         const container = getTimerContainer()
         const timerId = Date.now() + Math.random().toString()
 
@@ -251,7 +251,10 @@
                     if (title) {
                         // New Topic
                         fd.append('title', title)
-                        fd.append('category', categoryId)
+                        if (categoryId) fd.append('category', categoryId)
+                        if (tags && Array.isArray(tags)) {
+                            tags.forEach(tag => fd.append('tags[]', tag))
+                        }
                         fd.append('archetype', 'regular')
                     } else {
                         // Reply
@@ -279,16 +282,20 @@
                     }
 
                     // Success
+                    const json = await res.json()
+                    const successTopicId = json.topic_id || topicId
+                    const postUrl = json.post_url ? `<a href="${json.post_url}" target="_blank" style="color:#fff;text-decoration:underline">查看帖子</a>` : ''
+
                     el.classList.add('success')
                     el.innerHTML = `
                         <div style="font-weight:bold">✅ 发送成功</div>
-                        <div style="font-size:12px">Topic #${topicId}</div>
+                        <div style="font-size:12px">Topic #${successTopicId} ${postUrl}</div>
                     `
                     setTimeout(() => {
                         el.style.opacity = '0'
                         el.style.transform = 'translateY(20px)'
                         setTimeout(() => el.remove(), 300)
-                    }, 3000)
+                    }, 5000)
 
                 } catch (err) {
                     el.classList.add('error')
@@ -360,7 +367,17 @@
             const raw = model.reply || model.replyText // standard property for content
             const topicId = model.topic ? model.topic.id : model.topicId
             const title = model.title
-            const categoryId = model.categoryId
+
+            let categoryId = model.categoryId
+            if (!categoryId && model.get) {
+                categoryId = model.get('categoryId')
+            }
+
+            // Get tags from model
+            let tags = model.tags
+            if (!tags && model.get) {
+                tags = model.get('tags')
+            }
 
             // Try to get replyToPostNumber correctly from Ember model
             // It might be 'replyToPostNumber' or inside 'action' or 'reply'
@@ -395,7 +412,7 @@
             }
 
 
-            console.log('Timer script: Model state:', { topicId, replyToPostNumber, title, categoryId, raw: raw?.substring(0, 20) })
+            console.log('Timer script: Model state:', { topicId, replyToPostNumber, title, categoryId, tags, raw: raw?.substring(0, 20) })
 
             if (!raw || !raw.trim()) {
                 alert('请输入回复内容')
@@ -408,7 +425,7 @@
             }
 
             showTimePicker((seconds) => {
-                addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId)
+                addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId, tags)
             })
 
             // Optional: Close composer or clear it?
