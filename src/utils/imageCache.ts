@@ -930,31 +930,70 @@ export class ImageCache {
   async getAllEntries(): Promise<CacheEntry[]> {
     await this.init()
 
+    if (!this.db) {
+      throw new Error('Database not initialized')
+    }
+
     return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'))
-        return
-      }
+      try {
+        const transaction = this.db!.transaction([this.options.storeName], 'readonly')
+        const store = transaction.objectStore(this.options.storeName)
 
-      const transaction = this.db.transaction([this.options.storeName], 'readonly')
-      const store = transaction.objectStore(this.options.storeName)
+        const entries: CacheEntry[] = []
+        let processedCount = 0
 
-      const entries: CacheEntry[] = []
-      const cursorRequest = store.openCursor()
+        const cursorRequest = store.openCursor()
 
-      cursorRequest.onsuccess = event => {
-        const cursor = (event.target as IDBRequest).result
+        cursorRequest.onsuccess = event => {
+          try {
+            const cursor = (event.target as IDBRequest).result
 
-        if (cursor) {
-          const entry = cursor.value as CacheEntry
-          entries.push(entry)
-          cursor.continue()
-        } else {
-          resolve(entries)
+            if (cursor) {
+              const entry = cursor.value as CacheEntry
+
+              // 验证条目的完整性
+              if (entry && entry.id && entry.url && entry.blob) {
+                entries.push(entry)
+                processedCount++
+
+                // 每处理 100 个条目记录一次进度
+                if (processedCount % 100 === 0) {
+                  console.log(`[ImageCache] 已处理 ${processedCount} 个缓存条目`)
+                }
+              } else {
+                console.warn('[ImageCache] 跳过无效的缓存条目：', entry)
+              }
+
+              cursor.continue()
+            } else {
+              console.log(`[ImageCache] 获取所有缓存条目完成：${entries.length} 个有效条目`)
+              resolve(entries)
+            }
+          } catch (cursorError) {
+            console.error('[ImageCache] 处理游标时出错：', cursorError)
+            reject(cursorError)
+          }
         }
-      }
 
-      cursorRequest.onerror = () => reject(cursorRequest.error)
+        cursorRequest.onerror = event => {
+          const error = (event.target as IDBRequest).error
+          console.error('[ImageCache] 游标请求失败：', error)
+          reject(
+            new Error(
+              `Failed to iterate through cache entries: ${error?.message || 'Unknown error'}`
+            )
+          )
+        }
+
+        transaction.onerror = event => {
+          const error = (event.target as IDBTransaction).error
+          console.error('[ImageCache] 事务失败：', error)
+          reject(new Error(`Transaction failed: ${error?.message || 'Unknown error'}`))
+        }
+      } catch (error) {
+        console.error('[ImageCache] 创建事务时出错：', error)
+        reject(error)
+      }
     })
   }
 }

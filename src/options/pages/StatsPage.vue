@@ -390,32 +390,77 @@ const exportCache = async () => {
 
     // 获取所有缓存条目
     const allEntries = await imageCache.getAllEntries()
+    console.log(`[StatsPage] 获取到 ${allEntries.length} 个缓存条目`)
+
+    // 分批处理以避免内存问题
+    const batchSize = 50
+    const processedImages: any[] = []
+
+    for (let i = 0; i < allEntries.length; i += batchSize) {
+      const batch = allEntries.slice(i, i + batchSize)
+      console.log(
+        `[StatsPage] 处理批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(allEntries.length / batchSize)} (${batch.length} 个图片)`
+      )
+
+      const batchResults = await Promise.allSettled(
+        batch.map(async entry => {
+          try {
+            // 使用 FileReader 安全地转换 Blob
+            const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onload = () => resolve(reader.result as ArrayBuffer)
+              reader.onerror = () => reject(new Error('Failed to read blob'))
+              reader.readAsArrayBuffer(entry.blob)
+            })
+
+            return {
+              id: entry.id,
+              url: entry.url,
+              timestamp: entry.timestamp,
+              size: entry.size,
+              lastAccessed: entry.lastAccessed,
+              accessCount: entry.accessCount,
+              data: arrayBuffer,
+              mimeType: entry.blob.type
+            }
+          } catch (error) {
+            console.error(`[StatsPage] 处理图片失败 ${entry.url}:`, error)
+            return null
+          }
+        })
+      )
+
+      // 过滤成功的结果
+      const successfulResults = batchResults
+        .filter(
+          (result): result is PromiseFulfilledResult<any> =>
+            result.status === 'fulfilled' && result.value !== null
+        )
+        .map(result => result.value)
+
+      processedImages.push(...successfulResults)
+
+      // 添加延迟以避免浏览器压力过大
+      if (i + batchSize < allEntries.length) {
+        await new Promise(resolve => setTimeout(resolve, 10))
+      }
+    }
+
+    console.log(
+      `[StatsPage] 成功处理 ${processedImages.length} 个图片，失败 ${allEntries.length - processedImages.length} 个`
+    )
 
     // 创建导出数据
     const exportData = {
       metadata: {
         version: '1.0',
         exportDate: new Date().toISOString(),
-        totalImages: allEntries.length,
-        totalSize: allEntries.reduce((sum, entry) => sum + entry.size, 0),
+        totalImages: processedImages.length,
+        totalSize: processedImages.reduce((sum, img) => sum + img.size, 0),
         dbName: 'ImageCacheDB',
         storeName: 'images'
       },
-      images: await Promise.all(
-        allEntries.map(async entry => {
-          const arrayBuffer = await entry.blob.arrayBuffer()
-          return {
-            id: entry.id,
-            url: entry.url,
-            timestamp: entry.timestamp,
-            size: entry.size,
-            lastAccessed: entry.lastAccessed,
-            accessCount: entry.accessCount,
-            data: arrayBuffer,
-            mimeType: entry.blob.type
-          }
-        })
-      )
+      images: processedImages
     }
 
     // 创建二进制文件
@@ -484,11 +529,22 @@ const importCache = () => {
           }
 
           // 将 ArrayBuffer 转换为 Blob
-          const blob = new Blob([imgData.data], { type: imgData.mimeType })
+          try {
+            const blob = new Blob([imgData.data], { type: imgData.mimeType })
 
-          // 缓存图片
-          await imageCache.set(imgData.url, blob)
-          imported++
+            // 验证 Blob 是否有效
+            if (blob.size === 0) {
+              throw new Error('Empty blob created')
+            }
+
+            // 缓存图片
+            await imageCache.set(imgData.url, blob)
+            imported++
+            console.log(`[StatsPage] 成功导入：${imgData.url}`)
+          } catch (blobError) {
+            console.error(`[StatsPage] 创建 Blob 失败 ${imgData.url}:`, blobError)
+            errors.push(`创建 Blob 失败 ${imgData.url}: ${blobError}`)
+          }
         } catch (error) {
           errors.push(`处理图片失败 ${imgData.url}: ${error}`)
         }
