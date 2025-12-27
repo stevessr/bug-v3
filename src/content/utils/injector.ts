@@ -6,6 +6,7 @@ import { notify } from './notify'
 import { createE, DQSA, DQS, DOA, DAEL } from './createEl'
 import { showImageUploadDialog } from './uploader'
 import { createAndShowIframeModal, createAndShowSideIframeModal } from './iframe'
+import { animateEnter, animateExit, ANIMATION_DURATION, injectAnimationStyles } from './animation'
 
 import { ICONS } from '@/content/data/callout'
 
@@ -38,8 +39,9 @@ let currentPicker: HTMLElement | null = null
 
 function handleClickOutside(e: Event, button: HTMLElement) {
   if (currentPicker && !currentPicker.contains(e.target as Node) && e.target !== button) {
-    currentPicker.remove()
-    currentPicker = null
+    animateExit(currentPicker, 'picker', () => {
+      currentPicker = null
+    })
     document.removeEventListener('click', event => handleClickOutside(event, button))
   }
 }
@@ -81,12 +83,18 @@ async function injectDesktopPicker(button: HTMLElement) {
   pickerElement.style.top = top + 'px'
   pickerElement.style.left = left + 'px'
 
+  // Trigger enter animation
+  animateEnter(pickerElement, 'picker')
+
   setTimeout(() => {
     DAEL('click', event => handleClickOutside(event, button))
   }, 100)
 }
 
 async function injectMobilePicker() {
+  // Ensure animation styles are injected first
+  injectAnimationStyles()
+
   const picker = await createEmojiPicker(true)
 
   let modalContainer = DQS('.modal-container')
@@ -99,14 +107,35 @@ async function injectMobilePicker() {
 
   const backdrop = createE('div', { class: 'd-modal__backdrop' })
   backdrop.addEventListener('click', () => {
-    // Only remove the picker and the backdrop, keep the surrounding `.modal-container`
-    if (picker.parentElement) picker.parentElement.removeChild(picker)
-    if (backdrop.parentElement) backdrop.parentElement.removeChild(backdrop)
-    currentPicker = null
+    // Animate exit for both picker and backdrop
+    animateExit(picker as HTMLElement, 'modal')
+    animateExit(backdrop as HTMLElement, 'backdrop', () => {
+      currentPicker = null
+    })
   })
+
+  // Set initial animation state BEFORE adding to DOM
+  ;(picker as HTMLElement).classList.add('emoji-modal-enter')
+  ;(backdrop as HTMLElement).classList.add('emoji-backdrop-enter')
 
   modalContainer.appendChild(picker)
   modalContainer.appendChild(backdrop)
+
+  // Force reflow then trigger animation
+  void (picker as HTMLElement).offsetHeight
+  void (backdrop as HTMLElement).offsetHeight
+
+  // Remove enter class and add active class to start animation
+  ;(picker as HTMLElement).classList.remove('emoji-modal-enter')
+  ;(picker as HTMLElement).classList.add('emoji-modal-enter-active')
+  ;(backdrop as HTMLElement).classList.remove('emoji-backdrop-enter')
+  ;(backdrop as HTMLElement).classList.add('emoji-backdrop-enter-active')
+
+  // Clean up animation classes after animation completes
+  setTimeout(() => {
+    ;(picker as HTMLElement).classList.remove('emoji-modal-enter-active')
+    ;(backdrop as HTMLElement).classList.remove('emoji-backdrop-enter-active')
+  }, ANIMATION_DURATION)
 
   // Track the picker element itself so toggling will unmount only the picker
   currentPicker = picker as HTMLElement
@@ -542,8 +571,22 @@ export function injectButton(toolbar: Element) {
   emojiButton.addEventListener('click', async event => {
     event.stopPropagation()
     if (currentPicker) {
-      currentPicker.remove()
-      currentPicker = null
+      // Determine if mobile modal or desktop picker based on class
+      const isMobileModal = currentPicker.classList.contains('d-modal')
+      const modalContainer = DQS('.modal-container')
+      if (isMobileModal && modalContainer) {
+        const backdrop = modalContainer.querySelector('.d-modal__backdrop') as HTMLElement | null
+        if (backdrop) {
+          animateExit(backdrop, 'backdrop')
+        }
+        animateExit(currentPicker, 'modal', () => {
+          currentPicker = null
+        })
+      } else {
+        animateExit(currentPicker, 'picker', () => {
+          currentPicker = null
+        })
+      }
       document.removeEventListener('click', event => handleClickOutside(event, emojiButton))
       return
     }

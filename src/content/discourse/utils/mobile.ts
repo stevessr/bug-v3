@@ -1,6 +1,7 @@
 import { isImageUrl } from '../../utils/isimage'
 import { createE } from '../../utils/createEl'
 import { getCachedImageUrl } from '../../utils/contentImageCache'
+import { animateExit } from '../../utils/animation'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
@@ -67,14 +68,16 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   }) as HTMLInputElement
   filterInputContainer.appendChild(searchInput)
 
-  // Helper to close modal and also remove sibling backdrop
+  // Helper to close modal and also remove sibling backdrop with animation
   const closeModal = () => {
     const parent = modal.parentElement
     if (parent) {
-      const backdrop = parent.querySelector('.d-modal__backdrop')
-      if (backdrop) backdrop.remove()
+      const backdrop = parent.querySelector('.d-modal__backdrop') as HTMLElement | null
+      if (backdrop) {
+        animateExit(backdrop, 'backdrop')
+      }
     }
-    modal.remove()
+    animateExit(modal as HTMLElement, 'modal')
   }
 
   const closeButton = createE('button', {

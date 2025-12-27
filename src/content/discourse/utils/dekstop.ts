@@ -1,6 +1,7 @@
 import { isImageUrl } from '../../utils/isimage'
 import { createE, DOA } from '../../utils/createEl'
 import { getCachedImageUrl } from '../../utils/contentImageCache'
+import { animateExit } from '../../utils/animation'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
@@ -163,7 +164,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         on: {
           click: () => {
             insertEmojiIntoEditor(emoji)
-            picker.remove()
+            animateExit(picker as HTMLElement, 'picker')
           }
         }
       }) as HTMLImageElement
@@ -175,7 +176,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           insertEmojiIntoEditor(emoji)
-          picker.remove()
+          animateExit(picker as HTMLElement, 'picker')
         }
       })
       // --- hover preview (desktop only) ---
