@@ -77,6 +77,39 @@ export async function handleAddToFavorites(
       }
     }
 
+    // 发送收藏夹更新通知到所有上下文，特别是 Options 页面
+    if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
+      try {
+        // 向所有标签页发送消息
+        const tabs = await chromeAPI.tabs.query({})
+        for (const tab of tabs) {
+          try {
+            await chromeAPI.tabs.sendMessage(tab.id, {
+              type: 'FAVORITES_UPDATED',
+              payload: {
+                favoritesGroup: favoritesGroup,
+                timestamp: Date.now()
+              }
+            })
+          } catch (e) {
+            // 忽略无法发送消息的标签页
+            void e
+          }
+        }
+
+        // 向扩展的 runtime 发送消息（通知 Options 页面）
+        await chromeAPI.runtime.sendMessage({
+          type: 'FAVORITES_UPDATED',
+          payload: {
+            favoritesGroup: favoritesGroup,
+            timestamp: Date.now()
+          }
+        })
+      } catch (e) {
+        console.warn('Failed to send favorites update notification:', e)
+      }
+    }
+
     sendResponse({ success: true, message: 'Added to favorites' })
   } catch (error) {
     console.error('Failed to add emoji to favorites:', error)

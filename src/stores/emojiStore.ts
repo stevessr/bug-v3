@@ -1489,8 +1489,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           : ((globalThis as Record<string, unknown>).chrome as typeof chrome | undefined)
       if (chromeAPI?.runtime?.onMessage) {
         chromeAPI.runtime.onMessage.addListener(
-          (message: { type?: string; payload?: { emoji: Emoji; group?: EmojiGroup } }) => {
+          (message: {
+            type?: string
+            payload?: {
+              emoji: Emoji
+              group?: EmojiGroup
+              favoritesGroup?: EmojiGroup
+              timestamp?: number
+            }
+          }) => {
             if (!message || typeof message !== 'object') return
+
             if (message.type === 'EMOJI_EXTENSION_UNGROUPED_ADDED') {
               // Set flag to suppress storage change events during message processing
               isProcessingRuntimeMessage = true
@@ -1501,6 +1510,29 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
                 }
               } finally {
                 // Clear flag after a short delay to allow storage writes to complete
+                setTimeout(() => {
+                  isProcessingRuntimeMessage = false
+                }, 1000)
+              }
+            }
+
+            // 处理收藏夹更新通知
+            if (message.type === 'FAVORITES_UPDATED') {
+              isProcessingRuntimeMessage = true
+              try {
+                console.log('[EmojiStore] Processing FAVORITES_UPDATED message')
+                if (message.payload && message.payload.favoritesGroup) {
+                  // 更新本地收藏夹分组
+                  const favoritesGroupIndex = groups.value.findIndex(g => g.id === 'favorites')
+                  if (favoritesGroupIndex !== -1) {
+                    // 使用数组替换确保 shallowRef 响应式更新
+                    const updatedGroups = [...groups.value]
+                    updatedGroups[favoritesGroupIndex] = message.payload.favoritesGroup
+                    groups.value = updatedGroups
+                    console.log('[EmojiStore] Updated favorites group from runtime message')
+                  }
+                }
+              } finally {
                 setTimeout(() => {
                   isProcessingRuntimeMessage = false
                 }, 1000)
@@ -1591,6 +1623,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     activeGroup: groupStore.activeGroup,
     filteredEmojis,
     sortedGroups, // Keep local version
+    favoritesCount: computed(() => {
+      const favoritesGroup = groups.value.find(g => g.id === 'favorites')
+      return favoritesGroup?.emojis?.length || 0
+    }),
 
     // Actions
     loadData,
