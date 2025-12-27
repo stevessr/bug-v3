@@ -6,7 +6,9 @@ import {
   LinkOutlined,
   ClearOutlined,
   DownloadOutlined,
-  StopOutlined
+  StopOutlined,
+  UploadOutlined,
+  ExportOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
@@ -37,6 +39,11 @@ const totalCount = ref(0)
 const currentCacheGroup = ref('')
 const currentCacheEmoji = ref('')
 const shouldStopCaching = ref(false)
+
+// Cache export/import state
+const isExporting = ref(false)
+const isImporting = ref(false)
+const exportImportError = ref('')
 
 // 三个进度状态
 // 1. 总进度：基于总图片数量
@@ -139,6 +146,39 @@ const scanForDuplicates = async () => {
   }
 
   try {
+    // 首先检查缓存状态
+    console.log('[StatsPage] 检查缓存状态...')
+    const { optimizedHashService } = await import('@/utils/optimizedHashService')
+    await optimizedHashService.initializeWorkers()
+
+    // 收集所有需要处理的图片 URL
+    const emojiUrls: string[] = []
+    for (const group of emojiStore.groups) {
+      if (group.id === 'favorites') continue // 忽略收藏分组
+      const emojis = group.emojis || []
+      for (const emoji of emojis) {
+        if (!emoji) continue
+        if (emoji.url && !emoji.perceptualHash) {
+          emojiUrls.push(emoji.url)
+        }
+      }
+    }
+
+    if (emojiUrls.length > 0) {
+      const cacheStatus = await optimizedHashService.checkCacheStatus(emojiUrls)
+      console.log(
+        `[StatsPage] 缓存状态：${cacheStatus.cachedImages}/${cacheStatus.total} 图片已缓存，${cacheStatus.cachedHashes}/${cacheStatus.total} 哈希已缓存`
+      )
+
+      // 如果缓存率较低，提示用户
+      const cacheRate = (cacheStatus.cachedImages / cacheStatus.total) * 100
+      if (cacheRate < 50) {
+        console.log(
+          `[StatsPage] 缓存率较低 (${cacheRate.toFixed(1)}%)，建议先执行"一键缓存所有表情"操作`
+        )
+      }
+    }
+
     const results = await emojiStore.findDuplicatesAcrossGroups(
       similarityThreshold.value,
       handleProgress
@@ -329,6 +369,318 @@ const clearImageCache = async () => {
     console.error('Clear image cache error:', error)
   }
 }
+
+const exportCache = async () => {
+  isExporting.value = true
+  exportImportError.value = ''
+
+  try {
+    // 使用与 UI 统计相同的缓存服务
+    const { imageCache } = await import('@/utils/imageCache')
+    await imageCache.init()
+
+    // 获取所有缓存数据
+    const stats = await imageCache.getCacheStats()
+    console.log(`[StatsPage] 准备导出缓存：${stats.totalEntries} 个图片`)
+
+    if (stats.totalEntries === 0) {
+      message.warning('没有找到任何缓存数据')
+      return
+    }
+
+    // 获取所有缓存条目
+    const allEntries = await imageCache.getAllEntries()
+
+    // 创建导出数据
+    const exportData = {
+      metadata: {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        totalImages: allEntries.length,
+        totalSize: allEntries.reduce((sum, entry) => sum + entry.size, 0),
+        dbName: 'ImageCacheDB',
+        storeName: 'images'
+      },
+      images: await Promise.all(
+        allEntries.map(async entry => {
+          const arrayBuffer = await entry.blob.arrayBuffer()
+          return {
+            id: entry.id,
+            url: entry.url,
+            timestamp: entry.timestamp,
+            size: entry.size,
+            lastAccessed: entry.lastAccessed,
+            accessCount: entry.accessCount,
+            data: arrayBuffer,
+            mimeType: entry.blob.type
+          }
+        })
+      )
+    }
+
+    // 创建二进制文件
+    const dbFile = await createDatabaseFile(exportData)
+    const filename = `emoji-cache-${new Date().toISOString().split('T')[0]}.db`
+
+    // 创建下载链接
+    const blob = new Blob([dbFile], { type: 'application/octet-stream' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    message.success(
+      `已导出缓存：${exportData.metadata.totalImages} 个图片，${(exportData.metadata.totalSize / 1024 / 1024).toFixed(2)}MB`
+    )
+    console.log('Cache export completed:', exportData.metadata)
+  } catch (error: any) {
+    exportImportError.value = error.message || '导出失败'
+    message.error('导出缓存失败')
+    console.error('Export cache error:', error)
+  } finally {
+    isExporting.value = false
+  }
+}
+
+const importCache = () => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.db'
+
+  input.onchange = async event => {
+    const file = (event.target as HTMLInputElement).files?.[0]
+    if (!file) return
+
+    isImporting.value = true
+    exportImportError.value = ''
+
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const importData = await parseDatabaseFile(arrayBuffer)
+
+      // 使用与 UI 统计相同的缓存服务
+      const { imageCache } = await import('@/utils/imageCache')
+      await imageCache.init()
+
+      let imported = 0
+      let skipped = 0
+      const errors: string[] = []
+
+      for (const imgData of importData.images) {
+        try {
+          // 检查是否已存在
+          const existing = await imageCache.get(imgData.url)
+
+          if (existing) {
+            // 如果已存在，检查是否需要更新
+            if (existing.timestamp >= imgData.timestamp) {
+              skipped++
+              continue
+            }
+          }
+
+          // 将 ArrayBuffer 转换为 Blob
+          const blob = new Blob([imgData.data], { type: imgData.mimeType })
+
+          // 缓存图片
+          await imageCache.set(imgData.url, blob)
+          imported++
+        } catch (error) {
+          errors.push(`处理图片失败 ${imgData.url}: ${error}`)
+        }
+      }
+
+      if (errors.length > 0) {
+        message.warning(
+          `导入完成：${imported} 个新图片，${skipped} 个已跳过，${errors.length} 个错误`
+        )
+        console.warn('Import errors:', errors)
+      } else {
+        message.success(`导入完成：${imported} 个新图片，${skipped} 个已跳过`)
+      }
+
+      // 刷新缓存统计
+      await refreshCacheStats()
+    } catch (error: any) {
+      exportImportError.value = error.message || '导入失败'
+      message.error('导入缓存失败')
+      console.error('Import cache error:', error)
+    } finally {
+      isImporting.value = false
+    }
+  }
+
+  input.click()
+}
+
+// 辅助函数：创建数据库文件
+const createDatabaseFile = async (exportData: any): Promise<ArrayBuffer> => {
+  // 创建文件头
+  const header = new TextEncoder().encode('EMOJI_CACHE_DB_V1.0')
+
+  // 序列化元数据
+  const metadataBytes = new TextEncoder().encode(JSON.stringify(exportData.metadata))
+  const metadataLength = new Uint32Array([metadataBytes.length])
+
+  // 序列化图片数据
+  const imageData = await Promise.all(
+    exportData.images.map(async (img: any) => {
+      const urlBytes = new TextEncoder().encode(img.url)
+      const idBytes = new TextEncoder().encode(img.id)
+
+      return {
+        header: {
+          id: img.id,
+          idLength: idBytes.length,
+          urlLength: urlBytes.length,
+          hashLength: 0,
+          mimeTypeLength: new TextEncoder().encode(img.mimeType).length,
+          timestamp: img.timestamp,
+          size: img.size,
+          lastAccessed: img.lastAccessed,
+          accessCount: img.accessCount,
+          dataLength: img.data.byteLength
+        },
+        idBytes,
+        urlBytes,
+        hashBytes: new Uint8Array(0),
+        mimeTypeBytes: new TextEncoder().encode(img.mimeType),
+        dataArray: new Uint8Array(img.data)
+      }
+    })
+  )
+
+  // 计算总大小
+  let totalSize = header.length + 4 + metadataBytes.length
+  for (const img of imageData) {
+    totalSize += 64 // fixed header size
+    totalSize += img.idBytes.length
+    totalSize += img.urlBytes.length
+    totalSize += img.hashBytes.length
+    totalSize += img.mimeTypeBytes.length
+    totalSize += img.dataArray.length
+  }
+
+  // 创建 ArrayBuffer
+  const buffer = new ArrayBuffer(totalSize)
+  const view = new Uint8Array(buffer)
+  let offset = 0
+
+  // 写入文件头
+  view.set(header, offset)
+  offset += header.length
+
+  // 写入元数据长度和元数据
+  view.set(new Uint8Array(metadataLength.buffer), offset)
+  offset += 4
+  view.set(metadataBytes, offset)
+  offset += metadataBytes.length
+
+  // 写入图片数据
+  for (const img of imageData) {
+    // 写入头部信息
+    const headerView = new DataView(buffer, offset, 64)
+    headerView.setUint32(0, img.header.idLength, true)
+    headerView.setUint32(4, img.header.urlLength, true)
+    headerView.setUint32(8, img.header.hashLength, true)
+    headerView.setUint32(12, img.header.mimeTypeLength, true)
+    headerView.setBigUint64(16, BigInt(img.header.timestamp), true)
+    headerView.setUint32(24, img.header.size, true)
+    headerView.setBigUint64(28, BigInt(img.header.lastAccessed), true)
+    headerView.setUint32(36, img.header.accessCount, true)
+    headerView.setUint32(40, img.header.dataLength, true)
+    offset += 64
+
+    // 写入各个字段
+    view.set(img.idBytes, offset)
+    offset += img.idBytes.length
+
+    view.set(img.urlBytes, offset)
+    offset += img.urlBytes.length
+
+    view.set(img.hashBytes, offset)
+    offset += img.hashBytes.length
+
+    view.set(img.mimeTypeBytes, offset)
+    offset += img.mimeTypeBytes.length
+
+    view.set(img.dataArray, offset)
+    offset += img.dataArray.length
+  }
+
+  return buffer
+}
+
+// 辅助函数：解析数据库文件
+const parseDatabaseFile = async (
+  arrayBuffer: ArrayBuffer
+): Promise<{ metadata: any; images: any[] }> => {
+  const view = new Uint8Array(arrayBuffer)
+  let offset = 0
+
+  // 检查文件头
+  const header = new TextDecoder().decode(view.slice(offset, offset + 18))
+  if (header !== 'EMOJI_CACHE_DB_V1.0') {
+    throw new Error('无效的缓存文件格式')
+  }
+  offset += 18
+
+  // 读取元数据
+  const metadataLength = new DataView(arrayBuffer, offset, 4).getUint32(0, true)
+  offset += 4
+  const metadataBytes = view.slice(offset, offset + metadataLength)
+  const metadata = JSON.parse(new TextDecoder().decode(metadataBytes))
+  offset += metadataLength
+
+  // 读取图片数据
+  const images: any[] = []
+  const endOffset = arrayBuffer.byteLength
+
+  while (offset < endOffset) {
+    const headerView = new DataView(arrayBuffer, offset, 64)
+    const idLength = headerView.getUint32(0, true)
+    const urlLength = headerView.getUint32(4, true)
+    const hashLength = headerView.getUint32(8, true)
+    const mimeTypeLength = headerView.getUint32(12, true)
+    const timestamp = Number(headerView.getBigUint64(16, true))
+    const size = headerView.getUint32(24, true)
+    const lastAccessed = Number(headerView.getBigUint64(28, true))
+    const accessCount = headerView.getUint32(36, true)
+    const dataLength = headerView.getUint32(40, true)
+    offset += 64
+
+    const id = new TextDecoder().decode(view.slice(offset, offset + idLength))
+    offset += idLength
+
+    const url = new TextDecoder().decode(view.slice(offset, offset + urlLength))
+    offset += urlLength
+
+    offset += hashLength // 跳过哈希
+
+    const mimeType = new TextDecoder().decode(view.slice(offset, offset + mimeTypeLength))
+    offset += mimeTypeLength
+
+    const data = view.slice(offset, offset + dataLength).buffer
+    offset += dataLength
+
+    images.push({
+      id,
+      url,
+      mimeType,
+      timestamp,
+      size,
+      lastAccessed,
+      accessCount,
+      data
+    })
+  }
+
+  return { metadata, images }
+}
 </script>
 
 <template>
@@ -373,7 +725,7 @@ const clearImageCache = async () => {
         </div>
 
         <!-- Cache Controls -->
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
           <a-button
             type="primary"
             :loading="isCaching"
@@ -389,7 +741,25 @@ const clearImageCache = async () => {
             停止缓存
           </a-button>
 
-          <a-button @click="clearImageCache" :disabled="isCaching">
+          <a-button
+            @click="exportCache"
+            :loading="isExporting"
+            :disabled="isCaching || isExporting || cacheStats.total === 0"
+          >
+            <ExportOutlined v-if="!isExporting" />
+            {{ isExporting ? '导出中...' : '导出缓存' }}
+          </a-button>
+
+          <a-button
+            @click="importCache"
+            :loading="isImporting"
+            :disabled="isCaching || isImporting"
+          >
+            <UploadOutlined v-if="!isImporting" />
+            {{ isImporting ? '导入中...' : '导入缓存' }}
+          </a-button>
+
+          <a-button @click="clearImageCache" :disabled="isCaching || isImporting || isExporting">
             <ClearOutlined />
             清空缓存
           </a-button>
@@ -468,16 +838,40 @@ const clearImageCache = async () => {
           <p class="text-sm text-yellow-800">{{ cacheError }}</p>
         </div>
 
+        <!-- Export/Import Error Message -->
+        <div v-if="exportImportError" class="bg-red-50 border border-red-200 rounded p-3">
+          <p class="text-sm text-red-800">{{ exportImportError }}</p>
+        </div>
+
         <!-- Help Text -->
+
         <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
           <p>
             <strong>说明：</strong>
           </p>
+
           <ul class="list-disc list-inside space-y-1 ml-2">
             <li>缓存将图片存储到浏览器 IndexedDB，提升后续访问速度</li>
+
             <li>已缓存的图片在离线状态下也能正常显示</li>
+
             <li>缓存会占用一定的浏览器存储空间</li>
+
             <li>建议在网络状况良好时执行一键缓存操作</li>
+
+            <li>
+              <strong>导出功能：</strong>
+              将缓存数据导出为 .db 二进制文件，保持原始数据格式
+            </li>
+
+            <li>
+              <strong>导入功能：</strong>
+              从 .db 文件恢复缓存数据，完整保留所有图片和元数据
+            </li>
+
+            <li>.db 格式比 JSON 格式更紧凑，导入速度更快，适合大型缓存文件</li>
+
+            <li>导出的文件包含完整的 IndexedDB 数据，文件较大请耐心等待</li>
           </ul>
         </div>
       </div>
@@ -683,6 +1077,11 @@ const clearImageCache = async () => {
             <li>扫描会计算所有表情的感知哈希值（首次可能需要较长时间）</li>
             <li>如果表情已经有哈希值，将会跳过计算</li>
             <li>基于图片内容相似度检测重复，而非文件名或 URL</li>
+            <li>
+              <strong>优化特性：</strong>
+              优先从本地缓存加载图片，减少网络请求
+            </li>
+            <li>建议先执行"一键缓存所有表情"操作，提升重复检测速度</li>
             <li>创建引用会保留第一个表情，其他重复项指向它，节省存储空间</li>
             <li>建议先使用"创建引用"方式，如需完全删除可稍后手动处理</li>
           </ul>

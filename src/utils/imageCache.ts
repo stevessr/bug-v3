@@ -923,6 +923,40 @@ export class ImageCache {
   getMemoryStats() {
     return this.memoryCache.getStats()
   }
+
+  /**
+   * 获取所有缓存条目（用于导出）
+   */
+  async getAllEntries(): Promise<CacheEntry[]> {
+    await this.init()
+
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error('Database not initialized'))
+        return
+      }
+
+      const transaction = this.db.transaction([this.options.storeName], 'readonly')
+      const store = transaction.objectStore(this.options.storeName)
+
+      const entries: CacheEntry[] = []
+      const cursorRequest = store.openCursor()
+
+      cursorRequest.onsuccess = event => {
+        const cursor = (event.target as IDBRequest).result
+
+        if (cursor) {
+          const entry = cursor.value as CacheEntry
+          entries.push(entry)
+          cursor.continue()
+        } else {
+          resolve(entries)
+        }
+      }
+
+      cursorRequest.onerror = () => reject(cursorRequest.error)
+    })
+  }
 }
 
 // Default cache instance with optimized settings

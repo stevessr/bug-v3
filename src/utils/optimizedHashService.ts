@@ -182,23 +182,31 @@ export class OptimizedHashService {
   async calculateHash(url: string, options: HashCalculationOptions = {}): Promise<string> {
     const { useCache = true, quality = 'medium', useWASM = true } = options
 
-    // Check cache first
+    // 优先检查哈希缓存
     if (useCache) {
       const cachedHash = await imageCacheService.getHash(url)
       if (cachedHash) {
+        console.log(`[OptimizedHashService] Using cached hash for ${url}`)
         return cachedHash
       }
     }
 
-    // Try to get cached image
+    // 优先尝试从本地缓存获取图片
     let imageBlob = await imageCacheService.getImage(url)
+    let fromCache = true
 
     if (!imageBlob) {
-      // Fetch and cache the image
+      // 只有在缓存中没有时才从网络获取
+      console.log(`[OptimizedHashService] Cache miss for ${url}, fetching from network`)
+      fromCache = false
       imageBlob = await this.fetchImage(url)
       if (imageBlob) {
+        // 缓存获取到的图片以供后续使用
         await imageCacheService.cacheImage(url, imageBlob)
+        console.log(`[OptimizedHashService] Cached image for ${url}`)
       }
+    } else {
+      console.log(`[OptimizedHashService] Using cached image for ${url}`)
     }
 
     if (!imageBlob) {
@@ -215,6 +223,9 @@ export class OptimizedHashService {
           await imageCacheService.updateHash(url, hash)
         }
 
+        console.log(
+          `[OptimizedHashService] Calculated new hash for ${url} (source: ${fromCache ? 'cache' : 'network'})`
+        )
         return hash
       } catch (error) {
         console.warn(
@@ -232,6 +243,9 @@ export class OptimizedHashService {
       await imageCacheService.updateHash(url, hash)
     }
 
+    console.log(
+      `[OptimizedHashService] Calculated new hash for ${url} (source: ${fromCache ? 'cache' : 'network'})`
+    )
     return hash
   }
 
@@ -292,29 +306,42 @@ export class OptimizedHashService {
 
     const results: BatchHashResult[] = []
     const toProcess: string[] = []
+    let cacheHits = 0
+    let cacheMisses = 0
 
-    // Check cache first
+    console.log(`[OptimizedHashService] Processing batch of ${urls.length} URLs`)
+
+    // 优先检查缓存中的哈希值
     for (const url of urls) {
       if (useCache) {
         const cachedHash = await imageCacheService.getHash(url)
         if (cachedHash) {
           results.push({ url, hash: cachedHash, cached: true })
+          cacheHits++
           onProgress?.(results.length, urls.length)
           continue
         }
       }
       toProcess.push(url)
+      cacheMisses++
     }
 
-    // Process remaining URLs in batches
+    console.log(`[OptimizedHashService] Cache stats: ${cacheHits} hits, ${cacheMisses} misses`)
+
+    // 批量处理剩余的 URL
     for (let i = 0; i < toProcess.length; i += batchSize) {
       const batch = toProcess.slice(i, i + batchSize)
+      console.log(
+        `[OptimizedHashService] Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(toProcess.length / batchSize)} with ${batch.length} URLs`
+      )
+
       const batchResults = await this.processBatch(batch, quality, useWASM)
       results.push(...batchResults)
 
       onProgress?.(results.length, urls.length)
     }
 
+    console.log(`[OptimizedHashService] Batch processing complete: ${results.length} total results`)
     return results
   }
 
@@ -325,24 +352,36 @@ export class OptimizedHashService {
   ): Promise<BatchHashResult[]> {
     const size = this.HASH_SIZE[quality as keyof typeof this.HASH_SIZE]
     const results: BatchHashResult[] = []
+    let cacheHits = 0
+    let networkFetches = 0
 
-    // Fetch images in parallel
+    // 并行获取图片，优先从缓存加载
     const imagePromises = urls.map(async url => {
       let blob = await imageCacheService.getImage(url)
+      let fromCache = true
 
       if (!blob) {
+        // 只有在缓存中没有时才从网络获取
+        fromCache = false
+        networkFetches++
         blob = await this.fetchImage(url)
         if (blob) {
           await imageCacheService.cacheImage(url, blob)
+          console.log(`[OptimizedHashService] Cached new image: ${url}`)
         }
+      } else {
+        cacheHits++
       }
 
-      return { url, blob }
+      return { url, blob, fromCache }
     })
 
     const images = await Promise.all(imagePromises)
+    console.log(
+      `[OptimizedHashService] Batch image loading: ${cacheHits} from cache, ${networkFetches} from network`
+    )
 
-    // Try WASM batch processing if available
+    // 尝试使用 WASM 批量处理
     if (useWASM && this.wasmAvailable && images.length > 1) {
       try {
         const imageDataList: ImageData[] = []
@@ -357,11 +396,14 @@ export class OptimizedHashService {
         }
 
         if (imageDataList.length > 0) {
+          console.log(
+            `[OptimizedHashService] Using WASM batch processing for ${imageDataList.length} images`
+          )
           const wasmResults = await wasmHashService.calculateBatchHashes(imageDataList, size)
 
-          // Map WASM results back to URLs
+          // 将 WASM 结果映射回 URL
           for (let i = 0; i < images.length; i++) {
-            const { url, blob } = images[i]
+            const { url, blob, fromCache } = images[i]
             if (!blob) {
               results.push({ url, hash: '', cached: false, error: 'Failed to fetch image' })
               continue
@@ -372,16 +414,16 @@ export class OptimizedHashService {
               results.push({
                 url,
                 hash: wasmResult.hash,
-                cached: false,
+                cached: fromCache,
                 wasmAccelerated: true
               })
 
-              // Cache the hash
+              // 缓存哈希值
               await imageCacheService.updateHash(url, wasmResult.hash)
             } else {
-              // Fallback to individual processing
+              // 回退到单独处理
               const hash = await this.calculateHashFromBlob(blob, quality)
-              results.push({ url, hash, cached: false, wasmAccelerated: false })
+              results.push({ url, hash, cached: fromCache, wasmAccelerated: false })
               await imageCacheService.updateHash(url, hash)
             }
           }
@@ -396,8 +438,9 @@ export class OptimizedHashService {
       }
     }
 
-    // Fallback to individual processing
-    const workerPromises = images.map(async ({ url, blob }) => {
+    // 回退到单独处理
+    console.log(`[OptimizedHashService] Using individual processing for ${images.length} images`)
+    const workerPromises = images.map(async ({ url, blob, fromCache }) => {
       if (!blob) {
         return {
           url,
@@ -411,10 +454,10 @@ export class OptimizedHashService {
       try {
         const hash = await this.calculateHashFromBlob(blob, quality)
 
-        // Cache the hash
+        // 缓存哈希值
         await imageCacheService.updateHash(url, hash)
 
-        return { url, hash, cached: false, wasmAccelerated: false }
+        return { url, hash, cached: fromCache, wasmAccelerated: false }
       } catch (error) {
         return {
           url,
@@ -542,6 +585,53 @@ export class OptimizedHashService {
     } catch (error) {
       console.error('Failed to fetch image:', url, error)
       return null
+    }
+  }
+
+  /**
+   * 检查 URL 列表的缓存状态，用于重复检测前的缓存分析
+   */
+  async checkCacheStatus(urls: string[]): Promise<{
+    total: number
+    cachedImages: number
+    cachedHashes: number
+    needsDownload: number
+    details: Array<{
+      url: string
+      imageCached: boolean
+      hashCached: boolean
+    }>
+  }> {
+    const details = []
+    let cachedImages = 0
+    let cachedHashes = 0
+
+    for (const url of urls) {
+      const imageCached = !!(await imageCacheService.getImage(url))
+      const hashCached = !!(await imageCacheService.getHash(url))
+
+      if (imageCached) cachedImages++
+      if (hashCached) cachedHashes++
+
+      details.push({
+        url,
+        imageCached,
+        hashCached
+      })
+    }
+
+    const needsDownload = urls.length - cachedImages
+
+    console.log(
+      `[OptimizedHashService] Cache status check: ${cachedImages}/${urls.length} images cached, ${cachedHashes}/${urls.length} hashes cached, ${needsDownload} need download`
+    )
+
+    return {
+      total: urls.length,
+      cachedImages,
+      cachedHashes,
+      needsDownload,
+      details
     }
   }
 

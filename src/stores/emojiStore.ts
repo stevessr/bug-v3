@@ -2,15 +2,16 @@ import { defineStore } from 'pinia'
 import { ref, shallowRef, computed, watch, nextTick } from 'vue'
 
 // Import sub-stores for delegation
-import { 
-  useGroupStore, 
-  useEmojiCrudStore, 
-  useFavoritesStore, 
-  useTagStore, 
-  useSyncStore, 
-  useCssStore 
-} from './index'
 import type { SaveControl } from './core/types'
+
+import {
+  useGroupStore,
+  useEmojiCrudStore,
+  useFavoritesStore,
+  useTagStore,
+  useSyncStore,
+  useCssStore
+} from './index'
 
 import { normalizeImageUrl } from '@/utils/isImageUrl'
 import { newStorageHelpers, STORAGE_KEYS } from '@/utils/newStorage'
@@ -818,6 +819,24 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       const totalEmojis = allEmojis.length
       console.log(`[EmojiStore] Processing ${totalEmojis} emojis for duplicate detection...`)
+
+      // 检查缓存状态，优先使用本地缓存
+      if (emojiUrls.length > 0) {
+        console.log(`[EmojiStore] 检查 ${emojiUrls.length} 个需要计算哈希的表情的缓存状态...`)
+        const cacheStatus = await optimizedHashService.checkCacheStatus(emojiUrls)
+        const cacheRate = (cacheStatus.cachedImages / cacheStatus.total) * 100
+        console.log(
+          `[EmojiStore] 缓存状态：${cacheStatus.cachedImages}/${cacheStatus.total} 图片已缓存 (${cacheRate.toFixed(1)}%), ${cacheStatus.cachedHashes}/${cacheStatus.total} 哈希已缓存`
+        )
+
+        if (cacheRate >= 80) {
+          console.log('[EmojiStore] 缓存率良好，重复检测将优先使用本地缓存')
+        } else if (cacheRate >= 50) {
+          console.log('[EmojiStore] 缓存率中等，部分图片需要从网络获取')
+        } else {
+          console.log('[EmojiStore] 缓存率较低，建议先执行图片缓存操作以提升检测速度')
+        }
+      }
 
       // Batch calculate missing hashes using the optimized service
       if (emojiUrls.length > 0) {
