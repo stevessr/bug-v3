@@ -36,17 +36,72 @@ export function findAllToolbars(): Element[] {
 }
 
 let currentPicker: HTMLElement | null = null
+// 使用 AbortController 来管理事件监听器，解决泄漏问题
+let clickOutsideController: AbortController | null = null
+// 防止动画期间重复点击的锁
+let isAnimating = false
 
-function handleClickOutside(e: Event, button: HTMLElement) {
-  if (currentPicker && !currentPicker.contains(e.target as Node) && e.target !== button) {
-    animateExit(currentPicker, 'picker', () => {
-      currentPicker = null
-    })
-    document.removeEventListener('click', event => handleClickOutside(event, button))
+function cleanupClickOutsideListener() {
+  if (clickOutsideController) {
+    clickOutsideController.abort()
+    clickOutsideController = null
   }
 }
 
+function createClickOutsideHandler(button: HTMLElement) {
+  return (e: Event) => {
+    if (currentPicker && !currentPicker.contains(e.target as Node) && e.target !== button) {
+      closeDesktopPicker()
+    }
+  }
+}
+
+function closeDesktopPicker(onComplete?: () => void) {
+  if (!currentPicker || isAnimating) return
+
+  isAnimating = true
+  const pickerToClose = currentPicker
+  // 立即重置状态，防止竞争条件
+  currentPicker = null
+  cleanupClickOutsideListener()
+
+  // 调用 picker 的 cleanup 方法清理悬浮预览等资源
+  if (typeof (pickerToClose as any).__cleanup === 'function') {
+    ;(pickerToClose as any).__cleanup()
+  }
+
+  animateExit(pickerToClose, 'picker', () => {
+    isAnimating = false
+    onComplete?.()
+  })
+}
+
+function closeMobilePicker(onComplete?: () => void) {
+  if (!currentPicker || isAnimating) return
+
+  isAnimating = true
+  const pickerToClose = currentPicker
+  // 立即重置状态，防止竞争条件
+  currentPicker = null
+
+  const modalContainer = DQS('.modal-container')
+  if (modalContainer) {
+    const backdrop = modalContainer.querySelector('.d-modal__backdrop') as HTMLElement | null
+    if (backdrop) {
+      animateExit(backdrop, 'backdrop')
+    }
+  }
+
+  animateExit(pickerToClose, 'modal', () => {
+    isAnimating = false
+    onComplete?.()
+  })
+}
+
 async function injectDesktopPicker(button: HTMLElement) {
+  // 防止动画期间重复创建
+  if (isAnimating) return
+
   currentPicker = await createEmojiPicker(false)
   const buttonRect = button.getBoundingClientRect()
   const pickerElement = currentPicker
@@ -86,12 +141,20 @@ async function injectDesktopPicker(button: HTMLElement) {
   // Trigger enter animation
   animateEnter(pickerElement, 'picker')
 
+  // 使用 AbortController 管理事件监听器
+  cleanupClickOutsideListener()
+  clickOutsideController = new AbortController()
+  const handler = createClickOutsideHandler(button)
+
   setTimeout(() => {
-    DAEL('click', event => handleClickOutside(event, button))
+    document.addEventListener('click', handler, { signal: clickOutsideController!.signal })
   }, 100)
 }
 
 async function injectMobilePicker() {
+  // 防止动画期间重复创建
+  if (isAnimating) return
+
   // picker is created with animation already set up in mobile.ts
   const picker = await createEmojiPicker(true)
 
@@ -106,11 +169,8 @@ async function injectMobilePicker() {
   // Create backdrop with initial animation class
   const backdrop = createE('div', { class: 'd-modal__backdrop emoji-backdrop-enter' })
   backdrop.addEventListener('click', () => {
-    // Animate exit for both picker and backdrop
-    animateExit(picker as HTMLElement, 'modal')
-    animateExit(backdrop as HTMLElement, 'backdrop', () => {
-      currentPicker = null
-    })
+    // 使用统一的关闭函数
+    closeMobilePicker()
   })
 
   modalContainer.appendChild(picker)
@@ -559,24 +619,18 @@ export function injectButton(toolbar: Element) {
 
   emojiButton.addEventListener('click', async event => {
     event.stopPropagation()
+
+    // 防止动画期间重复点击
+    if (isAnimating) return
+
     if (currentPicker) {
       // Determine if mobile modal or desktop picker based on class
       const isMobileModal = currentPicker.classList.contains('d-modal')
-      const modalContainer = DQS('.modal-container')
-      if (isMobileModal && modalContainer) {
-        const backdrop = modalContainer.querySelector('.d-modal__backdrop') as HTMLElement | null
-        if (backdrop) {
-          animateExit(backdrop, 'backdrop')
-        }
-        animateExit(currentPicker, 'modal', () => {
-          currentPicker = null
-        })
+      if (isMobileModal) {
+        closeMobilePicker()
       } else {
-        animateExit(currentPicker, 'picker', () => {
-          currentPicker = null
-        })
+        closeDesktopPicker()
       }
-      document.removeEventListener('click', event => handleClickOutside(event, emojiButton))
       return
     }
 

@@ -490,6 +490,11 @@
 
     isAnimating = true;
 
+    // 隐藏悬浮预览
+    if (hoverPreview) {
+      hoverPreview.style.display = 'none';
+    }
+
     // 添加退出动画
     currentPicker.classList.add('picker-exit');
     void currentPicker.offsetHeight;

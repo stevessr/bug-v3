@@ -30,6 +30,9 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   // Data is already loaded via loadDataFromStorage() in initializeEmojiFeature()
   const groupsToUse = cachedState.emojiGroups
 
+  // 用于事件委托的 emoji 数据映射
+  const emojiDataMap = new Map<string, any>()
+
   const picker = createE('div', {
     class: 'fk-d-menu -animated -expanded',
     attrs: {
@@ -145,6 +148,10 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     group.emojis.forEach((emoji: any) => {
       if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return
       const originalUrl = emoji.displayUrl || emoji.url
+
+      // 存储 emoji 数据到 Map，用于事件委托
+      emojiDataMap.set(emoji.name, emoji)
+
       const img = createE('img', {
         style: `
         cursor: pointer;
@@ -164,6 +171,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         on: {
           click: () => {
             insertEmojiIntoEditor(emoji)
+            removePreview()
             animateExit(picker as HTMLElement, 'picker')
           }
         }
@@ -176,43 +184,11 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           insertEmojiIntoEditor(emoji)
+          removePreview()
           animateExit(picker as HTMLElement, 'picker')
         }
       })
-      // --- hover preview (desktop only) ---
-      try {
-        const shouldPreview = !!(
-          cachedState &&
-          cachedState.settings &&
-          cachedState.settings.enableHoverPreview
-        )
-        if (shouldPreview) {
-          img.addEventListener('mouseenter', (ev: MouseEvent) => {
-            try {
-              ensurePreview()
-              showPreviewAtEvent(ev, emoji)
-            } catch (err) {
-              void err
-            }
-          })
-          img.addEventListener('mousemove', (ev: MouseEvent) => {
-            try {
-              movePreviewToEvent(ev)
-            } catch (err) {
-              void err
-            }
-          })
-          img.addEventListener('mouseleave', () => {
-            try {
-              removePreview()
-            } catch (err) {
-              void err
-            }
-          })
-        }
-      } catch {
-        // ignore errors reading cachedState
-      }
+      // hover preview 使用事件委托，不再在每个 img 上绑定
       sectionEmojis.appendChild(img)
       added++
     })
@@ -402,6 +378,73 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     } finally {
       _previewEl = null
     }
+  }
+
+  // --- 使用事件委托处理 hover preview，减少事件监听器数量 ---
+  try {
+    const shouldPreview = !!(
+      cachedState &&
+      cachedState.settings &&
+      cachedState.settings.enableHoverPreview
+    )
+    if (shouldPreview) {
+      sections.addEventListener(
+        'mouseenter',
+        (ev: Event) => {
+          const target = ev.target as HTMLElement
+          if (target.tagName === 'IMG' && target.classList.contains('emoji')) {
+            const emojiName = target.getAttribute('data-emoji')
+            if (emojiName && emojiDataMap.has(emojiName)) {
+              const emoji = emojiDataMap.get(emojiName)
+              try {
+                ensurePreview()
+                showPreviewAtEvent(ev as MouseEvent, emoji)
+              } catch (err) {
+                void err
+              }
+            }
+          }
+        },
+        true
+      ) // 使用捕获阶段
+
+      sections.addEventListener(
+        'mousemove',
+        (ev: Event) => {
+          const target = ev.target as HTMLElement
+          if (target.tagName === 'IMG' && target.classList.contains('emoji')) {
+            try {
+              movePreviewToEvent(ev as MouseEvent)
+            } catch (err) {
+              void err
+            }
+          }
+        },
+        true
+      )
+
+      sections.addEventListener(
+        'mouseleave',
+        (ev: Event) => {
+          const target = ev.target as HTMLElement
+          if (target.tagName === 'IMG' && target.classList.contains('emoji')) {
+            try {
+              removePreview()
+            } catch (err) {
+              void err
+            }
+          }
+        },
+        true
+      )
+    }
+  } catch {
+    // ignore errors reading cachedState
+  }
+
+  // 将 cleanup 方法附加到 picker 元素上，供外部在关闭时调用
+  ;(picker as any).__cleanup = () => {
+    removePreview()
   }
 
   return picker
