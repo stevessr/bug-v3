@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, isRef, computed, type Ref } from 'vue'
+import { ref, watch, isRef, computed, onMounted, onBeforeUnmount, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
 
 import type { AppSettings } from '../../types/type'
@@ -40,12 +40,24 @@ const localCustomOpenAIModel = ref<string>(getSetting('customOpenAIModel', ''))
 
 // UI state
 const isSaving = ref(false)
-const hasChanges = ref(false)
 
 // Watch for external changes (only update if no unsaved changes)
+// Store original values to detect external changes
+const originalValues = ref({
+  geminiApiKey: getSetting('geminiApiKey', ''),
+  geminiApiUrl: getSetting('geminiApiUrl', ''),
+  geminiLanguage: getSetting('geminiLanguage', 'Chinese'),
+  geminiModel: getSetting('geminiModel', 'gemini-flash-latest'),
+  useCustomOpenAI: getSetting('useCustomOpenAI', false),
+  customOpenAIEndpoint: getSetting('customOpenAIEndpoint', ''),
+  customOpenAIKey: getSetting('customOpenAIKey', ''),
+  customOpenAIModel: getSetting('customOpenAIModel', '')
+})
+
 watch(
   () => getSetting('geminiApiKey', ''),
   (val: string) => {
+    originalValues.value.geminiApiKey = val
     if (!hasChanges.value) {
       localGeminiApiKey.value = val
     }
@@ -55,6 +67,7 @@ watch(
 watch(
   () => getSetting('geminiApiUrl', ''),
   (val: string) => {
+    originalValues.value.geminiApiUrl = val
     if (!hasChanges.value) {
       localGeminiApiUrl.value = val
     }
@@ -64,6 +77,7 @@ watch(
 watch(
   () => getSetting('geminiLanguage', 'Chinese'),
   (val: string) => {
+    originalValues.value.geminiLanguage = val
     if (!hasChanges.value) {
       localGeminiLanguage.value = val
     }
@@ -73,6 +87,7 @@ watch(
 watch(
   () => getSetting('geminiModel', 'gemini-flash-latest'),
   (val: string) => {
+    originalValues.value.geminiModel = val
     if (!hasChanges.value) {
       localGeminiModel.value = val
     }
@@ -82,6 +97,7 @@ watch(
 watch(
   () => getSetting('useCustomOpenAI', false),
   (val: boolean) => {
+    originalValues.value.useCustomOpenAI = val
     if (!hasChanges.value) {
       localUseCustomOpenAI.value = val
     }
@@ -91,6 +107,7 @@ watch(
 watch(
   () => getSetting('customOpenAIEndpoint', ''),
   (val: string) => {
+    originalValues.value.customOpenAIEndpoint = val
     if (!hasChanges.value) {
       localCustomOpenAIEndpoint.value = val
     }
@@ -100,6 +117,7 @@ watch(
 watch(
   () => getSetting('customOpenAIKey', ''),
   (val: string) => {
+    originalValues.value.customOpenAIKey = val
     if (!hasChanges.value) {
       localCustomOpenAIKey.value = val
     }
@@ -109,6 +127,7 @@ watch(
 watch(
   () => getSetting('customOpenAIModel', ''),
   (val: string) => {
+    originalValues.value.customOpenAIModel = val
     if (!hasChanges.value) {
       localCustomOpenAIModel.value = val
     }
@@ -116,29 +135,18 @@ watch(
 )
 
 // Watch for local changes to detect if form has been modified
-watch(
-  [
-    localGeminiApiKey,
-    localGeminiApiUrl,
-    localGeminiLanguage,
-    localGeminiModel,
-    localUseCustomOpenAI,
-    localCustomOpenAIEndpoint,
-    localCustomOpenAIKey,
-    localCustomOpenAIModel
-  ],
-  () => {
-    hasChanges.value =
-      localGeminiApiKey.value !== getSetting('geminiApiKey', '') ||
-      localGeminiApiUrl.value !== getSetting('geminiApiUrl', '') ||
-      localGeminiLanguage.value !== getSetting('geminiLanguage', 'Chinese') ||
-      localGeminiModel.value !== getSetting('geminiModel', 'gemini-flash-latest') ||
-      localUseCustomOpenAI.value !== getSetting('useCustomOpenAI', false) ||
-      localCustomOpenAIEndpoint.value !== getSetting('customOpenAIEndpoint', '') ||
-      localCustomOpenAIKey.value !== getSetting('customOpenAIKey', '') ||
-      localCustomOpenAIModel.value !== getSetting('customOpenAIModel', '')
-  }
-)
+const hasChanges = computed(() => {
+  return (
+    localGeminiApiKey.value !== originalValues.value.geminiApiKey ||
+    localGeminiApiUrl.value !== originalValues.value.geminiApiUrl ||
+    localGeminiLanguage.value !== originalValues.value.geminiLanguage ||
+    localGeminiModel.value !== originalValues.value.geminiModel ||
+    localUseCustomOpenAI.value !== originalValues.value.useCustomOpenAI ||
+    localCustomOpenAIEndpoint.value !== originalValues.value.customOpenAIEndpoint ||
+    localCustomOpenAIKey.value !== originalValues.value.customOpenAIKey ||
+    localCustomOpenAIModel.value !== originalValues.value.customOpenAIModel
+  )
+})
 
 // Validation
 const isValidConfig = computed(() => {
@@ -173,7 +181,19 @@ const handleSave = async () => {
     emit('update:customOpenAIEndpoint', localCustomOpenAIEndpoint.value)
     emit('update:customOpenAIKey', localCustomOpenAIKey.value)
     emit('update:customOpenAIModel', localCustomOpenAIModel.value)
-    hasChanges.value = false
+
+    // Update original values after successful save
+    originalValues.value = {
+      geminiApiKey: localGeminiApiKey.value,
+      geminiApiUrl: localGeminiApiUrl.value,
+      geminiLanguage: localGeminiLanguage.value,
+      geminiModel: localGeminiModel.value,
+      useCustomOpenAI: localUseCustomOpenAI.value,
+      customOpenAIEndpoint: localCustomOpenAIEndpoint.value,
+      customOpenAIKey: localCustomOpenAIKey.value,
+      customOpenAIModel: localCustomOpenAIModel.value
+    }
+
     message.success('AI 配置已保存')
   } catch (error) {
     console.error('Failed to save AI config:', error)
@@ -185,16 +205,36 @@ const handleSave = async () => {
 
 // Reset handler
 const handleReset = () => {
-  localGeminiApiKey.value = getSetting('geminiApiKey', '')
-  localGeminiApiUrl.value = getSetting('geminiApiUrl', '')
-  localGeminiLanguage.value = getSetting('geminiLanguage', 'Chinese')
-  localGeminiModel.value = getSetting('geminiModel', 'gemini-flash-latest')
-  localUseCustomOpenAI.value = getSetting('useCustomOpenAI', false)
-  localCustomOpenAIEndpoint.value = getSetting('customOpenAIEndpoint', '')
-  localCustomOpenAIKey.value = getSetting('customOpenAIKey', '')
-  localCustomOpenAIModel.value = getSetting('customOpenAIModel', '')
-  hasChanges.value = false
+  localGeminiApiKey.value = originalValues.value.geminiApiKey
+  localGeminiApiUrl.value = originalValues.value.geminiApiUrl
+  localGeminiLanguage.value = originalValues.value.geminiLanguage
+  localGeminiModel.value = originalValues.value.geminiModel
+  localUseCustomOpenAI.value = originalValues.value.useCustomOpenAI
+  localCustomOpenAIEndpoint.value = originalValues.value.customOpenAIEndpoint
+  localCustomOpenAIKey.value = originalValues.value.customOpenAIKey
+  localCustomOpenAIModel.value = originalValues.value.customOpenAIModel
 }
+
+// Keyboard shortcut handler
+const handleKeyDown = (e: KeyboardEvent) => {
+  // Ctrl/Cmd + S to save
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault()
+    if (hasChanges.value && isValidConfig.value) {
+      handleSave()
+    }
+  }
+}
+
+// Add keyboard event listener
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+// Remove keyboard event listener
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <template>
@@ -332,6 +372,7 @@ const handleReset = () => {
           @click="handleSave"
           :loading="isSaving"
           :disabled="!hasChanges || !isValidConfig"
+          :title="hasChanges && isValidConfig ? '保存配置 (Ctrl/Cmd+S)' : ''"
         >
           保存配置
         </a-button>

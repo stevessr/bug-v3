@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, isRef, computed, type Ref } from 'vue'
+import { ref, watch, isRef, computed, onMounted, onBeforeUnmount, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
 
 import type { AppSettings } from '../../types/type'
@@ -25,12 +25,18 @@ const localImgbedApiUrl = ref<string>(getSetting('imgbedApiUrl', ''))
 
 // UI state
 const isSaving = ref(false)
-const hasChanges = ref(false)
 
-// Watch for external changes
+// Store original values to detect external changes
+const originalValues = ref({
+  imgbedToken: getSetting('imgbedToken', ''),
+  imgbedApiUrl: getSetting('imgbedApiUrl', '')
+})
+
+// Watch for external changes (only update if no unsaved changes)
 watch(
   () => getSetting('imgbedToken', ''),
   (val: string) => {
+    originalValues.value.imgbedToken = val
     if (!hasChanges.value) {
       localImgbedToken.value = val
     }
@@ -40,17 +46,19 @@ watch(
 watch(
   () => getSetting('imgbedApiUrl', ''),
   (val: string) => {
+    originalValues.value.imgbedApiUrl = val
     if (!hasChanges.value) {
       localImgbedApiUrl.value = val
     }
   }
 )
 
-// Watch for local changes to detect if form has been modified
-watch([localImgbedToken, localImgbedApiUrl], () => {
-  hasChanges.value =
-    localImgbedToken.value !== getSetting('imgbedToken', '') ||
-    localImgbedApiUrl.value !== getSetting('imgbedApiUrl', '')
+// Detect if form has been modified
+const hasChanges = computed(() => {
+  return (
+    localImgbedToken.value !== originalValues.value.imgbedToken ||
+    localImgbedApiUrl.value !== originalValues.value.imgbedApiUrl
+  )
 })
 
 // Validation
@@ -72,7 +80,13 @@ const handleSave = async () => {
   try {
     emit('update:imgbedToken', localImgbedToken.value)
     emit('update:imgbedApiUrl', localImgbedApiUrl.value)
-    hasChanges.value = false
+
+    // Update original values after successful save
+    originalValues.value = {
+      imgbedToken: localImgbedToken.value,
+      imgbedApiUrl: localImgbedApiUrl.value
+    }
+
     message.success('图床配置已保存')
   } catch (error) {
     console.error('Failed to save imgbed config:', error)
@@ -84,10 +98,30 @@ const handleSave = async () => {
 
 // Reset handler
 const handleReset = () => {
-  localImgbedToken.value = getSetting('imgbedToken', '')
-  localImgbedApiUrl.value = getSetting('imgbedApiUrl', '')
-  hasChanges.value = false
+  localImgbedToken.value = originalValues.value.imgbedToken
+  localImgbedApiUrl.value = originalValues.value.imgbedApiUrl
 }
+
+// Keyboard shortcut handler
+const handleKeyDown = (e: KeyboardEvent) => {
+  // Ctrl/Cmd + S to save
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault()
+    if (hasChanges.value && isValidConfig.value) {
+      handleSave()
+    }
+  }
+}
+
+// Add keyboard event listener
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+// Remove keyboard event listener
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <template>
@@ -134,6 +168,7 @@ const handleReset = () => {
           @click="handleSave"
           :loading="isSaving"
           :disabled="!hasChanges || !isValidConfig"
+          :title="hasChanges && isValidConfig ? '保存配置 (Ctrl/Cmd+S)' : ''"
         >
           保存配置
         </a-button>
