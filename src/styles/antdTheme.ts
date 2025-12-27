@@ -71,6 +71,8 @@ import { safeLocalStorage } from '@/utils/safeStorage'
 
 // 获取当前主题模式
 export function getCurrentThemeMode(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'light'
+
   const theme = safeLocalStorage.get('theme', 'system')
 
   if (theme === 'system') {
@@ -82,6 +84,8 @@ export function getCurrentThemeMode(): 'light' | 'dark' {
 
 // 主题颜色验证函数
 export function isValidColor(color: string): boolean {
+  if (typeof window === 'undefined') return true
+
   const style = new Option().style
   style.color = color
   return style.color !== ''

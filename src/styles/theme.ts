@@ -3,6 +3,10 @@ import { getCurrentThemeMode } from './antdTheme'
 import { safeLocalStorage } from '@/utils/safeStorage'
 
 function applyTheme() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return
+  }
+
   const theme = safeLocalStorage.get('theme', 'system')
   const root = document.documentElement
 

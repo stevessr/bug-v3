@@ -29,13 +29,28 @@ const filterQuery = ref('')
 
 // Cache all images state
 const isCaching = ref(false)
-const cacheProgress = ref(0)
 const cacheError = ref('')
 const cachedCount = ref(0)
 const realCachedCount = ref(0)
 const totalCount = ref(0)
 const currentCacheGroup = ref('')
 const currentCacheEmoji = ref('')
+
+// 三个进度状态
+// 1. 总进度：基于总图片数量
+const totalProgress = ref(0)
+const totalProcessedCount = ref(0)
+const totalImageCount = ref(0)
+
+// 2. 分组进度：基于分组数量
+const groupProgress = ref(0)
+const processedGroupCount = ref(0)
+const totalGroupCount = ref(0)
+
+// 3. 当前分组进度：基于当前分组的图片数量
+const currentGroupProgress = ref(0)
+const currentGroupProcessedCount = ref(0)
+const currentGroupImageCount = ref(0)
 
 // Progress indicators
 const progress = ref(0)
@@ -183,34 +198,50 @@ const getTotalDuplicates = () => {
 const cacheAllImages = async () => {
   isCaching.value = true
   cacheError.value = ''
-  cacheProgress.value = 0
   cachedCount.value = 0
   realCachedCount.value = 0
   totalCount.value = 0
   currentCacheGroup.value = ''
   currentCacheEmoji.value = ''
 
+  // 初始化三个进度
+  totalProgress.value = 0
+  totalProcessedCount.value = 0
+  totalImageCount.value = 0
+  groupProgress.value = 0
+  processedGroupCount.value = 0
+  totalGroupCount.value = 0
+  currentGroupProgress.value = 0
+  currentGroupProcessedCount.value = 0
+  currentGroupImageCount.value = 0
+
   try {
     const { imageCache, cacheImage } = await import('@/utils/imageCache')
     // Initialize image cache
     await imageCache.init()
 
-    // Count total emojis first
-    let total = 0
-    for (const group of emojiStore.groups) {
-      for (const _emoji of group.emojis || []) {
-        total++
-      }
-    }
-    totalCount.value = total
+    // 计算总图片数和分组数
+    let totalImages = 0
+    const validGroups = emojiStore.groups.filter(group => group.emojis && group.emojis.length > 0)
+    totalGroupCount.value = validGroups.length
 
-    let processed = 0
+    for (const group of validGroups) {
+      totalImages += group.emojis.length
+    }
+    totalImageCount.value = totalImages
+    totalCount.value = totalImages
+
+    let processedImages = 0
+    let processedGroups = 0
 
     // Process each group
-    for (const group of emojiStore.groups) {
+    for (const group of validGroups) {
       currentCacheGroup.value = group.name
+      currentGroupImageCount.value = group.emojis.length
+      currentGroupProcessedCount.value = 0
+      currentGroupProgress.value = 0
 
-      for (const emoji of group.emojis || []) {
+      for (const emoji of group.emojis) {
         const url = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
         currentCacheEmoji.value = emoji.name
 
@@ -226,14 +257,30 @@ const cacheAllImages = async () => {
           console.warn(`Failed to cache image for ${emoji.name}:`, error)
         }
 
-        processed++
-        cacheProgress.value = totalCount.value > 0 ? (processed / totalCount.value) * 100 : 0
+        // 更新进度
+        processedImages++
+        totalProcessedCount.value = processedImages
+        currentGroupProcessedCount.value++
+
+        // 计算三个进度
+        totalProgress.value =
+          totalImageCount.value > 0 ? (processedImages / totalImageCount.value) * 100 : 0
+        currentGroupProgress.value =
+          currentGroupImageCount.value > 0
+            ? (currentGroupProcessedCount.value / currentGroupImageCount.value) * 100
+            : 0
 
         // Add small delay to prevent overwhelming the browser
-        if (processed % 10 === 0) {
+        if (processedImages % 10 === 0) {
           await new Promise(resolve => setTimeout(resolve, 100))
         }
       }
+
+      // 分组处理完成
+      processedGroups++
+      processedGroupCount.value = processedGroups
+      groupProgress.value =
+        totalGroupCount.value > 0 ? (processedGroups / totalGroupCount.value) * 100 : 0
     }
 
     message.success(`已缓存 ${cachedCount.value} 个表情图片`)
@@ -320,20 +367,43 @@ const clearImageCache = async () => {
         </div>
 
         <!-- Cache Progress Indicator -->
-        <div v-if="isCaching" class="space-y-3">
-          <div class="flex items-center gap-4">
-            <a-progress type="circle" :percent="cacheProgress" :width="80" />
-            <div class="flex-1 space-y-1">
-              <p class="text-sm font-medium dark:text-white">
-                总进度：{{ cachedCount }} / {{ totalCount }}
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                当前分组：{{ currentCacheGroup }}
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                正在处理：{{ currentCacheEmoji }}
-              </p>
+        <div v-if="isCaching" class="space-y-4">
+          <!-- 总进度（基于总图片数量） -->
+          <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                总进度（图片数量）
+              </h3>
+              <span class="text-sm text-blue-600 dark:text-blue-400">
+                {{ totalProcessedCount }} / {{ totalImageCount }}
+              </span>
             </div>
+            <a-progress :percent="totalProgress" :stroke-color="'#1890ff'" show-info />
+          </div>
+
+          <!-- 分组进度（基于分组数量） -->
+          <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-medium text-green-700 dark:text-green-300">分组进度</h3>
+              <span class="text-sm text-green-600 dark:text-green-400">
+                {{ processedGroupCount }} / {{ totalGroupCount }} 个分组
+              </span>
+            </div>
+            <a-progress :percent="groupProgress" :stroke-color="'#52c41a'" show-info />
+          </div>
+
+          <!-- 当前分组进度（基于当前分组的图片数量） -->
+          <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-medium text-orange-700 dark:text-orange-300">当前分组进度</h3>
+              <span class="text-sm text-orange-600 dark:text-orange-400">
+                {{ currentGroupProcessedCount }} / {{ currentGroupImageCount }}
+              </span>
+            </div>
+            <a-progress :percent="currentGroupProgress" :stroke-color="'#fa8c16'" show-info />
+            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              正在处理：{{ currentCacheGroup }} - {{ currentCacheEmoji }}
+            </p>
           </div>
         </div>
 

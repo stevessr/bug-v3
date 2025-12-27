@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, createMemoryHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
 // 页面组件
@@ -115,8 +115,8 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-  // Use HTML5 history mode (no hash)
-  history: createWebHashHistory(),
+  // Use hash history for browser environments, memory history for SSR
+  history: typeof window !== 'undefined' ? createWebHashHistory() : createMemoryHistory(),
   routes
 })
 

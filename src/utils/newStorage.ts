@@ -31,9 +31,13 @@ let archiveDb: IDBDatabase | null = null
 
 async function getArchiveDb(): Promise<IDBDatabase> {
   if (archiveDb) return archiveDb
+  if (typeof indexedDB === 'undefined') {
+    throw new Error('IndexedDB is not available in this environment')
+  }
 
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(ARCHIVE_DB_NAME, ARCHIVE_DB_VERSION)
+
 
     request.onerror = () => {
       reject(new Error('Failed to open archive database'))
