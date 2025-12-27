@@ -3,6 +3,10 @@ import { loadDataFromStorage } from '../data/storage'
 import { DAEL } from './createEl'
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'
+import { requestSettingFromBackground } from './requestSetting'
+
+// 缓存子菜单注入设置状态
+let cachedSubmenuInjectorEnabled: boolean | null = null
 import { initOneClickAdd } from './oneClickAdd'
 import {
   showFloatingButton,
@@ -20,6 +24,11 @@ window.addEventListener('beforeunload', () => {
 
 // Function to check and re-inject buttons if needed
 function checkAndReinjectButtons() {
+  // 如果启用了子菜单注入，则跳过工具栏按钮注入
+  if (cachedSubmenuInjectorEnabled === true) {
+    return
+  }
+
   const toolbars = findAllToolbars()
   toolbars.forEach((toolbar: Element) => {
     if (
@@ -147,6 +156,25 @@ export async function initializeEmojiFeature(
     void _e
   }
 
+  // 检查是否启用了子菜单注入（仅在 Discourse 上生效）
+  try {
+    const isDiscourse =
+      window.location.hostname.endsWith('linux.do') ||
+      document.querySelector('meta[name="discourse_theme_id"]') !== null ||
+      document.querySelector('#discourse-main') !== null
+
+    if (isDiscourse) {
+      const setting = await requestSettingFromBackground('enableSubmenuInjector')
+      cachedSubmenuInjectorEnabled = setting === true
+      if (cachedSubmenuInjectorEnabled) {
+        console.log('[Emoji Extension] Submenu injector enabled, skipping toolbar button injection')
+      }
+    }
+  } catch (e) {
+    console.warn('[Emoji Extension] Failed to get enableSubmenuInjector setting:', e)
+    cachedSubmenuInjectorEnabled = false
+  }
+
   // 初始化图片缓存功能
   try {
     await contentImageCache.init()
@@ -164,6 +192,12 @@ export async function initializeEmojiFeature(
   let injectionAttempts = 0
 
   function attemptInjection() {
+    // 如果启用了子菜单注入，则跳过工具栏按钮注入
+    if (cachedSubmenuInjectorEnabled === true) {
+      console.log('[Emoji Extension] Submenu injector enabled, skipping toolbar injection')
+      return
+    }
+
     injectionAttempts++
 
     // Inject into all available toolbars
@@ -285,6 +319,9 @@ export async function initializeEmojiFeature(
 
   // periodic checks
   setInterval(() => {
+    // 如果启用了子菜单注入，则跳过工具栏按钮注入
+    if (cachedSubmenuInjectorEnabled === true) return
+
     const toolbars = findAllToolbars()
     toolbars.forEach(toolbar => {
       if (

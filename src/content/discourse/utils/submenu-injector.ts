@@ -264,6 +264,46 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
   // 从后端配置加载额外菜单项
   const backendUploadConfig = (cachedState.settings as any)?.uploadMenuItems || {}
 
+  // 添加 autoItems（在新标签页中打开的链接）
+  if (Array.isArray(backendUploadConfig.autoItems)) {
+    backendUploadConfig.autoItems.forEach(([text, icon, url]: any) => {
+      const autoItem = createMenuItem(
+        text,
+        icon,
+        () => {
+          try {
+            window.open(url, '_blank')
+          } catch {
+            window.location.href = url
+          }
+        },
+        isChat
+      )
+      ul.appendChild(autoItem)
+    })
+  }
+
+  // 添加侧边栏项
+  if (Array.isArray(backendUploadConfig.sides)) {
+    backendUploadConfig.sides.forEach(([text, icon, url, className]: any) => {
+      const sideItem = createMenuItem(
+        text,
+        icon,
+        () => {
+          const existing = DQS(`.${className}`) as HTMLElement | null
+          if (existing) return
+          createAndShowSideIframeModal(url, () => false, {
+            title: text,
+            className: className,
+            icon: icon
+          })
+        },
+        isChat
+      )
+      ul.appendChild(sideItem)
+    })
+  }
+
   // 添加 iframe 模态框项
   if (Array.isArray(backendUploadConfig.iframes)) {
     backendUploadConfig.iframes.forEach(([text, icon, url, className]: any) => {
@@ -294,27 +334,6 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
         isChat
       )
       ul.appendChild(iframeItem)
-    })
-  }
-
-  // 添加侧边栏项
-  if (Array.isArray(backendUploadConfig.sides)) {
-    backendUploadConfig.sides.forEach(([text, icon, url, className]: any) => {
-      const sideItem = createMenuItem(
-        text,
-        icon,
-        () => {
-          const existing = DQS(`.${className}`) as HTMLElement | null
-          if (existing) return
-          createAndShowSideIframeModal(url, () => false, {
-            title: text,
-            className: className,
-            icon: icon
-          })
-        },
-        isChat
-      )
-      ul.appendChild(sideItem)
     })
   }
 }

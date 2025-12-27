@@ -584,7 +584,12 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   return menu
 }
 
-export function injectButton(toolbar: Element) {
+export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boolean = false) {
+  // 如果启用了子菜单注入，则跳过工具栏按钮注入
+  if (skipIfSubmenuInjectorEnabled) {
+    return
+  }
+
   // Check if we already injected buttons in this toolbar
   if (
     toolbar.querySelector('.emoji-extension-button') ||
