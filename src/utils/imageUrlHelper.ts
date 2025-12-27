@@ -4,7 +4,7 @@
  * 优化版本：利用增强的图片缓存系统
  */
 
-import { useEmojiStore } from '@/stores/emojiStore'
+import { useEmojiStore } from '@/stores'
 
 declare const __ENABLE_LOGGING__: boolean
 
@@ -192,19 +192,7 @@ async function triggerBackgroundCache(url: string): Promise<void> {
   }
 }
 
-/**
- * Check if an image is cached
- */
-export async function isImageCached(emoji: {
-  id: string
-  displayUrl?: string
-  url: string
-  packet?: number
-}): Promise<boolean> {
-  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
-  const { isImageCached } = await import('./imageCache')
-  return isImageCached(primaryUrl)
-}
+
 
 /**
  * Preload multiple images into cache

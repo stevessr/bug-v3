@@ -94,10 +94,4 @@ export const SYNC = {
   TIMEOUT: 30000
 } as const
 
-// Storage keys
-export const STORAGE_KEYS = {
-  SETTINGS: 'emoji_extension_settings',
-  GROUPS: 'emoji_groups',
-  FAVORITES: 'emoji_favorites',
-  SYNC_CONFIG: 'sync_config'
-} as const
+

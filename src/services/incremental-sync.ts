@@ -7,6 +7,7 @@ import { conflictResolver } from './conflict-resolver'
 import { offlineQueue } from './offline-queue'
 
 import { syncDb } from '@/utils/sync-db'
+import { useEmojiStore } from '@/stores'
 import { cloudflareSyncService } from '@/utils/cloudflareSync'
 import { getDeviceId } from '@/utils/device'
 import type {
@@ -252,7 +253,6 @@ export class IncrementalSyncService {
     const sortedDeltas = deltas.sort((a, b) => a.version - b.version)
 
     // 导入 store
-    const { useEmojiStore } = await import('@/stores/emojiStore')
     const emojiStore = useEmojiStore()
 
     // 开始批量操作

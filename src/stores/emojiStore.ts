@@ -2,12 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, shallowRef, computed, watch, nextTick } from 'vue'
 
 // Import sub-stores for delegation
-import { useGroupStore } from './groupStore'
-import { useEmojiCrudStore } from './emojiCrudStore'
-import { useFavoritesStore } from './favoritesStore'
-import { useTagStore } from './tagStore'
-import { useSyncStore } from './syncStore'
-import { useCssStore } from './cssStore'
+import { 
+  useGroupStore, 
+  useEmojiCrudStore, 
+  useFavoritesStore, 
+  useTagStore, 
+  useSyncStore, 
+  useCssStore 
+} from './index'
 import type { SaveControl } from './core/types'
 
 import { normalizeImageUrl } from '@/utils/isImageUrl'

@@ -36,9 +36,25 @@ export default defineConfig(({ mode }) => {
         }
       }),
       AutoImport({
-        imports: ['vue', 'vue-router', 'pinia'],
+        imports: [
+          'vue', 
+          'vue-router', 
+          'pinia',
+          {
+            from: './src/stores/index',
+            imports: [
+              'useGroupStore',
+              'useEmojiCrudStore', 
+              'useFavoritesStore',
+              'useCssStore',
+              'useEmojiStore',
+              'useSyncStore',
+              'useTagStore'
+            ]
+          }
+        ],
         dts: 'src/auto-imports.d.ts',
-        dirs: ['src/stores', 'src/composables', 'src/utils'],
+        dirs: ['src/composables', 'src/utils'],
         vueTemplate: true
       }),
       Components({

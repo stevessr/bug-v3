@@ -1,3 +1,5 @@
+import { useEmojiStore } from '@/stores'
+
 export interface UploadService {
   name: string
   uploadFile(
@@ -187,7 +189,6 @@ class ImgbedUploadService implements UploadService {
   }
 
   async uploadFile(file: File, onProgress?: (percent: number) => void): Promise<string> {
-    const { useEmojiStore } = await import('@/stores/emojiStore')
     const emojiStore = useEmojiStore()
     const token = emojiStore.settings.imgbedToken
     const apiUrl = emojiStore.settings.imgbedApiUrl
@@ -277,7 +278,6 @@ export async function uploadAndAddEmoji(
     }
 
     // Import store dynamically to avoid circular dependencies
-    const { useEmojiStore } = await import('@/stores/emojiStore')
     const emojiStore = useEmojiStore()
 
     // Determine target group

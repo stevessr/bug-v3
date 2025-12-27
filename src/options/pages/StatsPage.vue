@@ -13,7 +13,8 @@ import type { OptionsInject } from '../types'
 import EmojiStats from '../components/EmojiStats.vue'
 
 import type { Emoji } from '@/types/type'
-import { getEmojiImageUrlSync, addCacheBustingParam, isImageCached } from '@/utils/imageUrlHelper'
+import { getEmojiImageUrlSync, addCacheBustingParam } from '@/utils/imageUrlHelper'
+import { isImageCached } from '@/utils/imageCache'
 
 const options = inject<OptionsInject>('options')!
 const { emojiStore, totalEmojis } = options
@@ -215,7 +216,7 @@ const cacheAllImages = async () => {
 
         try {
           // Check if already cached
-          const isCached = await isImageCached(emoji)
+          const isCached = await isImageCached(url)
           if (!isCached) {
             // Cache the image
             await cacheImage(url)

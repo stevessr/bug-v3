@@ -77,7 +77,7 @@ declare global {
   const imageCache: typeof import('./utils/imageCache')['imageCache']
   const imageCacheService: typeof import('./utils/imageCacheService')['imageCacheService']
   const inject: typeof import('vue')['inject']
-  const isImageCached: typeof import('./utils/imageUrlHelper')['isImageCached']
+  const isImageCached: typeof import('./utils/imageCache')['isImageCached']
   const isImageUrl: typeof import('./utils/isImageUrl')['isImageUrl']
   const isProxy: typeof import('vue')['isProxy']
   const isReactive: typeof import('vue')['isReactive']
@@ -160,8 +160,8 @@ declare global {
   const useRoute: typeof import('vue-router')['useRoute']
   const useRouter: typeof import('vue-router')['useRouter']
   const useSlots: typeof import('vue')['useSlots']
-  const useSyncStore: typeof import('./stores/syncStore')['useSyncStore']
-  const useTagStore: typeof import('./stores/tagStore')['useTagStore']
+  const useSyncStore: typeof import('./stores/index')['useSyncStore']
+  const useTagStore: typeof import('./stores/index')['useTagStore']
   const useTemplateRef: typeof import('vue')['useTemplateRef']
   const wasmHashService: typeof import('./utils/wasmHashService')['wasmHashService']
   const watch: typeof import('vue')['watch']
@@ -282,7 +282,7 @@ declare module 'vue' {
     readonly imageCache: UnwrapRef<typeof import('./utils/imageCache')['imageCache']>
     readonly imageCacheService: UnwrapRef<typeof import('./utils/imageCacheService')['imageCacheService']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
-    readonly isImageCached: UnwrapRef<typeof import('./utils/imageUrlHelper')['isImageCached']>
+    readonly isImageCached: UnwrapRef<typeof import('./utils/imageCache')['isImageCached']>
     readonly isImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['isImageUrl']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
@@ -365,8 +365,8 @@ declare module 'vue' {
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router')['useRouter']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
-    readonly useSyncStore: UnwrapRef<typeof import('./stores/syncStore')['useSyncStore']>
-    readonly useTagStore: UnwrapRef<typeof import('./stores/tagStore')['useTagStore']>
+    readonly useSyncStore: UnwrapRef<typeof import('./stores/index')['useSyncStore']>
+    readonly useTagStore: UnwrapRef<typeof import('./stores/index')['useTagStore']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly wasmHashService: UnwrapRef<typeof import('./utils/wasmHashService')['wasmHashService']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
