@@ -171,7 +171,7 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
     })
     const title = createE('h2', {
       class: 'emoji-picker__section-title',
-      attrs: { textContent: group.name }
+      text: group.name
     })
     titleContainer.appendChild(title)
 
