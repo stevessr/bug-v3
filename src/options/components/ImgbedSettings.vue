@@ -1,126 +1,50 @@
 <script setup lang="ts">
-import { ref, watch, isRef, computed, onMounted, onBeforeUnmount, type Ref } from 'vue'
-import { message } from 'ant-design-vue'
+import { computed, type Ref } from 'vue'
 
 import type { AppSettings } from '../../types/type'
+import { useSettingsForm } from '../composables/useSettingsForm'
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
-const settings = props.settings as AppSettings | Ref<AppSettings>
 
 const emit = defineEmits(['update:imgbedToken', 'update:imgbedApiUrl'])
 
-// Helper function to get setting value
-const getSetting = (key: keyof AppSettings, defaultValue: any = '') => {
-  try {
-    if (isRef(settings)) return (settings.value && settings.value[key]) ?? defaultValue
-    return (settings && (settings as AppSettings)[key]) ?? defaultValue
-  } catch {
-    return defaultValue
-  }
-}
+// Use the settings form composable
+const { localValues, hasChanges, isValid, isSaving, handleSave, handleReset } = useSettingsForm(
+  props.settings,
+  [
+    { key: 'imgbedToken', default: '' },
+    { key: 'imgbedApiUrl', default: '' }
+  ],
+  emit as (event: string, ...args: any[]) => void,
+  {
+    successMessage: '图床配置已保存',
+    validate: (): { valid: boolean; error?: string } => {
+      // Both fields should be filled or both should be empty
+      const hasToken: boolean = (localValues.imgbedToken.value as string).trim().length > 0
+      const hasUrl: boolean = (localValues.imgbedApiUrl.value as string).trim().length > 0
+      const valid: boolean = (hasToken && hasUrl) || (!hasToken && !hasUrl)
 
-// Local state for form fields
-const localImgbedToken = ref<string>(getSetting('imgbedToken', ''))
-const localImgbedApiUrl = ref<string>(getSetting('imgbedApiUrl', ''))
-
-// UI state
-const isSaving = ref(false)
-
-// Store original values to detect external changes
-const originalValues = ref({
-  imgbedToken: getSetting('imgbedToken', ''),
-  imgbedApiUrl: getSetting('imgbedApiUrl', '')
-})
-
-// Watch for external changes (only update if no unsaved changes)
-watch(
-  () => getSetting('imgbedToken', ''),
-  (val: string) => {
-    originalValues.value.imgbedToken = val
-    if (!hasChanges.value) {
-      localImgbedToken.value = val
+      return {
+        valid,
+        error: valid ? undefined : '请同时填写 API URL 和 Token，或同时留空'
+      }
     }
   }
 )
 
-watch(
-  () => getSetting('imgbedApiUrl', ''),
-  (val: string) => {
-    originalValues.value.imgbedApiUrl = val
-    if (!hasChanges.value) {
-      localImgbedApiUrl.value = val
-    }
+// Destructure local values for easier access in template
+const localImgbedToken = computed({
+  get: () => localValues.imgbedToken.value,
+  set: val => {
+    localValues.imgbedToken.value = val
   }
-)
-
-// Detect if form has been modified
-const hasChanges = computed(() => {
-  return (
-    localImgbedToken.value !== originalValues.value.imgbedToken ||
-    localImgbedApiUrl.value !== originalValues.value.imgbedApiUrl
-  )
 })
 
-// Validation
-const isValidConfig = computed(() => {
-  // Both fields should be filled or both should be empty
-  const hasToken = localImgbedToken.value.trim().length > 0
-  const hasUrl = localImgbedApiUrl.value.trim().length > 0
-  return (hasToken && hasUrl) || (!hasToken && !hasUrl)
-})
-
-// Save handler
-const handleSave = async () => {
-  if (!isValidConfig.value) {
-    message.error('请同时填写 API URL 和 Token，或同时留空')
-    return
+const localImgbedApiUrl = computed({
+  get: () => localValues.imgbedApiUrl.value,
+  set: val => {
+    localValues.imgbedApiUrl.value = val
   }
-
-  isSaving.value = true
-  try {
-    emit('update:imgbedToken', localImgbedToken.value)
-    emit('update:imgbedApiUrl', localImgbedApiUrl.value)
-
-    // Update original values after successful save
-    originalValues.value = {
-      imgbedToken: localImgbedToken.value,
-      imgbedApiUrl: localImgbedApiUrl.value
-    }
-
-    message.success('图床配置已保存')
-  } catch (error) {
-    console.error('Failed to save imgbed config:', error)
-    message.error('保存失败：' + (error as Error).message)
-  } finally {
-    isSaving.value = false
-  }
-}
-
-// Reset handler
-const handleReset = () => {
-  localImgbedToken.value = originalValues.value.imgbedToken
-  localImgbedApiUrl.value = originalValues.value.imgbedApiUrl
-}
-
-// Keyboard shortcut handler
-const handleKeyDown = (e: KeyboardEvent) => {
-  // Ctrl/Cmd + S to save
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-    e.preventDefault()
-    if (hasChanges.value && isValidConfig.value) {
-      handleSave()
-    }
-  }
-}
-
-// Add keyboard event listener
-onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
-})
-
-// Remove keyboard event listener
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
@@ -167,8 +91,8 @@ onBeforeUnmount(() => {
           type="primary"
           @click="handleSave"
           :loading="isSaving"
-          :disabled="!hasChanges || !isValidConfig"
-          :title="hasChanges && isValidConfig ? '保存配置 (Ctrl/Cmd+S)' : ''"
+          :disabled="!hasChanges || !isValid"
+          :title="hasChanges && isValid ? '保存配置 (Ctrl/Cmd+S)' : ''"
         >
           保存配置
         </a-button>
