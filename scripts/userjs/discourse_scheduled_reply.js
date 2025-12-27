@@ -182,6 +182,30 @@
         document.body.appendChild(overlay)
     }
 
+    // Logic: Discard Draft
+    function discardDraft() {
+        // 1. Click Discard Button
+        const discardBtn = document.querySelector('.discard-button');
+        if (discardBtn) {
+            discardBtn.click();
+            // 2. Wait for Modal and Click Confirm
+            setTimeout(() => {
+                const confirmBtn = document.querySelector('.discard-draft-modal__discard-btn');
+                if (confirmBtn) {
+                    confirmBtn.click();
+                } else {
+                    console.warn('Timer script: Confirm discard button not found');
+                }
+            }, 300); // Wait 300ms for modal animation
+        } else {
+             // Fallback: Close composer via API if button not found (though button simulation is requested)
+             console.warn('Timer script: Discard button not found');
+             try {
+                window.Discourse.__container__.lookup('controller:composer').cancel();
+             } catch(e) {}
+        }
+    }
+
     // Logic: Add Timer
     function addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId) {
         const container = getTimerContainer()
@@ -189,7 +213,7 @@
 
         let replyInfo = ''
         if (title) {
-            replyInfo = `(发布主题: ${title.substring(0, 10)}...)`
+            replyInfo = `(发布主题：${title.substring(0, 10)}...)`
         } else {
             replyInfo = replyToPostNumber ? `(回复 #${replyToPostNumber})` : `(回复 Topic #${topicId})`
         }
@@ -203,6 +227,9 @@
             `
         })
         container.appendChild(el)
+
+        // Close Composer Immediately
+        discardDraft()
 
         let remaining = seconds
         const interval = setInterval(async () => {
