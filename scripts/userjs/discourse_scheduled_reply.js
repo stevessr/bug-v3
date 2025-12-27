@@ -183,16 +183,21 @@
     }
 
     // Logic: Add Timer
-    function addTimer(topicId, raw, seconds, replyToPostNumber) {
+    function addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId) {
         const container = getTimerContainer()
         const timerId = Date.now() + Math.random().toString()
 
-        const replyInfo = replyToPostNumber ? `(回复 #${replyToPostNumber})` : ''
+        let replyInfo = ''
+        if (title) {
+            replyInfo = `(发布主题: ${title.substring(0, 10)}...)`
+        } else {
+            replyInfo = replyToPostNumber ? `(回复 #${replyToPostNumber})` : `(回复 Topic #${topicId})`
+        }
 
         const el = createEl('div', {
             className: 'timer-item',
             innerHTML: `
-                <div style="font-weight:bold;margin-bottom:4px">Topic #${topicId} 定时回复 ${replyInfo}</div>
+                <div style="font-weight:bold;margin-bottom:4px">定时发送 ${replyInfo}</div>
                 <div class="timer-status">等待中：<span class="countdown">${seconds}</span>s</div>
                 <div class="timer-content" style="font-size:12px;opacity:0.8;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${raw}</div>
             `
@@ -215,11 +220,20 @@
 
                     const fd = new URLSearchParams()
                     fd.append('raw', raw)
-                    fd.append('topic_id', topicId)
-                    fd.append('archetype', 'regular')
-                    fd.append('nested_post', 'true')
-                    if (replyToPostNumber) {
-                        fd.append('reply_to_post_number', replyToPostNumber)
+
+                    if (title) {
+                        // New Topic
+                        fd.append('title', title)
+                        fd.append('category', categoryId)
+                        fd.append('archetype', 'regular')
+                    } else {
+                        // Reply
+                        fd.append('topic_id', topicId)
+                        fd.append('archetype', 'regular')
+                        fd.append('nested_post', 'true')
+                        if (replyToPostNumber) {
+                            fd.append('reply_to_post_number', replyToPostNumber)
+                        }
                     }
 
                     const res = await fetch('/posts', {
@@ -318,28 +332,56 @@
 
             const raw = model.reply || model.replyText // standard property for content
             const topicId = model.topic ? model.topic.id : model.topicId
+            const title = model.title
+            const categoryId = model.categoryId
+
             // Try to get replyToPostNumber correctly from Ember model
             // It might be 'replyToPostNumber' or inside 'action' or 'reply'
             let replyToPostNumber = model.replyToPostNumber
             if (!replyToPostNumber && model.get) {
                 replyToPostNumber = model.get('replyToPostNumber')
             }
-            // Sometimes it's in model.action ('reply' vs 'replyToPost')
             // If we are replying to a post, we need that ID.
 
-            console.log('Timer script: Model state:', { topicId, replyToPostNumber, raw: raw?.substring(0, 20) })
+            // Fallback: Try to extract from DOM if model is missing data (common in some Discourse setups)
+            // 1. Extract replyToPostNumber from user link in reply area
+            if (!replyToPostNumber) {
+                const userLink = document.querySelector('.reply-details .user-link');
+                if (userLink) {
+                    const match = userLink.href.match(/\/(\d+)$/);
+                    if (match) replyToPostNumber = match[1];
+                }
+            }
+            // 2. Extract topicId from URL if missing
+            if (!topicId) {
+                // If we are on a topic page, get ID from URL
+                const match = window.location.pathname.match(/\/t\/[^/]+\/(\d+)/);
+                if (match) {
+                    // But wait, if we are in a composer for a NEW topic, we shouldn't grab current topic ID.
+                    // Only grab if the composer is NOT creating a new topic.
+                    const isNewTopic = document.querySelector('.reply-details .composer-action-title .action-title')?.textContent.includes('Create Topic');
+                    if (!isNewTopic) {
+                        // Actually, better to check if composer has a title input visible
+                        // But relying on model.title is safer. If model.title is present, it's likely a new topic.
+                    }
+                }
+            }
+
+
+            console.log('Timer script: Model state:', { topicId, replyToPostNumber, title, categoryId, raw: raw?.substring(0, 20) })
 
             if (!raw || !raw.trim()) {
                 alert('请输入回复内容')
                 return
             }
-            if (!topicId) {
-                alert('无法获取话题 ID')
+            // Logic change: Allow if topicId exists OR title exists (new topic)
+            if (!topicId && !title) {
+                alert('无法获取话题 ID 或 标题')
                 return
             }
 
             showTimePicker((seconds) => {
-                addTimer(topicId, raw, seconds, replyToPostNumber)
+                addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId)
             })
 
             // Optional: Close composer or clear it?
