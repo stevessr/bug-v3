@@ -22,6 +22,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "type-check": "vue-tsc --noEmit",
+    "prepare:json": "node scripts/prepare-json-assets.js",
     "update:data": "cd scripts/cfworker && wrangler pages deploy",
     "update:metadata": "node scripts/update-market-metadata.js",
     "update:push": "git push",

@@ -9,7 +9,9 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 export default defineConfig(({ mode }) => {
   // 根据构建模式设置编译期标志
   const isDev = mode === 'development'
-  const enableLogging = process.env.ENABLE_LOGGING === 'true' || isDev
+  const isProd = mode === 'production'
+  // 生产环境强制禁用日志，开发环境默认启用（除非明确禁用）
+  const enableLogging = isDev && process.env.ENABLE_LOGGING !== 'false'
 
   return {
     css: {
@@ -94,18 +96,33 @@ export default defineConfig(({ mode }) => {
           ? undefined
           : {
               compress: {
-                drop_console: !enableLogging, // 根据日志开关决定是否移除 console
-                drop_debugger: !isDev, // 生产环境移除 debugger
-                passes: 3, // More aggressive compression
-                // 优化：更激进的压缩
-                pure_funcs: !enableLogging ? ['console.log', 'console.info', 'console.debug'] : [],
+                // 生产环境移除所有 console（除了 console.error）
+                drop_console: isProd,
+                drop_debugger: true, // 始终移除 debugger
+                passes: 3, // 更激进的压缩
+                // 显式移除日志函数
+                pure_funcs: isProd
+                  ? ['console.log', 'console.info', 'console.debug', 'console.warn']
+                  : [],
                 dead_code: true,
-                unused: true
+                unused: true,
+                // 额外的生产环境优化
+                ...(isProd && {
+                  arrows: true, // 转换箭头函数
+                  booleans: true, // 优化布尔值
+                  collapse_vars: true, // 内联变量
+                  comparisons: true, // 优化比较操作
+                  conditionals: true, // 优化条件语句
+                  evaluate: true, // 求值常量表达式
+                  join_vars: true, // 合并变量声明
+                  loops: true, // 优化循环
+                  reduce_vars: true, // 变量优化
+                  sequences: true // 合并语句序列
+                })
               },
               format: {
-                comments: false // Remove all comments in production
+                comments: false // 移除所有注释
               },
-              // 优化：启用 mangle
               mangle: {
                 safari10: true
               }

@@ -30,7 +30,7 @@ const configs = {
   },
 
   build: {
-    ENABLE_LOGGING: 'true',
+    ENABLE_LOGGING: 'false', // 生产环境禁用日志
     NODE_ENV: 'production'
   },
 
@@ -78,72 +78,9 @@ if (!config) {
 // 设置环境变量
 Object.assign(process.env, config)
 
-// Note: build-time generation of defaultEmojiGroups.ts has been removed.
-
-// Also, ensure a runtime JSON is available in public/assets for the loader
-try {
-  const configPath = path.resolve(process.cwd(), 'src/config/default.json')
-  const configContent = fs.readFileSync(configPath, 'utf-8')
-  const configData = JSON.parse(configContent)
-
-  if (configData) {
-    // Create assets/json directory
-    const jsonDir = path.resolve(process.cwd(), 'scripts', 'cfworker', 'public', 'assets', 'json')
-    fs.mkdirSync(jsonDir, { recursive: true })
-
-    // Write settings.json
-    if (configData.settings) {
-      const settingsOut = path.resolve(jsonDir, 'settings.json')
-      const settingsJsonString = JSON.stringify(configData.settings)
-      fs.writeFileSync(settingsOut, settingsJsonString, 'utf-8')
-      console.log(`ℹ️ Wrote runtime settings JSON to ${settingsOut}`)
-    }
-
-    // Prepare group index for manifest
-    const groupIndex = []
-
-    // Write individual emoji group JSON files
-    if (configData.groups && Array.isArray(configData.groups)) {
-      for (const group of configData.groups) {
-        const groupOut = path.resolve(jsonDir, `${group.id}.json`)
-        const groupJsonString = JSON.stringify({
-          emojis: group.emojis,
-          icon: group.icon,
-          id: group.id,
-          name: group.name,
-          order: group.order
-        })
-        fs.writeFileSync(groupOut, groupJsonString, 'utf-8')
-
-        // Add to group index for manifest
-        groupIndex.push({
-          id: group.id,
-          name: group.name,
-          order: group.order || 0,
-          icon: group.icon || '',
-          emojiCount: Array.isArray(group.emojis) ? group.emojis.length : 0
-        })
-      }
-      console.log(`ℹ️ Wrote ${configData.groups.length} emoji group JSON files to ${jsonDir}`)
-    }
-
-    const manifestOut = path.resolve(jsonDir, 'manifest.json')
-    const manifestJsonString = JSON.stringify(
-      {
-        groups: groupIndex,
-        version: configData.version,
-        exportDate: configData.exportDate
-      },
-      null,
-      2
-    )
-    fs.writeFileSync(manifestOut, manifestJsonString, 'utf-8')
-
-    console.log(`ℹ️ Wrote runtime manifest JSON to ${manifestOut}`)
-  }
-} catch (e) {
-  console.warn('⚠️ Failed to write runtime JSON files:', e)
-}
+// Note: JSON asset preparation has been moved to a separate script.
+// Run `node scripts/prepare-json-assets.js` to generate CloudFlare Worker JSON assets.
+// This is only needed when updating defaultEmojiGroups for the CF Worker deployment.
 
 // 打印配置信息
 console.log(`🚀 开始构建 (${buildType})`)
