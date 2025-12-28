@@ -520,11 +520,22 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         // 并行保存所有数据：索引、分组、设置和收藏
         const index = groups.value.map((g, order) => ({ id: g.id, order }))
 
+        // 优化：合并小数据（index、settings、favorites）为一次批量操作
+        const STORAGE_KEYS = {
+          GROUP_INDEX: 'emojiGroupIndex',
+          SETTINGS: 'appSettings',
+          FAVORITES: 'favorites'
+        }
+
         await Promise.all([
-          storage.setEmojiGroupIndex(index),
-          ...groups.value.map(group => storage.setEmojiGroup(group.id, group)),
-          storage.setSettings({ ...settings.value, lastModified: Date.now() }),
-          storage.setFavorites(Array.from(favorites.value))
+          // 批量保存小数据（1 次操作替代 3 次）
+          storage.storageBatchSet({
+            [STORAGE_KEYS.GROUP_INDEX]: index,
+            [STORAGE_KEYS.SETTINGS]: { ...settings.value, lastModified: Date.now() },
+            [STORAGE_KEYS.FAVORITES]: Array.from(favorites.value)
+          }),
+          // 并行保存所有分组
+          ...groups.value.map(group => storage.setEmojiGroup(group.id, group))
         ])
 
         console.log('[EmojiStore] SaveData completed successfully')

@@ -87,12 +87,30 @@ const addEmojiTouchEvents = (_element: HTMLElement, _emoji: Emoji, _index: numbe
   // 由父组件通过 TouchDragHandler 处理
 }
 
-// Group emojis into rows for virtual list
+// Group emojis into rows for virtual list - optimized with caching
+let cachedRows: Emoji[][] = []
+let cachedEmojisLength = -1
+let cachedGridColumns = -1
+
 const emojiRows = computed(() => {
+  // 仅在 length 或 gridColumns 变化时重新计算
+  if (
+    props.emojis.length === cachedEmojisLength &&
+    props.gridColumns === cachedGridColumns &&
+    cachedRows.length > 0
+  ) {
+    return cachedRows
+  }
+
   const rows: Emoji[][] = []
   for (let i = 0; i < props.emojis.length; i += props.gridColumns) {
     rows.push(props.emojis.slice(i, i + props.gridColumns))
   }
+
+  cachedRows = rows
+  cachedEmojisLength = props.emojis.length
+  cachedGridColumns = props.gridColumns
+
   return rows
 })
 </script>
@@ -132,6 +150,7 @@ const emojiRows = computed(() => {
       :container-height="600"
       :buffer="2"
       :items-per-row="1"
+      :item-key="(row, index) => row.map(e => e.id).join('-') || `row-${index}`"
     >
       <template #default="{ item: row, index: rowIndex }">
         <div

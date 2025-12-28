@@ -7,12 +7,14 @@ interface Props {
   containerHeight?: number
   buffer?: number
   itemsPerRow?: number // 每行显示的项目数
+  itemKey?: (item: T, index: number) => string | number // 自定义 key 提取函数
 }
 
 const props = withDefaults(defineProps<Props>(), {
   containerHeight: 600,
   buffer: 3,
-  itemsPerRow: 1 // 默认为 1，保持向后兼容
+  itemsPerRow: 1, // 默认为 1，保持向后兼容
+  itemKey: (_, index: number) => index // 默认使用 index
 })
 
 defineSlots<{
@@ -139,7 +141,7 @@ onUnmounted(() => {
       <div class="virtual-list-viewport" :style="{ transform: `translateY(${offsetY}px)` }">
         <div
           v-for="(item, idx) in visibleItems"
-          :key="startIndex + idx"
+          :key="itemKey(item, startIndex + idx)"
           class="virtual-list-item"
           :style="{
             '--items-per-row': itemsPerRow,

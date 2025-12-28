@@ -27,6 +27,40 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
   // --- Private Helpers ---
 
   /**
+   * 从 Trie 树移除单词
+   */
+  const removeWordFromTrie = (trie: TrieNode, word: string, emojiId: string): boolean => {
+    const path: TrieNode[] = []
+    let node = trie
+
+    // 遍历到目标节点，记录路径
+    for (const char of word) {
+      if (!node.children.has(char)) {
+        return false // 单词不存在
+      }
+      path.push(node)
+      const nextNode = node.children.get(char)
+      if (!nextNode) return false
+      node = nextNode
+    }
+
+    // 从叶节点开始向上删除 emojiId
+    node.emojiIds.delete(emojiId)
+
+    // 向上回溯，清理每个节点上的 emojiId
+    for (let i = path.length - 1; i >= 0; i--) {
+      const parentNode = path[i]
+      const char = word[path.length - 1 - i]
+      const childNode = parentNode.children.get(char)
+      if (childNode) {
+        childNode.emojiIds.delete(emojiId)
+      }
+    }
+
+    return true
+  }
+
+  /**
    * 向 Trie 树添加单词
    */
   const addWordToTrie = (trie: TrieNode, word: string, emojiId: string) => {
@@ -83,7 +117,11 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
   /**
    * 从索引中移除 emoji
    */
-  const removeEmojiFromSearchIndex = (index: Map<string, Set<string>>, emoji: Emoji) => {
+  const removeEmojiFromSearchIndex = (
+    index: Map<string, Set<string>>,
+    trie: TrieNode,
+    emoji: Emoji
+  ) => {
     if (!emoji) return
     const emojiId = emoji.id
 
@@ -98,6 +136,8 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
           index.delete(word)
         }
       }
+      // 从 Trie 树移除
+      removeWordFromTrie(trie, word, emojiId)
     }
 
     // 移除标签索引
@@ -111,6 +151,8 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
             index.delete(tagLower)
           }
         }
+        // 从 Trie 树移除
+        removeWordFromTrie(trie, tagLower, emojiId)
       }
     }
   }
@@ -148,13 +190,12 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
   }
 
   /**
-   * 增量移除 emoji（Trie 树删除复杂，重建索引）
+   * 增量移除 emoji（优化：使用增量 Trie 删除）
    */
   const removeEmojiFromIndex = (emoji: Emoji) => {
     if (!searchIndexValid.value) return
-    removeEmojiFromSearchIndex(searchIndexCache.value, emoji)
-    // Trie 树删除节点复杂度高，标记索引无效以触发重建
-    searchIndexValid.value = false
+    removeEmojiFromSearchIndex(searchIndexCache.value, searchPrefixTrie.value, emoji)
+    // 不再需要标记索引无效 - 已实现增量删除
   }
 
   /**
@@ -162,7 +203,7 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
    */
   const updateEmojiInIndex = (oldEmoji: Emoji, newEmoji: Emoji) => {
     if (!searchIndexValid.value) return
-    removeEmojiFromSearchIndex(searchIndexCache.value, oldEmoji)
+    removeEmojiFromSearchIndex(searchIndexCache.value, searchPrefixTrie.value, oldEmoji)
     addEmojiToSearchIndex(searchIndexCache.value, searchPrefixTrie.value, newEmoji)
   }
 
