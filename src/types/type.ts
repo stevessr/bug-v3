@@ -47,6 +47,10 @@ export interface AppSettings {
   enableContentImageCache?: boolean // 允许前端注入的 content script 使用本地缓存的图片显示
   enableSubmenuInjector?: boolean // 将功能按钮注入到 Discourse 下拉菜单中（试验性功能）
   cloudMarketDomain?: string // 云端市场域名配置（默认 video2gif-pages.pages.dev）
+  enableLinuxDoSeeking?: boolean // 启用 LinuxDo 追觅功能（监控 linux.do 用户活动，显示侧边栏）
+  linuxDoSeekingUsers?: string[] // LinuxDo 追觅功能的监控用户列表
+  enableLinuxDoSeekingDanmaku?: boolean // 启用 LinuxDo 追觅弹幕通知
+  enableLinuxDoSeekingSysNotify?: boolean // 启用 LinuxDo 追觅系统通知
 }
 
 export interface EmojiGroup {

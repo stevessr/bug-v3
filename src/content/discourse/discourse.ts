@@ -9,6 +9,7 @@ import { setupDiscourseUploadHandler } from './utils/upload-handler'
 import { initCalloutSuggestions } from './callout-suggestions'
 import { initChatMultiReactor } from './utils/chat-multi-reactor'
 import { initSubmenuInjector } from './utils/submenu-injector'
+import { initLinuxDoSeeking } from './utils/linuxdo-seeking'
 
 export async function initDiscourse() {
   try {
@@ -102,6 +103,18 @@ export async function initDiscourse() {
       }
     } catch (e) {
       console.warn('[DiscourseOneClick] failed to get enableSubmenuInjector setting', e)
+    }
+
+    // LinuxDo 追觅功能
+    // 监控 Linux.do 用户活动，显示侧边栏
+    try {
+      const enableLinuxDoSeeking = await requestSettingFromBackground('enableLinuxDoSeeking')
+      if (enableLinuxDoSeeking === true) {
+        initLinuxDoSeeking()
+        console.log('[DiscourseOneClick] LinuxDo seeking enabled')
+      }
+    } catch (e) {
+      console.warn('[DiscourseOneClick] failed to get enableLinuxDoSeeking setting', e)
     }
 
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages

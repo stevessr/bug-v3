@@ -14,6 +14,7 @@ import SyncSettings from '../components/SyncSettings.vue'
 import CloudDataPreview from '../components/CloudDataPreview.vue'
 import CollaborativeUploadSettings from '../components/CollaborativeUploadSettings.vue'
 import ChatMultiReactorSettings from '../components/ChatMultiReactorSettings.vue'
+import LinuxDoSeekingSettings from '../components/LinuxDoSeekingSettings.vue'
 
 const options = inject<OptionsInject>('options')!
 
@@ -34,6 +35,10 @@ const {
   updateUseIndexedDBForImages,
   updateEnableContentImageCache,
   updateEnableSubmenuInjector,
+  updateEnableLinuxDoSeeking,
+  updateLinuxDoSeekingUsers,
+  updateEnableLinuxDoSeekingDanmaku,
+  updateEnableLinuxDoSeekingSysNotify,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -202,6 +207,18 @@ onMounted(async () => {
               :settings="emojiStore.settings"
               @update:enableChatMultiReactor="updateEnableChatMultiReactor"
               @update:chatMultiReactorEmojis="updateChatMultiReactorEmojis"
+            />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="linuxdo-seeking" tab="LinuxDo 追觅">
+          <div class="py-4">
+            <LinuxDoSeekingSettings
+              :settings="emojiStore.settings"
+              @update:enableLinuxDoSeeking="updateEnableLinuxDoSeeking"
+              @update:linuxDoSeekingUsers="updateLinuxDoSeekingUsers"
+              @update:enableLinuxDoSeekingDanmaku="updateEnableLinuxDoSeekingDanmaku"
+              @update:enableLinuxDoSeekingSysNotify="updateEnableLinuxDoSeekingSysNotify"
             />
           </div>
         </a-tab-pane>
