@@ -97,6 +97,17 @@ export function useFilePersistence(selectedFiles: Ref<FileItem[]>) {
    */
   const saveSelectedFiles = async () => {
     try {
+      // 1. 预先序列化所有数据（异步操作）
+      // 必须在事务开始前完成所有异步操作，因为 IDB 事务会在事件循环空闲时自动提交
+      const serializedItems: SerializableFile[] = []
+      for (const item of selectedFiles.value) {
+        const serialized = await fileToSerializable(item)
+        if (serialized) {
+          serializedItems.push(serialized)
+        }
+      }
+
+      // 2. 开启事务（同步操作）
       const db = await openDatabase()
       const tx = db.transaction(STORE_NAME, 'readwrite')
       const store = tx.objectStore(STORE_NAME)
@@ -105,11 +116,8 @@ export function useFilePersistence(selectedFiles: Ref<FileItem[]>) {
       store.clear()
 
       // 保存新数据
-      for (const item of selectedFiles.value) {
-        const serialized = await fileToSerializable(item)
-        if (serialized) {
-          store.put(serialized)
-        }
+      for (const item of serializedItems) {
+        store.put(item)
       }
 
       await new Promise<void>((resolve, reject) => {
