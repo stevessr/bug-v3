@@ -1,7 +1,6 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 
 import { useEmojiStore } from '../stores/emojiStore'
-
 import type { EmojiGroup, Emoji } from '../types/type'
 import { isImageUrl } from '../utils/isImageUrl'
 

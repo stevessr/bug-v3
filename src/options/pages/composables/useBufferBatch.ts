@@ -233,7 +233,9 @@ export function useBufferBatch(options: UseBufferBatchOptions) {
     selectedGroupIdForFilter.value = ''
     showGroupSelector.value = false
 
-    console.log(`[useBufferBatch] Added group "${group.name}" to filter with ${emojiNames.size} emojis`)
+    console.log(
+      `[useBufferBatch] Added group "${group.name}" to filter with ${emojiNames.size} emojis`
+    )
   }
 
   /**

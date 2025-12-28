@@ -90,7 +90,10 @@ export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
         },
         onDisconnect: pendingTasks => {
           // 上传过程中断线
-          console.log('[useCollaborativeUpload] Disconnected during upload, pending tasks:', pendingTasks)
+          console.log(
+            '[useCollaborativeUpload] Disconnected during upload, pending tasks:',
+            pendingTasks
+          )
           disconnectedDuringUpload.value = true
           failedByDisconnect.value = pendingTasks
           message.error(`服务器连接断开，${pendingTasks.length} 个远程任务失败`)
@@ -159,7 +162,9 @@ export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
     emojiStore.beginBatch()
     try {
       for (const { filename, url } of pendingRemoteUploads.value) {
-        const alreadyAdded = bufferGroup.value?.emojis.some(e => e.url === url || e.name === filename)
+        const alreadyAdded = bufferGroup.value?.emojis.some(
+          e => e.url === url || e.name === filename
+        )
         if (!alreadyAdded) {
           addEmojiToBuffer(filename, url, true) // skipSave = true
         }
