@@ -103,24 +103,65 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const searchIndexCache = ref<Map<string, Set<string>>>(new Map())
   const searchIndexValid = ref(false)
 
+  // 前缀 Trie 树用于优化部分匹配搜索
+  interface TrieNode {
+    children: Map<string, TrieNode>
+    emojiIds: Set<string> // 以此节点为前缀的所有 emoji ID
+  }
+
+  const createTrieNode = (): TrieNode => ({
+    children: new Map(),
+    emojiIds: new Set()
+  })
+
+  const searchPrefixTrie = ref<TrieNode>(createTrieNode())
+
   // 构建搜索索引（在后台构建，不阻塞主线程）
   const buildSearchIndex = () => {
     const index = new Map<string, Set<string>>()
+    const trie = createTrieNode()
 
     for (const group of groups.value) {
       const emojis = group.emojis || []
       for (const emoji of emojis) {
         if (!emoji) continue
-        addEmojiToSearchIndex(index, emoji)
+        addEmojiToSearchIndex(index, trie, emoji)
       }
     }
 
     searchIndexCache.value = index
+    searchPrefixTrie.value = trie
     searchIndexValid.value = true
   }
 
-  // 辅助函数：将 emoji 添加到索引
-  const addEmojiToSearchIndex = (index: Map<string, Set<string>>, emoji: Emoji) => {
+  // 向 Trie 树添加单词
+  const addWordToTrie = (trie: TrieNode, word: string, emojiId: string) => {
+    let node = trie
+    // 为每个字符创建路径
+    for (const char of word) {
+      if (!node.children.has(char)) {
+        node.children.set(char, createTrieNode())
+      }
+      node = node.children.get(char)!
+      // 每个节点都记录包含该前缀的所有 emoji
+      node.emojiIds.add(emojiId)
+    }
+  }
+
+  // 从 Trie 树中搜索前缀
+  const searchTriePrefix = (trie: TrieNode, prefix: string): Set<string> => {
+    let node = trie
+    for (const char of prefix) {
+      if (!node.children.has(char)) {
+        return new Set() // 未找到前缀
+      }
+      node = node.children.get(char)!
+    }
+    return node.emojiIds // 返回所有匹配此前缀的 emoji IDs
+  }
+
+  // 辅助函数：将 emoji 添加到索引和 Trie 树
+  const addEmojiToSearchIndex = (index: Map<string, Set<string>>, trie: TrieNode, emoji: Emoji) => {
     if (!emoji) return
     const emojiId = emoji.id
 
@@ -132,6 +173,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         index.set(word, new Set())
       }
       index.get(word)!.add(emojiId)
+      // 同时添加到 Trie 树
+      addWordToTrie(trie, word, emojiId)
     }
 
     // 索引标签
@@ -142,6 +185,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           index.set(tagLower, new Set())
         }
         index.get(tagLower)!.add(emojiId)
+        // 同时添加到 Trie 树
+        addWordToTrie(trie, tagLower, emojiId)
       }
     }
   }
@@ -182,20 +227,22 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // 增量更新索引：添加 emoji
   const addEmojiToIndex = (emoji: Emoji) => {
     if (!searchIndexValid.value) return // 索引未初始化，跳过
-    addEmojiToSearchIndex(searchIndexCache.value, emoji)
+    addEmojiToSearchIndex(searchIndexCache.value, searchPrefixTrie.value, emoji)
   }
 
-  // 增量更新索引：移除 emoji
+  // 增量更新索引：移除 emoji（注意：Trie 树删除较复杂，重建可能更高效）
   const removeEmojiFromIndex = (emoji: Emoji) => {
     if (!searchIndexValid.value) return // 索引未初始化，跳过
     removeEmojiFromSearchIndex(searchIndexCache.value, emoji)
+    // Trie 树删除节点复杂度高，标记索引无效以触发重建
+    searchIndexValid.value = false
   }
 
   // 增量更新索引：更新 emoji（先删除旧的，再添加新的）
   const updateEmojiInIndex = (oldEmoji: Emoji, newEmoji: Emoji) => {
     if (!searchIndexValid.value) return
     removeEmojiFromSearchIndex(searchIndexCache.value, oldEmoji)
-    addEmojiToSearchIndex(searchIndexCache.value, newEmoji)
+    addEmojiToSearchIndex(searchIndexCache.value, searchPrefixTrie.value, newEmoji)
   }
 
   // 使索引失效（需要完全重建时调用）
@@ -228,25 +275,30 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       )
     }
 
-    // 搜索筛选 - 优化：使用 searchIndexCache
+    // 搜索筛选 - 优化：使用 Trie 树前缀搜索
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase().trim()
       if (query && searchIndexValid.value) {
-        // 使用搜索索引快速查找
-        const matchingEmojiIds = searchIndexCache.value.get(query)
-        if (matchingEmojiIds) {
+        // 优先：精确匹配
+        const exactMatches = searchIndexCache.value.get(query)
+        if (exactMatches) {
           // 索引命中：直接使用 Set 进行 O(1) 查找
-          emojis = emojis.filter(emoji => emoji && matchingEmojiIds.has(emoji.id))
+          emojis = emojis.filter(emoji => emoji && exactMatches.has(emoji.id))
         } else {
-          // 索引未命中：尝试部分匹配
-          // 收集所有包含查询字符串的键对应的 emoji IDs
-          const partialMatches = new Set<string>()
-          for (const [indexKey, emojiIds] of searchIndexCache.value) {
-            if (indexKey.includes(query)) {
-              emojiIds.forEach(id => partialMatches.add(id))
+          // 使用 Trie 树进行前缀匹配（O(k) 时间复杂度，k 为查询长度）
+          const prefixMatches = searchTriePrefix(searchPrefixTrie.value, query)
+          if (prefixMatches.size > 0) {
+            emojis = emojis.filter(emoji => emoji && prefixMatches.has(emoji.id))
+          } else {
+            // Trie 树未命中：降级为子串匹配（仅在必要时使用）
+            const partialMatches = new Set<string>()
+            for (const [indexKey, emojiIds] of searchIndexCache.value) {
+              if (indexKey.includes(query)) {
+                emojiIds.forEach(id => partialMatches.add(id))
+              }
             }
+            emojis = emojis.filter(emoji => emoji && partialMatches.has(emoji.id))
           }
-          emojis = emojis.filter(emoji => emoji && partialMatches.has(emoji.id))
         }
       } else if (query) {
         // 索引未准备好时的降级方案：使用原始过滤

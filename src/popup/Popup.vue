@@ -147,7 +147,7 @@ const openOptionsInNewWindow = () => {
         :setActive="setActiveHandler"
       />
 
-      <!-- Lazy Emoji Grids: 为每个分组创建独立网格，使用 v-show 切换 -->
+      <!-- Lazy Emoji Grids: 只渲染当前活动分组，真正的虚拟化 -->
       <div class="popup-body">
         <!-- 搜索模式：使用过滤后的表情 -->
         <template v-if="emojiStore.searchQuery">
@@ -165,19 +165,18 @@ const openOptionsInNewWindow = () => {
           />
         </template>
 
-        <!-- 正常模式：为每个分组创建独立网格 -->
+        <!-- 正常模式：只渲染当前活动分组（真正的虚拟化） -->
         <template v-else>
           <LazyEmojiGrid
-            v-for="group in emojiStore.sortedGroups"
-            :key="group.id"
-            :emojis="group.emojis || []"
+            :key="emojiStore.activeGroupId"
+            :emojis="emojiStore.activeGroup?.emojis || []"
             :isLoading="emojiStore.isLoading"
             :favorites="emojiStore.favorites"
             :gridColumns="emojiStore.settings.gridColumns"
             :emptyMessage="'该分组还没有表情'"
             showAddButton
-            :groupId="group.id"
-            :isActive="emojiStore.activeGroupId === group.id"
+            :groupId="emojiStore.activeGroupId"
+            isActive
             @select="selectEmoji"
             @openOptions="openOptions"
           />

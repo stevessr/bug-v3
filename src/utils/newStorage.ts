@@ -163,11 +163,17 @@ function ensureSerializable<T>(data: T, depth = 0): T {
 
     return raw as T
   } catch (error) {
-    // Fallback to JSON method if toRaw fails
+    // Fallback to structuredClone if toRaw fails (modern, faster than JSON)
     try {
-      return JSON.parse(JSON.stringify(data))
+      // structuredClone 支持更多类型：Date, RegExp, Blob, File, Map, Set 等
+      return structuredClone(data)
     } catch {
-      return data
+      // 最终降级到 JSON（某些类型如函数、Symbol 不支持）
+      try {
+        return JSON.parse(JSON.stringify(data))
+      } catch {
+        return data
+      }
     }
   }
 }
@@ -194,24 +200,21 @@ function cleanGroupEmojis(emojis: unknown[]): unknown[] {
 }
 
 // --- Simple Storage Manager ---
-// 优先写入 extension storage，localStorage 作为缓存加速读取
+// 纯异步存储：只使用 chrome.storage.local，避免 localStorage 的同步阻塞
+// 使用内存缓存加速频繁读取
 class SimpleStorageManager {
-  // 读取 - 优先 localStorage，回退到 extension storage
+  private memoryCache: Map<string, { data: unknown; timestamp: number }> = new Map()
+  private readonly CACHE_TTL = 5000 // 内存缓存 5 秒过期
+
+  // 读取 - 优先内存缓存，然后 extension storage
   async get(key: string): Promise<unknown> {
-    // 先尝试 localStorage（快速缓存）
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const value = localStorage.getItem(key)
-        if (value !== null) {
-          const parsed = JSON.parse(value)
-          return parsed?.data ?? parsed
-        }
-      }
-    } catch {
-      // ignore localStorage errors
+    // 先检查内存缓存
+    const cached = this.memoryCache.get(key)
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data
     }
 
-    // 回退到 extension storage
+    // 从 extension storage 读取
     const chromeAPI = getChromeAPI()
     if (chromeAPI?.storage?.local) {
       return new Promise(resolve => {
@@ -220,8 +223,13 @@ class SimpleStorageManager {
             if (chromeAPI.runtime.lastError) {
               resolve(null)
             } else {
-              const value = result[key] as { data?: unknown } | undefined
-              resolve(value?.data ?? value)
+              const value = result[key] as { data?: unknown; timestamp?: number } | undefined
+              const data = value?.data ?? value
+              // 更新内存缓存
+              if (data !== null && data !== undefined) {
+                this.memoryCache.set(key, { data, timestamp: Date.now() })
+              }
+              resolve(data)
             }
           })
         } catch {
@@ -233,7 +241,7 @@ class SimpleStorageManager {
     return null
   }
 
-  // 写入 - 主要写入 extension storage，localStorage 作为可选缓存
+  // 写入 - 异步写入 extension storage，同时更新内存缓存
   async set(key: string, value: unknown): Promise<void> {
     const cleanValue = ensureSerializable(value)
     const finalValue = {
@@ -241,16 +249,10 @@ class SimpleStorageManager {
       timestamp: Date.now()
     }
 
-    // 尝试写入 localStorage（可选缓存，失败不影响）
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(key, JSON.stringify(finalValue))
-      }
-    } catch {
-      // localStorage 满了或不可用，忽略
-    }
+    // 立即更新内存缓存（同步操作，不阻塞）
+    this.memoryCache.set(key, { data: cleanValue, timestamp: Date.now() })
 
-    // 写入 extension storage（必须成功）
+    // 异步写入 extension storage
     const chromeAPI = getChromeAPI()
     if (chromeAPI?.storage?.local) {
       return new Promise((resolve, reject) => {
@@ -281,14 +283,8 @@ class SimpleStorageManager {
 
   // 从所有存储层删除
   async remove(key: string): Promise<void> {
-    // 删除 localStorage
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(key)
-      }
-    } catch {
-      // ignore
-    }
+    // 删除内存缓存
+    this.memoryCache.delete(key)
 
     // 删除 extension storage
     const chromeAPI = getChromeAPI()
@@ -301,7 +297,7 @@ class SimpleStorageManager {
     }
   }
 
-  // 批量写入
+  // 批量写入 - 优化：单次 API 调用
   async setBatchSync(items: Record<string, unknown>): Promise<void> {
     const timestamp = Date.now()
     const finalItems: Record<string, { data: unknown; timestamp: number }> = {}
@@ -309,24 +305,11 @@ class SimpleStorageManager {
     for (const key of Object.keys(items)) {
       const cleanValue = ensureSerializable(items[key])
       finalItems[key] = { data: cleanValue, timestamp }
+      // 更新内存缓存
+      this.memoryCache.set(key, { data: cleanValue, timestamp })
     }
 
-    // 尝试写入 localStorage（可选缓存）
-    try {
-      if (typeof localStorage !== 'undefined') {
-        for (const key of Object.keys(finalItems)) {
-          try {
-            localStorage.setItem(key, JSON.stringify(finalItems[key]))
-          } catch {
-            // 单个 key 写入失败，继续其他
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
-
-    // 写入 extension storage
+    // 批量写入 extension storage
     const chromeAPI = getChromeAPI()
     if (chromeAPI?.storage?.local) {
       return new Promise((resolve, reject) => {
@@ -347,6 +330,11 @@ class SimpleStorageManager {
         }
       })
     }
+  }
+
+  // 清除内存缓存（在需要强制刷新时调用）
+  clearCache(): void {
+    this.memoryCache.clear()
   }
 }
 
