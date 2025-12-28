@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do 工具集
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.3.0
+// @version      1.4.0
 // @description  Linux.do 增强工具集：定时发送、表情助手（全员 + 用户）、点赞计数器
 // @author       stevessr, ChiGamma
 // @match        https://linux.do/*
@@ -99,7 +99,10 @@
         left: 20px;
         z-index: 9999;
         font-family: Arial, sans-serif;
-        transition: all 0.3s ease;
+        transition: left 0.3s ease, right 0.3s ease;
+    }
+    .ld-reaction-panel.dragging {
+        transition: none;
     }
 
     /* 折叠按钮 */
@@ -110,17 +113,22 @@
         color: white;
         border: none;
         border-radius: 50%;
-        cursor: pointer;
+        cursor: move;
         font-size: 24px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.3s;
+        user-select: none;
+        touch-action: none;
     }
     .ld-panel-toggle:hover {
         transform: scale(1.1);
         box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+    .ld-panel-toggle:active {
+        cursor: grabbing;
     }
 
     /* 展开的面板内容 */
@@ -657,10 +665,123 @@
         panel: null,
         panelContent: null,
         isExpanded: false,
+        isDragging: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        panelStartLeft: 0,
+        panelStartBottom: 0,
 
         getSelectedReaction() {
             const selector = document.getElementById('ld-reaction-select');
             return selector ? selector.value : 'distorted_face';
+        },
+
+        // 从 localStorage 加载位置
+        loadPosition() {
+            const saved = localStorage.getItem('ld-reaction-panel-position');
+            if (saved) {
+                try {
+                    const pos = JSON.parse(saved);
+                    this.panel.style.left = pos.left || '';
+                    this.panel.style.right = pos.right || '';
+                    this.panel.style.bottom = pos.bottom || '20px';
+                } catch (e) {
+                    console.error('Failed to load panel position', e);
+                }
+            }
+        },
+
+        // 保存位置到 localStorage
+        savePosition() {
+            const pos = {
+                left: this.panel.style.left,
+                right: this.panel.style.right,
+                bottom: this.panel.style.bottom
+            };
+            localStorage.setItem('ld-reaction-panel-position', JSON.stringify(pos));
+        },
+
+        // 吸附到最近的边缘
+        snapToEdge() {
+            const rect = this.panel.getBoundingClientRect();
+            const windowWidth = window.innerWidth;
+            const panelCenterX = rect.left + rect.width / 2;
+
+            // 保持底部位置不变
+            const bottomOffset = window.innerHeight - rect.bottom;
+            this.panel.style.bottom = Math.max(20, bottomOffset) + 'px';
+
+            // 判断吸附到左边还是右边
+            if (panelCenterX < windowWidth / 2) {
+                // 吸附到左边
+                this.panel.style.left = '20px';
+                this.panel.style.right = '';
+                this.panelContent.style.left = '0';
+                this.panelContent.style.right = '';
+            } else {
+                // 吸附到右边
+                this.panel.style.right = '20px';
+                this.panel.style.left = '';
+                this.panelContent.style.right = '0';
+                this.panelContent.style.left = '';
+            }
+
+            this.savePosition();
+        },
+
+        // 拖拽开始
+        onDragStart(e) {
+            // 只有点击按钮本身才能拖拽，点击面板内容不触发拖拽
+            if (!e.target.classList.contains('ld-panel-toggle')) return;
+
+            this.isDragging = true;
+            this.panel.classList.add('dragging');
+
+            const touch = e.type.includes('touch') ? e.touches[0] : e;
+            this.dragStartX = touch.clientX;
+            this.dragStartY = touch.clientY;
+
+            const rect = this.panel.getBoundingClientRect();
+            this.panelStartLeft = rect.left;
+            this.panelStartBottom = window.innerHeight - rect.bottom;
+
+            e.preventDefault();
+        },
+
+        // 拖拽中
+        onDragMove(e) {
+            if (!this.isDragging) return;
+
+            const touch = e.type.includes('touch') ? e.touches[0] : e;
+            const deltaX = touch.clientX - this.dragStartX;
+            const deltaY = touch.clientY - this.dragStartY;
+
+            // 计算新位置
+            const newLeft = this.panelStartLeft + deltaX;
+            const newBottom = this.panelStartBottom - deltaY;
+
+            // 设置边界限制
+            const maxLeft = window.innerWidth - this.panel.offsetWidth - 10;
+            const maxBottom = window.innerHeight - this.panel.offsetHeight - 10;
+
+            this.panel.style.left = Math.max(10, Math.min(newLeft, maxLeft)) + 'px';
+            this.panel.style.right = '';
+            this.panel.style.bottom = Math.max(10, Math.min(newBottom, maxBottom)) + 'px';
+
+            e.preventDefault();
+        },
+
+        // 拖拽结束
+        onDragEnd(e) {
+            if (!this.isDragging) return;
+
+            this.isDragging = false;
+            this.panel.classList.remove('dragging');
+
+            // 吸附到边缘
+            setTimeout(() => this.snapToEdge(), 50);
+
+            e.preventDefault();
         },
 
         log(msg, tabId = 'user') {
@@ -677,6 +798,9 @@
         },
 
         togglePanel() {
+            // 如果刚刚拖拽过，不触发展开/折叠
+            if (this.isDragging) return;
+
             this.isExpanded = !this.isExpanded;
             if (this.isExpanded) {
                 this.panelContent.classList.add('show');
@@ -919,7 +1043,40 @@
                 innerHTML: '🤯',
                 title: '表情助手'
             });
-            toggleBtn.onclick = () => this.togglePanel();
+
+            // 绑定拖拽事件（使用箭头函数保持 this 上下文）
+            toggleBtn.addEventListener('mousedown', (e) => this.onDragStart(e));
+            toggleBtn.addEventListener('touchstart', (e) => this.onDragStart(e), { passive: false });
+
+            document.addEventListener('mousemove', (e) => this.onDragMove(e));
+            document.addEventListener('touchmove', (e) => this.onDragMove(e), { passive: false });
+
+            document.addEventListener('mouseup', (e) => this.onDragEnd(e));
+            document.addEventListener('touchend', (e) => this.onDragEnd(e));
+
+            // 点击事件（在 mouseup 时判断是否为拖拽）
+            let clickStartTime = 0;
+            let clickStartX = 0;
+            let clickStartY = 0;
+
+            toggleBtn.addEventListener('mousedown', (e) => {
+                clickStartTime = Date.now();
+                clickStartX = e.clientX;
+                clickStartY = e.clientY;
+            });
+
+            toggleBtn.addEventListener('click', (e) => {
+                const clickDuration = Date.now() - clickStartTime;
+                const moveDistance = Math.sqrt(
+                    Math.pow(e.clientX - clickStartX, 2) +
+                    Math.pow(e.clientY - clickStartY, 2)
+                );
+
+                // 如果移动距离小于 5px 且点击时间小于 200ms，认为是点击而非拖拽
+                if (moveDistance < 5 && clickDuration < 200) {
+                    this.togglePanel();
+                }
+            });
 
             // 创建面板内容
             this.panelContent = createEl('div', { className: 'ld-panel-content' });
@@ -975,6 +1132,9 @@
             this.panel.appendChild(toggleBtn);
             this.panel.appendChild(this.panelContent);
             document.body.appendChild(this.panel);
+
+            // 加载保存的位置
+            this.loadPosition();
 
             // 绑定 Tab 切换事件
             document.querySelectorAll('.ld-panel-tab').forEach(tab => {
