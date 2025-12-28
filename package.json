@@ -19,6 +19,8 @@
     "pack:crx": "node ./scripts/pack-crx.js",
     "pack:xpi": "node ./scripts/pack-xpi.js",
     "pack:all": "./scripts/npm-run.sh npm run pack:crx && ./scripts/npm-run.sh npm run pack:xpi && ./scripts/npm-run.sh npm run update:version && ./scripts/npm-run.sh npm run update:data",
+    "key:generate": "node scripts/generate-key.js",
+    "key:backup": "cp extension-key.pem extension-key.pem.backup.$(date +%Y%m%d-%H%M%S) && echo '密钥已备份'",
     "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx",
     "lint:fix": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix",
     "format": "prettier --write .",
