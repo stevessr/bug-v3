@@ -115,6 +115,7 @@ export function useGroupStore(options: GroupStoreOptions) {
 
   /**
    * Reorder groups by moving source to target position
+   * 优化：只保存索引，不全量保存所有分组
    */
   const reorderGroups = async (sourceGroupId: string, targetGroupId: string): Promise<void> => {
     // Prevent reordering if either source or target is favorites
@@ -133,12 +134,14 @@ export function useGroupStore(options: GroupStoreOptions) {
       reorderedGroups.splice(targetIndex, 0, removed)
       reorderedGroups.forEach((group, index) => {
         group.order = index
-        // Mark all reordered groups as dirty (order changed)
-        saveControl.markGroupDirty?.(group.id)
       })
       groups.value = reorderedGroups
       console.log('[GroupStore] reorderGroups', { from: sourceGroupId, to: targetGroupId })
-      await saveControl.saveData()
+
+      // 优化：只保存索引，不需要全量保存所有分组
+      const { setEmojiGroupIndex } = await import('@/utils/simpleStorage')
+      const index = groups.value.map((g, order) => ({ id: g.id, order }))
+      await setEmojiGroupIndex(index)
     }
   }
 

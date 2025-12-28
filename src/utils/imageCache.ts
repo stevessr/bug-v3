@@ -701,6 +701,7 @@ export class ImageCache {
 
   /**
    * Ensure cache doesn't exceed limits
+   * 优化：使用 cursor 遍历，只读取元数据，避免加载大量 Blob 到内存
    */
   private async ensureCacheLimits(): Promise<void> {
     if (!this.db) return
@@ -709,44 +710,63 @@ export class ImageCache {
     const store = transaction.objectStore(this.options.storeName)
 
     return new Promise(resolve => {
-      const getAllRequest = store.getAll()
+      const cursorRequest = store.openCursor()
+      const metadata: Array<{ id: string; size: number; lastAccessed: number }> = []
+      let totalSize = 0
+      let totalCount = 0
 
-      getAllRequest.onsuccess = async () => {
-        const entries = getAllRequest.result as CacheEntry[]
+      cursorRequest.onsuccess = async event => {
+        const cursor = (event.target as IDBRequest).result
 
-        const totalSize = entries.reduce((sum, entry) => sum + entry.size, 0)
-        const needsCleanup =
-          entries.length > this.options.maxCacheEntries || totalSize > this.options.maxCacheSize
+        if (cursor) {
+          const entry = cursor.value as CacheEntry
+          // 只收集元数据，不加载 blob
+          metadata.push({
+            id: entry.id,
+            size: entry.size,
+            lastAccessed: entry.lastAccessed
+          })
+          totalSize += entry.size
+          totalCount++
+          cursor.continue()
+        } else {
+          // 遍历完成，检查是否需要清理
+          const needsCleanup =
+            totalCount > this.options.maxCacheEntries || totalSize > this.options.maxCacheSize
 
-        if (needsCleanup) {
-          await this.cleanupCache(entries, totalSize)
+          if (needsCleanup) {
+            await this.cleanupCacheByMetadata(metadata, totalSize)
+          }
+          resolve()
         }
-        resolve()
       }
 
-      getAllRequest.onerror = () => resolve()
+      cursorRequest.onerror = () => resolve()
     })
   }
 
   /**
-   * Clean up cache by removing least recently used entries
+   * Clean up cache by removing least recently used entries (基于元数据)
    * 仅基于 LRU 策略，不考虑过期时间（S3 URL 永久有效）
    */
-  private async cleanupCache(entries: CacheEntry[], currentSize: number): Promise<void> {
+  private async cleanupCacheByMetadata(
+    metadata: Array<{ id: string; size: number; lastAccessed: number }>,
+    currentSize: number
+  ): Promise<void> {
     if (!this.db) return
 
     // 按 LRU 排序（最少访问的排前面）
-    const sortedEntries = entries.sort((a, b) => a.lastAccessed - b.lastAccessed)
+    const sortedMetadata = metadata.sort((a, b) => a.lastAccessed - b.lastAccessed)
 
     const toRemove: string[] = []
     let size = currentSize
-    let count = entries.length
+    let count = metadata.length
 
     // 目标：减少到 80% 容量
     const targetSize = this.options.maxCacheSize * 0.8
     const targetCount = this.options.maxCacheEntries * 0.8
 
-    for (const entry of sortedEntries) {
+    for (const entry of sortedMetadata) {
       if (count <= targetCount && size <= targetSize) {
         break
       }
@@ -767,6 +787,19 @@ export class ImageCache {
 
       logCache(`Cleaned up ${toRemove.length} cache entries (LRU)`)
     }
+  }
+
+  /**
+   * Clean up cache by removing least recently used entries (旧方法，保留用于兼容)
+   * @deprecated Use cleanupCacheByMetadata instead
+   */
+  private async cleanupCache(entries: CacheEntry[], currentSize: number): Promise<void> {
+    const metadata = entries.map(e => ({
+      id: e.id,
+      size: e.size,
+      lastAccessed: e.lastAccessed
+    }))
+    return this.cleanupCacheByMetadata(metadata, currentSize)
   }
 
   /**
@@ -803,47 +836,67 @@ export class ImageCache {
 
   /**
    * 手动清理缓存（基于 LRU，用于用户主动清理）
+   * 优化：使用 cursor 遍历元数据，避免加载所有 Blob 到内存
    */
   async cleanupLRU(targetPercentage: number = 0.5): Promise<number> {
     try {
       await this.ensureInitialized()
       if (!this.db) return 0
 
-      const transaction = this.db.transaction([this.options.storeName], 'readwrite')
+      const transaction = this.db.transaction([this.options.storeName], 'readonly')
       const store = transaction.objectStore(this.options.storeName)
 
       return new Promise(resolve => {
-        const getAllRequest = store.getAll()
+        const cursorRequest = store.openCursor()
+        const metadata: Array<{ id: string; url: string; lastAccessed: number }> = []
 
-        getAllRequest.onsuccess = async () => {
-          const entries = getAllRequest.result as CacheEntry[]
-          if (entries.length === 0) {
-            resolve(0)
-            return
+        cursorRequest.onsuccess = async event => {
+          const cursor = (event.target as IDBRequest).result
+
+          if (cursor) {
+            const entry = cursor.value as CacheEntry
+            // 只收集元数据
+            metadata.push({
+              id: entry.id,
+              url: entry.url,
+              lastAccessed: entry.lastAccessed
+            })
+            cursor.continue()
+          } else {
+            // 遍历完成，执行清理
+            if (metadata.length === 0) {
+              resolve(0)
+              return
+            }
+
+            // 按 LRU 排序
+            const sortedMetadata = metadata.sort((a, b) => a.lastAccessed - b.lastAccessed)
+            const targetCount = Math.floor(metadata.length * targetPercentage)
+
+            const toRemove = sortedMetadata.slice(0, targetCount)
+
+            if (toRemove.length > 0) {
+              if (!this.db) {
+                resolve(0)
+                return
+              }
+              const deleteTransaction = this.db.transaction([this.options.storeName], 'readwrite')
+              const deleteStore = deleteTransaction.objectStore(this.options.storeName)
+
+              for (const entry of toRemove) {
+                deleteStore.delete(entry.id)
+                this.memoryCache.delete(entry.url)
+              }
+
+              logCache(`Manually cleaned up ${toRemove.length} cache entries`)
+              resolve(toRemove.length)
+            } else {
+              resolve(0)
+            }
           }
-
-          // 按 LRU 排序
-          const sortedEntries = entries.sort((a, b) => a.lastAccessed - b.lastAccessed)
-          const targetCount = Math.floor(entries.length * targetPercentage)
-
-          const toRemove = sortedEntries.slice(0, targetCount)
-
-          if (!this.db) {
-            throw new Error('Database is not initialized')
-          }
-          const deleteTransaction = this.db.transaction([this.options.storeName], 'readwrite')
-          const deleteStore = deleteTransaction.objectStore(this.options.storeName)
-
-          for (const entry of toRemove) {
-            deleteStore.delete(entry.id)
-            this.memoryCache.delete(entry.url)
-          }
-
-          logCache(`Manually cleaned up ${toRemove.length} cache entries`)
-          resolve(toRemove.length)
         }
 
-        getAllRequest.onerror = () => resolve(0)
+        cursorRequest.onerror = () => resolve(0)
       })
     } catch {
       return 0
@@ -852,6 +905,7 @@ export class ImageCache {
 
   /**
    * Get cache statistics (包括内存缓存)
+   * 优化：使用 cursor 遍历，只读取元数据
    */
   async getCacheStats(): Promise<{
     totalEntries: number
@@ -883,26 +937,44 @@ export class ImageCache {
       const store = transaction.objectStore(this.options.storeName)
 
       return new Promise(resolve => {
-        const getAllRequest = store.getAll()
+        const cursorRequest = store.openCursor()
+        let totalEntries = 0
+        let totalSize = 0
+        let oldestEntry: number | undefined
+        let newestEntry: number | undefined
 
-        getAllRequest.onsuccess = () => {
-          const entries = getAllRequest.result as CacheEntry[]
+        cursorRequest.onsuccess = event => {
+          const cursor = (event.target as IDBRequest).result
 
-          resolve({
-            totalEntries: entries.length,
-            totalSize: entries.reduce((sum, entry) => sum + entry.size, 0),
-            memoryEntries: memStats.entries,
-            memorySize: memStats.size,
-            memoryMaxSize: memStats.maxSize,
-            oldestEntry:
-              entries.length > 0 ? Math.min(...entries.map(e => e.timestamp)) : undefined,
-            newestEntry:
-              entries.length > 0 ? Math.max(...entries.map(e => e.timestamp)) : undefined,
-            context
-          })
+          if (cursor) {
+            const entry = cursor.value as CacheEntry
+            totalEntries++
+            totalSize += entry.size
+
+            if (oldestEntry === undefined || entry.timestamp < oldestEntry) {
+              oldestEntry = entry.timestamp
+            }
+            if (newestEntry === undefined || entry.timestamp > newestEntry) {
+              newestEntry = entry.timestamp
+            }
+
+            cursor.continue()
+          } else {
+            // 遍历完成
+            resolve({
+              totalEntries,
+              totalSize,
+              memoryEntries: memStats.entries,
+              memorySize: memStats.size,
+              memoryMaxSize: memStats.maxSize,
+              oldestEntry,
+              newestEntry,
+              context
+            })
+          }
         }
 
-        getAllRequest.onerror = () => {
+        cursorRequest.onerror = () => {
           resolve({
             totalEntries: 0,
             totalSize: 0,

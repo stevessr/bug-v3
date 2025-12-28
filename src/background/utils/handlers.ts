@@ -15,87 +15,112 @@ import {
 
 import { getChromeAPI } from './main.ts'
 
+import type { BackgroundMessage, TypedMessage, ActionMessage } from '@/types/messages'
+
 // Re-export setup functions so background entry can import them from ./handlers
 export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup }
 
 export function setupMessageListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onMessage) {
-    chromeAPI.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
-      console.log('Background received message:', message)
-      // mark unused sender as intentionally unused
-      void _sender
+    chromeAPI.runtime.onMessage.addListener(
+      (message: BackgroundMessage, _sender: chrome.runtime.MessageSender, sendResponse: any) => {
+        console.log('Background received message:', message)
 
-      // 首先检查 message.type
-      if (message.type) {
-        switch (message.type) {
-          case 'GET_EMOJI_DATA':
-            // pass full message so handler can use message.sourceDomain for per-domain filtering
-            handleGetEmojiData(message, sendResponse)
-            return true
-
-          case 'GET_EMOJI_SETTING':
-            // message.key expected
-            if (message.key) {
-              handleGetEmojiSetting(message.key, sendResponse)
+        // 首先检查 message.type
+        if (typeof message === 'object' && message !== null && 'type' in message) {
+          const typedMsg = message as TypedMessage
+          switch (typedMsg.type) {
+            case 'GET_EMOJI_DATA':
+              handleGetEmojiData(typedMsg as any, sendResponse)
               return true
-            } else {
-              sendResponse({ success: false, error: 'Missing key for GET_EMOJI_SETTING' })
+
+            case 'GET_EMOJI_SETTING':
+              if ('key' in typedMsg && typedMsg.key) {
+                handleGetEmojiSetting(typedMsg.key as any, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing key for GET_EMOJI_SETTING' })
+                return false
+              }
+
+            case 'SAVE_EMOJI_DATA':
+              if ('data' in typedMsg) {
+                handleSaveEmojiData((typedMsg as any).data, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing data for SAVE_EMOJI_DATA' })
+                return false
+              }
+
+            case 'SYNC_SETTINGS':
+              if ('settings' in typedMsg) {
+                handleSyncSettings((typedMsg as any).settings, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing settings for SYNC_SETTINGS' })
+                return false
+              }
+
+            case 'REQUEST_LINUX_DO_AUTH':
+              handleLinuxDoAuthRequest(sendResponse)
+              return true
+
+            case 'downloadImage':
+            case 'DOWNLOAD_IMAGE':
+              if ('url' in typedMsg) {
+                handleDownloadImage(typedMsg as any, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing url for DOWNLOAD_IMAGE' })
+                return false
+              }
+
+            default:
+              console.log('Unknown message type:', (typedMsg as any).type)
+              sendResponse({ success: false, error: 'Unknown message type' })
               return false
-            }
-
-          case 'SAVE_EMOJI_DATA':
-            handleSaveEmojiData(message.data, sendResponse)
-            return true
-
-          case 'SYNC_SETTINGS':
-            handleSyncSettings(message.settings, sendResponse)
-            return true
-
-          case 'REQUEST_LINUX_DO_AUTH':
-            handleLinuxDoAuthRequest(sendResponse)
-            return true
-
-          case 'downloadImage':
-          case 'DOWNLOAD_IMAGE':
-            handleDownloadImage(message, sendResponse)
-            return true
-
-          default:
-            console.log('Unknown message type:', message.type)
-            // mark message.type as referenced for linters
-            void message.type
-            sendResponse({ success: false, error: 'Unknown message type' })
-            return false
+          }
         }
-      }
 
-      // 然后检查 message.action
-      if (message.action) {
-        switch (message.action) {
-          case 'addToFavorites':
-            handleAddToFavorites(message.emoji, sendResponse)
-            return true
+        // 然后检查 message.action
+        if (typeof message === 'object' && message !== null && 'action' in message) {
+          const actionMsg = message as ActionMessage
+          switch (actionMsg.action) {
+            case 'addToFavorites':
+              if ('emoji' in actionMsg) {
+                handleAddToFavorites((actionMsg as any).emoji, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing emoji for addToFavorites' })
+                return false
+              }
 
-          case 'addEmojiFromWeb':
-            handleAddEmojiFromWeb(message.emojiData, sendResponse)
-            return true
+            case 'addEmojiFromWeb':
+              if ('emojiData' in actionMsg) {
+                handleAddEmojiFromWeb((actionMsg as any).emojiData, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing emojiData for addEmojiFromWeb' })
+                return false
+              }
 
-          case 'uploadAndAddEmoji':
-            handleUploadAndAddEmoji(message, sendResponse)
-            return true
+            case 'uploadAndAddEmoji':
+              handleUploadAndAddEmoji(actionMsg as any, sendResponse)
+              return true
 
-          default:
-            console.log('Unknown action:', message.action)
-            void message.action
-            sendResponse({ success: false, error: 'Unknown action' })
-            return false
+            default:
+              console.log('Unknown action:', (actionMsg as any).action)
+              sendResponse({ success: false, error: 'Unknown action' })
+              return false
+          }
         }
-      }
 
-      // 如果既没有 type 也没有 action
-      console.log('Message has no type or action:', message)
-      sendResponse({ success: false, error: 'Message has no type or action' })
-    })
+        // 如果既没有 type 也没有 action
+        console.log('Message has no type or action:', message)
+        sendResponse({ success: false, error: 'Message has no type or action' })
+        return false
+      }
+    )
   }
 }

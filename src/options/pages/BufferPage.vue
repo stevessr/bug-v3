@@ -9,6 +9,9 @@ import FileListDisplay from '../components/FileListDisplay.vue'
 import GroupSelector from '../components/GroupSelector.vue'
 import CreateGroupModal from '../components/CreateGroupModal.vue'
 
+import { useBufferBatch } from './composables/useBufferBatch'
+import { useTelegramImport } from './composables/useTelegramImport'
+
 import {
   processTelegramStickers,
   getTelegramBotToken,
@@ -166,6 +169,54 @@ const disconnectedDuringUpload = ref(false) // 上传过程中断线标记
 const failedByDisconnect = ref<string[]>([]) // 因断线失败的文件
 const pendingRemoteUploads = ref<Array<{ filename: string; url: string }>>([]) // 待保存的远程上传结果
 let incrementalSaveTimer: ReturnType<typeof setInterval> | null = null // 增量保存定时器
+
+// Buffer Batch Logic
+const {
+  isMultiSelectMode,
+  selectedEmojis,
+  targetGroupId,
+  showCreateGroupDialog,
+  enableFilter,
+  selectedFilterGroups,
+  isCheckingDuplicates,
+  selectedGroupIdForFilter,
+  showGroupSelector,
+  totalCount,
+  checkedCount,
+  checkAll,
+  indeterminate,
+  availableGroups,
+  filterableGroups,
+  toggleEmojiSelection,
+  handleEmojiClick,
+  clearSelection,
+  onCheckAllChange,
+  onMultiSelectModeChange,
+  moveSelectedEmojis,
+  copySelectedAsMarkdown,
+  handleCreateGroup,
+  addGroupToFilter,
+  removeGroupFromFilter,
+  filterDuplicateFiles
+} = useBufferBatch({
+  bufferGroup,
+  emojiStore,
+  selectedFiles
+})
+
+// Telegram Import Logic
+const {
+  telegramBotToken,
+  showTelegramModal,
+  telegramInput,
+  isProcessingTelegram,
+  telegramProgress,
+  saveBotToken,
+  handleTelegramImport: processTelegramImport
+} = useTelegramImport()
+
+// 包装 handleTelegramImport 以适配组件内的 addFiles
+const handleTelegramImport = () => processTelegramImport(addFiles)
 
 // 持久化相关函数 - 使用 IndexedDB 存储文件避免 localStorage 配额限制
 const DB_NAME = 'buffer-files-db'
@@ -339,61 +390,6 @@ const uploadProgress = ref<
 // 图片切割相关状态
 const showImageCropper = ref(false)
 const cropImageFile = ref<File | null>(null)
-
-// 多选功能相关状态
-const isMultiSelectMode = ref(false)
-const selectedEmojis = ref(new Set<number>())
-const targetGroupId = ref('')
-const showCreateGroupDialog = ref(false)
-
-// 过滤器相关状态
-const enableFilter = ref(false)
-const selectedFilterGroups = ref<
-  Array<{ id: string; name: string; icon: string; emojiNames: Set<string> }>
->([])
-const isCheckingDuplicates = ref(false)
-const selectedGroupIdForFilter = ref('')
-const showGroupSelector = ref(false)
-const telegramBotToken = ref(getTelegramBotToken() || '')
-const showTelegramModal = ref(false)
-const telegramInput = ref('')
-const isProcessingTelegram = ref(false)
-const telegramProgress = ref({ processed: 0, total: 0, message: '' })
-
-// 可用的分组列表（排除缓冲区）
-const availableGroups = computed(
-  () => emojiStore.groups.filter((g: EmojiGroup) => g.id !== 'buffer') || []
-)
-
-// 可用于过滤的分组列表
-const filterableGroups = computed(() => {
-  return emojiStore.groups.filter(
-    g =>
-      g.id !== 'buffer' &&
-      g.id !== 'favorites' &&
-      g.emojis.length > 0 &&
-      !selectedFilterGroups.value.some(fg => fg.id === g.id)
-  )
-})
-
-// 全选状态
-const totalCount = computed(() => bufferGroup.value?.emojis?.length || 0)
-const checkedCount = computed(() => selectedEmojis.value.size)
-const checkAll = computed<boolean>({
-  get: () => totalCount.value > 0 && checkedCount.value === totalCount.value,
-  set: (val: boolean) => {
-    if (!bufferGroup.value) return
-    if (val) {
-      selectedEmojis.value = new Set(bufferGroup.value.emojis.map((_, i) => i))
-    } else {
-      clearSelection()
-    }
-  }
-})
-
-const indeterminate = computed(
-  () => checkedCount.value > 0 && checkedCount.value < totalCount.value
-)
 
 // Debug: Watch for changes
 // 优化：只监听 emojis 长度变化而非深度监听整个对象
@@ -632,280 +628,6 @@ const removeEmoji = (index: number) => {
 
 const editEmoji = (emoji: any, index: number) => {
   openEditEmoji(emoji, bufferGroup.value?.id || 'buffer', index)
-}
-
-// 多选模式相关函数
-const onCheckAllChange = (e: any) => {
-  const checked = !!(e && e.target && e.target.checked)
-  if (!bufferGroup.value) return
-  if (checked) {
-    selectedEmojis.value = new Set(bufferGroup.value.emojis.map((_, i) => i))
-  } else {
-    clearSelection()
-  }
-}
-
-const onMultiSelectModeChange = () => {
-  if (!isMultiSelectMode.value) {
-    clearSelection()
-  }
-}
-
-const toggleEmojiSelection = (idx: number) => {
-  if (selectedEmojis.value.has(idx)) {
-    selectedEmojis.value.delete(idx)
-  } else {
-    selectedEmojis.value.add(idx)
-  }
-  selectedEmojis.value = new Set(selectedEmojis.value)
-}
-
-const handleEmojiClick = (idx: number) => {
-  if (isMultiSelectMode.value) toggleEmojiSelection(idx)
-}
-
-const clearSelection = () => {
-  selectedEmojis.value.clear()
-  selectedEmojis.value = new Set()
-  targetGroupId.value = ''
-}
-
-// 移动选中的表情到目标分组
-const moveSelectedEmojis = async () => {
-  if (!targetGroupId.value || selectedEmojis.value.size === 0) return
-
-  try {
-    // 如果选择创建新分组
-    if (targetGroupId.value === '__create_new__') {
-      showCreateGroupDialog.value = true
-      return
-    }
-
-    const targetGroup = emojiStore.groups.find((g: EmojiGroup) => g.id === targetGroupId.value)
-    if (!targetGroup) return
-
-    // 获取选中的表情索引（按降序排列，避免删除时索引变化）
-    const sortedIndices = Array.from(selectedEmojis.value).sort((a, b) => b - a)
-
-    // 开始批量操作
-    emojiStore.beginBatch()
-
-    try {
-      // 逐个移动表情
-      for (const index of sortedIndices) {
-        if (bufferGroup.value && index < bufferGroup.value.emojis.length) {
-          emojiStore.moveEmoji('buffer', index, targetGroupId.value, -1)
-        }
-      }
-    } finally {
-      // 结束批量操作，触发保存
-      await emojiStore.endBatch()
-    }
-
-    // 清空选择
-    clearSelection()
-  } catch {
-    // ignore errors during move
-  }
-}
-
-// 复制选中的表情为 markdown 格式
-const copySelectedAsMarkdown = async () => {
-  if (selectedEmojis.value.size === 0 || !bufferGroup.value) return
-
-  const lines = Array.from(selectedEmojis.value)
-    .map(idx => {
-      const e = bufferGroup.value!.emojis[idx]
-      return e && e.url ? `![${e.name}|${e.height}x${e.width}](${e.url})` : null
-    })
-    .filter((v): v is string => !!v)
-
-  if (lines.length === 0) return
-
-  const markdown = '>[!summary]-\n>[grid]\n>' + lines.join('\n>') + '\n>[/grid]'
-
-  try {
-    if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(markdown)
-    } else {
-      // fallback
-      const ta = document.createElement('textarea')
-      ta.value = markdown
-      ta.style.position = 'fixed'
-      ta.style.left = '-9999px'
-      document.body.appendChild(ta)
-      ta.select()
-      const success = document.execCommand('copy')
-      document.body.removeChild(ta)
-      if (!success) {
-        throw new Error('execCommand copy failed')
-      }
-    }
-    message.success('Markdown 已复制到剪贴板')
-  } catch (err) {
-    console.error('Failed to copy markdown to clipboard', err)
-    message.error('复制到剪贴板失败')
-  }
-}
-
-// 确认创建新分组
-const handleCreateGroup = async (data: { name: string; icon: string; detail: string }) => {
-  try {
-    // 创建新分组
-    const newGroup = emojiStore.createGroup(data.name, data.icon)
-
-    // 如果有详细信息，保存到分组
-    if (data.detail) {
-      emojiStore.updateGroup(newGroup.id, { detail: data.detail })
-    }
-
-    // 设置目标分组 ID
-    targetGroupId.value = newGroup.id
-
-    // 立即执行移动操作
-    await moveSelectedEmojis()
-  } catch {
-    // ignore errors during group creation
-  }
-}
-
-// 过滤已选文件中的重复项
-const filterDuplicateFiles = async () => {
-  if (
-    !enableFilter.value ||
-    selectedFilterGroups.value.length === 0 ||
-    selectedFiles.value.length === 0
-  ) {
-    return
-  }
-
-  isCheckingDuplicates.value = true
-
-  try {
-    // 收集所有过滤器分组中的表情名称（小写化并去除扩展名）
-    const filterEmojiNames = new Set<string>()
-    for (const filterGroup of selectedFilterGroups.value) {
-      for (const emojiName of filterGroup.emojiNames) {
-        const normalizedName = emojiName.toLowerCase().replace(/\.[^/.]+$/, '')
-        filterEmojiNames.add(normalizedName)
-      }
-    }
-
-    // 过滤重复文件
-    const filteredFiles: typeof selectedFiles.value = []
-    const originalLength = selectedFiles.value.length
-
-    for (const fileItem of selectedFiles.value) {
-      const fileName = fileItem.file.name.toLowerCase()
-      // 移除文件扩展名进行比较
-      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '')
-
-      if (!filterEmojiNames.has(nameWithoutExt)) {
-        filteredFiles.push(fileItem)
-      } else {
-        console.log(`[BufferPage] Filtered out duplicate file: ${fileItem.file.name}`)
-        URL.revokeObjectURL(fileItem.previewUrl) // 清理重复项的 URL
-      }
-    }
-
-    selectedFiles.value = filteredFiles
-
-    const filteredCount = originalLength - filteredFiles.length
-    if (filteredCount > 0) {
-      console.log(`[BufferPage] Filtered out ${filteredCount} duplicate files`)
-    }
-  } catch (error) {
-    console.error('[BufferPage] Failed to filter duplicate files:', error)
-  } finally {
-    isCheckingDuplicates.value = false
-  }
-}
-
-const saveBotToken = () => {
-  setTelegramBotToken(telegramBotToken.value)
-  message.success('Telegram Bot Token 已保存')
-}
-
-const handleTelegramImport = async () => {
-  console.log('[BufferPage] handleTelegramImport called')
-
-  if (!telegramBotToken.value) {
-    message.error('请先设置 Telegram Bot Token')
-    return
-  }
-
-  if (!telegramInput.value) {
-    message.error('请输入贴纸包链接或名称')
-    return
-  }
-
-  console.log('[BufferPage] Starting Telegram import:', telegramInput.value)
-  isProcessingTelegram.value = true
-  telegramProgress.value = { processed: 0, total: 0, message: '开始解析...' }
-
-  try {
-    console.log('[BufferPage] Calling processTelegramStickers...')
-    const files = await processTelegramStickers(
-      telegramInput.value,
-      telegramBotToken.value,
-      (processed, total, msg) => {
-        console.log(`[BufferPage] Progress: ${processed}/${total} - ${msg}`)
-        telegramProgress.value = { processed, total, message: msg }
-      }
-    )
-
-    console.log(`[BufferPage] processTelegramStickers returned ${files.length} files`)
-
-    if (files.length > 0) {
-      console.log(`[BufferPage] Adding ${files.length} files to selectedFiles`)
-      await addFiles(files)
-      message.success(`成功添加 ${files.length} 个贴纸文件，请点击上传按钮`)
-      showTelegramModal.value = false
-      telegramInput.value = ''
-    } else {
-      message.warning('未能找到符合条件的表情（可能跳过了不支持的格式）')
-    }
-  } catch (error: any) {
-    console.error('[BufferPage] Telegram import failed:', error)
-    message.error(`导入失败：${error.message}`)
-  } finally {
-    isProcessingTelegram.value = false
-  }
-}
-// 添加分组到过滤器
-const addGroupToFilter = () => {
-  if (!selectedGroupIdForFilter.value) return
-
-  const group = emojiStore.groups.find(g => g.id === selectedGroupIdForFilter.value)
-  if (!group) return
-
-  // 创建表情名称集合
-  const emojiNames = new Set<string>()
-  for (const emoji of group.emojis) {
-    emojiNames.add(emoji.name)
-  }
-
-  selectedFilterGroups.value.push({
-    id: group.id,
-    name: group.name,
-    icon: group.icon || '📁',
-    emojiNames
-  })
-
-  selectedGroupIdForFilter.value = ''
-  showGroupSelector.value = false
-
-  console.log(`[BufferPage] Added group "${group.name}" to filter with ${emojiNames.size} emojis`)
-}
-
-// 从过滤器中移除分组
-const removeGroupFromFilter = (groupId: string) => {
-  const index = selectedFilterGroups.value.findIndex(fg => fg.id === groupId)
-  if (index > -1) {
-    const removedGroup = selectedFilterGroups.value[index]
-    selectedFilterGroups.value.splice(index, 1)
-    console.log(`[BufferPage] Removed group "${removedGroup.name}" from filter`)
-  }
 }
 
 // 移动所有表情到未分组

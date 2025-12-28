@@ -161,6 +161,7 @@ declare global {
   const shallowRef: typeof import('vue')['shallowRef']
   const startWorkerMode: typeof import('./utils/collaborativeUpload')['startWorkerMode']
   const stopWorkerMode: typeof import('./utils/collaborativeUpload')['stopWorkerMode']
+  const storageBatchGet: typeof import('./utils/simpleStorage')['storageBatchGet']
   const storageBatchRemove: typeof import('./utils/simpleStorage')['storageBatchRemove']
   const storageBatchSet: typeof import('./utils/simpleStorage')['storageBatchSet']
   const storageGet: typeof import('./utils/simpleStorage')['storageGet']
@@ -398,6 +399,7 @@ declare module 'vue' {
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly startWorkerMode: UnwrapRef<typeof import('./utils/collaborativeUpload')['startWorkerMode']>
     readonly stopWorkerMode: UnwrapRef<typeof import('./utils/collaborativeUpload')['stopWorkerMode']>
+    readonly storageBatchGet: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchGet']>
     readonly storageBatchRemove: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchRemove']>
     readonly storageBatchSet: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchSet']>
     readonly storageGet: UnwrapRef<typeof import('./utils/simpleStorage')['storageGet']>

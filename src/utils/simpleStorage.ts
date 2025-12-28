@@ -152,6 +152,27 @@ export async function storageBatchRemove(keys: string[]): Promise<void> {
   })
 }
 
+/**
+ * 批量读取存储数据
+ * @param keys 要读取的 key 数组
+ * @returns 包含所有数据的对象
+ */
+export async function storageBatchGet(keys: string[]): Promise<Record<string, any>> {
+  return new Promise((resolve, reject) => {
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+      reject(new Error('Chrome storage API not available'))
+      return
+    }
+    chrome.storage.local.get(keys, result => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message))
+      } else {
+        resolve(result)
+      }
+    })
+  })
+}
+
 // ========================================
 // Serialization Helpers
 // ========================================
@@ -346,15 +367,24 @@ export async function saveAllData(data: {
 
 /**
  * 加载所有分组（用于初始化）
+ * 优化：使用批量读取，将 N+1 次查询优化为 2 次
  */
 export async function getAllEmojiGroups(): Promise<EmojiGroup[]> {
   const index = await getEmojiGroupIndex()
-  const groups: EmojiGroup[] = []
+  if (index.length === 0) {
+    return []
+  }
 
+  // 批量读取所有分组
+  const groupKeys = index.map(({ id }) => `${STORAGE_KEYS.GROUP_PREFIX}${id}`)
+  const results = await storageBatchGet(groupKeys)
+
+  // 按索引顺序重组分组数据
+  const groups: EmojiGroup[] = []
   for (const { id } of index) {
-    const group = await getEmojiGroup(id)
-    if (group) {
-      groups.push(group)
+    const groupData = results[`${STORAGE_KEYS.GROUP_PREFIX}${id}`]
+    if (groupData) {
+      groups.push(groupData as EmojiGroup)
     }
   }
 
