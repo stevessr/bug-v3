@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed, watch, nextTick, toRaw } from 'vue'
+import { ref, shallowRef, computed, watch, nextTick } from 'vue'
 
 // Import sub-stores for delegation
 import type { SaveControl } from './core/types'
@@ -12,6 +12,10 @@ import {
   useSyncStore,
   useCssStore
 } from './index'
+
+// 导入新的独立 stores
+import { useSearchIndexStore } from './searchIndexStore'
+import { useTagCountStore } from './tagCountStore'
 
 import { normalizeImageUrl } from '@/utils/isImageUrl'
 import { newStorageHelpers, STORAGE_KEYS } from '@/utils/newStorage'
@@ -99,166 +103,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // helper to check if a group's emojis are currently loaded in memory
   // All groups keep their emojis loaded in memory; no lazy-load support
 
-  // 搜索索引缓存 - 用于加速搜索
-  const searchIndexCache = ref<Map<string, Set<string>>>(new Map())
-  const searchIndexValid = ref(false)
+  // --- Initialize Search Index Store ---
+  const searchIndexStore = useSearchIndexStore()
+  const tagCountStore = useTagCountStore()
 
-  // 前缀 Trie 树用于优化部分匹配搜索
-  interface TrieNode {
-    children: Map<string, TrieNode>
-    emojiIds: Set<string> // 以此节点为前缀的所有 emoji ID
-  }
-
-  const createTrieNode = (): TrieNode => ({
-    children: new Map(),
-    emojiIds: new Set()
-  })
-
-  const searchPrefixTrie = ref<TrieNode>(createTrieNode())
-
-  // 构建搜索索引（在后台构建，不阻塞主线程）
-  const buildSearchIndex = () => {
-    const index = new Map<string, Set<string>>()
-    const trie = createTrieNode()
-
-    // 优化：使用 toRaw 避免响应式代理开销
-    const rawGroups = toRaw(groups.value)
-    for (const group of rawGroups) {
-      const emojis = group.emojis || []
-      for (const emoji of emojis) {
-        if (!emoji) continue
-        addEmojiToSearchIndex(index, trie, emoji)
-      }
-    }
-
-    searchIndexCache.value = index
-    searchPrefixTrie.value = trie
-    searchIndexValid.value = true
-  }
-
-  // 向 Trie 树添加单词
-  const addWordToTrie = (trie: TrieNode, word: string, emojiId: string) => {
-    let node = trie
-    // 为每个字符创建路径
-    for (const char of word) {
-      if (!node.children.has(char)) {
-        node.children.set(char, createTrieNode())
-      }
-      node = node.children.get(char)!
-      // 每个节点都记录包含该前缀的所有 emoji
-      node.emojiIds.add(emojiId)
-    }
-  }
-
-  // 从 Trie 树中搜索前缀
-  const searchTriePrefix = (trie: TrieNode, prefix: string): Set<string> => {
-    let node = trie
-    for (const char of prefix) {
-      if (!node.children.has(char)) {
-        return new Set() // 未找到前缀
-      }
-      node = node.children.get(char)!
-    }
-    return node.emojiIds // 返回所有匹配此前缀的 emoji IDs
-  }
-
-  // 辅助函数：将 emoji 添加到索引和 Trie 树
-  const addEmojiToSearchIndex = (index: Map<string, Set<string>>, trie: TrieNode, emoji: Emoji) => {
-    if (!emoji) return
-    const emojiId = emoji.id
-
-    // 索引名称的每个单词
-    const nameLower = (emoji.name || '').toLowerCase()
-    const words = nameLower.split(/\s+/)
-    for (const word of words) {
-      if (!index.has(word)) {
-        index.set(word, new Set())
-      }
-      index.get(word)!.add(emojiId)
-      // 同时添加到 Trie 树
-      addWordToTrie(trie, word, emojiId)
-    }
-
-    // 索引标签
-    if (emoji.tags) {
-      for (const tag of emoji.tags) {
-        const tagLower = tag.toLowerCase()
-        if (!index.has(tagLower)) {
-          index.set(tagLower, new Set())
-        }
-        index.get(tagLower)!.add(emojiId)
-        // 同时添加到 Trie 树
-        addWordToTrie(trie, tagLower, emojiId)
-      }
-    }
-  }
-
-  // 辅助函数：从索引中移除 emoji
-  const removeEmojiFromSearchIndex = (index: Map<string, Set<string>>, emoji: Emoji) => {
-    if (!emoji) return
-    const emojiId = emoji.id
-
-    // 移除名称索引
-    const nameLower = (emoji.name || '').toLowerCase()
-    const words = nameLower.split(/\s+/)
-    for (const word of words) {
-      const set = index.get(word)
-      if (set) {
-        set.delete(emojiId)
-        if (set.size === 0) {
-          index.delete(word)
-        }
-      }
-    }
-
-    // 移除标签索引
-    if (emoji.tags) {
-      for (const tag of emoji.tags) {
-        const tagLower = tag.toLowerCase()
-        const set = index.get(tagLower)
-        if (set) {
-          set.delete(emojiId)
-          if (set.size === 0) {
-            index.delete(tagLower)
-          }
-        }
-      }
-    }
-  }
-
-  // 增量更新索引：添加 emoji
-  const addEmojiToIndex = (emoji: Emoji) => {
-    if (!searchIndexValid.value) return // 索引未初始化，跳过
-    addEmojiToSearchIndex(searchIndexCache.value, searchPrefixTrie.value, emoji)
-  }
-
-  // 增量更新索引：移除 emoji（注意：Trie 树删除较复杂，重建可能更高效）
-  const removeEmojiFromIndex = (emoji: Emoji) => {
-    if (!searchIndexValid.value) return // 索引未初始化，跳过
-    removeEmojiFromSearchIndex(searchIndexCache.value, emoji)
-    // Trie 树删除节点复杂度高，标记索引无效以触发重建
-    searchIndexValid.value = false
-  }
-
-  // 增量更新索引：更新 emoji（先删除旧的，再添加新的）
-  const updateEmojiInIndex = (oldEmoji: Emoji, newEmoji: Emoji) => {
-    if (!searchIndexValid.value) return
-    removeEmojiFromSearchIndex(searchIndexCache.value, oldEmoji)
-    addEmojiToSearchIndex(searchIndexCache.value, searchPrefixTrie.value, newEmoji)
-  }
-
-  // 使索引失效（需要完全重建时调用）
-  const invalidateSearchIndex = () => {
-    searchIndexValid.value = false
-  }
-
-  // 在数据加载后构建索引
+  // Watch groups changes to rebuild search index
   watch(
     () => groups.value.length,
     () => {
-      // 索引失效后，延迟构建索引
-      if (!searchIndexValid.value) {
-        setTimeout(buildSearchIndex, SEARCH_INDEX_DEBOUNCE_MS)
+      // Rebuild search index when groups change
+      if (!searchIndexStore.searchIndexValid) {
+        setTimeout(() => searchIndexStore.buildSearchIndex(groups.value), SEARCH_INDEX_DEBOUNCE_MS)
       }
     },
     { immediate: true }
@@ -277,154 +132,54 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       )
     }
 
-    // 搜索筛选 - 优化：使用 Trie 树前缀搜索
+    // 搜索筛选 - 使用 searchIndexStore
     if (searchQuery.value) {
-      const query = searchQuery.value.toLowerCase().trim()
-      if (query && searchIndexValid.value) {
-        // 优先：精确匹配
-        const exactMatches = searchIndexCache.value.get(query)
-        if (exactMatches) {
-          // 索引命中：直接使用 Set 进行 O(1) 查找
-          emojis = emojis.filter(emoji => emoji && exactMatches.has(emoji.id))
+      const query = searchQuery.value.trim()
+      if (query) {
+        const matchedIds = searchIndexStore.search(query)
+        if (matchedIds) {
+          // 使用搜索索引结果过滤
+          emojis = emojis.filter(emoji => emoji && matchedIds.has(emoji.id))
         } else {
-          // 使用 Trie 树进行前缀匹配（O(k) 时间复杂度，k 为查询长度）
-          const prefixMatches = searchTriePrefix(searchPrefixTrie.value, query)
-          if (prefixMatches.size > 0) {
-            emojis = emojis.filter(emoji => emoji && prefixMatches.has(emoji.id))
-          } else {
-            // Trie 树未命中：降级为子串匹配（仅在必要时使用）
-            const partialMatches = new Set<string>()
-            for (const [indexKey, emojiIds] of searchIndexCache.value) {
-              if (indexKey.includes(query)) {
-                emojiIds.forEach(id => partialMatches.add(id))
+          // 索引未准备好时的降级方案：使用原始过滤
+          const queryLower = query.toLowerCase()
+          emojis = emojis.filter(emoji => {
+            if (!emoji) return false
+            // 搜索名称
+            if (emoji.name && emoji.name.toLowerCase().includes(queryLower)) {
+              return true
+            }
+            // 搜索标签
+            if (emoji.tags) {
+              for (const tag of emoji.tags) {
+                if (tag.toLowerCase().includes(queryLower)) {
+                  return true
+                }
               }
             }
-            emojis = emojis.filter(emoji => emoji && partialMatches.has(emoji.id))
-          }
+            return false
+          })
         }
-      } else if (query) {
-        // 索引未准备好时的降级方案：使用原始过滤
-        emojis = emojis.filter(emoji => {
-          if (!emoji) return false
-          // 搜索名称
-          if (emoji.name && emoji.name.toLowerCase().includes(query)) {
-            return true
-          }
-          // 搜索标签
-          if (emoji.tags) {
-            for (const tag of emoji.tags) {
-              if (tag.toLowerCase().includes(query)) {
-                return true
-              }
-            }
-          }
-          return false
-        })
       }
     }
 
     return emojis
   })
 
-  // 获取所有标签及其使用次数 - 使用增量更新的 Map
-  // 维护一个响应式的标签计数 Map，在 CRUD 操作时增量更新
-  const tagCountMap = ref<Map<string, number>>(new Map())
-  const tagCacheValid = ref(false)
-  // 用于触发 allTags 重新计算的版本号
-  const tagMapVersion = ref(0)
-
-  // 重建标签计数（仅在首次或需要完全重建时调用）
-  const rebuildTagCounts = () => {
-    const newMap = new Map<string, number>()
-
-    // 优化：使用 toRaw 避免响应式代理开销
-    const rawGroups = toRaw(groups.value)
-    for (const group of rawGroups) {
-      const emojis = group.emojis || []
-      for (let i = 0; i < emojis.length; i++) {
-        const emoji = emojis[i]
-        if (emoji && emoji.tags) {
-          const tags = emoji.tags
-          for (let j = 0; j < tags.length; j++) {
-            const tag = tags[j]
-            newMap.set(tag, (newMap.get(tag) || 0) + 1)
-          }
-        }
+  // Watch groups changes to rebuild tag counts
+  watch(
+    () => groups.value.length,
+    () => {
+      // Rebuild tag counts when groups change
+      if (!tagCountStore.tagCacheValid) {
+        tagCountStore.rebuildTagCounts(groups.value)
       }
-    }
+    },
+    { immediate: true }
+  )
 
-    tagCountMap.value = newMap
-    tagCacheValid.value = true
-    tagMapVersion.value++
-  }
-
-  // 增量更新标签计数（添加表情时调用）
-  const incrementTagCounts = (tags: string[] | undefined) => {
-    if (!tags || tags.length === 0) return
-    // 如果缓存无效，先重建
-    if (!tagCacheValid.value) {
-      rebuildTagCounts()
-      return
-    }
-
-    const map = tagCountMap.value
-    for (const tag of tags) {
-      map.set(tag, (map.get(tag) || 0) + 1)
-    }
-    // 触发 computed 重新计算
-    tagMapVersion.value++
-  }
-
-  // 增量更新标签计数（删除表情时调用）
-  const decrementTagCounts = (tags: string[] | undefined) => {
-    if (!tags || tags.length === 0) return
-    // 如果缓存无效，先重建
-    if (!tagCacheValid.value) {
-      rebuildTagCounts()
-      return
-    }
-
-    const map = tagCountMap.value
-    for (const tag of tags) {
-      const count = map.get(tag) || 0
-      if (count <= 1) {
-        map.delete(tag)
-      } else {
-        map.set(tag, count - 1)
-      }
-    }
-    // 触发 computed 重新计算
-    tagMapVersion.value++
-  }
-
-  // 使缓存失效（在批量操作或数据加载时调用）
-  const invalidateTagCache = () => {
-    tagCacheValid.value = false
-  }
-
-  const allTags = computed(() => {
-    // 依赖版本号以确保响应式更新（通过 void 使用避免 unused 警告）
-    void tagMapVersion.value
-
-    // 如果缓存无效，需要重建（此时通过 tagMapVersion 依赖触发）
-    if (!tagCacheValid.value) {
-      // 延迟到下一个微任务执行重建，避免在 computed 中修改状态
-      queueMicrotask(() => {
-        if (!tagCacheValid.value) {
-          rebuildTagCounts()
-        }
-      })
-      // 返回空数组，等待重建完成后通过 tagMapVersion 触发更新
-      return []
-    }
-
-    // 从 Map 转换为排序后的数组
-    const result = Array.from(tagCountMap.value.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-
-    return result
-  })
+  // 使用 tagCountStore 的 allTags
+  const allTags = computed(() => tagCountStore.allTags)
 
   const sortedGroups = computed(() => {
     const allGroups = [...groups.value]
@@ -487,15 +242,15 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     saveData: async () => {
       if (_saveData) await _saveData()
     },
-    // Tag count callbacks for incremental updates
-    onTagsAdded: incrementTagCounts,
-    onTagsRemoved: decrementTagCounts,
-    invalidateTagCache,
-    // Search index callbacks for incremental updates
-    onEmojiAdded: addEmojiToIndex,
-    onEmojiRemoved: removeEmojiFromIndex,
-    onEmojiUpdated: updateEmojiInIndex,
-    invalidateSearchIndex,
+    // Tag count callbacks for incremental updates - 使用 tagCountStore
+    onTagsAdded: tags => tagCountStore.incrementTagCounts(tags),
+    onTagsRemoved: tags => tagCountStore.decrementTagCounts(tags),
+    invalidateTagCache: () => tagCountStore.invalidateTagCache(),
+    // Search index callbacks for incremental updates - 使用 searchIndexStore
+    onEmojiAdded: emoji => searchIndexStore.addEmojiToIndex(emoji),
+    onEmojiRemoved: emoji => searchIndexStore.removeEmojiFromIndex(emoji),
+    onEmojiUpdated: (oldEmoji, newEmoji) => searchIndexStore.updateEmojiInIndex(oldEmoji, newEmoji),
+    invalidateSearchIndex: () => searchIndexStore.invalidateSearchIndex(),
     // 直接保存回调
     markGroupDirty,
     markSettingsDirty,

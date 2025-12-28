@@ -1,0 +1,120 @@
+import { safeLocalStorage } from '@/utils/safeStorage'
+import type { AppSettings } from '@/types/type'
+
+/**
+ * 主题管理 Composable
+ * 负责管理应用主题（亮色/暗色/系统）和自定义颜色
+ */
+export function useThemeManager(options: {
+  updateSettings: (partial: Partial<AppSettings>) => void
+}) {
+  const { updateSettings } = options
+
+  /**
+   * 应用主题到 DOM
+   */
+  const applyTheme = (theme: 'system' | 'light' | 'dark') => {
+    // 应用主题类名
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else if (theme === 'light') {
+      document.documentElement.classList.remove('dark')
+    } else {
+      // system theme
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    }
+
+    // 设置 data-theme 属性
+    const finalTheme =
+      theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : theme
+    document.documentElement.setAttribute('data-theme', finalTheme)
+
+    // 触发主题变化事件，通知 Ant Design Vue 主题更新
+    window.dispatchEvent(
+      new CustomEvent('theme-changed', {
+        detail: {
+          mode: finalTheme,
+          theme: theme
+        }
+      })
+    )
+  }
+
+  /**
+   * 更新主题设置
+   */
+  const updateTheme = (theme: 'system' | 'light' | 'dark') => {
+    updateSettings({ theme })
+    safeLocalStorage.set('theme', theme)
+    applyTheme(theme)
+  }
+
+  /**
+   * 更新自定义主色
+   */
+  const updateCustomPrimaryColor = (color: string) => {
+    updateSettings({ customPrimaryColor: color })
+
+    // 触发主题变化事件以更新 Ant Design Vue 主题
+    const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+    window.dispatchEvent(
+      new CustomEvent('theme-changed', {
+        detail: {
+          mode: currentMode,
+          theme: safeLocalStorage.get('theme', 'system')
+        }
+      })
+    )
+  }
+
+  /**
+   * 更新自定义配色方案
+   */
+  const updateCustomColorScheme = (scheme: AppSettings['customColorScheme']) => {
+    updateSettings({ customColorScheme: scheme })
+  }
+
+  /**
+   * 初始化主题（在应用启动时调用）
+   */
+  const initTheme = (currentTheme: 'system' | 'light' | 'dark') => {
+    applyTheme(currentTheme)
+
+    // 监听系统主题变化（仅在 system 模式下）
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleSystemThemeChange = () => {
+      const savedTheme = safeLocalStorage.get('theme', 'system')
+      if (savedTheme === 'system') {
+        applyTheme('system')
+      }
+    }
+
+    // 使用 addEventListener 而不是 deprecated addListener
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleSystemThemeChange)
+    }
+
+    // 返回清理函数
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleSystemThemeChange)
+      }
+    }
+  }
+
+  return {
+    updateTheme,
+    updateCustomPrimaryColor,
+    updateCustomColorScheme,
+    initTheme,
+    applyTheme
+  }
+}
