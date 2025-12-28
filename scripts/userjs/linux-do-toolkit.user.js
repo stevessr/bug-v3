@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do 工具集
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.2.0
+// @version      1.3.0
 // @description  Linux.do 增强工具集：定时发送、表情助手（全员 + 用户）、点赞计数器
 // @author       stevessr, ChiGamma
 // @match        https://linux.do/*
@@ -230,6 +230,20 @@
         margin-bottom: 4px;
         font-size: 12px;
         color: #aaa;
+    }
+    .ld-reaction-selector {
+        width: 100%;
+        padding: 6px;
+        border-radius: 4px;
+        border: 1px solid #555;
+        background: #333;
+        color: white;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .ld-reaction-selector option {
+        background: #333;
+        color: white;
     }
 
     /* 点赞计数器 */
@@ -622,7 +636,20 @@
 
     // ==================== 模块 2: 表情助手（全员表情 + 用户表情） ====================
     const ReactionHelper = {
-        REACTION_ID: 'distorted_face',
+        // 可用表情列表
+        REACTIONS: [
+            { id: 'heart', name: '❤️ Heart', emoji: '❤️' },
+            { id: '+1', name: '👍 +1', emoji: '👍' },
+            { id: 'laughing', name: '😆 Laughing', emoji: '😆' },
+            { id: 'open_mouth', name: '😮 Open Mouth', emoji: '😮' },
+            { id: 'clap', name: '👏 Clap', emoji: '👏' },
+            { id: 'confetti_ball', name: '🎊 Confetti Ball', emoji: '🎊' },
+            { id: 'hugs', name: '🤗 Hugs', emoji: '🤗' },
+            { id: 'distorted_face', name: '🤯 Distorted Face', emoji: '🤯' },
+            { id: 'tieba_087', name: '🎭 Tieba 087', emoji: '🎭' },
+            { id: 'bili_057', name: '📺 Bili 057', emoji: '📺' }
+        ],
+
         DELAY_MS_ALL: 1500,
         DELAY_MS_USER: 2000,
         targetPostIds: [],
@@ -630,6 +657,11 @@
         panel: null,
         panelContent: null,
         isExpanded: false,
+
+        getSelectedReaction() {
+            const selector = document.getElementById('ld-reaction-select');
+            return selector ? selector.value : 'distorted_face';
+        },
 
         log(msg, tabId = 'user') {
             const logBox = document.getElementById(`ld-log-${tabId}`);
@@ -695,7 +727,8 @@
         },
 
         async sendReactionToPost(postId, current, total, tabId) {
-            const url = `https://linux.do/discourse-reactions/posts/${postId}/custom-reactions/${this.REACTION_ID}/toggle.json`;
+            const reactionId = this.getSelectedReaction();
+            const url = `https://linux.do/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`;
 
             try {
                 const res = await fetch(url, {
@@ -730,7 +763,10 @@
             if (this.isRunning) return;
 
             const btn = document.getElementById('ld-all-start-btn');
-            if (!confirm(`确定要给当前帖子下的所有楼层发送 "${this.REACTION_ID}" 表情吗？\n注意：此接口为 toggle (切换)，如果已点过则会取消。`)) return;
+            const reactionId = this.getSelectedReaction();
+            const reactionName = this.REACTIONS.find(r => r.id === reactionId)?.name || reactionId;
+
+            if (!confirm(`确定要给当前帖子下的所有楼层发送 "${reactionName}" 表情吗？\n注意：此接口为 toggle (切换)，如果已点过则会取消。`)) return;
 
             this.isRunning = true;
             btn.disabled = true;
@@ -846,7 +882,10 @@
             if (this.targetPostIds.length === 0) return;
             if (this.isRunning) return;
 
-            if (!confirm(`确定要对这 ${this.targetPostIds.length} 个帖子/回复发送 "${this.REACTION_ID}" 吗？`)) return;
+            const reactionId = this.getSelectedReaction();
+            const reactionName = this.REACTIONS.find(r => r.id === reactionId)?.name || reactionId;
+
+            if (!confirm(`确定要对这 ${this.targetPostIds.length} 个帖子/回复发送 "${reactionName}" 吗？`)) return;
 
             this.isRunning = true;
             document.getElementById('ld-user-run-btn').disabled = true;
@@ -884,17 +923,30 @@
 
             // 创建面板内容
             this.panelContent = createEl('div', { className: 'ld-panel-content' });
+
+            // 生成表情选择器选项
+            const reactionOptions = this.REACTIONS.map(r =>
+                `<option value="${r.id}">${r.name}</option>`
+            ).join('');
+
             this.panelContent.innerHTML = `
                 <div class="ld-panel-tabs">
                     <div class="ld-panel-tab active" data-tab="all">🎯 全员表情</div>
                     <div class="ld-panel-tab" data-tab="user">👤 用户表情</div>
                 </div>
 
+                <!-- 表情选择器 - 全局共用 -->
+                <div class="ld-field-group">
+                    <label>选择表情</label>
+                    <select id="ld-reaction-select" class="ld-reaction-selector">
+                        ${reactionOptions}
+                    </select>
+                </div>
+
                 <!-- 全员表情 Tab -->
                 <div id="ld-tab-all" class="ld-tab-content active">
                     <h4>给当前帖子所有楼层发送表情</h4>
                     <p style="font-size: 12px; color: #999; margin: 10px 0;">
-                        默认表情：distorted_face 🤯<br>
                         注意：toggle 模式，已点过会取消
                     </p>
                     <button id="ld-all-start-btn" style="width: 100%; background: #e74c3c; margin-top: 10px;">🚀 开始执行</button>
