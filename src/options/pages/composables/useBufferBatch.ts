@@ -152,7 +152,7 @@ export function useBufferBatch(options: UseBufferBatchOptions) {
 
     const lines = Array.from(selectedEmojis.value)
       .map(idx => {
-        const e = bufferGroup.value!.emojis[idx]
+        const e = bufferGroup.value?.emojis[idx]
         return e && e.url ? `![${e.name}|${e.height}x${e.width}](${e.url})` : null
       })
       .filter((v): v is string => !!v)
