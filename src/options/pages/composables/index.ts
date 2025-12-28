@@ -5,7 +5,5 @@
 
 export { useCollaborativeUpload } from './useCollaborativeUpload'
 export { useFilePersistence, type FileItem } from './useFilePersistence'
-
-// TODO: 后续迭代添加
-// export { useTelegramImport } from './useTelegramImport'
-// export { useBufferBatch } from './useBufferBatch'
+export { useTelegramImport } from './useTelegramImport'
+export { useBufferBatch } from './useBufferBatch'
