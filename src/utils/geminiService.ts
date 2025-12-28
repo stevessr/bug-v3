@@ -130,8 +130,11 @@ async function analyzeImageWithOpenAI(
   imageUrl: string,
   config: GeminiConfig
 ): Promise<ImageAnalysisResult> {
-  const endpoint = config.customOpenAIEndpoint!
-  const apiKey = config.customOpenAIKey!
+  if (!config.customOpenAIEndpoint || !config.customOpenAIKey) {
+    throw new Error('Custom OpenAI endpoint and API key are required')
+  }
+  const endpoint = config.customOpenAIEndpoint
+  const apiKey = config.customOpenAIKey
   const model = config.customOpenAIModel || 'gpt-4o-mini'
   const language = config.language || 'Chinese'
 
@@ -584,8 +587,11 @@ async function generateBatchNamesWithOpenAI(
   config: GeminiConfig,
   concurrency: number = 5
 ): Promise<Record<string, string>> {
-  const endpoint = config.customOpenAIEndpoint!
-  const apiKey = config.customOpenAIKey!
+  if (!config.customOpenAIEndpoint || !config.customOpenAIKey) {
+    throw new Error('Custom OpenAI endpoint and API key are required')
+  }
+  const endpoint = config.customOpenAIEndpoint
+  const apiKey = config.customOpenAIKey
   const model = config.customOpenAIModel || 'gpt-4o-mini'
   const language = config.language || 'Chinese'
 

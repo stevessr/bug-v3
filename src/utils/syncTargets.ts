@@ -907,7 +907,9 @@ export class CloudflareSyncTarget implements ISyncTarget {
         if (item.key === 'settings') {
           pulledData.settings = item.data
         } else {
-          pulledData.emojiGroups!.push(item.data)
+          if (pulledData.emojiGroups) {
+            pulledData.emojiGroups.push(item.data)
+          }
         }
       }
 

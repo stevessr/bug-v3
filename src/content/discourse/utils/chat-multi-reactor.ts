@@ -69,8 +69,9 @@ const sleep = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms))
 function getChannelIdFromContainer(container: HTMLElement): string | null {
   try {
     const timeLink = container.querySelector<HTMLAnchorElement>('.chat-time')
-    if (timeLink?.getAttribute('href')) {
-      const parts = timeLink.getAttribute('href')!.split('/')
+    const href = timeLink?.getAttribute('href')
+    if (href) {
+      const parts = href.split('/')
       if (parts.length >= 2) {
         const possibleId = parts[parts.length - 2]
         if (/^\d+$/.test(possibleId)) return possibleId

@@ -196,7 +196,11 @@ export class ImageCacheService {
         const cachedImage = request.result as CachedImage | undefined
         if (cachedImage && cachedImage.hash) {
           // Update access statistics
-          const updateTransaction = this.db!.transaction([this.STORE_NAME], 'readwrite')
+          if (!this.db) {
+            reject(new Error('Database not initialized'))
+            return
+          }
+          const updateTransaction = this.db.transaction([this.STORE_NAME], 'readwrite')
           const updateStore = updateTransaction.objectStore(this.STORE_NAME)
           cachedImage.lastAccessed = Date.now()
           cachedImage.accessCount++
@@ -263,7 +267,10 @@ export class ImageCacheService {
       }
 
       // Need to collect entries for cleanup - use cursor with minimal data
-      const cleanupTransaction = this.db!.transaction([this.STORE_NAME], 'readonly')
+      if (!this.db) {
+        throw new Error('Database not initialized')
+      }
+      const cleanupTransaction = this.db.transaction([this.STORE_NAME], 'readonly')
       const cleanupStore = cleanupTransaction.objectStore(this.STORE_NAME)
 
       const entries: Array<{

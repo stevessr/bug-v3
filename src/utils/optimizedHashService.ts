@@ -34,10 +34,13 @@ class UnionFind {
       this.parent.set(x, x)
       this.rank.set(x, 0)
     }
-    if (this.parent.get(x) !== x) {
-      this.parent.set(x, this.find(this.parent.get(x)!))
+    const parentX = this.parent.get(x)
+    if (parentX !== x) {
+      if (parentX) {
+        this.parent.set(x, this.find(parentX))
+      }
     }
-    return this.parent.get(x)!
+    return this.parent.get(x) || x
   }
 
   union(x: string, y: string): void {
@@ -776,7 +779,12 @@ export class OptimizedHashService {
 
     for (const [root, ids] of ufGroups) {
       if (ids.length > 1) {
-        const groupItems = ids.map(id => idToItem.get(id)!).filter(Boolean)
+        const groupItems = ids
+          .map(id => {
+            const item = idToItem.get(id)
+            return item || null
+          })
+          .filter((item): item is T => item !== null)
         if (groupItems.length > 1) {
           result.set(root, groupItems)
         }
@@ -865,7 +873,12 @@ export class OptimizedHashService {
 
     for (const [root, ids] of ufGroups) {
       if (ids.length > 1) {
-        const groupItems = ids.map(id => idToItem.get(id)!).filter(Boolean)
+        const groupItems = ids
+          .map(id => {
+            const item = idToItem.get(id)
+            return item || null
+          })
+          .filter((item): item is T => item !== null)
         if (groupItems.length > 1) {
           result.set(root, groupItems)
         }
@@ -957,7 +970,8 @@ export class OptimizedHashService {
 
     for (let bucketIdx = 0; bucketIdx < bucketKeys.length; bucketIdx++) {
       const prefix = bucketKeys[bucketIdx]
-      const bucket = prefixBuckets.get(prefix)!
+      const bucket = prefixBuckets.get(prefix)
+      if (!bucket) continue
 
       // Compare within this bucket
       for (let i = 0; i < bucket.length; i++) {
@@ -989,7 +1003,8 @@ export class OptimizedHashService {
         // So we check if prefix distance is within a reasonable range
         if (prefixDistance > threshold) continue
 
-        const otherBucket = prefixBuckets.get(otherPrefix)!
+        const otherBucket = prefixBuckets.get(otherPrefix)
+        if (!otherBucket) continue
         for (const item1 of bucket) {
           for (const item2 of otherBucket) {
             const pairKey =
@@ -1018,7 +1033,12 @@ export class OptimizedHashService {
 
     for (const [root, ids] of ufGroups) {
       if (ids.length > 1) {
-        const groupItems = ids.map(id => idToItem.get(id)!).filter(Boolean)
+        const groupItems = ids
+          .map(id => {
+            const item = idToItem.get(id)
+            return item || null
+          })
+          .filter((item): item is T => item !== null)
         if (groupItems.length > 1) {
           result.set(root, groupItems)
         }

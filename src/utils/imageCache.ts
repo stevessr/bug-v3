@@ -107,8 +107,10 @@ class LRUMemoryCache {
   set(url: string, blobUrl: string, size: number): void {
     // 如果已存在，先移除旧的
     if (this.cache.has(url)) {
-      const old = this.cache.get(url)!
-      this.currentSize -= old.size
+      const old = this.cache.get(url)
+      if (old) {
+        this.currentSize -= old.size
+      }
       // 不释放旧的 blobUrl，因为可能还在使用
       this.cache.delete(url)
     }
@@ -542,7 +544,10 @@ export class ImageCache {
 
     for (const url of uniqueUrls) {
       if (this.memoryCache.has(url)) {
-        results.set(url, this.memoryCache.get(url)!)
+        const cachedUrl = this.memoryCache.get(url)
+        if (cachedUrl) {
+          results.set(url, cachedUrl)
+        }
         completed++
       } else {
         pendingUrls.push(url)
@@ -823,7 +828,10 @@ export class ImageCache {
 
           const toRemove = sortedEntries.slice(0, targetCount)
 
-          const deleteTransaction = this.db!.transaction([this.options.storeName], 'readwrite')
+          if (!this.db) {
+            throw new Error('Database is not initialized')
+          }
+          const deleteTransaction = this.db.transaction([this.options.storeName], 'readwrite')
           const deleteStore = deleteTransaction.objectStore(this.options.storeName)
 
           for (const entry of toRemove) {
@@ -936,7 +944,10 @@ export class ImageCache {
 
     return new Promise((resolve, reject) => {
       try {
-        const transaction = this.db!.transaction([this.options.storeName], 'readonly')
+        if (!this.db) {
+          throw new Error('Database not initialized')
+        }
+        const transaction = this.db.transaction([this.options.storeName], 'readonly')
         const store = transaction.objectStore(this.options.storeName)
 
         const entries: CacheEntry[] = []

@@ -505,8 +505,11 @@ class WASMHashService {
 
     let str = ''
     let i = 0
+    if (!this.module) {
+      throw new Error('WASM module not initialized')
+    }
     while (true) {
-      const charCode = this.module!.HEAPU8[ptr + i]
+      const charCode = this.module.HEAPU8[ptr + i]
       if (charCode === 0) break
       str += String.fromCharCode(charCode)
       i++

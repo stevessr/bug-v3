@@ -3,7 +3,6 @@ import { ref, shallowRef, computed, watch, nextTick } from 'vue'
 
 // Import sub-stores for delegation
 import type { SaveControl } from './core/types'
-
 // 导入新的独立 stores
 import { useSearchIndexStore } from './searchIndexStore'
 import { useTagCountStore } from './tagCountStore'

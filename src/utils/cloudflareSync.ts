@@ -319,7 +319,8 @@ export class CloudflareSyncService {
 
       return await this.executeWithRetry(
         async () => {
-          const target = createSyncTarget(this.config!)
+          if (!this.config) throw new Error('Sync config is required')
+          const target = createSyncTarget(this.config)
           const result = await target.pull(progress => {
             onProgress?.({
               current: progress.current,
@@ -331,7 +332,7 @@ export class CloudflareSyncService {
 
           if (result.success && result.data) {
             // Update sync time in config
-            const updatedConfig = { ...this.config!, lastPullTime: Date.now() }
+            const updatedConfig = { ...this.config, lastPullTime: Date.now() }
             await this.saveConfig(updatedConfig)
 
             // Merge the pulled data with local data
@@ -470,7 +471,8 @@ export class CloudflareSyncService {
 
       return await this.executeWithRetry(
         async () => {
-          const target = createSyncTarget(this.config!)
+          if (!this.config) throw new Error('Sync config is required')
+          const target = createSyncTarget(this.config)
           const result = await target.pull(progress => {
             onProgress?.({
               current: progress.current,
@@ -515,7 +517,8 @@ export class CloudflareSyncService {
 
       return await this.executeWithRetry(
         async () => {
-          const target = createSyncTarget(this.config!)
+          if (!this.config) throw new Error('Sync config is required')
+          const target = createSyncTarget(this.config)
 
           // First test connection
           const testResult = await target.test()
@@ -678,7 +681,8 @@ export class CloudflareSyncService {
     try {
       return await this.executeWithRetry(
         async () => {
-          const target = createSyncTarget(this.config!)
+          if (!this.config) throw new Error('Sync config is required')
+          const target = createSyncTarget(this.config)
           if (target.getGroupDetails) {
             // Wrap onProgress to convert from local ProgressCallback to SyncProgressCallback
             const wrappedProgress: SyncProgressCallback | undefined = onProgress

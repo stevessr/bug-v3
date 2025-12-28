@@ -35,8 +35,11 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
       if (!node.children.has(char)) {
         node.children.set(char, createTrieNode())
       }
-      node = node.children.get(char)!
-      node.emojiIds.add(emojiId)
+      const nextNode = node.children.get(char)
+      if (nextNode) {
+        node = nextNode
+        node.emojiIds.add(emojiId)
+      }
     }
   }
 
@@ -54,7 +57,10 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
       if (!index.has(word)) {
         index.set(word, new Set())
       }
-      index.get(word)!.add(emojiId)
+      const wordSet = index.get(word)
+      if (wordSet) {
+        wordSet.add(emojiId)
+      }
       addWordToTrie(trie, word, emojiId)
     }
 
@@ -65,7 +71,10 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
         if (!index.has(tagLower)) {
           index.set(tagLower, new Set())
         }
-        index.get(tagLower)!.add(emojiId)
+        const tagSet = index.get(tagLower)
+        if (tagSet) {
+          tagSet.add(emojiId)
+        }
         addWordToTrie(trie, tagLower, emojiId)
       }
     }
@@ -173,7 +182,11 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
       if (!node.children.has(char)) {
         return new Set()
       }
-      node = node.children.get(char)!
+      const nextNode = node.children.get(char)
+      if (!nextNode) {
+        return new Set()
+      }
+      node = nextNode
     }
     return node.emojiIds
   }

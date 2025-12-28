@@ -14,7 +14,6 @@ import {
   exportGroupZip as exportGroupZipUtil
 } from './utils'
 import OptionsStreamingIntegration from './utils/optionsStreamingIntegration'
-
 // Import composables
 import {
   useEmojiDraggable,
@@ -797,9 +796,6 @@ export default function useOptions() {
     updateEnableBatchParseImages,
     updateEnableChatMultiReactor,
     updateChatMultiReactorEmojis,
-    updateTheme,
-    updateCustomPrimaryColor,
-    updateCustomColorScheme,
     updateCustomCssBlocks,
     updateSyncVariantToDisplayUrl,
     updateUseIndexedDBForImages,

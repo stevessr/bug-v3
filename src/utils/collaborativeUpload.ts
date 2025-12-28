@@ -312,7 +312,10 @@ export class CollaborativeUploadClient {
     if (!this.nodeFileMap.has(workerId)) {
       this.nodeFileMap.set(workerId, new Set())
     }
-    this.nodeFileMap.get(workerId)!.add(filename)
+    const fileSet = this.nodeFileMap.get(workerId)
+    if (fileSet) {
+      fileSet.add(filename)
+    }
     console.log(`[CollaborativeUpload] Assigned ${filename} to ${workerId}`)
   }
 
@@ -955,7 +958,10 @@ export class CollaborativeUploadClient {
 
       await Promise.all(
         batch.map(async (file, idx) => {
-          const taskId = batchTasks[idx].taskId!
+          const taskId = batchTasks[idx].taskId
+          if (!taskId) {
+            throw new Error('Task ID is required')
+          }
           const data = await file.arrayBuffer()
           this.sendBinaryFrame(taskId, data)
         })
@@ -993,7 +999,10 @@ export class CollaborativeUploadClient {
     if (!this.messageHandlers.has(messageType)) {
       this.messageHandlers.set(messageType, [])
     }
-    this.messageHandlers.get(messageType)!.push(handler)
+    const handlers = this.messageHandlers.get(messageType)
+    if (handlers) {
+      handlers.push(handler)
+    }
   }
 
   /**

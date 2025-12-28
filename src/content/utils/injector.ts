@@ -147,7 +147,7 @@ async function injectDesktopPicker(button: HTMLElement) {
   const handler = createClickOutsideHandler(button)
 
   setTimeout(() => {
-    document.addEventListener('click', handler, { signal: clickOutsideController!.signal })
+    document.addEventListener('click', handler, { signal: clickOutsideController?.signal })
   }, 100)
 }
 

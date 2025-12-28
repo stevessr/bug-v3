@@ -251,10 +251,14 @@ export class ConflictResolver {
 
         if (hasLocal && hasRemote) {
           // 字段在两边都被修改
-          const localValue = localFields.get(field)!
-          const remoteValue = remoteFields.get(field)!
+          const localValue = localFields.get(field)
+          const remoteValue = remoteFields.get(field)
 
-          if (JSON.stringify(localValue) === JSON.stringify(remoteValue)) {
+          if (
+            localValue &&
+            remoteValue &&
+            JSON.stringify(localValue) === JSON.stringify(remoteValue)
+          ) {
             // 修改后的值相同，不是真正的冲突
             mergedData[field] = localValue
           } else {

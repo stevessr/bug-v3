@@ -320,8 +320,10 @@ class Semaphore {
 
   release(): void {
     if (this.waitQueue.length > 0) {
-      const resolve = this.waitQueue.shift()!
-      resolve()
+      const resolve = this.waitQueue.shift()
+      if (resolve) {
+        resolve()
+      }
     } else {
       this.permits++
     }

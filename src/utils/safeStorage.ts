@@ -205,7 +205,11 @@ export class SafeStorage {
         }
       }
 
-      keysToRemove.forEach(key => this.storage!.removeItem(key))
+      keysToRemove.forEach(key => {
+        if (this.storage) {
+          this.storage.removeItem(key)
+        }
+      })
       return true
     } catch (error) {
       console.warn('[SafeStorage] Failed to clear storage:', error)
