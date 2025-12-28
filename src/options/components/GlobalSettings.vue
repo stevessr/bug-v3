@@ -466,7 +466,9 @@ const removeSideItem = (i: number) => {
               :value="item[1]"
               @input="
                 e => {
-                  localUploadMenuItems.autoItems[i][1] = (e.target as HTMLInputElement).value
+                  localUploadMenuItems.autoItems[Number(i)][1] = (
+                    e.target as HTMLInputElement
+                  ).value
                   markDirty()
                 }
               "
@@ -477,7 +479,9 @@ const removeSideItem = (i: number) => {
               :value="item[2]"
               @input="
                 e => {
-                  localUploadMenuItems.autoItems[i][2] = (e.target as HTMLInputElement).value
+                  localUploadMenuItems.autoItems[Number(i)][2] = (
+                    e.target as HTMLInputElement
+                  ).value
                   markDirty()
                 }
               "
@@ -485,7 +489,7 @@ const removeSideItem = (i: number) => {
             />
             <a-button
               size="small"
-              danger
+              :danger="true"
               @click="removeAutoItem(Number(i))"
               :title="'删除第 ' + (Number(i) + 1) + ' 项'"
             >
@@ -521,7 +525,7 @@ const removeSideItem = (i: number) => {
               :value="item[1]"
               @input="
                 e => {
-                  localUploadMenuItems.iframes[i][1] = (e.target as HTMLInputElement).value
+                  localUploadMenuItems.iframes[Number(i)][1] = (e.target as HTMLInputElement).value
                   markDirty()
                 }
               "
@@ -532,7 +536,7 @@ const removeSideItem = (i: number) => {
               :value="item[2]"
               @input="
                 e => {
-                  localUploadMenuItems.iframes[i][2] = (e.target as HTMLInputElement).value
+                  localUploadMenuItems.iframes[Number(i)][2] = (e.target as HTMLInputElement).value
                   markDirty()
                 }
               "
@@ -544,7 +548,7 @@ const removeSideItem = (i: number) => {
               placeholder="className"
               @input="
                 e => {
-                  localUploadMenuItems.iframes[i][3] = (e.target as HTMLInputElement).value
+                  localUploadMenuItems.iframes[Number(i)][3] = (e.target as HTMLInputElement).value
                   markDirty()
                 }
               "
@@ -552,7 +556,7 @@ const removeSideItem = (i: number) => {
             />
             <a-button
               size="small"
-              danger
+              :danger="true"
               @click="removeIframeItem(Number(i))"
               :title="'删除第 ' + (Number(i) + 1) + ' 项'"
             >
@@ -588,7 +592,7 @@ const removeSideItem = (i: number) => {
               :value="item[1]"
               @input="
                 e => {
-                  localUploadMenuItems.sides[i][1] = (e.target as HTMLInputElement).value
+                  localUploadMenuItems.sides[Number(i)][1] = (e.target as HTMLInputElement).value
                   markDirty()
                 }
               "
@@ -599,7 +603,7 @@ const removeSideItem = (i: number) => {
               :value="item[2]"
               @input="
                 e => {
-                  localUploadMenuItems.sides[i][2] = (e.target as HTMLInputElement).value
+                  localUploadMenuItems.sides[Number(i)][2] = (e.target as HTMLInputElement).value
                   markDirty()
                 }
               "
@@ -611,7 +615,7 @@ const removeSideItem = (i: number) => {
               placeholder="className"
               @input="
                 e => {
-                  localUploadMenuItems.sides[i][3] = (e.target as HTMLInputElement).value
+                  localUploadMenuItems.sides[Number(i)][3] = (e.target as HTMLInputElement).value
                   markDirty()
                 }
               "
@@ -619,7 +623,7 @@ const removeSideItem = (i: number) => {
             />
             <a-button
               size="small"
-              danger
+              :danger="true"
               @click="removeSideItem(Number(i))"
               :title="'删除第 ' + (Number(i) + 1) + ' 项'"
             >

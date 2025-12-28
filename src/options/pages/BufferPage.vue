@@ -12,12 +12,6 @@ import CreateGroupModal from '../components/CreateGroupModal.vue'
 import { useBufferBatch } from './composables/useBufferBatch'
 import { useTelegramImport } from './composables/useTelegramImport'
 
-import {
-  processTelegramStickers,
-  getTelegramBotToken,
-  setTelegramBotToken
-} from '@/utils/telegramResolver'
-import type { EmojiGroup } from '@/types/type'
 import { uploadServices } from '@/utils/uploadServices'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import CachedImage from '@/components/CachedImage.vue'
@@ -181,8 +175,6 @@ const {
   isCheckingDuplicates,
   selectedGroupIdForFilter,
   showGroupSelector,
-  totalCount,
-  checkedCount,
   checkAll,
   indeterminate,
   availableGroups,

@@ -790,19 +790,6 @@ export class ImageCache {
   }
 
   /**
-   * Clean up cache by removing least recently used entries (旧方法，保留用于兼容)
-   * @deprecated Use cleanupCacheByMetadata instead
-   */
-  private async cleanupCache(entries: CacheEntry[], currentSize: number): Promise<void> {
-    const metadata = entries.map(e => ({
-      id: e.id,
-      size: e.size,
-      lastAccessed: e.lastAccessed
-    }))
-    return this.cleanupCacheByMetadata(metadata, currentSize)
-  }
-
-  /**
    * Clear all cached images
    */
   async clearCache(): Promise<void> {
