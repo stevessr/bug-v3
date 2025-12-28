@@ -176,3 +176,4 @@ scripts/wasm/perceptual_hash.js
 scripts/wasm/perceptual_hash.wasm
 scripts/wasm/emsdk
 scripts/collaborative-upload-server/bun.lock
+scripts/cfworker/public/updates/extension.xpi
