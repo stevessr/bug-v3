@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
-
 // Accept the project's Group shape when used from parent components
 type LooseGroup = Record<string, unknown>
 const props = defineProps<{ group: LooseGroup }>()

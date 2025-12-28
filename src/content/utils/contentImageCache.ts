@@ -236,7 +236,7 @@ class ContentImageCacheService {
 
     for (const selector of imageSelectors) {
       const images = document.querySelectorAll(selector)
-      allImages.push(...Array.from(images))
+      allImages.push(...Array.from(images).filter(img => img instanceof HTMLImageElement))
     }
 
     // 去重

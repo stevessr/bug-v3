@@ -1,7 +1,5 @@
 import { ref } from 'vue'
 
-import type { EmojiGroup } from '@/types/type'
-
 /**
  * 导出进度管理 Composable
  * 负责管理导出操作的进度显示、取消控制和模态框状态

@@ -265,12 +265,6 @@ const cleanupImageObserver = () => {
   }
 }
 
-const observeImage = (el: any) => {
-  if (el instanceof HTMLImageElement && imageObserver) {
-    imageObserver.observe(el)
-  }
-}
-
 onMounted(() => {
   if (props.visible) {
     setupImageObserver()

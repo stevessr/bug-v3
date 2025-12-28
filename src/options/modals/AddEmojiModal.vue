@@ -603,7 +603,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                       <div class="flex gap-2">
                         <a-button
                           @click="((pasteText = ''), (parsedItems = []))"
-                          type="button"
+                          htmlType="button"
                           class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
                           title="清空粘贴内容"
                         >
@@ -611,7 +611,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                         </a-button>
                         <a-button
                           @click="previewParse"
-                          type="button"
+                          htmlType="button"
                           class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded"
                           title="预览粘贴内容"
                         >
@@ -619,7 +619,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                         </a-button>
                         <a-button
                           @click="importParsed"
-                          type="button"
+                          htmlType="button"
                           class="px-3 py-1 text-xs bg-blue-600 text-white rounded"
                           title="导入所有解析出的表情"
                         >
@@ -669,7 +669,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                   <!-- Save and Cancel buttons -->
                   <div class="grid grid-cols-2 gap-3">
                     <a-button
-                      type="button"
+                      htmlType="button"
                       @click="add"
                       class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
                       title="添加表情"
@@ -677,7 +677,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                       {{ inputMode === 'url' ? '添加' : '导入解析项' }}
                     </a-button>
                     <a-button
-                      type="button"
+                      htmlType="button"
                       @click="close"
                       class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                       title="取消添加表情"
@@ -743,7 +743,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                   </h4>
                   <a-button
                     @click="parsedItems = []"
-                    type="button"
+                    htmlType="button"
                     class="text-xs text-gray-500 hover:text-gray-700"
                     title="清空解析结果"
                   >
@@ -764,7 +764,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                           :src="getEmojiImageUrlSync({ id: `parsed-${index}`, ...item })"
                           :alt="item.name"
                           class="w-full h-32 object-contain rounded border"
-                          @error="handleParsedImageError"
+                          @error="(e: Event | string) => handleParsedImageError(e as Event)"
                           preview
                         />
                       </div>

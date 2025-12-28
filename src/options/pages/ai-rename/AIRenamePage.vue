@@ -142,9 +142,6 @@ const handleApplyBatchRename = (newNames: Record<string, string>) => {
   selectedEmojis.value.clear()
 }
 
-// 虚拟列表引用 - use any to avoid vue-tsc generic inference issues
-const virtualListRef = ref<any>(null)
-
 // 使用设置中的网格列数
 const gridColumns = computed(() => emojiStore.settings.gridColumns || 4)
 

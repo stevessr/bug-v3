@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineEmits, defineProps, toRefs, computed, ref } from 'vue'
+import { toRefs, computed, ref } from 'vue'
 
 const props = defineProps({
   show: { type: Boolean, required: true },

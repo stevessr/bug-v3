@@ -632,7 +632,7 @@ export class ImageCache {
    * @param urls 要预加载的 URL 列表
    * @param concurrency 并发数，默认为 4
    */
-  async preloadToMemory(urls: string[], concurrency: number = 4): Promise<number> {
+  async preloadToMemory(urls: string[], _concurrency: number = 4): Promise<number> {
     let loaded = 0
 
     // 过滤出需要加载的 URL（已在内存缓存中的跳过）

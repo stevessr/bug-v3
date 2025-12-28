@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, toRefs, type Ref, ref, watch } from 'vue'
+import { toRefs, type Ref, ref, watch } from 'vue'
 
 import type { EmojiGroup } from '@/types/type'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'

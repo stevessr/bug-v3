@@ -260,7 +260,7 @@ const cacheAllImages = async () => {
   currentGroupImageCount.value = 0
 
   try {
-    const { imageCache, cacheImage } = await import('@/utils/imageCache')
+    const { imageCache } = await import('@/utils/imageCache')
     // Initialize image cache
     await imageCache.init()
 
@@ -554,7 +554,7 @@ const importCache = () => {
       for (const imgData of importData.images) {
         try {
           // 检查是否已存在
-          const existing = await imageCache.get(imgData.url)
+          const existing = await (imageCache as any).get(imgData.url)
 
           if (existing) {
             // 如果已存在，检查是否需要更新
@@ -574,7 +574,7 @@ const importCache = () => {
             }
 
             // 缓存图片
-            await imageCache.set(imgData.url, blob)
+            await (imageCache as any).set(imgData.url, blob)
             imported++
             console.log(`[StatsPage] 成功导入：${imgData.url}`)
           } catch (blobError) {

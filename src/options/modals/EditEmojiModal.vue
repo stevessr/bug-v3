@@ -432,7 +432,7 @@ const handleSubmit = () => {
                     >
                       {{ tag }}
                       <button
-                        type="button"
+                        htmlType="button"
                         @click="removeTag(tag)"
                         class="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
                         title="移除標籤"
@@ -455,7 +455,7 @@ const handleSubmit = () => {
                         @keydown.enter="handleTagInputEnter"
                       />
                       <button
-                        type="button"
+                        htmlType="button"
                         @click="addTag"
                         :disabled="!newTag.trim()"
                         class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -475,7 +475,7 @@ const handleSubmit = () => {
                           <button
                             v-for="tag in suggestedTags"
                             :key="tag"
-                            type="button"
+                            htmlType="button"
                             @click="addSuggestedTag(tag)"
                             class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                           >
@@ -537,7 +537,7 @@ const handleSubmit = () => {
                   <!-- Upload button (conditional) -->
                   <div v-if="shouldShowUploadButton" class="w-full">
                     <a-button
-                      type="button"
+                      htmlType="button"
                       @click="uploadSingleEmoji(localEmoji)"
                       :disabled="uploadingEmojiIds.has(localEmoji.id || '')"
                       title="上传到linux.do"
@@ -552,7 +552,7 @@ const handleSubmit = () => {
                   <!-- Save and Cancel buttons -->
                   <div class="grid grid-cols-2 gap-3">
                     <a-button
-                      type="button"
+                      htmlType="button"
                       @click="handleSubmit"
                       class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
                       title="保存表情更改"
@@ -560,7 +560,7 @@ const handleSubmit = () => {
                       保存
                     </a-button>
                     <a-button
-                      type="button"
+                      htmlType="button"
                       @click="closeModal"
                       class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
                       title="取消编辑表情"

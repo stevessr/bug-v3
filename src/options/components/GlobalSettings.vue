@@ -459,7 +459,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'自动项名称 ' + (i + 1)"
+              :title="'自动项名称 ' + (Number(i) + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-20"
@@ -470,7 +470,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'自动项图标 ' + (i + 1)"
+              :title="'自动项图标 ' + (Number(i) + 1)"
             />
             <input
               class="border rounded px-2 py-1 flex-1"
@@ -481,13 +481,13 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'自动项 URL ' + (i + 1)"
+              :title="'自动项 URL ' + (Number(i) + 1)"
             />
             <a-button
               size="small"
-              type="danger"
-              @click="removeAutoItem(i)"
-              :title="'删除第 ' + (i + 1) + ' 项'"
+              danger
+              @click="removeAutoItem(Number(i))"
+              :title="'删除第 ' + (Number(i) + 1) + ' 项'"
             >
               删除
             </a-button>
@@ -514,7 +514,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'Iframe 模态名称 ' + (i + 1)"
+              :title="'Iframe 模态名称 ' + (Number(i) + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-16"
@@ -525,7 +525,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'Iframe 模态图标 ' + (i + 1)"
+              :title="'Iframe 模态图标 ' + (Number(i) + 1)"
             />
             <input
               class="border rounded px-2 py-1 flex-1"
@@ -536,7 +536,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'Iframe 模态 URL ' + (i + 1)"
+              :title="'Iframe 模态 URL ' + (Number(i) + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-48"
@@ -548,13 +548,13 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'Iframe 模态 CSS 类名 ' + (i + 1)"
+              :title="'Iframe 模态 CSS 类名 ' + (Number(i) + 1)"
             />
             <a-button
               size="small"
-              type="danger"
-              @click="removeIframeItem(i)"
-              :title="'删除第 ' + (i + 1) + ' 项'"
+              danger
+              @click="removeIframeItem(Number(i))"
+              :title="'删除第 ' + (Number(i) + 1) + ' 项'"
             >
               删除
             </a-button>
@@ -581,7 +581,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'侧边 iframe 名称 ' + (i + 1)"
+              :title="'侧边 iframe 名称 ' + (Number(i) + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-16"
@@ -592,7 +592,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'侧边 iframe 图标 ' + (i + 1)"
+              :title="'侧边 iframe 图标 ' + (Number(i) + 1)"
             />
             <input
               class="border rounded px-2 py-1 flex-1"
@@ -603,7 +603,7 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'侧边 iframe URL ' + (i + 1)"
+              :title="'侧边 iframe URL ' + (Number(i) + 1)"
             />
             <input
               class="border rounded px-2 py-1 w-48"
@@ -615,13 +615,13 @@ const removeSideItem = (i: number) => {
                   markDirty()
                 }
               "
-              :title="'侧边 iframe CSS 类名 ' + (i + 1)"
+              :title="'侧边 iframe CSS 类名 ' + (Number(i) + 1)"
             />
             <a-button
               size="small"
-              type="danger"
-              @click="removeSideItem(i)"
-              :title="'删除第 ' + (i + 1) + ' 项'"
+              danger
+              @click="removeSideItem(Number(i))"
+              :title="'删除第 ' + (Number(i) + 1) + ' 项'"
             >
               删除
             </a-button>

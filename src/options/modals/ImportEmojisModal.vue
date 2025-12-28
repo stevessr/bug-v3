@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineEmits, defineProps } from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps<{ modelValue: boolean }>()
 // reference prop to satisfy TS/linter
@@ -8,7 +8,6 @@ const emit = defineEmits(['update:modelValue', 'imported'])
 
 const text = ref('')
 const targetGroupId = ref('')
-const fileInput = ref<HTMLInputElement | null>(null)
 
 const close = () => emit('update:modelValue', false)
 

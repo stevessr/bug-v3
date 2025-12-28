@@ -51,7 +51,7 @@ const _displayValue = computed(() => {
     class="w-full"
     :filter-option="filterOption"
     :disabled="disabled"
-    @change="handleChange"
+    @change="(value: any) => handleChange(String(value || ''))"
   >
     <a-select-option v-for="g in groups" :key="g.id" :value="g.id" :label="g.name">
       <div class="flex items-center">

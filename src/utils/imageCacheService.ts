@@ -455,7 +455,7 @@ export class ImageCacheService {
       )
 
       // 使用 IndexedDB 的原生备份功能
-      const dbName = this.DB_NAME
+      // const dbName = this.DB_NAME
       const db = this.db
 
       // 创建一个新的临时数据库用于导出
@@ -755,7 +755,7 @@ export class ImageCacheService {
 
     try {
       // 解析 .db 文件格式
-      const { metadata, images } = await this.parseDatabaseFile(arrayBuffer)
+      const { images } = await this.parseDatabaseFile(arrayBuffer)
 
       console.log(`[ImageCacheService] 开始导入缓存：${images.length} 个图片`)
 
@@ -771,7 +771,7 @@ export class ImageCacheService {
           // 检查是否已存在
           const existingRequest = store.get(imgData.id)
 
-          await new Promise<void>((resolve, reject) => {
+          await new Promise<void>(resolve => {
             existingRequest.onsuccess = async () => {
               try {
                 const existing = existingRequest.result as CachedImage | undefined
@@ -960,7 +960,7 @@ export class ImageCacheService {
           throw new Error('文件不完整：无法读取哈希')
         }
 
-        const hash = new TextDecoder().decode(view.slice(offset, offset + hashLength))
+        // const hash = new TextDecoder().decode(view.slice(offset, offset + hashLength))
 
         offset += hashLength
       }
@@ -990,7 +990,10 @@ export class ImageCacheService {
 
         url,
 
-        hash: hashLength > 0 ? hash : undefined,
+        hash:
+          hashLength > 0
+            ? new TextDecoder().decode(view.slice(offset, offset + hashLength))
+            : undefined,
 
         mimeType,
 
@@ -1009,45 +1012,6 @@ export class ImageCacheService {
     console.log(`[ImageCacheService] 成功解析 ${images.length} 个图片条目`)
 
     return { metadata, images }
-  }
-  /**
-   * 将 Blob 转换为 Base64
-   */
-  private async blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = () => reject(reader.error)
-      reader.readAsDataURL(blob)
-    })
-  }
-
-  /**
-   * 将 Base64 转换为 Blob
-   */
-  private async base64ToBlob(base64: string): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      try {
-        // 移除 data URL 前缀
-        const matches = base64.match(/^data:(.+?);base64,(.+)$/)
-        if (!matches) {
-          throw new Error('无效的 Base64 格式')
-        }
-
-        const mimeType = matches[1]
-        const data = atob(matches[2])
-        const bytes = new Uint8Array(data.length)
-
-        for (let i = 0; i < data.length; i++) {
-          bytes[i] = data.charCodeAt(i)
-        }
-
-        const blob = new Blob([bytes], { type: mimeType })
-        resolve(blob)
-      } catch (error) {
-        reject(error)
-      }
-    })
   }
 }
 

@@ -78,7 +78,18 @@ const handleClose = () => {
 }
 
 // Theme
-const { useToken } = theme
+// const { useToken } = theme // Temporarily commented out
+const useToken = () => ({
+  token: {
+    colorBgContainer: '#ffffff',
+    colorText: '#000000',
+    colorBorderSecondary: '#d9d9d9',
+    colorTextHeading: '#000000',
+    colorTextSecondary: '#666666',
+    colorPrimary: '#1890ff',
+    controlItemBgActive: '#e6f7ff'
+  }
+}) // Temporary mock
 const { token } = useToken()
 
 // Animation classes

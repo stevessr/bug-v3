@@ -208,7 +208,7 @@ const handleSearch = () => {
           placeholder="选择分组"
           class="w-full"
           :filterOption="filterOption"
-          @change="setActiveHandler"
+          @change="(value: any) => setActiveHandler(String(value || ''))"
         >
           <!-- 虛擬分組 -->
           <a-select-option v-for="g in virtualGroups" :key="g.id" :value="g.id" :label="g.name">

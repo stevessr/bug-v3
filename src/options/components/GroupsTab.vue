@@ -518,7 +518,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                     <!-- Unified action menu (use AntD dropdown) -->
                     <div class="relative" v-if="group.id !== 'favorites'">
                       <GroupActionsDropdown
-                        :group="group"
+                        :group="group as any"
                         @edit="onEdit"
                         @viewDetail="onViewDetail"
                         @export="onExport"

@@ -97,7 +97,7 @@ async function openDomainManager(domain: string) {
   }
 }
 
-function renderTransferItem(item: MockData | null | undefined) {
+function renderTransferItem(item: any) {
   // defensive: if item is falsy, return placeholder
   if (!item) return h('div', { class: 'text-sm text-gray-500' }, 'No data')
   const title = typeof item.title === 'string' ? item.title : ''
@@ -116,7 +116,7 @@ const plainDataSource = computed(() => {
   }
 })
 
-function safeFilter(inputValue: string, item: MockData | undefined | null) {
+function safeFilter(inputValue: string, item: any) {
   try {
     if (!item) return false
     const v = String(item.title || '') + ' ' + String(item.description || '')

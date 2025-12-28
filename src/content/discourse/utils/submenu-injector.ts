@@ -4,26 +4,16 @@
  * 这种方式比持续观察 DOM 更节省 CPU
  */
 
-import { createE, DQS, DOA, DAEL } from '../../utils/createEl'
+import { createE, DQS, DOA } from '../../utils/createEl'
 import { showImageUploadDialog } from '../../utils/uploader'
-import { animateEnter, animateExit, ANIMATION_DURATION } from '../../utils/animation'
+import { animateEnter, animateExit } from '../../utils/animation'
 import { autoReadAll, autoReadAllv2 } from '../../utils/autoReadReplies'
 import { notify } from '../../utils/notify'
 import { createAndShowIframeModal, createAndShowSideIframeModal } from '../../utils/iframe'
-import { ICONS } from '../../data/callout'
 import { createQuickInsertMenu } from '../../utils/injector'
 
-import { insertEmojiIntoEditor } from './editor'
 import { cachedState } from './ensure'
 import { createEmojiPicker } from './picker'
-
-// 菜单触发按钮选择器
-const MENU_TRIGGER_SELECTORS = [
-  // 工具栏选项菜单触发按钮
-  'button[data-identifier="toolbar-menu__options"]',
-  // 聊天编辑器下拉菜单触发按钮
-  'button[data-identifier="chat-composer-dropdown__menu"]'
-]
 
 // 菜单容器选择器
 const MENU_CONTAINER_SELECTORS = [

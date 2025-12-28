@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineEmits, defineProps } from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps<{ modelValue: boolean }>()
 void props.modelValue
@@ -10,7 +10,6 @@ const emit = defineEmits<{
 void emit // Used in template
 
 const text = ref('')
-const fileInput = ref<HTMLInputElement | null>(null)
 
 const close = () => emit('update:modelValue', false)
 
