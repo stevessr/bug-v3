@@ -43,7 +43,7 @@
 
         <div style="margin-bottom: 8px;">
             <label>用户名 (Username):</label>
-            <input type="text" id="ld-username" placeholder="如：ChesterYuan" style="width: 100%; padding: 5px; box-sizing: border-box; margin-top: 4px; border-radius: 4px; border: 1px solid #555; background: #333; color: white;">
+            <input type="text" id="ld-username" placeholder="如：Neo" style="width: 100%; padding: 5px; box-sizing: border-box; margin-top: 4px; border-radius: 4px; border: 1px solid #555; background: #333; color: white;">
         </div>
 
         <div style="margin-bottom: 8px;">

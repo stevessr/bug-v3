@@ -254,6 +254,25 @@
         color: white;
     }
 
+    /* 用户卡片点赞按钮 */
+    .ld-usercard-reaction-btn {
+        position: relative;
+    }
+    .ld-usercard-reaction-btn .ld-reaction-count {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #e74c3c;
+        color: white;
+        font-size: 11px;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 10px;
+        min-width: 18px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
     /* 点赞计数器 */
     .ld-picker-counter {
         width: auto !important;
@@ -1115,7 +1134,7 @@
                     <h4>给指定用户历史帖子发送表情</h4>
                     <div class="ld-field-group">
                         <label>用户名 (Username)</label>
-                        <input type="text" id="ld-username" placeholder="如：ChesterYuan">
+                        <input type="text" id="ld-username" placeholder="如：Neo">
                     </div>
                     <div class="ld-field-group">
                         <label>数量 (Count)</label>
