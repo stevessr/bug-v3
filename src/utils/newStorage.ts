@@ -80,6 +80,7 @@ const SAFE_TYPES = new Set(['string', 'number', 'boolean', 'undefined'])
 
 /**
  * 优化版本：减少递归深度，针对 EmojiGroup 结构优化
+ * 对于大型数组使用分块处理，避免主线程长时间阻塞
  */
 function ensureSerializable<T>(data: T, depth = 0): T {
   // 防止无限递归
@@ -124,6 +125,18 @@ function ensureSerializable<T>(data: T, depth = 0): T {
           return raw as T
         }
       }
+
+      // 大数组优化：分块处理，避免阻塞主线程
+      if (raw.length > 1000) {
+        const result: unknown[] = []
+        const chunkSize = 100
+        for (let i = 0; i < raw.length; i += chunkSize) {
+          const chunk = raw.slice(i, i + chunkSize)
+          result.push(...chunk.map(item => ensureSerializable(item, depth + 1)))
+        }
+        return result as T
+      }
+
       // 慢速路径：递归处理
       return raw.map(item => ensureSerializable(item, depth + 1)) as T
     }

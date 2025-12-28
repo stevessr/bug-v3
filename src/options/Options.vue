@@ -16,6 +16,7 @@ import EditGroupModal from './components/EditGroupModal.vue'
 import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
 
+import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
 import opensource from '@/options/modals/opensource.vue'
 
@@ -351,6 +352,7 @@ const handleSaveGroup = (
 
 <template>
   <AConfigProvider :theme="antdThemeConfig">
+    <ErrorBoundary />
     <div class="options-root min-h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Header -->
       <header class="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed, watch, nextTick } from 'vue'
+import { ref, shallowRef, computed, watch, nextTick, toRaw } from 'vue'
 
 // Import sub-stores for delegation
 import type { SaveControl } from './core/types'
@@ -121,7 +121,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const index = new Map<string, Set<string>>()
     const trie = createTrieNode()
 
-    for (const group of groups.value) {
+    // 优化：使用 toRaw 避免响应式代理开销
+    const rawGroups = toRaw(groups.value)
+    for (const group of rawGroups) {
       const emojis = group.emojis || []
       for (const emoji of emojis) {
         if (!emoji) continue
@@ -335,7 +337,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const rebuildTagCounts = () => {
     const newMap = new Map<string, number>()
 
-    for (const group of groups.value) {
+    // 优化：使用 toRaw 避免响应式代理开销
+    const rawGroups = toRaw(groups.value)
+    for (const group of rawGroups) {
       const emojis = group.emojis || []
       for (let i = 0; i < emojis.length; i++) {
         const emoji = emojis[i]
@@ -1188,19 +1192,39 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   // --- Synchronization and Persistence ---
 
-  // Watch for local changes and persist them
-  // Simplified: localStorage writes are synchronous, so minimal debouncing needed
+  // 优化：精确监听，避免全量保存
+  // 只在分组数量变化时全量保存索引
   watch(
-    [groups, settings, favorites],
+    () => groups.value.length,
     () => {
-      // Don't trigger saves until we've successfully loaded data at least once
-      // This prevents accidental saves of empty data during initialization
-      if (!isLoading.value && !isUpdatingFromStorage && !isSaving.value && hasLoadedOnce.value) {
-        console.log('[EmojiStore] Triggering save from watch')
-        maybeSave()
+      if (!isLoading.value && !isUpdatingFromStorage && hasLoadedOnce.value) {
+        // 分组数量变化：需要更新索引
+        const index = groups.value.map((g, order) => ({ id: g.id, order }))
+        newStorageHelpers.setEmojiGroupIndex(index).catch(err => {
+          console.error('[EmojiStore] Failed to save group index:', err)
+        })
       }
-    },
-    { deep: true }
+    }
+  )
+
+  // Settings 监听（浅层）
+  watch(
+    () => settings.value.lastModified,
+    () => {
+      if (!isLoading.value && !isUpdatingFromStorage && hasLoadedOnce.value) {
+        // Settings 已经通过 markSettingsDirty 处理
+      }
+    }
+  )
+
+  // Favorites 监听（浅层）
+  watch(
+    () => favorites.value.size,
+    () => {
+      if (!isLoading.value && !isUpdatingFromStorage && hasLoadedOnce.value) {
+        // Favorites 已经通过 markFavoritesDirty 处理
+      }
+    }
   )
 
   // Message deduplication: Track recently processed emoji additions to prevent duplicates

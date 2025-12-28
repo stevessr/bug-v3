@@ -43,11 +43,9 @@ const endIndex = computed(() => {
   return Math.min(props.items.length, Math.ceil(rowIndex) * itemsPerRow.value)
 })
 
+// 优化：直接切片，不创建中间对象数组
 const visibleItems = computed(() => {
-  return props.items.slice(startIndex.value, endIndex.value).map((item, idx) => ({
-    item,
-    index: startIndex.value + idx
-  }))
+  return props.items.slice(startIndex.value, endIndex.value)
 })
 
 const offsetY = computed(() => Math.floor(startIndex.value / itemsPerRow.value) * props.itemHeight)
@@ -140,15 +138,15 @@ onUnmounted(() => {
     <div class="virtual-list-spacer" :style="{ height: `${totalRows * itemHeight}px` }">
       <div class="virtual-list-viewport" :style="{ transform: `translateY(${offsetY}px)` }">
         <div
-          v-for="item in visibleItems"
-          :key="item.index"
+          v-for="(item, idx) in visibleItems"
+          :key="startIndex + idx"
           class="virtual-list-item"
           :style="{
             '--items-per-row': itemsPerRow,
             height: `${itemHeight}px`
           }"
         >
-          <slot :item="item.item" :index="item.index"></slot>
+          <slot :item="item" :index="startIndex + idx"></slot>
         </div>
       </div>
     </div>
