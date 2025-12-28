@@ -8,7 +8,15 @@ import {
   type Progress,
   type GroupLike
 } from '@/utils/syncTargets'
-import { newStorageHelpers } from '@/utils/newStorage'
+import { defaultSettings } from '@/types/defaultSettings'
+import {
+  getAllEmojiGroups,
+  getSettings,
+  getFavorites,
+  setAllEmojiGroups,
+  setSettings,
+  setFavorites
+} from '@/utils/simpleStorage'
 import { safeLocalStorage } from '@/utils/safeStorage'
 
 /** 常量定义 */
@@ -241,14 +249,11 @@ export class CloudflareSyncService {
       onProgress?.({ current: 0, total: 1, action: 'push', message: 'Preparing data...' })
 
       // Get current data from storage
-      const [groups, settings] = await Promise.all([
-        newStorageHelpers.getAllEmojiGroups(),
-        newStorageHelpers.getSettings()
-      ])
+      const [groups, settings] = await Promise.all([getAllEmojiGroups(), getSettings()])
 
       // Include favorites in the settings, ensure it's serializable
       const syncSettings: AppSettings = {
-        ...settings,
+        ...(settings || defaultSettings),
         lastModified: Date.now()
       }
 
@@ -359,9 +364,9 @@ export class CloudflareSyncService {
     try {
       // Get current local data
       const [localGroups, localSettings, localFavorites] = await Promise.all([
-        newStorageHelpers.getAllEmojiGroups(),
-        newStorageHelpers.getSettings(),
-        newStorageHelpers.getFavorites()
+        getAllEmojiGroups(),
+        getSettings(),
+        getFavorites()
       ])
 
       // Cast remote data to typed structure for easier access
@@ -379,7 +384,10 @@ export class CloudflareSyncService {
       ]
 
       // Merge settings: prefer remote settings but preserve local-only settings
-      const mergedSettings = { ...localSettings, ...remoteSettings }
+      const mergedSettings: AppSettings = {
+        ...(localSettings || defaultSettings),
+        ...(remoteSettings || {})
+      }
       // Ensure lastModified is updated to avoid sync conflicts
       mergedSettings.lastModified = Date.now()
 
@@ -395,9 +403,9 @@ export class CloudflareSyncService {
 
       // Save merged data
       await Promise.all([
-        newStorageHelpers.setAllEmojiGroups(mergedGroups),
-        newStorageHelpers.setSettings(mergedSettings),
-        newStorageHelpers.setFavorites(mergedFavorites)
+        setAllEmojiGroups(mergedGroups),
+        setSettings(mergedSettings),
+        setFavorites(mergedFavorites)
       ])
     } catch (error) {
       console.error('[CloudflareSync] Error merging sync data:', error)

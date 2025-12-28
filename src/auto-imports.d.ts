@@ -136,6 +136,7 @@ declare global {
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
   const ref: typeof import('vue')['ref']
+  const removeDiscourseDomain: typeof import('./utils/simpleStorage')['removeDiscourseDomain']
   const removeEmojiGroup: typeof import('./utils/simpleStorage')['removeEmojiGroup']
   const resetToDefaults: typeof import('./utils/simpleStorage')['resetToDefaults']
   const resolveComponent: typeof import('vue')['resolveComponent']
@@ -147,6 +148,7 @@ declare global {
   const setActivePinia: typeof import('pinia')['setActivePinia']
   const setAllEmojiGroups: typeof import('./utils/simpleStorage')['setAllEmojiGroups']
   const setArchivedGroupIds: typeof import('./utils/simpleStorage')['setArchivedGroupIds']
+  const setDiscourseDomain: typeof import('./utils/simpleStorage')['setDiscourseDomain']
   const setDiscourseDomains: typeof import('./utils/simpleStorage')['setDiscourseDomains']
   const setEmojiGroup: typeof import('./utils/simpleStorage')['setEmojiGroup']
   const setEmojiGroupIndex: typeof import('./utils/simpleStorage')['setEmojiGroupIndex']
@@ -257,7 +259,6 @@ declare module 'vue' {
     readonly S3SyncTarget: UnwrapRef<typeof import('./utils/syncTargets')['S3SyncTarget']>
     readonly STORAGE_KEYS: UnwrapRef<typeof import('./utils/simpleStorage')['STORAGE_KEYS']>
     readonly SYNC: UnwrapRef<typeof import('./utils/constants')['SYNC']>
-    readonly SYNC_STORAGE_KEYS: UnwrapRef<typeof import('./utils/newStorage')['SYNC_STORAGE_KEYS']>
     readonly SafeStorage: UnwrapRef<typeof import('./utils/safeStorage')['SafeStorage']>
     readonly SyncDatabase: UnwrapRef<typeof import('./utils/sync-db')['SyncDatabase']>
     readonly SyncTestHelper: UnwrapRef<typeof import('./utils/sync-test')['SyncTestHelper']>
@@ -345,7 +346,6 @@ declare module 'vue' {
     readonly mapWritableState: UnwrapRef<typeof import('pinia')['mapWritableState']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly message: UnwrapRef<typeof import('ant-design-vue')['message']>
-    readonly newStorageHelpers: UnwrapRef<typeof import('./utils/newStorage')['newStorageHelpers']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['normalizeImageUrl']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
@@ -373,6 +373,7 @@ declare module 'vue' {
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
+    readonly removeDiscourseDomain: UnwrapRef<typeof import('./utils/simpleStorage')['removeDiscourseDomain']>
     readonly removeEmojiGroup: UnwrapRef<typeof import('./utils/simpleStorage')['removeEmojiGroup']>
     readonly resetToDefaults: UnwrapRef<typeof import('./utils/simpleStorage')['resetToDefaults']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
@@ -384,6 +385,7 @@ declare module 'vue' {
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setAllEmojiGroups: UnwrapRef<typeof import('./utils/simpleStorage')['setAllEmojiGroups']>
     readonly setArchivedGroupIds: UnwrapRef<typeof import('./utils/simpleStorage')['setArchivedGroupIds']>
+    readonly setDiscourseDomain: UnwrapRef<typeof import('./utils/simpleStorage')['setDiscourseDomain']>
     readonly setDiscourseDomains: UnwrapRef<typeof import('./utils/simpleStorage')['setDiscourseDomains']>
     readonly setEmojiGroup: UnwrapRef<typeof import('./utils/simpleStorage')['setEmojiGroup']>
     readonly setEmojiGroupIndex: UnwrapRef<typeof import('./utils/simpleStorage')['setEmojiGroupIndex']>
@@ -399,7 +401,6 @@ declare module 'vue' {
     readonly storageBatchRemove: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchRemove']>
     readonly storageBatchSet: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchSet']>
     readonly storageGet: UnwrapRef<typeof import('./utils/simpleStorage')['storageGet']>
-    readonly storageManager: UnwrapRef<typeof import('./utils/newStorage')['storageManager']>
     readonly storageRemove: UnwrapRef<typeof import('./utils/simpleStorage')['storageRemove']>
     readonly storageSet: UnwrapRef<typeof import('./utils/simpleStorage')['storageSet']>
     readonly storeToRefs: UnwrapRef<typeof import('pinia')['storeToRefs']>

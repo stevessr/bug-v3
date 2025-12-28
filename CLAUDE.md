@@ -32,11 +32,10 @@ pnpm test:extension:debug    # Debug extension tests
 
 ## Architecture
 
-### Storage System (`src/utils/newStorage.ts`)
-Progressive multi-layer storage with priority chain:
-1. **Local Storage** (0ms) → 2. **Session Storage** (100ms) → 3. **Extension Storage** (500ms) → 4. **IndexedDB** (1000ms)
-
-Always use `newStorageHelpers` for data access. Timestamp-based conflict resolution (newer wins).
+### Storage System (`src/utils/simpleStorage.ts`)
+Simplified I/O layer directly wrapping `chrome.storage.local`.
+- **Logic**: Pure I/O, no internal caching (caching handled by Pinia stores).
+- **Usage**: Use `src/utils/simpleStorage.ts` for direct storage access, or Pinia stores for state management.
 
 ### Core Components
 | Component | Location | Purpose |

@@ -629,7 +629,7 @@ export default function useOptions() {
       const pingStart = Date.now()
       const pingInterval = setInterval(() => {
         try {
-          void newStorageHelpers.getAllEmojiGroups()
+          void getAllEmojiGroups()
         } catch (e) {
           void e
         }
@@ -647,8 +647,7 @@ export default function useOptions() {
     // NOTE: This test helper should NOT clear favorites - just read to trigger logs
     try {
       const emitInjectedSuccess = () => {
-        void newStorageHelpers
-          .getFavorites()
+        void getFavorites()
           .then(() => {
             /* intentionally silent for test harness */
           })

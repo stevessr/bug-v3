@@ -26,6 +26,10 @@ const resetError = () => {
   errorMessage.value = ''
   errorStack.value = ''
 }
+
+const reloadPage = () => {
+  window.location.reload()
+}
 </script>
 
 <template>
@@ -51,7 +55,7 @@ const resetError = () => {
 
         <div class="error-actions">
           <button @click="resetError" class="btn-retry">重试</button>
-          <button @click="() => window.location.reload()" class="btn-reload">刷新页面</button>
+          <button @click="reloadPage" class="btn-reload">刷新页面</button>
         </div>
       </div>
     </div>

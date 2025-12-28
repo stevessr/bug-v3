@@ -3,7 +3,12 @@ import { ref, h, toRaw, computed } from 'vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 
-import { newStorageHelpers } from '@/utils/newStorage'
+import {
+  getDiscourseDomains,
+  ensureDiscourseDomainExists,
+  setDiscourseDomain,
+  removeDiscourseDomain
+} from '@/utils/simpleStorage'
 
 const emojiStore = useEmojiStore()
 
@@ -23,7 +28,7 @@ const newDomainInput = ref<string>('')
 
 async function loadDomains() {
   try {
-    const ds = await newStorageHelpers.getDiscourseDomains()
+    const ds = await getDiscourseDomains()
     domainList.value = ds
   } catch (error) {
     console.warn('failed to load discourse domains', error)
@@ -41,13 +46,13 @@ async function addCustomDomain() {
       val = val.replace(/^https?:\/\//i, '').replace(/\/.*$/, '')
     }
     if (!val) return
-    const existing = (await newStorageHelpers.getDiscourseDomains()).find(d => d.domain === val)
+    const existing = (await getDiscourseDomains()).find(d => d.domain === val)
     if (existing) {
       newDomainInput.value = ''
       await loadDomains()
       return
     }
-    await newStorageHelpers.ensureDiscourseDomainExists(val)
+    await ensureDiscourseDomainExists(val)
     newDomainInput.value = ''
     await loadDomains()
   } catch (error) {
@@ -128,7 +133,7 @@ function safeFilter(inputValue: string, item: any) {
 
 async function saveDomainSettings() {
   if (!editingDomain.value) return
-  await newStorageHelpers.setDiscourseDomain(editingDomain.value, transferTargetKeys.value)
+  await setDiscourseDomain(editingDomain.value, transferTargetKeys.value)
   await loadDomains()
   domainModalVisible.value = false
   editingDomain.value = null
@@ -174,7 +179,7 @@ void loadDomains()
             title="确认删除该域名？"
             @confirm="
               async () => {
-                await newStorageHelpers.removeDiscourseDomain(d.domain)
+                await removeDiscourseDomain(d.domain)
                 await loadDomains()
               }
             "

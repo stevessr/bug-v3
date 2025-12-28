@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '@/utils/newStorage'
+import { STORAGE_KEYS } from '@/utils/simpleStorage'
 
 /**
  * Chrome 同步管理 Composable

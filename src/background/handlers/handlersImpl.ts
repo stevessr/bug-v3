@@ -2,6 +2,7 @@ import { getChromeAPI } from '../utils/main.ts'
 
 import * as storage from '@/utils/simpleStorage'
 import type { EmojiGroup, AppSettings } from '@/types/type'
+import { defaultSettings } from '@/types/defaultSettings'
 
 // 缓存机制：减少重复存储读取
 // 优化：将缓存时间从 5 秒增加到 30 秒，减少后台读取频率
@@ -31,7 +32,7 @@ async function getCachedData() {
   ])
 
   cachedGroups = groups || []
-  cachedSettings = settings
+  cachedSettings = settings || defaultSettings
   cachedFavorites = favorites || []
   cacheTimestamp = now
 
@@ -118,7 +119,7 @@ export async function handleGetEmojiData(
       success: true,
       data: {
         groups: finalGroups,
-        settings,
+        settings: settings || defaultSettings,
         favorites
       }
     })

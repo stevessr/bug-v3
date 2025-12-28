@@ -602,6 +602,21 @@ export async function ensureDiscourseDomainExists(
   return entry
 }
 
+export async function setDiscourseDomain(domain: string, enabledGroups: string[]): Promise<void> {
+  const domains = await getDiscourseDomains()
+  const idx = domains.findIndex(d => d.domain === domain)
+  const entry = { domain, enabledGroups }
+  if (idx >= 0) domains[idx] = entry
+  else domains.push(entry)
+  await setDiscourseDomains(domains)
+}
+
+export async function removeDiscourseDomain(domain: string): Promise<void> {
+  const domains = await getDiscourseDomains()
+  const filtered = domains.filter(d => d.domain !== domain)
+  await setDiscourseDomains(filtered)
+}
+
 // ========================================
 // Reset and Backup Functions
 // ========================================
