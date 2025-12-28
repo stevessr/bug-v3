@@ -77,6 +77,17 @@ groups.forEach(group => {
 // Sort groups by order
 groups.sort((a, b) => a.order - b.order);
 
+// Ensure unique order values by incrementing duplicates
+const usedOrders = new Set();
+for (let i = 0; i < groups.length; i++) {
+    let currentOrder = groups[i].order;
+    while (usedOrders.has(currentOrder)) {
+        currentOrder++;
+    }
+    groups[i].order = currentOrder;
+    usedOrders.add(currentOrder);
+}
+
 const metadata = {
     version: "1.0",
     exportDate: new Date().toISOString(),
