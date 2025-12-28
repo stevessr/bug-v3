@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
 import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import {

@@ -10,7 +10,6 @@ import {
   UploadOutlined,
   ExportOutlined
 } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 
 import type { OptionsInject } from '../types'
 import EmojiStats from '../components/EmojiStats.vue'

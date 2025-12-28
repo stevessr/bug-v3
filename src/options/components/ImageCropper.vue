@@ -8,7 +8,6 @@ import {
   UndoOutlined,
   DeleteOutlined
 } from '@ant-design/icons-vue'
-import { theme } from 'ant-design-vue'
 
 import { useImageCropper, type CroppedEmoji } from './useImageCropper'
 

@@ -1,5 +1,4 @@
 import { ref, computed, watch, isRef, onMounted, onBeforeUnmount, type Ref } from 'vue'
-import { message } from 'ant-design-vue'
 
 import type { AppSettings } from '../../types/type'
 

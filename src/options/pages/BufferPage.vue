@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
 import { QuestionCircleOutlined, SyncOutlined, CheckCircleOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 
 import type { OptionsInject } from '../types'
 import ImageCropper from '../components/ImageCropper.vue'

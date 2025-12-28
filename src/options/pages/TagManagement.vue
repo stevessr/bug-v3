@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { TagOutlined, DeleteOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 

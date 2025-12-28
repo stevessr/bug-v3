@@ -41,6 +41,10 @@ export default defineConfig(({ mode }) => {
           'vue-router', 
           'pinia',
           {
+            from: 'ant-design-vue',
+            imports: ['message']
+          },
+          {
             from: './src/stores/index',
             imports: [
               'useGroupStore',
@@ -58,7 +62,11 @@ export default defineConfig(({ mode }) => {
         vueTemplate: true
       }),
       Components({
-        resolvers: [AntDesignVueResolver({ importStyle: 'less' })]
+        dts: 'src/components.d.ts',
+        resolvers: [AntDesignVueResolver({ 
+          importStyle: 'less',
+          resolveIcons: true
+        })]
       })
     ],
     // 优化：预构建依赖

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { message } from 'ant-design-vue'
+import { ref, computed } from 'vue'
 
 import CachedImage from '@/components/CachedImage.vue'
 

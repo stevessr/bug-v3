@@ -93,6 +93,7 @@ declare global {
   const mapStores: typeof import('pinia')['mapStores']
   const mapWritableState: typeof import('pinia')['mapWritableState']
   const markRaw: typeof import('vue')['markRaw']
+  const message: typeof import('ant-design-vue')['message']
   const newStorageHelpers: typeof import('./utils/newStorage')['newStorageHelpers']
   const nextTick: typeof import('vue')['nextTick']
   const normalizeImageUrl: typeof import('./utils/isImageUrl')['normalizeImageUrl']
@@ -298,6 +299,7 @@ declare module 'vue' {
     readonly mapStores: UnwrapRef<typeof import('pinia')['mapStores']>
     readonly mapWritableState: UnwrapRef<typeof import('pinia')['mapWritableState']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
+    readonly message: UnwrapRef<typeof import('ant-design-vue')['message']>
     readonly newStorageHelpers: UnwrapRef<typeof import('./utils/newStorage')['newStorageHelpers']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['normalizeImageUrl']>
