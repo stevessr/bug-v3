@@ -1,0 +1,13 @@
+{
+  "addons": {
+    "nhhgdmadcclhgkjkgnjgdjobhcpdbcdi@pwsh.us.kg": {
+      "updates": [
+        {
+          "version": "1.2.9-patch-3",
+          "update_link": "https://s.pwsh.us.kg/updates/extension.xpi",
+          "update_hash": "sha256:d3688cc0930b0bcbba3b1720eee3a9fac270ca541865c5a17ea4181df4f52050"
+        }
+      ]
+    }
+  }
+}

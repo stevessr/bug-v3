@@ -56,5 +56,12 @@
       "resources": ["assets/*", "js/*", "*.html"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "update_url": "https://s.pwsh.us.kg/updates.xml",
+  "applications": {
+    "gecko": {
+      "id": "emoji-extension@pwsh.us.kg",
+      "update_url": "https://s.pwsh.us.kg/updates.json"
+    }
+  }
 }
