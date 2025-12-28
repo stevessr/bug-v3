@@ -8,7 +8,7 @@ import {
   setupPeriodicCleanup
 } from './utils/handlers'
 
-if (__ENABLE_LOGGING__) console.log('Emoji Extension Background script loaded.')
+console.log('Emoji Extension Background script loaded.')
 
 // Wire up listeners and periodic jobs
 setupOnInstalledListener()

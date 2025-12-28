@@ -15,17 +15,70 @@ import {
 } from './utils'
 import OptionsStreamingIntegration from './utils/optionsStreamingIntegration'
 
+// Import composables
+import {
+  useEmojiDraggable,
+  useExportProgress,
+  useThemeManager,
+  useSyncManager
+} from './composables'
+
 export default function useOptions() {
   const emojiStore = useEmojiStore()
 
   // 流式处理集成
   const streamingIntegration = new OptionsStreamingIntegration()
 
-  // Drag and drop state
-  const draggedGroup = ref<EmojiGroup | null>(null)
-  const draggedEmoji = ref<Emoji | null>(null)
-  const draggedEmojiGroupId = ref<string>('')
-  const draggedEmojiIndex = ref<number>(-1)
+  // --- Toast/Feedback State ---
+  const showSuccessToast = ref(false)
+  const showErrorToast = ref(false)
+  const successMessage = ref('')
+  const errorMessage = ref('')
+
+  const showSuccess = (message: string) => {
+    successMessage.value = message
+    showSuccessToast.value = true
+    setTimeout(() => {
+      showSuccessToast.value = false
+    }, 3000)
+  }
+
+  const showError = (message: string) => {
+    errorMessage.value = message
+    showErrorToast.value = true
+    setTimeout(() => {
+      showErrorToast.value = false
+    }, 3000)
+  }
+
+  // --- Initialize Composables ---
+
+  // Draggable composable
+  const draggable = useEmojiDraggable({
+    onGroupReordered: async (fromGroupId, toGroupId) => {
+      await emojiStore.reorderGroups(fromGroupId, toGroupId)
+    },
+    onEmojiMoved: (fromGroupId, fromIndex, toGroupId, toIndex) => {
+      emojiStore.moveEmoji(fromGroupId, fromIndex, toGroupId, toIndex)
+    },
+    showError,
+    showSuccess
+  })
+
+  // Export progress composable
+  const exportProgress = useExportProgress()
+
+  // Theme manager composable
+  const themeManager = useThemeManager({
+    updateSettings: partial => emojiStore.updateSettings(partial)
+  })
+
+  // Sync manager composable
+  const syncManager = useSyncManager({
+    forceSync: () => emojiStore.forceSync(),
+    showSuccess,
+    showError
+  })
 
   // Group expansion state
   const expandedGroups = ref<Set<string>>(new Set())
@@ -39,14 +92,10 @@ export default function useOptions() {
   const showEditEmojiModal = ref(false)
   const showImportModal = ref(false)
   const showImportEmojiModal = ref(false)
-  const showSuccessToast = ref(false)
-  const showErrorToast = ref(false)
   const showConfirmGenericModal = ref(false)
   const confirmGenericTitle = ref('')
   const confirmGenericMessage = ref('')
   let confirmGenericAction: (() => void) | null = null
-  const successMessage = ref('')
-  const errorMessage = ref('')
   const groupToDelete = ref<EmojiGroup | null>(null)
 
   // Edit group state
@@ -131,74 +180,7 @@ export default function useOptions() {
     showConfirmGenericModal.value = true
   }
 
-  const handleDragStart = (group: EmojiGroup, event: DragEvent) => {
-    if (group.id === 'favorites') {
-      event.preventDefault()
-      showError('常用分组不能移动位置')
-      return
-    }
-    draggedGroup.value = group
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move'
-    }
-  }
-
-  const handleDrop = async (targetGroup: EmojiGroup, event: DragEvent) => {
-    event.preventDefault()
-    if (targetGroup.id === 'favorites') {
-      showError('不能移动到常用分组位置')
-      draggedGroup.value = null
-      return
-    }
-    if (draggedGroup.value && draggedGroup.value.id !== targetGroup.id) {
-      await emojiStore.reorderGroups(draggedGroup.value.id, targetGroup.id)
-      // IndexedDB removed: flushBuffer not needed
-      showSuccess('分组顺序已更新')
-    }
-    draggedGroup.value = null
-  }
-
-  const handleEmojiDragStart = (emoji: Emoji, groupId: string, index: number, event: DragEvent) => {
-    draggedEmoji.value = emoji
-    draggedEmojiGroupId.value = groupId
-    draggedEmojiIndex.value = index
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move'
-    }
-  }
-
-  const handleEmojiDrop = (targetGroupId: string, targetIndex: number, event: DragEvent) => {
-    event.preventDefault()
-    if (draggedEmoji.value && draggedEmojiGroupId.value) {
-      emojiStore.moveEmoji(
-        draggedEmojiGroupId.value,
-        draggedEmojiIndex.value,
-        targetGroupId,
-        targetIndex
-      )
-      // IndexedDB removed: flushBuffer not needed
-      showSuccess('表情已移动')
-    }
-    resetEmojiDrag()
-  }
-
-  const resetEmojiDrag = () => {
-    // clear drag state
-    try {
-      draggedEmoji.value = null
-      draggedEmojiGroupId.value = ''
-      draggedEmojiIndex.value = -1
-      // Attempt to clear any drag-related attributes/styles in the DOM if present
-      try {
-        const els = document.querySelectorAll('[data-dragging="true"]')
-        els.forEach(el => el.removeAttribute('data-dragging'))
-      } catch {
-        // ignore
-      }
-    } catch {
-      // ignore
-    }
-  }
+  // Drag handlers are now provided by draggable composable
 
   const removeEmojiFromGroup = (groupId: string, index: number) => {
     emojiStore.removeEmojiFromGroup(groupId, index)
@@ -291,61 +273,8 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableSubmenuInjector: value })
   }
 
-  const updateTheme = (theme: 'system' | 'light' | 'dark') => {
-    emojiStore.updateSettings({ theme })
-    safeLocalStorage.set('theme', theme)
-
-    // 应用主题类名
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else if (theme === 'light') {
-      document.documentElement.classList.remove('dark')
-    } else {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
-      }
-    }
-
-    // 设置 data-theme 属性
-    const finalTheme =
-      theme === 'system'
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light'
-        : theme
-    document.documentElement.setAttribute('data-theme', finalTheme)
-
-    // 触发主题变化事件，通知 Ant Design Vue 主题更新
-    window.dispatchEvent(
-      new CustomEvent('theme-changed', {
-        detail: {
-          mode: finalTheme,
-          theme: theme
-        }
-      })
-    )
-  }
-
-  const updateCustomPrimaryColor = (color: string) => {
-    emojiStore.updateSettings({ customPrimaryColor: color })
-
-    // 触发主题变化事件以更新 Ant Design Vue 主题
-    const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-    window.dispatchEvent(
-      new CustomEvent('theme-changed', {
-        detail: {
-          mode: currentMode,
-          theme: safeLocalStorage.get('theme', 'system')
-        }
-      })
-    )
-  }
-
-  const updateCustomColorScheme = (scheme: AppSettings['customColorScheme']) => {
-    emojiStore.updateSettings({ customColorScheme: scheme })
-  }
+  // Theme management is now provided by themeManager composable
+  // Use themeManager.updateTheme(), themeManager.updateCustomPrimaryColor(), etc.
 
   const updateCustomCssBlocks = (blockOrAction: any) => {
     if (blockOrAction.type === 'delete') {
@@ -483,101 +412,32 @@ export default function useOptions() {
     showSuccess(`已导出分组 "${group.name}" (${(group.emojis || []).length} 个表情)`)
   }
 
-  // progress (0..100) for last export operation and current exporting group id
-  const exportProgress = ref<number>(0)
-  const exportProgressGroupId = ref<string | null>(null)
-  // modal for detailed export progress with current item preview
-  const showExportModal = ref(false)
-  const exportModalPercent = ref(0)
-  const exportModalCurrentName = ref<string | null>(null)
-  const exportModalCurrentPreview = ref<string | null>(null)
-  const exportModalCancelled = ref(false)
-  // arrays for carousel previews and names
-  const exportModalPreviews = ref<string[]>([])
-  const exportModalNames = ref<string[]>([])
-  // Abort controller for cancelling export
-  let exportAbortController: AbortController | null = null
+  // Export progress and modal state are now managed by exportProgress composable
 
   const exportGroupZip = async (group: EmojiGroup) => {
     if (!group) return
     try {
-      // create abort controller for this export
-      exportAbortController = new AbortController()
-      const signal = exportAbortController.signal
-      exportProgressGroupId.value = group.id
-      exportProgress.value = 0
-      // reset modal state and arrays
-      exportModalCancelled.value = false
-      exportModalPercent.value = 0
-      exportModalCurrentName.value = null
-      exportModalCurrentPreview.value = null
-      exportModalPreviews.value = []
-      exportModalNames.value = []
-      showExportModal.value = true
+      const signal = exportProgress.initExportProgress(group.id)
 
       await exportGroupZipUtil(
         group,
         (p: number) => {
-          exportProgress.value = Math.max(0, Math.min(100, Math.round(p)))
-          exportModalPercent.value = exportProgress.value
+          exportProgress.updateProgress(p)
         },
         (info: { index: number; name: string; preview?: string | null }) => {
-          if (exportModalCancelled.value) return
-          // collect into arrays for carousel (preview may be null)
-          exportModalNames.value.push(info.name)
-          exportModalPreviews.value.push(info.preview || '')
-          // also keep current for quick display
-          exportModalCurrentName.value = info.name
-          exportModalCurrentPreview.value = info.preview || null
+          exportProgress.updateCurrentItem(info)
         },
         signal
       )
-      exportProgress.value = 100
-      exportModalPercent.value = 100
+
+      exportProgress.completeExport()
       showSuccess(`已打包并下载分组 "${group.name}"`)
     } catch (e) {
       void e
-      exportProgress.value = 0
-      exportModalPercent.value = 0
-      // leave modal visible so user can see error; they'll close it
+      exportProgress.updateProgress(0)
       showError('打包下载失败，已导出 JSON 作为回退')
     }
-    // clear group id after short delay so UI can show 100 briefly
-    setTimeout(() => {
-      exportProgressGroupId.value = null
-      exportProgress.value = 0
-      // hide modal after brief delay
-      setTimeout(() => {
-        // revoke any preview URLs created during export
-        try {
-          exportModalPreviews.value.forEach(u => {
-            try {
-              if (u) URL.revokeObjectURL(u)
-            } catch {
-              /* ignore */
-            }
-          })
-        } catch {
-          /* ignore */
-        }
-
-        showExportModal.value = false
-        exportModalCurrentName.value = null
-        exportModalCurrentPreview.value = null
-        exportModalPercent.value = 0
-        exportModalCancelled.value = false
-        exportModalPreviews.value = []
-        exportModalNames.value = []
-        // cleanup controller
-        if (exportAbortController) {
-          try {
-            exportAbortController = null
-          } catch {
-            /* ignore */
-          }
-        }
-      }, 600)
-    }, 800)
+    exportProgress.resetExportState()
   }
 
   // 流式批量更新表情尺寸
@@ -588,77 +448,51 @@ export default function useOptions() {
     }
 
     try {
-      exportModalCancelled.value = false
-      exportModalPercent.value = 0
-      exportModalCurrentName.value = null
-      exportModalCurrentPreview.value = null
-      exportModalPreviews.value = []
-      exportModalNames.value = []
-      showExportModal.value = true
+      // 使用 exportProgress composable 初始化
+      const signal = exportProgress.initExportProgress(group.id)
 
-      // 创建 abort controller
-      exportAbortController = new AbortController()
-
-      // 使用防抖进度更新避免回弹
-      let lastProgressUpdate = 0
-      const progressUpdateInterval = 100 // 最小 100ms 更新间隔
+      // 用于防抖的进度更新
+      const lastUpdate = { value: 0 }
 
       await streamingIntegration.batchUpdateEmojiSizes(
         group,
         progress => {
-          if (exportModalCancelled.value) return
+          if (exportProgress.exportModalCancelled.value) return
 
-          const now = Date.now()
+          // 计算百分比
           const newPercent = Math.round((progress.current / progress.total) * 100)
+          exportProgress.updateProgress(newPercent)
 
-          // 防止进度回退和频繁更新
-          if (
-            newPercent >= exportModalPercent.value &&
-            (now - lastProgressUpdate >= progressUpdateInterval || newPercent === 100)
-          ) {
-            exportModalPercent.value = newPercent
-            lastProgressUpdate = now
-          }
-
-          // 更新其他信息
-          if (progress.name !== exportModalCurrentName.value) {
-            exportModalCurrentName.value = progress.name || null
-          }
-          if (progress.preview !== exportModalCurrentPreview.value) {
-            exportModalCurrentPreview.value = progress.preview || null
-          }
-
-          // 防止重复添加相同项目
-          if (progress.name && !exportModalNames.value.includes(progress.name)) {
-            exportModalNames.value.push(progress.name)
-          }
-          if (progress.preview && !exportModalPreviews.value.includes(progress.preview)) {
-            exportModalPreviews.value.push(progress.preview)
-          }
+          // 使用 composable 的防抖更新方法
+          exportProgress.updateCurrentItemDebounced(
+            {
+              name: progress.name,
+              preview: progress.preview
+            },
+            lastUpdate,
+            100 // 最小 100ms 更新间隔
+          )
         },
-        exportAbortController.signal
+        signal
       )
 
       // 保存更新后的尺寸数据
       await emojiStore.saveData()
 
-      exportModalPercent.value = 100
+      exportProgress.completeExport()
       showSuccess(`成功更新 ${group.emojis.length} 个表情的尺寸信息`)
 
       // 短暂显示完成状态后关闭
-      setTimeout(() => {
-        showExportModal.value = false
-      }, 1000)
+      exportProgress.resetExportState(1000, 600)
     } catch (error: any) {
-      exportModalPercent.value = 0
+      exportProgress.updateProgress(0)
       if (error?.message === 'aborted') {
         showError('批量更新已取消')
       } else {
         console.error('Streaming batch update failed:', error)
         showError('批量更新失败，请重试')
       }
-    } finally {
-      exportAbortController = null
+      exportProgress.resetExportState()
     }
   }
 
@@ -670,31 +504,37 @@ export default function useOptions() {
     }
 
     try {
-      exportModalCancelled.value = false
-      exportModalPercent.value = 0
-      exportModalCurrentName.value = null
-      exportModalCurrentPreview.value = null
-      exportModalPreviews.value = []
-      exportModalNames.value = []
-      showExportModal.value = true
-
-      exportAbortController = new AbortController()
+      // 使用 exportProgress composable 初始化
+      const signal = exportProgress.initExportProgress(group.id)
 
       await streamingIntegration.exportGroupStreaming(
         group,
         progress => {
-          if (exportModalCancelled.value) return
+          if (exportProgress.exportModalCancelled.value) return
 
-          exportModalPercent.value = Math.round((progress.current / progress.total) * 100)
-          exportModalCurrentName.value = progress.phase
+          // 更新进度百分比
+          const percent = Math.round((progress.current / progress.total) * 100)
+          exportProgress.updateProgress(percent)
+
+          // 更新当前阶段信息
+          if (progress.phase) {
+            exportProgress.updateCurrentItem({
+              index: progress.current,
+              name: progress.phase,
+              preview: null
+            })
+          }
         },
-        exportAbortController.signal
+        signal
       )
 
-      exportModalPercent.value = 100
+      exportProgress.completeExport()
       showSuccess(`成功导出分组 "${group.name}"`)
+
+      // 短暂显示完成状态后关闭
+      exportProgress.resetExportState(500, 600)
     } catch (error: any) {
-      exportModalPercent.value = 0
+      exportProgress.updateProgress(0)
       if (error?.message?.includes('cancelled') || error?.message === 'aborted') {
         showError('导出已取消')
       } else {
@@ -703,68 +543,8 @@ export default function useOptions() {
         // 回退到 JSON 导出
         exportGroupFile(group)
       }
-    } finally {
-      exportAbortController = null
-      setTimeout(() => {
-        showExportModal.value = false
-      }, 500)
+      exportProgress.resetExportState()
     }
-  }
-
-  // Cancel export in-progress: abort fetches, mark cancelled, revoke previews and hide modal
-  const cancelExport = () => {
-    exportModalCancelled.value = true
-    if (exportAbortController) {
-      try {
-        exportAbortController.abort()
-      } catch {
-        /* ignore */
-      }
-      exportAbortController = null
-    }
-    // revoke preview urls immediately
-    try {
-      exportModalPreviews.value.forEach(u => {
-        try {
-          if (u) URL.revokeObjectURL(u)
-        } catch {
-          /* ignore */
-        }
-      })
-    } catch {
-      /* ignore */
-    }
-    // reset UI state
-    exportModalCurrentName.value = null
-    exportModalCurrentPreview.value = null
-    exportModalPercent.value = 0
-    exportModalPreviews.value = []
-    exportModalNames.value = []
-    showExportModal.value = false
-  }
-
-  // Close modal without aborting (used when export completed)
-  const closeExportModal = () => {
-    // revoke preview urls and hide
-    try {
-      exportModalPreviews.value.forEach(u => {
-        try {
-          if (u) URL.revokeObjectURL(u)
-        } catch {
-          /* ignore */
-        }
-      })
-    } catch {
-      /* ignore */
-    }
-    exportModalCurrentName.value = null
-    exportModalCurrentPreview.value = null
-    exportModalPercent.value = 0
-    exportModalPreviews.value = []
-    exportModalNames.value = []
-    showExportModal.value = false
-    // ensure controller cleaned up
-    exportAbortController = null
   }
 
   const deleteEmoji = (emojiId: string) => {
@@ -891,8 +671,8 @@ export default function useOptions() {
   const onGroupCreated = (data: { name: string; icon: string; detail: string }) => {
     // Actually create the group in the store
     const newGroup = emojiStore.createGroup(data.name, data.icon)
-    if (__ENABLE_LOGGING__)
-      console.log('[useOptions] onGroupCreated', { id: newGroup.id, name: newGroup.name })
+
+    console.log('[useOptions] onGroupCreated', { id: newGroup.id, name: newGroup.name })
 
     // If there's detail info, update the group with it
     if (data.detail && newGroup.id) {
@@ -906,21 +686,7 @@ export default function useOptions() {
     showSuccess('表情添加成功')
   }
 
-  const showSuccess = (message: string) => {
-    successMessage.value = message
-    showSuccessToast.value = true
-    setTimeout(() => {
-      showSuccessToast.value = false
-    }, 3000)
-  }
-
-  const showError = (message: string) => {
-    errorMessage.value = message
-    showErrorToast.value = true
-    setTimeout(() => {
-      showErrorToast.value = false
-    }, 3000)
-  }
+  // showSuccess and showError are already defined above
 
   onMounted(async () => {
     // CRITICAL: Disable read-only mode for options page
@@ -1052,27 +818,27 @@ export default function useOptions() {
     updateImdbedToken,
     updateImdbedApiUrl,
     updateCloudMarketDomain,
-    // drag/drop
-    handleDragStart,
-    handleDrop,
-    handleEmojiDragStart,
-    handleEmojiDrop,
+    // drag/drop - from draggable composable
+    handleDragStart: draggable.handleDragStart,
+    handleDrop: draggable.handleDrop,
+    handleEmojiDragStart: draggable.handleEmojiDragStart,
+    handleEmojiDrop: draggable.handleEmojiDrop,
     removeEmojiFromGroup,
-    resetEmojiDrag,
+    resetEmojiDrag: draggable.resetEmojiDrag,
     // import/export
     handleConfigImported,
     handleEmojisImported,
     exportGroup,
     exportGroupZip,
     exportConfiguration,
-    exportModalPreviews,
-    exportModalNames,
-    // export modal state
-    showExportModal,
-    exportModalPercent,
-    exportModalCurrentName,
-    exportModalCurrentPreview,
-    exportModalCancelled,
+    // export modal state - from exportProgress composable
+    exportModalPreviews: exportProgress.exportModalPreviews,
+    exportModalNames: exportProgress.exportModalNames,
+    showExportModal: exportProgress.showExportModal,
+    exportModalPercent: exportProgress.exportModalPercent,
+    exportModalCurrentName: exportProgress.exportModalCurrentName,
+    exportModalCurrentPreview: exportProgress.exportModalCurrentPreview,
+    exportModalCancelled: exportProgress.exportModalCancelled,
     // group operations
     confirmDeleteGroup,
     openEditGroup,
@@ -1082,19 +848,23 @@ export default function useOptions() {
     onGroupCreated,
     onEmojiAdded,
     deleteEmoji,
-    // export progress
-    exportProgress,
-    exportProgressGroupId,
-    // export modal controls
-    cancelExport,
-    closeExportModal,
+    // export progress - from exportProgress composable
+    exportProgress: exportProgress.exportProgress,
+    exportProgressGroupId: exportProgress.exportProgressGroupId,
+    // export modal controls - from exportProgress composable
+    cancelExport: exportProgress.cancelExport,
+    closeExportModal: exportProgress.closeExportModal,
     // streaming methods
     runBatchUpdateSizeStreaming,
     exportGroupStreamingMethod,
-    // sync / settings
+    // theme - from themeManager composable
+    updateTheme: themeManager.updateTheme,
+    updateCustomPrimaryColor: themeManager.updateCustomPrimaryColor,
+    updateCustomColorScheme: themeManager.updateCustomColorScheme,
+    // sync / settings - from syncManager composable
     resetSettings,
-    syncToChrome,
-    forceLocalToExtension,
+    syncToChrome: syncManager.syncToChrome,
+    forceLocalToExtension: syncManager.forceLocalToExtension,
     // feedback
     showSuccess,
     showError,

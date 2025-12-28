@@ -19,7 +19,7 @@ export async function initializeDefaultData() {
       } catch {
         await chromeAPI.storage.local.set({ emojiGroups: [] })
       }
-      if (__ENABLE_LOGGING__) console.log('Default emoji groups initialized')
+      console.log('Default emoji groups initialized')
     }
 
     if (!existingData.appSettings) {
@@ -31,7 +31,7 @@ export async function initializeDefaultData() {
       }
 
       await chromeAPI.storage.local.set({ appSettings: defaultSettings })
-      if (__ENABLE_LOGGING__) console.log('Default app settings initialized')
+      console.log('Default app settings initialized')
     }
   } catch (error) {
     console.error('Failed to initialize default data:', error)
@@ -42,7 +42,7 @@ export function setupOnInstalledListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onInstalled) {
     chromeAPI.runtime.onInstalled.addListener(async (details: any) => {
-      if (__ENABLE_LOGGING__) console.log('Emoji extension installed/updated:', details.reason)
+      console.log('Emoji extension installed/updated:', details.reason)
       if (details.reason === 'install') {
         await initializeDefaultData()
       }

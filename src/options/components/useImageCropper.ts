@@ -731,7 +731,7 @@ export function useImageCropper(
           }
         } catch (parseError) {
           console.error('解析 AI 结果失败：', parseError)
-          if (__ENABLE_LOGGING__) console.log('AI 响应文本：', fullText)
+          console.log('AI 响应文本：', fullText)
           throw new Error('AI 识别结果解析失败，请重试')
         }
       } else {

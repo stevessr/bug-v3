@@ -69,10 +69,14 @@ export function useExportProgress() {
   /**
    * 更新当前项（用于流式处理，防止重复）
    */
-  const updateCurrentItemDebounced = (info: {
-    name?: string
-    preview?: string
-  }, lastProgressUpdate: { value: number }, minInterval = 100) => {
+  const updateCurrentItemDebounced = (
+    info: {
+      name?: string
+      preview?: string
+    },
+    lastProgressUpdate: { value: number },
+    minInterval = 100
+  ) => {
     if (exportModalCancelled.value) return false
 
     const now = Date.now()

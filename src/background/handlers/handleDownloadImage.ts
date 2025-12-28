@@ -9,10 +9,9 @@ export async function handleDownloadImage(message: any, sendResponse: (_resp: an
     return
   }
 
-  if (__ENABLE_LOGGING__)
-    console.log(
-      `[DownloadImage] Processing download request for: ${url}, source: ${source || 'unknown'}`
-    )
+  console.log(
+    `[DownloadImage] Processing download request for: ${url}, source: ${source || 'unknown'}`
+  )
 
   try {
     // 使用 Chrome downloads API 下载图片
@@ -63,7 +62,7 @@ export async function handleDownloadImage(message: any, sendResponse: (_resp: an
       }
     } catch (e) {
       // 忽略权限或其他错误
-      if (__ENABLE_LOGGING__) console.warn('[DownloadImage] Failed to disable download shelf:', e)
+      console.warn('[DownloadImage] Failed to disable download shelf:', e)
     }
 
     // 开始下载
@@ -78,8 +77,7 @@ export async function handleDownloadImage(message: any, sendResponse: (_resp: an
           console.error('[DownloadImage] Download failed:', chromeAPI.runtime.lastError)
           sendResponse({ success: false, error: chromeAPI.runtime.lastError.message })
         } else {
-          if (__ENABLE_LOGGING__)
-            console.log(`[DownloadImage] Download started successfully, ID: ${downloadId}`)
+          console.log(`[DownloadImage] Download started successfully, ID: ${downloadId}`)
           sendResponse({ success: true, downloadId })
         }
       }

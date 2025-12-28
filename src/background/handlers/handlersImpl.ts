@@ -83,8 +83,7 @@ export async function handleGetEmojiData(
           try {
             entry = await newStorageHelpers.ensureDiscourseDomainExists(src)
           } catch (e) {
-            if (__ENABLE_LOGGING__)
-              console.warn('[Background] ensureDiscourseDomainExists failed for', src, e)
+            console.warn('[Background] ensureDiscourseDomainExists failed for', src, e)
           }
         }
 
@@ -112,7 +111,7 @@ export async function handleGetEmojiData(
       }
     } catch (e) {
       // if domain filtering fails, log and fall back to full groups
-      if (__ENABLE_LOGGING__) console.warn('[Background] domain-based group filtering failed', e)
+      console.warn('[Background] domain-based group filtering failed', e)
     }
 
     _sendResponse({
@@ -124,7 +123,7 @@ export async function handleGetEmojiData(
       }
     })
   } catch (error) {
-    if (__ENABLE_LOGGING__) console.error('Failed to get emoji data via newStorageHelpers:', error)
+    console.error('Failed to get emoji data via newStorageHelpers:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -145,7 +144,7 @@ export async function handleGetEmojiSetting(
       _sendResponse({ success: true, data: { value: null } })
     }
   } catch (error) {
-    if (__ENABLE_LOGGING__) console.error('Failed to get emoji setting:', key, error)
+    console.error('Failed to get emoji setting:', key, error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -172,7 +171,7 @@ export async function handleSaveEmojiData(
     invalidateCache()
     _sendResponse({ success: true })
   } catch (error) {
-    if (__ENABLE_LOGGING__) console.error('Failed to save emoji data:', error)
+    console.error('Failed to save emoji data:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -185,7 +184,7 @@ export function setupStorageChangeListener() {
   if (chromeAPI && chromeAPI.storage && chromeAPI.storage.onChanged) {
     chromeAPI.storage.onChanged.addListener(
       (changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => {
-        if (__ENABLE_LOGGING__) console.log('Storage changed:', changes, namespace)
+        console.log('Storage changed:', changes, namespace)
         // Placeholder for cloud sync or other reactions
       }
     )
@@ -195,7 +194,7 @@ export function setupStorageChangeListener() {
 export function setupPeriodicCleanup() {
   // 避免重复设置
   if (cleanupIntervalId !== null) {
-    if (__ENABLE_LOGGING__) console.warn('[PeriodicCleanup] Already set up, skipping')
+    console.warn('[PeriodicCleanup] Already set up, skipping')
     return
   }
 
@@ -206,10 +205,10 @@ export function setupPeriodicCleanup() {
     try {
       const data = await chromeAPI.storage.local.get(['emojiGroups'])
       if (data.emojiGroups) {
-        if (__ENABLE_LOGGING__) console.log('Storage cleanup check completed')
+        console.log('Storage cleanup check completed')
       }
     } catch (error) {
-      if (__ENABLE_LOGGING__) console.error('Storage cleanup error:', error)
+      console.error('Storage cleanup error:', error)
     }
   }, CLEANUP_INTERVAL_MS)
 }
@@ -221,6 +220,6 @@ export function cleanupPeriodicCleanup(): void {
   if (cleanupIntervalId !== null) {
     clearInterval(cleanupIntervalId)
     cleanupIntervalId = null
-    if (__ENABLE_LOGGING__) console.log('[PeriodicCleanup] Cleanup task stopped')
+    console.log('[PeriodicCleanup] Cleanup task stopped')
   }
 }
