@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename)
 
 // 配置
 const CONFIG = {
-  extensionId: 'nhhgdmadcclhgkjkgnjgdjobhcpdbcdi', // Chrome 扩展 ID
+  extensionId: 'lcjnmefemojopjdnkjhacphegcaemcja', // Chrome 扩展 ID
   baseUrl: 'https://s.pwsh.us.kg',
   updateDir: path.join(__dirname, 'cfworker/public'),
   distDir: path.join(__dirname, '../dist'),
