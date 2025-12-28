@@ -373,7 +373,7 @@
             border: 1px solid var(--primary-low);
             border-radius: 6px;
             padding: 10px; margin-bottom: 8px;
-            text-decoration: none; color: var(--primary);
+            color: var(--primary);
             transition: 0.2s; position: relative; overflow: hidden;
         }
         .sb-card:hover {
@@ -898,6 +898,17 @@
     if (State.isLeader) channel.postMessage({ type: 'leader_resign' })
   })
 
+  // --- 导航函数 ---
+  function navigateToLink(link) {
+    if (window.Discourse && window.Discourse.router) {
+      window.Discourse.router.transitionTo(link)
+    } else {
+      // 如果 Discourse 路由不可用，回退到普通导航
+      console.warn('[LD-Seeking] Discourse router not found, using window.open instead.')
+      window.open(link, '_blank')
+    }
+  }
+
   // --- UI 构建 ---
   function createUI() {
     const host = document.createElement('div')
@@ -1207,6 +1218,15 @@
     })
   }
 
+  // 注入导航函数到页面中
+  const script = document.createElement('script')
+  script.textContent = `
+    function navigateToLink(link) {
+        window.Discourse.router.transitionTo(link)
+  }
+  `
+  document.head.appendChild(script)
+
   function renderFeed() {
     if (!shadowRoot) return
     const div = shadowRoot.getElementById('sb-list')
@@ -1249,7 +1269,7 @@
             : 'sb-card-excerpt-cited'
 
         return `
-                <a href="${link}" class="sb-card">
+                <div class="sb-card" data-link="${link}">
                     <div class="sb-card-head">
                         <img src="${avatar}" class="sb-avatar">
                         <div class="sb-card-info">
@@ -1263,10 +1283,21 @@
                         <span class="sb-badge" style="color:${catColor};background:${catColor}15">${catName}</span>
                         <span class="sb-timestr">${timeStr}</span>
                     </div>
-                </a>
+                </div>
             `
       })
       .join('')
+
+    // 添加事件委托来处理卡片点击
+    div.addEventListener('click', e => {
+      const card = e.target.closest('.sb-card')
+      if (card) {
+        const link = card.getAttribute('data-link')
+        if (link) {
+          navigateToLink(link)
+        }
+      }
+    })
   }
 
   attemptLeadership()
