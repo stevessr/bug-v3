@@ -341,9 +341,6 @@ const css = `
     .sb-user-row:hover { background: var(--primary-very-low); }
     .sb-user-row.active { background: var(--tertiary-very-low); border-left: 3px solid var(--tertiary); }
 
-    .sb-del { font-size: 14px; color: var(--primary-medium); cursor: pointer; margin: 0 4px; line-height: 1; }
-    .sb-del:hover { color: var(--danger); }
-
     .sb-timer-circle { flex-shrink: 0; margin: 0 6px 0 2px; }
     .sb-timer-circle:hover { opacity: 0.8; }
 
@@ -547,10 +544,6 @@ function createUI() {
                     <button id="btn-refresh" class="sb-icon-btn" title="刷新">🔄</button>
                 </div>
             </div>
-            <div class="sb-input-group">
-                <input id="inp-user" class="sb-input" placeholder="添加用户名...">
-                <button id="btn-add" class="sb-btn-add">＋</button>
-            </div>
             <div id="sb-tags" class="sb-tags"></div>
         </div>
         <div id="sb-list" class="sb-list"></div>
@@ -595,45 +588,7 @@ function createUI() {
     })
   }
 
-  shadowRoot.getElementById('btn-refresh').onclick = () => tickAll()
-
-  const handleAdd = async () => {
-    const inp = shadowRoot?.getElementById('inp-user') as HTMLInputElement
-    const name = inp.value.trim()
-    if (!name || State.users.includes(name)) return
-    const btn = shadowRoot?.getElementById('btn-add') as HTMLButtonElement
-    btn.innerText = '...'
-
-    if (!State.isLeader) {
-      channel.postMessage({ type: 'cmd_add_user', username: name })
-      btn.innerText = '＋'
-      inp.value = ''
-      return
-    }
-
-    const test = await fetchUser(name, true)
-    if (test && test !== 'SKIPPED') {
-      if (State.users.length >= CONFIG.MAX_USERS) {
-        log(`Max ${CONFIG.MAX_USERS} users reached.`, 'error')
-      } else {
-        State.users.push(name)
-        saveConfig()
-        renderSidebarRows()
-        tickAll()
-      }
-    }
-    btn.innerText = '＋'
-    inp.value = ''
-  }
-
-  shadowRoot.getElementById('btn-add').onclick = handleAdd
-  const inp = shadowRoot.getElementById('inp-user') as HTMLInputElement
-  inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAdd()
-    }
-  })
+  shadowRoot!.getElementById('btn-refresh').onclick = () => tickAll()
 
   renderSidebarRows()
   startVisualLoops()
@@ -1250,15 +1205,6 @@ function renderSidebarRows() {
     row.id = `row-${u}`
     row.className = `sb-user-row ${isHidden ? '' : 'active'}`
 
-    const delBtn = document.createElement('div')
-    delBtn.className = 'sb-del'
-    delBtn.textContent = '×'
-    delBtn.title = '移除用户'
-    delBtn.onclick = e => {
-      e.stopPropagation()
-      removeUser(u)
-    }
-
     const timerSize = 10,
       timerStroke = 2
     const timerRadius = (timerSize - timerStroke) / 2
@@ -1294,7 +1240,6 @@ function renderSidebarRows() {
     nameEl.className = `sb-user-name ${isHidden ? 'disabled' : ''}`
     nameEl.textContent = u
 
-    row.appendChild(delBtn)
     row.appendChild(timerSvg)
     row.appendChild(nameEl)
     row.appendChild(activityEl)

@@ -122,11 +122,6 @@ const handleEnter = () => {
               class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
               <div class="flex items-center gap-3">
-                <div
-                  class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold"
-                >
-                  {{ username.charAt(0).toUpperCase() }}
-                </div>
                 <span class="font-medium dark:text-white">{{ username }}</span>
               </div>
               <a-button

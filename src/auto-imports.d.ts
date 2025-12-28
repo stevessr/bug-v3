@@ -35,6 +35,7 @@ declare global {
   const cacheImage: typeof import('./utils/imageCache')['cacheImage']
   const cacheImages: typeof import('./utils/imageCache')['cacheImages']
   const cacheMultipleImages: typeof import('./utils/imageCache.example')['cacheMultipleImages']
+  const checkStorageHealth: typeof import('./utils/simpleStorage')['checkStorageHealth']
   const cleanupCacheExample: typeof import('./utils/imageCache.example')['cleanupCacheExample']
   const cleanupLRU: typeof import('./utils/imageCache')['cleanupLRU']
   const clearCache: typeof import('./utils/imageCache')['clearCache']
@@ -138,6 +139,7 @@ declare global {
   const ref: typeof import('vue')['ref']
   const removeDiscourseDomain: typeof import('./utils/simpleStorage')['removeDiscourseDomain']
   const removeEmojiGroup: typeof import('./utils/simpleStorage')['removeEmojiGroup']
+  const repairEmptyStorage: typeof import('./utils/simpleStorage')['repairEmptyStorage']
   const resetToDefaults: typeof import('./utils/simpleStorage')['resetToDefaults']
   const resolveComponent: typeof import('vue')['resolveComponent']
   const safeLocalStorage: typeof import('./utils/safeStorage')['safeLocalStorage']
@@ -274,6 +276,7 @@ declare module 'vue' {
     readonly cacheImage: UnwrapRef<typeof import('./utils/imageCache')['cacheImage']>
     readonly cacheImages: UnwrapRef<typeof import('./utils/imageCache')['cacheImages']>
     readonly cacheMultipleImages: UnwrapRef<typeof import('./utils/imageCache.example')['cacheMultipleImages']>
+    readonly checkStorageHealth: UnwrapRef<typeof import('./utils/simpleStorage')['checkStorageHealth']>
     readonly cleanupCacheExample: UnwrapRef<typeof import('./utils/imageCache.example')['cleanupCacheExample']>
     readonly cleanupLRU: UnwrapRef<typeof import('./utils/imageCache')['cleanupLRU']>
     readonly clearCache: UnwrapRef<typeof import('./utils/imageCache')['clearCache']>
@@ -376,6 +379,7 @@ declare module 'vue' {
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly removeDiscourseDomain: UnwrapRef<typeof import('./utils/simpleStorage')['removeDiscourseDomain']>
     readonly removeEmojiGroup: UnwrapRef<typeof import('./utils/simpleStorage')['removeEmojiGroup']>
+    readonly repairEmptyStorage: UnwrapRef<typeof import('./utils/simpleStorage')['repairEmptyStorage']>
     readonly resetToDefaults: UnwrapRef<typeof import('./utils/simpleStorage')['resetToDefaults']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly safeLocalStorage: UnwrapRef<typeof import('./utils/safeStorage')['safeLocalStorage']>

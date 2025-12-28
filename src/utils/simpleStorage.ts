@@ -52,6 +52,26 @@ export async function storageGet<T = unknown>(key: string): Promise<T | null> {
         // 解包包装格式 { data, timestamp }
         const data =
           (value && typeof value === 'object' && 'data' in value ? value.data : value) ?? null
+
+        // 添加调试信息
+        if (
+          key === STORAGE_KEYS.GROUP_INDEX ||
+          key === STORAGE_KEYS.SETTINGS ||
+          key.startsWith('emojiGroup_')
+        ) {
+          console.log(`[Storage] Get ${key}:`, {
+            hasData: !!data,
+            dataType: typeof data,
+            isArray: Array.isArray(data),
+            length: Array.isArray(data) ? data.length : undefined,
+            keys:
+              data && typeof data === 'object' && !Array.isArray(data)
+                ? Object.keys(data)
+                : undefined,
+            rawValue: value
+          })
+        }
+
         resolve(data as T | null)
       }
     })
@@ -167,7 +187,14 @@ export async function storageBatchGet(keys: string[]): Promise<Record<string, an
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message))
       } else {
-        resolve(result)
+        // 解包包装格式 { data, timestamp }
+        const unpacked: Record<string, any> = {}
+        for (const [key, value] of Object.entries(result)) {
+          const data =
+            (value && typeof value === 'object' && 'data' in value ? value.data : value) ?? null
+          unpacked[key] = data
+        }
+        resolve(unpacked)
       }
     })
   })
@@ -294,6 +321,98 @@ async function getArchiveDb(): Promise<IDBDatabase> {
       }
     }
   })
+}
+
+// ========================================
+// Storage Health Check
+// ========================================
+
+/**
+ * 检查存储数据的完整性
+ */
+export async function checkStorageHealth(): Promise<{
+  hasGroups: boolean
+  hasSettings: boolean
+  hasFavorites: boolean
+  groupCount: number
+  details: any
+}> {
+  try {
+    const [groupIndex, settings, favorites] = await Promise.all([
+      getEmojiGroupIndex(),
+      getSettings(),
+      getFavorites()
+    ])
+
+    const hasGroups = Array.isArray(groupIndex) && groupIndex.length > 0
+    const hasSettings = settings && typeof settings === 'object' && Object.keys(settings).length > 0
+    const hasFavorites = Array.isArray(favorites)
+
+    console.log('[Storage] Health check:', {
+      groupIndex,
+      settings,
+      favorites,
+      hasGroups,
+      hasSettings,
+      hasFavorites
+    })
+
+    return {
+      hasGroups,
+      hasSettings,
+      hasFavorites,
+      groupCount: groupIndex.length,
+      details: { groupIndex, settings, favorites }
+    }
+  } catch (error) {
+    console.error('[Storage] Health check failed:', error)
+    return {
+      hasGroups: false,
+      hasSettings: false,
+      hasFavorites: false,
+      groupCount: 0,
+      details: { error }
+    }
+  }
+}
+
+/**
+ * 修复空的存储数据
+ */
+export async function repairEmptyStorage(): Promise<void> {
+  console.log('[Storage] Starting storage repair')
+
+  const health = await checkStorageHealth()
+
+  if (!health.hasGroups) {
+    console.log('[Storage] No groups found, creating defaults')
+    try {
+      const { loadPackagedDefaults } = await import('@/types/defaultEmojiGroups.loader')
+      const defaults = await loadPackagedDefaults()
+      if (defaults?.groups?.length > 0) {
+        await setAllEmojiGroups(defaults.groups)
+        console.log('[Storage] Created default groups:', defaults.groups.length)
+      }
+    } catch (error) {
+      console.error('[Storage] Failed to create default groups:', error)
+    }
+  }
+
+  if (!health.hasSettings) {
+    console.log('[Storage] No settings found, creating defaults')
+    try {
+      const { defaultSettings } = await import('@/types/defaultSettings')
+      await setSettings(defaultSettings)
+      console.log('[Storage] Created default settings')
+    } catch (error) {
+      console.error('[Storage] Failed to create default settings:', error)
+    }
+  }
+
+  if (!health.hasFavorites) {
+    console.log('[Storage] No favorites found, creating empty array')
+    await setFavorites([])
+  }
 }
 
 /**

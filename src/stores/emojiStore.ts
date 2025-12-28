@@ -311,6 +311,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       // Initialize sync service first (delegated to syncStore)
       await syncStore.initializeSync()
 
+      // Check storage health first
+      const health = await storage.checkStorageHealth()
+      console.log('[EmojiStore] Storage health:', health)
+
+      // If storage is empty, repair it
+      if (!health.hasGroups && !health.hasSettings) {
+        console.log('[EmojiStore] Storage appears empty, attempting repair')
+        await storage.repairEmptyStorage()
+        console.log('[EmojiStore] Storage repair completed')
+      }
+
       // Load data using new storage system with conflict resolution
       console.log('[EmojiStore] Loading data from new storage system')
       const [loadedGroups, loadedSettings, loadedFavorites] = await Promise.allSettled([
@@ -351,13 +362,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       if (groupsData && groupsData.length > 0) {
         groups.value = groupsData
+        console.log('[EmojiStore] Loaded groups from storage:', groupsData.length)
       } else {
         // No groups from storage - try runtime loader first
+        console.log('[EmojiStore] No groups in storage, loading defaults')
         try {
           const packaged = await loadPackagedDefaults()
           groups.value =
             packaged && packaged.groups && packaged.groups.length > 0 ? packaged.groups : []
-        } catch {
+          console.log('[EmojiStore] Loaded default groups:', groups.value.length)
+        } catch (e) {
+          console.error('[EmojiStore] Failed to load default groups:', e)
           groups.value = []
         }
       }
