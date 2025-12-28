@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import { QuestionCircleOutlined, TagOutlined } from '@ant-design/icons-vue'
 
 import EmojiTags from './EmojiTags.vue'
@@ -48,10 +48,30 @@ const { imageSources, getImageSrcSync } = useEmojiImages(() => props.emojis, {
   preloadDelay: 50
 })
 
-// Calculate item height for virtual list (based on grid layout)
-// Each row has: image (aspect-square) + name (text-xs) + tags + spacing
-// Approximate: 150px for image + 20px for name + 24px for tags + 12px spacing = ~206px
-const ITEM_HEIGHT = 206
+// 动态测量行高
+const measuredItemHeight = ref<number>(206) // 默认值作为 fallback
+const measurementRef = ref<HTMLElement | null>(null)
+
+// 测量实际渲染的行高
+const measureItemHeight = async () => {
+  await nextTick()
+  if (measurementRef.value) {
+    const height = measurementRef.value.offsetHeight
+    if (height > 0) {
+      measuredItemHeight.value = height
+      console.log('[EmojiGrid] Measured item height:', height)
+    }
+  }
+}
+
+// 组件挂载后进行测量
+onMounted(() => {
+  measureItemHeight()
+})
+
+// 当 gridColumns 变化时重新测量
+// 注意：使用 computed + watch 会更好，但为了性能我们只在必要时重新测量
+const ITEM_HEIGHT = computed(() => measuredItemHeight.value)
 
 // 拖拽处理
 const handleEmojiDragStart = (emoji: Emoji, index: number, event: DragEvent) => {
@@ -79,6 +99,33 @@ const emojiRows = computed(() => {
 
 <template>
   <div class="emoji-grid-container">
+    <!-- 隐藏的测量元素 - 用于动态获取实际行高 -->
+    <div
+      v-if="emojis.length > 0"
+      ref="measurementRef"
+      class="measurement-row"
+      :style="{
+        visibility: 'hidden',
+        position: 'absolute',
+        pointerEvents: 'none',
+        gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+        padding: '0 4px',
+        width: '100%'
+      }"
+    >
+      <div class="emoji-item">
+        <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden">
+          <img
+            :src="getImageSrcSync(emojis[0])"
+            :alt="emojis[0].name"
+            class="w-full h-full object-cover"
+          />
+        </div>
+        <div class="text-xs text-center text-gray-600 mt-1 truncate">{{ emojis[0].name }}</div>
+        <EmojiTags :tags="emojis[0].tags || []" :max-display="2" />
+      </div>
+    </div>
+
     <VirtualList
       :items="emojiRows"
       :item-height="ITEM_HEIGHT"
@@ -174,6 +221,12 @@ const emojiRows = computed(() => {
 <style scoped>
 .emoji-grid-container {
   width: 100%;
+  position: relative;
+}
+
+.measurement-row {
+  display: grid;
+  gap: 0.75rem; /* gap-3 */
 }
 
 .emoji-item {

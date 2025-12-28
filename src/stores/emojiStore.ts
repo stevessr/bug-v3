@@ -40,7 +40,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const favorites = ref<Set<string>>(new Set())
   const activeGroupId = ref<string>('nachoneko')
   const searchQuery = ref<string>(' ')
-  const selectedTags = ref<string[]>([]) // 当前选中的标签
+  // 优化：使用 shallowRef 减少数组的深层响应式开销
+  const selectedTags = shallowRef<string[]>([]) // 当前选中的标签
   const isLoading = ref(true)
   const isSaving = ref(false)
   // Flag to track if initial data has been loaded successfully at least once
@@ -107,16 +108,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const searchIndexStore = useSearchIndexStore()
   const tagCountStore = useTagCountStore()
 
-  // Watch groups changes to rebuild search index
+  // 优化：监听分组的深层变化，而不仅仅是长度
+  // 使用 flush: 'post' 确保在 DOM 更新后执行
   watch(
-    () => groups.value.length,
+    () => groups.value,
     () => {
       // Rebuild search index when groups change
       if (!searchIndexStore.searchIndexValid) {
         setTimeout(() => searchIndexStore.buildSearchIndex(groups.value), SEARCH_INDEX_DEBOUNCE_MS)
       }
     },
-    { immediate: true }
+    { immediate: true, flush: 'post' }
   )
 
   const filteredEmojis = computed(() => {
@@ -166,16 +168,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     return emojis
   })
 
-  // Watch groups changes to rebuild tag counts
+  // 优化：监听分组变化以重建标签计数
+  // 使用 flush: 'post' 确保在 DOM 更新后执行
   watch(
-    () => groups.value.length,
+    () => groups.value,
     () => {
       // Rebuild tag counts when groups change
       if (!tagCountStore.tagCacheValid) {
         tagCountStore.rebuildTagCounts(groups.value)
       }
     },
-    { immediate: true }
+    { immediate: true, flush: 'post' }
   )
 
   // 使用 tagCountStore 的 allTags
@@ -958,25 +961,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
   )
 
-  // Settings 监听（浅层）
-  watch(
-    () => settings.value.lastModified,
-    () => {
-      if (!isLoading.value && !isUpdatingFromStorage && hasLoadedOnce.value) {
-        // Settings 已经通过 markSettingsDirty 处理
-      }
-    }
-  )
-
-  // Favorites 监听（浅层）
-  watch(
-    () => favorites.value.size,
-    () => {
-      if (!isLoading.value && !isUpdatingFromStorage && hasLoadedOnce.value) {
-        // Favorites 已经通过 markFavoritesDirty 处理
-      }
-    }
-  )
+  // 移除空的 watch - settings 和 favorites 已经通过各自的 save 方法处理
+  // 不需要额外的 watch
 
   // Message deduplication: Track recently processed emoji additions to prevent duplicates
   const processedEmojiIds = new Set<string>()
