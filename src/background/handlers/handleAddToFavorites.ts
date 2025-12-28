@@ -1,6 +1,6 @@
 import { getChromeAPI } from '../utils/main.ts'
 
-import { newStorageHelpers } from '@/utils/newStorage'
+import * as storage from '@/utils/simpleStorage'
 import type { Emoji, EmojiGroup } from '@/types/type'
 
 export async function handleAddToFavorites(
@@ -10,8 +10,8 @@ export async function handleAddToFavorites(
   // mark callback as referenced to avoid unused-var lint
   void sendResponse
   try {
-    // Use the unified newStorageHelpers to read/update groups for consistency
-    const groups = await newStorageHelpers.getAllEmojiGroups()
+    // Use the unified storage to read/update groups for consistency
+    const groups = await storage.getAllEmojiGroups()
     let favoritesGroup = groups.find((g: EmojiGroup) => g.id === 'favorites')
     if (!favoritesGroup) {
       console.warn('Favorites group not found - creating one')
@@ -58,8 +58,8 @@ export async function handleAddToFavorites(
 
     favoritesGroup.emojis.sort((a: Emoji, b: Emoji) => (b.lastUsed || 0) - (a.lastUsed || 0))
 
-    // Persist via newStorageHelpers which updates group index and individual groups
-    await newStorageHelpers.setAllEmojiGroups(groups)
+    // Persist via storage which updates group index and individual groups
+    await storage.setAllEmojiGroups(groups)
 
     // 确保 localStorage 也被更新 - 直接操作 localStorage 作为备用
     try {

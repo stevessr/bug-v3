@@ -18,7 +18,7 @@ declare global {
   const OptimizedHashService: typeof import('./utils/optimizedHashService')['OptimizedHashService']
   const PLATFORMS: typeof import('./utils/constants')['PLATFORMS']
   const S3SyncTarget: typeof import('./utils/syncTargets')['S3SyncTarget']
-  const STORAGE_KEYS: typeof import('./utils/newStorage')['STORAGE_KEYS']
+  const STORAGE_KEYS: typeof import('./utils/simpleStorage')['STORAGE_KEYS']
   const SYNC: typeof import('./utils/constants')['SYNC']
   const SYNC_STORAGE_KEYS: typeof import('./utils/newStorage')['SYNC_STORAGE_KEYS']
   const SafeStorage: typeof import('./utils/safeStorage')['SafeStorage']
@@ -30,6 +30,8 @@ declare global {
   const acceptHMRUpdate: typeof import('pinia')['acceptHMRUpdate']
   const addCacheBustingParam: typeof import('./utils/imageUrlHelper')['addCacheBustingParam']
   const analyzeImageForNaming: typeof import('./utils/geminiService')['analyzeImageForNaming']
+  const archiveGroup: typeof import('./utils/simpleStorage')['archiveGroup']
+  const backupToSync: typeof import('./utils/simpleStorage')['backupToSync']
   const cacheImage: typeof import('./utils/imageCache')['cacheImage']
   const cacheImages: typeof import('./utils/imageCache')['cacheImages']
   const cacheMultipleImages: typeof import('./utils/imageCache.example')['cacheMultipleImages']
@@ -51,25 +53,37 @@ declare global {
   const defineAsyncComponent: typeof import('vue')['defineAsyncComponent']
   const defineComponent: typeof import('vue')['defineComponent']
   const defineStore: typeof import('pinia')['defineStore']
+  const deleteArchivedGroup: typeof import('./utils/simpleStorage')['deleteArchivedGroup']
   const downloadFileAsBlob: typeof import('./utils/telegramResolver')['downloadFileAsBlob']
   const effectScope: typeof import('vue')['effectScope']
+  const ensureDiscourseDomainExists: typeof import('./utils/simpleStorage')['ensureDiscourseDomainExists']
   const environmentSpecificExample: typeof import('./utils/imageCache.example')['environmentSpecificExample']
   const exampleImageCaching: typeof import('./utils/imageCache.example')['exampleImageCaching']
   const extractStickerSetName: typeof import('./utils/telegramResolver')['extractStickerSetName']
   const generateBatchNames: typeof import('./utils/geminiService')['generateBatchNames']
   const generateBatchNamesStreaming: typeof import('./utils/geminiService')['generateBatchNamesStreaming']
   const getActivePinia: typeof import('pinia')['getActivePinia']
+  const getAllArchivedGroups: typeof import('./utils/simpleStorage')['getAllArchivedGroups']
+  const getAllEmojiGroups: typeof import('./utils/simpleStorage')['getAllEmojiGroups']
+  const getArchivedGroup: typeof import('./utils/simpleStorage')['getArchivedGroup']
+  const getArchivedGroupIds: typeof import('./utils/simpleStorage')['getArchivedGroupIds']
   const getCacheStats: typeof import('./utils/imageCache')['getCacheStats']
   const getCachedImage: typeof import('./utils/imageCache')['getCachedImage']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const getDeviceId: typeof import('./utils/device')['getDeviceId']
   const getDeviceInfo: typeof import('./utils/device')['getDeviceInfo']
+  const getDiscourseDomain: typeof import('./utils/simpleStorage')['getDiscourseDomain']
+  const getDiscourseDomains: typeof import('./utils/simpleStorage')['getDiscourseDomains']
+  const getEmojiGroup: typeof import('./utils/simpleStorage')['getEmojiGroup']
+  const getEmojiGroupIndex: typeof import('./utils/simpleStorage')['getEmojiGroupIndex']
   const getEmojiImageUrl: typeof import('./utils/imageUrlHelper')['getEmojiImageUrl']
   const getEmojiImageUrlSync: typeof import('./utils/imageUrlHelper')['getEmojiImageUrlSync']
   const getEmojiImageUrlWithLoading: typeof import('./utils/imageUrlHelper')['getEmojiImageUrlWithLoading']
   const getEmojiImageUrls: typeof import('./utils/imageUrlHelper')['getEmojiImageUrls']
+  const getFavorites: typeof import('./utils/simpleStorage')['getFavorites']
   const getFile: typeof import('./utils/telegramResolver')['getFile']
+  const getSettings: typeof import('./utils/simpleStorage')['getSettings']
   const getStickerSet: typeof import('./utils/telegramResolver')['getStickerSet']
   const getTelegramBotToken: typeof import('./utils/telegramResolver')['getTelegramBotToken']
   const getWorkerClient: typeof import('./utils/collaborativeUpload')['getWorkerClient']
@@ -110,6 +124,7 @@ declare global {
   const onRenderTriggered: typeof import('vue')['onRenderTriggered']
   const onScopeDispose: typeof import('vue')['onScopeDispose']
   const onServerPrefetch: typeof import('vue')['onServerPrefetch']
+  const onStorageChanged: typeof import('./utils/simpleStorage')['onStorageChanged']
   const onUnmounted: typeof import('vue')['onUnmounted']
   const onUpdated: typeof import('vue')['onUpdated']
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
@@ -121,20 +136,35 @@ declare global {
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
   const ref: typeof import('vue')['ref']
+  const removeEmojiGroup: typeof import('./utils/simpleStorage')['removeEmojiGroup']
+  const resetToDefaults: typeof import('./utils/simpleStorage')['resetToDefaults']
   const resolveComponent: typeof import('vue')['resolveComponent']
   const safeLocalStorage: typeof import('./utils/safeStorage')['safeLocalStorage']
   const safeSessionStorage: typeof import('./utils/safeStorage')['safeSessionStorage']
+  const saveAllData: typeof import('./utils/simpleStorage')['saveAllData']
   const saveDeviceInfo: typeof import('./utils/device')['saveDeviceInfo']
   const saveSyncConfig: typeof import('./utils/syncConfigStorage')['saveSyncConfig']
   const setActivePinia: typeof import('pinia')['setActivePinia']
+  const setAllEmojiGroups: typeof import('./utils/simpleStorage')['setAllEmojiGroups']
+  const setArchivedGroupIds: typeof import('./utils/simpleStorage')['setArchivedGroupIds']
+  const setDiscourseDomains: typeof import('./utils/simpleStorage')['setDiscourseDomains']
+  const setEmojiGroup: typeof import('./utils/simpleStorage')['setEmojiGroup']
+  const setEmojiGroupIndex: typeof import('./utils/simpleStorage')['setEmojiGroupIndex']
+  const setFavorites: typeof import('./utils/simpleStorage')['setFavorites']
   const setMapStoreSuffix: typeof import('pinia')['setMapStoreSuffix']
+  const setSettings: typeof import('./utils/simpleStorage')['setSettings']
   const setTelegramBotToken: typeof import('./utils/telegramResolver')['setTelegramBotToken']
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
   const startWorkerMode: typeof import('./utils/collaborativeUpload')['startWorkerMode']
   const stopWorkerMode: typeof import('./utils/collaborativeUpload')['stopWorkerMode']
+  const storageBatchRemove: typeof import('./utils/simpleStorage')['storageBatchRemove']
+  const storageBatchSet: typeof import('./utils/simpleStorage')['storageBatchSet']
+  const storageGet: typeof import('./utils/simpleStorage')['storageGet']
   const storageManager: typeof import('./utils/newStorage')['storageManager']
+  const storageRemove: typeof import('./utils/simpleStorage')['storageRemove']
+  const storageSet: typeof import('./utils/simpleStorage')['storageSet']
   const storeToRefs: typeof import('pinia')['storeToRefs']
   const syncDb: typeof import('./utils/sync-db')['syncDb']
   const syncTestHelper: typeof import('./utils/sync-test')['syncTestHelper']
@@ -143,6 +173,7 @@ declare global {
   const toRefs: typeof import('vue')['toRefs']
   const toValue: typeof import('vue')['toValue']
   const triggerRef: typeof import('vue')['triggerRef']
+  const unarchiveGroup: typeof import('./utils/simpleStorage')['unarchiveGroup']
   const unref: typeof import('vue')['unref']
   const uploadAndAddEmoji: typeof import('./utils/uploadServices')['uploadAndAddEmoji']
   const uploadServices: typeof import('./utils/uploadServices')['uploadServices']
@@ -224,7 +255,7 @@ declare module 'vue' {
     readonly OptimizedHashService: UnwrapRef<typeof import('./utils/optimizedHashService')['OptimizedHashService']>
     readonly PLATFORMS: UnwrapRef<typeof import('./utils/constants')['PLATFORMS']>
     readonly S3SyncTarget: UnwrapRef<typeof import('./utils/syncTargets')['S3SyncTarget']>
-    readonly STORAGE_KEYS: UnwrapRef<typeof import('./utils/newStorage')['STORAGE_KEYS']>
+    readonly STORAGE_KEYS: UnwrapRef<typeof import('./utils/simpleStorage')['STORAGE_KEYS']>
     readonly SYNC: UnwrapRef<typeof import('./utils/constants')['SYNC']>
     readonly SYNC_STORAGE_KEYS: UnwrapRef<typeof import('./utils/newStorage')['SYNC_STORAGE_KEYS']>
     readonly SafeStorage: UnwrapRef<typeof import('./utils/safeStorage')['SafeStorage']>
@@ -236,6 +267,8 @@ declare module 'vue' {
     readonly acceptHMRUpdate: UnwrapRef<typeof import('pinia')['acceptHMRUpdate']>
     readonly addCacheBustingParam: UnwrapRef<typeof import('./utils/imageUrlHelper')['addCacheBustingParam']>
     readonly analyzeImageForNaming: UnwrapRef<typeof import('./utils/geminiService')['analyzeImageForNaming']>
+    readonly archiveGroup: UnwrapRef<typeof import('./utils/simpleStorage')['archiveGroup']>
+    readonly backupToSync: UnwrapRef<typeof import('./utils/simpleStorage')['backupToSync']>
     readonly cacheImage: UnwrapRef<typeof import('./utils/imageCache')['cacheImage']>
     readonly cacheImages: UnwrapRef<typeof import('./utils/imageCache')['cacheImages']>
     readonly cacheMultipleImages: UnwrapRef<typeof import('./utils/imageCache.example')['cacheMultipleImages']>
@@ -257,25 +290,37 @@ declare module 'vue' {
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly defineStore: UnwrapRef<typeof import('pinia')['defineStore']>
+    readonly deleteArchivedGroup: UnwrapRef<typeof import('./utils/simpleStorage')['deleteArchivedGroup']>
     readonly downloadFileAsBlob: UnwrapRef<typeof import('./utils/telegramResolver')['downloadFileAsBlob']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly ensureDiscourseDomainExists: UnwrapRef<typeof import('./utils/simpleStorage')['ensureDiscourseDomainExists']>
     readonly environmentSpecificExample: UnwrapRef<typeof import('./utils/imageCache.example')['environmentSpecificExample']>
     readonly exampleImageCaching: UnwrapRef<typeof import('./utils/imageCache.example')['exampleImageCaching']>
     readonly extractStickerSetName: UnwrapRef<typeof import('./utils/telegramResolver')['extractStickerSetName']>
     readonly generateBatchNames: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNames']>
     readonly generateBatchNamesStreaming: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNamesStreaming']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
+    readonly getAllArchivedGroups: UnwrapRef<typeof import('./utils/simpleStorage')['getAllArchivedGroups']>
+    readonly getAllEmojiGroups: UnwrapRef<typeof import('./utils/simpleStorage')['getAllEmojiGroups']>
+    readonly getArchivedGroup: UnwrapRef<typeof import('./utils/simpleStorage')['getArchivedGroup']>
+    readonly getArchivedGroupIds: UnwrapRef<typeof import('./utils/simpleStorage')['getArchivedGroupIds']>
     readonly getCacheStats: UnwrapRef<typeof import('./utils/imageCache')['getCacheStats']>
     readonly getCachedImage: UnwrapRef<typeof import('./utils/imageCache')['getCachedImage']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getDeviceId: UnwrapRef<typeof import('./utils/device')['getDeviceId']>
     readonly getDeviceInfo: UnwrapRef<typeof import('./utils/device')['getDeviceInfo']>
+    readonly getDiscourseDomain: UnwrapRef<typeof import('./utils/simpleStorage')['getDiscourseDomain']>
+    readonly getDiscourseDomains: UnwrapRef<typeof import('./utils/simpleStorage')['getDiscourseDomains']>
+    readonly getEmojiGroup: UnwrapRef<typeof import('./utils/simpleStorage')['getEmojiGroup']>
+    readonly getEmojiGroupIndex: UnwrapRef<typeof import('./utils/simpleStorage')['getEmojiGroupIndex']>
     readonly getEmojiImageUrl: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrl']>
     readonly getEmojiImageUrlSync: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrlSync']>
     readonly getEmojiImageUrlWithLoading: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrlWithLoading']>
     readonly getEmojiImageUrls: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrls']>
+    readonly getFavorites: UnwrapRef<typeof import('./utils/simpleStorage')['getFavorites']>
     readonly getFile: UnwrapRef<typeof import('./utils/telegramResolver')['getFile']>
+    readonly getSettings: UnwrapRef<typeof import('./utils/simpleStorage')['getSettings']>
     readonly getStickerSet: UnwrapRef<typeof import('./utils/telegramResolver')['getStickerSet']>
     readonly getTelegramBotToken: UnwrapRef<typeof import('./utils/telegramResolver')['getTelegramBotToken']>
     readonly getWorkerClient: UnwrapRef<typeof import('./utils/collaborativeUpload')['getWorkerClient']>
@@ -316,6 +361,7 @@ declare module 'vue' {
     readonly onRenderTriggered: UnwrapRef<typeof import('vue')['onRenderTriggered']>
     readonly onScopeDispose: UnwrapRef<typeof import('vue')['onScopeDispose']>
     readonly onServerPrefetch: UnwrapRef<typeof import('vue')['onServerPrefetch']>
+    readonly onStorageChanged: UnwrapRef<typeof import('./utils/simpleStorage')['onStorageChanged']>
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
@@ -327,20 +373,35 @@ declare module 'vue' {
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
+    readonly removeEmojiGroup: UnwrapRef<typeof import('./utils/simpleStorage')['removeEmojiGroup']>
+    readonly resetToDefaults: UnwrapRef<typeof import('./utils/simpleStorage')['resetToDefaults']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly safeLocalStorage: UnwrapRef<typeof import('./utils/safeStorage')['safeLocalStorage']>
     readonly safeSessionStorage: UnwrapRef<typeof import('./utils/safeStorage')['safeSessionStorage']>
+    readonly saveAllData: UnwrapRef<typeof import('./utils/simpleStorage')['saveAllData']>
     readonly saveDeviceInfo: UnwrapRef<typeof import('./utils/device')['saveDeviceInfo']>
     readonly saveSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['saveSyncConfig']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
+    readonly setAllEmojiGroups: UnwrapRef<typeof import('./utils/simpleStorage')['setAllEmojiGroups']>
+    readonly setArchivedGroupIds: UnwrapRef<typeof import('./utils/simpleStorage')['setArchivedGroupIds']>
+    readonly setDiscourseDomains: UnwrapRef<typeof import('./utils/simpleStorage')['setDiscourseDomains']>
+    readonly setEmojiGroup: UnwrapRef<typeof import('./utils/simpleStorage')['setEmojiGroup']>
+    readonly setEmojiGroupIndex: UnwrapRef<typeof import('./utils/simpleStorage')['setEmojiGroupIndex']>
+    readonly setFavorites: UnwrapRef<typeof import('./utils/simpleStorage')['setFavorites']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
+    readonly setSettings: UnwrapRef<typeof import('./utils/simpleStorage')['setSettings']>
     readonly setTelegramBotToken: UnwrapRef<typeof import('./utils/telegramResolver')['setTelegramBotToken']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly startWorkerMode: UnwrapRef<typeof import('./utils/collaborativeUpload')['startWorkerMode']>
     readonly stopWorkerMode: UnwrapRef<typeof import('./utils/collaborativeUpload')['stopWorkerMode']>
+    readonly storageBatchRemove: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchRemove']>
+    readonly storageBatchSet: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchSet']>
+    readonly storageGet: UnwrapRef<typeof import('./utils/simpleStorage')['storageGet']>
     readonly storageManager: UnwrapRef<typeof import('./utils/newStorage')['storageManager']>
+    readonly storageRemove: UnwrapRef<typeof import('./utils/simpleStorage')['storageRemove']>
+    readonly storageSet: UnwrapRef<typeof import('./utils/simpleStorage')['storageSet']>
     readonly storeToRefs: UnwrapRef<typeof import('pinia')['storeToRefs']>
     readonly syncDb: UnwrapRef<typeof import('./utils/sync-db')['syncDb']>
     readonly syncTestHelper: UnwrapRef<typeof import('./utils/sync-test')['syncTestHelper']>
@@ -349,6 +410,7 @@ declare module 'vue' {
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
+    readonly unarchiveGroup: UnwrapRef<typeof import('./utils/simpleStorage')['unarchiveGroup']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly uploadAndAddEmoji: UnwrapRef<typeof import('./utils/uploadServices')['uploadAndAddEmoji']>
     readonly uploadServices: UnwrapRef<typeof import('./utils/uploadServices')['uploadServices']>

@@ -8,7 +8,7 @@ import type { Ref } from 'vue'
 import type { SaveControl } from './core/types'
 
 import type { Emoji, EmojiGroup } from '@/types/type'
-import { newStorageHelpers } from '@/utils/newStorage'
+import * as storage from '@/utils/simpleStorage'
 
 export interface FavoritesStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -67,7 +67,7 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
 
     try {
       // Ensure favorites group is in the index
-      const currentIndex = await newStorageHelpers.getEmojiGroupIndex()
+      const currentIndex = await storage.getEmojiGroupIndex()
       const favoritesInIndex = currentIndex.some(entry => entry.id === 'favorites')
 
       if (!favoritesInIndex) {
@@ -75,17 +75,17 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
           { id: 'favorites', order: 0 },
           ...currentIndex.map((e, i) => ({ ...e, order: i + 1 }))
         ]
-        await newStorageHelpers.setEmojiGroupIndexSync(newIndex)
+        await storage.setEmojiGroupIndex(newIndex)
       }
 
-      await newStorageHelpers.setEmojiGroupSync(favoritesGroup.id, favoritesGroup)
+      await storage.setEmojiGroup(favoritesGroup.id, favoritesGroup)
 
       // 优化：使用 reduce 单次遍历替代 .map().filter()
       const favoriteIds = favoritesGroup.emojis.reduce((acc, e) => {
         if (e.id) acc.push(e.id)
         return acc
       }, [] as string[])
-      await newStorageHelpers.setFavoritesSync(favoriteIds)
+      await storage.setFavorites(favoriteIds)
     } catch (error) {
       console.error('[FavoritesStore] Failed to save favorites:', error)
     }

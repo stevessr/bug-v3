@@ -1,4 +1,4 @@
-import { newStorageHelpers } from '../../utils/newStorage'
+import * as storage from '../../utils/simpleStorage'
 import { getChromeAPI } from '../utils/main.ts'
 
 import { downloadAndUploadDirect } from './downloadAndSend'
@@ -14,14 +14,14 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
         typeof emojiData.sourceDomain === 'string' &&
         emojiData.sourceDomain.length > 0
       ) {
-        await newStorageHelpers.ensureDiscourseDomainExists(emojiData.sourceDomain)
+        await storage.ensureDiscourseDomainExists(emojiData.sourceDomain)
       }
     } catch (e) {
       // Non-fatal: log and continue
       console.warn('[Background] ensureDiscourseDomainExists failed', e)
     }
     // 获取所有表情组
-    const groups = await newStorageHelpers.getAllEmojiGroups()
+    const groups = await storage.getAllEmojiGroups()
 
     // 找到未分组表情组
     let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
@@ -94,7 +94,7 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
     ungroupedGroup.emojis.push(newEmoji)
 
     // 保存到存储
-    await newStorageHelpers.setAllEmojiGroups(groups)
+    await storage.setAllEmojiGroups(groups)
 
     try {
       const chromeAPI = getChromeAPI()

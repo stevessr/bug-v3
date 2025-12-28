@@ -1,6 +1,6 @@
 import { getChromeAPI } from '../utils/main.ts'
 
-import { newStorageHelpers } from '@/utils/newStorage'
+import * as storage from '@/utils/simpleStorage'
 import type { EmojiGroup, AppSettings } from '@/types/type'
 
 // 缓存机制：减少重复存储读取
@@ -25,13 +25,13 @@ async function getCachedData() {
 
   // 并行加载数据
   const [groups, settings, favorites] = await Promise.all([
-    newStorageHelpers.getAllEmojiGroups(),
-    newStorageHelpers.getSettings(),
-    newStorageHelpers.getFavorites()
+    storage.getAllEmojiGroups(),
+    storage.getSettings(),
+    storage.getFavorites()
   ])
 
   cachedGroups = groups || []
-  cachedSettings = settings || {}
+  cachedSettings = settings
   cachedFavorites = favorites || []
   cacheTimestamp = now
 
@@ -78,10 +78,10 @@ export async function handleGetEmojiData(
       const src = message && message.sourceDomain ? String(message.sourceDomain).trim() : ''
       if (src) {
         // lookup domain config; if missing, create default entry that enables all current groups
-        let entry = await newStorageHelpers.getDiscourseDomain(src)
+        let entry = await storage.getDiscourseDomain(src)
         if (!entry) {
           try {
-            entry = await newStorageHelpers.ensureDiscourseDomainExists(src)
+            entry = await storage.ensureDiscourseDomainExists(src)
           } catch (e) {
             console.warn('[Background] ensureDiscourseDomainExists failed for', src, e)
           }
@@ -123,7 +123,7 @@ export async function handleGetEmojiData(
       }
     })
   } catch (error) {
-    console.error('Failed to get emoji data via newStorageHelpers:', error)
+    console.error('Failed to get emoji data via storage:', error)
     _sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -137,7 +137,7 @@ export async function handleGetEmojiSetting(
 ) {
   void _sendResponse
   try {
-    const settings = await newStorageHelpers.getSettings()
+    const settings = await storage.getSettings()
     if (settings && Object.prototype.hasOwnProperty.call(settings, key)) {
       _sendResponse({ success: true, data: { value: settings[key] } })
     } else {
