@@ -48,19 +48,26 @@ function ensureDistExists() {
 function ensureKey(keyPath) {
   if (keyPath && fs.existsSync(keyPath)) return path.resolve(keyPath)
 
-  // generate a temporary RSA private key PEM if none provided
-  const generatedPath = path.resolve(process.cwd(), 'pack-key.pem')
-  if (fs.existsSync(generatedPath)) return generatedPath
+  // 使用固定的扩展密钥
+  const fixedKeyPath = path.resolve(__dirname, 'extension-key.pem')
+  if (fs.existsSync(fixedKeyPath)) {
+    console.log('✅ 使用固定私钥:', fixedKeyPath)
+    return fixedKeyPath
+  }
 
-  console.log('No private key provided. Generating a temporary key at', generatedPath)
+  // 生成固定密钥
+  console.log('🔑 生成固定的扩展签名密钥...')
   const { privateKey } = crypto.generateKeyPairSync('rsa', {
     modulusLength: 2048,
     publicExponent: 0x10001,
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
     publicKeyEncoding: { type: 'spki', format: 'pem' }
   })
-  fs.writeFileSync(generatedPath, privateKey, { mode: 0o600 })
-  return generatedPath
+  fs.writeFileSync(fixedKeyPath, privateKey, { mode: 0o600 })
+  console.log('✅ 固定密钥已生成:', fixedKeyPath)
+  console.log('⚠️  请备份此密钥文件，丢失将无法更新扩展！')
+  
+  return fixedKeyPath
 }
 
 function packWithCrx(distPath, keyPath, outPath) {
