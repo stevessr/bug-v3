@@ -28,7 +28,8 @@
     "update:push": "git push",
     "update:wasm": "bash ./scripts/wasm/build.sh",
     "share": "node ./scripts/collaborative-upload-server/server.js",
-    "share:stop": "kill $(lsof -t -i:9527) 2>/dev/null || echo 'Server not running'"
+    "share:stop": "kill $(lsof -t -i:9527) 2>/dev/null || echo 'Server not running'",
+    "check:all": "pnpm lint && pnpm format:check && pnpm type-check"
   },
   "dependencies": {
     "ant-design-vue": "^4.2.6",
