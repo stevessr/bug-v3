@@ -43,6 +43,17 @@ const isWaitingFor429 = ref(false)
 const retryAfterSeconds = ref(0)
 const retryCountdown = ref(0)
 
+// 实时导入预览列表
+interface ImportingEmoji {
+  id: string
+  name: string
+  url: string
+  width: number
+  height: number
+}
+const importingEmojis = ref<ImportingEmoji[]>([])
+const showImportPreview = ref(false)
+
 // 可用分组列表
 const availableGroups = computed(() => {
   return store.groups
@@ -190,6 +201,10 @@ const doImport = async () => {
   isProcessing.value = true
   errorMessage.value = ''
 
+  // 清空预览列表并显示预览区域
+  importingEmojis.value = []
+  showImportPreview.value = true
+
   try {
     const stickers = stickerSetInfo.value.stickers
     const validStickers = stickers.filter(s => !s.is_video)
@@ -275,6 +290,15 @@ const doImport = async () => {
           width: sticker.width,
           height: sticker.height,
           groupId: targetGroup!.id
+        })
+
+        // 实时添加到预览列表
+        importingEmojis.value.push({
+          id: emojiId,
+          name: filename,
+          url: uploadUrl,
+          width: sticker.width,
+          height: sticker.height
         })
 
         progress.value.processed = i + 1
@@ -583,6 +607,42 @@ const doImport = async () => {
             >
               {{ importMode === 'new' ? '导入到新分组' : '更新分组' }}
             </a-button>
+          </div>
+
+          <!-- 实时导入预览 -->
+          <div
+            v-if="showImportPreview && importingEmojis.length > 0"
+            class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-medium text-blue-900 dark:text-blue-100">
+                正在导入的表情 ({{ importingEmojis.length }})
+              </h4>
+              <a-button v-if="!isProcessing" size="small" @click="showImportPreview = false">
+                关闭预览
+              </a-button>
+            </div>
+            <div
+              class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-[400px] overflow-y-auto"
+            >
+              <div
+                v-for="emoji in importingEmojis"
+                :key="emoji.id"
+                class="flex flex-col items-center p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all"
+              >
+                <img
+                  :src="emoji.url"
+                  :alt="emoji.name"
+                  class="w-16 h-16 object-contain"
+                  loading="lazy"
+                />
+                <span
+                  class="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center truncate w-full"
+                >
+                  {{ emoji.name }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
