@@ -240,23 +240,60 @@ const doImport = async () => {
     const newEmojis: any[] = []
     const service = uploadServices[uploadService.value]
 
+    // 构建已有表情名称集合（用于去重检查）
+    const existingEmojiNames = new Set<string>()
+    if (importMode.value === 'update' && targetGroup) {
+      targetGroup.emojis.forEach(e => existingEmojiNames.add(e.name))
+    }
+
+    let skippedDuplicates = 0
+
     // 处理每个贴纸
     for (let i = 0; i < validStickers.length; i++) {
       const sticker = validStickers[i]
       progress.value = {
         processed: i,
         total,
-        message: `下载并上传贴纸 ${i + 1}/${total}...`
+        message: `处理贴纸 ${i + 1}/${total}...`
       }
 
       try {
+        // 在更新模式下，提前检查是否可能重复（基于文件名模式）
+        if (importMode.value === 'update') {
+          const baseFilename = `${sticker.emoji || 'sticker'}_${i + 1}`
+          // 检查是否存在任何扩展名的相同基础名称
+          const possibleDuplicate = Array.from(existingEmojiNames).some(name =>
+            name.startsWith(baseFilename + '.')
+          )
+          if (possibleDuplicate) {
+            console.log(`[TelegramImport] Skipping duplicate (pattern match): ${baseFilename}.*`)
+            skippedDuplicates++
+            progress.value.message = `跳过重复贴纸 ${i + 1}/${total}`
+            progress.value.processed = i + 1
+            continue
+          }
+        }
+
         const fileInfo = await getFile(sticker.file_id, telegramBotToken.value)
         if (!fileInfo.file_path) continue
 
         const extension = fileInfo.file_path.split('.').pop()?.toLowerCase() || ''
         if (extension === 'webm') continue // 跳过 webm
 
+        // 生成文件名（与之前的逻辑一致）
+        const filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
+
+        // 二次检查（精确匹配，以防模式匹配有误）
+        if (importMode.value === 'update' && existingEmojiNames.has(filename)) {
+          console.log(`[TelegramImport] Skipping duplicate (exact match): ${filename}`)
+          skippedDuplicates++
+          progress.value.message = `跳过重复贴纸 ${i + 1}/${total}: ${filename}`
+          progress.value.processed = i + 1
+          continue
+        }
+
         // 下载贴纸
+        progress.value.message = `下载贴纸 ${i + 1}/${total}...`
         const proxyUrl = createProxyUrl(fileInfo.file_path, telegramBotToken.value)
         const blob = await downloadFileAsBlob(proxyUrl)
 
@@ -271,7 +308,6 @@ const doImport = async () => {
         }
 
         // 创建 File 对象
-        const filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
         const file = new File([blob], filename, { type: mimeType })
 
         // 上传到托管服务
@@ -320,40 +356,51 @@ const doImport = async () => {
 
     // 更新分组中的 emojis
     let addedCount = 0
-    let skippedCount = 0
+    let skippedCount = skippedDuplicates // 使用上传阶段统计的跳过数量
 
     if (importMode.value === 'new') {
-      targetGroup!.emojis = newEmojis
       addedCount = newEmojis.length
 
-      // 更新 groups 引用以触发响应式（关键：确保新分组的 emojis 被保存）
+      // 关键修复：先更新 emojis，然后重新创建整个 groups 数组以触发响应式
+      targetGroup!.emojis = newEmojis
+
       const groupIndex = store.groups.findIndex(g => g.id === targetGroup!.id)
       if (groupIndex !== -1) {
+        // 使用完整的对象（包含 emojis）重新构建 groups 数组
         store.groups = [
           ...store.groups.slice(0, groupIndex),
-          { ...targetGroup! },
+          { ...targetGroup!, emojis: [...newEmojis] }, // 确保 emojis 是新数组
           ...store.groups.slice(groupIndex + 1)
         ]
+      } else {
+        // 如果找不到（理论上不应该发生），直接追加
+        console.warn('[TelegramImport] Target group not found in store, appending...')
+        store.groups = [...store.groups, { ...targetGroup!, emojis: [...newEmojis] }]
       }
     } else {
-      // 更新模式：合并新旧 emoji，避免重复
-      const existingEmojiNames = new Set(targetGroup!.emojis.map(e => e.name))
-      const uniqueNewEmojis = newEmojis.filter(e => !existingEmojiNames.has(e.name))
-      skippedCount = newEmojis.length - uniqueNewEmojis.length
-      addedCount = uniqueNewEmojis.length
+      // 更新模式：直接添加新 emoji（已在上传前过滤重复）
+      addedCount = newEmojis.length
 
-      targetGroup!.emojis = [...targetGroup!.emojis, ...uniqueNewEmojis]
+      const updatedEmojis = [...targetGroup!.emojis, ...newEmojis]
+      targetGroup!.emojis = updatedEmojis
 
       // 更新 groups 引用以触发响应式
       const groupIndex = store.groups.findIndex(g => g.id === targetGroup!.id)
       if (groupIndex !== -1) {
         store.groups = [
           ...store.groups.slice(0, groupIndex),
-          { ...targetGroup! },
+          { ...targetGroup!, emojis: [...updatedEmojis] }, // 确保 emojis 是新数组
           ...store.groups.slice(groupIndex + 1)
         ]
       }
     }
+
+    // 调试：打印当前 store.groups 状态
+    console.log('[TelegramImport] Before endBatch - groups count:', store.groups.length)
+    console.log('[TelegramImport] Target group ID:', targetGroup!.id)
+    const targetGroupInStore = store.groups.find(g => g.id === targetGroup!.id)
+    console.log('[TelegramImport] Target group in store:', targetGroupInStore)
+    console.log('[TelegramImport] Target group emojis count:', targetGroupInStore?.emojis?.length || 0)
 
     // 结束批量操作并保存
     await store.endBatch()
