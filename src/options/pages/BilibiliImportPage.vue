@@ -24,6 +24,8 @@ const searchInput = ref('')
 const searchResults = ref<BilibiliEmoteIndexItem[]>([])
 const idImportLoading = ref(false)
 const searchLoading = ref(false)
+const previewModalVisible = ref(false)
+const previewingPackage = ref<BilibiliEmotePackage | null>(null)
 
 const isLoading = computed(() => idImportLoading.value || searchLoading.value)
 
@@ -33,6 +35,18 @@ const availableGroups = computed(() => {
 })
 
 // --- 方法 ---
+
+// 打开预览模态框
+const openPreview = (pkg: BilibiliEmotePackage) => {
+  previewingPackage.value = pkg
+  previewModalVisible.value = true
+}
+
+// 关闭预览模态框
+const closePreview = () => {
+  previewModalVisible.value = false
+  previewingPackage.value = null
+}
 
 const isPackageSelected = (packageId: number) => {
   return selectedPackages.value.includes(packageId)
@@ -412,25 +426,35 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
               </div>
 
               <!-- 表情预览 -->
-              <div class="mt-3 flex flex-wrap gap-1">
-                <img
-                  v-for="emote in pkg.emote.slice(0, 6)"
-                  :key="emote.id"
-                  :src="emote.url"
-                  :alt="emote.text"
-                  class="w-6 h-6 rounded object-cover"
-                  @error="
-                    e => {
-                      ;(e.target as HTMLImageElement).style.display = 'none'
-                    }
-                  "
-                />
-                <span
-                  v-if="pkg.emote.length > 6"
-                  class="text-xs text-gray-500 dark:text-gray-400 self-center"
+              <div class="mt-3">
+                <div class="flex flex-wrap gap-1 mb-2">
+                  <img
+                    v-for="emote in pkg.emote.slice(0, 6)"
+                    :key="emote.id"
+                    :src="emote.url"
+                    :alt="emote.text"
+                    class="w-6 h-6 rounded object-cover"
+                    @error="
+                      e => {
+                        ;(e.target as HTMLImageElement).style.display = 'none'
+                      }
+                    "
+                  />
+                  <span
+                    v-if="pkg.emote.length > 6"
+                    class="text-xs text-gray-500 dark:text-gray-400 self-center"
+                  >
+                    +{{ pkg.emote.length - 6 }}
+                  </span>
+                </div>
+                <a-button
+                  size="small"
+                  type="link"
+                  @click.stop="openPreview(pkg)"
+                  class="p-0 h-auto"
                 >
-                  +{{ pkg.emote.length - 6 }}
-                </span>
+                  查看全部表情 ({{ pkg.emote.length }})
+                </a-button>
               </div>
             </div>
           </div>
@@ -475,5 +499,39 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
         </div>
       </div>
     </div>
+
+    <!-- 表情预览模态框 -->
+    <a-modal
+      v-model:open="previewModalVisible"
+      :title="`${previewingPackage?.text || '表情包'} (${previewingPackage?.emote.length || 0} 个表情)`"
+      width="80%"
+      :footer="null"
+      @cancel="closePreview"
+    >
+      <div class="max-h-[70vh] overflow-y-auto">
+        <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 p-4">
+          <div
+            v-for="emote in previewingPackage?.emote"
+            :key="emote.id"
+            class="flex flex-col items-center gap-2 p-2 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <img
+              :src="emote.url"
+              :alt="emote.text"
+              class="w-16 h-16 object-contain"
+              @error="
+                e => {
+                  ;(e.target as HTMLImageElement).src =
+                    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zMiA0OEMyMS42OTEgNDggMTMuMzMzIDM5LjY0MiAxMy4zMzMgMjkuMzMzQzEzLjMzMyAxOS4wMjQgMjEuNjkxIDEwLjY2NyAzMiAxMC42NjdDNDIuMzA5IDEwLjY2NyA1MC42NjcgMTkuMDI0IDUwLjY2NyAyOS4zMzNDNTAuNjY3IDM5LjY0MiA0Mi4zMDkgNDggMzIgNDhaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='
+                }
+              "
+            />
+            <span class="text-xs text-center text-gray-600 dark:text-gray-400 truncate w-full">
+              {{ emote.text }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
