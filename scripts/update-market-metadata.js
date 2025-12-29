@@ -74,18 +74,12 @@ groups.forEach(group => {
     }
 });
 
-// Sort groups by order
-groups.sort((a, b) => a.order - b.order);
+// Sort groups by name first, then generate order values
+groups.sort((a, b) => a.name.localeCompare(b.name));
 
-// Ensure unique order values by incrementing duplicates
-const usedOrders = new Set();
+// Generate order values based on name sorting
 for (let i = 0; i < groups.length; i++) {
-    let currentOrder = groups[i].order;
-    while (usedOrders.has(currentOrder)) {
-        currentOrder++;
-    }
-    groups[i].order = currentOrder;
-    usedOrders.add(currentOrder);
+    groups[i].order = i;
 }
 
 const metadata = {
