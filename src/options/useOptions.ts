@@ -453,6 +453,47 @@ export default function useOptions() {
     exportProgress.resetExportState()
   }
 
+  const copyGroupAsMarkdown = async (group: EmojiGroup) => {
+    if (!group || !Array.isArray(group.emojis) || group.emojis.length === 0) {
+      showError('分组中没有表情可复制')
+      return
+    }
+
+    const lines = group.emojis
+      .filter((e: Emoji) => e && e.url)
+      .map((e: Emoji) => `![${e.name}|${e.height}x${e.width}](${e.url})`)
+
+    if (lines.length === 0) {
+      showError('分组中没有有效的表情')
+      return
+    }
+
+    const markdown = '>[!summary]-\n>[grid]\n>' + lines.join('\n>') + '\n>[/grid]'
+
+    try {
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(markdown)
+      } else {
+        // fallback
+        const ta = document.createElement('textarea')
+        ta.value = markdown
+        ta.style.position = 'fixed'
+        ta.style.left = '-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        const success = document.execCommand('copy')
+        document.body.removeChild(ta)
+        if (!success) {
+          throw new Error('execCommand copy failed')
+        }
+      }
+      showSuccess(`已复制分组 "${group.name}" 的 ${lines.length} 个表情为 Markdown 格式`)
+    } catch (err) {
+      console.error('Failed to copy markdown to clipboard', err)
+      showError('复制到剪贴板失败')
+    }
+  }
+
   // 流式批量更新表情尺寸
   const runBatchUpdateSizeStreaming = async (group: EmojiGroup) => {
     if (!group || !Array.isArray(group.emojis) || group.emojis.length === 0) {
@@ -769,6 +810,7 @@ export default function useOptions() {
     handleEmojisImported,
     exportGroup,
     exportGroupZip,
+    copyGroupAsMarkdown,
     exportConfiguration,
     // export modal state - from exportProgress composable
     exportModalPreviews: exportProgress.exportModalPreviews,

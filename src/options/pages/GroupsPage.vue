@@ -20,6 +20,7 @@ const {
   openEditGroup,
   exportGroup,
   exportGroupZip,
+  copyGroupAsMarkdown,
   confirmDeleteGroup,
   openAddEmojiModal,
   handleEmojiDragStart,
@@ -51,6 +52,7 @@ const handleArchiveGroup = async (group: any) => {
     @openEditGroup="openEditGroup"
     @exportGroup="exportGroup"
     @exportGroupZip="exportGroupZip"
+    @copyGroupAsMarkdown="copyGroupAsMarkdown"
     @confirmDeleteGroup="confirmDeleteGroup"
     @openAddEmoji="openAddEmojiModal"
     @emojiDragStart="handleEmojiDragStart"

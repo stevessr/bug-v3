@@ -38,12 +38,37 @@ const selectedGroupId = ref<string>('')
 // 获取的贴纸集信息
 const stickerSetInfo = ref<TelegramStickerSet | null>(null)
 
+// 429 错误等待状态
+const isWaitingFor429 = ref(false)
+const retryAfterSeconds = ref(0)
+const retryCountdown = ref(0)
+
 // 可用分组列表
 const availableGroups = computed(() => {
   return store.groups
 })
 
 // --- 方法 ---
+
+/**
+ * 处理 429 错误，显示等待倒计时
+ */
+const handle429Error = async (retryAfter: number): Promise<void> => {
+  isWaitingFor429.value = true
+  retryAfterSeconds.value = retryAfter
+  retryCountdown.value = retryAfter
+
+  return new Promise(resolve => {
+    const interval = setInterval(() => {
+      retryCountdown.value--
+      if (retryCountdown.value <= 0) {
+        clearInterval(interval)
+        isWaitingFor429.value = false
+        resolve()
+      }
+    }, 1000)
+  })
+}
 
 /**
  * 保存 Bot Token
@@ -97,6 +122,16 @@ const previewStickerSet = async () => {
     message.success(`成功获取贴纸包：${stickerSet.title}（${stickerSet.stickers.length} 个贴纸）`)
   } catch (error: any) {
     console.error('获取贴纸包失败：', error)
+
+    // 处理 429 错误
+    if (error.code === 429 && error.retryAfter) {
+      errorMessage.value = `请求过于频繁，需要等待 ${error.retryAfter} 秒`
+      message.warning(`请求过于频繁，正在等待 ${error.retryAfter} 秒...`)
+      await handle429Error(error.retryAfter)
+      // 等待完成后自动重试
+      return previewStickerSet()
+    }
+
     errorMessage.value = `获取失败：${error.message}`
     message.error(`获取失败：${error.message}`)
   } finally {
@@ -211,8 +246,18 @@ const doImport = async () => {
         })
 
         progress.value.processed = i + 1
-      } catch (err) {
+      } catch (err: any) {
         console.error(`处理贴纸失败：`, err)
+
+        // 处理 429 错误
+        if (err.code === 429 && err.retryAfter) {
+          message.warning(`请求过于频繁，等待 ${err.retryAfter} 秒后继续...`)
+          await handle429Error(err.retryAfter)
+          // 重试当前贴纸
+          i--
+          continue
+        }
+
         message.warning(`贴纸 ${i + 1} 上传失败，已跳过`)
       }
     }
@@ -367,6 +412,50 @@ const doImport = async () => {
             <span class="text-xs text-gray-600 dark:text-gray-400">
               {{ progress.processed }}/{{ progress.total }}
             </span>
+          </div>
+        </div>
+
+        <!-- 429 等待进度条 -->
+        <div
+          v-if="isWaitingFor429"
+          class="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md"
+        >
+          <div class="flex items-center gap-2 mb-3">
+            <svg
+              class="animate-spin h-5 w-5 text-orange-500"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <p class="text-sm font-medium text-orange-900 dark:text-orange-100">
+              请求过于频繁，等待中...
+            </p>
+          </div>
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs text-orange-700 dark:text-orange-300">
+              <span>剩余时间：{{ retryCountdown }} 秒</span>
+              <span>总计：{{ retryAfterSeconds }} 秒</span>
+            </div>
+            <a-progress
+              :percent="((retryAfterSeconds - retryCountdown) / retryAfterSeconds) * 100"
+              :show-info="false"
+              status="active"
+              stroke-color="#f97316"
+            />
           </div>
         </div>
 

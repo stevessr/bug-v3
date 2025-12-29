@@ -103,6 +103,16 @@ export const getFile = async (fileId: string, botToken: string): Promise<Telegra
       `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`
     )
     const data = await response.json()
+
+    // Handle 429 Too Many Requests
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '60')
+      const error: any = new Error(data.description || 'Too many requests')
+      error.retryAfter = retryAfter
+      error.code = 429
+      throw error
+    }
+
     if (data.ok) {
       return data.result
     } else {
@@ -126,6 +136,16 @@ export const getStickerSet = async (
       `https://api.telegram.org/bot${botToken}/getStickerSet?name=${name}`
     )
     const data = await response.json()
+
+    // Handle 429 Too Many Requests
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '60')
+      const error: any = new Error(data.description || 'Too many requests')
+      error.retryAfter = retryAfter
+      error.code = 429
+      throw error
+    }
+
     if (data.ok) {
       return data.result
     } else {
