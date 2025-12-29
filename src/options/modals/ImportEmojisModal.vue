@@ -128,7 +128,8 @@ const fillExample = () => {
           ></textarea>
           <div class="mt-2 text-xs text-gray-500 dark:text-white">
             <div class="mb-2">
-              支持的字段：name (必需), url (必需), displayUrl, originUrl, width, height, groupId, tags, customOutput, perceptualHash
+              支持的字段：name (必需), url (必需), displayUrl, originUrl, width, height, groupId,
+              tags, customOutput, perceptualHash
             </div>
             示例：
             <a-button

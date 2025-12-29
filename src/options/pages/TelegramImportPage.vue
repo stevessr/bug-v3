@@ -43,6 +43,11 @@ const stickerSetInfo = ref<TelegramStickerSet | null>(null)
 const isWaitingFor429 = ref(false)
 const retryAfterSeconds = ref(0)
 const retryCountdown = ref(0)
+let countdown429Interval: ReturnType<typeof setInterval> | null = null
+
+// 导入取消控制
+const isCancelling = ref(false)
+let abortController: AbortController | null = null
 
 // 实时导入预览列表
 interface ImportingEmoji {
@@ -82,21 +87,17 @@ const addToPreview = (emoji: ImportingEmoji) => {
 
 // 可用分组列表
 const availableGroups = computed(() => {
-  console.log(
-    '[TelegramImport] Available groups:',
-    store.groups.map(g => ({ id: g.id, name: g.name }))
-  )
   return store.groups
 })
 
-// 监控 selectedGroupId 的变化
-watch(selectedGroupId, (newVal, oldVal) => {
-  console.log('[TelegramImport] selectedGroupId changed:', { old: oldVal, new: newVal })
-  if (newVal) {
-    const group = store.groups.find(g => g.id === newVal)
-    console.log('[TelegramImport] Selected group details:', group?.name)
-  }
-})
+// 监控 selectedGroupId 的变化（调试用，生产环境可移除）
+watch(
+  selectedGroupId,
+  () => {
+    // 保留 watch 以便将来调试，但不输出日志
+  },
+  { immediate: false }
+)
 
 // 计算将要新增的表情数量（用于更新模式）
 const willAddCount = computed(() => {
@@ -107,19 +108,22 @@ const willAddCount = computed(() => {
   const targetGroup = store.groups.find(g => g.id === selectedGroupId.value)
   if (!targetGroup) return 0
 
-  // 获取当前分组中已有的表情名称
-  const existingNames = new Set(targetGroup.emojis.map(e => e.name))
+  // 获取当前分组中已有的表情基础名称（不含扩展名）
+  const existingBaseNames = new Set(
+    targetGroup.emojis.map(e => {
+      const lastDot = e.name.lastIndexOf('.')
+      return lastDot > 0 ? e.name.substring(0, lastDot) : e.name
+    })
+  )
 
   // 计算贴纸包中有多少个非视频贴纸
   const validStickers = stickerSetInfo.value.stickers.filter(s => !s.is_video)
 
-  // 预估将要新增的数量（假设文件名格式为 emoji_index.extension）
+  // 预估将要新增的数量
   let uniqueCount = 0
   validStickers.forEach((sticker, i) => {
-    // 根据导入逻辑推测文件名
-    const extension = 'webp' // 大多数贴纸是 webp
-    const filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
-    if (!existingNames.has(filename)) {
+    const baseFilename = `${sticker.emoji || 'sticker'}_${i + 1}`
+    if (!existingBaseNames.has(baseFilename)) {
       uniqueCount++
     }
   })
@@ -137,16 +141,51 @@ const handle429Error = async (retryAfter: number): Promise<void> => {
   retryAfterSeconds.value = retryAfter
   retryCountdown.value = retryAfter
 
+  // 清理之前的 interval（防止内存泄漏）
+  if (countdown429Interval) {
+    clearInterval(countdown429Interval)
+    countdown429Interval = null
+  }
+
   return new Promise(resolve => {
-    const interval = setInterval(() => {
+    countdown429Interval = setInterval(() => {
       retryCountdown.value--
+      // 检查是否被取消
+      if (isCancelling.value) {
+        if (countdown429Interval) {
+          clearInterval(countdown429Interval)
+          countdown429Interval = null
+        }
+        isWaitingFor429.value = false
+        resolve()
+        return
+      }
       if (retryCountdown.value <= 0) {
-        clearInterval(interval)
+        if (countdown429Interval) {
+          clearInterval(countdown429Interval)
+          countdown429Interval = null
+        }
         isWaitingFor429.value = false
         resolve()
       }
     }, 1000)
   })
+}
+
+/**
+ * 取消导入操作
+ */
+const cancelImport = () => {
+  isCancelling.value = true
+  if (abortController) {
+    abortController.abort()
+  }
+  if (countdown429Interval) {
+    clearInterval(countdown429Interval)
+    countdown429Interval = null
+  }
+  isWaitingFor429.value = false
+  message.warning('导入已取消')
 }
 
 /**
@@ -197,7 +236,6 @@ const previewStickerSet = async () => {
       // 使用 nextTick 确保 DOM 更新后再设置值
       await nextTick()
       selectedGroupId.value = existingGroup.id
-      console.log('[TelegramImport] Auto-selected group:', existingGroup.id, existingGroup.name)
       message.info(`检测到已存在分组「${stickerSet.title}」，已自动切换到更新模式并选择该分组`)
     } else {
       message.success(`成功获取贴纸包：${stickerSet.title}（${stickerSet.stickers.length} 个贴纸）`)
@@ -242,6 +280,8 @@ const doImport = async () => {
 
   isProcessing.value = true
   errorMessage.value = ''
+  isCancelling.value = false
+  abortController = new AbortController()
 
   // 清空预览列表并显示预览区域
   importingEmojis.value = []
@@ -289,14 +329,27 @@ const doImport = async () => {
 
     // 构建已有表情名称集合（用于去重检查）
     const existingEmojiNames = new Set<string>()
+    const existingBaseNames = new Set<string>() // 用于快速模式匹配
     if (importMode.value === 'update' && targetGroup) {
-      targetGroup.emojis.forEach(e => existingEmojiNames.add(e.name))
+      targetGroup.emojis.forEach(e => {
+        existingEmojiNames.add(e.name)
+        // 提取基础名称（不含扩展名）用于快速匹配
+        const lastDot = e.name.lastIndexOf('.')
+        if (lastDot > 0) {
+          existingBaseNames.add(e.name.substring(0, lastDot))
+        }
+      })
     }
 
     let skippedDuplicates = 0
 
     // 处理每个贴纸
     for (let i = 0; i < validStickers.length; i++) {
+      // 检查是否被取消
+      if (isCancelling.value) {
+        break
+      }
+
       const sticker = validStickers[i]
       progress.value = {
         processed: i,
@@ -305,15 +358,11 @@ const doImport = async () => {
       }
 
       try {
-        // 在更新模式下，提前检查是否可能重复（基于文件名模式）
+        // 在更新模式下，提前检查是否可能重复（基于基础文件名）
         if (importMode.value === 'update') {
           const baseFilename = `${sticker.emoji || 'sticker'}_${i + 1}`
-          // 检查是否存在任何扩展名的相同基础名称
-          const possibleDuplicate = Array.from(existingEmojiNames).some(name =>
-            name.startsWith(baseFilename + '.')
-          )
-          if (possibleDuplicate) {
-            console.log(`[TelegramImport] Skipping duplicate (pattern match): ${baseFilename}.*`)
+          // 使用 Set.has() 进行 O(1) 查找，而非 Array.from().some()
+          if (existingBaseNames.has(baseFilename)) {
             skippedDuplicates++
             progress.value.message = `跳过重复贴纸 ${i + 1}/${total}`
             progress.value.processed = i + 1
@@ -332,7 +381,6 @@ const doImport = async () => {
 
         // 二次检查（精确匹配，以防模式匹配有误）
         if (importMode.value === 'update' && existingEmojiNames.has(filename)) {
-          console.log(`[TelegramImport] Skipping duplicate (exact match): ${filename}`)
           skippedDuplicates++
           progress.value.message = `跳过重复贴纸 ${i + 1}/${total}: ${filename}`
           progress.value.processed = i + 1
@@ -359,8 +407,8 @@ const doImport = async () => {
 
         // 上传到托管服务
         progress.value.message = `上传贴纸 ${i + 1}/${total} 到 ${uploadService.value}...`
-        const uploadUrl = await service.uploadFile(file, percent => {
-          console.log(`Upload progress: ${percent}%`)
+        const uploadUrl = await service.uploadFile(file, () => {
+          // 上传进度回调（可用于更精细的进度显示）
         })
 
         const emojiId = `telegram_${sticker.file_id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -429,27 +477,14 @@ const doImport = async () => {
       ]
     }
 
-    // 调试：打印当前 store.groups 状态
-    console.log('[TelegramImport] Before save - groups count:', store.groups.length)
-    console.log('[TelegramImport] Target group ID:', targetGroup!.id)
-    const targetGroupInStore = store.groups.find(g => g.id === targetGroup!.id)
-    console.log('[TelegramImport] Target group in store:', targetGroupInStore)
-    console.log(
-      '[TelegramImport] Target group emojis count:',
-      targetGroupInStore?.emojis?.length || 0
-    )
-
-    // 【关键】直接保存分组到存储
+    // 保存分组到存储
     // 由于批量操作期间不会自动保存，需要手动调用
-    console.log('[TelegramImport] Saving group to storage...')
     await store.saveGroup(targetGroup!.id)
-    console.log('[TelegramImport] Group saved successfully')
 
     // 如果是新分组，还需要更新分组索引
     if (importMode.value === 'new') {
       const index = store.groups.map((g, order) => ({ id: g.id, order }))
       await storage.setEmojiGroupIndex(index)
-      console.log('[TelegramImport] Group index saved')
     }
 
     // 结束批量操作
@@ -481,6 +516,8 @@ const doImport = async () => {
     store.endBatch()
   } finally {
     isProcessing.value = false
+    isCancelling.value = false
+    abortController = null
   }
 }
 </script>
@@ -564,8 +601,13 @@ const doImport = async () => {
           v-if="isProcessing && progress.message"
           class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md"
         >
-          <p class="text-sm text-gray-700 dark:text-gray-300">{{ progress.message }}</p>
-          <div v-if="progress.total > 0" class="mt-2 flex items-center gap-2">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm text-gray-700 dark:text-gray-300">{{ progress.message }}</p>
+            <a-button size="small" danger @click="cancelImport" :disabled="isCancelling">
+              {{ isCancelling ? '取消中...' : '取消导入' }}
+            </a-button>
+          </div>
+          <div v-if="progress.total > 0" class="flex items-center gap-2">
             <div class="flex-1 bg-gray-300 dark:bg-gray-600 rounded-full h-2">
               <div
                 class="bg-blue-600 h-2 rounded-full transition-all"
@@ -727,12 +769,17 @@ const doImport = async () => {
                 :key="emoji.id"
                 class="flex flex-col items-center p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all"
               >
-                <img
-                  :src="emoji.url"
-                  :alt="emoji.name"
-                  class="w-16 h-16 object-contain"
-                  loading="lazy"
-                />
+                <div
+                  class="w-16 h-16 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded"
+                >
+                  <img
+                    :src="emoji.url"
+                    :alt="emoji.name"
+                    class="max-w-full max-h-full object-contain"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
                 <span
                   class="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center truncate w-full"
                 >
