@@ -48,6 +48,35 @@ const availableGroups = computed(() => {
   return store.groups
 })
 
+// 计算将要新增的表情数量（用于更新模式）
+const willAddCount = computed(() => {
+  if (importMode.value !== 'update' || !selectedGroupId.value || !stickerSetInfo.value) {
+    return 0
+  }
+
+  const targetGroup = store.groups.find(g => g.id === selectedGroupId.value)
+  if (!targetGroup) return 0
+
+  // 获取当前分组中已有的表情名称
+  const existingNames = new Set(targetGroup.emojis.map(e => e.name))
+
+  // 计算贴纸包中有多少个非视频贴纸
+  const validStickers = stickerSetInfo.value.stickers.filter(s => !s.is_video)
+
+  // 预估将要新增的数量（假设文件名格式为 emoji_index.extension）
+  let uniqueCount = 0
+  validStickers.forEach((sticker, i) => {
+    // 根据导入逻辑推测文件名
+    const extension = 'webp' // 大多数贴纸是 webp
+    const filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
+    if (!existingNames.has(filename)) {
+      uniqueCount++
+    }
+  })
+
+  return uniqueCount
+})
+
 // --- 方法 ---
 
 /**
@@ -243,6 +272,8 @@ const doImport = async () => {
           name: filename,
           url: uploadUrl,
           displayUrl: uploadUrl,
+          width: sticker.width,
+          height: sticker.height,
           groupId: targetGroup!.id
         })
 
@@ -510,7 +541,7 @@ const doImport = async () => {
             </div>
 
             <!-- 更新分组选项 -->
-            <div v-if="importMode === 'update'">
+            <div v-if="importMode === 'update'" class="space-y-2">
               <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                 选择要更新的分组
               </label>
@@ -519,6 +550,20 @@ const doImport = async () => {
                 :groups="availableGroups"
                 placeholder="请选择分组"
               />
+              <!-- 显示将要新增的表情数量 -->
+              <div
+                v-if="selectedGroupId && willAddCount > 0"
+                class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-sm text-blue-800 dark:text-blue-200"
+              >
+                <span class="font-medium">即将新增 {{ willAddCount }} 个表情</span>
+                <span class="text-xs ml-1">(已自动过滤重复)</span>
+              </div>
+              <div
+                v-else-if="selectedGroupId && willAddCount === 0"
+                class="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm text-yellow-800 dark:text-yellow-200"
+              >
+                <span>该分组已包含所有贴纸，无需重复导入</span>
+              </div>
             </div>
           </div>
 
