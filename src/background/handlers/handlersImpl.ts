@@ -186,7 +186,17 @@ export function setupStorageChangeListener() {
     chromeAPI.storage.onChanged.addListener(
       (changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => {
         console.log('Storage changed:', changes, namespace)
-        // Placeholder for cloud sync or other reactions
+
+        // 优化：当相关存储键变化时，立即失效缓存确保数据一致性
+        if (
+          changes['emojiGroups'] ||
+          changes['settings'] ||
+          changes['favorites'] ||
+          Object.keys(changes).some(key => key.startsWith('group_'))
+        ) {
+          console.log('[Background] Cache invalidated due to storage change')
+          invalidateCache()
+        }
       }
     )
   }

@@ -240,8 +240,16 @@ onMounted(() => {
     })
   })
 
-  // 监听主题变化事件
+  // 监听主题变化事件（优化：在卸载时清理监听器）
+  const cleanupThemeListener = () => {
+    window.removeEventListener('theme-changed', handleThemeChange as (event: Event) => void)
+  }
   window.addEventListener('theme-changed', handleThemeChange as (event: Event) => void)
+
+  // 组件卸载时清理
+  onBeforeUnmount(() => {
+    cleanupThemeListener()
+  })
 
   // 初始化主题模式
   currentThemeMode.value = getCurrentThemeMode()

@@ -160,20 +160,39 @@ export const useSearchIndexStore = defineStore('searchIndex', () => {
   // --- Public Actions ---
 
   /**
-   * 构建完整的搜索索引
+   * 构建完整的搜索索引（异步分片构建，防止阻塞主线程）
    */
-  const buildSearchIndex = (groups: EmojiGroup[]) => {
+  const buildSearchIndex = async (groups: EmojiGroup[]) => {
     const index = new Map<string, Set<string>>()
     const trie = createTrieNode()
 
     // 优化：使用 toRaw 避免响应式代理开销
     const rawGroups = toRaw(groups)
+
+    // 收集所有 emojis
+    const allEmojis: Emoji[] = []
     for (const group of rawGroups) {
       const emojis = group.emojis || []
-      for (const emoji of emojis) {
-        if (!emoji) continue
-        addEmojiToSearchIndex(index, trie, emoji)
-      }
+      allEmojis.push(...emojis.filter(emoji => emoji))
+    }
+
+    // 分片处理：每批处理 100 个 emoji，防止阻塞
+    const BATCH_SIZE = 100
+    for (let i = 0; i < allEmojis.length; i += BATCH_SIZE) {
+      const batch = allEmojis.slice(i, i + BATCH_SIZE)
+
+      // 在空闲时处理批次
+      await new Promise<void>(resolve => {
+        requestIdleCallback(
+          () => {
+            for (const emoji of batch) {
+              addEmojiToSearchIndex(index, trie, emoji)
+            }
+            resolve()
+          },
+          { timeout: 100 }
+        )
+      })
     }
 
     searchIndexCache.value = index

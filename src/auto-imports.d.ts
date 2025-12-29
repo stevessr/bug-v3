@@ -182,6 +182,7 @@ declare global {
   const unref: typeof import('vue')['unref']
   const uploadAndAddEmoji: typeof import('./utils/uploadServices')['uploadAndAddEmoji']
   const uploadServices: typeof import('./utils/uploadServices')['uploadServices']
+  const useAbortController: typeof import('./composables/useEventListener')['useAbortController']
   const useAttrs: typeof import('vue')['useAttrs']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssStore: typeof import('./stores/index')['useCssStore']
@@ -189,17 +190,21 @@ declare global {
   const useEmojiCrudStore: typeof import('./stores/index')['useEmojiCrudStore']
   const useEmojiImages: typeof import('./composables/useEmojiImages')['useEmojiImages']
   const useEmojiStore: typeof import('./stores/index')['useEmojiStore']
+  const useEventListener: typeof import('./composables/useEventListener')['useEventListener']
   const useFavoritesStore: typeof import('./stores/index')['useFavoritesStore']
   const useGroupStore: typeof import('./stores/index')['useGroupStore']
   const useId: typeof import('vue')['useId']
+  const useInterval: typeof import('./composables/useTimer')['useInterval']
   const useLink: typeof import('vue-router')['useLink']
   const useModel: typeof import('vue')['useModel']
+  const useRafFn: typeof import('./composables/useTimer')['useRafFn']
   const useRoute: typeof import('vue-router')['useRoute']
   const useRouter: typeof import('vue-router')['useRouter']
   const useSlots: typeof import('vue')['useSlots']
   const useSyncStore: typeof import('./stores/index')['useSyncStore']
   const useTagStore: typeof import('./stores/index')['useTagStore']
   const useTemplateRef: typeof import('vue')['useTemplateRef']
+  const useTimeout: typeof import('./composables/useTimer')['useTimeout']
   const wasmHashService: typeof import('./utils/wasmHashService')['wasmHashService']
   const watch: typeof import('vue')['watch']
   const watchEffect: typeof import('vue')['watchEffect']
@@ -421,6 +426,7 @@ declare module 'vue' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly uploadAndAddEmoji: UnwrapRef<typeof import('./utils/uploadServices')['uploadAndAddEmoji']>
     readonly uploadServices: UnwrapRef<typeof import('./utils/uploadServices')['uploadServices']>
+    readonly useAbortController: UnwrapRef<typeof import('./composables/useEventListener')['useAbortController']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssStore: UnwrapRef<typeof import('./stores/index')['useCssStore']>
@@ -428,17 +434,21 @@ declare module 'vue' {
     readonly useEmojiCrudStore: UnwrapRef<typeof import('./stores/index')['useEmojiCrudStore']>
     readonly useEmojiImages: UnwrapRef<typeof import('./composables/useEmojiImages')['useEmojiImages']>
     readonly useEmojiStore: UnwrapRef<typeof import('./stores/index')['useEmojiStore']>
+    readonly useEventListener: UnwrapRef<typeof import('./composables/useEventListener')['useEventListener']>
     readonly useFavoritesStore: UnwrapRef<typeof import('./stores/index')['useFavoritesStore']>
     readonly useGroupStore: UnwrapRef<typeof import('./stores/index')['useGroupStore']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
+    readonly useInterval: UnwrapRef<typeof import('./composables/useTimer')['useInterval']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
+    readonly useRafFn: UnwrapRef<typeof import('./composables/useTimer')['useRafFn']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router')['useRouter']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useSyncStore: UnwrapRef<typeof import('./stores/index')['useSyncStore']>
     readonly useTagStore: UnwrapRef<typeof import('./stores/index')['useTagStore']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
+    readonly useTimeout: UnwrapRef<typeof import('./composables/useTimer')['useTimeout']>
     readonly wasmHashService: UnwrapRef<typeof import('./utils/wasmHashService')['wasmHashService']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchEffect: UnwrapRef<typeof import('vue')['watchEffect']>

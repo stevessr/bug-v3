@@ -892,7 +892,7 @@ async function processUser(user: string, isInitial = false): Promise<boolean> {
     hasUpdates = true
   } else if (latestId !== lastSavedId && !isInitial) {
     const diff = []
-    for (let act of actions) {
+    for (const act of actions) {
       if (getUniqueId(act) === lastSavedId) break
       diff.push(act)
     }
@@ -1252,7 +1252,7 @@ function renderFeed() {
   if (!shadowRoot) return
   const div = shadowRoot.getElementById('sb-list')
   if (!div) return
-  let all: any[] = []
+  const all: any[] = []
   Object.entries(State.data).forEach(([user, arr]) => {
     if (!State.hiddenUsers.has(user)) all.push(...arr)
   })

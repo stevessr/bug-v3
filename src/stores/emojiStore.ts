@@ -52,41 +52,50 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const isReadOnlyMode = ref(false)
 
   // --- 直接保存 ---
-  // 直接保存指定分组（异步，不阻塞）
-  const saveGroup = (groupId: string) => {
+  // 优化：返回 Promise 以支持 await 和错误处理
+  const saveGroup = async (groupId: string): Promise<void> => {
     const group = groups.value.find(g => g.id === groupId)
     if (group) {
-      storage.setEmojiGroup(groupId, group).catch(err => {
+      try {
+        await storage.setEmojiGroup(groupId, group)
+      } catch (err) {
         console.error('[EmojiStore] Failed to save group:', groupId, err)
-      })
+        throw err
+      }
     }
   }
 
   // 直接保存 settings
-  const saveSettings = () => {
-    storage.setSettings(settings.value).catch(err => {
+  const saveSettings = async (): Promise<void> => {
+    try {
+      await storage.setSettings(settings.value)
+    } catch (err) {
       console.error('[EmojiStore] Failed to save settings:', err)
-    })
+      throw err
+    }
   }
 
   // 直接保存 favorites
-  const saveFavorites = () => {
-    storage.setFavorites(Array.from(favorites.value)).catch(err => {
+  const saveFavorites = async (): Promise<void> => {
+    try {
+      await storage.setFavorites(Array.from(favorites.value))
+    } catch (err) {
       console.error('[EmojiStore] Failed to save favorites:', err)
-    })
+      throw err
+    }
   }
 
-  // 兼容旧 API
-  const markGroupDirty = (groupId: string) => {
-    saveGroup(groupId)
+  // 兼容旧 API - 异步版本
+  const markGroupDirty = async (groupId: string): Promise<void> => {
+    return saveGroup(groupId)
   }
 
-  const markSettingsDirty = () => {
-    saveSettings()
+  const markSettingsDirty = async (): Promise<void> => {
+    return saveSettings()
   }
 
-  const markFavoritesDirty = () => {
-    saveFavorites()
+  const markFavoritesDirty = async (): Promise<void> => {
+    return saveFavorites()
   }
 
   // Enable or disable read-only mode
