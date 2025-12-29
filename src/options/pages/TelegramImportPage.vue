@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -156,6 +156,8 @@ const previewStickerSet = async () => {
     const existingGroup = store.groups.find(g => g.name === stickerSet.title)
     if (existingGroup) {
       importMode.value = 'update'
+      // 使用 nextTick 确保 GroupSelector 组件已渲染后再设置值
+      await nextTick()
       selectedGroupId.value = existingGroup.id
       message.info(`检测到已存在分组「${stickerSet.title}」，已自动切换到更新模式并选择该分组`)
     } else {
