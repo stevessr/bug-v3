@@ -59,9 +59,33 @@ const doImport = () => {
 const fillExample = () => {
   text.value = JSON.stringify(
     [
-      { name: '微笑', url: 'https://example.com/smile.png', groupId: '常用' },
-      { name: '点赞', url: 'https://example.com/thumbs-up.png', groupId: '常用' },
-      { name: '爱心', url: 'https://example.com/heart.png', groupId: '红色' }
+      {
+        name: '微笑',
+        url: 'https://example.com/smile.png',
+        displayUrl: 'https://example.com/smile-thumb.png',
+        width: 128,
+        height: 128,
+        groupId: '常用',
+        tags: ['表情', '开心']
+      },
+      {
+        name: '点赞',
+        url: 'https://example.com/thumbs-up.png',
+        width: 64,
+        height: 64,
+        groupId: '常用',
+        tags: ['手势', '赞同'],
+        customOutput: '👍'
+      },
+      {
+        name: '爱心',
+        url: 'https://example.com/heart.png',
+        originUrl: 'https://source.com/original-heart.png',
+        width: 256,
+        height: 256,
+        groupId: '红色',
+        tags: ['爱', '表情']
+      }
     ],
     null,
     2
@@ -103,6 +127,9 @@ const fillExample = () => {
             title="粘贴表情 JSON 内容"
           ></textarea>
           <div class="mt-2 text-xs text-gray-500 dark:text-white">
+            <div class="mb-2">
+              支持的字段：name (必需), url (必需), displayUrl, originUrl, width, height, groupId, tags, customOutput, perceptualHash
+            </div>
             示例：
             <a-button
               class="ml-2 text-blue-600 dark:text-blue-400 hover:underline"

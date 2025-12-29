@@ -113,8 +113,16 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
           name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl }),
+          ...(emoji.originUrl && { originUrl: emoji.originUrl }),
           ...(emoji.width && { width: emoji.width }),
-          ...(emoji.height && { height: emoji.height })
+          ...(emoji.height && { height: emoji.height }),
+          ...(emoji.tags && Array.isArray(emoji.tags) && { tags: emoji.tags }),
+          ...(emoji.customOutput && { customOutput: emoji.customOutput }),
+          ...(emoji.perceptualHash && { perceptualHash: emoji.perceptualHash }),
+          ...(emoji.usageCount && { usageCount: emoji.usageCount }),
+          ...(emoji.lastUsed && { lastUsed: emoji.lastUsed }),
+          ...(emoji.addedAt && { addedAt: emoji.addedAt }),
+          ...(emoji.referenceId && { referenceId: emoji.referenceId })
         }
         store.addEmojiWithoutSave(targetGroupId, emojiData)
       })
@@ -146,8 +154,16 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
           name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl }),
+          ...(emoji.originUrl && { originUrl: emoji.originUrl }),
           ...(emoji.width && { width: emoji.width }),
-          ...(emoji.height && { height: emoji.height })
+          ...(emoji.height && { height: emoji.height }),
+          ...(emoji.tags && Array.isArray(emoji.tags) && { tags: emoji.tags }),
+          ...(emoji.customOutput && { customOutput: emoji.customOutput }),
+          ...(emoji.perceptualHash && { perceptualHash: emoji.perceptualHash }),
+          ...(emoji.usageCount && { usageCount: emoji.usageCount }),
+          ...(emoji.lastUsed && { lastUsed: emoji.lastUsed }),
+          ...(emoji.addedAt && { addedAt: emoji.addedAt }),
+          ...(emoji.referenceId && { referenceId: emoji.referenceId })
         }
         if (targetId) store.addEmojiWithoutSave(targetId, emojiData)
       })
