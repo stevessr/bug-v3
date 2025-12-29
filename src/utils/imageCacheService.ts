@@ -32,6 +32,13 @@ export class ImageCacheService {
   private readonly MAX_CACHE_ENTRIES = 10000
   private readonly MAX_AGE = 30 * 24 * 60 * 60 * 1000 // 30 days
 
+  // 优化：批量统计更新队列，避免每次读取都执行 readwrite 事务
+  private readonly STATS_UPDATE_INTERVAL_MS = 5000 // 每 5 秒批量更新一次
+  private readonly STATS_UPDATE_BATCH_SIZE = 50 // 累积 50 条更新后立即写入
+  private pendingStatsUpdates: Map<string, { lastAccessed: number; accessCount: number }> =
+    new Map()
+  private statsUpdateTimer: ReturnType<typeof setTimeout> | null = null
+
   private stats: CacheStats = {
     totalImages: 0,
     totalSize: 0,
@@ -107,6 +114,77 @@ export class ImageCacheService {
     }
   }
 
+  /**
+   * 优化：将访问统计更新加入队列，批量异步写入
+   * 避免每次 getImage/getHash 都执行 readwrite 事务
+   */
+  private queueStatsUpdate(id: string, existingAccessCount: number): void {
+    const now = Date.now()
+    const existing = this.pendingStatsUpdates.get(id)
+
+    if (existing) {
+      // 合并更新：保留最新时间，累加访问次数
+      existing.lastAccessed = now
+      existing.accessCount++
+    } else {
+      this.pendingStatsUpdates.set(id, {
+        lastAccessed: now,
+        accessCount: existingAccessCount + 1
+      })
+    }
+
+    // 如果积累了足够多的更新，立即刷新
+    if (this.pendingStatsUpdates.size >= this.STATS_UPDATE_BATCH_SIZE) {
+      this.flushStatsUpdates()
+      return
+    }
+
+    // 否则启动定时器延迟批量写入
+    if (!this.statsUpdateTimer) {
+      this.statsUpdateTimer = setTimeout(() => {
+        this.flushStatsUpdates()
+      }, this.STATS_UPDATE_INTERVAL_MS)
+    }
+  }
+
+  /**
+   * 批量写入待处理的统计更新
+   */
+  private async flushStatsUpdates(): Promise<void> {
+    if (this.statsUpdateTimer) {
+      clearTimeout(this.statsUpdateTimer)
+      this.statsUpdateTimer = null
+    }
+
+    if (this.pendingStatsUpdates.size === 0 || !this.db) {
+      return
+    }
+
+    // 取出所有待更新项
+    const updates = new Map(this.pendingStatsUpdates)
+    this.pendingStatsUpdates.clear()
+
+    try {
+      const transaction = this.db.transaction([this.STORE_NAME], 'readwrite')
+      const store = transaction.objectStore(this.STORE_NAME)
+
+      for (const [id, { lastAccessed, accessCount }] of updates) {
+        const getRequest = store.get(id)
+        getRequest.onsuccess = () => {
+          const cachedImage = getRequest.result as CachedImage | undefined
+          if (cachedImage) {
+            cachedImage.lastAccessed = lastAccessed
+            cachedImage.accessCount = accessCount
+            store.put(cachedImage)
+          }
+        }
+      }
+    } catch (error) {
+      // 静默失败，统计更新不影响核心功能
+      console.warn('[ImageCacheService] Failed to flush stats updates:', error)
+    }
+  }
+
   async getImage(url: string): Promise<Blob | null> {
     if (!this.db) {
       await this.init()
@@ -114,7 +192,8 @@ export class ImageCacheService {
     if (!this.db) return null
 
     const id = this.generateId(url)
-    const transaction = this.db.transaction([this.STORE_NAME], 'readwrite')
+    // 优化：使用 readonly 事务读取，统计更新走队列批量写入
+    const transaction = this.db.transaction([this.STORE_NAME], 'readonly')
     const store = transaction.objectStore(this.STORE_NAME)
 
     return new Promise((resolve, reject) => {
@@ -124,10 +203,8 @@ export class ImageCacheService {
         const cachedImage = request.result as CachedImage | undefined
 
         if (cachedImage) {
-          // Update access statistics
-          cachedImage.lastAccessed = Date.now()
-          cachedImage.accessCount++
-          store.put(cachedImage)
+          // 异步队列更新访问统计，不阻塞读取
+          this.queueStatsUpdate(id, cachedImage.accessCount)
 
           this.stats.cacheHits++
           resolve(cachedImage.blob)
@@ -186,6 +263,7 @@ export class ImageCacheService {
     if (!this.db) return null
 
     const id = this.generateId(url)
+    // 优化：使用 readonly 事务读取，统计更新走队列批量写入
     const transaction = this.db.transaction([this.STORE_NAME], 'readonly')
     const store = transaction.objectStore(this.STORE_NAME)
 
@@ -195,17 +273,8 @@ export class ImageCacheService {
       request.onsuccess = () => {
         const cachedImage = request.result as CachedImage | undefined
         if (cachedImage && cachedImage.hash) {
-          // Update access statistics
-          if (!this.db) {
-            reject(new Error('Database not initialized'))
-            return
-          }
-          const updateTransaction = this.db.transaction([this.STORE_NAME], 'readwrite')
-          const updateStore = updateTransaction.objectStore(this.STORE_NAME)
-          cachedImage.lastAccessed = Date.now()
-          cachedImage.accessCount++
-          updateStore.put(cachedImage)
-
+          // 异步队列更新访问统计，不阻塞读取
+          this.queueStatsUpdate(id, cachedImage.accessCount)
           resolve(cachedImage.hash)
         } else {
           resolve(null)

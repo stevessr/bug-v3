@@ -961,6 +961,194 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Flag to suppress storage change events when we're processing runtime messages
   let isProcessingRuntimeMessage = false
 
+  // --- Storage Change Handlers (优化：按 key 类型分派处理，减少主监听器复杂度) ---
+
+  /**
+   * 处理 legacy emojiGroups key 的变更
+   */
+  const handleLegacyGroupsChange = (change: chrome.storage.StorageChange) => {
+    const legacyGroups = change?.newValue
+    if (!Array.isArray(legacyGroups)) return
+
+    console.log('[EmojiStore] Processing legacy emojiGroups change')
+    const legacyFavorites = legacyGroups.find((g: any) => g.id === 'favorites')
+    if (!legacyFavorites) return
+
+    const idx = groups.value.findIndex(g => g.id === 'favorites')
+    if (idx !== -1) {
+      const updatedGroups = [...groups.value]
+      updatedGroups[idx] = legacyFavorites
+      groups.value = updatedGroups
+      console.log('[EmojiStore] Updated favorites group from legacy data')
+    } else {
+      groups.value = [...groups.value, legacyFavorites]
+      console.log('[EmojiStore] Added favorites group from legacy data')
+    }
+  }
+
+  /**
+   * 处理单个分组的变更
+   */
+  const handleGroupChange = async (
+    groupId: string,
+    change: chrome.storage.StorageChange
+  ): Promise<void> => {
+    // 尝试从 change payload 获取新数据
+    let newGroup: EmojiGroup | null = null
+    if (change?.newValue && typeof change.newValue === 'object') {
+      newGroup = (change.newValue as { data?: EmojiGroup }).data || null
+    }
+
+    // 如果 payload 中没有，回退到存储读取
+    if (!newGroup) {
+      try {
+        newGroup = await storage.getEmojiGroup(groupId)
+      } catch {
+        newGroup = null
+      }
+    }
+
+    // 分组被删除
+    if (newGroup == null) {
+      groups.value = groups.value.filter(g => g.id !== groupId)
+      console.log('[EmojiStore] Removed group from store due to external change', groupId)
+      return
+    }
+
+    // 规范化图片 URL
+    try {
+      if (typeof newGroup.icon === 'string') {
+        newGroup.icon = normalizeImageUrl(newGroup.icon) || newGroup.icon
+      }
+      if (Array.isArray(newGroup.emojis)) {
+        for (const e of newGroup.emojis) {
+          if (e?.url) e.url = normalizeImageUrl(e.url) || e.url
+          if (e?.displayUrl) e.displayUrl = normalizeImageUrl(e.displayUrl) || e.displayUrl
+        }
+      }
+    } catch {
+      // 忽略规范化错误
+    }
+
+    // 更新或插入分组
+    const idx = groups.value.findIndex(g => g.id === newGroup!.id)
+    if (idx !== -1) {
+      const merged = { ...groups.value[idx], ...newGroup }
+      groups.value = [...groups.value.slice(0, idx), merged, ...groups.value.slice(idx + 1)]
+      console.log('[EmojiStore] Updated group in-place from external change', newGroup.id)
+    } else {
+      groups.value = [...groups.value, newGroup]
+      console.log('[EmojiStore] Inserted new group from external change', newGroup.id)
+    }
+  }
+
+  /**
+   * 处理设置变更
+   */
+  const handleSettingsChange = (change: chrome.storage.StorageChange) => {
+    const data = change?.newValue ? (change.newValue as { data?: AppSettings }).data : null
+    if (data && typeof data === 'object') {
+      settings.value = { ...defaultSettings, ...data }
+      console.log('[EmojiStore] Updated settings from external storage')
+    }
+  }
+
+  /**
+   * 处理收藏夹变更
+   */
+  const handleFavoritesChange = (change: chrome.storage.StorageChange) => {
+    const data = change?.newValue ? (change.newValue as { data?: string[] }).data : null
+    if (Array.isArray(data)) {
+      favorites.value = new Set(data)
+      console.log('[EmojiStore] Updated favorites from external storage')
+    }
+  }
+
+  /**
+   * 处理分组索引变更
+   */
+  const handleGroupIndexChange = async (): Promise<void> => {
+    try {
+      const index = await storage.getEmojiGroupIndex()
+      console.log('[EmojiStore] Processing GROUP_INDEX change:', index)
+
+      if (!Array.isArray(index) || !index.length) return
+
+      // 检查是否有新分组需要加载
+      const existingIds = new Set(groups.value.map(g => g.id))
+      const newGroupIds = index.filter(entry => !existingIds.has(entry.id))
+
+      // 加载新分组
+      if (newGroupIds.length > 0) {
+        console.log(
+          '[EmojiStore] Loading new groups from index:',
+          newGroupIds.map(e => e.id)
+        )
+        for (const entry of newGroupIds) {
+          try {
+            const newGroup = await storage.getEmojiGroup(entry.id)
+            if (newGroup) {
+              groups.value.push({ ...newGroup, order: entry.order })
+              console.log(
+                '[EmojiStore] Loaded new group:',
+                entry.id,
+                'emojis:',
+                newGroup.emojis?.length ?? 0
+              )
+            }
+          } catch {
+            console.warn('[EmojiStore] Failed to load new group:', entry.id)
+          }
+        }
+      }
+
+      // 按索引重新排序
+      const orderMap = new Map(index.map((i: { id: string; order: number }) => [i.id, i.order]))
+      const reordered = [...groups.value].sort((a, b) => {
+        const oa = orderMap.get(a.id) ?? a.order ?? 0
+        const ob = orderMap.get(b.id) ?? b.order ?? 0
+        return oa - ob
+      })
+      groups.value = reordered.map((g, idx) => ({ ...g, order: idx }))
+      console.log('[EmojiStore] Reordered groups from external group index')
+    } catch {
+      // 忽略错误
+    }
+  }
+
+  /**
+   * 处理存储变更事件的分派器
+   */
+  const processStorageChanges = async (
+    changes: { [key: string]: chrome.storage.StorageChange },
+    keys: string[]
+  ): Promise<void> => {
+    // 处理 legacy key
+    if (keys.includes('emojiGroups')) {
+      handleLegacyGroupsChange(changes['emojiGroups'])
+    }
+
+    // 按 key 类型分派处理
+    for (const key of keys) {
+      try {
+        if (key === 'emojiGroups') continue // 已处理
+
+        if (key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
+          const groupId = key.replace(STORAGE_KEYS.GROUP_PREFIX, '')
+          await handleGroupChange(groupId, changes[key])
+        } else if (key === STORAGE_KEYS.SETTINGS) {
+          handleSettingsChange(changes[key])
+        } else if (key === STORAGE_KEYS.FAVORITES) {
+          handleFavoritesChange(changes[key])
+        } else if (key === STORAGE_KEYS.GROUP_INDEX) {
+          await handleGroupIndexChange()
+        }
+      } catch (err) {
+        console.error('[EmojiStore] Error processing external key', key, err)
+      }
+    }
+  }
+
   // Note: The new storage system handles cross-context synchronization internally
   // We'll add a conservative listener for backward compatibility but only react
   // to relevant keys and to newer changes. This avoids frequent full reloads
@@ -1058,184 +1246,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
               '[EmojiStore] Applying external storage update - processing relevant keys',
               capturedKeys
             )
-
-            // Special handling for legacy emojiGroups key
-            if (capturedKeys.includes('emojiGroups')) {
-              const change = capturedChanges['emojiGroups']
-              const legacyGroups = change && change.newValue ? change.newValue : null
-              if (Array.isArray(legacyGroups)) {
-                console.log('[EmojiStore] Processing legacy emojiGroups change')
-                // Find favorites group from legacy data
-                const legacyFavorites = legacyGroups.find((g: any) => g.id === 'favorites')
-                if (legacyFavorites) {
-                  const idx = groups.value.findIndex(g => g.id === 'favorites')
-                  if (idx !== -1) {
-                    // Update existing favorites group
-                    const updatedGroups = [...groups.value]
-                    updatedGroups[idx] = legacyFavorites
-                    groups.value = updatedGroups
-                    console.log('[EmojiStore] Updated favorites group from legacy data')
-                  } else {
-                    // Add new favorites group
-                    groups.value = [...groups.value, legacyFavorites]
-                    console.log('[EmojiStore] Added favorites group from legacy data')
-                  }
-                }
-              }
-            }
-
-            // Process each relevant key individually to avoid full reloads
-            for (const k of capturedKeys) {
-              try {
-                // Skip legacy key as it's handled above
-                if (k === 'emojiGroups') continue
-
-                // Group-level change
-                if (k.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
-                  const groupId = k.replace(STORAGE_KEYS.GROUP_PREFIX, '')
-                  // Try to read new group data from change payload first
-                  let newGroup: EmojiGroup | null = null
-                  const change = capturedChanges[k]
-                  if (change && change.newValue && typeof change.newValue === 'object') {
-                    newGroup = (change.newValue as { data?: EmojiGroup }).data || null
-                  }
-                  // Fallback to storage read (conflict resolution) if not present
-                  if (!newGroup) {
-                    try {
-                      newGroup = await storage.getEmojiGroup(groupId)
-                    } catch {
-                      newGroup = null
-                    }
-                  }
-
-                  // If group deleted (null), remove locally; otherwise upsert
-                  if (newGroup == null) {
-                    groups.value = groups.value.filter(g => g.id !== groupId)
-                    console.log(
-                      '[EmojiStore] Removed group from store due to external change',
-                      groupId
-                    )
-                  } else {
-                    // Normalize image URLs similar to loadData
-                    try {
-                      if (newGroup && typeof newGroup.icon === 'string') {
-                        newGroup.icon = normalizeImageUrl(newGroup.icon) || newGroup.icon
-                      }
-                      if (Array.isArray(newGroup.emojis)) {
-                        for (const e of newGroup.emojis) {
-                          if (e && typeof e.url === 'string')
-                            e.url = normalizeImageUrl(e.url) || e.url
-                          if (e && typeof e.displayUrl === 'string')
-                            e.displayUrl = normalizeImageUrl(e.displayUrl) || e.displayUrl
-                        }
-                      }
-                    } catch {
-                      // ignore normalization errors
-                    }
-
-                    const idx = groups.value.findIndex(g => g.id === newGroup.id)
-                    if (idx !== -1) {
-                      // Merge existing metadata but prefer incoming data
-                      const merged = { ...groups.value[idx], ...newGroup }
-                      groups.value = [
-                        ...groups.value.slice(0, idx),
-                        merged,
-                        ...groups.value.slice(idx + 1)
-                      ]
-                      console.log(
-                        '[EmojiStore] Updated group in-place from external change',
-                        newGroup.id
-                      )
-                    } else {
-                      groups.value = [...groups.value, newGroup]
-                      console.log(
-                        '[EmojiStore] Inserted new group from external change',
-                        newGroup.id
-                      )
-                    }
-                  }
-                }
-
-                // Settings change
-                else if (k === STORAGE_KEYS.SETTINGS) {
-                  const change = capturedChanges[k]
-                  const data =
-                    change && change.newValue
-                      ? (change.newValue as { data?: AppSettings }).data
-                      : null
-                  if (data && typeof data === 'object') {
-                    settings.value = { ...defaultSettings, ...data }
-                    console.log('[EmojiStore] Updated settings from external storage')
-                  }
-                }
-
-                // Favorites change
-                else if (k === STORAGE_KEYS.FAVORITES) {
-                  const change = capturedChanges[k]
-                  const data =
-                    change && change.newValue ? (change.newValue as { data?: string[] }).data : null
-                  if (Array.isArray(data)) {
-                    favorites.value = new Set(data)
-                    console.log('[EmojiStore] Updated favorites from external storage')
-                  }
-                }
-
-                // Group index (order) changed - refresh index and apply order
-                // Also load any newly added groups
-                else if (k === STORAGE_KEYS.GROUP_INDEX) {
-                  try {
-                    const index = await storage.getEmojiGroupIndex()
-                    console.log('[EmojiStore] Processing GROUP_INDEX change:', index)
-
-                    if (Array.isArray(index) && index.length) {
-                      // Check for new groups that need to be loaded
-                      const existingIds = new Set(groups.value.map(g => g.id))
-                      const newGroupIds = index.filter(entry => !existingIds.has(entry.id))
-
-                      // Load any new groups
-                      if (newGroupIds.length > 0) {
-                        console.log(
-                          '[EmojiStore] Loading new groups from index:',
-                          newGroupIds.map(e => e.id)
-                        )
-                        for (const entry of newGroupIds) {
-                          try {
-                            const newGroup = await storage.getEmojiGroup(entry.id)
-                            if (newGroup) {
-                              groups.value.push({ ...newGroup, order: entry.order })
-                              console.log(
-                                '[EmojiStore] Loaded new group:',
-                                entry.id,
-                                'emojis:',
-                                newGroup.emojis?.length ?? 0
-                              )
-                            }
-                          } catch {
-                            console.warn('[EmojiStore] Failed to load new group:', entry.id)
-                          }
-                        }
-                      }
-
-                      // Map order by id and reorder
-                      const orderMap = new Map(
-                        index.map((i: { id: string; order: number }) => [i.id, i.order])
-                      )
-                      const reordered = [...groups.value].sort((a, b) => {
-                        const oa = orderMap.get(a.id) ?? a.order ?? 0
-                        const ob = orderMap.get(b.id) ?? b.order ?? 0
-                        return oa - ob
-                      })
-                      groups.value = reordered.map((g, idx) => ({ ...g, order: idx }))
-                      console.log('[EmojiStore] Reordered groups from external group index')
-                    }
-                  } catch {
-                    // ignore
-                  }
-                }
-              } catch (innerErr) {
-                console.error('[EmojiStore] Error processing external key', k, innerErr)
-              }
-            }
+            await processStorageChanges(capturedChanges, capturedKeys)
           } catch (error) {
             console.error('[EmojiStore] Failed to process storage change', error)
           } finally {
