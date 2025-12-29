@@ -317,7 +317,7 @@ const doImport = async () => {
         })
 
         const emojiId = `telegram_${sticker.file_id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
-        newEmojis.push({
+        const newEmoji = {
           id: emojiId,
           packet: 0,
           name: filename,
@@ -326,7 +326,9 @@ const doImport = async () => {
           width: sticker.width,
           height: sticker.height,
           groupId: targetGroup!.id
-        })
+        }
+
+        newEmojis.push(newEmoji)
 
         // 实时添加到预览列表
         importingEmojis.value.push({
@@ -336,6 +338,21 @@ const doImport = async () => {
           width: sticker.width,
           height: sticker.height
         })
+
+        // 【关键】实时更新到分组中
+        // 由于 groups 是 shallowRef，需要完整替换数组引用
+        targetGroup!.emojis.push(newEmoji)
+
+        // 找到分组在 store.groups 中的位置并更新整个数组引用
+        const groupIndex = store.groups.findIndex(g => g.id === targetGroup!.id)
+        if (groupIndex !== -1) {
+          // 创建新的 groups 数组以触发 shallowRef 响应式
+          store.groups = [
+            ...store.groups.slice(0, groupIndex),
+            { ...targetGroup! }, // 浅拷贝分组对象
+            ...store.groups.slice(groupIndex + 1)
+          ]
+        }
 
         progress.value.processed = i + 1
       } catch (err: any) {
@@ -354,53 +371,30 @@ const doImport = async () => {
       }
     }
 
-    // 更新分组中的 emojis
-    let addedCount = 0
-    let skippedCount = skippedDuplicates // 使用上传阶段统计的跳过数量
+    // 统计导入结果
+    const addedCount = newEmojis.length
+    const skippedCount = skippedDuplicates
 
-    if (importMode.value === 'new') {
-      addedCount = newEmojis.length
-
-      // 关键修复：先更新 emojis，然后重新创建整个 groups 数组以触发响应式
-      targetGroup!.emojis = newEmojis
-
-      const groupIndex = store.groups.findIndex(g => g.id === targetGroup!.id)
-      if (groupIndex !== -1) {
-        // 使用完整的对象（包含 emojis）重新构建 groups 数组
-        store.groups = [
-          ...store.groups.slice(0, groupIndex),
-          { ...targetGroup!, emojis: [...newEmojis] }, // 确保 emojis 是新数组
-          ...store.groups.slice(groupIndex + 1)
-        ]
-      } else {
-        // 如果找不到（理论上不应该发生），直接追加
-        console.warn('[TelegramImport] Target group not found in store, appending...')
-        store.groups = [...store.groups, { ...targetGroup!, emojis: [...newEmojis] }]
-      }
-    } else {
-      // 更新模式：直接添加新 emoji（已在上传前过滤重复）
-      addedCount = newEmojis.length
-
-      const updatedEmojis = [...targetGroup!.emojis, ...newEmojis]
-      targetGroup!.emojis = updatedEmojis
-
-      // 更新 groups 引用以触发响应式
-      const groupIndex = store.groups.findIndex(g => g.id === targetGroup!.id)
-      if (groupIndex !== -1) {
-        store.groups = [
-          ...store.groups.slice(0, groupIndex),
-          { ...targetGroup!, emojis: [...updatedEmojis] }, // 确保 emojis 是新数组
-          ...store.groups.slice(groupIndex + 1)
-        ]
-      }
-    }
+    // 注意：表情已经在上传过程中实时添加到了 targetGroup 和 store.groups
+    // 这里只需要确保最终状态正确并调试
 
     // 调试：打印当前 store.groups 状态
     console.log('[TelegramImport] Before endBatch - groups count:', store.groups.length)
     console.log('[TelegramImport] Target group ID:', targetGroup!.id)
-    const targetGroupInStore = store.groups.find(g => g.id === targetGroup!.id)
-    console.log('[TelegramImport] Target group in store:', targetGroupInStore)
-    console.log('[TelegramImport] Target group emojis count:', targetGroupInStore?.emojis?.length || 0)
+    const targetGroupInStore = store.groups.findIndex(g => g.id === targetGroup!.id)
+    console.log('[TelegramImport] Target group index in store:', targetGroupInStore)
+    if (targetGroupInStore !== -1) {
+      console.log('[TelegramImport] Target group emojis count:', store.groups[targetGroupInStore]?.emojis?.length || 0)
+
+      // 【关键修复】确保最终状态正确，触发一次完整的 groups 更新
+      // 这会设置 pendingSave flag，确保 endBatch 时保存
+      const finalGroup = store.groups[targetGroupInStore]
+      store.groups = [
+        ...store.groups.slice(0, targetGroupInStore),
+        { ...finalGroup, emojis: [...finalGroup.emojis] },
+        ...store.groups.slice(targetGroupInStore + 1)
+      ]
+    }
 
     // 结束批量操作并保存
     await store.endBatch()
