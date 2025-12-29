@@ -1400,6 +1400,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // Actions
     loadData,
     saveData,
+    saveGroup,
+    saveSettings,
+    saveFavorites,
     setReadOnlyMode,
     // Group operations (delegated to groupStore)
     createGroup: groupStore.createGroup,
