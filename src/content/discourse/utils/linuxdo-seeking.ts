@@ -114,6 +114,10 @@ function getSelfUser(): string | null {
 let shadowRoot: ShadowRoot | null = null
 const pushedIds = new Set<string>()
 
+// 优化：定时器控制，在侧边栏折叠时暂停视觉更新以节省 CPU
+// 注意：调度器 (scheduler) 需要持续运行以监控用户动态
+let visualUpdateInterval: ReturnType<typeof setInterval> | null = null
+
 const state: State = {
   users: [],
   lastIds: {},
@@ -128,6 +132,69 @@ const state: State = {
   nextFetchTime: {},
   userProfiles: {},
   isLeader: false
+}
+
+// 优化：视觉更新控制函数，在侧边栏折叠时暂停以节省 CPU
+function startVisualUpdates() {
+  if (visualUpdateInterval) return
+  visualUpdateInterval = setInterval(() => {
+    if (!shadowRoot) return
+    state.users.forEach(u => {
+      const timerEl = shadowRoot!.getElementById(`timer-${u}`)
+      if (timerEl) {
+        const titleEl = timerEl.querySelector('title')
+        if (titleEl) {
+          const duration = getUserCycleDuration(u)
+          const timerTitle = `刷新间隔：${(duration / 1000).toFixed(0)}s`
+          if (titleEl.textContent !== timerTitle) {
+            titleEl.textContent = timerTitle
+          }
+        }
+      }
+
+      const activityEl = shadowRoot!.getElementById(`activity-${u}`)
+      if (!activityEl) return
+      const isHidden = state.hiddenUsers.has(u)
+      const profile = state.userProfiles[u]
+      const userData = state.data[u]
+
+      if (profile) {
+        const spans = activityEl.querySelectorAll('span')
+        if (spans.length >= 3) {
+          const postedIso = profile.last_posted_at
+          const actionIso = userData?.[0]?.created_at
+          const seenIso = profile.last_seen_at
+
+          const postedAgo = postedIso ? formatTimeAgo(postedIso) : '--'
+          if (spans[0].textContent !== postedAgo) spans[0].textContent = postedAgo
+          ;(spans[0] as HTMLElement).style.color = isHidden
+            ? 'var(--primary-medium)'
+            : getTimeAgoColor(postedIso)
+
+          const lastActionAgo = actionIso ? formatTimeAgo(actionIso) : '--'
+          if (spans[1].textContent !== lastActionAgo) spans[1].textContent = lastActionAgo
+          ;(spans[1] as HTMLElement).style.color = isHidden
+            ? 'var(--primary-medium)'
+            : getTimeAgoColor(actionIso)
+
+          const seenAgo = seenIso ? formatTimeAgo(seenIso) : '--'
+          if (spans[2].textContent !== seenAgo) spans[2].textContent = seenAgo
+          ;(spans[2] as HTMLElement).style.color = isHidden
+            ? 'var(--primary-medium)'
+            : getTimeAgoColor(seenIso)
+        }
+      }
+    })
+  }, 1000)
+  console.log('[LinuxDo] Visual updates started')
+}
+
+function stopVisualUpdates() {
+  if (visualUpdateInterval) {
+    clearInterval(visualUpdateInterval)
+    visualUpdateInterval = null
+    console.log('[LinuxDo] Visual updates stopped')
+  }
 }
 
 // --- 工具函数 ---
@@ -552,12 +619,19 @@ function createUI() {
   shadowRoot.appendChild(container)
 
   // 绑定事件
-  shadowRoot.getElementById('ld-toggle-ball').onclick = () => {
-    const bar = shadowRoot.getElementById('ld-sidebar')
+  shadowRoot.getElementById('ld-toggle-ball')!.onclick = () => {
+    const bar = shadowRoot!.getElementById('ld-sidebar')
     if (bar) {
       bar.classList.toggle('collapsed')
       state.isCollapsed = bar.classList.contains('collapsed')
       sessionStorage.setItem('ld_is_collapsed', String(state.isCollapsed))
+
+      // 优化：折叠时仅暂停视觉更新，调度器继续运行以监控用户动态
+      if (state.isCollapsed) {
+        stopVisualUpdates()
+      } else {
+        startVisualUpdates()
+      }
     }
   }
 
@@ -600,7 +674,12 @@ function createUI() {
   window.addEventListener('focus', takeLeadership)
 
   log('Engine started.', 'success')
+
+  // 调度器始终运行以监控用户动态，视觉更新仅在侧边栏展开时启动
   setInterval(() => scheduler(), 1000)
+  if (!state.isCollapsed) {
+    startVisualUpdates()
+  }
 }
 
 // --- 网络请求 ---
@@ -1134,7 +1213,7 @@ function startVisualLoops() {
     if (!shadowRoot) return
     const now = Date.now()
     state.users.forEach(u => {
-      const timerEl = shadowRoot.getElementById(`timer-${u}`)
+      const timerEl = shadowRoot!.getElementById(`timer-${u}`)
       if (!timerEl) return
       const progressCircle = timerEl.querySelector('.timer-progress')
       if (!progressCircle) return
@@ -1156,49 +1235,7 @@ function startVisualLoops() {
   }
   requestAnimationFrame(updateTimers)
 
-  setInterval(() => {
-    if (!shadowRoot) return
-    state.users.forEach(u => {
-      const timerEl = shadowRoot.getElementById(`timer-${u}`)
-      if (timerEl) {
-        const titleEl = timerEl.querySelector('title')
-        if (titleEl) {
-          const duration = getUserCycleDuration(u)
-          const timerTitle = `刷新间隔：${(duration / 1000).toFixed(0)}s`
-          if (titleEl.textContent !== timerTitle) {
-            titleEl.textContent = timerTitle
-          }
-        }
-      }
-
-      const activityEl = shadowRoot.getElementById(`activity-${u}`)
-      if (!activityEl) return
-      const isHidden = state.hiddenUsers.has(u)
-      const profile = state.userProfiles[u]
-      const userData = state.data[u]
-
-      if (profile) {
-        const spans = activityEl.querySelectorAll('span')
-        if (spans.length >= 3) {
-          const postedIso = profile.last_posted_at
-          const actionIso = userData?.[0]?.created_at
-          const seenIso = profile.last_seen_at
-
-          const postedAgo = postedIso ? formatTimeAgo(postedIso) : '--'
-          if (spans[0].textContent !== postedAgo) spans[0].textContent = postedAgo
-          spans[0].style.color = isHidden ? 'var(--primary-medium)' : getTimeAgoColor(postedIso)
-
-          const lastActionAgo = actionIso ? formatTimeAgo(actionIso) : '--'
-          if (spans[1].textContent !== lastActionAgo) spans[1].textContent = lastActionAgo
-          spans[1].style.color = isHidden ? 'var(--primary-medium)' : getTimeAgoColor(actionIso)
-
-          const seenAgo = seenIso ? formatTimeAgo(seenIso) : '--'
-          if (spans[2].textContent !== seenAgo) spans[2].textContent = seenAgo
-          spans[2].style.color = isHidden ? 'var(--primary-medium)' : getTimeAgoColor(seenIso)
-        }
-      }
-    })
-  }, 1000)
+  // 优化：原 setInterval 已移至 startVisualUpdates()，由折叠状态控制
 }
 
 function renderSidebarRows() {
@@ -1257,6 +1294,9 @@ function renderSidebarRows() {
   })
 }
 
+// 优化：避免重复绑定事件监听器
+let feedClickHandlerBound = false
+
 function renderFeed() {
   if (!shadowRoot) return
   const div = shadowRoot.getElementById('sb-list')
@@ -1272,59 +1312,82 @@ function renderFeed() {
     return
   }
 
-  div.innerHTML = all
-    .map(item => {
-      let avatar =
-        'https://linux.do/uploads/default/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png'
-      if (item.avatar_template) avatar = CONFIG.HOST + item.avatar_template.replace('{size}', '48')
+  // 优化：仅在第一次调用时绑定事件委托，避免重复绑定
+  if (!feedClickHandlerBound) {
+    div.addEventListener('click', e => {
+      const card = (e.target as HTMLElement).closest('.sb-card')
+      if (card) {
+        const link = card.getAttribute('data-link')
+        if (link) {
+          navigateToLink(link)
+        }
+      }
+    })
+    feedClickHandlerBound = true
+  }
 
-      const date = new Date(item.created_at)
-      const now = new Date()
-      const timeStr =
-        date.toDateString() === now.toDateString()
-          ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-          : date.toLocaleString('en-US', { month: 'short', day: '2-digit' })
+  // 优化：使用增量更新而非完全替换 innerHTML
+  const existingCards = new Map<string, HTMLElement>()
+  div.querySelectorAll('.sb-card').forEach(card => {
+    const link = card.getAttribute('data-link')
+    if (link) existingCards.set(link, card as HTMLElement)
+  })
 
-      const catName = categoryMap.get(item.category_id) || '未分区'
-      const catColor = categoryColors[catName] || '#9e9e9e'
+  const fragment = document.createDocumentFragment()
+  all.forEach(item => {
+    let avatar =
+      'https://linux.do/uploads/default/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png'
+    if (item.avatar_template) avatar = CONFIG.HOST + item.avatar_template.replace('{size}', '48')
 
-      const excerpt = cleanHtml(item.excerpt)
-      const imgUrl = extractImg(item.excerpt)
-      const link = `/t/${item.topic_id}/${item.post_number}`
-      const actionInfo = formatActionInfo(item)
-      const excerptClass =
-        item.action_type === 4 || item.action_type === 5
-          ? 'sb-card-excerpt'
-          : 'sb-card-excerpt-cited'
+    const date = new Date(item.created_at)
+    const now = new Date()
+    const timeStr =
+      date.toDateString() === now.toDateString()
+        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+        : date.toLocaleString('en-US', { month: 'short', day: '2-digit' })
 
-      return `
-        <div class="sb-card" data-link="${link}">
-          <div class="sb-card-head">
-            <img src="${avatar}" class="sb-avatar">
-            <div class="sb-card-info">
-              <div class="sb-user-box">${actionInfo.html}</div>
-              <div class="sb-card-title">${item.title}</div>
-            </div>
-          </div>
-          ${excerpt ? `<div class="${excerptClass}">${excerpt}</div>` : ''}
-          ${imgUrl ? `<img src="${imgUrl}" class="sb-card-img" loading="lazy">` : ''}
-          <div class="sb-card-foot">
-            <span class="sb-badge" style="color:${catColor};background:${catColor}15">${catName}</span>
-            <span class="sb-timestr">${timeStr}</span>
+    const catName = categoryMap.get(item.category_id) || '未分区'
+    const catColor = categoryColors[catName] || '#9e9e9e'
+
+    const excerpt = cleanHtml(item.excerpt)
+    const imgUrl = extractImg(item.excerpt)
+    const link = `/t/${item.topic_id}/${item.post_number}`
+    const actionInfo = formatActionInfo(item)
+    const excerptClass =
+      item.action_type === 4 || item.action_type === 5
+        ? 'sb-card-excerpt'
+        : 'sb-card-excerpt-cited'
+
+    // 检查是否已存在相同的卡片，如果存在则复用
+    const existing = existingCards.get(link)
+    if (existing) {
+      fragment.appendChild(existing)
+      existingCards.delete(link)
+    } else {
+      // 新建卡片元素
+      const cardDiv = document.createElement('div')
+      cardDiv.className = 'sb-card'
+      cardDiv.setAttribute('data-link', link)
+      cardDiv.innerHTML = `
+        <div class="sb-card-head">
+          <img src="${avatar}" class="sb-avatar">
+          <div class="sb-card-info">
+            <div class="sb-user-box">${actionInfo.html}</div>
+            <div class="sb-card-title">${item.title}</div>
           </div>
         </div>
+        ${excerpt ? `<div class="${excerptClass}">${excerpt}</div>` : ''}
+        ${imgUrl ? `<img src="${imgUrl}" class="sb-card-img" loading="lazy">` : ''}
+        <div class="sb-card-foot">
+          <span class="sb-badge" style="color:${catColor};background:${catColor}15">${catName}</span>
+          <span class="sb-timestr">${timeStr}</span>
+        </div>
       `
-    })
-    .join('')
-
-  // 添加事件委托来处理卡片点击
-  div.addEventListener('click', e => {
-    const card = (e.target as HTMLElement).closest('.sb-card')
-    if (card) {
-      const link = card.getAttribute('data-link')
-      if (link) {
-        navigateToLink(link)
-      }
+      fragment.appendChild(cardDiv)
     }
   })
+
+  // 一次性替换所有内容
+  div.textContent = ''
+  div.appendChild(fragment)
 }

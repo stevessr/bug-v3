@@ -215,8 +215,8 @@ const SAFE_TYPES = new Set(['string', 'number', 'boolean', 'undefined'])
  */
 function ensureSerializable<T>(data: T, depth = 0): T {
   if (depth > 10) {
-    console.warn('[Storage] Max depth reached')
-    return data
+    console.warn('[Storage] Max depth reached, returning null to prevent unsafe references')
+    return null as T
   }
 
   if (data === null || data === undefined) return data
@@ -270,8 +270,8 @@ function ensureSerializable<T>(data: T, depth = 0): T {
 
     return raw
   } catch (error) {
-    console.error('[Storage] Serialization failed:', error)
-    return data
+    console.error('[Storage] Serialization failed, returning null:', error)
+    return null as T
   }
 }
 
@@ -348,7 +348,11 @@ export async function checkStorageHealth(): Promise<{
     ])
 
     const hasGroups = Array.isArray(groupIndex) && groupIndex.length > 0
-    const hasSettings = settings && typeof settings === 'object' && Object.keys(settings).length > 0
+    const hasSettings = !!(
+      settings &&
+      typeof settings === 'object' &&
+      Object.keys(settings).length > 0
+    )
     const hasFavorites = Array.isArray(favorites)
 
     console.log('[Storage] Health check:', {

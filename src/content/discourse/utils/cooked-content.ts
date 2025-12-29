@@ -201,7 +201,8 @@ export function scanForCookedContent() {
 }
 
 // 观察 DOM 变化，自动处理新增的 cooked 内容
-export function observeCookedContent(): MutationObserver {
+// 返回清理函数，调用时会停止观察
+export function observeCookedContent(): () => void {
   // 启动时先立即扫描一次
   scanForCookedContent()
 
@@ -239,5 +240,9 @@ export function observeCookedContent(): MutationObserver {
   })
 
   observer.observe(document.body, { childList: true, subtree: true })
-  return observer
+
+  // 返回清理函数
+  return () => {
+    observer.disconnect()
+  }
 }
