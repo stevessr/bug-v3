@@ -15,6 +15,7 @@ import {
 } from '@/utils/telegramResolver'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
+import GroupSelector from '@/options/components/GroupSelector.vue'
 
 const store = useEmojiStore()
 
@@ -144,6 +145,7 @@ const doImport = async () => {
         id: newGroupId,
         name: newGroupName.value.trim(),
         icon: newGroupIcon.value,
+        detail: `Telegram 贴纸包：${telegramInput.value}`,
         order: store.groups.length,
         emojis: []
       }
@@ -300,19 +302,14 @@ const doImport = async () => {
         >
           <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">1️⃣ Bot Token 设置</h4>
           <div class="flex gap-2">
-            <input
-              v-model="telegramBotToken"
-              type="password"
+            <a-input-password
+              v-model:value="telegramBotToken"
               placeholder="输入 Telegram Bot Token"
-              class="flex-1 px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-black text-blue-900 dark:text-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="flex-1"
             />
-            <button
-              @click="saveBotToken"
-              :disabled="!telegramBotToken"
-              class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <a-button type="primary" @click="saveBotToken" :disabled="!telegramBotToken">
               保存
-            </button>
+            </a-button>
           </div>
           <p class="text-xs text-blue-700 dark:text-blue-300 mt-2">
             在 Telegram 中搜索 @BotFather，发送 /newbot 创建机器人获取 Token
@@ -338,20 +335,19 @@ const doImport = async () => {
         <div>
           <h4 class="font-medium text-gray-900 dark:text-white mb-3">3️⃣ 输入贴纸包链接或名称</h4>
           <div class="flex gap-2">
-            <input
-              v-model="telegramInput"
-              type="text"
+            <a-input
+              v-model:value="telegramInput"
               placeholder="例如：https://t.me/addstickers/xxx 或 xxx"
-              class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              @keyup.enter="previewStickerSet"
+              @pressEnter="previewStickerSet"
             />
-            <button
+            <a-button
+              type="primary"
               @click="previewStickerSet"
               :disabled="!telegramInput || isProcessing"
-              class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              :loading="isProcessing"
             >
               预览
-            </button>
+            </a-button>
           </div>
         </div>
 
@@ -392,16 +388,10 @@ const doImport = async () => {
           <!-- 导入选项 -->
           <div>
             <h4 class="font-medium text-gray-900 dark:text-white mb-3">4️⃣ 导入模式</h4>
-            <div class="flex gap-4 mb-4">
-              <label class="flex items-center cursor-pointer">
-                <input v-model="importMode" type="radio" value="new" class="mr-2" />
-                <span class="text-gray-700 dark:text-gray-300">新建分组</span>
-              </label>
-              <label class="flex items-center cursor-pointer">
-                <input v-model="importMode" type="radio" value="update" class="mr-2" />
-                <span class="text-gray-700 dark:text-gray-300">更新已有分组</span>
-              </label>
-            </div>
+            <a-radio-group v-model:value="importMode" class="mb-4">
+              <a-radio value="new">新建分组</a-radio>
+              <a-radio value="update">更新已有分组</a-radio>
+            </a-radio-group>
 
             <!-- 新建分组选项 -->
             <div v-if="importMode === 'new'" class="space-y-3">
@@ -409,23 +399,13 @@ const doImport = async () => {
                 <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   分组名称
                 </label>
-                <input
-                  v-model="newGroupName"
-                  type="text"
-                  placeholder="输入分组名称"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
-                />
+                <a-input v-model:value="newGroupName" placeholder="输入分组名称" />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   分组图标
                 </label>
-                <input
-                  v-model="newGroupIcon"
-                  type="text"
-                  placeholder="输入 emoji 图标"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
-                />
+                <a-input v-model:value="newGroupIcon" placeholder="输入 emoji 图标" />
               </div>
             </div>
 
@@ -434,21 +414,19 @@ const doImport = async () => {
               <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                 选择要更新的分组
               </label>
-              <select
+              <GroupSelector
                 v-model="selectedGroupId"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
-              >
-                <option value="">请选择分组</option>
-                <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-                  {{ group.icon }} {{ group.name }} ({{ group.emojis.length }} 个表情)
-                </option>
-              </select>
+                :groups="availableGroups"
+                placeholder="请选择分组"
+              />
             </div>
           </div>
 
           <!-- 导入按钮 -->
           <div class="flex justify-end">
-            <button
+            <a-button
+              type="primary"
+              size="large"
               @click="doImport"
               :disabled="
                 !stickerSetInfo ||
@@ -456,10 +434,10 @@ const doImport = async () => {
                 (importMode === 'new' && !newGroupName.trim()) ||
                 (importMode === 'update' && !selectedGroupId)
               "
-              class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              :loading="isProcessing"
             >
               {{ importMode === 'new' ? '导入到新分组' : '更新分组' }}
-            </button>
+            </a-button>
           </div>
         </div>
       </div>
