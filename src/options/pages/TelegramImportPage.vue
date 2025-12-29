@@ -157,10 +157,10 @@ const previewStickerSet = async () => {
     if (existingGroup) {
       importMode.value = 'update'
       selectedGroupId.value = existingGroup.id
-      message.info(`检测到已存在分组「${stickerSet.title}」，已切换到更新模式`)
+      message.info(`检测到已存在分组「${stickerSet.title}」，已自动切换到更新模式并选择该分组`)
+    } else {
+      message.success(`成功获取贴纸包：${stickerSet.title}（${stickerSet.stickers.length} 个贴纸）`)
     }
-
-    message.success(`成功获取贴纸包：${stickerSet.title}（${stickerSet.stickers.length} 个贴纸）`)
   } catch (error: any) {
     console.error('获取贴纸包失败：', error)
 
