@@ -553,10 +553,12 @@ function createUI() {
 
   // 绑定事件
   shadowRoot.getElementById('ld-toggle-ball').onclick = () => {
-    const bar = shadowRoot.getElementById('ld-sidebar')!
-    bar.classList.toggle('collapsed')
-    state.isCollapsed = bar.classList.contains('collapsed')
-    sessionStorage.setItem('ld_is_collapsed', String(state.isCollapsed))
+    const bar = shadowRoot.getElementById('ld-sidebar')
+    if (bar) {
+      bar.classList.toggle('collapsed')
+      state.isCollapsed = bar.classList.contains('collapsed')
+      sessionStorage.setItem('ld_is_collapsed', String(state.isCollapsed))
+    }
   }
 
   shadowRoot.getElementById('btn-dm').onclick = function (this: HTMLElement) {
@@ -588,7 +590,10 @@ function createUI() {
     })
   }
 
-  shadowRoot!.getElementById('btn-refresh').onclick = () => tickAll()
+  const refreshBtn = shadowRoot?.getElementById('btn-refresh')
+  if (refreshBtn) {
+    refreshBtn.onclick = () => tickAll()
+  }
 
   renderSidebarRows()
   startVisualLoops()
