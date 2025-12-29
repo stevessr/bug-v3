@@ -55,9 +55,37 @@ interface ImportingEmoji {
 const importingEmojis = ref<ImportingEmoji[]>([])
 const showImportPreview = ref(false)
 
+// 预览更新节流（减少 DOM 更新频率）
+let previewUpdateTimer: ReturnType<typeof setTimeout> | null = null
+const pendingPreviewEmojis: ImportingEmoji[] = []
+
+const flushPreviewUpdates = () => {
+  if (pendingPreviewEmojis.length > 0) {
+    importingEmojis.value.push(...pendingPreviewEmojis)
+    pendingPreviewEmojis.length = 0
+  }
+}
+
+const addToPreview = (emoji: ImportingEmoji) => {
+  pendingPreviewEmojis.push(emoji)
+
+  if (previewUpdateTimer) {
+    clearTimeout(previewUpdateTimer)
+  }
+
+  // 每 200ms 批量更新一次预览列表
+  previewUpdateTimer = setTimeout(() => {
+    flushPreviewUpdates()
+    previewUpdateTimer = null
+  }, 200)
+}
+
 // 可用分组列表
 const availableGroups = computed(() => {
-  console.log('[TelegramImport] Available groups:', store.groups.map(g => ({ id: g.id, name: g.name })))
+  console.log(
+    '[TelegramImport] Available groups:',
+    store.groups.map(g => ({ id: g.id, name: g.name }))
+  )
   return store.groups
 })
 
@@ -166,13 +194,10 @@ const previewStickerSet = async () => {
     const existingGroup = store.groups.find(g => g.name === stickerSet.title)
     if (existingGroup) {
       importMode.value = 'update'
-      // 使用 nextTick 和额外延迟确保 GroupSelector 组件已完全初始化
+      // 使用 nextTick 确保 DOM 更新后再设置值
       await nextTick()
-      // 额外的延迟确保 ant-design-vue 的 select 组件完全准备好
-      setTimeout(() => {
-        selectedGroupId.value = existingGroup.id
-        console.log('[TelegramImport] Auto-selected group:', existingGroup.id, existingGroup.name)
-      }, 100)
+      selectedGroupId.value = existingGroup.id
+      console.log('[TelegramImport] Auto-selected group:', existingGroup.id, existingGroup.name)
       message.info(`检测到已存在分组「${stickerSet.title}」，已自动切换到更新模式并选择该分组`)
     } else {
       message.success(`成功获取贴纸包：${stickerSet.title}（${stickerSet.stickers.length} 个贴纸）`)
@@ -220,6 +245,11 @@ const doImport = async () => {
 
   // 清空预览列表并显示预览区域
   importingEmojis.value = []
+  pendingPreviewEmojis.length = 0
+  if (previewUpdateTimer) {
+    clearTimeout(previewUpdateTimer)
+    previewUpdateTimer = null
+  }
   showImportPreview.value = true
 
   try {
@@ -347,29 +377,17 @@ const doImport = async () => {
 
         newEmojis.push(newEmoji)
 
-        // 实时添加到预览列表
-        importingEmojis.value.push({
+        // 添加到本地分组对象（延迟更新 store 以减少重新渲染）
+        targetGroup!.emojis.push(newEmoji)
+
+        // 使用节流方式添加到预览列表
+        addToPreview({
           id: emojiId,
           name: filename,
           url: uploadUrl,
           width: sticker.width,
           height: sticker.height
         })
-
-        // 【关键】实时更新到分组中
-        // 由于 groups 是 shallowRef，需要完整替换数组引用
-        targetGroup!.emojis.push(newEmoji)
-
-        // 找到分组在 store.groups 中的位置并更新整个数组引用
-        const groupIndex = store.groups.findIndex(g => g.id === targetGroup!.id)
-        if (groupIndex !== -1) {
-          // 创建新的 groups 数组以触发 shallowRef 响应式
-          store.groups = [
-            ...store.groups.slice(0, groupIndex),
-            { ...targetGroup! }, // 浅拷贝分组对象
-            ...store.groups.slice(groupIndex + 1)
-          ]
-        }
 
         progress.value.processed = i + 1
       } catch (err: any) {
@@ -392,8 +410,24 @@ const doImport = async () => {
     const addedCount = newEmojis.length
     const skippedCount = skippedDuplicates
 
-    // 注意：表情已经在上传过程中实时添加到了 targetGroup 和 store.groups
-    // 这里只需要确保最终状态正确并调试
+    // 刷新所有待处理的预览更新
+    if (previewUpdateTimer) {
+      clearTimeout(previewUpdateTimer)
+      previewUpdateTimer = null
+    }
+    flushPreviewUpdates()
+
+    // 【关键】一次性更新 store.groups 以减少重新渲染
+    // 找到分组在 store.groups 中的位置并更新整个数组引用
+    const groupIndex = store.groups.findIndex(g => g.id === targetGroup!.id)
+    if (groupIndex !== -1) {
+      // 创建新的 groups 数组以触发 shallowRef 响应式
+      store.groups = [
+        ...store.groups.slice(0, groupIndex),
+        { ...targetGroup! }, // 浅拷贝分组对象
+        ...store.groups.slice(groupIndex + 1)
+      ]
+    }
 
     // 调试：打印当前 store.groups 状态
     console.log('[TelegramImport] Before save - groups count:', store.groups.length)
