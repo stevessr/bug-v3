@@ -239,6 +239,7 @@ const doImport = async () => {
         const emojiId = `telegram_${sticker.file_id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
         newEmojis.push({
           id: emojiId,
+          packet: 0,
           name: filename,
           url: uploadUrl,
           displayUrl: uploadUrl,
@@ -269,6 +270,16 @@ const doImport = async () => {
     if (importMode.value === 'new') {
       targetGroup!.emojis = newEmojis
       addedCount = newEmojis.length
+
+      // 更新 groups 引用以触发响应式（关键：确保新分组的 emojis 被保存）
+      const groupIndex = store.groups.findIndex(g => g.id === targetGroup!.id)
+      if (groupIndex !== -1) {
+        store.groups = [
+          ...store.groups.slice(0, groupIndex),
+          { ...targetGroup! },
+          ...store.groups.slice(groupIndex + 1)
+        ]
+      }
     } else {
       // 更新模式：合并新旧 emoji，避免重复
       const existingEmojiNames = new Set(targetGroup!.emojis.map(e => e.name))
