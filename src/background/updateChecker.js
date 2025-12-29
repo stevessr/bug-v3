@@ -203,9 +203,14 @@ async function manualCheckForUpdates() {
 if (chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'checkForUpdates') {
-      manualCheckForUpdates().then(hasUpdate => {
-        sendResponse({ hasUpdate })
-      })
+      manualCheckForUpdates()
+        .then(hasUpdate => {
+          sendResponse({ hasUpdate })
+        })
+        .catch(error => {
+          console.error('[UpdateChecker] Manual check failed:', error)
+          sendResponse({ hasUpdate: false, error: error.message })
+        })
       return true // 保持消息通道开放
     }
   })

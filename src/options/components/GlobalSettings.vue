@@ -489,7 +489,7 @@ const removeSideItem = (i: number) => {
             />
             <a-button
               size="small"
-              :danger="true"
+              danger
               @click="removeAutoItem(Number(i))"
               :title="'删除第 ' + (Number(i) + 1) + ' 项'"
             >
@@ -556,7 +556,7 @@ const removeSideItem = (i: number) => {
             />
             <a-button
               size="small"
-              :danger="true"
+              danger
               @click="removeIframeItem(Number(i))"
               :title="'删除第 ' + (Number(i) + 1) + ' 项'"
             >
@@ -623,7 +623,7 @@ const removeSideItem = (i: number) => {
             />
             <a-button
               size="small"
-              :danger="true"
+              danger
               @click="removeSideItem(Number(i))"
               :title="'删除第 ' + (Number(i) + 1) + ' 项'"
             >

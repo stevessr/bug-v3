@@ -114,7 +114,7 @@ function getSelfUser(): string | null {
 let shadowRoot: ShadowRoot | null = null
 const pushedIds = new Set<string>()
 
-const State: State = {
+const state: State = {
   users: [],
   lastIds: {},
   multipliers: {},
@@ -154,12 +154,12 @@ function getTimeAgoColor(isoTime: string | null): string {
 }
 
 function getUserColor(username: string): string {
-  const idx = State.users.indexOf(username)
+  const idx = state.users.indexOf(username)
   return nameColors[1 + (idx % nameColors.length)]
 }
 
 function getIntervalMultiplier(lastSeenAt: string | null): number {
-  const collapsedMult = State.isCollapsed ? 2 : 1
+  const collapsedMult = state.isCollapsed ? 2 : 1
   if (!lastSeenAt) return 20 * collapsedMult
   const diff = Date.now() - new Date(lastSeenAt).getTime()
   const minutes = diff / (1000 * 60)
@@ -171,7 +171,7 @@ function getIntervalMultiplier(lastSeenAt: string | null): number {
 }
 
 function getUserCycleDuration(username: string): number {
-  const mult = State.multipliers[username] || 1
+  const mult = state.multipliers[username] || 1
   return CONFIG.REFRESH_INTERVAL_MS * mult
 }
 
@@ -182,11 +182,11 @@ let leaderCheckTimeout: number | null = null
 
 async function saveConfig() {
   const store = {
-    users: State.users,
-    lastIds: State.lastIds,
-    enableSysNotify: State.enableSysNotify,
-    enableDanmaku: State.enableDanmaku,
-    hiddenUsers: Array.from(State.hiddenUsers)
+    users: state.users,
+    lastIds: state.lastIds,
+    enableSysNotify: state.enableSysNotify,
+    enableDanmaku: state.enableDanmaku,
+    hiddenUsers: Array.from(state.hiddenUsers)
   }
   // 使用 chrome.storage.local 代替 GM_setValue
   await chrome.storage.local.set({ ld_v21_config: JSON.stringify(store) })
@@ -204,13 +204,13 @@ async function loadConfig() {
 function broadcastState() {
   channel.postMessage({
     type: 'data_update',
-    data: State.data,
-    lastIds: State.lastIds,
-    hiddenUsers: Array.from(State.hiddenUsers),
-    nextFetchTime: State.nextFetchTime,
-    multipliers: State.multipliers,
-    userProfiles: State.userProfiles,
-    users: State.users
+    data: state.data,
+    lastIds: state.lastIds,
+    hiddenUsers: Array.from(state.hiddenUsers),
+    nextFetchTime: state.nextFetchTime,
+    multipliers: state.multipliers,
+    userProfiles: state.userProfiles,
+    users: state.users
   })
 }
 
@@ -487,27 +487,27 @@ export async function initLinuxDoSeeking() {
 
   // 从设置加载配置
   const saved = await loadConfig()
-  State.users = saved.users || []
-  State.lastIds = saved.lastIds || {}
-  State.enableSysNotify = saved.enableSysNotify !== false
-  State.enableDanmaku = saved.enableDanmaku !== false
-  State.hiddenUsers = new Set(saved.hiddenUsers || [])
+  state.users = saved.users || []
+  state.lastIds = saved.lastIds || {}
+  state.enableSysNotify = saved.enableSysNotify !== false
+  state.enableDanmaku = saved.enableDanmaku !== false
+  state.hiddenUsers = new Set(saved.hiddenUsers || [])
 
   // 从扩展设置加载用户列表
   try {
     const users = await requestSettingFromBackground('linuxDoSeekingUsers')
     if (Array.isArray(users) && users.length > 0) {
-      State.users = users.slice(0, CONFIG.MAX_USERS)
+      state.users = users.slice(0, CONFIG.MAX_USERS)
     }
 
     const enableDanmaku = await requestSettingFromBackground('enableLinuxDoSeekingDanmaku')
     if (typeof enableDanmaku === 'boolean') {
-      State.enableDanmaku = enableDanmaku
+      state.enableDanmaku = enableDanmaku
     }
 
     const enableSysNotify = await requestSettingFromBackground('enableLinuxDoSeekingSysNotify')
     if (typeof enableSysNotify === 'boolean') {
-      State.enableSysNotify = enableSysNotify
+      state.enableSysNotify = enableSysNotify
     }
   } catch (e) {
     console.warn('[LinuxDoSeeking] Failed to load settings from background', e)
@@ -533,14 +533,14 @@ function createUI() {
   const container = document.createElement('div')
   container.innerHTML = `
     <div id="dm-container" class="dm-container"></div>
-    <div id="ld-sidebar" class="${State.isCollapsed ? 'collapsed' : ''}">
+    <div id="ld-sidebar" class="${state.isCollapsed ? 'collapsed' : ''}">
         <div id="ld-toggle-ball" title="切换侧边栏">👀</div>
         <div class="sb-header">
             <div class="sb-title-row">
                 <div class="sb-title"><div class="sb-status-dot ok"></div> 追觅 · Seeking</div>
                 <div class="sb-tools">
-                    <button id="btn-dm" class="sb-icon-btn ${State.enableDanmaku ? 'active' : ''}" title="弹幕">💬</button>
-                    <button id="btn-sys" class="sb-icon-btn ${State.enableSysNotify ? 'active' : ''}" title="通知">🔔</button>
+                    <button id="btn-dm" class="sb-icon-btn ${state.enableDanmaku ? 'active' : ''}" title="弹幕">💬</button>
+                    <button id="btn-sys" class="sb-icon-btn ${state.enableSysNotify ? 'active' : ''}" title="通知">🔔</button>
                     <button id="btn-refresh" class="sb-icon-btn" title="刷新">🔄</button>
                 </div>
             </div>
@@ -555,26 +555,26 @@ function createUI() {
   shadowRoot.getElementById('ld-toggle-ball').onclick = () => {
     const bar = shadowRoot.getElementById('ld-sidebar')!
     bar.classList.toggle('collapsed')
-    State.isCollapsed = bar.classList.contains('collapsed')
-    sessionStorage.setItem('ld_is_collapsed', String(State.isCollapsed))
+    state.isCollapsed = bar.classList.contains('collapsed')
+    sessionStorage.setItem('ld_is_collapsed', String(state.isCollapsed))
   }
 
   shadowRoot.getElementById('btn-dm').onclick = function (this: HTMLElement) {
-    State.enableDanmaku = !State.enableDanmaku
-    this.className = `sb-icon-btn ${State.enableDanmaku ? 'active' : ''}`
+    state.enableDanmaku = !state.enableDanmaku
+    this.className = `sb-icon-btn ${state.enableDanmaku ? 'active' : ''}`
     saveConfig()
     channel.postMessage({
       type: 'cmd_config_sync',
       key: 'enableDanmaku',
-      value: State.enableDanmaku
+      value: state.enableDanmaku
     })
   }
 
   shadowRoot.getElementById('btn-sys').onclick = function (this: HTMLElement) {
-    State.enableSysNotify = !State.enableSysNotify
-    this.className = `sb-icon-btn ${State.enableSysNotify ? 'active' : ''}`
+    state.enableSysNotify = !state.enableSysNotify
+    this.className = `sb-icon-btn ${state.enableSysNotify ? 'active' : ''}`
     if (
-      State.enableSysNotify &&
+      state.enableSysNotify &&
       'Notification' in window &&
       Notification.permission !== 'granted'
     ) {
@@ -584,7 +584,7 @@ function createUI() {
     channel.postMessage({
       type: 'cmd_config_sync',
       key: 'enableSysNotify',
-      value: State.enableSysNotify
+      value: state.enableSysNotify
     })
   }
 
@@ -606,14 +606,14 @@ async function fetchUser(username: string, isInitial = false) {
 
     const newLastSeen = profileJson.user.last_seen_at
     const newLastPosted = profileJson.user.last_posted_at
-    const oldProfile = State.userProfiles[username]
+    const oldProfile = state.userProfiles[username]
 
-    State.multipliers[username] = getIntervalMultiplier(newLastSeen)
+    state.multipliers[username] = getIntervalMultiplier(newLastSeen)
     const hasChanged = !oldProfile || oldProfile.last_seen_at !== newLastSeen
 
-    State.userProfiles[username] = { last_posted_at: newLastPosted, last_seen_at: newLastSeen }
+    state.userProfiles[username] = { last_posted_at: newLastPosted, last_seen_at: newLastSeen }
 
-    if (!isInitial && !hasChanged && State.data[username]?.length > 0) {
+    if (!isInitial && !hasChanged && state.data[username]?.length > 0) {
       log(`[${username}] dormant.`, 'info')
       return 'SKIPPED'
     }
@@ -731,8 +731,8 @@ function getActionIcon(actionType: any): string {
 function getUsernameColor(username: string): string | null {
   if (!username) return null
   const lower = username.toLowerCase()
-  if (State.selfUser && lower === State.selfUser.toLowerCase()) return nameColors[0]
-  const userIndex = State.users.findIndex(u => u.toLowerCase() === lower)
+  if (state.selfUser && lower === state.selfUser.toLowerCase()) return nameColors[0]
+  const userIndex = state.users.findIndex(u => u.toLowerCase() === lower)
   if (userIndex !== -1 && userIndex + 1 < nameColors.length) return nameColors[userIndex + 1]
   return null
 }
@@ -825,12 +825,12 @@ function sendNotification(action: any) {
   const excerpt = cleanHtml(action.excerpt)
   const link = `${CONFIG.HOST}/t/${action.topic_id}/${action.post_number}`
 
-  if (State.enableDanmaku && shadowRoot) {
+  if (state.enableDanmaku && shadowRoot) {
     const layer = shadowRoot.getElementById('dm-container')
     if (layer) {
       const isLikeOrReaction = action.action_type === 1 || typeof action.action_type === 'string'
       const isSelfUser =
-        State.selfUser && action.acting_username.toLowerCase() === State.selfUser.toLowerCase()
+        state.selfUser && action.acting_username.toLowerCase() === state.selfUser.toLowerCase()
       if (isLikeOrReaction && isSelfUser) {
         const iconPop = document.createElement('div')
         iconPop.className = 'dm-icon-pop'
@@ -865,7 +865,7 @@ function sendNotification(action: any) {
     }
   }
 
-  if (State.enableSysNotify && document.hidden) {
+  if (state.enableSysNotify && document.hidden) {
     chrome.notifications.create({
       type: 'basic',
       iconUrl: avatar,
@@ -884,11 +884,11 @@ async function processUser(user: string, isInitial = false): Promise<boolean> {
 
   const latest = actions[0]
   const latestId = getUniqueId(latest)
-  const lastSavedId = State.lastIds[user]
+  const lastSavedId = state.lastIds[user]
   let hasUpdates = false
 
   if (!lastSavedId) {
-    State.lastIds[user] = latestId
+    state.lastIds[user] = latestId
     hasUpdates = true
   } else if (latestId !== lastSavedId && !isInitial) {
     const diff = []
@@ -904,31 +904,31 @@ async function processUser(user: string, isInitial = false): Promise<boolean> {
           broadcastNewAction(act)
         }, i * 1000)
       )
-      State.lastIds[user] = latestId
+      state.lastIds[user] = latestId
       hasUpdates = true
     }
   }
-  State.data[user] = actions
+  state.data[user] = actions
   log(`[${user}] has ${actions.length} actions`, 'info')
   return hasUpdates
 }
 
 async function tickAll() {
-  if (!State.isLeader) {
+  if (!state.isLeader) {
     channel.postMessage({ type: 'cmd_refresh_all' })
     return
   }
-  if (State.isProcessing) return
-  State.isProcessing = true
+  if (state.isProcessing) return
+  state.isProcessing = true
   const dot = shadowRoot?.querySelector('.sb-status-dot')
   if (dot) dot.className = 'sb-status-dot loading'
 
   let hasUpdates = false
   const now = Date.now()
-  for (const user of State.users) {
+  for (const user of state.users) {
     const updated = await processUser(user, true)
     if (updated) hasUpdates = true
-    State.nextFetchTime[user] = now + getUserCycleDuration(user) + Math.random() * 10000
+    state.nextFetchTime[user] = now + getUserCycleDuration(user) + Math.random() * 10000
   }
   if (hasUpdates) saveConfig()
 
@@ -936,28 +936,28 @@ async function tickAll() {
   broadcastState()
 
   if (dot) dot.className = 'sb-status-dot ok'
-  State.isProcessing = false
+  state.isProcessing = false
 }
 
 async function scheduler() {
-  if (!State.isLeader || State.isProcessing || State.users.length === 0) return
+  if (!state.isLeader || state.isProcessing || state.users.length === 0) return
   const now = Date.now()
-  const dueUsers = State.users.filter(u => !State.nextFetchTime[u] || now >= State.nextFetchTime[u])
+  const dueUsers = state.users.filter(u => !state.nextFetchTime[u] || now >= state.nextFetchTime[u])
   if (dueUsers.length === 0) return
 
-  State.isProcessing = true
+  state.isProcessing = true
   const user = dueUsers[0]
   const dot = shadowRoot?.querySelector('.sb-status-dot')
   if (dot) dot.className = 'sb-status-dot loading'
 
   const hasUpdates = await processUser(user, false)
-  State.nextFetchTime[user] = Date.now() + getUserCycleDuration(user) + Math.random() * 10000
+  state.nextFetchTime[user] = Date.now() + getUserCycleDuration(user) + Math.random() * 10000
   if (hasUpdates) saveConfig()
 
   renderFeed()
   broadcastState()
   if (dot) dot.className = 'sb-status-dot ok'
-  State.isProcessing = false
+  state.isProcessing = false
 }
 
 function broadcastNewAction(action: any) {
@@ -965,12 +965,12 @@ function broadcastNewAction(action: any) {
 }
 
 function takeLeadership() {
-  if (State.isLeader) return
+  if (state.isLeader) return
   if (leaderCheckTimeout) {
     clearTimeout(leaderCheckTimeout)
     leaderCheckTimeout = null
   }
-  State.isLeader = true
+  state.isLeader = true
   channel.postMessage({ type: 'leader_takeover' })
   scheduler()
 }
@@ -979,47 +979,47 @@ function takeLeadership() {
 channel.onmessage = event => {
   const msg = event.data
   if (msg.type === 'leader_check') {
-    if (State.isLeader) channel.postMessage({ type: 'leader_here' })
+    if (state.isLeader) channel.postMessage({ type: 'leader_here' })
   } else if (msg.type === 'leader_here') {
     if (leaderCheckTimeout) {
       clearTimeout(leaderCheckTimeout)
       leaderCheckTimeout = null
     }
-    State.isLeader = false
+    state.isLeader = false
     channel.postMessage({ type: 'data_request' })
   } else if (msg.type === 'data_request') {
-    if (State.isLeader) broadcastState()
+    if (state.isLeader) broadcastState()
   } else if (msg.type === 'leader_resign') {
     setTimeout(() => attemptLeadership(), Math.random() * 300)
   } else if (msg.type === 'leader_takeover') {
-    if (State.isLeader) {
-      State.isLeader = false
+    if (state.isLeader) {
+      state.isLeader = false
       if (leaderCheckTimeout) clearTimeout(leaderCheckTimeout)
       broadcastState()
     }
   } else if (msg.type === 'data_update') {
-    if (!State.isLeader) {
-      if (msg.users && JSON.stringify(msg.users) !== JSON.stringify(State.users)) {
-        State.users = msg.users || []
+    if (!state.isLeader) {
+      if (msg.users && JSON.stringify(msg.users) !== JSON.stringify(state.users)) {
+        state.users = msg.users || []
         renderSidebarRows()
       }
-      State.data = msg.data
-      State.lastIds = msg.lastIds
-      if (msg.hiddenUsers) State.hiddenUsers = new Set(msg.hiddenUsers)
-      if (msg.nextFetchTime) State.nextFetchTime = msg.nextFetchTime
-      if (msg.multipliers) State.multipliers = msg.multipliers
-      if (msg.userProfiles) State.userProfiles = msg.userProfiles
+      state.data = msg.data
+      state.lastIds = msg.lastIds
+      if (msg.hiddenUsers) state.hiddenUsers = new Set(msg.hiddenUsers)
+      if (msg.nextFetchTime) state.nextFetchTime = msg.nextFetchTime
+      if (msg.multipliers) state.multipliers = msg.multipliers
+      if (msg.userProfiles) state.userProfiles = msg.userProfiles
       renderFeed()
     }
   } else if (msg.type === 'new_action') {
-    if (!State.isLeader && State.enableDanmaku) sendNotification(msg.action)
+    if (!state.isLeader && state.enableDanmaku) sendNotification(msg.action)
   } else if (msg.type === 'cmd_refresh_all') {
-    if (State.isLeader) tickAll()
+    if (state.isLeader) tickAll()
   } else if (msg.type === 'cmd_refresh_user') {
-    if (State.isLeader) refreshSingleUser(msg.username)
+    if (state.isLeader) refreshSingleUser(msg.username)
   } else if (msg.type === 'cmd_config_sync') {
-    if (msg.key === 'enableDanmaku') State.enableDanmaku = msg.value
-    if (msg.key === 'enableSysNotify') State.enableSysNotify = msg.value
+    if (msg.key === 'enableDanmaku') state.enableDanmaku = msg.value
+    if (msg.key === 'enableSysNotify') state.enableSysNotify = msg.value
     saveConfig()
     if (shadowRoot) {
       const btn = shadowRoot.getElementById(msg.key === 'enableDanmaku' ? 'btn-dm' : 'btn-sys')
@@ -1027,48 +1027,52 @@ channel.onmessage = event => {
     }
   } else if (msg.type === 'cmd_add_user') {
     if (
-      State.isLeader &&
-      !State.users.includes(msg.username) &&
-      State.users.length < CONFIG.MAX_USERS
+      state.isLeader &&
+      !state.users.includes(msg.username) &&
+      state.users.length < CONFIG.MAX_USERS
     ) {
-      fetchUser(msg.username, true).then(res => {
-        if (res && res !== 'SKIPPED') {
-          State.users.push(msg.username)
-          saveConfig()
-          renderSidebarRows()
-          tickAll()
-        }
-      })
-    } else if (State.users.length >= CONFIG.MAX_USERS) {
+      fetchUser(msg.username, true)
+        .then(res => {
+          if (res && res !== 'SKIPPED') {
+            state.users.push(msg.username)
+            saveConfig()
+            renderSidebarRows()
+            tickAll()
+          }
+        })
+        .catch(error => {
+          console.error('[LinuxDo] Failed to fetch user:', msg.username, error)
+        })
+    } else if (state.users.length >= CONFIG.MAX_USERS) {
       log(`Max ${CONFIG.MAX_USERS} users reached.`, 'error')
     }
   } else if (msg.type === 'cmd_remove_user') {
-    if (State.isLeader) removeUser(msg.username)
+    if (state.isLeader) removeUser(msg.username)
   }
 }
 
 function attemptLeadership() {
   channel.postMessage({ type: 'leader_check' })
   leaderCheckTimeout = window.setTimeout(() => {
-    State.isLeader = true
+    state.isLeader = true
     leaderCheckTimeout = null
     tickAll()
   }, 200)
 }
 
 window.addEventListener('beforeunload', () => {
-  if (State.isLeader) channel.postMessage({ type: 'leader_resign' })
+  if (state.isLeader) channel.postMessage({ type: 'leader_resign' })
 })
 
 // --- UI 交互 ---
 function removeUser(name: string) {
-  if (!State.isLeader) {
+  if (!state.isLeader) {
     channel.postMessage({ type: 'cmd_remove_user', username: name })
     return
   }
-  State.users = State.users.filter(u => u !== name)
-  delete State.lastIds[name]
-  delete State.multipliers[name]
+  state.users = state.users.filter(u => u !== name)
+  delete state.lastIds[name]
+  delete state.multipliers[name]
   saveConfig()
   renderSidebarRows()
   renderFeed()
@@ -1076,13 +1080,13 @@ function removeUser(name: string) {
 }
 
 function toggleUserVisibility(name: string) {
-  if (State.hiddenUsers.has(name)) State.hiddenUsers.delete(name)
-  else State.hiddenUsers.add(name)
+  if (state.hiddenUsers.has(name)) state.hiddenUsers.delete(name)
+  else state.hiddenUsers.add(name)
   saveConfig()
 
   const row = shadowRoot?.getElementById(`row-${name}`)
   if (row) {
-    const isHidden = State.hiddenUsers.has(name)
+    const isHidden = state.hiddenUsers.has(name)
     row.className = `sb-user-row ${isHidden ? '' : 'active'}`
     const nameEl = row.querySelector('.sb-user-name')
     if (nameEl) {
@@ -1101,22 +1105,22 @@ function toggleUserVisibility(name: string) {
 }
 
 async function refreshSingleUser(username: string) {
-  if (!State.isLeader) {
+  if (!state.isLeader) {
     channel.postMessage({ type: 'cmd_refresh_user', username })
     return
   }
-  if (State.isProcessing) return
-  State.isProcessing = true
+  if (state.isProcessing) return
+  state.isProcessing = true
   const dot = shadowRoot?.querySelector('.sb-status-dot')
   if (dot) dot.className = 'sb-status-dot loading'
   const hasUpdates = await processUser(username, false)
-  State.nextFetchTime[username] =
+  state.nextFetchTime[username] =
     Date.now() + getUserCycleDuration(username) + Math.random() * 10000
   if (hasUpdates) saveConfig()
   renderFeed()
   broadcastState()
   if (dot) dot.className = 'sb-status-dot ok'
-  State.isProcessing = false
+  state.isProcessing = false
 }
 
 // --- 可视化循环 ---
@@ -1124,13 +1128,13 @@ function startVisualLoops() {
   const updateTimers = () => {
     if (!shadowRoot) return
     const now = Date.now()
-    State.users.forEach(u => {
+    state.users.forEach(u => {
       const timerEl = shadowRoot.getElementById(`timer-${u}`)
       if (!timerEl) return
       const progressCircle = timerEl.querySelector('.timer-progress')
       if (!progressCircle) return
 
-      const next = State.nextFetchTime[u]
+      const next = state.nextFetchTime[u]
       const totalDuration = getUserCycleDuration(u)
       const circumference = parseFloat(timerEl.getAttribute('data-circumference') || '0')
 
@@ -1149,7 +1153,7 @@ function startVisualLoops() {
 
   setInterval(() => {
     if (!shadowRoot) return
-    State.users.forEach(u => {
+    state.users.forEach(u => {
       const timerEl = shadowRoot.getElementById(`timer-${u}`)
       if (timerEl) {
         const titleEl = timerEl.querySelector('title')
@@ -1164,9 +1168,9 @@ function startVisualLoops() {
 
       const activityEl = shadowRoot.getElementById(`activity-${u}`)
       if (!activityEl) return
-      const isHidden = State.hiddenUsers.has(u)
-      const profile = State.userProfiles[u]
-      const userData = State.data[u]
+      const isHidden = state.hiddenUsers.has(u)
+      const profile = state.userProfiles[u]
+      const userData = state.data[u]
 
       if (profile) {
         const spans = activityEl.querySelectorAll('span')
@@ -1198,8 +1202,8 @@ function renderSidebarRows() {
   if (!div) return
   div.innerHTML = ''
 
-  State.users.forEach(u => {
-    const isHidden = State.hiddenUsers.has(u)
+  state.users.forEach(u => {
+    const isHidden = state.hiddenUsers.has(u)
     const userColor = 'var(--tertiary)'
     const row = document.createElement('div')
     row.id = `row-${u}`
@@ -1253,8 +1257,8 @@ function renderFeed() {
   const div = shadowRoot.getElementById('sb-list')
   if (!div) return
   const all: any[] = []
-  Object.entries(State.data).forEach(([user, arr]) => {
-    if (!State.hiddenUsers.has(user)) all.push(...arr)
+  Object.entries(state.data).forEach(([user, arr]) => {
+    if (!state.hiddenUsers.has(user)) all.push(...arr)
   })
   all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
