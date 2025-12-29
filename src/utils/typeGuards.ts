@@ -61,20 +61,17 @@ export function isSettings(data: unknown): data is AppSettings {
 
   const settings = data as Partial<AppSettings>
 
-  // 基本字段验证
-  if (typeof settings.theme !== 'string') return false
-  if (typeof settings.pasteAsImage !== 'boolean') return false
-  if (typeof settings.emojiSize !== 'number') return false
-
-  // 可选字段验证
-  if (settings.doubleClickMode !== undefined && typeof settings.doubleClickMode !== 'string')
-    return false
+  // 基本字段验证 - 检查实际存在的必需字段
+  if (typeof settings.imageScale !== 'number') return false
+  if (typeof settings.defaultGroup !== 'string') return false
+  if (typeof settings.showSearchBar !== 'boolean') return false
+  if (typeof settings.gridColumns !== 'number') return false
   if (
-    settings.discoursePostClickMode !== undefined &&
-    typeof settings.discoursePostClickMode !== 'string'
+    settings.outputFormat !== undefined &&
+    settings.outputFormat !== 'markdown' &&
+    settings.outputFormat !== 'html'
   )
     return false
-  if (settings.geminiApiKey !== undefined && typeof settings.geminiApiKey !== 'string') return false
 
   return true
 }
