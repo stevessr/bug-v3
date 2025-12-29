@@ -23,8 +23,8 @@
   const CONFIG = {
     // 云端市场基础 URL
     marketBaseUrl: GM_getValue('marketBaseUrl', 'https://video2gif-pages.pages.dev'),
-    // 缓存有效期（毫秒）- 默认 1 小时
-    cacheDuration: 60 * 60 * 1000,
+    // 缓存有效期（毫秒）- 默认 24 小时
+    cacheDuration: 24 * 60 * 60 * 1000,
     // 图片输出缩放比例
     imageScale: GM_getValue('imageScale', 30),
     // 输出格式：'markdown' 或 'html'
