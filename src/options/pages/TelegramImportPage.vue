@@ -16,6 +16,7 @@ import {
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import GroupSelector from '@/options/components/GroupSelector.vue'
+import * as storage from '@/utils/simpleStorage'
 
 const store = useEmojiStore()
 
@@ -379,24 +380,29 @@ const doImport = async () => {
     // 这里只需要确保最终状态正确并调试
 
     // 调试：打印当前 store.groups 状态
-    console.log('[TelegramImport] Before endBatch - groups count:', store.groups.length)
+    console.log('[TelegramImport] Before save - groups count:', store.groups.length)
     console.log('[TelegramImport] Target group ID:', targetGroup!.id)
-    const targetGroupInStore = store.groups.findIndex(g => g.id === targetGroup!.id)
-    console.log('[TelegramImport] Target group index in store:', targetGroupInStore)
-    if (targetGroupInStore !== -1) {
-      console.log('[TelegramImport] Target group emojis count:', store.groups[targetGroupInStore]?.emojis?.length || 0)
+    const targetGroupInStore = store.groups.find(g => g.id === targetGroup!.id)
+    console.log('[TelegramImport] Target group in store:', targetGroupInStore)
+    console.log(
+      '[TelegramImport] Target group emojis count:',
+      targetGroupInStore?.emojis?.length || 0
+    )
 
-      // 【关键修复】确保最终状态正确，触发一次完整的 groups 更新
-      // 这会设置 pendingSave flag，确保 endBatch 时保存
-      const finalGroup = store.groups[targetGroupInStore]
-      store.groups = [
-        ...store.groups.slice(0, targetGroupInStore),
-        { ...finalGroup, emojis: [...finalGroup.emojis] },
-        ...store.groups.slice(targetGroupInStore + 1)
-      ]
+    // 【关键】直接保存分组到存储
+    // 由于批量操作期间不会自动保存，需要手动调用
+    console.log('[TelegramImport] Saving group to storage...')
+    await store.saveGroup(targetGroup!.id)
+    console.log('[TelegramImport] Group saved successfully')
+
+    // 如果是新分组，还需要更新分组索引
+    if (importMode.value === 'new') {
+      const index = store.groups.map((g, order) => ({ id: g.id, order }))
+      await storage.setEmojiGroupIndex(index)
+      console.log('[TelegramImport] Group index saved')
     }
 
-    // 结束批量操作并保存
+    // 结束批量操作
     await store.endBatch()
 
     // 显示成功消息
