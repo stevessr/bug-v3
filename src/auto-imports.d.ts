@@ -92,12 +92,18 @@ declare global {
   const imageCache: typeof import('./utils/imageCache')['imageCache']
   const imageCacheService: typeof import('./utils/imageCacheService')['imageCacheService']
   const inject: typeof import('vue')['inject']
+  const isEmoji: typeof import('./utils/typeGuards')['isEmoji']
+  const isEmojiArray: typeof import('./utils/typeGuards')['isEmojiArray']
+  const isEmojiGroup: typeof import('./utils/typeGuards')['isEmojiGroup']
+  const isEmojiGroupArray: typeof import('./utils/typeGuards')['isEmojiGroupArray']
+  const isFavoritesSet: typeof import('./utils/typeGuards')['isFavoritesSet']
   const isImageCached: typeof import('./utils/imageCache')['isImageCached']
   const isImageUrl: typeof import('./utils/isImageUrl')['isImageUrl']
   const isProxy: typeof import('vue')['isProxy']
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
+  const isSettings: typeof import('./utils/typeGuards')['isSettings']
   const isTelegramStickerUrl: typeof import('./utils/telegramResolver')['isTelegramStickerUrl']
   const loadDeviceInfo: typeof import('./utils/device')['loadDeviceInfo']
   const loadSyncConfig: typeof import('./utils/syncConfigStorage')['loadSyncConfig']
@@ -144,6 +150,8 @@ declare global {
   const resolveComponent: typeof import('vue')['resolveComponent']
   const safeLocalStorage: typeof import('./utils/safeStorage')['safeLocalStorage']
   const safeSessionStorage: typeof import('./utils/safeStorage')['safeSessionStorage']
+  const sanitizeEmojiGroup: typeof import('./utils/typeGuards')['sanitizeEmojiGroup']
+  const sanitizeEmojiGroupArray: typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']
   const saveAllData: typeof import('./utils/simpleStorage')['saveAllData']
   const saveDeviceInfo: typeof import('./utils/device')['saveDeviceInfo']
   const saveSyncConfig: typeof import('./utils/syncConfigStorage')['saveSyncConfig']
@@ -205,6 +213,7 @@ declare global {
   const useTagStore: typeof import('./stores/index')['useTagStore']
   const useTemplateRef: typeof import('vue')['useTemplateRef']
   const useTimeout: typeof import('./composables/useTimer')['useTimeout']
+  const validateAndSanitize: typeof import('./utils/typeGuards')['validateAndSanitize']
   const wasmHashService: typeof import('./utils/wasmHashService')['wasmHashService']
   const watch: typeof import('vue')['watch']
   const watchEffect: typeof import('vue')['watchEffect']
@@ -338,12 +347,18 @@ declare module 'vue' {
     readonly imageCache: UnwrapRef<typeof import('./utils/imageCache')['imageCache']>
     readonly imageCacheService: UnwrapRef<typeof import('./utils/imageCacheService')['imageCacheService']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
+    readonly isEmoji: UnwrapRef<typeof import('./utils/typeGuards')['isEmoji']>
+    readonly isEmojiArray: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiArray']>
+    readonly isEmojiGroup: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiGroup']>
+    readonly isEmojiGroupArray: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiGroupArray']>
+    readonly isFavoritesSet: UnwrapRef<typeof import('./utils/typeGuards')['isFavoritesSet']>
     readonly isImageCached: UnwrapRef<typeof import('./utils/imageCache')['isImageCached']>
     readonly isImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['isImageUrl']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
+    readonly isSettings: UnwrapRef<typeof import('./utils/typeGuards')['isSettings']>
     readonly isTelegramStickerUrl: UnwrapRef<typeof import('./utils/telegramResolver')['isTelegramStickerUrl']>
     readonly loadDeviceInfo: UnwrapRef<typeof import('./utils/device')['loadDeviceInfo']>
     readonly loadSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['loadSyncConfig']>
@@ -389,6 +404,8 @@ declare module 'vue' {
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly safeLocalStorage: UnwrapRef<typeof import('./utils/safeStorage')['safeLocalStorage']>
     readonly safeSessionStorage: UnwrapRef<typeof import('./utils/safeStorage')['safeSessionStorage']>
+    readonly sanitizeEmojiGroup: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroup']>
+    readonly sanitizeEmojiGroupArray: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']>
     readonly saveAllData: UnwrapRef<typeof import('./utils/simpleStorage')['saveAllData']>
     readonly saveDeviceInfo: UnwrapRef<typeof import('./utils/device')['saveDeviceInfo']>
     readonly saveSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['saveSyncConfig']>
@@ -449,6 +466,7 @@ declare module 'vue' {
     readonly useTagStore: UnwrapRef<typeof import('./stores/index')['useTagStore']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useTimeout: UnwrapRef<typeof import('./composables/useTimer')['useTimeout']>
+    readonly validateAndSanitize: UnwrapRef<typeof import('./utils/typeGuards')['validateAndSanitize']>
     readonly wasmHashService: UnwrapRef<typeof import('./utils/wasmHashService')['wasmHashService']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchEffect: UnwrapRef<typeof import('vue')['watchEffect']>

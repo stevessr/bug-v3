@@ -545,12 +545,6 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         const index = groups.value.map((g, order) => ({ id: g.id, order }))
 
         // 优化：合并小数据（index、settings、favorites）为一次批量操作
-        const STORAGE_KEYS = {
-          GROUP_INDEX: 'emojiGroupIndex',
-          SETTINGS: 'appSettings',
-          FAVORITES: 'favorites'
-        }
-
         await Promise.all([
           // 批量保存小数据（1 次操作替代 3 次）
           storage.storageBatchSet({
@@ -658,130 +652,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       groupProcessed: number
     }) => void
   ) => {
-    try {
-      // Initialize the optimized hash service for better performance
-      const { optimizedHashService } = await import('@/utils/optimizedHashService')
-      await optimizedHashService.initializeWorkers()
-
-      // Collect all emojis with their URLs
-      const allEmojis: Array<{ emoji: Emoji; groupId: string; groupName: string }> = []
-      const emojiUrls: string[] = []
-
-      for (const group of groups.value) {
-        if (group.id === 'favorites') continue // Ignore favorites group
-        const emojis = group.emojis || []
-        for (const emoji of emojis) {
-          if (!emoji) continue
-          allEmojis.push({
-            emoji,
-            groupId: group.id,
-            groupName: group.name
-          })
-          if (emoji.url && !emoji.perceptualHash) {
-            emojiUrls.push(emoji.url)
-          }
-        }
-      }
-
-      const totalEmojis = allEmojis.length
-      console.log(`[EmojiStore] Processing ${totalEmojis} emojis for duplicate detection...`)
-
-      // 检查缓存状态，优先使用本地缓存
-      if (emojiUrls.length > 0) {
-        console.log(`[EmojiStore] 检查 ${emojiUrls.length} 个需要计算哈希的表情的缓存状态...`)
-        const cacheStatus = await optimizedHashService.checkCacheStatus(emojiUrls)
-        const cacheRate = (cacheStatus.cachedImages / cacheStatus.total) * 100
-        console.log(
-          `[EmojiStore] 缓存状态：${cacheStatus.cachedImages}/${cacheStatus.total} 图片已缓存 (${cacheRate.toFixed(1)}%), ${cacheStatus.cachedHashes}/${cacheStatus.total} 哈希已缓存`
-        )
-
-        if (cacheRate >= 80) {
-          console.log('[EmojiStore] 缓存率良好，重复检测将优先使用本地缓存')
-        } else if (cacheRate >= 50) {
-          console.log('[EmojiStore] 缓存率中等，部分图片需要从网络获取')
-        } else {
-          console.log('[EmojiStore] 缓存率较低，建议先执行图片缓存操作以提升检测速度')
-        }
-      }
-
-      // Batch calculate missing hashes using the optimized service
-      if (emojiUrls.length > 0) {
-        console.log(`[EmojiStore] Calculating hashes for ${emojiUrls.length} emojis...`)
-
-        const hashResults = await optimizedHashService.calculateBatchHashes(emojiUrls, {
-          useCache: true,
-          batchSize: 20,
-          quality: 'medium',
-          onProgress: (processed, _total) => {
-            // Map progress back to the original progress callback format
-            const processedEmoji = allEmojis.find(e => e.emoji.url === emojiUrls[processed - 1])
-            if (processedEmoji && onProgress) {
-              const group = groups.value.find(g => g.id === processedEmoji.groupId)
-              const groupEmojis = group?.emojis || []
-              const groupTotal = groupEmojis.length
-              onProgress({
-                total: totalEmojis,
-                processed: processed, // This is hash calculation progress
-                group: processedEmoji.groupName,
-                emojiName: processedEmoji.emoji.name,
-                groupTotal,
-                groupProcessed:
-                  groupEmojis.findIndex(e => e && e.id === processedEmoji.emoji.id) + 1
-              })
-            }
-          }
-        })
-
-        // Update emojis with calculated hashes
-        for (const result of hashResults) {
-          const emoji = allEmojis.find(e => e.emoji.url === result.url)
-          if (emoji && result.hash && !result.error) {
-            emoji.emoji.perceptualHash = result.hash
-          }
-        }
-      }
-
-      // Find duplicates using optimized batch processing with hash bucketing
-      console.log('[EmojiStore] Finding duplicates using optimized algorithm...')
-
-      // Prepare items for optimized comparison
-      const hashItems = allEmojis
-        .filter(
-          (item): item is typeof item & { emoji: { perceptualHash: string } } =>
-            !!item.emoji.perceptualHash
-        )
-        .map(item => ({
-          id: item.emoji.id,
-          hash: item.emoji.perceptualHash,
-          item
-        }))
-
-      // Use optimized duplicate finding with hash bucketing and Union-Find
-      const duplicateMap = await optimizedHashService.findDuplicatesOptimized(
-        hashItems,
-        similarityThreshold
-      )
-
-      // Convert Map result to array format expected by the rest of the code
-      const duplicateGroups: Array<Array<(typeof allEmojis)[0]>> = []
-      for (const [_root, groupItems] of duplicateMap) {
-        duplicateGroups.push(groupItems.map(gi => gi.item))
-      }
-
-      // Clear the binary hash cache after processing
-      optimizedHashService.clearBinaryHashCache()
-
-      console.log(`[EmojiStore] Found ${duplicateGroups.length} groups of duplicates`)
-
-      // Log cache statistics
-      const cacheStats = optimizedHashService.getCacheStats()
-      console.log('[EmojiStore] Cache stats:', cacheStats)
-
-      return duplicateGroups
-    } catch (err) {
-      console.error('[EmojiStore] findDuplicatesAcrossGroups error', err)
-      return []
-    }
+    // 优化：委托给专门的服务以简化 Store
+    const { findDuplicatesAcrossGroups: findDuplicates } =
+      await import('@/services/duplicateDetectionService')
+    return findDuplicates(groups.value, { similarityThreshold, onProgress })
   }
 
   // Note: clearAllPerceptualHashes is delegated to emojiCrudStore

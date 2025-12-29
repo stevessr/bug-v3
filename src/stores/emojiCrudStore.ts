@@ -31,17 +31,6 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
    * 因为 groups 使用了 shallowRef，直接修改数组内容或对象属性不会触发响应式更新
    * 必须创建新的对象引用并替换整个数组
    */
-  const updateGroup = (groupId: string, updateFn: (group: EmojiGroup) => EmojiGroup) => {
-    const groupIndex = groups.value.findIndex(g => g.id === groupId)
-    if (groupIndex === -1) return
-
-    const updatedGroup = updateFn(groups.value[groupIndex])
-    groups.value = [
-      ...groups.value.slice(0, groupIndex),
-      updatedGroup,
-      ...groups.value.slice(groupIndex + 1)
-    ]
-  }
 
   // --- Basic CRUD ---
 

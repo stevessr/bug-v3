@@ -87,29 +87,17 @@ const addEmojiTouchEvents = (_element: HTMLElement, _emoji: Emoji, _index: numbe
   // 由父组件通过 TouchDragHandler 处理
 }
 
-// Group emojis into rows for virtual list - optimized with caching
-let cachedRows: Emoji[][] = []
-let cachedEmojisLength = -1
-let cachedGridColumns = -1
-
+// Group emojis into rows for virtual list
+// 优化：使用 computed 的依赖收集，配合 length 和 gridColumns 作为显式依赖
 const emojiRows = computed(() => {
-  // 仅在 length 或 gridColumns 变化时重新计算
-  if (
-    props.emojis.length === cachedEmojisLength &&
-    props.gridColumns === cachedGridColumns &&
-    cachedRows.length > 0
-  ) {
-    return cachedRows
-  }
+  // 显式依赖这些值，Vue 会自动缓存
+  const { length } = props.emojis
+  const { gridColumns } = props
 
   const rows: Emoji[][] = []
-  for (let i = 0; i < props.emojis.length; i += props.gridColumns) {
-    rows.push(props.emojis.slice(i, i + props.gridColumns))
+  for (let i = 0; i < length; i += gridColumns) {
+    rows.push(props.emojis.slice(i, i + gridColumns))
   }
-
-  cachedRows = rows
-  cachedEmojisLength = props.emojis.length
-  cachedGridColumns = props.gridColumns
 
   return rows
 })

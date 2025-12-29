@@ -6,9 +6,12 @@
  * 2. Pinia stores 负责所有缓存和状态管理
  * 3. 简单的序列化/反序列化
  * 4. 最小化抽象层
+ * 5. 运行时类型验证提高数据可靠性
  */
 
 import { toRaw } from 'vue'
+
+import { sanitizeEmojiGroup, isSettings } from './typeGuards'
 
 import type { EmojiGroup, AppSettings } from '@/types/type'
 
@@ -419,7 +422,17 @@ export async function repairEmptyStorage(): Promise<void> {
  * 表情分组相关
  */
 export async function getEmojiGroup(groupId: string): Promise<EmojiGroup | null> {
-  return storageGet<EmojiGroup>(STORAGE_KEYS.GROUP_PREFIX + groupId)
+  const data = await storageGet<EmojiGroup>(STORAGE_KEYS.GROUP_PREFIX + groupId)
+  if (!data) return null
+
+  // 运行时类型验证和清理
+  const sanitized = sanitizeEmojiGroup(data)
+  if (!sanitized) {
+    console.warn(`[Storage] Invalid EmojiGroup data for ${groupId}, skipping`)
+    return null
+  }
+
+  return sanitized
 }
 
 export async function setEmojiGroup(groupId: string, group: EmojiGroup): Promise<void> {
@@ -448,7 +461,16 @@ export async function setEmojiGroupIndex(
  * 设置
  */
 export async function getSettings(): Promise<AppSettings | null> {
-  return storageGet<AppSettings>(STORAGE_KEYS.SETTINGS)
+  const data = await storageGet<AppSettings>(STORAGE_KEYS.SETTINGS)
+  if (!data) return null
+
+  // 运行时类型验证
+  if (!isSettings(data)) {
+    console.warn('[Storage] Invalid Settings data, returning null')
+    return null
+  }
+
+  return data
 }
 
 export async function setSettings(settings: AppSettings): Promise<void> {

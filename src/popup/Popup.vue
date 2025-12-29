@@ -5,6 +5,8 @@ import GroupTabs from './components/GroupTabs.vue'
 import LazyEmojiGrid from './components/LazyEmojiGrid.vue'
 import { usePopup } from './usePopup'
 
+import ErrorBoundary from '@/components/ErrorBoundary.vue'
+
 const {
   emojiStore,
   localScale,
@@ -35,6 +37,7 @@ const openOptionsInNewWindow = () => {
       token: {}
     }"
   >
+    <ErrorBoundary />
     <div class="popup-container bg-white dark:bg-gray-900">
       <!-- Header with scale control -->
       <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
