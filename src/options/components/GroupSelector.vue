@@ -45,7 +45,7 @@ const _displayValue = computed(() => {
 
 <template>
   <a-select
-    :model-value="modelValue"
+    :value="modelValue"
     showSearch
     :placeholder="placeholder"
     class="w-full"

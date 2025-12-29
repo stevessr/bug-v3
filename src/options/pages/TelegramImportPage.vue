@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -57,7 +57,17 @@ const showImportPreview = ref(false)
 
 // 可用分组列表
 const availableGroups = computed(() => {
+  console.log('[TelegramImport] Available groups:', store.groups.map(g => ({ id: g.id, name: g.name })))
   return store.groups
+})
+
+// 监控 selectedGroupId 的变化
+watch(selectedGroupId, (newVal, oldVal) => {
+  console.log('[TelegramImport] selectedGroupId changed:', { old: oldVal, new: newVal })
+  if (newVal) {
+    const group = store.groups.find(g => g.id === newVal)
+    console.log('[TelegramImport] Selected group details:', group?.name)
+  }
 })
 
 // 计算将要新增的表情数量（用于更新模式）
@@ -156,9 +166,13 @@ const previewStickerSet = async () => {
     const existingGroup = store.groups.find(g => g.name === stickerSet.title)
     if (existingGroup) {
       importMode.value = 'update'
-      // 使用 nextTick 确保 GroupSelector 组件已渲染后再设置值
+      // 使用 nextTick 和额外延迟确保 GroupSelector 组件已完全初始化
       await nextTick()
-      selectedGroupId.value = existingGroup.id
+      // 额外的延迟确保 ant-design-vue 的 select 组件完全准备好
+      setTimeout(() => {
+        selectedGroupId.value = existingGroup.id
+        console.log('[TelegramImport] Auto-selected group:', existingGroup.id, existingGroup.name)
+      }, 100)
       message.info(`检测到已存在分组「${stickerSet.title}」，已自动切换到更新模式并选择该分组`)
     } else {
       message.success(`成功获取贴纸包：${stickerSet.title}（${stickerSet.stickers.length} 个贴纸）`)
