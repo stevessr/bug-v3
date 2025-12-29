@@ -12,6 +12,7 @@ import AboutPage from '../pages/AboutPage.vue'
 import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
 import BufferPage from '../pages/BufferPage.vue'
 import BilibiliImportPage from '../pages/BilibiliImportPage.vue'
+import TelegramImportPage from '../pages/TelegramImportPage.vue'
 import ExportPage from '../pages/ExportPage.vue'
 import MarketPage from '../pages/MarketPage.vue'
 
@@ -86,6 +87,14 @@ const routes: RouteRecordRaw[] = [
     component: BilibiliImportPage,
     meta: {
       title: 'Bilibili 导入'
+    }
+  },
+  {
+    path: '/telegram-import',
+    name: 'telegram-import',
+    component: TelegramImportPage,
+    meta: {
+      title: 'Telegram 导入'
     }
   },
   {

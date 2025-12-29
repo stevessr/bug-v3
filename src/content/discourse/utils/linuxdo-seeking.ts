@@ -1354,9 +1354,7 @@ function renderFeed() {
     const link = `/t/${item.topic_id}/${item.post_number}`
     const actionInfo = formatActionInfo(item)
     const excerptClass =
-      item.action_type === 4 || item.action_type === 5
-        ? 'sb-card-excerpt'
-        : 'sb-card-excerpt-cited'
+      item.action_type === 4 || item.action_type === 5 ? 'sb-card-excerpt' : 'sb-card-excerpt-cited'
 
     // 检查是否已存在相同的卡片，如果存在则复用
     const existing = existingCards.get(link)

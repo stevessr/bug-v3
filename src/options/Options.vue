@@ -137,6 +137,7 @@ const menuItems = computed(() => {
     { key: 'market', label: '云端市场', route: '/market' },
     { key: 'export', label: '导出', route: '/export' },
     { key: 'bilibili-import', label: 'Bilibili 导入', route: '/bilibili-import' },
+    { key: 'telegram-import', label: 'Telegram 导入', route: '/telegram-import' },
     { key: 'stats', label: '统计', route: '/stats' },
     { key: 'ai-rename', label: 'AI 批量重命名', route: '/ai-rename' },
     { key: 'about', label: '关于', route: '/about' }
@@ -182,6 +183,7 @@ const handleMenuSelect = (info: any) => {
     buffer: '/buffer',
     market: '/market',
     'bilibili-import': '/bilibili-import',
+    'telegram-import': '/telegram-import',
     stats: '/stats',
     'ai-rename': '/ai-rename',
     about: '/about'
