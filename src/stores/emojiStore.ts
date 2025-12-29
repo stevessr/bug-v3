@@ -609,12 +609,29 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Note: deleteEmoji, moveEmoji are delegated to emojiCrudStore
 
   const removeEmojiFromGroup = (groupId: string, index: number) => {
-    const group = groups.value.find(g => g.id === groupId)
+    const groupIndex = groups.value.findIndex(g => g.id === groupId)
+    if (groupIndex === -1) return
+
+    const group = groups.value[groupIndex]
     const emojis = group?.emojis || []
-    if (group && index >= 0 && index < emojis.length) {
+    if (index >= 0 && index < emojis.length) {
       const emoji = emojis[index]
       if (!emoji) return
-      emojis.splice(index, 1)
+
+      // 优化：因为使用了 shallowRef，必须创建新的 group 对象并替换整个数组引用
+      // 这样才能触发响应式更新
+      const newGroup = {
+        ...group,
+        emojis: [...emojis.slice(0, index), ...emojis.slice(index + 1)]
+      }
+
+      // 替换整个 groups 数组，并替换修改的 group 对象
+      groups.value = [
+        ...groups.value.slice(0, groupIndex),
+        newGroup,
+        ...groups.value.slice(groupIndex + 1)
+      ]
+
       // Mark the group as dirty for incremental save
       markGroupDirty(groupId)
       // Also mark favorites as dirty if the emoji was a favorite

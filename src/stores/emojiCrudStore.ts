@@ -26,24 +26,53 @@ function generateEmojiId(): string {
 export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
   const { groups, favorites, saveControl } = options
 
+  /**
+   * 触发 groups 的响应式更新（用于 shallowRef）
+   * 因为 groups 使用了 shallowRef，直接修改数组内容或对象属性不会触发响应式更新
+   * 必须创建新的对象引用并替换整个数组
+   */
+  const updateGroup = (groupId: string, updateFn: (group: EmojiGroup) => EmojiGroup) => {
+    const groupIndex = groups.value.findIndex(g => g.id === groupId)
+    if (groupIndex === -1) return
+
+    const updatedGroup = updateFn(groups.value[groupIndex])
+    groups.value = [
+      ...groups.value.slice(0, groupIndex),
+      updatedGroup,
+      ...groups.value.slice(groupIndex + 1)
+    ]
+  }
+
   // --- Basic CRUD ---
 
   /**
    * Add an emoji to a group
    */
   const addEmoji = (groupId: string, emoji: Omit<Emoji, 'id' | 'groupId'>): Emoji | undefined => {
-    const group = groups.value.find(g => g.id === groupId)
-    if (group) {
-      if (!Array.isArray(group.emojis)) {
-        group.emojis = []
-      }
+    const groupIndex = groups.value.findIndex(g => g.id === groupId)
+    if (groupIndex !== -1) {
+      const group = groups.value[groupIndex]
+      const emojis = Array.isArray(group.emojis) ? group.emojis : []
+
       const newEmoji: Emoji = {
         ...emoji,
         id: generateEmojiId(),
         groupId,
         ...(emoji.tags && emoji.tags.length > 0 ? { tags: emoji.tags } : {})
       }
-      group.emojis.push(newEmoji)
+
+      // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
+      const newGroup = {
+        ...group,
+        emojis: [...emojis, newEmoji]
+      }
+
+      groups.value = [
+        ...groups.value.slice(0, groupIndex),
+        newGroup,
+        ...groups.value.slice(groupIndex + 1)
+      ]
+
       // Update tag counts incrementally
       saveControl.onTagsAdded?.(newEmoji.tags)
       // Update search index incrementally
@@ -62,18 +91,30 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
     groupId: string,
     emoji: Omit<Emoji, 'id' | 'groupId'>
   ): Emoji | undefined => {
-    const group = groups.value.find(g => g.id === groupId)
-    if (group) {
-      if (!Array.isArray(group.emojis)) {
-        group.emojis = []
-      }
+    const groupIndex = groups.value.findIndex(g => g.id === groupId)
+    if (groupIndex !== -1) {
+      const group = groups.value[groupIndex]
+      const emojis = Array.isArray(group.emojis) ? group.emojis : []
+
       const newEmoji: Emoji = {
         ...emoji,
         id: generateEmojiId(),
         groupId,
         ...(emoji.tags && emoji.tags.length > 0 ? { tags: emoji.tags } : {})
       }
-      group.emojis.push(newEmoji)
+
+      // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
+      const newGroup = {
+        ...group,
+        emojis: [...emojis, newEmoji]
+      }
+
+      groups.value = [
+        ...groups.value.slice(0, groupIndex),
+        newGroup,
+        ...groups.value.slice(groupIndex + 1)
+      ]
+
       // For batch operations, invalidate cache instead of incremental update
       saveControl.invalidateTagCache?.()
       saveControl.invalidateSearchIndex?.()
@@ -87,7 +128,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
    * Update an emoji by ID (searches across all groups)
    */
   const updateEmoji = (emojiId: string, updates: Partial<Emoji>): void => {
-    for (const group of groups.value) {
+    for (let i = 0; i < groups.value.length; i++) {
+      const group = groups.value[i]
       const emojis = group.emojis || []
       const index = emojis.findIndex(e => e && e.id === emojiId)
       if (index !== -1) {
@@ -98,7 +140,15 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
           saveControl.onTagsAdded?.(updates.tags)
         }
         const newEmoji = { ...emojis[index], ...updates }
-        emojis[index] = newEmoji
+
+        // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
+        const newGroup = {
+          ...group,
+          emojis: [...emojis.slice(0, index), newEmoji, ...emojis.slice(index + 1)]
+        }
+
+        groups.value = [...groups.value.slice(0, i), newGroup, ...groups.value.slice(i + 1)]
+
         // Update search index incrementally
         saveControl.onEmojiUpdated?.(oldEmoji, newEmoji)
         // Mark the group as dirty for incremental save
@@ -115,19 +165,35 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
   const updateEmojiNames = (nameUpdates: Record<string, string>): void => {
     saveControl.beginBatch()
     try {
-      for (const group of groups.value) {
+      const groupUpdates = new Map<number, EmojiGroup>()
+
+      for (let i = 0; i < groups.value.length; i++) {
+        const group = groups.value[i]
         const emojis = group.emojis || []
         let groupModified = false
-        for (const emoji of emojis) {
+        const newEmojis = [...emojis]
+
+        for (let j = 0; j < newEmojis.length; j++) {
+          const emoji = newEmojis[j]
           if (emoji && nameUpdates[emoji.id]) {
-            emoji.name = nameUpdates[emoji.id]
+            newEmojis[j] = { ...emoji, name: nameUpdates[emoji.id] }
             groupModified = true
           }
         }
-        // Mark the group as dirty if any emoji was modified
+
+        // 优化：创建新的 group 对象并暂存到 Map 中
         if (groupModified) {
+          groupUpdates.set(i, {
+            ...group,
+            emojis: newEmojis
+          })
           saveControl.markGroupDirty?.(group.id)
         }
+      }
+
+      // 一次性应用所有 group 更新，触发 shallowRef 响应式更新
+      if (groupUpdates.size > 0) {
+        groups.value = groups.value.map((g, i) => groupUpdates.get(i) || g)
       }
     } finally {
       saveControl.endBatch()
@@ -138,8 +204,12 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
    * Delete an emoji by ID
    */
   const deleteEmoji = (emojiId: string): void => {
-    for (const group of groups.value) {
+    let groupModified = false
+
+    for (let i = 0; i < groups.value.length; i++) {
+      const group = groups.value[i]
       if (!group.emojis) continue
+
       const emojiIndex = group.emojis.findIndex(e => e?.id === emojiId)
       if (emojiIndex !== -1) {
         const emoji = group.emojis[emojiIndex]
@@ -149,17 +219,30 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         if (emoji) {
           saveControl.onEmojiRemoved?.(emoji)
         }
-        group.emojis.splice(emojiIndex, 1)
+
+        // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
+        const newGroup = {
+          ...group,
+          emojis: group.emojis.filter((_, idx) => idx !== emojiIndex)
+        }
+
+        groups.value = [...groups.value.slice(0, i), newGroup, ...groups.value.slice(i + 1)]
+
         // Mark the group as dirty for incremental save
         saveControl.markGroupDirty?.(group.id)
         // Also mark favorites as dirty if the emoji was a favorite
         if (favorites.value.has(emojiId)) {
           saveControl.markFavoritesDirty?.()
         }
+        groupModified = true
+        break
       }
     }
-    favorites.value.delete(emojiId)
-    saveControl.maybeSave()
+
+    if (groupModified) {
+      favorites.value.delete(emojiId)
+      saveControl.maybeSave()
+    }
   }
 
   /**
@@ -170,18 +253,35 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
     index: number,
     updatedEmoji: Partial<Emoji>
   ): void => {
-    const group = groups.value.find(g => g.id === groupId)
+    const groupIndex = groups.value.findIndex(g => g.id === groupId)
+    if (groupIndex === -1) return
+
+    const group = groups.value[groupIndex]
     const emojis = group?.emojis || []
-    if (group && index >= 0 && index < emojis.length) {
+    if (index >= 0 && index < emojis.length) {
       const currentEmoji = emojis[index]
       if (!currentEmoji) return
+
       // Handle tag changes incrementally
       if (updatedEmoji.tags !== undefined && currentEmoji.tags !== updatedEmoji.tags) {
         saveControl.onTagsRemoved?.(currentEmoji.tags)
         saveControl.onTagsAdded?.(updatedEmoji.tags)
       }
+
       const newEmoji = { ...currentEmoji, ...updatedEmoji }
-      emojis[index] = newEmoji
+
+      // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
+      const newGroup = {
+        ...group,
+        emojis: [...emojis.slice(0, index), newEmoji, ...emojis.slice(index + 1)]
+      }
+
+      groups.value = [
+        ...groups.value.slice(0, groupIndex),
+        newGroup,
+        ...groups.value.slice(groupIndex + 1)
+      ]
+
       // Update search index incrementally
       saveControl.onEmojiUpdated?.(currentEmoji, newEmoji)
       // Mark the group as dirty for incremental save
@@ -194,14 +294,30 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
    * Remove an emoji from a group by index
    */
   const removeEmojiFromGroup = (groupId: string, index: number): void => {
-    const group = groups.value.find(g => g.id === groupId)
+    const groupIndex = groups.value.findIndex(g => g.id === groupId)
+    if (groupIndex === -1) return
+
+    const group = groups.value[groupIndex]
     const emojis = group?.emojis || []
-    if (group && index >= 0 && index < emojis.length) {
+    if (index >= 0 && index < emojis.length) {
       const emoji = emojis[index]
       if (!emoji) return
+
       // Decrement tag counts before removal
       saveControl.onTagsRemoved?.(emoji.tags)
-      emojis.splice(index, 1)
+
+      // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
+      const newGroup = {
+        ...group,
+        emojis: [...emojis.slice(0, index), ...emojis.slice(index + 1)]
+      }
+
+      groups.value = [
+        ...groups.value.slice(0, groupIndex),
+        newGroup,
+        ...groups.value.slice(groupIndex + 1)
+      ]
+
       // Mark the group as dirty for incremental save
       saveControl.markGroupDirty?.(groupId)
       // Also mark favorites as dirty if the emoji was a favorite
@@ -224,24 +340,69 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
     targetGroupId: string,
     targetIndex: number
   ): void => {
-    const sourceGroup = groups.value.find(g => g.id === sourceGroupId)
-    const targetGroup = groups.value.find(g => g.id === targetGroupId)
+    const sourceGroupIndex = groups.value.findIndex(g => g.id === sourceGroupId)
+    const targetGroupIndex = groups.value.findIndex(g => g.id === targetGroupId)
 
-    if (sourceGroup && targetGroup && sourceIndex >= 0 && sourceIndex < sourceGroup.emojis.length) {
-      const [emoji] = sourceGroup.emojis.splice(sourceIndex, 1)
-      emoji.groupId = targetGroupId
-
-      if (targetIndex >= 0 && targetIndex <= targetGroup.emojis.length) {
-        targetGroup.emojis.splice(targetIndex, 0, emoji)
-      } else {
-        targetGroup.emojis.push(emoji)
-      }
-
-      // Mark both source and target groups as dirty for incremental save
-      saveControl.markGroupDirty?.(sourceGroupId)
-      saveControl.markGroupDirty?.(targetGroupId)
-      saveControl.maybeSave()
+    if (
+      sourceGroupIndex === -1 ||
+      targetGroupIndex === -1 ||
+      sourceIndex < 0 ||
+      sourceIndex >= groups.value[sourceGroupIndex].emojis.length
+    ) {
+      return
     }
+
+    const sourceGroup = groups.value[sourceGroupIndex]
+    const targetGroup = groups.value[targetGroupIndex]
+    const emoji = sourceGroup.emojis[sourceIndex]
+    emoji.groupId = targetGroupId
+
+    // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
+    // 从源分组移除
+    const newSourceGroup = {
+      ...sourceGroup,
+      emojis: [
+        ...sourceGroup.emojis.slice(0, sourceIndex),
+        ...sourceGroup.emojis.slice(sourceIndex + 1)
+      ]
+    }
+
+    // 添加到目标分组
+    const newTargetEmojis =
+      targetIndex >= 0 && targetIndex <= targetGroup.emojis.length
+        ? [
+            ...targetGroup.emojis.slice(0, targetIndex),
+            emoji,
+            ...targetGroup.emojis.slice(targetIndex)
+          ]
+        : [...targetGroup.emojis, emoji]
+
+    const newTargetGroup = {
+      ...targetGroup,
+      emojis: newTargetEmojis
+    }
+
+    // 如果是同一个组，只需要更新一次
+    if (sourceGroupId === targetGroupId) {
+      groups.value = [
+        ...groups.value.slice(0, sourceGroupIndex),
+        newTargetGroup,
+        ...groups.value.slice(sourceGroupIndex + 1)
+      ]
+    } else {
+      // 不同组，需要同时更新源和目标组
+      const updates = new Map([
+        [sourceGroupIndex, newSourceGroup],
+        [targetGroupIndex, newTargetGroup]
+      ])
+
+      groups.value = groups.value.map((g, i) => updates.get(i) || g)
+    }
+
+    // Mark both source and target groups as dirty for incremental save
+    saveControl.markGroupDirty?.(sourceGroupId)
+    saveControl.markGroupDirty?.(targetGroupId)
+    saveControl.maybeSave()
   }
 
   // --- Deduplication ---
@@ -250,11 +411,11 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
    * Remove duplicate emojis within a group based on normalized URL
    */
   const dedupeGroup = (groupId: string): number => {
-    const group = groups.value.find(g => g.id === groupId)
-    if (!group) return 0
+    const groupIndex = groups.value.findIndex(g => g.id === groupId)
+    if (groupIndex === -1) return 0
 
+    const group = groups.value[groupIndex]
     if (!Array.isArray(group.emojis)) {
-      group.emojis = []
       return 0
     }
 
@@ -279,9 +440,20 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         }
       }
 
-      group.emojis = kept
-      const removed = originalLength - group.emojis.length
+      const removed = originalLength - kept.length
       if (removed > 0) {
+        // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
+        const newGroup = {
+          ...group,
+          emojis: kept
+        }
+
+        groups.value = [
+          ...groups.value.slice(0, groupIndex),
+          newGroup,
+          ...groups.value.slice(groupIndex + 1)
+        ]
+
         // Invalidate tag cache since we removed emojis
         saveControl.invalidateTagCache?.()
         // Mark the group as dirty for incremental save
@@ -299,11 +471,11 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
    * Remove duplicate emojis within a group based on name (case-insensitive)
    */
   const dedupeGroupByName = (groupId: string): number => {
-    const group = groups.value.find(g => g.id === groupId)
-    if (!group) return 0
+    const groupIndex = groups.value.findIndex(g => g.id === groupId)
+    if (groupIndex === -1) return 0
 
+    const group = groups.value[groupIndex]
     if (!Array.isArray(group.emojis)) {
-      group.emojis = []
       return 0
     }
 
@@ -326,9 +498,20 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         }
       }
 
-      group.emojis = kept
-      const removed = originalLength - group.emojis.length
+      const removed = originalLength - kept.length
       if (removed > 0) {
+        // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
+        const newGroup = {
+          ...group,
+          emojis: kept
+        }
+
+        groups.value = [
+          ...groups.value.slice(0, groupIndex),
+          newGroup,
+          ...groups.value.slice(groupIndex + 1)
+        ]
+
         // Invalidate tag cache since we removed emojis
         saveControl.invalidateTagCache?.()
         // Mark the group as dirty for incremental save
@@ -406,6 +589,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
   ): Promise<number> => {
     try {
       let totalRemoved = 0
+      const groupUpdates = new Map<string, EmojiGroup>()
 
       for (const duplicateSet of duplicates) {
         if (duplicateSet.length < 2) continue
@@ -413,28 +597,44 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         const [original, ...duplicatesToRemove] = duplicateSet
 
         for (const duplicate of duplicatesToRemove) {
-          const group = groups.value.find(g => g.id === duplicate.groupId)
-          if (!group) continue
+          const groupIndex = groups.value.findIndex(g => g.id === duplicate.groupId)
+          if (groupIndex === -1) continue
 
+          const group = groups.value[groupIndex]
           const emojis = group.emojis || []
           const index = emojis.findIndex(e => e && e.id === duplicate.emoji.id)
           if (index === -1) continue
 
+          let newEmojis: Emoji[]
+
           if (createReferences) {
-            emojis[index] = {
+            // Replace with reference
+            const referencedEmoji = {
               ...duplicate.emoji,
               referenceId: original.emoji.id,
               url: original.emoji.url
             }
-            // Mark the group as dirty for incremental save
-            saveControl.markGroupDirty?.(duplicate.groupId)
+            newEmojis = [...emojis.slice(0, index), referencedEmoji, ...emojis.slice(index + 1)]
           } else {
-            emojis.splice(index, 1)
-            // Mark the group as dirty for incremental save
-            saveControl.markGroupDirty?.(duplicate.groupId)
+            // Remove completely
+            newEmojis = [...emojis.slice(0, index), ...emojis.slice(index + 1)]
             totalRemoved++
           }
+
+          // 优化：创建新的 group 对象并暂存到 Map 中
+          groupUpdates.set(duplicate.groupId, {
+            ...group,
+            emojis: newEmojis
+          })
+
+          // Mark the group as dirty for incremental save
+          saveControl.markGroupDirty?.(duplicate.groupId)
         }
+      }
+
+      // 一次性应用所有 group 更新，触发 shallowRef 响应式更新
+      if (groupUpdates.size > 0) {
+        groups.value = groups.value.map(g => groupUpdates.get(g.id) || g)
       }
 
       if (totalRemoved > 0) {
