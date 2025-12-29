@@ -188,22 +188,16 @@ export class AutoDownloadManager {
 
   private async loadSettings(): Promise<void> {
     try {
-      const chromeAPI = (window as any).chrome
-      if (chromeAPI?.storage?.local) {
-        const result = await new Promise<any>(resolve => {
-          chromeAPI.storage.local.get([STORAGE_KEY], (res: any) => resolve(res))
-        })
-
-        if (result[STORAGE_KEY]) {
-          const stored = result[STORAGE_KEY]
-          // 支持新格式 { data: {...}, timestamp } 和旧格式
-          const data = stored.data || stored
-          this.settings = {
-            enableAutoDownload: data.enableAutoDownload ?? DEFAULT_SETTINGS.enableAutoDownload,
-            autoDownloadSuffixes: Array.isArray(data.autoDownloadSuffixes)
-              ? data.autoDownloadSuffixes
-              : DEFAULT_SETTINGS.autoDownloadSuffixes
-          }
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // 支持新格式 { data: {...}, timestamp } 和旧格式
+        const data = parsed.data || parsed
+        this.settings = {
+          enableAutoDownload: data.enableAutoDownload ?? DEFAULT_SETTINGS.enableAutoDownload,
+          autoDownloadSuffixes: Array.isArray(data.autoDownloadSuffixes)
+            ? data.autoDownloadSuffixes
+            : DEFAULT_SETTINGS.autoDownloadSuffixes
         }
       }
     } catch (error) {
@@ -213,18 +207,12 @@ export class AutoDownloadManager {
 
   private async loadHistory(): Promise<void> {
     try {
-      const chromeAPI = (window as any).chrome
-      if (chromeAPI?.storage?.local) {
-        const result = await new Promise<any>(resolve => {
-          chromeAPI.storage.local.get([HISTORY_KEY], (res: any) => resolve(res))
-        })
-
-        if (result[HISTORY_KEY]) {
-          const stored = result[HISTORY_KEY]
-          const data = stored.data || stored
-          if (typeof data === 'object') {
-            this.history = new Map(Object.entries(data))
-          }
+      const stored = localStorage.getItem(HISTORY_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        const data = parsed.data || parsed
+        if (typeof data === 'object') {
+          this.history = new Map(Object.entries(data))
         }
       }
     } catch (error) {
@@ -234,20 +222,13 @@ export class AutoDownloadManager {
 
   private async saveSettings(): Promise<void> {
     try {
-      const chromeAPI = (window as any).chrome
-      if (chromeAPI?.storage?.local) {
-        await new Promise<void>(resolve => {
-          chromeAPI.storage.local.set(
-            {
-              [STORAGE_KEY]: {
-                data: this.settings,
-                timestamp: Date.now()
-              }
-            },
-            () => resolve()
-          )
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          data: this.settings,
+          timestamp: Date.now()
         })
-      }
+      )
     } catch (error) {
       console.warn('[AutoDownloadManager] Failed to save settings:', error)
     }
@@ -255,20 +236,13 @@ export class AutoDownloadManager {
 
   private async saveHistory(): Promise<void> {
     try {
-      const chromeAPI = (window as any).chrome
-      if (chromeAPI?.storage?.local) {
-        await new Promise<void>(resolve => {
-          chromeAPI.storage.local.set(
-            {
-              [HISTORY_KEY]: {
-                data: Object.fromEntries(this.history),
-                timestamp: Date.now()
-              }
-            },
-            () => resolve()
-          )
+      localStorage.setItem(
+        HISTORY_KEY,
+        JSON.stringify({
+          data: Object.fromEntries(this.history),
+          timestamp: Date.now()
         })
-      }
+      )
     } catch (error) {
       console.warn('[AutoDownloadManager] Failed to save history:', error)
     }
