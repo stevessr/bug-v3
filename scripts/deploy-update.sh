@@ -11,7 +11,3 @@ echo "📦 部署到 Cloudflare Pages..."
 wrangler pages deploy
 
 echo "✅ 部署完成！"
-echo "📍 更新 URL:"
-echo "   Chrome: https://s.pwsh.us.kg/updates.xml"
-echo "   Firefox: https://s.pwsh.us.kg/updates.json"
-echo "   下载：https://s.pwsh.us.kg/updates/extension.crx"

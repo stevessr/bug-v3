@@ -18,7 +18,8 @@
     "release": "bash ./scripts/release.sh",
     "pack:crx": "node ./scripts/pack-crx.js",
     "pack:xpi": "node ./scripts/pack-xpi.js",
-    "pack:all": "./scripts/npm-run.sh npm run pack:crx && ./scripts/npm-run.sh npm run pack:xpi && ./scripts/npm-run.sh npm run update:version && ./scripts/npm-run.sh npm run update:data",
+    "pack:zip": "node ./scripts/pack-zip.js",
+    "pack:all": "./scripts/npm-run.sh npm run pack:crx && ./scripts/npm-run.sh npm run pack:xpi && ./scripts/npm-run.sh npm run update:data",
     "key:generate": "node scripts/generate-key.js",
     "key:backup": "cp extension-key.pem extension-key.pem.backup.$(date +%Y%m%d-%H%M%S) && echo '密钥已备份'",
     "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx",
@@ -30,9 +31,8 @@
     "update:data": "cd scripts/cfworker && wrangler pages deploy",
     "update:metadata": "node scripts/update-market-metadata.js",
     "update:push": "git push",
-    "update:version": "node scripts/update-extension-version.js",
     "update:deploy": "./scripts/deploy-update.sh",
-    "update:all": "npm run build:prod && npm run pack:all && npm run update:version && npm run update:deploy",
+    "update:all": "npm run build:prod && npm run pack:all && npm run update:deploy",
     "release:all": "node scripts/release-all.js",
     "update:wasm": "bash ./scripts/wasm/build.sh",
     "share": "node ./scripts/collaborative-upload-server/server.js",
@@ -88,6 +88,10 @@
     "vue-eslint-parser": "^10.2.0",
     "vue-tsc": "^3.2.1"
   },
+  "languages": [
+    "zh",
+    "en"
+  ],
   "pnpm": {
     "overrides": {
       "vite": "npm:rolldown-vite@latest"

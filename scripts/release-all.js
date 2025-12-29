@@ -26,7 +26,7 @@ function runCommand(command, description) {
 }
 
 function checkFiles() {
-  const requiredFiles = ['../dist', '../src/background/updateChecker.js', '../public/manifest.json']
+  const requiredFiles = ['../dist', '../public/manifest.json']
 
   for (const file of requiredFiles) {
     const filePath = path.resolve(__dirname, file)
@@ -45,9 +45,6 @@ function getDeploymentInfo() {
 
   console.log(`\n📋 发布信息:`)
   console.log(`   版本：${version}`)
-  console.log(`   Chrome 更新：https://s.pwsh.us.kg/updates.xml`)
-  console.log(`   Firefox 更新：https://s.pwsh.us.kg/updates.json`)
-  console.log(`   扩展下载：https://s.pwsh.us.kg/updates/extension.crx`)
 
   return version
 }

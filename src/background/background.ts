@@ -1,5 +1,4 @@
 import './utils/main.ts'
-import './updateChecker.js'
 
 import { setupOnInstalledListener } from './init'
 import {
