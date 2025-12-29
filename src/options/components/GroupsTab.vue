@@ -97,7 +97,8 @@ const emit = defineEmits([
   'editEmoji',
   'batchUpdateSizeStreaming',
   'exportGroupStreaming',
-  'archiveGroup'
+  'archiveGroup',
+  'copyGroupAsMarkdown'
 ])
 // props: only expandedGroups / isImageUrl / activeTab are expected from parent
 
@@ -298,6 +299,11 @@ const onDelete = (group: any) => {
 const onArchive = (group: any) => {
   closeMenu()
   emit('archiveGroup', group)
+}
+
+const onCopyAsMarkdown = (group: any) => {
+  closeMenu()
+  emit('copyGroupAsMarkdown', group)
 }
 
 // --- View Detail Modal ---
@@ -528,6 +534,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                         @confirmDelete="onDelete"
                         @batchUpdateSize="openBatchModal"
                         @archive="onArchive"
+                        @copyAsMarkdown="onCopyAsMarkdown"
                       />
                     </div>
                     <div

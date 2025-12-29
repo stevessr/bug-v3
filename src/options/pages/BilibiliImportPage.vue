@@ -4,7 +4,6 @@ import { message } from 'ant-design-vue'
 
 import {
   fetchBilibiliEmotePackageById,
-  convertBilibiliEmotesToPluginFormat,
   searchBilibiliPackages,
   type BilibiliEmotePackage,
   type BilibiliEmoteIndexItem
@@ -96,38 +95,54 @@ const doImport = () => {
       selectedPackages.value.includes(pkg.id)
     )
 
-    const convertedEmotes = convertBilibiliEmotesToPluginFormat(
-      selectedPackagesData,
-      targetGroupId.value || undefined
-    )
-
     // 直接使用 store 的方法添加
     store.beginBatch()
     try {
-      convertedEmotes.forEach(item => {
+      selectedPackagesData.forEach(pkg => {
         if (targetGroupId.value) {
           // 添加到指定分组
           const group = store.groups.find(g => g.id === targetGroupId.value)
           if (group) {
-            group.emojis.push(...item.emojis)
+            pkg.emote.forEach(emote => {
+              group.emojis.push({
+                id: `bili_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+                packet: 0,
+                name: emote.text.replace(/[[\]]/g, ''),
+                url: emote.url,
+                displayUrl: emote.url,
+                groupId: group.id
+              })
+            })
           }
         } else {
           // 创建新分组
           const newGroup = {
             id: `bili_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-            name: item.name,
-            icon: item.icon || '📦',
-            detail: `Bilibili 表情包 ID: ${item.sourceId || ''}`,
+            name: pkg.text,
+            icon: '📦',
+            detail: `Bilibili 表情包 ID: ${pkg.id}`,
             order: store.groups.length,
-            emojis: item.emojis
+            emojis: pkg.emote.map(emote => ({
+              id: `bili_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+              packet: 0,
+              name: emote.text.replace(/[[\]]/g, ''),
+              url: emote.url,
+              displayUrl: emote.url,
+              groupId: ''
+            }))
           }
+          // 更新分组 ID
+          newGroup.emojis.forEach(e => {
+            e.groupId = newGroup.id
+          })
           store.groups = [...store.groups, newGroup]
         }
       })
       store.endBatch()
 
+      const totalEmojis = selectedPackagesData.reduce((sum, pkg) => sum + pkg.emote.length, 0)
       message.success(
-        `成功导入 ${selectedPackages.value.length} 个表情包，共 ${convertedEmotes.reduce((sum, item) => sum + item.emojis.length, 0)} 个表情`
+        `成功导入 ${selectedPackages.value.length} 个表情包，共 ${totalEmojis} 个表情`
       )
 
       // 重置状态
