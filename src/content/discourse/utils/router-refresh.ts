@@ -9,6 +9,8 @@ import { notify } from '../../utils/notify'
 // 全局状态
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 let isRefreshing = false
+let lastPath: string = '' // 记录上次的路径
+let currentInterval: number = 30000 // 当前刷新间隔
 
 // 类型声明
 declare global {
@@ -112,10 +114,43 @@ function hasOpenModal(): boolean {
 }
 
 /**
+ * 重置刷新计时器
+ * 当路径变化时调用，重新开始计时
+ */
+function resetRefreshTimer(): void {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = setInterval(performRouterRefresh, currentInterval)
+    console.log('[DiscourseRouterRefresh] Timer reset due to path change')
+  }
+}
+
+/**
+ * 检查路径是否变化，如果变化则重置计时器
+ * @returns 如果路径变化返回 true
+ */
+function checkPathChange(): boolean {
+  const currentPath = window.location.pathname
+  if (lastPath && lastPath !== currentPath) {
+    console.log(`[DiscourseRouterRefresh] Path changed: ${lastPath} -> ${currentPath}`)
+    lastPath = currentPath
+    resetRefreshTimer()
+    return true
+  }
+  lastPath = currentPath
+  return false
+}
+
+/**
  * 执行路由刷新
  */
 async function performRouterRefresh(): Promise<void> {
   if (isRefreshing) return
+
+  // 检查路径是否变化，如果变化则跳过本次刷新（已重置计时器）
+  if (checkPathChange()) {
+    return
+  }
 
   // 检查路由器可用性
   const isAvailable = await checkDiscourseRouterAvailability()
@@ -191,6 +226,10 @@ function startRouterRefresh(interval: number): void {
 
   // 确保间隔至少为 10 秒，避免过于频繁的刷新
   const safeInterval = Math.max(interval, 10000)
+  currentInterval = safeInterval // 保存当前间隔
+
+  // 初始化路径记录
+  lastPath = window.location.pathname
 
   console.log(`[DiscourseRouterRefresh] Starting with interval: ${safeInterval}ms`)
 
@@ -219,6 +258,7 @@ function stopRouterRefresh(): void {
     refreshTimer = null
     console.log('[DiscourseRouterRefresh] Stopped')
   }
+  lastPath = '' // 清理路径记录
   document.removeEventListener('visibilitychange', handleVisibilityChange)
 }
 

@@ -39,8 +39,8 @@ export default defineConfig(({ mode }) => {
       }),
       AutoImport({
         imports: [
-          'vue', 
-          'vue-router', 
+          'vue',
+          'vue-router',
           'pinia',
           {
             from: 'ant-design-vue',
@@ -50,13 +50,24 @@ export default defineConfig(({ mode }) => {
             from: './src/stores/index',
             imports: [
               'useGroupStore',
-              'useEmojiCrudStore', 
+              'useEmojiCrudStore',
               'useFavoritesStore',
               'useCssStore',
               'useEmojiStore',
               'useSyncStore',
               'useTagStore'
             ]
+          }
+        ],
+        resolvers: [
+          // Auto import icons from @ant-design/icons-vue
+          (name) => {
+            if (name.match(/^[A-Z][a-z]+([A-Z][a-z]+)*(Outlined|Filled|TwoTone)$/)) {
+              return {
+                name,
+                from: '@ant-design/icons-vue'
+              }
+            }
           }
         ],
         dts: 'src/auto-imports.d.ts',
