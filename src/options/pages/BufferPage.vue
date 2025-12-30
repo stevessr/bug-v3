@@ -1050,6 +1050,19 @@ const uploadFiles = async () => {
     // After the loop, write any remaining emojis.
     await writeNewEmojis()
 
+    // Count successes and failures
+    const successCount = uploadProgress.value.filter(p => !p.error).length
+    const failCount = uploadProgress.value.filter(p => p.error).length
+
+    // Show notification
+    if (failCount > 0 && successCount > 0) {
+      message.warning(`上传完成：${successCount} 成功，${failCount} 失败`)
+    } else if (failCount > 0) {
+      message.error(`上传失败：${failCount} 个文件上传失败`)
+    } else if (successCount > 0) {
+      message.success(`上传完成：${successCount} 个文件`)
+    }
+
     // Keep failed files in the list for retry
     selectedFiles.value = selectedFiles.value.filter((_, i) => uploadProgress.value[i].error)
 
@@ -1267,14 +1280,19 @@ onBeforeUnmount(() => {
       <FileUploader @filesSelected="addFiles" />
 
       <!-- File List -->
-      <div v-if="selectedFiles.length > 0" class="mt-4">
-        <FileListDisplay
-          :files="selectedFiles"
-          :loading="isCheckingDuplicates"
-          @removeFile="removeFile"
-          @cropImage="openImageCropper"
-        />
-      </div>
+      <a-collapse v-if="selectedFiles.length > 0" class="mt-4" :default-active-key="['files']">
+        <a-collapse-panel key="files">
+          <template #header>
+            <span class="font-medium">待上传文件 ({{ selectedFiles.length }})</span>
+          </template>
+          <FileListDisplay
+            :files="selectedFiles"
+            :loading="isCheckingDuplicates"
+            @removeFile="removeFile"
+            @cropImage="openImageCropper"
+          />
+        </a-collapse-panel>
+      </a-collapse>
 
       <!-- 联动上传设置 -->
       <div
