@@ -1082,5 +1082,373 @@
   "loadGroupDetailsFailedError": {
     "message": "Failed to load group details: {message}",
     "description": "Failed to load group details"
+  },
+  "entityTypeGroup": {
+    "message": "Group",
+    "description": "Entity type: Group"
+  },
+  "entityTypeSettings": {
+    "message": "Settings",
+    "description": "Entity type: Settings"
+  },
+  "entityTypeFavorites": {
+    "message": "Favorites",
+    "description": "Entity type: Favorites"
+  },
+  "resolveConflictFailed": {
+    "message": "Failed to resolve conflict, please retry",
+    "description": "Failed to resolve conflict"
+  },
+  "autoMergeFailed": {
+    "message": "Auto merge failed, please manually select version",
+    "description": "Auto merge failed"
+  },
+  "batchResolveFailed": {
+    "message": "Batch resolve failed, please handle manually",
+    "description": "Batch resolve failed"
+  },
+  "componentLoadFailed": {
+    "message": "Component load failed",
+    "description": "Component load failed"
+  },
+  "unknownError": {
+    "message": "Unknown error occurred",
+    "description": "Unknown error occurred"
+  },
+  "openInNewWindow": {
+    "message": "Open settings in new window",
+    "description": "Open settings in new window"
+  },
+  "openSidebar": {
+    "message": "Open sidebar",
+    "description": "Open sidebar"
+  },
+  "zoomControl": {
+    "message": "Emoji zoom control",
+    "description": "Emoji zoom control"
+  },
+  "lazyEmojiGrids": {
+    "message": "Only render current active group, truly virtualized",
+    "description": "Lazy Emoji Grids comment"
+  },
+  "searchMode": {
+    "message": "Use filtered emojis",
+    "description": "Search mode"
+  },
+  "normalMode": {
+    "message": "Only render current active group (truly virtualized)",
+    "description": "Normal mode"
+  },
+  "groupTabs": {
+    "message": "Emoji group tabs",
+    "description": "Emoji group tabs"
+  },
+  "groupIcon": {
+    "message": "Group icon",
+    "description": "Group icon"
+  },
+  "keyboardNavigation": {
+    "message": "Keyboard navigation feature",
+    "description": "Keyboard navigation feature"
+  },
+  "loadingText": {
+    "message": "Loading...",
+    "description": "Loading text"
+  },
+  "usageCountTimes": {
+    "message": "Used {count} times",
+    "description": "Usage count"
+  },
+  "searchEmojiNamesOrTags": {
+    "message": "Search emoji names or tags...",
+    "description": "Search emoji names or tags placeholder"
+  },
+  "searchEmojiNamesOrTagsTitle": {
+    "message": "Search emoji names or tags",
+    "description": "Search emoji names or tags title"
+  },
+  "clearSearch": {
+    "message": "Clear search",
+    "description": "Clear search"
+  },
+  "selectGroupPlaceholder": {
+    "message": "Select group",
+    "description": "Select group placeholder"
+  },
+  "virtualGroup": {
+    "message": "(Virtual Group)",
+    "description": "Virtual group"
+  },
+  "searchResultsFound": {
+    "message": "🔍 Search \"{query}\" found {count} results",
+    "description": "Search results"
+  },
+  "noMatchingEmojisFound": {
+    "message": "No matching emojis found",
+    "description": "No matching emojis found"
+  },
+  "tagsLabel": {
+    "message": "Tags: {tags}",
+    "description": "Tags label"
+  },
+  "noTags": {
+    "message": "None",
+    "description": "No tags"
+  },
+  "showAllEmojis": {
+    "message": "🔍 Show emojis from all groups, total {count} emojis",
+    "description": "Show all emojis"
+  },
+  "noEmojisYet": {
+    "message": "No emojis yet",
+    "description": "No emojis yet"
+  },
+  "linkCopiedToClipboard": {
+    "message": "Link copied to clipboard",
+    "description": "Link copied to clipboard"
+  },
+  "tagManagement": {
+    "message": "Tag Management",
+    "description": "Tag management"
+  },
+  "tagManagementDescription": {
+    "message": "Manage all emoji tags, including create, rename, delete and view usage",
+    "description": "Tag management description"
+  },
+  "searchTags": {
+    "message": "Search tags...",
+    "description": "Search tags placeholder"
+  },
+  "createTag": {
+    "message": "Create Tag",
+    "description": "Create tag"
+  },
+  "tagRenameSuccess": {
+    "message": "Tag \"{oldName}\" has been renamed to \"{newName}\"",
+    "description": "Tag rename success"
+  },
+  "tagCreateSuccess": {
+    "message": "Tag \"{tagName}\" created successfully",
+    "description": "Tag create success"
+  },
+  "tagDeleteSuccess": {
+    "message": "Removed tag \"{tagName}\" from {count} emojis",
+    "description": "Tag delete success"
+  },
+  "tagNotUsed": {
+    "message": "Tag \"{tagName}\" is not used",
+    "description": "Tag not used"
+  },
+  "tagClickInfo": {
+    "message": "Clicked tag \"{tagName}\"",
+    "description": "Tag click info"
+  },
+  "pleaseEnterTagName": {
+    "message": "Please enter tag name",
+    "description": "Please enter tag name"
+  },
+  "tagAlreadyExists": {
+    "message": "This tag already exists",
+    "description": "Tag already exists"
+  },
+  "editTag": {
+    "message": "Edit Tag",
+    "description": "Edit tag"
+  },
+  "deleteTag": {
+    "message": "Delete Tag",
+    "description": "Delete tag"
+  },
+  "useThisTagEmojis": {
+    "message": "Emojis using this tag:",
+    "description": "Emojis using this tag"
+  },
+  "noMatchingTags": {
+    "message": "No matching tags found",
+    "description": "No matching tags found"
+  },
+  "noTagsYet": {
+    "message": "No tags yet",
+    "description": "No tags yet"
+  },
+  "createFirstTag": {
+    "message": "Create first tag",
+    "description": "Create first tag"
+  },
+  "createNewTag": {
+    "message": "Create New Tag",
+    "description": "Create new tag"
+  },
+  "enterTagName": {
+    "message": "Enter tag name...",
+    "description": "Enter tag name placeholder"
+  },
+  "loadMarketDataSuccess": {
+    "message": "Successfully loaded {count} emoji packs",
+    "description": "Load market data success"
+  },
+  "loadMarketDataFailed": {
+    "message": "Failed to load market data, please check network connection",
+    "description": "Load market data failed"
+  },
+  "loadGroupDetailsFailed": {
+    "message": "Failed to load group details, please try again later",
+    "description": "Load group details failed"
+  },
+  "packageInstallSuccess": {
+    "message": "Successfully installed emoji pack \"{name}\"",
+    "description": "Package install success"
+  },
+  "packageInstallFailed": {
+    "message": "Failed to install emoji pack, please try again later",
+    "description": "Package install failed"
+  },
+  "confirmOverwriteGroup": {
+    "message": "Group named \"{name}\" already exists, overwrite?",
+    "description": "Confirm overwrite group"
+  },
+  "unnamed": {
+    "message": "Unnamed",
+    "description": "Unnamed"
+  },
+  "bilibiliImportTitle": {
+    "message": "Bilibili Emoji Import",
+    "description": "Bilibili import title"
+  },
+  "bilibiliImportDescription": {
+    "message": "Import emoji packs from Bilibili by pack ID to the extension",
+    "description": "Bilibili import description"
+  },
+  "searchEmotePackages": {
+    "message": "1️⃣ Search Emoji Packs",
+    "description": "Search emoji packs"
+  },
+  "searchEmotePackagesPlaceholder": {
+    "message": "Enter keywords to search (e.g: 小黄脸)",
+    "description": "Search emoji packs placeholder"
+  },
+  "searching": {
+    "message": "Searching...",
+    "description": "Searching"
+  },
+  "select": {
+    "message": "Select",
+    "description": "Select"
+  },
+  "noRelatedPackagesFound": {
+    "message": "No related emoji packs found",
+    "description": "No related emoji packs found"
+  },
+  "importById": {
+    "message": "2️⃣ Import by ID",
+    "description": "Import by ID"
+  },
+  "importByIdDescription": {
+    "message": "Directly enter Bilibili emoji pack ID to import.",
+    "description": "Import by ID description"
+  },
+  "packageIdPlaceholder": {
+    "message": "Enter emoji pack ID (e.g: 237)",
+    "description": "Emoji pack ID placeholder"
+  },
+  "importing": {
+    "message": "Importing...",
+    "description": "Importing"
+  },
+  "preparedPackages": {
+    "message": "3️⃣ Prepared Emoji Packs",
+    "description": "Prepared emoji packs"
+  },
+  "selectAll": {
+    "message": "Select All",
+    "description": "Select all"
+  },
+  "deselectAll": {
+    "message": "Deselect All",
+    "description": "Deselect all"
+  },
+  "packagesCount": {
+    "message": "{count} emoji packs",
+    "description": "Packages count"
+  },
+  "selectedCount": {
+    "message": "(Selected {count})",
+    "description": "Selected count"
+  },
+  "emotesCount": {
+    "message": "{count} emojis",
+    "description": "Emojis count"
+  },
+  "removePackage": {
+    "message": "Remove emoji pack",
+    "description": "Remove emoji pack"
+  },
+  "viewAllEmojis": {
+    "message": "View all emojis ({count})",
+    "description": "View all emojis"
+  },
+  "selectTargetGroup": {
+    "message": "4️⃣ Select Target Group",
+    "description": "Select target group"
+  },
+  "targetGroupOptional": {
+    "message": "Target group (optional, leave empty to create group by pack name)",
+    "description": "Target group"
+  },
+  "selectTargetGroupOrLeaveEmpty": {
+    "message": "Select target group or leave empty to create new group",
+    "description": "Select target group or leave empty"
+  },
+  "importSelectedPackages": {
+    "message": "Import selected emoji packs ({count})",
+    "description": "Import selected emoji packs"
+  },
+  "noPackagesAdded": {
+    "message": "No emoji packs added yet",
+    "description": "No emoji packs added yet"
+  },
+  "startAddingPackages": {
+    "message": "Start adding emoji packs by searching or entering ID above",
+    "description": "Start adding emoji packs hint"
+  },
+  "packageDetailsWithTitle": {
+    "message": "{title} ({count} emojis)",
+    "description": "Package details with title"
+  },
+  "pleaseSelectAtLeastOnePackage": {
+    "message": "Please select at least one emoji pack",
+    "description": "Please select at least one emoji pack"
+  },
+  "importSuccess": {
+    "message": "Successfully imported {count} emoji packs, total {totalEmojis} emojis",
+    "description": "Import success"
+  },
+  "pleaseEnterValidPackageId": {
+    "message": "Please enter a valid emoji pack ID",
+    "description": "Please enter a valid emoji pack ID"
+  },
+  "packageImportFailed": {
+    "message": "Import failed: {error}",
+    "description": "Package import failed"
+  },
+  "packageAlreadyExists": {
+    "message": "Emoji pack \"{name}\" already exists, updated",
+    "description": "Package already exists"
+  },
+  "packageAddSuccess": {
+    "message": "Successfully added emoji pack \"{name}\" ({count} emojis)",
+    "description": "Package add success"
+  },
+  "searchFailed": {
+    "message": "Search failed, please try again later",
+    "description": "Search failed"
+  },
+  "noMatchingPackagesFound": {
+    "message": "No matching emoji packs found",
+    "description": "No matching emoji packs found"
+  },
+  "searchSuccess": {
+    "message": "Found {count} matching emoji packs",
+    "description": "Search success"
   }
 }

@@ -229,14 +229,16 @@ onMounted(() => {
     <!-- 顶部操作栏 -->
     <div class="mb-4 flex items-center justify-between">
       <div>
-        <h2 class="text-xl font-semibold dark:text-white">云端市场</h2>
+        <h2 class="text-xl font-semibold dark:text-white">{{ t('cloudMarket') }}</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          从云端浏览和安装表情包
-          <template v-if="marketMetadata">- 共 {{ marketMetadata.totalGroups }} 个表情包</template>
+          {{ t('cloudMarketDescription') }}
+          <template v-if="marketMetadata">
+            {{ t('totalPackages', [marketMetadata.totalGroups]) }}
+          </template>
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <a-button @click="loadMarketData" :loading="loading">刷新</a-button>
+        <a-button @click="loadMarketData" :loading="loading">{{ t('refresh') }}</a-button>
       </div>
     </div>
 
@@ -244,7 +246,7 @@ onMounted(() => {
     <div class="mb-4">
       <a-input-search
         v-model:value="searchKeyword"
-        placeholder="搜索表情包名称或描述..."
+        :placeholder="t('searchPackagesPlaceholder')"
         allow-clear
         size="large"
         class="max-w-md"
@@ -255,7 +257,7 @@ onMounted(() => {
     <a-spin :spinning="loading" class="flex-1">
       <div v-if="filteredMarketGroups.length === 0 && !loading" class="text-center py-12">
         <p class="text-gray-400">
-          {{ searchKeyword ? '没有找到匹配的表情包' : '暂无可用的表情包' }}
+          {{ searchKeyword ? t('noMatchingPackages') : t('noAvailablePackages') }}
         </p>
       </div>
 
@@ -313,7 +315,7 @@ onMounted(() => {
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="showDetailModal"
-      :title="currentDetailGroup?.name || '表情包详情'"
+      :title="currentDetailGroup?.name || t('packageDetails')"
       width="80%"
       :footer="null"
       @cancel="closeDetailModal"
@@ -346,7 +348,7 @@ onMounted(() => {
 
           <!-- 表情网格 -->
           <div class="mt-4">
-            <h4 class="font-semibold mb-3 dark:text-white">表情预览</h4>
+            <h4 class="font-semibold mb-3 dark:text-white">{{ t('emojiPreview') }}</h4>
             <div
               v-if="currentDetailGroup.emojis && currentDetailGroup.emojis.length > 0"
               class="grid gap-2"
@@ -372,12 +374,14 @@ onMounted(() => {
                 </div>
               </div>
             </div>
-            <div v-else class="text-center text-gray-400 py-8">此分组没有表情</div>
+            <div v-else class="text-center text-gray-400 py-8">
+              {{ t('groupHasNoEmojisDetail') }}
+            </div>
           </div>
 
           <!-- 底部操作按钮 -->
           <div class="flex justify-end gap-2 pt-4 border-t dark:border-gray-700">
-            <a-button @click="closeDetailModal">关闭</a-button>
+            <a-button @click="closeDetailModal">{{ t('close') }}</a-button>
             <a-button
               v-if="!installedGroupIds.has(currentDetailGroup.id)"
               type="primary"

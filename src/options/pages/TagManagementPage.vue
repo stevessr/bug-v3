@@ -172,10 +172,10 @@ const handleTagClick = (tagName: string) => {
     <div class="mb-6">
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
         <TagOutlined class="mr-2" />
-        標籤管理
+        {{ t('tagManagement') }}
       </h2>
       <p class="text-gray-600 dark:text-gray-400">
-        管理所有表情標籤，包括創建、重命名、刪除和查看使用情況
+        {{ t('tagManagementDescription') }}
       </p>
     </div>
 
@@ -187,7 +187,7 @@ const handleTagClick = (tagName: string) => {
         <input
           v-model="searchTerm"
           type="text"
-          placeholder="搜索標籤..."
+          :placeholder="t('searchTags')"
           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white dark:border-gray-600"
         />
       </div>
@@ -198,7 +198,7 @@ const handleTagClick = (tagName: string) => {
         class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
       >
         <PlusOutlined />
-        創建標籤
+        {{ t('createTag') }}
       </button>
     </div>
 
@@ -224,14 +224,14 @@ const handleTagClick = (tagName: string) => {
               <button
                 @click="saveTagEdit"
                 class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                title="保存"
+                :title="t('save')"
               >
                 ✓
               </button>
               <button
                 @click="cancelEdit"
                 class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                title="取消"
+                :title="t('cancel')"
               >
                 ✕
               </button>
@@ -253,14 +253,14 @@ const handleTagClick = (tagName: string) => {
             <button
               @click="startEditTag(tag.name)"
               class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-              title="編輯標籤"
+              :title="t('editTag')"
             >
               <EditOutlined class="text-sm" />
             </button>
             <button
               @click="deleteTag(tag.name)"
               class="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-              title="刪除標籤"
+              :title="t('deleteTag')"
             >
               <DeleteOutlined class="text-sm" />
             </button>
@@ -269,7 +269,7 @@ const handleTagClick = (tagName: string) => {
 
         <!-- 使用該標籤的表情預覽 -->
         <div class="mt-3">
-          <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">使用此標籤的表情：</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ t('useThisTagEmojis') }}</div>
           <div class="flex flex-wrap gap-1">
             <div
               v-for="(item, index) in getTagEmojis(tag.name).slice(0, 6)"
@@ -299,14 +299,14 @@ const handleTagClick = (tagName: string) => {
     <div v-if="allTags.length === 0" class="text-center py-12">
       <TagOutlined class="text-4xl text-gray-300 dark:text-gray-600 mb-4" />
       <p class="text-gray-500 dark:text-gray-400">
-        {{ searchTerm ? '未找到匹配的標籤' : '還沒有任何標籤' }}
+        {{ searchTerm ? t('noMatchingTags') : t('noTagsYet') }}
       </p>
       <button
         v-if="!searchTerm"
         @click="showCreateModal = true"
         class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
       >
-        創建第一個標籤
+        {{ t('createFirstTag') }}
       </button>
     </div>
 
@@ -321,12 +321,12 @@ const handleTagClick = (tagName: string) => {
 
       <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">創建新標籤</h3>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ t('createNewTag') }}</h3>
 
           <input
             v-model="newTagNameCreate"
             type="text"
-            placeholder="輸入標籤名稱..."
+            :placeholder="t('enterTagName')"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600"
             @keydown.enter="createNewTag"
           />
@@ -342,7 +342,7 @@ const handleTagClick = (tagName: string) => {
               @click="createNewTag"
               class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
             >
-              創建
+              {{ t('createTag') }}
             </button>
           </div>
         </div>

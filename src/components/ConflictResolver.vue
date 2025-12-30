@@ -61,9 +61,9 @@ function extractChanges(value: DeltaRecord | Record<string, unknown>) {
 function getEntityTypeLabel(type: EntityType): string {
   const labels: Record<EntityType, string> = {
     emoji: 'Emoji',
-    group: '分组',
-    settings: '设置',
-    favorites: '收藏'
+    group: browser.i18n.getMessage('entityTypeGroup'),
+    settings: browser.i18n.getMessage('entityTypeSettings'),
+    favorites: browser.i18n.getMessage('entityTypeFavorites')
   }
   return labels[type] || type
 }
@@ -99,7 +99,7 @@ async function resolveConflict(conflict: ConflictInfo, resolution: 'local' | 're
     console.log(`Resolved conflict ${conflict.id} with ${resolution}`)
   } catch (error) {
     console.error('Failed to resolve conflict:', error)
-    alert('解决冲突失败，请重试')
+    alert(browser.i18n.getMessage('resolveConflictFailed'))
   }
 }
 
@@ -113,11 +113,11 @@ async function tryAutoMerge(conflict: ConflictInfo) {
       emit('resolved', conflict, 'merged')
       console.log(`Auto-merged conflict ${conflict.id}`)
     } else {
-      alert('自动合并失败，请手动选择版本')
+      alert(browser.i18n.getMessage('autoMergeFailed'))
     }
   } catch (error) {
     console.error('Failed to auto-merge:', error)
-    alert('自动合并失败，请手动选择版本')
+    alert(browser.i18n.getMessage('autoMergeFailed'))
   }
 }
 
@@ -135,7 +135,7 @@ async function autoResolveAll() {
     console.log(`Auto-resolved ${results.length} conflicts`)
   } catch (error) {
     console.error('Failed to auto-resolve all:', error)
-    alert('批量解决冲突失败，请手动处理')
+    alert(browser.i18n.getMessage('batchResolveFailed'))
   }
 }
 </script>
@@ -143,8 +143,8 @@ async function autoResolveAll() {
 <template>
   <div v-if="conflicts.length > 0" class="conflict-resolver">
     <div class="conflict-header">
-      <h3>🔀 同步冲突</h3>
-      <p>检测到 {{ conflicts.length }} 个冲突，请选择如何解决</p>
+      <h3>{{ browser.i18n.getMessage('syncConflict') }}</h3>
+      <p>{{ browser.i18n.getMessage('syncConflictDescription', conflicts.length.toString()) }}</p>
     </div>
 
     <div class="conflict-list">
@@ -163,7 +163,7 @@ async function autoResolveAll() {
           <!-- 本地版本 -->
           <div class="version-panel local">
             <div class="version-header">
-              <h4>📱 本地版本</h4>
+              <h4>{{ browser.i18n.getMessage('localVersion') }}</h4>
               <span class="timestamp">
                 {{ formatTimestamp(extractTimestamp(conflict.localChange)) }}
               </span>
@@ -177,23 +177,23 @@ async function autoResolveAll() {
                 >
                   <div class="field-name">{{ change.field }}</div>
                   <div class="field-value">
-                    <span class="value-label">旧值：</span>
+                    <span class="value-label">{{ browser.i18n.getMessage('oldValue') }}</span>
                     <code>{{ formatValue(change.oldValue) }}</code>
                   </div>
                   <div class="field-value new">
-                    <span class="value-label">新值：</span>
+                    <span class="value-label">{{ browser.i18n.getMessage('newValue') }}</span>
                     <code>{{ formatValue(change.newValue) }}</code>
                   </div>
                 </div>
               </template>
-              <div v-else class="no-changes">无可用的变更详情</div>
+              <div v-else class="no-changes">{{ browser.i18n.getMessage('noChangeDetails') }}</div>
             </div>
           </div>
 
           <!-- 远程版本 -->
           <div class="version-panel remote">
             <div class="version-header">
-              <h4>☁️ 远程版本</h4>
+              <h4>{{ browser.i18n.getMessage('remoteVersion') }}</h4>
               <span class="timestamp">
                 {{ formatTimestamp(extractTimestamp(conflict.remoteChange)) }}
               </span>
@@ -223,21 +223,21 @@ async function autoResolveAll() {
 
         <div class="conflict-actions">
           <button class="action-btn local-btn" @click="resolveConflict(conflict, 'local')">
-            使用本地版本
+            {{ browser.i18n.getMessage('useLocalVersion') }}
           </button>
           <button class="action-btn remote-btn" @click="resolveConflict(conflict, 'remote')">
-            使用远程版本
+            {{ browser.i18n.getMessage('useRemoteVersion') }}
           </button>
-          <button class="action-btn merge-btn" @click="tryAutoMerge(conflict)">尝试自动合并</button>
+          <button class="action-btn merge-btn" @click="tryAutoMerge(conflict)">{{ browser.i18n.getMessage('tryAutoMerge') }}</button>
         </div>
       </div>
     </div>
 
     <div class="conflict-footer">
-      <button class="footer-btn cancel" @click="$emit('cancel')">取消同步</button>
-      <button class="footer-btn auto-resolve" @click="autoResolveAll">自动解决全部</button>
+      <button class="footer-btn cancel" @click="$emit('cancel')">{{ browser.i18n.getMessage('cancelSync') }}</button>
+      <button class="footer-btn auto-resolve" @click="autoResolveAll">{{ browser.i18n.getMessage('autoResolveAll') }}</button>
       <button class="footer-btn continue" :disabled="!allResolved" @click="$emit('continue')">
-        继续同步
+        {{ browser.i18n.getMessage('continueSync') }}
       </button>
     </div>
   </div>

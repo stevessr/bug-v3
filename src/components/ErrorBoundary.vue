@@ -7,7 +7,7 @@ const errorStack = ref('')
 
 onErrorCaptured((err: Error, instance, info) => {
   hasError.value = true
-  errorMessage.value = err.message || '发生未知错误'
+  errorMessage.value = err.message || browser.i18n.getMessage('unknownError')
   errorStack.value = err.stack || ''
 
   console.error('[ErrorBoundary] Caught error:', {
@@ -45,17 +45,17 @@ const reloadPage = () => {
           ></path>
         </svg>
 
-        <h3 class="error-title">组件加载失败</h3>
+        <h3 class="error-title">{{ browser.i18n.getMessage('componentLoadFailed') }}</h3>
         <p class="error-message">{{ errorMessage }}</p>
 
         <details v-if="errorStack" class="error-details">
-          <summary>查看详细信息</summary>
+          <summary>{{ browser.i18n.getMessage('viewDetails') }}</summary>
           <pre class="error-stack">{{ errorStack }}</pre>
         </details>
 
         <div class="error-actions">
-          <button @click="resetError" class="btn-retry">重试</button>
-          <button @click="reloadPage" class="btn-reload">刷新页面</button>
+          <button @click="resetError" class="btn-retry">{{ browser.i18n.getMessage('retry') }}</button>
+          <button @click="reloadPage" class="btn-reload">{{ browser.i18n.getMessage('reloadPage') }}</button>
         </div>
       </div>
     </div>

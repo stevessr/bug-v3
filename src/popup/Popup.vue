@@ -8,7 +8,10 @@ import { useI18n } from '@/utils/i18n'
 
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 
-const { t } = useI18n()
+const { t, initI18n } = useI18n()
+
+// 初始化 i18n
+initI18n()
 
 const {
   emojiStore,
@@ -70,7 +73,7 @@ const openOptionsInNewWindow = () => {
             <a-button
               @click="openOptionsInNewWindow"
               class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              title="在新窗口打开设置"
+              :title="t('openInNewWindow')"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -84,7 +87,7 @@ const openOptionsInNewWindow = () => {
             <a-button
               @click="openSidebar"
               class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              title="打开侧边栏"
+              :title="t('openSidebar')"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -111,7 +114,7 @@ const openOptionsInNewWindow = () => {
             class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
             @input="updateScale"
             role="slider"
-            aria-label="表情缩放控制"
+            :aria-label="t('zoomControl')"
             aria-valuemin="5"
             aria-valuemax="150"
             :aria-valuenow="localScale"

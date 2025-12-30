@@ -72,6 +72,7 @@ declare global {
   const getCacheStats: typeof import('./utils/imageCache')['getCacheStats']
   const getCachedImage: typeof import('./utils/imageCache')['getCachedImage']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
+  const getCurrentLanguage: typeof import('./utils/i18n')['getCurrentLanguage']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const getDeviceId: typeof import('./utils/device')['getDeviceId']
   const getDeviceInfo: typeof import('./utils/device')['getDeviceInfo']
@@ -94,6 +95,7 @@ declare global {
   const h: typeof import('vue')['h']
   const imageCache: typeof import('./utils/imageCache')['imageCache']
   const imageCacheService: typeof import('./utils/imageCacheService')['imageCacheService']
+  const initI18n: typeof import('./utils/i18n')['initI18n']
   const inject: typeof import('vue')['inject']
   const isChineseLocale: typeof import('./utils/i18n')['isChineseLocale']
   const isEmoji: typeof import('./utils/typeGuards')['isEmoji']
@@ -166,6 +168,7 @@ declare global {
   const setEmojiGroup: typeof import('./utils/simpleStorage')['setEmojiGroup']
   const setEmojiGroupIndex: typeof import('./utils/simpleStorage')['setEmojiGroupIndex']
   const setFavorites: typeof import('./utils/simpleStorage')['setFavorites']
+  const setLanguage: typeof import('./utils/i18n')['setLanguage']
   const setMapStoreSuffix: typeof import('pinia')['setMapStoreSuffix']
   const setSettings: typeof import('./utils/simpleStorage')['setSettings']
   const setTelegramBotToken: typeof import('./utils/telegramResolver')['setTelegramBotToken']
@@ -331,6 +334,7 @@ declare module 'vue' {
     readonly getCacheStats: UnwrapRef<typeof import('./utils/imageCache')['getCacheStats']>
     readonly getCachedImage: UnwrapRef<typeof import('./utils/imageCache')['getCachedImage']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
+    readonly getCurrentLanguage: UnwrapRef<typeof import('./utils/i18n')['getCurrentLanguage']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getDeviceId: UnwrapRef<typeof import('./utils/device')['getDeviceId']>
     readonly getDeviceInfo: UnwrapRef<typeof import('./utils/device')['getDeviceInfo']>
@@ -353,6 +357,7 @@ declare module 'vue' {
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly imageCache: UnwrapRef<typeof import('./utils/imageCache')['imageCache']>
     readonly imageCacheService: UnwrapRef<typeof import('./utils/imageCacheService')['imageCacheService']>
+    readonly initI18n: UnwrapRef<typeof import('./utils/i18n')['initI18n']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly isChineseLocale: UnwrapRef<typeof import('./utils/i18n')['isChineseLocale']>
     readonly isEmoji: UnwrapRef<typeof import('./utils/typeGuards')['isEmoji']>
@@ -425,6 +430,7 @@ declare module 'vue' {
     readonly setEmojiGroup: UnwrapRef<typeof import('./utils/simpleStorage')['setEmojiGroup']>
     readonly setEmojiGroupIndex: UnwrapRef<typeof import('./utils/simpleStorage')['setEmojiGroupIndex']>
     readonly setFavorites: UnwrapRef<typeof import('./utils/simpleStorage')['setFavorites']>
+    readonly setLanguage: UnwrapRef<typeof import('./utils/i18n')['setLanguage']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
     readonly setSettings: UnwrapRef<typeof import('./utils/simpleStorage')['setSettings']>
     readonly setTelegramBotToken: UnwrapRef<typeof import('./utils/telegramResolver')['setTelegramBotToken']>

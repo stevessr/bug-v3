@@ -21,7 +21,10 @@ import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
 import opensource from '@/options/modals/opensource.vue'
 
-const { t } = useI18n()
+const { t, initI18n } = useI18n()
+
+// 初始化 i18n
+initI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -357,7 +360,7 @@ const handleSaveGroup = (
       detail: payload.detail
     })
     // IndexedDB removed: no-op flushBuffer was removed — nothing to do here
-    options.showSuccess('分组已更新')
+    options.showSuccess(t('groupUpdated'))
   }
 }
 </script>

@@ -352,7 +352,7 @@
     "description": "搜索表情包"
   },
   "searchPlaceholder": {
-    "message": "输入关键词搜索 (如: 小黄脸)",
+    "message": "输入关键词搜索 (如：小黄脸)",
     "description": "搜索占位符"
   },
   "searching": {
@@ -368,7 +368,7 @@
     "description": "通过 ID 导入描述"
   },
   "packageIdPlaceholder": {
-    "message": "输入表情包ID (如: 237)",
+    "message": "输入表情包 ID (如：237)",
     "description": "表情包 ID 占位符"
   },
   "importing": {
@@ -1086,5 +1086,557 @@
   "loadGroupDetailsFailedError": {
     "message": "加载分组详情失败：{message}",
     "description": "加载分组详情失败"
+  },
+  "openInNewWindow": {
+    "message": "在新窗口打开设置",
+    "description": "在新窗口打开设置"
+  },
+  "openSidebar": {
+    "message": "打开侧边栏",
+    "description": "打开侧边栏"
+  },
+  "zoomControl": {
+    "message": "表情缩放控制",
+    "description": "表情缩放控制"
+  },
+  "lazyEmojiGrids": {
+    "message": "只渲染当前活动分组，真正的虚拟化",
+    "description": "Lazy Emoji Grids 注释"
+  },
+  "searchMode": {
+    "message": "使用过滤后的表情",
+    "description": "搜索模式"
+  },
+  "normalMode": {
+    "message": "只渲染当前活动分组（真正的虚拟化）",
+    "description": "正常模式"
+  },
+  "groupIcon": {
+    "message": "分组图标",
+    "description": "分组图标"
+  },
+  "groupTabs": {
+    "message": "表情分组标签",
+    "description": "表情分组标签"
+  },
+  "keyboardNavigation": {
+    "message": "键盘导航功能",
+    "description": "键盘导航功能"
+  },
+  "loadingText": {
+    "message": "加载中...",
+    "description": "加载中文本"
+  },
+  "usageCountTimes": {
+    "message": "使用 {count} 次",
+    "description": "使用次数"
+  },
+  "goAddEmojis": {
+    "message": "去添加表情",
+    "description": "去添加表情"
+  },
+  "allEmojis": {
+    "message": "所有表情",
+    "description": "所有表情"
+  },
+  "searchEmojiNamesOrTags": {
+    "message": "搜索表情名称或标签...",
+    "description": "搜索表情名称或标签占位符"
+  },
+  "searchEmojiNamesOrTagsTitle": {
+    "message": "搜索表情名称或标签",
+    "description": "搜索表情名称或标签标题"
+  },
+  "clearSearch": {
+    "message": "清除搜索",
+    "description": "清除搜索"
+  },
+  "selectGroupPlaceholder": {
+    "message": "选择分组",
+    "description": "选择分组占位符"
+  },
+  "virtualGroup": {
+    "message": "（虚拟分组）",
+    "description": "虚拟分组"
+  },
+  "searchResultsFound": {
+    "message": "🔍 搜索 \"{query}\" 找到 {count} 个结果",
+    "description": "搜索结果"
+  },
+  "noMatchingEmojisFound": {
+    "message": "未找到匹配的表情",
+    "description": "未找到匹配的表情"
+  },
+  "tagsLabel": {
+    "message": "标签：{tags}",
+    "description": "标签标签"
+  },
+  "noTags": {
+    "message": "无",
+    "description": "无标签"
+  },
+  "showAllEmojis": {
+    "message": "🔍 展示所有分组的表情，共 {count} 个表情",
+    "description": "展示所有表情"
+  },
+  "noEmojisYet": {
+    "message": "暂无表情",
+    "description": "暂无表情"
+  },
+  "groupUpdated": {
+    "message": "分组已更新",
+    "description": "分组已更新"
+  },
+  "entityTypeGroup": {
+    "message": "分组",
+    "description": "实体类型：分组"
+  },
+  "entityTypeSettings": {
+    "message": "设置",
+    "description": "实体类型：设置"
+  },
+  "entityTypeFavorites": {
+    "message": "收藏",
+    "description": "实体类型：收藏"
+  },
+  "resolveConflictFailed": {
+    "message": "解决冲突失败，请重试",
+    "description": "解决冲突失败"
+  },
+  "autoMergeFailed": {
+    "message": "自动合并失败，请手动选择版本",
+    "description": "自动合并失败"
+  },
+  "batchResolveFailed": {
+    "message": "批量解决冲突失败，请手动处理",
+    "description": "批量解决冲突失败"
+  },
+  "componentLoadFailed": {
+    "message": "组件加载失败",
+    "description": "组件加载失败"
+  },
+  "unknownError": {
+    "message": "发生未知错误",
+    "description": "发生未知错误"
+  },
+  "openInNewWindow": {
+    "message": "在新窗口打开设置",
+    "description": "在新窗口打开设置"
+  },
+  "openSidebar": {
+    "message": "打开侧边栏",
+    "description": "打开侧边栏"
+  },
+  "zoomControl": {
+    "message": "表情缩放控制",
+    "description": "表情缩放控制"
+  },
+  "lazyEmojiGrids": {
+    "message": "只渲染当前活动分组，真正的虚拟化",
+    "description": "Lazy Emoji Grids 注释"
+  },
+  "searchMode": {
+    "message": "使用过滤后的表情",
+    "description": "搜索模式"
+  },
+  "normalMode": {
+    "message": "只渲染当前活动分组（真正的虚拟化）",
+    "description": "正常模式"
+  },
+  "groupTabs": {
+    "message": "表情分组标签",
+    "description": "表情分组标签"
+  },
+  "groupIcon": {
+    "message": "分组图标",
+    "description": "分组图标"
+  },
+  "keyboardNavigation": {
+    "message": "键盘导航功能",
+    "description": "键盘导航功能"
+  },
+  "loadingText": {
+    "message": "加载中...",
+    "description": "加载中文本"
+  },
+  "usageCountTimes": {
+    "message": "使用 {count} 次",
+    "description": "使用次数"
+  },
+  "searchEmojiNamesOrTags": {
+    "message": "搜索表情名称或标签...",
+    "description": "搜索表情名称或标签占位符"
+  },
+  "searchEmojiNamesOrTagsTitle": {
+    "message": "搜索表情名称或标签",
+    "description": "搜索表情名称或标签标题"
+  },
+  "clearSearch": {
+    "message": "清除搜索",
+    "description": "清除搜索"
+  },
+  "selectGroupPlaceholder": {
+    "message": "选择分组",
+    "description": "选择分组占位符"
+  },
+  "virtualGroup": {
+    "message": "（虚拟分组）",
+    "description": "虚拟分组"
+  },
+  "searchResultsFound": {
+    "message": "🔍 搜索 \"{query}\" 找到 {count} 个结果",
+    "description": "搜索结果"
+  },
+  "noMatchingEmojisFound": {
+    "message": "未找到匹配的表情",
+    "description": "未找到匹配的表情"
+  },
+  "tagsLabel": {
+    "message": "标签：{tags}",
+    "description": "标签标签"
+  },
+  "noTags": {
+    "message": "无",
+    "description": "无标签"
+  },
+  "showAllEmojis": {
+    "message": "🔍 展示所有分组的表情，共 {count} 个表情",
+    "description": "展示所有表情"
+  },
+  "noEmojisYet": {
+    "message": "暂无表情",
+    "description": "暂无表情"
+  },
+  "linkCopiedToClipboard": {
+    "message": "链接已复制到剪贴板",
+    "description": "链接已复制到剪贴板"
+  },
+  "tagManagement": {
+    "message": "标签管理",
+    "description": "标签管理"
+  },
+  "tagManagementDescription": {
+    "message": "管理所有表情标签，包括创建、重命名、删除和查看使用情况",
+    "description": "标签管理描述"
+  },
+  "searchTags": {
+    "message": "搜索标签...",
+    "description": "搜索标签占位符"
+  },
+  "createTag": {
+    "message": "创建标签",
+    "description": "创建标签"
+  },
+  "save": {
+    "message": "保存",
+    "description": "保存"
+  },
+  "cancel": {
+    "message": "取消",
+    "description": "取消"
+  },
+  "editTag": {
+    "message": "编辑标签",
+    "description": "编辑标签"
+  },
+  "deleteTag": {
+    "message": "删除标签",
+    "description": "删除标签"
+  },
+  "useThisTagEmojis": {
+    "message": "使用此标签的表情：",
+    "description": "使用此标签的表情"
+  },
+  "noMatchingTags": {
+    "message": "未找到匹配的标签",
+    "description": "未找到匹配的标签"
+  },
+  "noTagsYet": {
+    "message": "还没有任何标签",
+    "description": "还没有任何标签"
+  },
+  "createFirstTag": {
+    "message": "创建第一个标签",
+    "description": "创建第一个标签"
+  },
+  "createNewTag": {
+    "message": "创建新标签",
+    "description": "创建新标签"
+  },
+  "enterTagName": {
+    "message": "输入标签名称...",
+    "description": "输入标签名称占位符"
+  },
+  "tagRenameSuccess": {
+    "message": "标签 \"{oldName}\" 已重命名为 \"{newName}\"",
+    "description": "标签重命名成功"
+  },
+  "tagCreateSuccess": {
+    "message": "标签 \"{tagName}\" 创建成功",
+    "description": "标签创建成功"
+  },
+  "tagDeleteSuccess": {
+    "message": "已从 {count} 个表情中移除标签 \"{tagName}\"",
+    "description": "标签删除成功"
+  },
+  "tagNotUsed": {
+    "message": "标签 \"{tagName}\" 未被使用",
+    "description": "标签未被使用"
+  },
+  "tagClickInfo": {
+    "message": "点击了标签 \"{tagName}\"",
+    "description": "点击标签信息"
+  },
+  "pleaseEnterTagName": {
+    "message": "请输入标签名称",
+    "description": "请输入标签名称"
+  },
+  "tagAlreadyExists": {
+    "message": "该标签已存在",
+    "description": "该标签已存在"
+  },
+  "cloudMarket": {
+    "message": "云端市场",
+    "description": "云端市场"
+  },
+  "cloudMarketDescription": {
+    "message": "从云端浏览和安装表情包",
+    "description": "云端市场描述"
+  },
+  "totalPackages": {
+    "message": "- 共 {count} 个表情包",
+    "description": "总表情包数"
+  },
+  "refresh": {
+    "message": "刷新",
+    "description": "刷新"
+  },
+  "searchPackagesPlaceholder": {
+    "message": "搜索表情包名称或描述...",
+    "description": "搜索表情包占位符"
+  },
+  "noMatchingPackages": {
+    "message": "没有找到匹配的表情包",
+    "description": "没有找到匹配的表情包"
+  },
+  "noAvailablePackages": {
+    "message": "暂无可用的表情包",
+    "description": "暂无可用的表情包"
+  },
+  "packageDetails": {
+    "message": "表情包详情",
+    "description": "表情包详情"
+  },
+  "archived": {
+    "message": "(已归档)",
+    "description": "已归档"
+  },
+  "viewDetails": {
+    "message": "查看详情",
+    "description": "查看详情"
+  },
+  "installed": {
+    "message": "已安装",
+    "description": "已安装"
+  },
+  "install": {
+    "message": "安装",
+    "description": "安装"
+  },
+  "close": {
+    "message": "关闭",
+    "description": "关闭"
+  },
+  "emojiPreview": {
+    "message": "表情预览",
+    "description": "表情预览"
+  },
+  "groupHasNoEmojisDetail": {
+    "message": "此分组没有表情",
+    "description": "此分组没有表情"
+  },
+  "loadMarketDataSuccess": {
+    "message": "成功加载 {count} 个表情包",
+    "description": "加载市场数据成功"
+  },
+  "loadMarketDataFailed": {
+    "message": "加载市场数据失败，请检查网络连接",
+    "description": "加载市场数据失败"
+  },
+  "loadGroupDetailsFailed": {
+    "message": "加载分组详情失败，请稍后重试",
+    "description": "加载分组详情失败"
+  },
+  "packageInstallSuccess": {
+    "message": "成功安装表情包「{name}」",
+    "description": "表情包安装成功"
+  },
+  "packageInstallFailed": {
+    "message": "安装表情包失败，请稍后重试",
+    "description": "表情包安装失败"
+  },
+  "confirmOverwriteGroup": {
+    "message": "已存在名为「{name}」的分组，是否覆盖？",
+    "description": "确认覆盖分组"
+  },
+  "unnamed": {
+    "message": "未命名",
+    "description": "未命名"
+  },
+  "totalEmojisInPackage": {
+    "message": "共 {count} 个表情",
+    "description": "包中表情总数"
+  },
+  "bilibiliImportTitle": {
+    "message": "Bilibili 表情导入",
+    "description": "Bilibili 导入标题"
+  },
+  "bilibiliImportDescription": {
+    "message": "通过表情包 ID 从 Bilibili 导入表情包到插件中",
+    "description": "Bilibili 导入描述"
+  },
+  "searchEmotePackages": {
+    "message": "1️⃣ 搜索表情包",
+    "description": "搜索表情包"
+  },
+  "searchEmotePackagesPlaceholder": {
+    "message": "输入关键词搜索 (如：小黄脸)",
+    "description": "搜索表情包占位符"
+  },
+  "search": {
+    "message": "搜索",
+    "description": "搜索"
+  },
+  "searching": {
+    "message": "搜索中...",
+    "description": "搜索中"
+  },
+  "select": {
+    "message": "选择",
+    "description": "选择"
+  },
+  "noRelatedPackagesFound": {
+    "message": "未找到相关表情包",
+    "description": "未找到相关表情包"
+  },
+  "importById": {
+    "message": "2️⃣ 通过 ID 导入",
+    "description": "通过 ID 导入"
+  },
+  "importByIdDescription": {
+    "message": "直接输入 Bilibili 表情包 ID 导入。",
+    "description": "通过 ID 导入描述"
+  },
+  "packageIdPlaceholder": {
+    "message": "输入表情包 ID (如：237)",
+    "description": "表情包 ID 占位符"
+  },
+  "import": {
+    "message": "导入",
+    "description": "导入"
+  },
+  "importing": {
+    "message": "导入中...",
+    "description": "导入中"
+  },
+  "preparedPackages": {
+    "message": "3️⃣ 已准备导入的表情包",
+    "description": "已准备导入的表情包"
+  },
+  "selectAll": {
+    "message": "全选",
+    "description": "全选"
+  },
+  "deselectAll": {
+    "message": "取消全选",
+    "description": "取消全选"
+  },
+  "packagesCount": {
+    "message": "{count} 个表情包",
+    "description": "表情包数量"
+  },
+  "selectedCount": {
+    "message": "(已选 {count})",
+    "description": "已选数量"
+  },
+  "emotesCount": {
+    "message": "{count} 个表情",
+    "description": "表情数量"
+  },
+  "removePackage": {
+    "message": "移除表情包",
+    "description": "移除表情包"
+  },
+  "viewAllEmojis": {
+    "message": "查看全部表情 ({count})",
+    "description": "查看全部表情"
+  },
+  "selectTargetGroup": {
+    "message": "4️⃣ 选择目标分组",
+    "description": "选择目标分组"
+  },
+  "targetGroupOptional": {
+    "message": "目标分组（可选，留空将按表情包名称创建新分组）",
+    "description": "目标分组"
+  },
+  "selectTargetGroupOrLeaveEmpty": {
+    "message": "选择目标分组或留空创建新分组",
+    "description": "选择目标分组或留空创建新分组"
+  },
+  "importSelectedPackages": {
+    "message": "导入选中的表情包 ({count})",
+    "description": "导入选中的表情包"
+  },
+  "noPackagesAdded": {
+    "message": "还没有添加任何表情包",
+    "description": "还没有添加任何表情包"
+  },
+  "startAddingPackages": {
+    "message": "在上方通过搜索或输入 ID 开始添加表情包",
+    "description": "开始添加表情包提示"
+  },
+  "packageDetailsWithTitle": {
+    "message": "{title} ({count} 个表情)",
+    "description": "表情包详情"
+  },
+  "pleaseSelectAtLeastOnePackage": {
+    "message": "请至少选择一个表情包",
+    "description": "请至少选择一个表情包"
+  },
+  "importSuccess": {
+    "message": "成功导入 {count} 个表情包，共 {totalEmojis} 个表情",
+    "description": "导入成功"
+  },
+  "importFailed": {
+    "message": "导入失败：{error}",
+    "description": "导入失败"
+  },
+  "pleaseEnterValidPackageId": {
+    "message": "请输入有效的表情包 ID",
+    "description": "请输入有效的表情包 ID"
+  },
+  "packageImportFailed": {
+    "message": "导入失败：{error}",
+    "description": "表情包导入失败"
+  },
+  "packageAlreadyExists": {
+    "message": "表情包「{name}」已存在，已更新",
+    "description": "表情包已存在"
+  },
+  "packageAddSuccess": {
+    "message": "成功添加表情包「{name}」（{count} 个表情）",
+    "description": "表情包添加成功"
+  },
+  "searchFailed": {
+    "message": "搜索失败，请稍后重试",
+    "description": "搜索失败"
+  },
+  "noMatchingPackagesFound": {
+    "message": "未找到匹配的表情包",
+    "description": "未找到匹配的表情包"
+  },
+  "searchSuccess": {
+    "message": "找到 {count} 个匹配的表情包",
+    "description": "搜索成功"
   }
 }

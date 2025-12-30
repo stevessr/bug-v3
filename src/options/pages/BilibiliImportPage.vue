@@ -246,8 +246,10 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
     <div class="max-w-6xl mx-auto">
       <!-- 页面标题 -->
       <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Bilibili 表情导入</h1>
-        <p class="text-gray-600 dark:text-gray-400">通过表情包 ID 从 Bilibili 导入表情包到插件中</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          {{ t('bilibiliImportTitle') }}
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400">{{ t('bilibiliImportDescription') }}</p>
       </div>
 
       <!-- 错误信息 -->
@@ -266,11 +268,13 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
           <div
             class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md p-4"
           >
-            <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">1️⃣ 搜索表情包</h4>
+            <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">
+              {{ t('searchEmotePackages') }}
+            </h4>
             <div class="flex gap-2 mb-3">
               <a-input
                 v-model:value="searchInput"
-                placeholder="输入关键词搜索 (如: 小黄脸)"
+                :placeholder="t('searchEmotePackagesPlaceholder')"
                 @pressEnter="handleSearch"
               />
               <a-button
@@ -279,7 +283,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                 :disabled="!searchInput || !searchInput.trim()"
                 :loading="searchLoading"
               >
-                搜索
+                {{ searchLoading ? t('searching') : t('search') }}
               </a-button>
             </div>
 
@@ -301,7 +305,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                   </div>
                   <div class="text-xs text-gray-500">ID: {{ result.id }}</div>
                 </div>
-                <a-button size="small" type="text">选择</a-button>
+                <a-button size="small" type="text">{{ t('select') }}</a-button>
               </div>
             </div>
             <div
@@ -313,7 +317,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
               "
               class="text-center py-4 text-sm text-gray-500"
             >
-              未找到相关表情包
+              {{ t('noRelatedPackagesFound') }}
             </div>
           </div>
 
@@ -321,16 +325,16 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
           <div
             class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
           >
-            <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">2️⃣ 通过 ID 导入</h4>
+            <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">{{ t('importById') }}</h4>
 
             <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
-              直接输入 Bilibili 表情包 ID 导入。
+              {{ t('importByIdDescription') }}
             </p>
 
             <div class="flex gap-2">
               <a-input-number
                 v-model:value="packageIdInput"
-                placeholder="输入表情包ID (如: 237)"
+                :placeholder="t('packageIdPlaceholder')"
                 class="flex-1"
                 :controls="false"
                 @pressEnter="importPackageById"
@@ -341,7 +345,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                 :disabled="!packageIdInput || !String(packageIdInput).trim()"
                 :loading="idImportLoading"
               >
-                导入
+                {{ idImportLoading ? t('importing') : t('import') }}
               </a-button>
             </div>
           </div>
@@ -351,26 +355,26 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
         <div v-if="packages.length > 0" class="space-y-4">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-4">
-              <h4 class="font-medium text-gray-900 dark:text-white">3️⃣ 已准备导入的表情包</h4>
+              <h4 class="font-medium text-gray-900 dark:text-white">{{ t('preparedPackages') }}</h4>
               <div class="flex gap-2">
                 <a-button size="small" @click="selectAllPackages" :disabled="packages.length === 0">
-                  全选
+                  {{ t('selectAll') }}
                 </a-button>
                 <a-button
                   size="small"
                   @click="deselectAllPackages"
                   :disabled="selectedPackages.length === 0"
                 >
-                  取消全选
+                  {{ t('deselectAll') }}
                 </a-button>
               </div>
             </div>
             <div class="flex items-center gap-2">
               <span class="text-sm text-gray-600 dark:text-gray-400">
-                {{ packages.length }} 个表情包
+                {{ t('packagesCount', [packages.length]) }}
               </span>
               <span class="text-sm text-blue-600 dark:text-blue-400">
-                (已选 {{ selectedPackages.length }})
+                {{ t('selectedCount', [selectedPackages.length]) }}
               </span>
             </div>
           </div>
@@ -403,7 +407,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                 <div class="flex-1">
                   <h4 class="font-medium text-gray-900 dark:text-white">{{ pkg.text }}</h4>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ pkg.emote.length }} 个表情
+                    {{ t('emotesCount', [pkg.emote.length]) }}
                   </p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -425,7 +429,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                     danger
                     size="small"
                     @click.stop="removePackage(pkg.id)"
-                    title="移除表情包"
+                    :title="t('removePackage')"
                   >
                     <template #icon>
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -468,7 +472,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                   @click.stop="openPreview(pkg)"
                   class="p-0 h-auto"
                 >
-                  查看全部表情 ({{ pkg.emote.length }})
+                  {{ t('viewAllEmojis', [pkg.emote.length]) }}
                 </a-button>
               </div>
             </div>
@@ -476,16 +480,18 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
 
           <!-- 目标分组选择 -->
           <div>
-            <h4 class="font-medium text-gray-900 dark:text-white mb-3">4️⃣ 选择目标分组</h4>
+            <h4 class="font-medium text-gray-900 dark:text-white mb-3">
+              {{ t('selectTargetGroup') }}
+            </h4>
             <div class="space-y-3">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
-                  目标分组（可选，留空将按表情包名称创建新分组）
+                  {{ t('targetGroupOptional') }}
                 </label>
                 <GroupSelector
                   v-model="targetGroupId"
                   :groups="availableGroups"
-                  placeholder="选择目标分组或留空创建新分组"
+                  :placeholder="t('selectTargetGroupOrLeaveEmpty')"
                 />
               </div>
             </div>
@@ -500,16 +506,16 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
               :disabled="selectedPackages.length === 0 || isLoading"
               :loading="isLoading"
             >
-              导入选中的表情包 ({{ selectedPackages.length }})
+              {{ t('importSelectedPackages', [selectedPackages.length]) }}
             </a-button>
           </div>
         </div>
 
         <!-- 无表情包时的提示 -->
         <div v-else class="text-center py-12">
-          <p class="text-gray-500 dark:text-gray-400 text-lg mb-2">还没有添加任何表情包</p>
+          <p class="text-gray-500 dark:text-gray-400 text-lg mb-2">{{ t('noPackagesAdded') }}</p>
           <p class="text-sm text-gray-400 dark:text-gray-500">
-            在上方通过搜索或输入 ID 开始添加表情包
+            {{ t('startAddingPackages') }}
           </p>
         </div>
       </div>
@@ -518,7 +524,12 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
     <!-- 表情预览模态框 -->
     <a-modal
       v-model:open="previewModalVisible"
-      :title="`${previewingPackage?.text || '表情包'} (${previewingPackage?.emote.length || 0} 个表情)`"
+      :title="
+        t('packageDetailsWithTitle', [
+          previewingPackage?.text || t('packageDetails'),
+          previewingPackage?.emote.length || 0
+        ])
+      "
       width="80%"
       :footer="null"
       @cancel="closePreview"
