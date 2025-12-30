@@ -140,7 +140,7 @@ function startVisualUpdates() {
   visualUpdateInterval = setInterval(() => {
     if (!shadowRoot) return
     state.users.forEach(u => {
-      const timerEl = shadowRoot!.getElementById(`timer-${u}`)
+      const timerEl = shadowRoot?.getElementById(`timer-${u}`)
       if (timerEl) {
         const titleEl = timerEl.querySelector('title')
         if (titleEl) {
@@ -152,7 +152,7 @@ function startVisualUpdates() {
         }
       }
 
-      const activityEl = shadowRoot!.getElementById(`activity-${u}`)
+      const activityEl = shadowRoot?.getElementById(`activity-${u}`)
       if (!activityEl) return
       const isHidden = state.hiddenUsers.has(u)
       const profile = state.userProfiles[u]
@@ -620,8 +620,8 @@ function createUI() {
   shadowRoot.appendChild(container)
 
   // 绑定事件
-  shadowRoot.getElementById('ld-toggle-ball')!.onclick = () => {
-    const bar = shadowRoot!.getElementById('ld-sidebar')
+  shadowRoot.getElementById('ld-toggle-ball')?.addEventListener('click', () => {
+    const bar = shadowRoot?.getElementById('ld-sidebar')
     if (bar) {
       bar.classList.toggle('collapsed')
       state.isCollapsed = bar.classList.contains('collapsed')
@@ -634,44 +634,42 @@ function createUI() {
         startVisualUpdates()
       }
     }
-  }
+  })
 
-  shadowRoot.getElementById('btn-dm')!.onclick = function (
-    this: GlobalEventHandlers,
-    _ev: MouseEvent
-  ) {
-    const el = this as HTMLElement
-    state.enableDanmaku = !state.enableDanmaku
-    el.className = `sb-icon-btn ${state.enableDanmaku ? 'active' : ''}`
-    saveConfig()
-    channel.postMessage({
-      type: 'cmd_config_sync',
-      key: 'enableDanmaku',
-      value: state.enableDanmaku
+  shadowRoot
+    .getElementById('btn-dm')
+    ?.addEventListener('click', function (this: GlobalEventHandlers, _ev: MouseEvent) {
+      const el = this as HTMLElement
+      state.enableDanmaku = !state.enableDanmaku
+      el.className = `sb-icon-btn ${state.enableDanmaku ? 'active' : ''}`
+      saveConfig()
+      channel.postMessage({
+        type: 'cmd_config_sync',
+        key: 'enableDanmaku',
+        value: state.enableDanmaku
+      })
     })
-  }
 
-  shadowRoot.getElementById('btn-sys')!.onclick = function (
-    this: GlobalEventHandlers,
-    _ev: MouseEvent
-  ) {
-    const el = this as HTMLElement
-    state.enableSysNotify = !state.enableSysNotify
-    el.className = `sb-icon-btn ${state.enableSysNotify ? 'active' : ''}`
-    if (
-      state.enableSysNotify &&
-      'Notification' in window &&
-      Notification.permission !== 'granted'
-    ) {
-      Notification.requestPermission()
-    }
-    saveConfig()
-    channel.postMessage({
-      type: 'cmd_config_sync',
-      key: 'enableSysNotify',
-      value: state.enableSysNotify
+  shadowRoot
+    .getElementById('btn-sys')
+    ?.addEventListener('click', function (this: GlobalEventHandlers, _ev: MouseEvent) {
+      const el = this as HTMLElement
+      state.enableSysNotify = !state.enableSysNotify
+      el.className = `sb-icon-btn ${state.enableSysNotify ? 'active' : ''}`
+      if (
+        state.enableSysNotify &&
+        'Notification' in window &&
+        Notification.permission !== 'granted'
+      ) {
+        Notification.requestPermission()
+      }
+      saveConfig()
+      channel.postMessage({
+        type: 'cmd_config_sync',
+        key: 'enableSysNotify',
+        value: state.enableSysNotify
+      })
     })
-  }
 
   const refreshBtn = shadowRoot?.getElementById('btn-refresh')
   if (refreshBtn) {
@@ -1229,7 +1227,7 @@ function startVisualLoops() {
     if (!shadowRoot) return
     const now = Date.now()
     state.users.forEach(u => {
-      const timerEl = shadowRoot!.getElementById(`timer-${u}`)
+      const timerEl = shadowRoot?.getElementById(`timer-${u}`)
       if (!timerEl) return
       const progressCircle = timerEl.querySelector('.timer-progress')
       if (!progressCircle) return

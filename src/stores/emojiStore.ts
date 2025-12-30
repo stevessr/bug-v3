@@ -1031,14 +1031,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
 
     // 更新或插入分组
-    const idx = groups.value.findIndex(g => g.id === newGroup!.id)
-    if (idx !== -1) {
-      const merged = { ...groups.value[idx], ...newGroup }
-      groups.value = [...groups.value.slice(0, idx), merged, ...groups.value.slice(idx + 1)]
-      console.log('[EmojiStore] Updated group in-place from external change', newGroup.id)
-    } else {
-      groups.value = [...groups.value, newGroup]
-      console.log('[EmojiStore] Inserted new group from external change', newGroup.id)
+    if (newGroup) {
+      const targetId = newGroup.id
+      const idx = groups.value.findIndex(g => g.id === targetId)
+      if (idx !== -1) {
+        const merged = { ...groups.value[idx], ...newGroup }
+        groups.value = [...groups.value.slice(0, idx), merged, ...groups.value.slice(idx + 1)]
+        console.log('[EmojiStore] Updated group in-place from external change', targetId)
+      } else {
+        groups.value = [...groups.value, newGroup]
+        console.log('[EmojiStore] Inserted new group from external change', targetId)
+      }
     }
   }
 
