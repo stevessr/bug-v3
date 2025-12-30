@@ -5,7 +5,6 @@ import GroupTabs from './components/GroupTabs.vue'
 import LazyEmojiGrid from './components/LazyEmojiGrid.vue'
 import { usePopup } from './usePopup'
 
-import { useI18n } from '@/utils/i18n'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 
 const { t, initI18n } = useI18n()

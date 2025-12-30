@@ -2,7 +2,6 @@
 import { ref, computed, watch } from 'vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
-import { useI18n } from '@/utils/i18n'
 
 interface Props {
   emojiId: string

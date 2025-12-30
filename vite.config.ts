@@ -57,6 +57,10 @@ export default defineConfig(({ mode }) => {
               'useSyncStore',
               'useTagStore'
             ]
+          },
+          {
+            from: '@/utils/i18n',
+            imports: ['useI18n']
           }
         ],
         resolvers: [

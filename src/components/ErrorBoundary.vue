@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, onErrorCaptured } from 'vue'
 
-import { useI18n } from '../utils/i18n'
-
 const { t } = useI18n()
 
 const hasError = ref(false)

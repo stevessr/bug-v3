@@ -6,7 +6,6 @@ import type { OptionsInject } from '../types'
 import { formatDate } from '../pages/utils/settings'
 
 import CachedImage from '@/components/CachedImage.vue'
-import { useI18n } from '@/utils/i18n'
 
 const { t } = useI18n()
 

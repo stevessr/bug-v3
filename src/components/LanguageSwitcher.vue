@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-import { useI18n } from '../utils/i18n'
-
 const { locale, setLanguage, initI18n } = useI18n()
 const currentLanguage = ref<string>('zh_CN')
 

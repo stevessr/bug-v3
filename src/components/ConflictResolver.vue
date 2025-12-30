@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 
 import type { ConflictInfo, EntityType, DeltaRecord } from '@/types/sync'
 import { conflictResolver } from '@/services/conflict-resolver'
-import { useI18n } from '@/utils/i18n'
 
 const { t } = useI18n()
 

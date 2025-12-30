@@ -17,7 +17,6 @@ import ChatMultiReactorSettings from '../components/ChatMultiReactorSettings.vue
 import LinuxDoSeekingSettings from '../components/LinuxDoSeekingSettings.vue'
 
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
-import { useI18n } from '@/utils/i18n'
 
 const options = inject<OptionsInject>('options')!
 const { t } = useI18n()

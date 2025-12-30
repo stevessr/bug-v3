@@ -11,7 +11,6 @@ import { message } from 'ant-design-vue'
 
 import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
-import { useI18n } from '@/utils/i18n'
 
 const { t } = useI18n()
 

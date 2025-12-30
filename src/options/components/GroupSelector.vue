@@ -3,7 +3,6 @@ import { computed } from 'vue'
 
 import type { EmojiGroup } from '@/types/type'
 import CachedImage from '@/components/CachedImage.vue'
-import { useI18n } from '@/utils/i18n'
 
 interface Props {
   modelValue: string

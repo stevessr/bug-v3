@@ -16,7 +16,6 @@ import EditGroupModal from './components/EditGroupModal.vue'
 import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
 
-import { useI18n } from '@/utils/i18n'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
 import opensource from '@/options/modals/opensource.vue'
