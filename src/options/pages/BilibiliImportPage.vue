@@ -89,7 +89,7 @@ const removePackage = (packageId: number) => {
 
 const doImport = () => {
   if (selectedPackages.value.length === 0) {
-    message.error('请至少选择一个表情包')
+    message.error(t('pleaseSelectAtLeastOnePackage'))
     return
   }
 
@@ -145,7 +145,7 @@ const doImport = () => {
 
       const totalEmojis = selectedPackagesData.reduce((sum, pkg) => sum + pkg.emote.length, 0)
       message.success(
-        `成功导入 ${selectedPackages.value.length} 个表情包，共 ${totalEmojis} 个表情`
+        t('importSuccess', { count: selectedPackages.value.length, totalEmojis })
       )
 
       // 重置状态
@@ -159,7 +159,7 @@ const doImport = () => {
     }
   } catch (error) {
     console.error('导入失败：', error)
-    message.error(`导入失败：${error instanceof Error ? error.message : '未知错误'}`)
+    message.error(t('importFailed', { error: error instanceof Error ? error.message : t('unknownError') }))
   }
 }
 
@@ -167,7 +167,7 @@ const importPackageById = async () => {
   const packageId = parseInt(String(packageIdInput.value).trim())
 
   if (!packageId || isNaN(packageId)) {
-    errorMessage.value = '请输入有效的表情包 ID'
+    errorMessage.value = t('pleaseEnterValidPackageId')
     return
   }
   idImportLoading.value = true
@@ -181,11 +181,11 @@ const importPackageById = async () => {
     if (existingIndex > -1) {
       // 如果已存在，替换
       packages.value[existingIndex] = packageData
-      message.info(`表情包「${packageData.text}」已存在，已更新`)
+      message.info(t('packageAlreadyExists', { name: packageData.text }))
     } else {
       // 如果不存在，添加
       packages.value.push(packageData)
-      message.success(`成功添加表情包「${packageData.text}」（${packageData.emote.length} 个表情）`)
+      message.success(t('packageAddSuccess', { name: packageData.text, count: packageData.emote.length }))
     }
 
     // 自动选中新添加的表情包
@@ -196,7 +196,7 @@ const importPackageById = async () => {
     packageIdInput.value = ''
   } catch (error) {
     console.error('通过 ID 导入表情包失败：', error)
-    errorMessage.value = `导入失败：${error instanceof Error ? error.message : '未知错误'}`
+    errorMessage.value = t('packageImportFailed', { error: error instanceof Error ? error.message : t('unknownError') })
     message.error(errorMessage.value)
   } finally {
     idImportLoading.value = false
@@ -221,13 +221,13 @@ const handleSearch = async () => {
 
     if (results.length === 0) {
       errorMessage.value = '未找到匹配的表情包'
-      message.info('未找到匹配的表情包')
+      message.info(t('noMatchingPackagesFound'))
     } else {
-      message.success(`找到 ${results.length} 个匹配的表情包`)
+      message.success(t('searchSuccess', { count: results.length }))
     }
   } catch (error) {
     console.error('搜索表情包失败：', error)
-    errorMessage.value = '搜索失败，请稍后重试'
+    errorMessage.value = t('searchFailed')
     message.error(errorMessage.value)
   } finally {
     searchLoading.value = false

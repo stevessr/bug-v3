@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { message } from 'ant-design-vue'
 
 import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -91,10 +92,10 @@ const loadMarketData = async () => {
     }
     marketGroups.value = data.groups || []
 
-    message.success(`成功加载 ${marketGroups.value.length} 个表情包`)
+    message.success(t('loadMarketDataSuccess', { count: marketGroups.value.length }))
   } catch (error) {
     console.error('加载市场数据失败：', error)
-    message.error('加载市场数据失败，请检查网络连接')
+    message.error(t('loadMarketDataFailed'))
   } finally {
     loading.value = false
   }
@@ -128,7 +129,7 @@ const loadGroupDetails = async (groupId: string): Promise<EmojiGroup | null> => 
       emojis: (groupData.emojis || []).map((e: any) => ({
         id: e.id || `emoji-${Date.now()}-${Math.random()}`,
         packet: e.packet || Date.now(),
-        name: e.name || '未命名',
+        name: e.name || t('unnamed'),
         url: e.url,
         displayUrl: e.displayUrl,
         width: e.width,
@@ -143,7 +144,7 @@ const loadGroupDetails = async (groupId: string): Promise<EmojiGroup | null> => 
     return detailGroup
   } catch (error) {
     console.error('加载分组详情失败：', error)
-    message.error('加载分组详情失败，请稍后重试')
+    message.error(t('loadGroupDetailsFailed'))
     return null
   }
 }
@@ -188,7 +189,7 @@ const installGroup = async (groupId: string) => {
     if (existingGroup) {
       const confirm = await new Promise<boolean>(resolve => {
         // 简单的确认对话框
-        resolve(window.confirm(`已存在名为「${groupData.name}」的分组，是否覆盖？`))
+        resolve(window.confirm(t('confirmOverwriteGroup', { name: groupData.name })))
       })
 
       if (!confirm) {
@@ -213,10 +214,10 @@ const installGroup = async (groupId: string) => {
       })
     }
 
-    message.success(`成功安装表情包「${groupData.name}」`)
+    message.success(t('packageInstallSuccess', { name: groupData.name }))
   } catch (error) {
     console.error('安装表情包失败：', error)
-    message.error('安装表情包失败，请稍后重试')
+    message.error(t('packageInstallFailed'))
   } finally {
     installingGroupIds.value.delete(groupId)
   }
@@ -284,8 +285,8 @@ onMounted(() => {
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-lg dark:text-white truncate">{{ group.name }}</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                {{ group.emojiCount }} 个表情
-                <span v-if="group.isArchived" class="ml-2 text-xs text-orange-500">(已归档)</span>
+                {{ t('emotesCount', [group.emojiCount]) }}
+                <span v-if="group.isArchived" class="ml-2 text-xs text-orange-500">{{ t('archived') }}</span>
               </p>
             </div>
           </div>
@@ -297,9 +298,9 @@ onMounted(() => {
 
           <!-- 操作按钮 -->
           <div class="flex items-center gap-2">
-            <a-button @click="viewGroupDetails(group.id)" class="flex-1">查看详情</a-button>
+            <a-button @click="viewGroupDetails(group.id)" class="flex-1">{{ t('viewDetails') }}</a-button>
             <a-button v-if="installedGroupIds.has(group.id)" type="default" disabled class="flex-1">
-              已安装
+              {{ t('installed') }}
             </a-button>
             <a-button
               v-else
@@ -308,7 +309,7 @@ onMounted(() => {
               @click="installGroup(group.id)"
               class="flex-1"
             >
-              安装
+              {{ t('install') }}
             </a-button>
           </div>
         </div>
@@ -341,7 +342,7 @@ onMounted(() => {
                 {{ currentDetailGroup.name }}
               </h3>
               <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                共 {{ currentDetailGroup.emojis?.length || 0 }} 个表情
+                {{ t('totalEmojisInPackage', { count: currentDetailGroup.emojis?.length || 0 }) }}
               </p>
               <p v-if="currentDetailGroup.detail" class="text-sm text-gray-600 dark:text-gray-300">
                 {{ currentDetailGroup.detail }}
@@ -395,9 +396,15 @@ onMounted(() => {
                 })
               "
             >
-              安装
-            </a-button>
-            <a-button v-else type="default" disabled>已安装</a-button>
+              {{ t('install') }}
+                          </a-button>
+                          <a-button
+                            v-else
+                            type="default"
+                            disabled
+                          >
+                            {{ t('installed') }}
+                          </a-button>
           </div>
         </div>
       </a-spin>

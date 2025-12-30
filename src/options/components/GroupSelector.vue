@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import type { EmojiGroup } from '@/types/type'
 import CachedImage from '@/components/CachedImage.vue'
+import { useI18n } from '@/utils/i18n'
 
 interface Props {
   modelValue: string
@@ -17,8 +18,10 @@ interface Emits {
   (e: 'change', value: string): void
 }
 
+const { t } = useI18n()
+
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: '搜索并选择分组',
+  placeholder: t('searchAndSelectGroup'),
   disabled: false,
   showEmojiCount: true
 })
@@ -63,7 +66,7 @@ const _displayValue = computed(() => {
         <span v-else class="inline-block mr-2">{{ g.icon || '📁' }}</span>
         {{ g.name }}
         <span v-if="showEmojiCount" class="ml-2 text-xs text-gray-500">
-          ({{ g.emojis.length }} 个表情)
+          {{ t('emojisCount', [g.emojis.length]) }}
         </span>
       </div>
     </a-select-option>

@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
+import { useI18n } from '@/utils/i18n'
 
 interface Props {
   emojiId: string
@@ -14,6 +15,7 @@ const emit = defineEmits<{
 }>()
 
 const emojiStore = useEmojiStore()
+const { t } = useI18n()
 const newTag = ref('')
 
 // 当前表情的标签
@@ -64,20 +66,20 @@ watch(
 <template>
   <div class="tag-editor">
     <div class="tag-editor-header">
-      <h3>标签管理</h3>
+      <h3>{{ t('tagManagement') }}</h3>
       <a-button @click="closeEditor" size="small" type="text">×</a-button>
     </div>
 
     <div class="tag-input-section">
       <a-input
         v-model:value="newTag"
-        placeholder="输入新标签，按回车添加"
+        :placeholder="t('enterNewTagPlaceholder')"
         @press-enter="addTag"
         size="small"
         style="margin-bottom: 8px"
       />
       <a-button @click="addTag" size="small" type="primary" :disabled="!newTag.trim()">
-        添加标签
+        {{ t('addTag') }}
       </a-button>
     </div>
 
@@ -93,7 +95,7 @@ watch(
     <!-- 快速标签建议 -->
     <div class="tag-suggestions" v-if="suggestedTags.length > 0">
       <div class="suggestions-header">
-        <span class="text-xs text-gray-500">快速添加：</span>
+        <span class="text-xs text-gray-500">{{ t('quickAdd') }}：</span>
       </div>
       <div class="suggestions-list">
         <span

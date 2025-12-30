@@ -11,6 +11,7 @@ import {
 import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { useI18n } from '@/utils/i18n'
+import { message } from 'ant-design-vue'
 
 const { t } = useI18n()
 
@@ -59,7 +60,7 @@ const saveTagEdit = () => {
   })
 
   emojiStore.maybeSave()
-  message.success(`標籤 "${oldName}" 已重命名為 "${newName}"`)
+  message.success(t('tagRenameSuccess', { oldName, newName }))
   editingTag.value = null
 }
 
@@ -73,14 +74,14 @@ const cancelEdit = () => {
 const createNewTag = async () => {
   const tagName = newTagNameCreate.value.trim()
   if (!tagName) {
-    message.warning('請輸入標籤名稱')
+    message.warning(t('pleaseEnterTagName'))
     return
   }
 
   // 檢查標籤是否已存在
   const existingTag = emojiStore.allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase())
   if (existingTag) {
-    message.warning('該標籤已存在')
+    message.warning(t('tagAlreadyExists'))
     return
   }
 
@@ -106,7 +107,7 @@ const createNewTag = async () => {
     }
   }
 
-  message.success(`標籤 "${tagName}" 創建成功`)
+  message.success(t('tagCreateSuccess', { tagName }))
   newTagNameCreate.value = ''
   showCreateModal.value = false
 }
@@ -130,9 +131,9 @@ const deleteTag = (tagName: string) => {
 
   if (count > 0) {
     emojiStore.maybeSave()
-    message.success(`已從 ${count} 個表情中移除標籤 "${tagName}"`)
+    message.success(t('tagDeleteSuccess', { count, tagName }))
   } else {
-    message.info(`標籤 "${tagName}" 未被使用`)
+    message.info(t('tagNotUsed', { tagName }))
   }
 }
 
@@ -166,7 +167,7 @@ const getTagEmojis = (tagName: string) => {
 // 處理標籤點擊（篩選功能）
 const handleTagClick = (tagName: string) => {
   // 這裡可以添加標籤篩選邏輯
-  message.info(`點擊了標籤 "${tagName}"`)
+  message.info(t('tagClickInfo', { tagName }))
 }
 </script>
 
@@ -247,7 +248,7 @@ const handleTagClick = (tagName: string) => {
               >
                 {{ tag.name }}
               </span>
-              <span class="text-sm text-gray-500 dark:text-gray-400">({{ tag.count }} 次)</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">({{ tag.count }} {{ t('times') }})</span>
             </div>
           </div>
 
@@ -339,7 +340,7 @@ const handleTagClick = (tagName: string) => {
               @click="showCreateModal = false"
               class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
             >
-              取消
+              {{ t('cancel') }}
             </button>
             <button
               @click="createNewTag"
