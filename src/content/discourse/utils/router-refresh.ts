@@ -4,6 +4,7 @@
  */
 
 import { requestSettingFromBackground } from '../../utils/requestSetting'
+import { notify } from '../../utils/notify'
 
 // 全局状态
 let refreshTimer: ReturnType<typeof setInterval> | null = null
@@ -12,23 +13,58 @@ let isRefreshing = false
 // 类型声明
 declare global {
   interface Window {
-    Discourse?: {
-      router?: {
-        transitionTo: (path: string) => void
-      }
-    }
+    // Content script 无法直接访问 Discourse 对象，移除相关声明以避免误导
   }
 }
 
 /**
- * 检查 Discourse 路由器是否可用
+ * 注入脚本到页面上下文执行
  */
-function isDiscourseRouterAvailable(): boolean {
-  return !!(
-    window.Discourse &&
-    window.Discourse.router &&
-    typeof window.Discourse.router.transitionTo === 'function'
-  )
+function injectRouterScript(): void {
+  const script = document.createElement('script')
+  script.src = chrome.runtime.getURL('js/discourse-router.js')
+  script.onload = () => script.remove()
+  ;(document.head || document.documentElement).appendChild(script)
+}
+
+/**
+ * 检查 Discourse 路由器是否可用
+ * 通过发送消息给注入的脚本来检查
+ */
+function checkDiscourseRouterAvailability(): Promise<boolean> {
+  return new Promise(resolve => {
+    const id = Math.random().toString(36).substring(7)
+    let resolved = false
+
+    const handler = (event: MessageEvent) => {
+      if (
+        event.source === window &&
+        event.data &&
+        event.data.type === 'DISCOURSE_ROUTER_PROBE_RESULT' &&
+        event.data.id === id
+      ) {
+        window.removeEventListener('message', handler)
+        if (!resolved) {
+          resolved = true
+          resolve(event.data.available)
+        }
+      }
+    }
+
+    window.addEventListener('message', handler)
+
+    // 发送探测请求
+    window.postMessage({ type: 'DISCOURSE_ROUTER_PROBE_REQUEST', id }, '*')
+
+    // 超时处理
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        window.removeEventListener('message', handler)
+        resolve(false)
+      }
+    }, 500)
+  })
 }
 
 /**
@@ -78,9 +114,12 @@ function hasOpenModal(): boolean {
 /**
  * 执行路由刷新
  */
-function performRouterRefresh(): void {
+async function performRouterRefresh(): Promise<void> {
   if (isRefreshing) return
-  if (!isDiscourseRouterAvailable()) {
+
+  // 检查路由器可用性
+  const isAvailable = await checkDiscourseRouterAvailability()
+  if (!isAvailable) {
     console.log('[DiscourseRouterRefresh] Discourse router not available, skipping')
     return
   }
@@ -104,9 +143,35 @@ function performRouterRefresh(): void {
 
   try {
     isRefreshing = true
-    const currentPath = window.location.pathname
-    window.Discourse!.router!.transitionTo(currentPath)
-    console.log(`[DiscourseRouterRefresh] Refreshed route: ${currentPath}`)
+
+    // 生成唯一 ID 用于关联消息
+    const id = Math.random().toString(36).substring(7)
+
+    // 监听刷新成功消息
+    const handler = (event: MessageEvent) => {
+      if (
+        event.source === window &&
+        event.data &&
+        event.data.type === 'DISCOURSE_ROUTE_REFRESH_SUCCESS' &&
+        event.data.id === id
+      ) {
+        window.removeEventListener('message', handler)
+        const path = event.data.path
+        console.log(`[DiscourseRouterRefresh] Refreshed route: ${path}`)
+        // 显示轻量提示
+        notify('已刷新页面路由', 'info', 2000)
+      }
+    }
+
+    window.addEventListener('message', handler)
+
+    // 发送刷新请求
+    window.postMessage({ type: 'DISCOURSE_ROUTE_REFRESH_REQUEST', id }, '*')
+
+    // 设置超时清理监听器
+    setTimeout(() => {
+      window.removeEventListener('message', handler)
+    }, 5000)
   } catch (e) {
     console.warn('[DiscourseRouterRefresh] Failed to refresh route:', e)
   } finally {
@@ -181,6 +246,9 @@ export async function initDiscourseRouterRefresh(): Promise<void> {
       console.warn('[DiscourseRouterRefresh] Failed to get interval setting, using default:', e)
     }
 
+    // 注入路由器操作脚本
+    injectRouterScript()
+
     // 等待 Discourse 路由器可用
     let attempts = 0
     const maxAttempts = 10
@@ -188,9 +256,9 @@ export async function initDiscourseRouterRefresh(): Promise<void> {
 
     const waitForRouter = (): Promise<void> => {
       return new Promise(resolve => {
-        const check = () => {
+        const check = async () => {
           attempts++
-          if (isDiscourseRouterAvailable()) {
+          if (await checkDiscourseRouterAvailability()) {
             resolve()
           } else if (attempts < maxAttempts) {
             setTimeout(check, checkInterval)
@@ -205,7 +273,7 @@ export async function initDiscourseRouterRefresh(): Promise<void> {
 
     await waitForRouter()
 
-    if (isDiscourseRouterAvailable()) {
+    if (await checkDiscourseRouterAvailability()) {
       startRouterRefresh(interval)
       console.log('[DiscourseRouterRefresh] Initialized successfully')
     }
