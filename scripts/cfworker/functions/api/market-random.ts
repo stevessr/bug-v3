@@ -1,0 +1,681 @@
+/**
+ * Cloudflare Snippet / Worker for Market Random Image API
+ *
+ * Compliant with: https://developers.cloudflare.com/rules/snippets/
+ *
+ * Features:
+ * - GET /api/market-random - Get a random emoji image from all groups
+ * - GET /api/market-random?group=GROUP_ID - Get a random emoji from specific group
+ * - GET /api/market-random?regex=PATTERN - Get a random emoji from groups matching regex
+ * - GET /api/market-random?redirect=true - Redirect to the image URL
+ */
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type'
+}
+
+// Inlined Manifest Data to avoid extra fetch (Snippet Limitation)
+const MANIFEST_GROUPS = [
+    {
+      "id": "group-1758073408523",
+      "name": "Nachoneko 表情包",
+      "order": 1,
+      "icon": "https://linux.do/uploads/default/original/4X/2/3/f/23fac94d8858a23cbd49879f2b037a2be020c87e.jpeg",
+      "emojiCount": 39
+    },
+    {
+      "id": "group-1759678713445",
+      "name": "神人表情包",
+      "order": 2,
+      "icon": "👊",
+      "emojiCount": 41
+    },
+    {
+      "id": "group-1755913884262",
+      "name": "neko",
+      "order": 3,
+      "icon": "https://linux.do/uploads/default/original/4X/f/4/7/f479dbd309305ab14c53fd377cd51e44ee6f455e.webp",
+      "emojiCount": 64
+    },
+    {
+      "id": "group-1755913887877",
+      "name": "neko2",
+      "order": 4,
+      "icon": "https://linux.do/uploads/default/original/4X/f/7/a/f7afaab5dd91159674a53cdc977a09402f66c278.webp",
+      "emojiCount": 40
+    },
+    {
+      "id": "group-1755964482153",
+      "name": "菲比",
+      "order": 5,
+      "icon": "https://linux.do/uploads/default/original/4X/c/b/9/cb9e72b10478eda89324d505f8597b6520516cc9.webp",
+      "emojiCount": 58
+    },
+    {
+      "id": "group-1755913842696",
+      "name": "黄",
+      "order": 6,
+      "icon": "https://linux.do/uploads/default/original/4X/c/3/8/c38f18581aafd9d9eae31b67c91261cc336072b6.webp",
+      "emojiCount": 87
+    },
+    {
+      "id": "group-1755970088527",
+      "name": "仙狐小姐",
+      "order": 7,
+      "icon": "https://linux.do/uploads/default/original/4X/d/d/9/dd9a3f3779dfd325b0b0cd45bbb0cc1334eb1318.webp",
+      "emojiCount": 272
+    },
+    {
+      "id": "group-1755966299851",
+      "name": "魔女的夜宴",
+      "order": 8,
+      "icon": "https://linux.do/uploads/default/original/4X/c/f/7/cf7a66e61f5d8179e67d3c73781cb61b08b85ec1.webp",
+      "emojiCount": 38
+    },
+    {
+      "id": "group-1755833820210",
+      "name": "铸币大头",
+      "order": 9,
+      "icon": "https://linux.do/uploads/default/original/4X/3/4/f/34fdc9cb2faf18e437081627ccf4277d893ccf97.jpeg",
+      "emojiCount": 112
+    },
+    {
+      "id": "group-1755865026150",
+      "name": "扒手手",
+      "order": 10,
+      "icon": "https://linux.do/uploads/default/original/4X/e/2/9/e29f21239357f9879fd83c2238974e76001eba56.gif",
+      "emojiCount": 13
+    },
+    {
+      "id": "group-1755968404073",
+      "name": "鲨鱼 gura",
+      "order": 11,
+      "icon": "https://linux.do/uploads/default/original/4X/6/2/8/628ac7a00ffc1f489a146e89dd1baf92db60577d.webp",
+      "emojiCount": 175
+    },
+    {
+      "id": "group-1755913811947",
+      "name": "始皇酱",
+      "order": 12,
+      "icon": "秦",
+      "emojiCount": 16
+    },
+    {
+      "id": "group-1756869834619",
+      "name": "KJU",
+      "order": 13,
+      "icon": "https://linux.do/uploads/default/original/4X/b/9/6/b9613456c03f5ddb99af6c712246c5855575e21a.webp",
+      "emojiCount": 42
+    },
+    {
+      "id": "group-1756869864620",
+      "name": "husband",
+      "order": 14,
+      "icon": "https://linux.do/uploads/default/original/4X/c/a/9/ca9def97014798279ea94efd92f8e5ac210a6b09.jpeg",
+      "emojiCount": 52
+    },
+    {
+      "id": "group-1756869887449",
+      "name": "小 C",
+      "order": 15,
+      "icon": "https://linux.do/uploads/default/original/4X/c/c/a/ccacd68f1d3883b372a7c53602d8a58d246a3e96.webp",
+      "emojiCount": 185
+    },
+    {
+      "id": "group-1756869988533",
+      "name": "科研喵",
+      "order": 16,
+      "icon": "https://linux.do/uploads/default/original/4X/4/0/5/405d8e2a4849c28afed8fc363348c3e9b3a24f33.webp",
+      "emojiCount": 16
+    },
+    {
+      "id": "group-1756870014160",
+      "name": "群友",
+      "order": 17,
+      "icon": "https://linux.do/uploads/default/original/4X/e/b/2/eb2c2a4c2102264f69f4b794f26179aa7d0feb16.webp",
+      "emojiCount": 48
+    },
+    {
+      "id": "group-1756870039233",
+      "name": "爱丽丝",
+      "order": 18,
+      "icon": "https://linux.do/uploads/default/original/4X/9/6/6/966615f73c28f39828580b82c095acc6fb121568.webp",
+      "emojiCount": 90
+    },
+    {
+      "id": "group-1756870069420",
+      "name": "neuro sama",
+      "order": 19,
+      "icon": "https://linux.do/uploads/default/original/4X/5/2/d/52d63b7361b0c4a13ea1aea236b5192925358c05.jpeg",
+      "emojiCount": 53
+    },
+    {
+      "id": "group-1756870080244",
+      "name": "从雨",
+      "order": 20,
+      "icon": "https://linux.do/uploads/default/original/4X/d/e/2/de2a975718247a6fe58222ec95f4e41525b8915e.webp",
+      "emojiCount": 27
+    },
+    {
+      "id": "group-1756871007943",
+      "name": "kurmoe",
+      "order": 21,
+      "icon": "https://linux.do/uploads/default/original/4X/8/2/9/829d72fbb4c9560899af4a9b40e3144d4e36325b.webp",
+      "emojiCount": 60
+    },
+    {
+      "id": "group-1757396353003",
+      "name": "X",
+      "order": 22,
+      "icon": "X",
+      "emojiCount": 373
+    },
+    {
+      "id": "ungrouped",
+      "name": "未分组",
+      "order": 23,
+      "icon": "📦",
+      "emojiCount": 10
+    },
+    {
+      "id": "group-1760528756665",
+      "name": "memes",
+      "order": 24,
+      "icon": "😮",
+      "emojiCount": 190
+    },
+    {
+      "id": "group-1759820121581",
+      "name": "魔法少女ノ魔女裁判",
+      "order": 25,
+      "icon": "https://linux.do/uploads/default/original/4X/d/f/6/df666def380f7d6434336e29635a6754085b51b0.jpeg",
+      "emojiCount": 318
+    },
+    {
+      "id": "group-1758292062046",
+      "name": "疯传箱子",
+      "order": 26,
+      "icon": "https://linux.do/uploads/default/optimized/4X/8/a/6/8a6b7ff534a2c8b7ac0674f84089388d148749c9_2_375x500.jpeg",
+      "emojiCount": 24
+    },
+    {
+      "id": "group-1758072938224",
+      "name": "素晴",
+      "order": 27,
+      "icon": "https://linux.do/uploads/default/original/4X/e/2/d/e2d0303b6833d8df9097e30001f47e4c56c5e7e2.png",
+      "emojiCount": 23
+    },
+    {
+      "id": "group-1758290078442",
+      "name": "东方大头",
+      "order": 28,
+      "icon": "https://linux.do/uploads/default/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
+      "emojiCount": 30
+    },
+    {
+      "id": "group-1758291025412",
+      "name": "tatakura",
+      "order": 29,
+      "icon": "https://linux.do/uploads/default/original/4X/8/f/4/8f436a831af266f55e0e56106dd3fb3e06485a8b.webp",
+      "emojiCount": 119
+    },
+    {
+      "id": "group-1758294156025",
+      "name": "伊蕾娜",
+      "order": 30,
+      "icon": "https://linux.do/uploads/default/original/4X/7/b/4/7b4f2325d3ac8347732bc97c45cde3b552f1a6dc.webp",
+      "emojiCount": 104
+    },
+    {
+      "id": "group-1758296437858",
+      "name": "堕天みろ / OchiteMiro",
+      "order": 31,
+      "icon": "https://linux.do/uploads/default/original/4X/a/9/5/a95d5eeedd72bd406ff16d544370673fe9f98a03.jpeg",
+      "emojiCount": 7
+    },
+    {
+      "id": "group-1758435118749",
+      "name": "bilibili idc",
+      "order": 32,
+      "icon": "https://idcflare.com/uploads/default/original/2X/c/c8b533868759cbe3d1cc72ac845439995bb71070.png",
+      "emojiCount": 51
+    },
+    {
+      "id": "group-1758505345831",
+      "name": "菲比 IDC",
+      "order": 33,
+      "icon": "https://idcflare.com/uploads/default/original/2X/c/cec9b4dc6db7b4241d92ae86bf17f6cc687d49ee.png",
+      "emojiCount": 102
+    },
+    {
+      "id": "group-1758703744073",
+      "name": "hy2 cn",
+      "order": 34,
+      "icon": "https://linux.do/uploads/default/original/4X/4/4/6/44603f39e09102a4330c28912d12bd6d0c2023d0.webp",
+      "emojiCount": 26
+    },
+    {
+      "id": "group-1758704054933",
+      "name": "hy2 en",
+      "order": 35,
+      "icon": "https://linux.do/uploads/default/original/4X/1/5/1/1512528c236c31460fd0bc5e5ac5ae7445936bce.webp",
+      "emojiCount": 26
+    },
+    {
+      "id": "group-1758720673759",
+      "name": "fu 师傅🍜",
+      "order": 36,
+      "icon": "https://linux.do/uploads/default/original/4X/3/2/1/321359362aaa44d55185e02dc56f3381c7137b34.jpeg",
+      "emojiCount": 9
+    },
+    {
+      "id": "group-1759062077224",
+      "name": "アマカノ 3",
+      "order": 37,
+      "icon": "https://linux.do/uploads/default/original/4X/2/2/5/225bc59a2d35425c04432861990ddf6d7d65b547.jpeg",
+      "emojiCount": 4
+    },
+    {
+      "id": "group-1759064721561",
+      "name": "令时焥夏 KiriAINa",
+      "order": 38,
+      "icon": "https://linux.do/uploads/default/optimized/4X/e/b/6/eb61ad449326caa5ae203c6346fd40c71e71068f_2_500x500.jpeg",
+      "emojiCount": 9
+    },
+    {
+      "id": "group-1759065160041",
+      "name": "超",
+      "order": 39,
+      "icon": "https://linux.do/uploads/default/original/4X/9/2/7/9272a6fd0cb3cbbbbd101ed51163628965890ad2.webp",
+      "emojiCount": 79
+    },
+    {
+      "id": "group-1759065232486",
+      "name": "服务器",
+      "order": 40,
+      "icon": "https://linux.do/uploads/default/original/4X/a/f/9/af9f35ab8c6376c3bef9fa6da4675b7feb0b0564.webp",
+      "emojiCount": 17
+    },
+    {
+      "id": "group-1759671340288",
+      "name": "舞萌",
+      "order": 41,
+      "icon": "https://linux.do/uploads/default/original/4X/e/a/8/ea84e70f67c32e54208772f9134d8ebb549d378a.webp",
+      "emojiCount": 47
+    },
+    {
+      "id": "group-1759672893426",
+      "name": "yauyau",
+      "order": 42,
+      "icon": "https://linux.do/uploads/default/original/4X/7/b/2/7b234af2b511005f4e5c1259b390b0f9b642034b.webp",
+      "emojiCount": 77
+    },
+    {
+      "id": "group-1759674514752",
+      "name": "kipfel",
+      "order": 43,
+      "icon": "https://linux.do/uploads/default/original/4X/1/f/c/1fcc9843d4ff80c4a94eca2747646db1dafa2a64.gif",
+      "emojiCount": 59
+    },
+    {
+      "id": "group-1759676376056",
+      "name": "狼狼",
+      "order": 44,
+      "icon": "https://linux.do/uploads/default/original/4X/9/7/a/97a95be9dd233b8070b0a960e30baab9c30689cc.webp",
+      "emojiCount": 101
+    },
+    {
+      "id": "group-1759820228329",
+      "name": "玻璃灵梦",
+      "order": 45,
+      "icon": "https://linux.do/uploads/default/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
+      "emojiCount": 29
+    },
+    {
+      "id": "group-1760528644701",
+      "name": "橘雪莉",
+      "order": 46,
+      "icon": "🍊",
+      "emojiCount": 25
+    },
+    {
+      "id": "group-1760717207846",
+      "name": "taffy",
+      "order": 47,
+      "icon": "https://linux.do/uploads/default/original/4X/5/2/c/52ce33243c77626ade1b60b2d12c201ebd964e43.webp",
+      "emojiCount": 136
+    },
+    {
+      "id": "group-1761060574614",
+      "name": "doro",
+      "order": 48,
+      "icon": "https://linux.do/uploads/default/original/4X/2/8/2/282837d25063aa92cb6abbcd17664a3cb7562393.webp",
+      "emojiCount": 108
+    },
+    {
+      "id": "group-1761152742132",
+      "name": "明风风风",
+      "order": 49,
+      "icon": "https://linux.do/uploads/default/original/4X/8/9/2/89229b93f42d8d9843a01f6b71ecfffc40a2c9e5.webp",
+      "emojiCount": 97
+    },
+    {
+      "id": "group-1761153964258",
+      "name": "明前奶绿",
+      "order": 50,
+      "icon": "https://linux.do/uploads/default/original/4X/8/0/7/807e55ab43794732803a5ef83a6a98592321a4bd.webp",
+      "emojiCount": 34
+    },
+    {
+      "id": "group-1761154281184",
+      "name": "小火切",
+      "order": 51,
+      "icon": "https://linux.do/uploads/default/original/4X/7/a/f/7af9ec83b8c60264d7caee2adb74c6844fc0128c.webp",
+      "emojiCount": 89
+    },
+    {
+      "id": "group-1761154861189",
+      "name": "真白花音",
+      "order": 52,
+      "icon": "https://linux.do/uploads/default/original/4X/9/c/e/9cef029cf8659ad3e40a2e286e1da62df9f650d0.webp",
+      "emojiCount": 96
+    },
+    {
+      "id": "group-1761155486316",
+      "name": "家有鲨猫",
+      "order": 53,
+      "icon": "https://linux.do/uploads/default/original/4X/d/5/0/d50e4e34c192daf2c186d7f00e091645d62e1be9.webp",
+      "emojiCount": 119
+    },
+    {
+      "id": "group-1761182392763",
+      "name": "by her side",
+      "order": 54,
+      "icon": "https://linux.do/uploads/default/original/4X/5/0/6/50694e3927be0a3a571c8655a966eca6c83f2154.webp",
+      "emojiCount": 64
+    },
+    {
+      "id": "group-1761182584049",
+      "name": "mis brands",
+      "order": 55,
+      "icon": "https://linux.do/uploads/default/original/4X/4/e/f/4efba64446534e39bb2d33559cd46147268bbdf3.webp",
+      "emojiCount": 42
+    },
+    {
+      "id": "group-1761182716118",
+      "name": "ATRI new",
+      "order": 56,
+      "icon": "https://linux.do/uploads/default/original/4X/5/5/2/5520d953b27e8cfaf1b25ed447991661e4b7f847.gif",
+      "emojiCount": 42
+    },
+    {
+      "id": "group-1761182869790",
+      "name": "ACfun",
+      "order": 57,
+      "icon": "https://linux.do/uploads/default/original/4X/8/5/4/854e689399578cce958bf82969687ad4fd303981.webp",
+      "emojiCount": 69
+    },
+    {
+      "id": "group-1761182921332",
+      "name": "凉宫春日的忧郁",
+      "order": 58,
+      "icon": "https://linux.do/uploads/default/original/4X/c/5/5/c55291775a5566e88d64d99f97ec66382c1c07d6.gif",
+      "emojiCount": 28
+    },
+    {
+      "id": "group-1761327403281",
+      "name": "Twitch",
+      "order": 59,
+      "icon": "T",
+      "emojiCount": 100
+    },
+    {
+      "id": "group-1761328497264",
+      "name": "Stevessr 搞来的 orange",
+      "order": 60,
+      "icon": "🌿",
+      "emojiCount": 69
+    },
+    {
+      "id": "group-1761442802743",
+      "name": "あきゅー",
+      "order": 61,
+      "icon": "https://linux.do/uploads/default/original/4X/d/0/f/d0fdb67759733664dd9cfa55618908c1b8d3250d.jpeg",
+      "emojiCount": 12
+    },
+    {
+      "id": "group-1761445939845",
+      "name": "mon3tr",
+      "order": 62,
+      "icon": "https://linux.do/uploads/default/original/4X/d/c/f/dcf74565da4918578345e1c2eae968726d9b350c.webp",
+      "emojiCount": 29
+    },
+    {
+      "id": "group-1761446423721",
+      "name": "可爱东方 1",
+      "order": 63,
+      "icon": "https://linux.do/uploads/default/original/4X/1/a/3/1a3be398e1b0de1e3884f88a34b7252065aa3474.webp",
+      "emojiCount": 63
+    },
+    {
+      "id": "group-1761446644760",
+      "name": "風間白花",
+      "order": 64,
+      "icon": "https://linux.do/uploads/default/original/4X/5/c/8/5c8016aa6233bdcdc60c984e2bbc60f8a2097dab.webp",
+      "emojiCount": 16
+    },
+    {
+      "id": "group-1761563222611",
+      "name": "企鹅",
+      "order": 65,
+      "icon": "🐧",
+      "emojiCount": 96
+    },
+    {
+      "id": "group-1761569266491",
+      "name": "happy cadot",
+      "order": 66,
+      "icon": "https://linux.do/uploads/default/original/4X/5/0/f/50f1355a1e2ea2efb8ea18caaeb5b5a003e442e2.webp",
+      "emojiCount": 50
+    },
+    {
+      "id": "group-1761569314695",
+      "name": "雪风",
+      "order": 67,
+      "icon": "https://linux.do/uploads/default/original/4X/e/f/9/ef93745624313add1dc703cf16c024517832f713.webp",
+      "emojiCount": 120
+    },
+    {
+      "id": "group-1761572596776",
+      "name": "茳枫",
+      "order": 68,
+      "icon": "https://linux.do/uploads/default/original/4X/9/a/f/9afa812f39164e918cd6e432c041a9d4c8072200.webp",
+      "emojiCount": 112
+    },
+    {
+      "id": "group-1761749438138",
+      "name": "夏目安安",
+      "order": 69,
+      "icon": "https://linux.do/uploads/default/optimized/4X/8/7/0/870aeb149aeb68b7eda41fc7cf45cdb86535ad01_2_382x500.jpeg",
+      "emojiCount": 20
+    },
+    {
+      "id": "group-1761910351243",
+      "name": "L5Mon 檬",
+      "order": 70,
+      "icon": "https://linux.do/uploads/default/original/4X/1/d/3/1d32b64bf4a43934a143e1254e5debb613e886b7.jpeg",
+      "emojiCount": 59
+    },
+    {
+      "id": "group-1762174377236",
+      "name": "Ciallo",
+      "order": 71,
+      "icon": "https://linux.do/uploads/default/original/4X/2/f/a/2fa72ee8bb3f83194bb68dda4b8ac9987118e6a6.webp",
+      "emojiCount": 11
+    },
+    {
+      "id": "group-1762250814892",
+      "name": "X 第二弹",
+      "order": 72,
+      "icon": "https://linux.do/uploads/default/original/4X/2/8/1/281f87a13b64e109025c34b9eac397bc1dc5dbe9.jpeg",
+      "emojiCount": 616
+    },
+    {
+      "id": "group-1762354787132",
+      "name": "樱宇艾玛",
+      "order": 73,
+      "icon": "https://linux.do/uploads/default/original/4X/6/d/0/6d0cd553b74d4ad762b9125de541fd42b3e28d2f.webp",
+      "emojiCount": 25
+    },
+    {
+      "id": "group-1762354829964",
+      "name": "二阶堂希罗",
+      "order": 74,
+      "icon": "https://linux.do/uploads/default/original/4X/7/6/a/76aef6c231f8b5032b1dee22685fbf6d39217296.gif",
+      "emojiCount": 25
+    },
+    {
+      "id": "group-1762519966926",
+      "name": "猪包 TV",
+      "order": 75,
+      "icon": "https://linux.do/uploads/default/original/4X/2/4/6/246f64f7604c2d69301f0ac003661af7af71c47d.webp",
+      "emojiCount": 62
+    },
+    {
+      "id": "group-1762523521486",
+      "name": "魔女",
+      "order": 76,
+      "icon": "https://linux.do/uploads/default/original/4X/0/9/c/09cd510aa8834074c5d94d118f9f5683b8419bdf.webp",
+      "emojiCount": 92
+    },
+    {
+      "id": "group-1762524245454",
+      "name": "魔裁补充包",
+      "order": 77,
+      "icon": "https://linux.do/uploads/default/original/4X/9/e/9/9e95a3ed14fbdb06225a60eca85a66286e821bf3.webp",
+      "emojiCount": 45
+    }
+]
+
+// Helper function to get random item from array
+function getRandomItem(array) {
+  if (array.length === 0) return null
+  return array[Math.floor(Math.random() * array.length)]
+}
+
+export default {
+  async fetch(request) {
+    // Handle CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders })
+    }
+
+    if (request.method !== 'GET') {
+      return new Response('Method Not Allowed', { status: 405, headers: corsHeaders })
+    }
+
+    try {
+      // Parse query parameters
+      const url = new URL(request.url)
+
+      const groupId = url.searchParams.get('group')
+      const regexPattern = url.searchParams.get('regex')
+      const redirectParam = url.searchParams.get('redirect')
+      const shouldRedirect = redirectParam === 'true' || redirectParam === '1'
+
+      // Filter groups using the INLINED manifest
+      let targetGroups = MANIFEST_GROUPS.filter(
+        g => g.emojiCount > 0 && g.id !== 'favorites' && g.id !== 'buffer'
+      )
+
+      // Apply filters
+      if (groupId) {
+        targetGroups = targetGroups.filter(g => g.id === groupId)
+      } else if (regexPattern) {
+        try {
+          const regex = new RegExp(regexPattern, 'i')
+          targetGroups = targetGroups.filter(g => regex.test(g.name))
+        } catch (e) {
+          return new Response(JSON.stringify({ error: 'Invalid regex pattern' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+          })
+        }
+      }
+
+      if (targetGroups.length === 0) {
+        return new Response(JSON.stringify({ error: 'No matching groups found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+        })
+      }
+
+      // Randomly select ONE group from the filtered list
+      const selectedGroup = getRandomItem(targetGroups)
+
+      if (!selectedGroup) {
+         return new Response(JSON.stringify({ error: 'No group selected' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+        })
+      }
+
+      // Fetch details for the selected group
+      const groupUrl = new URL(`/assets/json/${selectedGroup.id}.json`, url.origin)
+      const groupResponse = await fetch(groupUrl.toString())
+
+      if (!groupResponse.ok) {
+         return new Response(JSON.stringify({ error: 'Failed to load group data' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+        })
+      }
+
+      const groupData = await groupResponse.json()
+
+      if (!groupData.emojis || groupData.emojis.length === 0) {
+        return new Response(JSON.stringify({ error: 'No emojis in selected group' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+        })
+      }
+
+      // Select random emoji from the group
+      const randomEmoji = getRandomItem(groupData.emojis)
+
+      if (!randomEmoji) {
+          return new Response(JSON.stringify({ error: 'Failed to select random emoji' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+        })
+      }
+
+      // Handle Redirect
+      if (shouldRedirect) {
+        return Response.redirect(randomEmoji.url, 302)
+      }
+
+      // Return JSON
+      return new Response(JSON.stringify(randomEmoji, null, 2), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      })
+
+    } catch (error) {
+      console.error('[MarketRandom] Error:', error)
+      return new Response(
+        JSON.stringify({ error: 'Internal Server Error', details: String(error) }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=UTF-8' }
+        }
+      )
+    }
+  }
+}
