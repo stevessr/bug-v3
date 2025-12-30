@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed, watch, provide } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed, watch, provide, watchEffect } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
@@ -23,8 +23,13 @@ import opensource from '@/options/modals/opensource.vue'
 
 const { t, initI18n, isReady } = useI18n()
 
-// 初始化 i18n
-initI18n()
+// 本地 i18n 就绪状态
+const i18nReady = ref(false)
+
+// 监听 isReady 变化
+watchEffect(() => {
+  i18nReady.value = isReady.value
+})
 
 const router = useRouter()
 const route = useRoute()
@@ -133,8 +138,8 @@ const {
 
 // 基于路由的菜单项
 const menuItems = computed(() => {
-  // 引用 isReady.value 确保在 isReady 变化时重新计算
-  isReady.value
+  // 引用 i18nReady.value 确保在 i18nReady 变化时重新计算
+  i18nReady.value
 
   const routes = [
     { key: 'settings', label: t('settings'), route: '/settings' },
@@ -239,7 +244,10 @@ const onExportModalCancel = () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 初始化 i18n
+  await initI18n()
+
   setConfirmHandler((title?: string, message?: string) => {
     return new Promise<boolean>(resolve => {
       // save resolver so modal handlers can resolve when user acts
@@ -397,7 +405,7 @@ const handleSaveGroup = (
       <nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <a-menu
-            v-if="isReady"
+            v-if="i18nReady"
             :selectedKeys="menuSelectedKeys"
             mode="horizontal"
             :items="menuItems"

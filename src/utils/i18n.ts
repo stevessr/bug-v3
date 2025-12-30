@@ -110,6 +110,9 @@ export function getCurrentLanguage(): string {
   return currentLanguage
 }
 
+// 响应式的 i18n 就绪状态
+const isReady = ref(false)
+
 /**
  * 初始化 i18n 系统
  */
@@ -132,9 +135,6 @@ export async function initI18n(): Promise<void> {
   // 标记 i18n 已就绪
   isReady.value = true
 }
-
-// 响应式的 i18n 就绪状态
-const isReady = ref(false)
 
 /**
  * Vue 组合式函数 - 使用 i18n
