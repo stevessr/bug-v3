@@ -4,6 +4,9 @@ import { toRefs, type Ref, ref, watch } from 'vue'
 import type { EmojiGroup } from '@/types/type'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import { useEmojiStore } from '@/stores/emojiStore'
+import { useI18n } from '@/utils/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   groups: EmojiGroup[]

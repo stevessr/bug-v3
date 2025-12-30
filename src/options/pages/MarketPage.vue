@@ -5,6 +5,9 @@ import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import type { EmojiGroup } from '@/types/type'
+import { useI18n } from '@/utils/i18n'
+
+const { t } = useI18n()
 
 const emojiStore = useEmojiStore()
 

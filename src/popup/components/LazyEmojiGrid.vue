@@ -4,6 +4,9 @@ import { toRefs, watch } from 'vue'
 import { useEmojiImages } from '@/composables/useEmojiImages'
 import type { Emoji } from '@/types/type'
 import CachedImage from '@/components/CachedImage.vue'
+import { useI18n } from '@/utils/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   emojis: Emoji[]

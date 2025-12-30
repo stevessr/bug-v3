@@ -10,6 +10,9 @@ import {
 } from '@/services/bilibiliEmoteApi'
 import { useEmojiStore } from '@/stores/emojiStore'
 import GroupSelector from '@/options/components/GroupSelector.vue'
+import { useI18n } from '@/utils/i18n'
+
+const { t } = useI18n()
 
 const store = useEmojiStore()
 
