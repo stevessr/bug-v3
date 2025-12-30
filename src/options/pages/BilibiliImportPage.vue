@@ -144,9 +144,7 @@ const doImport = () => {
       store.endBatch()
 
       const totalEmojis = selectedPackagesData.reduce((sum, pkg) => sum + pkg.emote.length, 0)
-      message.success(
-        t('importSuccess', { count: selectedPackages.value.length, totalEmojis })
-      )
+      message.success(t('importSuccess', { count: selectedPackages.value.length, totalEmojis }))
 
       // 重置状态
       selectedPackages.value = []
@@ -159,7 +157,9 @@ const doImport = () => {
     }
   } catch (error) {
     console.error('导入失败：', error)
-    message.error(t('importFailed', { error: error instanceof Error ? error.message : t('unknownError') }))
+    message.error(
+      t('importFailed', { error: error instanceof Error ? error.message : t('unknownError') })
+    )
   }
 }
 
@@ -185,7 +185,9 @@ const importPackageById = async () => {
     } else {
       // 如果不存在，添加
       packages.value.push(packageData)
-      message.success(t('packageAddSuccess', { name: packageData.text, count: packageData.emote.length }))
+      message.success(
+        t('packageAddSuccess', { name: packageData.text, count: packageData.emote.length })
+      )
     }
 
     // 自动选中新添加的表情包
@@ -196,7 +198,9 @@ const importPackageById = async () => {
     packageIdInput.value = ''
   } catch (error) {
     console.error('通过 ID 导入表情包失败：', error)
-    errorMessage.value = t('packageImportFailed', { error: error instanceof Error ? error.message : t('unknownError') })
+    errorMessage.value = t('packageImportFailed', {
+      error: error instanceof Error ? error.message : t('unknownError')
+    })
     message.error(errorMessage.value)
   } finally {
     idImportLoading.value = false

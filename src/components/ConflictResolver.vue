@@ -3,6 +3,9 @@ import { ref, computed } from 'vue'
 
 import type { ConflictInfo, EntityType, DeltaRecord } from '@/types/sync'
 import { conflictResolver } from '@/services/conflict-resolver'
+import { useI18n } from '@/utils/i18n'
+
+const { t } = useI18n()
 
 interface Props {
   conflicts: ConflictInfo[]
@@ -61,9 +64,9 @@ function extractChanges(value: DeltaRecord | Record<string, unknown>) {
 function getEntityTypeLabel(type: EntityType): string {
   const labels: Record<EntityType, string> = {
     emoji: 'Emoji',
-    group: browser.i18n.getMessage('entityTypeGroup'),
-    settings: browser.i18n.getMessage('entityTypeSettings'),
-    favorites: browser.i18n.getMessage('entityTypeFavorites')
+    group: t('entityTypeGroup'),
+    settings: t('entityTypeSettings'),
+    favorites: t('entityTypeFavorites')
   }
   return labels[type] || type
 }
@@ -99,7 +102,7 @@ async function resolveConflict(conflict: ConflictInfo, resolution: 'local' | 're
     console.log(`Resolved conflict ${conflict.id} with ${resolution}`)
   } catch (error) {
     console.error('Failed to resolve conflict:', error)
-    alert(browser.i18n.getMessage('resolveConflictFailed'))
+    alert(t('resolveConflictFailed'))
   }
 }
 
@@ -113,11 +116,11 @@ async function tryAutoMerge(conflict: ConflictInfo) {
       emit('resolved', conflict, 'merged')
       console.log(`Auto-merged conflict ${conflict.id}`)
     } else {
-      alert(browser.i18n.getMessage('autoMergeFailed'))
+      alert(t('autoMergeFailed'))
     }
   } catch (error) {
     console.error('Failed to auto-merge:', error)
-    alert(browser.i18n.getMessage('autoMergeFailed'))
+    alert(t('autoMergeFailed'))
   }
 }
 
@@ -135,7 +138,7 @@ async function autoResolveAll() {
     console.log(`Auto-resolved ${results.length} conflicts`)
   } catch (error) {
     console.error('Failed to auto-resolve all:', error)
-    alert(browser.i18n.getMessage('batchResolveFailed'))
+    alert(t('batchResolveFailed'))
   }
 }
 </script>
@@ -143,8 +146,8 @@ async function autoResolveAll() {
 <template>
   <div v-if="conflicts.length > 0" class="conflict-resolver">
     <div class="conflict-header">
-      <h3>{{ browser.i18n.getMessage('syncConflict') }}</h3>
-      <p>{{ browser.i18n.getMessage('syncConflictDescription', conflicts.length.toString()) }}</p>
+      <h3>{{ t('syncConflict') }}</h3>
+      <p>{{ t('syncConflictDescription', conflicts.length.toString()) }}</p>
     </div>
 
     <div class="conflict-list">
@@ -163,7 +166,7 @@ async function autoResolveAll() {
           <!-- 本地版本 -->
           <div class="version-panel local">
             <div class="version-header">
-              <h4>{{ browser.i18n.getMessage('localVersion') }}</h4>
+              <h4>{{ t('localVersion') }}</h4>
               <span class="timestamp">
                 {{ formatTimestamp(extractTimestamp(conflict.localChange)) }}
               </span>
@@ -177,23 +180,23 @@ async function autoResolveAll() {
                 >
                   <div class="field-name">{{ change.field }}</div>
                   <div class="field-value">
-                    <span class="value-label">{{ browser.i18n.getMessage('oldValue') }}</span>
+                    <span class="value-label">{{ t('oldValue') }}</span>
                     <code>{{ formatValue(change.oldValue) }}</code>
                   </div>
                   <div class="field-value new">
-                    <span class="value-label">{{ browser.i18n.getMessage('newValue') }}</span>
+                    <span class="value-label">{{ t('newValue') }}</span>
                     <code>{{ formatValue(change.newValue) }}</code>
                   </div>
                 </div>
               </template>
-              <div v-else class="no-changes">{{ browser.i18n.getMessage('noChangeDetails') }}</div>
+              <div v-else class="no-changes">{{ t('noChangeDetails') }}</div>
             </div>
           </div>
 
           <!-- 远程版本 -->
           <div class="version-panel remote">
             <div class="version-header">
-              <h4>{{ browser.i18n.getMessage('remoteVersion') }}</h4>
+              <h4>{{ t('remoteVersion') }}</h4>
               <span class="timestamp">
                 {{ formatTimestamp(extractTimestamp(conflict.remoteChange)) }}
               </span>
@@ -223,21 +226,25 @@ async function autoResolveAll() {
 
         <div class="conflict-actions">
           <button class="action-btn local-btn" @click="resolveConflict(conflict, 'local')">
-            {{ browser.i18n.getMessage('useLocalVersion') }}
+            {{ t('useLocalVersion') }}
           </button>
           <button class="action-btn remote-btn" @click="resolveConflict(conflict, 'remote')">
-            {{ browser.i18n.getMessage('useRemoteVersion') }}
+            {{ t('useRemoteVersion') }}
           </button>
-          <button class="action-btn merge-btn" @click="tryAutoMerge(conflict)">{{ browser.i18n.getMessage('tryAutoMerge') }}</button>
+          <button class="action-btn merge-btn" @click="tryAutoMerge(conflict)">
+            {{ t('tryAutoMerge') }}
+          </button>
         </div>
       </div>
     </div>
 
     <div class="conflict-footer">
-      <button class="footer-btn cancel" @click="$emit('cancel')">{{ browser.i18n.getMessage('cancelSync') }}</button>
-      <button class="footer-btn auto-resolve" @click="autoResolveAll">{{ browser.i18n.getMessage('autoResolveAll') }}</button>
+      <button class="footer-btn cancel" @click="$emit('cancel')">{{ t('cancelSync') }}</button>
+      <button class="footer-btn auto-resolve" @click="autoResolveAll">
+        {{ t('autoResolveAll') }}
+      </button>
       <button class="footer-btn continue" :disabled="!allResolved" @click="$emit('continue')">
-        {{ browser.i18n.getMessage('continueSync') }}
+        {{ t('continueSync') }}
       </button>
     </div>
   </div>

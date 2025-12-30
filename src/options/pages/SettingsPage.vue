@@ -15,6 +15,7 @@ import CloudDataPreview from '../components/CloudDataPreview.vue'
 import CollaborativeUploadSettings from '../components/CollaborativeUploadSettings.vue'
 import ChatMultiReactorSettings from '../components/ChatMultiReactorSettings.vue'
 import LinuxDoSeekingSettings from '../components/LinuxDoSeekingSettings.vue'
+
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import { useI18n } from '@/utils/i18n'
 

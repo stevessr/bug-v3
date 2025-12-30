@@ -123,7 +123,7 @@ const focusLastTab = () => {
   <div
     class="group-tabs-scroll flex border-b border-gray-100 dark:border-gray-700 overflow-x-auto"
     role="tablist"
-    :aria-label="$t('groupTabs')"
+    :aria-label="t('groupTabs')"
   >
     <a-button
       v-for="(group, index) in groups"
@@ -147,7 +147,7 @@ const focusLastTab = () => {
         <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
           <img
             :src="getGroupIconSrc(group.icon, group.id)"
-            :alt="group.name ? `${group.name} ${$t('groupIcon')}` : $t('groupIcon')"
+            :alt="group.name ? `${group.name} ${t('groupIcon')}` : t('groupIcon')"
             class="w-4 h-4 mobile:w-5 mobile:h-5 object-contain inline-block"
           />
         </template>

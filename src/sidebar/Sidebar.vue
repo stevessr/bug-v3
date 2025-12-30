@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import LazyEmojiGrid from '../popup/components/LazyEmojiGrid.vue'
 import { usePopup } from '../popup/usePopup'
 import { useEmojiImages } from '../composables/useEmojiImages'
+
 import { useI18n } from '@/utils/i18n'
 
 const { t } = useI18n()
@@ -176,8 +177,8 @@ const handleSearch = () => {
           <a-input
             v-model:value="searchQuery"
             type="text"
-            :placeholder="$t('searchEmojiNamesOrTags')"
-            :title="$t('searchEmojiNamesOrTagsTitle')"
+            :placeholder="t('searchEmojiNamesOrTags')"
+            :title="t('searchEmojiNamesOrTagsTitle')"
             class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
             @input="handleSearch"
           />
@@ -185,7 +186,7 @@ const handleSearch = () => {
             v-if="searchQuery"
             @click="clearSearch"
             class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            :title="$t('clearSearch')"
+            :title="t('clearSearch')"
           >
             ✕
           </button>
@@ -208,7 +209,7 @@ const handleSearch = () => {
         <a-select
           v-model:value="emojiStore.activeGroupId"
           showSearch
-          :placeholder="$t('selectGroupPlaceholder')"
+          :placeholder="t('selectGroupPlaceholder')"
           class="w-full"
           :filterOption="filterOption"
           @change="(value: any) => setActiveHandler(String(value || ''))"
@@ -217,7 +218,7 @@ const handleSearch = () => {
           <a-select-option v-for="g in virtualGroups" :key="g.id" :value="g.id" :label="g.name">
             <span class="inline-block mr-2">{{ g.icon }}</span>
             {{ g.name }}
-            <span class="text-xs text-gray-400 ml-2">{{ $t('virtualGroup') }}</span>
+            <span class="text-xs text-gray-400 ml-2">{{ t('virtualGroup') }}</span>
           </a-select-option>
 
           <!-- 真實分組 -->
@@ -244,11 +245,11 @@ const handleSearch = () => {
         <template v-if="searchQuery">
           <div class="p-3">
             <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              {{ $t('searchResultsFound', [searchQuery, filteredEmojis.length]) }}
+              {{ t('searchResultsFound', [searchQuery, filteredEmojis.length]) }}
             </div>
             <div v-if="filteredEmojis.length === 0" class="text-center py-8">
               <div class="text-2xl mb-2">🔍</div>
-              <div class="text-gray-500 dark:text-gray-400">{{ $t('noMatchingEmojisFound') }}</div>
+              <div class="text-gray-500 dark:text-gray-400">{{ t('noMatchingEmojisFound') }}</div>
             </div>
             <div
               v-else
@@ -262,7 +263,7 @@ const handleSearch = () => {
                 :key="emoji.id"
                 @click="handleEmojiClick(emoji)"
                 class="relative group cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-                :title="`${emoji.name} (${emoji.groupName})\\n${$t('tagsLabel', [emoji.tags?.join(', ') || $t('noTags')])}`"
+                :title="`${emoji.name} (${emoji.groupName})\\n${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
               >
                 <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
                   <img
@@ -299,14 +300,14 @@ const handleSearch = () => {
         <template v-else-if="emojiStore.activeGroupId === 'all-emojis'">
           <div class="p-3">
             <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              {{ $t('showAllEmojis', [getCurrentGroupEmojis('all-emojis').length]) }}
+              {{ t('showAllEmojis', [getCurrentGroupEmojis('all-emojis').length]) }}
             </div>
             <LazyEmojiGrid
               :emojis="getCurrentGroupEmojis('all-emojis')"
               :isLoading="emojiStore.isLoading"
               :favorites="emojiStore.favorites"
               :gridColumns="emojiStore.settings.gridColumns"
-              :emptyMessage="$t('noEmojisYet')"
+              :emptyMessage="t('noEmojisYet')"
               :showAddButton="false"
               groupId="all-emojis"
               isActive
@@ -324,7 +325,7 @@ const handleSearch = () => {
             :isLoading="emojiStore.isLoading"
             :favorites="emojiStore.favorites"
             :gridColumns="emojiStore.settings.gridColumns"
-            :emptyMessage="$t('groupHasNoEmojisInDetail')"
+            :emptyMessage="t('groupHasNoEmojisInDetail')"
             showAddButton
             :groupId="activeGroup.id"
             isActive
@@ -339,7 +340,7 @@ const handleSearch = () => {
         v-if="showCopyToast"
         class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm animate-pulse"
       >
-        {{ $t('linkCopiedToClipboard') }}
+        {{ t('linkCopiedToClipboard') }}
       </div>
     </div>
   </a-config-provider>

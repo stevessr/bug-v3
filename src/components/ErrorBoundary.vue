@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { ref, onErrorCaptured } from 'vue'
 
+import { useI18n } from '../utils/i18n'
+
+const { t } = useI18n()
+
 const hasError = ref(false)
 const errorMessage = ref('')
 const errorStack = ref('')
 
 onErrorCaptured((err: Error, instance, info) => {
   hasError.value = true
-  errorMessage.value = err.message || browser.i18n.getMessage('unknownError')
+  errorMessage.value = err.message || t('unknownError')
   errorStack.value = err.stack || ''
 
   console.error('[ErrorBoundary] Caught error:', {
@@ -45,17 +49,17 @@ const reloadPage = () => {
           ></path>
         </svg>
 
-        <h3 class="error-title">{{ browser.i18n.getMessage('componentLoadFailed') }}</h3>
+        <h3 class="error-title">{{ t('componentLoadFailed') }}</h3>
         <p class="error-message">{{ errorMessage }}</p>
 
         <details v-if="errorStack" class="error-details">
-          <summary>{{ browser.i18n.getMessage('viewDetails') }}</summary>
+          <summary>{{ t('viewDetails') }}</summary>
           <pre class="error-stack">{{ errorStack }}</pre>
         </details>
 
         <div class="error-actions">
-          <button @click="resetError" class="btn-retry">{{ browser.i18n.getMessage('retry') }}</button>
-          <button @click="reloadPage" class="btn-reload">{{ browser.i18n.getMessage('reloadPage') }}</button>
+          <button @click="resetError" class="btn-retry">{{ t('retry') }}</button>
+          <button @click="reloadPage" class="btn-reload">{{ t('reloadPage') }}</button>
         </div>
       </div>
     </div>

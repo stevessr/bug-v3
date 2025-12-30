@@ -4,8 +4,8 @@ import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 import GroupTabs from './components/GroupTabs.vue'
 import LazyEmojiGrid from './components/LazyEmojiGrid.vue'
 import { usePopup } from './usePopup'
-import { useI18n } from '@/utils/i18n'
 
+import { useI18n } from '@/utils/i18n'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 
 const { t, initI18n } = useI18n()
@@ -48,7 +48,9 @@ const openOptionsInNewWindow = () => {
       <!-- Header with scale control -->
       <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('emojiManagement') }}</h2>
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-white">
+            {{ t('emojiManagement') }}
+          </h2>
           <div class="flex items-center gap-2">
             <a-button
               @click="openOptions"
@@ -130,7 +132,8 @@ const openOptionsInNewWindow = () => {
             v-model="emojiStore.searchQuery"
             type="text"
             :placeholder="t('searchEmojis')"
-                      :title="t('searchEmojisTitle')"            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+            :title="t('searchEmojisTitle')"
+            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
           />
           <svg
             class="absolute right-2 top-1.5 w-4 h-4 text-gray-400"

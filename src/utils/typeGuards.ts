@@ -121,7 +121,7 @@ export function sanitizeEmojiGroup(group: unknown): EmojiGroup | undefined {
     name: g.name,
     emojis: validEmojis,
     order: typeof g.order === 'number' ? g.order : 0,
-    icon: typeof g.icon === 'string' ? g.icon : undefined
+    icon: typeof g.icon === 'string' ? g.icon : '📁'
   }
 }
 

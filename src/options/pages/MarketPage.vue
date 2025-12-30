@@ -286,7 +286,9 @@ onMounted(() => {
               <h3 class="font-semibold text-lg dark:text-white truncate">{{ group.name }}</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">
                 {{ t('emotesCount', { count: group.emojiCount }) }}
-                <span v-if="group.isArchived" class="ml-2 text-xs text-orange-500">{{ t('archived') }}</span>
+                <span v-if="group.isArchived" class="ml-2 text-xs text-orange-500">
+                  {{ t('archived') }}
+                </span>
               </p>
             </div>
           </div>
@@ -298,7 +300,9 @@ onMounted(() => {
 
           <!-- 操作按钮 -->
           <div class="flex items-center gap-2">
-            <a-button @click="viewGroupDetails(group.id)" class="flex-1">{{ t('viewDetails') }}</a-button>
+            <a-button @click="viewGroupDetails(group.id)" class="flex-1">
+              {{ t('viewDetails') }}
+            </a-button>
             <a-button v-if="installedGroupIds.has(group.id)" type="default" disabled class="flex-1">
               {{ t('installed') }}
             </a-button>
@@ -397,14 +401,10 @@ onMounted(() => {
               "
             >
               {{ t('install') }}
-                          </a-button>
-                          <a-button
-                            v-else
-                            type="default"
-                            disabled
-                          >
-                            {{ t('installed') }}
-                          </a-button>
+            </a-button>
+            <a-button v-else type="default" disabled>
+              {{ t('installed') }}
+            </a-button>
           </div>
         </div>
       </a-spin>

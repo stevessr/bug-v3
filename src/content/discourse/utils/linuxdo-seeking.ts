@@ -220,10 +220,10 @@ function getTimeAgoColor(isoTime: string | null): string {
   return 'var(--primary-medium)'
 }
 
-function getUserColor(username: string): string {
-  const idx = state.users.indexOf(username)
-  return nameColors[1 + (idx % nameColors.length)]
-}
+// function getUserColor(username: string): string {
+//   const idx = state.users.indexOf(username)
+//   return nameColors[1 + (idx % nameColors.length)]
+// }
 
 function getIntervalMultiplier(lastSeenAt: string | null): number {
   const collapsedMult = state.isCollapsed ? 2 : 1
@@ -262,7 +262,8 @@ async function saveConfig() {
 async function loadConfig() {
   try {
     const result = await chrome.storage.local.get('ld_v21_config')
-    return JSON.parse(result.ld_v21_config || '{}')
+    const configStr = result.ld_v21_config || '{}'
+    return typeof configStr === 'string' ? JSON.parse(configStr) : configStr
   } catch {
     return {}
   }
@@ -541,7 +542,7 @@ function log(msg: string, type = 'info') {
     d.className = type === 'error' ? 'log-err' : type === 'success' ? 'log-ok' : ''
     d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`
     box.prepend(d)
-    if (box.children.length > 20) box.lastChild.remove()
+    if (box.children.length > 20 && box.lastChild) box.lastChild.remove()
   }
 }
 
@@ -554,11 +555,11 @@ export async function initLinuxDoSeeking() {
 
   // 从设置加载配置
   const saved = await loadConfig()
-  state.users = saved.users || []
-  state.lastIds = saved.lastIds || {}
+  state.users = (saved.users as string[]) || []
+  state.lastIds = (saved.lastIds as Record<string, string>) || {}
   state.enableSysNotify = saved.enableSysNotify !== false
   state.enableDanmaku = saved.enableDanmaku !== false
-  state.hiddenUsers = new Set(saved.hiddenUsers || [])
+  state.hiddenUsers = new Set((saved.hiddenUsers as string[]) || [])
 
   // 从扩展设置加载用户列表
   try {
@@ -635,9 +636,13 @@ function createUI() {
     }
   }
 
-  shadowRoot.getElementById('btn-dm').onclick = function (this: HTMLElement) {
+  shadowRoot.getElementById('btn-dm')!.onclick = function (
+    this: GlobalEventHandlers,
+    _ev: MouseEvent
+  ) {
+    const el = this as HTMLElement
     state.enableDanmaku = !state.enableDanmaku
-    this.className = `sb-icon-btn ${state.enableDanmaku ? 'active' : ''}`
+    el.className = `sb-icon-btn ${state.enableDanmaku ? 'active' : ''}`
     saveConfig()
     channel.postMessage({
       type: 'cmd_config_sync',
@@ -646,9 +651,13 @@ function createUI() {
     })
   }
 
-  shadowRoot.getElementById('btn-sys').onclick = function (this: HTMLElement) {
+  shadowRoot.getElementById('btn-sys')!.onclick = function (
+    this: GlobalEventHandlers,
+    _ev: MouseEvent
+  ) {
+    const el = this as HTMLElement
     state.enableSysNotify = !state.enableSysNotify
-    this.className = `sb-icon-btn ${state.enableSysNotify ? 'active' : ''}`
+    el.className = `sb-icon-btn ${state.enableSysNotify ? 'active' : ''}`
     if (
       state.enableSysNotify &&
       'Notification' in window &&
@@ -709,7 +718,7 @@ async function fetchUser(username: string, isInitial = false) {
       safeFetch(`${CONFIG.HOST}/discourse-reactions/posts/reactions.json?username=${username}`)
     ])
 
-    const actions = (jsonActions.user_actions || []).map(action => {
+    const actions = (jsonActions.user_actions || []).map((action: any) => {
       if (action.action_type === 1) {
         return {
           ...action,
@@ -726,7 +735,7 @@ async function fetchUser(username: string, isInitial = false) {
       return action
     })
 
-    const reactions = (jsonReactions || []).map(r => ({
+    const reactions = (jsonReactions || []).map((r: any) => ({
       id: r.id,
       post_id: r.post_id,
       created_at: r.created_at,
@@ -780,13 +789,13 @@ function extractImg(html: string): string | null {
   tmp.innerHTML = html
   const img = tmp.querySelector('img:not(.emoji)')
   if (!img) return null
-  let src = img.src
+  let src = (img as HTMLImageElement).src
   if (src.startsWith('/')) src = CONFIG.HOST + src
   if (!src.startsWith('http')) {
     const rawSrc = img.getAttribute('src')
     if (rawSrc && rawSrc.startsWith('/')) return CONFIG.HOST + rawSrc
   }
-  return src
+  return src as string
 }
 
 function getActionIcon(actionType: any): string {
@@ -818,6 +827,10 @@ function getUsernameColor(username: string): string | null {
   if (state.selfUser && lower === state.selfUser.toLowerCase()) return nameColors[0]
   const userIndex = state.users.findIndex(u => u.toLowerCase() === lower)
   if (userIndex !== -1 && userIndex + 1 < nameColors.length) return nameColors[userIndex + 1]
+
+  // Fallback to hashing if not in list
+  // const idx = Math.abs(username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0))
+  // return nameColors[1 + (idx % (nameColors.length - 1))]
   return null
 }
 
@@ -856,12 +869,12 @@ function navigateToLink(link: string) {
   const tryDiscourseRoute = () => {
     try {
       if (
-        window.Discourse &&
-        window.Discourse.router &&
-        typeof window.Discourse.router.transitionTo === 'function'
+        (window as any).Discourse &&
+        (window as any).Discourse.router &&
+        typeof (window as any).Discourse.router.transitionTo === 'function'
       ) {
         console.log('[LD-Seeking] Using Discourse router for:', normalizedLink)
-        window.Discourse.router.transitionTo(normalizedLink)
+        ;(window as any).Discourse.router.transitionTo(normalizedLink)
         return true
       }
     } catch (e) {
@@ -901,7 +914,10 @@ function sendNotification(action: any) {
   const uid = getUniqueId(action)
   if (pushedIds.has(uid)) return
   pushedIds.add(uid)
-  if (pushedIds.size > 200) pushedIds.delete(pushedIds.values().next().value)
+  if (pushedIds.size > 200) {
+    const first = pushedIds.values().next().value
+    if (first) pushedIds.delete(first)
+  }
 
   let avatar =
     'https://linux.do/uploads/default/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png'
@@ -1175,7 +1191,7 @@ function toggleUserVisibility(name: string) {
     const nameEl = row.querySelector('.sb-user-name')
     if (nameEl) {
       nameEl.className = `sb-user-name ${isHidden ? 'disabled' : ''}`
-      nameEl.style.color = isHidden ? '' : ''
+      ;(nameEl as HTMLElement).style.color = isHidden ? '' : ''
     }
     const timer = shadowRoot?.getElementById(`timer-${name}`)
     if (timer) {
@@ -1226,9 +1242,9 @@ function startVisualLoops() {
         const remaining = Math.max(0, next - now)
         const progress = Math.min(1, Math.max(0, remaining / totalDuration))
         const offset = circumference * (1 - progress)
-        progressCircle.style.strokeDashoffset = offset.toString()
+        ;(progressCircle as HTMLElement).style.strokeDashoffset = offset.toString()
       } else {
-        progressCircle.style.strokeDashoffset = '0'
+        ;(progressCircle as HTMLElement).style.strokeDashoffset = '0'
       }
     })
     requestAnimationFrame(updateTimers)

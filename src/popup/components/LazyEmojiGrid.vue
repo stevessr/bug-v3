@@ -111,7 +111,7 @@ const focusLastEmoji = () => {
   <div v-show="isActive" class="lazy-emoji-grid-wrapper">
     <div v-if="isLoading" class="flex items-center justify-center py-8">
       <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-      <span class="ml-2 text-sm text-gray-600 dark:text-white">{{ $t('loadingText') }}</span>
+      <span class="ml-2 text-sm text-gray-600 dark:text-white">{{ t('loadingText') }}</span>
     </div>
 
     <div v-else-if="emojis.length > 0" class="p-0 overflow-y-auto" role="grid">
@@ -148,7 +148,7 @@ const focusLastEmoji = () => {
           <div
             v-if="favorites.has(emoji.id) && emoji.usageCount"
             class="absolute top-0 right-0 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-xs text-white font-bold"
-            :title="$t('usageCountTimes', [emoji.usageCount])"
+            :title="t('usageCountTimes', [emoji.usageCount])"
           >
             {{ emoji.usageCount > 99 ? '99+' : emoji.usageCount }}
           </div>
@@ -187,7 +187,7 @@ const focusLastEmoji = () => {
         @click="$emit('openOptions')"
         class="mt-2 text-xs text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-white"
       >
-        {{ $t('goAddEmojis') }}
+        {{ t('goAddEmojis') }}
       </a-button>
     </div>
   </div>

@@ -64,7 +64,8 @@ const uploadProgress = ref<
 >([])
 
 const categorizedUploadItems = computed(() => {
-  if (uploadProgress.value.length === 0) return { completed: [], uploading: [], pending: [], error: [] }
+  if (uploadProgress.value.length === 0)
+    return { completed: [], uploading: [], pending: [], error: [] }
 
   const items: UploadCardItem[] = uploadProgress.value.map((progress, index) => {
     const fileInfo = selectedFiles.value[index]

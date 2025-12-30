@@ -5,7 +5,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
 // 本地翻译数据缓存
-let localTranslations: Record<string, Record<string, string>> = {}
+const localTranslations: Record<string, Record<string, { message: string }>> = {}
 let currentLanguage = 'zh_CN'
 
 /**
