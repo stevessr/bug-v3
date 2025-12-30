@@ -51,6 +51,9 @@ export interface AppSettings {
   linuxDoSeekingUsers?: string[] // LinuxDo 追觅功能的监控用户列表
   enableLinuxDoSeekingDanmaku?: boolean // 启用 LinuxDo 追觅弹幕通知
   enableLinuxDoSeekingSysNotify?: boolean // 启用 LinuxDo 追觅系统通知
+  // Discourse 路由刷新功能
+  enableDiscourseRouterRefresh?: boolean // 启用 Discourse 周期性路由刷新
+  discourseRouterRefreshInterval?: number // 刷新间隔（毫秒），默认 30000
 }
 
 export interface EmojiGroup {

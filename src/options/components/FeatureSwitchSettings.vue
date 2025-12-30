@@ -18,7 +18,9 @@ const emit = defineEmits([
   'update:useIndexedDBForImages',
   'update:enableContentImageCache',
   'update:enableSubmenuInjector',
-  'update:cloudMarketDomain'
+  'update:cloudMarketDomain',
+  'update:enableDiscourseRouterRefresh',
+  'update:discourseRouterRefreshInterval'
 ])
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
@@ -83,6 +85,33 @@ const saveCloudMarketDomain = async () => {
     await new Promise(resolve => setTimeout(resolve, 300))
   } finally {
     isCloudMarketDomainSaving.value = false
+  }
+}
+
+// Discourse 路由刷新间隔的本地状态
+const localRouterRefreshInterval = ref<number>(
+  getSetting('discourseRouterRefreshInterval', 30000) as number
+)
+const isRouterRefreshIntervalSaving = ref(false)
+
+// 监听 settings 变化，同步到本地状态
+watch(
+  () => getSetting('discourseRouterRefreshInterval', 30000),
+  val => {
+    localRouterRefreshInterval.value = val as number
+  }
+)
+
+// 保存路由刷新间隔
+const saveRouterRefreshInterval = async () => {
+  isRouterRefreshIntervalSaving.value = true
+  try {
+    // 确保间隔至少为 10 秒
+    const safeInterval = Math.max(localRouterRefreshInterval.value, 10000)
+    emit('update:discourseRouterRefreshInterval', safeInterval)
+    await new Promise(resolve => setTimeout(resolve, 300))
+  } finally {
+    isRouterRefreshIntervalSaving.value = false
   }
 }
 </script>
@@ -160,6 +189,46 @@ const saveCloudMarketDomain = async () => {
         label="启用子菜单注入 (试验性功能)"
         description="将功能按钮注入到 Discourse 工具栏的下拉菜单中，而不是传统的菜单栏，可降低 CPU 消耗"
       />
+
+      <SettingSwitch
+        :model-value="getSetting('enableDiscourseRouterRefresh', false)"
+        @update:model-value="handleSettingUpdate('enableDiscourseRouterRefresh', $event)"
+        label="启用 Discourse 路由刷新"
+        description="周期性刷新 Discourse 路由以优化页面状态同步（仅在 Discourse 站点生效）"
+      />
+
+      <!-- Discourse 路由刷新间隔配置（仅在启用时显示） -->
+      <div
+        v-if="getSetting('enableDiscourseRouterRefresh', false)"
+        class="ml-6 mt-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+      >
+        <div class="flex items-start justify-between">
+          <div>
+            <label class="text-sm font-medium dark:text-white">刷新间隔</label>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              设置路由刷新的间隔时间（最小 10 秒）
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <a-input-number
+              v-model:value="localRouterRefreshInterval"
+              :min="10000"
+              :max="300000"
+              :step="5000"
+              class="w-32"
+              :formatter="(value: string) => `${Math.round(Number(value) / 1000)}s`"
+              :parser="(value: string) => Number(value.replace('s', '')) * 1000"
+            />
+            <a-button
+              type="primary"
+              :loading="isRouterRefreshIntervalSaving"
+              @click="saveRouterRefreshInterval"
+            >
+              保存
+            </a-button>
+          </div>
+        </div>
+      </div>
 
       <!-- 云端市场域名配置 -->
       <div class="pt-4 border-t border-gray-200 dark:border-gray-700">

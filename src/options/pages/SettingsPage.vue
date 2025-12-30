@@ -38,6 +38,8 @@ const {
   updateUseIndexedDBForImages,
   updateEnableContentImageCache,
   updateEnableSubmenuInjector,
+  updateEnableDiscourseRouterRefresh,
+  updateDiscourseRouterRefreshInterval,
   updateEnableLinuxDoSeeking,
   updateLinuxDoSeekingUsers,
   updateEnableLinuxDoSeekingDanmaku,
@@ -128,6 +130,8 @@ onMounted(async () => {
               @update:enableContentImageCache="updateEnableContentImageCache"
               @update:enableSubmenuInjector="updateEnableSubmenuInjector"
               @update:cloudMarketDomain="updateCloudMarketDomain"
+              @update:enableDiscourseRouterRefresh="updateEnableDiscourseRouterRefresh"
+              @update:discourseRouterRefreshInterval="updateDiscourseRouterRefreshInterval"
             />
           </div>
         </a-tab-pane>

@@ -270,6 +270,14 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableSubmenuInjector: value })
   }
 
+  const updateEnableDiscourseRouterRefresh = (value: boolean) => {
+    emojiStore.updateSettings({ enableDiscourseRouterRefresh: value })
+  }
+
+  const updateDiscourseRouterRefreshInterval = (interval: number) => {
+    emojiStore.updateSettings({ discourseRouterRefreshInterval: interval })
+  }
+
   // Theme management is now provided by themeManager composable
   // Use themeManager.updateTheme(), themeManager.updateCustomPrimaryColor(), etc.
 
@@ -781,6 +789,8 @@ export default function useOptions() {
     updateUseIndexedDBForImages,
     updateEnableContentImageCache,
     updateEnableSubmenuInjector,
+    updateEnableDiscourseRouterRefresh,
+    updateDiscourseRouterRefreshInterval,
     updateEnableHoverPreview,
     updateUploadMenuItems,
     updateGeminiApiKey,

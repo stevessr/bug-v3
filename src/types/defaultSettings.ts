@@ -47,5 +47,8 @@ export const defaultSettings: AppSettings = {
   enableLinuxDoSeeking: false, // 默认禁用 LinuxDo 追觅功能
   linuxDoSeekingUsers: [], // 默认空监控列表
   enableLinuxDoSeekingDanmaku: true, // 默认启用弹幕通知
-  enableLinuxDoSeekingSysNotify: true // 默认启用系统通知
+  enableLinuxDoSeekingSysNotify: true, // 默认启用系统通知
+  // Discourse 路由刷新功能
+  enableDiscourseRouterRefresh: false, // 默认禁用周期性路由刷新
+  discourseRouterRefreshInterval: 30000 // 默认 30 秒刷新一次
 }

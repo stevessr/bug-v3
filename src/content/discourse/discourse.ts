@@ -10,6 +10,7 @@ import { initCalloutSuggestions } from './callout-suggestions'
 import { initChatMultiReactor } from './utils/chat-multi-reactor'
 import { initSubmenuInjector } from './utils/submenu-injector'
 import { initLinuxDoSeeking } from './utils/linuxdo-seeking'
+import { initDiscourseRouterRefresh } from './utils/router-refresh'
 
 export async function initDiscourse() {
   try {
@@ -115,6 +116,14 @@ export async function initDiscourse() {
       }
     } catch (e) {
       console.warn('[DiscourseOneClick] failed to get enableLinuxDoSeeking setting', e)
+    }
+
+    // Discourse 路由刷新功能
+    // 周期性调用 Discourse 路由刷新以优化用户体验
+    try {
+      await initDiscourseRouterRefresh()
+    } catch (e) {
+      console.warn('[DiscourseOneClick] failed to initialize router refresh:', e)
     }
 
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages
