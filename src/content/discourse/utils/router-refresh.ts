@@ -7,10 +7,11 @@ import { requestSettingFromBackground } from '../../utils/requestSetting'
 import { notify } from '../../utils/notify'
 
 // 全局状态
-let refreshTimer: ReturnType<typeof setInterval> | null = null
+let refreshTimer: ReturnType<typeof setTimeout> | null = null
 let isRefreshing = false
 let lastPath: string = '' // 记录上次的路径
 let currentInterval: number = 30000 // 当前刷新间隔
+let isRunning = false // 是否正在运行
 
 // 类型声明
 declare global {
@@ -114,13 +115,27 @@ function hasOpenModal(): boolean {
 }
 
 /**
+ * 安排下一次刷新
+ * 在页面加载完成后调用此函数开始新的倒计时
+ */
+function scheduleNextRefresh(): void {
+  if (!isRunning) return
+
+  if (refreshTimer) {
+    clearTimeout(refreshTimer)
+  }
+
+  refreshTimer = setTimeout(performRouterRefresh, currentInterval)
+  console.log(`[DiscourseRouterRefresh] Next refresh scheduled in ${currentInterval}ms`)
+}
+
+/**
  * 重置刷新计时器
  * 当路径变化时调用，重新开始计时
  */
 function resetRefreshTimer(): void {
-  if (refreshTimer) {
-    clearInterval(refreshTimer)
-    refreshTimer = setInterval(performRouterRefresh, currentInterval)
+  if (isRunning) {
+    scheduleNextRefresh()
     console.log('[DiscourseRouterRefresh] Timer reset due to path change')
   }
 }
@@ -142,6 +157,41 @@ function checkPathChange(): boolean {
 }
 
 /**
+ * 等待页面加载完成
+ * 检测 Discourse 页面的加载状态
+ */
+function waitForPageLoad(): Promise<void> {
+  return new Promise(resolve => {
+    // 检查是否有加载指示器
+    const checkLoading = () => {
+      const loadingIndicators = [
+        '.loading-indicator',
+        '.spinner',
+        '.d-spinner',
+        '#main-outlet.loading',
+        '.topic-loading'
+      ]
+
+      const isLoading = loadingIndicators.some(
+        selector => document.querySelector(selector) !== null
+      )
+
+      if (!isLoading) {
+        resolve()
+      } else {
+        setTimeout(checkLoading, 100)
+      }
+    }
+
+    // 延迟一小段时间让刷新开始
+    setTimeout(checkLoading, 200)
+
+    // 最长等待 5 秒
+    setTimeout(resolve, 5000)
+  })
+}
+
+/**
  * 执行路由刷新
  */
 async function performRouterRefresh(): Promise<void> {
@@ -156,23 +206,27 @@ async function performRouterRefresh(): Promise<void> {
   const isAvailable = await checkDiscourseRouterAvailability()
   if (!isAvailable) {
     console.log('[DiscourseRouterRefresh] Discourse router not available, skipping')
+    scheduleNextRefresh()
     return
   }
 
   // 跳过刷新的情况
   if (isUserTyping()) {
     console.log('[DiscourseRouterRefresh] User is typing, skipping refresh')
+    scheduleNextRefresh()
     return
   }
 
   if (hasOpenModal()) {
     console.log('[DiscourseRouterRefresh] Modal is open, skipping refresh')
+    scheduleNextRefresh()
     return
   }
 
   // 检查页面是否可见
   if (document.hidden) {
     console.log('[DiscourseRouterRefresh] Page is hidden, skipping refresh')
+    scheduleNextRefresh()
     return
   }
 
@@ -182,35 +236,49 @@ async function performRouterRefresh(): Promise<void> {
     // 生成唯一 ID 用于关联消息
     const id = Math.random().toString(36).substring(7)
 
-    // 监听刷新成功消息
-    const handler = (event: MessageEvent) => {
-      if (
-        event.source === window &&
-        event.data &&
-        event.data.type === 'DISCOURSE_ROUTE_REFRESH_SUCCESS' &&
-        event.data.id === id
-      ) {
-        window.removeEventListener('message', handler)
-        const path = event.data.path
-        console.log(`[DiscourseRouterRefresh] Refreshed route: ${path}`)
-        // 显示轻量提示
-        notify('已刷新页面路由', 'info', 2000)
+    // 使用 Promise 等待刷新完成
+    const refreshComplete = new Promise<boolean>(resolve => {
+      const handler = (event: MessageEvent) => {
+        if (
+          event.source === window &&
+          event.data &&
+          event.data.type === 'DISCOURSE_ROUTE_REFRESH_SUCCESS' &&
+          event.data.id === id
+        ) {
+          window.removeEventListener('message', handler)
+          const path = event.data.path
+          console.log(`[DiscourseRouterRefresh] Refreshed route: ${path}`)
+          notify('已刷新页面路由', 'info', 2000)
+          resolve(true)
+        }
       }
-    }
 
-    window.addEventListener('message', handler)
+      window.addEventListener('message', handler)
+
+      // 超时处理
+      setTimeout(() => {
+        window.removeEventListener('message', handler)
+        resolve(false)
+      }, 5000)
+    })
 
     // 发送刷新请求
     window.postMessage({ type: 'DISCOURSE_ROUTE_REFRESH_REQUEST', id }, '*')
 
-    // 设置超时清理监听器
-    setTimeout(() => {
-      window.removeEventListener('message', handler)
-    }, 5000)
+    // 等待刷新完成
+    const success = await refreshComplete
+
+    if (success) {
+      // 等待页面加载完成后再安排下一次刷新
+      await waitForPageLoad()
+      console.log('[DiscourseRouterRefresh] Page load complete, scheduling next refresh')
+    }
   } catch (e) {
     console.warn('[DiscourseRouterRefresh] Failed to refresh route:', e)
   } finally {
     isRefreshing = false
+    // 安排下一次刷新
+    scheduleNextRefresh()
   }
 }
 
@@ -219,7 +287,7 @@ async function performRouterRefresh(): Promise<void> {
  * @param interval 刷新间隔（毫秒）
  */
 function startRouterRefresh(interval: number): void {
-  if (refreshTimer) {
+  if (isRunning) {
     console.log('[DiscourseRouterRefresh] Already running, stopping previous timer')
     stopRouterRefresh()
   }
@@ -230,10 +298,12 @@ function startRouterRefresh(interval: number): void {
 
   // 初始化路径记录
   lastPath = window.location.pathname
+  isRunning = true
 
   console.log(`[DiscourseRouterRefresh] Starting with interval: ${safeInterval}ms`)
 
-  refreshTimer = setInterval(performRouterRefresh, safeInterval)
+  // 安排第一次刷新
+  scheduleNextRefresh()
 
   // 监听页面可见性变化，在页面重新可见时执行一次刷新
   document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -243,9 +313,9 @@ function startRouterRefresh(interval: number): void {
  * 处理页面可见性变化
  */
 function handleVisibilityChange(): void {
-  if (!document.hidden && refreshTimer) {
-    // 页面变为可见时，延迟一小段时间后刷新
-    setTimeout(performRouterRefresh, 500)
+  if (!document.hidden && isRunning) {
+    // 页面变为可见时，重置计时器
+    scheduleNextRefresh()
   }
 }
 
@@ -253,8 +323,9 @@ function handleVisibilityChange(): void {
  * 停止周期性路由刷新
  */
 function stopRouterRefresh(): void {
+  isRunning = false
   if (refreshTimer) {
-    clearInterval(refreshTimer)
+    clearTimeout(refreshTimer)
     refreshTimer = null
     console.log('[DiscourseRouterRefresh] Stopped')
   }
