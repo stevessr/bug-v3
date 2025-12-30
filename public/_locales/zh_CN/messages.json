@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "表情管理扩展",
+    "description": "扩展名称"
+  },
+  "extensionShortName": {
+    "message": "表情扩展",
+    "description": "扩展短名称"
+  },
+  "extensionDescription": {
+    "message": "一个功能强大的表情管理扩展，支持自定义表情分组、收藏夹，以及在各大网站（Discord、Reddit、X、小红书等）快速插入表情。",
+    "description": "扩展描述"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Emoji Extension",
+    "description": "Extension name"
+  },
+  "extensionShortName": {
+    "message": "Emoji Ext",
+    "description": "Extension short name"
+  },
+  "extensionDescription": {
+    "message": "A powerful emoji management extension that supports custom emoji grouping, favorites, and quick insertion on various websites (Discord, Reddit, X, Xiaohongshu, etc.).",
+    "description": "Extension description"
+  }
+}
