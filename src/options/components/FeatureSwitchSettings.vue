@@ -216,7 +216,7 @@ const saveRouterRefreshInterval = async () => {
               :max="300000"
               :step="5000"
               class="w-32"
-              :formatter="(value: string) => `${Math.round(Number(value) / 1000)}s`"
+              :formatter="(value: string | number) => `${Math.round(Number(value) / 1000)}s`"
               :parser="(value: string) => Number(value.replace('s', '')) * 1000"
             />
             <a-button
