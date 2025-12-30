@@ -374,10 +374,10 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
             </div>
             <div class="flex items-center gap-2">
               <span class="text-sm text-gray-600 dark:text-gray-400">
-                {{ t('packagesCount', [packages.length]) }}
+                {{ t('packagesCount', { count: packages.length }) }}
               </span>
               <span class="text-sm text-blue-600 dark:text-blue-400">
-                {{ t('selectedCount', [selectedPackages.length]) }}
+                {{ t('selectedCount', { count: selectedPackages.length }) }}
               </span>
             </div>
           </div>
@@ -410,7 +410,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                 <div class="flex-1">
                   <h4 class="font-medium text-gray-900 dark:text-white">{{ pkg.text }}</h4>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ t('emotesCount', [pkg.emote.length]) }}
+                    {{ t('emotesCount', { count: pkg.emote.length }) }}
                   </p>
                 </div>
                 <div class="flex items-center gap-2">

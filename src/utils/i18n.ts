@@ -14,7 +14,7 @@ let currentLanguage = 'zh_CN'
  */
 async function loadTranslations(language: string): Promise<void> {
   if (localTranslations[language]) return
-  
+
   try {
     const response = await fetch(`/_locales/${language}/messages.json`)
     const data = await response.json()
@@ -30,23 +30,38 @@ async function loadTranslations(language: string): Promise<void> {
  * @param substitutions 替换参数
  * @returns 本地化后的字符串
  */
-export function getMessage(messageName: string, substitutions?: string | string[]): string {
+export function getMessage(
+  messageName: string,
+  substitutions?: string | string[] | Record<string, any>
+): string {
   // 优先使用本地翻译
   if (localTranslations[currentLanguage] && localTranslations[currentLanguage][messageName]) {
     let message = localTranslations[currentLanguage][messageName].message
     if (substitutions) {
       if (typeof substitutions === 'string') {
         substitutions = [substitutions]
+      } else if (Array.isArray(substitutions)) {
+        // 处理数组格式 (Chrome i18n 格式)
+        substitutions.forEach((substitution, index) => {
+          message = message.replace(`$${index + 1}`, substitution)
+        })
+      } else {
+        // 处理对象格式 ({key: value})
+        Object.entries(substitutions).forEach(([key, value]) => {
+          message = message.replace(`{${key}}`, String(value))
+        })
       }
-      substitutions.forEach((substitution, index) => {
-        message = message.replace(`$${index + 1}`, substitution)
-      })
     }
     return message
   }
-  
+
   // 回退到 Chrome i18n API
-  return chrome.i18n.getMessage(messageName, substitutions) || messageName
+  if (Array.isArray(substitutions) || typeof substitutions === 'string') {
+    return chrome.i18n.getMessage(messageName, substitutions) || messageName
+  } else {
+    // Chrome i18n API 不支持对象格式，直接返回消息名
+    return messageName
+  }
 }
 
 /**
@@ -112,9 +127,14 @@ export async function initI18n(): Promise<void> {
       currentLanguage = 'en'
     }
   }
-  
+
   await loadTranslations(currentLanguage)
+  // 标记 i18n 已就绪
+  isReady.value = true
 }
+
+// 响应式的 i18n 就绪状态
+const isReady = ref(false)
 
 /**
  * Vue 组合式函数 - 使用 i18n
@@ -123,30 +143,31 @@ export async function initI18n(): Promise<void> {
 export function useI18n() {
   // 创建响应式的语言状态
   const language = ref(currentLanguage)
-  
+
   // 监听语言变化事件
   const updateLanguage = (event: CustomEvent) => {
     currentLanguage = event.detail
     language.value = event.detail
   }
-  
+
   // 在组件挂载时添加事件监听器
   onMounted(() => {
     window.addEventListener('languageChanged', updateLanguage as EventListener)
   })
-  
+
   // 在组件卸载时移除事件监听器
   onUnmounted(() => {
     window.removeEventListener('languageChanged', updateLanguage as EventListener)
   })
-  
+
   return {
     t: getMessage,
     locale: () => language.value,
     isChinese: () => language.value.startsWith('zh'),
     format: formatMessage,
     setLanguage,
-    initI18n
+    initI18n,
+    isReady
   }
 }
 

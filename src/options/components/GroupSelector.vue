@@ -24,10 +24,16 @@ const props = withDefaults(defineProps<Props>(), {
   showEmojiCount: true
 })
 
-const { t } = useI18n()
+const { t: _t, locale } = useI18n()
+
+// Ensure t is available in template and computed
+const t = (key: string, args?: any) => _t(key, args)
 
 // 使用 computed 来处理默认 placeholder
-const placeholderText = computed(() => props.placeholder || t('searchAndSelectGroup'))
+const placeholderText = computed(() => {
+  locale() // Add dependency on locale to trigger reactivity
+  return props.placeholder || t('searchAndSelectGroup')
+})
 
 const emit = defineEmits<Emits>()
 
@@ -69,7 +75,7 @@ const _displayValue = computed(() => {
         <span v-else class="inline-block mr-2">{{ g.icon || '📁' }}</span>
         {{ g.name }}
         <span v-if="showEmojiCount" class="ml-2 text-xs text-gray-500">
-          {{ t('emojisCount', [g.emojis.length]) }}
+          {{ t('emojisCount', { count: g.emojis.length }) }}
         </span>
       </div>
     </a-select-option>

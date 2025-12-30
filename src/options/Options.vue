@@ -15,13 +15,13 @@ import EditGroupModal from './components/EditGroupModal.vue'
 // composable
 import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
-import { useI18n } from '@/utils/i18n'
 
+import { useI18n } from '@/utils/i18n'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
 import opensource from '@/options/modals/opensource.vue'
 
-const { t, initI18n } = useI18n()
+const { t, initI18n, isReady } = useI18n()
 
 // 初始化 i18n
 initI18n()
@@ -133,20 +133,24 @@ const {
 
 // 基于路由的菜单项
 const menuItems = computed(() => {
+  // 引用 isReady.value 确保在 isReady 变化时重新计算
+  isReady.value
+
   const routes = [
     { key: 'settings', label: t('settings'), route: '/settings' },
-      { key: 'favorites', label: t('favorites'), route: '/favorites' },
-      { key: 'groups', label: t('groupManagement'), route: '/groups' },
-      { key: 'ungrouped', label: t('ungrouped'), route: '/ungrouped' },
-      { key: 'archived', label: t('archived'), route: '/archived' },
-      { key: 'buffer', label: t('buffer'), route: '/buffer' },
-      { key: 'market', label: t('cloudMarket'), route: '/market' },
-      { key: 'export', label: t('export'), route: '/export' },
-      { key: 'bilibili-import', label: t('bilibiliImport'), route: '/bilibili-import' },
-      { key: 'telegram-import', label: t('telegramImport'), route: '/telegram-import' },
-      { key: 'stats', label: t('statistics'), route: '/stats' },
-      { key: 'ai-rename', label: t('aiRename'), route: '/ai-rename' },
-      { key: 'about', label: t('about'), route: '/about' }  ]
+    { key: 'favorites', label: t('favorites'), route: '/favorites' },
+    { key: 'groups', label: t('groupManagement'), route: '/groups' },
+    { key: 'ungrouped', label: t('ungrouped'), route: '/ungrouped' },
+    { key: 'archived', label: t('archived'), route: '/archived' },
+    { key: 'buffer', label: t('buffer'), route: '/buffer' },
+    { key: 'market', label: t('cloudMarket'), route: '/market' },
+    { key: 'export', label: t('export'), route: '/export' },
+    { key: 'bilibili-import', label: t('bilibiliImport'), route: '/bilibili-import' },
+    { key: 'telegram-import', label: t('telegramImport'), route: '/telegram-import' },
+    { key: 'stats', label: t('statistics'), route: '/stats' },
+    { key: 'ai-rename', label: t('aiRename'), route: '/ai-rename' },
+    { key: 'about', label: t('about'), route: '/about' }
+  ]
 
   return routes.map(item => ({
     key: item.key,
@@ -393,6 +397,7 @@ const handleSaveGroup = (
       <nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <a-menu
+            v-if="isReady"
             :selectedKeys="menuSelectedKeys"
             mode="horizontal"
             :items="menuItems"

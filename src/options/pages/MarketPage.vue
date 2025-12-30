@@ -285,7 +285,7 @@ onMounted(() => {
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-lg dark:text-white truncate">{{ group.name }}</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                {{ t('emotesCount', [group.emojiCount]) }}
+                {{ t('emotesCount', { count: group.emojiCount }) }}
                 <span v-if="group.isArchived" class="ml-2 text-xs text-orange-500">{{ t('archived') }}</span>
               </p>
             </div>
