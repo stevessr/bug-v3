@@ -142,7 +142,9 @@ defineExpose({
               class="font-medium"
               :class="previewResult.success ? 'text-green-700' : 'text-red-700'"
             >
-              {{ previewResult.success ? t('cloudConfigFetchSuccess') : t('cloudConfigFetchFailed') }}
+              {{
+                previewResult.success ? t('cloudConfigFetchSuccess') : t('cloudConfigFetchFailed')
+              }}
             </span>
           </div>
           <p class="text-sm text-gray-600 mt-1">{{ previewResult.message }}</p>
@@ -150,7 +152,9 @@ defineExpose({
 
         <!-- Cloud Data Statistics -->
         <div v-if="previewResult.success && cloudData" class="space-y-4">
-          <h4 class="text-lg font-semibold text-gray-800 dark:text-white">{{ t('configOverview') }}</h4>
+          <h4 class="text-lg font-semibold text-gray-800 dark:text-white">
+            {{ t('configOverview') }}
+          </h4>
 
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div
@@ -162,7 +166,9 @@ defineExpose({
                 />
                 <ExclamationCircleOutlined v-else />
               </div>
-              <div class="text-sm text-blue-700 dark:text-blue-300">{{ t('connectionStatus') }}</div>
+              <div class="text-sm text-blue-700 dark:text-blue-300">
+                {{ t('connectionStatus') }}
+              </div>
             </div>
 
             <div
@@ -190,7 +196,9 @@ defineExpose({
 
           <!-- Settings/Metadata Info -->
           <div v-if="cloudData.settings && Object.keys(cloudData.settings).length > 0">
-            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">{{ t('settingsInfo') }}</h5>
+            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">
+              {{ t('settingsInfo') }}
+            </h5>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                 <div class="text-gray-500 dark:text-gray-400">{{ t('version') }}</div>
@@ -219,7 +227,9 @@ defineExpose({
 
           <!-- Emoji Groups Details -->
           <div v-if="cloudData.emojiGroups && cloudData.emojiGroups.length > 0">
-            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">{{ t('emojiGroups') }}</h5>
+            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">
+              {{ t('emojiGroups') }}
+            </h5>
             <div class="space-y-2 max-h-60 overflow-y-auto">
               <div
                 v-for="group in cloudData.emojiGroups"
@@ -249,12 +259,16 @@ defineExpose({
                 </div>
               </div>
             </div>
-            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">{{ t('clickGroupForDetails') }}</div>
+            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+              {{ t('clickGroupForDetails') }}
+            </div>
           </div>
 
           <!-- Connection Info -->
           <div>
-            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">{{ t('connectionInfo') }}</h5>
+            <h5 class="text-md font-semibold text-gray-700 dark:text-white mb-3">
+              {{ t('connectionInfo') }}
+            </h5>
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                 <div class="text-gray-500 dark:text-gray-400">{{ t('dataAvailability') }}</div>
@@ -262,8 +276,8 @@ defineExpose({
                   {{
                     typeof cloudData.hasData === 'boolean'
                       ? cloudData.hasData
-                        ? '{{ t('dataAvailable') }}'
-                        : '{{ t('dataUnavailable') }}'
+                        ? t('dataAvailable')
+                        : t('dataUnavailable')
                       : t('unknown')
                   }}
                 </div>
@@ -285,13 +299,17 @@ defineExpose({
         <span class="ml-3 text-gray-600 dark:text-gray-400">{{ t('checkingCloudConfig') }}</span>
       </div>
 
-      <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">{{ t('noConfigToPreview') }}</div>
+      <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">
+        {{ t('noConfigToPreview') }}
+      </div>
     </a-modal>
 
     <!-- Group Details Modal -->
     <a-modal
       v-model:open="showGroupDetailsModal"
-      :title="selectedGroup?.name ? `${t('groupDetails')}: ${selectedGroup.name}` : t('groupDetails')"
+      :title="
+        selectedGroup?.name ? `${t('groupDetails')}: ${selectedGroup.name}` : t('groupDetails')
+      "
       width="720px"
       @cancel="closeGroupDetailsModal"
     >
@@ -360,10 +378,14 @@ defineExpose({
             </div>
           </div>
         </div>
-        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400">{{ t('noEmojisInGroup') }}</div>
+        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400">
+          {{ t('noEmojisInGroup') }}
+        </div>
       </div>
 
-      <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">{{ t('noGroupDetailsToShow') }}</div>
+      <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">
+        {{ t('noGroupDetailsToShow') }}
+      </div>
     </a-modal>
   </div>
 </template>

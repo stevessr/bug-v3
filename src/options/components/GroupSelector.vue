@@ -18,13 +18,16 @@ interface Emits {
   (e: 'change', value: string): void
 }
 
-const { t } = useI18n()
-
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: t('searchAndSelectGroup'),
+  placeholder: '',
   disabled: false,
   showEmojiCount: true
 })
+
+const { t } = useI18n()
+
+// 使用 computed 来处理默认 placeholder
+const placeholderText = computed(() => props.placeholder || t('searchAndSelectGroup'))
 
 const emit = defineEmits<Emits>()
 
@@ -40,9 +43,9 @@ const handleChange = (value: string) => {
 // Computed value kept for potential future use in template
 // @ts-expect-error kept for API compatibility
 const _displayValue = computed(() => {
-  if (!props.modelValue) return props.placeholder
+  if (!props.modelValue) return placeholderText.value
   const group = props.groups.find(g => g.id === props.modelValue)
-  return group ? group.name : props.placeholder
+  return group ? group.name : placeholderText.value
 })
 </script>
 
@@ -50,7 +53,7 @@ const _displayValue = computed(() => {
   <a-select
     :value="modelValue"
     showSearch
-    :placeholder="placeholder"
+    :placeholder="placeholderText"
     class="w-full"
     :filter-option="filterOption"
     :disabled="disabled"

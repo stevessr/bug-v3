@@ -40,6 +40,55 @@ const bufferEmojis = computed(() => {
   return bufferGroup.value?.emojis || []
 })
 
+// 上传项目分类（用于水平卡片布局）
+interface UploadCardItem {
+  id: string
+  fileName: string
+  previewUrl: string
+  percent: number
+  status: 'pending' | 'uploading' | 'completed' | 'error' | 'waiting'
+  error?: string
+  waitingFor?: number
+  waitStart?: number
+}
+
+const categorizedUploadItems = computed(() => {
+  if (uploadProgress.value.length === 0) return { completed: [], uploading: [], pending: [] }
+
+  const items: UploadCardItem[] = uploadProgress.value.map((progress, index) => {
+    const fileInfo = selectedFiles.value[index]
+    let status: UploadCardItem['status'] = 'pending'
+
+    if (progress.error) {
+      status = 'error'
+    } else if (progress.waitingFor) {
+      status = 'waiting'
+    } else if (progress.percent === 100) {
+      status = 'completed'
+    } else if (progress.percent > 0) {
+      status = 'uploading'
+    }
+
+    return {
+      id: fileInfo?.id || `upload-${index}`,
+      fileName: progress.fileName,
+      previewUrl: fileInfo?.previewUrl || '',
+      percent: progress.percent,
+      status,
+      error: progress.error,
+      waitingFor: progress.waitingFor,
+      waitStart: progress.waitStart
+    }
+  })
+
+  return {
+    completed: items.filter(item => item.status === 'completed'),
+    uploading: items.filter(item => item.status === 'uploading' || item.status === 'waiting'),
+    pending: items.filter(item => item.status === 'pending'),
+    error: items.filter(item => item.status === 'error')
+  }
+})
+
 // 初始化图片缓存（带并发控制）
 const initializeImageSources = async () => {
   if (!bufferEmojis.value.length) return
@@ -1395,44 +1444,175 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Upload Progress -->
+    <!-- Upload Progress - 水平卡片布局 -->
     <div
       v-if="uploadProgress.length > 0"
       class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow"
     >
       <h3 class="text-lg font-semibold dark:text-white mb-4">上传进度</h3>
-      <div class="space-y-2">
+
+      <!-- 水平滚动卡片区域 -->
+      <div
+        class="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
+      >
+        <!-- 已完成卡片 - 左侧 -->
         <div
-          v-for="(progress, index) in uploadProgress"
-          :key="index"
-          class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
+          v-for="item in categorizedUploadItems.completed"
+          :key="item.id"
+          class="flex-shrink-0 w-24 bg-green-50 dark:bg-green-900/30 rounded-lg p-2 border border-green-200 dark:border-green-700 transition-all duration-300"
         >
-          <span class="text-sm dark:text-gray-300">{{ progress.fileName }}</span>
-          <div class="flex items-center space-x-2">
-            <div v-if="!progress.waitingFor" class="w-32 bg-gray-200 rounded-full h-2">
-              <div
-                class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                :style="{ width: `${progress.percent}%` }"
-              ></div>
+          <div
+            class="relative aspect-square mb-2 rounded overflow-hidden bg-gray-100 dark:bg-gray-700"
+          >
+            <img
+              v-if="item.previewUrl"
+              :src="item.previewUrl"
+              :alt="item.fileName"
+              class="w-full h-full object-cover"
+            />
+            <div class="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+              <CheckCircleOutlined class="text-green-500 text-2xl" />
             </div>
-            <a-progress
-              v-else
-              type="circle"
-              :width="24"
-              :percent="getWaitProgress(progress).percent"
-            >
-              <template #format>
-                <span class="text-xs">{{ getWaitProgress(progress).remaining }}s</span>
-              </template>
-            </a-progress>
-            <span class="text-xs text-gray-600 dark:text-gray-400 w-12 text-right">
-              {{ progress.percent }}%
-            </span>
           </div>
-          <div v-if="progress.error" class="text-xs text-red-500 max-w-xs truncate">
-            {{ progress.error }}
+          <div
+            class="text-xs text-center text-green-600 dark:text-green-400 truncate"
+            :title="item.fileName"
+          >
+            {{ item.fileName }}
           </div>
         </div>
+
+        <!-- 正在上传/等待卡片 - 中间 -->
+        <div
+          v-for="item in categorizedUploadItems.uploading"
+          :key="item.id"
+          class="flex-shrink-0 w-24 bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2 border-2 border-blue-400 dark:border-blue-500 transition-all duration-300"
+        >
+          <div
+            class="relative aspect-square mb-2 rounded overflow-hidden bg-gray-100 dark:bg-gray-700"
+          >
+            <img
+              v-if="item.previewUrl"
+              :src="item.previewUrl"
+              :alt="item.fileName"
+              class="w-full h-full object-cover"
+            />
+          </div>
+          <!-- 进度条或 429 等待环 -->
+          <div v-if="item.status === 'waiting'" class="flex flex-col items-center">
+            <a-progress
+              type="circle"
+              :width="32"
+              :percent="getWaitProgress(item).percent"
+              :stroke-color="'#f97316'"
+            >
+              <template #format>
+                <span class="text-xs">{{ getWaitProgress(item).remaining }}s</span>
+              </template>
+            </a-progress>
+            <span class="text-xs text-orange-500 mt-1">限流等待</span>
+          </div>
+          <div v-else class="space-y-1">
+            <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+              <div
+                class="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                :style="{ width: `${item.percent}%` }"
+              ></div>
+            </div>
+            <div class="text-xs text-center text-blue-600 dark:text-blue-400">
+              {{ item.percent }}%
+            </div>
+          </div>
+          <div
+            class="text-xs text-center text-gray-600 dark:text-gray-400 truncate mt-1"
+            :title="item.fileName"
+          >
+            {{ item.fileName }}
+          </div>
+        </div>
+
+        <!-- 待上传卡片 - 右侧 -->
+        <div
+          v-for="item in categorizedUploadItems.pending"
+          :key="item.id"
+          class="flex-shrink-0 w-24 bg-gray-50 dark:bg-gray-700 rounded-lg p-2 border border-gray-200 dark:border-gray-600 opacity-60 transition-all duration-300"
+        >
+          <div
+            class="relative aspect-square mb-2 rounded overflow-hidden bg-gray-100 dark:bg-gray-600"
+          >
+            <img
+              v-if="item.previewUrl"
+              :src="item.previewUrl"
+              :alt="item.fileName"
+              class="w-full h-full object-cover opacity-50"
+            />
+          </div>
+          <div
+            class="text-xs text-center text-gray-500 dark:text-gray-400 truncate"
+            :title="item.fileName"
+          >
+            {{ item.fileName }}
+          </div>
+        </div>
+
+        <!-- 错误卡片 -->
+        <div
+          v-for="item in categorizedUploadItems.error"
+          :key="item.id"
+          class="flex-shrink-0 w-24 bg-red-50 dark:bg-red-900/30 rounded-lg p-2 border border-red-200 dark:border-red-700 transition-all duration-300"
+        >
+          <div
+            class="relative aspect-square mb-2 rounded overflow-hidden bg-gray-100 dark:bg-gray-700"
+          >
+            <img
+              v-if="item.previewUrl"
+              :src="item.previewUrl"
+              :alt="item.fileName"
+              class="w-full h-full object-cover"
+            />
+            <div class="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+              <span class="text-red-500 text-xl">✕</span>
+            </div>
+          </div>
+          <div
+            class="text-xs text-center text-red-600 dark:text-red-400 truncate"
+            :title="item.fileName"
+          >
+            {{ item.fileName }}
+          </div>
+          <div
+            v-if="item.error"
+            class="text-xs text-center text-red-500 truncate mt-1"
+            :title="item.error"
+          >
+            {{ item.error }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 状态统计 -->
+      <div class="flex gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+        <span
+          v-if="categorizedUploadItems.completed.length > 0"
+          class="text-green-600 dark:text-green-400"
+        >
+          ✓ {{ categorizedUploadItems.completed.length }} 已完成
+        </span>
+        <span
+          v-if="categorizedUploadItems.uploading.length > 0"
+          class="text-blue-600 dark:text-blue-400"
+        >
+          ↑ {{ categorizedUploadItems.uploading.length }} 上传中
+        </span>
+        <span v-if="categorizedUploadItems.pending.length > 0">
+          ○ {{ categorizedUploadItems.pending.length }} 等待中
+        </span>
+        <span
+          v-if="categorizedUploadItems.error?.length > 0"
+          class="text-red-600 dark:text-red-400"
+        >
+          ✕ {{ categorizedUploadItems.error.length }} 失败
+        </span>
       </div>
     </div>
 
