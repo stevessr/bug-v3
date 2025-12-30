@@ -1,6 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
-  <app appid='lcjnmefemojopjdnkjhacphegcaemcja'>
-    <updatecheck codebase='https://s.pwsh.us.kg/updates/extension.crx' version='1.2.9-patch-3' />
-  </app>
-</gupdate>
