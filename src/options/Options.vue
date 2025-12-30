@@ -15,10 +15,13 @@ import EditGroupModal from './components/EditGroupModal.vue'
 // composable
 import useOptions from './useOptions'
 import ExportProgressModal from './components/ExportProgressModal.vue'
+import { useI18n } from '@/utils/i18n'
 
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
 import opensource from '@/options/modals/opensource.vue'
+
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -128,20 +131,19 @@ const {
 // 基于路由的菜单项
 const menuItems = computed(() => {
   const routes = [
-    { key: 'settings', label: '设置', route: '/settings' },
-    { key: 'favorites', label: '常用', route: '/favorites' },
-    { key: 'groups', label: '分组管理', route: '/groups' },
-    { key: 'ungrouped', label: '未分组', route: '/ungrouped' },
-    { key: 'archived', label: '已归档', route: '/archived' },
-    { key: 'buffer', label: '缓冲区', route: '/buffer' },
-    { key: 'market', label: '云端市场', route: '/market' },
-    { key: 'export', label: '导出', route: '/export' },
-    { key: 'bilibili-import', label: 'Bilibili 导入', route: '/bilibili-import' },
-    { key: 'telegram-import', label: 'Telegram 导入', route: '/telegram-import' },
-    { key: 'stats', label: '统计', route: '/stats' },
-    { key: 'ai-rename', label: 'AI 批量重命名', route: '/ai-rename' },
-    { key: 'about', label: '关于', route: '/about' }
-  ]
+    { key: 'settings', label: t('settings'), route: '/settings' },
+      { key: 'favorites', label: t('favorites'), route: '/favorites' },
+      { key: 'groups', label: t('groupManagement'), route: '/groups' },
+      { key: 'ungrouped', label: t('ungrouped'), route: '/ungrouped' },
+      { key: 'archived', label: t('archived'), route: '/archived' },
+      { key: 'buffer', label: t('buffer'), route: '/buffer' },
+      { key: 'market', label: t('cloudMarket'), route: '/market' },
+      { key: 'export', label: t('export'), route: '/export' },
+      { key: 'bilibili-import', label: t('bilibiliImport'), route: '/bilibili-import' },
+      { key: 'telegram-import', label: t('telegramImport'), route: '/telegram-import' },
+      { key: 'stats', label: t('statistics'), route: '/stats' },
+      { key: 'ai-rename', label: t('aiRename'), route: '/ai-rename' },
+      { key: 'about', label: t('about'), route: '/about' }  ]
 
   return routes.map(item => ({
     key: item.key,
@@ -369,9 +371,9 @@ const handleSaveGroup = (
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center py-6">
             <div>
-              <h1 class="text-2xl font-bold dark:text-white">表情管理</h1>
+              <h1 class="text-2xl font-bold dark:text-white">{{ t('emojiManagement') }}</h1>
               <p class="text-sm dark:bg-black dark:text-white">
-                管理表情包分组、自定义表情和扩展设置
+                {{ t('manageEmojisGroupsAndSettings') }}
               </p>
             </div>
             <opensource

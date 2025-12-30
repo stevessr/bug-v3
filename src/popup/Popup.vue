@@ -4,8 +4,11 @@ import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 import GroupTabs from './components/GroupTabs.vue'
 import LazyEmojiGrid from './components/LazyEmojiGrid.vue'
 import { usePopup } from './usePopup'
+import { useI18n } from '@/utils/i18n'
 
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
+
+const { t } = useI18n()
 
 const {
   emojiStore,
@@ -42,12 +45,12 @@ const openOptionsInNewWindow = () => {
       <!-- Header with scale control -->
       <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-white">表情管理</h2>
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('emojiManagement') }}</h2>
           <div class="flex items-center gap-2">
             <a-button
               @click="openOptions"
               class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              title="设置"
+              :title="t('settings')"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -97,14 +100,14 @@ const openOptionsInNewWindow = () => {
 
         <!-- Scale Control -->
         <div class="flex items-center gap-2 text-xs">
-          <span class="text-gray-600 dark:text-white">缩放：</span>
+          <span class="text-gray-600 dark:text-white">{{ t('zoom') }}：</span>
           <input
             v-model.number="localScale"
             type="range"
             min="5"
             max="150"
             step="5"
-            title="缩放"
+            :title="t('zoomTitle')"
             class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
             @input="updateScale"
             role="slider"
@@ -123,9 +126,8 @@ const openOptionsInNewWindow = () => {
           <input
             v-model="emojiStore.searchQuery"
             type="text"
-            placeholder="搜索表情..."
-            title="搜索表情"
-            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+            :placeholder="t('searchEmojis')"
+                      :title="t('searchEmojisTitle')"            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
           />
           <svg
             class="absolute right-2 top-1.5 w-4 h-4 text-gray-400"
@@ -159,7 +161,7 @@ const openOptionsInNewWindow = () => {
             :isLoading="emojiStore.isLoading"
             :favorites="emojiStore.favorites"
             :gridColumns="emojiStore.settings.gridColumns"
-            :emptyMessage="'没有找到匹配的表情'"
+            :emptyMessage="t('noMatchingEmojis')"
             :showAddButton="false"
             groupId="search"
             isActive
@@ -176,7 +178,7 @@ const openOptionsInNewWindow = () => {
             :isLoading="emojiStore.isLoading"
             :favorites="emojiStore.favorites"
             :gridColumns="emojiStore.settings.gridColumns"
-            :emptyMessage="'该分组还没有表情'"
+            :emptyMessage="t('groupHasNoEmojis')"
             showAddButton
             :groupId="emojiStore.activeGroupId"
             isActive
@@ -191,7 +193,7 @@ const openOptionsInNewWindow = () => {
         v-if="showCopyToast"
         class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm animate-pulse"
       >
-        链接已复制到剪贴板
+        {{ t('linkCopiedToClipboard') }}
       </div>
     </div>
   </AConfigProvider>

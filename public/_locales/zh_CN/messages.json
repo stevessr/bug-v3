@@ -10,5 +10,1081 @@
   "extensionDescription": {
     "message": "一个功能强大的表情管理扩展，支持自定义表情分组、收藏夹，以及在各大网站（Discord、Reddit、X、小红书等）快速插入表情。",
     "description": "扩展描述"
+  },
+  "emojiManagement": {
+    "message": "表情管理",
+    "description": "表情管理标题"
+  },
+  "settings": {
+    "message": "设置",
+    "description": "设置"
+  },
+  "favorites": {
+    "message": "常用",
+    "description": "常用"
+  },
+  "groupManagement": {
+    "message": "分组管理",
+    "description": "分组管理"
+  },
+  "ungrouped": {
+    "message": "未分组",
+    "description": "未分组"
+  },
+  "archived": {
+    "message": "已归档",
+    "description": "已归档"
+  },
+  "buffer": {
+    "message": "缓冲区",
+    "description": "缓冲区"
+  },
+  "cloudMarket": {
+    "message": "云端市场",
+    "description": "云端市场"
+  },
+  "export": {
+    "message": "导出",
+    "description": "导出"
+  },
+  "bilibiliImport": {
+    "message": "Bilibili 导入",
+    "description": "Bilibili 导入"
+  },
+  "telegramImport": {
+    "message": "Telegram 导入",
+    "description": "Telegram 导入"
+  },
+  "statistics": {
+    "message": "统计",
+    "description": "统计"
+  },
+  "aiRename": {
+    "message": "AI 批量重命名",
+    "description": "AI 批量重命名"
+  },
+  "about": {
+    "message": "关于",
+    "description": "关于"
+  },
+  "search": {
+    "message": "搜索",
+    "description": "搜索"
+  },
+  "searchEmojis": {
+    "message": "搜索表情...",
+    "description": "搜索表情占位符"
+  },
+  "searchEmojisTitle": {
+    "message": "搜索表情",
+    "description": "搜索表情标题"
+  },
+  "noMatchingEmojis": {
+    "message": "没有找到匹配的表情",
+    "description": "没有找到匹配的表情"
+  },
+  "groupHasNoEmojis": {
+    "message": "该分组还没有表情",
+    "description": "该分组还没有表情"
+  },
+  "linkCopiedToClipboard": {
+    "message": "链接已复制到剪贴板",
+    "description": "链接已复制到剪贴板"
+  },
+  "zoom": {
+    "message": "缩放",
+    "description": "缩放"
+  },
+  "zoomTitle": {
+    "message": "缩放",
+    "description": "缩放标题"
+  },
+  "newGroup": {
+    "message": "新建分组",
+    "description": "新建分组"
+  },
+  "addGroup": {
+    "message": "+ 添加表情",
+    "description": "添加表情"
+  },
+  "systemGroup": {
+    "message": "系统分组",
+    "description": "系统分组"
+  },
+  "allEmojis": {
+    "message": "所有表情",
+    "description": "所有表情"
+  },
+  "virtualGroup": {
+    "message": "（虚拟分组）",
+    "description": "虚拟分组"
+  },
+  "goAddEmojis": {
+    "message": "去添加表情",
+    "description": "去添加表情"
+  },
+  "loading": {
+    "message": "加载中...",
+    "description": "加载中"
+  },
+  "confirm": {
+    "message": "确认",
+    "description": "确认"
+  },
+  "cancel": {
+    "message": "取消",
+    "description": "取消"
+  },
+  "close": {
+    "message": "关闭",
+    "description": "关闭"
+  },
+  "save": {
+    "message": "保存",
+    "description": "保存"
+  },
+  "edit": {
+    "message": "编辑",
+    "description": "编辑"
+  },
+  "remove": {
+    "message": "移除",
+    "description": "移除"
+  },
+  "delete": {
+    "message": "删除",
+    "description": "删除"
+  },
+  "refresh": {
+    "message": "刷新",
+    "description": "刷新"
+  },
+  "view": {
+    "message": "查看",
+    "description": "查看"
+  },
+  "install": {
+    "message": "安装",
+    "description": "安装"
+  },
+  "installed": {
+    "message": "已安装",
+    "description": "已安装"
+  },
+  "import": {
+    "message": "导入",
+    "description": "导入"
+  },
+  "export": {
+    "message": "导出",
+    "description": "导出"
+  },
+  "sync": {
+    "message": "同步",
+    "description": "同步"
+  },
+  "manageEmojisGroupsAndSettings": {
+    "message": "管理表情包分组、自定义表情和扩展设置",
+    "description": "管理表情包分组、自定义表情和扩展设置"
+  },
+  "usageCount": {
+    "message": "使用 {count} 次",
+    "description": "使用次数"
+  },
+  "selectGroup": {
+    "message": "选择分组",
+    "description": "选择分组"
+  },
+  "clearFavorites": {
+    "message": "清空常用",
+    "description": "清空常用"
+  },
+  "clearAllFavorites": {
+    "message": "确认清空所有常用表情吗？此操作不可撤销。",
+    "description": "确认清空所有常用表情吗？此操作不可撤销。"
+  },
+  "noFavoritesYet": {
+    "message": "尚无常用表情，使用表情后会自动添加到常用。",
+    "description": "尚无常用表情，使用表情后会自动添加到常用。"
+  },
+  "confirmRemoveEmoji": {
+    "message": "确认移除此表情？",
+    "description": "确认移除此表情？"
+  },
+  "expand": {
+    "message": "展开",
+    "description": "展开"
+  },
+  "collapse": {
+    "message": "收起",
+    "description": "收起"
+  },
+  "emojiCount": {
+    "message": "{count} 个表情",
+    "description": "表情数量"
+  },
+  "searchResults": {
+    "message": "🔍 搜索 \"{query}\" 找到 {count} 个结果",
+    "description": "搜索结果"
+  },
+  "noSearchResults": {
+    "message": "未找到匹配的表情",
+    "description": "未找到匹配的表情"
+  },
+  "allEmojisDescription": {
+    "message": "🔍 展示所有分组的表情，共 {count} 个表情",
+    "description": "所有表情描述"
+  },
+  "noEmojis": {
+    "message": "暂无表情",
+    "description": "暂无表情"
+  },
+  "cloudMarketDescription": {
+    "message": "从云端浏览和安装表情包",
+    "description": "云端市场描述"
+  },
+  "totalPackages": {
+    "message": "- 共 {count} 个表情包",
+    "description": "总表情包数"
+  },
+  "noMarketPackages": {
+    "message": "没有找到匹配的表情包",
+    "description": "没有找到匹配的表情包"
+  },
+  "noAvailablePackages": {
+    "message": "暂无可用的表情包",
+    "description": "暂无可用的表情包"
+  },
+  "packageDetails": {
+    "message": "表情包详情",
+    "description": "表情包详情"
+  },
+  "emojiPreview": {
+    "message": "表情预览",
+    "description": "表情预览"
+  },
+  "groupHasNoEmojisInDetail": {
+    "message": "此分组没有表情",
+    "description": "此分组没有表情"
+  },
+  "viewDetails": {
+    "message": "查看详情",
+    "description": "查看详情"
+  },
+  "archivedPackage": {
+    "message": "(已归档)",
+    "description": "已归档"
+  },
+  "installPackage": {
+    "message": "安装",
+    "description": "安装"
+  },
+  "alreadyInstalled": {
+    "message": "已安装",
+    "description": "已安装"
+  },
+  "totalEmojisInPackage": {
+    "message": "共 {count} 个表情",
+    "description": "包中表情总数"
+  },
+  "batchUpdateSize": {
+    "message": "批量更新尺寸",
+    "description": "批量更新尺寸"
+  },
+  "processing": {
+    "message": "正在处理：{current} / {total}",
+    "description": "处理进度"
+  },
+  "autoParseSizeFromUrl": {
+    "message": "自动从图片 URL 解析尺寸并写回",
+    "description": "自动从图片 URL 解析尺寸并写回"
+  },
+  "noImage": {
+    "message": "无图片",
+    "description": "无图片"
+  },
+  "preview": {
+    "message": "预览",
+    "description": "预览"
+  },
+  "targetGroup": {
+    "message": "目标分组（可选）",
+    "description": "目标分组"
+  },
+  "targetGroupPlaceholder": {
+    "message": "留空按表情包名称创建分组",
+    "description": "目标分组占位符"
+  },
+  "noPackagesImported": {
+    "message": "还没有导入任何表情包",
+    "description": "还没有导入任何表情包"
+  },
+  "startImporting": {
+    "message": "在上方输入表情包 ID 开始导入",
+    "description": "开始导入提示"
+  },
+  "importSelectedPackages": {
+    "message": "导入选中的表情包 ({count})",
+    "description": "导入选中的表情包"
+  },
+  "selectAll": {
+    "message": "全选",
+    "description": "全选"
+  },
+  "deselectAll": {
+    "message": "取消全选",
+    "description": "取消全选"
+  },
+  "selectedPackages": {
+    "message": "(已选 {count})",
+    "description": "已选数量"
+  },
+  "removePackage": {
+    "message": "移除表情包",
+    "description": "移除表情包"
+  },
+  "bilibiliImportTitle": {
+    "message": "导入 Bilibili 表情包",
+    "description": "Bilibili 导入标题"
+  },
+  "searchPackages": {
+    "message": "搜索表情包",
+    "description": "搜索表情包"
+  },
+  "searchPlaceholder": {
+    "message": "输入关键词搜索 (如: 小黄脸)",
+    "description": "搜索占位符"
+  },
+  "searching": {
+    "message": "搜索中...",
+    "description": "搜索中"
+  },
+  "importById": {
+    "message": "通过 ID 导入",
+    "description": "通过 ID 导入"
+  },
+  "importByIdDescription": {
+    "message": "直接输入 Bilibili 表情包 ID 导入。",
+    "description": "通过 ID 导入描述"
+  },
+  "packageIdPlaceholder": {
+    "message": "输入表情包ID (如: 237)",
+    "description": "表情包 ID 占位符"
+  },
+  "importing": {
+    "message": "导入中...",
+    "description": "导入中"
+  },
+  "preparedPackages": {
+    "message": "已准备导入的表情包",
+    "description": "已准备导入的表情包"
+  },
+  "noMatchingPackages": {
+    "message": "未找到相关表情包",
+    "description": "未找到相关表情包"
+  },
+  "importFailed": {
+    "message": "导入失败：{error}",
+    "description": "导入失败"
+  },
+  "searchFailed": {
+    "message": "搜索失败，请稍后重试",
+    "description": "搜索失败"
+  },
+  "pleaseImportAtLeastOne": {
+    "message": "请至少导入一个表情包",
+    "description": "请至少导入一个表情包"
+  },
+  "pleaseEnterValidId": {
+    "message": "请输入有效的表情包 ID",
+    "description": "请输入有效的表情包 ID"
+  },
+  "telegramImportTitle": {
+    "message": "导入 Telegram 贴纸包",
+    "description": "Telegram 导入标题"
+  },
+  "botTokenSettings": {
+    "message": "Bot Token 设置",
+    "description": "Bot Token 设置"
+  },
+  "botTokenPlaceholder": {
+    "message": "输入 Telegram Bot Token",
+    "description": "Bot Token 占位符"
+  },
+  "uploadService": {
+    "message": "选择上传服务",
+    "description": "选择上传服务"
+  },
+  "uploadServiceDescription": {
+    "message": "贴纸将自动上传到所选服务并保存托管链接",
+    "description": "上传服务描述"
+  },
+  "stickerPackInput": {
+    "message": "贴纸包链接或名称",
+    "description": "贴纸包输入"
+  },
+  "stickerPackPlaceholder": {
+    "message": "例如：https://t.me/addstickers/xxx 或 xxx",
+    "description": "贴纸包占位符"
+  },
+  "importMode": {
+    "message": "导入模式",
+    "description": "导入模式"
+  },
+  "newGroup": {
+    "message": "新建分组",
+    "description": "新建分组"
+  },
+  "updateExisting": {
+    "message": "更新已有分组",
+    "description": "更新已有分组"
+  },
+  "groupName": {
+    "message": "分组名称",
+    "description": "分组名称"
+  },
+  "groupNamePlaceholder": {
+    "message": "输入分组名称",
+    "description": "分组名称占位符"
+  },
+  "groupIcon": {
+    "message": "分组图标",
+    "description": "分组图标"
+  },
+  "groupIconPlaceholder": {
+    "message": "输入 emoji 图标",
+    "description": "分组图标占位符"
+  },
+  "selectGroupToUpdate": {
+    "message": "选择要更新的分组",
+    "description": "选择要更新的分组"
+  },
+  "pleaseSelectGroup": {
+    "message": "请选择分组",
+    "description": "请选择分组"
+  },
+  "importToNewGroup": {
+    "message": "导入到新分组",
+    "description": "导入到新分组"
+  },
+  "updateGroup": {
+    "message": "更新分组",
+    "description": "更新分组"
+  },
+  "botTokenRequired": {
+    "message": "请先设置 Telegram Bot Token",
+    "description": "请先设置 Telegram Bot Token"
+  },
+  "pleaseEnterStickerPack": {
+    "message": "请输入贴纸包链接或名称",
+    "description": "请输入贴纸包链接或名称"
+  },
+  "invalidStickerPack": {
+    "message": "无效的贴纸包链接或名称",
+    "description": "无效的贴纸包链接或名称"
+  },
+  "pleaseEnterGroupName": {
+    "message": "请输入分组名称",
+    "description": "请输入分组名称"
+  },
+  "pleaseSelectUpdateTarget": {
+    "message": "请选择要更新的分组",
+    "description": "请选择要更新的分组"
+  },
+  "pleasePreviewFirst": {
+    "message": "请先预览贴纸包",
+    "description": "请先预览贴纸包"
+  },
+  "gettingStickerPackInfo": {
+    "message": "正在获取贴纸包信息...",
+    "description": "正在获取贴纸包信息"
+  },
+  "startingProcessStickers": {
+    "message": "开始处理贴纸...",
+    "description": "开始处理贴纸"
+  },
+  "downloadingSticker": {
+    "message": "下载贴纸 {current}/{total}...",
+    "description": "下载贴纸"
+  },
+  "uploadingSticker": {
+    "message": "上传贴纸 {current}/{total} 到 {service}...",
+    "description": "上传贴纸"
+  },
+  "stickerUploadFailed": {
+    "message": "贴纸 {index} 上传失败，已跳过",
+    "description": "贴纸上传失败"
+  },
+  "groupImported": {
+    "message": "成功导入分组：{name}（{count} 个贴纸）",
+    "description": "分组导入成功"
+  },
+  "groupUpdated": {
+    "message": "成功更新分组：{name}（{count} 个贴纸）",
+    "description": "分组更新成功"
+  },
+  "importFailedMessage": {
+    "message": "导入失败：{error}",
+    "description": "导入失败消息"
+  },
+  "aiSmartNaming": {
+    "message": "AI 智能命名",
+    "description": "AI 智能命名"
+  },
+  "pleaseConfigureGeminiKey": {
+    "message": "⚠️ 请先在设置页面配置 Gemini API Key 才能使用智能命名功能",
+    "description": "请配置 Gemini Key"
+  },
+  "goToSettings": {
+    "message": "前往设置 →",
+    "description": "前往设置"
+  },
+  "analyzingImage": {
+    "message": "AI 正在分析图片内容...",
+    "description": "AI 正在分析图片内容"
+  },
+  "retry": {
+    "message": "重试",
+    "description": "重试"
+  },
+  "imageDescription": {
+    "message": "图片描述：",
+    "description": "图片描述"
+  },
+  "suggestedName": {
+    "message": "建议的名称：",
+    "description": "建议的名称"
+  },
+  "tags": {
+    "message": "标签：",
+    "description": "标签"
+  },
+  "enterCustomName": {
+    "message": "或者输入自定义名称：",
+    "description": "输入自定义名称"
+  },
+  "customNamePlaceholder": {
+    "message": "输入自定义名称",
+    "description": "自定义名称占位符"
+  },
+  "willUseName": {
+    "message": "将使用名称：",
+    "description": "将使用名称"
+  },
+  "configureApiKey": {
+    "message": "配置 API Key",
+    "description": "配置 API Key"
+  },
+  "startAnalysis": {
+    "message": "开始分析",
+    "description": "开始分析"
+  },
+  "confirmUse": {
+    "message": "确认使用",
+    "description": "确认使用"
+  },
+  "batchTagOperations": {
+    "message": "批量标签操作",
+    "description": "批量标签操作"
+  },
+  "selectedEmojis": {
+    "message": "已选择 {count} 个表情",
+    "description": "已选择的表情数量"
+  },
+  "addTag": {
+    "message": "添加标签",
+    "description": "添加标签"
+  },
+  "tagNamePlaceholder": {
+    "message": "输入标签名称",
+    "description": "标签名称占位符"
+  },
+  "addToSelected": {
+    "message": "添加到选中",
+    "description": "添加到选中"
+  },
+  "removeTag": {
+    "message": "移除标签",
+    "description": "移除标签"
+  },
+  "quickActions": {
+    "message": "快速操作",
+    "description": "快速操作"
+  },
+  "clearAllTags": {
+    "message": "清除所有标签",
+    "description": "清除所有标签"
+  },
+  "copyFirstEmojiTags": {
+    "message": "复制第一个表情的标签",
+    "description": "复制第一个表情的标签"
+  },
+  "closeBatchOperations": {
+    "message": "关闭",
+    "description": "关闭批量操作"
+  },
+  "tagAddedToEmojis": {
+    "message": "已为 {count} 个表情添加标签 \"{tag}\"",
+    "description": "标签添加成功"
+  },
+  "tagRemovedFromEmojis": {
+    "message": "已从 {count} 个表情移除标签 \"{tag}\"",
+    "description": "标签移除成功"
+  },
+  "tagsCleared": {
+    "message": "已清除 {count} 个标签",
+    "description": "标签清除成功"
+  },
+  "firstEmojiNoTags": {
+    "message": "第一个表情没有标签",
+    "description": "第一个表情没有标签"
+  },
+  "tagsCopied": {
+    "message": "已为其他表情复制 {count} 个标签",
+    "description": "标签复制成功"
+  },
+  "aiBatchRename": {
+    "message": "AI 批量重命名",
+    "description": "AI 批量重命名"
+  },
+  "applySelectedRenames": {
+    "message": "应用选中的重命名",
+    "description": "应用选中的重命名"
+  },
+  "namingPrompt": {
+    "message": "命名提示：",
+    "description": "命名提示"
+  },
+  "namingPromptPlaceholder": {
+    "message": "例如：给这些表情加上'搞笑'前缀，或者'根据图片内容生成描述性名称'",
+    "description": "命名提示占位符"
+  },
+  "languageSettingsMoved": {
+    "message": "语言设置已移至 设置 → AI 设置",
+    "description": "语言设置已移至"
+  },
+  "startGeneration": {
+    "message": "开始生成",
+    "description": "开始生成"
+  },
+  "generating": {
+    "message": "生成中...",
+    "description": "生成中"
+  },
+  "accepted": {
+    "message": "已接受 ·",
+    "description": "已接受"
+  },
+  "rejected": {
+    "message": "已拒绝 ·",
+    "description": "已拒绝"
+  },
+  "pending": {
+    "message": "待处理",
+    "description": "待处理"
+  },
+  "processingProgress": {
+    "message": "处理进度：{current} / {total}",
+    "description": "处理进度"
+  },
+  "renamePreview": {
+    "message": "重命名预览：",
+    "description": "重命名预览"
+  },
+  "originalName": {
+    "message": "原名称：",
+    "description": "原名称"
+  },
+  "generatingCandidates": {
+    "message": "正在生成候选名称...",
+    "description": "正在生成候选名称"
+  },
+  "candidateNames": {
+    "message": "候选名称 (点击选择):",
+    "description": "候选名称"
+  },
+  "waitForGeneration": {
+    "message": "等待生成...",
+    "description": "等待生成"
+  },
+  "acceptRename": {
+    "message": "接受重命名",
+    "description": "接受重命名"
+  },
+  "rejectRename": {
+    "message": "拒绝重命名",
+    "description": "拒绝重命名"
+  },
+  "regenerate": {
+    "message": "重新生成",
+    "description": "重新生成"
+  },
+  "enterPromptToStart": {
+    "message": "输入命名提示后点击\"开始生成\"来为选中的表情生成新名称",
+    "description": "输入提示开始生成"
+  },
+  "syncConflict": {
+    "message": "🔀 同步冲突",
+    "description": "同步冲突"
+  },
+  "syncConflictDescription": {
+    "message": "检测到 {count} 个冲突，请选择如何解决",
+    "description": "同步冲突描述"
+  },
+  "localVersion": {
+    "message": "📱 本地版本",
+    "description": "本地版本"
+  },
+  "remoteVersion": {
+    "message": "☁️ 远程版本",
+    "description": "远程版本"
+  },
+  "oldValue": {
+    "message": "旧值：",
+    "description": "旧值"
+  },
+  "newValue": {
+    "message": "新值：",
+    "description": "新值"
+  },
+  "noChangeDetails": {
+    "message": "无可用的变更详情",
+    "description": "无可用的变更详情"
+  },
+  "useLocalVersion": {
+    "message": "使用本地版本",
+    "description": "使用本地版本"
+  },
+  "useRemoteVersion": {
+    "message": "使用远程版本",
+    "description": "使用远程版本"
+  },
+  "tryAutoMerge": {
+    "message": "尝试自动合并",
+    "description": "尝试自动合并"
+  },
+  "cancelSync": {
+    "message": "取消同步",
+    "description": "取消同步"
+  },
+  "autoResolveAll": {
+    "message": "自动解决全部",
+    "description": "自动解决全部"
+  },
+  "continueSync": {
+    "message": "继续同步",
+    "description": "继续同步"
+  },
+  "resolveConflictFailed": {
+    "message": "解决冲突失败，请重试",
+    "description": "解决冲突失败"
+  },
+  "autoMergeFailed": {
+    "message": "自动合并失败，请手动选择版本",
+    "description": "自动合并失败"
+  },
+  "batchResolveFailed": {
+    "message": "批量解决冲突失败，请手动处理",
+    "description": "批量解决冲突失败"
+  },
+  "componentLoadFailed": {
+    "message": "组件加载失败",
+    "description": "组件加载失败"
+  },
+  "retry": {
+    "message": "重试",
+    "description": "重试"
+  },
+  "reloadPage": {
+    "message": "刷新页面",
+    "description": "刷新页面"
+  },
+  "unknownError": {
+    "message": "发生未知错误",
+    "description": "发生未知错误"
+  },
+  "collaborativeUploadConfig": {
+    "message": "协调服务器配置",
+    "description": "协调服务器配置"
+  },
+  "collaborativeUploadDescription": {
+    "message": "联动上传允许多个安装了此插件的用户协同上传，绕过单账户速率限制。",
+    "description": "联动上传描述"
+  },
+  "runCoordinationServer": {
+    "message": "运行协调服务器：",
+    "description": "运行协调服务器"
+  },
+  "workerMode": {
+    "message": "🔧 工作者模式",
+    "description": "工作者模式"
+  },
+  "workerModeDescription": {
+    "message": "作为工作者帮助其他用户上传文件。你的上传配额将被用于处理任务。",
+    "description": "工作者模式描述"
+  },
+  "startWork": {
+    "message": "开始工作",
+    "description": "开始工作"
+  },
+  "stopWork": {
+    "message": "停止工作",
+    "description": "停止工作"
+  },
+  "completed": {
+    "message": "完成：",
+    "description": "完成"
+  },
+  "failed": {
+    "message": "失败：",
+    "description": "失败"
+  },
+  "traffic": {
+    "message": "流量：",
+    "description": "流量"
+  },
+  "currentTask": {
+    "message": "当前任务",
+    "description": "当前任务"
+  },
+  "masterMode": {
+    "message": "📤 主控模式",
+    "description": "主控模式"
+  },
+  "masterModeDescription": {
+    "message": "将上传任务分发给其他工作者，实现并行上传。",
+    "description": "主控模式描述"
+  },
+  "connectToServer": {
+    "message": "连接服务器",
+    "description": "连接服务器"
+  },
+  "disconnectFromServer": {
+    "message": "断开连接",
+    "description": "断开连接"
+  },
+  "filesSelected": {
+    "message": "已选择 {count} 个文件",
+    "description": "已选择文件数"
+  },
+  "startCollaborativeUpload": {
+    "message": "开始联动上传",
+    "description": "开始联动上传"
+  },
+  "uploadProgress": {
+    "message": "上传进度",
+    "description": "上传进度"
+  },
+  "serverStatus": {
+    "message": "📊 服务器状态",
+    "description": "服务器状态"
+  },
+  "workers": {
+    "message": "工作者",
+    "description": "工作者"
+  },
+  "idle": {
+    "message": "空闲",
+    "description": "空闲"
+  },
+  "pending": {
+    "message": "待处理",
+    "description": "待处理"
+  },
+  "inProgress": {
+    "message": "进行中",
+    "description": "进行中"
+  },
+  "onlineWorkers": {
+    "message": "在线工作者",
+    "description": "在线工作者"
+  },
+  "uploadResults": {
+    "message": "📋 上传结果",
+    "description": "上传结果"
+  },
+  "notConnected": {
+    "message": "未连接",
+    "description": "未连接"
+  },
+  "connecting": {
+    "message": "连接中...",
+    "description": "连接中"
+  },
+  "workerModeId": {
+    "message": "工作者模式 (ID: {id}...)",
+    "description": "工作者模式 ID"
+  },
+  "masterModeSession": {
+    "message": "主控模式 (会话：{session}...)",
+    "description": "主控模式会话"
+  },
+  "processing": {
+    "message": "处理中",
+    "description": "处理中"
+  },
+  "waiting": {
+    "message": "等待中",
+    "description": "等待中"
+  },
+  "completed": {
+    "message": "已完成",
+    "description": "已完成"
+  },
+  "failed": {
+    "message": "失败",
+    "description": "失败"
+  },
+  "cloudConfigPreview": {
+    "message": "云端配置预览",
+    "description": "云端配置预览"
+  },
+  "cloudConfigFetchSuccess": {
+    "message": "云端配置获取成功",
+    "description": "云端配置获取成功"
+  },
+  "cloudConfigFetchFailed": {
+    "message": "云端配置获取失败",
+    "description": "云端配置获取失败"
+  },
+  "configOverview": {
+    "message": "配置概览",
+    "description": "配置概览"
+  },
+  "connectionStatus": {
+    "message": "连接状态",
+    "description": "连接状态"
+  },
+  "groupCount": {
+    "message": "分组数量",
+    "description": "分组数量"
+  },
+  "checkTime": {
+    "message": "检查时间",
+    "description": "检查时间"
+  },
+  "settingsInfo": {
+    "message": "设置信息",
+    "description": "设置信息"
+  },
+  "version": {
+    "message": "版本",
+    "description": "版本"
+  },
+  "favoritesCount": {
+    "message": "收藏数量",
+    "description": "收藏数量"
+  },
+  "lastModified": {
+    "message": "最后修改",
+    "description": "最后修改"
+  },
+  "emojiGroups": {
+    "message": "表情分组",
+    "description": "表情分组"
+  },
+  "clickGroupForDetails": {
+    "message": "点击分组查看详细信息",
+    "description": "点击分组查看详细信息"
+  },
+  "connectionInfo": {
+    "message": "连接信息",
+    "description": "连接信息"
+  },
+  "dataAvailability": {
+    "message": "数据可用性",
+    "description": "数据可用性"
+  },
+  "available": {
+    "message": "可用",
+    "description": "可用"
+  },
+  "noData": {
+    "message": "无数据",
+    "description": "无数据"
+  },
+  "unknown": {
+    "message": "未知",
+    "description": "未知"
+  },
+  "syncService": {
+    "message": "同步服务",
+    "description": "同步服务"
+  },
+  "checkingCloudConfig": {
+    "message": "正在检查云端配置...",
+    "description": "正在检查云端配置"
+  },
+  "noConfigToPreview": {
+    "message": "暂无配置可预览",
+    "description": "暂无配置可预览"
+  },
+  "groupDetails": {
+    "message": "分组详情：{name}",
+    "description": "分组详情"
+  },
+  "loadingGroupDetails": {
+    "message": "正在加载分组详情...",
+    "description": "正在加载分组详情"
+  },
+  "emojiCountInGroup": {
+    "message": "表情数量",
+    "description": "表情数量"
+  },
+  "updateTime": {
+    "message": "更新时间",
+    "description": "更新时间"
+  },
+  "groupNote": {
+    "message": "分组备注",
+    "description": "分组备注"
+  },
+  "noPreview": {
+    "message": "无预览",
+    "description": "无预览"
+  },
+  "emojiWithNumber": {
+    "message": "表情 {number}",
+    "description": "表情编号"
+  },
+  "noUrl": {
+    "message": "无 URL",
+    "description": "无 URL"
+  },
+  "groupHasNoEmojisDetail": {
+    "message": "该分组暂无表情",
+    "description": "该分组暂无表情"
+  },
+  "noGroupDetailsToShow": {
+    "message": "暂无分组详情可展示",
+    "description": "暂无分组详情可展示"
+  },
+  "pleaseConfigureSyncParams": {
+    "message": "请先配置同步参数",
+    "description": "请先配置同步参数"
+  },
+  "cloudConfigPreviewSuccess": {
+    "message": "云端配置预览成功",
+    "description": "云端配置预览成功"
+  },
+  "cloudConfigPreviewFailed": {
+    "message": "预览云端配置失败：{message}",
+    "description": "预览云端配置失败"
+  },
+  "previewFailed": {
+    "message": "预览失败：{message}",
+    "description": "预览失败"
+  },
+  "invalidGroupInfo": {
+    "message": "无效的分组信息",
+    "description": "无效的分组信息"
+  },
+  "loadGroupDetailsFailed": {
+    "message": "加载分组详情失败：{message}",
+    "description": "加载分组详情失败"
+  },
+  "loadGroupDetailsFailedError": {
+    "message": "加载分组详情失败：{message}",
+    "description": "加载分组详情失败"
   }
 }

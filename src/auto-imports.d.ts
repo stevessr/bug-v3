@@ -41,6 +41,7 @@ declare global {
   const clearSyncConfig: typeof import('./utils/syncConfigStorage')['clearSyncConfig']
   const cloudflareSyncService: typeof import('./utils/cloudflareSync')['cloudflareSyncService']
   const collaborativeUpload: typeof import('./utils/collaborativeUpload')['collaborativeUpload']
+  const commonMessages: typeof import('./utils/i18n')['commonMessages']
   const computed: typeof import('vue')['computed']
   const createApp: typeof import('vue')['createApp']
   const createFileUrl: typeof import('./utils/telegramResolver')['createFileUrl']
@@ -60,6 +61,7 @@ declare global {
   const environmentSpecificExample: typeof import('./utils/imageCache.example')['environmentSpecificExample']
   const exampleImageCaching: typeof import('./utils/imageCache.example')['exampleImageCaching']
   const extractStickerSetName: typeof import('./utils/telegramResolver')['extractStickerSetName']
+  const formatMessage: typeof import('./utils/i18n')['formatMessage']
   const generateBatchNames: typeof import('./utils/geminiService')['generateBatchNames']
   const generateBatchNamesStreaming: typeof import('./utils/geminiService')['generateBatchNamesStreaming']
   const getActivePinia: typeof import('pinia')['getActivePinia']
@@ -83,14 +85,17 @@ declare global {
   const getEmojiImageUrls: typeof import('./utils/imageUrlHelper')['getEmojiImageUrls']
   const getFavorites: typeof import('./utils/simpleStorage')['getFavorites']
   const getFile: typeof import('./utils/telegramResolver')['getFile']
+  const getMessage: typeof import('./utils/i18n')['getMessage']
   const getSettings: typeof import('./utils/simpleStorage')['getSettings']
   const getStickerSet: typeof import('./utils/telegramResolver')['getStickerSet']
   const getTelegramBotToken: typeof import('./utils/telegramResolver')['getTelegramBotToken']
+  const getUILanguage: typeof import('./utils/i18n')['getUILanguage']
   const getWorkerClient: typeof import('./utils/collaborativeUpload')['getWorkerClient']
   const h: typeof import('vue')['h']
   const imageCache: typeof import('./utils/imageCache')['imageCache']
   const imageCacheService: typeof import('./utils/imageCacheService')['imageCacheService']
   const inject: typeof import('vue')['inject']
+  const isChineseLocale: typeof import('./utils/i18n')['isChineseLocale']
   const isEmoji: typeof import('./utils/typeGuards')['isEmoji']
   const isEmojiArray: typeof import('./utils/typeGuards')['isEmojiArray']
   const isEmojiGroup: typeof import('./utils/typeGuards')['isEmojiGroup']
@@ -198,6 +203,7 @@ declare global {
   const useEventListener: typeof import('./composables/useEventListener')['useEventListener']
   const useFavoritesStore: typeof import('./stores/index')['useFavoritesStore']
   const useGroupStore: typeof import('./stores/index')['useGroupStore']
+  const useI18n: typeof import('./utils/i18n')['useI18n']
   const useId: typeof import('vue')['useId']
   const useInterval: typeof import('./composables/useTimer')['useInterval']
   const useLink: typeof import('vue-router')['useLink']
@@ -294,6 +300,7 @@ declare module 'vue' {
     readonly clearSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['clearSyncConfig']>
     readonly cloudflareSyncService: UnwrapRef<typeof import('./utils/cloudflareSync')['cloudflareSyncService']>
     readonly collaborativeUpload: UnwrapRef<typeof import('./utils/collaborativeUpload')['collaborativeUpload']>
+    readonly commonMessages: UnwrapRef<typeof import('./utils/i18n')['commonMessages']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createFileUrl: UnwrapRef<typeof import('./utils/telegramResolver')['createFileUrl']>
@@ -313,6 +320,7 @@ declare module 'vue' {
     readonly environmentSpecificExample: UnwrapRef<typeof import('./utils/imageCache.example')['environmentSpecificExample']>
     readonly exampleImageCaching: UnwrapRef<typeof import('./utils/imageCache.example')['exampleImageCaching']>
     readonly extractStickerSetName: UnwrapRef<typeof import('./utils/telegramResolver')['extractStickerSetName']>
+    readonly formatMessage: UnwrapRef<typeof import('./utils/i18n')['formatMessage']>
     readonly generateBatchNames: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNames']>
     readonly generateBatchNamesStreaming: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNamesStreaming']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
@@ -336,14 +344,17 @@ declare module 'vue' {
     readonly getEmojiImageUrls: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrls']>
     readonly getFavorites: UnwrapRef<typeof import('./utils/simpleStorage')['getFavorites']>
     readonly getFile: UnwrapRef<typeof import('./utils/telegramResolver')['getFile']>
+    readonly getMessage: UnwrapRef<typeof import('./utils/i18n')['getMessage']>
     readonly getSettings: UnwrapRef<typeof import('./utils/simpleStorage')['getSettings']>
     readonly getStickerSet: UnwrapRef<typeof import('./utils/telegramResolver')['getStickerSet']>
     readonly getTelegramBotToken: UnwrapRef<typeof import('./utils/telegramResolver')['getTelegramBotToken']>
+    readonly getUILanguage: UnwrapRef<typeof import('./utils/i18n')['getUILanguage']>
     readonly getWorkerClient: UnwrapRef<typeof import('./utils/collaborativeUpload')['getWorkerClient']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly imageCache: UnwrapRef<typeof import('./utils/imageCache')['imageCache']>
     readonly imageCacheService: UnwrapRef<typeof import('./utils/imageCacheService')['imageCacheService']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
+    readonly isChineseLocale: UnwrapRef<typeof import('./utils/i18n')['isChineseLocale']>
     readonly isEmoji: UnwrapRef<typeof import('./utils/typeGuards')['isEmoji']>
     readonly isEmojiArray: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiArray']>
     readonly isEmojiGroup: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiGroup']>
@@ -451,6 +462,7 @@ declare module 'vue' {
     readonly useEventListener: UnwrapRef<typeof import('./composables/useEventListener')['useEventListener']>
     readonly useFavoritesStore: UnwrapRef<typeof import('./stores/index')['useFavoritesStore']>
     readonly useGroupStore: UnwrapRef<typeof import('./stores/index')['useGroupStore']>
+    readonly useI18n: UnwrapRef<typeof import('./utils/i18n')['useI18n']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useInterval: UnwrapRef<typeof import('./composables/useTimer')['useInterval']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>

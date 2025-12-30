@@ -10,5 +10,1077 @@
   "extensionDescription": {
     "message": "A powerful emoji management extension that supports custom emoji grouping, favorites, and quick insertion on various websites (Discord, Reddit, X, Xiaohongshu, etc.).",
     "description": "Extension description"
+  },
+  "emojiManagement": {
+    "message": "Emoji Management",
+    "description": "Emoji management title"
+  },
+  "settings": {
+    "message": "Settings",
+    "description": "Settings"
+  },
+  "favorites": {
+    "message": "Favorites",
+    "description": "Favorites"
+  },
+  "groupManagement": {
+    "message": "Group Management",
+    "description": "Group management"
+  },
+  "ungrouped": {
+    "message": "Ungrouped",
+    "description": "Ungrouped"
+  },
+  "archived": {
+    "message": "Archived",
+    "description": "Archived"
+  },
+  "buffer": {
+    "message": "Buffer",
+    "description": "Buffer"
+  },
+  "cloudMarket": {
+    "message": "Cloud Market",
+    "description": "Cloud market"
+  },
+  "export": {
+    "message": "Export",
+    "description": "Export"
+  },
+  "bilibiliImport": {
+    "message": "Bilibili Import",
+    "description": "Bilibili import"
+  },
+  "telegramImport": {
+    "message": "Telegram Import",
+    "description": "Telegram import"
+  },
+  "statistics": {
+    "message": "Statistics",
+    "description": "Statistics"
+  },
+  "aiRename": {
+    "message": "AI Batch Rename",
+    "description": "AI batch rename"
+  },
+  "about": {
+    "message": "About",
+    "description": "About"
+  },
+  "search": {
+    "message": "Search",
+    "description": "Search"
+  },
+  "searchEmojis": {
+    "message": "Search emojis...",
+    "description": "Search emojis placeholder"
+  },
+  "searchEmojisTitle": {
+    "message": "Search emojis",
+    "description": "Search emojis title"
+  },
+  "noMatchingEmojis": {
+    "message": "No matching emojis found",
+    "description": "No matching emojis found"
+  },
+  "groupHasNoEmojis": {
+    "message": "This group has no emojis yet",
+    "description": "This group has no emojis yet"
+  },
+  "linkCopiedToClipboard": {
+    "message": "Link copied to clipboard",
+    "description": "Link copied to clipboard"
+  },
+  "zoom": {
+    "message": "Zoom",
+    "description": "Zoom"
+  },
+  "zoomTitle": {
+    "message": "Zoom",
+    "description": "Zoom title"
+  },
+  "newGroup": {
+    "message": "New Group",
+    "description": "New group"
+  },
+  "addGroup": {
+    "message": "+ Add Emoji",
+    "description": "Add emoji"
+  },
+  "systemGroup": {
+    "message": "System Group",
+    "description": "System group"
+  },
+  "allEmojis": {
+    "message": "All Emojis",
+    "description": "All emojis"
+  },
+  "virtualGroup": {
+    "message": "(Virtual Group)",
+    "description": "Virtual group"
+  },
+  "goAddEmojis": {
+    "message": "Go add emojis",
+    "description": "Go add emojis"
+  },
+  "loading": {
+    "message": "Loading...",
+    "description": "Loading"
+  },
+  "confirm": {
+    "message": "Confirm",
+    "description": "Confirm"
+  },
+  "cancel": {
+    "message": "Cancel",
+    "description": "Cancel"
+  },
+  "close": {
+    "message": "Close",
+    "description": "Close"
+  },
+  "save": {
+    "message": "Save",
+    "description": "Save"
+  },
+  "edit": {
+    "message": "Edit",
+    "description": "Edit"
+  },
+  "remove": {
+    "message": "Remove",
+    "description": "Remove"
+  },
+  "delete": {
+    "message": "Delete",
+    "description": "Delete"
+  },
+  "refresh": {
+    "message": "Refresh",
+    "description": "Refresh"
+  },
+  "view": {
+    "message": "View",
+    "description": "View"
+  },
+  "install": {
+    "message": "Install",
+    "description": "Install"
+  },
+  "installed": {
+    "message": "Installed",
+    "description": "Installed"
+  },
+  "import": {
+    "message": "Import",
+    "description": "Import"
+  },
+  "sync": {
+    "message": "Sync",
+    "description": "Sync"
+  },
+  "manageEmojisGroupsAndSettings": {
+    "message": "Manage emoji groups, custom emojis, and extension settings",
+    "description": "Manage emoji groups, custom emojis, and extension settings"
+  },
+  "usageCount": {
+    "message": "Used {count} times",
+    "description": "Usage count"
+  },
+  "selectGroup": {
+    "message": "Select group",
+    "description": "Select group"
+  },
+  "clearFavorites": {
+    "message": "Clear favorites",
+    "description": "Clear favorites"
+  },
+  "clearAllFavorites": {
+    "message": "Are you sure you want to clear all favorite emojis? This action cannot be undone.",
+    "description": "Are you sure you want to clear all favorite emojis? This action cannot be undone."
+  },
+  "noFavoritesYet": {
+    "message": "No favorite emojis yet. Emojis will be automatically added to favorites when used.",
+    "description": "No favorite emojis yet. Emojis will be automatically added to favorites when used."
+  },
+  "confirmRemoveEmoji": {
+    "message": "Confirm remove this emoji?",
+    "description": "Confirm remove this emoji?"
+  },
+  "expand": {
+    "message": "Expand",
+    "description": "Expand"
+  },
+  "collapse": {
+    "message": "Collapse",
+    "description": "Collapse"
+  },
+  "emojiCount": {
+    "message": "{count} emojis",
+    "description": "Emoji count"
+  },
+  "searchResults": {
+    "message": "🔍 Search \"{query}\" found {count} results",
+    "description": "Search results"
+  },
+  "noSearchResults": {
+    "message": "No matching emojis found",
+    "description": "No matching emojis found"
+  },
+  "allEmojisDescription": {
+    "message": "🔍 Show emojis from all groups, total {count} emojis",
+    "description": "All emojis description"
+  },
+  "noEmojis": {
+    "message": "No emojis yet",
+    "description": "No emojis yet"
+  },
+  "cloudMarketDescription": {
+    "message": "Browse and install emoji packs from the cloud",
+    "description": "Cloud market description"
+  },
+  "totalPackages": {
+    "message": "- Total {count} emoji packs",
+    "description": "Total emoji packs"
+  },
+  "noMarketPackages": {
+    "message": "No matching emoji packs found",
+    "description": "No matching emoji packs found"
+  },
+  "noAvailablePackages": {
+    "message": "No available emoji packs",
+    "description": "No available emoji packs"
+  },
+  "packageDetails": {
+    "message": "Emoji Pack Details",
+    "description": "Emoji pack details"
+  },
+  "emojiPreview": {
+    "message": "Emoji Preview",
+    "description": "Emoji preview"
+  },
+  "groupHasNoEmojisInDetail": {
+    "message": "This group has no emojis",
+    "description": "This group has no emojis"
+  },
+  "viewDetails": {
+    "message": "View Details",
+    "description": "View details"
+  },
+  "archivedPackage": {
+    "message": "(Archived)",
+    "description": "Archived"
+  },
+  "installPackage": {
+    "message": "Install",
+    "description": "Install"
+  },
+  "alreadyInstalled": {
+    "message": "Installed",
+    "description": "Installed"
+  },
+  "totalEmojisInPackage": {
+    "message": "Total {count} emojis",
+    "description": "Total emojis in package"
+  },
+  "batchUpdateSize": {
+    "message": "Batch Update Size",
+    "description": "Batch update size"
+  },
+  "processing": {
+    "message": "Processing: {current} / {total}",
+    "description": "Processing progress"
+  },
+  "autoParseSizeFromUrl": {
+    "message": "Automatically parse size from image URL and write back",
+    "description": "Automatically parse size from image URL and write back"
+  },
+  "noImage": {
+    "message": "No image",
+    "description": "No image"
+  },
+  "preview": {
+    "message": "Preview",
+    "description": "Preview"
+  },
+  "targetGroup": {
+    "message": "Target group (optional)",
+    "description": "Target group"
+  },
+  "targetGroupPlaceholder": {
+    "message": "Leave empty to create group by pack name",
+    "description": "Target group placeholder"
+  },
+  "noPackagesImported": {
+    "message": "No emoji packs imported yet",
+    "description": "No emoji packs imported yet"
+  },
+  "startImporting": {
+    "message": "Enter emoji pack ID above to start importing",
+    "description": "Start importing hint"
+  },
+  "importSelectedPackages": {
+    "message": "Import selected emoji packs ({count})",
+    "description": "Import selected emoji packs"
+  },
+  "selectAll": {
+    "message": "Select All",
+    "description": "Select all"
+  },
+  "deselectAll": {
+    "message": "Deselect All",
+    "description": "Deselect all"
+  },
+  "selectedPackages": {
+    "message": "(Selected {count})",
+    "description": "Selected count"
+  },
+  "removePackage": {
+    "message": "Remove emoji pack",
+    "description": "Remove emoji pack"
+  },
+  "bilibiliImportTitle": {
+    "message": "Import Bilibili Emoji Pack",
+    "description": "Bilibili import title"
+  },
+  "searchPackages": {
+    "message": "Search emoji packs",
+    "description": "Search emoji packs"
+  },
+  "searchPlaceholder": {
+    "message": "Enter keywords to search (e.g: 小黄脸)",
+    "description": "Search placeholder"
+  },
+  "searching": {
+    "message": "Searching...",
+    "description": "Searching"
+  },
+  "importById": {
+    "message": "Import by ID",
+    "description": "Import by ID"
+  },
+  "importByIdDescription": {
+    "message": "Directly enter Bilibili emoji pack ID to import.",
+    "description": "Import by ID description"
+  },
+  "packageIdPlaceholder": {
+    "message": "Enter emoji pack ID (e.g: 237)",
+    "description": "Emoji pack ID placeholder"
+  },
+  "importing": {
+    "message": "Importing...",
+    "description": "Importing"
+  },
+  "preparedPackages": {
+    "message": "Prepared emoji packs for import",
+    "description": "Prepared emoji packs for import"
+  },
+  "noMatchingPackages": {
+    "message": "No related emoji packs found",
+    "description": "No related emoji packs found"
+  },
+  "importFailed": {
+    "message": "Import failed: {error}",
+    "description": "Import failed"
+  },
+  "searchFailed": {
+    "message": "Search failed, please try again later",
+    "description": "Search failed"
+  },
+  "pleaseImportAtLeastOne": {
+    "message": "Please import at least one emoji pack",
+    "description": "Please import at least one emoji pack"
+  },
+  "pleaseEnterValidId": {
+    "message": "Please enter a valid emoji pack ID",
+    "description": "Please enter a valid emoji pack ID"
+  },
+  "telegramImportTitle": {
+    "message": "Import Telegram Sticker Pack",
+    "description": "Telegram import title"
+  },
+  "botTokenSettings": {
+    "message": "Bot Token Settings",
+    "description": "Bot token settings"
+  },
+  "botTokenPlaceholder": {
+    "message": "Enter Telegram Bot Token",
+    "description": "Bot token placeholder"
+  },
+  "uploadService": {
+    "message": "Select Upload Service",
+    "description": "Select upload service"
+  },
+  "uploadServiceDescription": {
+    "message": "Stickers will be automatically uploaded to the selected service and save hosting links",
+    "description": "Upload service description"
+  },
+  "stickerPackInput": {
+    "message": "Sticker pack link or name",
+    "description": "Sticker pack input"
+  },
+  "stickerPackPlaceholder": {
+    "message": "e.g: https://t.me/addstickers/xxx or xxx",
+    "description": "Sticker pack placeholder"
+  },
+  "importMode": {
+    "message": "Import Mode",
+    "description": "Import mode"
+  },
+  "newGroup": {
+    "message": "New Group",
+    "description": "New group"
+  },
+  "updateExisting": {
+    "message": "Update Existing Group",
+    "description": "Update existing group"
+  },
+  "groupName": {
+    "message": "Group Name",
+    "description": "Group name"
+  },
+  "groupNamePlaceholder": {
+    "message": "Enter group name",
+    "description": "Group name placeholder"
+  },
+  "groupIcon": {
+    "message": "Group Icon",
+    "description": "Group icon"
+  },
+  "groupIconPlaceholder": {
+    "message": "Enter emoji icon",
+    "description": "Group icon placeholder"
+  },
+  "selectGroupToUpdate": {
+    "message": "Select group to update",
+    "description": "Select group to update"
+  },
+  "pleaseSelectGroup": {
+    "message": "Please select a group",
+    "description": "Please select a group"
+  },
+  "importToNewGroup": {
+    "message": "Import to new group",
+    "description": "Import to new group"
+  },
+  "updateGroup": {
+    "message": "Update group",
+    "description": "Update group"
+  },
+  "botTokenRequired": {
+    "message": "Please set up Telegram Bot Token first",
+    "description": "Please set up Telegram Bot Token first"
+  },
+  "pleaseEnterStickerPack": {
+    "message": "Please enter sticker pack link or name",
+    "description": "Please enter sticker pack link or name"
+  },
+  "invalidStickerPack": {
+    "message": "Invalid sticker pack link or name",
+    "description": "Invalid sticker pack link or name"
+  },
+  "pleaseEnterGroupName": {
+    "message": "Please enter group name",
+    "description": "Please enter group name"
+  },
+  "pleaseSelectUpdateTarget": {
+    "message": "Please select a group to update",
+    "description": "Please select a group to update"
+  },
+  "pleasePreviewFirst": {
+    "message": "Please preview sticker pack first",
+    "description": "Please preview sticker pack first"
+  },
+  "gettingStickerPackInfo": {
+    "message": "Getting sticker pack info...",
+    "description": "Getting sticker pack info"
+  },
+  "startingProcessStickers": {
+    "message": "Starting to process stickers...",
+    "description": "Starting to process stickers"
+  },
+  "downloadingSticker": {
+    "message": "Downloading sticker {current}/{total}...",
+    "description": "Downloading sticker"
+  },
+  "uploadingSticker": {
+    "message": "Uploading sticker {current}/{total} to {service}...",
+    "description": "Uploading sticker"
+  },
+  "stickerUploadFailed": {
+    "message": "Sticker {index} upload failed, skipped",
+    "description": "Sticker upload failed"
+  },
+  "groupImported": {
+    "message": "Successfully imported group: {name} ({count} stickers)",
+    "description": "Group imported successfully"
+  },
+  "groupUpdated": {
+    "message": "Successfully updated group: {name} ({count} stickers)",
+    "description": "Group updated successfully"
+  },
+  "importFailedMessage": {
+    "message": "Import failed: {error}",
+    "description": "Import failed message"
+  },
+  "aiSmartNaming": {
+    "message": "AI Smart Naming",
+    "description": "AI smart naming"
+  },
+  "pleaseConfigureGeminiKey": {
+    "message": "⚠️ Please configure Gemini API Key in settings page to use smart naming feature",
+    "description": "Please configure Gemini Key"
+  },
+  "goToSettings": {
+    "message": "Go to Settings →",
+    "description": "Go to settings"
+  },
+  "analyzingImage": {
+    "message": "AI is analyzing image content...",
+    "description": "AI is analyzing image content"
+  },
+  "retry": {
+    "message": "Retry",
+    "description": "Retry"
+  },
+  "imageDescription": {
+    "message": "Image description:",
+    "description": "Image description"
+  },
+  "suggestedName": {
+    "message": "Suggested name:",
+    "description": "Suggested name"
+  },
+  "tags": {
+    "message": "Tags:",
+    "description": "Tags"
+  },
+  "enterCustomName": {
+    "message": "Or enter custom name:",
+    "description": "Enter custom name"
+  },
+  "customNamePlaceholder": {
+    "message": "Enter custom name",
+    "description": "Custom name placeholder"
+  },
+  "willUseName": {
+    "message": "Will use name:",
+    "description": "Will use name"
+  },
+  "configureApiKey": {
+    "message": "Configure API Key",
+    "description": "Configure API Key"
+  },
+  "startAnalysis": {
+    "message": "Start Analysis",
+    "description": "Start analysis"
+  },
+  "confirmUse": {
+    "message": "Confirm Use",
+    "description": "Confirm use"
+  },
+  "batchTagOperations": {
+    "message": "Batch Tag Operations",
+    "description": "Batch tag operations"
+  },
+  "selectedEmojis": {
+    "message": "Selected {count} emojis",
+    "description": "Selected emoji count"
+  },
+  "addTag": {
+    "message": "Add Tag",
+    "description": "Add tag"
+  },
+  "tagNamePlaceholder": {
+    "message": "Enter tag name",
+    "description": "Tag name placeholder"
+  },
+  "addToSelected": {
+    "message": "Add to selected",
+    "description": "Add to selected"
+  },
+  "removeTag": {
+    "message": "Remove Tag",
+    "description": "Remove tag"
+  },
+  "quickActions": {
+    "message": "Quick Actions",
+    "description": "Quick actions"
+  },
+  "clearAllTags": {
+    "message": "Clear All Tags",
+    "description": "Clear all tags"
+  },
+  "copyFirstEmojiTags": {
+    "message": "Copy first emoji's tags",
+    "description": "Copy first emoji's tags"
+  },
+  "closeBatchOperations": {
+    "message": "Close",
+    "description": "Close batch operations"
+  },
+  "tagAddedToEmojis": {
+    "message": "Added tag \"{tag}\" to {count} emojis",
+    "description": "Tag added successfully"
+  },
+  "tagRemovedFromEmojis": {
+    "message": "Removed tag \"{tag}\" from {count} emojis",
+    "description": "Tag removed successfully"
+  },
+  "tagsCleared": {
+    "message": "Cleared {count} tags",
+    "description": "Tags cleared successfully"
+  },
+  "firstEmojiNoTags": {
+    "message": "First emoji has no tags",
+    "description": "First emoji has no tags"
+  },
+  "tagsCopied": {
+    "message": "Copied {count} tags to other emojis",
+    "description": "Tags copied successfully"
+  },
+  "aiBatchRename": {
+    "message": "AI Batch Rename",
+    "description": "AI batch rename"
+  },
+  "applySelectedRenames": {
+    "message": "Apply selected renames",
+    "description": "Apply selected renames"
+  },
+  "namingPrompt": {
+    "message": "Naming prompt:",
+    "description": "Naming prompt"
+  },
+  "namingPromptPlaceholder": {
+    "message": "e.g: Add 'funny' prefix to these emojis, or 'generate descriptive names based on image content'",
+    "description": "Naming prompt placeholder"
+  },
+  "languageSettingsMoved": {
+    "message": "Language settings moved to Settings → AI Settings",
+    "description": "Language settings moved"
+  },
+  "startGeneration": {
+    "message": "Start Generation",
+    "description": "Start generation"
+  },
+  "generating": {
+    "message": "Generating...",
+    "description": "Generating"
+  },
+  "accepted": {
+    "message": "Accepted ·",
+    "description": "Accepted"
+  },
+  "rejected": {
+    "message": "Rejected ·",
+    "description": "Rejected"
+  },
+  "pending": {
+    "message": "Pending",
+    "description": "Pending"
+  },
+  "processingProgress": {
+    "message": "Processing progress: {current} / {total}",
+    "description": "Processing progress"
+  },
+  "renamePreview": {
+    "message": "Rename preview:",
+    "description": "Rename preview"
+  },
+  "originalName": {
+    "message": "Original name:",
+    "description": "Original name"
+  },
+  "generatingCandidates": {
+    "message": "Generating candidate names...",
+    "description": "Generating candidate names"
+  },
+  "candidateNames": {
+    "message": "Candidate names (click to select):",
+    "description": "Candidate names"
+  },
+  "waitForGeneration": {
+    "message": "Waiting for generation...",
+    "description": "Waiting for generation"
+  },
+  "acceptRename": {
+    "message": "Accept rename",
+    "description": "Accept rename"
+  },
+  "rejectRename": {
+    "message": "Reject rename",
+    "description": "Reject rename"
+  },
+  "regenerate": {
+    "message": "Regenerate",
+    "description": "Regenerate"
+  },
+  "enterPromptToStart": {
+    "message": "Enter naming prompt and click \"Start Generation\" to generate new names for selected emojis",
+    "description": "Enter prompt to start generation"
+  },
+  "syncConflict": {
+    "message": "🔀 Sync Conflict",
+    "description": "Sync conflict"
+  },
+  "syncConflictDescription": {
+    "message": "Detected {count} conflicts, please choose how to resolve",
+    "description": "Sync conflict description"
+  },
+  "localVersion": {
+    "message": "📱 Local Version",
+    "description": "Local version"
+  },
+  "remoteVersion": {
+    "message": "☁️ Remote Version",
+    "description": "Remote version"
+  },
+  "oldValue": {
+    "message": "Old value:",
+    "description": "Old value"
+  },
+  "newValue": {
+    "message": "New value:",
+    "description": "New value"
+  },
+  "noChangeDetails": {
+    "message": "No change details available",
+    "description": "No change details available"
+  },
+  "useLocalVersion": {
+    "message": "Use local version",
+    "description": "Use local version"
+  },
+  "useRemoteVersion": {
+    "message": "Use remote version",
+    "description": "Use remote version"
+  },
+  "tryAutoMerge": {
+    "message": "Try auto merge",
+    "description": "Try auto merge"
+  },
+  "cancelSync": {
+    "message": "Cancel sync",
+    "description": "Cancel sync"
+  },
+  "autoResolveAll": {
+    "message": "Auto resolve all",
+    "description": "Auto resolve all"
+  },
+  "continueSync": {
+    "message": "Continue sync",
+    "description": "Continue sync"
+  },
+  "resolveConflictFailed": {
+    "message": "Failed to resolve conflict, please retry",
+    "description": "Failed to resolve conflict"
+  },
+  "autoMergeFailed": {
+    "message": "Auto merge failed, please manually select version",
+    "description": "Auto merge failed"
+  },
+  "batchResolveFailed": {
+    "message": "Batch resolve failed, please handle manually",
+    "description": "Batch resolve failed"
+  },
+  "componentLoadFailed": {
+    "message": "Component load failed",
+    "description": "Component load failed"
+  },
+  "retry": {
+    "message": "Retry",
+    "description": "Retry"
+  },
+  "reloadPage": {
+    "message": "Reload Page",
+    "description": "Reload page"
+  },
+  "unknownError": {
+    "message": "Unknown error occurred",
+    "description": "Unknown error occurred"
+  },
+  "collaborativeUploadConfig": {
+    "message": "Coordination Server Configuration",
+    "description": "Collaborative upload configuration"
+  },
+  "collaborativeUploadDescription": {
+    "message": "Collaborative upload allows multiple users with this extension to upload together, bypassing single account rate limits.",
+    "description": "Collaborative upload description"
+  },
+  "runCoordinationServer": {
+    "message": "Run coordination server:",
+    "description": "Run coordination server"
+  },
+  "workerMode": {
+    "message": "🔧 Worker Mode",
+    "description": "Worker mode"
+  },
+  "workerModeDescription": {
+    "message": "Help other users upload files as a worker. Your upload quota will be used to process tasks.",
+    "description": "Worker mode description"
+  },
+  "startWork": {
+    "message": "Start Work",
+    "description": "Start work"
+  },
+  "stopWork": {
+    "message": "Stop Work",
+    "description": "Stop work"
+  },
+  "completed": {
+    "message": "Completed:",
+    "description": "Completed"
+  },
+  "failed": {
+    "message": "Failed:",
+    "description": "Failed"
+  },
+  "traffic": {
+    "message": "Traffic:",
+    "description": "Traffic"
+  },
+  "currentTask": {
+    "message": "Current Task",
+    "description": "Current task"
+  },
+  "masterMode": {
+    "message": "📤 Master Mode",
+    "description": "Master mode"
+  },
+  "masterModeDescription": {
+    "message": "Distribute upload tasks to other workers for parallel uploading.",
+    "description": "Master mode description"
+  },
+  "connectToServer": {
+    "message": "Connect to Server",
+    "description": "Connect to server"
+  },
+  "disconnectFromServer": {
+    "message": "Disconnect from Server",
+    "description": "Disconnect from server"
+  },
+  "filesSelected": {
+    "message": "Selected {count} files",
+    "description": "Selected files count"
+  },
+  "startCollaborativeUpload": {
+    "message": "Start Collaborative Upload",
+    "description": "Start collaborative upload"
+  },
+  "uploadProgress": {
+    "message": "Upload Progress",
+    "description": "Upload progress"
+  },
+  "serverStatus": {
+    "message": "📊 Server Status",
+    "description": "Server status"
+  },
+  "workers": {
+    "message": "Workers",
+    "description": "Workers"
+  },
+  "idle": {
+    "message": "Idle",
+    "description": "Idle"
+  },
+  "pending": {
+    "message": "Pending",
+    "description": "Pending"
+  },
+  "inProgress": {
+    "message": "In Progress",
+    "description": "In progress"
+  },
+  "onlineWorkers": {
+    "message": "Online Workers",
+    "description": "Online workers"
+  },
+  "uploadResults": {
+    "message": "📋 Upload Results",
+    "description": "Upload results"
+  },
+  "notConnected": {
+    "message": "Not connected",
+    "description": "Not connected"
+  },
+  "connecting": {
+    "message": "Connecting...",
+    "description": "Connecting"
+  },
+  "workerModeId": {
+    "message": "Worker mode (ID: {id}...)",
+    "description": "Worker mode ID"
+  },
+  "masterModeSession": {
+    "message": "Master mode (Session: {session}...)",
+    "description": "Master mode session"
+  },
+  "processing": {
+    "message": "Processing",
+    "description": "Processing"
+  },
+  "waiting": {
+    "message": "Waiting",
+    "description": "Waiting"
+  },
+  "completed": {
+    "message": "Completed",
+    "description": "Completed"
+  },
+  "failed": {
+    "message": "Failed",
+    "description": "Failed"
+  },
+  "cloudConfigPreview": {
+    "message": "Cloud Configuration Preview",
+    "description": "Cloud configuration preview"
+  },
+  "cloudConfigFetchSuccess": {
+    "message": "Cloud configuration fetch successful",
+    "description": "Cloud configuration fetch successful"
+  },
+  "cloudConfigFetchFailed": {
+    "message": "Cloud configuration fetch failed",
+    "description": "Cloud configuration fetch failed"
+  },
+  "configOverview": {
+    "message": "Configuration Overview",
+    "description": "Configuration overview"
+  },
+  "connectionStatus": {
+    "message": "Connection Status",
+    "description": "Connection status"
+  },
+  "groupCount": {
+    "message": "Group Count",
+    "description": "Group count"
+  },
+  "checkTime": {
+    "message": "Check Time",
+    "description": "Check time"
+  },
+  "settingsInfo": {
+    "message": "Settings Info",
+    "description": "Settings info"
+  },
+  "version": {
+    "message": "Version",
+    "description": "Version"
+  },
+  "favoritesCount": {
+    "message": "Favorites Count",
+    "description": "Favorites count"
+  },
+  "lastModified": {
+    "message": "Last Modified",
+    "description": "Last modified"
+  },
+  "emojiGroups": {
+    "message": "Emoji Groups",
+    "description": "Emoji groups"
+  },
+  "clickGroupForDetails": {
+    "message": "Click group to view details",
+    "description": "Click group to view details"
+  },
+  "connectionInfo": {
+    "message": "Connection Info",
+    "description": "Connection info"
+  },
+  "dataAvailability": {
+    "message": "Data Availability",
+    "description": "Data availability"
+  },
+  "available": {
+    "message": "Available",
+    "description": "Available"
+  },
+  "noData": {
+    "message": "No data",
+    "description": "No data"
+  },
+  "unknown": {
+    "message": "Unknown",
+    "description": "Unknown"
+  },
+  "syncService": {
+    "message": "Sync Service",
+    "description": "Sync service"
+  },
+  "checkingCloudConfig": {
+    "message": "Checking cloud configuration...",
+    "description": "Checking cloud configuration"
+  },
+  "noConfigToPreview": {
+    "message": "No configuration to preview",
+    "description": "No configuration to preview"
+  },
+  "groupDetails": {
+    "message": "Group details: {name}",
+    "description": "Group details"
+  },
+  "loadingGroupDetails": {
+    "message": "Loading group details...",
+    "description": "Loading group details"
+  },
+  "emojiCountInGroup": {
+    "message": "Emoji count",
+    "description": "Emoji count"
+  },
+  "updateTime": {
+    "message": "Update time",
+    "description": "Update time"
+  },
+  "groupNote": {
+    "message": "Group note",
+    "description": "Group note"
+  },
+  "noPreview": {
+    "message": "No preview",
+    "description": "No preview"
+  },
+  "emojiWithNumber": {
+    "message": "Emoji {number}",
+    "description": "Emoji number"
+  },
+  "noUrl": {
+    "message": "No URL",
+    "description": "No URL"
+  },
+  "groupHasNoEmojisDetail": {
+    "message": "This group has no emojis",
+    "description": "This group has no emojis"
+  },
+  "noGroupDetailsToShow": {
+    "message": "No group details to show",
+    "description": "No group details to show"
+  },
+  "pleaseConfigureSyncParams": {
+    "message": "Please configure sync parameters first",
+    "description": "Please configure sync parameters first"
+  },
+  "cloudConfigPreviewSuccess": {
+    "message": "Cloud configuration preview successful",
+    "description": "Cloud configuration preview successful"
+  },
+  "cloudConfigPreviewFailed": {
+    "message": "Cloud configuration preview failed: {message}",
+    "description": "Cloud configuration preview failed"
+  },
+  "previewFailed": {
+    "message": "Preview failed: {message}",
+    "description": "Preview failed"
+  },
+  "invalidGroupInfo": {
+    "message": "Invalid group information",
+    "description": "Invalid group information"
+  },
+  "loadGroupDetailsFailed": {
+    "message": "Failed to load group details: {message}",
+    "description": "Failed to load group details"
+  },
+  "loadGroupDetailsFailedError": {
+    "message": "Failed to load group details: {message}",
+    "description": "Failed to load group details"
   }
 }

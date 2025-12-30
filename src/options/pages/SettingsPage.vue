@@ -15,8 +15,11 @@ import CloudDataPreview from '../components/CloudDataPreview.vue'
 import CollaborativeUploadSettings from '../components/CollaborativeUploadSettings.vue'
 import ChatMultiReactorSettings from '../components/ChatMultiReactorSettings.vue'
 import LinuxDoSeekingSettings from '../components/LinuxDoSeekingSettings.vue'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import { useI18n } from '@/utils/i18n'
 
 const options = inject<OptionsInject>('options')!
+const { t } = useI18n()
 
 const {
   emojiStore,
@@ -220,6 +223,21 @@ onMounted(async () => {
               @update:enableLinuxDoSeekingDanmaku="updateEnableLinuxDoSeekingDanmaku"
               @update:enableLinuxDoSeekingSysNotify="updateEnableLinuxDoSeekingSysNotify"
             />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="language" tab="语言设置">
+          <div class="py-4">
+            <div class="mb-4">
+              <h3 class="text-lg font-medium mb-2 dark:text-white">{{ t('settings') }}</h3>
+              <p class="text-gray-600 dark:text-gray-400 mb-4">
+                选择界面显示语言。更改后需要重新加载页面生效。
+              </p>
+              <div class="flex items-center gap-4">
+                <span class="text-gray-700 dark:text-gray-300">{{ t('settings') }}:</span>
+                <LanguageSwitcher />
+              </div>
+            </div>
           </div>
         </a-tab-pane>
       </a-tabs>
