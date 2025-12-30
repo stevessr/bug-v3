@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, inject, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, watch, inject, onBeforeUnmount, nextTick } from 'vue'
 import { QuestionCircleOutlined, SyncOutlined, CheckCircleOutlined } from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
@@ -52,8 +52,19 @@ interface UploadCardItem {
   waitStart?: number
 }
 
+// Upload progress state (must be defined before categorizedUploadItems)
+const uploadProgress = ref<
+  Array<{
+    fileName: string
+    percent: number
+    error?: string
+    waitingFor?: number
+    waitStart?: number
+  }>
+>([])
+
 const categorizedUploadItems = computed(() => {
-  if (uploadProgress.value.length === 0) return { completed: [], uploading: [], pending: [] }
+  if (uploadProgress.value.length === 0) return { completed: [], uploading: [], pending: [], error: [] }
 
   const items: UploadCardItem[] = uploadProgress.value.map((progress, index) => {
     const fileInfo = selectedFiles.value[index]
@@ -198,6 +209,29 @@ const selectedFiles = ref<
   }>
 >([])
 const isUploading = ref(false)
+const uploadScrollContainer = ref<HTMLElement | null>(null)
+
+// 自动滚动到当前上传项
+const scrollToUploading = () => {
+  const container = uploadScrollContainer.value
+  if (!container) return
+
+  const uploadingItem = container.querySelector('.uploading-card')
+  if (uploadingItem) {
+    uploadingItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }
+}
+
+watch(
+  () => categorizedUploadItems.value.uploading[0]?.id,
+  newId => {
+    if (newId) {
+      nextTick(() => {
+        scrollToUploading()
+      })
+    }
+  }
+)
 
 // 联动上传相关状态
 const enableCollaborativeUpload = ref(false)
@@ -418,15 +452,6 @@ watch(
     saveSelectedFiles()
   }
 )
-const uploadProgress = ref<
-  Array<{
-    fileName: string
-    percent: number
-    error?: string
-    waitingFor?: number
-    waitStart?: number
-  }>
->([])
 
 // 图片切割相关状态
 const showImageCropper = ref(false)
@@ -1453,6 +1478,7 @@ onBeforeUnmount(() => {
 
       <!-- 水平滚动卡片区域 -->
       <div
+        ref="uploadScrollContainer"
         class="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
       >
         <!-- 已完成卡片 - 左侧 -->
@@ -1486,7 +1512,7 @@ onBeforeUnmount(() => {
         <div
           v-for="item in categorizedUploadItems.uploading"
           :key="item.id"
-          class="flex-shrink-0 w-24 bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2 border-2 border-blue-400 dark:border-blue-500 transition-all duration-300"
+          class="uploading-card flex-shrink-0 w-24 bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2 border-2 border-blue-400 dark:border-blue-500 transition-all duration-300"
         >
           <div
             class="relative aspect-square mb-2 rounded overflow-hidden bg-gray-100 dark:bg-gray-700"
