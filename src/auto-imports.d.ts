@@ -243,9 +243,6 @@ declare global {
   export type { LogLevel } from './utils/logger'
   import('./utils/logger')
   // @ts-ignore
-  export type { OptimizedHashService } from './utils/optimizedHashService'
-  import('./utils/optimizedHashService')
-  // @ts-ignore
   export type { SyncDatabase } from './utils/sync-db'
   import('./utils/sync-db')
   // @ts-ignore

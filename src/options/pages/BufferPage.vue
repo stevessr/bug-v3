@@ -11,6 +11,7 @@ import CreateGroupModal from '../components/CreateGroupModal.vue'
 import TelegramStickerModal from '../modals/TelegramStickerModal.vue'
 
 import { useBufferBatch } from './composables/useBufferBatch'
+import { useFilePersistence } from './composables/useFilePersistence'
 
 import { uploadServices } from '@/utils/uploadServices'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
@@ -283,156 +284,9 @@ const {
 // Telegram Import Logic
 const showTelegramModal = ref(false)
 
-// 持久化相关函数 - 使用 IndexedDB 存储文件避免 localStorage 配额限制
-const DB_NAME = 'buffer-files-db'
-const DB_VERSION = 1
-const STORE_NAME = 'selected-files'
-
-// 打开 IndexedDB 数据库
-const openDatabase = (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve(request.result)
-    request.onupgradeneeded = event => {
-      const db = (event.target as IDBOpenDBRequest).result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' })
-      }
-    }
-  })
-}
-
-// 将 File 转换为可序列化的对象（使用 ArrayBuffer 而非 base64）
-const fileToSerializable = async (fileItem: (typeof selectedFiles.value)[0]) => {
-  try {
-    const arrayBuffer = await fileItem.file.arrayBuffer()
-    return {
-      id: fileItem.id,
-      fileName: fileItem.file.name,
-      fileType: fileItem.file.type,
-      fileData: arrayBuffer, // 直接存储 ArrayBuffer
-      width: fileItem.width,
-      height: fileItem.height,
-      cropData: fileItem.cropData
-    }
-  } catch {
-    return null
-  }
-}
-
-// 从序列化对象恢复 File
-const serializableToFile = async (data: {
-  id: string
-  fileName: string
-  fileType: string
-  fileData: ArrayBuffer
-  width?: number
-  height?: number
-  cropData?: { x: number; y: number; width: number; height: number }
-}) => {
-  try {
-    const blob = new Blob([data.fileData], { type: data.fileType })
-    const file = new File([blob], data.fileName, { type: data.fileType })
-    const previewUrl = URL.createObjectURL(file)
-
-    return {
-      id: data.id,
-      file,
-      previewUrl,
-      width: data.width,
-      height: data.height,
-      cropData: data.cropData
-    }
-  } catch (error) {
-    console.error('[BufferPage] Failed to restore file:', error)
-    return null
-  }
-}
-
-// 保存 selectedFiles 到 IndexedDB
-const saveSelectedFiles = async () => {
-  try {
-    // 1. 预先序列化所有数据（异步操作）
-    // 必须在事务开始前完成所有异步操作，因为 IDB 事务会在事件循环空闲时自动提交
-    const serializedItems: any[] = []
-    for (const item of selectedFiles.value) {
-      const serialized = await fileToSerializable(item)
-      if (serialized) {
-        serializedItems.push(serialized)
-      }
-    }
-
-    // 2. 开启事务（同步操作）
-    const db = await openDatabase()
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    const store = tx.objectStore(STORE_NAME)
-
-    // 清空旧数据
-    store.clear()
-
-    // 保存新数据
-    for (const item of serializedItems) {
-      store.put(item)
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
-    })
-
-    console.log(`[BufferPage] Saved ${selectedFiles.value.length} files to IndexedDB`)
-    db.close()
-  } catch (error) {
-    console.error('[BufferPage] Failed to save selected files:', error)
-  }
-}
-
-// 从 IndexedDB 恢复 selectedFiles
-const loadSelectedFiles = async () => {
-  try {
-    const db = await openDatabase()
-    const tx = db.transaction(STORE_NAME, 'readonly')
-    const store = tx.objectStore(STORE_NAME)
-
-    const allData = await new Promise<typeof selectedFiles.value>((resolve, reject) => {
-      const request = store.getAll()
-      request.onsuccess = async () => {
-        const data = request.result
-        console.log(`[BufferPage] Loading ${data.length} files from IndexedDB`)
-
-        const restored = await Promise.all(data.map(item => serializableToFile(item)))
-        const filtered = restored.filter(item => item !== null) as typeof selectedFiles.value
-        resolve(filtered)
-      }
-      request.onerror = () => reject(request.error)
-    })
-
-    selectedFiles.value = allData
-    console.log(`[BufferPage] Restored ${allData.length} files`)
-    db.close()
-  } catch (error) {
-    console.error('[BufferPage] Failed to load selected files:', error)
-  }
-}
-
-// 清除持久化数据
-const clearPersistedFiles = async () => {
-  try {
-    const db = await openDatabase()
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    const store = tx.objectStore(STORE_NAME)
-    store.clear()
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
-    })
-    console.log('[BufferPage] Cleared persisted files from IndexedDB')
-    db.close()
-  } catch (error) {
-    console.error('[BufferPage] Failed to clear persisted files:', error)
-  }
-}
+// 持久化相关函数 - 使用 composable 替代内联实现
+const { saveSelectedFiles, loadSelectedFiles, clearPersistedFiles } =
+  useFilePersistence(selectedFiles)
 
 // 监听 selectedFiles 变化并自动保存
 // 优化：改为浅监听，只监听数组长度变化
