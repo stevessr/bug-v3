@@ -195,9 +195,10 @@ export class FilePickerLogic {
     // Apply file filter if provided
     if (this.options.fileFilter) {
       const filtered: File[] = []
+      const fileFilter = this.options.fileFilter
 
       filesToAdd.forEach(file => {
-        const result = this.options.fileFilter!(file)
+        const result = fileFilter(file)
         if (result.shouldKeep) {
           filtered.push(file)
         } else {

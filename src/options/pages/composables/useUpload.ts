@@ -61,13 +61,14 @@ export function useUpload(options: UseUploadOptions) {
     }
 
     const newEmojis: any[] = []
+    const groupId = group.id || 'buffer'
     const writeNewEmojis = async () => {
       if (newEmojis.length === 0) return
       console.log(`Writing batch of ${newEmojis.length} emojis.`)
       emojiStore.beginBatch()
       try {
         for (const newEmoji of newEmojis) {
-          emojiStore.addEmojiWithoutSave(group!.id || 'buffer', newEmoji)
+          emojiStore.addEmojiWithoutSave(groupId, newEmoji)
         }
       } finally {
         await emojiStore.endBatch()
