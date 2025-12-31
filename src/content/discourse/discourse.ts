@@ -9,7 +9,7 @@ import { setupDiscourseUploadHandler } from './utils/upload-handler'
 import { initCalloutSuggestions } from './callout-suggestions'
 import { initChatMultiReactor } from './utils/chat-multi-reactor'
 import { initSubmenuInjector } from './utils/submenu-injector'
-import { initLinuxDoSeeking } from './utils/linuxdo-seeking'
+import { initLinuxDoSeeking } from './seeking'
 import { initDiscourseRouterRefresh } from './utils/router-refresh'
 
 export async function initDiscourse() {
