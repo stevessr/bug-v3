@@ -5,7 +5,7 @@ import { useCacheExportImport } from './useCacheExportImport'
 
 import { addCacheBustingParam } from '@/utils/imageUrlHelper'
 import { isImageCached } from '@/utils/imageCache'
-import type { Emoji, EmojiGroup } from '@/types/type'
+import type { EmojiGroup } from '@/types/type'
 
 export function useImageCache(emojiStore: any, totalEmojis: any) {
   // State

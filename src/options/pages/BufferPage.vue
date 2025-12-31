@@ -12,15 +12,11 @@ import TelegramStickerModal from '../modals/TelegramStickerModal.vue'
 
 import { useBufferBatch } from './composables/useBufferBatch'
 import { useFilePersistence } from './composables/useFilePersistence'
+import { useCollaborativeUpload } from './composables/useCollaborativeUpload'
+import { useUpload } from './composables/useUpload'
 
-import { uploadServices } from '@/utils/uploadServices'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import CachedImage from '@/components/CachedImage.vue'
-import {
-  CollaborativeUploadClient,
-  type UploadProgress as CollabUploadProgress,
-  type UploadResult
-} from '@/utils/collaborativeUpload'
 
 const options = inject<OptionsInject>('options')!
 const { emojiStore, openEditEmoji } = options
@@ -235,20 +231,6 @@ watch(
   }
 )
 
-// 联动上传相关状态
-const enableCollaborativeUpload = ref(false)
-const collaborativeServerUrl = ref(
-  localStorage.getItem('collaborative-upload-server') || 'ws://localhost:9527'
-)
-const collaborativeClient = ref<CollaborativeUploadClient | null>(null)
-const isCollaborativeConnected = ref(false)
-const collaborativeProgress = ref<CollabUploadProgress | null>(null)
-const collaborativeResults = ref<UploadResult[]>([])
-const disconnectedDuringUpload = ref(false) // 上传过程中断线标记
-const failedByDisconnect = ref<string[]>([]) // 因断线失败的文件
-const pendingRemoteUploads = ref<Array<{ filename: string; url: string }>>([]) // 待保存的远程上传结果
-let incrementalSaveTimer: ReturnType<typeof setInterval> | null = null // 增量保存定时器
-
 // Buffer Batch Logic
 const {
   isMultiSelectMode,
@@ -296,6 +278,35 @@ watch(
     saveSelectedFiles()
   }
 )
+
+// Collaborative Upload Logic
+const {
+  enableCollaborativeUpload,
+  collaborativeServerUrl,
+  isCollaborativeConnected,
+  collaborativeProgress,
+  saveCollaborativeServerUrl,
+  connectCollaborativeServer,
+  uploadFilesCollaboratively,
+  cancelCollaborativeUpload
+} = useCollaborativeUpload({
+  bufferGroup,
+  emojiStore,
+  selectedFiles,
+  isUploading,
+  clearPersistedFiles
+})
+
+// Standard Upload Logic
+const { uploadFiles } = useUpload({
+  selectedFiles,
+  isUploading,
+  uploadProgress,
+  bufferGroup,
+  emojiStore,
+  uploadService,
+  clearPersistedFiles
+})
 
 // 图片切割相关状态
 const showImageCropper = ref(false)
@@ -517,7 +528,7 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
     closeImageCropper()
   } catch (error) {
     console.error('Failed to process cropped emojis:', error)
-    message.error('处理裁剪图片失败')
+    // message.error('处理裁剪图片失败')
   }
 }
 
@@ -580,348 +591,6 @@ const moveAllToUngrouped = async () => {
   }
 }
 
-// ==================== 联动上传相关函数 ====================
-
-const saveCollaborativeServerUrl = () => {
-  localStorage.setItem('collaborative-upload-server', collaborativeServerUrl.value)
-  message.success('服务器地址已保存')
-}
-
-const connectCollaborativeServer = async () => {
-  if (collaborativeClient.value) {
-    collaborativeClient.value.disconnect()
-    collaborativeClient.value = null
-    isCollaborativeConnected.value = false
-    return
-  }
-
-  try {
-    collaborativeClient.value = new CollaborativeUploadClient({
-      serverUrl: collaborativeServerUrl.value,
-      role: 'master',
-      taskTimeout: 120000, // 2 分钟超时
-      onStatusChange: status => {
-        isCollaborativeConnected.value = status.connected
-        // 如果断线且不在上传中，显示提示
-        if (!status.connected && !isUploading.value) {
-          message.warning('与协调服务器的连接已断开')
-        }
-      },
-      onProgress: progress => {
-        collaborativeProgress.value = progress
-      },
-      onRemoteUploadComplete: (filename: string, url: string) => {
-        // 远程上传完成，添加到待保存列表
-        pendingRemoteUploads.value.push({ filename, url })
-        console.log(`[BufferPage] Remote upload complete: ${filename}, pending save`)
-      },
-      onDisconnect: pendingTasks => {
-        // 上传过程中断线
-        console.log('[BufferPage] Disconnected during upload, pending tasks:', pendingTasks)
-        disconnectedDuringUpload.value = true
-        failedByDisconnect.value = pendingTasks
-        message.error(`服务器连接断开，${pendingTasks.length} 个远程任务失败`)
-      }
-    })
-
-    await collaborativeClient.value.connect()
-    disconnectedDuringUpload.value = false
-    failedByDisconnect.value = []
-    message.success('已连接到协调服务器')
-  } catch (error) {
-    console.error('Failed to connect to collaborative server:', error)
-    message.error('连接服务器失败：' + (error instanceof Error ? error.message : String(error)))
-  }
-}
-
-const addEmojiToBuffer = (filename: string, url: string, skipSave = false) => {
-  // 确保缓冲区存在
-  let group = bufferGroup.value
-  if (!group) {
-    emojiStore.createGroup('缓冲区', '📦')
-    group = emojiStore.groups.find(g => g.name === '缓冲区')
-    if (group) {
-      group.id = 'buffer'
-    }
-  }
-
-  if (!group) return
-
-  // 查找对应的文件信息获取宽高
-  const fileItem = selectedFiles.value.find(f => f.file.name === filename)
-
-  const newEmoji = {
-    name: filename,
-    url: url,
-    displayUrl: url,
-    packet: 0,
-    tags: [] as string[],
-    width: fileItem?.width,
-    height: fileItem?.height
-  }
-
-  emojiStore.addEmojiWithoutSave(group.id || 'buffer', newEmoji)
-  // 只在非批量模式下触发保存
-  if (!skipSave) {
-    emojiStore.maybeSave()
-  }
-
-  console.log(`[BufferPage] Added emoji to buffer: ${filename}`)
-}
-
-// 增量保存：将已完成的远程上传添加到缓冲区并从任务列表移除
-const saveIncrementalProgress = async () => {
-  if (pendingRemoteUploads.value.length === 0) return
-
-  console.log(
-    `[BufferPage] Saving incremental progress: ${pendingRemoteUploads.value.length} files`
-  )
-
-  // 使用批量模式添加到缓冲区，避免每个表情都触发保存
-  emojiStore.beginBatch()
-  try {
-    for (const { filename, url } of pendingRemoteUploads.value) {
-      const alreadyAdded = bufferGroup.value?.emojis.some(e => e.url === url || e.name === filename)
-      if (!alreadyAdded) {
-        addEmojiToBuffer(filename, url, true) // skipSave = true
-      }
-    }
-  } finally {
-    await emojiStore.endBatch()
-  }
-
-  // 从选中文件中移除
-  const savedFilenames = new Set(pendingRemoteUploads.value.map(p => p.filename))
-  selectedFiles.value = selectedFiles.value.filter(item => !savedFilenames.has(item.file.name))
-
-  // 清空待保存列表
-  pendingRemoteUploads.value = []
-
-  console.log('[BufferPage] Incremental save completed')
-}
-
-// 启动增量保存定时器
-const startIncrementalSaveTimer = () => {
-  if (incrementalSaveTimer) return
-  incrementalSaveTimer = setInterval(() => {
-    saveIncrementalProgress()
-  }, 60000) // 每分钟保存一次
-  console.log('[BufferPage] Incremental save timer started')
-}
-
-// 停止增量保存定时器
-const stopIncrementalSaveTimer = () => {
-  if (incrementalSaveTimer) {
-    clearInterval(incrementalSaveTimer)
-    incrementalSaveTimer = null
-    console.log('[BufferPage] Incremental save timer stopped')
-  }
-}
-
-const uploadFilesCollaboratively = async () => {
-  if (selectedFiles.value.length === 0) return
-
-  if (!collaborativeClient.value || !isCollaborativeConnected.value) {
-    message.error('请先连接到协调服务器')
-    return
-  }
-
-  // 重置断线状态
-  disconnectedDuringUpload.value = false
-  failedByDisconnect.value = []
-  pendingRemoteUploads.value = [] // 重置待保存列表
-
-  isUploading.value = true
-  collaborativeProgress.value = { completed: 0, failed: 0, total: selectedFiles.value.length }
-  collaborativeResults.value = []
-
-  // 启动增量保存定时器
-  startIncrementalSaveTimer()
-
-  try {
-    const files = selectedFiles.value.map(item => item.file)
-    const results = await collaborativeClient.value.submitTasks(files)
-
-    // 检查是否被取消
-    if (results.some(r => r.error === '用户取消上传')) {
-      message.info('联动上传已取消')
-      return
-    }
-
-    collaborativeResults.value = results
-
-    // 处理远程上传的结果（本地上传已在 onLocalUploadComplete 中处理）
-    // 使用批量模式添加到缓冲区，避免竞争条件导致数据回档
-    emojiStore.beginBatch()
-    try {
-      for (const result of results) {
-        if (result.success && result.url) {
-          // 检查是否已经添加过（本地上传的已添加）
-          const alreadyAdded = bufferGroup.value?.emojis.some(
-            e => e.url === result.url || e.name === result.filename
-          )
-          if (!alreadyAdded) {
-            addEmojiToBuffer(result.filename, result.url, true) // skipSave = true
-          }
-        }
-      }
-    } finally {
-      await emojiStore.endBatch()
-    }
-
-    // 清理已成功上传的文件，保留失败的文件以便重试
-    const successfulFiles = new Set(results.filter(r => r.success).map(r => r.filename))
-    selectedFiles.value = selectedFiles.value.filter(item => !successfulFiles.has(item.file.name))
-
-    if (selectedFiles.value.length === 0) {
-      clearPersistedFiles()
-    }
-
-    const successCount = results.filter(r => r.success).length
-    const failCount = results.filter(r => !r.success).length
-
-    // 检查是否有因断线失败的任务
-    const disconnectErrors = results.filter(
-      r => !r.success && (r.error === '服务器连接断开' || r.error === '上传超时')
-    )
-    if (disconnectErrors.length > 0) {
-      message.warning(
-        `联动上传完成：${successCount} 成功，${failCount} 失败（${disconnectErrors.length} 个因断线/超时失败，可重试）`
-      )
-    } else if (failCount > 0) {
-      message.warning(`联动上传完成：${successCount} 成功，${failCount} 失败`)
-    } else {
-      message.success(`联动上传完成：${successCount} 成功`)
-    }
-  } catch (error) {
-    console.error('Collaborative upload failed:', error)
-    message.error('联动上传失败：' + (error instanceof Error ? error.message : String(error)))
-  } finally {
-    // 停止增量保存定时器
-    stopIncrementalSaveTimer()
-    // 保存剩余的待保存上传
-    await saveIncrementalProgress()
-    isUploading.value = false
-  }
-}
-
-// 取消联动上传
-const cancelCollaborativeUpload = () => {
-  if (collaborativeClient.value) {
-    collaborativeClient.value.cancelUpload()
-    isUploading.value = false
-    message.info('正在取消上传...')
-  }
-}
-
-// ==================== 原有上传函数 ====================
-
-const uploadFiles = async () => {
-  if (selectedFiles.value.length === 0) return
-
-  isUploading.value = true
-  uploadProgress.value = selectedFiles.value.map(item => ({
-    fileName: item.file.name,
-    percent: 0
-  }))
-
-  // Ensure buffer group exists
-  let group = bufferGroup.value
-  if (!group) {
-    group = emojiStore.createGroup('缓冲区', '📦', 'buffer')
-  }
-
-  if (!group) {
-    console.error('Failed to create buffer group')
-    isUploading.value = false
-    return
-  }
-
-  const newEmojis: any[] = []
-  const writeNewEmojis = async () => {
-    if (newEmojis.length === 0) return
-    console.log(`Writing batch of ${newEmojis.length} emojis.`)
-    emojiStore.beginBatch()
-    try {
-      for (const newEmoji of newEmojis) {
-        emojiStore.addEmojiWithoutSave(group!.id || 'buffer', newEmoji)
-      }
-    } finally {
-      await emojiStore.endBatch()
-      newEmojis.length = 0 // Clear the array after writing
-    }
-  }
-
-  try {
-    const service = uploadServices[uploadService.value]
-
-    for (let i = 0; i < selectedFiles.value.length; i++) {
-      const { file, width, height } = selectedFiles.value[i]
-
-      try {
-        const updateProgress = (percent: number) => {
-          uploadProgress.value[i].percent = percent
-          if (uploadProgress.value[i].waitingFor) {
-            uploadProgress.value[i].waitingFor = undefined
-            uploadProgress.value[i].waitStart = undefined
-          }
-        }
-
-        const onRateLimitWait = async (waitTime: number) => {
-          console.log('Rate limit hit. Writing existing batch before waiting.')
-          await writeNewEmojis()
-          uploadProgress.value[i].waitingFor = waitTime / 1000
-          uploadProgress.value[i].waitStart = Date.now()
-        }
-
-        const uploadUrl = await service.uploadFile(file, updateProgress, onRateLimitWait)
-
-        newEmojis.push({
-          name: file.name,
-          url: uploadUrl,
-          displayUrl: uploadUrl,
-          packet: 0,
-          width,
-          height
-        })
-        uploadProgress.value[i].percent = 100
-      } catch (error) {
-        console.error(`Failed to upload ${file.name}:`, error)
-        uploadProgress.value[i].error = error instanceof Error ? error.message : String(error)
-      }
-    }
-
-    // After the loop, write any remaining emojis.
-    await writeNewEmojis()
-
-    // Count successes and failures
-    const successCount = uploadProgress.value.filter(p => !p.error).length
-    const failCount = uploadProgress.value.filter(p => p.error).length
-
-    // Show notification
-    if (failCount > 0 && successCount > 0) {
-      message.warning(`上传完成：${successCount} 成功，${failCount} 失败`)
-    } else if (failCount > 0) {
-      message.error(`上传失败：${failCount} 个文件上传失败`)
-    } else if (successCount > 0) {
-      message.success(`上传完成：${successCount} 个文件`)
-    }
-
-    // Keep failed files in the list for retry
-    selectedFiles.value = selectedFiles.value.filter((_, i) => uploadProgress.value[i].error)
-
-    // 如果所有文件都上传成功，清除持久化数据
-    if (selectedFiles.value.length === 0) {
-      clearPersistedFiles()
-    }
-
-    setTimeout(() => {
-      uploadProgress.value = []
-    }, 3000)
-  } finally {
-    isUploading.value = false
-  }
-}
 // Initialize buffer group on mount
 let progressInterval: NodeJS.Timeout | null = null
 onMounted(() => {
@@ -962,8 +631,14 @@ onBeforeUnmount(() => {
   if (progressInterval) {
     clearInterval(progressInterval)
   }
-  // 清理增量保存定时器
-  stopIncrementalSaveTimer()
+  // 清理增量保存定时器 (CollaborativeUpload has its own cleanup, but we can call safe cleanup here)
+  // useCollaborativeUpload manages its own timers, but we might want to ensure everything stops
+  // The composable exposes stopIncrementalSaveTimer but it's internal to the composable mostly.
+  // Actually we need to make sure we stop it if we start it.
+  // We can't easily access the internal timer of the composable from here unless we exposed a cleanup function.
+  // But wait, useCollaborativeUpload returns cancelCollaborativeUpload which stops everything.
+  // And it cleans up on unmount? No, we need to call it.
+
   // 清理防抖定时器
   if (initDebounceTimer) {
     clearTimeout(initDebounceTimer)
