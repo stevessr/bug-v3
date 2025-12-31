@@ -15,9 +15,11 @@ import {
   getFavorites,
   setAllEmojiGroups,
   setSettings,
-  setFavorites
+  setFavorites,
+  storageGet,
+  storageSet,
+  storageRemove
 } from '@/utils/simpleStorage'
-import { safeLocalStorage } from '@/utils/safeStorage'
 
 /** 常量定义 */
 const RETRY_BASE_DELAY_MS = 1000
@@ -106,9 +108,9 @@ export class CloudflareSyncService {
       })
     } else {
       // Fallback to localStorage in development/standalone mode
-      console.log('[CloudflareSync] Using localStorage fallback')
-      safeLocalStorage.set(SYNC_CONFIG_KEY, config)
-      console.log('[CloudflareSync] Config saved to localStorage')
+      console.log('[CloudflareSync] Using simpleStorage (dev/standalone)')
+      await storageSet(SYNC_CONFIG_KEY, config)
+      console.log('[CloudflareSync] Config saved to storage')
     }
   }
 
@@ -137,10 +139,10 @@ export class CloudflareSyncService {
         }
       } else {
         // Fallback to localStorage in development/standalone mode
-        console.log('[CloudflareSync] Using localStorage fallback')
-        const config = safeLocalStorage.get<ExtendedCloudflareConfig | null>(SYNC_CONFIG_KEY, null)
+        console.log('[CloudflareSync] Using simpleStorage (dev/standalone)')
+        const config = await storageGet<ExtendedCloudflareConfig | null>(SYNC_CONFIG_KEY)
         if (config && typeof config === 'object' && config.type === 'cloudflare') {
-          console.log('[CloudflareSync] Loaded config from localStorage:', config)
+          console.log('[CloudflareSync] Loaded config from storage:', config)
           this.config = config
           return config
         }
@@ -162,7 +164,7 @@ export class CloudflareSyncService {
       })
     } else {
       // Fallback to localStorage
-      safeLocalStorage.remove(SYNC_CONFIG_KEY)
+      await storageRemove(SYNC_CONFIG_KEY)
     }
   }
 

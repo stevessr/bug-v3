@@ -5,7 +5,7 @@
 
 import { nanoid } from 'nanoid'
 
-import { safeLocalStorage } from './safeStorage'
+import { storageGet, storageSet } from '@/utils/simpleStorage'
 
 const DEVICE_ID_KEY = 'emoji_extension_device_id'
 const DEVICE_INFO_KEY = 'emoji_extension_device_info'
@@ -15,37 +15,15 @@ const DEVICE_INFO_KEY = 'emoji_extension_device_info'
  */
 export async function getDeviceId(): Promise<string> {
   try {
-    // 尝试从 Chrome Storage 获取
-    const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
-    if (chromeAPI?.storage?.local) {
-      const result = await new Promise<any>(resolve => {
-        chromeAPI.storage.local.get([DEVICE_ID_KEY], (r: any) => resolve(r))
-      })
-
-      if (result[DEVICE_ID_KEY]) {
-        return result[DEVICE_ID_KEY]
-      }
-    }
-
-    // 尝试从 localStorage 获取
-    if (typeof localStorage !== 'undefined') {
-      const stored = safeLocalStorage.get(DEVICE_ID_KEY, null)
-      if (stored) return stored
-    }
+    // 尝试从 Storage 获取
+    const stored = await storageGet<string>(DEVICE_ID_KEY)
+    if (stored) return stored
 
     // 生成新的设备 ID
     const newId = `device_${nanoid(16)}`
 
     // 保存到存储
-    if (chromeAPI?.storage?.local) {
-      await new Promise(resolve => {
-        chromeAPI.storage.local.set({ [DEVICE_ID_KEY]: newId }, () => resolve(undefined))
-      })
-    }
-
-    if (typeof localStorage !== 'undefined') {
-      safeLocalStorage.set(DEVICE_ID_KEY, newId)
-    }
+    await storageSet(DEVICE_ID_KEY, newId)
 
     return newId
   } catch (error) {
@@ -103,16 +81,7 @@ export async function getDeviceInfo(): Promise<{
  */
 export async function saveDeviceInfo(info: any): Promise<void> {
   try {
-    const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
-    if (chromeAPI?.storage?.local) {
-      await new Promise(resolve => {
-        chromeAPI.storage.local.set({ [DEVICE_INFO_KEY]: info }, () => resolve(undefined))
-      })
-    }
-
-    if (typeof localStorage !== 'undefined') {
-      safeLocalStorage.set(DEVICE_INFO_KEY, info)
-    }
+    await storageSet(DEVICE_INFO_KEY, info)
   } catch (error) {
     console.error('[Device] Failed to save device info:', error)
   }
@@ -123,23 +92,7 @@ export async function saveDeviceInfo(info: any): Promise<void> {
  */
 export async function loadDeviceInfo(): Promise<any> {
   try {
-    const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
-    if (chromeAPI?.storage?.local) {
-      const result = await new Promise<any>(resolve => {
-        chromeAPI.storage.local.get([DEVICE_INFO_KEY], (r: any) => resolve(r))
-      })
-
-      if (result[DEVICE_INFO_KEY]) {
-        return result[DEVICE_INFO_KEY]
-      }
-    }
-
-    if (typeof localStorage !== 'undefined') {
-      const stored = safeLocalStorage.get<any>(DEVICE_INFO_KEY, null)
-      if (stored) return stored
-    }
-
-    return null
+    return (await storageGet(DEVICE_INFO_KEY)) || null
   } catch (error) {
     console.error('[Device] Failed to load device info:', error)
     return null

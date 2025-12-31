@@ -67,13 +67,13 @@ export function generateAntdTheme(
   }
 }
 
-import { safeLocalStorage } from '@/utils/safeStorage'
+import { storageGet } from '@/utils/simpleStorage'
 
 // 获取当前主题模式
-export function getCurrentThemeMode(): 'light' | 'dark' {
+export async function getCurrentThemeMode(): Promise<'light' | 'dark'> {
   if (typeof window === 'undefined') return 'light'
 
-  const theme = safeLocalStorage.get('theme', 'system')
+  const theme = (await storageGet<string>('theme')) || 'system'
 
   if (theme === 'system') {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'

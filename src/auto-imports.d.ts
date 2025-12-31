@@ -20,7 +20,6 @@ declare global {
   const S3SyncTarget: typeof import('./utils/syncTargets')['S3SyncTarget']
   const STORAGE_KEYS: typeof import('./utils/simpleStorage')['STORAGE_KEYS']
   const SYNC: typeof import('./utils/constants')['SYNC']
-  const SafeStorage: typeof import('./utils/safeStorage')['SafeStorage']
   const SyncDatabase: typeof import('./utils/sync-db')['SyncDatabase']
   const SyncTestHelper: typeof import('./utils/sync-test')['SyncTestHelper']
   const TIME: typeof import('./utils/constants')['TIME']
@@ -47,7 +46,6 @@ declare global {
   const createFileUrl: typeof import('./utils/telegramResolver')['createFileUrl']
   const createLogger: typeof import('./utils/logger')['createLogger']
   const createPinia: typeof import('pinia')['createPinia']
-  const createPrefixedStorage: typeof import('./utils/safeStorage')['createPrefixedStorage']
   const createProxyUrl: typeof import('./utils/telegramResolver')['createProxyUrl']
   const createSyncTarget: typeof import('./utils/syncTargets')['createSyncTarget']
   const customRef: typeof import('vue')['customRef']
@@ -153,8 +151,6 @@ declare global {
   const repairEmptyStorage: typeof import('./utils/simpleStorage')['repairEmptyStorage']
   const resetToDefaults: typeof import('./utils/simpleStorage')['resetToDefaults']
   const resolveComponent: typeof import('vue')['resolveComponent']
-  const safeLocalStorage: typeof import('./utils/safeStorage')['safeLocalStorage']
-  const safeSessionStorage: typeof import('./utils/safeStorage')['safeSessionStorage']
   const sanitizeEmojiGroup: typeof import('./utils/typeGuards')['sanitizeEmojiGroup']
   const sanitizeEmojiGroupArray: typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']
   const saveAllData: typeof import('./utils/simpleStorage')['saveAllData']
@@ -250,9 +246,6 @@ declare global {
   export type { OptimizedHashService } from './utils/optimizedHashService'
   import('./utils/optimizedHashService')
   // @ts-ignore
-  export type { SafeStorage } from './utils/safeStorage'
-  import('./utils/safeStorage')
-  // @ts-ignore
   export type { SyncDatabase } from './utils/sync-db'
   import('./utils/sync-db')
   // @ts-ignore
@@ -282,7 +275,6 @@ declare module 'vue' {
     readonly S3SyncTarget: UnwrapRef<typeof import('./utils/syncTargets')['S3SyncTarget']>
     readonly STORAGE_KEYS: UnwrapRef<typeof import('./utils/simpleStorage')['STORAGE_KEYS']>
     readonly SYNC: UnwrapRef<typeof import('./utils/constants')['SYNC']>
-    readonly SafeStorage: UnwrapRef<typeof import('./utils/safeStorage')['SafeStorage']>
     readonly SyncDatabase: UnwrapRef<typeof import('./utils/sync-db')['SyncDatabase']>
     readonly SyncTestHelper: UnwrapRef<typeof import('./utils/sync-test')['SyncTestHelper']>
     readonly TIME: UnwrapRef<typeof import('./utils/constants')['TIME']>
@@ -309,7 +301,6 @@ declare module 'vue' {
     readonly createFileUrl: UnwrapRef<typeof import('./utils/telegramResolver')['createFileUrl']>
     readonly createLogger: UnwrapRef<typeof import('./utils/logger')['createLogger']>
     readonly createPinia: UnwrapRef<typeof import('pinia')['createPinia']>
-    readonly createPrefixedStorage: UnwrapRef<typeof import('./utils/safeStorage')['createPrefixedStorage']>
     readonly createProxyUrl: UnwrapRef<typeof import('./utils/telegramResolver')['createProxyUrl']>
     readonly createSyncTarget: UnwrapRef<typeof import('./utils/syncTargets')['createSyncTarget']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
@@ -415,8 +406,6 @@ declare module 'vue' {
     readonly repairEmptyStorage: UnwrapRef<typeof import('./utils/simpleStorage')['repairEmptyStorage']>
     readonly resetToDefaults: UnwrapRef<typeof import('./utils/simpleStorage')['resetToDefaults']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
-    readonly safeLocalStorage: UnwrapRef<typeof import('./utils/safeStorage')['safeLocalStorage']>
-    readonly safeSessionStorage: UnwrapRef<typeof import('./utils/safeStorage')['safeSessionStorage']>
     readonly sanitizeEmojiGroup: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroup']>
     readonly sanitizeEmojiGroupArray: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']>
     readonly saveAllData: UnwrapRef<typeof import('./utils/simpleStorage')['saveAllData']>

@@ -1,4 +1,4 @@
-import { safeLocalStorage } from '@/utils/safeStorage'
+import { storageGet, storageSet } from '@/utils/simpleStorage'
 import type { AppSettings } from '@/types/type'
 
 /**
@@ -51,25 +51,27 @@ export function useThemeManager(options: {
   /**
    * 更新主题设置
    */
-  const updateTheme = (theme: 'system' | 'light' | 'dark') => {
+  const updateTheme = async (theme: 'system' | 'light' | 'dark') => {
     updateSettings({ theme })
-    safeLocalStorage.set('theme', theme)
+    await storageSet('theme', theme)
     applyTheme(theme)
   }
 
   /**
    * 更新自定义主色
    */
-  const updateCustomPrimaryColor = (color: string) => {
+  const updateCustomPrimaryColor = async (color: string) => {
     updateSettings({ customPrimaryColor: color })
 
     // 触发主题变化事件以更新 Ant Design Vue 主题
     const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+    const savedTheme = (await storageGet<string>('theme')) || 'system'
+
     window.dispatchEvent(
       new CustomEvent('theme-changed', {
         detail: {
           mode: currentMode,
-          theme: safeLocalStorage.get('theme', 'system')
+          theme: savedTheme
         }
       })
     )
@@ -90,8 +92,8 @@ export function useThemeManager(options: {
 
     // 监听系统主题变化（仅在 system 模式下）
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handleSystemThemeChange = () => {
-      const savedTheme = safeLocalStorage.get('theme', 'system')
+    const handleSystemThemeChange = async () => {
+      const savedTheme = (await storageGet<string>('theme')) || 'system'
       if (savedTheme === 'system') {
         applyTheme('system')
       }

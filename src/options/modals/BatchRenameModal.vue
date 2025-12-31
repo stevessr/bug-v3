@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, computed, type PropType, onMounted, onUnmounted } from 'vue'
-import { CheckOutlined, CloseOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { ref, watch, computed, type PropType } from 'vue'
 
 import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
-import { generateBatchNames } from '@/utils/geminiService'
+import { generateBatchNamesStreaming } from '@/utils/geminiService'
 import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
-import CachedImage from '@/components/CachedImage.vue'
+import VirtualList from '@/options/components/VirtualList.vue'
 
 const props = defineProps({
   visible: {
@@ -23,70 +22,46 @@ const emit = defineEmits(['close', 'apply'])
 
 const emojiStore = useEmojiStore()
 const prompt = ref('')
-
-// Enhanced state for streaming and multiple candidates
-interface EmojiRenameState {
-  originalName: string
-  candidates: string[]
-  selectedIndex: number
-  status: 'pending' | 'processing' | 'completed' | 'rejected'
-  isGenerating: boolean
-}
-
-const renameStates = ref<Record<string, EmojiRenameState>>({})
+const newNames = ref<Record<string, string>>({})
+const excludedIds = ref(new Set<string>())
 const isLoading = ref(false)
 const error = ref<string | null>(null)
-const currentProcessingIndex = ref(0)
-const totalEmojis = computed(() => props.selectedEmojis.length)
-
-// Lazy loading state
-const loadedImages = ref<Set<string>>(new Set())
-let imageObserver: IntersectionObserver | null = null
-
-// Progress tracking
-const progress = computed(() => {
-  if (totalEmojis.value === 0) return 0
-  return Math.round((currentProcessingIndex.value / totalEmojis.value) * 100)
+const progress = ref<{ current: number; total: number; groupIndex?: number }>({
+  current: 0,
+  total: 0,
+  groupIndex: 0
 })
+const enableGroupedStreaming = ref(true)
 
-const processedCount = computed(() => {
-  return Object.values(renameStates.value).filter(
-    state => state.status === 'completed' || state.status === 'rejected'
-  ).length
-})
+// Virtual list ref - use any to avoid vue-tsc generic inference issues
+const virtualListRef = ref<any>(null)
 
-const acceptedCount = computed(() => {
-  return Object.values(renameStates.value).filter(state => state.status === 'completed').length
-})
+// Computed list for rendering
+interface EmojiRenderItem {
+  emoji: Emoji
+  hasNewName: boolean
+  newName: string
+  excluded: boolean
+}
 
-const rejectedCount = computed(() => {
-  return Object.values(renameStates.value).filter(state => state.status === 'rejected').length
+const emojiRenderList = computed<EmojiRenderItem[]>(() => {
+  return props.selectedEmojis.map(emoji => ({
+    emoji,
+    hasNewName: !!newNames.value[emoji.id],
+    newName: newNames.value[emoji.id] || '等待生成...',
+    excluded: excludedIds.value.has(emoji.id)
+  }))
 })
 
 const geminiConfig = computed(() => ({
-  apiKey: emojiStore.settings.geminiApiKey || '',
-  model: emojiStore.settings.geminiModel || 'gemini-2.0-flash-exp',
+  apiKey: emojiStore.settings.geminiApiKey,
+  model: emojiStore.settings.geminiModel,
   language: emojiStore.settings.geminiLanguage || 'Chinese',
-  useCustomOpenAI: emojiStore.settings.useCustomOpenAI || false,
-  customOpenAIEndpoint: emojiStore.settings.customOpenAIEndpoint || '',
-  customOpenAIKey: emojiStore.settings.customOpenAIKey || '',
-  customOpenAIModel: emojiStore.settings.customOpenAIModel || ''
+  useCustomOpenAI: emojiStore.settings.useCustomOpenAI,
+  customOpenAIEndpoint: emojiStore.settings.customOpenAIEndpoint,
+  customOpenAIKey: emojiStore.settings.customOpenAIKey,
+  customOpenAIModel: emojiStore.settings.customOpenAIModel
 }))
-
-// Initialize rename states
-const initializeStates = () => {
-  renameStates.value = {}
-  props.selectedEmojis.forEach(emoji => {
-    renameStates.value[emoji.id] = {
-      originalName: emoji.name,
-      candidates: [],
-      selectedIndex: 0,
-      status: 'pending',
-      isGenerating: false
-    }
-  })
-  currentProcessingIndex.value = 0
-}
 
 watch(
   () => props.visible,
@@ -94,18 +69,15 @@ watch(
     if (isVisible) {
       // Reset state when modal becomes visible
       prompt.value = ''
+      newNames.value = {}
+      excludedIds.value.clear()
       isLoading.value = false
       error.value = null
-      loadedImages.value.clear()
-      initializeStates()
-      setupImageObserver()
-    } else {
-      cleanupImageObserver()
+      progress.value = { current: 0, total: 0, groupIndex: 0 }
     }
   }
 )
 
-// Generate names with streaming effect
 const handleGenerateNames = async () => {
   const config = geminiConfig.value
 
@@ -124,155 +96,63 @@ const handleGenerateNames = async () => {
 
   isLoading.value = true
   error.value = null
-  currentProcessingIndex.value = 0
-  initializeStates()
+  newNames.value = {}
+  progress.value = { current: 0, total: props.selectedEmojis.length, groupIndex: 0 }
+
+  // Enable auto-scroll during generation
+  if (virtualListRef.value) {
+    virtualListRef.value.enableAutoScroll()
+  }
 
   try {
-    // Process emojis in batches with streaming effect
-    const concurrency = 3 // Process 3 at a time for streaming effect
-
-    for (let i = 0; i < props.selectedEmojis.length; i += concurrency) {
-      const batch = props.selectedEmojis.slice(
-        i,
-        Math.min(i + concurrency, props.selectedEmojis.length)
-      )
-
-      // Mark batch as processing
-      batch.forEach(emoji => {
-        renameStates.value[emoji.id].status = 'processing'
-        renameStates.value[emoji.id].isGenerating = true
-      })
-
-      // Generate names for batch
-      const results = await generateBatchNames(batch, prompt.value, config)
-
-      // Update states with results (simulate multiple candidates by generating variations)
-      for (const emoji of batch) {
-        const baseName = results[emoji.id]
-        if (baseName) {
-          // Generate 3 candidate variations
-          const candidates = [baseName, baseName + ' ✨', baseName.replace(/\s+/g, '_')]
-
-          renameStates.value[emoji.id].candidates = candidates
-          renameStates.value[emoji.id].status = 'completed'
-        } else {
-          renameStates.value[emoji.id].status = 'pending'
-        }
-        renameStates.value[emoji.id].isGenerating = false
-        currentProcessingIndex.value++
-      }
-
-      // Add small delay for visual streaming effect
-      if (i + concurrency < props.selectedEmojis.length) {
-        await new Promise(resolve => setTimeout(resolve, 200))
-      }
-    }
+    await generateBatchNamesStreaming(
+      props.selectedEmojis,
+      prompt.value,
+      config as any,
+      (results, progressInfo) => {
+        // Update names in real-time
+        newNames.value = { ...results }
+        progress.value = progressInfo
+      },
+      5, // concurrency
+      enableGroupedStreaming.value // group by groupId
+    )
   } catch (e: any) {
     error.value = `Failed to generate names: ${e.message}`
   } finally {
     isLoading.value = false
-  }
-}
-
-// Candidate selection
-const selectCandidate = (emojiId: string, index: number) => {
-  if (renameStates.value[emojiId]) {
-    renameStates.value[emojiId].selectedIndex = index
-  }
-}
-
-// Accept/Reject actions
-const acceptRename = (emojiId: string) => {
-  if (renameStates.value[emojiId]) {
-    renameStates.value[emojiId].status = 'completed'
-  }
-}
-
-const rejectRename = (emojiId: string) => {
-  if (renameStates.value[emojiId]) {
-    renameStates.value[emojiId].status = 'rejected'
-  }
-}
-
-const regenerateForEmoji = async (emoji: Emoji) => {
-  const config = geminiConfig.value
-  const state = renameStates.value[emoji.id]
-  if (!state) return
-
-  state.isGenerating = true
-  state.status = 'processing'
-
-  try {
-    const results = await generateBatchNames([emoji], prompt.value, config)
-    const baseName = results[emoji.id]
-
-    if (baseName) {
-      state.candidates = [baseName, baseName + ' ✨', baseName.replace(/\s+/g, '_')]
-      state.selectedIndex = 0
-      state.status = 'completed'
+    // Disable auto-scroll after generation
+    if (virtualListRef.value) {
+      virtualListRef.value.disableAutoScroll()
     }
-  } catch (e) {
-    console.error('Regenerate failed:', e)
-  } finally {
-    state.isGenerating = false
+  }
+}
+
+const toggleExclude = (id: string) => {
+  if (excludedIds.value.has(id)) {
+    excludedIds.value.delete(id)
+  } else {
+    excludedIds.value.add(id)
   }
 }
 
 const handleApply = () => {
   const finalNames: Record<string, string> = {}
-
-  Object.entries(renameStates.value).forEach(([emojiId, state]) => {
-    if (state.status === 'completed' && state.candidates.length > 0) {
-      finalNames[emojiId] = state.candidates[state.selectedIndex]
+  for (const [id, name] of Object.entries(newNames.value)) {
+    if (!excludedIds.value.has(id)) {
+      finalNames[id] = name
     }
-  })
-
+  }
   emit('apply', finalNames)
 }
 
 const okButtonProps = computed(() => ({
-  disabled: acceptedCount.value === 0
+  disabled: Object.keys(newNames.value).length === 0
 }))
 
-// Setup Intersection Observer for lazy loading images
-const setupImageObserver = () => {
-  if (typeof IntersectionObserver === 'undefined') return
-
-  imageObserver = new IntersectionObserver(
-    entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target as HTMLImageElement
-          const src = img.dataset.src
-          if (src && !loadedImages.value.has(src)) {
-            img.src = src
-            loadedImages.value.add(src)
-            imageObserver?.unobserve(img)
-          }
-        }
-      })
-    },
-    {
-      rootMargin: '50px'
-    }
-  )
-}
-
-const cleanupImageObserver = () => {
-  if (imageObserver) {
-    imageObserver.disconnect()
-    imageObserver = null
-  }
-}
-
-onMounted(() => {
-  if (props.visible) {
-    setupImageObserver()
-  }
-})
-
-onUnmounted(() => {
-  cleanupImageObserver()
+const progressPercentage = computed(() => {
+  if (progress.value.total === 0) return 0
+  return Math.round((progress.value.current / progress.value.total) * 100)
 })
 </script>
 
@@ -284,187 +164,114 @@ onUnmounted(() => {
     @cancel="$emit('close')"
     @ok="handleApply"
     :ok-button-props="okButtonProps"
-    ok-text="应用选中的重命名"
+    ok-text="应用"
   >
     <div class="space-y-4">
-      <a-alert
-        v-if="error"
-        :message="error"
-        type="error"
-        show-icon
-        closable
-        @close="error = null"
-      />
+      <a-alert v-if="error" :message="error" type="error" show-icon />
 
       <div>
-        <p class="font-semibold mb-2">命名提示：</p>
+        <p class="font-semibold">命名提示：</p>
         <a-textarea
           v-model:value="prompt"
           placeholder="例如：给这些表情加上'搞笑'前缀，或者'根据图片内容生成描述性名称'"
           :rows="2"
-          :disabled="isLoading"
         />
         <p class="text-xs text-gray-500 mt-1">语言设置已移至 设置 → AI 设置</p>
       </div>
 
-      <div class="flex items-center justify-between">
-        <a-button
-          type="primary"
-          @click="handleGenerateNames"
-          :loading="isLoading"
-          :disabled="isLoading || !prompt"
-        >
+      <div class="flex items-center gap-4">
+        <a-button type="primary" @click="handleGenerateNames" :loading="isLoading">
           {{ isLoading ? '生成中...' : '开始生成' }}
         </a-button>
-
-        <div v-if="processedCount > 0" class="text-sm text-gray-600">
-          <span class="text-green-600 font-medium">✓ {{ acceptedCount }}</span>
-          已接受 ·
-          <span class="text-red-600 font-medium">✗ {{ rejectedCount }}</span>
-          已拒绝 ·
-          <span class="text-gray-500">{{ totalEmojis - processedCount }}</span>
-          待处理
-        </div>
+        <a-checkbox v-model:checked="enableGroupedStreaming" :disabled="isLoading">
+          按分组流式加载
+        </a-checkbox>
+        <span class="text-sm text-gray-600">已选择 {{ selectedEmojis.length }} 个表情</span>
       </div>
 
-      <!-- Progress Bar -->
-      <div v-if="isLoading || processedCount > 0" class="space-y-2">
-        <div class="flex items-center justify-between text-sm">
-          <span class="text-gray-600">
-            处理进度：{{ currentProcessingIndex }} / {{ totalEmojis }}
+      <div v-if="isLoading" class="space-y-2">
+        <a-progress :percent="progressPercentage" status="active" />
+        <p class="text-center text-gray-500 text-sm">
+          正在生成 ({{ progress.current }} / {{ progress.total }})
+          <span v-if="enableGroupedStreaming && progress.groupIndex !== undefined">
+            - 分组 {{ progress.groupIndex + 1 }}
           </span>
-          <span class="text-gray-600">{{ progress }}%</span>
-        </div>
-        <a-progress
-          :percent="progress"
-          :status="isLoading ? 'active' : 'success'"
-          :stroke-color="{
-            '0%': '#108ee9',
-            '100%': '#87d068'
-          }"
-        />
+        </p>
       </div>
 
-      <!-- Results List with Streaming -->
-      <div v-if="Object.keys(renameStates).length > 0" class="space-y-3">
-        <h3 class="font-semibold">重命名预览：</h3>
-        <div class="max-h-96 overflow-y-auto space-y-2 pr-2">
-          <div
-            v-for="emoji in selectedEmojis"
-            :key="emoji.id"
-            class="border rounded-lg p-3 transition-all"
-            :class="{
-              'bg-green-50 border-green-200': renameStates[emoji.id]?.status === 'completed',
-              'bg-red-50 border-red-200': renameStates[emoji.id]?.status === 'rejected',
-              'bg-blue-50 border-blue-200': renameStates[emoji.id]?.status === 'processing',
-              'bg-gray-50 border-gray-200': renameStates[emoji.id]?.status === 'pending'
-            }"
-          >
-            <div class="flex items-start gap-3">
-              <!-- Emoji Preview -->
-              <div class="flex-shrink-0">
-                <CachedImage
-                  :src="getEmojiImageUrlSync(emoji)"
-                  class="w-12 h-12 object-contain bg-white rounded"
-                  loading="lazy"
-                  alt="emoji"
-                />
-              </div>
+      <div
+        v-if="Object.keys(newNames).length > 0 || isLoading"
+        class="border rounded-lg overflow-hidden"
+      >
+        <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b flex items-center">
+          <h3 class="font-semibold flex-1">
+            名称预览 ({{ Object.keys(newNames).length }} / {{ selectedEmojis.length }})
+          </h3>
+          <span class="text-xs text-gray-500">虚拟滚动优化</span>
+        </div>
 
-              <!-- Content -->
+        <VirtualList
+          ref="virtualListRef"
+          :items="emojiRenderList"
+          :item-height="60"
+          :container-height="400"
+          :buffer="5"
+        >
+          <template #default="{ item }">
+            <div
+              class="px-4 py-2 border-b dark:border-gray-600 flex items-center gap-3"
+              :class="{ 'opacity-50': item.excluded }"
+            >
+              <a-checkbox
+                :checked="!item.excluded"
+                :disabled="!item.hasNewName"
+                @change="toggleExclude(item.emoji.id)"
+              />
+              <img
+                :src="getEmojiImageUrlSync(item.emoji)"
+                class="w-12 h-12 object-contain bg-gray-100 rounded"
+                loading="lazy"
+                alt="emoji"
+              />
               <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="text-sm text-gray-600">原名称：</span>
-                  <span class="font-medium">{{ emoji.name }}</span>
+                <div class="text-sm text-gray-600 dark:text-gray-400 truncate">
+                  {{ item.emoji.name }}
                 </div>
-
-                <!-- Loading State -->
-                <div v-if="renameStates[emoji.id]?.isGenerating" class="flex items-center gap-2">
-                  <a-spin size="small" />
-                  <span class="text-sm text-gray-500">正在生成候选名称...</span>
-                </div>
-
-                <!-- Candidates -->
-                <div v-else-if="renameStates[emoji.id]?.candidates.length > 0" class="space-y-2">
-                  <div class="text-sm text-gray-600 mb-1">候选名称 (点击选择):</div>
-                  <div class="flex flex-wrap gap-2">
-                    <a-tag
-                      v-for="(candidate, index) in renameStates[emoji.id].candidates"
-                      :key="index"
-                      :color="renameStates[emoji.id].selectedIndex === index ? 'blue' : 'default'"
-                      class="cursor-pointer px-3 py-1 text-sm"
-                      @click="selectCandidate(emoji.id, index)"
-                    >
-                      {{ candidate }}
-                    </a-tag>
-                  </div>
-                </div>
-
-                <!-- Pending State -->
                 <div
-                  v-else-if="renameStates[emoji.id]?.status === 'pending'"
-                  class="text-sm text-gray-400"
+                  class="text-sm font-medium truncate"
+                  :class="{
+                    'text-green-600': item.hasNewName,
+                    'text-gray-400 animate-pulse': !item.hasNewName && isLoading,
+                    'text-gray-400': !item.hasNewName && !isLoading
+                  }"
                 >
-                  等待生成...
+                  {{ item.newName }}
                 </div>
-              </div>
-
-              <!-- Actions -->
-              <div class="flex-shrink-0 flex gap-1">
-                <a-tooltip title="接受重命名">
-                  <a-button
-                    v-if="renameStates[emoji.id]?.status !== 'completed'"
-                    type="text"
-                    size="small"
-                    :disabled="
-                      !renameStates[emoji.id]?.candidates.length ||
-                      renameStates[emoji.id]?.isGenerating
-                    "
-                    @click="acceptRename(emoji.id)"
-                  >
-                    <template #icon>
-                      <CheckOutlined class="text-green-600" />
-                    </template>
-                  </a-button>
-                </a-tooltip>
-
-                <a-tooltip title="拒绝重命名">
-                  <a-button
-                    v-if="renameStates[emoji.id]?.status !== 'rejected'"
-                    type="text"
-                    size="small"
-                    :disabled="renameStates[emoji.id]?.isGenerating"
-                    @click="rejectRename(emoji.id)"
-                  >
-                    <template #icon>
-                      <CloseOutlined class="text-red-600" />
-                    </template>
-                  </a-button>
-                </a-tooltip>
-
-                <a-tooltip title="重新生成">
-                  <a-button
-                    type="text"
-                    size="small"
-                    :loading="renameStates[emoji.id]?.isGenerating"
-                    :disabled="isLoading"
-                    @click="regenerateForEmoji(emoji)"
-                  >
-                    <template #icon>
-                      <ReloadOutlined />
-                    </template>
-                  </a-button>
-                </a-tooltip>
               </div>
             </div>
-          </div>
-        </div>
+          </template>
+        </VirtualList>
       </div>
 
-      <!-- Empty State -->
-      <div v-else class="text-center py-8 text-gray-400">
-        <p>输入命名提示后点击"开始生成"来为选中的表情生成新名称</p>
+      <div v-if="!isLoading && Object.keys(newNames).length === 0" class="text-center py-8">
+        <p class="text-gray-500">点击"开始生成"按钮使用 AI 生成新名称</p>
       </div>
     </div>
   </a-modal>
 </template>
+
+<style scoped>
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+</style>

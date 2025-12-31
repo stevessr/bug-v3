@@ -6,7 +6,7 @@ import { useEmojiStore } from '@/stores/emojiStore'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import VirtualList from '@/options/components/VirtualList.vue'
 import BatchActionsBar from '@/options/components/BatchActionsBar.vue'
-import BatchRenameModalOptimized from '@/options/modals/BatchRenameModalOptimized.vue'
+import BatchRenameModal from '@/options/modals/BatchRenameModal.vue'
 
 const emojiStore = useEmojiStore()
 
@@ -239,7 +239,7 @@ const containerHeight = 600
       @cancel="handleCancelSelection"
     />
 
-    <BatchRenameModalOptimized
+    <BatchRenameModal
       :visible="isBatchRenameModalVisible"
       :selected-emojis="selectedEmojiObjects"
       @close="isBatchRenameModalVisible = false"

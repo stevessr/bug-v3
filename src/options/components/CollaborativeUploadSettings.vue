@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
-import { safeLocalStorage } from '@/utils/safeStorage'
+import { storageGet, storageSet } from '@/utils/simpleStorage'
 import {
   CollaborativeUploadClient,
   startWorkerMode,
@@ -206,9 +206,9 @@ async function startCollaborativeUpload() {
 
 // ==================== 生命周期 ====================
 
-onMounted(() => {
+onMounted(async () => {
   // 检查是否有保存的服务器地址
-  const saved = safeLocalStorage.get<string>('collaborative-upload-server', '')
+  const saved = await storageGet<string>('collaborative-upload-server')
   if (saved) {
     serverUrl.value = saved
   }
@@ -224,8 +224,8 @@ onUnmounted(() => {
   }
 })
 
-function saveServerUrl() {
-  safeLocalStorage.set('collaborative-upload-server', serverUrl.value)
+async function saveServerUrl() {
+  await storageSet('collaborative-upload-server', serverUrl.value)
 }
 </script>
 

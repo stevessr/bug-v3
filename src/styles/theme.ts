@@ -1,13 +1,13 @@
 import { getCurrentThemeMode } from './antdTheme'
 
-import { safeLocalStorage } from '@/utils/safeStorage'
+import { storageGet } from '@/utils/simpleStorage'
 
-function applyTheme() {
+async function applyTheme() {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return
   }
 
-  const theme = safeLocalStorage.get('theme', 'system')
+  const theme = (await storageGet<string>('theme')) || 'system'
   const root = document.documentElement
 
   function apply(theme: string) {
@@ -40,8 +40,8 @@ function applyTheme() {
   apply(theme)
 
   // 监听系统主题变化
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    const currentTheme = safeLocalStorage.get('theme', 'system')
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', async () => {
+    const currentTheme = (await storageGet<string>('theme')) || 'system'
     if (currentTheme === 'system') {
       apply('system')
     }

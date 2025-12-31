@@ -1,16 +1,16 @@
 // Helper to interact with Telegram API
-import { safeLocalStorage } from './safeStorage'
+import { storageGet, storageSet, storageRemove } from './simpleStorage'
 
 // We need a persistent storage for the bot token
-export const getTelegramBotToken = (): string | null => {
-  return safeLocalStorage.get<string | null>('telegramBotToken', null)
+export const getTelegramBotToken = async (): Promise<string | null> => {
+  return await storageGet<string>('telegramBotToken')
 }
 
-export const setTelegramBotToken = (token: string) => {
+export const setTelegramBotToken = async (token: string) => {
   if (token) {
-    safeLocalStorage.set('telegramBotToken', token)
+    await storageSet('telegramBotToken', token)
   } else {
-    safeLocalStorage.remove('telegramBotToken')
+    await storageRemove('telegramBotToken')
   }
 }
 

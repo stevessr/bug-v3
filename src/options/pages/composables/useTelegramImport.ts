@@ -19,11 +19,16 @@ interface TelegramProgress {
 
 export function useTelegramImport() {
   // --- 状态 ---
-  const telegramBotToken = ref(getTelegramBotToken() || '')
+  const telegramBotToken = ref('')
   const showTelegramModal = ref(false)
   const telegramInput = ref('')
   const isProcessingTelegram = ref(false)
   const telegramProgress = ref<TelegramProgress>({ processed: 0, total: 0, message: '' })
+
+  // Initialize token
+  getTelegramBotToken().then(token => {
+    if (token) telegramBotToken.value = token
+  })
 
   // --- 方法 ---
 

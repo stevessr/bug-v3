@@ -21,7 +21,15 @@ import * as storage from '@/utils/simpleStorage'
 const store = useEmojiStore()
 
 // --- 状态 ---
-const telegramBotToken = ref(getTelegramBotToken() || '')
+const telegramBotToken = ref('')
+
+// Initialize asynchronously
+onMounted(async () => {
+  const token = await getTelegramBotToken()
+  if (token) {
+    telegramBotToken.value = token
+  }
+})
 const telegramInput = ref('')
 const isProcessing = ref(false)
 const progress = ref({ processed: 0, total: 0, message: '' })

@@ -53,7 +53,11 @@ provide('streamingHandlers', {
 })
 
 // 主题相关状态
-const currentThemeMode = ref<'light' | 'dark'>(getCurrentThemeMode())
+const currentThemeMode = ref<'light' | 'dark'>('light')
+
+onMounted(async () => {
+  currentThemeMode.value = await getCurrentThemeMode()
+})
 
 // 响应式的 Ant Design Vue 主题配置
 const antdThemeConfig = computed(() => {
@@ -270,7 +274,7 @@ onMounted(async () => {
   })
 
   // 初始化主题模式
-  currentThemeMode.value = getCurrentThemeMode()
+  currentThemeMode.value = await getCurrentThemeMode()
   // 处理通过 query tabs 指定的初始页面或分组
   const queryTabs =
     (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
