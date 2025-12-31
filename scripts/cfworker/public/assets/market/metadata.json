@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "exportDate": "2025-12-31T03:35:02.432Z",
-  "totalGroups": 128,
+  "exportDate": "2025-12-31T16:19:15.553Z",
+  "totalGroups": 129,
   "includeArchived": true,
   "groups": [
     {
@@ -845,10 +845,18 @@
       "isArchived": false
     },
     {
+      "id": "group-1767197875251",
+      "name": "X 第二十七弹",
+      "icon": "https://linux.do/uploads/default/original/4X/c/c/a/cca1e031240efa31eed006e64d4efbfa938a3d90.avif",
+      "order": 105,
+      "emojiCount": 482,
+      "isArchived": false
+    },
+    {
       "id": "group-1767080865612",
       "name": "X 第二十三弹",
       "icon": "https://linux.do/uploads/default/original/4X/4/d/e/4dea60c5cb3e36541398fa14060a8bb8b2c671e0.avif",
-      "order": 105,
+      "order": 106,
       "emojiCount": 236,
       "isArchived": false
     },
@@ -856,7 +864,7 @@
       "id": "group-1767093036745",
       "name": "X 第二十四弹",
       "icon": "https://linux.do/uploads/default/original/4X/b/4/d/b4d418f6d1b8e4f81c675625efc46f2a849a3e57.avif",
-      "order": 106,
+      "order": 107,
       "emojiCount": 318,
       "isArchived": false
     },
@@ -864,7 +872,7 @@
       "id": "group-1767100685975",
       "name": "X 第二十五弹",
       "icon": "https://linux.do/uploads/default/original/4X/7/0/a/70a7acb0f994cdaedcf37e87c0404feab74be72d.avif",
-      "order": 107,
+      "order": 108,
       "emojiCount": 583,
       "isArchived": false
     },
@@ -872,7 +880,7 @@
       "id": "group-1766980740966",
       "name": "X 第二十一弹",
       "icon": "https://linux.do/uploads/default/original/4X/b/c/f/bcf40ff1ceeaca7e28b0fededa09f3e56286801e.avif",
-      "order": 108,
+      "order": 109,
       "emojiCount": 444,
       "isArchived": false
     },
@@ -880,7 +888,7 @@
       "id": "group-1764738272674",
       "name": "X 第九弹",
       "icon": "https://linux.do/uploads/default/original/4X/9/4/b/94b6c1aff0ff7498d5d7f5ff1311b7ddabfc9ec1.avif",
-      "order": 109,
+      "order": 110,
       "emojiCount": 732,
       "isArchived": true
     },
@@ -888,7 +896,7 @@
       "id": "group-1763199932836",
       "name": "X 第六弹",
       "icon": "https://linux.do/uploads/default/original/4X/5/3/7/537925ed8cc590ea445613fdf839b1a9e1527d8a.avif",
-      "order": 110,
+      "order": 111,
       "emojiCount": 169,
       "isArchived": true
     },
@@ -896,7 +904,7 @@
       "id": "group-1763303057469",
       "name": "X 第七弹",
       "icon": "https://linux.do/uploads/default/original/4X/d/c/5/dc525ddc6e161406e80b8ddfb3c5f026dec2475b.avif",
-      "order": 111,
+      "order": 112,
       "emojiCount": 320,
       "isArchived": true
     },
@@ -904,7 +912,7 @@
       "id": "group-1762816988844",
       "name": "X 第三弹",
       "icon": "https://linux.do/uploads/default/original/4X/7/0/a/70a3b4f28baff9e38f748cb876537c19265a9c16.jpeg",
-      "order": 112,
+      "order": 113,
       "emojiCount": 886,
       "isArchived": true
     },
@@ -912,7 +920,7 @@
       "id": "group-1766845450023",
       "name": "X 第十八弹",
       "icon": "https://linux.do/uploads/default/original/4X/1/e/3/1e30ec0b55936bee6d6deaccc978158aecb1bd4e.avif",
-      "order": 113,
+      "order": 114,
       "emojiCount": 532,
       "isArchived": true
     },
@@ -920,7 +928,7 @@
       "id": "group-1765008889810",
       "name": "X 第十弹",
       "icon": "https://linux.do/uploads/default/original/4X/5/9/1/591224a2ceb7e449a15ecbe19c26b4945550dbc4.jpeg",
-      "order": 114,
+      "order": 115,
       "emojiCount": 1016,
       "isArchived": true
     },
@@ -928,7 +936,7 @@
       "id": "group-1765806805581",
       "name": "X 第十二弹",
       "icon": "https://linux.do/uploads/default/original/4X/8/5/c/85c46c959d4a0b729575260af51ee62733ca736d.avif",
-      "order": 115,
+      "order": 116,
       "emojiCount": 1245,
       "isArchived": true
     },
@@ -936,7 +944,7 @@
       "id": "group-1766906735649",
       "name": "X 第十九弹",
       "icon": "https://linux.do/uploads/default/original/4X/9/8/5/985fbe2044503318b8287d97303c0b1ae839e753.avif?v=emoji-17",
-      "order": 116,
+      "order": 117,
       "emojiCount": 311,
       "isArchived": false
     },
@@ -944,7 +952,7 @@
       "id": "group-1766734481816",
       "name": "X 第十六弹",
       "icon": "https://linux.do/uploads/default/original/4X/e/b/a/eba0c2574fae95818c2ba2436d3cbdf8c9d476f3.avif",
-      "order": 117,
+      "order": 118,
       "emojiCount": 1458,
       "isArchived": true
     },
@@ -952,7 +960,7 @@
       "id": "group-1766763084048",
       "name": "X 第十七弹",
       "icon": "https://linux.do/uploads/default/original/4X/7/a/9/7a92a9f9abef23a4373d5ce117b3fb687cd80c45.avif",
-      "order": 118,
+      "order": 119,
       "emojiCount": 340,
       "isArchived": true
     },
@@ -960,7 +968,7 @@
       "id": "group-1765977432564",
       "name": "X 第十三弹",
       "icon": "https://linux.do/uploads/default/original/4X/5/f/1/5f186ef099b920418391ec4792117d7adfbf8563.avif",
-      "order": 119,
+      "order": 120,
       "emojiCount": 720,
       "isArchived": true
     },
@@ -968,7 +976,7 @@
       "id": "group-1766486669577",
       "name": "X 第十四弹",
       "icon": "https://linux.do/uploads/default/original/4X/c/4/a/c4a7756a7c660327405b1a4a54c1996cd03a73be.avif",
-      "order": 120,
+      "order": 121,
       "emojiCount": 1490,
       "isArchived": true
     },
@@ -976,7 +984,7 @@
       "id": "group-1766586968469",
       "name": "X 第十五弹",
       "icon": "https://linux.do/uploads/default/original/4X/b/b/8/bb88f5fdfa6dd8e294f433ee1a44bd57a134a3c0.avif",
-      "order": 121,
+      "order": 122,
       "emojiCount": 920,
       "isArchived": true
     },
@@ -984,7 +992,7 @@
       "id": "group-1765284902642",
       "name": "X 第十一弹",
       "icon": "https://linux.do/uploads/default/original/4X/c/0/6/c06f67e3d6ecdbfbd54eacc472eb605532e98f4e.avif",
-      "order": 122,
+      "order": 123,
       "emojiCount": 887,
       "isArchived": true
     },
@@ -992,7 +1000,7 @@
       "id": "group-1762945443494",
       "name": "X 第四弹",
       "icon": "https://linux.do/uploads/default/original/4X/0/f/8/0f866327f9cfd47635ae71752cb91c728d2a60d1.avif",
-      "order": 123,
+      "order": 124,
       "emojiCount": 171,
       "isArchived": true
     },
@@ -1000,7 +1008,7 @@
       "id": "group-1763015750148",
       "name": "X 第五弹",
       "icon": "https://linux.do/uploads/default/original/4X/8/6/7/867afa6da4fb17099d955d4f078cf8d548f2250d.avif",
-      "order": 124,
+      "order": 125,
       "emojiCount": 120,
       "isArchived": true
     },
@@ -1008,7 +1016,7 @@
       "id": "group-1759672893426",
       "name": "yauyau",
       "icon": "https://linux.do/uploads/default/original/4X/7/b/2/7b234af2b511005f4e5c1259b390b0f9b642034b.webp",
-      "order": 125,
+      "order": 126,
       "emojiCount": 77,
       "isArchived": false
     },
@@ -1016,7 +1024,7 @@
       "id": "group-1761442802743",
       "name": "あきゅー",
       "icon": "https://linux.do/uploads/default/original/4X/d/0/f/d0fdb67759733664dd9cfa55618908c1b8d3250d.jpeg",
-      "order": 126,
+      "order": 127,
       "emojiCount": 11,
       "isArchived": true
     },
@@ -1024,7 +1032,7 @@
       "id": "group-1759062077224",
       "name": "アマカノ 3",
       "icon": "https://linux.do/uploads/default/original/4X/2/2/5/225bc59a2d35425c04432861990ddf6d7d65b547.jpeg",
-      "order": 127,
+      "order": 128,
       "emojiCount": 4,
       "isArchived": true
     }
