@@ -249,9 +249,6 @@ declare global {
   export type { SyncDatabase } from './utils/sync-db'
   import('./utils/sync-db')
   // @ts-ignore
-  export type { SyncTestHelper } from './utils/sync-test'
-  import('./utils/sync-test')
-  // @ts-ignore
   export type { WebDAVSyncTarget, S3SyncTarget, CloudflareSyncTarget } from './utils/syncTargets'
   import('./utils/syncTargets')
 }
@@ -276,7 +273,6 @@ declare module 'vue' {
     readonly STORAGE_KEYS: UnwrapRef<typeof import('./utils/simpleStorage')['STORAGE_KEYS']>
     readonly SYNC: UnwrapRef<typeof import('./utils/constants')['SYNC']>
     readonly SyncDatabase: UnwrapRef<typeof import('./utils/sync-db')['SyncDatabase']>
-    readonly SyncTestHelper: UnwrapRef<typeof import('./utils/sync-test')['SyncTestHelper']>
     readonly TIME: UnwrapRef<typeof import('./utils/constants')['TIME']>
     readonly UI: UnwrapRef<typeof import('./utils/constants')['UI']>
     readonly WebDAVSyncTarget: UnwrapRef<typeof import('./utils/syncTargets')['WebDAVSyncTarget']>
@@ -287,9 +283,7 @@ declare module 'vue' {
     readonly backupToSync: UnwrapRef<typeof import('./utils/simpleStorage')['backupToSync']>
     readonly cacheImage: UnwrapRef<typeof import('./utils/imageCache')['cacheImage']>
     readonly cacheImages: UnwrapRef<typeof import('./utils/imageCache')['cacheImages']>
-    readonly cacheMultipleImages: UnwrapRef<typeof import('./utils/imageCache.example')['cacheMultipleImages']>
     readonly checkStorageHealth: UnwrapRef<typeof import('./utils/simpleStorage')['checkStorageHealth']>
-    readonly cleanupCacheExample: UnwrapRef<typeof import('./utils/imageCache.example')['cleanupCacheExample']>
     readonly cleanupLRU: UnwrapRef<typeof import('./utils/imageCache')['cleanupLRU']>
     readonly clearCache: UnwrapRef<typeof import('./utils/imageCache')['clearCache']>
     readonly clearSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['clearSyncConfig']>
@@ -311,8 +305,6 @@ declare module 'vue' {
     readonly downloadFileAsBlob: UnwrapRef<typeof import('./utils/telegramResolver')['downloadFileAsBlob']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly ensureDiscourseDomainExists: UnwrapRef<typeof import('./utils/simpleStorage')['ensureDiscourseDomainExists']>
-    readonly environmentSpecificExample: UnwrapRef<typeof import('./utils/imageCache.example')['environmentSpecificExample']>
-    readonly exampleImageCaching: UnwrapRef<typeof import('./utils/imageCache.example')['exampleImageCaching']>
     readonly extractStickerSetName: UnwrapRef<typeof import('./utils/telegramResolver')['extractStickerSetName']>
     readonly formatMessage: UnwrapRef<typeof import('./utils/i18n')['formatMessage']>
     readonly generateBatchNames: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNames']>
@@ -436,7 +428,6 @@ declare module 'vue' {
     readonly storageSet: UnwrapRef<typeof import('./utils/simpleStorage')['storageSet']>
     readonly storeToRefs: UnwrapRef<typeof import('pinia')['storeToRefs']>
     readonly syncDb: UnwrapRef<typeof import('./utils/sync-db')['syncDb']>
-    readonly syncTestHelper: UnwrapRef<typeof import('./utils/sync-test')['syncTestHelper']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
@@ -471,7 +462,6 @@ declare module 'vue' {
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useTimeout: UnwrapRef<typeof import('./composables/useTimer')['useTimeout']>
     readonly validateAndSanitize: UnwrapRef<typeof import('./utils/typeGuards')['validateAndSanitize']>
-    readonly wasmHashService: UnwrapRef<typeof import('./utils/wasmHashService')['wasmHashService']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchEffect: UnwrapRef<typeof import('vue')['watchEffect']>
     readonly watchPostEffect: UnwrapRef<typeof import('vue')['watchPostEffect']>
