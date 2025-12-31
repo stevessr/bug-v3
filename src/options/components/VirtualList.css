@@ -1,0 +1,38 @@
+.virtual-list-container {
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.virtual-list-spacer {
+  position: relative;
+}
+
+.virtual-list-viewport {
+  /* 使用 will-change 优化滚动性能 */
+  will-change: transform;
+}
+
+.virtual-list-item {
+  display: inline-block;
+  /* 使用 CSS 变量减少内联样式计算 */
+  width: calc(100% / var(--items-per-row));
+  box-sizing: border-box;
+}
+
+.virtual-list-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.virtual-list-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.virtual-list-container::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 4px;
+}
+
+.virtual-list-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.7);
+}

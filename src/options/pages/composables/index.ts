@@ -5,5 +5,4 @@
 
 export { useCollaborativeUpload } from './useCollaborativeUpload'
 export { useFilePersistence, type FileItem } from './useFilePersistence'
-export { useTelegramImport } from './useTelegramImport'
 export { useBufferBatch } from './useBufferBatch'

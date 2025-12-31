@@ -225,43 +225,4 @@ const emojiRows = computed(() => {
   </div>
 </template>
 
-<style scoped>
-.emoji-grid-container {
-  width: 100%;
-  position: relative;
-}
-
-.measurement-row {
-  display: grid;
-  gap: 0.75rem; /* gap-3 */
-}
-
-.emoji-item {
-  transition:
-    transform 0.2s,
-    opacity 0.2s;
-}
-
-.emoji-item:hover {
-  transform: translateY(-2px);
-}
-
-.emoji-item.touch-dragging {
-  opacity: 0.6;
-  transform: scale(0.9);
-}
-
-.emoji-item img {
-  transition: opacity 0.3s;
-}
-
-@media (max-width: 768px) {
-  .emoji-item {
-    margin: 2px;
-  }
-
-  .emoji-item button {
-    opacity: 1;
-  }
-}
-</style>
+<style scoped src="./EmojiGrid.css" />

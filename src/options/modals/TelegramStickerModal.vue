@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
+import {
+  QuestionCircleOutlined,
+  CloudUploadOutlined,
+  SearchOutlined,
+  SaveOutlined,
+  FileImageOutlined
+} from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 import {
@@ -23,11 +30,6 @@ const store = useEmojiStore()
 
 // --- 状态 ---
 const telegramBotToken = ref('')
-getTelegramBotToken()
-  .then(token => {
-    if (token) telegramBotToken.value = token
-  })
-  .catch(console.error)
 const telegramInput = ref('')
 const isProcessing = ref(false)
 const progress = ref({ processed: 0, total: 0, message: '' })
@@ -44,6 +46,22 @@ const selectedGroupId = ref<string>('')
 
 // 获取的贴纸集信息
 const stickerSetInfo = ref<TelegramStickerSet | null>(null)
+
+// Modal visibility wrapper
+const isOpen = computed({
+  get: () => props.modelValue,
+  set: val => {
+    if (!val) close()
+    else emit('update:modelValue', val)
+  }
+})
+
+// Initialize token
+getTelegramBotToken()
+  .then(token => {
+    if (token) telegramBotToken.value = token
+  })
+  .catch(console.error)
 
 // 可用分组列表
 const availableGroups = computed(() => {
@@ -66,14 +84,16 @@ const saveBotToken = () => {
 const close = () => {
   emit('update:modelValue', false)
   // 重置状态
-  telegramInput.value = ''
-  errorMessage.value = ''
-  progress.value = { processed: 0, total: 0, message: '' }
-  stickerSetInfo.value = null
-  importMode.value = 'new'
-  newGroupName.value = ''
-  newGroupIcon.value = '📱'
-  selectedGroupId.value = ''
+  if (!isProcessing.value) {
+    telegramInput.value = ''
+    errorMessage.value = ''
+    progress.value = { processed: 0, total: 0, message: '' }
+    stickerSetInfo.value = null
+    importMode.value = 'new'
+    newGroupName.value = ''
+    newGroupIcon.value = '📱'
+    selectedGroupId.value = ''
+  }
 }
 
 /**
@@ -219,8 +239,8 @@ const doImport = async () => {
 
         // 上传到托管服务
         progress.value.message = `上传贴纸 ${i + 1}/${total} 到 ${uploadService.value}...`
-        const uploadUrl = await service.uploadFile(file, percent => {
-          console.log(`Upload progress: ${percent}%`)
+        const uploadUrl = await service.uploadFile(file, () => {
+          // console.log(`Upload progress: ${percent}%`)
         })
 
         const emojiId = `telegram_${sticker.file_id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -235,7 +255,7 @@ const doImport = async () => {
         progress.value.processed = i + 1
       } catch (err) {
         console.error(`处理贴纸失败：`, err)
-        message.warning(`贴纸 ${i + 1} 上传失败，已跳过`)
+        // message.warning(`贴纸 ${i + 1} 上传失败，已跳过`)
       }
     }
 
@@ -285,212 +305,213 @@ const doImport = async () => {
 </script>
 
 <template>
-  <div
-    v-if="modelValue"
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    @click="close"
+  <a-modal
+    v-model:open="isOpen"
+    title="导入 Telegram 贴纸包"
+    :width="700"
+    :footer="null"
+    @cancel="close"
+    :mask-closable="!isProcessing"
+    :keyboard="!isProcessing"
+    :closable="!isProcessing"
   >
-    <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
-      @click.stop
-    >
-      <div class="flex-shrink-0 mb-4">
-        <h3 class="text-xl font-semibold mb-4 dark:text-white">导入 Telegram 贴纸包</h3>
+    <div class="space-y-4">
+      <!-- 错误信息 -->
+      <a-alert v-if="errorMessage" :message="errorMessage" type="error" show-icon class="mb-4" />
 
-        <!-- 错误信息 -->
-        <div
-          v-if="errorMessage"
-          class="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-md"
-        >
-          <p class="text-sm text-red-800 dark:text-red-200">{{ errorMessage }}</p>
-        </div>
-
-        <!-- Bot Token 设置 -->
-        <div
-          class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
-        >
-          <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">Bot Token 设置</h4>
-          <div class="flex gap-2">
-            <input
-              v-model="telegramBotToken"
-              type="password"
-              placeholder="输入 Telegram Bot Token"
-              class="flex-1 px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-black text-blue-900 dark:text-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              @click="saveBotToken"
-              :disabled="!telegramBotToken"
-              class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              保存
-            </button>
-          </div>
-        </div>
-
-        <!-- 上传服务选择 -->
-        <div
-          class="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md"
-        >
-          <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">选择上传服务</h4>
-          <div class="flex gap-2">
-            <label class="flex items-center cursor-pointer">
-              <input v-model="uploadService" type="radio" value="linux.do" class="mr-2" />
-              <span class="text-gray-700 dark:text-gray-300">linux.do</span>
-            </label>
-            <label class="flex items-center cursor-pointer">
-              <input v-model="uploadService" type="radio" value="idcflare.com" class="mr-2" />
-              <span class="text-gray-700 dark:text-gray-300">idcflare.com</span>
-            </label>
-            <label class="flex items-center cursor-pointer">
-              <input v-model="uploadService" type="radio" value="imgbed" class="mr-2" />
-              <span class="text-gray-700 dark:text-gray-300">imgbed</span>
-            </label>
-          </div>
-          <p class="text-xs text-purple-700 dark:text-purple-300 mt-2">
-            贴纸将自动上传到所选服务并保存托管链接
-          </p>
-        </div>
-
-        <!-- 贴纸包输入 -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
-            贴纸包链接或名称
-          </label>
-          <div class="flex gap-2">
-            <input
-              v-model="telegramInput"
-              type="text"
-              placeholder="例如：https://t.me/addstickers/xxx 或 xxx"
-              class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              @keyup.enter="previewStickerSet"
-            />
-            <button
-              @click="previewStickerSet"
-              :disabled="!telegramInput || isProcessing"
-              class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              预览
-            </button>
-          </div>
-        </div>
-
-        <!-- 进度显示 -->
-        <div
-          v-if="isProcessing && progress.message"
-          class="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-md"
-        >
-          <p class="text-sm text-gray-700 dark:text-gray-300">{{ progress.message }}</p>
-          <div v-if="progress.total > 0" class="mt-2 flex items-center gap-2">
-            <div class="flex-1 bg-gray-300 dark:bg-gray-600 rounded-full h-2">
-              <div
-                class="bg-blue-600 h-2 rounded-full transition-all"
-                :style="{ width: `${(progress.processed / progress.total) * 100}%` }"
-              ></div>
-            </div>
-            <span class="text-xs text-gray-600 dark:text-gray-400">
-              {{ progress.processed }}/{{ progress.total }}
-            </span>
-          </div>
+      <!-- Bot Token 设置 -->
+      <div
+        class="p-4 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
+      >
+        <h4 class="font-medium mb-2 flex items-center gap-2 dark:text-gray-200">
+          Bot Token 设置
+          <a-tooltip title="访问 Telegram API 需要 Bot Token，请向 @BotFather 申请">
+            <QuestionCircleOutlined class="text-gray-400" />
+          </a-tooltip>
+        </h4>
+        <div class="flex gap-2">
+          <a-input-password
+            v-model:value="telegramBotToken"
+            placeholder="输入 Telegram Bot Token"
+          />
+          <a-button @click="saveBotToken" :disabled="!telegramBotToken">
+            <template #icon><SaveOutlined /></template>
+            保存
+          </a-button>
         </div>
       </div>
 
-      <!-- 贴纸包预览 -->
-      <div v-if="stickerSetInfo" class="flex-1 overflow-y-auto">
-        <div
-          class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md"
-        >
-          <h4 class="font-medium text-green-900 dark:text-green-100 mb-2">
-            {{ stickerSetInfo.title }}
-          </h4>
-          <p class="text-sm text-green-800 dark:text-green-200">
-            {{ stickerSetInfo.stickers.length }} 个贴纸
-            <span v-if="stickerSetInfo.is_animated">(包含动画贴纸)</span>
-            <span v-if="stickerSetInfo.is_video">(包含视频贴纸)</span>
-          </p>
-        </div>
+      <!-- 上传服务选择 -->
+      <div
+        class="p-4 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
+      >
+        <h4 class="font-medium mb-2 flex items-center gap-2 dark:text-gray-200">
+          选择上传服务
+          <a-tooltip title="贴纸将直接上传到选定的图床服务">
+            <QuestionCircleOutlined class="text-gray-400" />
+          </a-tooltip>
+        </h4>
+        <a-radio-group v-model:value="uploadService" button-style="solid">
+          <a-radio-button value="linux.do">linux.do</a-radio-button>
+          <a-radio-button value="idcflare.com">idcflare.com</a-radio-button>
+          <a-radio-button value="imgbed">imgbed</a-radio-button>
+        </a-radio-group>
+      </div>
 
-        <!-- 导入选项 -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
-            导入模式
-          </label>
-          <div class="flex gap-4">
-            <label class="flex items-center cursor-pointer">
-              <input v-model="importMode" type="radio" value="new" class="mr-2" />
-              <span class="text-gray-700 dark:text-gray-300">新建分组</span>
-            </label>
-            <label class="flex items-center cursor-pointer">
-              <input v-model="importMode" type="radio" value="update" class="mr-2" />
-              <span class="text-gray-700 dark:text-gray-300">更新已有分组</span>
-            </label>
+      <!-- 贴纸包输入 -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          贴纸包链接或名称
+        </label>
+        <div class="flex gap-2">
+          <a-input
+            v-model:value="telegramInput"
+            placeholder="例如：https://t.me/addstickers/xxx 或 xxx"
+            @pressEnter="previewStickerSet"
+            :disabled="isProcessing"
+          />
+          <a-button
+            type="primary"
+            @click="previewStickerSet"
+            :loading="isProcessing && !stickerSetInfo"
+            :disabled="!telegramInput || isProcessing"
+          >
+            <template #icon><SearchOutlined /></template>
+            预览
+          </a-button>
+        </div>
+      </div>
+
+      <!-- 进度显示 -->
+      <div v-if="isProcessing" class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded">
+        <div class="flex justify-between mb-2 text-sm">
+          <span class="text-blue-700 dark:text-blue-300">{{ progress.message }}</span>
+          <span v-if="progress.total > 0" class="text-blue-700 dark:text-blue-300">
+            {{ progress.processed }}/{{ progress.total }}
+          </span>
+        </div>
+        <a-progress
+          :percent="
+            progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0
+          "
+          status="active"
+          :stroke-color="{ from: '#108ee9', to: '#87d068' }"
+        />
+      </div>
+
+      <!-- 贴纸包预览与导入设置 -->
+      <div v-if="stickerSetInfo" class="mt-4 border-t pt-4 dark:border-gray-700">
+        <div
+          class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800"
+        >
+          <div class="flex items-start gap-3">
+            <FileImageOutlined class="text-2xl text-green-600 dark:text-green-400 mt-1" />
+            <div>
+              <h4 class="font-bold text-lg text-green-900 dark:text-green-100">
+                {{ stickerSetInfo.title }}
+              </h4>
+              <p class="text-green-800 dark:text-green-200 text-sm">
+                包含 {{ stickerSetInfo.stickers.length }} 个贴纸
+                <span
+                  v-if="stickerSetInfo.is_animated"
+                  class="ml-2 px-1.5 py-0.5 bg-green-200 dark:bg-green-800 rounded text-xs"
+                >
+                  动画
+                </span>
+                <span
+                  v-if="stickerSetInfo.is_video"
+                  class="ml-2 px-1.5 py-0.5 bg-green-200 dark:bg-green-800 rounded text-xs"
+                >
+                  视频
+                </span>
+              </p>
+            </div>
           </div>
         </div>
 
-        <!-- 新建分组选项 -->
-        <div v-if="importMode === 'new'" class="mb-4 space-y-3">
+        <!-- 导入模式 -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            导入方式
+          </label>
+          <a-radio-group v-model:value="importMode">
+            <a-radio value="new">新建分组</a-radio>
+            <a-radio value="update">更新/添加到已有分组</a-radio>
+          </a-radio-group>
+        </div>
+
+        <!-- 新建分组设置 -->
+        <div v-if="importMode === 'new'" class="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               分组名称
             </label>
-            <input
-              v-model="newGroupName"
-              type="text"
-              placeholder="输入分组名称"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
-            />
+            <a-input v-model:value="newGroupName" placeholder="输入分组名称" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
-              分组图标
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              图标
             </label>
-            <input
-              v-model="newGroupIcon"
-              type="text"
-              placeholder="输入 emoji 图标"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
-            />
+            <a-input v-model:value="newGroupIcon" placeholder="输入 Emoji" />
           </div>
         </div>
 
-        <!-- 更新分组选项 -->
+        <!-- 更新分组设置 -->
         <div v-if="importMode === 'update'" class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
-            选择要更新的分组
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            选择目标分组
           </label>
-          <select
-            v-model="selectedGroupId"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white"
+          <a-select
+            v-model:value="selectedGroupId"
+            class="w-full"
+            placeholder="请选择分组"
+            show-search
+            option-filter-prop="label"
           >
-            <option value="">请选择分组</option>
-            <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-              {{ group.icon }} {{ group.name }} ({{ group.emojis.length }} 个表情)
-            </option>
-          </select>
+            <a-select-option
+              v-for="group in availableGroups"
+              :key="group.id"
+              :value="group.id"
+              :label="group.name"
+            >
+              <span role="img" :aria-label="group.name" class="mr-2">{{ group.icon }}</span>
+              {{ group.name }} ({{ group.emojis.length }})
+            </a-select-option>
+          </a-select>
+        </div>
+
+        <!-- 底部按钮 -->
+        <div class="flex justify-end gap-3 mt-6">
+          <a-button @click="close" :disabled="isProcessing">取消</a-button>
+          <a-button
+            type="primary"
+            @click="doImport"
+            :loading="isProcessing"
+            :disabled="
+              !stickerSetInfo ||
+              (importMode === 'new' && !newGroupName.trim()) ||
+              (importMode === 'update' && !selectedGroupId)
+            "
+          >
+            <template #icon><CloudUploadOutlined /></template>
+            开始导入
+          </a-button>
         </div>
       </div>
 
-      <!-- 底部按钮 -->
-      <div class="flex justify-end gap-3 mt-4">
-        <button
-          @click="close"
-          :disabled="isProcessing"
-          class="px-4 py-2 text-sm text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-50"
-        >
-          取消
-        </button>
-        <button
-          @click="doImport"
-          :disabled="
-            !stickerSetInfo ||
-            isProcessing ||
-            (importMode === 'new' && !newGroupName.trim()) ||
-            (importMode === 'update' && !selectedGroupId)
-          "
-          class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ importMode === 'new' ? '导入到新分组' : '更新分组' }}
-        </button>
+      <div
+        v-else
+        class="text-xs text-gray-500 dark:text-gray-400 mt-4 bg-gray-50 dark:bg-gray-800 p-3 rounded"
+      >
+        <p class="font-medium mb-1">💡 提示：</p>
+        <ul class="list-disc pl-4 space-y-1">
+          <li>导入将会把贴纸直接上传到选定的图床服务。</li>
+          <li>支持静态图片贴纸。视频贴纸 (WebM) 和部分动画贴纸可能会被跳过。</li>
+          <li>如果遇到 "Too Many Requests" 错误，请稍后重试。</li>
+        </ul>
       </div>
     </div>
-  </div>
+  </a-modal>
 </template>
+
+<style scoped src="./TelegramStickerModal.css" />

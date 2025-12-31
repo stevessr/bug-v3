@@ -8,9 +8,9 @@ import FileUploader from '../components/FileUploader.vue'
 import FileListDisplay from '../components/FileListDisplay.vue'
 import GroupSelector from '../components/GroupSelector.vue'
 import CreateGroupModal from '../components/CreateGroupModal.vue'
+import TelegramStickerModal from '../modals/TelegramStickerModal.vue'
 
 import { useBufferBatch } from './composables/useBufferBatch'
-import { useTelegramImport } from './composables/useTelegramImport'
 
 import { uploadServices } from '@/utils/uploadServices'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
@@ -281,18 +281,7 @@ const {
 })
 
 // Telegram Import Logic
-const {
-  telegramBotToken,
-  showTelegramModal,
-  telegramInput,
-  isProcessingTelegram,
-  telegramProgress,
-  saveBotToken,
-  handleTelegramImport: processTelegramImport
-} = useTelegramImport()
-
-// 包装 handleTelegramImport 以适配组件内的 addFiles
-const handleTelegramImport = () => processTelegramImport(addFiles)
+const showTelegramModal = ref(false)
 
 // 持久化相关函数 - 使用 IndexedDB 存储文件避免 localStorage 配额限制
 const DB_NAME = 'buffer-files-db'
@@ -1836,67 +1825,6 @@ onBeforeUnmount(() => {
     />
 
     <!-- Telegram 导入模态框 -->
-    <a-modal
-      v-model:open="showTelegramModal"
-      title="从 Telegram 导入贴纸"
-      :confirm-loading="isProcessingTelegram"
-      @ok="handleTelegramImport"
-    >
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Telegram Bot Token
-            <a-tooltip title="需要一个 Bot Token 来访问 Telegram API。请向 @BotFather 申请。">
-              <QuestionCircleOutlined class="text-gray-400" />
-            </a-tooltip>
-          </label>
-          <div class="flex gap-2">
-            <a-input-password
-              v-model:value="telegramBotToken"
-              placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-            />
-            <a-button @click="saveBotToken">保存</a-button>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            贴纸包链接或名称
-          </label>
-          <a-input
-            v-model:value="telegramInput"
-            placeholder="https://t.me/addstickers/MyStickerSet 或 MyStickerSet"
-            @pressEnter="handleTelegramImport"
-          />
-        </div>
-
-        <div v-if="isProcessingTelegram" class="bg-blue-50 dark:bg-blue-900 p-3 rounded text-sm">
-          <div class="flex justify-between mb-1">
-            <span>{{ telegramProgress.message }}</span>
-            <span v-if="telegramProgress.total > 0">
-              {{ Math.round((telegramProgress.processed / telegramProgress.total) * 100) }}%
-            </span>
-          </div>
-          <a-progress
-            :percent="
-              telegramProgress.total > 0
-                ? Math.round((telegramProgress.processed / telegramProgress.total) * 100)
-                : 0
-            "
-            status="active"
-            :show-info="false"
-          />
-        </div>
-
-        <div class="text-xs text-gray-500 dark:text-gray-400">
-          <p>提示：</p>
-          <ul class="list-disc pl-4 space-y-1">
-            <li>仅支持静态图片贴纸和部分 WebP 贴纸</li>
-            <li>会自动跳过视频 (WebM) 和动态贴纸</li>
-            <li>导入后的图片将自动添加到缓冲区，您可以继续上传到图床</li>
-          </ul>
-        </div>
-      </div>
-    </a-modal>
+    <TelegramStickerModal v-model="showTelegramModal" />
   </div>
 </template>

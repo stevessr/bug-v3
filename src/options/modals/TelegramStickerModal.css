@@ -1,0 +1,23 @@
+/* Ensure modal content handles dark mode correctly */
+:deep(.ant-modal-content) {
+  @apply dark:bg-gray-900 dark:text-white;
+}
+:deep(.ant-modal-header) {
+  @apply dark:bg-gray-900 dark:text-white;
+}
+:deep(.ant-modal-title) {
+  @apply dark:text-white;
+}
+:deep(.ant-modal-close) {
+  @apply dark:text-gray-400 dark:hover:text-white;
+}
+:deep(.ant-input),
+:deep(.ant-input-password) {
+  @apply dark:bg-gray-800 dark:text-white dark:border-gray-700;
+}
+:deep(.ant-radio-button-wrapper) {
+  @apply dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700;
+}
+:deep(.ant-radio-button-wrapper-checked) {
+  @apply dark:bg-blue-600 dark:text-white dark:border-blue-600;
+}
