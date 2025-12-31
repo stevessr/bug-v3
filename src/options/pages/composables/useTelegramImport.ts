@@ -26,9 +26,11 @@ export function useTelegramImport() {
   const telegramProgress = ref<TelegramProgress>({ processed: 0, total: 0, message: '' })
 
   // Initialize token
-  getTelegramBotToken().then(token => {
-    if (token) telegramBotToken.value = token
-  })
+  getTelegramBotToken()
+    .then(token => {
+      if (token) telegramBotToken.value = token
+    })
+    .catch(console.error)
 
   // --- 方法 ---
 

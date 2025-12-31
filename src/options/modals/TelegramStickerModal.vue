@@ -23,9 +23,11 @@ const store = useEmojiStore()
 
 // --- 状态 ---
 const telegramBotToken = ref('')
-getTelegramBotToken().then(token => {
-  if (token) telegramBotToken.value = token
-})
+getTelegramBotToken()
+  .then(token => {
+    if (token) telegramBotToken.value = token
+  })
+  .catch(console.error)
 const telegramInput = ref('')
 const isProcessing = ref(false)
 const progress = ref({ processed: 0, total: 0, message: '' })
