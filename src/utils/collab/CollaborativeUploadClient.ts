@@ -1,8 +1,6 @@
 import { uploadServices } from '../uploadServices'
-import {
-  DEFAULT_RECONNECT_DELAY_MS,
-  DEFAULT_TASK_TIMEOUT_MS
-} from './constants'
+
+import { DEFAULT_RECONNECT_DELAY_MS, DEFAULT_TASK_TIMEOUT_MS } from './constants'
 import type {
   CollaborativeUploadConfig,
   ConnectionStatus,

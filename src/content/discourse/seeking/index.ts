@@ -4,6 +4,7 @@
  */
 
 import { requestSettingFromBackground } from '../../utils/requestSetting'
+
 import { CONFIG, categoryMap, categoryColors } from './config'
 import { state, saveConfig, loadConfig } from './state'
 import {

@@ -45,6 +45,7 @@ declare global {
   const commonMessages: typeof import('./utils/i18n')['commonMessages']
   const computed: typeof import('vue')['computed']
   const createApp: typeof import('vue')['createApp']
+  const createDatabaseFile: typeof import('./utils/cacheExportHelpers')['createDatabaseFile']
   const createFileUrl: typeof import('./utils/telegramResolver')['createFileUrl']
   const createLogger: typeof import('./utils/logger')['createLogger']
   const createPinia: typeof import('pinia')['createPinia']
@@ -141,6 +142,7 @@ declare global {
   const onUpdated: typeof import('vue')['onUpdated']
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
   const optimizedHashService: typeof import('./utils/optimizedHashService')['optimizedHashService']
+  const parseDatabaseFile: typeof import('./utils/cacheExportHelpers')['parseDatabaseFile']
   const preloadImages: typeof import('./utils/imageUrlHelper')['preloadImages']
   const preloadToMemory: typeof import('./utils/imageCache')['preloadToMemory']
   const processTelegramStickers: typeof import('./utils/telegramResolver')['processTelegramStickers']
@@ -293,6 +295,7 @@ declare module 'vue' {
     readonly commonMessages: UnwrapRef<typeof import('./utils/i18n')['commonMessages']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
+    readonly createDatabaseFile: UnwrapRef<typeof import('./utils/cacheExportHelpers')['createDatabaseFile']>
     readonly createFileUrl: UnwrapRef<typeof import('./utils/telegramResolver')['createFileUrl']>
     readonly createLogger: UnwrapRef<typeof import('./utils/logger')['createLogger']>
     readonly createPinia: UnwrapRef<typeof import('pinia')['createPinia']>
@@ -387,6 +390,7 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly optimizedHashService: UnwrapRef<typeof import('./utils/optimizedHashService')['optimizedHashService']>
+    readonly parseDatabaseFile: UnwrapRef<typeof import('./utils/cacheExportHelpers')['parseDatabaseFile']>
     readonly preloadImages: UnwrapRef<typeof import('./utils/imageUrlHelper')['preloadImages']>
     readonly preloadToMemory: UnwrapRef<typeof import('./utils/imageCache')['preloadToMemory']>
     readonly processTelegramStickers: UnwrapRef<typeof import('./utils/telegramResolver')['processTelegramStickers']>
