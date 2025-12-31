@@ -9,7 +9,9 @@ declare global {
   const BUTTON_TEXT: typeof import('./utils/constants')['BUTTON_TEXT']
   const CloudflareSyncService: typeof import('./utils/cloudflareSync')['CloudflareSyncService']
   const CloudflareSyncTarget: typeof import('./utils/syncTargets')['CloudflareSyncTarget']
-  const CollaborativeUploadClient: typeof import('./utils/collaborativeUpload')['CollaborativeUploadClient']
+  const CollaborativeUploadClient: typeof import('./utils/collab/CollaborativeUploadClient')['CollaborativeUploadClient']
+  const DEFAULT_RECONNECT_DELAY_MS: typeof import('./utils/collab/constants')['DEFAULT_RECONNECT_DELAY_MS']
+  const DEFAULT_TASK_TIMEOUT_MS: typeof import('./utils/collab/constants')['DEFAULT_TASK_TIMEOUT_MS']
   const EMOJI: typeof import('./utils/constants')['EMOJI']
   const EffectScope: typeof import('vue')['EffectScope']
   const ImageCache: typeof import('./utils/imageCache')['ImageCache']
@@ -39,7 +41,7 @@ declare global {
   const clearCache: typeof import('./utils/imageCache')['clearCache']
   const clearSyncConfig: typeof import('./utils/syncConfigStorage')['clearSyncConfig']
   const cloudflareSyncService: typeof import('./utils/cloudflareSync')['cloudflareSyncService']
-  const collaborativeUpload: typeof import('./utils/collaborativeUpload')['collaborativeUpload']
+  const collaborativeUpload: typeof import('./utils/collab/index')['collaborativeUpload']
   const commonMessages: typeof import('./utils/i18n')['commonMessages']
   const computed: typeof import('vue')['computed']
   const createApp: typeof import('vue')['createApp']
@@ -89,7 +91,7 @@ declare global {
   const getStickerSet: typeof import('./utils/telegramResolver')['getStickerSet']
   const getTelegramBotToken: typeof import('./utils/telegramResolver')['getTelegramBotToken']
   const getUILanguage: typeof import('./utils/i18n')['getUILanguage']
-  const getWorkerClient: typeof import('./utils/collaborativeUpload')['getWorkerClient']
+  const getWorkerClient: typeof import('./utils/collab/index')['getWorkerClient']
   const h: typeof import('vue')['h']
   const imageCache: typeof import('./utils/imageCache')['imageCache']
   const imageCacheService: typeof import('./utils/imageCacheService')['imageCacheService']
@@ -171,8 +173,8 @@ declare global {
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
-  const startWorkerMode: typeof import('./utils/collaborativeUpload')['startWorkerMode']
-  const stopWorkerMode: typeof import('./utils/collaborativeUpload')['stopWorkerMode']
+  const startWorkerMode: typeof import('./utils/collab/index')['startWorkerMode']
+  const stopWorkerMode: typeof import('./utils/collab/index')['stopWorkerMode']
   const storageBatchGet: typeof import('./utils/simpleStorage')['storageBatchGet']
   const storageBatchRemove: typeof import('./utils/simpleStorage')['storageBatchRemove']
   const storageBatchSet: typeof import('./utils/simpleStorage')['storageBatchSet']
@@ -231,8 +233,8 @@ declare global {
   export type { CloudflareSyncService } from './utils/cloudflareSync'
   import('./utils/cloudflareSync')
   // @ts-ignore
-  export type { CollaborativeUploadClient } from './utils/collaborativeUpload'
-  import('./utils/collaborativeUpload')
+  export type { CollaborativeUploadClient } from './utils/collab/CollaborativeUploadClient'
+  import('./utils/collab/CollaborativeUploadClient')
   // @ts-ignore
   export type { ImageCache } from './utils/imageCache'
   import('./utils/imageCache')
@@ -258,7 +260,9 @@ declare module 'vue' {
     readonly BUTTON_TEXT: UnwrapRef<typeof import('./utils/constants')['BUTTON_TEXT']>
     readonly CloudflareSyncService: UnwrapRef<typeof import('./utils/cloudflareSync')['CloudflareSyncService']>
     readonly CloudflareSyncTarget: UnwrapRef<typeof import('./utils/syncTargets')['CloudflareSyncTarget']>
-    readonly CollaborativeUploadClient: UnwrapRef<typeof import('./utils/collaborativeUpload')['CollaborativeUploadClient']>
+    readonly CollaborativeUploadClient: UnwrapRef<typeof import('./utils/collab/CollaborativeUploadClient')['CollaborativeUploadClient']>
+    readonly DEFAULT_RECONNECT_DELAY_MS: UnwrapRef<typeof import('./utils/collab/constants')['DEFAULT_RECONNECT_DELAY_MS']>
+    readonly DEFAULT_TASK_TIMEOUT_MS: UnwrapRef<typeof import('./utils/collab/constants')['DEFAULT_TASK_TIMEOUT_MS']>
     readonly EMOJI: UnwrapRef<typeof import('./utils/constants')['EMOJI']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly ImageCache: UnwrapRef<typeof import('./utils/imageCache')['ImageCache']>
@@ -285,7 +289,7 @@ declare module 'vue' {
     readonly clearCache: UnwrapRef<typeof import('./utils/imageCache')['clearCache']>
     readonly clearSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['clearSyncConfig']>
     readonly cloudflareSyncService: UnwrapRef<typeof import('./utils/cloudflareSync')['cloudflareSyncService']>
-    readonly collaborativeUpload: UnwrapRef<typeof import('./utils/collaborativeUpload')['collaborativeUpload']>
+    readonly collaborativeUpload: UnwrapRef<typeof import('./utils/collab/index')['collaborativeUpload']>
     readonly commonMessages: UnwrapRef<typeof import('./utils/i18n')['commonMessages']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
@@ -333,7 +337,7 @@ declare module 'vue' {
     readonly getStickerSet: UnwrapRef<typeof import('./utils/telegramResolver')['getStickerSet']>
     readonly getTelegramBotToken: UnwrapRef<typeof import('./utils/telegramResolver')['getTelegramBotToken']>
     readonly getUILanguage: UnwrapRef<typeof import('./utils/i18n')['getUILanguage']>
-    readonly getWorkerClient: UnwrapRef<typeof import('./utils/collaborativeUpload')['getWorkerClient']>
+    readonly getWorkerClient: UnwrapRef<typeof import('./utils/collab/index')['getWorkerClient']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly imageCache: UnwrapRef<typeof import('./utils/imageCache')['imageCache']>
     readonly imageCacheService: UnwrapRef<typeof import('./utils/imageCacheService')['imageCacheService']>
@@ -415,8 +419,8 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
-    readonly startWorkerMode: UnwrapRef<typeof import('./utils/collaborativeUpload')['startWorkerMode']>
-    readonly stopWorkerMode: UnwrapRef<typeof import('./utils/collaborativeUpload')['stopWorkerMode']>
+    readonly startWorkerMode: UnwrapRef<typeof import('./utils/collab/index')['startWorkerMode']>
+    readonly stopWorkerMode: UnwrapRef<typeof import('./utils/collab/index')['stopWorkerMode']>
     readonly storageBatchGet: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchGet']>
     readonly storageBatchRemove: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchRemove']>
     readonly storageBatchSet: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchSet']>
