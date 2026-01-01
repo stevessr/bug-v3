@@ -240,12 +240,25 @@ export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
 
       collaborativeResults.value = results
 
+      // 先清空 pendingRemoteUploads，避免 finally 中的 saveIncrementalProgress 重复处理
+      // 因为我们在这里统一处理所有结果
+      pendingRemoteUploads.value = []
+
       // 处理远程上传的结果（本地上传已在 onLocalUploadComplete 中处理）
       // 使用批量模式添加到缓冲区，避免竞争条件导致数据回档
       emojiStore.beginBatch()
       try {
+        // 对 results 进行去重（基于 filename），避免服务器重复发送消息导致的重复
+        const seenFilenames = new Set<string>()
         for (const result of results) {
           if (result.success && result.url) {
+            // 跳过已处理过的同名文件
+            if (seenFilenames.has(result.filename)) {
+              console.log(`[useCollaborativeUpload] Skipping duplicate result: ${result.filename}`)
+              continue
+            }
+            seenFilenames.add(result.filename)
+
             // 检查是否已经添加过（本地上传的已添加）
             const alreadyAdded = bufferGroup.value?.emojis.some(
               e => e.url === result.url || e.name === result.filename

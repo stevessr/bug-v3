@@ -499,8 +499,18 @@ export class CollaborativeUploadClient {
           })
           break
 
-        case 'TASK_COMPLETED':
+        case 'TASK_COMPLETED': {
           // 主控端收到任务完成通知（来自远程工作者）
+          // 检查是否已经有这个文件的结果，避免重复
+          const existingCompletedResult = this.sessionResults.find(
+            r => r.filename === data.filename
+          )
+          if (existingCompletedResult) {
+            console.warn(
+              `[CollaborativeUpload] Duplicate TASK_COMPLETED for ${data.filename}, ignoring`
+            )
+            break
+          }
           this.sessionResults.push({
             filename: data.filename,
             success: true,
@@ -529,9 +539,18 @@ export class CollaborativeUploadClient {
           })
           this.checkAllComplete()
           break
+        }
 
-        case 'TASK_FAILED':
+        case 'TASK_FAILED': {
           // 主控端收到任务失败通知（来自远程工作者）
+          // 检查是否已经有这个文件的结果，避免重复
+          const existingFailedResult = this.sessionResults.find(r => r.filename === data.filename)
+          if (existingFailedResult) {
+            console.warn(
+              `[CollaborativeUpload] Duplicate TASK_FAILED for ${data.filename}, ignoring`
+            )
+            break
+          }
           this.sessionResults.push({
             filename: data.filename,
             success: false,
@@ -558,6 +577,7 @@ export class CollaborativeUploadClient {
           })
           this.checkAllComplete()
           break
+        }
 
         case 'SESSION_COMPLETED':
           // 服务器通知会话完成（仅远程任务）
