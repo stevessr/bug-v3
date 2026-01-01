@@ -1,26 +1,13 @@
 import { createRouter, createWebHashHistory, createMemoryHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
-// 页面组件
-import SettingsPage from '../pages/SettingsPage.vue'
-import FavoritesPage from '../pages/FavoritesPage.vue'
-import GroupsPage from '../pages/GroupsPage.vue'
-import UngroupedPage from '../pages/UngroupedPage.vue'
-import ArchivedPage from '../pages/ArchivedPage.vue'
-import StatsPage from '../pages/StatsPage.vue'
-import AboutPage from '../pages/AboutPage.vue'
-import AIRenamePage from '../pages/ai-rename/AIRenamePage.vue'
-import BufferPage from '../pages/BufferPage.vue'
-import BilibiliImportPage from '../pages/BilibiliImportPage.vue'
-import TelegramImportPage from '../pages/TelegramImportPage.vue'
-import ExportPage from '../pages/ExportPage.vue'
-import MarketPage from '../pages/MarketPage.vue'
-
+// 优化：使用动态导入实现路由懒加载
+// 这可以显著减少初始 bundle 体积，加快选项页启动速度
 const routes: RouteRecordRaw[] = [
   {
     path: '/settings',
     name: 'settings',
-    component: SettingsPage,
+    component: () => import('../pages/SettingsPage.vue'),
     meta: {
       title: '设置'
     }
@@ -28,7 +15,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/favorites',
     name: 'favorites',
-    component: FavoritesPage,
+    component: () => import('../pages/FavoritesPage.vue'),
     meta: {
       title: '常用'
     }
@@ -36,7 +23,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/groups',
     name: 'groups',
-    component: GroupsPage,
+    component: () => import('../pages/GroupsPage.vue'),
     meta: {
       title: '分组管理'
     }
@@ -44,7 +31,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/ungrouped',
     name: 'ungrouped',
-    component: UngroupedPage,
+    component: () => import('../pages/UngroupedPage.vue'),
     meta: {
       title: '未分组'
     }
@@ -52,7 +39,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/archived',
     name: 'archived',
-    component: ArchivedPage,
+    component: () => import('../pages/ArchivedPage.vue'),
     meta: {
       title: '已归档'
     }
@@ -60,7 +47,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/stats',
     name: 'stats',
-    component: StatsPage,
+    component: () => import('../pages/StatsPage.vue'),
     meta: {
       title: '统计'
     }
@@ -68,7 +55,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/ai-rename',
     name: 'ai-rename',
-    component: AIRenamePage,
+    component: () => import('../pages/ai-rename/AIRenamePage.vue'),
     meta: {
       title: 'AI 批量重命名'
     }
@@ -76,7 +63,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/buffer',
     name: 'buffer',
-    component: BufferPage,
+    component: () => import('../pages/BufferPage.vue'),
     meta: {
       title: '缓冲区'
     }
@@ -84,7 +71,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/bilibili-import',
     name: 'bilibili-import',
-    component: BilibiliImportPage,
+    component: () => import('../pages/BilibiliImportPage.vue'),
     meta: {
       title: 'Bilibili 导入'
     }
@@ -92,7 +79,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/telegram-import',
     name: 'telegram-import',
-    component: TelegramImportPage,
+    component: () => import('../pages/TelegramImportPage.vue'),
     meta: {
       title: 'Telegram 导入'
     }
@@ -100,7 +87,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/export',
     name: 'export',
-    component: ExportPage,
+    component: () => import('../pages/ExportPage.vue'),
     meta: {
       title: '导出表情'
     }
@@ -108,7 +95,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/market',
     name: 'market',
-    component: MarketPage,
+    component: () => import('../pages/MarketPage.vue'),
     meta: {
       title: '云端市场'
     }
@@ -116,7 +103,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/about',
     name: 'about',
-    component: AboutPage,
+    component: () => import('../pages/AboutPage.vue'),
     meta: {
       title: '关于'
     }

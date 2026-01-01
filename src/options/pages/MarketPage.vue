@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, shallowRef, onMounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
 
 import CachedImage from '@/components/CachedImage.vue'
@@ -19,7 +19,8 @@ const getMarketBaseUrl = () => {
 
 // 市场数据
 const loading = ref(false)
-const marketGroups = ref<
+// 优化：使用 shallowRef 减少大数组的响应式代理开销
+const marketGroups = shallowRef<
   Array<{
     id: string
     name: string
@@ -37,8 +38,8 @@ const marketMetadata = ref<{
   totalGroups: number
 } | null>(null)
 
-// 已加载详情的分组数据缓存
-const groupDetailsCache = ref<Map<string, EmojiGroup>>(new Map())
+// 优化：使用 shallowRef 减少缓存 Map 的响应式代理开销
+const groupDetailsCache = shallowRef<Map<string, EmojiGroup>>(new Map())
 
 // 已安装的分组 ID 集合
 const installedGroupIds = computed(() => {
@@ -71,6 +72,9 @@ const currentDetailGroup = ref<EmojiGroup | null>(null)
 
 // 加载市场数据（仅加载 metadata）
 const loadMarketData = async () => {
+  // 优化：防止重复请求（竞态条件）
+  if (loading.value) return
+
   try {
     loading.value = true
 
@@ -137,8 +141,10 @@ const loadGroupDetails = async (groupId: string): Promise<EmojiGroup | null> => 
       }))
     }
 
-    // 缓存数据
-    groupDetailsCache.value.set(groupId, detailGroup)
+    // 优化：shallowRef 需要替换整个 Map 引用才能触发响应式更新
+    const newCache = new Map(groupDetailsCache.value)
+    newCache.set(groupId, detailGroup)
+    groupDetailsCache.value = newCache
 
     return detailGroup
   } catch (error) {

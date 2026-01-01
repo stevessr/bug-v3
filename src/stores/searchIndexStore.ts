@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, toRaw } from 'vue'
+import { shallowRef, ref, toRaw } from 'vue'
 
 import type { Emoji, EmojiGroup } from '@/types/type'
 
@@ -20,8 +20,10 @@ const createTrieNode = (): TrieNode => ({
  */
 export const useSearchIndexStore = defineStore('searchIndex', () => {
   // --- State ---
-  const searchIndexCache = ref<Map<string, Set<string>>>(new Map())
-  const searchPrefixTrie = ref<TrieNode>(createTrieNode())
+  // 优化：使用 shallowRef 减少大型数据结构的响应式代理开销
+  // 这些结构在构建后很少修改局部，只需在整体重构时替换引用
+  const searchIndexCache = shallowRef<Map<string, Set<string>>>(new Map())
+  const searchPrefixTrie = shallowRef<TrieNode>(createTrieNode())
   const searchIndexValid = ref(false)
 
   // --- Private Helpers ---

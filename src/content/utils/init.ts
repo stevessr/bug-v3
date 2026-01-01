@@ -17,9 +17,46 @@ import { contentImageCache } from './contentImageCache'
 // 缓存子菜单注入设置状态
 let cachedSubmenuInjectorEnabled: boolean | null = null
 
+// 存储定时器 ID 以便清理
+let toolbarCheckIntervalId: ReturnType<typeof setInterval> | null = null
+let floatingButtonIntervalId: ReturnType<typeof setInterval> | null = null
+let dataReloadIntervalId: ReturnType<typeof setInterval> | null = null
+let mutationObserver: MutationObserver | null = null
+
+/**
+ * 清理所有定时器和监听器
+ * 用于热更新或插件卸载时释放资源
+ */
+export function cleanupEmojiFeature(): void {
+  // 清理定时器
+  if (toolbarCheckIntervalId) {
+    clearInterval(toolbarCheckIntervalId)
+    toolbarCheckIntervalId = null
+  }
+  if (floatingButtonIntervalId) {
+    clearInterval(floatingButtonIntervalId)
+    floatingButtonIntervalId = null
+  }
+  if (dataReloadIntervalId) {
+    clearInterval(dataReloadIntervalId)
+    dataReloadIntervalId = null
+  }
+
+  // 清理 MutationObserver
+  if (mutationObserver) {
+    mutationObserver.disconnect()
+    mutationObserver = null
+  }
+
+  // 清理浮动按钮
+  cleanupFloatingButton()
+
+  console.log('[Emoji Extension] Cleanup completed')
+}
+
 // 页面卸载时清理资源，防止内存泄漏
 window.addEventListener('beforeunload', () => {
-  cleanupFloatingButton()
+  cleanupEmojiFeature()
 })
 
 // Function to check and re-inject buttons if needed
@@ -88,7 +125,12 @@ function setupReplyButtonListeners() {
   let mutationCheckTimeout: ReturnType<typeof setTimeout> | null = null
   let pendingCheck = false
 
-  const observer = new MutationObserver(mutations => {
+  // 清理之前的 observer（防止热更新时重复创建）
+  if (mutationObserver) {
+    mutationObserver.disconnect()
+  }
+
+  mutationObserver = new MutationObserver(mutations => {
     let shouldCheck = false
 
     mutations.forEach(mutation => {
@@ -136,7 +178,7 @@ function setupReplyButtonListeners() {
   })
 
   // Start observing DOM changes
-  observer.observe(document.body, {
+  mutationObserver.observe(document.body, {
     childList: true,
     subtree: true
   })
@@ -317,8 +359,12 @@ export async function initializeEmojiFeature(
     )
   }
 
-  // periodic checks
-  setInterval(() => {
+  // periodic checks - 使用模块级变量存储定时器 ID 以便清理
+  // 清理之前可能存在的定时器（防止热更新时重复创建）
+  if (toolbarCheckIntervalId) {
+    clearInterval(toolbarCheckIntervalId)
+  }
+  toolbarCheckIntervalId = setInterval(() => {
     // 如果启用了子菜单注入，则跳过工具栏按钮注入
     if (cachedSubmenuInjectorEnabled === true) return
 
@@ -335,13 +381,19 @@ export async function initializeEmojiFeature(
   }, 30000)
 
   // Check if floating button should be shown periodically
-  setInterval(() => {
+  if (floatingButtonIntervalId) {
+    clearInterval(floatingButtonIntervalId)
+  }
+  floatingButtonIntervalId = setInterval(() => {
     // 如果启用了子菜单注入，则不要显示浮动按钮
     if (cachedSubmenuInjectorEnabled === true) return
     checkAndShowFloatingButton()
   }, 5000)
 
-  setInterval(() => {
+  if (dataReloadIntervalId) {
+    clearInterval(dataReloadIntervalId)
+  }
+  dataReloadIntervalId = setInterval(() => {
     console.log('[Emoji Extension] Periodic data reload (module)')
     loadDataFromStorage()
   }, 120000)
