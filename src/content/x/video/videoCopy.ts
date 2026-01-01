@@ -352,7 +352,7 @@ function scanAndInjectVideo() {
   })
 }
 
-function observeVideos() {
+function observeVideos(): () => void {
   const obs = new MutationObserver(ms => {
     let changed = false
     ms.forEach(m => {
@@ -361,7 +361,16 @@ function observeVideos() {
     if (changed) setTimeout(scanAndInjectVideo, 120)
   })
   obs.observe(document.body, { childList: true, subtree: true, attributes: true })
+
+  // 返回 disconnect 函数以支持资源清理
+  return () => {
+    obs.disconnect()
+    console.log('[XVideoCopy] MutationObserver disconnected')
+  }
 }
+
+// 存储 disconnect 函数以便外部清理
+let disconnectObserver: (() => void) | null = null
 
 export function initVideoCopy() {
   try {
@@ -370,9 +379,20 @@ export function initVideoCopy() {
       return
     }
     setTimeout(scanAndInjectVideo, 200)
-    observeVideos()
+    disconnectObserver = observeVideos()
     console.log('[XVideoCopy] initialized')
   } catch (e) {
     console.error('[XVideoCopy] init failed', e)
+  }
+}
+
+/**
+ * 清理函数 - 停止 MutationObserver 监听
+ * 用于热更新或插件卸载时释放资源
+ */
+export function cleanupVideoCopy(): void {
+  if (disconnectObserver) {
+    disconnectObserver()
+    disconnectObserver = null
   }
 }

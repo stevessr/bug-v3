@@ -13,10 +13,8 @@ let cacheTimestamp = 0
 
 /** 常量定义 */
 const CACHE_TTL_MS = 30000 // 30 秒缓存有效期
-const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000 // 24 小时
-
-/** 存储定时器 ID 以便清理 */
-let cleanupIntervalId: ReturnType<typeof setInterval> | null = null
+const CLEANUP_ALARM_NAME = 'periodic-storage-cleanup'
+const CLEANUP_INTERVAL_MINUTES = 24 * 60 // 24 小时（以分钟为单位）
 
 async function getCachedData() {
   const now = Date.now()
@@ -203,34 +201,43 @@ export function setupStorageChangeListener() {
 }
 
 export function setupPeriodicCleanup() {
-  // 避免重复设置
-  if (cleanupIntervalId !== null) {
-    console.warn('[PeriodicCleanup] Already set up, skipping')
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI || !chromeAPI.alarms) {
+    console.warn('[PeriodicCleanup] chrome.alarms API not available')
     return
   }
 
-  cleanupIntervalId = setInterval(async () => {
-    const chromeAPI = getChromeAPI()
-    if (!chromeAPI || !chromeAPI.storage) return
+  // 使用 chrome.alarms API 替代 setInterval
+  // 优点：在 MV3 中 Service Worker 休眠后仍能正常触发
+  chromeAPI.alarms.create(CLEANUP_ALARM_NAME, {
+    delayInMinutes: CLEANUP_INTERVAL_MINUTES,
+    periodInMinutes: CLEANUP_INTERVAL_MINUTES
+  })
+
+  // 设置 alarm 监听器
+  chromeAPI.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
+    if (alarm.name !== CLEANUP_ALARM_NAME) return
 
     try {
       const data = await chromeAPI.storage.local.get(['emojiGroups'])
       if (data.emojiGroups) {
-        console.log('Storage cleanup check completed')
+        console.log('[PeriodicCleanup] Storage cleanup check completed')
       }
     } catch (error) {
-      console.error('Storage cleanup error:', error)
+      console.error('[PeriodicCleanup] Storage cleanup error:', error)
     }
-  }, CLEANUP_INTERVAL_MS)
+  })
+
+  console.log('[PeriodicCleanup] Alarm scheduled for every', CLEANUP_INTERVAL_MINUTES, 'minutes')
 }
 
 /**
  * 清理函数 - 停止定时清理任务
  */
 export function cleanupPeriodicCleanup(): void {
-  if (cleanupIntervalId !== null) {
-    clearInterval(cleanupIntervalId)
-    cleanupIntervalId = null
-    console.log('[PeriodicCleanup] Cleanup task stopped')
+  const chromeAPI = getChromeAPI()
+  if (chromeAPI?.alarms) {
+    chromeAPI.alarms.clear(CLEANUP_ALARM_NAME)
+    console.log('[PeriodicCleanup] Cleanup alarm cleared')
   }
 }

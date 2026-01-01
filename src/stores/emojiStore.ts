@@ -27,6 +27,7 @@ import { defaultSettings } from '@/types/defaultSettings'
 /** 常量定义 - 延迟时间（毫秒） */
 const SEARCH_INDEX_DEBOUNCE_MS = 100
 const SAVE_DEBOUNCE_MS = 100
+const SYNC_SETTINGS_DEBOUNCE_MS = 300 // 设置同步防抖时间
 
 export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- State ---
@@ -731,19 +732,30 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   }
 
   // Notify background to sync settings across contexts (content scripts)
-  // Use a separate function so we can call it after persistence if needed
-  const syncSettingsToBackground = async () => {
-    try {
-      const chromeAPI =
-        typeof chrome !== 'undefined'
-          ? chrome
-          : ((globalThis as Record<string, unknown>).chrome as typeof chrome | undefined)
-      if (chromeAPI?.runtime?.sendMessage) {
-        chromeAPI.runtime.sendMessage({ type: 'SYNC_SETTINGS', settings: settings.value })
-      }
-    } catch {
-      // ignore
+  // 优化：添加防抖，避免用户快速调节滑块时产生大量无效的 sendMessage 调用
+  let syncSettingsTimer: ReturnType<typeof setTimeout> | null = null
+
+  const syncSettingsToBackground = () => {
+    // 清除之前的定时器
+    if (syncSettingsTimer) {
+      clearTimeout(syncSettingsTimer)
     }
+
+    // 设置新的防抖定时器
+    syncSettingsTimer = setTimeout(() => {
+      try {
+        const chromeAPI =
+          typeof chrome !== 'undefined'
+            ? chrome
+            : ((globalThis as Record<string, unknown>).chrome as typeof chrome | undefined)
+        if (chromeAPI?.runtime?.sendMessage) {
+          chromeAPI.runtime.sendMessage({ type: 'SYNC_SETTINGS', settings: settings.value })
+        }
+      } catch {
+        // ignore
+      }
+      syncSettingsTimer = null
+    }, SYNC_SETTINGS_DEBOUNCE_MS)
   }
 
   // Specific setting update functions

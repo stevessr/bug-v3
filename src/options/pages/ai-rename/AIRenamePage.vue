@@ -37,7 +37,9 @@ const selectedEmojis = ref(new Set<string>())
 const imageSources = ref<Map<string, string>>(new Map())
 const loadingStates = ref<Map<string, boolean>>(new Map())
 
-// 初始化图片缓存
+// 初始化图片缓存 - 使用并发加载优化性能
+const CONCURRENT_BATCH_SIZE = 10 // 每批并发加载的数量
+
 const initializeImageSources = async () => {
   if (!allEmojis.value.length) return
 
@@ -47,31 +49,34 @@ const initializeImageSources = async () => {
   const newSources = new Map<string, string>()
   const newLoadingStates = new Map<string, boolean>()
 
-  for (const emoji of allEmojis.value) {
-    try {
-      if (emojiStore.settings.useIndexedDBForImages) {
-        // 使用缓存优先的加载函数
-        const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
-        newSources.set(emoji.id, result.url)
-        newLoadingStates.set(emoji.id, result.isLoading)
-        console.log(
-          `[AIRenamePage] Image source for ${emoji.name}:`,
-          result.url,
-          'from cache:',
-          result.isFromCache
-        )
-      } else {
-        // 直接 URL 模式
-        const fallbackSrc = emoji.displayUrl || emoji.url
-        newSources.set(emoji.id, fallbackSrc)
-        console.log(`[AIRenamePage] Direct URL for ${emoji.name}:`, fallbackSrc)
-      }
-    } catch (error) {
-      console.warn(`[AIRenamePage] Failed to get image source for ${emoji.name}:`, error)
-      // 回退到直接 URL
-      const fallbackSrc = emoji.displayUrl || emoji.url
-      newSources.set(emoji.id, fallbackSrc)
-    }
+  // 优化：使用并发批量加载替代串行加载
+  const emojis = allEmojis.value
+
+  for (let i = 0; i < emojis.length; i += CONCURRENT_BATCH_SIZE) {
+    const batch = emojis.slice(i, i + CONCURRENT_BATCH_SIZE)
+
+    // 并发处理当前批次
+    await Promise.all(
+      batch.map(async emoji => {
+        try {
+          if (emojiStore.settings.useIndexedDBForImages) {
+            // 使用缓存优先的加载函数
+            const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
+            newSources.set(emoji.id, result.url)
+            newLoadingStates.set(emoji.id, result.isLoading)
+          } else {
+            // 直接 URL 模式
+            const fallbackSrc = emoji.displayUrl || emoji.url
+            newSources.set(emoji.id, fallbackSrc)
+          }
+        } catch (error) {
+          console.warn(`[AIRenamePage] Failed to get image source for ${emoji.name}:`, error)
+          // 回退到直接 URL
+          const fallbackSrc = emoji.displayUrl || emoji.url
+          newSources.set(emoji.id, fallbackSrc)
+        }
+      })
+    )
   }
 
   imageSources.value = newSources
@@ -79,14 +84,14 @@ const initializeImageSources = async () => {
   console.log('[AIRenamePage] Image sources initialized:', imageSources.value.size)
 }
 
-// 监听表情数据变化
+// 监听表情数据变化 - 移除 deep: true，只监听数组长度变化
+// 原因：deep: true 会监听所有表情对象的属性变化，导致频繁的重新初始化
 watch(
-  () => allEmojis.value,
+  () => allEmojis.value.length,
   () => {
-    console.log('[AIRenamePage] Emojis changed, reinitializing image sources')
+    console.log('[AIRenamePage] Emojis count changed, reinitializing image sources')
     initializeImageSources()
-  },
-  { deep: true }
+  }
 )
 
 // 组件挂载时初始化
