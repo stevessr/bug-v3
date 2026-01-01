@@ -347,39 +347,63 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
     emoji.groupId = targetGroupId
 
     // 优化：创建新的 group 对象并替换，触发 shallowRef 响应式更新
-    // 从源分组移除
-    const newSourceGroup = {
-      ...sourceGroup,
-      emojis: [
-        ...sourceGroup.emojis.slice(0, sourceIndex),
-        ...sourceGroup.emojis.slice(sourceIndex + 1)
-      ]
-    }
-
-    // 添加到目标分组
-    const newTargetEmojis =
-      targetIndex >= 0 && targetIndex <= targetGroup.emojis.length
-        ? [
-            ...targetGroup.emojis.slice(0, targetIndex),
-            emoji,
-            ...targetGroup.emojis.slice(targetIndex)
-          ]
-        : [...targetGroup.emojis, emoji]
-
-    const newTargetGroup = {
-      ...targetGroup,
-      emojis: newTargetEmojis
-    }
 
     // 如果是同一个组，只需要更新一次
     if (sourceGroupId === targetGroupId) {
+      // 先从源位置移除表情
+      const emojisWithoutSource = [
+        ...sourceGroup.emojis.slice(0, sourceIndex),
+        ...sourceGroup.emojis.slice(sourceIndex + 1)
+      ]
+
+      // 然后在目标位置插入表情
+      // 注意：如果目标位置在源位置之后，需要调整索引
+      const adjustedTargetIndex = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex
+      const newEmojis =
+        adjustedTargetIndex >= 0 && adjustedTargetIndex <= emojisWithoutSource.length
+          ? [
+              ...emojisWithoutSource.slice(0, adjustedTargetIndex),
+              emoji,
+              ...emojisWithoutSource.slice(adjustedTargetIndex)
+            ]
+          : [...emojisWithoutSource, emoji]
+
+      const newGroup = {
+        ...sourceGroup,
+        emojis: newEmojis
+      }
+
       groups.value = [
         ...groups.value.slice(0, sourceGroupIndex),
-        newTargetGroup,
+        newGroup,
         ...groups.value.slice(sourceGroupIndex + 1)
       ]
     } else {
       // 不同组，需要同时更新源和目标组
+      // 从源分组移除
+      const newSourceGroup = {
+        ...sourceGroup,
+        emojis: [
+          ...sourceGroup.emojis.slice(0, sourceIndex),
+          ...sourceGroup.emojis.slice(sourceIndex + 1)
+        ]
+      }
+
+      // 添加到目标分组
+      const newTargetEmojis =
+        targetIndex >= 0 && targetIndex <= targetGroup.emojis.length
+          ? [
+              ...targetGroup.emojis.slice(0, targetIndex),
+              emoji,
+              ...targetGroup.emojis.slice(targetIndex)
+            ]
+          : [...targetGroup.emojis, emoji]
+
+      const newTargetGroup = {
+        ...targetGroup,
+        emojis: newTargetEmojis
+      }
+
       const updates = new Map([
         [sourceGroupIndex, newSourceGroup],
         [targetGroupIndex, newTargetGroup]
