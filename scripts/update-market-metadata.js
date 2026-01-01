@@ -93,31 +93,25 @@ const metadata = {
 fs.writeFileSync(METADATA_FILE, JSON.stringify(metadata, null, 2));
 console.log(`Generated metadata.json with ${groups.length} groups.`);
 
-// Update MANIFEST_METADATA in market-random.ts (full metadata objects for Snippet limitation)
+// Update MANIFEST_GROUPS in market-random.ts (only IDs for Snippet limitation)
 const marketRandomFile = path.join(__dirname, 'cfworker/functions/api/market-random.ts');
 
 try {
     let marketRandomContent = fs.readFileSync(marketRandomFile, 'utf8');
 
-    // Extract minimal metadata (id, name, emojiCount, isArchived) for each group
-    const metadataObjects = groups.map(g => ({
-        id: g.id,
-        name: g.name,
-        emojiCount: g.emojiCount,
-        isArchived: g.isArchived
-    }));
-    const manifestMetadataString = JSON.stringify(metadataObjects);
+    // Extract only IDs from groups
+    const groupIds = groups.map(g => `'${g.id}'`).join(', ');
 
-    // Find and replace the MANIFEST_METADATA constant
-    const regex = /const MANIFEST_METADATA = \[[\s\S]*?\n\]/;
-    const newManifestMetadata = `const MANIFEST_METADATA = [\n    ${manifestMetadataString.slice(1, -1)}\n]`;
+    // Find and replace the MANIFEST_GROUPS constant
+    const regex = /const MANIFEST_GROUPS: string\[\] = \[[\s\S]*?\n\]/;
+    const newManifestGroups = `const MANIFEST_GROUPS: string[] = [\n  ${groupIds}\n]`;
 
     if (regex.test(marketRandomContent)) {
-        marketRandomContent = marketRandomContent.replace(regex, newManifestMetadata);
+        marketRandomContent = marketRandomContent.replace(regex, newManifestGroups);
         fs.writeFileSync(marketRandomFile, marketRandomContent);
-        console.log(`Updated MANIFEST_METADATA in market-random.ts with ${groups.length} group objects.`);
+        console.log(`Updated MANIFEST_GROUPS in market-random.ts with ${groups.length} group IDs.`);
     } else {
-        console.error('Could not find MANIFEST_METADATA constant in market-random.ts');
+        console.error('Could not find MANIFEST_GROUPS constant in market-random.ts');
     }
 } catch (err) {
     console.error('Error updating market-random.ts:', err);
