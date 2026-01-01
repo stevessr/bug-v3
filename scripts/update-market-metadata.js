@@ -93,26 +93,31 @@ const metadata = {
 fs.writeFileSync(METADATA_FILE, JSON.stringify(metadata, null, 2));
 console.log(`Generated metadata.json with ${groups.length} groups.`);
 
-// Update MANIFEST_GROUPS in market-random.ts
+// Update MANIFEST_METADATA in market-random.ts (full metadata objects for Snippet limitation)
 const marketRandomFile = path.join(__dirname, 'cfworker/functions/api/market-random.ts');
 
 try {
     let marketRandomContent = fs.readFileSync(marketRandomFile, 'utf8');
 
-    // Generate the MANIFEST_GROUPS array as a string
-    const manifestGroupsString = JSON.stringify(groups, null, 4);
-    const indentedManifestGroups = manifestGroupsString.split('\n').map(line => '    ' + line).join('\n');
+    // Extract minimal metadata (id, name, emojiCount, isArchived) for each group
+    const metadataObjects = groups.map(g => ({
+        id: g.id,
+        name: g.name,
+        emojiCount: g.emojiCount,
+        isArchived: g.isArchived
+    }));
+    const manifestMetadataString = JSON.stringify(metadataObjects);
 
-    // Find and replace the MANIFEST_GROUPS constant
-    const regex = /const MANIFEST_GROUPS = \[[\s\S]*?\n\]/;
-    const newManifestGroups = `const MANIFEST_GROUPS = [\n${indentedManifestGroups}\n]`;
+    // Find and replace the MANIFEST_METADATA constant
+    const regex = /const MANIFEST_METADATA = \[[\s\S]*?\n\]/;
+    const newManifestMetadata = `const MANIFEST_METADATA = [\n    ${manifestMetadataString.slice(1, -1)}\n]`;
 
     if (regex.test(marketRandomContent)) {
-        marketRandomContent = marketRandomContent.replace(regex, newManifestGroups);
+        marketRandomContent = marketRandomContent.replace(regex, newManifestMetadata);
         fs.writeFileSync(marketRandomFile, marketRandomContent);
-        console.log(`Updated MANIFEST_GROUPS in market-random.ts with ${groups.length} groups.`);
+        console.log(`Updated MANIFEST_METADATA in market-random.ts with ${groups.length} group objects.`);
     } else {
-        console.error('Could not find MANIFEST_GROUPS constant in market-random.ts');
+        console.error('Could not find MANIFEST_METADATA constant in market-random.ts');
     }
 } catch (err) {
     console.error('Error updating market-random.ts:', err);
