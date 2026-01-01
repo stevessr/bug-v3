@@ -77,7 +77,7 @@ export default {
       }
 
       // Single fetch + json parse chained (only 1 async continuation point)
-      const groupUrl = new URL(`/assets/market/${selectedGroupId}.json`, url.origin)
+      const groupUrl = new URL(`/assets/market/group-${selectedGroupId}.json`, url.origin)
       const groupData = await fetch(groupUrl.toString()).then(r => {
         if (!r.ok) throw new Error(`Failed to load group data: ${r.status}`)
         return r.json()
