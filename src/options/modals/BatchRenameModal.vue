@@ -36,22 +36,8 @@ const enableGroupedStreaming = ref(true)
 // Virtual list ref - use any to avoid vue-tsc generic inference issues
 const virtualListRef = ref<any>(null)
 
-// Computed list for rendering
-interface EmojiRenderItem {
-  emoji: Emoji
-  hasNewName: boolean
-  newName: string
-  excluded: boolean
-}
+// Removed expensive emojiRenderList computed property
 
-const emojiRenderList = computed<EmojiRenderItem[]>(() => {
-  return props.selectedEmojis.map(emoji => ({
-    emoji,
-    hasNewName: !!newNames.value[emoji.id],
-    newName: newNames.value[emoji.id] || '等待生成...',
-    excluded: excludedIds.value.has(emoji.id)
-  }))
-})
 
 const geminiConfig = computed(() => ({
   apiKey: emojiStore.settings.geminiApiKey,
@@ -109,9 +95,10 @@ const handleGenerateNames = async () => {
       props.selectedEmojis,
       prompt.value,
       config as any,
-      (results, progressInfo) => {
-        // Update names in real-time
-        newNames.value = { ...results }
+      (chunkResults, progressInfo) => {
+        // Update names in real-time with incremental updates
+        // This avoids Vue reactivity triggering a full list re-render
+        Object.assign(newNames.value, chunkResults)
         progress.value = progressInfo
       },
       5, // concurrency
@@ -212,40 +199,40 @@ const progressPercentage = computed(() => {
 
         <VirtualList
           ref="virtualListRef"
-          :items="emojiRenderList"
+          :items="selectedEmojis"
           :item-height="60"
           :container-height="400"
           :buffer="5"
         >
-          <template #default="{ item }">
+          <template #default="{ item: emoji }">
             <div
               class="px-4 py-2 border-b dark:border-gray-600 flex items-center gap-3"
-              :class="{ 'opacity-50': item.excluded }"
+              :class="{ 'opacity-50': excludedIds.has(emoji.id) }"
             >
               <a-checkbox
-                :checked="!item.excluded"
-                :disabled="!item.hasNewName"
-                @change="toggleExclude(item.emoji.id)"
+                :checked="!excludedIds.has(emoji.id)"
+                :disabled="!newNames[emoji.id]"
+                @change="toggleExclude(emoji.id)"
               />
               <img
-                :src="getEmojiImageUrlSync(item.emoji)"
+                :src="getEmojiImageUrlSync(emoji)"
                 class="w-12 h-12 object-contain bg-gray-100 rounded"
                 loading="lazy"
                 alt="emoji"
               />
               <div class="flex-1 min-w-0">
                 <div class="text-sm text-gray-600 dark:text-gray-400 truncate">
-                  {{ item.emoji.name }}
+                  {{ emoji.name }}
                 </div>
                 <div
                   class="text-sm font-medium truncate"
                   :class="{
-                    'text-green-600': item.hasNewName,
-                    'text-gray-400 animate-pulse': !item.hasNewName && isLoading,
-                    'text-gray-400': !item.hasNewName && !isLoading
+                    'text-green-600': !!newNames[emoji.id],
+                    'text-gray-400 animate-pulse': !newNames[emoji.id] && isLoading,
+                    'text-gray-400': !newNames[emoji.id] && !isLoading
                   }"
                 >
-                  {{ item.newName }}
+                  {{ newNames[emoji.id] || '等待生成...' }}
                 </div>
               </div>
             </div>

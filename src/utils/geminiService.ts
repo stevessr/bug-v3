@@ -208,6 +208,7 @@ Format your response as JSON with this structure:
 
 /**
  * Fetch an image and convert it to base64
+ * @deprecated Use resizeImage instead for better performance
  */
 async function fetchImageAsBase64(imageUrl: string): Promise<string> {
   try {
@@ -281,9 +282,78 @@ function parseGeminiResponse(text: string): any {
  * Streaming callback for batch name generation
  */
 export type StreamingCallback = (
-  results: Record<string, string>,
+  chunkResults: Record<string, string>,
   progress: { current: number; total: number; groupIndex?: number }
 ) => void
+
+/**
+ * Resize image to specific dimensions and return base64
+ */
+async function resizeImage(
+  url: string,
+  maxDimension: number = 512,
+  quality: number = 0.8
+): Promise<string> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error('Failed to fetch image')
+    const blob = await response.blob()
+
+    // Create bitmap from blob
+    const bitmap = await createImageBitmap(blob)
+
+    // Calculate new dimensions
+    let { width, height } = bitmap
+    if (width > maxDimension || height > maxDimension) {
+      const ratio = width / height
+      if (width > height) {
+        width = maxDimension
+        height = Math.round(maxDimension / ratio)
+      } else {
+        height = maxDimension
+        width = Math.round(maxDimension * ratio)
+      }
+    }
+
+    // Use OffscreenCanvas if available (works in workers)
+    if (typeof OffscreenCanvas !== 'undefined') {
+      const canvas = new OffscreenCanvas(width, height)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Failed to get canvas context')
+
+      ctx.drawImage(bitmap, 0, 0, width, height)
+      const resizedBlob = await canvas.convertToBlob({
+        type: 'image/jpeg',
+        quality
+      })
+
+      // Convert blob to base64
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          const base64 = reader.result as string
+          resolve(base64.split(',')[1])
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(resizedBlob)
+      })
+    } else {
+      // Fallback to DOM Canvas element
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Failed to get canvas context')
+
+      ctx.drawImage(bitmap, 0, 0, width, height)
+      const dataUrl = canvas.toDataURL('image/jpeg', quality)
+      return dataUrl.split(',')[1]
+    }
+  } catch (error) {
+    console.warn('Image resizing failed, falling back to original:', error)
+    return fetchImageAsBase64(url)
+  }
+}
 
 /**
  * Generate names for a batch of emojis with streaming support
@@ -341,40 +411,22 @@ export async function generateBatchNamesStreaming(
         chunks.push(groupEmojis.slice(i, i + chunkSize))
       }
 
-      // Process each group's chunks with concurrency control
-      const processingQueue: Promise<void>[] = []
-      let activeRequests = 0
-      let processedInGroup = 0
+      // Process chunks serially to minimize RAM usage
+      for (const chunk of chunks) {
+        try {
+          const chunkResults = await processGeminiChunk(chunk, prompt, language, apiKey, model)
+          Object.assign(results, chunkResults)
 
-      for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-        while (activeRequests >= concurrency) {
-          await Promise.race(processingQueue)
+          // Report progress for this group with only incremental results
+          onProgress(chunkResults, {
+            current: Object.keys(results).length,
+            total: emojis.length,
+            groupIndex
+          })
+        } catch (error) {
+          console.error('Error processing batch chunk:', error)
         }
-
-        const chunk = chunks[chunkIndex]
-        activeRequests++
-
-        const chunkPromise = (async () => {
-          try {
-            const chunkResults = await processGeminiChunk(chunk, prompt, language, apiKey, model)
-            Object.assign(results, chunkResults)
-            processedInGroup += chunk.length
-
-            // Report progress for this group
-            onProgress(results, {
-              current: Object.keys(results).length,
-              total: emojis.length,
-              groupIndex
-            })
-          } finally {
-            activeRequests--
-          }
-        })()
-
-        processingQueue.push(chunkPromise)
       }
-
-      await Promise.all(processingQueue)
       groupIndex++
     }
   } else {
@@ -385,36 +437,21 @@ export async function generateBatchNamesStreaming(
       chunks.push(emojis.slice(i, i + chunkSize))
     }
 
-    const processingQueue: Promise<void>[] = []
-    let activeRequests = 0
+    // Process chunks serially
+    for (const chunk of chunks) {
+      try {
+        const chunkResults = await processGeminiChunk(chunk, prompt, language, apiKey, model)
+        Object.assign(results, chunkResults)
 
-    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-      while (activeRequests >= concurrency) {
-        await Promise.race(processingQueue)
+        // Report progress with only incremental results
+        onProgress(chunkResults, {
+          current: Object.keys(results).length,
+          total: emojis.length
+        })
+      } catch (error) {
+        console.error('Error processing batch chunk:', error)
       }
-
-      const chunk = chunks[chunkIndex]
-      activeRequests++
-
-      const chunkPromise = (async () => {
-        try {
-          const chunkResults = await processGeminiChunk(chunk, prompt, language, apiKey, model)
-          Object.assign(results, chunkResults)
-
-          // Report progress
-          onProgress(results, {
-            current: Object.keys(results).length,
-            total: emojis.length
-          })
-        } finally {
-          activeRequests--
-        }
-      })()
-
-      processingQueue.push(chunkPromise)
     }
-
-    await Promise.all(processingQueue)
   }
 
   return results
@@ -512,18 +549,18 @@ Return the result as a single JSON object where keys are the image index (e.g., 
 }
 `
 
-    // 2. Fetch all images as base64 in parallel
-    const imageParts = await Promise.all(
-      emojis.map(async emoji => {
-        const base64 = await fetchImageAsBase64(emoji.url)
-        return {
-          inline_data: {
-            mime_type: getMimeType(emoji.url),
-            data: base64
-          }
+    // 2. Prepare images sequentially to save memory
+    // Processing images one by one prevents memory spikes from multiple high-res base64 strings
+    const imageParts = []
+    for (const emoji of emojis) {
+      const base64 = await resizeImage(emoji.url)
+      imageParts.push({
+        inline_data: {
+          mime_type: 'image/jpeg',
+          data: base64
         }
       })
-    )
+    }
 
     // 3. Combine text and image parts
     const requestBody = {
@@ -757,12 +794,15 @@ Generate a new name for this emoji in ${language}. Return only the name, nothing
               const newName = data.choices?.[0]?.message?.content?.trim() || emoji.name
               results[emoji.id] = newName
 
-              // Report progress
-              onProgress(results, {
-                current: Object.keys(results).length,
-                total: emojis.length,
-                groupIndex
-              })
+              // Report progress with incremental result
+              onProgress(
+                { [emoji.id]: newName },
+                {
+                  current: Object.keys(results).length,
+                  total: emojis.length,
+                  groupIndex
+                }
+              )
             }
           } catch (error) {
             console.error(`Error processing emoji ${emoji.id}:`, error)
