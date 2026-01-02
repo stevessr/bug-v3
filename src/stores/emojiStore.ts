@@ -662,18 +662,34 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Note: resolveEmojiReference is delegated to emojiCrudStore
 
   const updateEmojiInGroup = (groupId: string, index: number, updatedEmoji: Partial<Emoji>) => {
-    const group = groups.value.find(g => g.id === groupId)
+    const groupIndex = groups.value.findIndex(g => g.id === groupId)
+    if (groupIndex === -1) return
+
+    const group = groups.value[groupIndex]
     const emojis = group?.emojis || []
-    if (group && index >= 0 && index < emojis.length) {
-      const currentEmoji = emojis[index]
-      if (!currentEmoji) return
-      // Update the emoji while preserving the id and other metadata
-      emojis[index] = { ...currentEmoji, ...updatedEmoji }
-      console.log('[EmojiStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id })
-      // Mark the group as dirty for incremental save
-      markGroupDirty(groupId)
-      maybeSave()
+    if (index < 0 || index >= emojis.length) return
+
+    const currentEmoji = emojis[index]
+    if (!currentEmoji) return
+
+    // Update the emoji while preserving the id and other metadata
+    const newEmoji = { ...currentEmoji, ...updatedEmoji }
+    const newGroup = {
+      ...group,
+      emojis: [...emojis.slice(0, index), newEmoji, ...emojis.slice(index + 1)]
     }
+
+    // 使用数组替换以触发 shallowRef 响应式更新
+    groups.value = [
+      ...groups.value.slice(0, groupIndex),
+      newGroup,
+      ...groups.value.slice(groupIndex + 1)
+    ]
+
+    console.log('[EmojiStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id })
+    // Mark the group as dirty for incremental save
+    markGroupDirty(groupId)
+    maybeSave()
   }
 
   // Note: Favorites Management is delegated to favoritesStore

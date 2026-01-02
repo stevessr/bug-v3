@@ -88,15 +88,14 @@ const addEmojiTouchEvents = (_element: HTMLElement, _emoji: Emoji, _index: numbe
 }
 
 // Group emojis into rows for virtual list
-// 优化：使用 computed 的依赖收集，配合 length 和 gridColumns 作为显式依赖
+// 注意：需要依赖整个 emojis 数组，以便在 emoji 内容变化时触发更新
 const emojiRows = computed(() => {
-  // 显式依赖这些值，Vue 会自动缓存
-  const { length } = props.emojis
+  const emojis = props.emojis
   const { gridColumns } = props
 
   const rows: Emoji[][] = []
-  for (let i = 0; i < length; i += gridColumns) {
-    rows.push(props.emojis.slice(i, i + gridColumns))
+  for (let i = 0; i < emojis.length; i += gridColumns) {
+    rows.push(emojis.slice(i, i + gridColumns))
   }
 
   return rows
