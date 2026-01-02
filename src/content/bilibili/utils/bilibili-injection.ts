@@ -155,7 +155,8 @@ function addButtonToPicture(pictureEl: Element) {
  */
 export function scanAndInject() {
   // Check for PhotoSwipe previews first (with debouncing)
-  const pswpContainer = DQS('.pswp__scroll-wrap')
+  // 支持两种容器格式：.pswp__scroll-wrap 和 #pswp__items (opus 页面)
+  const pswpContainer = DQS('.pswp__scroll-wrap') || DQS('#pswp__items')
   if (pswpContainer) {
     addButtonToPhotoSwipeDebounced()
   }
@@ -229,11 +230,23 @@ export function observeMutations() {
         if (hasImg) {
           needsScan = true
           // If any added node is a pswp container, schedule PhotoSwipe check
+          // 支持两种容器：.pswp__scroll-wrap 和 #pswp__items (opus 页面)
           if (
             Array.from(m.addedNodes).some(node => {
               if (node.nodeType === 1) {
                 const element = node as Element
-                return element.classList && element.classList.contains('pswp__scroll-wrap')
+                // 检查标准容器
+                if (element.classList && element.classList.contains('pswp__scroll-wrap')) {
+                  return true
+                }
+                // 检查 opus 页面容器
+                if (element.id === 'pswp__items') {
+                  return true
+                }
+                // 检查是否包含 pswp__img
+                if (element.querySelector && element.querySelector('.pswp__img')) {
+                  return true
+                }
               }
               return false
             })
@@ -248,6 +261,15 @@ export function observeMutations() {
           target.classList &&
           target.classList.contains('pswp__item') &&
           m.attributeName === 'aria-hidden'
+        ) {
+          needsPswpCheck = true
+        }
+
+        // 检测 pswp__img 的 src 变化（opus 页面图片切换）
+        if (
+          target.classList &&
+          target.classList.contains('pswp__img') &&
+          m.attributeName === 'src'
         ) {
           needsPswpCheck = true
         }

@@ -25,19 +25,42 @@ export function resetPhotoSwipeState(): void {
 
 /**
  * 检查 PhotoSwipe 预览器是否存在
+ * 支持两种容器格式：.pswp__scroll-wrap 和 #pswp__items
  */
 function isPhotoSwipeActive(): boolean {
-  return !!DQS('.pswp__scroll-wrap')
+  return !!(DQS('.pswp__scroll-wrap') || DQS('#pswp__items'))
 }
 
 /**
  * 获取当前活动的 PhotoSwipe 图片项
+ * 支持两种容器格式
  */
 function getCurrentPhotoSwipeItem(): Element | null {
+  // 尝试标准 PhotoSwipe 容器
   const pswpContainer = DQS('.pswp__scroll-wrap')
-  if (!pswpContainer) return null
+  if (pswpContainer) {
+    return pswpContainer.querySelector('.pswp__item[aria-hidden="false"]')
+  }
 
-  return pswpContainer.querySelector('.pswp__item[aria-hidden="false"]')
+  // 尝试 opus 页面的 #pswp__items 容器
+  const pswpItems = DQS('#pswp__items')
+  if (pswpItems) {
+    // 在 opus 页面，活动项可能没有 aria-hidden 属性
+    // 直接查找包含 pswp__img 的 div
+    const itemsWithImg = pswpItems.querySelectorAll('div > div > img.pswp__img')
+    for (const img of itemsWithImg) {
+      // 返回包含图片的最近 pswp__item 容器
+      const item = img.closest('.pswp__item') || img.parentElement?.parentElement
+      if (item) return item
+    }
+    // 如果没有找到带类名的，返回第一个有图片的 div
+    const firstImg = pswpItems.querySelector('img.pswp__img')
+    if (firstImg) {
+      return firstImg.parentElement?.parentElement || firstImg.parentElement
+    }
+  }
+
+  return null
 }
 
 /**
@@ -62,6 +85,10 @@ function hasPhotoSwipeButton(): boolean {
   const activeItem = getCurrentPhotoSwipeItem()
   if (activeItem && activeItem.querySelector('.bili-emoji-add-btn')) return true
 
+  // Check in #pswp__items container (opus pages)
+  const pswpItems = DQS('#pswp__items')
+  if (pswpItems && pswpItems.querySelector('.bili-emoji-add-btn')) return true
+
   return false
 }
 
@@ -82,6 +109,49 @@ function addButtonToPhotoSwipeTopBar(name: string, url: string): boolean {
   // Insert the button right before the close button
   topBar.insertBefore(btn, closeButton)
   return true
+}
+
+/**
+ * 向 PhotoSwipe 图片上添加浮动按钮（用于 opus 页面的 #pswp__items）
+ */
+function addButtonToPhotoSwipeImage(): boolean {
+  // 查找 #pswp__items 中的图片
+  const pswpItems = DQS('#pswp__items')
+  if (!pswpItems) return false
+
+  // 查找所有 pswp__img 图片
+  const pswpImages = pswpItems.querySelectorAll('img.pswp__img')
+  let addedCount = 0
+
+  for (const img of pswpImages) {
+    const parent = img.parentElement
+    if (!parent) continue
+
+    // 检查是否已经有按钮
+    if (parent.querySelector('.bili-emoji-add-btn')) continue
+
+    // 获取这个图片的 URL
+    const imgUrl = (img as HTMLImageElement).src
+    if (!imgUrl) continue
+
+    const imgName = extractNameFromUrl(imgUrl)
+
+    // 确保父元素有定位
+    const parentEl = parent as HTMLElement
+    const computed = window.getComputedStyle(parentEl)
+    if (computed.position === 'static' || !computed.position) {
+      parentEl.style.position = 'relative'
+    }
+
+    // 创建浮动按钮
+    const btn = createFloatingButton({ name: imgName, url: imgUrl })
+    btn.style.cssText +=
+      'position: absolute; right: 16px; top: 16px; z-index: 10010; background: rgba(0,0,0,0.8);'
+    parent.appendChild(btn)
+    addedCount++
+  }
+
+  return addedCount > 0
 }
 
 /**
@@ -111,6 +181,26 @@ function addButtonToPhotoSwipe(): boolean {
 
     if (!isPhotoSwipeActive()) return false
 
+    // 优先处理 opus 页面的 #pswp__items 容器
+    const pswpItems = DQS('#pswp__items')
+    if (pswpItems) {
+      // 检查是否已有按钮
+      if (pswpItems.querySelector('.bili-emoji-add-btn')) return false
+
+      isProcessingPhotoSwipe = true
+
+      // 直接向图片上添加按钮
+      const success = addButtonToPhotoSwipeImage()
+
+      // 重置处理状态
+      setTimeout(() => {
+        isProcessingPhotoSwipe = false
+      }, 100)
+
+      return success
+    }
+
+    // 标准 PhotoSwipe 处理逻辑
     const imgEl = getCurrentPhotoSwipeImage()
     if (!imgEl) return false
 
@@ -188,17 +278,25 @@ function createPhotoSwipeObserver(callback: () => void): MutationObserver {
 
 /**
  * 监听 PhotoSwipe 容器的变化
+ * 支持两种容器格式：.pswp__scroll-wrap 和 #pswp__items
  */
 export function observePhotoSwipeContainer(callback: () => void): MutationObserver | null {
-  const pswpContainer = DQS('.pswp__scroll-wrap')
+  // 尝试标准容器
+  let pswpContainer: Element | null = DQS('.pswp__scroll-wrap')
+
+  // 如果没有标准容器，尝试 opus 页面容器
+  if (!pswpContainer) {
+    pswpContainer = DQS('#pswp__items')
+  }
+
   if (!pswpContainer) return null
 
   const observer = createPhotoSwipeObserver(callback)
   observer.observe(pswpContainer, {
     childList: true,
-    subtree: false, // 不要监听所有子树变化，减少触发频率
+    subtree: true, // 对于 #pswp__items 需要监听子树变化
     attributes: true,
-    attributeFilter: ['aria-hidden'] // 只监听 aria-hidden 变化
+    attributeFilter: ['aria-hidden', 'src', 'style'] // 监听 src 变化以检测图片切换
   })
 
   return observer
