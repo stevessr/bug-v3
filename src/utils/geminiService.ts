@@ -21,6 +21,37 @@ export interface ImageAnalysisResult {
 
 const DEFAULT_MODEL = 'gemini-2.5-flash-latest'
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+const MAX_RETRIES = 3
+const INITIAL_RETRY_DELAY = 1000
+
+/**
+ * Helper to fetch with retry on 429
+ */
+async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
+  let retries = 0
+  let delay = INITIAL_RETRY_DELAY
+
+  while (true) {
+    const response = await fetch(url, options)
+
+    if (response.status === 429) {
+      if (retries >= MAX_RETRIES) {
+        throw new Error('Max retries exceeded for 429 (Too Many Requests)')
+      }
+
+      console.warn(
+        `Encountered 429, retrying in ${delay}ms... (Attempt ${retries + 1}/${MAX_RETRIES})`
+      )
+      await new Promise(resolve => setTimeout(resolve, delay))
+
+      retries++
+      delay *= 2 // Exponential backoff
+      continue
+    }
+
+    return response
+  }
+}
 
 function getGeminiModelName(model?: string): string {
   return model || DEFAULT_MODEL
@@ -91,7 +122,7 @@ Format your response as JSON with this structure:
       }
     }
 
-    const response = await fetch(endpoint, {
+    const response = await fetchWithRetry(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -140,7 +171,7 @@ async function analyzeImageWithOpenAI(
 
   try {
     // For OpenAI vision API, we can pass the image URL directly
-    const response = await fetch(`${endpoint}/chat/completions`, {
+    const response = await fetchWithRetry(`${endpoint}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -580,7 +611,7 @@ Return the result as a single JSON object where keys are the image index (e.g., 
 
     // 4. Make the API call
     const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`
-    const response = await fetch(endpoint, {
+    const response = await fetchWithRetry(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -648,7 +679,7 @@ async function generateBatchNamesWithOpenAI(
 
     const emojiPromise = (async () => {
       try {
-        const response = await fetch(`${endpoint}/chat/completions`, {
+        const response = await fetchWithRetry(`${endpoint}/chat/completions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -757,7 +788,7 @@ async function generateBatchNamesWithOpenAIStreaming(
 
         const emojiPromise = (async () => {
           try {
-            const response = await fetch(`${endpoint}/chat/completions`, {
+            const response = await fetchWithRetry(`${endpoint}/chat/completions`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
