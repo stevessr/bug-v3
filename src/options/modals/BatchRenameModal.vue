@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, computed, type PropType } from 'vue'
+import { ReloadOutlined } from '@ant-design/icons-vue'
 
 import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
-import { generateBatchNamesStreaming } from '@/utils/geminiService'
+import { generateBatchNamesStreaming, generateBatchNames } from '@/utils/geminiService'
 import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import VirtualList from '@/options/components/VirtualList.vue'
 
@@ -24,6 +25,7 @@ const emojiStore = useEmojiStore()
 const prompt = ref('')
 const newNames = ref<Record<string, string>>({})
 const excludedIds = ref(new Set<string>())
+const regeneratingIds = ref(new Set<string>())
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const progress = ref<{ current: number; total: number; groupIndex?: number }>({
@@ -37,7 +39,6 @@ const enableGroupedStreaming = ref(true)
 const virtualListRef = ref<any>(null)
 
 // Removed expensive emojiRenderList computed property
-
 
 const geminiConfig = computed(() => ({
   apiKey: emojiStore.settings.geminiApiKey,
@@ -112,6 +113,43 @@ const handleGenerateNames = async () => {
     if (virtualListRef.value) {
       virtualListRef.value.disableAutoScroll()
     }
+  }
+}
+
+const handleRegenerateSingle = async (emoji: Emoji) => {
+  if (regeneratingIds.value.has(emoji.id)) return
+
+  const config = geminiConfig.value
+
+  // Check config similar to batch generation
+  if (config.useCustomOpenAI) {
+    if (!config.customOpenAIKey || !config.customOpenAIEndpoint) {
+      error.value = 'Custom OpenAI API configuration is incomplete.'
+      return
+    }
+  } else if (!config.apiKey) {
+    error.value = 'Gemini API Key is not configured.'
+    return
+  }
+
+  regeneratingIds.value.add(emoji.id)
+
+  try {
+    const result = await generateBatchNames(
+      [emoji],
+      prompt.value,
+      config as any,
+      1 // concurrency
+    )
+
+    if (result[emoji.id]) {
+      newNames.value[emoji.id] = result[emoji.id]
+    }
+  } catch (e: any) {
+    console.error('Failed to regenerate name:', e)
+    // Optional: show error message
+  } finally {
+    regeneratingIds.value.delete(emoji.id)
   }
 }
 
@@ -235,6 +273,19 @@ const progressPercentage = computed(() => {
                   {{ newNames[emoji.id] || '等待生成...' }}
                 </div>
               </div>
+
+              <a-button
+                type="text"
+                shape="circle"
+                size="small"
+                :loading="regeneratingIds.has(emoji.id)"
+                :disabled="isLoading && !newNames[emoji.id]"
+                @click="handleRegenerateSingle(emoji)"
+              >
+                <template #icon>
+                  <ReloadOutlined />
+                </template>
+              </a-button>
             </div>
           </template>
         </VirtualList>

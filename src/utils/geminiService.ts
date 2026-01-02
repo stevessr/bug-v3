@@ -445,6 +445,14 @@ export async function generateBatchNamesStreaming(
       for (const chunk of chunks) {
         try {
           const chunkResults = await processGeminiChunk(chunk, prompt, language, apiKey, model)
+
+          // Fill missing items with original name to prevent UI from being stuck in "Waiting..."
+          for (const emoji of chunk) {
+            if (!chunkResults[emoji.id]) {
+              chunkResults[emoji.id] = emoji.name
+            }
+          }
+
           Object.assign(results, chunkResults)
 
           // Report progress for this group with only incremental results
@@ -455,6 +463,17 @@ export async function generateBatchNamesStreaming(
           })
         } catch (error) {
           console.error('Error processing batch chunk:', error)
+          // Fallback for strict error cases
+          const fallbackResults: Record<string, string> = {}
+          for (const emoji of chunk) {
+            fallbackResults[emoji.id] = emoji.name
+            results[emoji.id] = emoji.name
+          }
+          onProgress(fallbackResults, {
+            current: Object.keys(results).length,
+            total: emojis.length,
+            groupIndex
+          })
         }
       }
       groupIndex++
@@ -471,6 +490,14 @@ export async function generateBatchNamesStreaming(
     for (const chunk of chunks) {
       try {
         const chunkResults = await processGeminiChunk(chunk, prompt, language, apiKey, model)
+
+        // Fill missing items with original name to prevent UI from being stuck in "Waiting..."
+        for (const emoji of chunk) {
+          if (!chunkResults[emoji.id]) {
+            chunkResults[emoji.id] = emoji.name
+          }
+        }
+
         Object.assign(results, chunkResults)
 
         // Report progress with only incremental results
@@ -480,6 +507,16 @@ export async function generateBatchNamesStreaming(
         })
       } catch (error) {
         console.error('Error processing batch chunk:', error)
+        // Fallback for strict error cases
+        const fallbackResults: Record<string, string> = {}
+        for (const emoji of chunk) {
+          fallbackResults[emoji.id] = emoji.name
+          results[emoji.id] = emoji.name
+        }
+        onProgress(fallbackResults, {
+          current: Object.keys(results).length,
+          total: emojis.length
+        })
       }
     }
   }
@@ -725,7 +762,7 @@ async function generateBatchNamesWithOpenAIStreaming(
   prompt: string,
   config: GeminiConfig,
   onProgress: StreamingCallback,
-  concurrency: number = 5,
+  _concurrency: number = 5,
   groupByGroupId: boolean = false
 ): Promise<Record<string, string>> {
   if (!config.customOpenAIEndpoint) {
