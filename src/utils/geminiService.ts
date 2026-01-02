@@ -210,8 +210,7 @@ Format your response as JSON with this structure:
             ]
           }
         ],
-        temperature: 0.4,
-        max_tokens: 1024
+        temperature: 0.4
       })
     })
 
@@ -653,7 +652,7 @@ async function generateBatchNamesWithOpenAI(
   emojis: { id: string; url: string; name: string }[],
   prompt: string,
   config: GeminiConfig,
-  concurrency: number = 5
+  _concurrency: number = 5
 ): Promise<Record<string, string>> {
   if (!config.customOpenAIEndpoint || !config.customOpenAIKey) {
     throw new Error('Custom OpenAI endpoint and API key are required')
@@ -664,72 +663,56 @@ async function generateBatchNamesWithOpenAI(
   const language = config.language || 'Chinese'
 
   const results: Record<string, string> = {}
-  const processingQueue: Promise<void>[] = []
-  let activeRequests = 0
 
-  // Process each emoji individually with concurrency control
-  for (let i = 0; i < emojis.length; i++) {
-    // Wait if we've reached the concurrency limit
-    while (activeRequests >= concurrency) {
-      await Promise.race(processingQueue)
-    }
+  // Process each emoji serially
+  for (const emoji of emojis) {
+    try {
+      // Resize image to save bandwidth and token usage
+      const base64 = await resizeImage(emoji.url)
+      const dataUri = `data:image/jpeg;base64,${base64}`
 
-    const emoji = emojis[i]
-    activeRequests++
-
-    const emojiPromise = (async () => {
-      try {
-        const response = await fetchWithRetry(`${endpoint}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: `Based on this instruction: "${prompt}"
+      const response = await fetchWithRetry(`${endpoint}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Based on this instruction: "${prompt}"
 
 Generate a new name for this emoji in ${language}. Return only the name, nothing else.`
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: emoji.url
-                    }
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: dataUri
                   }
-                ]
-              }
-            ],
-            temperature: 0.5,
-            max_tokens: 100
-          })
+                }
+              ]
+            }
+          ],
+          temperature: 0.5
         })
+      })
 
-        if (response.ok) {
-          const data = await response.json()
-          const newName = data.choices?.[0]?.message?.content?.trim() || emoji.name
-          results[emoji.id] = newName
-        }
-      } catch (error) {
-        console.error(`Error processing emoji ${emoji.id}:`, error)
-        // Keep original name on error
-        results[emoji.id] = emoji.name
-      } finally {
-        activeRequests--
+      if (response.ok) {
+        const data = await response.json()
+        const newName = data.choices?.[0]?.message?.content?.trim() || emoji.name
+        results[emoji.id] = newName
       }
-    })()
-
-    processingQueue.push(emojiPromise)
+    } catch (error) {
+      console.error(`Error processing emoji ${emoji.id}:`, error)
+      // Keep original name on error
+      results[emoji.id] = emoji.name
+    }
   }
-
-  // Wait for all to complete
-  await Promise.all(processingQueue)
 
   return results
 }
@@ -775,96 +758,14 @@ async function generateBatchNamesWithOpenAIStreaming(
 
     let groupIndex = 0
     for (const [_groupId, groupEmojis] of groupedEmojis.entries()) {
-      const processingQueue: Promise<void>[] = []
-      let activeRequests = 0
-
-      for (let i = 0; i < groupEmojis.length; i++) {
-        while (activeRequests >= concurrency) {
-          await Promise.race(processingQueue)
-        }
-
-        const emoji = groupEmojis[i]
-        activeRequests++
-
-        const emojiPromise = (async () => {
-          try {
-            const response = await fetchWithRetry(`${endpoint}/chat/completions`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${apiKey}`
-              },
-              body: JSON.stringify({
-                model: model,
-                messages: [
-                  {
-                    role: 'user',
-                    content: [
-                      {
-                        type: 'text',
-                        text: `Based on this instruction: "${prompt}"
-
-Generate a new name for this emoji in ${language}. Return only the name, nothing else.`
-                      },
-                      {
-                        type: 'image_url',
-                        image_url: {
-                          url: emoji.url
-                        }
-                      }
-                    ]
-                  }
-                ],
-                temperature: 0.5,
-                max_tokens: 100
-              })
-            })
-
-            if (response.ok) {
-              const data = await response.json()
-              const newName = data.choices?.[0]?.message?.content?.trim() || emoji.name
-              results[emoji.id] = newName
-
-              // Report progress with incremental result
-              onProgress(
-                { [emoji.id]: newName },
-                {
-                  current: Object.keys(results).length,
-                  total: emojis.length,
-                  groupIndex
-                }
-              )
-            }
-          } catch (error) {
-            console.error(`Error processing emoji ${emoji.id}:`, error)
-            results[emoji.id] = emoji.name
-          } finally {
-            activeRequests--
-          }
-        })()
-
-        processingQueue.push(emojiPromise)
-      }
-
-      await Promise.all(processingQueue)
-      groupIndex++
-    }
-  } else {
-    // Process all emojis without grouping
-    const processingQueue: Promise<void>[] = []
-    let activeRequests = 0
-
-    for (let i = 0; i < emojis.length; i++) {
-      while (activeRequests >= concurrency) {
-        await Promise.race(processingQueue)
-      }
-
-      const emoji = emojis[i]
-      activeRequests++
-
-      const emojiPromise = (async () => {
+      // Process group items serially
+      for (const emoji of groupEmojis) {
         try {
-          const response = await fetch(`${endpoint}/chat/completions`, {
+          // Resize image
+          const base64 = await resizeImage(emoji.url)
+          const dataUri = `data:image/jpeg;base64,${base64}`
+
+          const response = await fetchWithRetry(`${endpoint}/chat/completions`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -885,14 +786,13 @@ Generate a new name for this emoji in ${language}. Return only the name, nothing
                     {
                       type: 'image_url',
                       image_url: {
-                        url: emoji.url
+                        url: dataUri
                       }
                     }
                   ]
                 }
               ],
-              temperature: 0.5,
-              max_tokens: 100
+              temperature: 0.5
             })
           })
 
@@ -901,24 +801,81 @@ Generate a new name for this emoji in ${language}. Return only the name, nothing
             const newName = data.choices?.[0]?.message?.content?.trim() || emoji.name
             results[emoji.id] = newName
 
-            // Report progress
-            onProgress(results, {
-              current: Object.keys(results).length,
-              total: emojis.length
-            })
+            // Report progress with incremental result
+            onProgress(
+              { [emoji.id]: newName },
+              {
+                current: Object.keys(results).length,
+                total: emojis.length,
+                groupIndex
+              }
+            )
           }
         } catch (error) {
           console.error(`Error processing emoji ${emoji.id}:`, error)
           results[emoji.id] = emoji.name
-        } finally {
-          activeRequests--
         }
-      })()
-
-      processingQueue.push(emojiPromise)
+      }
+      groupIndex++
     }
+  } else {
+    // Process all emojis serially without grouping
+    for (const emoji of emojis) {
+      try {
+        // Resize image
+        const base64 = await resizeImage(emoji.url)
+        const dataUri = `data:image/jpeg;base64,${base64}`
 
-    await Promise.all(processingQueue)
+        const response = await fetchWithRetry(`${endpoint}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: `Based on this instruction: "${prompt}"
+
+Generate a new name for this emoji in ${language}. Return only the name, nothing else.`
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: dataUri
+                    }
+                  }
+                ]
+              }
+            ],
+            temperature: 0.5
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const newName = data.choices?.[0]?.message?.content?.trim() || emoji.name
+          results[emoji.id] = newName
+
+          // Report progress with incremental result
+          onProgress(
+            { [emoji.id]: newName },
+            {
+              current: Object.keys(results).length,
+              total: emojis.length
+            }
+          )
+        }
+      } catch (error) {
+        console.error(`Error processing emoji ${emoji.id}:`, error)
+        results[emoji.id] = emoji.name
+      }
+    }
   }
 
   return results
