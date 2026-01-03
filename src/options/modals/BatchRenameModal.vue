@@ -50,6 +50,8 @@ const geminiConfig = computed(() => ({
   customOpenAIModel: emojiStore.settings.customOpenAIModel
 }))
 
+const aiConcurrency = computed(() => emojiStore.settings.aiConcurrency || 5)
+
 watch(
   () => props.visible,
   isVisible => {
@@ -102,7 +104,7 @@ const handleGenerateNames = async () => {
         Object.assign(newNames.value, chunkResults)
         progress.value = progressInfo
       },
-      5, // concurrency
+      aiConcurrency.value, // concurrency from settings
       enableGroupedStreaming.value // group by groupId
     )
   } catch (e: any) {

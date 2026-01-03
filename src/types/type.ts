@@ -25,6 +25,7 @@ export interface AppSettings {
   customOpenAIEndpoint?: string
   customOpenAIKey?: string
   customOpenAIModel?: string
+  aiConcurrency?: number // AI 请求并发数（1-10，默认 5）
   theme?: 'system' | 'light' | 'dark'
   // Custom theme colors
   customPrimaryColor?: string // 主题主色

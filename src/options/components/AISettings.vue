@@ -14,7 +14,8 @@ const emit = defineEmits([
   'update:useCustomOpenAI',
   'update:customOpenAIEndpoint',
   'update:customOpenAIKey',
-  'update:customOpenAIModel'
+  'update:customOpenAIModel',
+  'update:aiConcurrency'
 ])
 
 // Use the settings form composable
@@ -28,7 +29,8 @@ const { localValues, hasChanges, isValid, isSaving, handleSave, handleReset } = 
     { key: 'useCustomOpenAI', default: false },
     { key: 'customOpenAIEndpoint', default: '' },
     { key: 'customOpenAIKey', default: '' },
-    { key: 'customOpenAIModel', default: '' }
+    { key: 'customOpenAIModel', default: '' },
+    { key: 'aiConcurrency', default: 5 }
   ],
   emit as (event: string, ...args: any[]) => void,
   {
@@ -106,6 +108,13 @@ const localCustomOpenAIModel = computed({
   get: () => localValues.customOpenAIModel.value as string,
   set: val => {
     localValues.customOpenAIModel.value = val
+  }
+})
+
+const localAiConcurrency = computed({
+  get: () => localValues.aiConcurrency.value as number,
+  set: val => {
+    localValues.aiConcurrency.value = val
   }
 })
 </script>
@@ -232,6 +241,29 @@ const localCustomOpenAIModel = computed({
               例如：gpt-4o-mini, gpt-4, gpt-3.5-turbo
             </p>
           </div>
+        </div>
+      </div>
+
+      <!-- Concurrency Settings -->
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+        <h3 class="text-md font-medium dark:text-white">请求设置</h3>
+        <div>
+          <label class="block text-sm font-medium dark:text-white mb-2">并发数：</label>
+          <div class="flex items-center gap-4">
+            <a-slider
+              v-model:value="localAiConcurrency"
+              :min="1"
+              :max="100"
+              :step="1"
+              class="flex-1"
+            />
+            <span class="w-8 text-center font-medium dark:text-white">
+              {{ localAiConcurrency }}
+            </span>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            同时发送的 AI 请求数量（1-10），数值越大速度越快，但可能触发 API 限流
+          </p>
         </div>
       </div>
 
