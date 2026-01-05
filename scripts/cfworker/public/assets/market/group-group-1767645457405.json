@@ -1,0 +1,188 @@
+{
+  "id": "group-1767645457405",
+  "name": "遥奈",
+  "icon": "https://linux.do/uploads/default/original/4X/4/5/4/4547b563f1d912bd117558d62840df1ceb81246c.avif",
+  "order": 0,
+  "emojis": [
+    {
+      "id": "emoji-1767645457405-ksxztc",
+      "packet": 1767645457405,
+      "name": "遥奈_yes.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/8/7/487a7c5b1272ced8c8eb3d17674282a06d123c6c.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-awt2c1",
+      "packet": 1767645457406,
+      "name": "遥奈_中指.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/b/4/eb4e849255c3e46bf2e74c4ef57f6a4b976e4c18.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-tb0lcw",
+      "packet": 1767645457406,
+      "name": "遥奈_吃薯片.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/8/4/3846623398824c5c3b26d8949d15bdc49d349b30.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-5sf774",
+      "packet": 1767645457406,
+      "name": "遥奈_吐舌.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/f/3/af3879ab39706c360156c0fd6afa16906f65658f.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-mb7yrt",
+      "packet": 1767645457406,
+      "name": "遥奈_启动.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/3/1/9314df5fbc35e410a6fb0f71c142776d092fa2e7.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-hzdn1r",
+      "packet": 1767645457406,
+      "name": "遥奈_噗呲.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/3/f/83f61daf8e123c27adf2ae3f0dca9036ff02015e.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-ji00tg",
+      "packet": 1767645457406,
+      "name": "遥奈_害羞.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/5/5/d557365d970a8c98fd58a92b0aa13be2823e25c6.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-cjybyu",
+      "packet": 1767645457406,
+      "name": "遥奈_思考.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/5/4/4547b563f1d912bd117558d62840df1ceb81246c.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-d7dbkm",
+      "packet": 1767645457406,
+      "name": "遥奈_我擦.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/0/a/a0a3bcd1ac72592853fb08f18d78a45af2787ef1.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-xd12yn",
+      "packet": 1767645457406,
+      "name": "遥奈_扣脸.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/2/7/b2724134c08d7d3dccad1f2583bbaefd8077eeae.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-j03c79",
+      "packet": 1767645457406,
+      "name": "遥奈_扶墙.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/3/2/e3290db1edf4ae096988d863b76e48a3b3a3aab8.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-zub97b",
+      "packet": 1767645457406,
+      "name": "遥奈_抱抱.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/e/3/be375f5a6f1c5d01a5cdc0af83f30291fe202ce4.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-9398ls",
+      "packet": 1767645457406,
+      "name": "遥奈_捏脸.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/4/1/c4184079bfc61c33c2eaff17fa6e0f3aacfe50c8.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-fo6v21",
+      "packet": 1767645457406,
+      "name": "遥奈_捏鼻.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/3/c/63cc11c8124f29f1df2448ae52829da5663b7003.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-xp5h1r",
+      "packet": 1767645457406,
+      "name": "遥奈_摇奶茶.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/8/3/58311d00669075dda5d221c0433af11129549970.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-afrnfg",
+      "packet": 1767645457406,
+      "name": "遥奈_无语.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/7/c/d7cb3455fba7bd4b7192a90a0dd37c00c38b4c86.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-hi9puq",
+      "packet": 1767645457406,
+      "name": "遥奈_比x.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/a/b/8abbb262d49ac825982d9f77a8d6caf6a3b7b767.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-ebiw0t",
+      "packet": 1767645457406,
+      "name": "遥奈_浇水.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/a/4/4a46eaeb2fab0cf06fb88c7a222a6a02d7c2631e.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-j7c4gk",
+      "packet": 1767645457406,
+      "name": "遥奈_纸箱.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/8/e/28eccd78357b36141a492d61b637d267244002fd.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767645457406-orfhi2",
+      "packet": 1767645457406,
+      "name": "遥奈_阴险.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/d/4/3d4ed93151b5e8f127fb024911f3045c41bea743.avif",
+      "groupId": "group-1767645457405",
+      "width": 500,
+      "height": 500
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "id": "group-1767644847774",
+  "name": "朝日六花｜Asahi Rokka",
+  "icon": "https://linux.do/uploads/default/original/4X/f/3/2/f322d1acb1ec94845193ebde2121d8cedf17bd87.avif",
+  "order": 0,
+  "emojis": [
+    {
+      "id": "emoji-1767644847774-6qnilq",
+      "packet": 1767644847774,
+      "name": "01.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/6/7/267e3176a992c0ddfb0c5576b3bff389f28ec6ae.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-q7gw90",
+      "packet": 1767644847774,
+      "name": "02.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/a/5/9a55cb67f6fdff721b28407fdb6f65a602872d9e.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-1b68od",
+      "packet": 1767644847774,
+      "name": "03.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/7/0/d70a74814302c5f2b44f2a7827c3ad08f5c2a54d.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-rpmrcy",
+      "packet": 1767644847774,
+      "name": "04.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/7/1/1717629d07560148e4833e260dd4300fcd0de4a7.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-9wd20h",
+      "packet": 1767644847774,
+      "name": "05.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/f/3/df36d7ced5ed27e412db14fd9190aa8cb66878f9.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-flj7lf",
+      "packet": 1767644847774,
+      "name": "06.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/3/2/f322d1acb1ec94845193ebde2121d8cedf17bd87.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-lkaya9",
+      "packet": 1767644847774,
+      "name": "07.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/6/2/c62e2a89c3b96b77d2fd1496ad98415aba1291c3.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-q2cva9",
+      "packet": 1767644847774,
+      "name": "08.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/3/a/e3af06f105d1462ff58f493477686453cbe48f88.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-qmp2h5",
+      "packet": 1767644847774,
+      "name": "09.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/f/2/3f2ffcb9b61d4855d05de6258b0021abfea96877.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-7kgpwo",
+      "packet": 1767644847774,
+      "name": "10.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/e/a/1eafe56323ccf2dcc693e47595159d49a02f9d95.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-napot1",
+      "packet": 1767644847774,
+      "name": "11.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/0/7/207ed3fe8255b487cc3649467d49eb94a2b2807a.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-ncj82p",
+      "packet": 1767644847774,
+      "name": "12.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/a/4/0a4714a13a2541126ee3d4389e6ab88598f3e711.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-42bt46",
+      "packet": 1767644847774,
+      "name": "13.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/a/6/0a65f47e2e451e78757555340d8407d9d863b4d7.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-nhrjpa",
+      "packet": 1767644847774,
+      "name": "14.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/8/d/08dee837c9c3b8f968e1b6901ef83a0a3772b7d9.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-wc88gj",
+      "packet": 1767644847774,
+      "name": "15.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/1/2/9120020482164a3b9ac3cae4f58b98cf62cf9939.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-e3asrj",
+      "packet": 1767644847774,
+      "name": "16.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/4/3/9433034be7078102991af13eae85fd3dffa63095.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-qlesx7",
+      "packet": 1767644847774,
+      "name": "17.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/8/d/88df74bc065191b256ec6b6d572c0b9707749a07.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-umj401",
+      "packet": 1767644847774,
+      "name": "18.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/d/8/cd89ff13e571a5c001bcc5b2ef31fcd683a06b00.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-eb4qds",
+      "packet": 1767644847774,
+      "name": "19.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/2/4/0246749dfc9858054a083a1e71bf107f2b6f9330.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": "emoji-1767644847774-sj8yg9",
+      "packet": 1767644847774,
+      "name": "20.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/9/4/294db49d631831acfc5bcfb235219ddcc9ddee39.avif",
+      "groupId": "group-1767644847774",
+      "width": 500,
+      "height": 500
+    }
+  ]
+}
