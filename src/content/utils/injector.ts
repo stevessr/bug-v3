@@ -459,6 +459,28 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
   })
   list.appendChild(autoReadLi2)
 
+  const challengeLi = createListItem('过盾', '🛡️', () => {
+    menu.remove()
+    createAndShowIframeModal(
+      'https://linux.do/challenge',
+      href => {
+        try {
+          const u = new URL(href)
+          return u.hostname === 'linux.do' && u.pathname === '/'
+        } catch {
+          return false
+        }
+      },
+      {
+        title: 'Cloudflare Challenge',
+        className: 'cf-challenge-modal',
+        style:
+          'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:400px;height:300px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;background:white;'
+      }
+    )
+  })
+  list.appendChild(challengeLi)
+
   const makeitem = (text: string, icon: string, url: string) =>
     createListItem(text, icon, () => {
       menu.remove()

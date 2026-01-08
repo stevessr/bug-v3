@@ -196,6 +196,33 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
   )
   ul.appendChild(uploadItem)
 
+  // 添加过盾按钮
+  const challengeItem = createMenuItem(
+    '过盾',
+    '🛡️',
+    () => {
+      createAndShowIframeModal(
+        'https://linux.do/challenge',
+        href => {
+            try {
+                const u = new URL(href)
+                return u.hostname === 'linux.do' && u.pathname === '/'
+            } catch {
+                return false
+            }
+        },
+        {
+          title: 'Cloudflare Challenge',
+          className: 'cf-challenge-modal',
+          style:
+            'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:400px;height:300px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;background:white;'
+        }
+      )
+    },
+    isChat
+  )
+  ul.appendChild(challengeItem)
+
   // 添加自动阅读按钮（仅非聊天模式）
   if (!isChat) {
     const autoReadItem = createMenuItem(
