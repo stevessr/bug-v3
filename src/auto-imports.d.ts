@@ -61,7 +61,9 @@ declare global {
   const ensureDiscourseDomainExists: typeof import('./utils/simpleStorage')['ensureDiscourseDomainExists']
   const environmentSpecificExample: typeof import('./utils/imageCache.example')['environmentSpecificExample']
   const exampleImageCaching: typeof import('./utils/imageCache.example')['exampleImageCaching']
+  const extractChanges: typeof import('./utils/typeGuards')['extractChanges']
   const extractStickerSetName: typeof import('./utils/telegramResolver')['extractStickerSetName']
+  const extractTimestamp: typeof import('./utils/typeGuards')['extractTimestamp']
   const formatMessage: typeof import('./utils/i18n')['formatMessage']
   const generateBatchNames: typeof import('./utils/geminiService')['generateBatchNames']
   const generateBatchNamesStreaming: typeof import('./utils/geminiService')['generateBatchNamesStreaming']
@@ -99,6 +101,7 @@ declare global {
   const initI18n: typeof import('./utils/i18n')['initI18n']
   const inject: typeof import('vue')['inject']
   const isChineseLocale: typeof import('./utils/i18n')['isChineseLocale']
+  const isDeltaRecord: typeof import('./utils/typeGuards')['isDeltaRecord']
   const isEmoji: typeof import('./utils/typeGuards')['isEmoji']
   const isEmojiArray: typeof import('./utils/typeGuards')['isEmojiArray']
   const isEmojiGroup: typeof import('./utils/typeGuards')['isEmojiGroup']
@@ -309,7 +312,9 @@ declare module 'vue' {
     readonly downloadFileAsBlob: UnwrapRef<typeof import('./utils/telegramResolver')['downloadFileAsBlob']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly ensureDiscourseDomainExists: UnwrapRef<typeof import('./utils/simpleStorage')['ensureDiscourseDomainExists']>
+    readonly extractChanges: UnwrapRef<typeof import('./utils/typeGuards')['extractChanges']>
     readonly extractStickerSetName: UnwrapRef<typeof import('./utils/telegramResolver')['extractStickerSetName']>
+    readonly extractTimestamp: UnwrapRef<typeof import('./utils/typeGuards')['extractTimestamp']>
     readonly formatMessage: UnwrapRef<typeof import('./utils/i18n')['formatMessage']>
     readonly generateBatchNames: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNames']>
     readonly generateBatchNamesStreaming: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNamesStreaming']>
@@ -347,6 +352,7 @@ declare module 'vue' {
     readonly initI18n: UnwrapRef<typeof import('./utils/i18n')['initI18n']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly isChineseLocale: UnwrapRef<typeof import('./utils/i18n')['isChineseLocale']>
+    readonly isDeltaRecord: UnwrapRef<typeof import('./utils/typeGuards')['isDeltaRecord']>
     readonly isEmoji: UnwrapRef<typeof import('./utils/typeGuards')['isEmoji']>
     readonly isEmojiArray: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiArray']>
     readonly isEmojiGroup: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiGroup']>

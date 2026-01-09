@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed, watch, nextTick } from 'vue'
+import { ref, shallowRef, computed, watch, nextTick, onScopeDispose } from 'vue'
 
 // Import sub-stores for delegation
 import type { SaveControl } from './core/types'
@@ -23,6 +23,9 @@ import { STORAGE_KEYS } from '@/utils/simpleStorage'
 import type { Emoji, EmojiGroup, AppSettings } from '@/types/type'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 import { defaultSettings } from '@/types/defaultSettings'
+import { createLogger } from '@/utils/logger'
+
+const log = createLogger('EmojiStore')
 
 /** 常量定义 - 延迟时间（毫秒） */
 const SEARCH_INDEX_DEBOUNCE_MS = 100
@@ -58,7 +61,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       try {
         await storage.setEmojiGroup(groupId, group)
       } catch (err) {
-        console.error('[EmojiStore] Failed to save group:', groupId, err)
+        log.error('Failed to save group:', groupId, err)
         throw err
       }
     }
@@ -69,7 +72,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     try {
       await storage.setSettings(settings.value)
     } catch (err) {
-      console.error('[EmojiStore] Failed to save settings:', err)
+      log.error('Failed to save settings:', err)
       throw err
     }
   }
@@ -79,7 +82,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     try {
       await storage.setFavorites(Array.from(favorites.value))
     } catch (err) {
-      console.error('[EmojiStore] Failed to save favorites:', err)
+      log.error('Failed to save favorites:', err)
       throw err
     }
   }
@@ -101,7 +104,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Call setReadOnlyMode(true) in popup/sidebar before loading data
   const setReadOnlyMode = (value: boolean) => {
     isReadOnlyMode.value = value
-    console.log('[EmojiStore] Read-only mode:', value ? 'enabled' : 'disabled')
+    log.info('Read-only mode:', value ? 'enabled' : 'disabled')
   }
 
   // --- Computed ---
@@ -223,7 +226,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const maybeSave = () => {
     // In read-only mode, only saveFavoritesOnly is allowed, not full saves
     if (isReadOnlyMode.value) {
-      console.log('[EmojiStore] maybeSave blocked - read-only mode active')
+      log.debug('maybeSave blocked - read-only mode active')
       return
     }
     if (isLoading.value || isSaving.value || batchDepth > 0) {
@@ -242,7 +245,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // 删除分组时直接从存储删除
   const markGroupDeleted = (groupId: string) => {
     storage.removeEmojiGroup(groupId).catch(err => {
-      console.error('[EmojiStore] Failed to remove group:', groupId, err)
+      log.error('Failed to remove group:', groupId, err)
     })
   }
 
@@ -313,7 +316,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // --- Actions ---
 
   const loadData = async () => {
-    console.log('[EmojiStore] Starting loadData with new storage system')
+    log.info('Starting loadData with new storage system')
     isLoading.value = true
     try {
       // Initialize sync service first (delegated to syncStore)
@@ -321,17 +324,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       // Check storage health first
       const health = await storage.checkStorageHealth()
-      console.log('[EmojiStore] Storage health:', health)
+      log.info('Storage health:', health)
 
       // If storage is empty, repair it
       if (!health.hasGroups && !health.hasSettings) {
-        console.log('[EmojiStore] Storage appears empty, attempting repair')
+        log.info('Storage appears empty, attempting repair')
         await storage.repairEmptyStorage()
-        console.log('[EmojiStore] Storage repair completed')
+        log.info('Storage repair completed')
       }
 
       // Load data using new storage system with conflict resolution
-      console.log('[EmojiStore] Loading data from new storage system')
+      log.info('Loading data from new storage system')
       const [loadedGroups, loadedSettings, loadedFavorites] = await Promise.allSettled([
         storage.getAllEmojiGroups(),
         storage.getSettings(),
@@ -345,23 +348,24 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       // Log any loading errors but don't fail completely
       if (loadedGroups.status === 'rejected') {
-        console.error('[EmojiStore] Failed to load groups:', loadedGroups.reason)
+        log.error('Failed to load groups:', loadedGroups.reason)
       }
       if (loadedSettings.status === 'rejected') {
-        console.error('[EmojiStore] Failed to load settings:', loadedSettings.reason)
+        log.error('Failed to load settings:', loadedSettings.reason)
       }
       if (loadedFavorites.status === 'rejected') {
-        console.error('[EmojiStore] Failed to load favorites:', loadedFavorites.reason)
+        log.error('Failed to load favorites:', loadedFavorites.reason)
       }
 
       // Detailed data loading debug info
-      console.log('[EmojiStore] Raw loaded data:')
-      console.log('  - loadedGroups:', groupsData)
-      console.log('  - loadedSettings:', settingsData)
-      console.log('  - loadedFavorites:', favoritesData)
+      log.debug('Raw loaded data:', {
+        loadedGroups: groupsData,
+        loadedSettings: settingsData,
+        loadedFavorites: favoritesData
+      })
 
       // Summarize loaded data to avoid huge console dumps
-      console.log('[EmojiStore] Data loaded summary:', {
+      log.info('Data loaded summary:', {
         groupsCount: groupsData?.length || 0,
         groupsValid: Array.isArray(groupsData),
         settingsLastModified: settingsData?.lastModified,
@@ -370,17 +374,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       if (groupsData && groupsData.length > 0) {
         groups.value = groupsData
-        console.log('[EmojiStore] Loaded groups from storage:', groupsData.length)
+        log.info('Loaded groups from storage:', groupsData.length)
       } else {
         // No groups from storage - try runtime loader first
-        console.log('[EmojiStore] No groups in storage, loading defaults')
+        log.info('No groups in storage, loading defaults')
         try {
           const packaged = await loadPackagedDefaults()
           groups.value =
             packaged && packaged.groups && packaged.groups.length > 0 ? packaged.groups : []
-          console.log('[EmojiStore] Loaded default groups:', groups.value.length)
+          log.info('Loaded default groups:', groups.value.length)
         } catch (e) {
-          console.error('[EmojiStore] Failed to load default groups:', e)
+          log.error('Failed to load default groups:', e)
           groups.value = []
         }
       }
@@ -425,16 +429,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       favorites.value = new Set(favoritesData || [])
 
-      console.log('[EmojiStore] Final groups after assignment:', {
+      log.info('Final groups after assignment:', {
         count: groups.value?.length || 0,
         groupIds: groups.value?.map((g: EmojiGroup) => g.id) || []
       })
 
       // If we used default data, save it to storage for next time (with error handling)
       if (!groupsData || groupsData.length === 0) {
-        console.log('[EmojiStore] No groups loaded, saving default groups to storage')
+        log.info('No groups loaded, saving default groups to storage')
         storage.setAllEmojiGroups(groups.value).catch(error => {
-          console.error('[EmojiStore] Failed to save default groups:', error)
+          log.error('Failed to save default groups:', error)
         })
       }
       // If settings were missing entirely, or if uploadMenuItems is absent, persist merged defaults so
@@ -446,13 +450,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           settingsData && Object.prototype.hasOwnProperty.call(settingsData, 'uploadMenuItems')
         )
         if (missingSettings || missingUploadMenu) {
-          console.log(
-            '[EmojiStore] Persisting default/merged settings (ensure uploadMenuItems present)'
-          )
+          log.info('Persisting default/merged settings (ensure uploadMenuItems present)')
           await storage.setSettings(settings.value)
         }
       } catch (error) {
-        console.error('[EmojiStore] Failed to persist default/merged settings:', error)
+        log.error('Failed to persist default/merged settings:', error)
       }
 
       activeGroupId.value = settings.value.defaultGroup || 'nachoneko'
@@ -468,16 +470,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       // 加载归档分组
       try {
         archivedGroups.value = await storage.getAllArchivedGroups()
-        console.log('[EmojiStore] Loaded archived groups:', archivedGroups.value.length)
+        log.info('Loaded archived groups:', archivedGroups.value.length)
       } catch (err) {
-        console.error('[EmojiStore] Failed to load archived groups:', err)
+        log.error('Failed to load archived groups:', err)
         archivedGroups.value = []
       }
 
-      console.log('[EmojiStore] LoadData completed successfully')
+      log.info('LoadData completed successfully')
     } catch (error) {
       const e = error as Error
-      console.error('[EmojiStore] Failed to load initial data:', e?.stack || e)
+      log.error('Failed to load initial data:', e?.stack || e)
       // Fallback to runtime loader or empty
       try {
         const packaged = await loadPackagedDefaults()
@@ -499,7 +501,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   let saveQueue: Promise<void> = Promise.resolve()
   const enqueueSave = (operation: () => Promise<void>): Promise<void> => {
     saveQueue = saveQueue.then(operation).catch(error => {
-      console.error('[EmojiStore] Queue operation failed:', error)
+      log.error('Queue operation failed:', error)
     })
     return saveQueue
   }
@@ -509,13 +511,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     return enqueueSave(async () => {
       // In read-only mode, block full saves entirely
       if (isReadOnlyMode.value) {
-        console.log('[EmojiStore] SaveData blocked - read-only mode active')
+        log.debug('SaveData blocked - read-only mode active')
         return
       }
 
       if (isLoading.value || isSaving.value || batchDepth > 0) {
-        console.log(
-          '[EmojiStore] SaveData deferred - loading:',
+        log.debug(
+          'SaveData deferred - loading:',
           isLoading.value,
           'saving:',
           isSaving.value,
@@ -528,13 +530,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
       // CRITICAL: Prevent saving empty groups if we haven't loaded data successfully yet
       if (groups.value.length === 0 && !hasLoadedOnce.value) {
-        console.warn(
-          '[EmojiStore] SaveData blocked - groups array is empty and no successful load has occurred yet.'
+        log.warn(
+          'SaveData blocked - groups array is empty and no successful load has occurred yet.'
         )
         return
       }
 
-      console.log('[EmojiStore] Starting saveData - saving all groups')
+      log.info('Starting saveData - saving all groups')
 
       isSaving.value = true
       try {
@@ -555,10 +557,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           ...groups.value.map(group => storage.setEmojiGroup(group.id, group))
         ])
 
-        console.log('[EmojiStore] SaveData completed successfully')
+        log.info('SaveData completed successfully')
       } catch (error) {
         const e = error as Error
-        console.error('[EmojiStore] Failed to save data:', e?.stack || e)
+        log.error('Failed to save data:', e?.stack || e)
       } finally {
         isSaving.value = false
         if (pendingSave.value) {
@@ -593,7 +595,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
           markGroupDirty(group.id)
         }
       }
-      console.log('[EmojiStore] updateEmojiNames', { count: Object.keys(nameUpdates).length })
+      log.info('updateEmojiNames', { count: Object.keys(nameUpdates).length })
     } finally {
       endBatch()
     }
@@ -632,7 +634,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         markFavoritesDirty()
       }
       favorites.value.delete(emoji.id)
-      console.log('[EmojiStore] removeEmojiFromGroup', { groupId, index, id: emoji.id })
+      log.info('removeEmojiFromGroup', { groupId, index, id: emoji.id })
       maybeSave()
     }
   }
@@ -686,7 +688,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       ...groups.value.slice(groupIndex + 1)
     ]
 
-    console.log('[EmojiStore] updateEmojiInGroup', { groupId, index, id: currentEmoji.id })
+    log.info('updateEmojiInGroup', { groupId, index, id: currentEmoji.id })
     // Mark the group as dirty for incremental save
     markGroupDirty(groupId)
     maybeSave()
@@ -710,7 +712,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         groupId: 'ungrouped'
       }
       ungroupedGroup.emojis.push(newEmoji)
-      console.log('[EmojiStore] addEmojiFromWeb', { id: newEmoji.id, name: newEmoji.name })
+      log.info('addEmojiFromWeb', { id: newEmoji.id, name: newEmoji.name })
       // Mark the ungrouped group as dirty for incremental save
       markGroupDirty('ungrouped')
       maybeSave()
@@ -733,12 +735,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     }
 
     if (!hasChanges) {
-      console.log('[EmojiStore] updateSettings - no changes detected, skipping')
+      log.debug('updateSettings - no changes detected, skipping')
       return
     }
 
     settings.value = { ...settings.value, ...newSettings }
-    console.log('[EmojiStore] updateSettings', { updates: newSettings })
+    log.info('updateSettings', { updates: newSettings })
     // Mark settings as dirty for incremental save
     markSettingsDirty()
     // Don't call maybeSave() here - let the watch handle all saves with debouncing
@@ -750,6 +752,19 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Notify background to sync settings across contexts (content scripts)
   // 优化：添加防抖，避免用户快速调节滑块时产生大量无效的 sendMessage 调用
   let syncSettingsTimer: ReturnType<typeof setTimeout> | null = null
+
+  // 清理定时器，防止内存泄漏
+  const cleanupSyncSettingsTimer = () => {
+    if (syncSettingsTimer) {
+      clearTimeout(syncSettingsTimer)
+      syncSettingsTimer = null
+    }
+  }
+
+  // 在 store 销毁时清理定时器
+  onScopeDispose(() => {
+    cleanupSyncSettingsTimer()
+  })
 
   const syncSettingsToBackground = () => {
     // 清除之前的定时器
@@ -778,7 +793,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const updateUseIndexedDBForImages = (value: boolean) => {
     if (settings.value.useIndexedDBForImages !== value) {
       updateSettings({ useIndexedDBForImages: value })
-      console.log('[EmojiStore] updateUseIndexedDBForImages', { value })
+      log.info('updateUseIndexedDBForImages', { value })
     }
   }
 
@@ -870,7 +885,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         markFavoritesDirty()
       }
 
-      console.log('[EmojiStore] importConfiguration merged', {
+      log.info('importConfiguration merged', {
         importedGroups: config.groups?.length || 0
       })
     } finally {
@@ -891,7 +906,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       await storage.backupToSync(groups.value, settings.value, Array.from(favorites.value))
       return true
     } catch (error) {
-      console.error('Failed to sync to chrome:', error)
+      log.error('Failed to sync to chrome:', error)
       return false
     }
   }
@@ -907,7 +922,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         // 分组数量变化：需要更新索引
         const index = groups.value.map((g, order) => ({ id: g.id, order }))
         storage.setEmojiGroupIndex(index).catch(err => {
-          console.error('[EmojiStore] Failed to save group index:', err)
+          log.error('Failed to save group index:', err)
         })
       }
     }
@@ -926,7 +941,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // Deduplication check: Skip if we recently processed this emoji
     const emojiKey = `${payload.emoji.id || ''}_${payload.emoji.url || ''}_${payload.emoji.addedAt || Date.now()}`
     if (processedEmojiIds.has(emojiKey)) {
-      console.log('[EmojiStore] Skipping duplicate emoji addition:', emojiKey)
+      log.debug('Skipping duplicate emoji addition:', emojiKey)
       return
     }
 
@@ -964,16 +979,13 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         favorites.value.add(payload.emoji.id)
         markFavoritesDirty()
       }
-      console.log('[EmojiStore] Applied emoji addition:', payload.emoji.id || payload.emoji.name)
+      log.info('Applied emoji addition:', payload.emoji.id || payload.emoji.name)
       // Only save if not already saving or loading
       if (!isSaving.value && !isLoading.value) {
         maybeSave()
       }
     } else {
-      console.log(
-        '[EmojiStore] Emoji already exists, skipping:',
-        payload.emoji.id || payload.emoji.name
-      )
+      log.debug('Emoji already exists, skipping:', payload.emoji.id || payload.emoji.name)
     }
   }
 
@@ -994,7 +1006,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const archiveGroup = async (groupId: string) => {
     const group = groups.value.find(g => g.id === groupId)
     if (!group) {
-      console.error('[EmojiStore] archiveGroup: group not found', groupId)
+      log.error('archiveGroup: group not found', groupId)
       return
     }
 
@@ -1004,9 +1016,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       groups.value = groups.value.filter(g => g.id !== groupId)
       // 添加到归档列表 - 使用数组替换以触发 shallowRef 响应式更新
       archivedGroups.value = [...archivedGroups.value, group]
-      console.log('[EmojiStore] Group archived:', groupId)
+      log.info('Group archived:', groupId)
     } catch (err) {
-      console.error('[EmojiStore] Failed to archive group:', err)
+      log.error('Failed to archive group:', err)
     }
   }
 
@@ -1019,10 +1031,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         archivedGroups.value = archivedGroups.value.filter(g => g.id !== groupId)
         // 添加到主列表 - 使用数组替换以触发 shallowRef 响应式更新
         groups.value = [...groups.value, group]
-        console.log('[EmojiStore] Group unarchived:', groupId)
+        log.info('Group unarchived:', groupId)
       }
     } catch (err) {
-      console.error('[EmojiStore] Failed to unarchive group:', err)
+      log.error('Failed to unarchive group:', err)
     }
   }
 
@@ -1031,9 +1043,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     try {
       await storage.deleteArchivedGroup(groupId)
       archivedGroups.value = archivedGroups.value.filter(g => g.id !== groupId)
-      console.log('[EmojiStore] Archived group deleted:', groupId)
+      log.info('Archived group deleted:', groupId)
     } catch (err) {
-      console.error('[EmojiStore] Failed to delete archived group:', err)
+      log.error('Failed to delete archived group:', err)
     }
   }
 
@@ -1042,7 +1054,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     try {
       archivedGroups.value = await storage.getAllArchivedGroups()
     } catch (err) {
-      console.error('[EmojiStore] Failed to refresh archived groups:', err)
+      log.error('Failed to refresh archived groups:', err)
     }
   }
 
