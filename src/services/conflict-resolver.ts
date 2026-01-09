@@ -7,40 +7,17 @@ import { nanoid } from 'nanoid'
 
 import type {
   DeltaRecord,
+  DeltaValue,
   ConflictInfo,
   ConflictStrategy,
   MergeResult,
   MergeConflict
 } from '@/types/sync'
 import { syncDb } from '@/utils/sync-db'
+import { isDeltaRecord, extractTimestamp } from '@/utils/typeGuards'
+import { createLogger } from '@/utils/logger'
 
-/**
- * Type guard to check if a value is a DeltaRecord
- */
-function isDeltaRecord(value: unknown): value is DeltaRecord {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'timestamp' in value &&
-    'version' in value &&
-    'operation' in value &&
-    'changes' in value &&
-    Array.isArray((value as DeltaRecord).changes)
-  )
-}
-
-/**
- * Extract timestamp from a DeltaRecord or data object
- */
-function extractTimestamp(value: DeltaRecord | Record<string, unknown>): number {
-  if (isDeltaRecord(value)) {
-    return value.timestamp
-  }
-  // For data objects, try to find a timestamp property
-  const timestamp = (value as { timestamp?: number }).timestamp
-  return typeof timestamp === 'number' ? timestamp : Date.now()
-}
+const log = createLogger('ConflictResolver')
 
 export class ConflictResolver {
   /**
@@ -70,7 +47,7 @@ export class ConflictResolver {
       }
     }
 
-    console.log(`[ConflictResolver] Detected ${conflicts.length} conflicts`)
+    log.info(`Detected ${conflicts.length} conflicts`)
     return conflicts
   }
 
@@ -210,9 +187,9 @@ export class ConflictResolver {
         })
 
         resolved.push(conflict)
-        console.log(`[ConflictResolver] Auto-resolved conflict ${conflict.id} with ${resolution}`)
+        log.info(`Auto-resolved conflict ${conflict.id} with ${resolution}`)
       } catch (error) {
-        console.error(`[ConflictResolver] Failed to resolve conflict ${conflict.id}:`, error)
+        log.error(`Failed to resolve conflict ${conflict.id}:`, error)
       }
     }
 
@@ -290,7 +267,7 @@ export class ConflictResolver {
         strategy: 'three-way-merge'
       }
     } catch (error) {
-      console.error('[ConflictResolver] Smart merge failed:', error)
+      log.error('Smart merge failed:', error)
       return {
         success: false,
         autoResolved: false,
@@ -308,7 +285,7 @@ export class ConflictResolver {
   async manualResolve(
     conflictId: string,
     resolution: 'local' | 'remote' | 'merged',
-    mergedData?: any
+    mergedData?: Record<string, DeltaValue>
   ): Promise<void> {
     try {
       await syncDb.resolveConflict(conflictId, resolution)
@@ -321,9 +298,9 @@ export class ConflictResolver {
         })
       }
 
-      console.log(`[ConflictResolver] Manually resolved conflict ${conflictId} with ${resolution}`)
+      log.info(`Manually resolved conflict ${conflictId} with ${resolution}`)
     } catch (error) {
-      console.error(`[ConflictResolver] Failed to manually resolve conflict ${conflictId}:`, error)
+      log.error(`Failed to manually resolve conflict ${conflictId}:`, error)
       throw error
     }
   }
@@ -346,7 +323,7 @@ export class ConflictResolver {
         resolution: record.resolution
       }))
     } catch (error) {
-      console.error('[ConflictResolver] Failed to get unresolved conflicts:', error)
+      log.error('Failed to get unresolved conflicts:', error)
       return []
     }
   }
@@ -355,7 +332,7 @@ export class ConflictResolver {
    * 三方合并（带基础版本）
    * 比较 base、local、remote 三个版本，智能合并
    */
-  async threeWayMerge<T = any>(base: T, local: T, remote: T): Promise<MergeResult<T>> {
+  async threeWayMerge<T extends Record<string, DeltaValue>>(base: T, local: T, remote: T): Promise<MergeResult<T>> {
     try {
       // 检测变更
       const localChanges = this.diff(base, local)
@@ -377,12 +354,12 @@ export class ConflictResolver {
       }
 
       // 构建合并结果
-      const merged: any = { ...base }
+      const merged = { ...base } as Record<string, DeltaValue>
       const conflicts: Array<{
         field: string
-        localValue: any
-        remoteValue: any
-        baseValue: any
+        localValue: DeltaValue
+        remoteValue: DeltaValue
+        baseValue: DeltaValue
       }> = []
 
       // 应用非冲突变更
@@ -402,9 +379,9 @@ export class ConflictResolver {
       for (const field of conflictFields) {
         conflicts.push({
           field,
-          localValue: localChanges.get(field),
-          remoteValue: remoteChanges.get(field),
-          baseValue: (base as any)[field]
+          localValue: localChanges.get(field) as DeltaValue,
+          remoteValue: remoteChanges.get(field) as DeltaValue,
+          baseValue: base[field]
         })
 
         // 默认使用 remote 的值（可配置）
@@ -419,7 +396,7 @@ export class ConflictResolver {
         strategy: 'three-way-merge'
       }
     } catch (error) {
-      console.error('[ConflictResolver] Three-way merge failed:', error)
+      log.error('Three-way merge failed:', error)
       return {
         success: false,
         autoResolved: false,
@@ -431,8 +408,11 @@ export class ConflictResolver {
   /**
    * 对比两个对象的差异
    */
-  private diff(base: any, modified: any): Map<string, any> {
-    const changes = new Map<string, any>()
+  private diff(
+    base: Record<string, DeltaValue> | null | undefined,
+    modified: Record<string, DeltaValue> | null | undefined
+  ): Map<string, DeltaValue> {
+    const changes = new Map<string, DeltaValue>()
 
     const allKeys = new Set([...Object.keys(base || {}), ...Object.keys(modified || {})])
 

@@ -324,6 +324,7 @@ export class ImageCache {
         }
 
         request.onerror = () => {
+          errorCache('isImageCached IndexedDB operation failed:', request.error)
           resolve(false)
         }
       })
@@ -380,6 +381,7 @@ export class ImageCache {
         }
 
         request.onerror = () => {
+          errorCache('getCachedImage IndexedDB operation failed:', request.error)
           resolve(null)
         }
       })
@@ -425,7 +427,8 @@ export class ImageCache {
           }
 
           request.onerror = () => {
-            // 单个失败不影响整体
+            // 单个失败不影响整体，但记录错误
+            errorCache('_batchGetFromDb single request failed:', request.error)
             completed++
             if (completed === urls.length && !hasError) resolve(results)
           }
@@ -741,7 +744,10 @@ export class ImageCache {
         }
       }
 
-      cursorRequest.onerror = () => resolve()
+      cursorRequest.onerror = () => {
+        errorCache('ensureCacheLimits cursor failed:', cursorRequest.error)
+        resolve()
+      }
     })
   }
 
@@ -883,7 +889,10 @@ export class ImageCache {
           }
         }
 
-        cursorRequest.onerror = () => resolve(0)
+        cursorRequest.onerror = () => {
+          errorCache('cleanupLRU cursor failed:', cursorRequest.error)
+          resolve(0)
+        }
       })
     } catch {
       return 0
@@ -962,6 +971,7 @@ export class ImageCache {
         }
 
         cursorRequest.onerror = () => {
+          errorCache('getCacheStats cursor failed:', cursorRequest.error)
           resolve({
             totalEntries: 0,
             totalSize: 0,

@@ -10,6 +10,7 @@ import { syncDb } from '@/utils/sync-db'
 import { useEmojiStore } from '@/stores'
 import { cloudflareSyncService } from '@/utils/cloudflareSync'
 import { getDeviceId } from '@/utils/device'
+import { createLogger } from '@/utils/logger'
 import type {
   SyncOptions,
   SyncResult,
@@ -18,6 +19,11 @@ import type {
   SyncState,
   DeltaValue
 } from '@/types/sync'
+
+const log = createLogger('IncrementalSync')
+
+/** Type for the emoji store instance */
+type EmojiStoreInstance = ReturnType<typeof useEmojiStore>
 
 export class IncrementalSyncService {
   private syncInProgress = false
@@ -43,14 +49,14 @@ export class IncrementalSyncService {
     this.updateSyncState('syncing', 0, 'Starting sync...')
 
     try {
-      console.log('[IncrementalSync] Starting sync', options)
+      log.info('Starting sync', options)
 
       // 1. 获取本地和远程版本信息
       this.updateSyncState('syncing', 10, 'Checking versions...')
       const localVersion = await this.getLocalVersion()
       const remoteVersion = await this.getRemoteVersion(options.provider)
 
-      console.log('[IncrementalSync] Versions:', { local: localVersion, remote: remoteVersion })
+      log.info('Versions:', { local: localVersion, remote: remoteVersion })
 
       // 2. 判断同步方向
       if (options.fullSync || localVersion.local === 0) {
@@ -65,7 +71,7 @@ export class IncrementalSyncService {
       this.updateSyncState('syncing', 40, 'Fetching remote changes...')
       const remoteDeltas = await this.getRemoteDeltas(options.provider)
 
-      console.log('[IncrementalSync] Deltas:', {
+      log.info('Deltas:', {
         local: localDeltas.length,
         remote: remoteDeltas.length
       })
@@ -75,7 +81,7 @@ export class IncrementalSyncService {
       const conflicts = conflictResolver.detectConflicts(localDeltas, remoteDeltas)
 
       if (conflicts.length > 0) {
-        console.log(`[IncrementalSync] Detected ${conflicts.length} conflicts`)
+        log.info(`Detected ${conflicts.length} conflicts`)
 
         // 根据策略处理冲突
         if (options.conflictStrategy === 'manual') {
@@ -121,7 +127,7 @@ export class IncrementalSyncService {
         message: 'Sync completed successfully'
       }
     } catch (error) {
-      console.error('[IncrementalSync] Sync failed:', error)
+      log.error('Sync failed:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       this.updateSyncState('error', 0, errorMessage)
 
@@ -139,7 +145,7 @@ export class IncrementalSyncService {
    * 全量同步
    */
   private async fullSync(options: SyncOptions): Promise<SyncResult> {
-    console.log('[IncrementalSync] Performing full sync')
+    log.info('Performing full sync')
 
     try {
       if (options.provider === 'cloudflare') {
@@ -164,7 +170,7 @@ export class IncrementalSyncService {
         throw new Error(`Provider ${options.provider} not supported for full sync`)
       }
     } catch (error) {
-      console.error('[IncrementalSync] Full sync failed:', error)
+      log.error('Full sync failed:', error)
       throw error
     }
   }
@@ -210,7 +216,7 @@ export class IncrementalSyncService {
 
       return { remote: 0 }
     } catch (error) {
-      console.error('[IncrementalSync] Failed to get remote version:', error)
+      log.error('Failed to get remote version:', error)
       return { remote: 0 }
     }
   }
@@ -236,7 +242,7 @@ export class IncrementalSyncService {
 
       return []
     } catch (error) {
-      console.error('[IncrementalSync] Failed to get remote deltas:', error)
+      log.error('Failed to get remote deltas:', error)
       return []
     }
   }
@@ -247,7 +253,7 @@ export class IncrementalSyncService {
   private async applyRemoteDeltas(deltas: DeltaRecord[]): Promise<void> {
     if (deltas.length === 0) return
 
-    console.log(`[IncrementalSync] Applying ${deltas.length} remote changes`)
+    log.info(`Applying ${deltas.length} remote changes`)
 
     // 按版本号排序确保顺序应用
     const sortedDeltas = deltas.sort((a, b) => a.version - b.version)
@@ -270,7 +276,7 @@ export class IncrementalSyncService {
   /**
    * 应用单个变更
    */
-  private async applyDelta(delta: DeltaRecord, store: any): Promise<void> {
+  private async applyDelta(delta: DeltaRecord, store: EmojiStoreInstance): Promise<void> {
     try {
       switch (delta.entityType) {
         case 'emoji':
@@ -287,25 +293,26 @@ export class IncrementalSyncService {
           break
       }
 
-      console.log('[IncrementalSync] Applied delta:', {
+      log.debug('Applied delta:', {
         operation: delta.operation,
         entityType: delta.entityType,
         entityId: delta.entityId
       })
     } catch (error) {
-      console.error('[IncrementalSync] Failed to apply delta:', error)
+      log.error('Failed to apply delta:', error)
     }
   }
 
   /**
    * 应用 emoji 变更
    */
-  private async applyEmojiDelta(delta: DeltaRecord, store: any): Promise<void> {
+  private async applyEmojiDelta(delta: DeltaRecord, store: EmojiStoreInstance): Promise<void> {
     switch (delta.operation) {
       case 'create': {
         const emojiData = delta.changes.find(c => c.field === 'emojis')?.newValue
         if (emojiData && typeof emojiData === 'object' && 'groupId' in emojiData) {
-          store.addEmojiWithoutSave(emojiData.groupId, emojiData)
+          const groupId = (emojiData as { groupId: string }).groupId
+          store.addEmojiWithoutSave(groupId, emojiData as Parameters<typeof store.addEmojiWithoutSave>[1])
         }
         break
       }
@@ -335,13 +342,13 @@ export class IncrementalSyncService {
             const targetGroupId =
               typeof moveData.newValue === 'string' ? moveData.newValue : undefined
             const sourceGroup = sourceGroupId
-              ? store.groups.find((g: any) => g.id === sourceGroupId)
+              ? store.groups.find(g => g.id === sourceGroupId)
               : undefined
             const targetGroup = targetGroupId
-              ? store.groups.find((g: any) => g.id === targetGroupId)
+              ? store.groups.find(g => g.id === targetGroupId)
               : undefined
             if (sourceGroup && targetGroup) {
-              const sourceIndex = sourceGroup.emojis.findIndex((e: any) => e.id === delta.entityId)
+              const sourceIndex = sourceGroup.emojis.findIndex(e => e.id === delta.entityId)
               if (sourceIndex !== -1) {
                 store.moveEmoji(sourceGroup.id, sourceIndex, targetGroup.id, 0)
               }
@@ -356,7 +363,7 @@ export class IncrementalSyncService {
   /**
    * 应用分组变更
    */
-  private async applyGroupDelta(delta: DeltaRecord, store: any): Promise<void> {
+  private async applyGroupDelta(delta: DeltaRecord, store: EmojiStoreInstance): Promise<void> {
     switch (delta.operation) {
       case 'create': {
         const groupData = delta.changes.find(c => c.field === 'groups')?.newValue
@@ -391,7 +398,7 @@ export class IncrementalSyncService {
   /**
    * 应用设置变更
    */
-  private async applySettingsDelta(delta: DeltaRecord, store: any): Promise<void> {
+  private async applySettingsDelta(delta: DeltaRecord, store: EmojiStoreInstance): Promise<void> {
     const updates: Record<string, DeltaValue> = {}
     for (const change of delta.changes) {
       updates[change.field] = change.newValue
@@ -402,12 +409,12 @@ export class IncrementalSyncService {
   /**
    * 应用收藏变更
    */
-  private async applyFavoritesDelta(delta: DeltaRecord, store: any): Promise<void> {
+  private async applyFavoritesDelta(delta: DeltaRecord, store: EmojiStoreInstance): Promise<void> {
     switch (delta.operation) {
       case 'create':
       case 'update': {
         const emojiId = delta.changes.find(c => c.field === 'favorites')?.newValue
-        if (emojiId) {
+        if (typeof emojiId === 'string') {
           store.favorites.add(emojiId)
         }
         break
@@ -426,7 +433,7 @@ export class IncrementalSyncService {
   private async pushLocalDeltas(deltas: DeltaRecord[], provider: string): Promise<void> {
     if (deltas.length === 0) return
 
-    console.log(`[IncrementalSync] Pushing ${deltas.length} local changes`)
+    log.info(`Pushing ${deltas.length} local changes`)
 
     try {
       if (provider === 'cloudflare') {
@@ -436,7 +443,7 @@ export class IncrementalSyncService {
         await cloudflareSyncService.pushData()
       }
     } catch (error) {
-      console.error('[IncrementalSync] Failed to push local deltas:', error)
+      log.error('Failed to push local deltas:', error)
       // 添加到离线队列
       for (const delta of deltas) {
         await offlineQueue.enqueue(delta)
@@ -449,7 +456,7 @@ export class IncrementalSyncService {
    */
   private async updateSyncVersion(version: SyncVersion): Promise<void> {
     await syncDb.syncVersions.put(version)
-    console.log('[IncrementalSync] Updated sync version:', version)
+    log.info('Updated sync version:', version)
   }
 
   /**
@@ -458,7 +465,7 @@ export class IncrementalSyncService {
   private async resetLocalVersion(): Promise<void> {
     const deviceId = await getDeviceId()
     await syncDb.syncVersions.delete(deviceId)
-    console.log('[IncrementalSync] Reset local version')
+    log.info('Reset local version')
   }
 
   /**
@@ -470,7 +477,7 @@ export class IncrementalSyncService {
       progress,
       message
     }
-    console.log('[IncrementalSync] State:', this.syncState)
+    log.debug('State:', this.syncState)
   }
 
   /**

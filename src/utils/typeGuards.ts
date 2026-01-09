@@ -4,6 +4,7 @@
  */
 
 import type { Emoji, EmojiGroup, AppSettings } from '@/types/type'
+import type { DeltaRecord } from '@/types/sync'
 
 /**
  * Check if a value is a valid Emoji object
@@ -134,4 +135,42 @@ export function sanitizeEmojiGroupArray(data: unknown): EmojiGroup[] {
   return data
     .map(item => sanitizeEmojiGroup(item))
     .filter((group): group is EmojiGroup => group !== undefined)
+}
+
+/**
+ * Type guard to check if a value is a DeltaRecord
+ */
+export function isDeltaRecord(value: unknown): value is DeltaRecord {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'timestamp' in value &&
+    'version' in value &&
+    'operation' in value &&
+    'changes' in value &&
+    Array.isArray((value as DeltaRecord).changes)
+  )
+}
+
+/**
+ * Extract timestamp from a DeltaRecord or data object
+ */
+export function extractTimestamp(value: DeltaRecord | Record<string, unknown>): number {
+  if (isDeltaRecord(value)) {
+    return value.timestamp
+  }
+  // For data objects, try to find a timestamp property
+  const timestamp = (value as { timestamp?: number }).timestamp
+  return typeof timestamp === 'number' ? timestamp : Date.now()
+}
+
+/**
+ * Extract changes from a DeltaRecord or return undefined
+ */
+export function extractChanges(value: DeltaRecord | Record<string, unknown>) {
+  if (isDeltaRecord(value)) {
+    return value.changes
+  }
+  return undefined
 }
