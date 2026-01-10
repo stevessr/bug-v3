@@ -70,6 +70,26 @@ export interface AgentAction {
     | 'get_page_info'
     | 'get_elements'
     | 'execute_script'
+    | 'get_element_text'
+    | 'get_element_html'
+    | 'get_element_attribute'
+    | 'get_all_attributes'
+    | 'get_computed_styles'
+    | 'get_element_rect'
+    | 'query_elements'
+    | 'set_attribute'
+    | 'remove_attribute'
+    | 'add_class'
+    | 'remove_class'
+    | 'toggle_class'
+    | 'set_style'
+    | 'scroll_into_view'
+    | 'element_exists'
+    | 'get_element_count'
+    | 'get_parent_element'
+    | 'get_child_elements'
+    | 'set_property'
+    | 'get_property'
     | 'done'
   params?: Record<string, unknown>
 }
@@ -338,6 +358,255 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       required: ['code']
     }
   },
+  // DOM Reading Tools
+  {
+    name: 'get_element_text',
+    description: 'Get the text content of an element by CSS selector',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'get_element_html',
+    description: 'Get the HTML content of an element (inner or outer HTML)',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        outer: { type: 'boolean', description: 'If true, get outerHTML instead of innerHTML' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'get_element_attribute',
+    description: 'Get a specific attribute value of an element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        attribute: { type: 'string', description: 'Name of the attribute to get' }
+      },
+      required: ['selector', 'attribute']
+    }
+  },
+  {
+    name: 'get_all_attributes',
+    description: 'Get all attributes of an element as a key-value object',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'get_computed_styles',
+    description: 'Get computed CSS styles of an element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        properties: {
+          type: 'string',
+          description:
+            'Comma-separated list of CSS properties to get (e.g., "color,font-size"). If empty, returns common properties.'
+        }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'get_element_rect',
+    description: 'Get bounding rectangle and position of an element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'query_elements',
+    description: 'Query multiple elements by selector and get their basic info',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector to query' },
+        limit: { type: 'number', description: 'Maximum number of elements to return (default: 20)' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'element_exists',
+    description: 'Check if an element exists on the page',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector to check' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'get_element_count',
+    description: 'Get the count of elements matching a selector',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector to count' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'get_parent_element',
+    description: 'Get information about the parent element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the child element' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'get_child_elements',
+    description: 'Get information about child elements',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the parent element' },
+        limit: { type: 'number', description: 'Maximum number of children to return (default: 10)' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'get_property',
+    description: 'Get a JavaScript property value of an element (e.g., checked, disabled, value)',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        property: { type: 'string', description: 'Property name to get (e.g., checked, disabled, value)' }
+      },
+      required: ['selector', 'property']
+    }
+  },
+  // DOM Manipulation Tools
+  {
+    name: 'set_attribute',
+    description: 'Set an attribute on an element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        attribute: { type: 'string', description: 'Attribute name to set' },
+        value: { type: 'string', description: 'Value to set' }
+      },
+      required: ['selector', 'attribute', 'value']
+    }
+  },
+  {
+    name: 'remove_attribute',
+    description: 'Remove an attribute from an element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        attribute: { type: 'string', description: 'Attribute name to remove' }
+      },
+      required: ['selector', 'attribute']
+    }
+  },
+  {
+    name: 'add_class',
+    description: 'Add one or more CSS classes to an element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        class_name: { type: 'string', description: 'Class name(s) to add (space-separated for multiple)' }
+      },
+      required: ['selector', 'class_name']
+    }
+  },
+  {
+    name: 'remove_class',
+    description: 'Remove one or more CSS classes from an element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        class_name: { type: 'string', description: 'Class name(s) to remove (space-separated for multiple)' }
+      },
+      required: ['selector', 'class_name']
+    }
+  },
+  {
+    name: 'toggle_class',
+    description: 'Toggle a CSS class on an element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        class_name: { type: 'string', description: 'Class name to toggle' }
+      },
+      required: ['selector', 'class_name']
+    }
+  },
+  {
+    name: 'set_style',
+    description: 'Set an inline CSS style property on an element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        property: { type: 'string', description: 'CSS property name (e.g., color, display, width)' },
+        value: { type: 'string', description: 'CSS value to set' }
+      },
+      required: ['selector', 'property', 'value']
+    }
+  },
+  {
+    name: 'scroll_into_view',
+    description: 'Scroll an element into the visible viewport',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        behavior: { type: 'string', description: 'Scroll behavior: auto or smooth', enum: ['auto', 'smooth'] },
+        block: {
+          type: 'string',
+          description: 'Vertical alignment: start, center, end, nearest',
+          enum: ['start', 'center', 'end', 'nearest']
+        }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'set_property',
+    description:
+      'Set a JavaScript property on an element (e.g., checked=true for checkboxes, disabled=true)',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the element' },
+        property: { type: 'string', description: 'Property name to set' },
+        value: { type: 'string', description: 'Value to set (use "true"/"false" for booleans)' }
+      },
+      required: ['selector', 'property', 'value']
+    }
+  },
   {
     name: 'done',
     description: 'Mark the task as complete and provide a summary',
@@ -354,7 +623,13 @@ const BROWSER_TOOLS: ToolDefinition[] = [
 const SYSTEM_PROMPT = `You are a browser automation agent. You can control a web browser to complete tasks.
 
 You have access to the following tools:
+
+**Screen & Navigation:**
 - screenshot: Capture what's currently visible on the screen
+- navigate: Go to a URL
+- get_page_info: Get page URL, title, and dimensions
+
+**Mouse & Keyboard:**
 - click: Click at specific x,y coordinates
 - double_click: Double click at specific x,y coordinates
 - right_click: Right click to open context menu
@@ -365,29 +640,57 @@ You have access to the following tools:
 - type: Type text into input fields
 - clear_input: Clear an input field
 - key: Press keyboard keys (Enter, Tab, Escape, etc.)
-- navigate: Go to a URL
-- wait: Wait for a duration
-- wait_for_element: Wait for an element to appear
+
+**Element Interaction:**
 - focus: Focus on an element by selector
 - select_text: Select all text in an element
 - get_selected_text: Get the currently selected text
 - get_input_value: Get the value of an input element
-- get_page_info: Get page URL, title, and dimensions
+- scroll_into_view: Scroll an element into the visible viewport
+
+**DOM Reading (for understanding page structure):**
 - get_elements: Get interactive elements on the page
+- get_element_text: Get the text content of an element
+- get_element_html: Get the HTML content of an element
+- get_element_attribute: Get a specific attribute value
+- get_all_attributes: Get all attributes of an element
+- get_computed_styles: Get computed CSS styles
+- get_element_rect: Get bounding rectangle and position
+- query_elements: Query multiple elements by selector
+- element_exists: Check if an element exists
+- get_element_count: Count elements matching a selector
+- get_parent_element: Get parent element info
+- get_child_elements: Get child elements info
+- get_property: Get a JavaScript property (e.g., checked, disabled)
+
+**DOM Manipulation (for modifying elements):**
+- set_attribute: Set an attribute on an element
+- remove_attribute: Remove an attribute
+- add_class: Add CSS class(es) to an element
+- remove_class: Remove CSS class(es) from an element
+- toggle_class: Toggle a CSS class
+- set_style: Set inline CSS style
+- set_property: Set a JavaScript property (e.g., checked, disabled)
+
+**Timing & Control:**
+- wait: Wait for a duration
+- wait_for_element: Wait for an element to appear
 - execute_script: Execute custom JavaScript (use with caution)
 - done: Complete the task with a summary
 
 Workflow:
 1. First take a screenshot to see the current state
-2. Analyze what you see and plan your next action
+2. Use DOM reading tools to understand the page structure if needed
 3. Execute actions step by step
-4. After each action, take another screenshot to verify the result
+4. After important actions, take a screenshot to verify the result
 5. When the task is complete, use the 'done' tool
 
 Important:
 - Always take a screenshot first to understand the current page state
+- Use CSS selectors (e.g., "#id", ".class", "button[type='submit']") for reliable element targeting
 - Click coordinates are relative to the page (not viewport), account for scroll position
 - Be precise with coordinates - click in the center of buttons/links
+- Use DOM reading tools to verify element presence before interacting
 - If something doesn't work, try an alternative approach
 - Provide clear thinking about what you're doing and why`
 
@@ -642,6 +945,215 @@ async function executeTool(
     case 'done': {
       const summary = toolInput.summary as string
       return { result: `Task completed: ${summary}` }
+    }
+
+    // DOM Reading Tools
+    case 'get_element_text': {
+      const selector = toolInput.selector as string
+      const result = await browserAutomation.getElementText(selector)
+      if (result.success) {
+        return { result: `Text content: "${result.text?.slice(0, 500) || '(empty)'}"` }
+      }
+      return { result: `Get text failed: ${result.error}` }
+    }
+
+    case 'get_element_html': {
+      const selector = toolInput.selector as string
+      const outer = (toolInput.outer as boolean) || false
+      const result = await browserAutomation.getElementHTML(selector, outer)
+      if (result.success) {
+        return { result: `HTML content:\n${result.html?.slice(0, 1000) || '(empty)'}${(result.html?.length || 0) > 1000 ? '...' : ''}` }
+      }
+      return { result: `Get HTML failed: ${result.error}` }
+    }
+
+    case 'get_element_attribute': {
+      const selector = toolInput.selector as string
+      const attribute = toolInput.attribute as string
+      const result = await browserAutomation.getElementAttribute(selector, attribute)
+      if (result.success) {
+        return { result: `Attribute "${attribute}": ${result.value === null ? '(not set)' : `"${result.value}"`}` }
+      }
+      return { result: `Get attribute failed: ${result.error}` }
+    }
+
+    case 'get_all_attributes': {
+      const selector = toolInput.selector as string
+      const result = await browserAutomation.getAllAttributes(selector)
+      if (result.success) {
+        return { result: `Attributes:\n${JSON.stringify(result.attributes, null, 2)}` }
+      }
+      return { result: `Get attributes failed: ${result.error}` }
+    }
+
+    case 'get_computed_styles': {
+      const selector = toolInput.selector as string
+      const propsString = toolInput.properties as string | undefined
+      const properties = propsString ? propsString.split(',').map(p => p.trim()) : undefined
+      const result = await browserAutomation.getComputedStyles(selector, properties)
+      if (result.success) {
+        return { result: `Computed styles:\n${JSON.stringify(result.styles, null, 2)}` }
+      }
+      return { result: `Get styles failed: ${result.error}` }
+    }
+
+    case 'get_element_rect': {
+      const selector = toolInput.selector as string
+      const result = await browserAutomation.getElementRect(selector)
+      if (result.success) {
+        return { result: `Element rect:\n${JSON.stringify(result.rect, null, 2)}` }
+      }
+      return { result: `Get rect failed: ${result.error}` }
+    }
+
+    case 'query_elements': {
+      const selector = toolInput.selector as string
+      const limit = (toolInput.limit as number) || 20
+      const result = await browserAutomation.queryElements(selector, limit)
+      if (result.success) {
+        return { result: `Found ${result.elements?.length || 0} elements:\n${JSON.stringify(result.elements, null, 2)}` }
+      }
+      return { result: `Query elements failed: ${result.error}` }
+    }
+
+    case 'element_exists': {
+      const selector = toolInput.selector as string
+      const result = await browserAutomation.elementExists(selector)
+      if (result.success) {
+        return { result: `Element "${selector}" ${result.exists ? 'exists' : 'does not exist'}` }
+      }
+      return { result: `Check failed: ${result.error}` }
+    }
+
+    case 'get_element_count': {
+      const selector = toolInput.selector as string
+      const result = await browserAutomation.getElementCount(selector)
+      if (result.success) {
+        return { result: `Found ${result.count} element(s) matching "${selector}"` }
+      }
+      return { result: `Count failed: ${result.error}` }
+    }
+
+    case 'get_parent_element': {
+      const selector = toolInput.selector as string
+      const result = await browserAutomation.getParentElement(selector)
+      if (result.success) {
+        if (result.parent) {
+          return { result: `Parent element:\n${JSON.stringify(result.parent, null, 2)}` }
+        }
+        return { result: 'No parent element found' }
+      }
+      return { result: `Get parent failed: ${result.error}` }
+    }
+
+    case 'get_child_elements': {
+      const selector = toolInput.selector as string
+      const limit = (toolInput.limit as number) || 10
+      const result = await browserAutomation.getChildElements(selector, limit)
+      if (result.success) {
+        return { result: `Found ${result.children?.length || 0} child elements:\n${JSON.stringify(result.children, null, 2)}` }
+      }
+      return { result: `Get children failed: ${result.error}` }
+    }
+
+    case 'get_property': {
+      const selector = toolInput.selector as string
+      const property = toolInput.property as string
+      const result = await browserAutomation.getProperty(selector, property)
+      if (result.success) {
+        return { result: `Property "${property}": ${JSON.stringify(result.value)}` }
+      }
+      return { result: `Get property failed: ${result.error}` }
+    }
+
+    // DOM Manipulation Tools
+    case 'set_attribute': {
+      const selector = toolInput.selector as string
+      const attribute = toolInput.attribute as string
+      const value = toolInput.value as string
+      const result = await browserAutomation.setAttribute(selector, attribute, value)
+      if (result.success) {
+        return { result: `Set attribute "${attribute}" = "${value}" on ${selector}` }
+      }
+      return { result: `Set attribute failed: ${result.error}` }
+    }
+
+    case 'remove_attribute': {
+      const selector = toolInput.selector as string
+      const attribute = toolInput.attribute as string
+      const result = await browserAutomation.removeAttribute(selector, attribute)
+      if (result.success) {
+        return { result: `Removed attribute "${attribute}" from ${selector}` }
+      }
+      return { result: `Remove attribute failed: ${result.error}` }
+    }
+
+    case 'add_class': {
+      const selector = toolInput.selector as string
+      const className = toolInput.class_name as string
+      const result = await browserAutomation.addClass(selector, className)
+      if (result.success) {
+        return { result: `Added class "${className}" to ${selector}` }
+      }
+      return { result: `Add class failed: ${result.error}` }
+    }
+
+    case 'remove_class': {
+      const selector = toolInput.selector as string
+      const className = toolInput.class_name as string
+      const result = await browserAutomation.removeClass(selector, className)
+      if (result.success) {
+        return { result: `Removed class "${className}" from ${selector}` }
+      }
+      return { result: `Remove class failed: ${result.error}` }
+    }
+
+    case 'toggle_class': {
+      const selector = toolInput.selector as string
+      const className = toolInput.class_name as string
+      const result = await browserAutomation.toggleClass(selector, className)
+      if (result.success) {
+        return { result: `Toggled class "${className}" on ${selector}. Has class: ${result.hasClass}` }
+      }
+      return { result: `Toggle class failed: ${result.error}` }
+    }
+
+    case 'set_style': {
+      const selector = toolInput.selector as string
+      const property = toolInput.property as string
+      const value = toolInput.value as string
+      const result = await browserAutomation.setStyle(selector, property, value)
+      if (result.success) {
+        return { result: `Set style "${property}: ${value}" on ${selector}` }
+      }
+      return { result: `Set style failed: ${result.error}` }
+    }
+
+    case 'scroll_into_view': {
+      const selector = toolInput.selector as string
+      const behavior = toolInput.behavior as 'auto' | 'smooth' | undefined
+      const block = toolInput.block as 'start' | 'center' | 'end' | 'nearest' | undefined
+      const result = await browserAutomation.scrollIntoView(selector, { behavior, block })
+      if (result.success) {
+        return { result: `Scrolled element "${selector}" into view` }
+      }
+      return { result: `Scroll into view failed: ${result.error}` }
+    }
+
+    case 'set_property': {
+      const selector = toolInput.selector as string
+      const property = toolInput.property as string
+      const valueStr = toolInput.value as string
+      // Parse value: handle booleans and numbers
+      let value: unknown = valueStr
+      if (valueStr === 'true') value = true
+      else if (valueStr === 'false') value = false
+      else if (!isNaN(Number(valueStr)) && valueStr !== '') value = Number(valueStr)
+      const result = await browserAutomation.setProperty(selector, property, value)
+      if (result.success) {
+        return { result: `Set property "${property}" = ${JSON.stringify(value)} on ${selector}` }
+      }
+      return { result: `Set property failed: ${result.error}` }
     }
 
     default:

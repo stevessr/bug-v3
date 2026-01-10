@@ -960,3 +960,667 @@ export async function executeScript(
     return { success: false, error: String(e) }
   }
 }
+
+/**
+ * Get text content of an element
+ */
+export async function getElementText(
+  selector: string
+): Promise<{ success: boolean; text?: string; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      return { success: true, text: element.textContent?.trim() || '' }
+    },
+    args: [selector]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get inner HTML of an element
+ */
+export async function getElementHTML(
+  selector: string,
+  outer: boolean = false
+): Promise<{ success: boolean; html?: string; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, getOuter: boolean) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      return {
+        success: true,
+        html: getOuter ? element.outerHTML : element.innerHTML
+      }
+    },
+    args: [selector, outer]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get attribute of an element
+ */
+export async function getElementAttribute(
+  selector: string,
+  attribute: string
+): Promise<{ success: boolean; value?: string | null; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, attr: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      return { success: true, value: element.getAttribute(attr) }
+    },
+    args: [selector, attribute]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get all attributes of an element
+ */
+export async function getAllAttributes(
+  selector: string
+): Promise<{ success: boolean; attributes?: Record<string, string>; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      const attrs: Record<string, string> = {}
+      for (const attr of element.attributes) {
+        attrs[attr.name] = attr.value
+      }
+      return { success: true, attributes: attrs }
+    },
+    args: [selector]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get computed CSS styles of an element
+ */
+export async function getComputedStyles(
+  selector: string,
+  properties?: string[]
+): Promise<{ success: boolean; styles?: Record<string, string>; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, props?: string[]) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+
+      const computed = window.getComputedStyle(element)
+      const styles: Record<string, string> = {}
+
+      if (props && props.length > 0) {
+        for (const prop of props) {
+          styles[prop] = computed.getPropertyValue(prop)
+        }
+      } else {
+        // Return common useful properties
+        const commonProps = [
+          'display',
+          'visibility',
+          'opacity',
+          'width',
+          'height',
+          'color',
+          'background-color',
+          'font-size',
+          'font-weight',
+          'position',
+          'top',
+          'left',
+          'right',
+          'bottom',
+          'margin',
+          'padding',
+          'border',
+          'z-index'
+        ]
+        for (const prop of commonProps) {
+          styles[prop] = computed.getPropertyValue(prop)
+        }
+      }
+
+      return { success: true, styles }
+    },
+    args: [selector, properties]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get bounding rect and position info of an element
+ */
+export async function getElementRect(
+  selector: string
+): Promise<{
+  success: boolean
+  rect?: { x: number; y: number; width: number; height: number; top: number; left: number; bottom: number; right: number }
+  error?: string
+}> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      const rect = element.getBoundingClientRect()
+      return {
+        success: true,
+        rect: {
+          x: rect.x + window.scrollX,
+          y: rect.y + window.scrollY,
+          width: rect.width,
+          height: rect.height,
+          top: rect.top + window.scrollY,
+          left: rect.left + window.scrollX,
+          bottom: rect.bottom + window.scrollY,
+          right: rect.right + window.scrollX
+        }
+      }
+    },
+    args: [selector]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Query elements by selector and return basic info
+ */
+export async function queryElements(
+  selector: string,
+  limit: number = 20
+): Promise<{
+  success: boolean
+  elements?: Array<{
+    index: number
+    tagName: string
+    id?: string
+    className?: string
+    text?: string
+    rect: { x: number; y: number; width: number; height: number }
+  }>
+  error?: string
+}> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, max: number) => {
+      const elements = document.querySelectorAll(sel)
+      const result: Array<{
+        index: number
+        tagName: string
+        id?: string
+        className?: string
+        text?: string
+        rect: { x: number; y: number; width: number; height: number }
+      }> = []
+
+      const count = Math.min(elements.length, max)
+      for (let i = 0; i < count; i++) {
+        const el = elements[i]
+        const rect = el.getBoundingClientRect()
+        result.push({
+          index: i,
+          tagName: el.tagName.toLowerCase(),
+          id: el.id || undefined,
+          className: el.className?.toString() || undefined,
+          text: el.textContent?.trim().slice(0, 100) || undefined,
+          rect: {
+            x: rect.x + window.scrollX,
+            y: rect.y + window.scrollY,
+            width: rect.width,
+            height: rect.height
+          }
+        })
+      }
+
+      return { success: true, elements: result }
+    },
+    args: [selector, limit]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Set attribute on an element
+ */
+export async function setAttribute(
+  selector: string,
+  attribute: string,
+  value: string
+): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, attr: string, val: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      element.setAttribute(attr, val)
+      return { success: true }
+    },
+    args: [selector, attribute, value]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Remove attribute from an element
+ */
+export async function removeAttribute(
+  selector: string,
+  attribute: string
+): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, attr: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      element.removeAttribute(attr)
+      return { success: true }
+    },
+    args: [selector, attribute]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Add CSS class to an element
+ */
+export async function addClass(
+  selector: string,
+  className: string
+): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, cls: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      element.classList.add(...cls.split(/\s+/).filter(Boolean))
+      return { success: true }
+    },
+    args: [selector, className]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Remove CSS class from an element
+ */
+export async function removeClass(
+  selector: string,
+  className: string
+): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, cls: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      element.classList.remove(...cls.split(/\s+/).filter(Boolean))
+      return { success: true }
+    },
+    args: [selector, className]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Toggle CSS class on an element
+ */
+export async function toggleClass(
+  selector: string,
+  className: string
+): Promise<{ success: boolean; hasClass?: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, cls: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      const result = element.classList.toggle(cls)
+      return { success: true, hasClass: result }
+    },
+    args: [selector, className]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Set inline style on an element
+ */
+export async function setStyle(
+  selector: string,
+  property: string,
+  value: string
+): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, prop: string, val: string) => {
+      const element = document.querySelector(sel) as HTMLElement
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      element.style.setProperty(prop, val)
+      return { success: true }
+    },
+    args: [selector, property, value]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Scroll an element into view
+ */
+export async function scrollIntoView(
+  selector: string,
+  options?: { behavior?: 'auto' | 'smooth'; block?: 'start' | 'center' | 'end' | 'nearest' }
+): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, opts?: { behavior?: 'auto' | 'smooth'; block?: 'start' | 'center' | 'end' | 'nearest' }) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      element.scrollIntoView(opts || { behavior: 'smooth', block: 'center' })
+      return { success: true }
+    },
+    args: [selector, options]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Check if element exists on the page
+ */
+export async function elementExists(
+  selector: string
+): Promise<{ success: boolean; exists?: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string) => {
+      const element = document.querySelector(sel)
+      return { success: true, exists: element !== null }
+    },
+    args: [selector]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get element count for a selector
+ */
+export async function getElementCount(
+  selector: string
+): Promise<{ success: boolean; count?: number; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string) => {
+      const elements = document.querySelectorAll(sel)
+      return { success: true, count: elements.length }
+    },
+    args: [selector]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get parent element info
+ */
+export async function getParentElement(
+  selector: string
+): Promise<{
+  success: boolean
+  parent?: { tagName: string; id?: string; className?: string }
+  error?: string
+}> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      const parent = element.parentElement
+      if (!parent) {
+        return { success: true, parent: undefined }
+      }
+      return {
+        success: true,
+        parent: {
+          tagName: parent.tagName.toLowerCase(),
+          id: parent.id || undefined,
+          className: parent.className?.toString() || undefined
+        }
+      }
+    },
+    args: [selector]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get child elements info
+ */
+export async function getChildElements(
+  selector: string,
+  limit: number = 10
+): Promise<{
+  success: boolean
+  children?: Array<{ tagName: string; id?: string; className?: string; text?: string }>
+  error?: string
+}> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, max: number) => {
+      const element = document.querySelector(sel)
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      const children: Array<{ tagName: string; id?: string; className?: string; text?: string }> = []
+      const count = Math.min(element.children.length, max)
+      for (let i = 0; i < count; i++) {
+        const child = element.children[i]
+        children.push({
+          tagName: child.tagName.toLowerCase(),
+          id: child.id || undefined,
+          className: child.className?.toString() || undefined,
+          text: child.textContent?.trim().slice(0, 50) || undefined
+        })
+      }
+      return { success: true, children }
+    },
+    args: [selector, limit]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Set element property (for form elements like checked, disabled, etc.)
+ */
+export async function setProperty(
+  selector: string,
+  property: string,
+  value: unknown
+): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, prop: string, val: unknown) => {
+      const element = document.querySelector(sel) as any
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      element[prop] = val
+      return { success: true }
+    },
+    args: [selector, property, value]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get element property value
+ */
+export async function getProperty(
+  selector: string,
+  property: string
+): Promise<{ success: boolean; value?: unknown; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, prop: string) => {
+      const element = document.querySelector(sel) as any
+      if (!element) {
+        return { success: false, error: `Element not found: ${sel}` }
+      }
+      return { success: true, value: element[prop] }
+    },
+    args: [selector, property]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}

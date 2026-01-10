@@ -38,7 +38,7 @@ const currentAction = ref<AgentAction | null>(null)
 const currentScreenshot = ref('')
 const steps = ref<AgentStep[]>([])
 const errorMessage = ref('')
-const showSettings = ref(false)
+const settingsActiveKey = ref<string[]>([])
 const abortController = ref<AbortController | null>(null)
 const expandedScreenshots = ref<Set<number>>(new Set())
 
@@ -94,34 +94,13 @@ function formatActionParams(action: AgentAction): string {
     .join(', ')
 }
 
-// 获取操作类型的图标组件名称
-function getActionIconType(type: string): string {
-  const icons: Record<string, string> = {
-    screenshot: 'camera',
-    click: 'click',
-    double_click: 'double-click',
-    right_click: 'right-click',
-    click_element: 'aim',
-    hover: 'hover',
-    drag: 'drag',
-    scroll: 'scroll',
-    type: 'keyboard',
-    clear_input: 'delete',
-    key: 'keyboard',
-    navigate: 'link',
-    wait: 'clock',
-    wait_for_element: 'eye',
-    focus: 'aim',
-    select_text: 'text',
-    get_selected_text: 'copy',
-    get_input_value: 'input',
-    get_page_info: 'info',
-    get_elements: 'search',
-    execute_script: 'code',
-    done: 'check'
+// Settings panel toggle
+const showSettings = computed({
+  get: () => settingsActiveKey.value.includes('settings'),
+  set: (value: boolean) => {
+    settingsActiveKey.value = value ? ['settings'] : []
   }
-  return icons[type] || 'thunder'
-}
+})
 
 // 切换截图展开状态
 function toggleScreenshot(index: number) {
@@ -225,8 +204,8 @@ function clearHistory() {
     </div>
 
     <!-- Settings Panel -->
-    <a-collapse v-model:active-key="showSettings" :bordered="false" class="settings-collapse">
-      <a-collapse-panel key="true" :show-arrow="false">
+    <a-collapse v-model:active-key="settingsActiveKey" :bordered="false" class="settings-collapse">
+      <a-collapse-panel key="settings" :show-arrow="false">
         <template #header><span></span></template>
         <a-form layout="vertical" class="settings-form" size="small">
           <a-form-item :label="t('aiAgentApiKey')">
