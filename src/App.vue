@@ -166,4 +166,13 @@ body.sidebar-mode #app {
   width: 100%;
   min-height: 100vh;
 }
+
+/* Agent Popup 模式：固定高度，禁止页面滚动 */
+body.agent-popup-mode,
+body.agent-popup-mode html,
+body.agent-popup-mode #app {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
 </style>

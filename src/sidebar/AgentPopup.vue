@@ -32,14 +32,6 @@ onMounted(async () => {
 <style>
 @import '../styles/main.css';
 
-html,
-body,
-#app {
-  height: 100%;
-  margin: 0;
-  overflow: hidden;
-}
-
 .agent-popup-container {
   display: flex;
   flex-direction: column;

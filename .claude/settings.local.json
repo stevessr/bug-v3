@@ -18,7 +18,8 @@
       "Bash(npm run lint)",
       "Bash(pnpm type-check:*)",
       "Bash(chmod:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__auggie-mcp__codebase-retrieval"
     ],
     "deny": [],
     "ask": []
