@@ -64,13 +64,13 @@ const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
 
 // 云端市场域名的本地状态
 const localCloudMarketDomain = ref<string>(
-  getSetting('cloudMarketDomain', 'video2gif-pages.pages.dev')
+  getSetting('cloudMarketDomain', 's.pwsh.us.kg')
 )
 const isCloudMarketDomainSaving = ref(false)
 
 // 监听 settings 变化，同步到本地状态
 watch(
-  () => getSetting('cloudMarketDomain', 'video2gif-pages.pages.dev'),
+  () => getSetting('cloudMarketDomain', 's.pwsh.us.kg'),
   val => {
     localCloudMarketDomain.value = val
   }
@@ -243,7 +243,7 @@ const saveRouterRefreshInterval = async () => {
             <input
               v-model="localCloudMarketDomain"
               class="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 w-80 dark:bg-gray-700 dark:text-white"
-              placeholder="video2gif-pages.pages.dev"
+              placeholder="s.pwsh.us.kg"
               title="云端市场域名"
             />
             <a-button

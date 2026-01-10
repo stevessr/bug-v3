@@ -22,7 +22,7 @@
   // ============== 配置 ==============
   const CONFIG = {
     // 远程 JSON URL - 可以通过油猴菜单修改
-    remoteUrl: GM_getValue('remoteUrl', 'https://video2gif-pages.pages.dev/assets/defaultEmojiGroups.json'),
+    remoteUrl: GM_getValue('remoteUrl', 'https://s.pwsh.us.kg/assets/defaultEmojiGroups.json'),
     // 缓存有效期（毫秒）- 默认 1 小时
     cacheDuration: 60 * 60 * 1000,
     // 图片输出缩放比例

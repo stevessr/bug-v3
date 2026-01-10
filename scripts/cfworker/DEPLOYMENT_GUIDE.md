@@ -4,7 +4,7 @@
 
 你的 Cloudflare Pages 已部署到：
 ```
-https://902d00ad.video2gif-pages.pages.dev
+https://902d00ad.s.pwsh.us.kg
 ```
 
 ## 🔐 配置生产环境密钥（重要！）
@@ -41,7 +41,7 @@ openssl rand -base64 32
 ### 2. 配置同步设置
 1. 打开扩展设置 → 同步设置
 2. 选择 "☁️ Cloudflare Worker"
-3. **Worker URL**: `https://902d00ad.video2gif-pages.pages.dev/api/backup`
+3. **Worker URL**: `https://902d00ad.s.pwsh.us.kg/api/backup`
    - ⚠️ 注意必须包含 `/api/backup` 路径！
 4. **认证令牌**: 输入你刚才设置的 `AUTH_SECRET` 值
 5. **只读认证令牌**（可选）: 输入 `AUTH_SECRET_READONLY` 值
@@ -62,7 +62,7 @@ openssl rand -base64 32
 
 # 1. 测试列出所有备份键
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  https://902d00ad.video2gif-pages.pages.dev/api/backup
+  https://902d00ad.s.pwsh.us.kg/api/backup
 
 # 应该返回 JSON 数组，例如: []（如果还没有数据）或 [{"name":"settings"}]
 
@@ -71,20 +71,20 @@ curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"test":"data"}' \
-  https://902d00ad.video2gif-pages.pages.dev/api/backup/test-key
+  https://902d00ad.s.pwsh.us.kg/api/backup/test-key
 
 # 应该返回: Backup successful for key: test-key
 
 # 3. 测试获取数据
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  https://902d00ad.video2gif-pages.pages.dev/api/backup/test-key
+  https://902d00ad.s.pwsh.us.kg/api/backup/test-key
 
 # 应该返回: {"test":"data"}
 
 # 4. 测试删除数据
 curl -X DELETE \
   -H "Authorization: Bearer YOUR_TOKEN" \
-  https://902d00ad.video2gif-pages.pages.dev/api/backup/test-key
+  https://902d00ad.s.pwsh.us.kg/api/backup/test-key
 
 # 应该返回: Deleted key: test-key
 ```
@@ -94,13 +94,13 @@ curl -X DELETE \
 ### Video2GIF 工具
 访问首页即可使用视频转 GIF 工具：
 ```
-https://902d00ad.video2gif-pages.pages.dev/
+https://902d00ad.s.pwsh.us.kg/
 ```
 
 ### WebCodecs 测试页面
 检查浏览器是否支持 WebCodecs API：
 ```
-https://902d00ad.video2gif-pages.pages.dev/webcodecs-check.html
+https://902d00ad.s.pwsh.us.kg/webcodecs-check.html
 ```
 
 ## 📊 Cloudflare Dashboard

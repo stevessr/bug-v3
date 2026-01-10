@@ -5,7 +5,7 @@ import type { DefaultEmojiData, EmojiGroup } from './type'
 
 // 获取云端市场基础 URL（从设置中读取域名，或使用默认值）
 function getCloudMarketBaseUrl(customDomain?: string): string {
-  const domain = customDomain || 'video2gif-pages.pages.dev'
+  const domain = customDomain || 's.pwsh.us.kg'
   return `https://${domain}`
 }
 

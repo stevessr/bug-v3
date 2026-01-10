@@ -12,7 +12,7 @@ const emojiStore = useEmojiStore()
 
 // 获取云端市场基础 URL
 const getMarketBaseUrl = () => {
-  const domain = emojiStore.settings.cloudMarketDomain || 'video2gif-pages.pages.dev'
+  const domain = emojiStore.settings.cloudMarketDomain || 's.pwsh.us.kg'
   return `https://${domain}`
 }
 
