@@ -16,7 +16,8 @@ import {
   ThunderboltOutlined,
   PlusOutlined,
   ApiOutlined,
-  ExpandOutlined
+  ExpandOutlined,
+  EditOutlined
 } from '@ant-design/icons-vue'
 
 import type { McpServerConfig } from '@/types/type'
@@ -118,6 +119,52 @@ function removeMcpServer(id: string) {
 
 function toggleMcpServer(id: string) {
   mcpServers.value = mcpServers.value.map(s => (s.id === id ? { ...s, enabled: !s.enabled } : s))
+}
+
+// MCP Server Editing
+const editingServer = ref<McpServerConfig | null>(null)
+const showEditModal = ref(false)
+const editForm = ref({
+  name: '',
+  url: '',
+  type: 'sse' as 'sse' | 'streamable-http',
+  apiKey: ''
+})
+
+function openEditModal(server: McpServerConfig) {
+  editingServer.value = server
+  editForm.value = {
+    name: server.name,
+    url: server.url,
+    type: server.type,
+    apiKey: server.apiKey || ''
+  }
+  showEditModal.value = true
+}
+
+function saveEditedServer() {
+  if (!editingServer.value) return
+  if (!editForm.value.name.trim() || !editForm.value.url.trim()) return
+
+  mcpServers.value = mcpServers.value.map(s =>
+    s.id === editingServer.value!.id
+      ? {
+          ...s,
+          name: editForm.value.name.trim(),
+          url: editForm.value.url.trim(),
+          type: editForm.value.type,
+          apiKey: editForm.value.apiKey.trim() || undefined
+        }
+      : s
+  )
+
+  showEditModal.value = false
+  editingServer.value = null
+}
+
+function cancelEdit() {
+  showEditModal.value = false
+  editingServer.value = null
 }
 
 // MCP Server Testing
@@ -458,6 +505,9 @@ async function openInPopupWindow() {
                   </a-tag>
                 </div>
                 <div class="mcp-server-actions">
+                  <a-button type="text" size="small" @click="openEditModal(server)">
+                    <template #icon><EditOutlined /></template>
+                  </a-button>
                   <a-button
                     type="text"
                     size="small"
@@ -681,11 +731,23 @@ async function openInPopupWindow() {
             <div class="subagent-header" @click="toggleSubagent(subagent.id)">
               <div class="subagent-info">
                 <a-badge
-                  :status="subagent.status === 'running' ? 'processing' : subagent.status === 'completed' ? 'success' : 'error'"
+                  :status="
+                    subagent.status === 'running'
+                      ? 'processing'
+                      : subagent.status === 'completed'
+                        ? 'success'
+                        : 'error'
+                  "
                 />
                 <span class="subagent-id">{{ subagent.id }}</span>
                 <a-tag
-                  :color="subagent.status === 'running' ? 'processing' : subagent.status === 'completed' ? 'success' : 'error'"
+                  :color="
+                    subagent.status === 'running'
+                      ? 'processing'
+                      : subagent.status === 'completed'
+                        ? 'success'
+                        : 'error'
+                  "
                   size="small"
                 >
                   {{ subagent.status }}
@@ -707,9 +769,14 @@ async function openInPopupWindow() {
               <div v-if="subagent.steps.length > 0" class="subagent-steps">
                 <div class="steps-label">{{ t('aiAgentSteps') }}: {{ subagent.steps.length }}</div>
                 <div v-for="(step, idx) in subagent.steps" :key="idx" class="subagent-step">
-                  <a-badge :count="idx + 1" :number-style="{ backgroundColor: '#d97706', fontSize: '10px' }" />
+                  <a-badge
+                    :count="idx + 1"
+                    :number-style="{ backgroundColor: '#d97706', fontSize: '10px' }"
+                  />
                   <span v-if="step.action" class="step-action">{{ step.action.type }}</span>
-                  <span v-if="step.result" class="step-result">{{ step.result.slice(0, 50) }}{{ step.result.length > 50 ? '...' : '' }}</span>
+                  <span v-if="step.result" class="step-result">
+                    {{ step.result.slice(0, 50) }}{{ step.result.length > 50 ? '...' : '' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -765,6 +832,40 @@ async function openInPopupWindow() {
       </div>
     </div>
   </div>
+
+  <!-- Edit MCP Server Modal -->
+  <a-modal
+    v-model:open="showEditModal"
+    :title="t('aiAgentMcpEditServer')"
+    @ok="saveEditedServer"
+    @cancel="cancelEdit"
+    :ok-button-props="{ disabled: !editForm.name.trim() || !editForm.url.trim() }"
+  >
+    <div class="space-y-4 py-4">
+      <div>
+        <label class="block text-sm font-medium mb-2">{{ t('aiAgentMcpServerName') }}:</label>
+        <a-input v-model:value="editForm.name" :placeholder="t('aiAgentMcpServerName')" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2">{{ t('aiAgentMcpServerUrl') }}:</label>
+        <a-input v-model:value="editForm.url" :placeholder="t('aiAgentMcpServerUrl')" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2">{{ t('aiAgentMcpServerType') }}:</label>
+        <a-select v-model:value="editForm.type" class="w-full">
+          <a-select-option value="sse">SSE</a-select-option>
+          <a-select-option value="streamable-http">Streamable HTTP</a-select-option>
+        </a-select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2">{{ t('aiAgentMcpServerApiKey') }}:</label>
+        <a-input-password
+          v-model:value="editForm.apiKey"
+          :placeholder="t('aiAgentMcpServerApiKey')"
+        />
+      </div>
+    </div>
+  </a-modal>
 </template>
 
 <style scoped>
