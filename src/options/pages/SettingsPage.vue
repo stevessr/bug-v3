@@ -9,6 +9,7 @@ import FeatureSwitchSettings from '../components/FeatureSwitchSettings.vue'
 import MenuBarSettings from '../components/MenuBarSettings.vue'
 import CustomCSSBlockSettings from '../components/CustomCSSBlockSettings.vue'
 import AISettings from '../components/AISettings.vue'
+import AIAgentSettings from '../components/AIAgentSettings.vue'
 import ImgbedSettings from '../components/ImgbedSettings.vue'
 import SyncSettings from '../components/SyncSettings.vue'
 import CloudDataPreview from '../components/CloudDataPreview.vue'
@@ -44,6 +45,13 @@ const {
   updateLinuxDoSeekingUsers,
   updateEnableLinuxDoSeekingDanmaku,
   updateEnableLinuxDoSeekingSysNotify,
+  updateClaudeApiKey,
+  updateClaudeApiBaseUrl,
+  updateClaudeModel,
+  updateClaudeImageModel,
+  updateClaudeMaxSteps,
+  updateClaudeMaxTokens,
+  updateClaudeMcpServers,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -166,6 +174,21 @@ onMounted(async () => {
               @update:customOpenAIEndpoint="updateCustomOpenAIEndpoint"
               @update:customOpenAIKey="updateCustomOpenAIKey"
               @update:customOpenAIModel="updateCustomOpenAIModel"
+            />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="ai-agent" tab="AI Agent">
+          <div class="py-4">
+            <AIAgentSettings
+              :settings="emojiStore.settings"
+              @update:claudeApiKey="updateClaudeApiKey"
+              @update:claudeApiBaseUrl="updateClaudeApiBaseUrl"
+              @update:claudeModel="updateClaudeModel"
+              @update:claudeImageModel="updateClaudeImageModel"
+              @update:claudeMaxSteps="updateClaudeMaxSteps"
+              @update:claudeMaxTokens="updateClaudeMaxTokens"
+              @update:claudeMcpServers="updateClaudeMcpServers"
             />
           </div>
         </a-tab-pane>

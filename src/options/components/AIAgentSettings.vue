@@ -1,0 +1,386 @@
+<script setup lang="ts">
+import { ref, computed, type Ref } from 'vue'
+import { ApiOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
+
+import type { AppSettings, McpServerConfig } from '../../types/type'
+import { useSettingsForm } from '../composables/useSettingsForm'
+
+const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
+
+const emit = defineEmits([
+  'update:claudeApiKey',
+  'update:claudeApiBaseUrl',
+  'update:claudeModel',
+  'update:claudeImageModel',
+  'update:claudeMaxSteps',
+  'update:claudeMaxTokens',
+  'update:claudeMcpServers'
+])
+
+// Use the settings form composable
+const { localValues, hasChanges, isValid, isSaving, handleSave, handleReset } = useSettingsForm(
+  props.settings,
+  [
+    { key: 'claudeApiKey', default: '' },
+    { key: 'claudeApiBaseUrl', default: 'https://api.anthropic.com' },
+    { key: 'claudeModel', default: 'claude-sonnet-4-20250514' },
+    { key: 'claudeImageModel', default: '' },
+    { key: 'claudeMaxSteps', default: 30 },
+    { key: 'claudeMaxTokens', default: 8192 },
+    { key: 'claudeMcpServers', default: [] }
+  ],
+  emit as (event: string, ...args: any[]) => void,
+  {
+    successMessage: 'AI Agent 配置已保存'
+  }
+)
+
+// Create computed properties for easier template access
+const localClaudeApiKey = computed({
+  get: () => localValues.claudeApiKey.value as string,
+  set: val => {
+    localValues.claudeApiKey.value = val
+  }
+})
+
+const localClaudeApiBaseUrl = computed({
+  get: () => localValues.claudeApiBaseUrl.value as string,
+  set: val => {
+    localValues.claudeApiBaseUrl.value = val
+  }
+})
+
+const localClaudeModel = computed({
+  get: () => localValues.claudeModel.value as string,
+  set: val => {
+    localValues.claudeModel.value = val
+  }
+})
+
+const localClaudeImageModel = computed({
+  get: () => localValues.claudeImageModel.value as string,
+  set: val => {
+    localValues.claudeImageModel.value = val
+  }
+})
+
+const localClaudeMaxSteps = computed({
+  get: () => localValues.claudeMaxSteps.value as number,
+  set: val => {
+    localValues.claudeMaxSteps.value = val
+  }
+})
+
+const localClaudeMaxTokens = computed({
+  get: () => localValues.claudeMaxTokens.value as number,
+  set: val => {
+    localValues.claudeMaxTokens.value = val
+  }
+})
+
+const localMcpServers = computed({
+  get: () => (localValues.claudeMcpServers.value as McpServerConfig[]) || [],
+  set: val => {
+    localValues.claudeMcpServers.value = val
+  }
+})
+
+// MCP Server Management
+const newMcpServer = ref({
+  name: '',
+  url: '',
+  type: 'sse' as 'sse' | 'streamable-http',
+  apiKey: ''
+})
+
+function addMcpServer() {
+  if (!newMcpServer.value.name.trim() || !newMcpServer.value.url.trim()) return
+
+  const server: McpServerConfig = {
+    id: Date.now().toString(),
+    name: newMcpServer.value.name.trim(),
+    url: newMcpServer.value.url.trim(),
+    type: newMcpServer.value.type,
+    enabled: true,
+    apiKey: newMcpServer.value.apiKey.trim() || undefined
+  }
+
+  localMcpServers.value = [...localMcpServers.value, server]
+  newMcpServer.value = { name: '', url: '', type: 'sse', apiKey: '' }
+}
+
+function removeMcpServer(id: string) {
+  localMcpServers.value = localMcpServers.value.filter(s => s.id !== id)
+}
+
+function toggleMcpServer(id: string) {
+  localMcpServers.value = localMcpServers.value.map(s =>
+    s.id === id ? { ...s, enabled: !s.enabled } : s
+  )
+}
+
+// MCP Server Testing
+const mcpTestingIds = ref<Set<string>>(new Set())
+const mcpTestResults = ref<Map<string, { success: boolean; message: string }>>(new Map())
+
+async function testMcpServer(server: McpServerConfig) {
+  mcpTestingIds.value.add(server.id)
+  mcpTestingIds.value = new Set(mcpTestingIds.value)
+  mcpTestResults.value.delete(server.id)
+
+  try {
+    const headers: Record<string, string> = {
+      Accept: 'application/json, text/event-stream'
+    }
+    if (server.apiKey) {
+      headers['Authorization'] = `Bearer ${server.apiKey}`
+    }
+    if (server.headers) {
+      Object.assign(headers, server.headers)
+    }
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+
+    const response = await fetch(server.url, {
+      method: 'GET',
+      headers,
+      signal: controller.signal
+    })
+
+    clearTimeout(timeout)
+
+    if (response.ok) {
+      mcpTestResults.value.set(server.id, {
+        success: true,
+        message: `OK (${response.status})`
+      })
+    } else {
+      mcpTestResults.value.set(server.id, {
+        success: false,
+        message: `HTTP ${response.status}`
+      })
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    mcpTestResults.value.set(server.id, {
+      success: false,
+      message: message.includes('abort') ? 'Timeout' : message
+    })
+  } finally {
+    mcpTestingIds.value.delete(server.id)
+    mcpTestingIds.value = new Set(mcpTestingIds.value)
+    mcpTestResults.value = new Map(mcpTestResults.value)
+  }
+}
+</script>
+
+<template>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-lg font-semibold dark:text-white">AI Agent 配置</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+        配置 Claude AI 浏览器助手，支持自动化浏览器操作
+      </p>
+    </div>
+
+    <div class="p-6 space-y-6">
+      <!-- Claude API Configuration -->
+      <div class="space-y-4">
+        <h3 class="text-md font-medium dark:text-white">Claude API 配置</h3>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">API Key:</label>
+            <a-input-password
+              v-model:value="localClaudeApiKey"
+              placeholder="输入你的 Claude API Key"
+              class="w-full"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              获取 API Key:
+              <a
+                href="https://console.anthropic.com/"
+                target="_blank"
+                class="text-blue-500 hover:underline"
+              >
+                Anthropic Console
+              </a>
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">API Base URL:</label>
+            <a-input
+              v-model:value="localClaudeApiBaseUrl"
+              placeholder="https://api.anthropic.com"
+              class="w-full"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              自定义 API 基础地址，用于反代或企业部署
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">模型：</label>
+            <a-input
+              v-model:value="localClaudeModel"
+              placeholder="claude-sonnet-4-20250514"
+              class="w-full"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              例如：claude-sonnet-4-20250514, claude-opus-4-20250514
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">
+              图片转述模型（可选）：
+            </label>
+            <a-input
+              v-model:value="localClaudeImageModel"
+              placeholder="留空则使用主模型"
+              class="w-full"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              用于转述截图内容的模型，留空则使用主模型
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Parameters -->
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+        <h3 class="text-md font-medium dark:text-white">Agent 参数</h3>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">最大步骤数：</label>
+            <a-input-number
+              v-model:value="localClaudeMaxSteps"
+              :min="5"
+              :max="1000"
+              :step="5"
+              class="w-full"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Agent 执行的最大步骤数量</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">最大 Token 数：</label>
+            <a-input-number
+              v-model:value="localClaudeMaxTokens"
+              :min="1024"
+              :max="32768"
+              :step="1024"
+              class="w-full"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">每次 AI 响应的最大 Token 数</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MCP Servers -->
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+        <h3 class="text-md font-medium dark:text-white">MCP 服务器</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          配置 Model Context Protocol (MCP) 服务器以扩展 Agent 能力
+        </p>
+
+        <!-- Server List -->
+        <div class="space-y-2">
+          <div
+            v-if="localMcpServers.length === 0"
+            class="text-center py-4 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded"
+          >
+            未配置 MCP 服务器
+          </div>
+
+          <div
+            v-for="server in localMcpServers"
+            :key="server.id"
+            class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded"
+          >
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+              <a-switch
+                :checked="server.enabled"
+                size="small"
+                @change="toggleMcpServer(server.id)"
+              />
+              <span
+                class="font-medium dark:text-white truncate"
+                :class="{ 'text-gray-400 line-through': !server.enabled }"
+              >
+                {{ server.name }}
+              </span>
+              <a-tag size="small">{{ server.type }}</a-tag>
+              <a-tag
+                v-if="mcpTestResults.get(server.id)"
+                :color="mcpTestResults.get(server.id)?.success ? 'success' : 'error'"
+                size="small"
+              >
+                {{ mcpTestResults.get(server.id)?.message }}
+              </a-tag>
+            </div>
+            <div class="flex items-center gap-2">
+              <a-button
+                type="text"
+                size="small"
+                :loading="mcpTestingIds.has(server.id)"
+                @click="testMcpServer(server)"
+              >
+                <template #icon><ApiOutlined /></template>
+                {{ mcpTestingIds.has(server.id) ? '测试中...' : '测试' }}
+              </a-button>
+              <a-button type="text" danger size="small" @click="removeMcpServer(server.id)">
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Server Form -->
+        <div class="space-y-3 p-4 bg-gray-50 dark:bg-gray-700 rounded">
+          <h4 class="text-sm font-medium dark:text-white">添加 MCP 服务器</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <a-input v-model:value="newMcpServer.name" placeholder="服务器名称" size="small" />
+            <a-input v-model:value="newMcpServer.url" placeholder="服务器地址" size="small" />
+            <a-select v-model:value="newMcpServer.type" size="small">
+              <a-select-option value="sse">SSE</a-select-option>
+              <a-select-option value="streamable-http">Streamable HTTP</a-select-option>
+            </a-select>
+            <a-input-password
+              v-model:value="newMcpServer.apiKey"
+              placeholder="API Key（可选）"
+              size="small"
+            />
+          </div>
+          <a-button
+            type="primary"
+            size="small"
+            :disabled="!newMcpServer.name.trim() || !newMcpServer.url.trim()"
+            @click="addMcpServer"
+          >
+            <template #icon><PlusOutlined /></template>
+            添加服务器
+          </a-button>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div
+        class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700"
+      >
+        <a-button @click="handleReset" :disabled="!hasChanges || isSaving">重置</a-button>
+        <a-button
+          type="primary"
+          @click="handleSave"
+          :loading="isSaving"
+          :disabled="!hasChanges || !isValid"
+        >
+          保存配置
+        </a-button>
+      </div>
+    </div>
+  </div>
+</template>

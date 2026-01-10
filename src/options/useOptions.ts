@@ -364,6 +364,35 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableLinuxDoSeekingSysNotify: value })
   }
 
+  // Claude AI Agent settings
+  const updateClaudeApiKey = (apiKey: string) => {
+    emojiStore.updateSettings({ claudeApiKey: apiKey })
+  }
+
+  const updateClaudeApiBaseUrl = (url: string) => {
+    emojiStore.updateSettings({ claudeApiBaseUrl: url })
+  }
+
+  const updateClaudeModel = (model: string) => {
+    emojiStore.updateSettings({ claudeModel: model })
+  }
+
+  const updateClaudeImageModel = (model: string) => {
+    emojiStore.updateSettings({ claudeImageModel: model })
+  }
+
+  const updateClaudeMaxSteps = (steps: number) => {
+    emojiStore.updateSettings({ claudeMaxSteps: steps })
+  }
+
+  const updateClaudeMaxTokens = (tokens: number) => {
+    emojiStore.updateSettings({ claudeMaxTokens: tokens })
+  }
+
+  const updateClaudeMcpServers = (servers: any[]) => {
+    emojiStore.updateSettings({ claudeMcpServers: servers })
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -808,6 +837,14 @@ export default function useOptions() {
     updateLinuxDoSeekingUsers,
     updateEnableLinuxDoSeekingDanmaku,
     updateEnableLinuxDoSeekingSysNotify,
+    // Claude AI Agent settings
+    updateClaudeApiKey,
+    updateClaudeApiBaseUrl,
+    updateClaudeModel,
+    updateClaudeImageModel,
+    updateClaudeMaxSteps,
+    updateClaudeMaxTokens,
+    updateClaudeMcpServers,
     // drag/drop - from draggable composable
     handleDragStart: draggable.handleDragStart,
     handleDrop: draggable.handleDrop,
