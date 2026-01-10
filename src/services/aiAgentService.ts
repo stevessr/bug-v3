@@ -1377,10 +1377,9 @@ function convertMcpToolsToAnthropicFormat(
     description: tool.description || `MCP tool from ${serverName}`,
     input_schema: {
       type: 'object' as const,
-      properties: (tool.inputSchema?.properties as Record<
-        string,
-        { type: string; description: string }
-      >) || {},
+      properties:
+        (tool.inputSchema?.properties as Record<string, { type: string; description: string }>) ||
+        {},
       required: tool.inputSchema?.required || []
     }
   }))
@@ -1389,9 +1388,7 @@ function convertMcpToolsToAnthropicFormat(
 /**
  * Initialize MCP clients and fetch all tools
  */
-async function initializeMcpClients(
-  servers: McpServerConfig[]
-): Promise<Map<string, McpClient>> {
+async function initializeMcpClients(servers: McpServerConfig[]): Promise<Map<string, McpClient>> {
   const clients = new Map<string, McpClient>()
 
   const enabledServers = servers.filter(s => s.enabled)
@@ -2040,7 +2037,9 @@ async function executeTool(
       const active = (toolInput.active as boolean) ?? false
       const result = await browserAutomation.createTab(url, active)
       if (result.success) {
-        return { result: `Created new tab with ID: ${result.tabId}, URL: ${result.url || '(new tab)'}, Title: ${result.title || '(loading)'}` }
+        return {
+          result: `Created new tab with ID: ${result.tabId}, URL: ${result.url || '(new tab)'}, Title: ${result.title || '(loading)'}`
+        }
       }
       return { result: `Create tab failed: ${result.error}` }
     }
@@ -2480,6 +2479,245 @@ async function callClaudeAPI(
 }
 
 /**
+ * Image description prompt for screenshot analysis
+ */
+const IMAGE_DESCRIPTION_PROMPT = `You are analyzing a browser screenshot for an AI automation agent.
+
+Describe what you see in the screenshot in a structured way:
+1. **Page Type**: What kind of page is this? (login page, form, article, dashboard, etc.)
+2. **Key Elements**: List important interactive elements (buttons, links, input fields, menus)
+3. **Current State**: Describe any visible state (errors, loading, selected items, etc.)
+4. **Layout**: Brief description of the page layout and structure
+5. **Action Suggestions**: What actions might be relevant on this page?
+
+Be concise but comprehensive. Focus on elements that would be useful for browser automation.`
+
+/**
+ * Describe a screenshot using the image model
+ */
+async function describeScreenshot(config: AgentConfig, screenshotBase64: string): Promise<string> {
+  const imageModel = config.imageModel || config.model
+
+  const client = new Anthropic({
+    apiKey: config.apiKey,
+    baseURL: config.baseUrl,
+    dangerouslyAllowBrowser: true,
+    defaultHeaders: {
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    }
+  })
+
+  try {
+    const response = await client.messages.create({
+      model: imageModel,
+      max_tokens: 2048,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/png',
+                data: screenshotBase64
+              }
+            },
+            {
+              type: 'text',
+              text: IMAGE_DESCRIPTION_PROMPT
+            }
+          ]
+        }
+      ]
+    })
+
+    const textBlock = response.content.find(block => block.type === 'text')
+    return textBlock && 'text' in textBlock ? textBlock.text : 'Unable to describe screenshot'
+  } catch (error) {
+    log.error('Failed to describe screenshot:', error)
+    return 'Error describing screenshot'
+  }
+}
+
+/**
+ * Subagent runner - runs a task in a specific tab context
+ */
+async function runSubagent(
+  config: AgentConfig,
+  task: string,
+  subagentId: string,
+  tabId: number | undefined,
+  maxSteps: number,
+  allTools: ToolDefinition[],
+  mcpClients: Map<string, McpClient>,
+  abortSignal?: AbortSignal
+): Promise<SubagentStatus> {
+  const subagentStatus: SubagentStatus = {
+    id: subagentId,
+    task,
+    status: 'running',
+    steps: []
+  }
+
+  const messages: AgentMessage[] = []
+  let stepCount = 0
+
+  // If tabId specified, switch to that tab first
+  if (tabId !== undefined) {
+    await browserAutomation.switchToTab(tabId)
+  }
+
+  messages.push({
+    role: 'user',
+    content: `Subagent Task: ${task}\n\nYou are a subagent running in parallel. Complete this specific task and report back.\nStart by taking a screenshot to see the current state.`
+  })
+
+  try {
+    while (stepCount < maxSteps) {
+      if (abortSignal?.aborted) {
+        subagentStatus.status = 'failed'
+        subagentStatus.error = 'Cancelled'
+        return subagentStatus
+      }
+
+      stepCount++
+
+      const response = await callClaudeAPI(config, messages, allTools)
+      const step: AgentStep = { subagentId }
+      const assistantContent: AgentContentBlock[] = []
+
+      for (const block of response.content) {
+        if (block.type === 'text') {
+          step.thinking = block.text
+          assistantContent.push(block)
+        } else if (block.type === 'tool_use') {
+          assistantContent.push(block)
+
+          const toolName = block.name!
+          const toolInput = block.input as Record<string, unknown>
+
+          step.action = {
+            type: toolName as AgentAction['type'],
+            params: toolInput
+          }
+
+          if (toolName === 'done') {
+            step.result = toolInput.summary as string
+            subagentStatus.steps.push(step)
+            subagentStatus.status = 'completed'
+            subagentStatus.result = toolInput.summary as string
+            return subagentStatus
+          }
+
+          // Skip subagent spawning from within subagent
+          if (toolName === 'spawn_subagent' || toolName === 'wait_for_subagents') {
+            step.result = 'Subagents cannot spawn other subagents'
+            messages.push({ role: 'assistant', content: assistantContent })
+            messages.push({
+              role: 'user',
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: block.id!,
+                  content:
+                    'Subagents cannot spawn other subagents. Please complete the task directly.'
+                }
+              ]
+            })
+            continue
+          }
+
+          try {
+            let toolResult: { result: string; screenshot?: string }
+
+            if (toolName.startsWith('mcp_')) {
+              const parts = toolName.split('_')
+              if (parts.length >= 3) {
+                const serverName = parts[1]
+                const mcpToolName = parts.slice(2).join('_')
+                const client = mcpClients.get(serverName)
+
+                if (client) {
+                  const mcpResult = await client.callTool(mcpToolName, toolInput)
+                  const textContent = mcpResult.content
+                    .filter(c => c.type === 'text' && c.text)
+                    .map(c => c.text)
+                    .join('\n')
+                  toolResult = { result: textContent || 'Tool executed successfully' }
+                } else {
+                  toolResult = { result: `MCP server ${serverName} not found` }
+                }
+              } else {
+                toolResult = { result: `Invalid MCP tool name: ${toolName}` }
+              }
+            } else {
+              toolResult = await executeTool(toolName, toolInput)
+            }
+
+            step.result = toolResult.result
+            if (toolResult.screenshot) {
+              step.screenshot = toolResult.screenshot
+            }
+
+            messages.push({ role: 'assistant', content: assistantContent })
+
+            const toolResultContent: AgentContentBlock[] = [
+              {
+                type: 'tool_result',
+                tool_use_id: block.id!,
+                content: toolResult.result
+              }
+            ]
+
+            if (toolResult.screenshot) {
+              toolResultContent.push({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: 'image/png',
+                  data: toolResult.screenshot
+                }
+              })
+            }
+
+            messages.push({ role: 'user', content: toolResultContent })
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            step.error = errorMessage
+
+            messages.push({ role: 'assistant', content: assistantContent })
+            messages.push({
+              role: 'user',
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: block.id!,
+                  content: `Error: ${errorMessage}`,
+                  is_error: true
+                }
+              ]
+            })
+          }
+        }
+      }
+
+      subagentStatus.steps.push(step)
+    }
+
+    // Max steps reached
+    subagentStatus.status = 'completed'
+    subagentStatus.result = 'Max steps reached'
+    return subagentStatus
+  } catch (error) {
+    subagentStatus.status = 'failed'
+    subagentStatus.error = error instanceof Error ? error.message : String(error)
+    return subagentStatus
+  }
+}
+
+/**
  * Run the AI Agent to complete a task
  */
 export async function runAgent(
@@ -2518,6 +2756,11 @@ export async function runAgent(
     role: 'user',
     content: `Task: ${task}\n\nStart by taking a screenshot to see the current state of the browser.`
   })
+
+  // Track running subagents
+  const runningSubagents = new Map<string, Promise<SubagentStatus>>()
+  const completedSubagents = new Map<string, SubagentStatus>()
+  let subagentCounter = 0
 
   while (stepCount < maxSteps) {
     if (abortSignal?.aborted) {
@@ -2598,6 +2841,120 @@ export async function runAgent(
           } else {
             // Execute built-in browser tool
             toolResult = await executeTool(toolName, toolInput)
+
+            // If this is a screenshot and imageModel is configured, add description
+            if (
+              toolName === 'screenshot' &&
+              toolResult.screenshot &&
+              config.imageModel &&
+              config.imageModel !== config.model
+            ) {
+              try {
+                const description = await describeScreenshot(config, toolResult.screenshot)
+                toolResult.result = `Screenshot captured.\n\n**Image Analysis:**\n${description}`
+              } catch {
+                // Keep original result if description fails
+              }
+            }
+          }
+
+          // Handle subagent tools
+          if (toolName === 'spawn_subagent') {
+            const subagentTask = toolInput.task as string
+            const tabId = toolInput.tab_id as number | undefined
+            const subagentMaxSteps = (toolInput.max_steps as number) || 10
+
+            subagentCounter++
+            const subagentId = `subagent_${subagentCounter}`
+
+            // Spawn subagent in background
+            const subagentPromise = runSubagent(
+              config,
+              subagentTask,
+              subagentId,
+              tabId,
+              subagentMaxSteps,
+              allTools,
+              mcpClients,
+              abortSignal
+            )
+
+            runningSubagents.set(subagentId, subagentPromise)
+
+            step.subagentId = subagentId
+            step.subagentTask = subagentTask
+
+            toolResult = {
+              result: `Spawned subagent ${subagentId} for task: "${subagentTask}". Use wait_for_subagents to get results.`
+            }
+
+            // Update status with subagent info
+            const subagentStatuses = Array.from(completedSubagents.values())
+            for (const [id] of runningSubagents) {
+              subagentStatuses.push({
+                id,
+                task: id === subagentId ? subagentTask : 'Running...',
+                status: 'running',
+                steps: []
+              })
+            }
+            onStatus({
+              step: stepCount,
+              message: `Spawned ${subagentId}`,
+              thinking: step.thinking,
+              action: step.action,
+              subagents: subagentStatuses
+            })
+          } else if (toolName === 'wait_for_subagents') {
+            const subagentIdsStr = toolInput.subagent_ids as string | undefined
+            const idsToWait = subagentIdsStr
+              ? subagentIdsStr.split(',').map(s => s.trim())
+              : Array.from(runningSubagents.keys())
+
+            const results: string[] = []
+
+            for (const id of idsToWait) {
+              const promise = runningSubagents.get(id)
+              if (promise) {
+                const result = await promise
+                completedSubagents.set(id, result)
+                runningSubagents.delete(id)
+                results.push(
+                  `${id}: ${result.status === 'completed' ? result.result : `Failed: ${result.error}`}`
+                )
+              } else {
+                const completed = completedSubagents.get(id)
+                if (completed) {
+                  results.push(
+                    `${id}: ${completed.status === 'completed' ? completed.result : `Failed: ${completed.error}`}`
+                  )
+                } else {
+                  results.push(`${id}: Not found`)
+                }
+              }
+            }
+
+            toolResult = {
+              result: `Subagent Results:\n${results.join('\n')}`
+            }
+
+            // Update status with completed subagents
+            const subagentStatuses = Array.from(completedSubagents.values())
+            for (const [id] of runningSubagents) {
+              subagentStatuses.push({
+                id,
+                task: 'Running...',
+                status: 'running',
+                steps: []
+              })
+            }
+            onStatus({
+              step: stepCount,
+              message: 'Subagents completed',
+              thinking: step.thinking,
+              action: step.action,
+              subagents: subagentStatuses
+            })
           }
 
           step.result = toolResult.result

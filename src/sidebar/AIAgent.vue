@@ -24,7 +24,8 @@ import {
   validateConfig,
   type AgentConfig,
   type AgentStep,
-  type AgentAction
+  type AgentAction,
+  type SubagentStatus
 } from '@/services/aiAgentService'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { useI18n } from '@/utils/i18n'
@@ -44,6 +45,8 @@ const errorMessage = ref('')
 const settingsActiveKey = ref<string[]>([])
 const abortController = ref<AbortController | null>(null)
 const expandedScreenshots = ref<Set<number>>(new Set())
+const subagents = ref<SubagentStatus[]>([])
+const expandedSubagents = ref<Set<string>>(new Set())
 
 const chatContainer = ref<HTMLElement | null>(null)
 
@@ -270,6 +273,9 @@ async function startTask() {
         if (status.screenshot) {
           currentScreenshot.value = status.screenshot
         }
+        if (status.subagents) {
+          subagents.value = status.subagents
+        }
       },
       abortController.value.signal,
       maxSteps.value
@@ -301,6 +307,18 @@ function clearHistory() {
   errorMessage.value = ''
   currentScreenshot.value = ''
   expandedScreenshots.value = new Set()
+  subagents.value = []
+  expandedSubagents.value = new Set()
+}
+
+// Toggle subagent expansion
+function toggleSubagent(id: string) {
+  if (expandedSubagents.value.has(id)) {
+    expandedSubagents.value.delete(id)
+  } else {
+    expandedSubagents.value.add(id)
+  }
+  expandedSubagents.value = new Set(expandedSubagents.value)
 }
 </script>
 
@@ -590,6 +608,58 @@ function clearHistory() {
         <template #message>{{ t('aiAgentError') }}</template>
         <template #description>{{ errorMessage }}</template>
       </a-alert>
+
+      <!-- Subagents Panel -->
+      <div v-if="subagents.length > 0" class="subagents-panel">
+        <div class="subagents-header">
+          <RobotOutlined class="subagents-icon" />
+          <span>{{ t('aiAgentSubagents') }} ({{ subagents.length }})</span>
+        </div>
+        <div class="subagents-list">
+          <div
+            v-for="subagent in subagents"
+            :key="subagent.id"
+            class="subagent-card"
+            :class="{ expanded: expandedSubagents.has(subagent.id) }"
+          >
+            <div class="subagent-header" @click="toggleSubagent(subagent.id)">
+              <div class="subagent-info">
+                <a-badge
+                  :status="subagent.status === 'running' ? 'processing' : subagent.status === 'completed' ? 'success' : 'error'"
+                />
+                <span class="subagent-id">{{ subagent.id }}</span>
+                <a-tag
+                  :color="subagent.status === 'running' ? 'processing' : subagent.status === 'completed' ? 'success' : 'error'"
+                  size="small"
+                >
+                  {{ subagent.status }}
+                </a-tag>
+              </div>
+              <DownOutlined v-if="expandedSubagents.has(subagent.id)" class="expand-icon" />
+              <RightOutlined v-else class="expand-icon" />
+            </div>
+            <div class="subagent-task">{{ subagent.task }}</div>
+            <div v-if="expandedSubagents.has(subagent.id)" class="subagent-details">
+              <div v-if="subagent.result" class="subagent-result">
+                <CheckCircleOutlined class="result-icon" />
+                <span>{{ subagent.result }}</span>
+              </div>
+              <div v-if="subagent.error" class="subagent-error">
+                <CloseCircleOutlined class="error-icon" />
+                <span>{{ subagent.error }}</span>
+              </div>
+              <div v-if="subagent.steps.length > 0" class="subagent-steps">
+                <div class="steps-label">{{ t('aiAgentSteps') }}: {{ subagent.steps.length }}</div>
+                <div v-for="(step, idx) in subagent.steps" :key="idx" class="subagent-step">
+                  <a-badge :count="idx + 1" :number-style="{ backgroundColor: '#d97706', fontSize: '10px' }" />
+                  <span v-if="step.action" class="step-action">{{ step.action.type }}</span>
+                  <span v-if="step.result" class="step-result">{{ step.result.slice(0, 50) }}{{ step.result.length > 50 ? '...' : '' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Empty State -->
       <div v-if="steps.length === 0 && !isRunning && isConfigured" class="empty-state">
@@ -1061,5 +1131,139 @@ function clearHistory() {
 
 :global(.dark) .settings-collapse :deep(.ant-collapse-content-box) {
   border-bottom-color: var(--border-color);
+}
+
+/* Subagents Panel */
+.subagents-panel {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--accent-border, #fed7aa);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.subagents-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #fef3e2 0%, #fff7ed 100%);
+  border-bottom: 1px solid var(--accent-border, #fed7aa);
+  font-weight: 500;
+  color: var(--accent-dark, #c2410c);
+}
+
+:global(.dark) .subagents-header {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
+}
+
+.subagents-icon {
+  color: var(--accent-color, #d97706);
+}
+
+.subagents-list {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subagent-card {
+  background: var(--code-bg, #f5f4f2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.2s;
+}
+
+.subagent-card.expanded {
+  background: var(--card-bg, #fff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.subagent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.subagent-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subagent-id {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.expand-icon {
+  font-size: 10px;
+  color: var(--text-secondary, #6b6b6b);
+}
+
+.subagent-task {
+  font-size: 12px;
+  color: var(--text-secondary, #6b6b6b);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.subagent-details {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color, #e8e5e0);
+}
+
+.subagent-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--success-color, #22c55e);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.subagent-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--error-color, #ef4444);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.subagent-steps {
+  margin-top: 8px;
+}
+
+.steps-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #6b6b6b);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.subagent-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 11px;
+}
+
+.step-action {
+  font-weight: 500;
+  color: var(--accent-color, #d97706);
+}
+
+.step-result {
+  color: var(--text-secondary, #6b6b6b);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

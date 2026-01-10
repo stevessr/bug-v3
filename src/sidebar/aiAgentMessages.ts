@@ -43,7 +43,9 @@ export const AI_AGENT_MESSAGES = {
   aiAgentHint: 'aiAgentHint',
   aiAgentInputPlaceholder: 'aiAgentInputPlaceholder',
   aiAgentClear: 'aiAgentClear',
-  aiAgentTask: 'aiAgentTask'
+  aiAgentTask: 'aiAgentTask',
+  aiAgentSubagents: 'aiAgentSubagents',
+  aiAgentSteps: 'aiAgentSteps'
 } as const
 
 /**
@@ -91,7 +93,9 @@ export const AI_AGENT_FALLBACKS: Record<string, string> = {
     'Describe a task and AI will automatically control the browser to complete it. Supports screenshot, click, scroll, type, and more.',
   aiAgentInputPlaceholder: 'Describe the task you want AI to complete...',
   aiAgentClear: 'Clear History',
-  aiAgentTask: 'Task'
+  aiAgentTask: 'Task',
+  aiAgentSubagents: 'Subagents',
+  aiAgentSteps: 'Steps'
 }
 
 /**
@@ -138,5 +142,7 @@ export const AI_AGENT_FALLBACKS_ZH: Record<string, string> = {
   aiAgentHint: '输入任务描述，AI 将自动操控浏览器完成任务。支持截屏、点击、滚动、输入等操作。',
   aiAgentInputPlaceholder: '描述您想让 AI 完成的任务...',
   aiAgentClear: '清除历史',
-  aiAgentTask: '任务'
+  aiAgentTask: '任务',
+  aiAgentSubagents: '子代理',
+  aiAgentSteps: '步骤'
 }
