@@ -13,6 +13,8 @@ export const AI_AGENT_MESSAGES = {
   aiAgentBaseUrlPlaceholder: 'aiAgentBaseUrlPlaceholder',
   aiAgentModel: 'aiAgentModel',
   aiAgentModelPlaceholder: 'aiAgentModelPlaceholder',
+  aiAgentMaxSteps: 'aiAgentMaxSteps',
+  aiAgentMaxTokens: 'aiAgentMaxTokens',
   aiAgentSettingsHint: 'aiAgentSettingsHint',
   aiAgentNotConfigured: 'aiAgentNotConfigured',
   aiAgentConfigure: 'aiAgentConfigure',
@@ -44,6 +46,8 @@ export const AI_AGENT_FALLBACKS: Record<string, string> = {
   aiAgentBaseUrlPlaceholder: 'https://api.anthropic.com',
   aiAgentModel: 'Model',
   aiAgentModelPlaceholder: 'claude-sonnet-4-20250514',
+  aiAgentMaxSteps: 'Max Steps',
+  aiAgentMaxTokens: 'Max Tokens',
   aiAgentSettingsHint:
     'You need to configure your own Claude API Key to use the AI Agent. Custom API endpoints are supported.',
   aiAgentNotConfigured: 'AI Agent is not configured',
@@ -77,6 +81,8 @@ export const AI_AGENT_FALLBACKS_ZH: Record<string, string> = {
   aiAgentBaseUrlPlaceholder: 'https://api.anthropic.com',
   aiAgentModel: '模型',
   aiAgentModelPlaceholder: 'claude-sonnet-4-20250514',
+  aiAgentMaxSteps: '最大步骤数',
+  aiAgentMaxTokens: '最大 Token 数',
   aiAgentSettingsHint:
     '您需要配置自己的 Claude API Key 才能使用 AI 助手功能。支持自定义 API 地址。',
   aiAgentNotConfigured: 'AI 助手尚未配置',

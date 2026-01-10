@@ -14,6 +14,7 @@ export interface AgentConfig {
   apiKey: string
   baseUrl: string
   model: string
+  maxTokens?: number
 }
 
 export interface AgentMessage {
@@ -326,7 +327,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         selector: { type: 'string', description: 'CSS selector of the element to wait for' },
-        timeout: { type: 'number', description: 'Maximum wait time in milliseconds (default: 10000)' }
+        timeout: {
+          type: 'number',
+          description: 'Maximum wait time in milliseconds (default: 10000)'
+        }
       },
       required: ['selector']
     }
@@ -543,7 +547,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         selector: { type: 'string', description: 'CSS selector of the element' },
-        property: { type: 'string', description: 'Property name to get (e.g., checked, disabled, value)' }
+        property: {
+          type: 'string',
+          description: 'Property name to get (e.g., checked, disabled, value)'
+        }
       },
       required: ['selector', 'property']
     }
@@ -581,7 +588,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         selector: { type: 'string', description: 'CSS selector of the element' },
-        class_name: { type: 'string', description: 'Class name(s) to add (space-separated for multiple)' }
+        class_name: {
+          type: 'string',
+          description: 'Class name(s) to add (space-separated for multiple)'
+        }
       },
       required: ['selector', 'class_name']
     }
@@ -593,7 +603,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         selector: { type: 'string', description: 'CSS selector of the element' },
-        class_name: { type: 'string', description: 'Class name(s) to remove (space-separated for multiple)' }
+        class_name: {
+          type: 'string',
+          description: 'Class name(s) to remove (space-separated for multiple)'
+        }
       },
       required: ['selector', 'class_name']
     }
@@ -617,7 +630,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         selector: { type: 'string', description: 'CSS selector of the element' },
-        property: { type: 'string', description: 'CSS property name (e.g., color, display, width)' },
+        property: {
+          type: 'string',
+          description: 'CSS property name (e.g., color, display, width)'
+        },
         value: { type: 'string', description: 'CSS value to set' }
       },
       required: ['selector', 'property', 'value']
@@ -630,7 +646,11 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         selector: { type: 'string', description: 'CSS selector of the element' },
-        behavior: { type: 'string', description: 'Scroll behavior: auto or smooth', enum: ['auto', 'smooth'] },
+        behavior: {
+          type: 'string',
+          description: 'Scroll behavior: auto or smooth',
+          enum: ['auto', 'smooth']
+        },
         block: {
           type: 'string',
           description: 'Vertical alignment: start, center, end, nearest',
@@ -679,8 +699,14 @@ const BROWSER_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: 'URL to open in the new tab (optional, defaults to new tab page)' },
-        active: { type: 'boolean', description: 'Whether to make the new tab active (default: true)' }
+        url: {
+          type: 'string',
+          description: 'URL to open in the new tab (optional, defaults to new tab page)'
+        },
+        active: {
+          type: 'boolean',
+          description: 'Whether to make the new tab active (default: true)'
+        }
       },
       required: []
     }
@@ -713,7 +739,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        tab_id: { type: 'number', description: 'ID of the tab to duplicate (optional, defaults to active tab)' }
+        tab_id: {
+          type: 'number',
+          description: 'ID of the tab to duplicate (optional, defaults to active tab)'
+        }
       },
       required: []
     }
@@ -724,7 +753,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        tab_id: { type: 'number', description: 'ID of the tab to reload (optional, defaults to active tab)' },
+        tab_id: {
+          type: 'number',
+          description: 'ID of the tab to reload (optional, defaults to active tab)'
+        },
         bypass_cache: { type: 'boolean', description: 'Whether to bypass cache (default: false)' }
       },
       required: []
@@ -899,7 +931,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: 'URL to get cookies for (optional, defaults to current page)' }
+        url: {
+          type: 'string',
+          description: 'URL to get cookies for (optional, defaults to current page)'
+        }
       },
       required: []
     }
@@ -989,7 +1024,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        limit: { type: 'number', description: 'Maximum number of resources to return (default: 50)' }
+        limit: {
+          type: 'number',
+          description: 'Maximum number of resources to return (default: 50)'
+        }
       },
       required: []
     }
@@ -1013,7 +1051,10 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         selector: { type: 'string', description: 'CSS selector of the form element' },
-        data: { type: 'string', description: 'JSON object with field names as keys and values to fill' }
+        data: {
+          type: 'string',
+          description: 'JSON object with field names as keys and values to fill'
+        }
       },
       required: ['selector', 'data']
     }
@@ -1396,7 +1437,9 @@ async function executeTool(
       const selector = toolInput.selector as string
       const result = await browserAutomation.selectText(selector)
       if (result.success) {
-        return { result: `Selected text: "${result.text?.slice(0, 50)}${(result.text?.length || 0) > 50 ? '...' : ''}"` }
+        return {
+          result: `Selected text: "${result.text?.slice(0, 50)}${(result.text?.length || 0) > 50 ? '...' : ''}"`
+        }
       }
       return { result: `Select failed: ${result.error}` }
     }
@@ -1451,9 +1494,8 @@ async function executeTool(
       const code = toolInput.code as string
       const result = await browserAutomation.executeScript(code)
       if (result.success) {
-        const resultStr = typeof result.result === 'string'
-          ? result.result
-          : JSON.stringify(result.result, null, 2)
+        const resultStr =
+          typeof result.result === 'string' ? result.result : JSON.stringify(result.result, null, 2)
         return { result: `Script executed. Result: ${resultStr?.slice(0, 500) || '(no output)'}` }
       }
       return { result: `Script execution failed: ${result.error}` }
@@ -1479,7 +1521,9 @@ async function executeTool(
       const outer = (toolInput.outer as boolean) || false
       const result = await browserAutomation.getElementHTML(selector, outer)
       if (result.success) {
-        return { result: `HTML content:\n${result.html?.slice(0, 1000) || '(empty)'}${(result.html?.length || 0) > 1000 ? '...' : ''}` }
+        return {
+          result: `HTML content:\n${result.html?.slice(0, 1000) || '(empty)'}${(result.html?.length || 0) > 1000 ? '...' : ''}`
+        }
       }
       return { result: `Get HTML failed: ${result.error}` }
     }
@@ -1489,7 +1533,9 @@ async function executeTool(
       const attribute = toolInput.attribute as string
       const result = await browserAutomation.getElementAttribute(selector, attribute)
       if (result.success) {
-        return { result: `Attribute "${attribute}": ${result.value === null ? '(not set)' : `"${result.value}"`}` }
+        return {
+          result: `Attribute "${attribute}": ${result.value === null ? '(not set)' : `"${result.value}"`}`
+        }
       }
       return { result: `Get attribute failed: ${result.error}` }
     }
@@ -1528,7 +1574,9 @@ async function executeTool(
       const limit = (toolInput.limit as number) || 20
       const result = await browserAutomation.queryElements(selector, limit)
       if (result.success) {
-        return { result: `Found ${result.elements?.length || 0} elements:\n${JSON.stringify(result.elements, null, 2)}` }
+        return {
+          result: `Found ${result.elements?.length || 0} elements:\n${JSON.stringify(result.elements, null, 2)}`
+        }
       }
       return { result: `Query elements failed: ${result.error}` }
     }
@@ -1568,7 +1616,9 @@ async function executeTool(
       const limit = (toolInput.limit as number) || 10
       const result = await browserAutomation.getChildElements(selector, limit)
       if (result.success) {
-        return { result: `Found ${result.children?.length || 0} child elements:\n${JSON.stringify(result.children, null, 2)}` }
+        return {
+          result: `Found ${result.children?.length || 0} child elements:\n${JSON.stringify(result.children, null, 2)}`
+        }
       }
       return { result: `Get children failed: ${result.error}` }
     }
@@ -1630,7 +1680,9 @@ async function executeTool(
       const className = toolInput.class_name as string
       const result = await browserAutomation.toggleClass(selector, className)
       if (result.success) {
-        return { result: `Toggled class "${className}" on ${selector}. Has class: ${result.hasClass}` }
+        return {
+          result: `Toggled class "${className}" on ${selector}. Has class: ${result.hasClass}`
+        }
       }
       return { result: `Toggle class failed: ${result.error}` }
     }
@@ -1827,7 +1879,9 @@ async function executeTool(
       const key = toolInput.key as string
       const result = await browserAutomation.getLocalStorageItem(key)
       if (result.success) {
-        return { result: `localStorage["${key}"]: ${result.value === null ? '(not set)' : JSON.stringify(result.value)}` }
+        return {
+          result: `localStorage["${key}"]: ${result.value === null ? '(not set)' : JSON.stringify(result.value)}`
+        }
       }
       return { result: `Get localStorage failed: ${result.error}` }
     }
@@ -1871,7 +1925,9 @@ async function executeTool(
       const key = toolInput.key as string
       const result = await browserAutomation.getSessionStorageItem(key)
       if (result.success) {
-        return { result: `sessionStorage["${key}"]: ${result.value === null ? '(not set)' : JSON.stringify(result.value)}` }
+        return {
+          result: `sessionStorage["${key}"]: ${result.value === null ? '(not set)' : JSON.stringify(result.value)}`
+        }
       }
       return { result: `Get sessionStorage failed: ${result.error}` }
     }
@@ -1927,7 +1983,9 @@ async function executeTool(
       const text = toolInput.text as string
       const result = await browserAutomation.copyToClipboard(text)
       if (result.success) {
-        return { result: `Copied to clipboard: "${text.slice(0, 50)}${text.length > 50 ? '...' : ''}"` }
+        return {
+          result: `Copied to clipboard: "${text.slice(0, 50)}${text.length > 50 ? '...' : ''}"`
+        }
       }
       return { result: `Copy to clipboard failed: ${result.error}` }
     }
@@ -1952,7 +2010,9 @@ async function executeTool(
     case 'get_console_logs': {
       const result = await browserAutomation.getConsoleLogs()
       if (result.success) {
-        return { result: `Console logs (${result.logs?.length || 0}):\n${JSON.stringify(result.logs, null, 2)}` }
+        return {
+          result: `Console logs (${result.logs?.length || 0}):\n${JSON.stringify(result.logs, null, 2)}`
+        }
       }
       return { result: `Get console logs failed: ${result.error}` }
     }
@@ -1970,7 +2030,9 @@ async function executeTool(
       const limit = (toolInput.limit as number) || 50
       const result = await browserAutomation.getResourceTiming(limit)
       if (result.success) {
-        return { result: `Resource timing (${result.resources?.length || 0} entries):\n${JSON.stringify(result.resources, null, 2)}` }
+        return {
+          result: `Resource timing (${result.resources?.length || 0} entries):\n${JSON.stringify(result.resources, null, 2)}`
+        }
       }
       return { result: `Get resource timing failed: ${result.error}` }
     }
@@ -2050,12 +2112,13 @@ async function executeTool(
 }
 
 /**
- * Call Claude API
+ * Call Claude API with retry logic for 429 errors
  */
 async function callClaudeAPI(
   config: AgentConfig,
   messages: AgentMessage[],
-  tools: ToolDefinition[]
+  tools: ToolDefinition[],
+  maxRetries: number = 3
 ): Promise<{
   content: AgentContentBlock[]
   stop_reason: string
@@ -2070,18 +2133,57 @@ async function callClaudeAPI(
     }
   })
 
-  const response = await client.messages.create({
-    model: config.model,
-    max_tokens: 4096,
-    system: SYSTEM_PROMPT,
-    tools: tools as any,
-    messages: messages as any
-  })
+  let lastError: Error | null = null
 
-  return {
-    content: response.content as AgentContentBlock[],
-    stop_reason: response.stop_reason || 'end_turn'
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await client.messages.create({
+        model: config.model,
+        max_tokens: config.maxTokens || 8192,
+        system: SYSTEM_PROMPT,
+        tools: tools as any,
+        messages: messages as any
+      })
+
+      return {
+        content: response.content as AgentContentBlock[],
+        stop_reason: response.stop_reason || 'end_turn'
+      }
+    } catch (error) {
+      lastError = error as Error
+
+      // Check for 429 rate limit error
+      const errorMessage = String(error)
+      const is429 =
+        errorMessage.includes('429') ||
+        errorMessage.includes('rate_limit') ||
+        errorMessage.includes('Rate limit') ||
+        (error as any)?.status === 429
+
+      if (is429 && attempt < maxRetries) {
+        // Extract retry-after header if available, otherwise use exponential backoff
+        let waitTime = Math.min(1000 * Math.pow(2, attempt), 60000) // max 60 seconds
+
+        // Try to parse retry-after from error
+        const retryAfterMatch = errorMessage.match(/retry[- ]?after[:\s]+(\d+)/i)
+        if (retryAfterMatch) {
+          waitTime = parseInt(retryAfterMatch[1], 10) * 1000
+        }
+
+        log.info(
+          `Rate limited (429), waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}`
+        )
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+        continue
+      }
+
+      // For non-429 errors or max retries reached, throw
+      throw error
+    }
   }
+
+  // Should not reach here, but just in case
+  throw lastError || new Error('Max retries reached')
 }
 
 /**
@@ -2091,12 +2193,12 @@ export async function runAgent(
   config: AgentConfig,
   task: string,
   onStatus: AgentStatusCallback,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  maxSteps: number = 30
 ): Promise<{ success: boolean; steps: AgentStep[]; error?: string }> {
   const steps: AgentStep[] = []
   const messages: AgentMessage[] = []
   let stepCount = 0
-  const maxSteps = 30
 
   messages.push({
     role: 'user',

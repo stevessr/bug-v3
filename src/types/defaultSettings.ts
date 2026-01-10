@@ -54,5 +54,7 @@ export const defaultSettings: AppSettings = {
   // Claude AI Agent settings
   claudeApiKey: '', // Claude API Key
   claudeApiBaseUrl: 'https://api.anthropic.com', // Claude API Base URL
-  claudeModel: 'claude-sonnet-4-20250514' // Claude model
+  claudeModel: 'claude-sonnet-4-20250514', // Claude model
+  claudeMaxSteps: 30, // Maximum steps for AI Agent
+  claudeMaxTokens: 8192 // Maximum tokens for AI response
 }

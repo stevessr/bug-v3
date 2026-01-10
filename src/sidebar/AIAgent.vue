@@ -59,6 +59,16 @@ const model = computed({
   set: (value: string) => emojiStore.updateSettings({ claudeModel: value })
 })
 
+const maxSteps = computed({
+  get: () => emojiStore.settings.claudeMaxSteps || 30,
+  set: (value: number) => emojiStore.updateSettings({ claudeMaxSteps: value })
+})
+
+const maxTokens = computed({
+  get: () => emojiStore.settings.claudeMaxTokens || 8192,
+  set: (value: number) => emojiStore.updateSettings({ claudeMaxTokens: value })
+})
+
 const isConfigured = computed(() => {
   const validation = validateConfig({
     apiKey: apiKey.value,
@@ -118,7 +128,8 @@ async function startTask() {
   const config: AgentConfig = {
     apiKey: apiKey.value,
     baseUrl: baseUrl.value,
-    model: model.value
+    model: model.value,
+    maxTokens: maxTokens.value
   }
 
   isRunning.value = true
@@ -154,7 +165,8 @@ async function startTask() {
           currentScreenshot.value = status.screenshot
         }
       },
-      abortController.value.signal
+      abortController.value.signal,
+      maxSteps.value
     )
 
     steps.value = [steps.value[0], ...result.steps]
@@ -216,6 +228,24 @@ function clearHistory() {
           </a-form-item>
           <a-form-item :label="t('aiAgentModel')">
             <a-input v-model:value="model" :placeholder="t('aiAgentModelPlaceholder')" />
+          </a-form-item>
+          <a-form-item :label="t('aiAgentMaxSteps')">
+            <a-input-number
+              v-model:value="maxSteps"
+              :min="5"
+              :max="100"
+              :step="5"
+              style="width: 100%"
+            />
+          </a-form-item>
+          <a-form-item :label="t('aiAgentMaxTokens')">
+            <a-input-number
+              v-model:value="maxTokens"
+              :min="1024"
+              :max="32768"
+              :step="1024"
+              style="width: 100%"
+            />
           </a-form-item>
           <a-typography-text type="secondary" class="settings-hint">
             {{ t('aiAgentSettingsHint') }}
