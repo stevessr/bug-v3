@@ -71,8 +71,8 @@ export interface AppSettings {
 export interface McpServerConfig {
   id: string // Unique identifier
   name: string // Display name
-  url: string // Server URL (HTTP/WebSocket)
-  type: 'sse' | 'websocket' | 'http' // Connection type
+  url: string // Server URL
+  type: 'sse' | 'streamable-http' // Connection type
   enabled: boolean // Whether the server is enabled
   apiKey?: string // Optional API key for authentication
   headers?: Record<string, string> // Optional custom headers

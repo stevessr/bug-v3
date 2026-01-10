@@ -85,7 +85,7 @@ const mcpServers = computed({
 const newMcpServer = ref({
   name: '',
   url: '',
-  type: 'sse' as 'sse' | 'websocket' | 'http',
+  type: 'sse' as 'sse' | 'streamable-http',
   apiKey: ''
 })
 
@@ -349,8 +349,7 @@ function clearHistory() {
                 class="mcp-select"
               >
                 <a-select-option value="sse">SSE</a-select-option>
-                <a-select-option value="websocket">WebSocket</a-select-option>
-                <a-select-option value="http">HTTP</a-select-option>
+                <a-select-option value="streamable-http">Streamable HTTP</a-select-option>
               </a-select>
               <a-input-password
                 v-model:value="newMcpServer.apiKey"
