@@ -7,7 +7,6 @@ import {
   SearchOutlined,
   PlusOutlined
 } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 
 import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue'
-import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 import {

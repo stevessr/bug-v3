@@ -16,7 +16,9 @@
       "Bash(cat:*)",
       "Bash(ls:*)",
       "Bash(npm run lint)",
-      "Bash(pnpm type-check:*)"
+      "Bash(pnpm type-check:*)",
+      "Bash(chmod:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

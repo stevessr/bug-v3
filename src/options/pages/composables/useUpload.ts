@@ -1,5 +1,4 @@
 import { type Ref, type ComputedRef } from 'vue'
-import { message } from 'ant-design-vue'
 
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
