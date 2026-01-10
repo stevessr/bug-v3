@@ -15,7 +15,8 @@
       "Bash(pnpm lint:fix)",
       "Bash(cat:*)",
       "Bash(ls:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(pnpm type-check:*)"
     ],
     "deny": [],
     "ask": []

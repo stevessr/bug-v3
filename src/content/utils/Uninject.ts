@@ -1,78 +1,68 @@
-import { initPixiv } from '../pixiv/detector'
-import { initBilibili } from '../bilibili/bilibili'
-import { initX } from '../x/init'
-import { initXhs } from '../xhs/init'
-import { initReddit } from '../reddit/reddit'
+/**
+ * Platform Module Initializer (重构版)
+ * 移除静态导入，改为动态加载
+ * 保留向后兼容的 API
+ */
 
 import { requestSettingFromBackground } from './requestSetting'
 
-// logger removed: replaced by direct console usage in migration
+import { createLogger } from '@/utils/logger'
 
-// NOTE: Requesting the full configuration from background is deprecated for
-// this module. Consumers should use `requestSettingFromBackground` to fetch
-// single keys on demand to reduce IPC payload and improve performance.
+const log = createLogger('Uninject')
 
-export function Uninject() {
-  try {
-    initPixiv()
-  } catch (e) {
-    console.error('[OneClickAdd] initPixiv failed', e)
-  }
+/**
+ * @deprecated 使用 platformLoader.ts 中的 loadPlatformModule 替代
+ * 保留此函数仅用于向后兼容
+ */
+export async function Uninject(): Promise<void> {
+  log.warn('Uninject() is deprecated, use platformLoader.loadPlatformModule() instead')
 
-  try {
-    initBilibili()
-  } catch (e) {
-    console.error('[OneClickAdd] initBilibili failed', e)
-  }
+  // 动态加载所有平台模块
+  const platforms = ['pixiv', 'bilibili', 'reddit', 'xhs'] as const
 
-  try {
-    initReddit()
-  } catch (e) {
-    console.error('[OneClickAdd] initReddit failed', e)
-  }
+  const loadPromises = platforms.map(async platform => {
+    try {
+      const { loadPlatformModule } = await import('./platformLoader')
+      await loadPlatformModule(platform)
+    } catch (e) {
+      log.error(`Failed to load ${platform}:`, e)
+    }
+  })
 
-  try {
-    initXIfEnabled()
-  } catch (e) {
-    console.error('[OneClickAdd] initX failed', e)
-  }
+  // 特殊处理 X (需要检查设置)
+  loadPromises.push(initXIfEnabled())
 
-  try {
-    initXhs()
-  } catch (xhsErr) {
-    console.error('[XOneClick] initXhs failed', xhsErr)
-  }
+  await Promise.allSettled(loadPromises)
 }
 
-// Exported helper: check settings and initialize X-specific injection if enabled.
+/**
+ * 检查设置并初始化 X 平台功能
+ */
 export async function initXIfEnabled(): Promise<void> {
   try {
-    // Request only the single setting we care about to reduce payload and
-    // avoid requesting the entire configuration object.
     const val = await requestSettingFromBackground('enableXcomExtraSelectors')
-
     const enabled = val === null || val === undefined || val === true
 
     if (val === null || val === undefined) {
-      console.log(
-        '[XOneClick] enableXcomExtraSelectors unavailable; defaulting to enabled for X injection'
-      )
+      log.info('enableXcomExtraSelectors unavailable; defaulting to enabled for X injection')
     } else {
-      console.log('[XOneClick] fetched enableXcomExtraSelectors from background:', val)
+      log.info('Fetched enableXcomExtraSelectors from background:', val)
     }
-    console.log('[XOneClick] init decision - enabled:', enabled)
+
+    log.info('X init decision - enabled:', enabled)
 
     if (enabled) {
       try {
+        const { initX } = await import('../x/init')
         initX()
-        console.log('[XOneClick] initX invoked')
+        log.info('X module initialized')
       } catch (innerErr) {
-        console.error('[XOneClick] initX threw an error during invocation', innerErr)
+        log.error('initX threw an error during invocation', innerErr)
       }
     } else {
-      console.log('[XOneClick] skipping init: enableXcomExtraSelectors disabled in settings')
+      log.info('Skipping X init: enableXcomExtraSelectors disabled in settings')
     }
   } catch (err) {
-    console.error('[OneClickAdd] initX check failed', err)
+    log.error('initX check failed', err)
   }
 }

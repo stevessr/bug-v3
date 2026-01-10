@@ -1,64 +1,57 @@
-// Entry point: 初始化模块并启动功能
+/**
+ * Content Script Entry Point (优化版)
+ * 使用动态加载减少初始体积，按需加载平台特定模块
+ */
 
 import { initializeEmojiFeature } from './utils/init'
-import { Uninject } from './utils/Uninject'
 import { postTimings } from './utils/timingsBinder'
 import { autoReadAllv2 } from './utils/autoReadReplies'
-import { DQS, DQSA } from './utils/createEl'
-import { DISCOURSE_DOMAINS } from './data/domains'
-// antiRateLimit removed — content script no longer listens for network-level 429 notifications
+import { DQS } from './utils/createEl'
+import {
+  detectPlatform,
+  shouldInjectEmojiFeature,
+  getDiscourseDomains
+} from './utils/platformDetector'
+import { loadPlatformModule } from './utils/platformLoader'
 
-console.log('[Emoji Extension] Content script loaded (entry)')
+import { createLogger } from '@/utils/logger'
 
-// Function to check if current page should have emoji injection
-function shouldInjectEmoji(): boolean {
-  // Check for discourse meta tag as example
-  const discourseMetaTags = DQSA(
-    'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
-  )
-  if (discourseMetaTags.length > 0) {
-    console.log('[Emoji Extension] Discourse detected via meta tags')
-    return true
+const log = createLogger('ContentScript')
+
+log.info('Content script loaded (entry)')
+
+// 获取 Discourse 域名列表（向后兼容）
+const DISCOURSE_DOMAINS = getDiscourseDomains()
+
+/**
+ * 初始化函数 - 使用动态加载优化
+ */
+async function initialize(): Promise<void> {
+  // 1. 检测平台
+  const platformInfo = detectPlatform()
+  log.info(`Platform detected: ${platformInfo.platform} (${platformInfo.hostname})`)
+
+  // 2. 处理 Discourse 平台（最常用，保留静态加载）
+  if (shouldInjectEmojiFeature()) {
+    log.info('Initializing emoji feature for Discourse/forum platform')
+    initializeEmojiFeature()
   }
 
-  // Check for common forum/discussion platforms
-  const generatorMeta = DQS('meta[name="generator"]')
-  if (generatorMeta) {
-    const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
-    if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
-      console.log('[Emoji Extension] Forum platform detected via generator meta')
-      return true
+  // 3. 动态加载其他平台模块
+  if (platformInfo.shouldLoadModule && platformInfo.platform !== 'discourse') {
+    try {
+      await loadPlatformModule(platformInfo.platform)
+      log.info(`Platform module ${platformInfo.platform} loaded successfully`)
+    } catch (error) {
+      log.error(`Failed to load platform module ${platformInfo.platform}:`, error)
     }
   }
-
-  // Check current domain - allow linux.do and other known sites
-  const hostname = window.location.hostname.toLowerCase()
-  if (DISCOURSE_DOMAINS.some(domain => hostname.includes(domain))) {
-    console.log('[Emoji Extension] Allowed domain detected:', hostname)
-    return true
-  }
-
-  // Check for editor elements that suggest a discussion platform
-  const editors = DQSA(
-    'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
-  )
-  if (editors.length > 0) {
-    console.log('[Emoji Extension] Discussion editor detected')
-    return true
-  }
-
-  console.log('[Emoji Extension] No compatible platform detected')
-  return false
 }
 
-// Only inject if compatible platform is detected
-if (shouldInjectEmoji()) {
-  console.log('[Emoji Extension] Initializing emoji feature')
-  initializeEmojiFeature()
-} else {
-  Uninject()
-  console.log('[Emoji Extension] Skipping injection - incompatible platform')
-}
+// 执行初始化
+initialize().catch(error => {
+  log.error('Initialization failed:', error)
+})
 
 // Add message listener for linux.do CSRF token requests
 if (DISCOURSE_DOMAINS.some(domain => window.location.hostname.includes(domain))) {
