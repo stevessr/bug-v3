@@ -175,11 +175,10 @@ export function usePopup(options?: { manageUrl?: boolean }) {
         active: true,
         currentWindow: true
       })
-      if (!tab.id) throw new Error('No active tab found')
+      if (!tab.windowId) throw new Error('No active window found')
 
-      // Set sidepanel URL to our extension's sidebar page
+      // Set sidepanel URL globally (no tabId = window-level, prevents reload on tab switch)
       await chrome.sidePanel.setOptions({
-        tabId: tab.id,
         path: 'index.html?type=sidebar',
         enabled: true
       })

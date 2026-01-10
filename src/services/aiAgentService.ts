@@ -706,7 +706,7 @@ const BROWSER_TOOLS: ToolDefinition[] = [
         },
         active: {
           type: 'boolean',
-          description: 'Whether to make the new tab active (default: true)'
+          description: 'Whether to make the new tab active (default: false, opens in background)'
         }
       },
       required: []
@@ -1186,7 +1186,7 @@ You have access to the following tools:
 **Tab Management:**
 - get_all_tabs: Get list of all open tabs
 - get_active_tab: Get the currently active tab
-- create_tab: Create a new tab
+- create_tab: Create a new tab (opens in background by default to avoid disrupting current workflow)
 - close_tab: Close a tab by ID
 - switch_tab: Switch to a specific tab
 - duplicate_tab: Duplicate a tab
