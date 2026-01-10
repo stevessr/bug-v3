@@ -30,6 +30,7 @@ export interface AppSettings {
   claudeApiKey?: string // Claude API Key
   claudeApiBaseUrl?: string // Claude API Base URL (default: https://api.anthropic.com)
   claudeModel?: string // Claude model (default: claude-sonnet-4-20250514)
+  claudeImageModel?: string // Claude model for image description (default: same as main model)
   claudeMaxSteps?: number // Maximum steps for AI Agent (default: 30)
   claudeMaxTokens?: number // Maximum tokens for AI response (default: 8192)
   theme?: 'system' | 'light' | 'dark'

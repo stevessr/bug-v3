@@ -59,6 +59,11 @@ const model = computed({
   set: (value: string) => emojiStore.updateSettings({ claudeModel: value })
 })
 
+const imageModel = computed({
+  get: () => emojiStore.settings.claudeImageModel || '',
+  set: (value: string) => emojiStore.updateSettings({ claudeImageModel: value })
+})
+
 const maxSteps = computed({
   get: () => emojiStore.settings.claudeMaxSteps || 30,
   set: (value: number) => emojiStore.updateSettings({ claudeMaxSteps: value })
@@ -129,6 +134,7 @@ async function startTask() {
     apiKey: apiKey.value,
     baseUrl: baseUrl.value,
     model: model.value,
+    imageModel: imageModel.value || undefined,
     maxTokens: maxTokens.value
   }
 
@@ -229,11 +235,14 @@ function clearHistory() {
           <a-form-item :label="t('aiAgentModel')">
             <a-input v-model:value="model" :placeholder="t('aiAgentModelPlaceholder')" />
           </a-form-item>
+          <a-form-item :label="t('aiAgentImageModel')">
+            <a-input v-model:value="imageModel" :placeholder="t('aiAgentImageModelPlaceholder')" />
+          </a-form-item>
           <a-form-item :label="t('aiAgentMaxSteps')">
             <a-input-number
               v-model:value="maxSteps"
               :min="5"
-              :max="100"
+              :max="1000"
               :step="5"
               style="width: 100%"
             />

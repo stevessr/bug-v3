@@ -1697,10 +1697,10 @@ export async function getActiveTab(): Promise<{
 export async function createTab(
   url?: string,
   active: boolean = true
-): Promise<{ success: boolean; tabId?: number; error?: string }> {
+): Promise<{ success: boolean; tabId?: number; url?: string; title?: string; error?: string }> {
   try {
     const tab = await chrome.tabs.create({ url, active })
-    return { success: true, tabId: tab.id }
+    return { success: true, tabId: tab.id, url: tab.url, title: tab.title }
   } catch (e) {
     return { success: false, error: String(e) }
   }

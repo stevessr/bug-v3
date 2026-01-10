@@ -14,6 +14,7 @@ export interface AgentConfig {
   apiKey: string
   baseUrl: string
   model: string
+  imageModel?: string
   maxTokens?: number
 }
 
@@ -1747,7 +1748,7 @@ async function executeTool(
       const active = (toolInput.active as boolean) ?? true
       const result = await browserAutomation.createTab(url, active)
       if (result.success) {
-        return { result: `Created new tab with ID: ${result.tabId}` }
+        return { result: `Created new tab with ID: ${result.tabId}, URL: ${result.url || '(new tab)'}, Title: ${result.title || '(loading)'}` }
       }
       return { result: `Create tab failed: ${result.error}` }
     }
