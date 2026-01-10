@@ -393,6 +393,14 @@ export default function useOptions() {
     emojiStore.updateSettings({ claudeMcpServers: servers })
   }
 
+  const updateClaudeEnabledBuiltinTools = (tools: string[]) => {
+    emojiStore.updateSettings({ claudeEnabledBuiltinTools: tools })
+  }
+
+  const updateClaudeEnableMcpTools = (enabled: boolean) => {
+    emojiStore.updateSettings({ claudeEnableMcpTools: enabled })
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -845,6 +853,8 @@ export default function useOptions() {
     updateClaudeMaxSteps,
     updateClaudeMaxTokens,
     updateClaudeMcpServers,
+    updateClaudeEnabledBuiltinTools,
+    updateClaudeEnableMcpTools,
     // drag/drop - from draggable composable
     handleDragStart: draggable.handleDragStart,
     handleDrop: draggable.handleDrop,

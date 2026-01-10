@@ -52,6 +52,8 @@ const {
   updateClaudeMaxSteps,
   updateClaudeMaxTokens,
   updateClaudeMcpServers,
+  updateClaudeEnabledBuiltinTools,
+  updateClaudeEnableMcpTools,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -189,6 +191,8 @@ onMounted(async () => {
               @update:claudeMaxSteps="updateClaudeMaxSteps"
               @update:claudeMaxTokens="updateClaudeMaxTokens"
               @update:claudeMcpServers="updateClaudeMcpServers"
+              @update:claudeEnabledBuiltinTools="updateClaudeEnabledBuiltinTools"
+              @update:claudeEnableMcpTools="updateClaudeEnableMcpTools"
             />
           </div>
         </a-tab-pane>

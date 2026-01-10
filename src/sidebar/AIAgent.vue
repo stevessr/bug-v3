@@ -24,6 +24,7 @@ import type { McpServerConfig } from '@/types/type'
 import {
   runAgent,
   validateConfig,
+  BUILTIN_TOOL_NAMES,
   type AgentConfig,
   type AgentStep,
   type AgentAction,
@@ -87,6 +88,19 @@ const mcpServers = computed({
   get: () => emojiStore.settings.claudeMcpServers || [],
   set: (servers: McpServerConfig[]) => emojiStore.updateSettings({ claudeMcpServers: servers })
 })
+
+// Tools configuration
+const enableMcpTools = computed({
+  get: () => emojiStore.settings.claudeEnableMcpTools !== false, // Default to true
+  set: (value: boolean) => emojiStore.updateSettings({ claudeEnableMcpTools: value })
+})
+
+const enabledBuiltinTools = computed({
+  get: () => emojiStore.settings.claudeEnabledBuiltinTools || BUILTIN_TOOL_NAMES,
+  set: (tools: string[]) => emojiStore.updateSettings({ claudeEnabledBuiltinTools: tools })
+})
+
+const allBuiltinTools = BUILTIN_TOOL_NAMES
 
 const newMcpServer = ref({
   name: '',
@@ -287,7 +301,9 @@ async function startTask() {
     imageModel: imageModel.value || undefined,
     maxTokens: maxTokens.value,
     mcpServers: mcpServers.value,
-    targetTabId: targetTabId.value // Pass target tab ID for popup window mode
+    targetTabId: targetTabId.value, // Pass target tab ID for popup window mode
+    enabledBuiltinTools: enabledBuiltinTools.value,
+    enableMcpTools: enableMcpTools.value
   }
 
   isRunning.value = true
@@ -476,6 +492,45 @@ async function openInPopupWindow() {
               :step="1024"
               style="width: 100%"
             />
+          </a-form-item>
+
+          <!-- Built-in Tools Configuration -->
+          <a-form-item :label="t('aiAgentBuiltinTools') || 'Built-in Tools'">
+            <a-select
+              v-model:value="enabledBuiltinTools"
+              mode="multiple"
+              :placeholder="t('aiAgentSelectTools') || 'Select tools to enable'"
+              size="small"
+              style="width: 100%"
+              :max-tag-count="3"
+            >
+              <a-select-option v-for="tool in allBuiltinTools" :key="tool" :value="tool">
+                {{ tool }}
+              </a-select-option>
+            </a-select>
+            <a-typography-text
+              type="secondary"
+              style="font-size: 11px; display: block; margin-top: 4px"
+            >
+              {{
+                t('aiAgentBuiltinToolsHint') ||
+                'Select which built-in tools the agent can use. Leave empty to enable all.'
+              }}
+            </a-typography-text>
+          </a-form-item>
+
+          <!-- MCP Tools Toggle -->
+          <a-form-item :label="t('aiAgentEnableMcpTools') || 'Enable MCP Tools'">
+            <a-switch v-model:checked="enableMcpTools" size="small" />
+            <a-typography-text
+              type="secondary"
+              style="font-size: 11px; display: block; margin-top: 4px"
+            >
+              {{
+                t('aiAgentEnableMcpToolsHint') ||
+                'Allow the agent to use tools provided by MCP servers'
+              }}
+            </a-typography-text>
           </a-form-item>
 
           <!-- MCP Servers Section -->

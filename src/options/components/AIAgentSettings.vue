@@ -5,6 +5,8 @@ import { ApiOutlined, DeleteOutlined, PlusOutlined, EditOutlined } from '@ant-de
 import type { AppSettings, McpServerConfig } from '../../types/type'
 import { useSettingsForm } from '../composables/useSettingsForm'
 
+import { BUILTIN_TOOL_NAMES } from '@/services/aiAgentService'
+
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 
 const emit = defineEmits([
@@ -14,7 +16,9 @@ const emit = defineEmits([
   'update:claudeImageModel',
   'update:claudeMaxSteps',
   'update:claudeMaxTokens',
-  'update:claudeMcpServers'
+  'update:claudeMcpServers',
+  'update:claudeEnabledBuiltinTools',
+  'update:claudeEnableMcpTools'
 ])
 
 // Use the settings form composable
@@ -27,7 +31,9 @@ const { localValues, hasChanges, isValid, isSaving, handleSave, handleReset } = 
     { key: 'claudeImageModel', default: '' },
     { key: 'claudeMaxSteps', default: 30 },
     { key: 'claudeMaxTokens', default: 8192 },
-    { key: 'claudeMcpServers', default: [] }
+    { key: 'claudeMcpServers', default: [] },
+    { key: 'claudeEnabledBuiltinTools', default: BUILTIN_TOOL_NAMES },
+    { key: 'claudeEnableMcpTools', default: true }
   ],
   emit as (event: string, ...args: any[]) => void,
   {
@@ -84,6 +90,22 @@ const localMcpServers = computed({
     localValues.claudeMcpServers.value = val
   }
 })
+
+const localEnabledBuiltinTools = computed({
+  get: () => (localValues.claudeEnabledBuiltinTools.value as string[]) || BUILTIN_TOOL_NAMES,
+  set: val => {
+    localValues.claudeEnabledBuiltinTools.value = val
+  }
+})
+
+const localEnableMcpTools = computed({
+  get: () => (localValues.claudeEnableMcpTools.value as boolean) !== false, // Default to true
+  set: val => {
+    localValues.claudeEnableMcpTools.value = val
+  }
+})
+
+const allBuiltinTools = BUILTIN_TOOL_NAMES
 
 // MCP Server Management
 const newMcpServer = ref({
@@ -326,6 +348,54 @@ async function testMcpServer(server: McpServerConfig) {
         </div>
       </div>
 
+      <!-- Tools Configuration -->
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+        <h3 class="text-md font-medium dark:text-white">工具配置</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          控制 Agent 可以使用的内置工具和 MCP 工具
+        </p>
+
+        <div class="space-y-4">
+          <!-- Built-in Tools Selection -->
+          <div>
+            <label class="block text-sm font-medium dark:text-white mb-2">内置工具：</label>
+            <a-select
+              v-model:value="localEnabledBuiltinTools"
+              mode="multiple"
+              placeholder="选择要启用的内置工具"
+              class="w-full"
+              :max-tag-count="5"
+              show-search
+              :filter-option="
+                (input: string, option: any) =>
+                  String(option?.value || '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+              "
+            >
+              <a-select-option v-for="tool in allBuiltinTools" :key="tool" :value="tool">
+                {{ tool }}
+              </a-select-option>
+            </a-select>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              选择 Agent
+              可以使用的内置工具。留空则启用全部工具。包括浏览器操作、标签管理、存储、剪贴板等工具。
+            </p>
+          </div>
+
+          <!-- MCP Tools Toggle -->
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="block text-sm font-medium dark:text-white mb-1">启用 MCP 工具</label>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                允许 Agent 使用下方配置的 MCP 服务器提供的工具
+              </p>
+            </div>
+            <a-switch v-model:checked="localEnableMcpTools" />
+          </div>
+        </div>
+      </div>
+
       <!-- MCP Servers -->
       <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
         <h3 class="text-md font-medium dark:text-white">MCP 服务器</h3>
@@ -369,11 +439,7 @@ async function testMcpServer(server: McpServerConfig) {
               </a-tag>
             </div>
             <div class="flex items-center gap-2">
-              <a-button
-                type="text"
-                size="small"
-                @click="openEditModal(server)"
-              >
+              <a-button type="text" size="small" @click="openEditModal(server)">
                 <template #icon><EditOutlined /></template>
               </a-button>
               <a-button

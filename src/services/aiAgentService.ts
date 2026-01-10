@@ -19,6 +19,8 @@ export interface AgentConfig {
   maxTokens?: number
   mcpServers?: McpServerConfig[]
   targetTabId?: number // Target tab ID for popup window mode
+  enabledBuiltinTools?: string[] // Enabled built-in tool names (if undefined, all enabled)
+  enableMcpTools?: boolean // Enable MCP provided tools (default: true)
 }
 
 export interface AgentMessage {
@@ -1179,6 +1181,11 @@ const BROWSER_TOOLS: ToolDefinition[] = [
     }
   }
 ]
+
+/**
+ * Export all available built-in tool names for UI configuration
+ */
+export const BUILTIN_TOOL_NAMES = BROWSER_TOOLS.map(tool => tool.name)
 
 /**
  * MCP Tool definition from server
@@ -2783,9 +2790,18 @@ export async function runAgent(
 
   // Initialize MCP clients if configured
   let mcpClients = new Map<string, McpClient>()
-  let allTools: ToolDefinition[] = [...BROWSER_TOOLS]
 
-  if (config.mcpServers && config.mcpServers.length > 0) {
+  // Filter built-in tools based on config
+  let allTools: ToolDefinition[] = [...BROWSER_TOOLS]
+  if (config.enabledBuiltinTools && Array.isArray(config.enabledBuiltinTools)) {
+    const enabledNames = new Set(config.enabledBuiltinTools)
+    allTools = BROWSER_TOOLS.filter(tool => enabledNames.has(tool.name))
+    log.info(`Filtered to ${allTools.length} enabled built-in tools`)
+  }
+
+  // Add MCP tools if enabled
+  const enableMcpTools = config.enableMcpTools !== false // Default to true
+  if (enableMcpTools && config.mcpServers && config.mcpServers.length > 0) {
     onStatus({ step: 0, message: 'Initializing MCP servers...' })
     try {
       mcpClients = await initializeMcpClients(config.mcpServers)

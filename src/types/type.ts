@@ -34,6 +34,9 @@ export interface AppSettings {
   claudeMaxSteps?: number // Maximum steps for AI Agent (default: 30)
   claudeMaxTokens?: number // Maximum tokens for AI response (default: 8192)
   claudeMcpServers?: McpServerConfig[] // MCP server configurations
+  // Tools enablement
+  claudeEnabledBuiltinTools?: string[] // Enabled built-in tools (default: all)
+  claudeEnableMcpTools?: boolean // Enable MCP provided tools (default: true)
   theme?: 'system' | 'light' | 'dark'
   // Custom theme colors
   customPrimaryColor?: string // 主题主色
