@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import {
   SettingOutlined,
   SendOutlined,
@@ -37,6 +37,7 @@ const { t } = useI18n()
 
 const emojiStore = useEmojiStore()
 
+// Conversation state
 const taskInput = ref('')
 const isRunning = ref(false)
 const currentStep = ref(0)
@@ -50,6 +51,77 @@ const abortController = ref<AbortController | null>(null)
 const expandedScreenshots = ref<Set<number>>(new Set())
 const subagents = ref<SubagentStatus[]>([])
 const expandedSubagents = ref<Set<string>>(new Set())
+
+// Persistent conversation state
+interface PersistedConversation {
+  task: string
+  steps: AgentStep[]
+  currentStep: number
+  isRunning: boolean
+  timestamp: number
+  config: AgentConfig
+  subagents: SubagentStatus[]
+}
+
+const STORAGE_KEY = 'ai_agent_conversation'
+const CONVERSATION_TIMEOUT = 24 * 60 * 60 * 1000 // 24 hours
+
+// Save conversation state to localStorage
+const saveConversation = () => {
+  try {
+    const conversation: PersistedConversation = {
+      task: steps.value[0]?.thinking?.replace(/^.*?: /, '') || '',
+      steps: steps.value,
+      currentStep: currentStep.value,
+      isRunning: isRunning.value,
+      timestamp: Date.now(),
+      config: {
+        apiKey: apiKey.value,
+        baseUrl: baseUrl.value,
+        model: model.value,
+        imageModel: imageModel.value || undefined,
+        maxTokens: maxTokens.value,
+        mcpServers: mcpServers.value,
+        enabledBuiltinTools: enabledBuiltinTools.value,
+        enableMcpTools: enableMcpTools.value
+      },
+      subagents: subagents.value
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversation))
+  } catch (error) {
+    console.error('Failed to save conversation:', error)
+  }
+}
+
+// Load conversation state from localStorage
+const loadConversation = (): PersistedConversation | null => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return null
+
+    const conversation: PersistedConversation = JSON.parse(stored)
+
+    // Check if conversation is too old
+    if (Date.now() - conversation.timestamp > CONVERSATION_TIMEOUT) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+
+    return conversation
+  } catch (error) {
+    console.error('Failed to load conversation:', error)
+    return null
+  }
+}
+
+// Clear persisted conversation
+const clearPersistedConversation = () => {
+  localStorage.removeItem(STORAGE_KEY)
+}
+
+// Detect if conversation was interrupted
+const wasInterrupted = ref(false)
+const savedConversation = ref<PersistedConversation | null>(null)
 
 const chatContainer = ref<HTMLElement | null>(null)
 
@@ -267,6 +339,60 @@ watch([currentStep, currentThinking, currentScreenshot], () => {
   })
 })
 
+// Watch steps and save to localStorage when changed (debounced to avoid excessive saves)
+let saveTimeout: ReturnType<typeof setTimeout> | null = null
+watch([steps, currentStep, isRunning, subagents], () => {
+  if (steps.value.length > 0) {
+    // Debounce saves to avoid triggering too frequently
+    if (saveTimeout) clearTimeout(saveTimeout)
+    saveTimeout = setTimeout(() => {
+      saveConversation()
+    }, 500)
+  }
+}, { deep: true })
+
+// Initialize: Check for interrupted conversation
+onMounted(() => {
+  const saved = loadConversation()
+  if (saved && saved.isRunning) {
+    // Conversation was interrupted
+    wasInterrupted.value = true
+    savedConversation.value = saved
+  }
+})
+
+// Cleanup: Mark conversation as completed when unmounting
+onBeforeUnmount(() => {
+  if (isRunning.value) {
+    // Save final state before unmounting
+    saveConversation()
+  }
+})
+
+// Resume interrupted conversation
+const resumeConversation = async () => {
+  if (!savedConversation.value) return
+
+  // Restore state
+  steps.value = savedConversation.value.steps
+  currentStep.value = savedConversation.value.currentStep
+  subagents.value = savedConversation.value.subagents
+
+  // Continue from where we left off
+  wasInterrupted.value = false
+
+  // Note: We can't actually resume the agent execution because it's a streaming API
+  // But we preserve the conversation history for the user to see
+  errorMessage.value = '对话已从中断处恢复。请重新提交任务以继续。'
+}
+
+// Dismiss the interrupted conversation notice
+const dismissInterrupted = () => {
+  wasInterrupted.value = false
+  savedConversation.value = null
+  clearPersistedConversation()
+}
+
 // 格式化操作参数为易读格式
 function formatActionParams(action: AgentAction): string {
   if (!action.params || Object.keys(action.params).length === 0) return ''
@@ -366,6 +492,8 @@ async function startTask() {
     abortController.value = null
     currentThinking.value = ''
     currentAction.value = null
+    // Clear persisted conversation on successful completion
+    clearPersistedConversation()
   }
 }
 
@@ -465,6 +593,27 @@ async function openInPopupWindow() {
         </a-button>
       </div>
     </div>
+
+    <!-- Interrupted Conversation Notice -->
+    <a-alert
+      v-if="wasInterrupted && savedConversation"
+      type="info"
+      closable
+      @close="dismissInterrupted"
+      style="margin: 12px"
+    >
+      <template #message>
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <span>检测到上次对话意外中断 ({{ new Date(savedConversation.timestamp).toLocaleString() }})</span>
+          <a-button type="primary" size="small" @click="resumeConversation">
+            恢复对话
+          </a-button>
+        </div>
+      </template>
+      <template #description>
+        对话包含 {{ savedConversation.steps.length }} 个步骤。点击"恢复对话"查看历史记录。
+      </template>
+    </a-alert>
 
     <!-- Settings Panel -->
     <a-collapse v-model:active-key="settingsActiveKey" :bordered="false" class="settings-collapse">
