@@ -13,9 +13,11 @@ import {
   CloseCircleOutlined,
   DownOutlined,
   RightOutlined,
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  PlusOutlined
 } from '@ant-design/icons-vue'
 
+import type { McpServerConfig } from '@/types/type'
 import {
   runAgent,
   validateConfig,
@@ -73,6 +75,47 @@ const maxTokens = computed({
   get: () => emojiStore.settings.claudeMaxTokens || 8192,
   set: (value: number) => emojiStore.updateSettings({ claudeMaxTokens: value })
 })
+
+// MCP Servers
+const mcpServers = computed({
+  get: () => emojiStore.settings.claudeMcpServers || [],
+  set: (servers: McpServerConfig[]) => emojiStore.updateSettings({ claudeMcpServers: servers })
+})
+
+const newMcpServer = ref({
+  name: '',
+  url: '',
+  type: 'sse' as 'sse' | 'websocket' | 'http',
+  apiKey: ''
+})
+
+function addMcpServer() {
+  if (!newMcpServer.value.name.trim() || !newMcpServer.value.url.trim()) return
+
+  const server: McpServerConfig = {
+    id: Date.now().toString(),
+    name: newMcpServer.value.name.trim(),
+    url: newMcpServer.value.url.trim(),
+    type: newMcpServer.value.type,
+    enabled: true,
+    apiKey: newMcpServer.value.apiKey.trim() || undefined
+  }
+
+  mcpServers.value = [...mcpServers.value, server]
+
+  // Reset form
+  newMcpServer.value = { name: '', url: '', type: 'sse', apiKey: '' }
+}
+
+function removeMcpServer(id: string) {
+  mcpServers.value = mcpServers.value.filter(s => s.id !== id)
+}
+
+function toggleMcpServer(id: string) {
+  mcpServers.value = mcpServers.value.map(s =>
+    s.id === id ? { ...s, enabled: !s.enabled } : s
+  )
+}
 
 const isConfigured = computed(() => {
   const validation = validateConfig({
@@ -256,6 +299,77 @@ function clearHistory() {
               style="width: 100%"
             />
           </a-form-item>
+
+          <!-- MCP Servers Section -->
+          <a-form-item :label="t('aiAgentMcpServers')">
+            <div class="mcp-servers-list">
+              <div v-if="mcpServers.length === 0" class="mcp-no-servers">
+                {{ t('aiAgentMcpNoServers') }}
+              </div>
+              <div v-for="server in mcpServers" :key="server.id" class="mcp-server-item">
+                <div class="mcp-server-info">
+                  <a-switch
+                    :checked="server.enabled"
+                    size="small"
+                    @change="toggleMcpServer(server.id)"
+                  />
+                  <span class="mcp-server-name" :class="{ disabled: !server.enabled }">
+                    {{ server.name }}
+                  </span>
+                  <a-tag size="small">{{ server.type }}</a-tag>
+                </div>
+                <a-button
+                  type="text"
+                  danger
+                  size="small"
+                  @click="removeMcpServer(server.id)"
+                >
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </div>
+            </div>
+
+            <!-- Add MCP Server Form -->
+            <div class="mcp-add-form">
+              <a-input
+                v-model:value="newMcpServer.name"
+                :placeholder="t('aiAgentMcpServerName')"
+                size="small"
+                class="mcp-input"
+              />
+              <a-input
+                v-model:value="newMcpServer.url"
+                :placeholder="t('aiAgentMcpServerUrl')"
+                size="small"
+                class="mcp-input"
+              />
+              <a-select
+                v-model:value="newMcpServer.type"
+                size="small"
+                class="mcp-select"
+              >
+                <a-select-option value="sse">SSE</a-select-option>
+                <a-select-option value="websocket">WebSocket</a-select-option>
+                <a-select-option value="http">HTTP</a-select-option>
+              </a-select>
+              <a-input-password
+                v-model:value="newMcpServer.apiKey"
+                :placeholder="t('aiAgentMcpServerApiKey')"
+                size="small"
+                class="mcp-input"
+              />
+              <a-button
+                type="primary"
+                size="small"
+                :disabled="!newMcpServer.name.trim() || !newMcpServer.url.trim()"
+                @click="addMcpServer"
+              >
+                <template #icon><PlusOutlined /></template>
+                {{ t('aiAgentMcpAddServer') }}
+              </a-button>
+            </div>
+          </a-form-item>
+
           <a-typography-text type="secondary" class="settings-hint">
             {{ t('aiAgentSettingsHint') }}
           </a-typography-text>
@@ -526,6 +640,68 @@ function clearHistory() {
 .settings-hint {
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* MCP Servers */
+.mcp-servers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mcp-no-servers {
+  font-size: 12px;
+  color: var(--text-secondary, #6b6b6b);
+  padding: 8px;
+  text-align: center;
+  background: var(--code-bg, #f5f4f2);
+  border-radius: 6px;
+}
+
+.mcp-server-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--code-bg, #f5f4f2);
+  border-radius: 6px;
+}
+
+.mcp-server-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mcp-server-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #1a1a1a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcp-server-name.disabled {
+  color: var(--text-secondary, #6b6b6b);
+  text-decoration: line-through;
+}
+
+.mcp-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mcp-input {
+  width: 100%;
+}
+
+.mcp-select {
+  width: 100%;
 }
 
 /* Status Bar - Anthropic orange accent */

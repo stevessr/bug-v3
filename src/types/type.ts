@@ -33,6 +33,7 @@ export interface AppSettings {
   claudeImageModel?: string // Claude model for image description (default: same as main model)
   claudeMaxSteps?: number // Maximum steps for AI Agent (default: 30)
   claudeMaxTokens?: number // Maximum tokens for AI response (default: 8192)
+  claudeMcpServers?: McpServerConfig[] // MCP server configurations
   theme?: 'system' | 'light' | 'dark'
   // Custom theme colors
   customPrimaryColor?: string // 主题主色
@@ -62,6 +63,19 @@ export interface AppSettings {
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh?: boolean // 启用 Discourse 周期性路由刷新
   discourseRouterRefreshInterval?: number // 刷新间隔（毫秒），默认 30000
+}
+
+/**
+ * MCP (Model Context Protocol) Server Configuration
+ */
+export interface McpServerConfig {
+  id: string // Unique identifier
+  name: string // Display name
+  url: string // Server URL (HTTP/WebSocket)
+  type: 'sse' | 'websocket' | 'http' // Connection type
+  enabled: boolean // Whether the server is enabled
+  apiKey?: string // Optional API key for authentication
+  headers?: Record<string, string> // Optional custom headers
 }
 
 export interface EmojiGroup {
