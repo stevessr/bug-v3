@@ -4,9 +4,17 @@
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 
+import { AI_AGENT_FALLBACKS, AI_AGENT_FALLBACKS_ZH } from '@/sidebar/aiAgentMessages'
+
 // 本地翻译数据缓存
 const localTranslations: Record<string, Record<string, { message: string }>> = {}
 let currentLanguage = 'zh_CN'
+
+// Runtime fallbacks for messages not in locale files
+const runtimeFallbacks: Record<string, Record<string, string>> = {
+  en: AI_AGENT_FALLBACKS,
+  zh_CN: AI_AGENT_FALLBACKS_ZH
+}
 
 /**
  * 加载指定语言的翻译文件
@@ -40,13 +48,33 @@ export function getMessage(
     if (substitutions) {
       if (typeof substitutions === 'string') {
         substitutions = [substitutions]
-      } else if (Array.isArray(substitutions)) {
-        // 处理数组格式 (Chrome i18n 格式)
+      }
+      if (Array.isArray(substitutions)) {
         substitutions.forEach((substitution, index) => {
           message = message.replace(`$${index + 1}`, substitution)
         })
       } else {
-        // 处理对象格式 ({key: value})
+        Object.entries(substitutions).forEach(([key, value]) => {
+          message = message.replace(`{${key}}`, String(value))
+        })
+      }
+    }
+    return message
+  }
+
+  // Check runtime fallbacks
+  const fallbackLang = currentLanguage.startsWith('zh') ? 'zh_CN' : 'en'
+  if (runtimeFallbacks[fallbackLang] && runtimeFallbacks[fallbackLang][messageName]) {
+    let message = runtimeFallbacks[fallbackLang][messageName]
+    if (substitutions) {
+      if (typeof substitutions === 'string') {
+        substitutions = [substitutions]
+      }
+      if (Array.isArray(substitutions)) {
+        substitutions.forEach((substitution, index) => {
+          message = message.replace(`$${index + 1}`, substitution)
+        })
+      } else {
         Object.entries(substitutions).forEach(([key, value]) => {
           message = message.replace(`{${key}}`, String(value))
         })

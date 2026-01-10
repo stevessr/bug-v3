@@ -35,11 +35,15 @@ declare global {
   const cacheImage: typeof import('./utils/imageCache')['cacheImage']
   const cacheImages: typeof import('./utils/imageCache')['cacheImages']
   const cacheMultipleImages: typeof import('./utils/imageCache.example')['cacheMultipleImages']
+  const captureScreenshot: typeof import('./utils/browserAutomation')['captureScreenshot']
   const checkStorageHealth: typeof import('./utils/simpleStorage')['checkStorageHealth']
   const cleanupCacheExample: typeof import('./utils/imageCache.example')['cleanupCacheExample']
   const cleanupLRU: typeof import('./utils/imageCache')['cleanupLRU']
   const clearCache: typeof import('./utils/imageCache')['clearCache']
+  const clearInput: typeof import('./utils/browserAutomation')['clearInput']
   const clearSyncConfig: typeof import('./utils/syncConfigStorage')['clearSyncConfig']
+  const clickAt: typeof import('./utils/browserAutomation')['clickAt']
+  const clickElement: typeof import('./utils/browserAutomation')['clickElement']
   const cloudflareSyncService: typeof import('./utils/cloudflareSync')['cloudflareSyncService']
   const collaborativeUpload: typeof import('./utils/collab/index')['collaborativeUpload']
   const commonMessages: typeof import('./utils/i18n')['commonMessages']
@@ -56,14 +60,18 @@ declare global {
   const defineComponent: typeof import('vue')['defineComponent']
   const defineStore: typeof import('pinia')['defineStore']
   const deleteArchivedGroup: typeof import('./utils/simpleStorage')['deleteArchivedGroup']
+  const doubleClickAt: typeof import('./utils/browserAutomation')['doubleClickAt']
   const downloadFileAsBlob: typeof import('./utils/telegramResolver')['downloadFileAsBlob']
+  const drag: typeof import('./utils/browserAutomation')['drag']
   const effectScope: typeof import('vue')['effectScope']
   const ensureDiscourseDomainExists: typeof import('./utils/simpleStorage')['ensureDiscourseDomainExists']
   const environmentSpecificExample: typeof import('./utils/imageCache.example')['environmentSpecificExample']
   const exampleImageCaching: typeof import('./utils/imageCache.example')['exampleImageCaching']
+  const executeScript: typeof import('./utils/browserAutomation')['executeScript']
   const extractChanges: typeof import('./utils/typeGuards')['extractChanges']
   const extractStickerSetName: typeof import('./utils/telegramResolver')['extractStickerSetName']
   const extractTimestamp: typeof import('./utils/typeGuards')['extractTimestamp']
+  const focusElement: typeof import('./utils/browserAutomation')['focusElement']
   const formatMessage: typeof import('./utils/i18n')['formatMessage']
   const generateBatchNames: typeof import('./utils/geminiService')['generateBatchNames']
   const generateBatchNamesStreaming: typeof import('./utils/geminiService')['generateBatchNamesStreaming']
@@ -77,6 +85,7 @@ declare global {
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentLanguage: typeof import('./utils/i18n')['getCurrentLanguage']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
+  const getDOMElements: typeof import('./utils/browserAutomation')['getDOMElements']
   const getDeviceId: typeof import('./utils/device')['getDeviceId']
   const getDeviceInfo: typeof import('./utils/device')['getDeviceInfo']
   const getDiscourseDomain: typeof import('./utils/simpleStorage')['getDiscourseDomain']
@@ -89,13 +98,17 @@ declare global {
   const getEmojiImageUrls: typeof import('./utils/imageUrlHelper')['getEmojiImageUrls']
   const getFavorites: typeof import('./utils/simpleStorage')['getFavorites']
   const getFile: typeof import('./utils/telegramResolver')['getFile']
+  const getInputValue: typeof import('./utils/browserAutomation')['getInputValue']
   const getMessage: typeof import('./utils/i18n')['getMessage']
+  const getPageInfo: typeof import('./utils/browserAutomation')['getPageInfo']
+  const getSelectedText: typeof import('./utils/browserAutomation')['getSelectedText']
   const getSettings: typeof import('./utils/simpleStorage')['getSettings']
   const getStickerSet: typeof import('./utils/telegramResolver')['getStickerSet']
   const getTelegramBotToken: typeof import('./utils/telegramResolver')['getTelegramBotToken']
   const getUILanguage: typeof import('./utils/i18n')['getUILanguage']
   const getWorkerClient: typeof import('./utils/collab/index')['getWorkerClient']
   const h: typeof import('vue')['h']
+  const hoverAt: typeof import('./utils/browserAutomation')['hoverAt']
   const imageCache: typeof import('./utils/imageCache')['imageCache']
   const imageCacheService: typeof import('./utils/imageCacheService')['imageCacheService']
   const initI18n: typeof import('./utils/i18n')['initI18n']
@@ -125,6 +138,7 @@ declare global {
   const mapWritableState: typeof import('pinia')['mapWritableState']
   const markRaw: typeof import('vue')['markRaw']
   const message: typeof import('ant-design-vue')['message']
+  const navigateTo: typeof import('./utils/browserAutomation')['navigateTo']
   const nextTick: typeof import('vue')['nextTick']
   const normalizeImageUrl: typeof import('./utils/isImageUrl')['normalizeImageUrl']
   const onActivated: typeof import('vue')['onActivated']
@@ -148,6 +162,7 @@ declare global {
   const parseDatabaseFile: typeof import('./utils/cacheExportHelpers')['parseDatabaseFile']
   const preloadImages: typeof import('./utils/imageUrlHelper')['preloadImages']
   const preloadToMemory: typeof import('./utils/imageCache')['preloadToMemory']
+  const pressKey: typeof import('./utils/browserAutomation')['pressKey']
   const processTelegramStickers: typeof import('./utils/telegramResolver')['processTelegramStickers']
   const provide: typeof import('vue')['provide']
   const reactive: typeof import('vue')['reactive']
@@ -158,11 +173,15 @@ declare global {
   const repairEmptyStorage: typeof import('./utils/simpleStorage')['repairEmptyStorage']
   const resetToDefaults: typeof import('./utils/simpleStorage')['resetToDefaults']
   const resolveComponent: typeof import('vue')['resolveComponent']
+  const rightClickAt: typeof import('./utils/browserAutomation')['rightClickAt']
   const sanitizeEmojiGroup: typeof import('./utils/typeGuards')['sanitizeEmojiGroup']
   const sanitizeEmojiGroupArray: typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']
   const saveAllData: typeof import('./utils/simpleStorage')['saveAllData']
   const saveDeviceInfo: typeof import('./utils/device')['saveDeviceInfo']
   const saveSyncConfig: typeof import('./utils/syncConfigStorage')['saveSyncConfig']
+  const scroll: typeof import('./utils/browserAutomation')['scroll']
+  const scrollTo: typeof import('./utils/browserAutomation')['scrollTo']
+  const selectText: typeof import('./utils/browserAutomation')['selectText']
   const setActivePinia: typeof import('pinia')['setActivePinia']
   const setAllEmojiGroups: typeof import('./utils/simpleStorage')['setAllEmojiGroups']
   const setArchivedGroupIds: typeof import('./utils/simpleStorage')['setArchivedGroupIds']
@@ -194,6 +213,7 @@ declare global {
   const toRefs: typeof import('vue')['toRefs']
   const toValue: typeof import('vue')['toValue']
   const triggerRef: typeof import('vue')['triggerRef']
+  const typeText: typeof import('./utils/browserAutomation')['typeText']
   const unarchiveGroup: typeof import('./utils/simpleStorage')['unarchiveGroup']
   const unref: typeof import('vue')['unref']
   const uploadAndAddEmoji: typeof import('./utils/uploadServices')['uploadAndAddEmoji']
@@ -223,6 +243,8 @@ declare global {
   const useTemplateRef: typeof import('vue')['useTemplateRef']
   const useTimeout: typeof import('./composables/useTimer')['useTimeout']
   const validateAndSanitize: typeof import('./utils/typeGuards')['validateAndSanitize']
+  const wait: typeof import('./utils/browserAutomation')['wait']
+  const waitForElement: typeof import('./utils/browserAutomation')['waitForElement']
   const wasmHashService: typeof import('./utils/wasmHashService')['wasmHashService']
   const watch: typeof import('vue')['watch']
   const watchEffect: typeof import('vue')['watchEffect']
@@ -289,10 +311,14 @@ declare module 'vue' {
     readonly backupToSync: UnwrapRef<typeof import('./utils/simpleStorage')['backupToSync']>
     readonly cacheImage: UnwrapRef<typeof import('./utils/imageCache')['cacheImage']>
     readonly cacheImages: UnwrapRef<typeof import('./utils/imageCache')['cacheImages']>
+    readonly captureScreenshot: UnwrapRef<typeof import('./utils/browserAutomation')['captureScreenshot']>
     readonly checkStorageHealth: UnwrapRef<typeof import('./utils/simpleStorage')['checkStorageHealth']>
     readonly cleanupLRU: UnwrapRef<typeof import('./utils/imageCache')['cleanupLRU']>
     readonly clearCache: UnwrapRef<typeof import('./utils/imageCache')['clearCache']>
+    readonly clearInput: UnwrapRef<typeof import('./utils/browserAutomation')['clearInput']>
     readonly clearSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['clearSyncConfig']>
+    readonly clickAt: UnwrapRef<typeof import('./utils/browserAutomation')['clickAt']>
+    readonly clickElement: UnwrapRef<typeof import('./utils/browserAutomation')['clickElement']>
     readonly cloudflareSyncService: UnwrapRef<typeof import('./utils/cloudflareSync')['cloudflareSyncService']>
     readonly collaborativeUpload: UnwrapRef<typeof import('./utils/collab/index')['collaborativeUpload']>
     readonly commonMessages: UnwrapRef<typeof import('./utils/i18n')['commonMessages']>
@@ -309,12 +335,16 @@ declare module 'vue' {
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly defineStore: UnwrapRef<typeof import('pinia')['defineStore']>
     readonly deleteArchivedGroup: UnwrapRef<typeof import('./utils/simpleStorage')['deleteArchivedGroup']>
+    readonly doubleClickAt: UnwrapRef<typeof import('./utils/browserAutomation')['doubleClickAt']>
     readonly downloadFileAsBlob: UnwrapRef<typeof import('./utils/telegramResolver')['downloadFileAsBlob']>
+    readonly drag: UnwrapRef<typeof import('./utils/browserAutomation')['drag']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly ensureDiscourseDomainExists: UnwrapRef<typeof import('./utils/simpleStorage')['ensureDiscourseDomainExists']>
+    readonly executeScript: UnwrapRef<typeof import('./utils/browserAutomation')['executeScript']>
     readonly extractChanges: UnwrapRef<typeof import('./utils/typeGuards')['extractChanges']>
     readonly extractStickerSetName: UnwrapRef<typeof import('./utils/telegramResolver')['extractStickerSetName']>
     readonly extractTimestamp: UnwrapRef<typeof import('./utils/typeGuards')['extractTimestamp']>
+    readonly focusElement: UnwrapRef<typeof import('./utils/browserAutomation')['focusElement']>
     readonly formatMessage: UnwrapRef<typeof import('./utils/i18n')['formatMessage']>
     readonly generateBatchNames: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNames']>
     readonly generateBatchNamesStreaming: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNamesStreaming']>
@@ -328,6 +358,7 @@ declare module 'vue' {
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentLanguage: UnwrapRef<typeof import('./utils/i18n')['getCurrentLanguage']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
+    readonly getDOMElements: UnwrapRef<typeof import('./utils/browserAutomation')['getDOMElements']>
     readonly getDeviceId: UnwrapRef<typeof import('./utils/device')['getDeviceId']>
     readonly getDeviceInfo: UnwrapRef<typeof import('./utils/device')['getDeviceInfo']>
     readonly getDiscourseDomain: UnwrapRef<typeof import('./utils/simpleStorage')['getDiscourseDomain']>
@@ -340,13 +371,17 @@ declare module 'vue' {
     readonly getEmojiImageUrls: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrls']>
     readonly getFavorites: UnwrapRef<typeof import('./utils/simpleStorage')['getFavorites']>
     readonly getFile: UnwrapRef<typeof import('./utils/telegramResolver')['getFile']>
+    readonly getInputValue: UnwrapRef<typeof import('./utils/browserAutomation')['getInputValue']>
     readonly getMessage: UnwrapRef<typeof import('./utils/i18n')['getMessage']>
+    readonly getPageInfo: UnwrapRef<typeof import('./utils/browserAutomation')['getPageInfo']>
+    readonly getSelectedText: UnwrapRef<typeof import('./utils/browserAutomation')['getSelectedText']>
     readonly getSettings: UnwrapRef<typeof import('./utils/simpleStorage')['getSettings']>
     readonly getStickerSet: UnwrapRef<typeof import('./utils/telegramResolver')['getStickerSet']>
     readonly getTelegramBotToken: UnwrapRef<typeof import('./utils/telegramResolver')['getTelegramBotToken']>
     readonly getUILanguage: UnwrapRef<typeof import('./utils/i18n')['getUILanguage']>
     readonly getWorkerClient: UnwrapRef<typeof import('./utils/collab/index')['getWorkerClient']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
+    readonly hoverAt: UnwrapRef<typeof import('./utils/browserAutomation')['hoverAt']>
     readonly imageCache: UnwrapRef<typeof import('./utils/imageCache')['imageCache']>
     readonly imageCacheService: UnwrapRef<typeof import('./utils/imageCacheService')['imageCacheService']>
     readonly initI18n: UnwrapRef<typeof import('./utils/i18n')['initI18n']>
@@ -376,6 +411,7 @@ declare module 'vue' {
     readonly mapWritableState: UnwrapRef<typeof import('pinia')['mapWritableState']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly message: UnwrapRef<typeof import('ant-design-vue')['message']>
+    readonly navigateTo: UnwrapRef<typeof import('./utils/browserAutomation')['navigateTo']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['normalizeImageUrl']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
@@ -399,6 +435,7 @@ declare module 'vue' {
     readonly parseDatabaseFile: UnwrapRef<typeof import('./utils/cacheExportHelpers')['parseDatabaseFile']>
     readonly preloadImages: UnwrapRef<typeof import('./utils/imageUrlHelper')['preloadImages']>
     readonly preloadToMemory: UnwrapRef<typeof import('./utils/imageCache')['preloadToMemory']>
+    readonly pressKey: UnwrapRef<typeof import('./utils/browserAutomation')['pressKey']>
     readonly processTelegramStickers: UnwrapRef<typeof import('./utils/telegramResolver')['processTelegramStickers']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
@@ -409,11 +446,15 @@ declare module 'vue' {
     readonly repairEmptyStorage: UnwrapRef<typeof import('./utils/simpleStorage')['repairEmptyStorage']>
     readonly resetToDefaults: UnwrapRef<typeof import('./utils/simpleStorage')['resetToDefaults']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
+    readonly rightClickAt: UnwrapRef<typeof import('./utils/browserAutomation')['rightClickAt']>
     readonly sanitizeEmojiGroup: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroup']>
     readonly sanitizeEmojiGroupArray: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']>
     readonly saveAllData: UnwrapRef<typeof import('./utils/simpleStorage')['saveAllData']>
     readonly saveDeviceInfo: UnwrapRef<typeof import('./utils/device')['saveDeviceInfo']>
     readonly saveSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['saveSyncConfig']>
+    readonly scroll: UnwrapRef<typeof import('./utils/browserAutomation')['scroll']>
+    readonly scrollTo: UnwrapRef<typeof import('./utils/browserAutomation')['scrollTo']>
+    readonly selectText: UnwrapRef<typeof import('./utils/browserAutomation')['selectText']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setAllEmojiGroups: UnwrapRef<typeof import('./utils/simpleStorage')['setAllEmojiGroups']>
     readonly setArchivedGroupIds: UnwrapRef<typeof import('./utils/simpleStorage')['setArchivedGroupIds']>
@@ -444,6 +485,7 @@ declare module 'vue' {
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
+    readonly typeText: UnwrapRef<typeof import('./utils/browserAutomation')['typeText']>
     readonly unarchiveGroup: UnwrapRef<typeof import('./utils/simpleStorage')['unarchiveGroup']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly uploadAndAddEmoji: UnwrapRef<typeof import('./utils/uploadServices')['uploadAndAddEmoji']>
@@ -473,6 +515,8 @@ declare module 'vue' {
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useTimeout: UnwrapRef<typeof import('./composables/useTimer')['useTimeout']>
     readonly validateAndSanitize: UnwrapRef<typeof import('./utils/typeGuards')['validateAndSanitize']>
+    readonly wait: UnwrapRef<typeof import('./utils/browserAutomation')['wait']>
+    readonly waitForElement: UnwrapRef<typeof import('./utils/browserAutomation')['waitForElement']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchEffect: UnwrapRef<typeof import('vue')['watchEffect']>
     readonly watchPostEffect: UnwrapRef<typeof import('vue')['watchPostEffect']>

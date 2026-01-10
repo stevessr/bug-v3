@@ -3054,5 +3054,74 @@
   "zoomTitle": {
     "message": "缩放",
     "description": "缩放标题"
+  },
+  "aiAgentTab": {
+    "message": "AI 助手"
+  },
+  "aiAgentTitle": {
+    "message": "AI 浏览器助手"
+  },
+  "aiAgentApiKey": {
+    "message": "API Key"
+  },
+  "aiAgentApiKeyPlaceholder": {
+    "message": "输入您的 Claude API Key"
+  },
+  "aiAgentBaseUrl": {
+    "message": "API Base URL"
+  },
+  "aiAgentBaseUrlPlaceholder": {
+    "message": "https://api.anthropic.com"
+  },
+  "aiAgentModel": {
+    "message": "模型"
+  },
+  "aiAgentModelPlaceholder": {
+    "message": "claude-sonnet-4-20250514"
+  },
+  "aiAgentSettingsHint": {
+    "message": "您需要配置自己的 Claude API Key 才能使用 AI 助手功能。支持自定义 API 地址。"
+  },
+  "aiAgentNotConfigured": {
+    "message": "AI 助手尚未配置"
+  },
+  "aiAgentConfigure": {
+    "message": "配置 API"
+  },
+  "aiAgentStep": {
+    "message": "步骤 $1"
+  },
+  "aiAgentStop": {
+    "message": "停止"
+  },
+  "aiAgentThinking": {
+    "message": "思考中"
+  },
+  "aiAgentAction": {
+    "message": "操作"
+  },
+  "aiAgentExecuting": {
+    "message": "执行中"
+  },
+  "aiAgentResult": {
+    "message": "结果"
+  },
+  "aiAgentScreenshot": {
+    "message": "截图"
+  },
+  "aiAgentError": {
+    "message": "错误"
+  },
+  "aiAgentWelcome": {
+    "message": "AI 浏览器助手"
+  },
+  "aiAgentHint": {
+    "message": "输入任务描述，AI 将自动操控浏览器完成任务。支持截屏、点击、滚动、输入等操作。"
+  },
+  "aiAgentInputPlaceholder": {
+    "message": "描述您想让 AI 完成的任务..."
+  },
+  "aiAgentClear": {
+    "message": "清除历史"
   }
 }

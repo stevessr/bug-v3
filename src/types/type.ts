@@ -26,6 +26,10 @@ export interface AppSettings {
   customOpenAIKey?: string
   customOpenAIModel?: string
   aiConcurrency?: number // AI 请求并发数（1-10，默认 5）
+  // Claude AI Agent settings
+  claudeApiKey?: string // Claude API Key
+  claudeApiBaseUrl?: string // Claude API Base URL (default: https://api.anthropic.com)
+  claudeModel?: string // Claude model (default: claude-sonnet-4-20250514)
   theme?: 'system' | 'light' | 'dark'
   // Custom theme colors
   customPrimaryColor?: string // 主题主色

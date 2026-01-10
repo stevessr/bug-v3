@@ -50,5 +50,9 @@ export const defaultSettings: AppSettings = {
   enableLinuxDoSeekingSysNotify: true, // 默认启用系统通知
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh: false, // 默认禁用周期性路由刷新
-  discourseRouterRefreshInterval: 30000 // 默认 30 秒刷新一次
+  discourseRouterRefreshInterval: 30000, // 默认 30 秒刷新一次
+  // Claude AI Agent settings
+  claudeApiKey: '', // Claude API Key
+  claudeApiBaseUrl: 'https://api.anthropic.com', // Claude API Base URL
+  claudeModel: 'claude-sonnet-4-20250514' // Claude model
 }
