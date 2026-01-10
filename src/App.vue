@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from 'vue'
 import Popup from './popup/Popup.vue'
 import Options from './options/Options.vue'
 import Sidebar from './sidebar/Sidebar.vue'
+import AgentPopup from './sidebar/AgentPopup.vue'
 
 import router from '@/options/router'
 
@@ -12,7 +13,7 @@ import router from '@/options/router'
 const mode = ref('popup')
 
 onMounted(() => {
-  // 通过 URL 查询参数判断模式（格式：?type={options|popup|sidebar}&tabs={route 或分组名}）
+  // 通过 URL 查询参数判断模式（格式：?type={options|popup|sidebar|agent-popup}&tabs={route 或分组名}）
   const params = new URLSearchParams(window.location.search)
   const type = params.get('type')
   const tabs = params.get('tabs')
@@ -30,9 +31,10 @@ onMounted(() => {
   // 1. 有 tabs 参数 -> 强制 Options 模式（Popup 不支持路由）
   // 2. 明确指定 type=options -> Options 模式
   // 3. 明确指定 type=popup -> Popup 模式
-  // 4. 明确指定 type=sidebar -> Popup 模式
-  // 5. 默认 -> Popup 模式
-  if (tabs && tabs.length > 0 && type !== 'sidebar') {
+  // 4. 明确指定 type=sidebar -> Sidebar 模式
+  // 5. 明确指定 type=agent-popup -> AI Agent 弹窗模式
+  // 6. 默认 -> Popup 模式
+  if (tabs && tabs.length > 0 && type !== 'sidebar' && type !== 'agent-popup') {
     // 最高优先级：有路由 hash 或 tabs 参数，必须使用 Options 模式
     //console.log('[App.vue] 检测到路由 hash 或 tabs 参数，强制使用 Options 模式（Popup 不支持路由）')
     mode.value = 'options'
@@ -72,6 +74,8 @@ onMounted(() => {
     mode.value = 'popup'
   } else if (type === 'sidebar') {
     mode.value = 'sidebar'
+  } else if (type === 'agent-popup') {
+    mode.value = 'agent-popup'
   } else {
     mode.value = 'popup'
   }
@@ -80,6 +84,7 @@ onMounted(() => {
   document.body.classList.remove('options-mode')
   document.body.classList.remove('popup-mode')
   document.body.classList.remove('sidebar-mode')
+  document.body.classList.remove('agent-popup-mode')
   switch (mode.value) {
     case 'options':
       document.body.classList.add('options-mode')
@@ -90,6 +95,9 @@ onMounted(() => {
       break
     case 'sidebar':
       document.body.classList.add('sidebar-mode')
+      break
+    case 'agent-popup':
+      document.body.classList.add('agent-popup-mode')
       break
   }
 })
@@ -103,6 +111,8 @@ const currentComponent = computed(() => {
       return Popup
     case 'sidebar':
       return Sidebar
+    case 'agent-popup':
+      return AgentPopup
     default:
       return Options
   }

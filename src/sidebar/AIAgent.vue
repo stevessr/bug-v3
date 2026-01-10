@@ -15,7 +15,8 @@ import {
   RightOutlined,
   ThunderboltOutlined,
   PlusOutlined,
-  ApiOutlined
+  ApiOutlined,
+  ExpandOutlined
 } from '@ant-design/icons-vue'
 
 import type { McpServerConfig } from '@/types/type'
@@ -320,6 +321,39 @@ function toggleSubagent(id: string) {
   }
   expandedSubagents.value = new Set(expandedSubagents.value)
 }
+
+// Check if running in popup window mode
+const isPopupWindow = computed(() => {
+  return window.location.search.includes('type=agent-popup')
+})
+
+// Open AI Agent in a separate popup window
+async function openInPopupWindow() {
+  const width = 500
+  const height = 700
+  const left = window.screen.width - width - 50
+  const top = 100
+
+  // Use chrome.windows.create for extension popup
+  if (typeof chrome !== 'undefined' && chrome.windows) {
+    await chrome.windows.create({
+      url: 'index.html?type=agent-popup',
+      type: 'popup',
+      width,
+      height,
+      left,
+      top,
+      focused: true
+    })
+  } else {
+    // Fallback for non-extension context
+    window.open(
+      'index.html?type=agent-popup',
+      'ai-agent-popup',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    )
+  }
+}
 </script>
 
 <template>
@@ -330,13 +364,20 @@ function toggleSubagent(id: string) {
         <RobotOutlined class="header-icon" />
         <span>{{ t('aiAgentTitle') }}</span>
       </div>
-      <a-button
-        type="text"
-        :class="['settings-btn', { active: showSettings }]"
-        @click="showSettings = !showSettings"
-      >
-        <SettingOutlined />
-      </a-button>
+      <div class="header-actions">
+        <a-tooltip v-if="!isPopupWindow" :title="t('aiAgentOpenPopup')">
+          <a-button type="text" class="header-btn" @click="openInPopupWindow">
+            <ExpandOutlined />
+          </a-button>
+        </a-tooltip>
+        <a-button
+          type="text"
+          :class="['settings-btn', { active: showSettings }]"
+          @click="showSettings = !showSettings"
+        >
+          <SettingOutlined />
+        </a-button>
+      </div>
     </div>
 
     <!-- Settings Panel -->
@@ -740,6 +781,20 @@ function toggleSubagent(id: string) {
 
 .header-icon {
   font-size: 20px;
+  color: var(--accent-color, #d97706);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-btn {
+  color: var(--text-secondary, #6b6b6b);
+}
+
+.header-btn:hover {
   color: var(--accent-color, #d97706);
 }
 
