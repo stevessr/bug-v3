@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, type Ref } from 'vue'
-import { ApiOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
+import { ApiOutlined, DeleteOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons-vue'
 
 import type { AppSettings, McpServerConfig } from '../../types/type'
 import { useSettingsForm } from '../composables/useSettingsForm'
@@ -117,6 +117,52 @@ function toggleMcpServer(id: string) {
   localMcpServers.value = localMcpServers.value.map(s =>
     s.id === id ? { ...s, enabled: !s.enabled } : s
   )
+}
+
+// MCP Server Editing
+const editingServer = ref<McpServerConfig | null>(null)
+const showEditModal = ref(false)
+const editForm = ref({
+  name: '',
+  url: '',
+  type: 'sse' as 'sse' | 'streamable-http',
+  apiKey: ''
+})
+
+function openEditModal(server: McpServerConfig) {
+  editingServer.value = server
+  editForm.value = {
+    name: server.name,
+    url: server.url,
+    type: server.type,
+    apiKey: server.apiKey || ''
+  }
+  showEditModal.value = true
+}
+
+function saveEditedServer() {
+  if (!editingServer.value) return
+  if (!editForm.value.name.trim() || !editForm.value.url.trim()) return
+
+  localMcpServers.value = localMcpServers.value.map(s =>
+    s.id === editingServer.value!.id
+      ? {
+          ...s,
+          name: editForm.value.name.trim(),
+          url: editForm.value.url.trim(),
+          type: editForm.value.type,
+          apiKey: editForm.value.apiKey.trim() || undefined
+        }
+      : s
+  )
+
+  showEditModal.value = false
+  editingServer.value = null
+}
+
+function cancelEdit() {
+  showEditModal.value = false
+  editingServer.value = null
 }
 
 // MCP Server Testing
@@ -326,6 +372,13 @@ async function testMcpServer(server: McpServerConfig) {
               <a-button
                 type="text"
                 size="small"
+                @click="openEditModal(server)"
+              >
+                <template #icon><EditOutlined /></template>
+              </a-button>
+              <a-button
+                type="text"
+                size="small"
                 :loading="mcpTestingIds.has(server.id)"
                 @click="testMcpServer(server)"
               >
@@ -382,5 +435,36 @@ async function testMcpServer(server: McpServerConfig) {
         </a-button>
       </div>
     </div>
+
+    <!-- Edit MCP Server Modal -->
+    <a-modal
+      v-model:open="showEditModal"
+      title="编辑 MCP 服务器"
+      @ok="saveEditedServer"
+      @cancel="cancelEdit"
+      :ok-button-props="{ disabled: !editForm.name.trim() || !editForm.url.trim() }"
+    >
+      <div class="space-y-4 py-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">服务器名称：</label>
+          <a-input v-model:value="editForm.name" placeholder="服务器名称" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">服务器地址：</label>
+          <a-input v-model:value="editForm.url" placeholder="服务器地址" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">连接类型：</label>
+          <a-select v-model:value="editForm.type" class="w-full">
+            <a-select-option value="sse">SSE</a-select-option>
+            <a-select-option value="streamable-http">Streamable HTTP</a-select-option>
+          </a-select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">API Key（可选）：</label>
+          <a-input-password v-model:value="editForm.apiKey" placeholder="API Key" />
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>

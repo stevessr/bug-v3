@@ -1745,7 +1745,8 @@ async function executeTool(
 
     case 'create_tab': {
       const url = toolInput.url as string | undefined
-      const active = (toolInput.active as boolean) ?? true
+      // Default to inactive to prevent sidebar reload when switching tabs
+      const active = (toolInput.active as boolean) ?? false
       const result = await browserAutomation.createTab(url, active)
       if (result.success) {
         return { result: `Created new tab with ID: ${result.tabId}, URL: ${result.url || '(new tab)'}, Title: ${result.title || '(loading)'}` }
