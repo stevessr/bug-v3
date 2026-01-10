@@ -234,7 +234,8 @@ async function startTask() {
     baseUrl: baseUrl.value,
     model: model.value,
     imageModel: imageModel.value || undefined,
-    maxTokens: maxTokens.value
+    maxTokens: maxTokens.value,
+    mcpServers: mcpServers.value
   }
 
   isRunning.value = true

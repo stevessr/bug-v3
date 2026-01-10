@@ -7,6 +7,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 import { createLogger } from '@/utils/logger'
 import * as browserAutomation from '@/utils/browserAutomation'
+import type { McpServerConfig } from '@/types/type'
 
 const log = createLogger('AIAgentService')
 
@@ -16,6 +17,7 @@ export interface AgentConfig {
   model: string
   imageModel?: string
   maxTokens?: number
+  mcpServers?: McpServerConfig[]
 }
 
 export interface AgentMessage {
@@ -140,6 +142,8 @@ export interface AgentAction {
     | 'set_zoom'
     | 'trigger_print'
     | 'done'
+    | 'spawn_subagent'
+    | 'wait_for_subagents'
   params?: Record<string, unknown>
 }
 
@@ -149,6 +153,17 @@ export interface AgentStep {
   result?: string
   screenshot?: string
   error?: string
+  subagentId?: string // For subagent steps
+  subagentTask?: string // Task description for subagent
+}
+
+export interface SubagentStatus {
+  id: string
+  task: string
+  status: 'running' | 'completed' | 'failed'
+  steps: AgentStep[]
+  result?: string
+  error?: string
 }
 
 export type AgentStatusCallback = (status: {
@@ -157,6 +172,7 @@ export type AgentStatusCallback = (status: {
   thinking?: string
   action?: AgentAction
   screenshot?: string
+  subagents?: SubagentStatus[]
 }) => void
 
 const BROWSER_TOOLS: ToolDefinition[] = [
@@ -1122,8 +1138,279 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       },
       required: ['summary']
     }
+  },
+  {
+    name: 'spawn_subagent',
+    description:
+      'Spawn a subagent to perform a specific task in parallel. Multiple subagents can run simultaneously. Each subagent has its own browser tab context. Use this for tasks that can be parallelized.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task: {
+          type: 'string',
+          description: 'The specific task for the subagent to complete'
+        },
+        tab_id: {
+          type: 'number',
+          description: 'Optional: specific tab ID for the subagent to work in'
+        },
+        max_steps: {
+          type: 'number',
+          description: 'Maximum steps for the subagent (default: 10)'
+        }
+      },
+      required: ['task']
+    }
+  },
+  {
+    name: 'wait_for_subagents',
+    description: 'Wait for all running subagents to complete and get their results',
+    input_schema: {
+      type: 'object',
+      properties: {
+        subagent_ids: {
+          type: 'string',
+          description:
+            'Optional: comma-separated list of subagent IDs to wait for. If not provided, waits for all.'
+        }
+      },
+      required: []
+    }
   }
 ]
+
+/**
+ * MCP Tool definition from server
+ */
+interface McpTool {
+  name: string
+  description?: string
+  inputSchema: {
+    type: 'object'
+    properties?: Record<string, unknown>
+    required?: string[]
+  }
+}
+
+/**
+ * MCP Client for SSE/Streamable HTTP connections
+ */
+class McpClient {
+  private serverConfig: McpServerConfig
+  private tools: McpTool[] = []
+
+  constructor(config: McpServerConfig) {
+    this.serverConfig = config
+  }
+
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream'
+    }
+    if (this.serverConfig.apiKey) {
+      headers['Authorization'] = `Bearer ${this.serverConfig.apiKey}`
+    }
+    if (this.serverConfig.headers) {
+      Object.assign(headers, this.serverConfig.headers)
+    }
+    return headers
+  }
+
+  /**
+   * Initialize connection and fetch available tools
+   */
+  async initialize(): Promise<McpTool[]> {
+    try {
+      if (this.serverConfig.type === 'sse') {
+        return await this.initializeSSE()
+      } else {
+        return await this.initializeStreamableHttp()
+      }
+    } catch (error) {
+      log.error(`Failed to initialize MCP server ${this.serverConfig.name}:`, error)
+      return []
+    }
+  }
+
+  private async initializeSSE(): Promise<McpTool[]> {
+    // For SSE, we need to establish a connection first, then send initialize
+    const initResponse = await fetch(this.serverConfig.url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'bug-emoji-agent', version: '1.0.0' }
+        }
+      })
+    })
+
+    if (!initResponse.ok) {
+      throw new Error(`Initialize failed: ${initResponse.status}`)
+    }
+
+    // Parse init result (we don't need sessionId for now, but verify response is valid)
+    await initResponse.json()
+
+    // Fetch tools list
+    const toolsResponse = await fetch(this.serverConfig.url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/list',
+        params: {}
+      })
+    })
+
+    if (!toolsResponse.ok) {
+      throw new Error(`Tools list failed: ${toolsResponse.status}`)
+    }
+
+    const toolsResult = await toolsResponse.json()
+    this.tools = toolsResult.result?.tools || []
+    return this.tools
+  }
+
+  private async initializeStreamableHttp(): Promise<McpTool[]> {
+    // Streamable HTTP uses standard HTTP POST for all operations
+    const initResponse = await fetch(this.serverConfig.url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'bug-emoji-agent', version: '1.0.0' }
+        }
+      })
+    })
+
+    if (!initResponse.ok) {
+      throw new Error(`Initialize failed: ${initResponse.status}`)
+    }
+
+    // Parse init result (we don't need sessionId for now, but verify response is valid)
+    await initResponse.json()
+
+    // Fetch tools list
+    const toolsResponse = await fetch(this.serverConfig.url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/list',
+        params: {}
+      })
+    })
+
+    if (!toolsResponse.ok) {
+      throw new Error(`Tools list failed: ${toolsResponse.status}`)
+    }
+
+    const toolsResult = await toolsResponse.json()
+    this.tools = toolsResult.result?.tools || []
+    return this.tools
+  }
+
+  /**
+   * Call a tool on the MCP server
+   */
+  async callTool(
+    toolName: string,
+    args: Record<string, unknown>
+  ): Promise<{ content: Array<{ type: string; text?: string }> }> {
+    const response = await fetch(this.serverConfig.url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'tools/call',
+        params: {
+          name: toolName,
+          arguments: args
+        }
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Tool call failed: ${response.status}`)
+    }
+
+    const result = await response.json()
+    if (result.error) {
+      throw new Error(result.error.message || 'Tool call failed')
+    }
+
+    return result.result
+  }
+
+  getTools(): McpTool[] {
+    return this.tools
+  }
+
+  getServerName(): string {
+    return this.serverConfig.name
+  }
+}
+
+/**
+ * Convert MCP tools to Anthropic tool format
+ */
+function convertMcpToolsToAnthropicFormat(
+  mcpTools: McpTool[],
+  serverName: string
+): ToolDefinition[] {
+  return mcpTools.map(tool => ({
+    name: `mcp_${serverName}_${tool.name}`,
+    description: tool.description || `MCP tool from ${serverName}`,
+    input_schema: {
+      type: 'object' as const,
+      properties: (tool.inputSchema?.properties as Record<
+        string,
+        { type: string; description: string }
+      >) || {},
+      required: tool.inputSchema?.required || []
+    }
+  }))
+}
+
+/**
+ * Initialize MCP clients and fetch all tools
+ */
+async function initializeMcpClients(
+  servers: McpServerConfig[]
+): Promise<Map<string, McpClient>> {
+  const clients = new Map<string, McpClient>()
+
+  const enabledServers = servers.filter(s => s.enabled)
+
+  await Promise.all(
+    enabledServers.map(async server => {
+      try {
+        const client = new McpClient(server)
+        await client.initialize()
+        clients.set(server.name, client)
+        log.info(`MCP server ${server.name} initialized with ${client.getTools().length} tools`)
+      } catch (error) {
+        log.error(`Failed to initialize MCP server ${server.name}:`, error)
+      }
+    })
+  )
+
+  return clients
+}
 
 const SYSTEM_PROMPT = `You are a browser automation agent. You can control a web browser to complete tasks.
 
@@ -1236,6 +1523,10 @@ You have access to the following tools:
 - get_zoom: Get current zoom level
 - set_zoom: Set zoom level
 - trigger_print: Trigger print dialog
+
+**Subagent (Parallel Execution):**
+- spawn_subagent: Spawn a subagent to run a task in parallel. Useful for parallelizing work across multiple tabs.
+- wait_for_subagents: Wait for all running subagents to complete and get their results.
 
 Workflow:
 1. First take a screenshot to see the current state
@@ -2202,6 +2493,27 @@ export async function runAgent(
   const messages: AgentMessage[] = []
   let stepCount = 0
 
+  // Initialize MCP clients if configured
+  let mcpClients = new Map<string, McpClient>()
+  let allTools: ToolDefinition[] = [...BROWSER_TOOLS]
+
+  if (config.mcpServers && config.mcpServers.length > 0) {
+    onStatus({ step: 0, message: 'Initializing MCP servers...' })
+    try {
+      mcpClients = await initializeMcpClients(config.mcpServers)
+
+      // Add MCP tools to the tools list
+      for (const [serverName, client] of mcpClients) {
+        const mcpTools = convertMcpToolsToAnthropicFormat(client.getTools(), serverName)
+        allTools = [...allTools, ...mcpTools]
+        log.info(`Added ${mcpTools.length} tools from MCP server: ${serverName}`)
+      }
+    } catch (error) {
+      log.error('Failed to initialize MCP clients:', error)
+      // Continue without MCP tools
+    }
+  }
+
   messages.push({
     role: 'user',
     content: `Task: ${task}\n\nStart by taking a screenshot to see the current state of the browser.`
@@ -2217,7 +2529,7 @@ export async function runAgent(
 
     let response
     try {
-      response = await callClaudeAPI(config, messages, BROWSER_TOOLS)
+      response = await callClaudeAPI(config, messages, allTools)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       log.error('Claude API call failed:', errorMessage)
@@ -2258,7 +2570,36 @@ export async function runAgent(
         }
 
         try {
-          const toolResult = await executeTool(toolName, toolInput)
+          let toolResult: { result: string; screenshot?: string }
+
+          // Check if this is an MCP tool (prefixed with mcp_)
+          if (toolName.startsWith('mcp_')) {
+            // Parse MCP tool name: mcp_<serverName>_<toolName>
+            const parts = toolName.split('_')
+            if (parts.length >= 3) {
+              const serverName = parts[1]
+              const mcpToolName = parts.slice(2).join('_')
+              const client = mcpClients.get(serverName)
+
+              if (client) {
+                const mcpResult = await client.callTool(mcpToolName, toolInput)
+                // Convert MCP result to our format
+                const textContent = mcpResult.content
+                  .filter(c => c.type === 'text' && c.text)
+                  .map(c => c.text)
+                  .join('\n')
+                toolResult = { result: textContent || 'Tool executed successfully' }
+              } else {
+                toolResult = { result: `MCP server ${serverName} not found` }
+              }
+            } else {
+              toolResult = { result: `Invalid MCP tool name: ${toolName}` }
+            }
+          } else {
+            // Execute built-in browser tool
+            toolResult = await executeTool(toolName, toolInput)
+          }
+
           step.result = toolResult.result
 
           if (toolResult.screenshot) {
