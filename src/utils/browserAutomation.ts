@@ -1624,3 +1624,950 @@ export async function getProperty(
 
   return results[0]?.result || { success: false, error: 'Script execution failed' }
 }
+
+// ============================================================================
+// Chrome Tab Management
+// ============================================================================
+
+/**
+ * Get all open tabs
+ */
+export async function getAllTabs(): Promise<{
+  success: boolean
+  tabs?: Array<{
+    id: number
+    url: string
+    title: string
+    active: boolean
+    windowId: number
+    index: number
+    pinned: boolean
+  }>
+  error?: string
+}> {
+  try {
+    const tabs = await chrome.tabs.query({})
+    return {
+      success: true,
+      tabs: tabs.map(tab => ({
+        id: tab.id!,
+        url: tab.url || '',
+        title: tab.title || '',
+        active: tab.active,
+        windowId: tab.windowId,
+        index: tab.index,
+        pinned: tab.pinned || false
+      }))
+    }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Get current active tab
+ */
+export async function getActiveTab(): Promise<{
+  success: boolean
+  tab?: { id: number; url: string; title: string; windowId: number }
+  error?: string
+}> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    if (!tab) {
+      return { success: false, error: 'No active tab found' }
+    }
+    return {
+      success: true,
+      tab: {
+        id: tab.id!,
+        url: tab.url || '',
+        title: tab.title || '',
+        windowId: tab.windowId
+      }
+    }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Create a new tab
+ */
+export async function createTab(
+  url?: string,
+  active: boolean = true
+): Promise<{ success: boolean; tabId?: number; error?: string }> {
+  try {
+    const tab = await chrome.tabs.create({ url, active })
+    return { success: true, tabId: tab.id }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Close a tab by ID
+ */
+export async function closeTab(tabId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    await chrome.tabs.remove(tabId)
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Switch to a tab by ID
+ */
+export async function switchToTab(tabId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    await chrome.tabs.update(tabId, { active: true })
+    const tab = await chrome.tabs.get(tabId)
+    await chrome.windows.update(tab.windowId, { focused: true })
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Duplicate a tab
+ */
+export async function duplicateTab(tabId: number): Promise<{ success: boolean; newTabId?: number; error?: string }> {
+  try {
+    const newTab = await chrome.tabs.duplicate(tabId)
+    return { success: true, newTabId: newTab?.id }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Reload a tab
+ */
+export async function reloadTab(
+  tabId?: number,
+  bypassCache: boolean = false
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (tabId) {
+      await chrome.tabs.reload(tabId, { bypassCache })
+    } else {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      if (tab?.id) {
+        await chrome.tabs.reload(tab.id, { bypassCache })
+      }
+    }
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Go back in history
+ */
+export async function goBack(): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  try {
+    await chrome.tabs.goBack(tab.id)
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Go forward in history
+ */
+export async function goForward(): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  try {
+    await chrome.tabs.goForward(tab.id)
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Pin/unpin a tab
+ */
+export async function pinTab(tabId: number, pinned: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    await chrome.tabs.update(tabId, { pinned })
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Mute/unmute a tab
+ */
+export async function muteTab(tabId: number, muted: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    await chrome.tabs.update(tabId, { muted })
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+// ============================================================================
+// Chrome Window Management
+// ============================================================================
+
+/**
+ * Get all windows
+ */
+export async function getAllWindows(): Promise<{
+  success: boolean
+  windows?: Array<{ id: number; focused: boolean; type: string; tabCount: number }>
+  error?: string
+}> {
+  try {
+    const windows = await chrome.windows.getAll({ populate: true })
+    return {
+      success: true,
+      windows: windows.map(w => ({
+        id: w.id!,
+        focused: w.focused || false,
+        type: w.type || 'normal',
+        tabCount: w.tabs?.length || 0
+      }))
+    }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Create a new window
+ */
+export async function createWindow(
+  url?: string,
+  type: 'normal' | 'popup' = 'normal'
+): Promise<{ success: boolean; windowId?: number; error?: string }> {
+  try {
+    const window = await chrome.windows.create({ url, type, focused: true })
+    return { success: true, windowId: window?.id }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Close a window
+ */
+export async function closeWindow(windowId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    await chrome.windows.remove(windowId)
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Focus a window
+ */
+export async function focusWindow(windowId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    await chrome.windows.update(windowId, { focused: true })
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+// ============================================================================
+// Chrome Storage (localStorage/sessionStorage)
+// ============================================================================
+
+/**
+ * Get localStorage item
+ */
+export async function getLocalStorageItem(
+  key: string
+): Promise<{ success: boolean; value?: string | null; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (k: string) => {
+      return { success: true, value: localStorage.getItem(k) }
+    },
+    args: [key]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Set localStorage item
+ */
+export async function setLocalStorageItem(
+  key: string,
+  value: string
+): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (k: string, v: string) => {
+      localStorage.setItem(k, v)
+      return { success: true }
+    },
+    args: [key, value]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Remove localStorage item
+ */
+export async function removeLocalStorageItem(key: string): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (k: string) => {
+      localStorage.removeItem(k)
+      return { success: true }
+    },
+    args: [key]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get all localStorage keys
+ */
+export async function getLocalStorageKeys(): Promise<{
+  success: boolean
+  keys?: string[]
+  error?: string
+}> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      const keys: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key) keys.push(key)
+      }
+      return { success: true, keys }
+    }
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Clear localStorage
+ */
+export async function clearLocalStorage(): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      localStorage.clear()
+      return { success: true }
+    }
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get sessionStorage item
+ */
+export async function getSessionStorageItem(
+  key: string
+): Promise<{ success: boolean; value?: string | null; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (k: string) => {
+      return { success: true, value: sessionStorage.getItem(k) }
+    },
+    args: [key]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Set sessionStorage item
+ */
+export async function setSessionStorageItem(
+  key: string,
+  value: string
+): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (k: string, v: string) => {
+      sessionStorage.setItem(k, v)
+      return { success: true }
+    },
+    args: [key, value]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+// ============================================================================
+// Chrome Cookies
+// ============================================================================
+
+/**
+ * Get cookies for current page
+ */
+export async function getCookies(
+  url?: string
+): Promise<{
+  success: boolean
+  cookies?: Array<{ name: string; value: string; domain: string; path: string; secure: boolean; httpOnly: boolean }>
+  error?: string
+}> {
+  try {
+    let targetUrl = url
+    if (!targetUrl) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      targetUrl = tab?.url
+    }
+    if (!targetUrl) {
+      return { success: false, error: 'No URL provided or active tab' }
+    }
+
+    const cookies = await chrome.cookies.getAll({ url: targetUrl })
+    return {
+      success: true,
+      cookies: cookies.map(c => ({
+        name: c.name,
+        value: c.value,
+        domain: c.domain,
+        path: c.path,
+        secure: c.secure,
+        httpOnly: c.httpOnly
+      }))
+    }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Set a cookie
+ */
+export async function setCookie(
+  name: string,
+  value: string,
+  options?: { domain?: string; path?: string; secure?: boolean; httpOnly?: boolean; expirationDate?: number }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    if (!tab?.url) {
+      return { success: false, error: 'No active tab URL' }
+    }
+
+    await chrome.cookies.set({
+      url: tab.url,
+      name,
+      value,
+      domain: options?.domain,
+      path: options?.path || '/',
+      secure: options?.secure,
+      httpOnly: options?.httpOnly,
+      expirationDate: options?.expirationDate
+    })
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Delete a cookie
+ */
+export async function deleteCookie(
+  name: string,
+  url?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    let targetUrl = url
+    if (!targetUrl) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      targetUrl = tab?.url
+    }
+    if (!targetUrl) {
+      return { success: false, error: 'No URL provided or active tab' }
+    }
+
+    await chrome.cookies.remove({ url: targetUrl, name })
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+// ============================================================================
+// Clipboard Operations
+// ============================================================================
+
+/**
+ * Copy text to clipboard
+ */
+export async function copyToClipboard(text: string): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: async (t: string) => {
+      try {
+        await navigator.clipboard.writeText(t)
+        return { success: true }
+      } catch {
+        // Fallback method
+        const textarea = document.createElement('textarea')
+        textarea.value = t
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        return { success: true }
+      }
+    },
+    args: [text]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Read text from clipboard
+ */
+export async function readFromClipboard(): Promise<{ success: boolean; text?: string; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: async () => {
+      try {
+        const text = await navigator.clipboard.readText()
+        return { success: true, text }
+      } catch {
+        return { success: false, error: 'Clipboard access denied' }
+      }
+    }
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+// ============================================================================
+// Console & Debugging
+// ============================================================================
+
+/**
+ * Inject and capture console logs
+ */
+export async function getConsoleLogs(): Promise<{
+  success: boolean
+  logs?: Array<{ type: string; message: string; timestamp: number }>
+  error?: string
+}> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      // Get logs if we've captured them before
+      const logs = (window as any).__capturedConsoleLogs || []
+      return { success: true, logs }
+    }
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Start capturing console logs
+ */
+export async function startConsoleCapture(): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      if ((window as any).__consoleCapturing) {
+        return { success: true } // Already capturing
+      }
+
+      (window as any).__capturedConsoleLogs = [];
+      (window as any).__consoleCapturing = true
+
+      const methods = ['log', 'warn', 'error', 'info', 'debug'] as const
+      const originalConsole: any = {}
+
+      methods.forEach(method => {
+        originalConsole[method] = console[method]
+        console[method] = (...args: any[]) => {
+          (window as any).__capturedConsoleLogs.push({
+            type: method,
+            message: args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '),
+            timestamp: Date.now()
+          })
+          originalConsole[method](...args)
+        }
+      })
+
+      return { success: true }
+    }
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+// ============================================================================
+// Network & Performance
+// ============================================================================
+
+/**
+ * Get performance timing info
+ */
+export async function getPerformanceTiming(): Promise<{
+  success: boolean
+  timing?: {
+    loadTime: number
+    domContentLoaded: number
+    firstPaint?: number
+    firstContentfulPaint?: number
+  }
+  error?: string
+}> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      const timing = performance.timing
+      const paintEntries = performance.getEntriesByType('paint')
+      const fpEntry = paintEntries.find(e => e.name === 'first-paint')
+      const fcpEntry = paintEntries.find(e => e.name === 'first-contentful-paint')
+
+      return {
+        success: true,
+        timing: {
+          loadTime: timing.loadEventEnd - timing.navigationStart,
+          domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
+          firstPaint: fpEntry?.startTime,
+          firstContentfulPaint: fcpEntry?.startTime
+        }
+      }
+    }
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Get resource timing entries
+ */
+export async function getResourceTiming(
+  limit: number = 20
+): Promise<{
+  success: boolean
+  resources?: Array<{ name: string; type: string; duration: number; size: number }>
+  error?: string
+}> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (max: number) => {
+      const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[]
+      return {
+        success: true,
+        resources: entries.slice(0, max).map(e => ({
+          name: e.name.split('/').pop() || e.name,
+          type: e.initiatorType,
+          duration: Math.round(e.duration),
+          size: e.transferSize || 0
+        }))
+      }
+    },
+    args: [limit]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+// ============================================================================
+// Form Handling
+// ============================================================================
+
+/**
+ * Get all form data from a form element
+ */
+export async function getFormData(
+  selector: string
+): Promise<{
+  success: boolean
+  data?: Record<string, string>
+  error?: string
+}> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string) => {
+      const form = document.querySelector(sel) as HTMLFormElement
+      if (!form) {
+        return { success: false, error: `Form not found: ${sel}` }
+      }
+
+      const formData = new FormData(form)
+      const data: Record<string, string> = {}
+      formData.forEach((value, key) => {
+        data[key] = value.toString()
+      })
+
+      return { success: true, data }
+    },
+    args: [selector]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Fill a form with data
+ */
+export async function fillForm(
+  selector: string,
+  data: Record<string, string>
+): Promise<{ success: boolean; filledFields?: string[]; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string, formData: Record<string, string>) => {
+      const form = document.querySelector(sel) as HTMLFormElement
+      if (!form) {
+        return { success: false, error: `Form not found: ${sel}` }
+      }
+
+      const filledFields: string[] = []
+
+      for (const [name, value] of Object.entries(formData)) {
+        const field = form.querySelector(`[name="${name}"]`) as
+          | HTMLInputElement
+          | HTMLSelectElement
+          | HTMLTextAreaElement
+        if (field) {
+          if (field instanceof HTMLSelectElement) {
+            field.value = value
+          } else if (field instanceof HTMLInputElement) {
+            if (field.type === 'checkbox' || field.type === 'radio') {
+              field.checked = value === 'true' || value === '1'
+            } else {
+              field.value = value
+            }
+          } else {
+            field.value = value
+          }
+          field.dispatchEvent(new Event('input', { bubbles: true }))
+          field.dispatchEvent(new Event('change', { bubbles: true }))
+          filledFields.push(name)
+        }
+      }
+
+      return { success: true, filledFields }
+    },
+    args: [selector, data]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+/**
+ * Submit a form
+ */
+export async function submitForm(selector: string): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (sel: string) => {
+      const form = document.querySelector(sel) as HTMLFormElement
+      if (!form) {
+        return { success: false, error: `Form not found: ${sel}` }
+      }
+
+      form.submit()
+      return { success: true }
+    },
+    args: [selector]
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+// ============================================================================
+// Alert/Dialog Handling
+// ============================================================================
+
+/**
+ * Dismiss any open alerts/confirms/prompts
+ */
+export async function dismissDialog(): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      // Override alert, confirm, prompt to auto-dismiss
+      window.alert = () => {}
+      window.confirm = () => true
+      window.prompt = () => ''
+      return { success: true }
+    }
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}
+
+// ============================================================================
+// Zoom Control
+// ============================================================================
+
+/**
+ * Get current zoom level
+ */
+export async function getZoom(): Promise<{ success: boolean; zoomFactor?: number; error?: string }> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    if (!tab?.id) {
+      return { success: false, error: 'No active tab found' }
+    }
+
+    const zoomFactor = await chrome.tabs.getZoom(tab.id)
+    return { success: true, zoomFactor }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+/**
+ * Set zoom level
+ */
+export async function setZoom(zoomFactor: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    if (!tab?.id) {
+      return { success: false, error: 'No active tab found' }
+    }
+
+    await chrome.tabs.setZoom(tab.id, zoomFactor)
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+// ============================================================================
+// Print
+// ============================================================================
+
+/**
+ * Trigger print dialog
+ */
+export async function triggerPrint(): Promise<{ success: boolean; error?: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) {
+    return { success: false, error: 'No active tab found' }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      window.print()
+      return { success: true }
+    }
+  })
+
+  return results[0]?.result || { success: false, error: 'Script execution failed' }
+}

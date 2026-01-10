@@ -90,6 +90,53 @@ export interface AgentAction {
     | 'get_child_elements'
     | 'set_property'
     | 'get_property'
+    // Tab Management
+    | 'get_all_tabs'
+    | 'get_active_tab'
+    | 'create_tab'
+    | 'close_tab'
+    | 'switch_tab'
+    | 'duplicate_tab'
+    | 'reload_tab'
+    | 'go_back'
+    | 'go_forward'
+    | 'pin_tab'
+    | 'mute_tab'
+    // Window Management
+    | 'get_all_windows'
+    | 'create_window'
+    | 'close_window'
+    | 'focus_window'
+    // Storage
+    | 'get_local_storage'
+    | 'set_local_storage'
+    | 'remove_local_storage'
+    | 'get_local_storage_keys'
+    | 'clear_local_storage'
+    | 'get_session_storage'
+    | 'set_session_storage'
+    // Cookies
+    | 'get_cookies'
+    | 'set_cookie'
+    | 'delete_cookie'
+    // Clipboard
+    | 'copy_to_clipboard'
+    | 'read_clipboard'
+    // Console
+    | 'get_console_logs'
+    | 'start_console_capture'
+    // Performance
+    | 'get_performance_timing'
+    | 'get_resource_timing'
+    // Forms
+    | 'get_form_data'
+    | 'fill_form'
+    | 'submit_form'
+    // Other
+    | 'dismiss_dialog'
+    | 'get_zoom'
+    | 'set_zoom'
+    | 'trigger_print'
     | 'done'
   params?: Record<string, unknown>
 }
@@ -607,6 +654,422 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       required: ['selector', 'property', 'value']
     }
   },
+  // Chrome Tab Management Tools
+  {
+    name: 'get_all_tabs',
+    description: 'Get a list of all open browser tabs with their IDs, URLs, and titles',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'get_active_tab',
+    description: 'Get information about the currently active tab',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'create_tab',
+    description: 'Create a new browser tab',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL to open in the new tab (optional, defaults to new tab page)' },
+        active: { type: 'boolean', description: 'Whether to make the new tab active (default: true)' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'close_tab',
+    description: 'Close a browser tab by ID',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tab_id: { type: 'number', description: 'ID of the tab to close' }
+      },
+      required: ['tab_id']
+    }
+  },
+  {
+    name: 'switch_tab',
+    description: 'Switch to a specific tab by ID',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tab_id: { type: 'number', description: 'ID of the tab to switch to' }
+      },
+      required: ['tab_id']
+    }
+  },
+  {
+    name: 'duplicate_tab',
+    description: 'Duplicate the current active tab',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tab_id: { type: 'number', description: 'ID of the tab to duplicate (optional, defaults to active tab)' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'reload_tab',
+    description: 'Reload a browser tab',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tab_id: { type: 'number', description: 'ID of the tab to reload (optional, defaults to active tab)' },
+        bypass_cache: { type: 'boolean', description: 'Whether to bypass cache (default: false)' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'go_back',
+    description: 'Navigate back in the current tab history',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'go_forward',
+    description: 'Navigate forward in the current tab history',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'pin_tab',
+    description: 'Pin or unpin a browser tab',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tab_id: { type: 'number', description: 'ID of the tab to pin/unpin' },
+        pinned: { type: 'boolean', description: 'Whether to pin (true) or unpin (false) the tab' }
+      },
+      required: ['tab_id', 'pinned']
+    }
+  },
+  {
+    name: 'mute_tab',
+    description: 'Mute or unmute a browser tab',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tab_id: { type: 'number', description: 'ID of the tab to mute/unmute' },
+        muted: { type: 'boolean', description: 'Whether to mute (true) or unmute (false) the tab' }
+      },
+      required: ['tab_id', 'muted']
+    }
+  },
+  // Chrome Window Management Tools
+  {
+    name: 'get_all_windows',
+    description: 'Get a list of all browser windows',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'create_window',
+    description: 'Create a new browser window',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL to open in the new window (optional)' },
+        incognito: { type: 'boolean', description: 'Create incognito window (default: false)' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'close_window',
+    description: 'Close a browser window by ID',
+    input_schema: {
+      type: 'object',
+      properties: {
+        window_id: { type: 'number', description: 'ID of the window to close' }
+      },
+      required: ['window_id']
+    }
+  },
+  {
+    name: 'focus_window',
+    description: 'Focus a browser window by ID',
+    input_schema: {
+      type: 'object',
+      properties: {
+        window_id: { type: 'number', description: 'ID of the window to focus' }
+      },
+      required: ['window_id']
+    }
+  },
+  // Chrome Storage Tools
+  {
+    name: 'get_local_storage',
+    description: 'Get a value from localStorage',
+    input_schema: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'Key to get from localStorage' }
+      },
+      required: ['key']
+    }
+  },
+  {
+    name: 'set_local_storage',
+    description: 'Set a value in localStorage',
+    input_schema: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'Key to set in localStorage' },
+        value: { type: 'string', description: 'Value to store' }
+      },
+      required: ['key', 'value']
+    }
+  },
+  {
+    name: 'remove_local_storage',
+    description: 'Remove a key from localStorage',
+    input_schema: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'Key to remove from localStorage' }
+      },
+      required: ['key']
+    }
+  },
+  {
+    name: 'get_local_storage_keys',
+    description: 'Get all keys from localStorage',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'clear_local_storage',
+    description: 'Clear all localStorage data',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'get_session_storage',
+    description: 'Get a value from sessionStorage',
+    input_schema: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'Key to get from sessionStorage' }
+      },
+      required: ['key']
+    }
+  },
+  {
+    name: 'set_session_storage',
+    description: 'Set a value in sessionStorage',
+    input_schema: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'Key to set in sessionStorage' },
+        value: { type: 'string', description: 'Value to store' }
+      },
+      required: ['key', 'value']
+    }
+  },
+  // Chrome Cookie Tools
+  {
+    name: 'get_cookies',
+    description: 'Get cookies for a URL',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL to get cookies for (optional, defaults to current page)' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'set_cookie',
+    description: 'Set a cookie',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL to set cookie for' },
+        name: { type: 'string', description: 'Cookie name' },
+        value: { type: 'string', description: 'Cookie value' },
+        domain: { type: 'string', description: 'Cookie domain (optional)' },
+        path: { type: 'string', description: 'Cookie path (optional, defaults to /)' },
+        secure: { type: 'boolean', description: 'Secure cookie (optional)' },
+        http_only: { type: 'boolean', description: 'HttpOnly cookie (optional)' }
+      },
+      required: ['url', 'name', 'value']
+    }
+  },
+  {
+    name: 'delete_cookie',
+    description: 'Delete a cookie',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL the cookie is associated with' },
+        name: { type: 'string', description: 'Name of the cookie to delete' }
+      },
+      required: ['url', 'name']
+    }
+  },
+  // Clipboard Tools
+  {
+    name: 'copy_to_clipboard',
+    description: 'Copy text to the clipboard',
+    input_schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Text to copy to clipboard' }
+      },
+      required: ['text']
+    }
+  },
+  {
+    name: 'read_clipboard',
+    description: 'Read text from the clipboard',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  // Console Tools
+  {
+    name: 'get_console_logs',
+    description: 'Get captured console logs (must call start_console_capture first)',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'start_console_capture',
+    description: 'Start capturing console logs on the page',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  // Performance Tools
+  {
+    name: 'get_performance_timing',
+    description: 'Get page performance timing metrics',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'get_resource_timing',
+    description: 'Get resource timing entries for loaded resources',
+    input_schema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Maximum number of resources to return (default: 50)' }
+      },
+      required: []
+    }
+  },
+  // Form Tools
+  {
+    name: 'get_form_data',
+    description: 'Get all form data from a form element',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the form element' }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'fill_form',
+    description: 'Fill a form with provided data',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the form element' },
+        data: { type: 'string', description: 'JSON object with field names as keys and values to fill' }
+      },
+      required: ['selector', 'data']
+    }
+  },
+  {
+    name: 'submit_form',
+    description: 'Submit a form',
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS selector of the form element' }
+      },
+      required: ['selector']
+    }
+  },
+  // Other Chrome Tools
+  {
+    name: 'dismiss_dialog',
+    description: 'Dismiss a JavaScript dialog (alert, confirm, prompt)',
+    input_schema: {
+      type: 'object',
+      properties: {
+        accept: { type: 'boolean', description: 'Accept (true) or dismiss (false) the dialog' }
+      },
+      required: ['accept']
+    }
+  },
+  {
+    name: 'get_zoom',
+    description: 'Get the current zoom level of the page',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'set_zoom',
+    description: 'Set the zoom level of the current tab',
+    input_schema: {
+      type: 'object',
+      properties: {
+        zoom_factor: { type: 'number', description: 'Zoom factor (1.0 = 100%, 1.5 = 150%, etc.)' }
+      },
+      required: ['zoom_factor']
+    }
+  },
+  {
+    name: 'trigger_print',
+    description: 'Trigger the browser print dialog',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
   {
     name: 'done',
     description: 'Mark the task as complete and provide a summary',
@@ -677,6 +1140,60 @@ You have access to the following tools:
 - wait_for_element: Wait for an element to appear
 - execute_script: Execute custom JavaScript (use with caution)
 - done: Complete the task with a summary
+
+**Tab Management:**
+- get_all_tabs: Get list of all open tabs
+- get_active_tab: Get the currently active tab
+- create_tab: Create a new tab
+- close_tab: Close a tab by ID
+- switch_tab: Switch to a specific tab
+- duplicate_tab: Duplicate a tab
+- reload_tab: Reload a tab
+- go_back: Navigate back in history
+- go_forward: Navigate forward in history
+- pin_tab: Pin or unpin a tab
+- mute_tab: Mute or unmute a tab
+
+**Window Management:**
+- get_all_windows: Get list of all windows
+- create_window: Create a new window
+- close_window: Close a window
+- focus_window: Focus a window
+
+**Storage (localStorage/sessionStorage):**
+- get_local_storage: Get localStorage item
+- set_local_storage: Set localStorage item
+- remove_local_storage: Remove localStorage item
+- get_local_storage_keys: Get all localStorage keys
+- clear_local_storage: Clear localStorage
+- get_session_storage: Get sessionStorage item
+- set_session_storage: Set sessionStorage item
+
+**Cookies:**
+- get_cookies: Get cookies for a URL
+- set_cookie: Set a cookie
+- delete_cookie: Delete a cookie
+
+**Clipboard:**
+- copy_to_clipboard: Copy text to clipboard
+- read_clipboard: Read from clipboard
+
+**Console & Performance:**
+- start_console_capture: Start capturing console logs
+- get_console_logs: Get captured console logs
+- get_performance_timing: Get page performance metrics
+- get_resource_timing: Get resource loading timings
+
+**Forms:**
+- get_form_data: Get form data
+- fill_form: Fill form fields
+- submit_form: Submit a form
+
+**Other:**
+- dismiss_dialog: Dismiss JavaScript dialogs
+- get_zoom: Get current zoom level
+- set_zoom: Set zoom level
+- trigger_print: Trigger print dialog
 
 Workflow:
 1. First take a screenshot to see the current state
@@ -1154,6 +1671,377 @@ async function executeTool(
         return { result: `Set property "${property}" = ${JSON.stringify(value)} on ${selector}` }
       }
       return { result: `Set property failed: ${result.error}` }
+    }
+
+    // Chrome Tab Management
+    case 'get_all_tabs': {
+      const result = await browserAutomation.getAllTabs()
+      if (result.success) {
+        return { result: `Tabs:\n${JSON.stringify(result.tabs, null, 2)}` }
+      }
+      return { result: `Get tabs failed: ${result.error}` }
+    }
+
+    case 'get_active_tab': {
+      const result = await browserAutomation.getActiveTab()
+      if (result.success) {
+        return { result: `Active tab:\n${JSON.stringify(result.tab, null, 2)}` }
+      }
+      return { result: `Get active tab failed: ${result.error}` }
+    }
+
+    case 'create_tab': {
+      const url = toolInput.url as string | undefined
+      const active = (toolInput.active as boolean) ?? true
+      const result = await browserAutomation.createTab(url, active)
+      if (result.success) {
+        return { result: `Created new tab with ID: ${result.tabId}` }
+      }
+      return { result: `Create tab failed: ${result.error}` }
+    }
+
+    case 'close_tab': {
+      const tabId = toolInput.tab_id as number
+      const result = await browserAutomation.closeTab(tabId)
+      if (result.success) {
+        return { result: `Closed tab: ${tabId}` }
+      }
+      return { result: `Close tab failed: ${result.error}` }
+    }
+
+    case 'switch_tab': {
+      const tabId = toolInput.tab_id as number
+      const result = await browserAutomation.switchToTab(tabId)
+      if (result.success) {
+        return { result: `Switched to tab: ${tabId}` }
+      }
+      return { result: `Switch tab failed: ${result.error}` }
+    }
+
+    case 'duplicate_tab': {
+      const tabId = toolInput.tab_id as number | undefined
+      // If no tabId provided, get active tab
+      let targetTabId = tabId
+      if (targetTabId === undefined) {
+        const activeResult = await browserAutomation.getActiveTab()
+        if (activeResult.success && activeResult.tab?.id) {
+          targetTabId = activeResult.tab.id
+        } else {
+          return { result: 'Duplicate tab failed: No tab ID provided and could not get active tab' }
+        }
+      }
+      const result = await browserAutomation.duplicateTab(targetTabId)
+      if (result.success) {
+        return { result: `Duplicated tab, new tab ID: ${result.newTabId}` }
+      }
+      return { result: `Duplicate tab failed: ${result.error}` }
+    }
+
+    case 'reload_tab': {
+      const tabId = toolInput.tab_id as number | undefined
+      const bypassCache = (toolInput.bypass_cache as boolean) || false
+      const result = await browserAutomation.reloadTab(tabId, bypassCache)
+      if (result.success) {
+        return { result: `Reloaded tab${tabId ? ` ${tabId}` : ''}` }
+      }
+      return { result: `Reload tab failed: ${result.error}` }
+    }
+
+    case 'go_back': {
+      const result = await browserAutomation.goBack()
+      if (result.success) {
+        return { result: 'Navigated back' }
+      }
+      return { result: `Go back failed: ${result.error}` }
+    }
+
+    case 'go_forward': {
+      const result = await browserAutomation.goForward()
+      if (result.success) {
+        return { result: 'Navigated forward' }
+      }
+      return { result: `Go forward failed: ${result.error}` }
+    }
+
+    case 'pin_tab': {
+      const tabId = toolInput.tab_id as number
+      const pinned = toolInput.pinned as boolean
+      const result = await browserAutomation.pinTab(tabId, pinned)
+      if (result.success) {
+        return { result: `${pinned ? 'Pinned' : 'Unpinned'} tab: ${tabId}` }
+      }
+      return { result: `Pin tab failed: ${result.error}` }
+    }
+
+    case 'mute_tab': {
+      const tabId = toolInput.tab_id as number
+      const muted = toolInput.muted as boolean
+      const result = await browserAutomation.muteTab(tabId, muted)
+      if (result.success) {
+        return { result: `${muted ? 'Muted' : 'Unmuted'} tab: ${tabId}` }
+      }
+      return { result: `Mute tab failed: ${result.error}` }
+    }
+
+    // Chrome Window Management
+    case 'get_all_windows': {
+      const result = await browserAutomation.getAllWindows()
+      if (result.success) {
+        return { result: `Windows:\n${JSON.stringify(result.windows, null, 2)}` }
+      }
+      return { result: `Get windows failed: ${result.error}` }
+    }
+
+    case 'create_window': {
+      const url = toolInput.url as string | undefined
+      const incognito = toolInput.incognito as boolean | undefined
+      // Use 'popup' type for incognito-like behavior, 'normal' otherwise
+      const windowType = incognito ? 'popup' : 'normal'
+      const result = await browserAutomation.createWindow(url, windowType)
+      if (result.success) {
+        return { result: `Created new window with ID: ${result.windowId}` }
+      }
+      return { result: `Create window failed: ${result.error}` }
+    }
+
+    case 'close_window': {
+      const windowId = toolInput.window_id as number
+      const result = await browserAutomation.closeWindow(windowId)
+      if (result.success) {
+        return { result: `Closed window: ${windowId}` }
+      }
+      return { result: `Close window failed: ${result.error}` }
+    }
+
+    case 'focus_window': {
+      const windowId = toolInput.window_id as number
+      const result = await browserAutomation.focusWindow(windowId)
+      if (result.success) {
+        return { result: `Focused window: ${windowId}` }
+      }
+      return { result: `Focus window failed: ${result.error}` }
+    }
+
+    // Chrome Storage
+    case 'get_local_storage': {
+      const key = toolInput.key as string
+      const result = await browserAutomation.getLocalStorageItem(key)
+      if (result.success) {
+        return { result: `localStorage["${key}"]: ${result.value === null ? '(not set)' : JSON.stringify(result.value)}` }
+      }
+      return { result: `Get localStorage failed: ${result.error}` }
+    }
+
+    case 'set_local_storage': {
+      const key = toolInput.key as string
+      const value = toolInput.value as string
+      const result = await browserAutomation.setLocalStorageItem(key, value)
+      if (result.success) {
+        return { result: `Set localStorage["${key}"] = ${JSON.stringify(value)}` }
+      }
+      return { result: `Set localStorage failed: ${result.error}` }
+    }
+
+    case 'remove_local_storage': {
+      const key = toolInput.key as string
+      const result = await browserAutomation.removeLocalStorageItem(key)
+      if (result.success) {
+        return { result: `Removed localStorage["${key}"]` }
+      }
+      return { result: `Remove localStorage failed: ${result.error}` }
+    }
+
+    case 'get_local_storage_keys': {
+      const result = await browserAutomation.getLocalStorageKeys()
+      if (result.success) {
+        return { result: `localStorage keys: ${JSON.stringify(result.keys)}` }
+      }
+      return { result: `Get localStorage keys failed: ${result.error}` }
+    }
+
+    case 'clear_local_storage': {
+      const result = await browserAutomation.clearLocalStorage()
+      if (result.success) {
+        return { result: 'Cleared localStorage' }
+      }
+      return { result: `Clear localStorage failed: ${result.error}` }
+    }
+
+    case 'get_session_storage': {
+      const key = toolInput.key as string
+      const result = await browserAutomation.getSessionStorageItem(key)
+      if (result.success) {
+        return { result: `sessionStorage["${key}"]: ${result.value === null ? '(not set)' : JSON.stringify(result.value)}` }
+      }
+      return { result: `Get sessionStorage failed: ${result.error}` }
+    }
+
+    case 'set_session_storage': {
+      const key = toolInput.key as string
+      const value = toolInput.value as string
+      const result = await browserAutomation.setSessionStorageItem(key, value)
+      if (result.success) {
+        return { result: `Set sessionStorage["${key}"] = ${JSON.stringify(value)}` }
+      }
+      return { result: `Set sessionStorage failed: ${result.error}` }
+    }
+
+    // Chrome Cookies
+    case 'get_cookies': {
+      const url = toolInput.url as string | undefined
+      const result = await browserAutomation.getCookies(url)
+      if (result.success) {
+        return { result: `Cookies:\n${JSON.stringify(result.cookies, null, 2)}` }
+      }
+      return { result: `Get cookies failed: ${result.error}` }
+    }
+
+    case 'set_cookie': {
+      const url = toolInput.url as string
+      const name = toolInput.name as string
+      const value = toolInput.value as string
+      const result = await browserAutomation.setCookie(name, value, {
+        domain: toolInput.domain as string | undefined,
+        path: toolInput.path as string | undefined,
+        secure: toolInput.secure as boolean | undefined,
+        httpOnly: toolInput.http_only as boolean | undefined
+      })
+      if (result.success) {
+        return { result: `Set cookie "${name}" = "${value}" for ${url}` }
+      }
+      return { result: `Set cookie failed: ${result.error}` }
+    }
+
+    case 'delete_cookie': {
+      const url = toolInput.url as string
+      const name = toolInput.name as string
+      const result = await browserAutomation.deleteCookie(url, name)
+      if (result.success) {
+        return { result: `Deleted cookie "${name}"` }
+      }
+      return { result: `Delete cookie failed: ${result.error}` }
+    }
+
+    // Clipboard
+    case 'copy_to_clipboard': {
+      const text = toolInput.text as string
+      const result = await browserAutomation.copyToClipboard(text)
+      if (result.success) {
+        return { result: `Copied to clipboard: "${text.slice(0, 50)}${text.length > 50 ? '...' : ''}"` }
+      }
+      return { result: `Copy to clipboard failed: ${result.error}` }
+    }
+
+    case 'read_clipboard': {
+      const result = await browserAutomation.readFromClipboard()
+      if (result.success) {
+        return { result: `Clipboard content: "${result.text || '(empty)'}"` }
+      }
+      return { result: `Read clipboard failed: ${result.error}` }
+    }
+
+    // Console
+    case 'start_console_capture': {
+      const result = await browserAutomation.startConsoleCapture()
+      if (result.success) {
+        return { result: 'Started capturing console logs' }
+      }
+      return { result: `Start console capture failed: ${result.error}` }
+    }
+
+    case 'get_console_logs': {
+      const result = await browserAutomation.getConsoleLogs()
+      if (result.success) {
+        return { result: `Console logs (${result.logs?.length || 0}):\n${JSON.stringify(result.logs, null, 2)}` }
+      }
+      return { result: `Get console logs failed: ${result.error}` }
+    }
+
+    // Performance
+    case 'get_performance_timing': {
+      const result = await browserAutomation.getPerformanceTiming()
+      if (result.success) {
+        return { result: `Performance timing:\n${JSON.stringify(result.timing, null, 2)}` }
+      }
+      return { result: `Get performance timing failed: ${result.error}` }
+    }
+
+    case 'get_resource_timing': {
+      const limit = (toolInput.limit as number) || 50
+      const result = await browserAutomation.getResourceTiming(limit)
+      if (result.success) {
+        return { result: `Resource timing (${result.resources?.length || 0} entries):\n${JSON.stringify(result.resources, null, 2)}` }
+      }
+      return { result: `Get resource timing failed: ${result.error}` }
+    }
+
+    // Forms
+    case 'get_form_data': {
+      const selector = toolInput.selector as string
+      const result = await browserAutomation.getFormData(selector)
+      if (result.success) {
+        return { result: `Form data:\n${JSON.stringify(result.data, null, 2)}` }
+      }
+      return { result: `Get form data failed: ${result.error}` }
+    }
+
+    case 'fill_form': {
+      const selector = toolInput.selector as string
+      const dataStr = toolInput.data as string
+      let data: Record<string, string>
+      try {
+        data = JSON.parse(dataStr)
+      } catch {
+        return { result: 'Fill form failed: Invalid JSON data' }
+      }
+      const result = await browserAutomation.fillForm(selector, data)
+      if (result.success) {
+        return { result: `Filled form with ${Object.keys(data).length} fields` }
+      }
+      return { result: `Fill form failed: ${result.error}` }
+    }
+
+    case 'submit_form': {
+      const selector = toolInput.selector as string
+      const result = await browserAutomation.submitForm(selector)
+      if (result.success) {
+        return { result: `Submitted form: ${selector}` }
+      }
+      return { result: `Submit form failed: ${result.error}` }
+    }
+
+    // Other Chrome tools
+    case 'dismiss_dialog': {
+      const result = await browserAutomation.dismissDialog()
+      if (result.success) {
+        return { result: 'Dismissed dialog' }
+      }
+      return { result: `Dismiss dialog failed: ${result.error}` }
+    }
+
+    case 'get_zoom': {
+      const result = await browserAutomation.getZoom()
+      if (result.success) {
+        return { result: `Current zoom level: ${(result.zoomFactor || 1) * 100}%` }
+      }
+      return { result: `Get zoom failed: ${result.error}` }
+    }
+
+    case 'set_zoom': {
+      const zoomFactor = toolInput.zoom_factor as number
+      const result = await browserAutomation.setZoom(zoomFactor)
+      if (result.success) {
+        return { result: `Set zoom to ${zoomFactor * 100}%` }
+      }
+      return { result: `Set zoom failed: ${result.error}` }
+    }
+
+    case 'trigger_print': {
+      const result = await browserAutomation.triggerPrint()
+      if (result.success) {
+        return { result: 'Triggered print dialog' }
+      }
+      return { result: `Trigger print failed: ${result.error}` }
     }
 
     default:
