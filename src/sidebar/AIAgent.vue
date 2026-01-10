@@ -14,7 +14,8 @@ import {
   DownOutlined,
   RightOutlined,
   ThunderboltOutlined,
-  PlusOutlined
+  PlusOutlined,
+  ApiOutlined
 } from '@ant-design/icons-vue'
 
 import type { McpServerConfig } from '@/types/type'
@@ -112,9 +113,64 @@ function removeMcpServer(id: string) {
 }
 
 function toggleMcpServer(id: string) {
-  mcpServers.value = mcpServers.value.map(s =>
-    s.id === id ? { ...s, enabled: !s.enabled } : s
-  )
+  mcpServers.value = mcpServers.value.map(s => (s.id === id ? { ...s, enabled: !s.enabled } : s))
+}
+
+// MCP Server Testing
+const mcpTestingIds = ref<Set<string>>(new Set())
+const mcpTestResults = ref<Map<string, { success: boolean; message: string }>>(new Map())
+
+async function testMcpServer(server: McpServerConfig) {
+  mcpTestingIds.value.add(server.id)
+  mcpTestingIds.value = new Set(mcpTestingIds.value)
+  mcpTestResults.value.delete(server.id)
+
+  try {
+    const headers: Record<string, string> = {
+      Accept: 'application/json, text/event-stream'
+    }
+    if (server.apiKey) {
+      headers['Authorization'] = `Bearer ${server.apiKey}`
+    }
+    if (server.headers) {
+      Object.assign(headers, server.headers)
+    }
+
+    // For SSE, try to connect and read the first event
+    // For Streamable HTTP, try a simple request
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+
+    const response = await fetch(server.url, {
+      method: 'GET',
+      headers,
+      signal: controller.signal
+    })
+
+    clearTimeout(timeout)
+
+    if (response.ok) {
+      mcpTestResults.value.set(server.id, {
+        success: true,
+        message: `OK (${response.status})`
+      })
+    } else {
+      mcpTestResults.value.set(server.id, {
+        success: false,
+        message: `HTTP ${response.status}`
+      })
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    mcpTestResults.value.set(server.id, {
+      success: false,
+      message: message.includes('abort') ? 'Timeout' : message
+    })
+  } finally {
+    mcpTestingIds.value.delete(server.id)
+    mcpTestingIds.value = new Set(mcpTestingIds.value)
+    mcpTestResults.value = new Map(mcpTestResults.value)
+  }
 }
 
 const isConfigured = computed(() => {
@@ -317,15 +373,31 @@ function clearHistory() {
                     {{ server.name }}
                   </span>
                   <a-tag size="small">{{ server.type }}</a-tag>
+                  <!-- Test Result -->
+                  <a-tag
+                    v-if="mcpTestResults.get(server.id)"
+                    :color="mcpTestResults.get(server.id)?.success ? 'success' : 'error'"
+                    size="small"
+                  >
+                    {{ mcpTestResults.get(server.id)?.message }}
+                  </a-tag>
                 </div>
-                <a-button
-                  type="text"
-                  danger
-                  size="small"
-                  @click="removeMcpServer(server.id)"
-                >
-                  <template #icon><DeleteOutlined /></template>
-                </a-button>
+                <div class="mcp-server-actions">
+                  <a-button
+                    type="text"
+                    size="small"
+                    :loading="mcpTestingIds.has(server.id)"
+                    @click="testMcpServer(server)"
+                  >
+                    <template #icon><ApiOutlined /></template>
+                    {{
+                      mcpTestingIds.has(server.id) ? t('aiAgentMcpTesting') : t('aiAgentMcpTest')
+                    }}
+                  </a-button>
+                  <a-button type="text" danger size="small" @click="removeMcpServer(server.id)">
+                    <template #icon><DeleteOutlined /></template>
+                  </a-button>
+                </div>
               </div>
             </div>
 
@@ -343,11 +415,7 @@ function clearHistory() {
                 size="small"
                 class="mcp-input"
               />
-              <a-select
-                v-model:value="newMcpServer.type"
-                size="small"
-                class="mcp-select"
-              >
+              <a-select v-model:value="newMcpServer.type" size="small" class="mcp-select">
                 <a-select-option value="sse">SSE</a-select-option>
                 <a-select-option value="streamable-http">Streamable HTTP</a-select-option>
               </a-select>
@@ -687,6 +755,13 @@ function clearHistory() {
 .mcp-server-name.disabled {
   color: var(--text-secondary, #6b6b6b);
   text-decoration: line-through;
+}
+
+.mcp-server-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .mcp-add-form {
