@@ -18,6 +18,7 @@ export interface AgentConfig {
   imageModel?: string
   maxTokens?: number
   mcpServers?: McpServerConfig[]
+  targetTabId?: number // Target tab ID for popup window mode
 }
 
 export interface AgentMessage {
@@ -1546,9 +1547,58 @@ Important:
  */
 async function executeTool(
   toolName: string,
-  toolInput: Record<string, unknown>
+  toolInput: Record<string, unknown>,
+  targetTabId?: number
 ): Promise<{ result: string; screenshot?: string }> {
   log.info(`Executing tool: ${toolName}`, toolInput)
+
+  // If targetTabId is specified, switch to that tab first for tab-affecting operations
+  if (targetTabId !== undefined) {
+    const needsTabSwitch = [
+      'screenshot',
+      'click',
+      'double_click',
+      'right_click',
+      'click_element',
+      'hover',
+      'drag',
+      'scroll',
+      'type',
+      'clear_input',
+      'key',
+      'navigate',
+      'wait_for_element',
+      'focus',
+      'select_text',
+      'get_selected_text',
+      'get_input_value',
+      'get_page_info',
+      'get_elements',
+      'execute_script',
+      'get_element_text',
+      'get_element_html',
+      'get_element_attribute',
+      'get_all_attributes',
+      'set_element_attribute',
+      'remove_element_attribute',
+      'add_class',
+      'remove_class',
+      'toggle_class',
+      'highlight_element',
+      'inject_css',
+      'get_form_data',
+      'fill_form',
+      'submit_form'
+    ].includes(toolName)
+
+    if (needsTabSwitch) {
+      try {
+        await browserAutomation.switchToTab(targetTabId)
+      } catch (e) {
+        log.warn(`Failed to switch to target tab ${targetTabId}:`, e)
+      }
+    }
+  }
 
   switch (toolName) {
     case 'screenshot': {
@@ -2653,7 +2703,7 @@ async function runSubagent(
                 toolResult = { result: `Invalid MCP tool name: ${toolName}` }
               }
             } else {
-              toolResult = await executeTool(toolName, toolInput)
+              toolResult = await executeTool(toolName, toolInput, tabId)
             }
 
             step.result = toolResult.result
@@ -2840,7 +2890,7 @@ export async function runAgent(
             }
           } else {
             // Execute built-in browser tool
-            toolResult = await executeTool(toolName, toolInput)
+            toolResult = await executeTool(toolName, toolInput, config.targetTabId)
 
             // If this is a screenshot and imageModel is configured, add description
             if (

@@ -239,7 +239,8 @@ async function startTask() {
     model: model.value,
     imageModel: imageModel.value || undefined,
     maxTokens: maxTokens.value,
-    mcpServers: mcpServers.value
+    mcpServers: mcpServers.value,
+    targetTabId: targetTabId.value // Pass target tab ID for popup window mode
   }
 
   isRunning.value = true
@@ -327,6 +328,13 @@ const isPopupWindow = computed(() => {
   return window.location.search.includes('type=agent-popup')
 })
 
+// Get target tab ID from URL params (for popup window mode)
+const targetTabId = computed(() => {
+  const params = new URLSearchParams(window.location.search)
+  const tabId = params.get('targetTabId')
+  return tabId ? parseInt(tabId, 10) : undefined
+})
+
 // Open AI Agent in a separate popup window
 async function openInPopupWindow() {
   const width = 500
@@ -335,9 +343,13 @@ async function openInPopupWindow() {
   const top = 100
 
   // Use chrome.windows.create for extension popup
-  if (typeof chrome !== 'undefined' && chrome.windows) {
+  if (typeof chrome !== 'undefined' && chrome.windows && chrome.tabs) {
+    // Get the current active tab to remember which tab to control
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    const targetTabId = activeTab?.id
+
     await chrome.windows.create({
-      url: 'index.html?type=agent-popup',
+      url: `index.html?type=agent-popup&targetTabId=${targetTabId}`,
       type: 'popup',
       width,
       height,
@@ -363,6 +375,9 @@ async function openInPopupWindow() {
       <div class="header-title">
         <RobotOutlined class="header-icon" />
         <span>{{ t('aiAgentTitle') }}</span>
+        <a-tag v-if="isPopupWindow && targetTabId" color="blue" size="small" class="target-tab-tag">
+          Tab #{{ targetTabId }}
+        </a-tag>
       </div>
       <div class="header-actions">
         <a-tooltip v-if="!isPopupWindow" :title="t('aiAgentOpenPopup')">
@@ -782,6 +797,11 @@ async function openInPopupWindow() {
 .header-icon {
   font-size: 20px;
   color: var(--accent-color, #d97706);
+}
+
+.target-tab-tag {
+  margin-left: 8px;
+  font-size: 11px;
 }
 
 .header-actions {
