@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import LazyEmojiGrid from '../popup/components/LazyEmojiGrid.vue'
 import { usePopup } from '../popup/usePopup'
 import { useEmojiImages } from '../composables/useEmojiImages'
+import { useI18n } from '../utils/i18n'
 
 import AIAgent from './AIAgent.vue'
 

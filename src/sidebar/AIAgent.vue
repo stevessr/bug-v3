@@ -1,11 +1,27 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+import {
+  SettingOutlined,
+  SendOutlined,
+  LoadingOutlined,
+  StopOutlined,
+  DeleteOutlined,
+  RobotOutlined,
+  CameraOutlined,
+  WarningOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  DownOutlined,
+  RightOutlined,
+  ThunderboltOutlined
+} from '@ant-design/icons-vue'
 
 import {
   runAgent,
   validateConfig,
   type AgentConfig,
-  type AgentStep
+  type AgentStep,
+  type AgentAction
 } from '@/services/aiAgentService'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { useI18n } from '@/utils/i18n'
@@ -18,12 +34,13 @@ const taskInput = ref('')
 const isRunning = ref(false)
 const currentStep = ref(0)
 const currentThinking = ref('')
-const currentAction = ref('')
+const currentAction = ref<AgentAction | null>(null)
 const currentScreenshot = ref('')
 const steps = ref<AgentStep[]>([])
 const errorMessage = ref('')
 const showSettings = ref(false)
 const abortController = ref<AbortController | null>(null)
+const expandedScreenshots = ref<Set<number>>(new Set())
 
 const chatContainer = ref<HTMLElement | null>(null)
 
@@ -63,6 +80,59 @@ watch([currentStep, currentThinking, currentScreenshot], () => {
   })
 })
 
+// 格式化操作参数为易读格式
+function formatActionParams(action: AgentAction): string {
+  if (!action.params || Object.keys(action.params).length === 0) return ''
+  const entries = Object.entries(action.params)
+  return entries
+    .map(([key, value]) => {
+      if (typeof value === 'string' && value.length > 30) {
+        return `${key}: "${value.slice(0, 30)}..."`
+      }
+      return `${key}: ${JSON.stringify(value)}`
+    })
+    .join(', ')
+}
+
+// 获取操作类型的图标组件名称
+function getActionIconType(type: string): string {
+  const icons: Record<string, string> = {
+    screenshot: 'camera',
+    click: 'click',
+    double_click: 'double-click',
+    right_click: 'right-click',
+    click_element: 'aim',
+    hover: 'hover',
+    drag: 'drag',
+    scroll: 'scroll',
+    type: 'keyboard',
+    clear_input: 'delete',
+    key: 'keyboard',
+    navigate: 'link',
+    wait: 'clock',
+    wait_for_element: 'eye',
+    focus: 'aim',
+    select_text: 'text',
+    get_selected_text: 'copy',
+    get_input_value: 'input',
+    get_page_info: 'info',
+    get_elements: 'search',
+    execute_script: 'code',
+    done: 'check'
+  }
+  return icons[type] || 'thunder'
+}
+
+// 切换截图展开状态
+function toggleScreenshot(index: number) {
+  if (expandedScreenshots.value.has(index)) {
+    expandedScreenshots.value.delete(index)
+  } else {
+    expandedScreenshots.value.add(index)
+  }
+  expandedScreenshots.value = new Set(expandedScreenshots.value)
+}
+
 async function startTask() {
   if (!canRun.value) return
 
@@ -77,15 +147,17 @@ async function startTask() {
   steps.value = []
   currentStep.value = 0
   currentThinking.value = ''
-  currentAction.value = ''
+  currentAction.value = null
   currentScreenshot.value = ''
+  expandedScreenshots.value = new Set()
 
   abortController.value = new AbortController()
 
   const task = taskInput.value
   taskInput.value = ''
 
-  steps.value.push({ thinking: `Task: ${task}` })
+  // 添加任务作为第一个步骤
+  steps.value.push({ thinking: `${t('aiAgentTask')}: ${task}` })
 
   try {
     const result = await runAgent(
@@ -97,7 +169,7 @@ async function startTask() {
           currentThinking.value = status.thinking
         }
         if (status.action) {
-          currentAction.value = `${status.action.type}: ${JSON.stringify(status.action.params || {})}`
+          currentAction.value = status.action
         }
         if (status.screenshot) {
           currentScreenshot.value = status.screenshot
@@ -106,7 +178,7 @@ async function startTask() {
       abortController.value.signal
     )
 
-    steps.value = result.steps
+    steps.value = [steps.value[0], ...result.steps]
 
     if (!result.success && result.error) {
       errorMessage.value = result.error
@@ -117,7 +189,7 @@ async function startTask() {
     isRunning.value = false
     abortController.value = null
     currentThinking.value = ''
-    currentAction.value = ''
+    currentAction.value = null
   }
 }
 
@@ -131,6 +203,7 @@ function clearHistory() {
   steps.value = []
   errorMessage.value = ''
   currentScreenshot.value = ''
+  expandedScreenshots.value = new Set()
 }
 </script>
 
@@ -139,158 +212,194 @@ function clearHistory() {
     <!-- Header -->
     <div class="agent-header">
       <div class="header-title">
-        <span class="icon">🤖</span>
+        <RobotOutlined class="header-icon" />
         <span>{{ t('aiAgentTitle') }}</span>
       </div>
-      <button
-        class="settings-btn"
-        :class="{ active: showSettings }"
+      <a-button
+        type="text"
+        :class="['settings-btn', { active: showSettings }]"
         @click="showSettings = !showSettings"
-        :title="t('settings')"
       >
-        ⚙️
-      </button>
+        <SettingOutlined />
+      </a-button>
     </div>
 
     <!-- Settings Panel -->
-    <div v-if="showSettings" class="settings-panel">
-      <div class="setting-item">
-        <label>{{ t('aiAgentApiKey') }}</label>
-        <a-input-password
-          v-model:value="apiKey"
-          :placeholder="t('aiAgentApiKeyPlaceholder')"
-          size="small"
-        />
-      </div>
-      <div class="setting-item">
-        <label>{{ t('aiAgentBaseUrl') }}</label>
-        <a-input
-          v-model:value="baseUrl"
-          :placeholder="t('aiAgentBaseUrlPlaceholder')"
-          size="small"
-        />
-      </div>
-      <div class="setting-item">
-        <label>{{ t('aiAgentModel') }}</label>
-        <a-input v-model:value="model" :placeholder="t('aiAgentModelPlaceholder')" size="small" />
-      </div>
-      <div class="setting-hint">
-        {{ t('aiAgentSettingsHint') }}
-      </div>
-    </div>
+    <a-collapse v-model:active-key="showSettings" :bordered="false" class="settings-collapse">
+      <a-collapse-panel key="true" :show-arrow="false">
+        <template #header><span></span></template>
+        <a-form layout="vertical" class="settings-form" size="small">
+          <a-form-item :label="t('aiAgentApiKey')">
+            <a-input-password v-model:value="apiKey" :placeholder="t('aiAgentApiKeyPlaceholder')" />
+          </a-form-item>
+          <a-form-item :label="t('aiAgentBaseUrl')">
+            <a-input v-model:value="baseUrl" :placeholder="t('aiAgentBaseUrlPlaceholder')" />
+          </a-form-item>
+          <a-form-item :label="t('aiAgentModel')">
+            <a-input v-model:value="model" :placeholder="t('aiAgentModelPlaceholder')" />
+          </a-form-item>
+          <a-typography-text type="secondary" class="settings-hint">
+            {{ t('aiAgentSettingsHint') }}
+          </a-typography-text>
+        </a-form>
+      </a-collapse-panel>
+    </a-collapse>
 
     <!-- Status Bar -->
     <div v-if="isRunning" class="status-bar">
       <div class="status-indicator">
-        <span class="spinner"></span>
+        <LoadingOutlined spin class="status-spinner" />
         <span>{{ t('aiAgentStep', [currentStep]) }}</span>
       </div>
-      <button class="stop-btn" @click="stopTask">
+      <a-button type="primary" danger size="small" @click="stopTask">
+        <template #icon><StopOutlined /></template>
         {{ t('aiAgentStop') }}
-      </button>
+      </a-button>
     </div>
 
     <!-- Chat Area -->
     <div ref="chatContainer" class="chat-container">
       <!-- Config Warning -->
-      <div v-if="!isConfigured && !showSettings" class="config-warning">
-        <span class="warning-icon">⚠️</span>
-        <span>{{ t('aiAgentNotConfigured') }}</span>
-        <button class="config-btn" @click="showSettings = true">
-          {{ t('aiAgentConfigure') }}
-        </button>
-      </div>
+      <a-alert
+        v-if="!isConfigured && !showSettings"
+        type="warning"
+        show-icon
+        class="config-warning"
+      >
+        <template #icon><WarningOutlined /></template>
+        <template #message>{{ t('aiAgentNotConfigured') }}</template>
+        <template #description>
+          <a-button type="primary" size="small" class="config-btn" @click="showSettings = true">
+            {{ t('aiAgentConfigure') }}
+          </a-button>
+        </template>
+      </a-alert>
 
       <!-- Steps -->
       <template v-for="(step, index) in steps" :key="index">
-        <div v-if="step.thinking" class="message thinking">
-          <div class="message-header">
-            <span class="avatar">🤖</span>
-            <span class="label">{{ t('aiAgentThinking') }}</span>
-          </div>
-          <div class="message-content">{{ step.thinking }}</div>
-        </div>
+        <a-card :class="['step-card', { 'has-error': step.error }]" :bordered="true" size="small">
+          <!-- Step Number Badge -->
+          <template #title v-if="index > 0">
+            <a-badge :count="index" :number-style="{ backgroundColor: '#d97706' }" />
+          </template>
 
-        <div v-if="step.action" class="message action">
-          <div class="message-header">
-            <span class="avatar">⚡</span>
-            <span class="label">{{ t('aiAgentAction') }}</span>
+          <!-- Thinking Section -->
+          <div v-if="step.thinking" class="step-section thinking-section">
+            <div class="section-header">
+              <ThunderboltOutlined class="section-icon thinking-icon" />
+              <span class="section-label">
+                {{ index === 0 ? t('aiAgentTask') : t('aiAgentThinking') }}
+              </span>
+            </div>
+            <div class="thinking-text">{{ step.thinking.replace(/^.*?: /, '') }}</div>
           </div>
-          <div class="message-content action-content">
-            <span class="action-type">{{ step.action.type }}</span>
-            <span v-if="step.action.params" class="action-params">
-              {{ JSON.stringify(step.action.params) }}
-            </span>
-          </div>
-        </div>
 
-        <div v-if="step.result" class="message result">
-          <div class="message-header">
-            <span class="avatar">✅</span>
-            <span class="label">{{ t('aiAgentResult') }}</span>
+          <!-- Action Section -->
+          <div v-if="step.action" class="step-section action-section">
+            <div class="section-header">
+              <ThunderboltOutlined class="section-icon action-icon" />
+              <a-tag color="orange">{{ step.action.type }}</a-tag>
+            </div>
+            <a-typography-text v-if="step.action.params" code class="action-params">
+              {{ formatActionParams(step.action) }}
+            </a-typography-text>
           </div>
-          <div class="message-content">{{ step.result }}</div>
-        </div>
 
-        <div v-if="step.screenshot" class="message screenshot">
-          <div class="message-header">
-            <span class="avatar">📷</span>
-            <span class="label">{{ t('aiAgentScreenshot') }}</span>
+          <!-- Result Section -->
+          <div v-if="step.result" class="step-section result-section">
+            <div class="section-header">
+              <CheckCircleOutlined class="section-icon result-icon" />
+              <span class="section-label">{{ t('aiAgentResult') }}</span>
+            </div>
+            <a-typography-text type="success" class="result-text">
+              {{ step.result }}
+            </a-typography-text>
           </div>
-          <div class="screenshot-preview">
-            <img :src="`data:image/png;base64,${step.screenshot}`" alt="Screenshot" />
-          </div>
-        </div>
 
-        <div v-if="step.error" class="message error">
-          <div class="message-header">
-            <span class="avatar">❌</span>
-            <span class="label">{{ t('aiAgentError') }}</span>
+          <!-- Error Section -->
+          <div v-if="step.error" class="step-section error-section">
+            <div class="section-header">
+              <CloseCircleOutlined class="section-icon error-icon" />
+              <span class="section-label">{{ t('aiAgentError') }}</span>
+            </div>
+            <a-typography-text type="danger" class="error-text">{{ step.error }}</a-typography-text>
           </div>
-          <div class="message-content">{{ step.error }}</div>
-        </div>
+
+          <!-- Screenshot Section (Collapsible) -->
+          <div v-if="step.screenshot" class="step-section screenshot-section">
+            <a-button type="text" class="screenshot-toggle" @click="toggleScreenshot(index)">
+              <CameraOutlined />
+              <span>{{ t('aiAgentScreenshot') }}</span>
+              <DownOutlined v-if="expandedScreenshots.has(index)" class="toggle-icon" />
+              <RightOutlined v-else class="toggle-icon" />
+            </a-button>
+            <div v-if="expandedScreenshots.has(index)" class="screenshot-preview">
+              <a-image :src="`data:image/png;base64,${step.screenshot}`" alt="Screenshot" />
+            </div>
+          </div>
+        </a-card>
       </template>
 
       <!-- Current Activity -->
-      <template v-if="isRunning">
-        <div v-if="currentThinking" class="message thinking current">
-          <div class="message-header">
-            <span class="avatar">🤖</span>
-            <span class="label">{{ t('aiAgentThinking') }}</span>
-            <span class="typing-indicator">...</span>
+      <a-card
+        v-if="isRunning && (currentThinking || currentAction)"
+        class="step-card current"
+        :bordered="true"
+        size="small"
+      >
+        <template #title>
+          <a-badge
+            :count="currentStep"
+            :number-style="{ backgroundColor: '#d97706' }"
+            status="processing"
+          />
+        </template>
+
+        <!-- Current Thinking -->
+        <div v-if="currentThinking" class="step-section thinking-section">
+          <div class="section-header">
+            <LoadingOutlined spin class="section-icon thinking-icon" />
+            <span class="section-label">{{ t('aiAgentThinking') }}</span>
           </div>
-          <div class="message-content">{{ currentThinking }}</div>
+          <div class="thinking-text">{{ currentThinking }}</div>
         </div>
 
-        <div v-if="currentAction" class="message action current">
-          <div class="message-header">
-            <span class="avatar">⚡</span>
-            <span class="label">{{ t('aiAgentExecuting') }}</span>
+        <!-- Current Action -->
+        <div v-if="currentAction" class="step-section action-section">
+          <div class="section-header">
+            <LoadingOutlined spin class="section-icon action-icon" />
+            <a-tag color="processing">{{ currentAction.type }}</a-tag>
+            <a-tag>{{ t('aiAgentExecuting') }}...</a-tag>
           </div>
-          <div class="message-content">{{ currentAction }}</div>
+          <a-typography-text v-if="currentAction.params" code class="action-params">
+            {{ formatActionParams(currentAction) }}
+          </a-typography-text>
         </div>
 
-        <div v-if="currentScreenshot" class="message screenshot">
+        <!-- Current Screenshot -->
+        <div v-if="currentScreenshot" class="step-section screenshot-section">
           <div class="screenshot-preview">
-            <img :src="`data:image/png;base64,${currentScreenshot}`" alt="Current Screenshot" />
+            <a-image :src="`data:image/png;base64,${currentScreenshot}`" alt="Current Screenshot" />
           </div>
         </div>
-      </template>
+      </a-card>
 
       <!-- Error Message -->
-      <div v-if="errorMessage" class="message error final">
-        <div class="message-header">
-          <span class="avatar">❌</span>
-          <span class="label">{{ t('aiAgentError') }}</span>
-        </div>
-        <div class="message-content">{{ errorMessage }}</div>
-      </div>
+      <a-alert v-if="errorMessage" type="error" show-icon class="error-alert">
+        <template #icon><CloseCircleOutlined /></template>
+        <template #message>{{ t('aiAgentError') }}</template>
+        <template #description>{{ errorMessage }}</template>
+      </a-alert>
 
       <!-- Empty State -->
       <div v-if="steps.length === 0 && !isRunning && isConfigured" class="empty-state">
-        <div class="empty-icon">🤖</div>
-        <div class="empty-title">{{ t('aiAgentWelcome') }}</div>
-        <div class="empty-hint">{{ t('aiAgentHint') }}</div>
+        <RobotOutlined class="empty-icon" />
+        <a-typography-title :level="4" class="empty-title">
+          {{ t('aiAgentWelcome') }}
+        </a-typography-title>
+        <a-typography-paragraph type="secondary" class="empty-hint">
+          {{ t('aiAgentHint') }}
+        </a-typography-paragraph>
       </div>
     </div>
 
@@ -303,20 +412,30 @@ function clearHistory() {
           :auto-size="{ minRows: 1, maxRows: 4 }"
           :disabled="isRunning || !isConfigured"
           @keydown.enter.exact.prevent="startTask"
+          class="task-input"
         />
-        <button class="send-btn" :disabled="!canRun" @click="startTask">
-          {{ isRunning ? '...' : '▶' }}
-        </button>
+        <a-button
+          type="primary"
+          class="send-btn"
+          :disabled="!canRun"
+          :loading="isRunning"
+          @click="startTask"
+        >
+          <template #icon><SendOutlined /></template>
+        </a-button>
       </div>
       <div class="input-actions">
-        <button
+        <a-button
           v-if="steps.length > 0"
-          class="clear-btn"
+          type="text"
+          size="small"
+          danger
           @click="clearHistory"
           :disabled="isRunning"
         >
+          <template #icon><DeleteOutlined /></template>
           {{ t('aiAgentClear') }}
-        </button>
+        </a-button>
       </div>
     </div>
   </div>
@@ -327,251 +446,246 @@ function clearHistory() {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-color, #fff);
+  background: var(--bg-color, #faf9f7);
 }
 
+/* Header - Anthropic style */
 .agent-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-  background: var(--header-bg, #f9fafb);
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, #e8e5e0);
+  background: var(--header-bg, #fff);
 }
 
 .header-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
+  color: var(--text-primary, #1a1a1a);
 }
 
-.header-title .icon {
-  font-size: 18px;
+.header-icon {
+  font-size: 20px;
+  color: var(--accent-color, #d97706);
 }
 
 .settings-btn {
-  padding: 4px 8px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.2s;
+  color: var(--text-secondary, #6b6b6b);
 }
 
-.settings-btn:hover,
 .settings-btn.active {
-  background: var(--hover-bg, #f3f4f6);
-  border-color: var(--border-color, #e5e7eb);
+  color: var(--accent-color, #d97706);
+  background: var(--accent-bg, #fef3e2);
 }
 
-.settings-panel {
-  padding: 12px 16px;
-  background: var(--panel-bg, #f9fafb);
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+/* Settings Panel */
+.settings-collapse {
+  background: var(--panel-bg, #fff);
 }
 
-.setting-item {
+.settings-collapse :deep(.ant-collapse-header) {
+  display: none !important;
+}
+
+.settings-collapse :deep(.ant-collapse-content-box) {
+  padding: 16px 20px !important;
+  border-bottom: 1px solid var(--border-color, #e8e5e0);
+}
+
+.settings-form :deep(.ant-form-item) {
   margin-bottom: 12px;
 }
 
-.setting-item label {
-  display: block;
+.settings-form :deep(.ant-form-item-label > label) {
+  color: var(--text-secondary, #6b6b6b);
   font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary, #6b7280);
-  margin-bottom: 4px;
 }
 
-.setting-hint {
-  font-size: 11px;
-  color: var(--text-tertiary, #9ca3af);
-  line-height: 1.4;
+.settings-hint {
+  font-size: 12px;
+  line-height: 1.5;
 }
 
+/* Status Bar - Anthropic orange accent */
 .status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  background: var(--status-bg, #eff6ff);
-  border-bottom: 1px solid var(--status-border, #bfdbfe);
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #fef3e2 0%, #fff7ed 100%);
+  border-bottom: 1px solid var(--accent-border, #fed7aa);
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 13px;
-  color: var(--status-text, #1d4ed8);
+  font-weight: 500;
+  color: var(--accent-dark, #c2410c);
 }
 
-.spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--spinner-bg, #bfdbfe);
-  border-top-color: var(--spinner-color, #1d4ed8);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+.status-spinner {
+  color: var(--accent-color, #d97706);
+  font-size: 16px;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.stop-btn {
-  padding: 4px 12px;
-  font-size: 12px;
-  background: var(--stop-bg, #fee2e2);
-  color: var(--stop-text, #dc2626);
-  border: 1px solid var(--stop-border, #fecaca);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.stop-btn:hover {
-  background: var(--stop-hover-bg, #fecaca);
-}
-
+/* Chat Container */
 .chat-container {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .config-warning {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 24px;
-  background: var(--warning-bg, #fffbeb);
-  border: 1px solid var(--warning-border, #fde68a);
-  border-radius: 8px;
-  text-align: center;
-}
-
-.warning-icon {
-  font-size: 24px;
+  border-radius: 12px;
 }
 
 .config-btn {
   margin-top: 8px;
-  padding: 6px 16px;
-  background: var(--primary-color, #3b82f6);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.2s;
+  background: var(--accent-color, #d97706);
+  border-color: var(--accent-color, #d97706);
 }
 
 .config-btn:hover {
-  background: var(--primary-hover, #2563eb);
+  background: var(--accent-hover, #b45309) !important;
+  border-color: var(--accent-hover, #b45309) !important;
 }
 
-.message {
-  background: var(--message-bg, #f9fafb);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 13px;
+/* Step Card - Anthropic style */
+.step-card {
+  border-radius: 12px;
+  border-color: var(--card-border, #e8e5e0);
+  background: var(--card-bg, #fff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.message.current {
-  border: 1px solid var(--current-border, #bfdbfe);
-  background: var(--current-bg, #eff6ff);
+.step-card :deep(.ant-card-head) {
+  min-height: auto;
+  padding: 8px 16px;
+  border-bottom: none;
 }
 
-.message.error {
+.step-card :deep(.ant-card-body) {
+  padding: 12px 16px;
+}
+
+.step-card.current {
+  border-color: var(--accent-color, #d97706);
+  box-shadow: 0 0 0 2px var(--accent-bg, #fef3e2);
+}
+
+.step-card.has-error {
+  border-color: var(--error-color, #ef4444);
   background: var(--error-bg, #fef2f2);
-  border: 1px solid var(--error-border, #fecaca);
 }
 
-.message.action {
-  background: var(--action-bg, #f0fdf4);
-  border: 1px solid var(--action-border, #bbf7d0);
+/* Step Sections */
+.step-section {
+  margin-bottom: 10px;
 }
 
-.message-header {
+.step-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 6px;
 }
 
-.message-header .avatar {
+.section-icon {
   font-size: 14px;
 }
 
-.message-header .label {
-  font-size: 11px;
-  font-weight: 600;
+.thinking-icon {
+  color: var(--accent-color, #d97706);
+}
+
+.action-icon {
+  color: var(--accent-color, #d97706);
+}
+
+.result-icon {
+  color: var(--success-color, #22c55e);
+}
+
+.error-icon {
+  color: var(--error-color, #ef4444);
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #6b6b6b);
   text-transform: uppercase;
-  color: var(--label-color, #6b7280);
+  letter-spacing: 0.5px;
 }
 
-.typing-indicator {
-  color: var(--typing-color, #3b82f6);
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%,
-  50% {
-    opacity: 1;
-  }
-  51%,
-  100% {
-    opacity: 0;
-  }
-}
-
-.message-content {
-  line-height: 1.5;
+.thinking-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary, #1a1a1a);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.action-content {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-.action-type {
-  font-weight: 600;
-  color: var(--action-type-color, #059669);
-}
-
 .action-params {
-  font-size: 12px;
-  color: var(--params-color, #6b7280);
-  font-family: monospace;
+  font-size: 11px;
+  background: var(--code-bg, #f5f4f2) !important;
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.result-text,
+.error-text {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Screenshot Section */
+.screenshot-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary, #6b6b6b);
+  padding: 4px 8px;
+}
+
+.toggle-icon {
+  font-size: 10px;
+  margin-left: 4px;
 }
 
 .screenshot-preview {
   margin-top: 8px;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--screenshot-border, #e5e7eb);
+  border: 1px solid var(--border-color, #e8e5e0);
 }
 
-.screenshot-preview img {
+.screenshot-preview :deep(.ant-image-img) {
   max-width: 100%;
-  height: auto;
   display: block;
 }
 
+/* Error Alert */
+.error-alert {
+  border-radius: 12px;
+}
+
+/* Empty State */
 .empty-state {
   flex: 1;
   display: flex;
@@ -579,70 +693,64 @@ function clearHistory() {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 32px;
-  color: var(--empty-color, #9ca3af);
+  padding: 40px 20px;
 }
 
 .empty-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
+  font-size: 56px;
+  color: var(--accent-color, #d97706);
+  margin-bottom: 16px;
 }
 
 .empty-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--empty-title-color, #6b7280);
-  margin-bottom: 8px;
+  color: var(--text-primary, #1a1a1a) !important;
+  margin-bottom: 8px !important;
 }
 
 .empty-hint {
-  font-size: 13px;
-  line-height: 1.5;
   max-width: 280px;
+  line-height: 1.6;
 }
 
+/* Input Area */
 .input-area {
-  padding: 12px 16px;
-  border-top: 1px solid var(--border-color, #e5e7eb);
-  background: var(--input-area-bg, #fff);
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color, #e8e5e0);
+  background: var(--input-bg, #fff);
 }
 
 .input-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: flex-end;
 }
 
-.input-row :deep(.ant-input) {
+.task-input {
   flex: 1;
-  resize: none;
-  border-radius: 8px;
+  border-radius: 12px !important;
+}
+
+.task-input :deep(.ant-input) {
+  border-radius: 12px;
 }
 
 .send-btn {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--primary-color, #3b82f6);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--accent-color, #d97706);
+  border-color: var(--accent-color, #d97706);
 }
 
 .send-btn:hover:not(:disabled) {
-  background: var(--primary-hover, #2563eb);
+  background: var(--accent-hover, #b45309) !important;
+  border-color: var(--accent-hover, #b45309) !important;
 }
 
 .send-btn:disabled {
-  background: var(--disabled-bg, #e5e7eb);
-  color: var(--disabled-color, #9ca3af);
-  cursor: not-allowed;
+  background: var(--disabled-bg, #e8e5e0);
+  border-color: var(--disabled-bg, #e8e5e0);
 }
 
 .input-actions {
@@ -651,63 +759,38 @@ function clearHistory() {
   margin-top: 8px;
 }
 
-.clear-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: transparent;
-  color: var(--clear-color, #6b7280);
-  border: 1px solid var(--clear-border, #e5e7eb);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.clear-btn:hover:not(:disabled) {
-  background: var(--clear-hover-bg, #f3f4f6);
-}
-
-.clear-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Dark mode support */
+/* Dark mode support - Anthropic dark theme */
 :global(.dark) .ai-agent-container {
-  --bg-color: #1f2937;
-  --header-bg: #111827;
-  --border-color: #374151;
-  --hover-bg: #374151;
-  --panel-bg: #111827;
-  --text-secondary: #9ca3af;
-  --text-tertiary: #6b7280;
-  --status-bg: #1e3a5f;
-  --status-border: #2563eb;
-  --status-text: #93c5fd;
-  --spinner-bg: #1e40af;
-  --spinner-color: #93c5fd;
-  --stop-bg: #7f1d1d;
-  --stop-text: #fca5a5;
-  --stop-border: #991b1b;
-  --message-bg: #374151;
-  --current-bg: #1e3a5f;
-  --current-border: #2563eb;
-  --error-bg: #7f1d1d;
-  --error-border: #991b1b;
-  --action-bg: #14532d;
-  --action-border: #166534;
-  --label-color: #9ca3af;
-  --action-type-color: #4ade80;
-  --params-color: #9ca3af;
-  --screenshot-border: #374151;
-  --empty-color: #6b7280;
-  --empty-title-color: #9ca3af;
-  --input-area-bg: #1f2937;
-  --disabled-bg: #374151;
-  --disabled-color: #6b7280;
-  --clear-color: #9ca3af;
-  --clear-border: #374151;
-  --clear-hover-bg: #374151;
-  --warning-bg: #422006;
-  --warning-border: #854d0e;
+  --bg-color: #1c1917;
+  --header-bg: #292524;
+  --panel-bg: #292524;
+  --border-color: #44403c;
+  --card-bg: #292524;
+  --card-border: #44403c;
+  --text-primary: #fafaf9;
+  --text-secondary: #a8a29e;
+  --accent-color: #f59e0b;
+  --accent-hover: #d97706;
+  --accent-bg: rgba(245, 158, 11, 0.15);
+  --accent-border: rgba(245, 158, 11, 0.3);
+  --accent-dark: #fbbf24;
+  --code-bg: #1c1917;
+  --input-bg: #292524;
+  --disabled-bg: #44403c;
+  --success-color: #4ade80;
+  --error-color: #f87171;
+  --error-bg: rgba(248, 113, 113, 0.1);
+}
+
+:global(.dark) .status-bar {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
+}
+
+:global(.dark) .step-card.current {
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+:global(.dark) .settings-collapse :deep(.ant-collapse-content-box) {
+  border-bottom-color: var(--border-color);
 }
 </style>
