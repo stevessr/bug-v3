@@ -727,7 +727,24 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     for (const key in newSettings) {
       if (Object.prototype.hasOwnProperty.call(newSettings, key)) {
         const typedKey = key as keyof AppSettings
-        if (settings.value[typedKey] !== newSettings[typedKey]) {
+        const oldValue = settings.value[typedKey]
+        const newValue = newSettings[typedKey]
+
+        // Deep comparison for arrays and objects
+        if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+          if (oldValue.length !== newValue.length ||
+              !oldValue.every((item, index) => {
+                // For primitive arrays, use simple equality
+                if (typeof item !== 'object' || item === null) {
+                  return item === newValue[index]
+                }
+                // For object arrays, use JSON comparison (works for MCP servers, etc)
+                return JSON.stringify(item) === JSON.stringify(newValue[index])
+              })) {
+            hasChanges = true
+            break
+          }
+        } else if (oldValue !== newValue) {
           hasChanges = true
           break
         }

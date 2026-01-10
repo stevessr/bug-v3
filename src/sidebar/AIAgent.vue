@@ -83,9 +83,12 @@ const maxTokens = computed({
   set: (value: number) => emojiStore.updateSettings({ claudeMaxTokens: value })
 })
 
-// MCP Servers
+// MCP Servers - use stable reference to avoid unnecessary updates
 const mcpServers = computed({
-  get: () => emojiStore.settings.claudeMcpServers || [],
+  get: () => {
+    const servers = emojiStore.settings.claudeMcpServers
+    return servers || []
+  },
   set: (servers: McpServerConfig[]) => emojiStore.updateSettings({ claudeMcpServers: servers })
 })
 
@@ -95,8 +98,13 @@ const enableMcpTools = computed({
   set: (value: boolean) => emojiStore.updateSettings({ claudeEnableMcpTools: value })
 })
 
+// Use a stable reference for enabled tools to avoid unnecessary reactivity
 const enabledBuiltinTools = computed({
-  get: () => emojiStore.settings.claudeEnabledBuiltinTools || BUILTIN_TOOL_NAMES,
+  get: () => {
+    const tools = emojiStore.settings.claudeEnabledBuiltinTools
+    // If not set or empty, use all tools but return a stable reference
+    return tools && Array.isArray(tools) && tools.length > 0 ? tools : BUILTIN_TOOL_NAMES
+  },
   set: (tools: string[]) => emojiStore.updateSettings({ claudeEnabledBuiltinTools: tools })
 })
 

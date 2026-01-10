@@ -19,7 +19,8 @@
       "Bash(pnpm type-check:*)",
       "Bash(chmod:*)",
       "Bash(node:*)",
-      "mcp__auggie-mcp__codebase-retrieval"
+      "mcp__auggie-mcp__codebase-retrieval",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
