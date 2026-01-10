@@ -22,10 +22,10 @@
   "optional_permissions": ["cookies"],
   "host_permissions": ["<all_urls>"],
   "side_panel": {
-    "default_path": "index.html?mode=sidebar"
+    "default_path": "index.html?type=sidebar"
   },
   "action": {
-    "default_popup": "index.html?mode=popup",
+    "default_popup": "index.html?type=popup",
     "default_title": "__MSG_extensionName__",
     "default_icon": {
       "48": "img/48.png",
@@ -36,9 +36,9 @@
       "1200": "img/1200.jpg"
     }
   },
-  "options_page": "index.html?mode=options",
+  "options_page": "index.html?type=options",
   "options_ui": {
-    "page": "index.html?mode=options",
+    "page": "index.html?type=options",
     "open_in_tab": true
   },
   "background": {

@@ -1,6 +1,6 @@
 import './utils/main.ts'
 
-import { setupOnInstalledListener } from './init'
+import { setupOnInstalledListener, setupSidePanel } from './init'
 import {
   setupMessageListener,
   setupStorageChangeListener,
@@ -16,3 +16,7 @@ setupMessageListener()
 setupStorageChangeListener()
 setupContextMenu()
 setupPeriodicCleanup()
+
+// Configure side panel at window level on every background script load
+// This ensures the side panel doesn't reload when switching tabs
+setupSidePanel()
