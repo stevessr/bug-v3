@@ -21,6 +21,8 @@ export interface AgentConfig {
   targetTabId?: number // Target tab ID for popup window mode
   enabledBuiltinTools?: string[] // Enabled built-in tool names (if undefined, all enabled)
   enableMcpTools?: boolean // Enable MCP provided tools (default: true)
+  maxConcurrentSubagents?: number // Maximum concurrent subagents (default: 5)
+  subagentTimeout?: number // Subagent timeout in milliseconds (default: 120000)
 }
 
 export interface AgentMessage {
@@ -49,7 +51,7 @@ export interface ToolDefinition {
   description: string
   input_schema: {
     type: 'object'
-    properties: Record<string, { type: string; description: string; enum?: string[] }>
+    properties: Record<string, any>
     required?: string[]
   }
 }
@@ -1145,7 +1147,7 @@ const BROWSER_TOOLS: ToolDefinition[] = [
   {
     name: 'spawn_subagent',
     description:
-      'Spawn a subagent to perform a specific task in parallel. Multiple subagents can run simultaneously. Each subagent has its own browser tab context. Use this for tasks that can be parallelized.',
+      'RECOMMENDED: Spawn a subagent to perform a specific task in parallel. ALWAYS PREFER spawning multiple subagents at once when tasks are independent. Multiple subagents can run simultaneously. Each subagent has its own browser tab context. Use this proactively for any tasks that can be parallelized (e.g., testing different scenarios, gathering data from multiple sources, performing independent operations). Example: spawn subagent_1 for task A, spawn subagent_2 for task B, spawn subagent_3 for task C, then wait_for_subagents to collect all results.',
     input_schema: {
       type: 'object',
       properties: {
@@ -1166,8 +1168,32 @@ const BROWSER_TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'spawn_multiple_subagents',
+    description:
+      'HIGHLY RECOMMENDED: Spawn multiple subagents at once for better parallelization. Use this when you have 2 or more independent tasks. This is more efficient than calling spawn_subagent multiple times. Each subagent runs in parallel with its own browser tab context.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tasks: {
+          type: 'array',
+          description:
+            'Array of task descriptions. Each will be assigned to a separate subagent running in parallel.',
+          items: {
+            type: 'string'
+          }
+        },
+        max_steps_per_agent: {
+          type: 'number',
+          description: 'Maximum steps for each subagent (default: 10)'
+        }
+      },
+      required: ['tasks']
+    }
+  },
+  {
     name: 'wait_for_subagents',
-    description: 'Wait for all running subagents to complete and get their results',
+    description:
+      'Wait for subagents to complete and get their results. Supports both blocking (wait for all) and non-blocking (check status) modes. Returns results even if some subagents fail.',
     input_schema: {
       type: 'object',
       properties: {
@@ -1175,6 +1201,11 @@ const BROWSER_TOOLS: ToolDefinition[] = [
           type: 'string',
           description:
             'Optional: comma-separated list of subagent IDs to wait for. If not provided, waits for all.'
+        },
+        timeout_ms: {
+          type: 'number',
+          description:
+            'Optional: timeout in milliseconds. If specified, returns partial results after timeout.'
         }
       },
       required: []
@@ -2820,7 +2851,20 @@ export async function runAgent(
 
   messages.push({
     role: 'user',
-    content: `Task: ${task}\n\nStart by taking a screenshot to see the current state of the browser.`
+    content: `Task: ${task}
+
+IMPORTANT OPTIMIZATION GUIDANCE:
+- PROACTIVELY identify tasks that can run in PARALLEL
+- When you identify 2+ independent sub-tasks, IMMEDIATELY use spawn_multiple_subagents or spawn multiple subagents
+- Examples of parallelizable tasks:
+  * Testing multiple scenarios simultaneously
+  * Gathering data from multiple sources
+  * Performing independent validation checks
+  * Executing similar operations on different data
+- Don't wait for sequential completion if parallel execution is possible
+- Think: "Can I do multiple things at once?" before planning sequential steps
+
+Start by taking a screenshot to see the current state of the browser.`
   })
 
   // Track running subagents
@@ -2971,37 +3015,129 @@ export async function runAgent(
               action: step.action,
               subagents: subagentStatuses
             })
+          } else if (toolName === 'spawn_multiple_subagents') {
+            // NEW: Batch spawn multiple subagents for better parallelization
+            const tasks = toolInput.tasks as string[]
+            const maxStepsPerAgent = (toolInput.max_steps_per_agent as number) || 10
+
+            if (!Array.isArray(tasks) || tasks.length === 0) {
+              toolResult = { result: 'Error: tasks must be a non-empty array' }
+            } else {
+              const spawnedIds: string[] = []
+
+              // Spawn all subagents in parallel
+              for (const task of tasks) {
+                subagentCounter++
+                const subagentId = `subagent_${subagentCounter}`
+
+                const subagentPromise = runSubagent(
+                  config,
+                  task,
+                  subagentId,
+                  undefined,
+                  maxStepsPerAgent,
+                  allTools,
+                  mcpClients,
+                  abortSignal
+                )
+
+                runningSubagents.set(subagentId, subagentPromise)
+                spawnedIds.push(subagentId)
+              }
+
+              toolResult = {
+                result: `Spawned ${spawnedIds.length} subagents in parallel: ${spawnedIds.join(', ')}. Use wait_for_subagents to get results.`
+              }
+
+              // Update status
+              const subagentStatuses = Array.from(completedSubagents.values())
+              for (const [id] of runningSubagents) {
+                subagentStatuses.push({
+                  id,
+                  task: 'Running...',
+                  status: 'running',
+                  steps: []
+                })
+              }
+              onStatus({
+                step: stepCount,
+                message: `Spawned ${spawnedIds.length} subagents`,
+                thinking: step.thinking,
+                action: step.action,
+                subagents: subagentStatuses
+              })
+            }
           } else if (toolName === 'wait_for_subagents') {
             const subagentIdsStr = toolInput.subagent_ids as string | undefined
+            const timeoutMs = toolInput.timeout_ms as number | undefined
             const idsToWait = subagentIdsStr
               ? subagentIdsStr.split(',').map(s => s.trim())
               : Array.from(runningSubagents.keys())
 
             const results: string[] = []
 
-            for (const id of idsToWait) {
+            // Use Promise.allSettled for parallel waiting with optional timeout
+            const promises = idsToWait.map(async id => {
               const promise = runningSubagents.get(id)
               if (promise) {
-                const result = await promise
+                return { id, result: await promise }
+              } else {
+                const completed = completedSubagents.get(id)
+                return { id, result: completed || null }
+              }
+            })
+
+            let settledResults: Array<{ id: string; result: SubagentStatus | null }>
+
+            if (timeoutMs) {
+              // Race between timeout and all promises
+              const timeoutPromise = new Promise<'timeout'>(resolve =>
+                setTimeout(() => resolve('timeout'), timeoutMs)
+              )
+
+              const raceResult = await Promise.race([
+                Promise.allSettled(promises),
+                timeoutPromise
+              ])
+
+              if (raceResult === 'timeout') {
+                // Partial results - only completed ones
+                settledResults = []
+                for (const id of idsToWait) {
+                  const completed = completedSubagents.get(id)
+                  if (completed) {
+                    settledResults.push({ id, result: completed })
+                  }
+                }
+                results.push(`⚠ Timeout after ${timeoutMs}ms - returning partial results`)
+              } else {
+                settledResults = raceResult
+                  .filter(r => r.status === 'fulfilled')
+                  .map(r => (r as PromiseFulfilledResult<{ id: string; result: SubagentStatus | null }>).value)
+              }
+            } else {
+              // Wait for all without timeout
+              const allSettled = await Promise.allSettled(promises)
+              settledResults = allSettled
+                .filter(r => r.status === 'fulfilled')
+                .map(r => (r as PromiseFulfilledResult<{ id: string; result: SubagentStatus | null }>).value)
+            }
+
+            // Process results
+            for (const { id, result } of settledResults) {
+              if (result) {
                 completedSubagents.set(id, result)
                 runningSubagents.delete(id)
                 results.push(
                   `${id}: ${result.status === 'completed' ? result.result : `Failed: ${result.error}`}`
                 )
               } else {
-                const completed = completedSubagents.get(id)
-                if (completed) {
-                  results.push(
-                    `${id}: ${completed.status === 'completed' ? completed.result : `Failed: ${completed.error}`}`
-                  )
-                } else {
-                  results.push(`${id}: Not found`)
-                }
+                results.push(`${id}: Not found`)
               }
             }
 
             toolResult = {
-              result: `Subagent Results:\n${results.join('\n')}`
+              result: `Subagent Results (${results.length}/${idsToWait.length} completed):\n${results.join('\n')}`
             }
 
             // Update status with completed subagents

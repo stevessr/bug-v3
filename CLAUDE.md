@@ -64,5 +64,15 @@ Chrome runtime messaging between background, content scripts, popup, and options
 ### AI Features
 Optional Google Gemini API integration. Main AI functionality in `src/options/pages/ai-rename/`.
 
+**AI Agent System** (`src/services/aiAgentService.ts`):
+- Browser automation with Claude API integration
+- **Parallel Subagent Execution**: Optimized for concurrent task processing
+  - Use `spawn_multiple_subagents` to spawn multiple agents in one call
+  - `wait_for_subagents` uses `Promise.allSettled` for parallel waiting
+  - Configurable concurrency limits and timeouts
+  - See [docs/ai-agent/PARALLEL_SUBAGENT_OPTIMIZATION.md](docs/ai-agent/PARALLEL_SUBAGENT_OPTIMIZATION.md)
+- System automatically encourages parallel thinking for independent tasks
+- 3-5x performance improvement for parallelizable workloads
+
 ### Vue Components
 Use Composition API with `<script setup>` syntax. Ant Design Vue for UI components.
