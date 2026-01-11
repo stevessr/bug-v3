@@ -1865,7 +1865,9 @@ async function executeTool(
 ): Promise<{ result: string; screenshot?: string }> {
   log.info(`Executing tool: ${toolName}`, toolInput)
 
-  // If targetTabId is specified, switch to that tab first for tab-affecting operations
+  // If targetTabId is specified, check if we need to switch tabs
+  // IMPORTANT: Only switch if the target tab is NOT the currently active tab
+  // to avoid refreshing the sidebar when working with the same tab
   if (targetTabId !== undefined) {
     const needsTabSwitch = [
       'screenshot',
@@ -1906,7 +1908,12 @@ async function executeTool(
 
     if (needsTabSwitch) {
       try {
-        await browserAutomation.switchToTab(targetTabId)
+        // Check if target tab is already active to avoid unnecessary switches
+        const [currentActiveTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+        if (currentActiveTab?.id !== targetTabId) {
+          // Only switch if target is different from current
+          await browserAutomation.switchToTab(targetTabId)
+        }
       } catch (e) {
         log.warn(`Failed to switch to target tab ${targetTabId}:`, e)
       }
