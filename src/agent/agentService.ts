@@ -36,7 +36,8 @@ const buildSystemPrompt = (settings: AgentSettings, subagent?: SubAgentConfig): 
     '如果不需要自动化操作，仅输出 message。',
     'action 只使用以下类型：click, scroll, touch, screenshot, navigate, click-dom, input。',
     '如果需要操作页面元素，请优先提供 selector；否则使用坐标 x/y。',
-    '不要编造不存在的元素，缺少信息时先提问。'
+    '不要编造不存在的元素，缺少信息时先提问。',
+    '必须严格输出 JSON，不要输出多余文本。JSON 结构：{ "message": string, "actions": [ ... ] }'
   ]
 
   if (settings.enableMcp && settings.mcpServers.length > 0) {
@@ -56,6 +57,14 @@ const buildSystemPrompt = (settings: AgentSettings, subagent?: SubAgentConfig): 
   }
 
   return lines.join('\n')
+}
+
+const repairJson = (text: string): string | null => {
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start === -1 || end === -1 || end <= start) return null
+  const candidate = text.slice(start, end + 1)
+  return candidate
 }
 
 export async function runAgentMessage(
@@ -78,6 +87,11 @@ export async function runAgentMessage(
     const { object } = await generateObject({
       model: provider(modelId),
       schema: responseSchema,
+      schemaName: 'agent_response',
+      schemaDescription:
+        'Browser automation response with a message and optional action list.',
+      mode: 'json',
+      experimental_repairText: repairJson,
       system: [buildSystemPrompt(settings, subagent), subagent?.systemPrompt || '']
         .filter(Boolean)
         .join('\n'),
