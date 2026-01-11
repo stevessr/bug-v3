@@ -534,7 +534,12 @@ const isConfigured = computed(() => {
 })
 
 const canRun = computed(() => {
-  return isConfigured.value && taskInput.value.trim() !== '' && !isRunning.value
+  const missingTarget = isPopupWindow.value && !targetTabId.value
+  return isConfigured.value && taskInput.value.trim() !== '' && !isRunning.value && !missingTarget
+})
+
+const popupTargetMissing = computed(() => {
+  return isPopupWindow.value && !targetTabId.value
 })
 
 watch([currentStep, currentThinking, currentScreenshot], () => {
@@ -567,10 +572,18 @@ onMounted(async () => {
   // This ensures we always operate on the correct tab even if focus changes
   if (typeof chrome !== 'undefined' && chrome.tabs) {
     try {
-      const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-      if (activeTab?.id && !activeTab.url?.startsWith('chrome-extension://')) {
-        capturedTabId.value = activeTab.id
-        console.log('[AIAgent] Captured target tab ID:', activeTab.id, activeTab.url)
+      if (isPopupWindow.value) {
+        const resolved = await resolvePopupTargetTabId()
+        if (resolved) {
+          validatedTargetTabId.value = resolved
+          console.log('[AIAgent] Resolved popup target tab ID:', resolved)
+        }
+      } else {
+        const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+        if (activeTab?.id && !isExtensionUrl(activeTab.url)) {
+          capturedTabId.value = activeTab.id
+          console.log('[AIAgent] Captured target tab ID:', activeTab.id, activeTab.url)
+        }
       }
     } catch (e) {
       console.error('[AIAgent] Failed to capture target tab:', e)
@@ -858,20 +871,65 @@ const isPopupWindow = computed(() => {
   return window.location.search.includes('type=agent-popup')
 })
 
+const validatedTargetTabId = ref<number | undefined>(undefined)
+
+const isExtensionUrl = (url?: string) => {
+  return !!url && (url.startsWith('chrome-extension://') || url.startsWith('moz-extension://'))
+}
+
+const resolvePopupTargetTabId = async (): Promise<number | undefined> => {
+  const chromeApi = (window as any).chrome
+  if (!chromeApi?.tabs || !chromeApi?.windows) return undefined
+
+  const params = new URLSearchParams(window.location.search)
+  const paramTabId = params.get('targetTabId')
+  if (paramTabId) {
+    const parsed = Number.parseInt(paramTabId, 10)
+    if (!Number.isNaN(parsed)) {
+      try {
+        const tab = await chromeApi.tabs.get(parsed)
+        if (tab?.id && !isExtensionUrl(tab.url)) {
+          return tab.id
+        }
+      } catch {
+        // Ignore invalid tab IDs
+      }
+    }
+  }
+
+  try {
+    const currentWindow = await chromeApi.windows.getCurrent()
+    const windows = await chromeApi.windows.getAll({ populate: true })
+
+    const focusedWindow = windows.find(
+      (win: any) => win.type === 'normal' && win.focused && win.id !== currentWindow?.id
+    )
+    const focusedActive = focusedWindow?.tabs?.find(
+      (tab: any) => tab.active && !isExtensionUrl(tab.url)
+    )
+    if (focusedActive?.id) return focusedActive.id
+
+    for (const win of windows) {
+      if (win.type !== 'normal' || win.id === currentWindow?.id) continue
+      const activeTab = win.tabs?.find((tab: any) => tab.active && !isExtensionUrl(tab.url))
+      if (activeTab?.id) return activeTab.id
+      const anyTab = win.tabs?.find((tab: any) => !isExtensionUrl(tab.url))
+      if (anyTab?.id) return anyTab.id
+    }
+  } catch {
+    // Ignore lookup errors
+  }
+
+  return undefined
+}
+
 // Target tab ID for operations
-// For popup window: from URL params
+// For popup window: resolved from URL params or last focused non-extension tab
 // For sidebar: captured on mount
 const capturedTabId = ref<number | undefined>(undefined)
 
 const targetTabId = computed(() => {
-  // First check URL params (for popup window mode)
-  const params = new URLSearchParams(window.location.search)
-  const tabId = params.get('targetTabId')
-  if (tabId) {
-    return parseInt(tabId, 10)
-  }
-  // For sidebar mode, use captured tab ID
-  return capturedTabId.value
+  return validatedTargetTabId.value ?? capturedTabId.value
 })
 
 // Open AI Agent in a separate popup window
@@ -885,10 +943,12 @@ async function openInPopupWindow() {
   if (typeof chrome !== 'undefined' && chrome.windows && chrome.tabs) {
     // Get the current active tab to remember which tab to control
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    const targetTabId = activeTab?.id
+    const targetTabId = activeTab?.id && !isExtensionUrl(activeTab.url) ? activeTab.id : undefined
 
     await chrome.windows.create({
-      url: `index.html?type=agent-popup&targetTabId=${targetTabId}`,
+      url: targetTabId
+        ? `index.html?type=agent-popup&targetTabId=${targetTabId}`
+        : 'index.html?type=agent-popup',
       type: 'popup',
       width,
       height,
@@ -933,6 +993,14 @@ async function openInPopupWindow() {
         </a-button>
       </div>
     </div>
+
+    <a-alert
+      v-if="popupTargetMissing"
+      type="warning"
+      :message="'未找到目标标签页，请先切回要操作的页面后再打开弹窗。'"
+      class="mb-2"
+      show-icon
+    />
 
     <!-- Interrupted Conversation Notice -->
     <a-alert
