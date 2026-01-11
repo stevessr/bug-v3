@@ -18,7 +18,12 @@ const emit = defineEmits([
   'update:claudeMaxTokens',
   'update:claudeMcpServers',
   'update:claudeEnabledBuiltinTools',
-  'update:claudeEnableMcpTools'
+  'update:claudeEnableMcpTools',
+  'update:ntfyServer',
+  'update:ntfyTopic',
+  'update:ntfyUsername',
+  'update:ntfyPassword',
+  'update:ntfyToken'
 ])
 
 // Use the settings form composable
@@ -33,7 +38,12 @@ const { localValues, hasChanges, isValid, isSaving, handleSave, handleReset } = 
     { key: 'claudeMaxTokens', default: 8192 },
     { key: 'claudeMcpServers', default: [] },
     { key: 'claudeEnabledBuiltinTools', default: BUILTIN_TOOL_NAMES },
-    { key: 'claudeEnableMcpTools', default: true }
+    { key: 'claudeEnableMcpTools', default: true },
+    { key: 'ntfyServer', default: 'https://ntfy.sh' },
+    { key: 'ntfyTopic', default: '' },
+    { key: 'ntfyUsername', default: '' },
+    { key: 'ntfyPassword', default: '' },
+    { key: 'ntfyToken', default: '' }
   ],
   emit as (event: string, ...args: any[]) => void,
   {
@@ -102,6 +112,42 @@ const localEnableMcpTools = computed({
   get: () => (localValues.claudeEnableMcpTools.value as boolean) !== false, // Default to true
   set: val => {
     localValues.claudeEnableMcpTools.value = val
+  }
+})
+
+// ntfy.sh notification settings
+const localNtfyServer = computed({
+  get: () => (localValues.ntfyServer.value as string) || 'https://ntfy.sh',
+  set: val => {
+    localValues.ntfyServer.value = val
+  }
+})
+
+const localNtfyTopic = computed({
+  get: () => (localValues.ntfyTopic.value as string) || '',
+  set: val => {
+    localValues.ntfyTopic.value = val
+  }
+})
+
+const localNtfyUsername = computed({
+  get: () => (localValues.ntfyUsername.value as string) || '',
+  set: val => {
+    localValues.ntfyUsername.value = val
+  }
+})
+
+const localNtfyPassword = computed({
+  get: () => (localValues.ntfyPassword.value as string) || '',
+  set: val => {
+    localValues.ntfyPassword.value = val
+  }
+})
+
+const localNtfyToken = computed({
+  get: () => (localValues.ntfyToken.value as string) || '',
+  set: val => {
+    localValues.ntfyToken.value = val
   }
 })
 
@@ -392,6 +438,102 @@ async function testMcpServer(server: McpServerConfig) {
               </p>
             </div>
             <a-switch v-model:checked="localEnableMcpTools" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ntfy.sh Notification Settings -->
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+        <h3 class="text-md font-medium dark:text-white">ntfy.sh 通知配置</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          配置 ntfy.sh 推送通知服务，Agent 可发送任务状态、错误告警等通知
+        </p>
+
+        <div class="space-y-3">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium dark:text-white mb-2">服务器地址：</label>
+              <a-input
+                v-model:value="localNtfyServer"
+                placeholder="https://ntfy.sh"
+                class="w-full"
+              />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                ntfy 服务器地址，支持自建服务器
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium dark:text-white mb-2">默认话题：</label>
+              <a-input
+                v-model:value="localNtfyTopic"
+                placeholder="my-agent-notifications"
+                class="w-full"
+              />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                默认推送话题，Agent 将推送通知到此话题
+              </p>
+            </div>
+          </div>
+
+          <div class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+            <p class="text-sm text-blue-800 dark:text-blue-200">
+              💡 <strong>如何接收通知：</strong>
+            </p>
+            <ul class="text-xs text-blue-700 dark:text-blue-300 mt-2 ml-4 space-y-1">
+              <li>• 网页端：访问 <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">https://ntfy.sh/your-topic</code></li>
+              <li>• 移动端：下载 ntfy App，订阅你的话题</li>
+              <li>• CLI：运行 <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">ntfy subscribe your-topic</code></li>
+            </ul>
+          </div>
+
+          <!-- Authentication (collapsed by default) -->
+          <a-collapse ghost>
+            <a-collapse-panel key="auth" header="认证设置（可选，用于私有话题）">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-sm font-medium dark:text-white mb-2">用户名：</label>
+                  <a-input
+                    v-model:value="localNtfyUsername"
+                    placeholder="留空表示无需认证"
+                    class="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium dark:text-white mb-2">密码：</label>
+                  <a-input-password
+                    v-model:value="localNtfyPassword"
+                    placeholder="留空表示无需认证"
+                    class="w-full"
+                  />
+                </div>
+
+                <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <label class="block text-sm font-medium dark:text-white mb-2">
+                    Bearer Token（替代用户名密码）：
+                  </label>
+                  <a-input-password
+                    v-model:value="localNtfyToken"
+                    placeholder="留空表示使用用户名密码认证"
+                    class="w-full"
+                  />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    若填写 Token，将优先使用 Token 认证
+                  </p>
+                </div>
+              </div>
+            </a-collapse-panel>
+          </a-collapse>
+
+          <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+            <p class="text-sm font-medium dark:text-white mb-2">📚 使用示例：</p>
+            <div class="text-xs text-gray-600 dark:text-gray-300 space-y-1 font-mono">
+              <p>Agent 任务： "处理数据，完成后发送通知"</p>
+              <p class="text-green-600 dark:text-green-400">
+                → 自动调用: send_ntfy_notification("数据处理完成!")
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -71,6 +71,11 @@ Optional Google Gemini API integration. Main AI functionality in `src/options/pa
   - `wait_for_subagents` uses `Promise.allSettled` for parallel waiting
   - Configurable concurrency limits and timeouts
   - See [docs/ai-agent/PARALLEL_SUBAGENT_OPTIMIZATION.md](docs/ai-agent/PARALLEL_SUBAGENT_OPTIMIZATION.md)
+- **ntfy.sh Integration**: Built-in notification support
+  - Send notifications to ntfy.sh or self-hosted servers
+  - Rich formatting: priority levels, tags, emojis, action buttons
+  - Authentication support (username/password or bearer token)
+  - See [docs/ai-agent/NTFY_INTEGRATION.md](docs/ai-agent/NTFY_INTEGRATION.md)
 - System automatically encourages parallel thinking for independent tasks
 - 3-5x performance improvement for parallelizable workloads
 

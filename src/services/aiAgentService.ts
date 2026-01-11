@@ -11,6 +11,14 @@ import type { McpServerConfig } from '@/types/type'
 
 const log = createLogger('AIAgentService')
 
+export interface NtfyConfig {
+  server?: string // Custom ntfy server URL (default: https://ntfy.sh)
+  topic?: string // Default topic to publish to
+  username?: string // Username for authentication
+  password?: string // Password for authentication
+  token?: string // Bearer token for authentication (alternative to username/password)
+}
+
 export interface AgentConfig {
   apiKey: string
   baseUrl: string
@@ -23,6 +31,7 @@ export interface AgentConfig {
   enableMcpTools?: boolean // Enable MCP provided tools (default: true)
   maxConcurrentSubagents?: number // Maximum concurrent subagents (default: 5)
   subagentTimeout?: number // Subagent timeout in milliseconds (default: 120000)
+  ntfy?: NtfyConfig // ntfy.sh notification configuration
 }
 
 export interface AgentMessage {
@@ -1210,6 +1219,52 @@ const BROWSER_TOOLS: ToolDefinition[] = [
       },
       required: []
     }
+  },
+  {
+    name: 'send_ntfy_notification',
+    description:
+      'Send a notification via ntfy.sh (or custom ntfy server). Use this to send status updates, alerts, or completion notifications to external devices/services. Supports rich formatting with priority levels, tags, and action buttons.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'The notification message body (required)'
+        },
+        topic: {
+          type: 'string',
+          description:
+            'Topic to publish to. If not specified, uses the default topic from config. Topics are like channels - any device subscribed to this topic will receive the notification.'
+        },
+        title: {
+          type: 'string',
+          description: 'Notification title (optional)'
+        },
+        priority: {
+          type: 'number',
+          description: 'Priority level: 1=min, 2=low, 3=default, 4=high, 5=urgent/max (default: 3)'
+        },
+        tags: {
+          type: 'string',
+          description:
+            'Comma-separated tags/emojis to categorize the notification (e.g., "warning,skull", "success,white_check_mark")'
+        },
+        click_url: {
+          type: 'string',
+          description: 'URL to open when notification is clicked'
+        },
+        attach_url: {
+          type: 'string',
+          description: 'URL of an image/file to attach to the notification'
+        },
+        actions: {
+          type: 'string',
+          description:
+            'JSON array of action buttons (e.g., [{"action":"view","label":"Open","url":"https://example.com"}])'
+        }
+      },
+      required: ['message']
+    }
   }
 ]
 
@@ -1586,7 +1641,8 @@ Important:
 async function executeTool(
   toolName: string,
   toolInput: Record<string, unknown>,
-  targetTabId?: number
+  targetTabId?: number,
+  config?: AgentConfig
 ): Promise<{ result: string; screenshot?: string }> {
   log.info(`Executing tool: ${toolName}`, toolInput)
 
@@ -2486,6 +2542,93 @@ async function executeTool(
       return { result: `Trigger print failed: ${result.error}` }
     }
 
+    case 'send_ntfy_notification': {
+      const message = toolInput.message as string
+      const topic = (toolInput.topic as string) || config?.ntfy?.topic
+      const title = toolInput.title as string | undefined
+      const priority = (toolInput.priority as number) || 3
+      const tags = toolInput.tags as string | undefined
+      const clickUrl = toolInput.click_url as string | undefined
+      const attachUrl = toolInput.attach_url as string | undefined
+      const actions = toolInput.actions as string | undefined
+
+      // Validate required parameters
+      if (!message) {
+        return { result: 'Error: message is required for ntfy notification' }
+      }
+
+      if (!topic) {
+        return {
+          result: 'Error: topic is required. Provide it via tool parameter or config.ntfy.topic'
+        }
+      }
+
+      try {
+        // Build ntfy server URL
+        const server = config?.ntfy?.server || 'https://ntfy.sh'
+        const url = `${server}/${topic}`
+
+        // Build headers
+        const headers: Record<string, string> = {
+          'Content-Type': 'text/plain; charset=utf-8'
+        }
+
+        if (title) {
+          headers['Title'] = title
+        }
+
+        if (priority) {
+          headers['Priority'] = String(priority)
+        }
+
+        if (tags) {
+          headers['Tags'] = tags
+        }
+
+        if (clickUrl) {
+          headers['Click'] = clickUrl
+        }
+
+        if (attachUrl) {
+          headers['Attach'] = attachUrl
+        }
+
+        if (actions) {
+          headers['Actions'] = actions
+        }
+
+        // Add authentication if configured
+        if (config?.ntfy?.token) {
+          headers['Authorization'] = `Bearer ${config.ntfy.token}`
+        } else if (config?.ntfy?.username && config?.ntfy?.password) {
+          const credentials = btoa(`${config.ntfy.username}:${config.ntfy.password}`)
+          headers['Authorization'] = `Basic ${credentials}`
+        }
+
+        // Send notification
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: message
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          return {
+            result: `ntfy notification failed: ${response.status} ${response.statusText} - ${errorText}`
+          }
+        }
+
+        const responseData = await response.json()
+        return {
+          result: `ntfy notification sent successfully to topic "${topic}". Message ID: ${responseData.id || 'N/A'}`
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        return { result: `ntfy notification error: ${errorMessage}` }
+      }
+    }
+
     default:
       return { result: `Unknown tool: ${toolName}` }
   }
@@ -2741,7 +2884,7 @@ async function runSubagent(
                 toolResult = { result: `Invalid MCP tool name: ${toolName}` }
               }
             } else {
-              toolResult = await executeTool(toolName, toolInput, tabId)
+              toolResult = await executeTool(toolName, toolInput, tabId, config)
             }
 
             step.result = toolResult.result
@@ -2950,7 +3093,7 @@ Start by taking a screenshot to see the current state of the browser.`
             }
           } else {
             // Execute built-in browser tool
-            toolResult = await executeTool(toolName, toolInput, config.targetTabId)
+            toolResult = await executeTool(toolName, toolInput, config.targetTabId, config)
 
             // If this is a screenshot and imageModel is configured, add description
             if (
@@ -3095,10 +3238,7 @@ Start by taking a screenshot to see the current state of the browser.`
                 setTimeout(() => resolve('timeout'), timeoutMs)
               )
 
-              const raceResult = await Promise.race([
-                Promise.allSettled(promises),
-                timeoutPromise
-              ])
+              const raceResult = await Promise.race([Promise.allSettled(promises), timeoutPromise])
 
               if (raceResult === 'timeout') {
                 // Partial results - only completed ones
@@ -3113,14 +3253,22 @@ Start by taking a screenshot to see the current state of the browser.`
               } else {
                 settledResults = raceResult
                   .filter(r => r.status === 'fulfilled')
-                  .map(r => (r as PromiseFulfilledResult<{ id: string; result: SubagentStatus | null }>).value)
+                  .map(
+                    r =>
+                      (r as PromiseFulfilledResult<{ id: string; result: SubagentStatus | null }>)
+                        .value
+                  )
               }
             } else {
               // Wait for all without timeout
               const allSettled = await Promise.allSettled(promises)
               settledResults = allSettled
                 .filter(r => r.status === 'fulfilled')
-                .map(r => (r as PromiseFulfilledResult<{ id: string; result: SubagentStatus | null }>).value)
+                .map(
+                  r =>
+                    (r as PromiseFulfilledResult<{ id: string; result: SubagentStatus | null }>)
+                      .value
+                )
             }
 
             // Process results

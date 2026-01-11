@@ -37,6 +37,12 @@ export interface AppSettings {
   // Tools enablement
   claudeEnabledBuiltinTools?: string[] // Enabled built-in tools (default: all)
   claudeEnableMcpTools?: boolean // Enable MCP provided tools (default: true)
+  // ntfy.sh notification settings
+  ntfyServer?: string // ntfy server URL (default: https://ntfy.sh)
+  ntfyTopic?: string // Default ntfy topic
+  ntfyUsername?: string // ntfy username for authentication
+  ntfyPassword?: string // ntfy password for authentication
+  ntfyToken?: string // ntfy bearer token (alternative to username/password)
   theme?: 'system' | 'light' | 'dark'
   // Custom theme colors
   customPrimaryColor?: string // 主题主色
