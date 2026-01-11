@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid'
+import { query } from '@anthropic-ai/claude-agent-sdk'
 
 import type { AgentAction, AgentMessage, AgentSettings, SubAgentConfig } from './types'
 
@@ -8,16 +9,33 @@ interface AgentRunResult {
   error?: string
 }
 
-const SDK_IMPORT_PATH = '@anthropic-ai/claude-agent-sdk'
+type SdkMessage = {
+  type?: string
+  message?: { content?: unknown }
+  result?: string
+  subtype?: string
+  errors?: string[]
+}
 
-async function loadSdkClient() {
-  try {
-    const mod: any = await import(SDK_IMPORT_PATH)
-    return mod
-  } catch (error) {
-    console.warn('[AgentService] Failed to load Claude Agent SDK:', error)
-    return null
+const extractContent = (content: unknown): string => {
+  if (!content) return ''
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .map(item => {
+        if (typeof item === 'string') return item
+        if (item && typeof item === 'object' && 'text' in item) {
+          return String((item as { text?: string }).text ?? '')
+        }
+        return ''
+      })
+      .filter(Boolean)
+      .join('\n')
   }
+  if (typeof content === 'object' && 'text' in (content as Record<string, unknown>)) {
+    return String((content as { text?: string }).text ?? '')
+  }
+  return ''
 }
 
 export async function runAgentMessage(
@@ -31,26 +49,7 @@ export async function runAgentMessage(
     }
   }
 
-  const sdk = await loadSdkClient()
-  if (!sdk) {
-    return {
-      error: 'Claude Agent SDK 未加载，请确认依赖已安装。'
-    }
-  }
-
   // Placeholder integration: wire up SDK based on actual API surface.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const client = sdk?.createClient?.({
-    apiKey: settings.apiKey,
-    baseUrl: settings.baseUrl
-  })
-
-  if (!client) {
-    return {
-      error: 'Claude Agent SDK 初始化失败。'
-    }
-  }
-
   const mcpServers = settings.enableMcp
     ? settings.mcpServers.filter(server => {
         if (!server.enabled) return false
@@ -60,28 +59,57 @@ export async function runAgentMessage(
       })
     : []
 
+  const mcpRecord = mcpServers.reduce<
+    Record<string, { type: 'sse' | 'http'; url: string; headers?: Record<string, string> }>
+  >((acc, server) => {
+    const type = server.transport === 'streamable-http' ? 'http' : 'sse'
+    acc[server.id] = {
+      type,
+      url: server.url,
+      ...(server.headers ? { headers: server.headers } : {})
+    }
+    return acc
+  }, {})
+
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    const response = await client.run({
-      input,
-      taskModel: subagent?.taskModel || settings.taskModel,
-      reasoningModel: subagent?.reasoningModel || settings.reasoningModel,
-      imageModel: subagent?.imageModel || settings.imageModel,
-      systemPrompt: subagent?.systemPrompt || '',
-      mcp: mcpServers,
-      subagent
+    const resultChunks: string[] = []
+    const q = query({
+      prompt: input,
+      options: {
+        model: subagent?.taskModel || settings.taskModel,
+        systemPrompt: subagent?.systemPrompt || '',
+        mcpServers: mcpRecord,
+        env: {
+          ANTHROPIC_API_KEY: settings.apiKey,
+          ANTHROPIC_BASE_URL: settings.baseUrl,
+          ANTHROPIC_API_URL: settings.baseUrl
+        }
+      }
     })
 
-    const message: AgentMessage = {
-      id: nanoid(),
-      role: 'assistant',
-      content: response?.message || '',
-      actions: response?.actions || []
+    for await (const raw of q as AsyncIterable<SdkMessage>) {
+      if (raw?.type === 'assistant') {
+        const chunk = extractContent(raw.message?.content)
+        if (chunk) resultChunks.push(chunk)
+      }
+      if (raw?.type === 'result' && raw.subtype && raw.subtype !== 'success') {
+        return {
+          error: raw.errors?.[0] || 'Claude Agent 请求失败。'
+        }
+      }
+      if (raw?.type === 'result' && raw.result) {
+        resultChunks.push(raw.result)
+      }
     }
 
+    const content = resultChunks.join('\n').trim()
     return {
-      message,
-      actions: response?.actions || []
+      message: {
+        id: nanoid(),
+        role: 'assistant',
+        content: content || '已完成任务。'
+      },
+      actions: []
     }
   } catch (error: any) {
     return {
