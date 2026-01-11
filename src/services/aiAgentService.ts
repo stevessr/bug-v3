@@ -1303,7 +1303,10 @@ class McpClient {
   private serverConfig: McpServerConfig
   private tools: McpTool[] = []
   private sseEndpoint: string | null = null
-  private pendingRequests: Map<number | string, { resolve: (data: any) => void; reject: (error: Error) => void }> = new Map()
+  private pendingRequests: Map<
+    number | string,
+    { resolve: (data: any) => void; reject: (error: Error) => void }
+  > = new Map()
 
   constructor(config: McpServerConfig) {
     this.serverConfig = config
@@ -1461,7 +1464,11 @@ class McpClient {
     })
   }
 
-  private startSSEListener(reader: ReadableStreamDefaultReader<Uint8Array>, decoder: TextDecoder, initialBuffer: string) {
+  private startSSEListener(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    decoder: TextDecoder,
+    initialBuffer: string
+  ) {
     let buffer = initialBuffer
     let currentEvent = ''
     let currentData = ''
@@ -1531,11 +1538,11 @@ class McpClient {
       }, 30000)
 
       this.pendingRequests.set(id, {
-        resolve: (data) => {
+        resolve: data => {
           clearTimeout(timeout)
           resolve(data)
         },
-        reject: (error) => {
+        reject: error => {
           clearTimeout(timeout)
           reject(error)
         }
@@ -1912,10 +1919,14 @@ async function executeTool(
     if (needsTabSwitch) {
       try {
         // Check if target tab is already active to avoid unnecessary switches
-        const [currentActiveTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+        const [currentActiveTab] = await chrome.tabs.query({
+          active: true,
+          lastFocusedWindow: true
+        })
         if (currentActiveTab?.id !== targetTabId) {
           // Only switch if target is different from current
-          await browserAutomation.switchToTab(targetTabId)
+          // Don't focus the window to avoid refreshing the sidebar
+          await browserAutomation.switchToTab(targetTabId, false)
         }
       } catch (e) {
         log.warn(`Failed to switch to target tab ${targetTabId}:`, e)
@@ -3034,11 +3045,17 @@ async function runSubagent(
     }
     // Create a new window (not just tab) to avoid affecting the main window's sidebar
     try {
-      const createResult = await browserAutomation.createWindow(baseUrl || 'about:blank', 'normal', false)
+      const createResult = await browserAutomation.createWindow(
+        baseUrl || 'about:blank',
+        'normal',
+        false
+      )
       if (createResult.success && createResult.windowId && createResult.tabId) {
         ownedWindowId = createResult.windowId
         workingTabId = createResult.tabId
-        log.info(`[${subagentId}] Created new window ${ownedWindowId} with tab ${workingTabId} for subagent`)
+        log.info(
+          `[${subagentId}] Created new window ${ownedWindowId} with tab ${workingTabId} for subagent`
+        )
         return workingTabId
       }
     } catch (e) {
@@ -3104,7 +3121,11 @@ async function runSubagent(
           }
 
           // Skip subagent spawning from within subagent
-          if (toolName === 'spawn_subagent' || toolName === 'wait_for_subagents' || toolName === 'spawn_multiple_subagents') {
+          if (
+            toolName === 'spawn_subagent' ||
+            toolName === 'wait_for_subagents' ||
+            toolName === 'spawn_multiple_subagents'
+          ) {
             step.result = 'Subagents cannot spawn other subagents'
             messages.push({ role: 'assistant', content: assistantContent })
             messages.push({
@@ -3146,9 +3167,38 @@ async function runSubagent(
               }
             } else {
               // For browser tools, ensure we have our own window first
-              const browserToolNames = ['screenshot', 'click', 'type', 'scroll', 'navigate', 'wait', 'execute_js', 'select', 'hover', 'drag']
+              const browserToolNames = [
+                'screenshot',
+                'click',
+                'type',
+                'scroll',
+                'navigate',
+                'wait',
+                'execute_js',
+                'select',
+                'hover',
+                'drag',
+                'double_click',
+                'right_click',
+                'click_element',
+                'clear_input',
+                'key',
+                'wait_for_element',
+                'focus',
+                'get_page_info',
+                'get_elements'
+              ]
               if (browserToolNames.includes(toolName)) {
                 await ensureOwnWindow()
+                // For subagent, activate our working tab without focusing the window
+                // This prevents the main window's sidebar from refreshing
+                if (workingTabId !== undefined) {
+                  try {
+                    await browserAutomation.switchToTab(workingTabId, false) // Don't focus window
+                  } catch (e) {
+                    log.warn(`[${subagentId}] Failed to switch to working tab ${workingTabId}:`, e)
+                  }
+                }
               }
               // Execute tool in the subagent's working tab
               toolResult = await executeTool(toolName, toolInput, workingTabId, config)
@@ -3202,7 +3252,10 @@ async function runSubagent(
 
       subagentStatus.steps.push(step)
 
-      if (response.stop_reason === 'end_turn' && !response.content.some(b => b.type === 'tool_use')) {
+      if (
+        response.stop_reason === 'end_turn' &&
+        !response.content.some(b => b.type === 'tool_use')
+      ) {
         subagentStatus.status = 'completed'
         subagentStatus.result = step.thinking || 'Task completed'
         await cleanup()
@@ -3414,6 +3467,17 @@ Start by taking a screenshot to see the current state of the browser.`
             subagentCounter++
             const subagentId = `subagent_${subagentCounter}`
 
+            // Get current page URL for subagent to start from
+            let currentPageUrl: string | undefined
+            try {
+              const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+              if (activeTab?.url && !activeTab.url.startsWith('chrome')) {
+                currentPageUrl = activeTab.url
+              }
+            } catch {
+              // Ignore errors getting URL
+            }
+
             // Spawn subagent in background
             const subagentPromise = runSubagent(
               config,
@@ -3423,7 +3487,8 @@ Start by taking a screenshot to see the current state of the browser.`
               subagentMaxSteps,
               allTools,
               mcpClients,
-              abortSignal
+              abortSignal,
+              currentPageUrl
             )
 
             runningSubagents.set(subagentId, subagentPromise)
@@ -3462,6 +3527,20 @@ Start by taking a screenshot to see the current state of the browser.`
             } else {
               const spawnedIds: string[] = []
 
+              // Get current page URL for subagents to start from
+              let currentPageUrl: string | undefined
+              try {
+                const [activeTab] = await chrome.tabs.query({
+                  active: true,
+                  lastFocusedWindow: true
+                })
+                if (activeTab?.url && !activeTab.url.startsWith('chrome')) {
+                  currentPageUrl = activeTab.url
+                }
+              } catch {
+                // Ignore errors getting URL
+              }
+
               // Spawn all subagents in parallel
               for (const task of tasks) {
                 subagentCounter++
@@ -3475,7 +3554,8 @@ Start by taking a screenshot to see the current state of the browser.`
                   maxStepsPerAgent,
                   allTools,
                   mcpClients,
-                  abortSignal
+                  abortSignal,
+                  currentPageUrl
                 )
 
                 runningSubagents.set(subagentId, subagentPromise)

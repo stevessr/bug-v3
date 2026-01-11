@@ -692,7 +692,11 @@ export async function selectText(
 /**
  * Get selected text on the page
  */
-export async function getSelectedText(): Promise<{ success: boolean; text?: string; error?: string }> {
+export async function getSelectedText(): Promise<{
+  success: boolean
+  text?: string
+  error?: string
+}> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (!tab?.id) {
     return { success: false, error: 'No active tab found' }
@@ -715,7 +719,9 @@ export async function getSelectedText(): Promise<{ success: boolean; text?: stri
 /**
  * Focus on an element by selector
  */
-export async function focusElement(selector: string): Promise<{ success: boolean; error?: string }> {
+export async function focusElement(
+  selector: string
+): Promise<{ success: boolean; error?: string }> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (!tab?.id) {
     return { success: false, error: 'No active tab found' }
@@ -1139,11 +1145,18 @@ export async function getComputedStyles(
 /**
  * Get bounding rect and position info of an element
  */
-export async function getElementRect(
-  selector: string
-): Promise<{
+export async function getElementRect(selector: string): Promise<{
   success: boolean
-  rect?: { x: number; y: number; width: number; height: number; top: number; left: number; bottom: number; right: number }
+  rect?: {
+    x: number
+    y: number
+    width: number
+    height: number
+    top: number
+    left: number
+    bottom: number
+    right: number
+  }
   error?: string
 }> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -1426,7 +1439,10 @@ export async function scrollIntoView(
 
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    func: (sel: string, opts?: { behavior?: 'auto' | 'smooth'; block?: 'start' | 'center' | 'end' | 'nearest' }) => {
+    func: (
+      sel: string,
+      opts?: { behavior?: 'auto' | 'smooth'; block?: 'start' | 'center' | 'end' | 'nearest' }
+    ) => {
       const element = document.querySelector(sel)
       if (!element) {
         return { success: false, error: `Element not found: ${sel}` }
@@ -1489,9 +1505,7 @@ export async function getElementCount(
 /**
  * Get parent element info
  */
-export async function getParentElement(
-  selector: string
-): Promise<{
+export async function getParentElement(selector: string): Promise<{
   success: boolean
   parent?: { tagName: string; id?: string; className?: string }
   error?: string
@@ -1550,7 +1564,8 @@ export async function getChildElements(
       if (!element) {
         return { success: false, error: `Element not found: ${sel}` }
       }
-      const children: Array<{ tagName: string; id?: string; className?: string; text?: string }> = []
+      const children: Array<{ tagName: string; id?: string; className?: string; text?: string }> =
+        []
       const count = Math.min(element.children.length, max)
       for (let i = 0; i < count; i++) {
         const child = element.children[i]
@@ -1720,12 +1735,19 @@ export async function closeTab(tabId: number): Promise<{ success: boolean; error
 
 /**
  * Switch to a tab by ID
+ * @param tabId - The tab ID to switch to
+ * @param focusWindow - Whether to focus the window (default: true). Set to false for background operations.
  */
-export async function switchToTab(tabId: number): Promise<{ success: boolean; error?: string }> {
+export async function switchToTab(
+  tabId: number,
+  focusWindow: boolean = true
+): Promise<{ success: boolean; error?: string }> {
   try {
     await chrome.tabs.update(tabId, { active: true })
-    const tab = await chrome.tabs.get(tabId)
-    await chrome.windows.update(tab.windowId, { focused: true })
+    if (focusWindow) {
+      const tab = await chrome.tabs.get(tabId)
+      await chrome.windows.update(tab.windowId, { focused: true })
+    }
     return { success: true }
   } catch (e) {
     return { success: false, error: String(e) }
@@ -1735,7 +1757,9 @@ export async function switchToTab(tabId: number): Promise<{ success: boolean; er
 /**
  * Duplicate a tab
  */
-export async function duplicateTab(tabId: number): Promise<{ success: boolean; newTabId?: number; error?: string }> {
+export async function duplicateTab(
+  tabId: number
+): Promise<{ success: boolean; newTabId?: number; error?: string }> {
   try {
     const newTab = await chrome.tabs.duplicate(tabId)
     return { success: true, newTabId: newTab?.id }
@@ -1803,7 +1827,10 @@ export async function goForward(): Promise<{ success: boolean; error?: string }>
 /**
  * Pin/unpin a tab
  */
-export async function pinTab(tabId: number, pinned: boolean): Promise<{ success: boolean; error?: string }> {
+export async function pinTab(
+  tabId: number,
+  pinned: boolean
+): Promise<{ success: boolean; error?: string }> {
   try {
     await chrome.tabs.update(tabId, { pinned })
     return { success: true }
@@ -1815,7 +1842,10 @@ export async function pinTab(tabId: number, pinned: boolean): Promise<{ success:
 /**
  * Mute/unmute a tab
  */
-export async function muteTab(tabId: number, muted: boolean): Promise<{ success: boolean; error?: string }> {
+export async function muteTab(
+  tabId: number,
+  muted: boolean
+): Promise<{ success: boolean; error?: string }> {
   try {
     await chrome.tabs.update(tabId, { muted })
     return { success: true }
@@ -1946,7 +1976,9 @@ export async function setLocalStorageItem(
 /**
  * Remove localStorage item
  */
-export async function removeLocalStorageItem(key: string): Promise<{ success: boolean; error?: string }> {
+export async function removeLocalStorageItem(
+  key: string
+): Promise<{ success: boolean; error?: string }> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (!tab?.id) {
     return { success: false, error: 'No active tab found' }
@@ -2065,11 +2097,16 @@ export async function setSessionStorageItem(
 /**
  * Get cookies for current page
  */
-export async function getCookies(
-  url?: string
-): Promise<{
+export async function getCookies(url?: string): Promise<{
   success: boolean
-  cookies?: Array<{ name: string; value: string; domain: string; path: string; secure: boolean; httpOnly: boolean }>
+  cookies?: Array<{
+    name: string
+    value: string
+    domain: string
+    path: string
+    secure: boolean
+    httpOnly: boolean
+  }>
   error?: string
 }> {
   try {
@@ -2105,7 +2142,13 @@ export async function getCookies(
 export async function setCookie(
   name: string,
   value: string,
-  options?: { domain?: string; path?: string; secure?: boolean; httpOnly?: boolean; expirationDate?: number }
+  options?: {
+    domain?: string
+    path?: string
+    secure?: boolean
+    httpOnly?: boolean
+    expirationDate?: number
+  }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -2194,7 +2237,11 @@ export async function copyToClipboard(text: string): Promise<{ success: boolean;
 /**
  * Read text from clipboard
  */
-export async function readFromClipboard(): Promise<{ success: boolean; text?: string; error?: string }> {
+export async function readFromClipboard(): Promise<{
+  success: boolean
+  text?: string
+  error?: string
+}> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (!tab?.id) {
     return { success: false, error: 'No active tab found' }
@@ -2260,8 +2307,8 @@ export async function startConsoleCapture(): Promise<{ success: boolean; error?:
         return { success: true } // Already capturing
       }
 
-      (window as any).__capturedConsoleLogs = [];
-      (window as any).__consoleCapturing = true
+      ;(window as any).__capturedConsoleLogs = []
+      ;(window as any).__consoleCapturing = true
 
       const methods = ['log', 'warn', 'error', 'info', 'debug'] as const
       const originalConsole: any = {}
@@ -2269,9 +2316,11 @@ export async function startConsoleCapture(): Promise<{ success: boolean; error?:
       methods.forEach(method => {
         originalConsole[method] = console[method]
         console[method] = (...args: any[]) => {
-          (window as any).__capturedConsoleLogs.push({
+          ;(window as any).__capturedConsoleLogs.push({
             type: method,
-            message: args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '),
+            message: args
+              .map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+              .join(' '),
             timestamp: Date.now()
           })
           originalConsole[method](...args)
@@ -2333,9 +2382,7 @@ export async function getPerformanceTiming(): Promise<{
 /**
  * Get resource timing entries
  */
-export async function getResourceTiming(
-  limit: number = 20
-): Promise<{
+export async function getResourceTiming(limit: number = 20): Promise<{
   success: boolean
   resources?: Array<{ name: string; type: string; duration: number; size: number }>
   error?: string
@@ -2372,9 +2419,7 @@ export async function getResourceTiming(
 /**
  * Get all form data from a form element
  */
-export async function getFormData(
-  selector: string
-): Promise<{
+export async function getFormData(selector: string): Promise<{
   success: boolean
   data?: Record<string, string>
   error?: string
@@ -2519,7 +2564,11 @@ export async function dismissDialog(): Promise<{ success: boolean; error?: strin
 /**
  * Get current zoom level
  */
-export async function getZoom(): Promise<{ success: boolean; zoomFactor?: number; error?: string }> {
+export async function getZoom(): Promise<{
+  success: boolean
+  zoomFactor?: number
+  error?: string
+}> {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     if (!tab?.id) {
