@@ -952,7 +952,8 @@ export async function executeScript(
       func: (jsCode: string) => {
         try {
           // eslint-disable-next-line no-eval
-          const result = eval(jsCode)
+          const indirectEval = (0, eval)
+          const result = indirectEval(jsCode)
           return { success: true, result }
         } catch (e) {
           return { success: false, error: String(e) }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted, nextTick, onBeforeUnmount } from 'vue'
 
 import LazyEmojiGrid from '../popup/components/LazyEmojiGrid.vue'
 import { usePopup } from '../popup/usePopup'
@@ -12,6 +12,12 @@ const { t } = useI18n()
 
 const activeTab = ref<'emoji' | 'agent'>('emoji')
 const hasVisitedAgent = ref(false)
+const scrollContainer = ref<HTMLElement | null>(null)
+const sidebarStateKey = ref<string | null>(null)
+const isRestoringState = ref(false)
+const hasRestoredState = ref(false)
+let persistTimer: number | null = null
+let cleanupScrollListener: (() => void) | null = null
 
 // Check for interrupted AI conversation on mount
 const AI_AGENT_STORAGE_KEY = 'ai_agent_conversation'
@@ -36,6 +42,169 @@ onMounted(() => {
 watch(activeTab, value => {
   if (value === 'agent') {
     hasVisitedAgent.value = true
+  }
+})
+
+type SidebarState = {
+  activeTab?: 'emoji' | 'agent'
+  activeGroupId?: string
+  searchQuery?: string
+  scrollTop?: number
+}
+
+const getStorageArea = () => {
+  const chromeApi = (window as any).chrome
+  if (chromeApi?.storage?.session) {
+    return { kind: 'chrome', area: chromeApi.storage.session }
+  }
+  if (chromeApi?.storage?.local) {
+    return { kind: 'chrome', area: chromeApi.storage.local }
+  }
+  return null
+}
+
+const getContextKey = async () => {
+  const chromeApi = (window as any).chrome
+  if (!chromeApi?.tabs?.query) return 'global'
+
+  try {
+    const tabs = await chromeApi.tabs.query({ active: true, currentWindow: true })
+    const tab = tabs?.[0]
+    if (!tab) return 'global'
+    const windowId = tab.windowId ?? 'unknown'
+    const tabId = tab.id ?? 'unknown'
+    return `window_${windowId}_tab_${tabId}`
+  } catch {
+    return 'global'
+  }
+}
+
+const readSidebarState = async (): Promise<SidebarState | null> => {
+  if (!sidebarStateKey.value) return null
+
+  const storage = getStorageArea()
+  if (storage?.kind === 'chrome') {
+    const result = await storage.area.get(sidebarStateKey.value)
+    return result?.[sidebarStateKey.value] ?? null
+  }
+
+  const raw = localStorage.getItem(sidebarStateKey.value)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+const writeSidebarState = async (state: SidebarState) => {
+  if (!sidebarStateKey.value) return
+
+  const storage = getStorageArea()
+  if (storage?.kind === 'chrome') {
+    await storage.area.set({ [sidebarStateKey.value]: state })
+    return
+  }
+
+  localStorage.setItem(sidebarStateKey.value, JSON.stringify(state))
+}
+
+const schedulePersistState = (override?: Partial<SidebarState>) => {
+  if (isRestoringState.value) return
+
+  if (persistTimer) {
+    window.clearTimeout(persistTimer)
+  }
+
+  persistTimer = window.setTimeout(() => {
+    persistTimer = null
+    void persistSidebarState(override)
+  }, 150)
+}
+
+const persistSidebarState = async (override?: Partial<SidebarState>) => {
+  if (isRestoringState.value) return
+  if (!sidebarStateKey.value) return
+
+  const state: SidebarState = {
+    activeTab: activeTab.value,
+    activeGroupId: emojiStore.activeGroupId,
+    searchQuery: emojiStore.searchQuery,
+    scrollTop: scrollContainer.value?.scrollTop ?? 0,
+    ...override
+  }
+
+  await writeSidebarState(state)
+}
+
+const restoreSidebarState = async () => {
+  isRestoringState.value = true
+  try {
+    const state = await readSidebarState()
+    if (!state) return
+
+    if (state.activeTab === 'emoji' || state.activeTab === 'agent') {
+      activeTab.value = state.activeTab
+    }
+    if (state.activeGroupId) {
+      emojiStore.activeGroupId = state.activeGroupId
+    }
+    if (typeof state.searchQuery === 'string') {
+      emojiStore.searchQuery = state.searchQuery
+    }
+
+    await nextTick()
+    if (typeof state.scrollTop === 'number' && scrollContainer.value) {
+      scrollContainer.value.scrollTop = state.scrollTop
+    }
+  } finally {
+    isRestoringState.value = false
+  }
+}
+
+onMounted(async () => {
+  sidebarStateKey.value = `sidepanel_state_${await getContextKey()}`
+  if (!emojiStore.isLoading) {
+    await restoreSidebarState()
+    hasRestoredState.value = true
+  }
+})
+
+watch(
+  () => emojiStore.isLoading,
+  async isLoading => {
+    if (!isLoading && !hasRestoredState.value) {
+      await restoreSidebarState()
+      hasRestoredState.value = true
+    }
+  }
+)
+
+const attachScrollListener = (el: HTMLElement | null) => {
+  if (cleanupScrollListener) {
+    cleanupScrollListener()
+    cleanupScrollListener = null
+  }
+  if (!el) return
+
+  const handler = () => {
+    schedulePersistState({ scrollTop: el.scrollTop })
+  }
+
+  el.addEventListener('scroll', handler)
+  cleanupScrollListener = () => {
+    el.removeEventListener('scroll', handler)
+  }
+}
+
+watch(scrollContainer, el => {
+  attachScrollListener(el)
+})
+
+onBeforeUnmount(() => {
+  if (cleanupScrollListener) {
+    cleanupScrollListener()
+    cleanupScrollListener = null
   }
 })
 
@@ -188,6 +357,24 @@ const clearSearch = () => {
 const handleSearch = () => {
   // 搜索邏輯已經由 computed 屬性處理
 }
+
+watch(activeTab, () => {
+  schedulePersistState()
+})
+
+watch(
+  () => emojiStore.activeGroupId,
+  () => {
+    schedulePersistState()
+  }
+)
+
+watch(
+  () => emojiStore.searchQuery,
+  () => {
+    schedulePersistState()
+  }
+)
 </script>
 
 <template>
@@ -293,98 +480,102 @@ const handleSearch = () => {
 
         <!-- 表情网格 -->
         <div class="sidebar-body">
-          <!-- 搜索模式 - 顯示搜索結果 -->
-          <template v-if="searchQuery">
-            <div class="p-3">
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                {{ t('searchResultsFound', [searchQuery, filteredEmojis.length]) }}
-              </div>
-              <div v-if="filteredEmojis.length === 0" class="text-center py-8">
-                <div class="text-2xl mb-2">🔍</div>
-                <div class="text-gray-500 dark:text-gray-400">{{ t('noMatchingEmojisFound') }}</div>
-              </div>
-              <div
-                v-else
-                class="grid gap-2"
-                :style="{
-                  gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns || 6}, minmax(0, 1fr))`
-                }"
-              >
+          <div ref="scrollContainer" class="sidebar-scroll">
+            <!-- 搜索模式 - 顯示搜索結果 -->
+            <template v-if="searchQuery">
+              <div class="p-3">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  {{ t('searchResultsFound', [searchQuery, filteredEmojis.length]) }}
+                </div>
+                <div v-if="filteredEmojis.length === 0" class="text-center py-8">
+                  <div class="text-2xl mb-2">🔍</div>
+                  <div class="text-gray-500 dark:text-gray-400">
+                    {{ t('noMatchingEmojisFound') }}
+                  </div>
+                </div>
                 <div
-                  v-for="emoji in filteredEmojis"
-                  :key="emoji.id"
-                  @click="handleEmojiClick(emoji)"
-                  class="relative group cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-                  :title="`${emoji.name} (${emoji.groupName})\\n${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
+                  v-else
+                  class="grid gap-2"
+                  :style="{
+                    gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns || 6}, minmax(0, 1fr))`
+                  }"
                 >
-                  <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
-                    <img
-                      :src="getSearchEmojiSrc(emoji)"
-                      :alt="emoji.name"
-                      class="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div class="text-xs text-center text-gray-600 dark:text-white mt-1 truncate">
-                    {{ emoji.name }}
-                  </div>
-                  <!-- 標籤顯示 -->
-                  <div v-if="emoji.tags && emoji.tags.length > 0" class="mt-1">
-                    <div class="flex flex-wrap gap-1">
-                      <span
-                        v-for="tag in emoji.tags.slice(0, 2)"
-                        :key="tag"
-                        class="inline-block px-1 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded"
-                      >
-                        {{ tag }}
-                      </span>
-                      <span v-if="emoji.tags.length > 2" class="text-xs text-gray-400">
-                        +{{ emoji.tags.length - 2 }}
-                      </span>
+                  <div
+                    v-for="emoji in filteredEmojis"
+                    :key="emoji.id"
+                    @click="handleEmojiClick(emoji)"
+                    class="relative group cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                    :title="`${emoji.name} (${emoji.groupName})\\n${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
+                  >
+                    <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
+                      <img
+                        :src="getSearchEmojiSrc(emoji)"
+                        :alt="emoji.name"
+                        class="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div class="text-xs text-center text-gray-600 dark:text-white mt-1 truncate">
+                      {{ emoji.name }}
+                    </div>
+                    <!-- 標籤顯示 -->
+                    <div v-if="emoji.tags && emoji.tags.length > 0" class="mt-1">
+                      <div class="flex flex-wrap gap-1">
+                        <span
+                          v-for="tag in emoji.tags.slice(0, 2)"
+                          :key="tag"
+                          class="inline-block px-1 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded"
+                        >
+                          {{ tag }}
+                        </span>
+                        <span v-if="emoji.tags.length > 2" class="text-xs text-gray-400">
+                          +{{ emoji.tags.length - 2 }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </template>
+            </template>
 
-          <!-- 虛擬分組 - 所有表情 -->
-          <template v-else-if="emojiStore.activeGroupId === 'all-emojis'">
-            <div class="p-3">
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                {{ t('showAllEmojis', [getCurrentGroupEmojis('all-emojis').length]) }}
+            <!-- 虛擬分組 - 所有表情 -->
+            <template v-else-if="emojiStore.activeGroupId === 'all-emojis'">
+              <div class="p-3">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  {{ t('showAllEmojis', [getCurrentGroupEmojis('all-emojis').length]) }}
+                </div>
+                <LazyEmojiGrid
+                  :emojis="getCurrentGroupEmojis('all-emojis')"
+                  :isLoading="emojiStore.isLoading"
+                  :favorites="emojiStore.favorites"
+                  :gridColumns="emojiStore.settings.gridColumns"
+                  :emptyMessage="t('noEmojisYet')"
+                  :showAddButton="false"
+                  groupId="all-emojis"
+                  isActive
+                  @select="selectEmoji"
+                  @openOptions="openOptions"
+                />
               </div>
+            </template>
+
+            <!-- 普通分組 -->
+            <template v-else-if="activeGroup">
               <LazyEmojiGrid
-                :emojis="getCurrentGroupEmojis('all-emojis')"
+                :key="activeGroup.id"
+                :emojis="activeGroup.emojis || []"
                 :isLoading="emojiStore.isLoading"
                 :favorites="emojiStore.favorites"
                 :gridColumns="emojiStore.settings.gridColumns"
-                :emptyMessage="t('noEmojisYet')"
-                :showAddButton="false"
-                groupId="all-emojis"
+                :emptyMessage="t('groupHasNoEmojisInDetail')"
+                showAddButton
+                :groupId="activeGroup.id"
                 isActive
                 @select="selectEmoji"
                 @openOptions="openOptions"
               />
-            </div>
-          </template>
-
-          <!-- 普通分組 -->
-          <template v-else-if="activeGroup">
-            <LazyEmojiGrid
-              :key="activeGroup.id"
-              :emojis="activeGroup.emojis || []"
-              :isLoading="emojiStore.isLoading"
-              :favorites="emojiStore.favorites"
-              :gridColumns="emojiStore.settings.gridColumns"
-              :emptyMessage="t('groupHasNoEmojisInDetail')"
-              showAddButton
-              :groupId="activeGroup.id"
-              isActive
-              @select="selectEmoji"
-              @openOptions="openOptions"
-            />
-          </template>
+            </template>
+          </div>
         </div>
 
         <!-- 复制成功提示 -->
@@ -508,10 +699,12 @@ body,
   overflow: hidden;
 }
 
-.sidebar-body > * {
+.sidebar-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (min-width: 768px) {
