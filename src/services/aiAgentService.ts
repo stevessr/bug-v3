@@ -39,6 +39,13 @@ export interface AgentMessage {
   content: string | AgentContentBlock[]
 }
 
+export interface AgentResumeState {
+  messages: AgentMessage[]
+  steps: AgentStep[]
+  stepCount: number
+  subagentCounter?: number
+}
+
 export interface AgentContentBlock {
   type: 'text' | 'image' | 'tool_use' | 'tool_result'
   text?: string
@@ -2956,11 +2963,19 @@ export async function runAgent(
   task: string,
   onStatus: AgentStatusCallback,
   abortSignal?: AbortSignal,
-  maxSteps: number = 30
-): Promise<{ success: boolean; steps: AgentStep[]; error?: string }> {
-  const steps: AgentStep[] = []
-  const messages: AgentMessage[] = []
-  let stepCount = 0
+  maxSteps: number = 30,
+  resumeState?: AgentResumeState
+): Promise<{
+  success: boolean
+  steps: AgentStep[]
+  error?: string
+  resumeState?: AgentResumeState
+}> {
+  // Initialize from resume state or fresh
+  const steps: AgentStep[] = resumeState?.steps ? [...resumeState.steps] : []
+  const messages: AgentMessage[] = resumeState?.messages ? [...resumeState.messages] : []
+  let stepCount = resumeState?.stepCount || 0
+  let subagentCounter = resumeState?.subagentCounter || 0
 
   // Initialize MCP clients if configured
   let mcpClients = new Map<string, McpClient>()
@@ -2992,9 +3007,11 @@ export async function runAgent(
     }
   }
 
-  messages.push({
-    role: 'user',
-    content: `Task: ${task}
+  // Only add initial message if not resuming
+  if (!resumeState) {
+    messages.push({
+      role: 'user',
+      content: `Task: ${task}
 
 IMPORTANT OPTIMIZATION GUIDANCE:
 - PROACTIVELY identify tasks that can run in PARALLEL
@@ -3008,16 +3025,26 @@ IMPORTANT OPTIMIZATION GUIDANCE:
 - Think: "Can I do multiple things at once?" before planning sequential steps
 
 Start by taking a screenshot to see the current state of the browser.`
-  })
+    })
+  } else {
+    log.info(`Resuming agent from step ${stepCount} with ${messages.length} messages`)
+  }
 
   // Track running subagents
   const runningSubagents = new Map<string, Promise<SubagentStatus>>()
   const completedSubagents = new Map<string, SubagentStatus>()
-  let subagentCounter = 0
+
+  // Helper to build current resume state
+  const buildResumeState = (): AgentResumeState => ({
+    messages: [...messages],
+    steps: [...steps],
+    stepCount,
+    subagentCounter
+  })
 
   while (stepCount < maxSteps) {
     if (abortSignal?.aborted) {
-      return { success: false, steps, error: 'Task was cancelled' }
+      return { success: false, steps, error: 'Task was cancelled', resumeState: buildResumeState() }
     }
 
     stepCount++
@@ -3029,7 +3056,7 @@ Start by taking a screenshot to see the current state of the browser.`
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       log.error('Claude API call failed:', errorMessage)
-      return { success: false, steps, error: errorMessage }
+      return { success: false, steps, error: errorMessage, resumeState: buildResumeState() }
     }
 
     const step: AgentStep = {}
@@ -3370,7 +3397,7 @@ Start by taking a screenshot to see the current state of the browser.`
     }
   }
 
-  return { success: false, steps, error: 'Maximum steps reached' }
+  return { success: false, steps, error: 'Maximum steps reached', resumeState: buildResumeState() }
 }
 
 /**

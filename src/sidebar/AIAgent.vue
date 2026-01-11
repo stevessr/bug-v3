@@ -28,7 +28,8 @@ import {
   type AgentConfig,
   type AgentStep,
   type AgentAction,
-  type SubagentStatus
+  type SubagentStatus,
+  type AgentResumeState
 } from '@/services/aiAgentService'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { useI18n } from '@/utils/i18n'
@@ -51,6 +52,8 @@ const abortController = ref<AbortController | null>(null)
 const expandedScreenshots = ref<Set<number>>(new Set())
 const subagents = ref<SubagentStatus[]>([])
 const expandedSubagents = ref<Set<string>>(new Set())
+const currentResumeState = ref<AgentResumeState | null>(null)
+const originalTask = ref('')
 
 // Persistent conversation state
 interface PersistedConversation {
@@ -61,6 +64,7 @@ interface PersistedConversation {
   timestamp: number
   config: AgentConfig
   subagents: SubagentStatus[]
+  resumeState?: AgentResumeState
 }
 
 const STORAGE_KEY = 'ai_agent_conversation'
@@ -70,7 +74,7 @@ const CONVERSATION_TIMEOUT = 24 * 60 * 60 * 1000 // 24 hours
 const saveConversation = () => {
   try {
     const conversation: PersistedConversation = {
-      task: steps.value[0]?.thinking?.replace(/^.*?: /, '') || '',
+      task: originalTask.value || steps.value[0]?.thinking?.replace(/^.*?: /, '') || '',
       steps: steps.value,
       currentStep: currentStep.value,
       isRunning: isRunning.value,
@@ -85,7 +89,8 @@ const saveConversation = () => {
         enabledBuiltinTools: enabledBuiltinTools.value,
         enableMcpTools: enableMcpTools.value
       },
-      subagents: subagents.value
+      subagents: subagents.value,
+      resumeState: currentResumeState.value || undefined
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversation))
   } catch (error) {
@@ -342,9 +347,9 @@ watch([currentStep, currentThinking, currentScreenshot], () => {
 // Watch steps and save to localStorage when changed (debounced to avoid excessive saves)
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 watch(
-  [steps, currentStep, isRunning, subagents],
+  [steps, currentStep, isRunning, subagents, currentResumeState],
   () => {
-    if (steps.value.length > 0) {
+    if (steps.value.length > 0 || currentResumeState.value) {
       // Debounce saves to avoid triggering too frequently
       if (saveTimeout) clearTimeout(saveTimeout)
       saveTimeout = setTimeout(() => {
@@ -356,12 +361,22 @@ watch(
 )
 
 // Initialize: Check for interrupted conversation
-onMounted(() => {
+onMounted(async () => {
   const saved = loadConversation()
   if (saved && saved.isRunning) {
     // Conversation was interrupted
-    wasInterrupted.value = true
     savedConversation.value = saved
+
+    // If we have a resume state with messages, automatically resume
+    if (saved.resumeState && saved.resumeState.messages.length > 0) {
+      // Auto-resume after a short delay to allow UI to render
+      setTimeout(() => {
+        resumeConversation()
+      }, 500)
+    } else {
+      // No resume state, just show the notice
+      wasInterrupted.value = true
+    }
   }
 })
 
@@ -377,17 +392,86 @@ onBeforeUnmount(() => {
 const resumeConversation = async () => {
   if (!savedConversation.value) return
 
+  const saved = savedConversation.value
+
   // Restore state
-  steps.value = savedConversation.value.steps
-  currentStep.value = savedConversation.value.currentStep
-  subagents.value = savedConversation.value.subagents
+  steps.value = saved.steps
+  currentStep.value = saved.currentStep
+  subagents.value = saved.subagents
+  originalTask.value = saved.task
 
   // Continue from where we left off
   wasInterrupted.value = false
 
-  // Note: We can't actually resume the agent execution because it's a streaming API
-  // But we preserve the conversation history for the user to see
-  errorMessage.value = '对话已从中断处恢复。请重新提交任务以继续。'
+  // If we have a resume state, actually continue the agent execution
+  if (saved.resumeState && saved.resumeState.messages.length > 0) {
+    const config: AgentConfig = {
+      apiKey: saved.config.apiKey || apiKey.value,
+      baseUrl: saved.config.baseUrl || baseUrl.value,
+      model: saved.config.model || model.value,
+      imageModel: saved.config.imageModel || imageModel.value || undefined,
+      maxTokens: saved.config.maxTokens || maxTokens.value,
+      mcpServers: saved.config.mcpServers || mcpServers.value,
+      targetTabId: targetTabId.value,
+      enabledBuiltinTools: saved.config.enabledBuiltinTools || enabledBuiltinTools.value,
+      enableMcpTools: saved.config.enableMcpTools ?? enableMcpTools.value
+    }
+
+    isRunning.value = true
+    errorMessage.value = ''
+    abortController.value = new AbortController()
+
+    try {
+      const result = await runAgent(
+        config,
+        saved.task,
+        status => {
+          currentStep.value = status.step
+          if (status.thinking) {
+            currentThinking.value = status.thinking
+          }
+          if (status.action) {
+            currentAction.value = status.action
+          }
+          if (status.screenshot) {
+            currentScreenshot.value = status.screenshot
+          }
+          if (status.subagents) {
+            subagents.value = status.subagents
+          }
+        },
+        abortController.value.signal,
+        maxSteps.value,
+        saved.resumeState
+      )
+
+      // Merge steps - keep the first step (task), then add result steps
+      steps.value = [steps.value[0], ...result.steps]
+
+      // Update resume state for next potential interruption
+      if (result.resumeState) {
+        currentResumeState.value = result.resumeState
+      }
+
+      if (!result.success && result.error) {
+        errorMessage.value = result.error
+      }
+    } catch (error) {
+      errorMessage.value = error instanceof Error ? error.message : String(error)
+    } finally {
+      isRunning.value = false
+      abortController.value = null
+      currentThinking.value = ''
+      currentAction.value = null
+      // Clear persisted conversation on successful completion
+      if (!errorMessage.value) {
+        clearPersistedConversation()
+      }
+    }
+  } else {
+    // No resume state available, just show the history
+    errorMessage.value = '对话历史已恢复，但无法继续执行。请重新提交任务。'
+  }
 }
 
 // Dismiss the interrupted conversation notice
@@ -452,11 +536,13 @@ async function startTask() {
   currentAction.value = null
   currentScreenshot.value = ''
   expandedScreenshots.value = new Set()
+  currentResumeState.value = null
 
   abortController.value = new AbortController()
 
   const task = taskInput.value
   taskInput.value = ''
+  originalTask.value = task
 
   // 添加任务作为第一个步骤
   steps.value.push({ thinking: `${t('aiAgentTask')}: ${task}` })
@@ -486,6 +572,11 @@ async function startTask() {
 
     steps.value = [steps.value[0], ...result.steps]
 
+    // Update resume state for potential future resumption
+    if (result.resumeState) {
+      currentResumeState.value = result.resumeState
+    }
+
     if (!result.success && result.error) {
       errorMessage.value = result.error
     }
@@ -496,8 +587,12 @@ async function startTask() {
     abortController.value = null
     currentThinking.value = ''
     currentAction.value = null
-    // Clear persisted conversation on successful completion
-    clearPersistedConversation()
+    // Only clear persisted conversation on successful completion
+    if (!errorMessage.value) {
+      clearPersistedConversation()
+      currentResumeState.value = null
+      originalTask.value = ''
+    }
   }
 }
 
