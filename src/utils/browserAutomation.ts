@@ -951,9 +951,8 @@ export async function executeScript(
       target: { tabId: tab.id },
       func: (jsCode: string) => {
         try {
-          // eslint-disable-next-line no-eval
-          const indirectEval = (0, eval)
-          const result = indirectEval(jsCode)
+          const fn = new Function(`"use strict";\n${jsCode}`)
+          const result = fn()
           return { success: true, result }
         } catch (e) {
           return { success: false, error: String(e) }
