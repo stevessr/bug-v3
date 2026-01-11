@@ -14,6 +14,43 @@ const activeTab = ref<'emoji' | 'agent'>('emoji')
 
 const { emojiStore, showCopyToast, selectEmoji, openOptions } = usePopup({ manageUrl: false })
 
+// 搜索功能
+const searchQuery = computed({
+  get: () => emojiStore.searchQuery,
+  set: (value: string) => {
+    emojiStore.searchQuery = value
+  }
+})
+
+// 過濾後的表情（支持按名稱和標籤搜索）
+const filteredEmojis = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return []
+  }
+
+  const query = searchQuery.value.toLowerCase()
+  const allEmojis: Array<any> = []
+
+  // 收集所有表情
+  emojiStore.sortedGroups.forEach(group => {
+    group.emojis?.forEach(emoji => {
+      // 按名稱搜索
+      const nameMatch = emoji.name.toLowerCase().includes(query)
+      // 按標籤搜索
+      const tagMatch = emoji.tags?.some((tag: string) => tag.toLowerCase().includes(query))
+
+      if (nameMatch || tagMatch) {
+        allEmojis.push({
+          ...emoji,
+          groupName: group.name
+        })
+      }
+    })
+  })
+
+  return allEmojis
+})
+
 // 使用 useEmojiImages 处理搜索结果的图片缓存
 const { imageSources: searchImageSources, getImageSrcSync } = useEmojiImages(
   () => filteredEmojis.value,
@@ -87,43 +124,6 @@ const virtualGroups = computed(() => [
 // 組合所有分組（虛擬 + 真實）- kept for potential future use
 // @ts-expect-error kept for API compatibility
 const _allGroups = computed(() => [...virtualGroups.value, ...emojiStore.sortedGroups])
-
-// 搜索功能
-const searchQuery = computed({
-  get: () => emojiStore.searchQuery,
-  set: (value: string) => {
-    emojiStore.searchQuery = value
-  }
-})
-
-// 過濾後的表情（支持按名稱和標籤搜索）
-const filteredEmojis = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return []
-  }
-
-  const query = searchQuery.value.toLowerCase()
-  const allEmojis: Array<any> = []
-
-  // 收集所有表情
-  emojiStore.sortedGroups.forEach(group => {
-    group.emojis?.forEach(emoji => {
-      // 按名稱搜索
-      const nameMatch = emoji.name.toLowerCase().includes(query)
-      // 按標籤搜索
-      const tagMatch = emoji.tags?.some((tag: string) => tag.toLowerCase().includes(query))
-
-      if (nameMatch || tagMatch) {
-        allEmojis.push({
-          ...emoji,
-          groupName: group.name
-        })
-      }
-    })
-  })
-
-  return allEmojis
-})
 
 // 判斷是否為虛擬分組 - kept for potential future use
 // @ts-expect-error kept for API compatibility
