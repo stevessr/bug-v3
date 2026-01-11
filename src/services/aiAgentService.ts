@@ -3014,48 +3014,44 @@ async function runSubagent(
 
   const messages: AgentMessage[] = []
   let stepCount = 0
-  let ownedTabId: number | undefined = undefined // Tab created by this subagent
+  let ownedWindowId: number | undefined = undefined // Window created by this subagent
+  let ownedTabId: number | undefined = undefined // Tab in the created window
   let workingTabId: number | undefined = tabId // Tab to operate on
 
-  // Create a new tab for this subagent if no specific tab is provided
-  // This prevents subagents from competing for the same tab
+  // Create a new window for this subagent if no specific tab is provided
+  // This prevents subagents from competing for the same window and avoids sidebar refresh
   if (tabId === undefined) {
     try {
-      // Create a new tab - start with the base URL if provided, otherwise about:blank
-      const createResult = await browserAutomation.createTab(baseUrl || 'about:blank', false)
-      if (createResult.success && createResult.tabId) {
+      // Create a new window (not just tab) to avoid affecting the main window's sidebar
+      // Use focused: false to avoid stealing focus from main window
+      const createResult = await browserAutomation.createWindow(baseUrl || 'about:blank', 'normal', false)
+      if (createResult.success && createResult.windowId && createResult.tabId) {
+        ownedWindowId = createResult.windowId
         ownedTabId = createResult.tabId
         workingTabId = createResult.tabId
-        log.info(`[${subagentId}] Created new tab ${ownedTabId} for subagent`)
+        log.info(`[${subagentId}] Created new window ${ownedWindowId} with tab ${ownedTabId} for subagent`)
       }
     } catch (e) {
-      log.warn(`[${subagentId}] Failed to create tab for subagent:`, e)
-      // Continue without dedicated tab - will use active tab
+      log.warn(`[${subagentId}] Failed to create window for subagent:`, e)
+      // Continue without dedicated window - will use active tab
     }
   }
 
-  // Switch to working tab if we have one
-  if (workingTabId !== undefined) {
-    try {
-      await browserAutomation.switchToTab(workingTabId)
-    } catch (e) {
-      log.warn(`[${subagentId}] Failed to switch to tab ${workingTabId}:`, e)
-    }
-  }
+  // No need to switch tabs - the new window is already active in its own context
 
   messages.push({
     role: 'user',
-    content: `Subagent Task: ${task}\n\nYou are a subagent running in parallel with your own dedicated browser tab. Complete this specific task and report back.\nIMPORTANT: You are operating in tab ${workingTabId || 'active'}. Stay in this tab unless the task requires navigating elsewhere.\nStart by taking a screenshot to see the current state.`
+    content: `Subagent Task: ${task}\n\nYou are a subagent running in parallel with your own dedicated browser window. Complete this specific task and report back.\nIMPORTANT: You are operating in tab ${workingTabId || 'active'}. Stay in this tab unless the task requires navigating elsewhere.\nStart by taking a screenshot to see the current state.`
   })
 
-  // Cleanup function to close owned tab
+  // Cleanup function to close owned window (which also closes the tab)
   const cleanup = async () => {
-    if (ownedTabId !== undefined) {
+    if (ownedWindowId !== undefined) {
       try {
-        await browserAutomation.closeTab(ownedTabId)
-        log.info(`[${subagentId}] Closed owned tab ${ownedTabId}`)
+        await browserAutomation.closeWindow(ownedWindowId)
+        log.info(`[${subagentId}] Closed owned window ${ownedWindowId}`)
       } catch (e) {
-        log.warn(`[${subagentId}] Failed to close owned tab:`, e)
+        log.warn(`[${subagentId}] Failed to close owned window:`, e)
       }
     }
   }

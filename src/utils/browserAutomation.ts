@@ -1857,11 +1857,13 @@ export async function getAllWindows(): Promise<{
  */
 export async function createWindow(
   url?: string,
-  type: 'normal' | 'popup' = 'normal'
-): Promise<{ success: boolean; windowId?: number; error?: string }> {
+  type: 'normal' | 'popup' = 'normal',
+  focused: boolean = true
+): Promise<{ success: boolean; windowId?: number; tabId?: number; error?: string }> {
   try {
-    const window = await chrome.windows.create({ url, type, focused: true })
-    return { success: true, windowId: window?.id }
+    const window = await chrome.windows.create({ url, type, focused })
+    const tabId = window?.tabs?.[0]?.id
+    return { success: true, windowId: window?.id, tabId }
   } catch (e) {
     return { success: false, error: String(e) }
   }
