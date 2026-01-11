@@ -37,6 +37,8 @@ export interface AppSettings {
   // Tools enablement
   claudeEnabledBuiltinTools?: string[] // Enabled built-in tools (default: all)
   claudeEnableMcpTools?: boolean // Enable MCP provided tools (default: true)
+  claudeEnableImageInput?: boolean // Enable image input for AI assistant (default: false)
+  claudeAllowSubagentPopup?: boolean // Allow subagent to open popup tabs (default: true)
   // ntfy.sh notification settings
   ntfyServer?: string // ntfy server URL (default: https://ntfy.sh)
   ntfyTopic?: string // Default ntfy topic

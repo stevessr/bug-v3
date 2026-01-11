@@ -32,6 +32,8 @@ export interface AgentConfig {
   maxConcurrentSubagents?: number // Maximum concurrent subagents (default: 5)
   subagentTimeout?: number // Subagent timeout in milliseconds (default: 120000)
   ntfy?: NtfyConfig // ntfy.sh notification configuration
+  initialImages?: Array<{ base64: string; mediaType?: string }> // Images to include with initial message
+  allowSubagentPopup?: boolean // Allow subagents to open popup tabs (default: true)
 }
 
 export interface AgentMessage {
@@ -2897,42 +2899,44 @@ async function callClaudeAPI(
   })
 
   // Clean and validate messages to ensure proper format
-  const cleanedMessages = messages.map(msg => {
-    if (Array.isArray(msg.content)) {
-      // Filter out invalid content blocks and ensure proper structure
-      const validContent = msg.content.filter(block => {
-        if (block.type === 'text') {
-          return block.text !== undefined && block.text !== ''
+  const cleanedMessages = messages
+    .map(msg => {
+      if (Array.isArray(msg.content)) {
+        // Filter out invalid content blocks and ensure proper structure
+        const validContent = msg.content.filter(block => {
+          if (block.type === 'text') {
+            return block.text !== undefined && block.text !== ''
+          }
+          if (block.type === 'tool_use') {
+            return block.id && block.name
+          }
+          if (block.type === 'tool_result') {
+            return block.tool_use_id !== undefined
+          }
+          if (block.type === 'image') {
+            return block.source?.data
+          }
+          return true
+        })
+        // If no valid content, add a placeholder
+        if (validContent.length === 0) {
+          return { ...msg, content: [{ type: 'text', text: '...' }] }
         }
-        if (block.type === 'tool_use') {
-          return block.id && block.name
-        }
-        if (block.type === 'tool_result') {
-          return block.tool_use_id !== undefined
-        }
-        if (block.type === 'image') {
-          return block.source?.data
-        }
-        return true
-      })
-      // If no valid content, add a placeholder
-      if (validContent.length === 0) {
-        return { ...msg, content: [{ type: 'text', text: '...' }] }
+        return { ...msg, content: validContent }
       }
-      return { ...msg, content: validContent }
-    }
-    // String content
-    if (typeof msg.content === 'string' && msg.content.trim() === '') {
-      return { ...msg, content: '...' }
-    }
-    return msg
-  }).filter(msg => {
-    // Remove messages with completely invalid content
-    if (Array.isArray(msg.content)) {
-      return msg.content.length > 0
-    }
-    return msg.content !== undefined
-  })
+      // String content
+      if (typeof msg.content === 'string' && msg.content.trim() === '') {
+        return { ...msg, content: '...' }
+      }
+      return msg
+    })
+    .filter(msg => {
+      // Remove messages with completely invalid content
+      if (Array.isArray(msg.content)) {
+        return msg.content.length > 0
+      }
+      return msg.content !== undefined
+    })
 
   let lastError: Error | null = null
 
@@ -3076,11 +3080,23 @@ async function runSubagent(
   let ownedWindowId: number | undefined = undefined // Window created by this subagent
   let workingTabId: number | undefined = tabId // Tab to operate on
 
+  // Check if subagent popups are allowed (default: true)
+  const allowPopup = config.allowSubagentPopup !== false
+
   // Lazy window creation - only create when first browser tool is used
   const ensureOwnWindow = async (): Promise<number | undefined> => {
     if (workingTabId !== undefined) {
       return workingTabId
     }
+
+    // If popups are not allowed, don't create a window
+    if (!allowPopup) {
+      log.warn(
+        `[${subagentId}] Subagent popups are disabled, cannot create window for browser tools`
+      )
+      return undefined
+    }
+
     // Create a new window (not just tab) to avoid affecting the main window's sidebar
     try {
       const createResult = await browserAutomation.createWindow(
@@ -3104,7 +3120,9 @@ async function runSubagent(
 
   messages.push({
     role: 'user',
-    content: `Subagent Task: ${task}\n\nYou are a subagent running in parallel. Complete this specific task and report back.\nIf you need to use browser tools (screenshot, click, navigate, etc.), a dedicated browser window will be created for you.\nIMPORTANT: Focus on completing the task efficiently.`
+    content: allowPopup
+      ? `Subagent Task: ${task}\n\nYou are a subagent running in parallel. Complete this specific task and report back.\nIf you need to use browser tools (screenshot, click, navigate, etc.), a dedicated browser window will be created for you.\nIMPORTANT: Focus on completing the task efficiently.`
+      : `Subagent Task: ${task}\n\nYou are a subagent running in parallel. Complete this specific task and report back.\nNOTE: Browser popup windows are disabled. You should avoid using browser tools that require a visual context. Focus on non-browser tasks or use provided information.\nIMPORTANT: Focus on completing the task efficiently.`
   })
 
   // Cleanup function to close owned window (which also closes the tab)
@@ -3367,9 +3385,27 @@ export async function runAgent(
 
   // Only add initial message if not resuming
   if (!resumeState) {
-    messages.push({
-      role: 'user',
-      content: `Task: ${task}
+    // Build initial message content with optional images
+    const initialContent: AgentContentBlock[] = []
+
+    // Add images if provided
+    if (config.initialImages && config.initialImages.length > 0) {
+      for (const img of config.initialImages) {
+        initialContent.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.mediaType || 'image/png',
+            data: img.base64
+          }
+        })
+      }
+    }
+
+    // Add the task text
+    initialContent.push({
+      type: 'text',
+      text: `Task: ${task}
 
 IMPORTANT OPTIMIZATION GUIDANCE:
 - PROACTIVELY identify tasks that can run in PARALLEL
@@ -3383,6 +3419,11 @@ IMPORTANT OPTIMIZATION GUIDANCE:
 - Think: "Can I do multiple things at once?" before planning sequential steps
 
 Start by taking a screenshot to see the current state of the browser.`
+    })
+
+    messages.push({
+      role: 'user',
+      content: initialContent
     })
   } else {
     log.info(`Resuming agent from step ${stepCount} with ${messages.length} messages`)

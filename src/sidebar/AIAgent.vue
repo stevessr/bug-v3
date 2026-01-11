@@ -17,7 +17,8 @@ import {
   PlusOutlined,
   ApiOutlined,
   ExpandOutlined,
-  EditOutlined
+  EditOutlined,
+  PictureOutlined
 } from '@ant-design/icons-vue'
 
 import type { McpServerConfig } from '@/types/type'
@@ -86,29 +87,30 @@ const saveConversation = () => {
     let cleanResumeState = currentResumeState.value
     if (cleanResumeState) {
       // Filter and clean messages, removing images and empty content
-      const cleanedMessages = cleanResumeState.messages.slice(-10).map(msg => {
-        if (Array.isArray(msg.content)) {
-          // Filter out images and keep valid content blocks
-          const filteredContent = msg.content
-            .filter(c => c.type !== 'image')
-            .slice(-5)
-          // If no content left after filtering, create a placeholder text
-          if (filteredContent.length === 0) {
-            return {
-              ...msg,
-              content: [{ type: 'text' as const, text: '[Content removed for storage]' }]
+      const cleanedMessages = cleanResumeState.messages
+        .slice(-10)
+        .map(msg => {
+          if (Array.isArray(msg.content)) {
+            // Filter out images and keep valid content blocks
+            const filteredContent = msg.content.filter(c => c.type !== 'image').slice(-5)
+            // If no content left after filtering, create a placeholder text
+            if (filteredContent.length === 0) {
+              return {
+                ...msg,
+                content: [{ type: 'text' as const, text: '[Content removed for storage]' }]
+              }
             }
+            return { ...msg, content: filteredContent }
           }
-          return { ...msg, content: filteredContent }
-        }
-        return msg
-      }).filter(msg => {
-        // Remove messages with invalid content
-        if (Array.isArray(msg.content)) {
-          return msg.content.length > 0
-        }
-        return msg.content !== undefined && msg.content !== ''
-      }) as typeof cleanResumeState.messages
+          return msg
+        })
+        .filter(msg => {
+          // Remove messages with invalid content
+          if (Array.isArray(msg.content)) {
+            return msg.content.length > 0
+          }
+          return msg.content !== undefined && msg.content !== ''
+        }) as typeof cleanResumeState.messages
 
       cleanResumeState = {
         ...cleanResumeState,
@@ -239,6 +241,86 @@ const enableMcpTools = computed({
   get: () => emojiStore.settings.claudeEnableMcpTools !== false, // Default to true
   set: (value: boolean) => emojiStore.updateSettings({ claudeEnableMcpTools: value })
 })
+
+// Image input toggle
+const enableImageInput = computed({
+  get: () => emojiStore.settings.claudeEnableImageInput === true, // Default to false
+  set: (value: boolean) => emojiStore.updateSettings({ claudeEnableImageInput: value })
+})
+
+// Subagent popup toggle
+const allowSubagentPopup = computed({
+  get: () => emojiStore.settings.claudeAllowSubagentPopup !== false, // Default to true
+  set: (value: boolean) => emojiStore.updateSettings({ claudeAllowSubagentPopup: value })
+})
+
+// Image attachment for input
+const inputImages = ref<Array<{ id: string; base64: string; name: string }>>([])
+const imageInputRef = ref<HTMLInputElement | null>(null)
+
+// Handle image file selection
+function handleImageSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files) return
+
+  Array.from(input.files).forEach(file => {
+    if (!file.type.startsWith('image/')) return
+
+    const reader = new FileReader()
+    reader.onload = e => {
+      const result = e.target?.result as string
+      // Extract base64 data without the data URL prefix
+      const base64 = result.split(',')[1]
+      inputImages.value.push({
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        base64,
+        name: file.name
+      })
+    }
+    reader.readAsDataURL(file)
+  })
+
+  // Reset input for re-selection
+  input.value = ''
+}
+
+// Handle paste event for images
+function handlePaste(event: ClipboardEvent) {
+  if (!enableImageInput.value) return
+
+  const items = event.clipboardData?.items
+  if (!items) return
+
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      event.preventDefault()
+      const file = item.getAsFile()
+      if (!file) continue
+
+      const reader = new FileReader()
+      reader.onload = e => {
+        const result = e.target?.result as string
+        const base64 = result.split(',')[1]
+        inputImages.value.push({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          base64,
+          name: `pasted-image-${Date.now()}.png`
+        })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+}
+
+// Remove an attached image
+function removeImage(id: string) {
+  inputImages.value = inputImages.value.filter(img => img.id !== id)
+}
+
+// Trigger file input click
+function triggerImageUpload() {
+  imageInputRef.value?.click()
+}
 
 // Use a stable reference for enabled tools to avoid unnecessary reactivity
 const enabledBuiltinTools = computed({
@@ -650,6 +732,12 @@ function toggleScreenshot(index: number) {
 async function startTask() {
   if (!canRun.value) return
 
+  // Prepare images for the config
+  const initialImages = inputImages.value.map(img => ({
+    base64: img.base64,
+    mediaType: 'image/png'
+  }))
+
   const config: AgentConfig = {
     apiKey: apiKey.value,
     baseUrl: baseUrl.value,
@@ -659,7 +747,9 @@ async function startTask() {
     mcpServers: mcpServers.value,
     targetTabId: targetTabId.value, // Pass target tab ID for popup window mode
     enabledBuiltinTools: enabledBuiltinTools.value,
-    enableMcpTools: enableMcpTools.value
+    enableMcpTools: enableMcpTools.value,
+    initialImages: initialImages.length > 0 ? initialImages : undefined,
+    allowSubagentPopup: allowSubagentPopup.value
   }
 
   isRunning.value = true
@@ -677,6 +767,7 @@ async function startTask() {
   const task = taskInput.value
   taskInput.value = ''
   originalTask.value = task
+  inputImages.value = [] // Clear attached images after sending
 
   // 添加任务作为第一个步骤
   steps.value.push({ thinking: `${t('aiAgentTask')}: ${task}` })
@@ -853,10 +944,10 @@ async function openInPopupWindow() {
     >
       <template #message>
         <div style="display: flex; align-items: center; justify-content: space-between">
-          <span>检测到上次对话意外中断 ({{ new Date(savedConversation.timestamp).toLocaleString() }})</span>
-          <a-button type="primary" size="small" @click="resumeConversation">
-            恢复对话
-          </a-button>
+          <span>
+            检测到上次对话意外中断 ({{ new Date(savedConversation.timestamp).toLocaleString() }})
+          </span>
+          <a-button type="primary" size="small" @click="resumeConversation">恢复对话</a-button>
         </div>
       </template>
       <template #description>
@@ -935,6 +1026,31 @@ async function openInPopupWindow() {
               {{
                 t('aiAgentEnableMcpToolsHint') ||
                 'Allow the agent to use tools provided by MCP servers'
+              }}
+            </a-typography-text>
+          </a-form-item>
+
+          <!-- Image Input Toggle -->
+          <a-form-item :label="t('aiAgentEnableImageInput') || 'Enable Image Input'">
+            <a-switch v-model:checked="enableImageInput" size="small" />
+            <a-typography-text
+              type="secondary"
+              style="font-size: 11px; display: block; margin-top: 4px"
+            >
+              {{ t('aiAgentEnableImageInputHint') || 'Allow attaching images to messages' }}
+            </a-typography-text>
+          </a-form-item>
+
+          <!-- Subagent Popup Toggle -->
+          <a-form-item :label="t('aiAgentAllowSubagentPopup') || 'Allow Subagent Popups'">
+            <a-switch v-model:checked="allowSubagentPopup" size="small" />
+            <a-typography-text
+              type="secondary"
+              style="font-size: 11px; display: block; margin-top: 4px"
+            >
+              {{
+                t('aiAgentAllowSubagentPopupHint') ||
+                'Allow subagents to open new tabs for browser operations (each runs in isolated tab)'
               }}
             </a-typography-text>
           </a-form-item>
@@ -1259,13 +1375,54 @@ async function openInPopupWindow() {
 
     <!-- Input Area -->
     <div class="input-area">
+      <!-- Image Preview Area -->
+      <div v-if="inputImages.length > 0" class="image-preview-area">
+        <div v-for="img in inputImages" :key="img.id" class="image-preview-item">
+          <img
+            :src="`data:image/png;base64,${img.base64}`"
+            :alt="img.name"
+            class="preview-thumbnail"
+          />
+          <a-button
+            type="text"
+            size="small"
+            danger
+            class="remove-image-btn"
+            @click="removeImage(img.id)"
+          >
+            <template #icon><CloseCircleOutlined /></template>
+          </a-button>
+        </div>
+      </div>
+
       <div class="input-row">
+        <!-- Hidden file input -->
+        <input
+          ref="imageInputRef"
+          type="file"
+          accept="image/*"
+          multiple
+          style="display: none"
+          @change="handleImageSelect"
+        />
+        <!-- Image upload button -->
+        <a-button
+          v-if="enableImageInput"
+          type="text"
+          class="image-btn"
+          :disabled="isRunning || !isConfigured"
+          @click="triggerImageUpload"
+          :title="t('aiAgentAttachImage') || 'Attach image'"
+        >
+          <template #icon><PictureOutlined /></template>
+        </a-button>
         <a-textarea
           v-model:value="taskInput"
           :placeholder="t('aiAgentInputPlaceholder')"
           :auto-size="{ minRows: 1, maxRows: 4 }"
           :disabled="isRunning || !isConfigured"
           @keydown.enter.exact.prevent="startTask"
+          @paste="handlePaste"
           class="task-input"
         />
         <a-button
@@ -1902,5 +2059,50 @@ async function openInPopupWindow() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Image Preview Area */
+.image-preview-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.image-preview-item {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color, #e8e5e0);
+}
+
+.preview-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 12px;
+  background: var(--card-bg, #fff);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.image-btn {
+  flex-shrink: 0;
+  color: var(--text-secondary, #6b6b6b);
+}
+
+.image-btn:hover:not(:disabled) {
+  color: var(--accent-color, #d97706);
 }
 </style>
