@@ -194,6 +194,9 @@ export type AgentStatusCallback = (status: {
   action?: AgentAction
   screenshot?: string
   subagents?: SubagentStatus[]
+  // Real-time state for persistence
+  currentSteps?: AgentStep[]
+  resumeState?: AgentResumeState
 }) => void
 
 const BROWSER_TOOLS: ToolDefinition[] = [
@@ -3655,6 +3658,17 @@ Start by taking a screenshot to see the current state of the browser.`
     }
 
     steps.push(step)
+
+    // Notify with current state for real-time persistence
+    onStatus({
+      step: stepCount,
+      message: `Step ${stepCount} completed`,
+      thinking: step.thinking,
+      action: step.action,
+      screenshot: step.screenshot,
+      currentSteps: [...steps],
+      resumeState: buildResumeState()
+    })
 
     if (response.stop_reason === 'end_turn' && !response.content.some(b => b.type === 'tool_use')) {
       return { success: true, steps }

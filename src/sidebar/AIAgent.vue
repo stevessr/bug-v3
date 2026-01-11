@@ -546,6 +546,13 @@ const resumeConversation = async () => {
           if (status.subagents) {
             subagents.value = status.subagents
           }
+          // Real-time state updates for persistence
+          if (status.currentSteps) {
+            steps.value = [steps.value[0], ...status.currentSteps]
+          }
+          if (status.resumeState) {
+            currentResumeState.value = status.resumeState
+          }
         },
         abortController.value.signal,
         maxSteps.value,
@@ -671,6 +678,13 @@ async function startTask() {
         }
         if (status.subagents) {
           subagents.value = status.subagents
+        }
+        // Real-time state updates for persistence
+        if (status.currentSteps) {
+          steps.value = [steps.value[0], ...status.currentSteps]
+        }
+        if (status.resumeState) {
+          currentResumeState.value = status.resumeState
         }
       },
       abortController.value.signal,
