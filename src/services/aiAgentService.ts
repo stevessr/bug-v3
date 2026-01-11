@@ -2441,7 +2441,7 @@ async function executeTool(
 
     case 'switch_tab': {
       const tabId = toolInput.tab_id as number
-      const result = await browserAutomation.switchToTab(tabId)
+      const result = await browserAutomation.switchToTab(tabId, false)
       if (result.success) {
         return { result: `Switched to tab: ${tabId}` }
       }

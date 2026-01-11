@@ -272,7 +272,7 @@ function handleImageSelect(event: Event) {
       // Extract base64 data without the data URL prefix
       const base64 = result.split(',')[1]
       inputImages.value.push({
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         base64,
         name: file.name
       })
@@ -302,7 +302,7 @@ function handlePaste(event: ClipboardEvent) {
         const result = e.target?.result as string
         const base64 = result.split(',')[1]
         inputImages.value.push({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
           base64,
           name: `pasted-image-${Date.now()}.png`
         })
