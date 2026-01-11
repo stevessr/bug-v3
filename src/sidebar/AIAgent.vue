@@ -477,19 +477,13 @@ onMounted(async () => {
 
   const saved = loadConversation()
   if (saved && saved.isRunning) {
-    // Conversation was interrupted
+    // Conversation was interrupted - always auto-resume
     savedConversation.value = saved
 
-    // If we have a resume state with messages, automatically resume
-    if (saved.resumeState && saved.resumeState.messages.length > 0) {
-      // Auto-resume after a short delay to allow UI to render
-      setTimeout(() => {
-        resumeConversation()
-      }, 500)
-    } else {
-      // No resume state, just show the notice
-      wasInterrupted.value = true
-    }
+    // Auto-resume after a short delay to allow UI to render
+    setTimeout(() => {
+      resumeConversation()
+    }, 500)
   }
 })
 

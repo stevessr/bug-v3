@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 
 import LazyEmojiGrid from '../popup/components/LazyEmojiGrid.vue'
 import { usePopup } from '../popup/usePopup'
@@ -11,6 +11,26 @@ import AIAgent from './AIAgent.vue'
 const { t } = useI18n()
 
 const activeTab = ref<'emoji' | 'agent'>('emoji')
+
+// Check for interrupted AI conversation on mount
+const AI_AGENT_STORAGE_KEY = 'ai_agent_conversation'
+onMounted(() => {
+  try {
+    const stored = localStorage.getItem(AI_AGENT_STORAGE_KEY)
+    if (stored) {
+      const conversation = JSON.parse(stored)
+      // If there's an interrupted conversation that was running, switch to agent tab
+      if (conversation.isRunning && conversation.timestamp) {
+        const timeout = 24 * 60 * 60 * 1000 // 24 hours
+        if (Date.now() - conversation.timestamp < timeout) {
+          activeTab.value = 'agent'
+        }
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+})
 
 const { emojiStore, showCopyToast, selectEmoji, openOptions } = usePopup({ manageUrl: false })
 
