@@ -13,6 +13,7 @@ import {
   getDiscourseDomains
 } from './utils/platformDetector'
 import { loadPlatformModule } from './utils/platformLoader'
+import { handleAgentAction } from './agent/actions'
 
 import { createLogger } from '@/utils/logger'
 
@@ -54,9 +55,18 @@ initialize().catch(error => {
 })
 
 // Add message listener for linux.do CSRF token requests
-if (DISCOURSE_DOMAINS.some(domain => window.location.hostname.includes(domain))) {
+if (chrome?.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message.type === 'GET_CSRF_TOKEN') {
+    if (message?.type === 'AGENT_ACTION') {
+      handleAgentAction(message.action)
+        .then(result => sendResponse({ success: true, data: result }))
+        .catch((error: any) =>
+          sendResponse({ success: false, error: error?.message || '动作执行失败' })
+        )
+      return true
+    }
+
+    if (message?.type === 'GET_CSRF_TOKEN') {
       try {
         // Try to get CSRF token from meta tag
         const metaToken = DQS('meta[name="csrf-token"]') as HTMLMetaElement
@@ -87,6 +97,7 @@ if (DISCOURSE_DOMAINS.some(domain => window.location.hostname.includes(domain)))
         return true // 表示异步响应
       }
     }
+
     return false // 对于其他消息类型，不处理
   })
 }

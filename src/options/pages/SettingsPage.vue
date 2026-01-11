@@ -9,6 +9,7 @@ import FeatureSwitchSettings from '../components/FeatureSwitchSettings.vue'
 import MenuBarSettings from '../components/MenuBarSettings.vue'
 import CustomCSSBlockSettings from '../components/CustomCSSBlockSettings.vue'
 import AISettings from '../components/AISettings.vue'
+import AIAgentSettings from '../components/AIAgentSettings.vue'
 import ImgbedSettings from '../components/ImgbedSettings.vue'
 import SyncSettings from '../components/SyncSettings.vue'
 import CloudDataPreview from '../components/CloudDataPreview.vue'
@@ -76,6 +77,12 @@ const cloudDataPreviewRef = ref<InstanceType<typeof CloudDataPreview>>()
 
 // Load existing sync config on component mount
 onMounted(async () => {
+  const params = new URLSearchParams(window.location.search)
+  const subtab = params.get('subtab')
+  if (subtab) {
+    activeTab.value = subtab
+  }
+
   const config: any = await emojiStore.loadSyncConfig()
   if (config) {
     configSaved.value = true
@@ -167,6 +174,12 @@ onMounted(async () => {
               @update:customOpenAIKey="updateCustomOpenAIKey"
               @update:customOpenAIModel="updateCustomOpenAIModel"
             />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="ai-agent" tab="AI Agent">
+          <div class="py-4">
+            <AIAgentSettings />
           </div>
         </a-tab-pane>
 

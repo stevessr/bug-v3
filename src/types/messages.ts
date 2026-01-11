@@ -65,6 +65,14 @@ export interface DownloadImageMessage extends BaseMessage {
 }
 
 /**
+ * CAPTURE_SCREENSHOT 消息
+ */
+export interface CaptureScreenshotMessage extends BaseMessage {
+  type: 'CAPTURE_SCREENSHOT'
+  format?: 'png' | 'jpeg'
+}
+
+/**
  * ADD_TO_FAVORITES 操作消息
  */
 export interface AddToFavoritesMessage {
@@ -104,6 +112,7 @@ export type TypedMessage =
   | SyncSettingsMessage
   | RequestLinuxDoAuthMessage
   | DownloadImageMessage
+  | CaptureScreenshotMessage
 
 /**
  * 所有基于 action 的消息联合类型

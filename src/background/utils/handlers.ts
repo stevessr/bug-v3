@@ -7,6 +7,7 @@ import {
   handleSyncSettings,
   handleLinuxDoAuthRequest,
   handleDownloadImage,
+  handleCaptureScreenshot,
   setupStorageChangeListener,
   setupContextMenu,
   setupPeriodicCleanup,
@@ -75,6 +76,10 @@ export function setupMessageListener() {
                 sendResponse({ success: false, error: 'Missing url for DOWNLOAD_IMAGE' })
                 return false
               }
+
+            case 'CAPTURE_SCREENSHOT':
+              handleCaptureScreenshot((typedMsg as any).format, sendResponse)
+              return true
 
             default:
               console.log('Unknown message type:', (typedMsg as any).type)

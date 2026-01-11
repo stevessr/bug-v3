@@ -5,9 +5,13 @@ import LazyEmojiGrid from '../popup/components/LazyEmojiGrid.vue'
 import { usePopup } from '../popup/usePopup'
 import { useEmojiImages } from '../composables/useEmojiImages'
 
+import Agent from './Agent.vue'
+
 const { t } = useI18n()
 
 const { emojiStore, showCopyToast, selectEmoji, openOptions } = usePopup({ manageUrl: false })
+
+const activeView = ref<'emoji' | 'agent'>('emoji')
 
 // 使用 useEmojiImages 处理搜索结果的图片缓存
 const { imageSources: searchImageSources, getImageSrcSync } = useEmojiImages(
@@ -165,181 +169,210 @@ const handleSearch = () => {
     }"
   >
     <div class="sidebar-container bg-white dark:bg-gray-900">
-      <!-- 搜索和分组选择 -->
-      <div class="p-2 border-b border-gray-100 dark:border-gray-700 space-y-2">
-        <!-- 表情搜索 -->
-        <div
-          v-if="emojiStore.settings.showSearchBar || emojiStore.activeGroupId === 'all-emojis'"
-          class="relative"
+      <div class="flex items-center gap-2 p-2 border-b border-gray-100 dark:border-gray-700">
+        <button
+          class="flex-1 text-xs py-2 rounded-md border"
+          :class="
+            activeView === 'emoji'
+              ? 'bg-gray-900 text-white border-gray-900'
+              : 'bg-white text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600'
+          "
+          @click="activeView = 'emoji'"
         >
-          <a-input
-            v-model:value="searchQuery"
-            type="text"
-            :placeholder="t('searchEmojiNamesOrTags')"
-            :title="t('searchEmojiNamesOrTagsTitle')"
-            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
-            @input="handleSearch"
-          />
-          <button
-            v-if="searchQuery"
-            @click="clearSearch"
-            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            :title="t('clearSearch')"
-          >
-            ✕
-          </button>
-          <svg
-            v-else
-            class="absolute right-2 top-1.5 w-4 h-4 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            ></path>
-          </svg>
-        </div>
-        <!-- 分组选择 -->
-        <a-select
-          v-model:value="emojiStore.activeGroupId"
-          showSearch
-          :placeholder="t('selectGroupPlaceholder')"
-          class="w-full"
-          :filterOption="filterOption"
-          @change="(value: any) => setActiveHandler(String(value || ''))"
+          表情
+        </button>
+        <button
+          class="flex-1 text-xs py-2 rounded-md border"
+          :class="
+            activeView === 'agent'
+              ? 'bg-gray-900 text-white border-gray-900'
+              : 'bg-white text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600'
+          "
+          @click="activeView = 'agent'"
         >
-          <!-- 虛擬分組 -->
-          <a-select-option v-for="g in virtualGroups" :key="g.id" :value="g.id" :label="g.name">
-            <span class="inline-block mr-2">{{ g.icon }}</span>
-            {{ g.name }}
-            <span class="text-xs text-gray-400 ml-2">{{ t('virtualGroup') }}</span>
-          </a-select-option>
-
-          <!-- 真實分組 -->
-          <a-select-option
-            v-for="g in emojiStore.sortedGroups"
-            :key="g.id"
-            :value="g.id"
-            :label="g.name"
-          >
-            <img
-              v-if="g.icon.startsWith('http') || g.icon.startsWith('data:')"
-              :src="getGroupIconSrc(g.icon, g.id)"
-              class="w-4 h-4 inline-block mr-2"
-            />
-            <span v-else class="inline-block mr-2">{{ g.icon }}</span>
-            {{ g.name }}
-          </a-select-option>
-        </a-select>
+          助手
+        </button>
       </div>
 
-      <!-- 表情网格 -->
-      <div class="sidebar-body">
-        <!-- 搜索模式 - 顯示搜索結果 -->
-        <template v-if="searchQuery">
-          <div class="p-3">
-            <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              {{ t('searchResultsFound', [searchQuery, filteredEmojis.length]) }}
-            </div>
-            <div v-if="filteredEmojis.length === 0" class="text-center py-8">
-              <div class="text-2xl mb-2">🔍</div>
-              <div class="text-gray-500 dark:text-gray-400">{{ t('noMatchingEmojisFound') }}</div>
-            </div>
-            <div
-              v-else
-              class="grid gap-2"
-              :style="{
-                gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns || 6}, minmax(0, 1fr))`
-              }"
+      <Agent v-if="activeView === 'agent'" />
+
+      <template v-else>
+        <!-- 搜索和分组选择 -->
+        <div class="p-2 border-b border-gray-100 dark:border-gray-700 space-y-2">
+          <!-- 表情搜索 -->
+          <div
+            v-if="emojiStore.settings.showSearchBar || emojiStore.activeGroupId === 'all-emojis'"
+            class="relative"
+          >
+            <a-input
+              v-model:value="searchQuery"
+              type="text"
+              :placeholder="t('searchEmojiNamesOrTags')"
+              :title="t('searchEmojiNamesOrTagsTitle')"
+              class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+              @input="handleSearch"
+            />
+            <button
+              v-if="searchQuery"
+              @click="clearSearch"
+              class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              :title="t('clearSearch')"
             >
+              ✕
+            </button>
+            <svg
+              v-else
+              class="absolute right-2 top-1.5 w-4 h-4 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              ></path>
+            </svg>
+          </div>
+          <!-- 分组选择 -->
+          <a-select
+            v-model:value="emojiStore.activeGroupId"
+            showSearch
+            :placeholder="t('selectGroupPlaceholder')"
+            class="w-full"
+            :filterOption="filterOption"
+            @change="(value: any) => setActiveHandler(String(value || ''))"
+          >
+            <!-- 虛擬分組 -->
+            <a-select-option v-for="g in virtualGroups" :key="g.id" :value="g.id" :label="g.name">
+              <span class="inline-block mr-2">{{ g.icon }}</span>
+              {{ g.name }}
+              <span class="text-xs text-gray-400 ml-2">{{ t('virtualGroup') }}</span>
+            </a-select-option>
+
+            <!-- 真實分組 -->
+            <a-select-option
+              v-for="g in emojiStore.sortedGroups"
+              :key="g.id"
+              :value="g.id"
+              :label="g.name"
+            >
+              <img
+                v-if="g.icon.startsWith('http') || g.icon.startsWith('data:')"
+                :src="getGroupIconSrc(g.icon, g.id)"
+                class="w-4 h-4 inline-block mr-2"
+              />
+              <span v-else class="inline-block mr-2">{{ g.icon }}</span>
+              {{ g.name }}
+            </a-select-option>
+          </a-select>
+        </div>
+
+        <!-- 表情网格 -->
+        <div class="sidebar-body">
+          <!-- 搜索模式 - 顯示搜索結果 -->
+          <template v-if="searchQuery">
+            <div class="p-3">
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                {{ t('searchResultsFound', [searchQuery, filteredEmojis.length]) }}
+              </div>
+              <div v-if="filteredEmojis.length === 0" class="text-center py-8">
+                <div class="text-2xl mb-2">🔍</div>
+                <div class="text-gray-500 dark:text-gray-400">{{ t('noMatchingEmojisFound') }}</div>
+              </div>
               <div
-                v-for="emoji in filteredEmojis"
-                :key="emoji.id"
-                @click="handleEmojiClick(emoji)"
-                class="relative group cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-                :title="`${emoji.name} (${emoji.groupName})\\n${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
+                v-else
+                class="grid gap-2"
+                :style="{
+                  gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns || 6}, minmax(0, 1fr))`
+                }"
               >
-                <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
-                  <img
-                    :src="getSearchEmojiSrc(emoji)"
-                    :alt="emoji.name"
-                    class="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-                <div class="text-xs text-center text-gray-600 dark:text-white mt-1 truncate">
-                  {{ emoji.name }}
-                </div>
-                <!-- 標籤顯示 -->
-                <div v-if="emoji.tags && emoji.tags.length > 0" class="mt-1">
-                  <div class="flex flex-wrap gap-1">
-                    <span
-                      v-for="tag in emoji.tags.slice(0, 2)"
-                      :key="tag"
-                      class="inline-block px-1 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded"
-                    >
-                      {{ tag }}
-                    </span>
-                    <span v-if="emoji.tags.length > 2" class="text-xs text-gray-400">
-                      +{{ emoji.tags.length - 2 }}
-                    </span>
+                <div
+                  v-for="emoji in filteredEmojis"
+                  :key="emoji.id"
+                  @click="handleEmojiClick(emoji)"
+                  class="relative group cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  :title="`${emoji.name} (${emoji.groupName})\\n${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
+                >
+                  <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
+                    <img
+                      :src="getSearchEmojiSrc(emoji)"
+                      :alt="emoji.name"
+                      class="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div class="text-xs text-center text-gray-600 dark:text-white mt-1 truncate">
+                    {{ emoji.name }}
+                  </div>
+                  <!-- 標籤顯示 -->
+                  <div v-if="emoji.tags && emoji.tags.length > 0" class="mt-1">
+                    <div class="flex flex-wrap gap-1">
+                      <span
+                        v-for="tag in emoji.tags.slice(0, 2)"
+                        :key="tag"
+                        class="inline-block px-1 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded"
+                      >
+                        {{ tag }}
+                      </span>
+                      <span v-if="emoji.tags.length > 2" class="text-xs text-gray-400">
+                        +{{ emoji.tags.length - 2 }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </template>
+          </template>
 
-        <!-- 虛擬分組 - 所有表情 -->
-        <template v-else-if="emojiStore.activeGroupId === 'all-emojis'">
-          <div class="p-3">
-            <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              {{ t('showAllEmojis', [getCurrentGroupEmojis('all-emojis').length]) }}
+          <!-- 虛擬分組 - 所有表情 -->
+          <template v-else-if="emojiStore.activeGroupId === 'all-emojis'">
+            <div class="p-3">
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                {{ t('showAllEmojis', [getCurrentGroupEmojis('all-emojis').length]) }}
+              </div>
+              <LazyEmojiGrid
+                :emojis="getCurrentGroupEmojis('all-emojis')"
+                :isLoading="emojiStore.isLoading"
+                :favorites="emojiStore.favorites"
+                :gridColumns="emojiStore.settings.gridColumns"
+                :emptyMessage="t('noEmojisYet')"
+                :showAddButton="false"
+                groupId="all-emojis"
+                isActive
+                @select="selectEmoji"
+                @openOptions="openOptions"
+              />
             </div>
+          </template>
+
+          <!-- 普通分組 -->
+          <template v-else-if="activeGroup">
             <LazyEmojiGrid
-              :emojis="getCurrentGroupEmojis('all-emojis')"
+              :key="activeGroup.id"
+              :emojis="activeGroup.emojis || []"
               :isLoading="emojiStore.isLoading"
               :favorites="emojiStore.favorites"
               :gridColumns="emojiStore.settings.gridColumns"
-              :emptyMessage="t('noEmojisYet')"
-              :showAddButton="false"
-              groupId="all-emojis"
+              :emptyMessage="t('groupHasNoEmojisInDetail')"
+              showAddButton
+              :groupId="activeGroup.id"
               isActive
               @select="selectEmoji"
               @openOptions="openOptions"
             />
-          </div>
-        </template>
+          </template>
+        </div>
 
-        <!-- 普通分組 -->
-        <template v-else-if="activeGroup">
-          <LazyEmojiGrid
-            :key="activeGroup.id"
-            :emojis="activeGroup.emojis || []"
-            :isLoading="emojiStore.isLoading"
-            :favorites="emojiStore.favorites"
-            :gridColumns="emojiStore.settings.gridColumns"
-            :emptyMessage="t('groupHasNoEmojisInDetail')"
-            showAddButton
-            :groupId="activeGroup.id"
-            isActive
-            @select="selectEmoji"
-            @openOptions="openOptions"
-          />
-        </template>
-      </div>
-
-      <!-- 复制成功提示 -->
-      <div
-        v-if="showCopyToast"
-        class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm animate-pulse"
-      >
-        {{ t('linkCopiedToClipboard') }}
-      </div>
+        <!-- 复制成功提示 -->
+        <div
+          v-if="showCopyToast"
+          class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm animate-pulse"
+        >
+          {{ t('linkCopiedToClipboard') }}
+        </div>
+      </template>
     </div>
   </a-config-provider>
 </template>

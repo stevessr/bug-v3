@@ -1,0 +1,272 @@
+<script setup lang="ts">
+import { computed, reactive } from 'vue'
+import { nanoid } from 'nanoid'
+
+import { useAgentSettings } from '@/agent/useAgentSettings'
+import type { AgentPermissions, McpServerConfig, SubAgentConfig } from '@/agent/types'
+
+const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSettings()
+
+const headerDrafts = reactive<Record<string, string>>({})
+const headerErrors = reactive<Record<string, string>>({})
+
+const subagentOptions = computed(() =>
+  settings.value.subagents.map(agent => ({
+    label: agent.name,
+    value: agent.id
+  }))
+)
+
+const addMcpServer = () => {
+  const id = nanoid()
+  const server: McpServerConfig = {
+    id,
+    name: '新 MCP 服务',
+    url: '',
+    transport: 'sse',
+    headers: {},
+    enabled: true
+  }
+  settings.value.mcpServers.push(server)
+  headerDrafts[id] = '{}'
+}
+
+const removeMcpServer = (id: string) => {
+  settings.value.mcpServers = settings.value.mcpServers.filter(server => server.id !== id)
+  delete headerDrafts[id]
+  delete headerErrors[id]
+}
+
+const syncHeaderDraft = (server: McpServerConfig) => {
+  const json = JSON.stringify(server.headers || {}, null, 2)
+  headerDrafts[server.id] = json
+}
+
+const updateHeaders = (server: McpServerConfig) => {
+  const raw = headerDrafts[server.id] || ''
+  if (!raw.trim()) {
+    server.headers = {}
+    headerErrors[server.id] = ''
+    return
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object') {
+      server.headers = parsed as Record<string, string>
+      headerErrors[server.id] = ''
+    } else {
+      headerErrors[server.id] = '必须是 JSON 对象'
+    }
+  } catch (error: any) {
+    headerErrors[server.id] = error?.message || 'JSON 解析失败'
+  }
+}
+
+const addPresetSubagent = () => {
+  addSubagent({
+    name: '新预配置子代理',
+    description: '可作为任务模板复用。',
+    systemPrompt: '你是任务子代理，按照提示执行自动化步骤。',
+    permissions: {
+      click: true,
+      scroll: true,
+      touch: false,
+      screenshot: true,
+      navigate: true,
+      clickDom: true,
+      input: true
+    },
+    enabled: true,
+    isPreset: true
+  })
+}
+
+const updatePermission = (agent: SubAgentConfig, key: keyof AgentPermissions, value: boolean) => {
+  agent.permissions[key] = value
+}
+</script>
+
+<template>
+  <div class="space-y-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-medium dark:text-white">Claude Agent 连接</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            支持自定义 baseUrl 与 apiKey，使用 Claude Agent SDK 调用。
+          </p>
+        </div>
+        <a-button size="small" @click="restoreDefaults">重置为默认</a-button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4">
+        <a-input v-model:value="settings.baseUrl" placeholder="https://api.anthropic.com"></a-input>
+        <a-input v-model:value="settings.apiKey" placeholder="API Key" type="password"></a-input>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <a-input v-model:value="settings.taskModel" placeholder="任务模型"></a-input>
+        <a-input v-model:value="settings.reasoningModel" placeholder="思考模型"></a-input>
+        <a-input v-model:value="settings.imageModel" placeholder="图片转述模型"></a-input>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-medium dark:text-white">MCP 配置</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">支持 SSE 或 Streamable HTTP。</p>
+        </div>
+        <a-switch v-model:checked="settings.enableMcp" />
+      </div>
+
+      <div v-if="settings.enableMcp" class="space-y-4">
+        <div
+          v-for="server in settings.mcpServers"
+          :key="server.id"
+          class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3"
+        >
+          <div class="flex items-center justify-between">
+            <a-input v-model:value="server.name" class="max-w-xs" placeholder="服务名称" />
+            <div class="flex items-center gap-2">
+              <a-switch v-model:checked="server.enabled" size="small" />
+              <a-button size="small" danger @click="removeMcpServer(server.id)">删除</a-button>
+            </div>
+          </div>
+          <a-input v-model:value="server.url" placeholder="https://mcp.example.com/stream" />
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <a-select v-model:value="server.transport">
+              <a-select-option value="sse">SSE</a-select-option>
+              <a-select-option value="streamable-http">Streamable HTTP</a-select-option>
+            </a-select>
+          </div>
+          <div>
+            <a-textarea
+              v-model:value="headerDrafts[server.id]"
+              :rows="3"
+              placeholder='{"Authorization":"Bearer ..."}'
+              @focus="syncHeaderDraft(server)"
+              @blur="updateHeaders(server)"
+            />
+            <p v-if="headerErrors[server.id]" class="text-xs text-red-500 mt-1">
+              {{ headerErrors[server.id] }}
+            </p>
+          </div>
+        </div>
+
+        <a-button type="dashed" block @click="addMcpServer">添加 MCP 服务</a-button>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-medium dark:text-white">Subagent 配置</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            为不同任务场景配置独立模型、提示词与权限。
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a-button size="small" @click="addSubagent()">新增</a-button>
+          <a-button size="small" @click="addPresetSubagent">新增预配置</a-button>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="text-sm text-gray-600 dark:text-gray-300">
+          默认子代理：
+          <a-select
+            v-model:value="settings.defaultSubagentId"
+            :options="subagentOptions"
+            class="w-48 ml-2"
+            placeholder="选择默认子代理"
+          />
+        </div>
+        <div
+          v-for="agent in settings.subagents"
+          :key="agent.id"
+          class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3"
+        >
+          <div class="flex items-center justify-between">
+            <a-input v-model:value="agent.name" class="max-w-xs" />
+            <div class="flex items-center gap-2">
+              <a-switch v-model:checked="agent.enabled" size="small" />
+              <a-button
+                size="small"
+                danger
+                :disabled="agent.isPreset"
+                @click="removeSubagent(agent.id)"
+              >
+                删除
+              </a-button>
+            </div>
+          </div>
+
+          <a-input v-model:value="agent.description" placeholder="描述（可选）" />
+          <a-textarea v-model:value="agent.systemPrompt" :rows="3" placeholder="系统提示词" />
+
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <a-input v-model:value="agent.taskModel" placeholder="任务模型（可覆盖）" />
+            <a-input v-model:value="agent.reasoningModel" placeholder="思考模型（可覆盖）" />
+            <a-input v-model:value="agent.imageModel" placeholder="图片转述模型（可覆盖）" />
+          </div>
+
+          <div v-if="settings.enableMcp && settings.mcpServers.length > 0">
+            <a-select
+              v-model:value="agent.mcpServerIds"
+              mode="multiple"
+              placeholder="选择 MCP 服务"
+              :options="settings.mcpServers.map(s => ({ label: s.name, value: s.id }))"
+              class="w-full"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <a-switch
+              :checked="agent.permissions.click"
+              @change="value => updatePermission(agent, 'click', value as boolean)"
+              checked-children="点击"
+              un-checked-children="点击"
+            />
+            <a-switch
+              :checked="agent.permissions.scroll"
+              @change="value => updatePermission(agent, 'scroll', value as boolean)"
+              checked-children="滑动"
+              un-checked-children="滑动"
+            />
+            <a-switch
+              :checked="agent.permissions.touch"
+              @change="value => updatePermission(agent, 'touch', value as boolean)"
+              checked-children="触摸"
+              un-checked-children="触摸"
+            />
+            <a-switch
+              :checked="agent.permissions.screenshot"
+              @change="value => updatePermission(agent, 'screenshot', value as boolean)"
+              checked-children="截图"
+              un-checked-children="截图"
+            />
+            <a-switch
+              :checked="agent.permissions.navigate"
+              @change="value => updatePermission(agent, 'navigate', value as boolean)"
+              checked-children="切换URL"
+              un-checked-children="切换URL"
+            />
+            <a-switch
+              :checked="agent.permissions.clickDom"
+              @change="value => updatePermission(agent, 'clickDom', value as boolean)"
+              checked-children="点击DOM"
+              un-checked-children="点击DOM"
+            />
+            <a-switch
+              :checked="agent.permissions.input"
+              @change="value => updatePermission(agent, 'input', value as boolean)"
+              checked-children="输入"
+              un-checked-children="输入"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
