@@ -11,13 +11,29 @@ const { t } = useI18n()
 
 const { emojiStore, showCopyToast, selectEmoji, openOptions } = usePopup({ manageUrl: false })
 
-const activeView = ref<'emoji' | 'agent'>('emoji')
+const SIDEBAR_PANEL_KEY = 'sidebar-active-panel'
 
-// 使用 useEmojiImages 处理搜索结果的图片缓存
-const { imageSources: searchImageSources, getImageSrcSync } = useEmojiImages(
-  () => filteredEmojis.value,
-  { preload: true, preloadBatchSize: 5 }
-)
+const activeView = ref<'emoji' | 'agent'>('emoji')
+try {
+  const stored = localStorage.getItem(SIDEBAR_PANEL_KEY)
+  if (stored === 'agent' || stored === 'emoji') {
+    activeView.value = stored
+  }
+} catch {
+  // ignore storage errors
+}
+
+watch(activeView, value => {
+  try {
+    localStorage.setItem(SIDEBAR_PANEL_KEY, value)
+  } catch {
+    // ignore storage errors
+  }
+})
+
+const setActiveView = (value: 'emoji' | 'agent') => {
+  activeView.value = value
+}
 
 // 分组图标缓存
 const groupIconSources = ref<Map<string, string>>(new Map())
@@ -124,6 +140,12 @@ const filteredEmojis = computed(() => {
   return allEmojis
 })
 
+// 使用 useEmojiImages 处理搜索结果的图片缓存
+const { imageSources: searchImageSources, getImageSrcSync } = useEmojiImages(
+  () => filteredEmojis.value,
+  { preload: true, preloadBatchSize: 5 }
+)
+
 // 判斷是否為虛擬分組 - kept for potential future use
 // @ts-expect-error kept for API compatibility
 const _isVirtualGroup = (groupId: string) => {
@@ -169,32 +191,32 @@ const handleSearch = () => {
     }"
   >
     <div class="sidebar-container bg-white dark:bg-gray-900">
-      <div class="flex items-center gap-2 p-2 border-b border-gray-100 dark:border-gray-700">
-        <button
-          class="flex-1 text-xs py-2 rounded-md border"
-          :class="
-            activeView === 'emoji'
-              ? 'bg-gray-900 text-white border-gray-900'
-              : 'bg-white text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600'
-          "
-          @click="activeView = 'emoji'"
-        >
-          表情
-        </button>
-        <button
-          class="flex-1 text-xs py-2 rounded-md border"
-          :class="
-            activeView === 'agent'
-              ? 'bg-gray-900 text-white border-gray-900'
-              : 'bg-white text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600'
-          "
-          @click="activeView = 'agent'"
-        >
-          助手
-        </button>
+      <div class="sidebar-header border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center justify-between px-3 py-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-gray-900 dark:text-white">Claude 助手</span>
+            <span class="text-[11px] text-gray-400">自动化任务与网页操作</span>
+          </div>
+          <div class="sidebar-toggle">
+            <button
+              class="sidebar-toggle-button"
+              :class="{ active: activeView === 'agent' }"
+              @click="setActiveView('agent')"
+            >
+              助手
+            </button>
+            <button
+              class="sidebar-toggle-button"
+              :class="{ active: activeView === 'emoji' }"
+              @click="setActiveView('emoji')"
+            >
+              表情
+            </button>
+          </div>
+        </div>
       </div>
 
-      <Agent v-if="activeView === 'agent'" />
+      <Agent v-if="activeView === 'agent'" class="flex-1 min-h-0" />
 
       <template v-else>
         <!-- 搜索和分组选择 -->
@@ -399,6 +421,34 @@ body,
   min-height: 200px;
   box-sizing: border-box;
   overflow: auto;
+}
+
+.sidebar-header {
+  flex-shrink: 0;
+}
+
+.sidebar-toggle {
+  display: inline-flex;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  padding: 2px;
+  gap: 2px;
+}
+
+.sidebar-toggle-button {
+  border: none;
+  background: transparent;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-toggle-button.active {
+  background: #111827;
+  color: #ffffff;
 }
 
 .sidebar-body {

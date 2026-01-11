@@ -12,7 +12,7 @@ const SDK_IMPORT_PATH = '@anthropic-ai/claude-agent-sdk'
 
 async function loadSdkClient() {
   try {
-    const mod: any = await import(/* @vite-ignore */ SDK_IMPORT_PATH)
+    const mod: any = await import(SDK_IMPORT_PATH)
     return mod
   } catch (error) {
     console.warn('[AgentService] Failed to load Claude Agent SDK:', error)
@@ -51,6 +51,15 @@ export async function runAgentMessage(
     }
   }
 
+  const mcpServers = settings.enableMcp
+    ? settings.mcpServers.filter(server => {
+        if (!server.enabled) return false
+        const scope = subagent?.mcpServerIds
+        if (scope && scope.length > 0) return scope.includes(server.id)
+        return true
+      })
+    : []
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const response = await client.run({
@@ -59,7 +68,7 @@ export async function runAgentMessage(
       reasoningModel: subagent?.reasoningModel || settings.reasoningModel,
       imageModel: subagent?.imageModel || settings.imageModel,
       systemPrompt: subagent?.systemPrompt || '',
-      mcp: settings.enableMcp ? settings.mcpServers.filter(s => s.enabled) : [],
+      mcp: mcpServers,
       subagent
     })
 

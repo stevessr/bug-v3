@@ -40,6 +40,7 @@
     "check:all": "pnpm lint && pnpm format:check && pnpm type-check"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.77",
     "ant-design-vue": "^4.2.6",
     "dexie": "^4.2.1",
     "dompurify": "^3.3.1",
@@ -57,12 +58,12 @@
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/typography": "^0.5.19",
-    "@types/chrome": "^0.1.32",
+    "@types/chrome": "^0.1.33",
     "@types/dompurify": "^3.2.0",
     "@types/marked": "^6.0.0",
-    "@types/node": "^24.10.4",
-    "@typescript-eslint/eslint-plugin": "^8.50.1",
-    "@typescript-eslint/parser": "^8.50.1",
+    "@types/node": "^24.10.7",
+    "@typescript-eslint/eslint-plugin": "^8.52.0",
+    "@typescript-eslint/parser": "^8.52.0",
     "@vitejs/plugin-vue": "^6.0.3",
     "autoprefixer": "^10.4.23",
     "crx": "^5.0.1",
@@ -84,9 +85,9 @@
     "typescript": "^5.9.3",
     "unplugin-auto-import": "^0.17.8",
     "unplugin-vue-components": "^0.26.0",
-    "vite": "npm:rolldown-vite@^7.3.0",
+    "vite": "npm:rolldown-vite@^7.3.1",
     "vue-eslint-parser": "^10.2.0",
-    "vue-tsc": "^3.2.1"
+    "vue-tsc": "^3.2.2"
   },
   "languages": [
     "zh",
