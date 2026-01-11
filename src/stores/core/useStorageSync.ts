@@ -176,6 +176,8 @@ export function useStorageSync({
       const existingIds = new Set(groups.value.map(g => g.id))
       const newGroupIds = index.filter(entry => !existingIds.has(entry.id))
 
+      const newGroupsToAdd: EmojiGroup[] = []
+
       // 加载新分组
       if (newGroupIds.length > 0) {
         console.log(
@@ -186,13 +188,15 @@ export function useStorageSync({
           try {
             const newGroup = await storage.getEmojiGroup(entry.id)
             if (newGroup) {
-              groups.value.push({ ...newGroup, order: entry.order })
+              newGroupsToAdd.push({ ...newGroup, order: entry.order })
               console.log(
                 '[EmojiStore] Loaded new group:',
                 entry.id,
                 'emojis:',
                 newGroup.emojis?.length ?? 0
               )
+            } else {
+              console.log('[EmojiStore] Skipping non-existent group:', entry.id)
             }
           } catch {
             console.warn('[EmojiStore] Failed to load new group:', entry.id)
@@ -200,15 +204,41 @@ export function useStorageSync({
         }
       }
 
-      // 按索引重新排序
+      // 检查顺序是否需要调整
       const orderMap = new Map(index.map((i: { id: string; order: number }) => [i.id, i.order]))
-      const reordered = [...groups.value].sort((a, b) => {
-        const oa = orderMap.get(a.id) ?? a.order ?? 0
-        const ob = orderMap.get(b.id) ?? b.order ?? 0
-        return oa - ob
-      })
-      groups.value = reordered.map((g, idx) => ({ ...g, order: idx }))
-      console.log('[EmojiStore] Reordered groups from external group index')
+      let needsReorder = false
+
+      // 合并现有分组和新分组
+      const allGroups =
+        newGroupsToAdd.length > 0 ? [...groups.value, ...newGroupsToAdd] : groups.value
+
+      // 只检查分组的顺序是否匹配
+      for (let i = 0; i < allGroups.length; i++) {
+        const group = allGroups[i]
+        const expectedOrder = orderMap.get(group.id) ?? group.order ?? 0
+        if (expectedOrder !== i) {
+          needsReorder = true
+          break
+        }
+      }
+
+      // 只在有新分组或顺序变化时才更新 groups
+      if (newGroupsToAdd.length > 0 || needsReorder) {
+        const reordered = allGroups.sort((a, b) => {
+          const oa = orderMap.get(a.id) ?? a.order ?? 0
+          const ob = orderMap.get(b.id) ?? b.order ?? 0
+          return oa - ob
+        })
+        groups.value = reordered.map((g, idx) => ({ ...g, order: idx }))
+        console.log(
+          '[EmojiStore] Updated groups: added',
+          newGroupsToAdd.length,
+          'reordered:',
+          needsReorder
+        )
+      } else {
+        console.log('[EmojiStore] Group index unchanged, skipping update')
+      }
     } catch {
       // 忽略错误
     }
