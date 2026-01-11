@@ -1299,6 +1299,8 @@ interface McpTool {
 class McpClient {
   private serverConfig: McpServerConfig
   private tools: McpTool[] = []
+  private sseEndpoint: string | null = null
+  private pendingRequests: Map<number | string, { resolve: (data: any) => void; reject: (error: Error) => void }> = new Map()
 
   constructor(config: McpServerConfig) {
     this.serverConfig = config
@@ -1335,48 +1337,248 @@ class McpClient {
   }
 
   private async initializeSSE(): Promise<McpTool[]> {
-    // For SSE, we need to establish a connection first, then send initialize
-    const initResponse = await fetch(this.serverConfig.url, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '2024-11-05',
-          capabilities: {},
-          clientInfo: { name: 'bug-emoji-agent', version: '1.0.0' }
+    // Step 1: Establish SSE connection and get endpoint
+    const endpoint = await this.establishSSEConnection()
+    if (!endpoint) {
+      throw new Error('Failed to get SSE endpoint')
+    }
+    this.sseEndpoint = endpoint
+    log.info(`MCP SSE endpoint established: ${this.sseEndpoint}`)
+
+    // Step 2: Send initialize request
+    const initResult = await this.sendSSERequest('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'bug-emoji-agent', version: '1.0.0' }
+    })
+    log.info(`MCP SSE initialized:`, initResult)
+
+    // Step 3: Fetch tools list
+    const toolsResult = await this.sendSSERequest('tools/list', {})
+    this.tools = toolsResult?.tools || []
+    log.info(`MCP SSE tools loaded: ${this.tools.length} tools`)
+    return this.tools
+  }
+
+  private async establishSSEConnection(): Promise<string | null> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('SSE connection timeout'))
+      }, 15000)
+
+      // Use fetch with ReadableStream for SSE (EventSource doesn't support custom headers)
+      const headers = this.getHeaders()
+      headers['Accept'] = 'text/event-stream'
+
+      fetch(this.serverConfig.url, {
+        method: 'GET',
+        headers
+      })
+        .then(response => {
+          if (!response.ok) {
+            clearTimeout(timeout)
+            reject(new Error(`SSE connection failed: ${response.status}`))
+            return
+          }
+
+          const reader = response.body?.getReader()
+          if (!reader) {
+            clearTimeout(timeout)
+            reject(new Error('No response body'))
+            return
+          }
+
+          const decoder = new TextDecoder()
+          let buffer = ''
+          let endpointResolved = false
+
+          const processChunk = async () => {
+            try {
+              const { value, done } = await reader.read()
+
+              if (done) {
+                if (!endpointResolved) {
+                  clearTimeout(timeout)
+                  reject(new Error('SSE stream ended without endpoint'))
+                }
+                return
+              }
+
+              buffer += decoder.decode(value, { stream: true })
+
+              // Parse SSE events
+              const lines = buffer.split('\n')
+              buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+              let currentEvent = ''
+              let currentData = ''
+
+              for (const line of lines) {
+                if (line.startsWith('event:')) {
+                  currentEvent = line.slice(6).trim()
+                } else if (line.startsWith('data:')) {
+                  currentData = line.slice(5).trim()
+                } else if (line === '' && currentEvent) {
+                  // Event complete
+                  if (currentEvent === 'endpoint' && currentData) {
+                    clearTimeout(timeout)
+                    endpointResolved = true
+
+                    // Build full endpoint URL
+                    const baseUrl = new URL(this.serverConfig.url)
+                    const endpointUrl = currentData.startsWith('/')
+                      ? `${baseUrl.origin}${currentData}`
+                      : currentData
+
+                    resolve(endpointUrl)
+
+                    // Keep reading for responses (don't cancel)
+                    this.startSSEListener(reader, decoder, buffer)
+                    return
+                  }
+                  currentEvent = ''
+                  currentData = ''
+                }
+              }
+
+              // Continue reading
+              processChunk()
+            } catch (error) {
+              clearTimeout(timeout)
+              reject(error)
+            }
+          }
+
+          processChunk()
+        })
+        .catch(error => {
+          clearTimeout(timeout)
+          reject(error)
+        })
+    })
+  }
+
+  private startSSEListener(reader: ReadableStreamDefaultReader<Uint8Array>, decoder: TextDecoder, initialBuffer: string) {
+    let buffer = initialBuffer
+    let currentEvent = ''
+    let currentData = ''
+
+    const processChunk = async () => {
+      try {
+        const { value, done } = await reader.read()
+
+        if (done) {
+          log.info('SSE stream ended')
+          return
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            currentEvent = line.slice(6).trim()
+          } else if (line.startsWith('data:')) {
+            currentData = line.slice(5).trim()
+          } else if (line === '' && currentData) {
+            // Event complete - handle message response
+            if (currentEvent === 'message' || !currentEvent) {
+              try {
+                const data = JSON.parse(currentData)
+                if (data.id !== undefined && this.pendingRequests.has(data.id)) {
+                  const pending = this.pendingRequests.get(data.id)!
+                  this.pendingRequests.delete(data.id)
+                  if (data.error) {
+                    pending.reject(new Error(data.error.message || 'Request failed'))
+                  } else {
+                    pending.resolve(data.result)
+                  }
+                }
+              } catch (e) {
+                log.error('Failed to parse SSE message:', currentData)
+              }
+            }
+            currentEvent = ''
+            currentData = ''
+          }
+        }
+
+        processChunk()
+      } catch (error) {
+        log.error('SSE listener error:', error)
+      }
+    }
+
+    processChunk()
+  }
+
+  private async sendSSERequest(method: string, params: Record<string, unknown>): Promise<any> {
+    if (!this.sseEndpoint) {
+      throw new Error('SSE endpoint not established')
+    }
+
+    const id = Date.now()
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.pendingRequests.delete(id)
+        reject(new Error(`SSE request timeout: ${method}`))
+      }, 30000)
+
+      this.pendingRequests.set(id, {
+        resolve: (data) => {
+          clearTimeout(timeout)
+          resolve(data)
+        },
+        reject: (error) => {
+          clearTimeout(timeout)
+          reject(error)
         }
       })
-    })
 
-    if (!initResponse.ok) {
-      throw new Error(`Initialize failed: ${initResponse.status}`)
-    }
-
-    // Parse init result (we don't need sessionId for now, but verify response is valid)
-    await initResponse.json()
-
-    // Fetch tools list
-    const toolsResponse = await fetch(this.serverConfig.url, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/list',
-        params: {}
+      fetch(this.sseEndpoint!, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id,
+          method,
+          params
+        })
       })
+        .then(response => {
+          if (!response.ok) {
+            this.pendingRequests.delete(id)
+            clearTimeout(timeout)
+            reject(new Error(`SSE request failed: ${response.status}`))
+          }
+          // For SSE, response comes through the event stream, not the POST response
+          // But some servers might return the result directly
+          return response.text()
+        })
+        .then(text => {
+          if (text && text.trim()) {
+            try {
+              const data = JSON.parse(text)
+              if (data.result !== undefined) {
+                // Response came directly, not through SSE
+                this.pendingRequests.delete(id)
+                clearTimeout(timeout)
+                resolve(data.result)
+              }
+            } catch {
+              // Not JSON, wait for SSE response
+            }
+          }
+        })
+        .catch(error => {
+          this.pendingRequests.delete(id)
+          clearTimeout(timeout)
+          reject(error)
+        })
     })
-
-    if (!toolsResponse.ok) {
-      throw new Error(`Tools list failed: ${toolsResponse.status}`)
-    }
-
-    const toolsResult = await toolsResponse.json()
-    this.tools = toolsResult.result?.tools || []
-    return this.tools
   }
 
   private async initializeStreamableHttp(): Promise<McpTool[]> {
@@ -1431,6 +1633,16 @@ class McpClient {
     toolName: string,
     args: Record<string, unknown>
   ): Promise<{ content: Array<{ type: string; text?: string }> }> {
+    // For SSE, use the established endpoint
+    if (this.serverConfig.type === 'sse' && this.sseEndpoint) {
+      const result = await this.sendSSERequest('tools/call', {
+        name: toolName,
+        arguments: args
+      })
+      return result
+    }
+
+    // For Streamable HTTP, use direct POST
     const response = await fetch(this.serverConfig.url, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -2780,7 +2992,7 @@ async function describeScreenshot(config: AgentConfig, screenshotBase64: string)
 }
 
 /**
- * Subagent runner - runs a task in a specific tab context
+ * Subagent runner - runs a task in its own tab context to avoid conflicts
  */
 async function runSubagent(
   config: AgentConfig,
@@ -2790,7 +3002,8 @@ async function runSubagent(
   maxSteps: number,
   allTools: ToolDefinition[],
   mcpClients: Map<string, McpClient>,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  baseUrl?: string // Optional base URL to duplicate from main agent's current page
 ): Promise<SubagentStatus> {
   const subagentStatus: SubagentStatus = {
     id: subagentId,
@@ -2801,22 +3014,58 @@ async function runSubagent(
 
   const messages: AgentMessage[] = []
   let stepCount = 0
+  let ownedTabId: number | undefined = undefined // Tab created by this subagent
+  let workingTabId: number | undefined = tabId // Tab to operate on
 
-  // If tabId specified, switch to that tab first
-  if (tabId !== undefined) {
-    await browserAutomation.switchToTab(tabId)
+  // Create a new tab for this subagent if no specific tab is provided
+  // This prevents subagents from competing for the same tab
+  if (tabId === undefined) {
+    try {
+      // Create a new tab - start with the base URL if provided, otherwise about:blank
+      const createResult = await browserAutomation.createTab(baseUrl || 'about:blank', false)
+      if (createResult.success && createResult.tabId) {
+        ownedTabId = createResult.tabId
+        workingTabId = createResult.tabId
+        log.info(`[${subagentId}] Created new tab ${ownedTabId} for subagent`)
+      }
+    } catch (e) {
+      log.warn(`[${subagentId}] Failed to create tab for subagent:`, e)
+      // Continue without dedicated tab - will use active tab
+    }
+  }
+
+  // Switch to working tab if we have one
+  if (workingTabId !== undefined) {
+    try {
+      await browserAutomation.switchToTab(workingTabId)
+    } catch (e) {
+      log.warn(`[${subagentId}] Failed to switch to tab ${workingTabId}:`, e)
+    }
   }
 
   messages.push({
     role: 'user',
-    content: `Subagent Task: ${task}\n\nYou are a subagent running in parallel. Complete this specific task and report back.\nStart by taking a screenshot to see the current state.`
+    content: `Subagent Task: ${task}\n\nYou are a subagent running in parallel with your own dedicated browser tab. Complete this specific task and report back.\nIMPORTANT: You are operating in tab ${workingTabId || 'active'}. Stay in this tab unless the task requires navigating elsewhere.\nStart by taking a screenshot to see the current state.`
   })
+
+  // Cleanup function to close owned tab
+  const cleanup = async () => {
+    if (ownedTabId !== undefined) {
+      try {
+        await browserAutomation.closeTab(ownedTabId)
+        log.info(`[${subagentId}] Closed owned tab ${ownedTabId}`)
+      } catch (e) {
+        log.warn(`[${subagentId}] Failed to close owned tab:`, e)
+      }
+    }
+  }
 
   try {
     while (stepCount < maxSteps) {
       if (abortSignal?.aborted) {
         subagentStatus.status = 'failed'
         subagentStatus.error = 'Cancelled'
+        await cleanup()
         return subagentStatus
       }
 
@@ -2846,11 +3095,12 @@ async function runSubagent(
             subagentStatus.steps.push(step)
             subagentStatus.status = 'completed'
             subagentStatus.result = toolInput.summary as string
+            await cleanup()
             return subagentStatus
           }
 
           // Skip subagent spawning from within subagent
-          if (toolName === 'spawn_subagent' || toolName === 'wait_for_subagents') {
+          if (toolName === 'spawn_subagent' || toolName === 'wait_for_subagents' || toolName === 'spawn_multiple_subagents') {
             step.result = 'Subagents cannot spawn other subagents'
             messages.push({ role: 'assistant', content: assistantContent })
             messages.push({
@@ -2891,7 +3141,8 @@ async function runSubagent(
                 toolResult = { result: `Invalid MCP tool name: ${toolName}` }
               }
             } else {
-              toolResult = await executeTool(toolName, toolInput, tabId, config)
+              // Execute tool in the subagent's working tab
+              toolResult = await executeTool(toolName, toolInput, workingTabId, config)
             }
 
             step.result = toolResult.result
@@ -2924,7 +3175,6 @@ async function runSubagent(
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error)
             step.error = errorMessage
-
             messages.push({ role: 'assistant', content: assistantContent })
             messages.push({
               role: 'user',
@@ -2942,15 +3192,23 @@ async function runSubagent(
       }
 
       subagentStatus.steps.push(step)
+
+      if (response.stop_reason === 'end_turn' && !response.content.some(b => b.type === 'tool_use')) {
+        subagentStatus.status = 'completed'
+        subagentStatus.result = step.thinking || 'Task completed'
+        await cleanup()
+        return subagentStatus
+      }
     }
 
-    // Max steps reached
-    subagentStatus.status = 'completed'
-    subagentStatus.result = 'Max steps reached'
+    subagentStatus.status = 'failed'
+    subagentStatus.error = 'Max steps reached'
+    await cleanup()
     return subagentStatus
   } catch (error) {
     subagentStatus.status = 'failed'
     subagentStatus.error = error instanceof Error ? error.message : String(error)
+    await cleanup()
     return subagentStatus
   }
 }

@@ -277,7 +277,7 @@ async function testMcpServer(server: McpServerConfig) {
 
   try {
     const headers: Record<string, string> = {
-      Accept: 'application/json, text/event-stream'
+      Accept: 'text/event-stream, application/json'
     }
     if (server.apiKey) {
       headers['Authorization'] = `Bearer ${server.apiKey}`
@@ -286,8 +286,6 @@ async function testMcpServer(server: McpServerConfig) {
       Object.assign(headers, server.headers)
     }
 
-    // For SSE, try to connect and read the first event
-    // For Streamable HTTP, try a simple request
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10000)
 
@@ -299,15 +297,71 @@ async function testMcpServer(server: McpServerConfig) {
 
     clearTimeout(timeout)
 
-    if (response.ok) {
-      mcpTestResults.value.set(server.id, {
-        success: true,
-        message: `OK (${response.status})`
-      })
-    } else {
+    if (!response.ok) {
       mcpTestResults.value.set(server.id, {
         success: false,
         message: `HTTP ${response.status}`
+      })
+      return
+    }
+
+    const contentType = response.headers.get('content-type') || ''
+
+    // For SSE responses, try to read the first event
+    if (contentType.includes('text/event-stream') && response.body) {
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let receivedData = ''
+
+      // Try to read the first chunk with a timeout
+      const readTimeout = setTimeout(() => {
+        reader.cancel()
+      }, 5000)
+
+      try {
+        const { value, done } = await reader.read()
+        clearTimeout(readTimeout)
+
+        if (value) {
+          receivedData = decoder.decode(value)
+        }
+
+        // Cancel the stream after reading first chunk
+        reader.cancel()
+
+        // Check if we received valid SSE data (event: or data:)
+        if (receivedData.includes('event:') || receivedData.includes('data:')) {
+          // Extract event type if present
+          const eventMatch = receivedData.match(/event:\s*(\w+)/)
+          const eventType = eventMatch ? eventMatch[1] : 'data'
+          mcpTestResults.value.set(server.id, {
+            success: true,
+            message: `SSE OK (${eventType})`
+          })
+        } else if (done && !receivedData) {
+          mcpTestResults.value.set(server.id, {
+            success: false,
+            message: 'No SSE data'
+          })
+        } else {
+          mcpTestResults.value.set(server.id, {
+            success: true,
+            message: 'SSE Connected'
+          })
+        }
+      } catch (readError) {
+        clearTimeout(readTimeout)
+        // If read was cancelled due to timeout but connection was established
+        mcpTestResults.value.set(server.id, {
+          success: true,
+          message: 'SSE OK (slow)'
+        })
+      }
+    } else {
+      // Non-SSE response (JSON or other)
+      mcpTestResults.value.set(server.id, {
+        success: true,
+        message: `OK (${response.status})`
       })
     }
   } catch (error) {
@@ -360,8 +414,22 @@ watch(
   { deep: true }
 )
 
-// Initialize: Check for interrupted conversation
+// Initialize: Check for interrupted conversation and capture target tab
 onMounted(async () => {
+  // Capture the current active tab ID for sidebar mode
+  // This ensures we always operate on the correct tab even if focus changes
+  if (typeof chrome !== 'undefined' && chrome.tabs) {
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+      if (activeTab?.id && !activeTab.url?.startsWith('chrome-extension://')) {
+        capturedTabId.value = activeTab.id
+        console.log('[AIAgent] Captured target tab ID:', activeTab.id, activeTab.url)
+      }
+    } catch (e) {
+      console.error('[AIAgent] Failed to capture target tab:', e)
+    }
+  }
+
   const saved = loadConversation()
   if (saved && saved.isRunning) {
     // Conversation was interrupted
@@ -626,11 +694,20 @@ const isPopupWindow = computed(() => {
   return window.location.search.includes('type=agent-popup')
 })
 
-// Get target tab ID from URL params (for popup window mode)
+// Target tab ID for operations
+// For popup window: from URL params
+// For sidebar: captured on mount
+const capturedTabId = ref<number | undefined>(undefined)
+
 const targetTabId = computed(() => {
+  // First check URL params (for popup window mode)
   const params = new URLSearchParams(window.location.search)
   const tabId = params.get('targetTabId')
-  return tabId ? parseInt(tabId, 10) : undefined
+  if (tabId) {
+    return parseInt(tabId, 10)
+  }
+  // For sidebar mode, use captured tab ID
+  return capturedTabId.value
 })
 
 // Open AI Agent in a separate popup window
