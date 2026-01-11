@@ -11,6 +11,7 @@ import AIAgent from './AIAgent.vue'
 const { t } = useI18n()
 
 const activeTab = ref<'emoji' | 'agent'>('emoji')
+const hasVisitedAgent = ref(false)
 
 // Check for interrupted AI conversation on mount
 const AI_AGENT_STORAGE_KEY = 'ai_agent_conversation'
@@ -29,6 +30,12 @@ onMounted(() => {
     }
   } catch {
     // Ignore parse errors
+  }
+})
+
+watch(activeTab, value => {
+  if (value === 'agent') {
+    hasVisitedAgent.value = true
   }
 })
 
@@ -211,7 +218,7 @@ const handleSearch = () => {
       </div>
 
       <!-- Emoji Tab Content -->
-      <div v-if="activeTab === 'emoji'" class="emoji-tab-content">
+      <div v-show="activeTab === 'emoji'" class="emoji-tab-content">
         <!-- 搜索和分组选择 -->
         <div class="p-2 border-b border-gray-100 dark:border-gray-700 space-y-2">
           <!-- 表情搜索 -->
@@ -390,7 +397,7 @@ const handleSearch = () => {
       </div>
 
       <!-- AI Agent Tab Content -->
-      <AIAgent v-else-if="activeTab === 'agent'" class="agent-content" />
+      <AIAgent v-if="hasVisitedAgent" v-show="activeTab === 'agent'" class="agent-content" />
     </div>
   </a-config-provider>
 </template>
