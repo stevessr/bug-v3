@@ -341,15 +341,19 @@ watch([currentStep, currentThinking, currentScreenshot], () => {
 
 // Watch steps and save to localStorage when changed (debounced to avoid excessive saves)
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
-watch([steps, currentStep, isRunning, subagents], () => {
-  if (steps.value.length > 0) {
-    // Debounce saves to avoid triggering too frequently
-    if (saveTimeout) clearTimeout(saveTimeout)
-    saveTimeout = setTimeout(() => {
-      saveConversation()
-    }, 500)
-  }
-}, { deep: true })
+watch(
+  [steps, currentStep, isRunning, subagents],
+  () => {
+    if (steps.value.length > 0) {
+      // Debounce saves to avoid triggering too frequently
+      if (saveTimeout) clearTimeout(saveTimeout)
+      saveTimeout = setTimeout(() => {
+        saveConversation()
+      }, 500)
+    }
+  },
+  { deep: true }
+)
 
 // Initialize: Check for interrupted conversation
 onMounted(() => {

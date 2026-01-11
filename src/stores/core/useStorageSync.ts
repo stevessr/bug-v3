@@ -122,8 +122,32 @@ export function useStorageSync({
   const handleSettingsChange = (change: chrome.storage.StorageChange) => {
     const data = change?.newValue ? (change.newValue as { data?: AppSettings }).data : null
     if (data && typeof data === 'object') {
-      settings.value = { ...defaultSettings, ...data }
-      console.log('[EmojiStore] Updated settings from external storage')
+      // Check if settings actually changed before updating
+      const hasChanges = Object.keys(data).some(key => {
+        const k = key as keyof AppSettings
+        const oldValue = settings.value[k]
+        const newValue = data[k]
+
+        // Deep comparison for arrays
+        if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+          if (oldValue.length !== newValue.length) return true
+          return !oldValue.every((item, index) => {
+            if (typeof item !== 'object' || item === null) {
+              return item === newValue[index]
+            }
+            return JSON.stringify(item) === JSON.stringify(newValue[index])
+          })
+        }
+
+        return oldValue !== newValue
+      })
+
+      if (hasChanges) {
+        settings.value = { ...defaultSettings, ...data }
+        console.log('[EmojiStore] Updated settings from external storage')
+      } else {
+        console.log('[EmojiStore] Settings unchanged, skipping update')
+      }
     }
   }
 
