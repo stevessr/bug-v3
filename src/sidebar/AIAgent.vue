@@ -73,9 +73,33 @@ const CONVERSATION_TIMEOUT = 24 * 60 * 60 * 1000 // 24 hours
 // Save conversation state to localStorage
 const saveConversation = () => {
   try {
+    // Strip screenshots from steps to reduce storage size
+    const stepsWithoutScreenshots = steps.value.map(step => ({
+      ...step,
+      screenshot: undefined // Remove base64 screenshots to save space
+    }))
+
+    // Limit to last 20 steps to prevent quota issues
+    const limitedSteps = stepsWithoutScreenshots.slice(-20)
+
+    // Also strip screenshots from resumeState messages if present
+    let cleanResumeState = currentResumeState.value
+    if (cleanResumeState) {
+      cleanResumeState = {
+        ...cleanResumeState,
+        messages: cleanResumeState.messages.slice(-10).map(msg => ({
+          ...msg,
+          content: Array.isArray(msg.content)
+            ? msg.content.filter(c => c.type !== 'image').slice(-5)
+            : msg.content
+        })),
+        steps: cleanResumeState.steps.slice(-20).map(s => ({ ...s, screenshot: undefined }))
+      }
+    }
+
     const conversation: PersistedConversation = {
       task: originalTask.value || steps.value[0]?.thinking?.replace(/^.*?: /, '') || '',
-      steps: steps.value,
+      steps: limitedSteps,
       currentStep: currentStep.value,
       isRunning: isRunning.value,
       timestamp: Date.now(),
@@ -89,12 +113,33 @@ const saveConversation = () => {
         enabledBuiltinTools: enabledBuiltinTools.value,
         enableMcpTools: enableMcpTools.value
       },
-      subagents: subagents.value,
-      resumeState: currentResumeState.value || undefined
+      subagents: subagents.value.slice(-5), // Limit subagents too
+      resumeState: cleanResumeState || undefined
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversation))
   } catch (error) {
     console.error('Failed to save conversation:', error)
+    // If still quota exceeded, try saving minimal state
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      try {
+        const minimalConversation = {
+          task: originalTask.value || '',
+          steps: [],
+          currentStep: currentStep.value,
+          isRunning: isRunning.value,
+          timestamp: Date.now(),
+          config: {
+            apiKey: apiKey.value,
+            baseUrl: baseUrl.value,
+            model: model.value
+          }
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(minimalConversation))
+      } catch {
+        // Give up if even minimal save fails
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    }
   }
 }
 

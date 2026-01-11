@@ -3015,33 +3015,31 @@ async function runSubagent(
   const messages: AgentMessage[] = []
   let stepCount = 0
   let ownedWindowId: number | undefined = undefined // Window created by this subagent
-  let ownedTabId: number | undefined = undefined // Tab in the created window
   let workingTabId: number | undefined = tabId // Tab to operate on
 
-  // Create a new window for this subagent if no specific tab is provided
-  // This prevents subagents from competing for the same window and avoids sidebar refresh
-  if (tabId === undefined) {
+  // Lazy window creation - only create when first browser tool is used
+  const ensureOwnWindow = async (): Promise<number | undefined> => {
+    if (workingTabId !== undefined) {
+      return workingTabId
+    }
+    // Create a new window (not just tab) to avoid affecting the main window's sidebar
     try {
-      // Create a new window (not just tab) to avoid affecting the main window's sidebar
-      // Use focused: false to avoid stealing focus from main window
       const createResult = await browserAutomation.createWindow(baseUrl || 'about:blank', 'normal', false)
       if (createResult.success && createResult.windowId && createResult.tabId) {
         ownedWindowId = createResult.windowId
-        ownedTabId = createResult.tabId
         workingTabId = createResult.tabId
-        log.info(`[${subagentId}] Created new window ${ownedWindowId} with tab ${ownedTabId} for subagent`)
+        log.info(`[${subagentId}] Created new window ${ownedWindowId} with tab ${workingTabId} for subagent`)
+        return workingTabId
       }
     } catch (e) {
       log.warn(`[${subagentId}] Failed to create window for subagent:`, e)
-      // Continue without dedicated window - will use active tab
     }
+    return undefined
   }
-
-  // No need to switch tabs - the new window is already active in its own context
 
   messages.push({
     role: 'user',
-    content: `Subagent Task: ${task}\n\nYou are a subagent running in parallel with your own dedicated browser window. Complete this specific task and report back.\nIMPORTANT: You are operating in tab ${workingTabId || 'active'}. Stay in this tab unless the task requires navigating elsewhere.\nStart by taking a screenshot to see the current state.`
+    content: `Subagent Task: ${task}\n\nYou are a subagent running in parallel. Complete this specific task and report back.\nIf you need to use browser tools (screenshot, click, navigate, etc.), a dedicated browser window will be created for you.\nIMPORTANT: Focus on completing the task efficiently.`
   })
 
   // Cleanup function to close owned window (which also closes the tab)
@@ -3137,6 +3135,11 @@ async function runSubagent(
                 toolResult = { result: `Invalid MCP tool name: ${toolName}` }
               }
             } else {
+              // For browser tools, ensure we have our own window first
+              const browserToolNames = ['screenshot', 'click', 'type', 'scroll', 'navigate', 'wait', 'execute_js', 'select', 'hover', 'drag']
+              if (browserToolNames.includes(toolName)) {
+                await ensureOwnWindow()
+              }
               // Execute tool in the subagent's working tab
               toolResult = await executeTool(toolName, toolInput, workingTabId, config)
             }
