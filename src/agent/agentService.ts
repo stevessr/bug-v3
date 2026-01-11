@@ -1,4 +1,4 @@
-import { generateObject } from 'ai'
+import { streamObject } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
@@ -59,18 +59,22 @@ const buildSystemPrompt = (settings: AgentSettings, subagent?: SubAgentConfig): 
   return lines.join('\n')
 }
 
-const repairJson = (text: string): string | null => {
-  const start = text.indexOf('{')
-  const end = text.lastIndexOf('}')
+const repairJson = (raw: unknown): string | null => {
+  if (typeof raw !== 'string') return null
+  const start = raw.indexOf('{')
+  const end = raw.lastIndexOf('}')
   if (start === -1 || end === -1 || end <= start) return null
-  const candidate = text.slice(start, end + 1)
+  const candidate = raw.slice(start, end + 1)
   return candidate
 }
 
 export async function runAgentMessage(
   input: string,
   settings: AgentSettings,
-  subagent?: SubAgentConfig
+  subagent?: SubAgentConfig,
+  options?: {
+    onUpdate?: (update: { message?: string }) => void
+  }
 ): Promise<AgentRunResult> {
   if (!settings.apiKey) {
     return {
@@ -84,7 +88,7 @@ export async function runAgentMessage(
       baseURL: settings.baseUrl || undefined
     })
     const modelId = subagent?.taskModel || settings.taskModel
-    const { object } = await generateObject({
+    const stream = streamObject({
       model: provider(modelId),
       schema: responseSchema,
       schemaName: 'agent_response',
@@ -97,6 +101,13 @@ export async function runAgentMessage(
         .join('\n'),
       prompt: input
     })
+    for await (const partial of stream.partialObjectStream) {
+      if (typeof partial?.message === 'string') {
+        options?.onUpdate?.({ message: partial.message })
+      }
+    }
+
+    const object = await stream.object
 
     const content = object.message?.trim() || '已完成任务。'
     const actions =

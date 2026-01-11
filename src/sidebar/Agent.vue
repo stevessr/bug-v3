@@ -81,20 +81,51 @@ const sendMessage = async () => {
   inputValue.value = ''
   isSending.value = true
 
-  const result = await runAgentMessage(content, settings.value, activeSubagent.value)
+  const assistantId = nanoid()
+  appendMessage({
+    id: assistantId,
+    role: 'assistant',
+    content: ''
+  })
+
+  const result = await runAgentMessage(content, settings.value, activeSubagent.value, {
+    onUpdate: update => {
+      if (!update.message) return
+      const idx = messages.value.findIndex(message => message.id === assistantId)
+      if (idx === -1) return
+      messages.value[idx] = {
+        ...messages.value[idx],
+        content: update.message
+      }
+    }
+  })
   if (result.error) {
-    appendMessage({
-      id: nanoid(),
-      role: 'assistant',
-      content: result.error,
-      error: result.error
-    })
+    const idx = messages.value.findIndex(message => message.id === assistantId)
+    if (idx !== -1) {
+      messages.value[idx] = {
+        ...messages.value[idx],
+        content: result.error,
+        error: result.error
+      }
+    } else {
+      appendMessage({
+        id: nanoid(),
+        role: 'assistant',
+        content: result.error,
+        error: result.error
+      })
+    }
     isSending.value = false
     return
   }
 
   if (result.message) {
-    appendMessage(result.message)
+    const idx = messages.value.findIndex(message => message.id === assistantId)
+    if (idx !== -1) {
+      messages.value[idx] = result.message
+    } else {
+      appendMessage(result.message)
+    }
   }
 
   pendingActions.value = result.actions || []
