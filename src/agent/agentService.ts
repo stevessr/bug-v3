@@ -1,5 +1,5 @@
 import { generateObject } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { createOpenAI } from '@ai-sdk/openai'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 
@@ -70,7 +70,7 @@ export async function runAgentMessage(
   }
 
   try {
-    const provider = createAnthropic({
+    const provider = createOpenAI({
       apiKey: settings.apiKey,
       baseURL: settings.baseUrl || undefined
     })

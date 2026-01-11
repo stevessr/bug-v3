@@ -5,6 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import crypto from 'crypto'
+import crx3 from 'crx3'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -70,43 +71,24 @@ function ensureKey(keyPath) {
   return fixedKeyPath
 }
 
-function runCrxCommand(args) {
-  const res = spawnSync('pnpm', ['exec', ...args], { stdio: 'inherit', shell: false })
-  if (res.status === 0) return true
-  return false
-}
-
-function packWithCrx(distPath, keyPath, outPath) {
+async function packWithCrx(distPath, keyPath, outPath) {
   const outFile = outPath || path.resolve(process.cwd(), 'dist.crx')
   console.log(`📦 Packing ${distPath} -> ${outFile}`)
 
-  // Try common CLI forms for '@crxjs/crx'. Prefer: pnpm exec crx pack <dir> --private-key <key> -o <out>
-  const args = ['crx', 'pack', distPath, '--private-key', keyPath, '-o', outFile]
-  if (runCrxCommand(args)) {
+  try {
+    // crx3 需要文件列表，我们传入 dist 目录下的 manifest.json
+    const manifestPath = path.join(distPath, 'manifest.json')
+    
+    await crx3([manifestPath], {
+      keyPath: keyPath,
+      crxPath: outFile
+    })
+    
     console.log('✅ .crx created at', outFile)
-    return
+  } catch (error) {
+    console.error('Failed to pack using crx3:', error.message)
+    process.exit(1)
   }
-
-  console.warn('Primary crx invocation failed, trying alternate flags...')
-
-  // Alternate flags
-  const altArgs = ['crx', 'pack', distPath, '-k', keyPath, '-o', outFile]
-  if (runCrxCommand(altArgs)) {
-    console.log('✅ .crx created at', outFile)
-    return
-  }
-
-  console.warn('crx CLI failed, trying crxjs CLI...')
-  const crxjsArgs = ['crxjs', 'pack', distPath, '--private-key', keyPath, '-o', outFile]
-  if (runCrxCommand(crxjsArgs)) {
-    console.log('✅ .crx created at', outFile)
-    return
-  }
-
-  console.error(
-    'Failed to pack using crx CLI. Please ensure `@crxjs/crx` is installed and try running `pnpm install` first.'
-  )
-  process.exit(1)
 }
 
 async function main() {
@@ -117,7 +99,7 @@ async function main() {
   const out = opts.out
     ? path.resolve(opts.out)
     : path.resolve(process.cwd(), `${path.basename(process.cwd())}.crx`)
-  packWithCrx(distPath, key, out)
+  await packWithCrx(distPath, key, out)
 }
 
 main()
