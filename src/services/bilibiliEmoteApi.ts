@@ -167,7 +167,7 @@ export async function loadBilibiliIndex(customDomain?: string): Promise<Bilibili
   }
 
   try {
-    const domain = customDomain || 'video2gif-pages.pages.dev'
+    const domain = customDomain || 's.pwsh.us.kg'
     const response = await fetch(`https://${domain}/assets/bilibili/index.json`)
 
     if (!response.ok) {

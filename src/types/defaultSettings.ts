@@ -14,7 +14,7 @@ export const DEFAULT_UPLOAD_MENU_ITEMS = {
     [
       '视频转 gif(iframe)',
       '🎞️',
-      'https://video2gif-pages.pages.dev/',
+      'https://s.pwsh.us.kg/',
       'emoji-extension-video2gif-iframe'
     ]
   ] as Array<[string, string, string, string]>
@@ -43,7 +43,7 @@ export const defaultSettings: AppSettings = {
   useIndexedDBForImages: false,
   enableContentImageCache: false, // 默认禁用前端图片缓存（试验性功能）
   uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS,
-  cloudMarketDomain: 'video2gif-pages.pages.dev', // 云端市场默认域名
+  cloudMarketDomain: 's.pwsh.us.kg', // 云端市场默认域名
   enableLinuxDoSeeking: false, // 默认禁用 LinuxDo 追觅功能
   linuxDoSeekingUsers: [], // 默认空监控列表
   enableLinuxDoSeekingDanmaku: true, // 默认启用弹幕通知
