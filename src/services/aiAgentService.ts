@@ -2896,6 +2896,44 @@ async function callClaudeAPI(
     }
   })
 
+  // Clean and validate messages to ensure proper format
+  const cleanedMessages = messages.map(msg => {
+    if (Array.isArray(msg.content)) {
+      // Filter out invalid content blocks and ensure proper structure
+      const validContent = msg.content.filter(block => {
+        if (block.type === 'text') {
+          return block.text !== undefined && block.text !== ''
+        }
+        if (block.type === 'tool_use') {
+          return block.id && block.name
+        }
+        if (block.type === 'tool_result') {
+          return block.tool_use_id !== undefined
+        }
+        if (block.type === 'image') {
+          return block.source?.data
+        }
+        return true
+      })
+      // If no valid content, add a placeholder
+      if (validContent.length === 0) {
+        return { ...msg, content: [{ type: 'text', text: '...' }] }
+      }
+      return { ...msg, content: validContent }
+    }
+    // String content
+    if (typeof msg.content === 'string' && msg.content.trim() === '') {
+      return { ...msg, content: '...' }
+    }
+    return msg
+  }).filter(msg => {
+    // Remove messages with completely invalid content
+    if (Array.isArray(msg.content)) {
+      return msg.content.length > 0
+    }
+    return msg.content !== undefined
+  })
+
   let lastError: Error | null = null
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -2905,7 +2943,7 @@ async function callClaudeAPI(
         max_tokens: config.maxTokens || 8192,
         system: SYSTEM_PROMPT,
         tools: tools as any,
-        messages: messages as any
+        messages: cleanedMessages as any
       })
 
       return {

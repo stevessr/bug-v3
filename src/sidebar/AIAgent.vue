@@ -85,14 +85,34 @@ const saveConversation = () => {
     // Also strip screenshots from resumeState messages if present
     let cleanResumeState = currentResumeState.value
     if (cleanResumeState) {
+      // Filter and clean messages, removing images and empty content
+      const cleanedMessages = cleanResumeState.messages.slice(-10).map(msg => {
+        if (Array.isArray(msg.content)) {
+          // Filter out images and keep valid content blocks
+          const filteredContent = msg.content
+            .filter(c => c.type !== 'image')
+            .slice(-5)
+          // If no content left after filtering, create a placeholder text
+          if (filteredContent.length === 0) {
+            return {
+              ...msg,
+              content: [{ type: 'text' as const, text: '[Content removed for storage]' }]
+            }
+          }
+          return { ...msg, content: filteredContent }
+        }
+        return msg
+      }).filter(msg => {
+        // Remove messages with invalid content
+        if (Array.isArray(msg.content)) {
+          return msg.content.length > 0
+        }
+        return msg.content !== undefined && msg.content !== ''
+      }) as typeof cleanResumeState.messages
+
       cleanResumeState = {
         ...cleanResumeState,
-        messages: cleanResumeState.messages.slice(-10).map(msg => ({
-          ...msg,
-          content: Array.isArray(msg.content)
-            ? msg.content.filter(c => c.type !== 'image').slice(-5)
-            : msg.content
-        })),
+        messages: cleanedMessages,
         steps: cleanResumeState.steps.slice(-20).map(s => ({ ...s, screenshot: undefined }))
       }
     }
