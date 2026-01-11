@@ -70,32 +70,43 @@ function ensureKey(keyPath) {
   return fixedKeyPath
 }
 
+function runCrxCommand(args) {
+  const res = spawnSync('pnpm', ['exec', ...args], { stdio: 'inherit', shell: false })
+  if (res.status === 0) return true
+  return false
+}
+
 function packWithCrx(distPath, keyPath, outPath) {
   const outFile = outPath || path.resolve(process.cwd(), 'dist.crx')
   console.log(`📦 Packing ${distPath} -> ${outFile}`)
 
-  // Try common CLI forms for 'crx' package. Prefer: pnpm exec crx pack <dir> --private-key <key> -o <out>
+  // Try common CLI forms for '@crxjs/crx'. Prefer: pnpm exec crx pack <dir> --private-key <key> -o <out>
   const args = ['crx', 'pack', distPath, '--private-key', keyPath, '-o', outFile]
-  const res = spawnSync('pnpm', ['exec', ...args], { stdio: 'inherit', shell: false })
-  if (res.status === 0) {
+  if (runCrxCommand(args)) {
     console.log('✅ .crx created at', outFile)
     return
   }
 
-  console.warn('Primary npx crx invocation failed, trying alternate flags...')
+  console.warn('Primary crx invocation failed, trying alternate flags...')
 
   // Alternate flags
   const altArgs = ['crx', 'pack', distPath, '-k', keyPath, '-o', outFile]
-  const res2 = spawnSync('pnpm', ['exec', ...altArgs], { stdio: 'inherit', shell: false })
-  if (res2.status === 0) {
+  if (runCrxCommand(altArgs)) {
+    console.log('✅ .crx created at', outFile)
+    return
+  }
+
+  console.warn('crx CLI failed, trying crxjs CLI...')
+  const crxjsArgs = ['crxjs', 'pack', distPath, '--private-key', keyPath, '-o', outFile]
+  if (runCrxCommand(crxjsArgs)) {
     console.log('✅ .crx created at', outFile)
     return
   }
 
   console.error(
-    'Failed to pack using npx crx. Please ensure the `crx` package is installed (devDependency) and try running `pnpm install` first.'
+    'Failed to pack using crx CLI. Please ensure `@crxjs/crx` is installed and try running `pnpm install` first.'
   )
-  process.exit(res2.status || res.status || 1)
+  process.exit(1)
 }
 
 async function main() {

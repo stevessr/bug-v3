@@ -40,7 +40,8 @@
     "check:all": "pnpm lint && pnpm format:check && pnpm type-check"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.77",
+    "@ai-sdk/anthropic": "^1.2.12",
+    "ai": "^5.0.119",
     "ant-design-vue": "^4.2.6",
     "dexie": "^4.2.1",
     "dompurify": "^3.3.1",
@@ -51,7 +52,8 @@
     "pinia": "^2.3.1",
     "typeit": "^8.8.7",
     "vue": "^3.5.26",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@ant-design/icons-vue": "^7.0.1",
@@ -66,7 +68,7 @@
     "@typescript-eslint/parser": "^8.52.0",
     "@vitejs/plugin-vue": "^6.0.3",
     "autoprefixer": "^10.4.23",
-    "crx": "^5.0.1",
+    "@crxjs/crx": "^2.0.1",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
