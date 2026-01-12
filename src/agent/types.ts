@@ -39,6 +39,9 @@ export interface AgentSettings {
   taskModel: string
   reasoningModel: string
   imageModel: string
+  maxTokens: number
+  masterSystemPrompt: string
+  enableThoughts: boolean
   enableMcp: boolean
   mcpServers: McpServerConfig[]
   subagents: SubAgentConfig[]
@@ -63,6 +66,15 @@ export type AgentActionType =
   | 'navigate'
   | 'click-dom'
   | 'input'
+  | 'double-click'
+  | 'right-click'
+  | 'hover'
+  | 'key'
+  | 'type'
+  | 'drag'
+  | 'select'
+  | 'focus'
+  | 'blur'
 
 export interface AgentActionBase {
   id: string
@@ -71,10 +83,11 @@ export interface AgentActionBase {
 }
 
 export interface ClickAction extends AgentActionBase {
-  type: 'click' | 'click-dom'
+  type: 'click' | 'click-dom' | 'double-click' | 'right-click' | 'hover' | 'focus' | 'blur'
   selector?: string
   x?: number
   y?: number
+  button?: number
 }
 
 export interface ScrollAction extends AgentActionBase {
@@ -108,6 +121,42 @@ export interface InputAction extends AgentActionBase {
   clear?: boolean
 }
 
+export interface KeyAction extends AgentActionBase {
+  type: 'key'
+  key: string
+  code?: string
+  ctrlKey?: boolean
+  altKey?: boolean
+  shiftKey?: boolean
+  metaKey?: boolean
+  repeat?: boolean
+}
+
+export interface TypeAction extends AgentActionBase {
+  type: 'type'
+  selector?: string
+  text: string
+  clear?: boolean
+  delayMs?: number
+}
+
+export interface DragAction extends AgentActionBase {
+  type: 'drag'
+  selector?: string
+  x?: number
+  y?: number
+  targetSelector?: string
+  toX?: number
+  toY?: number
+}
+
+export interface SelectAction extends AgentActionBase {
+  type: 'select'
+  selector: string
+  value?: string
+  label?: string
+}
+
 export type AgentAction =
   | ClickAction
   | ScrollAction
@@ -115,6 +164,10 @@ export type AgentAction =
   | ScreenshotAction
   | NavigateAction
   | InputAction
+  | KeyAction
+  | TypeAction
+  | DragAction
+  | SelectAction
 
 export interface AgentActionResult {
   id: string

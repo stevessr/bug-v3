@@ -13,13 +13,14 @@ import {
   setupPeriodicCleanup,
   handleGetEmojiSetting
 } from '../handlers/main.ts'
+import { setMcpBridgeDisabled, setupMcpBridge } from '../handlers/mcpBridge.ts'
 
 import { getChromeAPI } from './main.ts'
 
 import type { BackgroundMessage, TypedMessage, ActionMessage } from '@/types/messages'
 
 // Re-export setup functions so background entry can import them from ./handlers
-export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup }
+export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup, setupMcpBridge }
 
 export function setupMessageListener() {
   const chromeAPI = getChromeAPI()
@@ -78,7 +79,11 @@ export function setupMessageListener() {
               }
 
             case 'CAPTURE_SCREENSHOT':
-              handleCaptureScreenshot((typedMsg as any).format, sendResponse)
+              handleCaptureScreenshot((typedMsg as any).format, sendResponse, (typedMsg as any).tabId)
+              return true
+            case 'MCP_BRIDGE_SET_DISABLED':
+              setMcpBridgeDisabled(Boolean((typedMsg as any).disabled))
+              sendResponse({ success: true })
               return true
 
             default:

@@ -1,28 +1,39 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+import katex from 'katex'
 import { nanoid } from 'nanoid'
 
 import { useAgentSettings } from '@/agent/useAgentSettings'
-import { runAgentMessage } from '@/agent/agentService'
+import { describeScreenshot, runAgentFollowup, runAgentMessage } from '@/agent/agentService'
 import { executeAgentActions } from '@/agent/executeActions'
 import type { AgentAction, AgentActionResult, AgentMessage } from '@/agent/types'
 
-const { settings, activeSubagent, setActiveSubagent } = useAgentSettings()
+const { settings, activeSubagent } = useAgentSettings()
 
 const inputValue = ref('')
 const isSending = ref(false)
 const messages = ref<AgentMessage[]>([])
 const pendingActions = ref<AgentAction[]>([])
 const actionResults = ref<Record<string, AgentActionResult>>({})
+const targetTabId = ref<number | null>(null)
+const TARGET_TAB_STORAGE_KEY = 'ai-agent-target-tab-id-v1'
+const BYPASS_MODE_STORAGE_KEY = 'ai-agent-bypass-mode-v1'
+const bypassMode = ref(true)
+const lastUserInput = ref('')
+const lastToolUseId = ref<string | null>(null)
+const lastToolInput = ref<any>(null)
+const lastParallelActions = ref(false)
+const pendingActionsAssistantId = ref<string | null>(null)
+const TIMELINE_STORAGE_KEY = 'ai-agent-timeline-v1'
+const timelines = ref<Record<string, { collapsed: boolean; entries: any[] }>>({})
+const MESSAGE_STORAGE_KEY = 'ai-agent-messages-v1'
 
 const hasConnection = computed(() => {
   return Boolean(settings.value.baseUrl && settings.value.apiKey)
 })
 
-const enabledSubagents = computed(() => {
-  const list = settings.value.subagents.filter(agent => agent.enabled)
-  return list.length > 0 ? list : settings.value.subagents
-})
 
 const activePermissions = computed(() => {
   const agent = activeSubagent.value
@@ -39,6 +50,39 @@ const activePermissions = computed(() => {
   return labels.filter(item => agent.permissions[item.key])
 })
 
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
+
+const renderMarkdown = (input: string) => {
+  if (!input) return ''
+  const blocks: Array<{ tex: string; display: boolean }> = []
+  let source = input.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+    const id = blocks.length
+    blocks.push({ tex, display: true })
+    return `@@MATH_BLOCK_${id}@@`
+  })
+  source = source.replace(/(^|[^\\])\$(.+?)\$/g, (match, prefix, tex) => {
+    const id = blocks.length
+    blocks.push({ tex, display: false })
+    return `${prefix}@@MATH_INLINE_${id}@@`
+  })
+  let html = marked.parse(source) as string
+  html = html.replace(/@@MATH_(BLOCK|INLINE)_(\d+)@@/g, (_, kind, index) => {
+    const item = blocks[Number(index)]
+    if (!item) return ''
+    return katex.renderToString(item.tex, {
+      displayMode: kind === 'BLOCK',
+      throwOnError: false
+    })
+  })
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mn', 'mo', 'annotation', 'annotation-xml', 'svg', 'path'],
+    ADD_ATTR: ['class', 'style']
+  })
+}
+
 const mcpSummary = computed(() => {
   if (!settings.value.enableMcp) return '未启用 MCP'
   const scope = activeSubagent.value?.mcpServerIds
@@ -50,6 +94,93 @@ const mcpSummary = computed(() => {
   return enabled.length > 0 ? `MCP ${enabled.length} 个` : 'MCP 未配置'
 })
 
+const readStoredTabId = (): number | null => {
+  if (typeof localStorage === 'undefined') return null
+  const raw = localStorage.getItem(TARGET_TAB_STORAGE_KEY)
+  if (!raw) return null
+  const id = Number.parseInt(raw, 10)
+  return Number.isNaN(id) ? null : id
+}
+
+const readStoredBypassMode = (): boolean => {
+  if (typeof localStorage === 'undefined') return true
+  const raw = localStorage.getItem(BYPASS_MODE_STORAGE_KEY)
+  if (!raw) return true
+  return raw === 'true'
+}
+
+const loadTimelines = () => {
+  if (typeof localStorage === 'undefined') return
+  const raw = localStorage.getItem(TIMELINE_STORAGE_KEY)
+  if (!raw) return
+  try {
+    timelines.value = JSON.parse(raw)
+  } catch {
+    timelines.value = {}
+  }
+}
+
+const loadMessages = () => {
+  if (typeof localStorage === 'undefined') return
+  const raw = localStorage.getItem(MESSAGE_STORAGE_KEY)
+  if (!raw) return
+  try {
+    messages.value = JSON.parse(raw)
+  } catch {
+    messages.value = []
+  }
+}
+
+const saveMessages = () => {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(MESSAGE_STORAGE_KEY, JSON.stringify(messages.value))
+}
+
+const saveTimelines = () => {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(TIMELINE_STORAGE_KEY, JSON.stringify(timelines.value))
+}
+
+const ensureTimeline = (assistantId: string) => {
+  if (!timelines.value[assistantId]) {
+    timelines.value[assistantId] = { collapsed: false, entries: [] }
+  }
+}
+
+const addTimelineEntries = (assistantId: string, entries: any[]) => {
+  ensureTimeline(assistantId)
+  timelines.value[assistantId].entries.push(...entries)
+  saveTimelines()
+}
+
+const updateTimelineEntry = (assistantId: string, entryId: string, patch: Record<string, any>) => {
+  const timeline = timelines.value[assistantId]
+  if (!timeline) return
+  const entry = timeline.entries.find(item => item.id === entryId)
+  if (!entry) return
+  Object.assign(entry, patch)
+  saveTimelines()
+}
+const setTimelineCollapsed = (assistantId: string, collapsed: boolean) => {
+  ensureTimeline(assistantId)
+  timelines.value[assistantId].collapsed = collapsed
+  saveTimelines()
+}
+
+const writeStoredTabId = (id: number | null) => {
+  if (typeof localStorage === 'undefined') return
+  if (id === null) {
+    localStorage.removeItem(TARGET_TAB_STORAGE_KEY)
+    return
+  }
+  localStorage.setItem(TARGET_TAB_STORAGE_KEY, String(id))
+}
+
+const writeStoredBypassMode = (value: boolean) => {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(BYPASS_MODE_STORAGE_KEY, value ? 'true' : 'false')
+}
+
 const openAgentSettings = () => {
   if (!chrome?.runtime?.getURL || !chrome?.tabs?.create) return
   const url = chrome.runtime.getURL('index.html?type=options&tabs=settings&subtab=ai-agent')
@@ -58,19 +189,149 @@ const openAgentSettings = () => {
 
 const appendMessage = (message: AgentMessage) => {
   messages.value.push(message)
+  saveMessages()
 }
 
 const runActions = async () => {
   if (!activeSubagent.value || pendingActions.value.length === 0) return
-  const results = await executeAgentActions(pendingActions.value, activeSubagent.value.permissions)
+  const results = await executeAgentActions(
+    pendingActions.value,
+    activeSubagent.value.permissions,
+    targetTabId.value,
+    { parallel: lastParallelActions.value }
+  )
   for (const result of results) {
     actionResults.value[result.id] = result
   }
+  return results
+}
+
+const updateAssistantMessage = (assistantId: string, content: string, error?: string) => {
+  const idx = messages.value.findIndex(message => message.id === assistantId)
+  if (idx !== -1) {
+    messages.value[idx] = {
+      ...messages.value[idx],
+      content,
+      error
+    }
+  } else {
+    appendMessage({
+      id: assistantId,
+      role: 'assistant',
+      content,
+      error
+    })
+  }
+  saveMessages()
+}
+
+const runActionsAndContinue = async () => {
+  if (!pendingActionsAssistantId.value) return
+  while (pendingActions.value.length > 0 && lastToolUseId.value && lastToolInput.value) {
+    const results = (await runActions()) || []
+    if (pendingActionsAssistantId.value) {
+      addTimelineEntries(
+        pendingActionsAssistantId.value,
+        results.map(result => ({
+          id: result.id,
+          type: 'action',
+          actionType: result.type,
+          status: result.success ? 'success' : result.error ? 'error' : 'info',
+          error: result.error,
+          data: result.data
+        }))
+      )
+    }
+    if (pendingActionsAssistantId.value) {
+      for (const result of results) {
+        if (result.type === 'screenshot' && result.data) {
+          const description = await describeScreenshot(
+            result.data,
+            settings.value,
+            activeSubagent.value
+          )
+          if (description) {
+            updateTimelineEntry(pendingActionsAssistantId.value, result.id, {
+              description
+            })
+          }
+        }
+      }
+    }
+    const followup = await runAgentFollowup(
+      lastUserInput.value,
+      lastToolUseId.value,
+      lastToolInput.value,
+      results,
+      settings.value,
+      activeSubagent.value,
+      {
+        onUpdate: update => {
+          if (!update.message) return
+          updateAssistantMessage(pendingActionsAssistantId.value as string, update.message)
+        }
+      }
+    )
+    if (followup.error) {
+      updateAssistantMessage(
+        pendingActionsAssistantId.value as string,
+        followup.error,
+        followup.error
+      )
+      break
+    }
+    if (followup.message) {
+      updateAssistantMessage(pendingActionsAssistantId.value as string, followup.message.content)
+    }
+    pendingActions.value = followup.actions || []
+    actionResults.value = {}
+    lastToolUseId.value = followup.toolUseId || null
+    lastToolInput.value = followup.toolInput || null
+    lastParallelActions.value = Boolean(followup.parallelActions)
+    if (followup.thoughts?.length && pendingActionsAssistantId.value) {
+      addTimelineEntries(
+        pendingActionsAssistantId.value,
+        followup.thoughts.map(text => ({
+          id: nanoid(),
+          type: 'thought',
+          text,
+          status: 'info'
+        }))
+      )
+    }
+    if (followup.steps?.length && pendingActionsAssistantId.value) {
+      addTimelineEntries(
+        pendingActionsAssistantId.value,
+        followup.steps.map(text => ({
+          id: nanoid(),
+          type: 'step',
+          text,
+          status: 'info'
+        }))
+      )
+    }
+    if (!pendingActions.value.length) break
+  }
+  if (pendingActionsAssistantId.value && pendingActions.value.length === 0) {
+    setTimelineCollapsed(pendingActionsAssistantId.value, true)
+  }
+}
+
+const resolveActiveTabId = async (): Promise<number | null> => {
+  if (!chrome?.tabs?.query) return null
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+  return tabs[0]?.id ?? null
+}
+
+const setTargetTabId = (id: number | null) => {
+  targetTabId.value = id
+  writeStoredTabId(id)
 }
 
 const sendMessage = async () => {
   const content = inputValue.value.trim()
   if (!content || isSending.value) return
+  lastUserInput.value = content
 
   const userMessage: AgentMessage = {
     id: nanoid(),
@@ -80,6 +341,7 @@ const sendMessage = async () => {
   appendMessage(userMessage)
   inputValue.value = ''
   isSending.value = true
+  setTargetTabId(await resolveActiveTabId())
 
   const assistantId = nanoid()
   appendMessage({
@@ -87,49 +349,59 @@ const sendMessage = async () => {
     role: 'assistant',
     content: ''
   })
+  ensureTimeline(assistantId)
+  saveTimelines()
 
   const result = await runAgentMessage(content, settings.value, activeSubagent.value, {
     onUpdate: update => {
       if (!update.message) return
-      const idx = messages.value.findIndex(message => message.id === assistantId)
-      if (idx === -1) return
-      messages.value[idx] = {
-        ...messages.value[idx],
-        content: update.message
-      }
+      updateAssistantMessage(assistantId, update.message)
     }
   })
   if (result.error) {
-    const idx = messages.value.findIndex(message => message.id === assistantId)
-    if (idx !== -1) {
-      messages.value[idx] = {
-        ...messages.value[idx],
-        content: result.error,
-        error: result.error
-      }
-    } else {
-      appendMessage({
-        id: nanoid(),
-        role: 'assistant',
-        content: result.error,
-        error: result.error
-      })
-    }
+    updateAssistantMessage(assistantId, result.error, result.error)
     isSending.value = false
     return
   }
 
   if (result.message) {
-    const idx = messages.value.findIndex(message => message.id === assistantId)
-    if (idx !== -1) {
-      messages.value[idx] = result.message
-    } else {
-      appendMessage(result.message)
-    }
+    updateAssistantMessage(assistantId, result.message.content)
   }
 
   pendingActions.value = result.actions || []
   actionResults.value = {}
+  pendingActionsAssistantId.value = assistantId
+  lastToolUseId.value = result.toolUseId || null
+  lastToolInput.value = result.toolInput || null
+  lastParallelActions.value = Boolean(result.parallelActions)
+  if (result.thoughts?.length) {
+    addTimelineEntries(
+      assistantId,
+      result.thoughts.map(text => ({
+        id: nanoid(),
+        type: 'thought',
+        text,
+        status: 'info'
+      }))
+    )
+  }
+  if (result.steps?.length) {
+    addTimelineEntries(
+      assistantId,
+      result.steps.map(text => ({
+        id: nanoid(),
+        type: 'step',
+        text,
+        status: 'info'
+      }))
+    )
+  }
+  if (bypassMode.value && pendingActions.value.length > 0) {
+    await runActionsAndContinue()
+  }
+  if (pendingActions.value.length === 0) {
+    setTimelineCollapsed(assistantId, true)
+  }
   isSending.value = false
 }
 
@@ -137,7 +409,49 @@ const clearMessages = () => {
   messages.value = []
   pendingActions.value = []
   actionResults.value = {}
+  setTargetTabId(null)
+  lastToolUseId.value = null
+  lastToolInput.value = null
+  pendingActionsAssistantId.value = null
+  timelines.value = {}
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(TIMELINE_STORAGE_KEY)
+    localStorage.removeItem(MESSAGE_STORAGE_KEY)
+  }
 }
+
+onMounted(async () => {
+  const stored = readStoredTabId()
+  if (!stored) return
+  if (!chrome?.tabs?.get) {
+    setTargetTabId(stored)
+    return
+  }
+  try {
+    await chrome.tabs.get(stored)
+    setTargetTabId(stored)
+  } catch {
+    setTargetTabId(null)
+  }
+})
+
+onMounted(() => {
+  bypassMode.value = readStoredBypassMode()
+})
+
+onMounted(() => {
+  loadTimelines()
+})
+
+onMounted(() => {
+  loadMessages()
+})
+
+const onBypassModeChange = (value: boolean) => {
+  bypassMode.value = value
+  writeStoredBypassMode(value)
+}
+
 </script>
 
 <template>
@@ -159,14 +473,9 @@ const clearMessages = () => {
         </div>
       </div>
       <div class="agent-config">
-        <div class="flex items-center gap-2">
-          <span class="text-[11px] text-gray-500 dark:text-gray-400">Subagent</span>
-          <a-select
-            v-model:value="settings.defaultSubagentId"
-            :options="enabledSubagents.map(a => ({ label: a.name, value: a.id }))"
-            class="w-44"
-            @change="value => setActiveSubagent(String(value))"
-          />
+        <div class="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+          <span>自动执行</span>
+          <a-switch size="small" :checked="bypassMode" @change="onBypassModeChange" />
         </div>
         <div class="text-[11px] text-gray-500 dark:text-gray-400">
           任务模型：{{ activeSubagent?.taskModel || settings.taskModel }}
@@ -207,10 +516,45 @@ const clearMessages = () => {
           {{ message.role === 'user' ? '你' : 'Claude' }}
         </div>
         <div
+          v-if="message.role === 'assistant' && timelines[message.id]"
+          class="agent-timeline"
+        >
+          <a-collapse
+            :active-key="timelines[message.id].collapsed ? [] : ['flow']"
+            @change="keys => setTimelineCollapsed(message.id, (keys as string[]).length === 0)"
+            ghost
+          >
+            <a-collapse-panel key="flow" header="过程">
+              <a-timeline>
+                <a-timeline-item
+                  v-for="entry in timelines[message.id].entries"
+                  :key="entry.id"
+                  :color="entry.status === 'error' ? 'red' : entry.status === 'success' ? 'green' : 'blue'"
+                >
+                  <div class="text-xs text-gray-600">
+                    <span v-if="entry.type === 'thought'">思考：{{ entry.text }}</span>
+                    <span v-else-if="entry.type === 'step'">步骤：{{ entry.text }}</span>
+                    <span v-else>
+                      动作：{{ entry.actionType }}
+                      <span v-if="entry.error" class="text-red-500">（{{ entry.error }}）</span>
+                    </span>
+                  </div>
+                  <div v-if="entry.actionType === 'screenshot' && entry.data" class="mt-2">
+                    <a-image :src="entry.data" :width="200" />
+                  </div>
+                  <div v-if="entry.description" class="mt-2 text-xs text-gray-500">
+                    识图：{{ entry.description }}
+                  </div>
+                </a-timeline-item>
+              </a-timeline>
+            </a-collapse-panel>
+          </a-collapse>
+        </div>
+        <div
           class="agent-message-bubble"
           :class="message.role === 'user' ? 'agent-user' : 'agent-assistant'"
         >
-          {{ message.content }}
+          <div class="agent-markdown" v-html="renderMarkdown(message.content)"></div>
           <div v-if="message.actions && message.actions.length" class="agent-action-hint">
             返回 {{ message.actions.length }} 个动作待执行
           </div>
@@ -220,13 +564,16 @@ const clearMessages = () => {
       <div v-if="pendingActions.length" class="agent-actions">
         <div class="agent-actions-header">
           <div class="text-xs text-gray-500 dark:text-gray-400">待执行动作</div>
-          <a-button size="small" @click="runActions">执行全部</a-button>
+          <a-button size="small" @click="runActionsAndContinue">执行全部</a-button>
         </div>
         <div class="agent-actions-list">
           <div v-for="action in pendingActions" :key="action.id" class="agent-action-item">
             <div class="agent-action-text">
               <span class="agent-action-type">{{ action.type }}</span>
               <span class="text-gray-500">{{ action.note || '自动化操作' }}</span>
+            </div>
+            <div v-if="action.type === 'screenshot' && actionResults[action.id]?.data" class="mt-2">
+              <a-image :src="actionResults[action.id]?.data" :width="200" />
             </div>
             <span
               :class="
@@ -267,6 +614,8 @@ const clearMessages = () => {
 </template>
 
 <style scoped>
+@import 'katex/dist/katex.min.css';
+
 .agent-shell {
   display: flex;
   flex-direction: column;
@@ -368,6 +717,10 @@ const clearMessages = () => {
   gap: 6px;
 }
 
+.agent-timeline {
+  margin-bottom: 6px;
+}
+
 .agent-message-role {
   font-size: 11px;
   color: #94a3b8;
@@ -383,6 +736,34 @@ const clearMessages = () => {
   border-radius: 14px;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.agent-markdown :deep(p) {
+  margin: 0 0 8px;
+}
+
+.agent-markdown :deep(pre) {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  overflow: auto;
+}
+
+.agent-markdown :deep(code) {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.agent-markdown :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.agent-markdown :deep(th),
+.agent-markdown :deep(td) {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  padding: 6px 8px;
 }
 
 .agent-user {

@@ -16,12 +16,17 @@ function isChromeAvailable() {
   return typeof chrome !== 'undefined' && !!chrome.tabs
 }
 
-async function captureScreenshot(format: 'png' | 'jpeg' = 'png'): Promise<ActionStatus> {
+async function captureScreenshot(
+  format: 'png' | 'jpeg' = 'png',
+  tabId?: number
+): Promise<ActionStatus> {
   if (!chrome?.runtime?.sendMessage) {
     return { id: `screenshot-${Date.now()}`, type: 'screenshot', success: false, error: '无法截图' }
   }
   return new Promise(resolve => {
-    chrome.runtime.sendMessage({ type: 'CAPTURE_SCREENSHOT', format }, (response: any) => {
+    chrome.runtime.sendMessage(
+      { type: 'CAPTURE_SCREENSHOT', format, tabId },
+      (response: any) => {
       if (response?.success) {
         resolve({
           id: `screenshot-${Date.now()}`,
@@ -37,7 +42,8 @@ async function captureScreenshot(format: 'png' | 'jpeg' = 'png'): Promise<Action
           error: response?.error || '截图失败'
         })
       }
-    })
+      }
+    )
   })
 }
 
@@ -49,7 +55,9 @@ async function getActiveTabId(): Promise<number | null> {
 
 export async function executeAgentActions(
   actions: AgentAction[],
-  permissions: AgentPermissions
+  permissions: AgentPermissions,
+  targetTabId?: number | null,
+  options?: { parallel?: boolean }
 ): Promise<ActionStatus[]> {
   if (!isChromeAvailable()) {
     return actions.map(action => ({
@@ -60,69 +68,62 @@ export async function executeAgentActions(
     }))
   }
 
-  const results: ActionStatus[] = []
-  const tabId = await getActiveTabId()
+  const tabId = targetTabId ?? (await getActiveTabId())
 
-  for (const action of actions) {
+  const executeSingle = async (action: AgentAction): Promise<ActionStatus> => {
     const permissionKey = ACTION_TYPE_TO_PERMISSION[action.type]
     if (permissionKey && !permissions[permissionKey]) {
-      results.push({
+      return {
         id: action.id,
         type: action.type,
         success: false,
         error: '权限未开启'
-      })
-      continue
+      }
     }
 
     if (action.type === 'navigate') {
       if (!chrome.tabs?.update || tabId === null) {
-        results.push({
+        return {
           id: action.id,
           type: action.type,
           success: false,
           error: '无法切换 URL'
-        })
-        continue
+        }
       }
       try {
         await chrome.tabs.update(tabId, { url: action.url })
-        results.push({ id: action.id, type: action.type, success: true })
+        return { id: action.id, type: action.type, success: true }
       } catch (error: any) {
-        results.push({
+        return {
           id: action.id,
           type: action.type,
           success: false,
           error: error?.message || '切换 URL 失败'
-        })
+        }
       }
-      continue
     }
 
     if (action.type === 'screenshot') {
-      const res = await captureScreenshot(action.format)
-      results.push({ ...res, id: action.id })
-      continue
+      const res = await captureScreenshot(action.format, tabId ?? undefined)
+      return { ...res, id: action.id }
     }
 
     if (tabId === null) {
-      results.push({
+      return {
         id: action.id,
         type: action.type,
         success: false,
-        error: '未找到活动标签页'
-      })
-      continue
+        error: '未找到目标标签页'
+      }
     }
 
     if (!chrome.tabs?.sendMessage) {
-      results.push({
+      return {
         id: action.id,
         type: action.type,
         success: false,
         error: '无法发送消息到内容脚本'
-      })
-      continue
+      }
     }
 
     const response = await new Promise<any>(resolve => {
@@ -131,14 +132,20 @@ export async function executeAgentActions(
       })
     })
 
-    results.push({
+    return {
       id: action.id,
       type: action.type,
       success: response?.success === true,
       error: response?.error,
       data: response?.data
-    })
+    }
   }
-
+  if (options?.parallel) {
+    return Promise.all(actions.map(action => executeSingle(action)))
+  }
+  const results: ActionStatus[] = []
+  for (const action of actions) {
+    results.push(await executeSingle(action))
+  }
   return results
 }

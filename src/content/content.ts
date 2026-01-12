@@ -14,6 +14,7 @@ import {
 } from './utils/platformDetector'
 import { loadPlatformModule } from './utils/platformLoader'
 import { handleAgentAction } from './agent/actions'
+import { getDomTree, getDomTreeAtPoint } from './agent/dom'
 
 import { createLogger } from '@/utils/logger'
 
@@ -64,6 +65,26 @@ if (chrome?.runtime?.onMessage) {
           sendResponse({ success: false, error: error?.message || '动作执行失败' })
         )
       return true
+    }
+
+    if (message?.type === 'DOM_QUERY') {
+      try {
+        if (message.kind === 'tree') {
+          const data = getDomTree(message.selector, message.options || {})
+          sendResponse({ success: true, data })
+          return true
+        }
+        if (message.kind === 'at-point') {
+          const data = getDomTreeAtPoint(message.x, message.y, message.options || {})
+          sendResponse({ success: true, data })
+          return true
+        }
+        sendResponse({ success: false, error: '未知 DOM 查询类型' })
+        return true
+      } catch (error: any) {
+        sendResponse({ success: false, error: error?.message || 'DOM 查询失败' })
+        return true
+      }
     }
 
     if (message?.type === 'GET_CSRF_TOKEN') {

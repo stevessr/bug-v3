@@ -1,0 +1,7 @@
+{
+  "name": "com.bugv3.mcp",
+  "description": "Bug-V3 MCP bridge",
+  "path": "__HOST_PATH__",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://__EXTENSION_ID__/"]
+}

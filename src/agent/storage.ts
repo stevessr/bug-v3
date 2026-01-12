@@ -14,7 +14,13 @@ export function loadAgentSettings(): AgentSettings {
       ...defaultAgentSettings,
       ...parsed,
       mcpServers: parsed.mcpServers || [],
-      subagents: parsed.subagents || defaultAgentSettings.subagents
+      subagents: parsed.subagents || defaultAgentSettings.subagents,
+      maxTokens: parsed.maxTokens || defaultAgentSettings.maxTokens,
+      masterSystemPrompt: parsed.masterSystemPrompt || defaultAgentSettings.masterSystemPrompt,
+      enableThoughts:
+        typeof parsed.enableThoughts === 'boolean'
+          ? parsed.enableThoughts
+          : defaultAgentSettings.enableThoughts
     }
   } catch {
     return { ...defaultAgentSettings }

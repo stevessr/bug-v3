@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { nanoid } from 'nanoid'
 
 import { useAgentSettings } from '@/agent/useAgentSettings'
@@ -9,6 +9,8 @@ const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSetti
 
 const headerDrafts = reactive<Record<string, string>>({})
 const headerErrors = reactive<Record<string, string>>({})
+const mcpBridgeEnabled = ref(true)
+const MCP_BRIDGE_DISABLE_KEY = 'mcp-native-host-disabled'
 
 const subagentOptions = computed(() =>
   settings.value.subagents.map(agent => ({
@@ -84,6 +86,32 @@ const addPresetSubagent = () => {
 const updatePermission = (agent: SubAgentConfig, key: keyof AgentPermissions, value: boolean) => {
   agent.permissions[key] = value
 }
+
+const loadMcpBridgeState = () => {
+  if (typeof localStorage === 'undefined') return
+  const raw = localStorage.getItem(MCP_BRIDGE_DISABLE_KEY)
+  mcpBridgeEnabled.value = raw ? raw !== 'true' : true
+  if (chrome?.runtime?.sendMessage) {
+    chrome.runtime.sendMessage({
+      type: 'MCP_BRIDGE_SET_DISABLED',
+      disabled: !mcpBridgeEnabled.value
+    })
+  }
+}
+
+const onMcpBridgeToggle = (value: boolean) => {
+  mcpBridgeEnabled.value = value
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(MCP_BRIDGE_DISABLE_KEY, value ? 'false' : 'true')
+  }
+  if (chrome?.runtime?.sendMessage) {
+    chrome.runtime.sendMessage({ type: 'MCP_BRIDGE_SET_DISABLED', disabled: !value })
+  }
+}
+
+onMounted(() => {
+  loadMcpBridgeState()
+})
 </script>
 
 <template>
@@ -104,10 +132,64 @@ const updatePermission = (agent: SubAgentConfig, key: keyof AgentPermissions, va
         <a-input v-model:value="settings.apiKey" placeholder="API Key" type="password"></a-input>
       </div>
 
+      <div class="flex items-center justify-between">
+        <div>
+          <h4 class="text-sm font-medium dark:text-white">本地 MCP 桥接</h4>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            手动启用 Native Messaging 后才可生效，关闭会停止自动探测。
+          </p>
+        </div>
+        <a-switch :checked="mcpBridgeEnabled" @change="onMcpBridgeToggle" />
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+        <div>启用步骤：</div>
+        <div>1. 运行：chmod +x scripts/mcp-bridge/server.js</div>
+        <div>
+          2. 生成 manifest：
+          <span class="font-mono">
+            node scripts/mcp-bridge/create-host-manifest.js --extension-id
+            &lt;扩展ID&gt; --host-path &quot;/绝对路径/scripts/mcp-bridge/server.js&quot;
+          </span>
+        </div>
+        <div>3. 将 manifest 放到系统目录：</div>
+        <div>macOS: ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/</div>
+        <div>Linux: ~/.config/google-chrome/NativeMessagingHosts/</div>
+        <div>Windows: 注册表指向 manifest</div>
+        <div>4. 重启浏览器或重载扩展</div>
+      </div>
+
       <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
         <a-input v-model:value="settings.taskModel" placeholder="任务模型"></a-input>
         <a-input v-model:value="settings.reasoningModel" placeholder="思考模型"></a-input>
         <a-input v-model:value="settings.imageModel" placeholder="图片转述模型"></a-input>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4">
+        <a-input-number
+          v-model:value="settings.maxTokens"
+          :min="1"
+          :max="96000"
+          class="w-full"
+          placeholder="max_tokens（最大 96000）"
+        />
+      </div>
+
+      <div class="grid grid-cols-1 gap-4">
+        <a-textarea
+          v-model:value="settings.masterSystemPrompt"
+          :rows="3"
+          placeholder="总代理提示词"
+        />
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <h4 class="text-sm font-medium dark:text-white">思考模式</h4>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            允许模型输出简短思考过程（会展示在时间线中）。
+          </p>
+        </div>
+        <a-switch v-model:checked="settings.enableThoughts" />
       </div>
     </div>
 
