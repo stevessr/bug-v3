@@ -236,7 +236,7 @@ const retryFromMessage = async (message: AgentMessage) => {
   pendingActionsAssistantId.value = null
   lastToolUseId.value = null
   lastToolInput.value = null
-  lastParallelActions.value = false
+  lastParallelActions.value = true
   const keptIds = new Set(messages.value.map(item => item.id))
   const nextTimelines: Record<string, { collapsed: boolean; entries: any[] }> = {}
   for (const [key, value] of Object.entries(timelines.value)) {
@@ -273,7 +273,7 @@ const runActionsAndContinue = async () => {
             {
               id: promptEntryId,
               type: 'vision_prompt',
-              text: 'working',
+              text: '识图中',
               status: 'info'
             }
           ])
@@ -287,7 +287,7 @@ const runActionsAndContinue = async () => {
           if (description) {
             result.data = { dataUrl: result.data, vision: description }
             updateTimelineEntry(pendingActionsAssistantId.value, promptEntryId, {
-              text: 'working'
+              text: '识图中'
             })
           }
         }
@@ -323,7 +323,7 @@ const runActionsAndContinue = async () => {
     actionResults.value = {}
     lastToolUseId.value = followup.toolUseId || null
     lastToolInput.value = followup.toolInput || null
-    lastParallelActions.value = Boolean(followup.parallelActions)
+    lastParallelActions.value = followup.parallelActions !== false
     if (followup.thoughts?.length && pendingActionsAssistantId.value) {
       addTimelineEntries(
         pendingActionsAssistantId.value,
@@ -454,7 +454,7 @@ const sendMessageWithInput = async (
   pendingActionsAssistantId.value = assistantId
   lastToolUseId.value = result.toolUseId || null
   lastToolInput.value = result.toolInput || null
-  lastParallelActions.value = Boolean(result.parallelActions)
+  lastParallelActions.value = result.parallelActions !== false
   if (result.thoughts?.length) {
     addTimelineEntries(
       assistantId,
@@ -638,7 +638,9 @@ const onBypassModeChange = (value: boolean) => {
                   <div class="text-xs text-gray-600">
                     <span v-if="entry.type === 'thought'">思考：{{ entry.text }}</span>
                     <span v-else-if="entry.type === 'step'">步骤：{{ entry.text }}</span>
-                    <span v-else-if="entry.type === 'vision_prompt'">识图提示词：{{ entry.text }}</span>
+                    <span v-else-if="entry.type === 'vision_prompt'" class="agent-working">
+                      识图中
+                    </span>
                     <span v-else>
                       动作：{{ entry.actionType }}
                       <span v-if="entry.error" class="text-red-500">（{{ entry.error }}）</span>
@@ -838,6 +840,36 @@ const onBypassModeChange = (value: boolean) => {
 .agent-markdown :deep(td) {
   border: 1px solid rgba(148, 163, 184, 0.3);
   padding: 6px 8px;
+}
+
+.agent-working {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-working::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+  animation: agentPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes agentPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
 }
 
 .agent-user {

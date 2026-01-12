@@ -67,7 +67,7 @@ const actionSchema = z.object({
 })
 
 const responseSchema = z.object({
-  message: z.string(),
+  message: z.string().optional(),
   actions: z.array(actionSchema).optional(),
   parallelActions: z.boolean().optional(),
   thoughts: z.array(z.string()).optional(),
@@ -91,7 +91,8 @@ const responseSchema = z.object({
 
 const toolSchema = {
   name: 'browser_actions',
-  description: 'Respond with a message and optional browser actions.',
+  description:
+    'Respond with a message and optional browser actions. Use parallelActions=true for independent actions.',
   input_schema: {
     type: 'object',
     properties: {
@@ -173,7 +174,7 @@ const toolSchema = {
         }
       }
     },
-    required: ['message']
+    required: []
   }
 }
 
@@ -198,12 +199,14 @@ const buildSystemPrompt = (
     'action 只使用以下类型：click, double-click, right-click, hover, focus, blur, scroll, touch, screenshot, navigate, click-dom, input, key, type, drag, select。',
     '如果需要操作页面元素，请优先提供 selector；否则使用坐标 x/y。',
     '尽量自行探索当前页面并执行可行的下一步，不要先向用户索要显而易见的信息。',
-    '当不确定页面内容时，优先尝试: 获取 DOM 树、截图、滚动或聚焦关键区域，再决定下一步。',
+    '当不确定页面内容时，优先尝试：获取 DOM 树、截图、滚动或聚焦关键区域，再决定下一步。',
     '仅当确实无法继续时才提问，并给出你需要的具体信息。',
-    '如果需要调用多个子代理，请返回 subagents 数组，每项包含 id 或 name 以及 prompt。',
+    '如果需要调用多个子代理，请尽量并行调用，返回 subagents 数组，每项包含 id 或 name 以及 prompt。',
     '需要子代理时，使用 subagents 数组触发；需要动作时放入 actions。',
-    '如需并行执行动作，将 parallelActions 设为 true。',
-    '可写入记忆：memory.set；可删除记忆：memory.remove。'
+    '尽量合并多个独立动作并并行执行，将 parallelActions 设为 true。',
+    '可写入记忆：memory.set；可删除记忆：memory.remove。',
+    'steps 与 thoughts 必须基于可观察证据（当前页面、DOM、截图结果），不要猜测或编造。',
+    '若证据不足，用“待确认”表述，不要下结论。'
   ]
 
   if (settings.enableThoughts) {
@@ -272,10 +275,7 @@ const extractTextContent = (
 }
 
 const buildSubagentPrompt = (subagent: SubAgentConfig): string => {
-  const lines = [
-    '你是协作子代理，只输出简洁的文本结论或步骤。',
-    '不要输出 JSON，不要包含 action。'
-  ]
+  const lines = ['你是协作子代理，只输出简洁的文本结论或步骤。', '不要输出 JSON，不要包含 action。']
   if (subagent.systemPrompt) lines.push(subagent.systemPrompt)
   return lines.join('\n')
 }
@@ -395,10 +395,7 @@ export async function runAgentMessage(
     })
     const useReasoning = shouldUseReasoning(input, settings)
     const modelId = selectTaskModel(settings, subagent, useReasoning)
-    const system = [
-      buildSystemPrompt(settings, subagent, context),
-      subagent?.systemPrompt || ''
-    ]
+    const system = [buildSystemPrompt(settings, subagent, context), subagent?.systemPrompt || '']
       .filter(Boolean)
       .join('\n')
     const firstPass = await streamClaudeTools({
@@ -437,12 +434,12 @@ export async function runAgentMessage(
           }
           try {
             const output = await streamClaudeText({
-            client,
-            model: selectTaskModel(settings, target, useReasoning),
-            system: buildSubagentPrompt(target),
-            prompt: call.prompt,
-            maxTokens: settings.maxTokens || 1024
-          })
+              client,
+              model: selectTaskModel(settings, target, useReasoning),
+              system: buildSubagentPrompt(target),
+              prompt: call.prompt,
+              maxTokens: settings.maxTokens || 1024
+            })
             updateSubagentSessionItem(sessionId, call, { output })
             return { id: call.id, name: call.name, output }
           } catch (error: any) {
@@ -485,7 +482,8 @@ export async function runAgentMessage(
         }
       }
 
-      const aggregatedContent = aggregated.parsed.message?.trim() || '已完成任务。'
+      const aggregatedContent =
+        aggregated.parsed.message?.trim() || aggregated.parsed.steps?.[0]?.trim() || '已完成任务。'
       const aggregatedActions =
         aggregated.parsed.actions?.map(action => ({
           ...action,
@@ -515,7 +513,8 @@ export async function runAgentMessage(
       updateMemory(firstPass.parsed.memory)
     }
 
-    const content = firstPass.parsed.message?.trim() || '已完成任务。'
+    const content =
+      firstPass.parsed.message?.trim() || firstPass.parsed.steps?.[0]?.trim() || '已完成任务。'
     const actions =
       firstPass.parsed.actions?.map(action => ({
         ...action,
@@ -562,10 +561,7 @@ export async function runAgentFollowup(
     })
     const useReasoning = shouldUseReasoning(input, settings)
     const modelId = selectTaskModel(settings, subagent, useReasoning)
-    const system = [
-      buildSystemPrompt(settings, subagent, context),
-      subagent?.systemPrompt || ''
-    ]
+    const system = [buildSystemPrompt(settings, subagent, context), subagent?.systemPrompt || '']
       .filter(Boolean)
       .join('\n')
 
@@ -648,7 +644,7 @@ export async function runAgentFollowup(
       updateMemory(parsed.memory)
     }
 
-    const content = parsed.message?.trim() || '已完成任务。'
+    const content = parsed.message?.trim() || parsed.steps?.[0]?.trim() || '已完成任务。'
     const actions =
       parsed.actions?.map(action => ({
         ...action,
