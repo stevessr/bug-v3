@@ -3,6 +3,12 @@ import type { AgentSettings } from './types'
 
 const STORAGE_KEY = 'ai-agent-settings-v1'
 
+const resolveMaxTokens = (value: unknown, fallback: number): number => {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+  return Math.floor(parsed)
+}
+
 export function loadAgentSettings(): AgentSettings {
   if (typeof localStorage === 'undefined') return { ...defaultAgentSettings }
 
@@ -15,7 +21,7 @@ export function loadAgentSettings(): AgentSettings {
       ...parsed,
       mcpServers: parsed.mcpServers || [],
       subagents: parsed.subagents || defaultAgentSettings.subagents,
-      maxTokens: parsed.maxTokens || defaultAgentSettings.maxTokens,
+      maxTokens: resolveMaxTokens(parsed.maxTokens, defaultAgentSettings.maxTokens),
       masterSystemPrompt: parsed.masterSystemPrompt || defaultAgentSettings.masterSystemPrompt,
       enableThoughts:
         typeof parsed.enableThoughts === 'boolean'

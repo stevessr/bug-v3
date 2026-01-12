@@ -296,6 +296,12 @@ const selectTaskModel = (
   return subagent?.taskModel || settings.taskModel
 }
 
+const resolveMaxTokens = (value: unknown, fallback = 1024): number => {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+  return Math.floor(parsed)
+}
+
 async function streamClaudeTools(options: {
   client: Anthropic
   model: string
@@ -403,7 +409,7 @@ export async function generateChecklist(
       model: modelId,
       system,
       prompt: input,
-      maxTokens: Math.min(settings.maxTokens || 1024, 512)
+      maxTokens: resolveMaxTokens(settings.maxTokens)
     })
     return parseChecklist(raw)
   } catch {
@@ -441,7 +447,7 @@ export async function verifyChecklist(
       model: modelId,
       system,
       prompt,
-      maxTokens: Math.min(settings.maxTokens || 1024, 256)
+      maxTokens: resolveMaxTokens(settings.maxTokens)
     })
     return raw || '待确认'
   } catch {
@@ -482,7 +488,7 @@ export async function runAgentMessage(
       prompt: input,
       onUpdate: message => options?.onUpdate?.({ message }),
       forceTool: true,
-      maxTokens: settings.maxTokens || 1024
+      maxTokens: resolveMaxTokens(settings.maxTokens)
     })
 
     if (!firstPass.parsed) {
@@ -515,7 +521,7 @@ export async function runAgentMessage(
               model: selectTaskModel(settings, target, useReasoning),
               system: buildSubagentPrompt(target),
               prompt: call.prompt,
-              maxTokens: settings.maxTokens || 1024
+              maxTokens: resolveMaxTokens(settings.maxTokens)
             })
             updateSubagentSessionItem(sessionId, call, { output })
             return { id: call.id, name: call.name, output }
@@ -544,7 +550,7 @@ export async function runAgentMessage(
         prompt: aggregatePrompt,
         onUpdate: message => options?.onUpdate?.({ message }),
         forceTool: false,
-        maxTokens: settings.maxTokens || 1024
+        maxTokens: resolveMaxTokens(settings.maxTokens)
       })
 
       if (!aggregated.parsed) {
@@ -646,7 +652,7 @@ export async function runAgentFollowup(
     const stream = client.messages
       .stream({
         model: modelId,
-        max_tokens: settings.maxTokens || 1024,
+        max_tokens: resolveMaxTokens(settings.maxTokens),
         system,
         messages: [
           { role: 'user', content: input },
@@ -768,7 +774,7 @@ async function rewriteScreenshotPrompt(options: {
     const stream = client.messages
       .stream({
         model: modelId,
-        max_tokens: Math.min(options.settings.maxTokens || 1024, 512),
+        max_tokens: resolveMaxTokens(options.settings.maxTokens),
         system,
         messages: [{ role: 'user', content: options.input }]
       })
@@ -811,7 +817,7 @@ export async function describeScreenshot(
     const stream = client.messages
       .stream({
         model: modelId,
-        max_tokens: settings.maxTokens || 1024,
+        max_tokens: resolveMaxTokens(settings.maxTokens),
         messages: [
           {
             role: 'user',
