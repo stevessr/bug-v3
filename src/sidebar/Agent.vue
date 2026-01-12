@@ -6,7 +6,14 @@ import katex from 'katex'
 import { nanoid } from 'nanoid'
 
 import { useAgentSettings } from '@/agent/useAgentSettings'
-import { describeScreenshot, runAgentFollowup, runAgentMessage } from '@/agent/agentService'
+import {
+  describeScreenshot,
+  generateChecklist,
+  runAgentFollowup,
+  runAgentMessage,
+  verifyChecklist
+} from '@/agent/agentService'
+import { updateMemory } from '@/agent/memory'
 import { executeAgentActions } from '@/agent/executeActions'
 import type { AgentAction, AgentActionResult, AgentMessage } from '@/agent/types'
 
@@ -27,6 +34,7 @@ const lastToolInput = ref<any>(null)
 const lastParallelActions = ref(false)
 const pendingActionsAssistantId = ref<string | null>(null)
 const lastTabContext = ref<any>(null)
+const lastChecklist = ref<string[]>([])
 const TIMELINE_STORAGE_KEY = 'ai-agent-timeline-v1'
 const timelines = ref<Record<string, { collapsed: boolean; entries: any[] }>>({})
 const MESSAGE_STORAGE_KEY = 'ai-agent-messages-v1'
@@ -237,6 +245,7 @@ const retryFromMessage = async (message: AgentMessage) => {
   lastToolUseId.value = null
   lastToolInput.value = null
   lastParallelActions.value = true
+  lastChecklist.value = []
   const keptIds = new Set(messages.value.map(item => item.id))
   const nextTimelines: Record<string, { collapsed: boolean; entries: any[] }> = {}
   for (const [key, value] of Object.entries(timelines.value)) {
@@ -348,6 +357,26 @@ const runActionsAndContinue = async () => {
     }
     if (!pendingActions.value.length) break
   }
+  if (pendingActionsAssistantId.value && pendingActions.value.length === 0 && lastChecklist.value.length) {
+    const finalMessage =
+      messages.value.find(item => item.id === pendingActionsAssistantId.value)?.content || ''
+    const review = await verifyChecklist(
+      lastUserInput.value,
+      lastChecklist.value,
+      finalMessage,
+      settings.value,
+      activeSubagent.value,
+      { tab: lastTabContext.value || undefined }
+    )
+    addTimelineEntries(pendingActionsAssistantId.value, [
+      {
+        id: nanoid(),
+        type: 'review',
+        text: review,
+        status: review.includes('未完成') ? 'error' : 'success'
+      }
+    ])
+  }
   if (pendingActionsAssistantId.value && pendingActions.value.length === 0) {
     setTimelineCollapsed(pendingActionsAssistantId.value, true)
   }
@@ -417,6 +446,17 @@ const sendMessageWithInput = async (
   isSending.value = true
   setTargetTabId(await resolveActiveTabId())
   lastTabContext.value = await resolveTabContext(targetTabId.value)
+  lastChecklist.value = await generateChecklist(
+    content,
+    settings.value,
+    activeSubagent.value,
+    { tab: lastTabContext.value || undefined }
+  )
+  if (lastChecklist.value.length) {
+    updateMemory({
+      set: { task_checklist: lastChecklist.value.map(item => `- ${item}`).join('\n') }
+    })
+  }
 
   const assistantId = nanoid()
   appendMessage({
@@ -426,6 +466,16 @@ const sendMessageWithInput = async (
   })
   ensureTimeline(assistantId)
   saveTimelines()
+  if (lastChecklist.value.length) {
+    addTimelineEntries(assistantId, [
+      {
+        id: nanoid(),
+        type: 'checklist',
+        text: lastChecklist.value.join(' · '),
+        status: 'info'
+      }
+    ])
+  }
 
   const result = await runAgentMessage(
     content,
@@ -479,6 +529,25 @@ const sendMessageWithInput = async (
   }
   if (bypassMode.value && pendingActions.value.length > 0) {
     await runActionsAndContinue()
+  }
+  if (pendingActions.value.length === 0 && lastChecklist.value.length) {
+    const finalMessage = messages.value.find(item => item.id === assistantId)?.content || ''
+    const review = await verifyChecklist(
+      lastUserInput.value,
+      lastChecklist.value,
+      finalMessage,
+      settings.value,
+      activeSubagent.value,
+      { tab: lastTabContext.value || undefined }
+    )
+    addTimelineEntries(assistantId, [
+      {
+        id: nanoid(),
+        type: 'review',
+        text: review,
+        status: review.includes('未完成') ? 'error' : 'success'
+      }
+    ])
   }
   if (pendingActions.value.length === 0) {
     setTimelineCollapsed(assistantId, true)
@@ -638,9 +707,9 @@ const onBypassModeChange = (value: boolean) => {
                   <div class="text-xs text-gray-600">
                     <span v-if="entry.type === 'thought'">思考：{{ entry.text }}</span>
                     <span v-else-if="entry.type === 'step'">步骤：{{ entry.text }}</span>
-                    <span v-else-if="entry.type === 'vision_prompt'" class="agent-working">
-                      识图中
-                    </span>
+                    <span v-else-if="entry.type === 'checklist'">清单：{{ entry.text }}</span>
+                    <span v-else-if="entry.type === 'review'">核查：{{ entry.text }}</span>
+                    <span v-else-if="entry.type === 'vision_prompt'" class="agent-working">识图中</span>
                     <span v-else>
                       动作：{{ entry.actionType }}
                       <span v-if="entry.error" class="text-red-500">（{{ entry.error }}）</span>
